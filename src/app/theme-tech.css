@@ -1,0 +1,20 @@
+/* Segunda composição: linguagem de central de monitoramento.
+   O conteúdo e os fluxos permanecem os mesmos; a composição muda. */
+.site--tecnologia .hero { background-image: linear-gradient(90deg, #62a1df0a 1px, transparent 1px), linear-gradient(#62a1df0a 1px, transparent 1px); background-size: 44px 44px; }
+.site--tecnologia .hero__grid { grid-template-columns: 1fr .92fr; gap: 7%; }
+.site--tecnologia .hero__content { order: 2; }
+.site--tecnologia .hero__visual { order: 1; height: 520px; border: 1px solid #68adf161; border-radius: 0; box-shadow: 16px 16px 0 #11365d; }
+.site--tecnologia .hero h1 { font-size: clamp(43px, 4.75vw, 67px); }
+.site--tecnologia .hero h1 em { color: #8ecbff; }
+.site--tecnologia .hero__lead { border-left: 2px solid var(--accent); padding-left: 18px; }
+.site--tecnologia .visual__grid { background-size: 25px 25px; }
+.site--tecnologia .eyebrow, .site--tecnologia .kicker { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .13em; }
+.site--tecnologia .service-grid { grid-template-columns: repeat(2, 1fr); }
+.site--tecnologia .service-card { min-height: 228px; border-left: 3px solid #316aab; border-radius: 0; }
+.site--tecnologia .service-card__icon { background: transparent; border: 1px solid var(--line); }
+.site--tecnologia .solutions-section { background: #06162e; background-image: radial-gradient(circle at 10% 15%,#256a9c38,transparent 40%); }
+.site--tecnologia .about-art { border: 1px solid #569ad166; }
+.site--tecnologia .quote-form-wrap { border-top: 3px solid #56bbf5; }
+.site--tecnologia .closing { background: #0d3662; }
+@media (max-width: 880px) { .site--tecnologia .hero__grid { grid-template-columns: 1fr; }.site--tecnologia .hero__content { order: 1; }.site--tecnologia .hero__visual { order: 2; height: 360px; } }
+@media (max-width: 640px) { .site--tecnologia .service-grid { grid-template-columns: 1fr; }.site--tecnologia .hero__visual { height: 330px; box-shadow: 7px 7px 0 #11365d; }.site--tecnologia .hero h1 { font-size: clamp(40px, 11vw, 58px); } }

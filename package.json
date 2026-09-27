@@ -1,0 +1,39 @@
+{
+  "name": "grupo-seg-system",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node server.mjs --dev",
+    "build": "next build",
+    "db:up": "docker compose --env-file .env.local -f infra/postgres/compose.yaml up -d",
+    "db:down": "docker compose --env-file .env.local -f infra/postgres/compose.yaml down",
+    "db:migrate": "node scripts/migrate-site-visual.mjs",
+    "build:preview": "STATIC_PREVIEW=1 next build",
+    "package:layout-02": "npm run build:preview && bash scripts/package-layout-02.sh",
+    "package:layout-03": "npm run build:preview && bash scripts/package-layout-03.sh",
+    "package:layout-04": "npm run build:preview && bash scripts/package-layout-04.sh",
+    "package:layout-05": "npm run build:preview && bash scripts/package-layout-05.sh",
+    "package:layout-06": "npm run build:preview && bash scripts/package-layout-06.sh",
+    "package:layout-07": "npm run build:preview && bash scripts/package-layout-07.sh",
+    "package:layout-08": "npm run build:preview && bash scripts/package-layout-08.sh",
+    "package:layout-09": "npm run build:preview && bash scripts/package-layout-09.sh",
+    "package:layout-10": "npm run build:preview && bash scripts/package-layout-10.sh",
+    "start": "node server.mjs",
+    "test": "node --test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "next": "^16.3.6",
+    "nodemailer": "^10.0.10",
+    "pg": "^8.23.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.9.0"
+  }
+}
