@@ -11,7 +11,7 @@ Primeiro incremento: site público responsivo com composições **Institucional 
 
 O formulário **não salva leads nem envia e-mails**: ele abre uma mensagem para o visitante revisar e enviar manualmente no WhatsApp. Portal autenticado, CRM, agendamento confirmado, candidaturas, blog, temas globais e o restante dos módulos ainda serão construídos. Essas áreas aparecem como “Em desenvolvimento”; não existe login ou dado contratual fictício exposto como real. O `robots` está configurado como `noindex` durante a prévia.
 
-A foto de viatura enviada na conversa não estava acessível no caminho indicado para anexos neste ambiente; o site usa ilustração conceitual até receber o arquivo original. Antes de publicar, confirmar contatos, conteúdo, licenças, autorização de imagens e política de privacidade.
+A foto da viatura e o logotipo foram vistos na conversa, mas não estavam acessíveis nos caminhos de anexos informados pelo ambiente; o site usa ilustração e marca tipográfica provisórias até os arquivos estarem disponíveis em `public/brand/`. Antes de publicar, confirmar contatos, conteúdo, licenças, autorização de imagens e política de privacidade.
 
 ## Desenvolvimento
 
