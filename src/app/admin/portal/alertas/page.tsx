@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, Bell, Check, CircleAlert, Mail, ShieldCheck, TriangleAlert } from "lucide-react";
 import styles from "./SecurityAlerts.module.css";
@@ -8,10 +8,27 @@ import styles from "./SecurityAlerts.module.css";
 export default function SecurityAlertsPreviewPage() {
   const [showExample, setShowExample] = useState(false);
   const [alertStatus, setAlertStatus] = useState<"pending" | "reviewed" | "resolved">("pending");
+  const [holdSubmitted, setHoldSubmitted] = useState(false);
+  const [holdReason, setHoldReason] = useState("");
+  const [holdReference, setHoldReference] = useState("");
+  const [holdReviewDate, setHoldReviewDate] = useState("");
+  const [marceloApproved, setMarceloApproved] = useState(false);
+  const [tiApproved, setTiApproved] = useState(false);
+
+  function submitHold(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setHoldSubmitted(true);
+  }
 
   function resetPreview() {
     setShowExample(false);
     setAlertStatus("pending");
+    setHoldSubmitted(false);
+    setHoldReason("");
+    setHoldReference("");
+    setHoldReviewDate("");
+    setMarceloApproved(false);
+    setTiApproved(false);
   }
 
   return (
@@ -50,6 +67,33 @@ export default function SecurityAlertsPreviewPage() {
                 <small>Exemplo ilustrativo. Nenhum cliente, endereço, data ou evento real está associado.</small>
               </div>
             </article>
+          )}
+        </section>
+        <section className={styles.holdSection} aria-labelledby="hold-title">
+          <div className={styles.holdHeader}><div><span className={styles.eyebrow}>EXCEÇÃO DE RETENÇÃO · PRÉVIA DE PROCESSO</span><h2 id="hold-title">Solicitar extensão temporária</h2></div><span className={styles.channelPill}><ShieldCheck size={13} /> DUPLA APROVAÇÃO</span></div>
+          <p className={styles.holdIntro}>Uma obrigação legal ou investigação formal pode exigir prazo diferente. A exceção precisa de motivo, referência do caso, aprovação de Marcelo e TI e data de revisão/fim. Use apenas dados fictícios.</p>
+          {!holdSubmitted ? (
+            <form className={styles.holdForm} onSubmit={submitHold}>
+              <label htmlFor="hold-reason">Motivo da exceção</label>
+              <textarea id="hold-reason" required maxLength={500} value={holdReason} onChange={event => setHoldReason(event.target.value)} placeholder="Justificativa fictícia, sem dados pessoais reais" />
+              <div className={styles.holdFields}>
+                <div><label htmlFor="hold-reference">Referência do caso</label><input id="hold-reference" required maxLength={80} value={holdReference} onChange={event => setHoldReference(event.target.value)} placeholder="REF-DEMO-001" /></div>
+                <div><label htmlFor="hold-review-date">Data de revisão/fim</label><input id="hold-review-date" type="date" required value={holdReviewDate} onChange={event => setHoldReviewDate(event.target.value)} /></div>
+              </div>
+              <div className={styles.approvals}>
+                <strong>Aprovações exigidas conjuntamente</strong>
+                <label><input type="checkbox" required checked={marceloApproved} onChange={event => setMarceloApproved(event.target.checked)} /> Simular aprovação de Marcelo</label>
+                <label><input type="checkbox" required checked={tiApproved} onChange={event => setTiApproved(event.target.checked)} /> Simular aprovação de TI</label>
+              </div>
+              <small className={styles.holdWarning}>Na versão real, a aprovação e a trilha de auditoria serão registradas no servidor. Esta prévia não altera prazos nem mantém dados.</small>
+              <button type="submit">Pré-visualizar exceção aprovada <Check size={14} /></button>
+            </form>
+          ) : (
+            <div className={styles.holdResult} role="status" aria-live="polite">
+              <span className={styles.resultIcon}><Check size={17} /></span>
+              <div><strong>Exceção aprovada na demonstração</strong><p><b>Motivo:</b> {holdReason}</p><p><b>Referência:</b> {holdReference} · <b>Revisão/fim:</b> {holdReviewDate}</p><p><b>Aprovadores simulados:</b> Marcelo + TI · <b>Data/hora:</b> registrada pelo servidor na implementação real.</p><small>Somente exemplo fictício; nada foi salvo, auditado ou prorrogado.</small></div>
+              <button type="button" className={styles.holdReset} onClick={() => setHoldSubmitted(false)}>Editar demonstração</button>
+            </div>
           )}
         </section>
         <div className={styles.securityNote}><ShieldCheck size={17} /><p>O e-mail contém apenas o necessário; a análise completa fica no painel protegido. Qualquer administrador com permissão liberada por TI pode analisar. Marcar como analisado não encerra o alerta: somente a resolução explícita o remove dos pendentes. Alertas identificáveis: 12 meses, depois exclusão e apenas estatísticas anônimas. Logs de auditoria separados: 12 meses, sem senhas, tokens ou códigos; depois, excluir os registros detalhados e manter métricas anônimas apenas se necessárias. Exceções legais ou investigações formais precisam de justificativa e prazo próprio. Exclusão automática ainda não está implementada.</p></div>
