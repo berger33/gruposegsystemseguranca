@@ -105,7 +105,7 @@ export default function Layout06() {
 
       <section className={styles.faq} id="duvidas"><div className={styles.faqHeading}><span className={styles.eyebrowBlue}>05 / PARA COMEÇAR</span><h2>Algumas respostas.<br /><em>O resto, conversamos.</em></h2><a href={whatsapp("Olá! Tenho uma dúvida sobre os serviços do Grupo SEG System.")} target="_blank" rel="noreferrer">Chamar alguém da equipe <ArrowUpRight size={14} /></a></div><div className={styles.faqList}>{faq.map(([question, answer], index) => <article key={question}><button type="button" aria-expanded={openFaq === index} onClick={() => setOpenFaq(openFaq === index ? -1 : index)}><span>0{index + 1}</span>{question}<ChevronDown size={17} /></button>{openFaq === index && <p>{answer}</p>}</article>)}</div></section>
 
-      <footer className={styles.footer}><a className={styles.footerBrand} href="#inicio"><span className={styles.brandIcon}><ShieldCheck size={20} /></span><span><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a><span>PRÉVIA VISUAL · LAYOUT 06</span><a href="/">Comparar com Layout 01 <ArrowUpRight size={13} /></a></footer>
+      <footer className={styles.footer}><a className={styles.footerBrand} href="#inicio"><span className={styles.brandIcon}><ShieldCheck size={20} /></span><span><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a><span>PRÉVIA VISUAL · LAYOUT 06</span><a href="/layout-01">Comparar com Layout 01 <ArrowUpRight size={13} /></a></footer>
       <a className={styles.floating} href={`https://wa.me/${phone}`} target="_blank" rel="noreferrer" aria-label="Falar com a equipe pelo WhatsApp"><MessageCircle size={18} /><span>Vamos conversar</span></a>
     </main>
   );

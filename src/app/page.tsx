@@ -1,5 +1,5 @@
-import PublicSite from "@/components/PublicSite";
+import SiteVisualRenderer from "@/components/SiteVisualRenderer";
 
 export default function Home() {
-  return <PublicSite />;
+  return <SiteVisualRenderer />;
 }

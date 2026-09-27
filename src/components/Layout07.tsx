@@ -121,7 +121,7 @@ export default function Layout07() {
 
         <section className={styles.faq} id="duvidas"><div className={styles.faqIntro}><span className={styles.sectionIndex}>05 <i /> DÚVIDAS</span><h2>Se o mapa ainda não estiver claro, <em>pergunte.</em></h2><a href={whatsapp("Olá! Tenho uma dúvida sobre os serviços do Grupo SEG System.")} target="_blank" rel="noreferrer">Falar com uma pessoa <ArrowUpRight size={14} /></a></div><div className={styles.faqList}>{faq.map(([question, answer], index) => <article key={question}><button type="button" aria-expanded={openFaq === index} onClick={() => setOpenFaq(openFaq === index ? -1 : index)}><span>0{index + 1}</span>{question}<ChevronDown size={17} /></button>{openFaq === index && <p>{answer}</p>}</article>)}</div></section>
 
-        <footer className={styles.footer}><a className={styles.footerBrand} href="#inicio"><span className={styles.brandShield}><ShieldCheck size={20} /></span><span><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a><span>MAPA DE CUIDADO · LAYOUT 07</span><a href="/">Voltar ao layout 01 <ArrowUpRight size={13} /></a></footer>
+        <footer className={styles.footer}><a className={styles.footerBrand} href="#inicio"><span className={styles.brandShield}><ShieldCheck size={20} /></span><span><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a><span>MAPA DE CUIDADO · LAYOUT 07</span><a href="/layout-01">Voltar ao layout 01 <ArrowUpRight size={13} /></a></footer>
       </main>
       <a className={styles.floating} href={`https://wa.me/${phone}`} target="_blank" rel="noreferrer" aria-label="Conversar com a equipe pelo WhatsApp"><MessageCircle size={18} /><span>Falar com a equipe</span></a>
     </div>

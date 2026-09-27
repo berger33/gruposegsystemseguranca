@@ -135,7 +135,7 @@ export default function Layout09() {
 
       <section className={styles.faq} id="duvidas"><div className={styles.faqTitle}><span className={styles.sectionIndex}>DÚVIDAS <i /> ANTES DE COMEÇAR</span><h2>Um bom atendimento<br />começa com escuta.</h2><a href={whatsapp("Olá! Tenho uma dúvida sobre os serviços do Grupo SEG System.")} target="_blank" rel="noreferrer"><MessageCircle size={15} /> Falar com a equipe</a></div><div className={styles.faqList}>{questions.map(([question, answer], index) => <article key={question}><button type="button" aria-expanded={openFaq === index} onClick={() => setOpenFaq(openFaq === index ? -1 : index)}><span>0{index + 1}</span>{question}<ChevronDown size={17} /></button>{openFaq === index && <p>{answer}</p>}</article>)}</div></section>
 
-      <footer className={styles.footer}><a className={styles.footerBrand} href="#inicio"><span className={styles.brandMark}><ShieldCheck size={19} /></span><span><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a><span>LAYOUT 09 · BRIEFING GUIADO</span><a href="/">Comparar com Layout 01 <ArrowUpRight size={13} /></a></footer>
+      <footer className={styles.footer}><a className={styles.footerBrand} href="#inicio"><span className={styles.brandMark}><ShieldCheck size={19} /></span><span><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a><span>LAYOUT 09 · BRIEFING GUIADO</span><a href="/layout-01">Comparar com Layout 01 <ArrowUpRight size={13} /></a></footer>
     </main>
   );
 }

@@ -10,10 +10,13 @@ for page in index layout-02 layout-03 layout-04 layout-05 layout-06; do
   [[ -f "$OUT/$page.html" ]] || { echo "Missing $OUT/$page.html; run npm run build:preview first." >&2; exit 1; }
 done
 [[ -d "$OUT/_next" ]] || { echo "Missing static Next assets." >&2; exit 1; }
+[[ -f "$OUT/layout-01.html" && -d "$OUT/visuals/layout-01" ]] || { echo "Missing Layout 01 static preview; run npm run build:preview first." >&2; exit 1; }
 
 mkdir -p "$TMP/_next" "$TMP/images" "$ROOT/downloads"
 cp -R "$OUT/_next/." "$TMP/_next/"
 cp -R "$OUT/images/." "$TMP/images/"
+mkdir -p "$TMP/visuals"
+cp -R "$OUT/visuals/layout-01" "$TMP/visuals/layout-01"
 
 rewrite_page() {
   local source="$1" target="$2" back_link="$3"
@@ -22,13 +25,15 @@ const fs = require('node:fs');
 const [source, target, backLink] = process.argv.slice(2);
 let html = fs.readFileSync(source, 'utf8');
 html = html.replaceAll('src="/images/', 'src="./images/');
+html = html.replaceAll('src="/visuals/', 'src="./visuals/');
 html = html.replaceAll('href="/images/', 'href="./images/');
 html = html.replaceAll('href="/"', `href="${backLink}"`);
+html = html.replaceAll('href="/layout-01"', 'href="./layout-01.html"');
 fs.writeFileSync(target, html);
 NODE
 }
 
-rewrite_page "$OUT/index.html" "$TMP/layout-01.html" "./layout-01.html"
+rewrite_page "$OUT/layout-01.html" "$TMP/layout-01.html" "./layout-01.html"
 rewrite_page "$OUT/layout-02.html" "$TMP/layout-02.html" "./layout-01.html"
 rewrite_page "$OUT/layout-03.html" "$TMP/layout-03.html" "./layout-01.html"
 rewrite_page "$OUT/layout-04.html" "$TMP/layout-04.html" "./layout-01.html"

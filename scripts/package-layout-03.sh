@@ -14,7 +14,10 @@ fi
 mkdir -p "$TMP/_next" "$TMP/images" "$ROOT/downloads"
 cp -R "$OUT/_next/." "$TMP/_next/"
 cp -R "$OUT/images/." "$TMP/images/"
-cp "$OUT/index.html" "$TMP/layout-01.html"
+mkdir -p "$TMP/visuals"
+cp -R "$OUT/visuals/layout-01" "$TMP/visuals/layout-01"
+cp "$OUT/layout-01.html" "$TMP/layout-01.html"
+sed -i 's@src="/visuals/layout-01/index.html"@src="./visuals/layout-01/index.html"@g' "$TMP/layout-01.html"
 
 rewrite_page() {
   local source="$1" target="$2" back_link="$3"
@@ -24,8 +27,10 @@ const [source, target, backLink] = process.argv.slice(2);
 let html = fs.readFileSync(source, 'utf8');
 // Keep static previews usable when opened directly from an extracted folder.
 html = html.replaceAll('src="/images/', 'src="./images/');
+html = html.replaceAll('src="/visuals/', 'src="./visuals/');
 html = html.replaceAll('href="/images/', 'href="./images/');
 html = html.replaceAll('href="/"', `href="${backLink}"`);
+html = html.replaceAll('href="/layout-01"', 'href="./layout-01.html"');
 fs.writeFileSync(target, html);
 NODE
 }
