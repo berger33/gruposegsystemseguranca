@@ -7,7 +7,7 @@ Sistema em desenvolvimento para o Grupo SEG System. O **plano foi registrado em 
 
 ## Prévia atual
 
-Prévia pública com layout 01 (institucional) e layout 02 (Central tecnológica), ambos aprovados visualmente pelo usuário. O **layout 03 — Presença** está disponível em `/layout-03` para avaliação; os demais serão apresentados um por vez, depois da aprovação de cada proposta. As imagens novas são conceituais e geradas, não representam funcionários ou instalações reais. Esta aplicação **não está pronta para produção**.
+Prévia pública com layouts 01 (institucional), 02 (Central tecnológica) e 03 (Presença humano-editorial), aprovados visualmente pelo usuário. O **layout 04 — Operação** está disponível em `/layout-04` para avaliação; os demais serão apresentados um por vez, depois da aprovação de cada proposta. As imagens novas são conceituais e geradas, não representam funcionários ou instalações reais. Esta aplicação **não está pronta para produção**.
 
 O formulário **não salva leads nem envia e-mails**: ele abre uma mensagem para o visitante revisar e enviar manualmente no WhatsApp. Portal autenticado, CRM, agendamento confirmado, candidaturas, blog, temas globais e o restante dos módulos ainda serão construídos. Essas áreas aparecem como “Em desenvolvimento”; não existe login ou dado contratual fictício exposto como real. O `robots` está configurado como `noindex` durante a prévia.
 
@@ -17,9 +17,10 @@ A foto da viatura e o logotipo foram vistos na conversa, mas não estavam acess�
 
 - [Layout 01 — prévia estática original (.zip)](downloads/seg-system-previa.zip). Extraia e abra `index.html`.
 - [Layout 02 — Central (.zip)](downloads/layout-02-central-preview.zip). Extraia e abra `index.html`; `layout-01.html` permite comparar com o primeiro conceito.
-- [Layout 03 — Presença (.zip)](downloads/layout-03-presenca-preview.zip). Extraia e abra `index.html`; o pacote inclui os layouts 01 e 02 para comparação.
+- [Layout 03 — Presença (.zip)](downloads/layout-03-presenca-preview.zip). Extraia e abra `index.html`; o pacote inclui os layouts anteriores para comparação.
+- [Layout 04 — Operação (.zip)](downloads/layout-04-operacao-preview.zip). Extraia e abra `index.html`; os layouts 01–03 também estão incluídos.
 
-Os ZIPs são **fotografias visuais desta etapa**, não o sistema completo nem versões para publicação. As prévias não têm backend, e os formulários apenas abrem uma mensagem para revisão e envio manual pelo WhatsApp. Gere os pacotes com `npm run package:layout-02` e `npm run package:layout-03`.
+Os ZIPs são **fotografias visuais desta etapa**, não o sistema completo nem versões para publicação. As prévias não têm backend, e os formulários apenas abrem uma mensagem para revisão e envio manual pelo WhatsApp. Gere os pacotes com `npm run package:layout-02`, `npm run package:layout-03` e `npm run package:layout-04`.
 
 ## Desenvolvimento
 

@@ -7,7 +7,7 @@ Levantamento em 27/09/2026 para orientar o início do desenvolvimento. Conteúdo
 - [Site atual: Grupo SEG System | Segurança Integrada](https://gruposegsystemseguranca.com.br/) — conteúdo textual consultado nesta conversa.
 - [Página do Facebook indicada](https://www.facebook.com/gruposegsystemseguranca.com.br/) — leitura automática bloqueada (HTTP 403); não usar seu conteúdo como informação verificada por enquanto.
 - O usuário reenviou visualmente o logotipo (escudo azul com “GRUPO”, “SEG SYSTEM” e “SEGURANÇA INTEGRADA”) e a viatura branca/azul com identificação “SUPERVISÃO”. Os anexos atuais foram anunciados em `/home/user/uploads/480443364_1214890203811692_1245250058270366235_n.jpg` e `/home/user/uploads/viatura.jpg`, mas esses arquivos não aparecem no workspace desta execução. **Não incorporar nem afirmar que são as imagens originais.** Solicitar reenvio em arquivos acessíveis no projeto ou links públicos diretos. Até lá, usar wordmark textual e imagens conceituais identificadas como ilustração.
-- Foram geradas imagens conceituais, não fotografias da empresa: `public/images/layout-02-central-monitoramento.png` (central genérica) e `public/images/layout-03-atendimento.png` (cena editorial ilustrativa de portaria). Não representam instalações, funcionários ou clientes reais.
+- Foram geradas imagens conceituais, não fotografias da empresa: `public/images/layout-02-central-monitoramento.png` (central genérica), `public/images/layout-03-atendimento.png` (cena editorial ilustrativa de portaria) e `public/images/layout-04-industrial.png` (acesso industrial genérico). Não representam instalações, funcionários ou clientes reais.
 
 ## Informações apresentadas no site atual — confirmar antes da nova publicação
 
@@ -26,8 +26,9 @@ Levantamento em 27/09/2026 para orientar o início do desenvolvimento. Conteúdo
 - Cores observadas nas imagens enviadas: azul escuro/azul forte, branco e neutros escuros. O escudo tem contorno azul e área branca; a viatura traz branco e azul. **Não há códigos HEX oficiais confirmados.** Usar tokens provisórios e ajustar quando o arquivo do logotipo estiver acessível.
 - Interface 01 **Institucional clássica**: primeira composição mostrada e aprovada visualmente pelo usuário; manter como referência, sem alterações de direção visual não solicitadas.
 - Interface 02 **Central**: composição tecnológica em azul profundo e ciano, aprovada pelo usuário. Distingue-se da primeira por composição, tipografia, densidade e hierarquia, não apenas por cor.
-- Interface 03 **Presença**: proposta humano-editorial, com tons de papel/areia, azul institucional e imagem conceitual de recepção. Está em avaliação nesta etapa.
-- O usuário quer revisar **um layout por vez**; depois de cada entrega, aguardar aprovação ou instruções de ajuste antes de começar o seguinte. Restam sete layouts depois da aprovação do 03.
+- Interface 03 **Presença**: composição humano-editorial, com tons de papel/areia, azul institucional e imagem conceitual de recepção. Aprovada pelo usuário.
+- Interface 04 **Operação**: proposta robusta industrial, com grafite, aço, azul e acentos âmbar, grade técnica e imagem conceitual de acesso logístico. Está em avaliação nesta etapa.
+- O usuário quer revisar **um layout por vez**; depois de cada entrega, aguardar aprovação ou instruções de ajuste antes de começar o seguinte. Restam seis layouts depois da aprovação do 04.
 - As composições devem compartilhar conteúdo e fluxos, mas variar de modo perceptível e manter acessibilidade; o painel de seleção/publicação será implementado em etapa posterior.
 
 ## Publicação segura / pendências
