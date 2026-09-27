@@ -57,13 +57,13 @@ export default function ChangeEmailPreviewPage() {
                 <div className={styles.noticeInline}>
                   <strong>Aviso para o e-mail atual · rascunho</strong>
                   <span><b>Assunto:</b> Solicitação de alteração do e-mail da Área do Cliente</span>
-                  <span>Foi solicitada a alteração do endereço de acesso associado à sua conta. Seu e-mail atual continuará ativo até a confirmação do novo endereço. Se você não reconhece esta solicitação, não confirme a mudança e entre em contato com a equipe pelos canais oficiais.</span>
+                  <span>Foi solicitada a alteração do e-mail de acesso da sua conta para <strong>{newEmail}</strong>. Seu endereço atual continuará ativo até a confirmação do novo. Se você não fez este pedido, não confirme a mudança e procure a equipe pelos canais oficiais. Este aviso não contém link de confirmação.</span>
                   <small>RASCUNHO · NÃO ENVIADO</small>
                 </div>
                 <div className={styles.noticeInline}>
                   <strong>Confirmação para o novo e-mail · rascunho</strong>
                   <span><b>Assunto:</b> Confirme o novo e-mail da Área do Cliente</span>
-                  <span>Confirme que você controla este endereço para concluir a alteração. O link será válido por 1 hora e cada reenvio invalida o link anterior. Até a confirmação, use o e-mail atual para entrar.</span>
+                  <span>Se você solicitou esta mudança, confirme que controla este endereço pelo link de uso único, válido por 1 hora. Se pedir um novo link, o anterior será invalidado. O e-mail atual continua sendo seu login até a confirmação.</span>
                   <small>RASCUNHO · LINK NÃO GERADO</small>
                 </div>
                 <button type="button" onClick={() => setStage("confirmed")}>Simular confirmação do novo e-mail <Check size={15} /></button>

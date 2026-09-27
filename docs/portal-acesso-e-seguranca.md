@@ -19,6 +19,11 @@
 - Não importar nem inventar cadastros, contratos, documentos ou clientes para a prévia.
 - PostgreSQL, autenticação real, persistência das opções e notificações do portal permanecem para a etapa final, conforme a prioridade atual.
 
+## Referências de segurança consultadas
+
+- OWASP, [Email Validation and Verification Cheat Sheet — Email Change Workflows](https://cheatsheetseries.owasp.org/cheatsheets/Email_Validation_and_Verification_Cheat_Sheet.html#email-change-workflows): recomenda reautenticar, avisar o endereço atual e confirmar o novo; também orienta proteger os fluxos contra enumeração e abusos.
+- OWASP, [Authentication Cheat Sheet — Require Re-authentication for Sensitive Features](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html#require-re-authentication-for-sensitive-features): recomenda pedir credenciais atuais antes de mudanças sensíveis, como e-mail e senha.
+
 ## Invariantes de segurança propostos
 
 As regras abaixo são uma base técnica para discussão; não ativam comportamento sem aprovação e implementação:
