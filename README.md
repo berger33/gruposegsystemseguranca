@@ -7,7 +7,7 @@ Sistema em desenvolvimento para o Grupo SEG System. O **plano foi registrado em 
 
 ## Prévia atual
 
-Prévia pública com os dez layouts aprovados visualmente pelo usuário. A rota `/layout-10` mostra a proposta Linha de cuidado; as dez opções estão disponíveis para comparação. Ainda falta escolher qual delas servirá de base visual para a implementação do site público. Esta aplicação **não está pronta para produção**.
+As dez propostas visuais foram aprovadas; o **layout 06 — Azul em camadas** foi escolhido como base para implementar o site público. A rota `/layout-06` mantém a prévia original do conceito e as demais propostas continuam disponíveis para comparação. A aplicação atual ainda é uma prévia e **não está pronta para produção**.
 
 O formulário **não salva leads nem envia e-mails**: ele abre uma mensagem para o visitante revisar e enviar manualmente no WhatsApp. Portal autenticado, CRM, agendamento confirmado, candidaturas, blog, temas globais e o restante dos módulos ainda serão construídos. Essas áreas aparecem como “Em desenvolvimento”; não existe login ou dado contratual fictício exposto como real. O `robots` está configurado como `noindex` durante a prévia.
 

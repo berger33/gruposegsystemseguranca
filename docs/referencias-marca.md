@@ -34,8 +34,8 @@ Levantamento em 27/09/2026 para orientar o início do desenvolvimento. Conteúdo
 - Interface 08 **Núcleo integrado**: diagrama circular interativo, sem hero fotográfico, com serviços ao redor de um núcleo central; paleta azul e branca. O diagrama é conceitual, criado com CSS, não representa um sistema operacional. Aprovada pelo usuário.
 - Interface 09 **Briefing guiado**: fluxo progressivo em três etapas (tipo de espaço, serviços de interesse e contato), com resumo lateral; sem hero fotográfico nem mosaico de serviços. Aprovada pelo usuário.
 - Interface 10 **Linha de cuidado**: proposta com serviços dispostos de forma alternada em torno de um eixo vertical central, sem hero fotográfico, navegação lateral ou wizard. Usa azul institucional e branco; a linha é metáfora visual, não uma sequência de serviço. Aprovada pelo usuário.
-- O usuário revisou e aprovou visualmente os dez layouts, um por vez. Ainda falta escolher qual proposta servirá de base para a implementação do site público; a aprovação de todas não significa que uma foi escolhida como versão final.
-- As composições devem compartilhar conteúdo e fluxos, mas variar de modo perceptível e manter acessibilidade; o painel de seleção/publicação será implementado em etapa posterior.
+- O usuário revisou e aprovou visualmente os dez layouts, um por vez, e selecionou o **layout 06 — Azul em camadas** como base visual para a implementação do site público. Preservar a paleta azul-cobalto/azul-celeste, as formas geométricas editoriais e a hierarquia visual; usar os outros conceitos apenas como referência, a menos que seja solicitado combiná-los.
+- A implementação deve compartilhar conteúdo e fluxos, mantendo acessibilidade; o painel de seleção/publicação será implementado em etapa posterior.
 
 ## Publicação segura / pendências
 
