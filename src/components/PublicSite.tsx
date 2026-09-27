@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import {
   ArrowDownRight, ArrowRight, ArrowUpRight, Building2, Camera,
   Check, CheckCircle2, ChevronDown, CircleHelp, Clock3, FileText, Headphones,
@@ -12,7 +12,6 @@ const WHATSAPP = "551134372217"; // Número publicado no site atual; confirmar a
 const EMAIL = "contato@gruposegsystemseguranca.com.br";
 const SITE_PHONE = "(11) 3437-2217";
 
-type Theme = "classico" | "tecnologia";
 type RequestKind = "orcamento" | "visita";
 
 type Service = { name: string; short: string; icon: LucideIcon; number: string };
@@ -46,23 +45,12 @@ function Brand({ compact = false }: { compact?: boolean }) {
 }
 
 export default function PublicSite() {
-  const [theme, setTheme] = useState<Theme>("classico");
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [kind, setKind] = useState<RequestKind>("orcamento");
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [assistantQuestion, setAssistantQuestion] = useState<number | null>(null);
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem("seg-theme-preview");
-    if (saved === "classico" || saved === "tecnologia") setTheme(saved);
-  }, []);
-
-  function changeTheme(value: Theme) {
-    setTheme(value);
-    window.localStorage.setItem("seg-theme-preview", value);
-  }
 
   function toggleService(name: string) {
     setSelectedServices(current => current.includes(name) ? current.filter(item => item !== name) : [...current, name]);
@@ -90,7 +78,7 @@ export default function PublicSite() {
   }
 
   return (
-    <div className={`site site--${theme}`} id="inicio">
+    <div className="site site--layered" id="inicio">
       <div className="preview-bar"><div className="container preview-bar__inner"><span><span className="preview-dot" /> PRÉVIA DE DESENVOLVIMENTO <span className="preview-bar__extra">· Este não é o site publicado</span></span><span>Guarulhos, São Paulo <MapPin size={12} /></span></div></div>
       <header className="header">
         <div className="container header__inner">
@@ -114,16 +102,17 @@ export default function PublicSite() {
         <section className="hero" aria-labelledby="hero-title">
           <div className="container hero__grid">
             <div className="hero__content">
-              <div className="eyebrow"><span className="eyebrow__line" /> PROTEÇÃO · TECNOLOGIA · CONFIANÇA</div>
-              <h1 id="hero-title">Segurança para o que <em>realmente importa.</em></h1>
-              <p className="hero__lead">Pessoas, processos e tecnologia trabalhando juntos para proteger sua operação. Soluções de segurança integrada para condomínios, empresas e indústrias.</p>
+              <div className="eyebrow"><span className="eyebrow__line" /> SEGURANÇA <span className="hero-divider" /> EM CAMADAS</div>
+              <h1 id="hero-title">Cuidar bem começa <em>por entender.</em></h1>
+              <p className="hero__lead">Todo espaço tem sua própria rotina. O primeiro passo é conversar sobre o que faz sentido para o seu ambiente, conectando pessoas, processos e tecnologia.</p>
               <div className="hero__actions">
-                <a href="#orcamento" className="button button--primary">Encontrar minha solução <ArrowUpRight size={18} /></a>
-                <a href="#servicos" className="button button--text">Explorar serviços <ArrowRight size={18} /></a>
+                <a href="#orcamento" className="button button--primary">Conte o que você precisa <ArrowUpRight size={18} /></a>
+                <a href="#servicos" className="button button--text">Ver serviços <ArrowRight size={18} /></a>
               </div>
-              <div className="hero__trust"><span className="trust-mark"><ShieldCheck size={18} /></span><span>Atendimento pensado para a necessidade<br />de cada espaço e operação.</span></div>
+              <div className="hero__trust"><span className="trust-mark"><ShieldCheck size={18} /></span><span>Um primeiro passo começa<br />por uma conversa.</span></div>
             </div>
-            <div className="hero__visual" aria-label="Ilustração conceitual de proteção integrada">
+            <div className="hero__visual">
+              <img className="visual__editorial" src="/images/layout-06-blueprint-editorial.png" alt="Ilustração editorial de edifícios conectados em tons de azul" />
               <div className="visual__grid" />
               <div className="visual__orbit visual__orbit--one" /><div className="visual__orbit visual__orbit--two" />
               <div className="visual__building visual__building--back" /><div className="visual__building visual__building--front" />
@@ -137,6 +126,13 @@ export default function PublicSite() {
         </section>
 
         <div className="ticker" aria-label="Áreas de atuação"><div className="container ticker__inner"><span><ShieldCheck size={17} /> Segurança patrimonial</span><i /> <span><Camera size={17} /> Tecnologia e CFTV</span><i /> <span><Users size={17} /> Portaria e acesso</span><i /> <span><MapPin size={17} /> Supervisão e ronda</span></div></div>
+
+        <section className="layer-note" aria-label="Nossa abordagem">
+          <span className="layer-note__index">A.</span>
+          <h2>Segurança não é uma peça isolada.<br /><em>É um sistema de escolhas.</em></h2>
+          <p>Presença, organização e tecnologia precisam fazer sentido para cada espaço.</p>
+          <span className="layer-note__mark" aria-hidden="true"><LockKeyhole size={21} /></span>
+        </section>
 
         <section className="section services-section" id="servicos">
           <div className="container">
@@ -162,8 +158,6 @@ export default function PublicSite() {
       </main>
 
       <footer className="footer"><div className="container footer__main"><div className="footer__brand"><Brand compact /><p>Proteção patrimonial, prevenção e soluções integradas para sua operação.</p></div><div><strong>Navegação</strong><a href="#servicos">Serviços</a><a href="#solucoes">Soluções</a><a href="#sobre">Sobre o grupo</a><a href="#duvidas">Dúvidas frequentes</a></div><div><strong>Contato</strong><a href={`tel:+${WHATSAPP}`}><Phone size={15} /> {SITE_PHONE}</a><a href={`mailto:${EMAIL}`}><Mail size={15} /> {EMAIL}</a><span className="footer__address"><MapPin size={15} /> Av. Armando Bei, 305 - Sala 01<br />Vila Nova Bonsucesso, Guarulhos / SP</span></div></div><div className="container footer__bottom"><span>© {new Date().getFullYear()} Grupo SEG System. Prévia em desenvolvimento.</span><span>Dados de contato extraídos do site atual — aguardando confirmação.</span></div></footer>
-
-      <div className="theme-preview" aria-label="Prévia das interfaces"><span className="theme-preview__label">PRÉVIA DE INTERFACE</span><div className="theme-preview__options"><button type="button" className={theme === "classico" ? "active" : ""} onClick={() => changeTheme("classico")} aria-pressed={theme === "classico"}><span className="theme-swatch theme-swatch--light" /> Clássica</button><button type="button" className={theme === "tecnologia" ? "active" : ""} onClick={() => changeTheme("tecnologia")} aria-pressed={theme === "tecnologia"}><span className="theme-swatch theme-swatch--dark" /> Tecnológica</button></div><small>A escolha muda apenas a prévia neste navegador.</small></div>
 
       <div className="assistant-area">{assistantOpen && <div className="assistant-panel" role="dialog" aria-label="Assistente de dúvidas"><div className="assistant-panel__head"><span className="assistant-panel__avatar"><Headphones size={22} /></span><span><strong>Posso ajudar?</strong><small>FAQ de demonstração · sem IA</small></span><button type="button" aria-label="Fechar assistente" onClick={() => setAssistantOpen(false)}><X size={19} /></button></div><div className="assistant-panel__body"><p className="assistant-bubble">Olá! Escolha uma pergunta para consultar a FAQ ou fale com a nossa equipe.</p>{assistantQuestion !== null && <><p className="assistant-user">{questions[assistantQuestion].q}</p><p className="assistant-bubble">{questions[assistantQuestion].a}</p></>}<div className="assistant-prompts">{questions.map(({q}, i) => <button type="button" key={q} onClick={() => setAssistantQuestion(i)}>{q} <ArrowRight size={14} /></button>)}</div></div><a className="assistant-panel__handoff" href={whatsappLink("Olá! Gostaria de falar com a equipe do Grupo SEG System.")} target="_blank" rel="noopener noreferrer">Falar com uma pessoa <Send size={16} /></a></div>}<button className="assistant-trigger" type="button" onClick={() => setAssistantOpen(!assistantOpen)} aria-label={assistantOpen ? "Fechar assistente" : "Abrir assistente de dúvidas"} aria-expanded={assistantOpen}>{assistantOpen ? <X size={24} /> : <MessageCircle size={25} />}<span>{assistantOpen ? "Fechar" : "Dúvidas?"}</span></button></div>
     </div>

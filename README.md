@@ -7,7 +7,7 @@ Sistema em desenvolvimento para o Grupo SEG System. O **plano foi registrado em 
 
 ## Prévia atual
 
-As dez propostas visuais foram aprovadas; o **layout 06 — Azul em camadas** foi escolhido como base para implementar o site público. A rota `/layout-06` mantém a prévia original do conceito e as demais propostas continuam disponíveis para comparação. A aplicação atual ainda é uma prévia e **não está pronta para produção**.
+As dez propostas visuais foram aprovadas e o **layout 06 — Azul em camadas** foi escolhido como base. A página inicial (`/`) agora aplica essa direção ao protótipo público integrado; `/layout-06` preserva a prévia original. O protótipo mantém orçamento/visita por WhatsApp, FAQ com transferência humana e áreas de portal, conteúdo e vagas identificadas como em desenvolvimento. Ainda não armazena leads nem envia e-mail e **não está pronto para produção**.
 
 O formulário **não salva leads nem envia e-mails**: ele abre uma mensagem para o visitante revisar e enviar manualmente no WhatsApp. Portal autenticado, CRM, agendamento confirmado, candidaturas, blog, temas globais e o restante dos módulos ainda serão construídos. Essas áreas aparecem como “Em desenvolvimento”; não existe login ou dado contratual fictício exposto como real. O `robots` está configurado como `noindex` durante a prévia.
 
