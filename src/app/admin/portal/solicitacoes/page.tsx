@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, CircleAlert, CircleCheck, Clock3, FileSearch, Sh
 import styles from "./AccessRequests.module.css";
 
 type RequestStatus = "pending" | "reviewing" | "approved" | "declined";
+type QueueFilter = RequestStatus | "all";
 type ApproverRole = "marcelo" | "ti";
 type ClientScope = "contracts" | "invoices" | "tickets";
 type AccessAuditEvent = {
@@ -44,6 +45,7 @@ export default function AccessRequestsPreviewPage() {
   const [requests, setRequests] = useState<DemoAccessRequest[]>([]);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
   const [nextRequestId, setNextRequestId] = useState(1);
+  const [queueFilter, setQueueFilter] = useState<QueueFilter>("all");
   const [requestEmail, setRequestEmail] = useState("");
   const [validationMessage, setValidationMessage] = useState("");
   const selectedRequest = requests.find(request => request.id === selectedRequestId) ?? null;
@@ -53,6 +55,7 @@ export default function AccessRequestsPreviewPage() {
   const centralRecordChecked = selectedRequest?.centralRecordChecked ?? false;
   const scope = selectedRequest?.scope ?? [];
   const auditEvents = selectedRequest?.auditEvents ?? [];
+  const visibleRequests = queueFilter === "all" ? requests : requests.filter(request => request.status === queueFilter);
 
   function updateSelectedRequest(update: (request: DemoAccessRequest) => DemoAccessRequest) {
     if (selectedRequestId === null) return;
@@ -80,6 +83,7 @@ export default function AccessRequestsPreviewPage() {
       }],
     };
     setRequests(current => [created, ...current]);
+    setQueueFilter("all");
     setSelectedRequestId(id);
     setNextRequestId(current => current + 1);
     setRequestEmail("");
@@ -90,6 +94,7 @@ export default function AccessRequestsPreviewPage() {
     setRequests([]);
     setSelectedRequestId(null);
     setNextRequestId(1);
+    setQueueFilter("all");
     setRequestEmail("");
     setValidationMessage("");
   }
@@ -116,6 +121,13 @@ export default function AccessRequestsPreviewPage() {
       localTime: new Date().toLocaleString("pt-BR"),
     };
     updateSelectedRequest(request => ({ ...request, status: nextStatus, auditEvents: [...request.auditEvents, auditEvent] }));
+    setQueueFilter("all");
+  }
+
+  function setQueueStatusFilter(filter: QueueFilter) {
+    setQueueFilter(filter);
+    if (filter !== "all" && selectedRequest && selectedRequest.status !== filter) setSelectedRequestId(null);
+    setValidationMessage("");
   }
 
   function setApprover(nextApprover: ApproverRole) {
@@ -174,15 +186,26 @@ export default function AccessRequestsPreviewPage() {
             <div><span className={styles.sectionLabel}>FILA DE REVISÃO</span><h2 id="queue-title">Solicitações recebidas</h2></div>
             <span className={styles.unavailable}><Clock3 size={14} /> {requests.length ? `${requests.length} PEDIDO${requests.length === 1 ? "" : "S"} FICTÍCIO${requests.length === 1 ? "" : "S"}` : "SEM CONEXÃO"}</span>
           </div>
+          {requests.length > 0 && (
+            <div className={styles.queueFilters} role="group" aria-label="Filtrar solicitações por status">
+              <button type="button" className={queueFilter === "all" ? styles.queueFilterActive : ""} aria-pressed={queueFilter === "all"} onClick={() => setQueueStatusFilter("all")}>Todas <span>{requests.length}</span></button>
+              {statusOptions.map(item => {
+                const count = requests.filter(request => request.status === item.id).length;
+                return <button key={item.id} type="button" className={queueFilter === item.id ? styles.queueFilterActive : ""} aria-pressed={queueFilter === item.id} onClick={() => setQueueStatusFilter(item.id)}>{item.label} <span>{count}</span></button>;
+              })}
+            </div>
+          )}
           {requests.length === 0 ? (
             <div className={styles.emptyState}>
               <span className={styles.emptyIcon}><FileSearch size={22} /></span>
               <strong>Nenhum registro é exibido nesta prévia</strong>
               <p>Use o formulário acima para criar pedidos locais e explorar a revisão.</p>
             </div>
+          ) : visibleRequests.length === 0 ? (
+            <div className={styles.filterEmpty}>Nenhuma solicitação com este status nesta demonstração.</div>
           ) : (
             <div className={styles.demoRequestList}>
-              {requests.map(request => (
+              {visibleRequests.map(request => (
                 <article className={`${styles.demoRequest} ${selectedRequestId === request.id ? styles.demoRequestSelected : ""}`} key={request.id}>
                   <div><strong>Pedido DEMO-{String(request.id).padStart(3, "0")} · solicitante fictício</strong><span>E-mail de teste: {request.email}</span></div>
                   <span className={styles.demoRequestStatus}>{statusOptions.find(item => item.id === request.status)?.label}</span>
