@@ -28,8 +28,30 @@ export default function AccessRequestsPreviewPage() {
   const [centralRecordChecked, setCentralRecordChecked] = useState(false);
   const [scope, setScope] = useState<ClientScope[]>([]);
   const [validationMessage, setValidationMessage] = useState("");
+  const [requestCreated, setRequestCreated] = useState(false);
+
+  function createDemoRequest() {
+    setRequestCreated(true);
+    setStatus("pending");
+    setApprover("marcelo");
+    setCentralRecordChecked(false);
+    setScope([]);
+    setValidationMessage("");
+  }
+
+  function resetDemoRequest() {
+    setRequestCreated(false);
+    setStatus("pending");
+    setCentralRecordChecked(false);
+    setScope([]);
+    setValidationMessage("");
+  }
 
   function updateStatus(nextStatus: RequestStatus) {
+    if (!requestCreated) {
+      setValidationMessage("Crie primeiro uma solicitação demonstrativa; nenhum pedido real está conectado a esta prévia.");
+      return;
+    }
     if (nextStatus === "approved" && (!centralRecordChecked || scope.length === 0)) {
       setValidationMessage("Para pré-visualizar uma aprovação, marque a consulta ao cadastro central e selecione pelo menos um item de escopo. Isso não concede acesso real.");
       return;
@@ -39,6 +61,7 @@ export default function AccessRequestsPreviewPage() {
   }
 
   function toggleScope(item: ClientScope) {
+    if (!requestCreated) return;
     setScope(current => current.includes(item) ? current.filter(value => value !== item) : [...current, item]);
     setValidationMessage("");
   }
@@ -56,18 +79,35 @@ export default function AccessRequestsPreviewPage() {
           <Link className={styles.clientLink} href="/cliente">Ver página do cliente <ArrowRight size={14} /></Link>
         </div>
 
-        <div className={styles.notice} role="note"><CircleAlert size={18} /><p><strong>Fila não conectada.</strong> Esta demonstração não recebe solicitações, não contém registros e não altera permissões. Não use dados reais; as ações abaixo apenas trocam a prévia nesta tela.</p></div>
+        <div className={styles.notice} role="note"><CircleAlert size={18} /><p><strong>Fluxo alternativo · demonstração local.</strong> Nenhum pedido real é recebido ou salvo. Os campos mínimos para identificar o vínculo ainda precisam de decisão; para não inventá-los, o botão abaixo cria apenas um registro fictício sem nome, e-mail ou dados de empresa.</p></div>
+
+        <section className={styles.requesterSection} aria-labelledby="requester-title">
+          <div><span className={styles.sectionLabel}>01 · VISÃO DO SOLICITANTE</span><h2 id="requester-title">Solicitar acesso ao portal</h2><p>Alternativa ao convite, sujeita à decisão de habilitação. A solicitação sozinha não verifica vínculo nem concede acesso a documentos.</p></div>
+          {!requestCreated ? (
+            <button className={styles.createRequest} type="button" onClick={createDemoRequest}>Simular envio de pedido fictício <ArrowRight size={15} /></button>
+          ) : (
+            <div className={styles.createdNotice} role="status"><CircleCheck size={16} /><span>Pedido DEMO-001 enviado somente à fila simulada desta página. Nenhum dado de contato foi incluído.</span><button type="button" onClick={resetDemoRequest}>Reiniciar simulação</button></div>
+          )}
+        </section>
 
         <section className={styles.queue} aria-labelledby="queue-title">
           <div className={styles.queueHeader}>
             <div><span className={styles.sectionLabel}>FILA DE REVISÃO</span><h2 id="queue-title">Solicitações recebidas</h2></div>
-            <span className={styles.unavailable}><Clock3 size={14} /> SEM CONEXÃO</span>
+            <span className={styles.unavailable}><Clock3 size={14} /> {requestCreated ? "1 PEDIDO FICTÍCIO" : "SEM CONEXÃO"}</span>
           </div>
-          <div className={styles.emptyState}>
-            <span className={styles.emptyIcon}><FileSearch size={22} /></span>
-            <strong>Nenhum registro é exibido nesta prévia</strong>
-            <p>Quando o fluxo for implementado, solicitações reais deverão aparecer aqui após serem armazenadas e protegidas.</p>
-          </div>
+          {!requestCreated ? (
+            <div className={styles.emptyState}>
+              <span className={styles.emptyIcon}><FileSearch size={22} /></span>
+              <strong>Nenhum registro é exibido nesta prévia</strong>
+              <p>Use o botão de simulação acima para criar um pedido local, sem dados pessoais, e explorar a revisão.</p>
+            </div>
+          ) : (
+            <article className={styles.demoRequest}>
+              <div><strong>Pedido DEMO-001 · solicitante fictício</strong><span>Sem nome, e-mail, empresa ou referência real</span></div>
+              <span className={styles.demoRequestStatus}>{statusOptions.find(item => item.id === status)?.label}</span>
+              <p>Pedido de acesso ao portal. Vínculo ainda não verificado nesta simulação.</p>
+            </article>
+          )}
         </section>
 
         <section className={styles.flowSection}>
@@ -82,24 +122,24 @@ export default function AccessRequestsPreviewPage() {
         </section>
 
         <section className={styles.decisionSection} aria-labelledby="decision-title">
-          <div className={styles.decisionIntro}><span className={styles.sectionLabel}>PRÉVIA INTERATIVA · SEM REGISTRO</span><h2 id="decision-title">Simule a revisão de um pedido</h2><p>Use os controles para explorar papéis, verificação, escopo e estados. Não há solicitação real nesta tela.</p></div>
+          <div className={styles.decisionIntro}><span className={styles.sectionLabel}>02 · VISÃO DA EQUIPE · PRÉVIA INTERATIVA</span><h2 id="decision-title">Revisar a solicitação demonstrativa</h2><p>Crie um pedido fictício acima para habilitar os controles. Explore responsável, verificação, escopo e decisão; nada concede acesso real.</p></div>
 
           <div className={styles.simulatorGrid}>
             <div className={styles.simulatorBlock}>
               <strong className={styles.controlLabel}>Responsável pela decisão</strong>
               <div className={styles.roleChoices} role="group" aria-label="Responsável demonstrativo">
-                <button type="button" className={approver === "marcelo" ? styles.roleSelected : ""} aria-pressed={approver === "marcelo"} onClick={() => setApprover("marcelo")}>Marcelo</button>
-                <button type="button" className={approver === "ti" ? styles.roleSelected : ""} aria-pressed={approver === "ti"} onClick={() => setApprover("ti")}>TI / sistema</button>
+                <button type="button" disabled={!requestCreated} className={approver === "marcelo" ? styles.roleSelected : ""} aria-pressed={approver === "marcelo"} onClick={() => setApprover("marcelo")}>Marcelo</button>
+                <button type="button" disabled={!requestCreated} className={approver === "ti" ? styles.roleSelected : ""} aria-pressed={approver === "ti"} onClick={() => setApprover("ti")}>TI / sistema</button>
               </div>
               <label className={styles.verifyToggle}>
-                <input type="checkbox" checked={centralRecordChecked} onChange={event => { setCentralRecordChecked(event.target.checked); setValidationMessage(""); }} />
+                <input type="checkbox" disabled={!requestCreated} checked={centralRecordChecked} onChange={event => { setCentralRecordChecked(event.target.checked); setValidationMessage(""); }} />
                 <span><strong>Simular consulta ao cadastro central</strong><small>Marque apenas para demonstrar a etapa de verificação; nenhum cadastro é consultado.</small></span>
               </label>
               <strong className={styles.controlLabel}>Escopo a demonstrar</strong>
               <div className={styles.scopeChoices}>
                 {scopeOptions.map(item => (
                   <label key={item.id}>
-                    <input type="checkbox" checked={scope.includes(item.id)} onChange={() => toggleScope(item.id)} />
+                    <input type="checkbox" disabled={!requestCreated} checked={scope.includes(item.id)} onChange={() => toggleScope(item.id)} />
                     <span>{item.label}</span>
                   </label>
                 ))}
@@ -110,7 +150,7 @@ export default function AccessRequestsPreviewPage() {
               <strong className={styles.controlLabel}>Estado demonstrativo</strong>
               <div className={styles.statusChoices} role="group" aria-label="Estado da solicitação">
                 {statusOptions.map(item => (
-                  <button key={item.id} type="button" className={status === item.id ? styles.statusSelected : ""} aria-pressed={status === item.id} onClick={() => updateStatus(item.id)}>{item.label}</button>
+                  <button key={item.id} type="button" disabled={!requestCreated} className={status === item.id ? styles.statusSelected : ""} aria-pressed={status === item.id} onClick={() => updateStatus(item.id)}>{item.label}</button>
                 ))}
               </div>
               <div className={`${styles.outcome} ${status === "approved" ? styles.outcomeApproved : status === "declined" ? styles.outcomeDeclined : ""}`} role="status" aria-live="polite">
@@ -120,18 +160,29 @@ export default function AccessRequestsPreviewPage() {
               {validationMessage && <p className={styles.validationMessage} role="alert">{validationMessage}</p>}
             </div>
           </div>
+          {requestCreated && (
+            <div className={styles.requesterOutcome} role="status" aria-live="polite">
+              <span className={styles.sectionLabel}>VISÃO DO SOLICITANTE · RESPOSTA DEMONSTRATIVA</span>
+              <strong>{status === "pending" ? "Pedido recebido" : status === "reviewing" ? "Pedido em análise" : status === "approved" ? "Pedido aprovado na simulação" : "Não foi possível aprovar o pedido neste momento"}</strong>
+              <p>{status === "declined" ? "Mensagem genérica, sem detalhes internos. Nenhum e-mail foi enviado." : status === "approved" ? "A aprovação simulada não cria conta, não substitui a verificação do vínculo e não libera contratos ou documentos." : "Nenhum acesso é concedido antes de verificar o vínculo e concluir a decisão no servidor."}</p>
+            </div>
+          )}
         </section>
 
         <section className={styles.notificationSection} aria-labelledby="notification-title">
           <div className={styles.decisionIntro}><span className={styles.sectionLabel}>MENSAGENS AO SOLICITANTE · PRÉVIA</span><h2 id="notification-title">Aviso por e-mail</h2><p>Canal escolhido para o fluxo. Revise os rascunhos; esta tela não envia mensagens.</p></div>
           <div className={styles.messagePreview} aria-live="polite">
             <div className={styles.messageHeader}><span className={styles.mailBadge}>E-MAIL</span><span className={styles.messageBadge}>RASCUNHO · NÃO ENVIADO</span></div>
-            <strong>Assunto: {status === "declined" ? "Atualização sobre sua solicitação de acesso" : "Solicitação de acesso ao portal aprovada"}</strong>
+            <strong>Assunto: {status === "declined" ? "Atualização sobre sua solicitação de acesso" : status === "approved" ? "Solicitação de acesso ao portal aprovada" : status === "reviewing" ? "Sua solicitação de acesso está em análise" : "Recebemos sua solicitação de acesso"}</strong>
             <div className={styles.messageBody}>
               {status === "declined" ? (
                 <><p>Olá,</p><p>Não foi possível aprovar sua solicitação de acesso à Área do Cliente neste momento.</p><p>Para esclarecer dúvidas ou receber orientação, entre em contato com a equipe pelos canais oficiais da Grupo SEG System.</p><p>Atenciosamente,<br />Grupo SEG System</p></>
+              ) : status === "approved" ? (
+                <><p>Olá,</p><p>Sua solicitação de acesso à Área do Cliente foi aprovada após análise da equipe.</p><p>Esta mensagem não envia um convite nem libera contratos ou documentos. O acesso dependerá da verificação do vínculo e das permissões autorizadas.</p><p>Atenciosamente,<br />Grupo SEG System</p></>
+              ) : status === "reviewing" ? (
+                <><p>Olá,</p><p>Sua solicitação de acesso à Área do Cliente está em análise.</p><p>Nenhum acesso é liberado enquanto as verificações necessárias não forem concluídas.</p><p>Atenciosamente,<br />Grupo SEG System</p></>
               ) : (
-                <><p>Olá,</p><p>Sua solicitação de acesso à Área do Cliente foi aprovada após análise da equipe.</p><p>A equipe informará as próximas etapas após concluir as validações necessárias. Esta mensagem não envia um convite nem libera contratos ou documentos; o acesso dependerá da verificação do vínculo e das permissões autorizadas.</p><p>Atenciosamente,<br />Grupo SEG System</p></>
+                <><p>Olá,</p><p>Recebemos sua solicitação de acesso à Área do Cliente. Ela ainda aguarda análise.</p><p>Este aviso não confirma vínculo nem libera acesso.</p><p>Atenciosamente,<br />Grupo SEG System</p></>
               )}
             </div>
             <small className={styles.messageFootnote}>Conteúdo provisório para revisão. A aprovação não envia automaticamente um convite e a recusa usa texto genérico, sem expor detalhes internos.</small>

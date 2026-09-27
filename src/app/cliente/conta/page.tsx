@@ -42,6 +42,12 @@ export default function ClientSecurityHubPage() {
             </article>
           ))}
         </section>
+        <section className={styles.alternateMode}>
+          <span className={styles.cardLabel}>MODO ALTERNATIVO · NÃO É O PADRÃO</span>
+          <h2>Solicitação de acesso com aprovação</h2>
+          <p>Explore um pedido fictício e sua revisão na mesma demonstração local. Os campos de identificação ainda não foram definidos; por isso, não solicitamos dados pessoais.</p>
+          <Link href="/admin/portal/solicitacoes">Abrir prévia integrada do pedido e da revisão <ArrowRight size={14} /></Link>
+        </section>
         <footer className={styles.footer}><span>Nenhuma sessão ou conta real está ativa nesta prévia.</span><Link href="/cliente/painel">Voltar à visão geral</Link></footer>
       </section>
     </main>
