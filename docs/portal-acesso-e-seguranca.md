@@ -1,0 +1,195 @@
+# Área do cliente: acesso, convites e segurança
+
+> Documento de preparação. **Não é política jurídica aprovada nem implementação de autenticação.** Separa decisões já confirmadas de propostas e perguntas que ainda precisam de resposta. Os protótipos em `/admin/portal/*` não guardam dados nem concedem acesso.
+
+## Decisões confirmadas
+
+- No modo alternativo de solicitação de acesso, o único dado mínimo definido para o pedido é o e-mail que consta no cadastro central; a equipe verifica o vínculo ali. A prévia aceita somente endereços de demonstração `.invalid` e não consulta o cadastro.
+- O portal começa **por convite**. A administração poderá escolher entre convite, solicitação de acesso com aprovação e autocadastro, quando esse módulo for implementado.
+- A verificação do vínculo será feita pelo **cadastro central da empresa** antes de conceder acesso. O cadastro deve ser consultado por pessoa autorizada; esta decisão não significa que exista integração técnica pronta.
+- **Marcelo e TI** podem aprovar solicitações, emitir convites e definir o escopo do acesso. O sistema deverá auditar essas ações.
+- Convites terão validade de **7 dias**, serão de **uso único** e poderão ser revogados antes do uso.
+- Após aceitar o convite, o cliente entrará com **senha + confirmação de e-mail**. O link de confirmação terá validade de **7 dias**; reenvio limitado a **5 vezes por endereço em 24 horas**, com intervalo mínimo de **2 minutos**, e cada novo link invalida o anterior.
+- Recuperação de senha será por link enviado ao e-mail cadastrado, de **uso único** e validade de **1 hora**. A resposta pública deve ser genérica para não revelar se o e-mail tem conta.
+- MFA será **opcional para clientes** no início do portal, com escolha entre **aplicativo autenticador** e **código por e-mail**. Não será exigida para nenhuma ação do portal; clientes poderão usar todas as funções sem ativá-la. Para recuperação, haverá **códigos de recuperação de uso único**; se o cliente perder todos, poderá pedir ajuda à equipe após verificação de identidade. A implementação, armazenamento seguro/visualização única dos códigos e processo de validação manual ainda precisam ser definidos antes da produção.
+- Senha do cliente: mínimo de **12 caracteres**, aceitando frases-senha sem exigir mistura de maiúsculas, números ou símbolos. Rejeitar senhas comuns; a validação deve ocorrer no servidor.
+- Tentativas de login: após a **5ª falha**, aplicar espera progressiva de **1, 5 e 15 minutos** nas faixas seguintes; sem bloqueio permanente da conta e com mensagem genérica. Limitar por conta e origem. Zerar a contagem após login bem-sucedido ou após **24 horas sem novas falhas**. A implementação deve ser no servidor; monitoramento e ajuste de abuso serão revisados antes da produção.
+- Troca de e-mail: solicitar a **senha atual**, enviar confirmação ao **novo endereço** e notificar o **endereço antigo**. Manter o e-mail atual como login até que o novo endereço seja confirmado. O link vale **1 hora**; permite até **5 reenvios por endereço em 24 horas**, com intervalo mínimo de **2 minutos**, invalidando o link anterior. Após confirmação, encerrar **todas as sessões** e exigir novo login.
+- Se a pessoa no endereço atual sinalizar **“Não fui eu”**, cancelar a troca pendente, invalidar o link do novo endereço, registrar o alerta no painel de segurança e enviar aviso por **e-mail a Marcelo/TI**. Registrar o evento em auditoria quando implementado.
+- Alertas podem ser tratados por **qualquer administrador que TI tenha autorizado**. Marcar como analisado não os encerra: somente uma resolução explícita os remove dos pendentes; o histórico permanece por **12 meses**. Depois, excluir o alerta identificável e manter apenas estatísticas agregadas anônimas, se forem úteis. Exclusão automática ainda não está ativa.
+- Logs de auditoria de segurança serão mantidos por **12 meses**, separados dos alertas. Registrar apenas metadados necessários (autor, ação, data/hora, objeto e resultado); nunca senhas, tokens completos ou códigos. Após o prazo, excluir os registros detalhados; métricas agregadas anônimas podem ser mantidas se necessárias. Exceções por obrigação legal ou investigação formal exigem aprovação conjunta de **Marcelo e TI**, com motivo/base, referência do caso, aprovadores, data da aprovação e data de revisão/fim.
+- Avisos de fim de exceção: **30 e 7 dias antes**. Se a exceção for aprovada com menos de 30 dias, enviar um aviso imediato; se restarem mais de 7 dias, enviar também o lembrete de 7 dias. Com 7 dias ou menos, o aviso imediato substitui o lembrete de 7 dias para evitar duplicidade. Não enviar o aviso de 30 dias retroativamente.
+- O canal será configurável entre **somente painel**, **somente e-mail** e **painel + e-mail**; padrão inicial: **somente painel**. TI seleciona uma conta existente no **diretório de administradores** para conceder ou revogar a permissão; vinculá-la ao **ID interno imutável**, nunca ao e-mail, para que mudanças de e-mail não a transfiram nem alterem. Não permitir digitação manual de IDs na interface real. Mostrar o status da conta; bloquear novas concessões para contas suspensas ou desativadas, mas permitir revogar permissões já existentes em qualquer status. Suspensão/desativação bloqueia o acesso e o uso da permissão, mas não a revoga automaticamente: ela permanece vinculada e volta a ser utilizável se a conta for reativada, salvo se TI a tiver revogado. Na reativação, se a permissão ainda existir, avisar o administrador somente pelo painel com mensagem genérica contendo ação e data, sem motivo, link ou e-mail; expirar após 30 dias. Cada concessão ou revogação exige motivo obrigatório e gera aviso **somente no painel** do administrador afetado, sem e-mail. O aviso informa apenas a ação (concedida/revogada) e a data; não inclui o motivo, que fica restrito à auditoria, e não contém link. Expira após **30 dias**, tenha sido lido ou não; o registro de auditoria correspondente permanece por 12 meses. Registrar em auditoria quem fez a mudança, quando, para qual administrador e o motivo; também registrar autor, horário e valores anterior/novo em cada mudança de canal; mudanças de canal ficam apenas na auditoria, sem aviso aos demais administradores. Auditar todas as suspensões, desativações e reativações, além de toda tentativa malsucedida de mudança de status. Registrar ID interno da conta, transição solicitada, status anterior/novo quando aplicável, resultado, autor e data/hora. Nas falhas, usar somente categorias padronizadas, sem texto livre; categorias aprovadas (lista fechada): autorização negada, conta não encontrada no diretório, conta suspensa/desativada (categoria única), transição inválida, conflito de estado e serviço indisponível. Para rotinas automáticas, registrar ID da conta de serviço e rotina/evento de origem; se houver iniciador humano, registrar seu ID interno imutável e o nome exibido no momento. Nas mudanças manuais, exigir categoria padronizada e detalhe obrigatório de até **500 caracteres**; identificar TI pelo ID interno imutável e guardar também o nome exibido naquele momento. Não incluir senhas, tokens, códigos de verificação nem dados pessoais sensíveis ou desnecessários. Usar uma lista comum às três ações: mudança de função/vínculo, afastamento temporário, segurança, correção administrativa, decisão formal e reativação autorizada. Aplicar a retenção de 12 meses dos logs de auditoria. Sem nova aprovação conjunta documentada até a data, a exceção termina e o descarte normal é aplicado; não há renovação automática. A exclusão e os avisos automáticos ainda não estão ativos.
+- O solicitante será notificado por **e-mail** sobre a decisão. Em caso de recusa, usar mensagem **genérica**, sem expor detalhes internos. Os textos da prévia são rascunhos e ainda precisam de revisão antes de uso real.
+- O autocadastro, por si só, **não libera contratos nem documentos**. O vínculo do usuário com o cliente e o escopo autorizado precisam ser verificados no servidor.
+- Não importar nem inventar cadastros, contratos, documentos ou clientes para a prévia.
+- PostgreSQL, autenticação real, persistência das opções e notificações do portal permanecem para a etapa final, conforme a prioridade atual.
+
+## Referências de segurança consultadas
+
+- OWASP, [Email Validation and Verification Cheat Sheet — Email Change Workflows](https://cheatsheetseries.owasp.org/cheatsheets/Email_Validation_and_Verification_Cheat_Sheet.html#email-change-workflows): recomenda reautenticar, avisar o endereço atual e confirmar o novo; também orienta proteger os fluxos contra enumeração e abusos.
+- OWASP, [Authentication Cheat Sheet — Require Re-authentication for Sensitive Features](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html#require-re-authentication-for-sensitive-features): recomenda pedir credenciais atuais antes de mudanças sensíveis, como e-mail e senha.
+
+## Invariantes de segurança propostos
+
+As regras abaixo são uma base técnica para discussão; não ativam comportamento sem aprovação e implementação:
+
+1. **Negar por padrão:** ausência de sessão, vínculo ou permissão explícita resulta em acesso negado. Ocultar um botão não substitui autorização no servidor.
+2. **Separar identidade de vínculo:** provar controle de um e-mail/telefone não prova, por si só, que a pessoa representa um cliente nem determina quais contratos pode ver.
+3. **Escopo por cliente em cada requisição:** validar no servidor o usuário, a unidade/filial quando aplicável e o objeto solicitado. Não confiar em IDs enviados pelo navegador.
+4. **Convites revogáveis e de uso limitado:** validade confirmada de 7 dias e uso único; emitir tokens aleatórios de alta entropia, armazenar somente hash quando possível, impedir reutilização e permitir revogação antes do aceite. Canal de entrega ainda não foi definido.
+5. **Aprovação sem concessão excessiva:** uma aprovação deve registrar quem decidiu e limitar o acesso ao escopo expressamente autorizado; não deve liberar todo o conjunto de contratos por padrão.
+6. **Revogação efetiva:** ao remover vínculo ou desativar acesso, revogar convites pendentes e encerrar sessões/credenciais associadas, segundo política definida.
+7. **Auditoria mínima:** registrar emissão, reenvio, revogação, aprovação, recusa, mudança de permissão e autorizações administrativas, sem gravar senhas, tokens completos ou conteúdo desnecessário.
+8. **Arquivos privados:** documentos não devem ficar em URLs públicas previsíveis; cada visualização/download deve passar por autorização no servidor.
+9. **Privacidade e retenção:** coletar apenas dados necessários, definir prazos de retenção, processo de correção/exclusão e aviso de privacidade antes da ativação.
+10. **Operação resiliente:** preparar backup, restauração testada, rotação de segredos, HTTPS e alertas de acesso indevido antes de produção.
+
+## Decisões em aberto — não presumir valores
+
+| Tema | Pergunta a decidir |
+| --- | --- |
+| Destinatário | Quais dados mínimos serão pedidos para convidar uma pessoa? Confirmar o endereço de e-mail pelo cadastro central antes de enviar; definir reenvio e tratamento de endereço incorreto. |
+| Autenticação | Regras principais definidas: senha de 12+ caracteres, MFA opcional, espera progressiva e política de troca de e-mail. Ainda definir texto final das notificações de troca, envio/armazenamento dos códigos de recuperação e validade da sessão. MFA não será exigida para uso do portal. |
+| Solicitação aprovada | Quem recebe a fila, quais estados existem e como o cliente é informado de aprovação ou recusa? |
+| Autocadastro | Quais modos ficam habilitados por cliente/filial? Que prova de vínculo é exigida e quem resolve casos inconclusivos? |
+| Escopo documental | Quais categorias de contrato/documento cada papel pode consultar e por quanto tempo? |
+| Sessões | Duração, inatividade, dispositivos simultâneos e encerramento forçado após revogação. |
+| Retenção e privacidade | Prazos para convites, pedidos recusados, auditoria e documentos; contato do controlador e texto final de privacidade. |
+| Filiais | A autorização é por empresa, contrato ou unidade? Como evitar acesso cruzado entre filiais futuras? |
+
+## Sequência de implementação quando a persistência voltar ao escopo
+
+1. Confirmar as decisões acima e revisar política de privacidade/termos com o responsável.
+2. Definir o modelo de dados PostgreSQL para identidades, vínculo com cliente/filial, convites, pedidos de acesso, permissões e auditoria — sem misturar dados de clientes.
+3. Implementar endpoints com autorização por padrão negado, tokens armazenados com segurança, limitação de abuso e trilha de auditoria.
+4. Implementar emissão/revogação de convite, fila de aprovação e autocadastro de acordo com os modos escolhidos.
+5. Testar isolamento entre clientes, revogação, convites usados/expirados, recuperação e backups em homologação com dados sintéticos explicitamente identificados.
+6. Só ativar o portal após testes de segurança, verificação de e-mail/notificações configuradas, backups e revisão operacional.
+
+## Estado dos protótipos
+
+- O fluxo administrativo de convites oferece um atalho para abrir a prévia do cliente com o estado demonstrativo (válido, expirado, utilizado ou revogado); apenas o estado segue em um parâmetro de URL, nunca token, e-mail ou convite real. Estados inválidos bloqueiam a continuação. Sem autenticação, envio ou persistência.
+- `/cliente/conta`: central de atalhos para login/convite, recuperação de senha, MFA e troca de e-mail; usa conteúdo demonstrativo e não cria sessão. A navegação comum destaca esta seção também nas quatro rotas de segurança.
+- As prévias `/cliente/painel`, `/cliente/contratos`, `/cliente/documentos` e `/cliente/chamados` compartilham navegação por abas com indicação visual da rota ativa; não implica autenticação nem autorização real.
+- `/cliente/contratos`: prévia vazia para contratos e informações de serviços; não inventa cadastros, valores, unidades ou escopos. Explicita a validação de identidade, vínculo e escopo em cada requisição real.
+- `/cliente/documentos`: prévia vazia da biblioteca de documentos autorizados; não há arquivos, cliente ou links de download reais. Explicita a futura verificação de autorização no servidor para cada consulta/download.
+- `/cliente/painel`: shell visual do futuro painel do cliente, com estados vazios para contratos/serviços e documentos, além de atalho para a prévia de chamados; nenhum registro fictício é apresentado como dado real. Não autentica, não consulta cadastro e não persiste dados.
+- `/cliente/chamados`: demonstração local de abertura e histórico de solicitações em memória, com categoria, título, detalhe limitado a 500 caracteres e estados de exemplo avançáveis pelo usuário. Os identificadores e estados são explicitamente fictícios; nada envia, persiste ou representa protocolo/atendimento real.
+- `/cliente`: página informativa; não autentica e não cria contas. Inclui atalho para a prévia visual do painel.
+- `/cliente/recuperar-senha`: demonstra solicitação por e-mail com resposta genérica e link de uso único válido por 1 hora; não envia mensagem nem altera senha.
+- `/cliente/seguranca`: demonstra a opção de MFA por aplicativo autenticador ou código por e-mail e recuperação com códigos de uso único/ajuda da equipe; não ativa MFA nem gera códigos reais.
+- `/cliente/acesso`: prévia local do login, aceite demonstrativo de convite, confirmação do e-mail e criação de senha fictícia; mostra a regra de senha de 12+ caracteres e a espera progressiva planejada após 5 falhas (1, 5 e 15 minutos), com contagem zerada após login bem-sucedido ou 24 horas sem falhas. Não autentica, não envia dados e não cria contas; bloqueio de senhas comuns e throttling precisam de validação no servidor.
+- `/cliente/alterar-email`: demonstra reautenticação com senha, link de 1 hora, limite de até 5 reenvios por endereço em 24 horas (intervalo mínimo 2 minutos), notificação do endereço anterior e manutenção do e-mail atual até confirmação. Exibe rascunhos dos avisos e permite simular “Não fui eu” — cancelando o pedido, invalidando o link e mostrando o alerta a Marcelo/TI. Após confirmar, a regra é encerrar todas as sessões e exigir novo login. Não envia mensagens nem altera cadastro.
+- `/admin/portal`: compara os três modos em memória.
+- `/admin/portal/convites`: prévia sem envio de e-mail, token ou link real; permite simular estados do convite, confirmação e reenvio do e-mail em memória no navegador. Link de confirmação: validade definida de 7 dias; até 5 reenvios por endereço em 24 horas, intervalo mínimo de 2 minutos e invalidação do link anterior.
+- A revisão de solicitação mostra trilha local de criação e decisões, com estado anterior/novo, responsável simulado, escopo, consulta demonstrativa e horário local. Ela desaparece ao reiniciar/recarregar; não é auditoria real.
+- A fila demonstrativa permite filtrar por status, buscar por e-mail fictício ou ID DEMO e ordenar por mais recentes/mais antigos; tudo opera somente na memória da página.
+- A prévia de solicitações simula múltiplos pedidos em memória, cada um com e-mail fictício `.invalid`, status e trilha local independente; não inclui nome, empresa, contrato ou texto livre. O percurso cobre solicitante → fila → revisão → resposta genérica. A aprovação exige marcação demonstrativa de consulta e escopo, e confirmação explícita; a recusa também exige confirmação. Ambas alteram somente o estado local e não concedem acesso. Limpar/recarregar apaga os pedidos.
+- `/admin/portal/solicitacoes`: sem registros; permite simular Marcelo ou TI como responsável, a consulta ao cadastro central, escopos e estados da análise. Também exibe rascunhos de e-mail de aprovação e recusa genérica; não envia mensagens. As interações são locais e não alteram permissões.
+- `/admin/portal/alertas`: painel vazio por padrão; botão opcional mostra um evento fictício e rascunho do e-mail para Marcelo/TI. Simula estados pendente, em análise e resolvido; somente a resolução tira dos pendentes. Alertas ficam 12 meses e depois o item identificável será excluído, mantendo apenas estatísticas anônimas. Auditoria separada: 12 meses, sem segredos; depois excluir logs detalhados e manter métricas anônimas apenas se necessárias. Exceções simuladas exigem Marcelo + TI, motivo/base, referência, aprovadores e datas de aprovação/revisão. Avisos aos 30 e 7 dias; aprovação com menos de 30 dias gera aviso imediato e, se faltarem mais de 7 dias, também lembrete de 7 dias; com 7 dias ou menos, somente o aviso imediato. Canal configurável (painel, e-mail ou ambos), com painel como padrão; TI concede ou revoga permissão por administrador individualmente, sempre com motivo obrigatório; ela permanece ativa até revogação. Avisar o administrador afetado somente pelo painel, com mensagem genérica contendo ação e data, sem motivo e sem link; expirar após 30 dias, lido ou não. Auditar concessões e revogações; mudanças de canal ficam apenas na auditoria, sem aviso aos demais administradores. Sem nova aprovação conjunta, encerrar na data e aplicar descarte normal, sem renovação automática. Nenhuma exclusão/aviso automático está ativo; a versão real permitirá tratamento a administradores autorizados por TI. Não registra alertas ou envia e-mails reais.
+- `/admin/portal/permissoes`: simula a concessão/revogação individual da permissão para mudar o canal dos avisos, com motivo obrigatório, histórico local e aviso genérico no painel (ação/data, sem link ou motivo; expira em 30 dias). Também esclarece que mudanças no canal geram apenas auditoria. A prévia oferece três contas fictícias (ativa, suspensa e desativada) com e-mails no domínio reservado `.invalid`, pesquisáveis por nome/e-mail. Novas concessões são bloqueadas para as duas últimas; o status suspenso/desativado bloqueia o uso, mas não revoga automaticamente uma permissão existente, que permanece até TI revogá-la. Na reativação com permissão existente, mostrar aviso genérico no painel com ação/data (sem motivo, link ou e-mail, expira em 30 dias). Revogações ficam disponíveis em qualquer status. Na implementação real, buscar no diretório existente pelo nome ou e-mail corporativo verificado, selecionar a conta (sem digitar IDs manualmente) e vincular a permissão ao ID interno imutável, não ao e-mail. A prévia simula localmente transições manuais, justificativas, auditoria demonstrativa e aviso de reativação; repetir o status atual registra falha de transição inválida. Não autentica TI, não altera permissões reais nem persiste dados. Na versão real, auditar suspensão/desativação/reativação e tentativas malsucedidas por 12 meses, com transição solicitada e resultado; usar a lista fechada de categorias sem texto livre para falhas (autorização negada, conta não encontrada no diretório, conta suspensa/desativada (categoria única), transição inválida, conflito de estado, serviço indisponível). Em rotinas automáticas, identificar conta de serviço e rotina/evento; se houver iniciador humano, guardar ID imutável e nome exibido. Em ações manuais, exigir categoria padronizada e detalhe obrigatório de até 500 caracteres, sem senhas, tokens, códigos de verificação ou dados pessoais sensíveis/desnecessários; usar lista comum (mudança de função/vínculo, afastamento temporário, segurança, correção administrativa, decisão formal, reativação autorizada). Registrar o ID imutável de TI e o nome exibido no momento.
+- `/admin/portal/autocadastro`: estados demonstrativos; não coleta dados nem libera acesso.
+
+## Implementação real — etapa 1 (27/09/2026)
+
+A primeira etapa de autenticação do portal **está implementada e verificada contra um PostgreSQL real**, com a suíte de integração `tests/client-access.integration.test.mjs` (`npm run test:integration`). O esquema está em `db/migrations/003-client-access.sql`, o núcleo puro em `src/lib/client-auth-core.mjs` e a API em `src/server/client-access-api.mjs`.
+
+### O que está ativo de verdade
+
+- **Convite como modo inicial** (decisão confirmada): emissão, listagem e revogação via API administrativa (`POST/GET /api/admin/invites`, `DELETE /api/admin/invites/:id`), usando a sessão administrativa existente (Marcelo/TI). Validade de **7 dias**, **uso único**, revogável antes do uso. Tokens nunca são persistidos em claro: o banco guarda somente o hash SHA-256. Sem SMTP configurado, a API devolve o link ao administrador para entrega manual (o e-mail nunca sai se não estiver configurado, e o status é informado).
+- **Aceite de convite** (`POST /api/auth/invite/accept`, página real `/cliente/convite`): cria a identidade `pending_email`, grava a senha com **scrypt** (parâmetros embutidos no hash) e emite o link de confirmação de e-mail (**7 dias**, uso único, novo link invalida o anterior). Senha mínima de **12 caracteres**, frases-senha aceitas, senhas comuns recusadas — tudo validado no servidor.
+- **Confirmação de e-mail** (`POST /api/auth/confirm-email`, página real `/cliente/confirmar-email`): ativa a conta (`active`) uma única vez.
+- **Login** (`POST /api/auth/login`, página real `/cliente/entrar`): sessão do cliente **revogável no servidor** (cookie HttpOnly, SameSite=Lax; o banco guarda só o hash do token). Espera progressiva após a **5ª falha** (**1, 5 e 15 minutos** nas faixas seguintes), por conta e origem, zerando após sucesso ou **24 horas** sem falhas. Mensagem sempre genérica, sem revelar se o e-mail tem conta.
+- **Recuperação de senha** (`POST /api/auth/recover` + `POST /api/auth/reset`, página real `/cliente/redefinir-senha`): link de **uso único válido por 1 hora**, resposta pública **genérica** (sem confirmar se a conta existe e sem enviar e-mail para endereços sem conta). Máximo de **5 links por endereço em 24 horas** e intervalo mínimo de **2 minutos**. A redefinição **encerra todas as sessões** da identidade.
+- **Primeira rota protegida**: `/cliente/app` exige sessão válida (`GET /api/auth/me`) e mostra os dados da própria conta; sem sessão, redireciona ao login. Ainda **não** expõe contratos nem documentos — isso exige o vínculo verificado com o cadastro central (etapa seguinte).
+- **Trilha de auditoria** (`auth_access_audit`): emissões/revogações/aceites de convite, logins (permitidos e negados por categoria: credenciais inválidas, throttled etc.), confirmações, pedidos e conclusões de recuperação, logout e revogações em massa — com categorias fechadas no banco, sem senhas, tokens completos ou códigos. Retenção prevista de 12 meses; **exclusão automática ainda não está ativa**.
+
+### Verificação automatizada
+
+`npm run test:integration` sobe o servidor contra um PostgreSQL real e **um servidor SMTP de captura embutido no teste**, cobrindo 13 cenários de ponta a ponta: entrega real das mensagens de convite/confirmação/recuperação (diálogo SMTP exercitado, não apenas "not_configured"), hashing de tokens e senhas no banco, limites de reenvio, throttle progressivo com `Retry-After`, uso único de links, revogação de convites, expiração e encerramento de sessões ao trocar a senha. A regra pura do núcleo (`tests/client-auth-core.test.mjs`) roda sem banco em `npm test`.
+
+### Ainda não implementado nesta camada
+
+- Vínculo verificado com o **cadastro central** e escopo por contrato/filial (pré-requisito para `/cliente/painel` real com dados).
+- Modos alternativos de cadastro (solicitação com aprovação e autocadastro) — hoje só convite.
+- Troca de e-mail com confirmação no novo endereço e aviso ao antigo, MFA opcional e códigos de recuperação.
+- Interface administrativa (hoje os convites são geridos por API; a UI virá com o painel administrativo consolidado).
+- Exclusão automática de alertas/logs ao fim da retenção, 2FA de administradores, RBAC completo e rate limit distribuído.
+- Provedor SMTP real e política de privacidade aprovada — obrigatórios antes de produção.
+
+---
+
+## Implementação real — etapa 2 (27/09/2026): vínculo verificado + dados reais do cliente
+
+Com a identidade da etapa 1 pronta, a etapa 2 materializa a regra central do documento:
+o portal nunca confia em identificadores vindos do navegador. Todo dado é entregue com base
+no **vínculo verificado no servidor** entre a identidade de acesso e o cadastro central
+(“grant”), registrado com emissor e motivo.
+
+### Modelo implementado (migração `004-client-space.sql`)
+
+- **`client_accounts`**: cadastro central da empresa/condomínio cliente (`parent_account_id`
+  prepara filiais futuras). Situações: `active`, `suspended`, `closed`.
+- **`client_access_grants`**: o vínculo. Índice único parcial garante **um vínculo ativo por
+  par identidade+cadastro**; revogação é soft (histórico preservado) e idempotente.
+- **`client_contracts`** (título, serviço do catálogo público, resumo, vigência, situação),
+  **`client_documents`** (metadados + `storage_key` aleatório de 48 hex; o conteúdo fica em
+  pasta privada fora do site, nunca servido por URL pública),
+  **`client_tickets`** e **`client_ticket_status_audit`** (mudança de situação com anterior/nova).
+- Trilha `auth_access_audit` ampliada com: `account_create`, `account_status`, `grant_issue`,
+  `grant_revoke`, `contract_create`, `contract_status`, `contract_list`, `document_upload`,
+  `document_download`, `document_list`, `ticket_open`, `ticket_status`, `ticket_list`.
+  **Nenhuma linha contém senha, token ou segredo** — apenas ids, ação, resultado e quem fez.
+
+### Resolução de permissão em cada requisição (deny-by-default)
+
+1. Sessão do cliente válida (etapa 1, revogável no servidor).
+2. Existe grant **ativo** (`revoked_at IS NULL`) entre a identidade e o cadastro pedido.
+3. O cadastro está `active` (conta suspensa/encerrada anula o efeito do grant na hora).
+
+Falha em qualquer passo → `403 { "error": "forbidden" }` **genérico** (sem revelar se o
+cadastro existe) + linha de auditoria com categoria `authorization_denied` e a ação de leitura
+correspondente (`contract_list`, `document_list`, …). Nada do `account` enviado pelo
+navegador é aceito sem essa verificação.
+
+### Rotas da etapa 2
+
+- Cliente: `GET /api/client/accounts` · `GET /api/client/contracts|documents|tickets?account=<uuid>`
+  · `GET /api/client/documents/:id/download` (bytes com `Content-Disposition: attachment`,
+  `Cache-Control: private, no-store`, `nosniff`, download auditado) · `POST /api/client/tickets`.
+- Admin (chave marcelo/TI): `GET /api/admin/identities?q=` · `GET|POST /api/admin/client-accounts`
+  · `PATCH /api/admin/client-accounts/:id` · `GET|POST /api/admin/grants` · `DELETE /api/admin/grants/:id`
+  (motivo obrigatório, revogação idempotente) · `GET|POST /api/admin/contracts` (serviço validado
+  contra o catálogo público do site) · `PATCH /api/admin/contracts/:id` · `GET|POST /api/admin/documents`
+  (upload base64, tipos permitidos PDF/PNG/JPG/webp/TXT/CSV/DOCX/XLSX, limite 10 MB) ·
+  `GET /api/admin/documents/:id/download` · `GET /api/admin/tickets?status=&account=` ·
+  `PATCH /api/admin/tickets/:id` (transação `FOR UPDATE` + trilha de situação + resposta ao
+  cliente até 500 caracteres, mantida quando o campo chega em branco).
+
+### Telas
+
+- Área do cliente em `/cliente/app` (navegação Visão geral · Contratos · Documentos · Chamados,
+  seletor de cadastro quando há mais de um vínculo, estados vazios explicando que a equipe ainda
+  não vinculou/publicou os dados, cadastro suspenso não exibe dados protegidos).
+- Painel administrativo em `/admin/clientes` com as seções numeradas na ordem do processo:
+  **1** cadastros centrais → **2** vínculos (com busca de identidade e motivo obrigatório) →
+  **3** contratos → **4** documentos → **5** chamados com resposta visível ao cliente.
+
+### Limites e rejeições padronizadas
+
+Validação pura em `src/lib/client-space-core.mjs` (mesma fonte para UI e testes): nomes sem
+`<>`, limites (cadastro 160 · motivo/escopo 500 · contrato 160/500 · documento 160/60 ·
+chamado 120/500/500), períodos de vigência coerentes (`AAAA-MM-DD`), nomes de arquivo com
+caracteres proibidos do Windows removidos e apenas a extensão permitida no mapa de tipos.
+
+### Cobertura de testes da etapa 2
+
+- `tests/client-space-core.test.mjs` (unitário dos validadores).
+- `tests/client-space.integration.test.mjs` (PostgreSQL real, servidor real):
+  vínculo exigido em 403 genérico com auditoria; cadastro suspenso nega mesmo com vínculo;
+  grant duplicado → 409; revogação corta o acesso na hora e repetir a revogação é seguro
+  (`already_revoked`); upload/download com **round-trip byte a byte** e headers seguros;
+  tipo proibido e arquivo > 10 MB rejeitados; chamado aberto só dentro do vínculo; resposta da
+  equipe visível ao cliente; trilhas `grant_issue/grant_revoke/ticket_status/document_download`
+  conferidas direto no banco.

@@ -1,0 +1,5 @@
+GRUPO SEG SYSTEM — PRÉVIA ESTÁTICA
+
+Extraia todo o ZIP. Abra index.html no navegador. Se seu navegador bloquear scripts ao abrir arquivos locais, execute "python -m http.server 8080" na pasta extraída e abra http://localhost:8080 somente no seu computador.
+
+Esta é uma prévia; não há login, CRM, envio automático de e-mails ou armazenamento de leads. O formulário apenas prepara uma mensagem para WhatsApp. Não publique como sistema final.
