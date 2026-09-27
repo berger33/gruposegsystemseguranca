@@ -73,7 +73,7 @@ export default function SecurityAlertsPreviewPage() {
         </section>
         <section className={styles.holdSection} aria-labelledby="hold-title">
           <div className={styles.holdHeader}><div><span className={styles.eyebrow}>EXCEÇÃO DE RETENÇÃO · PRÉVIA DE PROCESSO</span><h2 id="hold-title">Solicitar extensão temporária</h2></div><span className={styles.channelPill}><ShieldCheck size={13} /> DUPLA APROVAÇÃO</span></div>
-          <p className={styles.holdIntro}>Uma obrigação legal ou investigação formal pode exigir prazo diferente. A exceção precisa de motivo, referência do caso, aprovação de Marcelo e TI e data de revisão/fim. Antes do vencimento, avisar os responsáveis 30 e 7 dias antes; sem nova aprovação conjunta até a data, a exceção termina e o descarte normal é aplicado. Use apenas dados fictícios.</p>
+          <p className={styles.holdIntro}>Uma obrigação legal ou investigação formal pode exigir prazo diferente. A exceção precisa de motivo, referência do caso, aprovação de Marcelo e TI e data de revisão/fim. Avisos previstos: 30 e 7 dias antes; se aprovada com menos de 30 dias, aviso imediato e lembrete de 7 dias se faltarem mais de 7 dias (com 7 dias ou menos, somente imediato). Sem nova aprovação conjunta até a data, a exceção termina e o descarte normal é aplicado. Use apenas dados fictícios.</p>
           <div className={styles.reminderSettings}>
             <strong>Canal dos avisos de vencimento · configuração demonstrativa</strong>
             <div role="group" aria-label="Canal dos avisos de vencimento">
@@ -102,7 +102,7 @@ export default function SecurityAlertsPreviewPage() {
           ) : (
             <div className={styles.holdResult} role="status" aria-live="polite">
               <span className={styles.resultIcon}><Check size={17} /></span>
-              <div><strong>Exceção aprovada na demonstração</strong><p><b>Motivo:</b> {holdReason}</p><p><b>Referência:</b> {holdReference} · <b>Revisão/fim:</b> {holdReviewDate}</p><p><b>Aprovadores simulados:</b> Marcelo + TI · <b>Data/hora:</b> registrada pelo servidor na implementação real.</p><p><b>Lembretes:</b> 30 e 7 dias antes · <b>Canal:</b> {holdReminderChannel === "panel" ? "somente painel" : holdReminderChannel === "email" ? "somente e-mail" : "painel + e-mail"}.</p><small>Sem renovação automática: se não houver nova aprovação conjunta até o prazo, a exceção termina e aplica-se o descarte normal. Esta prévia não salvou, auditou nem prorrogou dados.</small></div>
+              <div><strong>Exceção aprovada na demonstração</strong><p><b>Motivo:</b> {holdReason}</p><p><b>Referência:</b> {holdReference} · <b>Revisão/fim:</b> {holdReviewDate}</p><p><b>Aprovadores simulados:</b> Marcelo + TI · <b>Data/hora:</b> registrada pelo servidor na implementação real.</p><p><b>Lembretes:</b> 30 e 7 dias antes; para aprovação com menos de 30 dias, aviso imediato e lembrete de 7 dias se faltarem mais de 7 dias · <b>Canal:</b> {holdReminderChannel === "panel" ? "somente painel" : holdReminderChannel === "email" ? "somente e-mail" : "painel + e-mail"}.</p><small>Sem renovação automática: se não houver nova aprovação conjunta até o prazo, a exceção termina e aplica-se o descarte normal. Esta prévia não salvou, auditou nem prorrogou dados.</small></div>
               <button type="button" className={styles.holdReset} onClick={() => setHoldSubmitted(false)}>Editar demonstração</button>
             </div>
           )}
