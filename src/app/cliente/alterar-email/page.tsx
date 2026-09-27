@@ -71,7 +71,7 @@ export default function ChangeEmailPreviewPage() {
                 </div>
                 <button type="button" disabled={reportedUnexpected} onClick={() => setStage("confirmed")}>{reportedUnexpected ? "Confirmação bloqueada após sinalização" : "Simular confirmação do novo e-mail"} {!reportedUnexpected && <Check size={15} />}</button>
                 {reportedUnexpected ? (
-                  <p className={styles.pendingNote}>A solicitação seria cancelada, o link invalidado e Marcelo/TI notificados para análise. Nenhuma ação real foi executada.</p>
+                  <p className={styles.pendingNote}>A solicitação seria cancelada, o link invalidado, o alerta registrado no painel de segurança e um e-mail enviado a Marcelo/TI. Nenhuma ação real foi executada.</p>
                 ) : (
                   <>
                     <p className={styles.pendingNote}>Link válido por 1 hora. Até 5 reenvios por endereço em 24 horas, com intervalo mínimo de 2 minutos; cada novo link invalida o anterior. Simulações de reenvio: {resendCount}/5. Nenhuma mensagem foi enviada.</p>
