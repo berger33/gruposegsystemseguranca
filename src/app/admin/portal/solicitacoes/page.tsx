@@ -17,6 +17,15 @@ type AccessAuditEvent = {
   centralRecordChecked: boolean;
   localTime: string;
 };
+type DemoAccessRequest = {
+  id: number;
+  email: string;
+  status: RequestStatus;
+  approver: ApproverRole;
+  centralRecordChecked: boolean;
+  scope: ClientScope[];
+  auditEvents: AccessAuditEvent[];
+};
 
 const statusOptions: Array<{ id: RequestStatus; label: string }> = [
   { id: "pending", label: "Recebida" },
@@ -32,47 +41,62 @@ const scopeOptions: Array<{ id: ClientScope; label: string }> = [
 ];
 
 export default function AccessRequestsPreviewPage() {
-  const [status, setStatus] = useState<RequestStatus>("pending");
-  const [approver, setApprover] = useState<ApproverRole>("marcelo");
-  const [centralRecordChecked, setCentralRecordChecked] = useState(false);
-  const [scope, setScope] = useState<ClientScope[]>([]);
-  const [validationMessage, setValidationMessage] = useState("");
-  const [requestCreated, setRequestCreated] = useState(false);
+  const [requests, setRequests] = useState<DemoAccessRequest[]>([]);
+  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
+  const [nextRequestId, setNextRequestId] = useState(1);
   const [requestEmail, setRequestEmail] = useState("");
-  const [auditEvents, setAuditEvents] = useState<AccessAuditEvent[]>([]);
+  const [validationMessage, setValidationMessage] = useState("");
+  const selectedRequest = requests.find(request => request.id === selectedRequestId) ?? null;
+  const requestCreated = Boolean(selectedRequest);
+  const status = selectedRequest?.status ?? "pending";
+  const approver = selectedRequest?.approver ?? "marcelo";
+  const centralRecordChecked = selectedRequest?.centralRecordChecked ?? false;
+  const scope = selectedRequest?.scope ?? [];
+  const auditEvents = selectedRequest?.auditEvents ?? [];
+
+  function updateSelectedRequest(update: (request: DemoAccessRequest) => DemoAccessRequest) {
+    if (selectedRequestId === null) return;
+    setRequests(current => current.map(request => request.id === selectedRequestId ? update(request) : request));
+  }
 
   function createDemoRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setRequestCreated(true);
-    setStatus("pending");
-    setApprover("marcelo");
-    setCentralRecordChecked(false);
-    setScope([]);
-    setValidationMessage("");
-    setAuditEvents([{
-      id: 1,
-      previousStatus: null,
-      nextStatus: "pending",
-      actor: "Solicitante fictício",
-      scopes: [],
+    const id = nextRequestId;
+    const created: DemoAccessRequest = {
+      id,
+      email: requestEmail.trim(),
+      status: "pending",
+      approver: "marcelo",
       centralRecordChecked: false,
-      localTime: new Date().toLocaleString("pt-BR"),
-    }]);
+      scope: [],
+      auditEvents: [{
+        id: 1,
+        previousStatus: null,
+        nextStatus: "pending",
+        actor: "Solicitante fictício",
+        scopes: [],
+        centralRecordChecked: false,
+        localTime: new Date().toLocaleString("pt-BR"),
+      }],
+    };
+    setRequests(current => [created, ...current]);
+    setSelectedRequestId(id);
+    setNextRequestId(current => current + 1);
+    setRequestEmail("");
+    setValidationMessage("");
   }
 
   function resetDemoRequest() {
-    setRequestCreated(false);
+    setRequests([]);
+    setSelectedRequestId(null);
+    setNextRequestId(1);
     setRequestEmail("");
-    setAuditEvents([]);
-    setStatus("pending");
-    setCentralRecordChecked(false);
-    setScope([]);
     setValidationMessage("");
   }
 
   function updateStatus(nextStatus: RequestStatus) {
-    if (!requestCreated) {
-      setValidationMessage("Crie primeiro uma solicitação demonstrativa; nenhum pedido real está conectado a esta prévia.");
+    if (!selectedRequest) {
+      setValidationMessage("Selecione ou crie uma solicitação demonstrativa; nenhum pedido real está conectado a esta prévia.");
       return;
     }
     if (nextStatus === "approved" && (!centralRecordChecked || scope.length === 0)) {
@@ -80,23 +104,40 @@ export default function AccessRequestsPreviewPage() {
       return;
     }
     setValidationMessage("");
-    if (nextStatus === status) return;
-    const previousStatus = status;
-    setAuditEvents(current => [...current, {
-      id: current.length + 1,
+    if (nextStatus === selectedRequest.status) return;
+    const previousStatus = selectedRequest.status;
+    const auditEvent: AccessAuditEvent = {
+      id: selectedRequest.auditEvents.length + 1,
       previousStatus,
       nextStatus,
       actor: approver === "marcelo" ? "Marcelo · simulado" : "TI / sistema · simulado",
       scopes: scopeOptions.filter(item => scope.includes(item.id)).map(item => item.label),
       centralRecordChecked,
       localTime: new Date().toLocaleString("pt-BR"),
-    }]);
-    setStatus(nextStatus);
+    };
+    updateSelectedRequest(request => ({ ...request, status: nextStatus, auditEvents: [...request.auditEvents, auditEvent] }));
+  }
+
+  function setApprover(nextApprover: ApproverRole) {
+    updateSelectedRequest(request => ({ ...request, approver: nextApprover }));
+  }
+
+  function setCentralRecordChecked(checked: boolean) {
+    updateSelectedRequest(request => ({ ...request, centralRecordChecked: checked }));
+    setValidationMessage("");
   }
 
   function toggleScope(item: ClientScope) {
-    if (!requestCreated) return;
-    setScope(current => current.includes(item) ? current.filter(value => value !== item) : [...current, item]);
+    if (!selectedRequest) return;
+    updateSelectedRequest(request => ({
+      ...request,
+      scope: request.scope.includes(item) ? request.scope.filter(value => value !== item) : [...request.scope, item],
+    }));
+    setValidationMessage("");
+  }
+
+  function selectRequest(id: number) {
+    setSelectedRequestId(id);
     setValidationMessage("");
   }
 
@@ -117,35 +158,39 @@ export default function AccessRequestsPreviewPage() {
 
         <section className={styles.requesterSection} aria-labelledby="requester-title">
           <div><span className={styles.sectionLabel}>01 · VISÃO DO SOLICITANTE</span><h2 id="requester-title">Solicitar acesso ao portal</h2><p>Alternativa ao convite, sujeita à habilitação. Solicita somente o e-mail cadastrado para a equipe verificar o vínculo no cadastro central; não libera acesso automaticamente.</p></div>
-          {!requestCreated ? (
+          <div className={styles.requesterActions}>
             <form className={styles.requestForm} onSubmit={createDemoRequest}>
               <label htmlFor="access-request-email">E-mail do cadastro central · fictício</label>
               <input id="access-request-email" type="email" required maxLength={254} pattern="[^@\s]+@[^@\s]+\.invalid" title="Use somente um endereço fictício terminado em .invalid" placeholder="cliente-demo@example.invalid" value={requestEmail} onChange={event => setRequestEmail(event.target.value)} />
               <small>É o único dado solicitado nesta etapa. Não use e-mail real; o domínio .invalid é reservado para exemplos.</small>
-              <button className={styles.createRequest} type="submit">Simular envio de pedido fictício <ArrowRight size={15} /></button>
+              <button className={styles.createRequest} type="submit">Simular novo pedido fictício <ArrowRight size={15} /></button>
             </form>
-          ) : (
-            <div className={styles.createdNotice} role="status"><CircleCheck size={16} /><span>Pedido DEMO-001 enviado somente à fila simulada. E-mail de teste: {requestEmail}. Nenhum servidor consultado.</span><button type="button" onClick={resetDemoRequest}>Reiniciar simulação</button></div>
-          )}
+            {requests.length > 0 && <button className={styles.clearRequests} type="button" onClick={resetDemoRequest}>Limpar pedidos desta sessão</button>}
+          </div>
         </section>
 
         <section className={styles.queue} aria-labelledby="queue-title">
           <div className={styles.queueHeader}>
             <div><span className={styles.sectionLabel}>FILA DE REVISÃO</span><h2 id="queue-title">Solicitações recebidas</h2></div>
-            <span className={styles.unavailable}><Clock3 size={14} /> {requestCreated ? "1 PEDIDO FICTÍCIO" : "SEM CONEXÃO"}</span>
+            <span className={styles.unavailable}><Clock3 size={14} /> {requests.length ? `${requests.length} PEDIDO${requests.length === 1 ? "" : "S"} FICTÍCIO${requests.length === 1 ? "" : "S"}` : "SEM CONEXÃO"}</span>
           </div>
-          {!requestCreated ? (
+          {requests.length === 0 ? (
             <div className={styles.emptyState}>
               <span className={styles.emptyIcon}><FileSearch size={22} /></span>
               <strong>Nenhum registro é exibido nesta prévia</strong>
-              <p>Use o botão de simulação acima para criar um pedido local, sem dados pessoais, e explorar a revisão.</p>
+              <p>Use o formulário acima para criar pedidos locais e explorar a revisão.</p>
             </div>
           ) : (
-            <article className={styles.demoRequest}>
-              <div><strong>Pedido DEMO-001 · solicitante fictício</strong><span>E-mail de teste: {requestEmail} · sem outros dados pessoais ou de empresa</span></div>
-              <span className={styles.demoRequestStatus}>{statusOptions.find(item => item.id === status)?.label}</span>
-              <p>Pedido de acesso ao portal. Vínculo ainda não verificado nesta simulação.</p>
-            </article>
+            <div className={styles.demoRequestList}>
+              {requests.map(request => (
+                <article className={`${styles.demoRequest} ${selectedRequestId === request.id ? styles.demoRequestSelected : ""}`} key={request.id}>
+                  <div><strong>Pedido DEMO-{String(request.id).padStart(3, "0")} · solicitante fictício</strong><span>E-mail de teste: {request.email}</span></div>
+                  <span className={styles.demoRequestStatus}>{statusOptions.find(item => item.id === request.status)?.label}</span>
+                  <p>Vínculo ainda não verificado nesta simulação.</p>
+                  <button type="button" aria-pressed={selectedRequestId === request.id} onClick={() => selectRequest(request.id)}>{selectedRequestId === request.id ? "Selecionado para revisão" : "Selecionar para revisão"}</button>
+                </article>
+              ))}
+            </div>
           )}
         </section>
 
@@ -161,7 +206,7 @@ export default function AccessRequestsPreviewPage() {
         </section>
 
         <section className={styles.decisionSection} aria-labelledby="decision-title">
-          <div className={styles.decisionIntro}><span className={styles.sectionLabel}>02 · VISÃO DA EQUIPE · PRÉVIA INTERATIVA</span><h2 id="decision-title">Revisar a solicitação demonstrativa</h2><p>Crie um pedido fictício acima para habilitar os controles. Explore responsável, verificação, escopo e decisão; nada concede acesso real.</p></div>
+          <div className={styles.decisionIntro}><span className={styles.sectionLabel}>02 · VISÃO DA EQUIPE · PRÉVIA INTERATIVA</span><h2 id="decision-title">Revisar {selectedRequest ? `DEMO-${String(selectedRequest.id).padStart(3, "0")}` : "a solicitação demonstrativa"}</h2><p>Selecione um pedido fictício na fila para revisar responsável, verificação, escopo e decisão. Nada concede acesso real.</p></div>
 
           <div className={styles.simulatorGrid}>
             <div className={styles.simulatorBlock}>
@@ -171,7 +216,7 @@ export default function AccessRequestsPreviewPage() {
                 <button type="button" disabled={!requestCreated} className={approver === "ti" ? styles.roleSelected : ""} aria-pressed={approver === "ti"} onClick={() => setApprover("ti")}>TI / sistema</button>
               </div>
               <label className={styles.verifyToggle}>
-                <input type="checkbox" disabled={!requestCreated} checked={centralRecordChecked} onChange={event => { setCentralRecordChecked(event.target.checked); setValidationMessage(""); }} />
+                <input type="checkbox" disabled={!requestCreated} checked={centralRecordChecked} onChange={event => setCentralRecordChecked(event.target.checked)} />
                 <span><strong>Simular consulta ao cadastro central</strong><small>Marque apenas para demonstrar a etapa de verificação; nenhum cadastro é consultado.</small></span>
               </label>
               <strong className={styles.controlLabel}>Escopo a demonstrar</strong>
@@ -202,14 +247,14 @@ export default function AccessRequestsPreviewPage() {
           {requestCreated && (
             <div className={styles.requesterOutcome} role="status" aria-live="polite">
               <span className={styles.sectionLabel}>VISÃO DO SOLICITANTE · RESPOSTA DEMONSTRATIVA</span>
-              <strong>{status === "pending" ? "Pedido recebido" : status === "reviewing" ? "Pedido em análise" : status === "approved" ? "Pedido aprovado na simulação" : "Não foi possível aprovar o pedido neste momento"}</strong>
+              <strong>{status === "pending" ? "Pedido recebido" : status === "reviewing" ? "Pedido em análise" : status === "approved" ? "Pedido aprovado na simulação" : "Não foi possível aprovar o pedido neste momento"} · DEMO-{String(selectedRequest?.id ?? 0).padStart(3, "0")}</strong>
               <p>{status === "declined" ? "Mensagem genérica, sem detalhes internos. Nenhum e-mail foi enviado." : status === "approved" ? "A aprovação simulada não cria conta, não substitui a verificação do vínculo e não libera contratos ou documentos." : "Nenhum acesso é concedido antes de verificar o vínculo e concluir a decisão no servidor."}</p>
             </div>
           )}
           {requestCreated && (
             <section className={styles.auditSection} aria-labelledby="request-audit-title">
               <div className={styles.auditHeading}><div><span className={styles.sectionLabel}>TRILHA LOCAL · NÃO PERSISTIDA</span><h3 id="request-audit-title">Histórico da solicitação</h3></div><span>{auditEvents.length} {auditEvents.length === 1 ? "evento" : "eventos"}</span></div>
-              <p className={styles.auditNote}>Registro demonstrativo em memória. O sistema real deverá gravar no servidor o estado, responsável, escopo e data/hora segundo a política aprovada.</p>
+              <p className={styles.auditNote}>Pedido DEMO-{String(selectedRequest?.id ?? 0).padStart(3, "0")} · Registro demonstrativo em memória. O sistema real deverá gravar no servidor o estado, responsável, escopo e data/hora segundo a política aprovada.</p>
               <ol className={styles.auditList}>
                 {auditEvents.map(event => (
                   <li key={event.id}>
