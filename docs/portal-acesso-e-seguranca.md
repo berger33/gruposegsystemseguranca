@@ -10,7 +10,7 @@
 - Convites terão validade de **7 dias**, serão de **uso único** e poderão ser revogados antes do uso.
 - Após aceitar o convite, o cliente entrará com **senha + confirmação de e-mail**. O link de confirmação terá validade de **7 dias**; reenvio limitado a **5 vezes por endereço em 24 horas**, com intervalo mínimo de **2 minutos**, e cada novo link invalida o anterior.
 - Recuperação de senha será por link enviado ao e-mail cadastrado, de **uso único** e validade de **1 hora**. A resposta pública deve ser genérica para não revelar se o e-mail tem conta.
-- MFA será **opcional para clientes** no início do portal, com escolha entre **aplicativo autenticador** e **código por e-mail**. Para recuperação, haverá **códigos de recuperação de uso único**; se o cliente perder todos, poderá pedir ajuda à equipe após verificação de identidade. A implementação, armazenamento seguro/visualização única dos códigos e processo de validação manual ainda precisam ser definidos antes da produção.
+- MFA será **opcional para clientes** no início do portal, com escolha entre **aplicativo autenticador** e **código por e-mail**. Não será exigida para nenhuma ação do portal; clientes poderão usar todas as funções sem ativá-la. Para recuperação, haverá **códigos de recuperação de uso único**; se o cliente perder todos, poderá pedir ajuda à equipe após verificação de identidade. A implementação, armazenamento seguro/visualização única dos códigos e processo de validação manual ainda precisam ser definidos antes da produção.
 - O solicitante será notificado por **e-mail** sobre a decisão. Em caso de recusa, usar mensagem **genérica**, sem expor detalhes internos. Os textos da prévia são rascunhos e ainda precisam de revisão antes de uso real.
 - O autocadastro, por si só, **não libera contratos nem documentos**. O vínculo do usuário com o cliente e o escopo autorizado precisam ser verificados no servidor.
 - Não importar nem inventar cadastros, contratos, documentos ou clientes para a prévia.
@@ -36,7 +36,7 @@ As regras abaixo são uma base técnica para discussão; não ativam comportamen
 | Tema | Pergunta a decidir |
 | --- | --- |
 | Destinatário | Quais dados mínimos serão pedidos para convidar uma pessoa? Confirmar o endereço de e-mail pelo cadastro central antes de enviar; definir reenvio e tratamento de endereço incorreto. |
-| Autenticação | Senha + confirmação de e-mail; MFA opcional por aplicativo autenticador ou código por e-mail, com códigos de recuperação e auxílio da equipe após verificação. Definir operações que podem exigir MFA e processo de troca de e-mail. |
+| Autenticação | Senha + confirmação de e-mail; MFA opcional por aplicativo autenticador ou código por e-mail, com códigos de recuperação e auxílio da equipe após verificação. MFA não será exigida para nenhuma ação do portal. Processo de troca de e-mail ainda deve ser definido. |
 | Solicitação aprovada | Quem recebe a fila, quais estados existem e como o cliente é informado de aprovação ou recusa? |
 | Autocadastro | Quais modos ficam habilitados por cliente/filial? Que prova de vínculo é exigida e quem resolve casos inconclusivos? |
 | Escopo documental | Quais categorias de contrato/documento cada papel pode consultar e por quanto tempo? |

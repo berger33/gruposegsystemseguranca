@@ -20,7 +20,7 @@ export default function ClientSecurityPreviewPage() {
       <section className={styles.content}>
         <span className={styles.eyebrow}>PORTAL DO CLIENTE · CONFIGURAÇÃO DEMONSTRATIVA</span>
         <h1>Uma etapa extra,<br /><em>se você quiser.</em></h1>
-        <p className={styles.intro}>A autenticação em duas etapas (MFA) será opcional. Na configuração real, o cliente poderá escolher um dos métodos disponíveis.</p>
+        <p className={styles.intro}>A autenticação em duas etapas (MFA) será opcional. O cliente poderá escolher um método, mas nenhuma ação do portal exigirá ativar essa proteção.</p>
         <div className={styles.notice} role="note"><TriangleAlert size={18} /><p><strong>Esta é só uma prévia.</strong> Não ativa MFA nem envia códigos. Não informe códigos reais ou dados de conta.</p></div>
 
         <section className={styles.card} aria-labelledby="methods-title">
