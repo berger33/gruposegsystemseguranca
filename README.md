@@ -7,15 +7,18 @@ Sistema em desenvolvimento para o Grupo SEG System. O **plano foi registrado em 
 
 ## Prévia atual
 
-Primeiro incremento: site público responsivo com composições **Institucional clássica** e **Tecnologia/monitoramento** (o seletor é uma prévia local, não uma configuração global), seis serviços informados no site atual, montador de interesse, solicitação de orçamento/visita via link oficial de WhatsApp e assistente de FAQ com respostas fixas. Esta aplicação **não está pronta para produção**.
+Primeiro incremento salvo: site público responsivo com a interface 01 (composição institucional aprovada pelo usuário) e seus fluxos de prévia. O **layout 02 — Central** está disponível em `/layout-02` para avaliação sequencial; os nove layouts seguintes só serão iniciados após aprovação de cada etapa. Inclui seis serviços citados no site atual, montagem de interesse, solicitação via WhatsApp e FAQ fixa. A foto da central é ilustração conceitual gerada, não instalação real da empresa. Esta aplicação **não está pronta para produção**.
 
 O formulário **não salva leads nem envia e-mails**: ele abre uma mensagem para o visitante revisar e enviar manualmente no WhatsApp. Portal autenticado, CRM, agendamento confirmado, candidaturas, blog, temas globais e o restante dos módulos ainda serão construídos. Essas áreas aparecem como “Em desenvolvimento”; não existe login ou dado contratual fictício exposto como real. O `robots` está configurado como `noindex` durante a prévia.
 
 A foto da viatura e o logotipo foram vistos na conversa, mas não estavam acessíveis nos caminhos de anexos informados pelo ambiente; o site usa ilustração e marca tipográfica provisórias até os arquivos estarem disponíveis em `public/brand/`. Antes de publicar, confirmar contatos, conteúdo, licenças, autorização de imagens e política de privacidade.
 
-## Download da prévia
+## Download das prévias
 
-[Baixar prévia estática (.zip)](downloads/seg-system-previa.zip). Extraia todos os arquivos e abra `index.html`. O ZIP é uma **fotografia desta etapa**, não o sistema completo nem uma versão para publicação. Ele é gerado com `npm run build:preview`; recursos futuros com backend não funcionarão em exportação estática.
+- [Layout 01 — prévia estática original (.zip)](downloads/seg-system-previa.zip). Extraia e abra `index.html`.
+- [Layout 02 — Central (.zip)](downloads/layout-02-central-preview.zip). Extraia e abra `index.html`; `layout-01.html` permite comparar com o primeiro conceito.
+
+Os ZIPs são **fotografias visuais desta etapa**, não o sistema completo nem versões para publicação. O layout 02 pode ser gerado com `npm run package:layout-02`; as prévias não têm backend, e o formulário somente abre uma mensagem para revisão e envio manual pelo WhatsApp.
 
 ## Desenvolvimento
 

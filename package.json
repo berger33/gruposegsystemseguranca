@@ -6,6 +6,7 @@
     "dev": "next dev --hostname 0.0.0.0",
     "build": "next build",
     "build:preview": "STATIC_PREVIEW=1 next build",
+    "package:layout-02": "npm run build:preview && bash scripts/package-layout-02.sh",
     "start": "next start --hostname 0.0.0.0",
     "typecheck": "tsc --noEmit"
   },

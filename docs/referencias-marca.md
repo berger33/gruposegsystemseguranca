@@ -6,8 +6,8 @@ Levantamento em 27/09/2026 para orientar o início do desenvolvimento. Conteúdo
 
 - [Site atual: Grupo SEG System | Segurança Integrada](https://gruposegsystemseguranca.com.br/) — conteúdo textual consultado nesta conversa.
 - [Página do Facebook indicada](https://www.facebook.com/gruposegsystemseguranca.com.br/) — leitura automática bloqueada (HTTP 403); não usar seu conteúdo como informação verificada por enquanto.
-- Imagem de viatura exibida pelo usuário na conversa (branco/azul, marca Grupo SEG System e palavra “SUPERVISÃO”). O sistema informou que o arquivo estaria em `/home/user/uploads/viatura.jpg`, mas ele não estava disponível no ambiente ao verificar, inclusive após um segundo envio.
-- Logotipo enviado visualmente na conversa: escudo azul com “GRUPO” no alto, “SEG SYSTEM” na diagonal e “SEGURANÇA INTEGRADA” na base, sobre círculo branco e fundo azul. O sistema informou que o arquivo estaria em `/home/user/uploads/454751406_1061413479159366_4672298606281258831_n.jpg`, mas ele também não estava acessível no workspace. **As imagens foram vistas na conversa, mas ainda não estão incorporadas ao repositório nem à prévia.** Um link direto para os arquivos ou sua inclusão em `public/brand/` no repositório resolverá o bloqueio técnico.
+- O usuário reenviou visualmente o logotipo (escudo azul com “GRUPO”, “SEG SYSTEM” e “SEGURANÇA INTEGRADA”) e a viatura branca/azul com identificação “SUPERVISÃO”. Os anexos atuais foram anunciados em `/home/user/uploads/480443364_1214890203811692_1245250058270366235_n.jpg` e `/home/user/uploads/viatura.jpg`, mas esses arquivos não aparecem no workspace desta execução. **Não incorporar nem afirmar que são as imagens originais.** Solicitar reenvio em arquivos acessíveis no projeto ou links públicos diretos. Até lá, usar wordmark textual e imagens conceituais identificadas como ilustração.
+- Foi gerada para o layout 02 uma imagem conceitual, não uma fotografia da empresa: `public/images/layout-02-central-monitoramento.png`. Ela representa uma central genérica e não mostra clientes, instalações ou sistemas reais.
 
 ## Informações apresentadas no site atual — confirmar antes da nova publicação
 
@@ -24,9 +24,10 @@ Levantamento em 27/09/2026 para orientar o início do desenvolvimento. Conteúdo
 ## Direção visual inicial
 
 - Cores observadas nas imagens enviadas: azul escuro/azul forte, branco e neutros escuros. O escudo tem contorno azul e área branca; a viatura traz branco e azul. **Não há códigos HEX oficiais confirmados.** Usar tokens provisórios e ajustar quando o arquivo do logotipo estiver acessível.
-- Interface **Institucional clássica**: clara, organizada, confiável, com navegação corporativa e conteúdo objetivo.
-- Interface **Tecnologia/monitoramento**: base mais escura, azul de destaque, elementos de interface operacional sem sugerir acesso real a câmeras.
-- As duas devem compartilhar dados, links, acessibilidade e fluxos; o administrador poderá alternar qual é publicada. As outras oito interfaces serão desenvolvidas em fases posteriores.
+- Interface 01 **Institucional clássica**: primeira composição mostrada e aprovada visualmente pelo usuário; manter como referência, sem alterações de direção visual não solicitadas.
+- Interface 02 **Central**: candidata tecnológica em azul profundo e ciano, contrastando com a primeira por composição, tipografia, densidade e hierarquia — não apenas por cor. Imagem de central gerada e explicitamente conceitual; aguardando aprovação do usuário.
+- O usuário quer revisar **um layout por vez**; depois de cada entrega, aguardar aprovação ou instruções de ajuste antes de começar o seguinte. Restam nove layouts além do primeiro aprovado.
+- As composições devem compartilhar conteúdo e fluxos, mas variar de modo perceptível e manter acessibilidade; o painel de seleção/publicação será implementado em etapa posterior.
 
 ## Publicação segura / pendências
 
