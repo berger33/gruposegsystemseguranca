@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import dynamic from "next/dynamic";
 import { Palette } from "lucide-react";
+import {
+  DEFAULT_SITE_VISUAL,
+  isSiteVisualId,
+  SITE_VISUAL_STORAGE_KEY,
+  type SiteVisualId,
+} from "@/lib/site-visuals";
+import styles from "./SiteVisualRenderer.module.css";
+
 const Layout01 = dynamic(() => import("@/components/Layout01"));
 const Layout02 = dynamic(() => import("@/components/Layout02"));
 const Layout03 = dynamic(() => import("@/components/Layout03"));
@@ -13,13 +21,6 @@ const Layout07 = dynamic(() => import("@/components/Layout07"));
 const Layout08 = dynamic(() => import("@/components/Layout08"));
 const Layout09 = dynamic(() => import("@/components/Layout09"));
 const Layout10 = dynamic(() => import("@/components/Layout10"));
-import {
-  DEFAULT_SITE_VISUAL,
-  isSiteVisualId,
-  SITE_VISUAL_STORAGE_KEY,
-  type SiteVisualId,
-} from "@/lib/site-visuals";
-import styles from "./SiteVisualRenderer.module.css";
 
 const visualComponents: Record<SiteVisualId, ComponentType> = {
   "01": Layout01,
@@ -45,11 +46,34 @@ function getStoredVisual(): SiteVisualId {
 
 export default function SiteVisualRenderer() {
   const [visualId, setVisualId] = useState<SiteVisualId>(DEFAULT_SITE_VISUAL);
+  const centralSource = useRef(false);
 
   useEffect(() => {
     setVisualId(getStoredVisual());
+    let disposed = false;
+    const syncFromServer = async () => {
+      try {
+        const response = await fetch("/api/site-visual", { cache: "no-store" });
+        const data = await response.json().catch(() => ({}));
+        if (disposed) return;
+        if (response.ok && isSiteVisualId(data.visual)) {
+          centralSource.current = true;
+          setVisualId(data.visual);
+        } else {
+          centralSource.current = false;
+          setVisualId(getStoredVisual());
+        }
+      } catch {
+        if (!disposed) {
+          centralSource.current = false;
+          setVisualId(getStoredVisual());
+        }
+      }
+    };
+    void syncFromServer();
+    const poll = window.setInterval(() => void syncFromServer(), 30_000);
     const updateFromStorage = (event: StorageEvent) => {
-      if (event.key === SITE_VISUAL_STORAGE_KEY) {
+      if (!centralSource.current && event.key === SITE_VISUAL_STORAGE_KEY) {
         setVisualId(isSiteVisualId(event.newValue) ? event.newValue : DEFAULT_SITE_VISUAL);
       }
     };
@@ -60,6 +84,8 @@ export default function SiteVisualRenderer() {
     window.addEventListener("storage", updateFromStorage);
     window.addEventListener("seg-site-visual-updated", updateFromSameTab);
     return () => {
+      disposed = true;
+      window.clearInterval(poll);
       window.removeEventListener("storage", updateFromStorage);
       window.removeEventListener("seg-site-visual-updated", updateFromSameTab);
     };

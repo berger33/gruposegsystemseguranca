@@ -7,9 +7,11 @@ Sistema em desenvolvimento para o Grupo SEG System. O **plano foi registrado em 
 
 ## Prévia atual
 
-As dez propostas visuais foram aprovadas. O **layout 06 — Azul em camadas** é o padrão inicial; todos os dez conceitos estão disponíveis no seletor de demonstração `/admin/visual`, que troca a composição completa da página inicial (`/`). A seleção é salva apenas neste navegador: ainda não há autenticação nem publicação global. `/layout-01` a `/layout-10` abrem as prévias individuais; `/layout-06` preserva o conceito original. A aplicação **não está pronta para produção**.
+As dez propostas visuais foram aprovadas. O **layout 06 — Azul em camadas** é o padrão inicial; todos os dez conceitos estão disponíveis em `/admin/visual`, que troca a composição completa da página inicial (`/`). O módulo tem modo local e integração preparada com PostgreSQL/sessão administrativa; como este workspace não tem banco nem segredos configurados, a prévia opera localmente. `/layout-01` a `/layout-10` abrem as propostas individuais; `/layout-06` preserva o conceito original. A aplicação **não está pronta para produção**.
 
-O formulário **não salva leads nem envia e-mails**: ele abre uma mensagem para o visitante revisar e enviar manualmente no WhatsApp. Portal autenticado, CRM, agendamento confirmado, candidaturas, blog e módulos administrativos seguros ainda serão construídos. A seleção visual em `/admin/visual` é demonstrativa e local; a ativação compartilhada entre visitantes requer backend persistente, autenticação e permissões. As demais áreas aparecem como “Em desenvolvimento”; não existe login ou dado contratual fictício exposto como real. O `robots` está configurado como `noindex` durante a prévia.
+Veja [como configurar a administração global da aparência](docs/administracao-visual.md).
+
+O formulário **não salva leads nem envia e-mails**: ele abre uma mensagem para o visitante revisar e enviar manualmente no WhatsApp. Portal autenticado, CRM, agendamento confirmado, candidaturas, blog e módulos administrativos completos ainda serão construídos. A seleção visual global exige PostgreSQL e segredos do servidor; até configurá-los, o modo local permite apenas testar no navegador atual. As demais áreas aparecem como “Em desenvolvimento”; não existe login ou dado contratual fictício exposto como real. O `robots` está configurado como `noindex` durante a prévia.
 
 A foto da viatura e o logotipo foram vistos na conversa, mas não estavam acessíveis nos caminhos de anexos informados pelo ambiente; o site usa ilustração e marca tipográfica provisórias até os arquivos estarem disponíveis em `public/brand/`. Antes de publicar, confirmar contatos, conteúdo, licenças, autorização de imagens e política de privacidade.
 
@@ -44,4 +46,4 @@ npm run typecheck
 npm run build
 ```
 
-Nenhuma chave de API, credencial ou banco de dados é necessária **nesta etapa de prévia**. Antes de implementar autenticação/CRM, definir banco PostgreSQL, armazenamento privado, 2FA, RBAC, auditoria, notificações e ambiente de homologação conforme o plano.
+Para testar temas no modo local, não é necessário configurar credenciais. Para ativar a seleção central, configure PostgreSQL e segredos conforme [administração visual](docs/administracao-visual.md), depois execute `npm run db:migrate`. A autenticação de token por papel é uma base inicial; concluir o RBAC do sistema e 2FA antes da produção.
