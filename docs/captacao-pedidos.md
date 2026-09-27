@@ -9,6 +9,14 @@
 5. A equipe consulta `/admin/leads`, autentica com a sessão administrativa compartilhada com o módulo visual, e pode filtrar/atualizar status (`Novo`, `Em contato`, `Concluído`) e iniciar contato por telefone ou WhatsApp.
 6. Pedidos de visita são somente solicitações. Uma pessoa da equipe deve verificar disponibilidade e confirmar com o cliente.
 
+## Simulador de solicitação (`/simulador`)
+
+- Quatro etapas: tipo de imóvel, serviços de interesse, dados de contato e revisão. O resumo lateral acompanha a escolha e a navegação está disponível no menu principal e na seção de serviços.
+- O simulador **não exibe preços, não estima valores e não reserva visita**: ele usa o mesmo `POST /api/leads` do formulário da home, com validação no servidor idêntica.
+- As listas de serviços e tipos de imóvel vivem em `src/lib/service-catalog.mjs`, importado tanto pela tela quanto por `src/lib/public-lead-validation.mjs`. O teste `tests/service-catalog.test.mjs` garante que todo item do catálogo é aceito pela API, para a tela não oferecer opção que o servidor recusa.
+- Cada serviço traz uma pergunta de qualificação, que vai para a mensagem de continuação pelo WhatsApp. São perguntas sobre o contexto do cliente, não descrições de capacidade: enquanto não houver tabela de preços aprovada e confirmação do responsável, o simulador não promete escopo nem prazo.
+- A visita segue sendo somente solicitação: o texto do simulador e a resposta após o registro dizem que a confirmação é feita por uma pessoa da equipe.
+
 ## Preparação local
 
 1. Copie `.env.example` para `.env.local` e preencha PostgreSQL e segredos administrativos conforme `docs/administracao-visual.md`. Nunca coloque segredos em Git, no navegador ou em mensagens.

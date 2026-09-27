@@ -1,13 +1,4 @@
-const publicServices = new Set([
-  "Segurança Desarmada",
-  "Monitoramento 24 Horas",
-  "Câmeras e CFTV",
-  "Portaria e Controle de Acesso",
-  "Limpeza e Conservação",
-  "Supervisão e Ronda",
-]);
-
-const propertyTypes = new Set(["Condomínio", "Empresa ou comércio", "Indústria", "Instituição", "Outro"]);
+import { PUBLIC_SERVICES, isPropertyType, isPublicService } from "./service-catalog.mjs";
 
 export function validateLeadInput(body) {
   const text = (value, limit) => typeof value === "string" && value.trim().length <= limit ? value.trim() : null;
@@ -23,12 +14,12 @@ export function validateLeadInput(body) {
   if (!name || name.length < 2) return { error: "invalid_name" };
   if (!phone || phone.replace(/\D/g, "").length < 8 || phone.replace(/\D/g, "").length > 15) return { error: "invalid_phone" };
   if (!city || city.length < 2) return { error: "invalid_city" };
-  if (!propertyType || !propertyTypes.has(propertyType)) return { error: "invalid_property_type" };
+  if (!propertyType || !isPropertyType(propertyType)) return { error: "invalid_property_type" };
   if (details === null) return { error: "invalid_details" };
   if (visitPreference === null) return { error: "invalid_visit_preference" };
   if (!visitPreference && requestKind === "visit") return { error: "visit_preference_required" };
   if (requestKind === "visit" && visitPreference.length < 2) return { error: "visit_preference_required" };
-  if (!services || services.length > publicServices.size || services.some(service => typeof service !== "string" || !publicServices.has(service))) {
+  if (!services || services.length > PUBLIC_SERVICES.length || services.some(service => !isPublicService(service))) {
     return { error: "invalid_services" };
   }
   if (body?.consent !== true) return { error: "consent_required" };
