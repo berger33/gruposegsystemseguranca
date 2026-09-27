@@ -133,6 +133,7 @@ export default function InvitationFlowPreviewPage() {
               <div><CircleCheck size={17} /><span><strong>Permissões definidas</strong><small>O acesso é limitado ao escopo aprovado no servidor.</small></span></div>
               <div><CircleCheck size={17} /><span><strong>Convite com prazo e uso limitados</strong><small>Prazo de 7 dias; uso único; revogável antes do aceite.</small></span></div>
               <div><CircleCheck size={17} /><span><strong>Entrada com senha e e-mail confirmado</strong><small>O cliente confirma o e-mail e define uma senha após aceitar o convite.</small></span></div>
+              <div><ShieldCheck size={17} /><span><strong>MFA opcional para clientes</strong><small>O cliente poderá ativar uma segunda etapa; método e recuperação ainda serão definidos.</small></span></div>
               <button className={styles.secondary} type="button" onClick={() => setStage("email")}><ArrowLeft size={15} /> Voltar à mensagem</button>
             </aside>
           </section>

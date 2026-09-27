@@ -9,7 +9,8 @@
 - **Marcelo e TI** podem aprovar solicitações, emitir convites e definir o escopo do acesso. O sistema deverá auditar essas ações.
 - Convites terão validade de **7 dias**, serão de **uso único** e poderão ser revogados antes do uso.
 - Após aceitar o convite, o cliente entrará com **senha + confirmação de e-mail**. O link de confirmação terá validade de **7 dias**; reenvio limitado a **5 vezes por endereço em 24 horas**, com intervalo mínimo de **2 minutos**, e cada novo link invalida o anterior.
-- Recuperação de senha será por link enviado ao e-mail cadastrado, de **uso único** e validade de **1 hora**. A resposta pública deve ser genérica para não revelar se o e-mail tem conta. MFA de clientes e detalhes de segurança/limitação da recuperação ainda precisam ser definidos antes da produção.
+- Recuperação de senha será por link enviado ao e-mail cadastrado, de **uso único** e validade de **1 hora**. A resposta pública deve ser genérica para não revelar se o e-mail tem conta.
+- MFA será **opcional para clientes** no início do portal. O método de MFA, a recuperação quando o segundo fator for perdido e a eventual exigência para operações sensíveis ainda precisam ser definidos antes da produção.
 - O solicitante será notificado por **e-mail** sobre a decisão. Em caso de recusa, usar mensagem **genérica**, sem expor detalhes internos. Os textos da prévia são rascunhos e ainda precisam de revisão antes de uso real.
 - O autocadastro, por si só, **não libera contratos nem documentos**. O vínculo do usuário com o cliente e o escopo autorizado precisam ser verificados no servidor.
 - Não importar nem inventar cadastros, contratos, documentos ou clientes para a prévia.
@@ -35,7 +36,7 @@ As regras abaixo são uma base técnica para discussão; não ativam comportamen
 | Tema | Pergunta a decidir |
 | --- | --- |
 | Destinatário | Quais dados mínimos serão pedidos para convidar uma pessoa? Confirmar o endereço de e-mail pelo cadastro central antes de enviar; definir reenvio e tratamento de endereço incorreto. |
-| Autenticação | Senha + confirmação de e-mail foram escolhidas. Haverá MFA para clientes? Como funciona recuperação de conta e troca de e-mail? |
+| Autenticação | Senha + confirmação de e-mail foram escolhidas; MFA é opcional. Qual método de MFA, recuperação do segundo fator e operações que poderão exigir MFA? Como funciona troca de e-mail? |
 | Solicitação aprovada | Quem recebe a fila, quais estados existem e como o cliente é informado de aprovação ou recusa? |
 | Autocadastro | Quais modos ficam habilitados por cliente/filial? Que prova de vínculo é exigida e quem resolve casos inconclusivos? |
 | Escopo documental | Quais categorias de contrato/documento cada papel pode consultar e por quanto tempo? |
