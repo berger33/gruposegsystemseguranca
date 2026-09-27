@@ -41,6 +41,7 @@ export default function ClientPortalPage() {
           <Link className={styles.recoveryLink} href="/cliente/seguranca">Ver prévia de autenticação em duas etapas <ArrowRight size={13} /></Link>
           <Link className={styles.recoveryLink} href="/cliente/acesso">Ver prévia de login e cadastro por convite <ArrowRight size={13} /></Link>
           <Link className={styles.recoveryLink} href="/cliente/alterar-email">Ver prévia de troca de e-mail <ArrowRight size={13} /></Link>
+          <Link className={styles.recoveryLink} href="/cliente/painel">Ver prévia do painel do cliente <ArrowRight size={13} /></Link>
           <span className={styles.status}><i /> EM PREPARAÇÃO</span>
         </aside>
       </section>

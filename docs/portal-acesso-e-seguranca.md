@@ -68,7 +68,8 @@ As regras abaixo são uma base técnica para discussão; não ativam comportamen
 
 ## Estado dos protótipos
 
-- `/cliente`: página informativa; não autentica e não cria contas.
+- `/cliente/painel`: shell visual do futuro painel do cliente, com estados vazios para contratos/serviços, documentos e solicitações/chamados; nenhum registro fictício é apresentado como dado real. Não autentica, não consulta cadastro e não persiste dados.
+- `/cliente`: página informativa; não autentica e não cria contas. Inclui atalho para a prévia visual do painel.
 - `/cliente/recuperar-senha`: demonstra solicitação por e-mail com resposta genérica e link de uso único válido por 1 hora; não envia mensagem nem altera senha.
 - `/cliente/seguranca`: demonstra a opção de MFA por aplicativo autenticador ou código por e-mail e recuperação com códigos de uso único/ajuda da equipe; não ativa MFA nem gera códigos reais.
 - `/cliente/acesso`: prévia local do login, aceite demonstrativo de convite, confirmação do e-mail e criação de senha fictícia; mostra a regra de senha de 12+ caracteres e a espera progressiva planejada após 5 falhas (1, 5 e 15 minutos), com contagem zerada após login bem-sucedido ou 24 horas sem falhas. Não autentica, não envia dados e não cria contas; bloqueio de senhas comuns e throttling precisam de validação no servidor.
