@@ -21,13 +21,20 @@ type PanelNotice = {
   expiresAt: string;
 };
 
-const demoAdminDirectory = [
-  { id: "id-demo-admin-001", label: "Conta administrativa fictícia 01", email: "admin-demo-01@example.invalid" },
-  { id: "id-demo-admin-002", label: "Conta administrativa fictícia 02", email: "admin-demo-02@example.invalid" },
+type AccountStatus = "ativa" | "suspensa" | "desativada";
+
+const demoAdminDirectory: Array<{ id: string; label: string; email: string; status: AccountStatus }> = [
+  { id: "id-demo-admin-001", label: "Conta administrativa fictícia 01", email: "admin-demo-01@example.invalid", status: "ativa" },
+  { id: "id-demo-admin-002", label: "Conta administrativa fictícia 02", email: "admin-demo-02@example.invalid", status: "suspensa" },
+  { id: "id-demo-admin-003", label: "Conta administrativa fictícia 03", email: "admin-demo-03@example.invalid", status: "desativada" },
 ];
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(date);
+}
+
+function statusLabel(status: AccountStatus) {
+  return status === "ativa" ? "Ativa" : status === "suspensa" ? "Suspensa" : "Desativada";
 }
 
 export default function ReminderPermissionsPage() {
@@ -57,6 +64,10 @@ export default function ReminderPermissionsPage() {
     if (!selectedAdmin || !cleanReason) return;
     const key = selectedAdmin.id;
     const currentlyActive = Boolean(permissions[key]);
+    if (action === "grant" && selectedAdmin.status !== "ativa") {
+      setFeedback("Não é possível conceder permissão a uma conta suspensa ou desativada.");
+      return;
+    }
     if (action === "grant" && currentlyActive) {
       setFeedback("Este identificador já tem a permissão na demonstração.");
       return;
@@ -104,7 +115,7 @@ export default function ReminderPermissionsPage() {
     setFeedback("");
   }
 
-  const actionIsValid = action === "grant" ? !hasPermission : hasPermission;
+  const actionIsValid = action === "grant" ? Boolean(selectedAdmin?.status === "ativa" && !hasPermission) : hasPermission;
 
   return (
     <main className={styles.page}>
@@ -125,7 +136,7 @@ export default function ReminderPermissionsPage() {
 
         <div className={styles.prototypeNotice} role="note">
           <span><UserRoundCog size={18} /></span>
-          <p><strong>Protótipo local, sem efeito real.</strong> A lista abaixo contém apenas duas contas administrativas fictícias. Nenhuma conta real é consultada, nenhuma permissão é alterada no servidor e nada é persistido. Avisos e auditoria são apenas simulações nesta página.</p>
+          <p><strong>Protótipo local, sem efeito real.</strong> A lista abaixo contém apenas três contas administrativas fictícias. Nenhuma conta real é consultada, nenhuma permissão é alterada no servidor e nada é persistido. Avisos e auditoria são apenas simulações nesta página.</p>
         </div>
 
         <div className={styles.policyStrip}>
@@ -143,10 +154,11 @@ export default function ReminderPermissionsPage() {
               <label htmlFor="permission-target">Selecionar conta administrativa fictícia</label>
               <select id="permission-target" required value={target} onChange={event => { setTarget(event.target.value); setFeedback(""); }}>
                 <option value="">Escolha uma conta da lista demonstrativa</option>
-                {filteredAdmins.map(admin => <option key={admin.id} value={admin.id}>{admin.label} · {admin.email}</option>)}
+                {filteredAdmins.map(admin => <option key={admin.id} value={admin.id}>{admin.label} · {admin.email} · {statusLabel(admin.status)}</option>)}
               </select>
               {filteredAdmins.length === 0 && <small role="status">Nenhuma conta fictícia encontrada para essa busca.</small>}
               <small>Os e-mails exibidos usam o domínio reservado .invalid e são fictícios. Na implementação real, buscar contas administrativas existentes pelo nome ou e-mail corporativo verificado; vincular e validar a permissão pelo ID interno imutável no servidor.</small>
+              {selectedAdmin && selectedAdmin.status !== "ativa" && <small className={styles.statusHint} role="status">Conta {statusLabel(selectedAdmin.status).toLowerCase()}: novas concessões são bloqueadas. Se já houver uma permissão, a revogação continua disponível.</small>}
 
               <div className={styles.actionGroup} role="group" aria-label="Ação de permissão">
                 <button type="button" aria-pressed={action === "grant"} className={action === "grant" ? styles.actionSelected : ""} onClick={() => { setAction("grant"); setFeedback(""); }}><UserRoundPlus size={15} /> Conceder</button>
@@ -160,11 +172,11 @@ export default function ReminderPermissionsPage() {
           </section>
 
           <section className={styles.card} aria-labelledby="active-title">
-            <div className={styles.cardHeading}><span className={styles.step}>02 · ESTADO SIMULADO</span><h2 id="active-title">Permissões ativas</h2><p>A lista começa vazia e existe apenas enquanto esta página estiver aberta.</p></div>
+            <div className={styles.cardHeading}><span className={styles.step}>02 · ESTADO SIMULADO</span><h2 id="active-title">Permissões ativas</h2><p>Uma concessão só pode ser feita a conta ativa; permissões de contas suspensas/desativadas ainda podem ser revogadas.</p></div>
             {activePermissions.length === 0 ? (
-              <div className={styles.empty}><ShieldCheck size={20} /><strong>Nenhuma permissão na prévia</strong><span>Conceda uma usando um identificador de demonstração.</span></div>
+              <div className={styles.empty}><ShieldCheck size={20} /><strong>Nenhuma permissão na prévia</strong><span>Selecione uma conta fictícia ativa para conceder a permissão.</span></div>
             ) : (
-              <ul className={styles.activeList}>{activePermissions.map(identifier => { const admin = demoAdminDirectory.find(item => item.id === identifier); return <li key={identifier}><span className={styles.statusDot} /><span><strong>{admin?.label ?? "Conta fictícia"}</strong><small>ID interno de demonstração: {identifier} · até revogação</small></span><span className={styles.activeTag}>ATIVA</span></li>; })}</ul>
+              <ul className={styles.activeList}>{activePermissions.map(identifier => { const admin = demoAdminDirectory.find(item => item.id === identifier); return <li key={identifier}><span className={styles.statusDot} /><span><strong>{admin?.label ?? "Conta fictícia"}</strong><small>ID interno fictício: {identifier} · conta {admin ? statusLabel(admin.status).toLowerCase() : "desconhecida"}</small></span><span className={styles.activeTag}>ATIVA</span></li>; })}</ul>
             )}
           </section>
         </div>
