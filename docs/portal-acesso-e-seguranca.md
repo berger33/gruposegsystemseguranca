@@ -58,6 +58,7 @@ As regras abaixo são uma base técnica para discussão; não ativam comportamen
 - `/cliente`: página informativa; não autentica e não cria contas.
 - `/cliente/recuperar-senha`: demonstra solicitação por e-mail com resposta genérica e link de uso único válido por 1 hora; não envia mensagem nem altera senha.
 - `/cliente/seguranca`: demonstra a opção de MFA por aplicativo autenticador ou código por e-mail e recuperação com códigos de uso único/ajuda da equipe; não ativa MFA nem gera códigos reais.
+- `/cliente/acesso`: prévia local do login, aceite demonstrativo de convite, confirmação do e-mail e criação de senha fictícia; não autentica, não envia dados e não cria contas.
 - `/admin/portal`: compara os três modos em memória.
 - `/admin/portal/convites`: prévia sem envio de e-mail, token ou link real; permite simular estados do convite, confirmação e reenvio do e-mail em memória no navegador. Link de confirmação: validade definida de 7 dias; reenvio com limite, invalidando o link anterior (limite exato ainda pendente).
 - `/admin/portal/solicitacoes`: sem registros; permite simular Marcelo ou TI como responsável, a consulta ao cadastro central, escopos e estados da análise. Também exibe rascunhos de e-mail de aprovação e recusa genérica; não envia mensagens. As interações são locais e não alteram permissões.

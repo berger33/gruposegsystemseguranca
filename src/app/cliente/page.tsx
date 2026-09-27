@@ -39,6 +39,7 @@ export default function ClientPortalPage() {
           <p>Não insira senhas, códigos ou dados de contrato nesta página. A autenticação será habilitada quando o portal estiver pronto.</p>
           <Link className={styles.recoveryLink} href="/cliente/recuperar-senha">Ver prévia de recuperação de senha <ArrowRight size={13} /></Link>
           <Link className={styles.recoveryLink} href="/cliente/seguranca">Ver prévia de autenticação em duas etapas <ArrowRight size={13} /></Link>
+          <Link className={styles.recoveryLink} href="/cliente/acesso">Ver prévia de login e cadastro por convite <ArrowRight size={13} /></Link>
           <span className={styles.status}><i /> EM PREPARAÇÃO</span>
         </aside>
       </section>
