@@ -32,8 +32,9 @@ Levantamento em 27/09/2026 para orientar o início do desenvolvimento. Conteúdo
 - Interface 06 **Azul em camadas**: proposta editorial criativa, com azul-cobalto e azul-celeste, geometria gráfica e imagem urbana ilustrativa. Aprovada pelo usuário.
 - Interface 07 **Mapa de cuidado**: proposta em painel com navegação lateral fixa, imagem à esquerda, conteúdo à direita e cartões interativos assimétricos. Aprovada pelo usuário.
 - Interface 08 **Núcleo integrado**: diagrama circular interativo, sem hero fotográfico, com serviços ao redor de um núcleo central; paleta azul e branca. O diagrama é conceitual, criado com CSS, não representa um sistema operacional. Aprovada pelo usuário.
-- Interface 09 **Briefing guiado**: proposta de fluxo progressivo em três etapas (tipo de espaço, serviços de interesse e contato), com cartão de resumo lateral; sem hero fotográfico nem mosaico de serviços. Mantém azul institucional e branco. Está em avaliação nesta etapa.
-- O usuário quer revisar **um layout por vez**; depois de cada entrega, aguardar aprovação ou instruções de ajuste antes de começar o seguinte. Resta um layout depois da aprovação do 09.
+- Interface 09 **Briefing guiado**: fluxo progressivo em três etapas (tipo de espaço, serviços de interesse e contato), com resumo lateral; sem hero fotográfico nem mosaico de serviços. Aprovada pelo usuário.
+- Interface 10 **Linha de cuidado**: proposta com serviços dispostos de forma alternada em torno de um eixo vertical central, sem hero fotográfico, navegação lateral ou wizard. Usa azul institucional e branco; a linha é metáfora visual, não uma sequência de serviço. Está em avaliação nesta etapa.
+- O usuário quer revisar **um layout por vez**; aguardar a aprovação do 10 ou instruções de ajuste antes de encerrar a etapa das dez interfaces.
 - As composições devem compartilhar conteúdo e fluxos, mas variar de modo perceptível e manter acessibilidade; o painel de seleção/publicação será implementado em etapa posterior.
 
 ## Publicação segura / pendências
