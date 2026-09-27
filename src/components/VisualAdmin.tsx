@@ -28,6 +28,7 @@ function readLocalVisual(): SiteVisualId {
 export default function VisualAdmin() {
   const [activeVisual, setActiveVisual] = useState<SiteVisualId>(DEFAULT_SITE_VISUAL);
   const [storageMode, setStorageMode] = useState<StorageMode>("loading");
+  const [selectionEnabled, setSelectionEnabled] = useState(false);
   const [adminRole, setAdminRole] = useState<AdminRole | null>(null);
   const [accessToken, setAccessToken] = useState("");
   const [ready, setReady] = useState(false);
@@ -52,8 +53,10 @@ export default function VisualAdmin() {
         if (visualResponse.ok && isSiteVisualId(visualData.visual)) {
           setStorageMode("central");
           setActiveVisual(visualData.visual);
+          setSelectionEnabled(visualData.selectionEnabled === true);
         } else {
           setStorageMode("local");
+          setSelectionEnabled(false);
         }
         if (sessionResponse.ok && (sessionData.role === "marcelo" || sessionData.role === "ti")) {
           setAdminRole(sessionData.role);
@@ -115,6 +118,10 @@ export default function VisualAdmin() {
   }
 
   async function applyVisual(id: SiteVisualId) {
+    if (!selectionEnabled) {
+      setErrorMessage("A seleção administrativa de visuais está pausada. O layout 06 permanece padrão.");
+      return;
+    }
     setBusy(true);
     setErrorMessage("");
     setSavedMessage("");
@@ -161,7 +168,7 @@ export default function VisualAdmin() {
     }
   }
 
-  const canApply = storageMode === "local" || (storageMode === "central" && !!adminRole);
+  const canApply = selectionEnabled && (storageMode === "local" || (storageMode === "central" && !!adminRole));
   const currentName = SITE_VISUAL_OPTIONS.find(option => option.id === activeVisual)?.name || "Azul em camadas";
 
   return (
@@ -174,8 +181,8 @@ export default function VisualAdmin() {
         <div className={styles.headingRow}>
           <div>
             <span className={styles.eyebrow}>MÓDULO DE ADMINISTRAÇÃO · VISUAIS</span>
-            <h1>Escolha o visual<br /><em>do site público.</em></h1>
-            <p>As dez propostas aprovadas podem ser alternadas. O layout 06 é o padrão inicial; a escolha troca a composição completa da página inicial.</p>
+            <h1>Visuais preservados.<br /><em>Seleção em pausa.</em></h1>
+            <p>Por decisão atual, o layout 06 permanece como padrão enquanto os fluxos essenciais avançam. As dez propostas seguem disponíveis como prévias; a seleção global será retomada depois.</p>
           </div>
           <div className={styles.currentCard} aria-live="polite">
             <span>{storageMode === "central" ? "VISUAL ATIVO NO SITE" : "VISUAL ATIVO NESTE NAVEGADOR"}</span>
@@ -184,7 +191,9 @@ export default function VisualAdmin() {
           </div>
         </div>
 
-        {storageMode === "central" ? (
+        {!selectionEnabled ? (
+          <div className={styles.notice} role="note"><ShieldAlert size={19} /><p><strong>Seleção administrativa pausada:</strong> o layout 06 permanece padrão e os links de prévia preservam os dez conceitos sem alterar o site. A publicação global será reativada em uma fase futura.</p></div>
+        ) : storageMode === "central" ? (
           <div className={styles.accessPanel}>
             {adminRole ? (
               <><div><span className={styles.accessLabel}>SESSÃO ADMINISTRATIVA ATIVA</span><strong>{roleNames[adminRole]}</strong><small>A seleção salva passa a ser o visual padrão para visitantes.</small></div><button type="button" className={styles.secondaryButton} onClick={() => void logout()} disabled={busy}><LogOut size={14} /> Encerrar sessão</button></>
@@ -193,7 +202,7 @@ export default function VisualAdmin() {
             )}
           </div>
         ) : storageMode === "local" ? (
-          <div className={styles.notice} role="note"><ShieldAlert size={19} /><p><strong>Modo de demonstração local:</strong> o servidor ainda não está conectado ao PostgreSQL. Você pode testar os dez visuais neste navegador; a alteração não é compartilhada com outros visitantes. Para publicação central, configure o banco, execute a migração e defina as credenciais de Marcelo/TI no ambiente do servidor.</p></div>
+          <div className={styles.notice} role="note"><ShieldAlert size={19} /><p><strong>Seleção administrativa pausada:</strong> o layout 06 permanece padrão e os links de prévia preservam os dez conceitos sem alterar o site. A publicação global será reativada em uma fase futura.</p></div>
         ) : (
           <div className={styles.notice} role="status"><Palette size={19} /><p>Carregando a configuração e verificando o acesso administrativo…</p></div>
         )}
@@ -217,7 +226,7 @@ export default function VisualAdmin() {
                   <h2>{option.name}</h2>
                   <p>{option.descriptor}</p>
                   <div className={styles.cardActions}>
-                    <button type="button" className={styles.applyButton} disabled={!canApply || isActive || busy} onClick={() => void applyVisual(option.id)}>{isActive ? "Ativo" : storageMode === "central" && !adminRole ? "Requer acesso" : busy ? "Salvando…" : storageMode === "central" ? "Publicar visual" : "Aplicar nesta prévia"}</button>
+                    <button type="button" className={styles.applyButton} disabled={!canApply || isActive || busy} onClick={() => void applyVisual(option.id)}>{!selectionEnabled ? "Seleção adiada" : isActive ? "Ativo" : storageMode === "central" && !adminRole ? "Requer acesso" : busy ? "Salvando…" : storageMode === "central" ? "Publicar visual" : "Aplicar nesta prévia"}</button>
                     <a className={styles.previewLink} href={option.previewPath} target="_blank" rel="noreferrer" aria-label={`Abrir prévia do Layout ${option.id} em outra aba`}><ExternalLink size={14} /> Prévia</a>
                   </div>
                 </div>

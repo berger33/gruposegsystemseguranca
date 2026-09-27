@@ -1,8 +1,9 @@
-import { createHmac, createHash, timingSafeEqual } from "node:crypto";
+import { createHmac, createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { createServer } from "node:http";
 import nextEnv from "@next/env";
 import next from "next";
 import pg from "pg";
+import nodemailer from "nodemailer";
 
 const { loadEnvConfig } = nextEnv;
 const { Pool } = pg;
@@ -14,7 +15,20 @@ const SESSION_TTL_SECONDS = 8 * 60 * 60;
 const MAX_BODY_BYTES = 8 * 1024;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 8;
+const LEAD_WINDOW_MS = 10 * 60 * 1000;
+const LEAD_MAX_ATTEMPTS = 5;
 const loginAttempts = new Map();
+const leadAttempts = new Map();
+const publicServices = new Set([
+  "Segurança Desarmada",
+  "Monitoramento 24 Horas",
+  "Câmeras e CFTV",
+  "Portaria e Controle de Acesso",
+  "Limpeza e Conservação",
+  "Supervisão e Ronda",
+]);
+const propertyTypes = new Set(["Condomínio", "Empresa ou comércio", "Indústria", "Instituição", "Outro"]);
+const leadStatuses = new Set(["new", "contacted", "closed"]);
 let pool;
 
 const dev = process.argv.includes("--dev");
@@ -130,21 +144,225 @@ function sessionCookie(req, value, maxAge) {
   return `${SESSION_COOKIE}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${cookieSecure(req) ? "; Secure" : ""}`;
 }
 
-function rateLimitAllows(req) {
+function rateLimitAllows(bucket, req, windowMs, maxAttempts) {
   const forwardedFor = process.env.TRUST_PROXY === "true" ? req.headers["x-forwarded-for"] : undefined;
   const ip = String(forwardedFor || req.socket.remoteAddress || "unknown").split(",")[0].trim();
   const now = Date.now();
-  const current = (loginAttempts.get(ip) || []).filter(timestamp => now - timestamp < LOGIN_WINDOW_MS);
-  if (current.length >= LOGIN_MAX_ATTEMPTS) {
-    loginAttempts.set(ip, current);
+  const current = (bucket.get(ip) || []).filter(timestamp => now - timestamp < windowMs);
+  if (current.length >= maxAttempts) {
+    bucket.set(ip, current);
     return false;
   }
   current.push(now);
-  loginAttempts.set(ip, current);
+  bucket.set(ip, current);
   return true;
 }
 
+function validateLeadInput(body) {
+  const text = (value, limit) => typeof value === "string" && value.trim().length <= limit ? value.trim() : null;
+  const requestKind = body?.requestKind;
+  const name = text(body?.name, 100);
+  const phone = text(body?.phone, 30);
+  const city = text(body?.city, 100);
+  const propertyType = text(body?.propertyType, 80);
+  const visitPreference = text(body?.visitPreference || "", 120);
+  const details = text(body?.details || "", 1000);
+  const services = Array.isArray(body?.services) ? [...new Set(body.services)] : null;
+  if (!["quote", "visit"].includes(requestKind)) return { error: "invalid_request_kind" };
+  if (!name || name.length < 2) return { error: "invalid_name" };
+  if (!phone || phone.replace(/\D/g, "").length < 8 || phone.replace(/\D/g, "").length > 15) return { error: "invalid_phone" };
+  if (!city || city.length < 2) return { error: "invalid_city" };
+  if (!propertyType || !propertyTypes.has(propertyType)) return { error: "invalid_property_type" };
+  if (!details && body?.details && typeof body.details !== "string") return { error: "invalid_details" };
+  if (!visitPreference && requestKind === "visit") return { error: "visit_preference_required" };
+  if (requestKind === "visit" && visitPreference.length < 2) return { error: "visit_preference_required" };
+  if (!services || services.length > publicServices.size || services.some(service => typeof service !== "string" || !publicServices.has(service))) {
+    return { error: "invalid_services" };
+  }
+  if (body?.consent !== true) return { error: "consent_required" };
+  return {
+    value: {
+      requestKind,
+      name,
+      phone,
+      city,
+      propertyType,
+      services,
+      visitPreference: requestKind === "visit" ? visitPreference : null,
+      details: details || null,
+    },
+  };
+}
+
+async function sendLeadEmail(lead, leadId) {
+  const { MAIL_HOST, MAIL_FROM, LEADS_NOTIFY_EMAIL } = process.env;
+  if (!MAIL_HOST || !MAIL_FROM || !LEADS_NOTIFY_EMAIL) return "not_configured";
+  const port = Number(process.env.MAIL_PORT || 587);
+  const auth = process.env.MAIL_USER && process.env.MAIL_PASSWORD
+    ? { user: process.env.MAIL_USER, pass: process.env.MAIL_PASSWORD }
+    : undefined;
+  const transporter = nodemailer.createTransport({
+    host: MAIL_HOST,
+    port,
+    secure: process.env.MAIL_SECURE === "true" || port === 465,
+    auth,
+    connectionTimeout: 8_000,
+    greetingTimeout: 8_000,
+    socketTimeout: 12_000,
+  });
+  const label = lead.requestKind === "visit" ? "Visita técnica solicitada" : "Pedido de orçamento";
+  const lines = [
+    label,
+    `Referência: ${leadId}`,
+    `Nome: ${lead.name}`,
+    `Telefone: ${lead.phone}`,
+    `Cidade/bairro: ${lead.city}`,
+    `Tipo de local: ${lead.propertyType}`,
+    `Serviços de interesse: ${lead.services.length ? lead.services.join(", ") : "Gostaria de orientação"}`,
+    ...(lead.visitPreference ? [`Preferência de visita: ${lead.visitPreference}`] : []),
+    `Detalhes: ${lead.details || "Não informado"}`,
+  ];
+  await transporter.sendMail({
+    from: MAIL_FROM,
+    to: LEADS_NOTIFY_EMAIL,
+    subject: `${label} — ${leadId.slice(0, 8)}`,
+    text: lines.join("\n"),
+  });
+  return "sent";
+}
+
+async function handleCreateLead(req, res) {
+  if (req.method !== "POST") return json(res, 405, { error: "method_not_allowed" }, { Allow: "POST" });
+  if (!sameOrigin(req)) return json(res, 403, { error: "same_origin_required" });
+  if (!rateLimitAllows(leadAttempts, req, LEAD_WINDOW_MS, LEAD_MAX_ATTEMPTS)) {
+    return json(res, 429, { error: "too_many_requests" }, { "Retry-After": "600" });
+  }
+  let body;
+  try {
+    body = await readJson(req);
+  } catch {
+    return json(res, 400, { error: "invalid_request" });
+  }
+  if (typeof body?.website === "string" && body.website.trim()) return json(res, 202, { accepted: true, spamIgnored: true });
+  const validated = validateLeadInput(body);
+  if (validated.error) return json(res, 400, { error: validated.error });
+  const lead = validated.value;
+  const id = randomUUID();
+  let database;
+  try {
+    database = getPool();
+    await database.query(
+      `INSERT INTO public_leads
+        (id, request_kind, name, phone, city, property_type, services, visit_preference, details, consented_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())`,
+      [id, lead.requestKind, lead.name, lead.phone, lead.city, lead.propertyType, lead.services, lead.visitPreference, lead.details],
+    );
+  } catch (error) {
+    const unconfigured = error instanceof Error && error.message === "DATABASE_NOT_CONFIGURED";
+    const migrationMissing = error && typeof error === "object" && error.code === "42P01";
+    if (!unconfigured) console.error("Could not record the public lead.", error);
+    return json(res, 503, { error: unconfigured ? "database_not_configured" : migrationMissing ? "migration_required" : "lead_storage_unavailable" });
+  }
+
+  let emailStatus = "not_configured";
+  try {
+    emailStatus = await sendLeadEmail(lead, id);
+  } catch (error) {
+    emailStatus = "failed";
+    console.error("Lead notification email failed.", { leadId: id, message: error instanceof Error ? error.message : "unknown" });
+  }
+  if (emailStatus !== "not_configured") {
+    await database.query("UPDATE public_leads SET email_status = $2, updated_at = NOW() WHERE id = $1", [id, emailStatus]).catch(error => {
+      console.error("Could not update lead notification status.", { leadId: id, message: error instanceof Error ? error.message : "unknown" });
+    });
+  }
+  return json(res, 201, { leadId: id, emailStatus, recorded: true });
+}
+
+async function handleAdminLeads(req, res, url) {
+  const session = readSession(req);
+  if (!session) return json(res, 401, { error: "admin_session_required" });
+  if (req.method !== "GET") return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
+  const limit = Math.min(100, Math.max(1, Number.parseInt(url.searchParams.get("limit") || "50", 10) || 50));
+  const offset = Math.min(10_000, Math.max(0, Number.parseInt(url.searchParams.get("offset") || "0", 10) || 0));
+  const status = url.searchParams.get("status");
+  if (status && !leadStatuses.has(status)) return json(res, 400, { error: "invalid_status_filter" });
+  try {
+    const values = [];
+    let where = "";
+    if (status) {
+      values.push(status);
+      where = "WHERE status = $1";
+    }
+    const count = await getPool().query(`SELECT COUNT(*)::int AS total FROM public_leads ${where}`, values);
+    const listValues = [...values, limit, offset];
+    const limitPos = values.length + 1;
+    const offsetPos = values.length + 2;
+    const result = await getPool().query(
+      `SELECT id, request_kind, name, phone, city, property_type, services, visit_preference, details, status, email_status, created_at, updated_at
+       FROM public_leads ${where} ORDER BY created_at DESC LIMIT $${limitPos} OFFSET $${offsetPos}`,
+      listValues,
+    );
+    return json(res, 200, { leads: result.rows, total: count.rows[0]?.total || 0, limit, offset, role: session.role });
+  } catch (error) {
+    const unconfigured = error instanceof Error && error.message === "DATABASE_NOT_CONFIGURED";
+    const migrationMissing = error && typeof error === "object" && error.code === "42P01";
+    if (!unconfigured) console.error("Could not load the admin lead inbox.", error);
+    return json(res, 503, { error: unconfigured ? "database_not_configured" : migrationMissing ? "migration_required" : "leads_unavailable" });
+  }
+}
+
+async function handleAdminLeadStatus(req, res, leadId) {
+  if (req.method !== "PATCH") return json(res, 405, { error: "method_not_allowed" }, { Allow: "PATCH" });
+  if (!sameOrigin(req)) return json(res, 403, { error: "same_origin_required" });
+  const session = readSession(req);
+  if (!session) return json(res, 401, { error: "admin_session_required" });
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(leadId)) return json(res, 400, { error: "invalid_lead_id" });
+  let body;
+  try {
+    body = await readJson(req);
+  } catch {
+    return json(res, 400, { error: "invalid_request" });
+  }
+  if (!leadStatuses.has(body?.status)) return json(res, 400, { error: "invalid_status" });
+  let client;
+  try {
+    client = await getPool().connect();
+    await client.query("BEGIN");
+    const current = await client.query("SELECT status FROM public_leads WHERE id = $1 FOR UPDATE", [leadId]);
+    if (!current.rows[0]) {
+      await client.query("ROLLBACK");
+      return json(res, 404, { error: "lead_not_found" });
+    }
+    const previousStatus = current.rows[0].status;
+    if (previousStatus !== body.status) {
+      await client.query("UPDATE public_leads SET status = $2, updated_at = NOW() WHERE id = $1", [leadId, body.status]);
+      await client.query(
+        "INSERT INTO public_lead_status_audit (lead_id, previous_status, next_status, changed_by) VALUES ($1,$2,$3,$4)",
+        [leadId, previousStatus, body.status, session.role],
+      );
+    }
+    await client.query("COMMIT");
+    return json(res, 200, { leadId, status: body.status, updatedBy: session.role });
+  } catch (error) {
+    if (client) await client.query("ROLLBACK").catch(() => {});
+    const unconfigured = error instanceof Error && error.message === "DATABASE_NOT_CONFIGURED";
+    const migrationMissing = error && typeof error === "object" && error.code === "42P01";
+    if (!unconfigured) console.error("Could not update lead status.", error);
+    return json(res, 503, { error: unconfigured ? "database_not_configured" : migrationMissing ? "migration_required" : "lead_update_unavailable" });
+  } finally {
+    client?.release();
+  }
+}
+
 async function handleSiteVisual(req, res, url) {
+  const selectionEnabled = process.env.SITE_VISUAL_SELECTION_ENABLED === "true";
+  if (req.method === "GET" && !selectionEnabled) {
+    return json(res, 200, { visual: DEFAULT_VISUAL, updatedBy: null, updatedAt: null, source: "default", selectionEnabled: false });
+  }
+  if (req.method === "PUT" && !selectionEnabled) {
+    return json(res, 409, { error: "visual_selection_paused" });
+  }
   if (req.method === "GET") {
     try {
       const result = await getPool().query(
@@ -156,6 +374,7 @@ async function handleSiteVisual(req, res, url) {
         updatedBy: row?.updated_by || null,
         updatedAt: row?.updated_at || null,
         source: "postgres",
+        selectionEnabled: true,
       });
     } catch (error) {
       const unconfigured = error instanceof Error && error.message === "DATABASE_NOT_CONFIGURED";
@@ -228,7 +447,7 @@ async function handleAdminSession(req, res) {
 
   if (req.method !== "POST") return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, POST, DELETE" });
   if (!sameOrigin(req)) return json(res, 403, { error: "same_origin_required" });
-  if (!rateLimitAllows(req)) return json(res, 429, { error: "too_many_attempts" }, { "Retry-After": "900" });
+  if (!rateLimitAllows(loginAttempts, req, LOGIN_WINDOW_MS, LOGIN_MAX_ATTEMPTS)) return json(res, 429, { error: "too_many_attempts" }, { "Retry-After": "900" });
 
   let body;
   try {
@@ -258,7 +477,11 @@ async function handleAdminSession(req, res) {
 async function routeApi(req, res) {
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
   if (url.pathname === "/api/site-visual") return handleSiteVisual(req, res, url);
+  if (url.pathname === "/api/leads") return handleCreateLead(req, res);
   if (url.pathname === "/api/admin/session") return handleAdminSession(req, res);
+  if (url.pathname === "/api/admin/leads") return handleAdminLeads(req, res, url);
+  const leadMatch = url.pathname.match(/^\/api\/admin\/leads\/([0-9a-f-]{36})$/i);
+  if (leadMatch) return handleAdminLeadStatus(req, res, leadMatch[1]);
   return json(res, 404, { error: "not_found" });
 }
 
@@ -268,7 +491,7 @@ await app.prepare();
 
 const server = createServer(async (req, res) => {
   const pathname = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`).pathname;
-  if (pathname === "/api/site-visual" || pathname === "/api/admin/session") {
+  if (pathname === "/api/site-visual" || pathname === "/api/leads" || pathname === "/api/admin/session" || pathname === "/api/admin/leads" || pathname.startsWith("/api/admin/leads/")) {
     await routeApi(req, res);
     return;
   }

@@ -4,14 +4,13 @@ Sistema em desenvolvimento para o Grupo SEG System. O **plano foi registrado em 
 
 - [Plano de produto e decisões pendentes](docs/plano-produto.md)
 - [Referências de marca e conteúdo público](docs/referencias-marca.md)
+- [Captação de pedidos, painel e SMTP](docs/captacao-pedidos.md)
 
 ## Prévia atual
 
-As dez propostas visuais foram aprovadas. O **layout 06 — Azul em camadas** é o padrão inicial; todos os dez conceitos estão disponíveis em `/admin/visual`, que troca a composição completa da página inicial (`/`). O módulo tem modo local e integração preparada com PostgreSQL/sessão administrativa; como este workspace não tem banco nem segredos configurados, a prévia opera localmente. `/layout-01` a `/layout-10` abrem as propostas individuais; `/layout-06` preserva o conceito original. A aplicação **não está pronta para produção**.
+As dez propostas visuais foram aprovadas. Por decisão atual, o **layout 06 — Azul em camadas** permanece como padrão, e a seleção administrativa/global dos dez temas fica adiada enquanto avançamos nos fluxos essenciais. As rotas `/layout-01` a `/layout-10` preservam as propostas para retomada posterior; `/layout-06` abre o conceito original. A aplicação **não está pronta para produção**.
 
-Veja [como configurar a administração global da aparência](docs/administracao-visual.md).
-
-O formulário **não salva leads nem envia e-mails**: ele abre uma mensagem para o visitante revisar e enviar manualmente no WhatsApp. Portal autenticado, CRM, agendamento confirmado, candidaturas, blog e módulos administrativos completos ainda serão construídos. A seleção visual global exige PostgreSQL e segredos do servidor; até configurá-los, o modo local permite apenas testar no navegador atual. As demais áreas aparecem como “Em desenvolvimento”; não existe login ou dado contratual fictício exposto como real. O `robots` está configurado como `noindex` durante a prévia.
+O formulário integrado do layout 06 envia pedidos à API do servidor, que valida e tenta registrar os dados no PostgreSQL, tenta notificar por SMTP quando configurado e, após o registro, oferece continuidade pelo WhatsApp. Visitas permanecem solicitações — não são confirmadas automaticamente. O painel `/admin/leads` lista os pedidos e permite atualizar o status usando a sessão administrativa existente. **Este fluxo ainda não foi validado contra um PostgreSQL real neste ambiente**; é necessário configurar banco, credenciais e aplicar as migrações. Sem SMTP, a gravação continua independente e a interface informa o status de notificação. Portal autenticado, candidaturas, blog e outros módulos ainda serão construídos. A seleção administrativa/global de visuais está adiada; layout 06 permanece padrão e as demais propostas ficam preservadas para retomada. As demais áreas aparecem como “Em desenvolvimento”; não existe dado contratual fictício exposto como real. O `robots` está configurado como `noindex` durante a prévia.
 
 A foto da viatura e o logotipo foram vistos na conversa, mas não estavam acessíveis nos caminhos de anexos informados pelo ambiente; o site usa ilustração e marca tipográfica provisórias até os arquivos estarem disponíveis em `public/brand/`. Antes de publicar, confirmar contatos, conteúdo, licenças, autorização de imagens e política de privacidade.
 
@@ -46,4 +45,4 @@ npm run typecheck
 npm run build
 ```
 
-Para testar temas no modo local, não é necessário configurar credenciais. Para ativar a seleção central, configure PostgreSQL e segredos conforme [administração visual](docs/administracao-visual.md), depois execute `npm run db:migrate`. A autenticação de token por papel é uma base inicial; concluir o RBAC do sistema e 2FA antes da produção.
+Para desenvolver os fluxos de pedidos, configure PostgreSQL e os segredos administrativos conforme [administração e configuração](docs/administracao-visual.md), copie `.env.example` para `.env.local` e execute `npm run db:up` e `npm run db:migrate`. Para alertas por e-mail, preencha `MAIL_HOST`, `MAIL_PORT`, `MAIL_SECURE`, `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_FROM` e `LEADS_NOTIFY_EMAIL` com os dados do serviço SMTP escolhido. Nunca versione credenciais. A autenticação por token é uma base inicial; concluir RBAC completo e 2FA antes da produção. Os ZIPs de download são snapshots estáticos e não incluem esta API.

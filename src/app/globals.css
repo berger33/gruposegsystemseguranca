@@ -188,7 +188,9 @@ h1 em, h2 em { color: var(--blue); font-style: normal; }
 .optional { color: var(--muted); font-weight: 400; }
 .quote-form-wrap label.consent { display: flex; gap: 9px; align-items: start; margin: 18px 0; font-weight: 400; color: var(--muted); font-size: 10px; line-height: 1.55; }
 .consent input { accent-color: #1c4d96; margin: 2px 0 0; flex: none; }
+.honeypot { position: absolute !important; left: -10000px !important; width: 1px !important; height: 1px !important; overflow: hidden !important; }
 .form-submit { width: 100%; gap: 10px; border: none; }
+.form-submit:disabled { cursor: wait; opacity: .7; }
 .form-disclaimer { margin: 12px 0 0; text-align: center; color: var(--muted); font-size: 10px; line-height: 1.5; }
 .extras-section { background: var(--paper); padding: 95px 0; }
 .extras-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }

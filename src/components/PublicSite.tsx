@@ -51,14 +51,19 @@ export default function PublicSite() {
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [assistantQuestion, setAssistantQuestion] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submissionMessage, setSubmissionMessage] = useState("");
+  const [whatsappContinuation, setWhatsappContinuation] = useState("");
 
   function toggleService(name: string) {
     setSelectedServices(current => current.includes(name) ? current.filter(item => item !== name) : [...current, name]);
   }
 
-  function sendRequest(event: FormEvent<HTMLFormElement>) {
+  async function sendRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    if (submitting) return;
+    const form = event.currentTarget;
+    const data = new FormData(form);
     const name = String(data.get("name") || "").trim();
     const phone = String(data.get("phone") || "").trim();
     const city = String(data.get("city") || "").trim();
@@ -73,8 +78,44 @@ export default function PublicSite() {
       ...(kind === "visita" ? [`Preferência de dia/turno: ${preference || "A combinar"}`] : []),
       ...(details ? [`Detalhes: ${details}`] : []),
     ];
-    // Prévia sem armazenamento: o visitante decide se envia a mensagem no WhatsApp.
-    window.open(whatsappLink(lines.join("\n")), "_blank", "noopener,noreferrer");
+    setSubmitting(true);
+    setSubmissionMessage("");
+    setWhatsappContinuation("");
+    try {
+      const response = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requestKind: kind === "visita" ? "visit" : "quote",
+          name,
+          phone,
+          city,
+          propertyType: property,
+          services: selectedServices,
+          visitPreference: preference,
+          details,
+          consent: data.get("consent") === "on",
+          website: String(data.get("website") || ""),
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.recorded) {
+        setSubmissionMessage(response.status === 429
+          ? "Recebemos muitas tentativas deste dispositivo. Aguarde alguns minutos ou fale diretamente com a equipe."
+          : "Não foi possível registrar sua solicitação agora. Tente novamente ou fale diretamente com a equipe.");
+        return;
+      }
+      setWhatsappContinuation(whatsappLink(lines.join("\n")));
+      setSubmissionMessage(kind === "visita"
+        ? "Solicitação registrada. A visita ainda depende de confirmação da equipe. Você pode continuar pelo WhatsApp."
+        : "Solicitação registrada. A equipe poderá dar continuidade pelo WhatsApp.");
+      form.reset();
+      setSelectedServices([]);
+    } catch {
+      setSubmissionMessage("Não foi possível conectar ao sistema. Tente novamente ou fale diretamente com a equipe.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -148,7 +189,7 @@ export default function PublicSite() {
 
         <section className="process-section"><div className="container"><div className="section-heading"><span className="kicker">04 — COMO COMEÇAR</span><h2>Do primeiro contato à <em>solução certa.</em></h2></div><div className="steps"><div><span>01</span><MessageCircle size={28} /><h3>Conte sua necessidade</h3><p>Selecione os serviços e descreva seu imóvel ou operação.</p></div><div><span>02</span><CalendarIcon /><h3>Converse com a equipe</h3><p>Quando necessário, solicite uma visita. A equipe confirma a disponibilidade.</p></div><div><span>03</span><ShieldCheck size={28} /><h3>Receba uma proposta</h3><p>Uma solução dimensionada conforme o que você realmente precisa.</p></div></div></div></section>
 
-        <section className="section quote-section" id="orcamento"><div className="container quote-grid"><div className="quote-copy"><span className="kicker">05 — VAMOS CONVERSAR</span><h2>Vamos construir uma proteção <em>para você?</em></h2><p>Escolha o que faz sentido agora. Sua solicitação será preparada para envio pelo WhatsApp — nenhum valor é calculado automaticamente nesta prévia.</p><div className="quote-benefits"><span><Check size={17} /> Sem compromisso</span><span><Check size={17} /> Serviços combináveis</span><span><Check size={17} /> Atendimento humano</span></div><div className="quote-contact"><small>PREFERE CONVERSAR DIRETAMENTE?</small><a href={whatsappLink("Olá! Gostaria de falar com a equipe do Grupo SEG System.")} target="_blank" rel="noopener noreferrer"><MessageCircle size={20} /> {SITE_PHONE} <ArrowUpRight size={16} /></a></div></div><div className="quote-form-wrap"><div className="form-heading"><span>SUA SOLICITAÇÃO</span><span>ETAPA 01 / 01</span></div><div className="form-tabs" role="group" aria-label="Tipo de solicitação"><button className={kind === "orcamento" ? "active" : ""} type="button" onClick={() => setKind("orcamento")}>Orçamento</button><button className={kind === "visita" ? "active" : ""} type="button" onClick={() => setKind("visita")}>Solicitar visita</button></div><form onSubmit={sendRequest}><fieldset className="service-choices"><legend>Quais serviços interessam a você?</legend><div className="service-choices__grid">{services.map(service => <button type="button" key={service.name} className={`choice ${selectedServices.includes(service.name) ? "choice--selected" : ""}`} aria-pressed={selectedServices.includes(service.name)} onClick={() => toggleService(service.name)}><span className="choice__check">{selectedServices.includes(service.name) && <Check size={13} strokeWidth={3} />}</span>{service.name}</button>)}</div></fieldset><div className="form-row"><label>Seu nome <span>*</span><input name="name" autoComplete="name" placeholder="Como podemos chamar você?" required maxLength={100} /></label><label>Telefone / WhatsApp <span>*</span><input name="phone" type="tel" autoComplete="tel" placeholder="(11) 99999-9999" required maxLength={30} /></label></div><div className="form-row"><label>Cidade / bairro <span>*</span><input name="city" placeholder="Onde fica o imóvel?" required maxLength={100} /></label><label>Tipo de imóvel <span>*</span><select name="property" required defaultValue=""><option value="" disabled>Selecione uma opção</option><option>Condomínio</option><option>Empresa ou comércio</option><option>Indústria</option><option>Instituição</option><option>Outro</option></select></label></div>{kind === "visita" && <label className="field-full">Dia ou turno de preferência <span>*</span><input name="preference" placeholder="Ex.: terça-feira à tarde" required maxLength={120} /></label>}<label className="field-full">Conte um pouco mais <span className="optional">(opcional)</span><textarea name="details" placeholder="Tamanho do local, necessidades ou dúvidas..." rows={3} maxLength={1000} /></label><label className="consent"><input type="checkbox" required /><span>Estou ciente de que, ao continuar, a mensagem com os dados acima será aberta no WhatsApp para que eu decida se quero enviá-la. Nenhuma solicitação é armazenada neste site de prévia.</span></label><button className="button button--primary form-submit" type="submit">Preparar mensagem no WhatsApp <ArrowUpRight size={18} /></button><p className="form-disclaimer">{kind === "visita" ? "A visita só é confirmada após resposta da equipe." : "Um orçamento depende da avaliação da equipe. Não exibimos preços automáticos."}</p></form></div></div></section>
+        <section className="section quote-section" id="orcamento"><div className="container quote-grid"><div className="quote-copy"><span className="kicker">05 — VAMOS CONVERSAR</span><h2>Vamos construir uma proteção <em>para você?</em></h2><p>Escolha o que faz sentido agora. Sua solicitação será preparada para envio pelo WhatsApp — nenhum valor é calculado automaticamente nesta prévia.</p><div className="quote-benefits"><span><Check size={17} /> Sem compromisso</span><span><Check size={17} /> Serviços combináveis</span><span><Check size={17} /> Atendimento humano</span></div><div className="quote-contact"><small>PREFERE CONVERSAR DIRETAMENTE?</small><a href={whatsappLink("Olá! Gostaria de falar com a equipe do Grupo SEG System.")} target="_blank" rel="noopener noreferrer"><MessageCircle size={20} /> {SITE_PHONE} <ArrowUpRight size={16} /></a></div></div><div className="quote-form-wrap"><div className="form-heading"><span>SUA SOLICITAÇÃO</span><span>ETAPA 01 / 01</span></div><div className="form-tabs" role="group" aria-label="Tipo de solicitação"><button className={kind === "orcamento" ? "active" : ""} type="button" onClick={() => setKind("orcamento")}>Orçamento</button><button className={kind === "visita" ? "active" : ""} type="button" onClick={() => setKind("visita")}>Solicitar visita</button></div><form onSubmit={sendRequest}><fieldset className="service-choices"><legend>Quais serviços interessam a você?</legend><div className="service-choices__grid">{services.map(service => <button type="button" key={service.name} className={`choice ${selectedServices.includes(service.name) ? "choice--selected" : ""}`} aria-pressed={selectedServices.includes(service.name)} onClick={() => toggleService(service.name)}><span className="choice__check">{selectedServices.includes(service.name) && <Check size={13} strokeWidth={3} />}</span>{service.name}</button>)}</div></fieldset><div className="form-row"><label>Seu nome <span>*</span><input name="name" autoComplete="name" placeholder="Como podemos chamar você?" required maxLength={100} /></label><label>Telefone / WhatsApp <span>*</span><input name="phone" type="tel" autoComplete="tel" placeholder="(11) 99999-9999" required maxLength={30} /></label></div><div className="form-row"><label>Cidade / bairro <span>*</span><input name="city" placeholder="Onde fica o imóvel?" required maxLength={100} /></label><label>Tipo de imóvel <span>*</span><select name="property" required defaultValue=""><option value="" disabled>Selecione uma opção</option><option>Condomínio</option><option>Empresa ou comércio</option><option>Indústria</option><option>Instituição</option><option>Outro</option></select></label></div>{kind === "visita" && <label className="field-full">Dia ou turno de preferência <span>*</span><input name="preference" placeholder="Ex.: terça-feira à tarde" required maxLength={120} /></label>}<label className="field-full">Conte um pouco mais <span className="optional">(opcional)</span><textarea name="details" placeholder="Tamanho do local, necessidades ou dúvidas..." rows={3} maxLength={1000} /></label><label className="consent"><input name="consent" type="checkbox" required /><span>Autorizo o registro destes dados para que a equipe do Grupo SEG System responda ao meu pedido. Após o registro, poderei continuar pelo WhatsApp.</span></label><label className="honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label><button className="button button--primary form-submit" type="submit" disabled={submitting}>{submitting ? "Registrando solicitação…" : "Registrar e continuar"} <ArrowUpRight size={18} /></button>{submissionMessage && <p className="form-disclaimer" role="status" aria-live="polite">{submissionMessage}</p>}{whatsappContinuation && <a className="button button--outline" href={whatsappContinuation} target="_blank" rel="noopener noreferrer">Continuar pelo WhatsApp <MessageCircle size={17} /></a>}<p className="form-disclaimer">{kind === "visita" ? "O pedido será registrado, mas a visita só é confirmada por uma pessoa da equipe." : "Um orçamento depende da avaliação da equipe. Não exibimos preços automáticos."}</p></form></div></div></section>
 
         <section className="extras-section" id="portal"><div className="container"><div className="section-heading section-heading--split"><div><span className="kicker">EM CONSTRUÇÃO</span><h2>Mais perto de quem <em>confia na gente.</em></h2></div><p>O novo sistema vai reunir atendimento, relacionamento e informações em um só lugar. Estas áreas ainda não estão disponíveis nesta prévia.</p></div><div className="extras-grid"><div className="extra-card"><span className="extra-card__icon"><LockKeyhole size={25} /></span><h3>Portal do cliente</h3><p>Contratos autorizados, documentos e acompanhamento de chamados em um ambiente reservado.</p><span className="status-pill">Em desenvolvimento</span></div><div className="extra-card"><span className="extra-card__icon"><FileText size={25} /></span><h3>Conteúdo e novidades</h3><p>Dicas de prevenção e informações sobre segurança, com conteúdo revisado antes da publicação.</p><span className="status-pill">Em desenvolvimento</span></div><div className="extra-card"><span className="extra-card__icon"><Users size={25} /></span><h3>Trabalhe conosco</h3><p>Um espaço para conhecer oportunidades e se candidatar com segurança e privacidade.</p><span className="status-pill">Em desenvolvimento</span></div></div></div></section>
 
