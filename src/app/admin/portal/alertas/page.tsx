@@ -37,7 +37,14 @@ export default function SecurityAlertsPreviewPage() {
               <div className={styles.alertBody}>
                 <div className={styles.alertTop}><strong>Pedido de troca de e-mail sinalizado como não reconhecido</strong><span>{reviewed ? "VISTO NA PRÉVIA" : "PENDENTE"}</span></div>
                 <p>Uma pessoa com acesso ao endereço atual sinalizou que não solicitou a alteração. Na regra definida, a solicitação pendente é cancelada e o link enviado ao novo endereço é invalidado.</p>
-                <dl><div><dt>Conta</dt><dd>e-mail mascarado · exemplo fictício</dd></div><div><dt>Destinatários</dt><dd>Marcelo e TI</dd></div><div><dt>Canal</dt><dd><Mail size={13} /> Caixa de alertas + aviso por e-mail</dd></div></dl>
+                <dl><div><dt>Conta</dt><dd>identificador mascarado · exemplo fictício</dd></div><div><dt>Destinatários</dt><dd>Marcelo e TI</dd></div><div><dt>Canal</dt><dd><Mail size={13} /> Caixa de alertas + aviso por e-mail</dd></div></dl>
+                <section className={styles.emailDraft} aria-label="Rascunho demonstrativo do e-mail de alerta">
+                  <div><Mail size={14} /><strong>Rascunho de e-mail · não enviado</strong></div>
+                  <span><b>Assunto:</b> Segurança do portal — alteração de e-mail sinalizada</span>
+                  <p>Uma alteração de e-mail foi sinalizada como não reconhecida. A solicitação foi cancelada e o link de confirmação invalidado.</p>
+                  <p>Conta: identificador mascarado. Horário: registrado pelo servidor no evento real.</p>
+                  <p>Acesse o painel de segurança pelo endereço habitual para revisar os detalhes. Este aviso não inclui o novo endereço, tokens, códigos nem links de acesso.</p>
+                </section>
                 {!reviewed && <button type="button" onClick={() => setReviewed(true)}>Marcar como visto <Check size={14} /></button>}
                 <small>Exemplo ilustrativo. Nenhum cliente, endereço, data ou evento real está associado.</small>
               </div>
