@@ -26,6 +26,10 @@ curl -X POST http://localhost:3000/api/admin/invites -H "Content-Type: applicati
 
 Sem SMTP configurado, a resposta inclui `inviteUrl` para entrega manual pelo WhatsApp; com SMTP, o convite sai por e-mail e o link não aparece na resposta.
 
+### Área logada do cliente — etapa 2 (27/09/2026)
+
+A segunda camada **real** está ativa: vínculo verificado no servidor entre a identidade de acesso e o cadastro central do cliente (grant com emissor e motivo, revogação idempotente e imediata), mais os dados reais do painel — contratos, documentos e chamados. A regra de ouro: **o portal nunca confia em identificadores vindos do navegador**; cada consulta passa por sessão válida + grant ativo + cadastro ativo, e qualquer desvio responde `403 forbidden` genérico com linha de auditoria `authorization_denied`. Área do cliente em `/cliente/app` (visão geral, contratos, documentos com download auditado, chamados com resposta da equipe); painel operacional em `/admin/clientes` (cadastros → vínculos → contratos → documentos → chamados, com motivo obrigatório nas ações sensíveis). Migração `db/migrations/004-client-space.sql` + validadores compartilhados em `src/lib/client-space-core.mjs`. Detalhes em [portal do cliente](docs/portal-acesso-e-seguranca.md).
+
 ## Download das prévias
 
 - [Layout 01 — prévia estática original (.zip)](downloads/seg-system-previa.zip). Extraia e abra `index.html`.
@@ -58,6 +62,6 @@ npm run typecheck
 npm run build
 ```
 
-`npm test` cobre apenas a validação pura e não precisa de banco. Com `DATABASE_URL` configurada, `npm run test:integration` sobe uma instância própria do servidor e confere, de forma serializada, o fluxo completo de pedidos **e** o fluxo completo de acesso do cliente (convite → aceite → confirmação → login → recuperação de senha) contra um PostgreSQL real, com um servidor SMTP de captura embutido nos testes. Eles só rodam com `RUN_DATABASE_INTEGRATION=1` e se recusam a escrever em bancos que não sejam de loopback, salvo `RUN_DATABASE_INTEGRATION_REMOTE=1`.
+`npm test` cobre apenas a validação pura e não precisa de banco. Com `DATABASE_URL` configurada, `npm run test:integration` sobe uma instância própria do servidor e confere, de forma serializada contra um PostgreSQL real: o fluxo completo de pedidos; o fluxo completo de acesso do cliente (convite → aceite → confirmação → login → recuperação de senha), com servidor SMTP de captura embutido; e o fluxo do espaço real do cliente (vínculos verificados, negação por padrão com auditoria, documentos com round-trip byte a byte, chamados com trilha de situação). Eles só rodam com `RUN_DATABASE_INTEGRATION=1` e se recusam a escrever em bancos que não sejam de loopback, salvo `RUN_DATABASE_INTEGRATION_REMOTE=1`.
 
 Para desenvolver os fluxos de pedidos, configure PostgreSQL e os segredos administrativos conforme [administração e configuração](docs/administracao-visual.md), copie `.env.example` para `.env.local` e execute `npm run db:up` e `npm run db:migrate`. Para alertas por e-mail, preencha `MAIL_HOST`, `MAIL_PORT`, `MAIL_SECURE`, `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_FROM` e `LEADS_NOTIFY_EMAIL` com os dados do serviço SMTP escolhido. Nunca versione credenciais. A autenticação por token é uma base inicial; concluir RBAC completo e 2FA antes da produção. Os ZIPs de download são snapshots estáticos e não incluem esta API.

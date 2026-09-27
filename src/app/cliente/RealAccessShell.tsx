@@ -24,7 +24,7 @@ export default function RealAccessShell({ children }: { children: ReactNode }) {
       </header>
       <main className={styles.main}>{children}</main>
       <footer className={styles.footer}>
-        Área de acesso real (etapa 1). As rotas marcadas como prévia continuam sendo demonstrações sem autenticação.
+        Portal do cliente com autenticação real. As rotas marcadas como prévia continuam sendo demonstrações sem autenticação.
         Dúvidas sobre acesso: fale com a equipe do Grupo SEG System.
       </footer>
     </div>

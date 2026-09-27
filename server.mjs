@@ -1,11 +1,13 @@
 import { createHmac, createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { createServer } from "node:http";
+import path from "node:path";
 import nextEnv from "@next/env";
 import next from "next";
 import pg from "pg";
 import nodemailer from "nodemailer";
 import { validateLeadInput } from "./src/lib/public-lead-validation.mjs";
 import { createClientAccessApi } from "./src/server/client-access-api.mjs";
+import { createClientSpaceApi } from "./src/server/client-space-api.mjs";
 
 const { loadEnvConfig } = nextEnv;
 const { Pool } = pg;
@@ -56,12 +58,12 @@ function json(res, status, payload, extraHeaders = {}) {
   res.end(body);
 }
 
-async function readJson(req) {
+async function readJson(req, maxBytes = MAX_BODY_BYTES) {
   const chunks = [];
   let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > MAX_BODY_BYTES) throw new Error("BODY_TOO_LARGE");
+    if (size > maxBytes) throw new Error("BODY_TOO_LARGE");
     chunks.push(chunk);
   }
   try {
@@ -448,6 +450,16 @@ const clientAccessApi = createClientAccessApi({
   baseUrl: publicBaseUrl,
 });
 
+const clientSpaceApi = createClientSpaceApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+  readClientSession: clientAccessApi.readClientSession,
+  docsDir: (process.env.CLIENT_DOCS_DIR || "").trim() || path.join(process.cwd(), ".data", "documents"),
+});
+
 async function routeApi(req, res) {
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
   if (url.pathname === "/api/site-visual") return handleSiteVisual(req, res, url);
@@ -460,6 +472,28 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/invites") return clientAccessApi.handleAdminInvites(req, res, url);
   const inviteMatch = url.pathname.match(/^\/api\/admin\/invites\/([0-9a-f-]{36})$/i);
   if (inviteMatch) return clientAccessApi.handleInviteRevoke(req, res, inviteMatch[1]);
+  if (url.pathname === "/api/client/accounts") return clientSpaceApi.handleClientAccounts(req, res);
+  if (url.pathname === "/api/client/contracts") return clientSpaceApi.handleClientContracts(req, res, url);
+  if (url.pathname === "/api/client/documents") return clientSpaceApi.handleClientDocuments(req, res, url);
+  const clientDocMatch = url.pathname.match(/^\/api\/client\/documents\/([0-9a-f-]{36})\/download$/i);
+  if (clientDocMatch) return clientSpaceApi.handleClientDocumentDownload(req, res, clientDocMatch[1]);
+  if (url.pathname === "/api/client/tickets") return clientSpaceApi.handleClientTickets(req, res, url);
+  if (url.pathname === "/api/admin/identities") return clientSpaceApi.handleAdminIdentities(req, res, url);
+  if (url.pathname === "/api/admin/client-accounts") return clientSpaceApi.handleAdminAccounts(req, res, url);
+  const accountMatch = url.pathname.match(/^\/api\/admin\/client-accounts\/([0-9a-f-]{36})$/i);
+  if (accountMatch) return clientSpaceApi.handleAdminAccountStatus(req, res, accountMatch[1]);
+  if (url.pathname === "/api/admin/grants") return clientSpaceApi.handleAdminGrants(req, res, url);
+  const grantMatch = url.pathname.match(/^\/api\/admin\/grants\/([0-9a-f-]{36})$/i);
+  if (grantMatch) return clientSpaceApi.handleAdminGrantRevoke(req, res, grantMatch[1]);
+  if (url.pathname === "/api/admin/contracts") return clientSpaceApi.handleAdminContracts(req, res, url);
+  const contractMatch = url.pathname.match(/^\/api\/admin\/contracts\/([0-9a-f-]{36})$/i);
+  if (contractMatch) return clientSpaceApi.handleAdminContractStatus(req, res, contractMatch[1]);
+  if (url.pathname === "/api/admin/documents") return clientSpaceApi.handleAdminDocuments(req, res, url);
+  const adminDocMatch = url.pathname.match(/^\/api\/admin\/documents\/([0-9a-f-]{36})\/download$/i);
+  if (adminDocMatch) return clientSpaceApi.handleAdminDocumentDownload(req, res, adminDocMatch[1]);
+  if (url.pathname === "/api/admin/tickets") return clientSpaceApi.handleAdminTickets(req, res, url);
+  const ticketMatch = url.pathname.match(/^\/api\/admin\/tickets\/([0-9a-f-]{36})$/i);
+  if (ticketMatch) return clientSpaceApi.handleAdminTicketUpdate(req, res, ticketMatch[1]);
   return json(res, 404, { error: "not_found" });
 }
 
@@ -471,7 +505,19 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/admin/leads/")
   || pathname.startsWith("/api/auth/")
   || pathname === "/api/admin/invites"
-  || pathname.startsWith("/api/admin/invites/");
+  || pathname.startsWith("/api/admin/invites/")
+  || pathname.startsWith("/api/client/")
+  || pathname === "/api/admin/identities"
+  || pathname === "/api/admin/client-accounts"
+  || pathname.startsWith("/api/admin/client-accounts/")
+  || pathname === "/api/admin/grants"
+  || pathname.startsWith("/api/admin/grants/")
+  || pathname === "/api/admin/contracts"
+  || pathname.startsWith("/api/admin/contracts/")
+  || pathname === "/api/admin/documents"
+  || pathname.startsWith("/api/admin/documents/")
+  || pathname === "/api/admin/tickets"
+  || pathname.startsWith("/api/admin/tickets/");
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();

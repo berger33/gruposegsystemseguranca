@@ -16,13 +16,13 @@ if (!migrationUrl) {
 } else {
   const pool = new Pool({ connectionString: migrationUrl, max: 1 });
   try {
-    const migrations = ["001-site-visual.sql", "002-public-leads.sql", "003-client-access.sql"];
+    const migrations = ["001-site-visual.sql", "002-public-leads.sql", "003-client-access.sql", "004-client-space.sql"];
     for (const filename of migrations) {
       const migration = await readFile(path.join(projectRoot, "db/migrations", filename), "utf8");
       await pool.query(migration);
       console.log(`Applied idempotent schema step: ${filename}`);
     }
-    console.log("Site visual, public lead and client access schemas are ready. The default visual remains Layout 06.");
+    console.log("Site visual, public lead, client access and client space schemas are ready. The default visual remains Layout 06.");
   } catch (error) {
     console.error("Migration failed. Check the PostgreSQL connection and permissions.");
     console.error(error instanceof Error ? error.message : String(error));

@@ -117,3 +117,79 @@ A primeira etapa de autenticação do portal **está implementada e verificada c
 - Interface administrativa (hoje os convites são geridos por API; a UI virá com o painel administrativo consolidado).
 - Exclusão automática de alertas/logs ao fim da retenção, 2FA de administradores, RBAC completo e rate limit distribuído.
 - Provedor SMTP real e política de privacidade aprovada — obrigatórios antes de produção.
+
+---
+
+## Implementação real — etapa 2 (27/09/2026): vínculo verificado + dados reais do cliente
+
+Com a identidade da etapa 1 pronta, a etapa 2 materializa a regra central do documento:
+o portal nunca confia em identificadores vindos do navegador. Todo dado é entregue com base
+no **vínculo verificado no servidor** entre a identidade de acesso e o cadastro central
+(“grant”), registrado com emissor e motivo.
+
+### Modelo implementado (migração `004-client-space.sql`)
+
+- **`client_accounts`**: cadastro central da empresa/condomínio cliente (`parent_account_id`
+  prepara filiais futuras). Situações: `active`, `suspended`, `closed`.
+- **`client_access_grants`**: o vínculo. Índice único parcial garante **um vínculo ativo por
+  par identidade+cadastro**; revogação é soft (histórico preservado) e idempotente.
+- **`client_contracts`** (título, serviço do catálogo público, resumo, vigência, situação),
+  **`client_documents`** (metadados + `storage_key` aleatório de 48 hex; o conteúdo fica em
+  pasta privada fora do site, nunca servido por URL pública),
+  **`client_tickets`** e **`client_ticket_status_audit`** (mudança de situação com anterior/nova).
+- Trilha `auth_access_audit` ampliada com: `account_create`, `account_status`, `grant_issue`,
+  `grant_revoke`, `contract_create`, `contract_status`, `contract_list`, `document_upload`,
+  `document_download`, `document_list`, `ticket_open`, `ticket_status`, `ticket_list`.
+  **Nenhuma linha contém senha, token ou segredo** — apenas ids, ação, resultado e quem fez.
+
+### Resolução de permissão em cada requisição (deny-by-default)
+
+1. Sessão do cliente válida (etapa 1, revogável no servidor).
+2. Existe grant **ativo** (`revoked_at IS NULL`) entre a identidade e o cadastro pedido.
+3. O cadastro está `active` (conta suspensa/encerrada anula o efeito do grant na hora).
+
+Falha em qualquer passo → `403 { "error": "forbidden" }` **genérico** (sem revelar se o
+cadastro existe) + linha de auditoria com categoria `authorization_denied` e a ação de leitura
+correspondente (`contract_list`, `document_list`, …). Nada do `account` enviado pelo
+navegador é aceito sem essa verificação.
+
+### Rotas da etapa 2
+
+- Cliente: `GET /api/client/accounts` · `GET /api/client/contracts|documents|tickets?account=<uuid>`
+  · `GET /api/client/documents/:id/download` (bytes com `Content-Disposition: attachment`,
+  `Cache-Control: private, no-store`, `nosniff`, download auditado) · `POST /api/client/tickets`.
+- Admin (chave marcelo/TI): `GET /api/admin/identities?q=` · `GET|POST /api/admin/client-accounts`
+  · `PATCH /api/admin/client-accounts/:id` · `GET|POST /api/admin/grants` · `DELETE /api/admin/grants/:id`
+  (motivo obrigatório, revogação idempotente) · `GET|POST /api/admin/contracts` (serviço validado
+  contra o catálogo público do site) · `PATCH /api/admin/contracts/:id` · `GET|POST /api/admin/documents`
+  (upload base64, tipos permitidos PDF/PNG/JPG/webp/TXT/CSV/DOCX/XLSX, limite 10 MB) ·
+  `GET /api/admin/documents/:id/download` · `GET /api/admin/tickets?status=&account=` ·
+  `PATCH /api/admin/tickets/:id` (transação `FOR UPDATE` + trilha de situação + resposta ao
+  cliente até 500 caracteres, mantida quando o campo chega em branco).
+
+### Telas
+
+- Área do cliente em `/cliente/app` (navegação Visão geral · Contratos · Documentos · Chamados,
+  seletor de cadastro quando há mais de um vínculo, estados vazios explicando que a equipe ainda
+  não vinculou/publicou os dados, cadastro suspenso não exibe dados protegidos).
+- Painel administrativo em `/admin/clientes` com as seções numeradas na ordem do processo:
+  **1** cadastros centrais → **2** vínculos (com busca de identidade e motivo obrigatório) →
+  **3** contratos → **4** documentos → **5** chamados com resposta visível ao cliente.
+
+### Limites e rejeições padronizadas
+
+Validação pura em `src/lib/client-space-core.mjs` (mesma fonte para UI e testes): nomes sem
+`<>`, limites (cadastro 160 · motivo/escopo 500 · contrato 160/500 · documento 160/60 ·
+chamado 120/500/500), períodos de vigência coerentes (`AAAA-MM-DD`), nomes de arquivo com
+caracteres proibidos do Windows removidos e apenas a extensão permitida no mapa de tipos.
+
+### Cobertura de testes da etapa 2
+
+- `tests/client-space-core.test.mjs` (unitário dos validadores).
+- `tests/client-space.integration.test.mjs` (PostgreSQL real, servidor real):
+  vínculo exigido em 403 genérico com auditoria; cadastro suspenso nega mesmo com vínculo;
+  grant duplicado → 409; revogação corta o acesso na hora e repetir a revogação é seguro
+  (`already_revoked`); upload/download com **round-trip byte a byte** e headers seguros;
+  tipo proibido e arquivo > 10 MB rejeitados; chamado aberto só dentro do vínculo; resposta da
+  equipe visível ao cliente; trilhas `grant_issue/grant_revoke/ticket_status/document_download`
+  conferidas direto no banco.
