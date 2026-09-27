@@ -26,7 +26,7 @@ export default function InvitationFlowPreviewPage() {
   const [email, setEmail] = useState("");
   const [simulatedStatus, setSimulatedStatus] = useState<SimulatedInviteStatus>("valid");
   const [emailConfirmed, setEmailConfirmed] = useState(false);
-  const [resendSimulated, setResendSimulated] = useState(false);
+  const [resendCount, setResendCount] = useState(0);
 
   function previewInvitation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -38,7 +38,7 @@ export default function InvitationFlowPreviewPage() {
     setEmail("");
     setSimulatedStatus("valid");
     setEmailConfirmed(false);
-    setResendSimulated(false);
+    setResendCount(0);
   }
 
   return (
@@ -115,8 +115,8 @@ export default function InvitationFlowPreviewPage() {
                 <p><strong>Assunto:</strong> Confirme seu e-mail para continuar</p>
                 <p>Na implementação, o cliente receberá uma mensagem de confirmação. O link terá validade de 7 dias. Clique nos controles abaixo apenas para visualizar os estados; nenhum e-mail ou link real é enviado.</p>
                 <button className={styles.secondary} type="button" aria-pressed={emailConfirmed} onClick={() => setEmailConfirmed(current => !current)}>{emailConfirmed ? "E-mail confirmado · desfazer simulação" : "Simular confirmação do e-mail"}</button>
-                {!emailConfirmed && <button className={styles.resendButton} type="button" aria-pressed={resendSimulated} onClick={() => setResendSimulated(current => !current)}>{resendSimulated ? "Desfazer prévia do reenvio" : "Simular reenvio do link"}</button>}
-                <small className={emailConfirmed ? styles.confirmedNote : ""} role="status">{emailConfirmed ? "E-mail marcado como confirmado nesta demonstração. Isso não cria conta nem libera documentos." : resendSimulated ? "Reenvio simulado: em produção, o link anterior seria invalidado. Limite de frequência será aplicado; quantidade e intervalo ainda serão definidos." : "Aguardando confirmação demonstrativa. Reenvio terá limite e invalidará o link anterior."}</small>
+                {!emailConfirmed && <button className={styles.resendButton} type="button" disabled={resendCount >= 5} onClick={() => setResendCount(count => Math.min(5, count + 1))}>{resendCount >= 5 ? "Limite demonstrativo atingido" : "Simular reenvio do link"}</button>}
+                <small className={emailConfirmed ? styles.confirmedNote : ""} role="status">{emailConfirmed ? "E-mail marcado como confirmado nesta demonstração. Isso não cria conta nem libera documentos." : `Reenvios simulados: ${resendCount}/5 por endereço em 24 horas; intervalo mínimo de 2 minutos. ${resendCount > 0 ? "O link anterior foi invalidado na simulação. " : ""}O limite real precisa ser aplicado no servidor.`}</small>
               </div>
               <small>Esta simulação não autentica nem libera acesso.</small>
             </div>

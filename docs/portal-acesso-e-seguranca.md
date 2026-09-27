@@ -8,7 +8,8 @@
 - A verificação do vínculo será feita pelo **cadastro central da empresa** antes de conceder acesso. O cadastro deve ser consultado por pessoa autorizada; esta decisão não significa que exista integração técnica pronta.
 - **Marcelo e TI** podem aprovar solicitações, emitir convites e definir o escopo do acesso. O sistema deverá auditar essas ações.
 - Convites terão validade de **7 dias**, serão de **uso único** e poderão ser revogados antes do uso.
-- Após aceitar o convite, o cliente entrará com **senha + confirmação de e-mail**. O link de confirmação também terá validade de **7 dias**; reenvio será permitido com limite de frequência, e cada novo link invalida o anterior. A quantidade/intervalo exatos do limite e os fluxos de recuperação de senha/MFA ainda precisam ser definidos antes da produção.
+- Após aceitar o convite, o cliente entrará com **senha + confirmação de e-mail**. O link de confirmação terá validade de **7 dias**; reenvio limitado a **5 vezes por endereço em 24 horas**, com intervalo mínimo de **2 minutos**, e cada novo link invalida o anterior.
+- Recuperação de senha será por link enviado ao e-mail cadastrado, de **uso único** e validade de **1 hora**. A resposta pública deve ser genérica para não revelar se o e-mail tem conta. MFA de clientes e detalhes de segurança/limitação da recuperação ainda precisam ser definidos antes da produção.
 - O solicitante será notificado por **e-mail** sobre a decisão. Em caso de recusa, usar mensagem **genérica**, sem expor detalhes internos. Os textos da prévia são rascunhos e ainda precisam de revisão antes de uso real.
 - O autocadastro, por si só, **não libera contratos nem documentos**. O vínculo do usuário com o cliente e o escopo autorizado precisam ser verificados no servidor.
 - Não importar nem inventar cadastros, contratos, documentos ou clientes para a prévia.
@@ -54,6 +55,7 @@ As regras abaixo são uma base técnica para discussão; não ativam comportamen
 ## Estado dos protótipos
 
 - `/cliente`: página informativa; não autentica e não cria contas.
+- `/cliente/recuperar-senha`: demonstra solicitação por e-mail com resposta genérica e link de uso único válido por 1 hora; não envia mensagem nem altera senha.
 - `/admin/portal`: compara os três modos em memória.
 - `/admin/portal/convites`: prévia sem envio de e-mail, token ou link real; permite simular estados do convite, confirmação e reenvio do e-mail em memória no navegador. Link de confirmação: validade definida de 7 dias; reenvio com limite, invalidando o link anterior (limite exato ainda pendente).
 - `/admin/portal/solicitacoes`: sem registros; permite simular Marcelo ou TI como responsável, a consulta ao cadastro central, escopos e estados da análise. Também exibe rascunhos de e-mail de aprovação e recusa genérica; não envia mensagens. As interações são locais e não alteram permissões.
