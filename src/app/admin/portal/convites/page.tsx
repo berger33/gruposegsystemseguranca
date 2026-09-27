@@ -6,6 +6,14 @@ import { ArrowLeft, ArrowRight, Check, CircleAlert, CircleCheck, Mail, ShieldChe
 import styles from "./InvitationFlow.module.css";
 
 type Stage = "compose" | "email" | "acceptance";
+type SimulatedInviteStatus = "valid" | "expired" | "used" | "revoked";
+
+const invitationStatuses: Array<{ id: SimulatedInviteStatus; label: string; title: string; description: string }> = [
+  { id: "valid", label: "Válido", title: "Convite dentro do prazo", description: "Demonstração: um convite real só permitiria continuar depois de confirmar o e-mail e validar o vínculo no cadastro central." },
+  { id: "expired", label: "Expirado", title: "Este convite expirou", description: "Convites reais deixam de funcionar após 7 dias. A equipe precisará emitir um novo convite após nova verificação." },
+  { id: "used", label: "Utilizado", title: "Este convite já foi utilizado", description: "O convite é de uso único. Após o aceite, não pode ser reutilizado para entrar novamente." },
+  { id: "revoked", label: "Revogado", title: "Este convite foi revogado", description: "Marcelo ou TI pode revogar um convite antes do aceite. Um link revogado não deve liberar acesso." },
+];
 
 const stages: Array<{ id: Stage; label: string }> = [
   { id: "compose", label: "Preparar" },
@@ -16,6 +24,7 @@ const stages: Array<{ id: Stage; label: string }> = [
 export default function InvitationFlowPreviewPage() {
   const [stage, setStage] = useState<Stage>("compose");
   const [email, setEmail] = useState("");
+  const [simulatedStatus, setSimulatedStatus] = useState<SimulatedInviteStatus>("valid");
 
   function previewInvitation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -25,6 +34,7 @@ export default function InvitationFlowPreviewPage() {
   function resetPreview() {
     setStage("compose");
     setEmail("");
+    setSimulatedStatus("valid");
   }
 
   return (
@@ -90,15 +100,22 @@ export default function InvitationFlowPreviewPage() {
             <div className={styles.acceptanceCard}>
               <span className={styles.acceptanceIcon}><UserRoundCheck size={23} /></span>
               <span className={styles.cardKicker}>03 · EXPERIÊNCIA DA PESSOA CONVIDADA</span>
-              <h2>Este convite ainda não está ativo.</h2>
-              <p>O fluxo real deverá aceitar o convite uma única vez, confirmar o e-mail e consultar o cadastro central antes de criar a conta e liberar somente o escopo aprovado por Marcelo ou TI.</p>
+              <h2>{invitationStatuses.find(item => item.id === simulatedStatus)?.title}</h2>
+              <p>{invitationStatuses.find(item => item.id === simulatedStatus)?.description}</p>
               <label htmlFor="invite-code">Código ou link de convite</label>
               <input id="invite-code" type="text" value="Nenhum código foi gerado nesta prévia" readOnly />
-              <button className={styles.disabledAction} type="button" disabled>Aceite indisponível</button>
+              <button className={styles.disabledAction} type="button" disabled>Aceite indisponível nesta prévia</button>
               <small>Esta simulação não autentica nem libera acesso.</small>
             </div>
             <aside className={styles.checklist}>
-              <h3><ShieldCheck size={18} /> Verificações necessárias</h3>
+              <h3><ShieldCheck size={18} /> Simular estado do convite</h3>
+              <p className={styles.simulatorHelp}>Escolha um estado para visualizar a resposta esperada. Os botões só alteram esta demonstração local.</p>
+              <div className={styles.statusChoices} role="group" aria-label="Estado demonstrativo do convite">
+                {invitationStatuses.map(item => (
+                  <button key={item.id} type="button" className={`${styles.statusChoice} ${simulatedStatus === item.id ? styles.statusChoiceActive : ""}`} aria-pressed={simulatedStatus === item.id} onClick={() => setSimulatedStatus(item.id)}>{item.label}</button>
+                ))}
+              </div>
+              <h3><ShieldCheck size={18} /> Regras confirmadas</h3>
               <div><CircleCheck size={17} /><span><strong>Vínculo confirmado</strong><small>Uma pessoa autorizada verifica a relação com o cliente.</small></span></div>
               <div><CircleCheck size={17} /><span><strong>Permissões definidas</strong><small>O acesso é limitado ao escopo aprovado no servidor.</small></span></div>
               <div><CircleCheck size={17} /><span><strong>Convite com prazo e uso limitados</strong><small>Prazo de 7 dias; uso único; revogável antes do aceite.</small></span></div>

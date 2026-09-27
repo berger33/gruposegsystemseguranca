@@ -54,6 +54,6 @@ As regras abaixo são uma base técnica para discussão; não ativam comportamen
 
 - `/cliente`: página informativa; não autentica e não cria contas.
 - `/admin/portal`: compara os três modos em memória.
-- `/admin/portal/convites`: prévia sem envio de e-mail, token ou link real.
+- `/admin/portal/convites`: prévia sem envio de e-mail, token ou link real; permite simular os estados válido, expirado, utilizado e revogado apenas em memória no navegador.
 - `/admin/portal/solicitacoes`: sem registros; botões apenas pré-visualizam estados.
 - `/admin/portal/autocadastro`: estados demonstrativos; não coleta dados nem libera acesso.
