@@ -105,7 +105,7 @@ export default function ReminderPermissionsPage() {
           <div>
             <span className={styles.eyebrow}>PORTAL DO CLIENTE · PRÉVIA ADMINISTRATIVA</span>
             <h1>Permissão para mudar<br /><em>o canal dos avisos.</em></h1>
-            <p>TI concede ou revoga o acesso individualmente, com motivo obrigatório e trilha de auditoria.</p>
+            <p>TI concede ou revoga o acesso individualmente pelo ID interno imutável da conta, com motivo obrigatório e trilha de auditoria. Alterações no e-mail não transferem a permissão.</p>
           </div>
           {(events.length > 0 || notices.length > 0) && <button type="button" className={styles.reset} onClick={resetDemo}>Limpar demonstração</button>}
         </div>
@@ -125,8 +125,8 @@ export default function ReminderPermissionsPage() {
           <section className={styles.card} aria-labelledby="change-title">
             <div className={styles.cardHeading}><span className={styles.step}>01 · AÇÃO DE TI</span><h2 id="change-title">Conceder ou revogar</h2><p>O motivo é obrigatório nas duas ações. A revogação remove a permissão imediatamente na implementação real.</p></div>
             <form className={styles.form} onSubmit={submitChange}>
-              <label htmlFor="permission-target">Identificador fictício do administrador</label>
-              <input id="permission-target" required maxLength={100} value={target} onChange={event => { setTarget(event.target.value); setFeedback(""); }} placeholder="Ex.: admin-demo-01" autoComplete="off" />
+              <label htmlFor="permission-target">ID interno fictício do administrador</label>
+              <input id="permission-target" required maxLength={100} value={target} onChange={event => { setTarget(event.target.value); setFeedback(""); }} placeholder="Ex.: id-admin-demo-01" autoComplete="off" />
               <small>Não informe nome, e-mail ou identificador real de funcionário.</small>
 
               <div className={styles.actionGroup} role="group" aria-label="Ação de permissão">
