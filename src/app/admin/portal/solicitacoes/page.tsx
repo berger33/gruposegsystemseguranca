@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CircleAlert, CircleCheck, Clock3, FileSearch, ShieldCheck } from "lucide-react";
 import styles from "./AccessRequests.module.css";
@@ -29,8 +29,10 @@ export default function AccessRequestsPreviewPage() {
   const [scope, setScope] = useState<ClientScope[]>([]);
   const [validationMessage, setValidationMessage] = useState("");
   const [requestCreated, setRequestCreated] = useState(false);
+  const [requestEmail, setRequestEmail] = useState("");
 
-  function createDemoRequest() {
+  function createDemoRequest(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setRequestCreated(true);
     setStatus("pending");
     setApprover("marcelo");
@@ -41,6 +43,7 @@ export default function AccessRequestsPreviewPage() {
 
   function resetDemoRequest() {
     setRequestCreated(false);
+    setRequestEmail("");
     setStatus("pending");
     setCentralRecordChecked(false);
     setScope([]);
@@ -79,14 +82,19 @@ export default function AccessRequestsPreviewPage() {
           <Link className={styles.clientLink} href="/cliente">Ver página do cliente <ArrowRight size={14} /></Link>
         </div>
 
-        <div className={styles.notice} role="note"><CircleAlert size={18} /><p><strong>Fluxo alternativo · demonstração local.</strong> Nenhum pedido real é recebido ou salvo. Os campos mínimos para identificar o vínculo ainda precisam de decisão; para não inventá-los, o botão abaixo cria apenas um registro fictício sem nome, e-mail ou dados de empresa.</p></div>
+        <div className={styles.notice} role="note"><CircleAlert size={18} /><p><strong>Fluxo alternativo · demonstração local.</strong> O único campo definido é o e-mail que consta no cadastro central. Use exclusivamente um endereço fictício terminado em <code>.invalid</code>; nenhum pedido é enviado, verificado ou salvo.</p></div>
 
         <section className={styles.requesterSection} aria-labelledby="requester-title">
-          <div><span className={styles.sectionLabel}>01 · VISÃO DO SOLICITANTE</span><h2 id="requester-title">Solicitar acesso ao portal</h2><p>Alternativa ao convite, sujeita à decisão de habilitação. A solicitação sozinha não verifica vínculo nem concede acesso a documentos.</p></div>
+          <div><span className={styles.sectionLabel}>01 · VISÃO DO SOLICITANTE</span><h2 id="requester-title">Solicitar acesso ao portal</h2><p>Alternativa ao convite, sujeita à habilitação. Solicita somente o e-mail cadastrado para a equipe verificar o vínculo no cadastro central; não libera acesso automaticamente.</p></div>
           {!requestCreated ? (
-            <button className={styles.createRequest} type="button" onClick={createDemoRequest}>Simular envio de pedido fictício <ArrowRight size={15} /></button>
+            <form className={styles.requestForm} onSubmit={createDemoRequest}>
+              <label htmlFor="access-request-email">E-mail do cadastro central · fictício</label>
+              <input id="access-request-email" type="email" required maxLength={254} pattern="[^@\s]+@[^@\s]+\.invalid" title="Use somente um endereço fictício terminado em .invalid" placeholder="cliente-demo@example.invalid" value={requestEmail} onChange={event => setRequestEmail(event.target.value)} />
+              <small>É o único dado solicitado nesta etapa. Não use e-mail real; o domínio .invalid é reservado para exemplos.</small>
+              <button className={styles.createRequest} type="submit">Simular envio de pedido fictício <ArrowRight size={15} /></button>
+            </form>
           ) : (
-            <div className={styles.createdNotice} role="status"><CircleCheck size={16} /><span>Pedido DEMO-001 enviado somente à fila simulada desta página. Nenhum dado de contato foi incluído.</span><button type="button" onClick={resetDemoRequest}>Reiniciar simulação</button></div>
+            <div className={styles.createdNotice} role="status"><CircleCheck size={16} /><span>Pedido DEMO-001 enviado somente à fila simulada. E-mail de teste: {requestEmail}. Nenhum servidor consultado.</span><button type="button" onClick={resetDemoRequest}>Reiniciar simulação</button></div>
           )}
         </section>
 
@@ -103,7 +111,7 @@ export default function AccessRequestsPreviewPage() {
             </div>
           ) : (
             <article className={styles.demoRequest}>
-              <div><strong>Pedido DEMO-001 · solicitante fictício</strong><span>Sem nome, e-mail, empresa ou referência real</span></div>
+              <div><strong>Pedido DEMO-001 · solicitante fictício</strong><span>E-mail de teste: {requestEmail} · sem outros dados pessoais ou de empresa</span></div>
               <span className={styles.demoRequestStatus}>{statusOptions.find(item => item.id === status)?.label}</span>
               <p>Pedido de acesso ao portal. Vínculo ainda não verificado nesta simulação.</p>
             </article>
