@@ -63,7 +63,10 @@ export default function PortalAccessAdminPage() {
             <h1>Como o cliente<br /><em>poderá obter acesso.</em></h1>
             <p>Convite é o modo inicial previsto. Compare as opções para orientar a futura configuração administrativa do portal.</p>
           </div>
-          <Link className={styles.previewLink} href="/cliente">Ver página do cliente <ArrowUpRight size={15} /></Link>
+          <div className={styles.previewLinks}>
+            <Link className={styles.previewLink} href="/cliente">Ver página do cliente <ArrowUpRight size={15} /></Link>
+            <Link className={styles.previewLink} href="/admin/portal/convites">Prévia do fluxo de convite <ArrowUpRight size={15} /></Link>
+          </div>
         </div>
 
         <div className={styles.prototypeNotice} role="note">
