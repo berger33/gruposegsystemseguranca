@@ -6,6 +6,7 @@
     "dev": "next dev --hostname 0.0.0.0",
     "build": "next build",
     "build:preview": "STATIC_PREVIEW=1 next build",
+    "build:download": "npm run build:preview && python3 scripts/empacotar-previa.py",
     "start": "next start --hostname 0.0.0.0",
     "typecheck": "tsc --noEmit"
   },

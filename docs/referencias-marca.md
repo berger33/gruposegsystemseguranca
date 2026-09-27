@@ -26,7 +26,7 @@ Levantamento em 27/09/2026 para orientar o início do desenvolvimento. Conteúdo
 - Cores observadas nas imagens enviadas: azul escuro/azul forte, branco e neutros escuros. O escudo tem contorno azul e área branca; a viatura traz branco e azul. **Não há códigos HEX oficiais confirmados.** Usar tokens provisórios e ajustar quando o arquivo do logotipo estiver acessível.
 - Interface **Institucional clássica**: clara, organizada, confiável, com navegação corporativa e conteúdo objetivo.
 - Interface **Tecnologia/monitoramento**: base mais escura, azul de destaque, elementos de interface operacional sem sugerir acesso real a câmeras.
-- As duas devem compartilhar dados, links, acessibilidade e fluxos; o administrador poderá alternar qual é publicada. As outras oito interfaces serão desenvolvidas em fases posteriores.
+- As dez propostas visuais devem compartilhar dados, links, acessibilidade e fluxos. A primeira foi aprovada; as demais são prévias para avaliação. O administrador poderá alternar qual é publicada quando o painel seguro de configurações estiver implementado.
 
 ## Publicação segura / pendências
 
