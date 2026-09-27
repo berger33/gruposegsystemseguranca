@@ -2,13 +2,46 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Check, CircleAlert, CircleCheck, Clock3, FileSearch, ShieldCheck, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CircleAlert, CircleCheck, Clock3, FileSearch, ShieldCheck } from "lucide-react";
 import styles from "./AccessRequests.module.css";
 
-type DecisionPreview = "approved" | "declined" | null;
+type RequestStatus = "pending" | "reviewing" | "approved" | "declined";
+type ApproverRole = "marcelo" | "ti";
+type ClientScope = "contracts" | "invoices" | "tickets";
+
+const statusOptions: Array<{ id: RequestStatus; label: string }> = [
+  { id: "pending", label: "Recebida" },
+  { id: "reviewing", label: "Em análise" },
+  { id: "approved", label: "Aprovada" },
+  { id: "declined", label: "Recusada" },
+];
+
+const scopeOptions: Array<{ id: ClientScope; label: string }> = [
+  { id: "contracts", label: "Contratos autorizados" },
+  { id: "invoices", label: "Faturas autorizadas" },
+  { id: "tickets", label: "Chamados do cliente" },
+];
 
 export default function AccessRequestsPreviewPage() {
-  const [decision, setDecision] = useState<DecisionPreview>(null);
+  const [status, setStatus] = useState<RequestStatus>("pending");
+  const [approver, setApprover] = useState<ApproverRole>("marcelo");
+  const [centralRecordChecked, setCentralRecordChecked] = useState(false);
+  const [scope, setScope] = useState<ClientScope[]>([]);
+  const [validationMessage, setValidationMessage] = useState("");
+
+  function updateStatus(nextStatus: RequestStatus) {
+    if (nextStatus === "approved" && (!centralRecordChecked || scope.length === 0)) {
+      setValidationMessage("Para pré-visualizar uma aprovação, marque a consulta ao cadastro central e selecione pelo menos um item de escopo. Isso não concede acesso real.");
+      return;
+    }
+    setValidationMessage("");
+    setStatus(nextStatus);
+  }
+
+  function toggleScope(item: ClientScope) {
+    setScope(current => current.includes(item) ? current.filter(value => value !== item) : [...current, item]);
+    setValidationMessage("");
+  }
 
   return (
     <main className={styles.page}>
@@ -49,21 +82,44 @@ export default function AccessRequestsPreviewPage() {
         </section>
 
         <section className={styles.decisionSection} aria-labelledby="decision-title">
-          <div className={styles.decisionIntro}><span className={styles.sectionLabel}>PRÉVIA INTERATIVA · SEM REGISTRO</span><h2 id="decision-title">Veja os dois resultados possíveis</h2><p>Estas opções não analisam nem aprovam uma solicitação real.</p></div>
-          <div className={styles.decisionGrid}>
-            <button className={`${styles.decisionButton} ${decision === "approved" ? styles.selectedApproved : ""}`} type="button" aria-pressed={decision === "approved"} onClick={() => setDecision("approved")}>
-              <span><Check size={16} /></span><strong>Pré-visualizar aprovação</strong><small>Ver mensagem de estado aprovado</small>
-            </button>
-            <button className={`${styles.decisionButton} ${decision === "declined" ? styles.selectedDeclined : ""}`} type="button" aria-pressed={decision === "declined"} onClick={() => setDecision("declined")}>
-              <span><X size={16} /></span><strong>Pré-visualizar não aprovação</strong><small>Ver mensagem de estado não aprovado</small>
-            </button>
-          </div>
-          {decision && (
-            <div className={`${styles.outcome} ${decision === "approved" ? styles.outcomeApproved : styles.outcomeDeclined}`} role="status" aria-live="polite">
-              {decision === "approved" ? <CircleCheck size={19} /> : <CircleAlert size={19} />}
-              <div><strong>{decision === "approved" ? "Prévia: solicitação aprovada" : "Prévia: acesso não aprovado"}</strong><p>{decision === "approved" ? "Em uma versão real, a equipe ainda precisaria confirmar o vínculo e definir permissões no servidor antes de enviar instruções de acesso." : "Em uma versão real, a equipe registraria a decisão segundo a política aprovada. Motivos, comunicação e possibilidade de nova solicitação ainda precisam ser definidos."}</p></div>
+          <div className={styles.decisionIntro}><span className={styles.sectionLabel}>PRÉVIA INTERATIVA · SEM REGISTRO</span><h2 id="decision-title">Simule a revisão de um pedido</h2><p>Use os controles para explorar papéis, verificação, escopo e estados. Não há solicitação real nesta tela.</p></div>
+
+          <div className={styles.simulatorGrid}>
+            <div className={styles.simulatorBlock}>
+              <strong className={styles.controlLabel}>Responsável pela decisão</strong>
+              <div className={styles.roleChoices} role="group" aria-label="Responsável demonstrativo">
+                <button type="button" className={approver === "marcelo" ? styles.roleSelected : ""} aria-pressed={approver === "marcelo"} onClick={() => setApprover("marcelo")}>Marcelo</button>
+                <button type="button" className={approver === "ti" ? styles.roleSelected : ""} aria-pressed={approver === "ti"} onClick={() => setApprover("ti")}>TI / sistema</button>
+              </div>
+              <label className={styles.verifyToggle}>
+                <input type="checkbox" checked={centralRecordChecked} onChange={event => { setCentralRecordChecked(event.target.checked); setValidationMessage(""); }} />
+                <span><strong>Simular consulta ao cadastro central</strong><small>Marque apenas para demonstrar a etapa de verificação; nenhum cadastro é consultado.</small></span>
+              </label>
+              <strong className={styles.controlLabel}>Escopo a demonstrar</strong>
+              <div className={styles.scopeChoices}>
+                {scopeOptions.map(item => (
+                  <label key={item.id}>
+                    <input type="checkbox" checked={scope.includes(item.id)} onChange={() => toggleScope(item.id)} />
+                    <span>{item.label}</span>
+                  </label>
+                ))}
+              </div>
             </div>
-          )}
+
+            <div className={styles.simulatorBlock}>
+              <strong className={styles.controlLabel}>Estado demonstrativo</strong>
+              <div className={styles.statusChoices} role="group" aria-label="Estado da solicitação">
+                {statusOptions.map(item => (
+                  <button key={item.id} type="button" className={status === item.id ? styles.statusSelected : ""} aria-pressed={status === item.id} onClick={() => updateStatus(item.id)}>{item.label}</button>
+                ))}
+              </div>
+              <div className={`${styles.outcome} ${status === "approved" ? styles.outcomeApproved : status === "declined" ? styles.outcomeDeclined : ""}`} role="status" aria-live="polite">
+                {status === "approved" ? <CircleCheck size={19} /> : status === "declined" ? <CircleAlert size={19} /> : <Clock3 size={19} />}
+                <div><strong>{statusOptions.find(item => item.id === status)?.label} · responsável: {approver === "marcelo" ? "Marcelo" : "TI / sistema"}</strong><p>{status === "approved" ? `Escopo demonstrativo: ${scopeOptions.filter(item => scope.includes(item.id)).map(item => item.label.toLowerCase()).join(", ")}. Em produção, a decisão exigirá verificação do cadastro central e autorização no servidor.` : status === "declined" ? "Prévia de recusa. Motivo, comunicação e possibilidade de nova solicitação ainda precisam de política definida." : status === "reviewing" ? "A solicitação está em análise; nenhuma permissão é concedida enquanto a verificação e a decisão não forem concluídas." : "Pedido recebido e aguardando análise. Esta mudança é somente demonstrativa."}</p></div>
+              </div>
+              {validationMessage && <p className={styles.validationMessage} role="alert">{validationMessage}</p>}
+            </div>
+          </div>
         </section>
 
         <div className={styles.securityNote}><ShieldCheck size={18} /><p>A aprovação deve ser auditável. Contratos e documentos continuam sujeitos a autorização por cliente no servidor — uma solicitação ou cadastro não libera acesso automaticamente.</p></div>
