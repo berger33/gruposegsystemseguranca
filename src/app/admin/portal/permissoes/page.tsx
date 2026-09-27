@@ -1,0 +1,172 @@
+"use client";
+
+import { useMemo, useState, type FormEvent } from "react";
+import Link from "next/link";
+import { ArrowLeft, Bell, Check, Clock3, History, ShieldCheck, UserRoundCog, UserRoundPlus, UserRoundX } from "lucide-react";
+import styles from "./ReminderPermissions.module.css";
+
+type PermissionAction = "grant" | "revoke";
+type PermissionEvent = {
+  id: number;
+  target: string;
+  action: PermissionAction;
+  reason: string;
+  createdAt: string;
+};
+type PanelNotice = {
+  id: number;
+  message: string;
+  createdAt: string;
+  expiresAt: string;
+};
+
+function formatDate(date: Date) {
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(date);
+}
+
+export default function ReminderPermissionsPage() {
+  const [target, setTarget] = useState("");
+  const [reason, setReason] = useState("");
+  const [action, setAction] = useState<PermissionAction>("grant");
+  const [permissions, setPermissions] = useState<Record<string, boolean>>({});
+  const [events, setEvents] = useState<PermissionEvent[]>([]);
+  const [notices, setNotices] = useState<PanelNotice[]>([]);
+  const [feedback, setFeedback] = useState("");
+  const normalizedTarget = target.trim();
+  const hasPermission = Boolean(normalizedTarget && permissions[normalizedTarget.toLocaleLowerCase("pt-BR")]);
+  const activePermissions = useMemo(
+    () => Object.entries(permissions).filter(([, active]) => active).map(([identifier]) => identifier),
+    [permissions],
+  );
+
+  function submitChange(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const cleanTarget = normalizedTarget;
+    const cleanReason = reason.trim();
+    if (!cleanTarget || !cleanReason) return;
+    const key = cleanTarget.toLocaleLowerCase("pt-BR");
+    const currentlyActive = Boolean(permissions[key]);
+    if (action === "grant" && currentlyActive) {
+      setFeedback("Este identificador já tem a permissão na demonstração.");
+      return;
+    }
+    if (action === "revoke" && !currentlyActive) {
+      setFeedback("Não há permissão ativa para revogar neste identificador de demonstração.");
+      return;
+    }
+
+    const now = new Date();
+    const actionText = action === "grant" ? "concedida" : "revogada";
+    const auditEvent: PermissionEvent = {
+      id: now.getTime(),
+      target: cleanTarget,
+      action,
+      reason: cleanReason,
+      createdAt: formatDate(now),
+    };
+    const expires = new Date(now);
+    expires.setDate(expires.getDate() + 30);
+    const notice: PanelNotice = {
+      id: now.getTime() + 1,
+      message: `Permissão para alterar o canal dos avisos ${actionText} em ${formatDate(now)}.`,
+      createdAt: formatDate(now),
+      expiresAt: formatDate(expires),
+    };
+
+    setPermissions(previous => ({ ...previous, [key]: action === "grant" }));
+    setEvents(previous => [auditEvent, ...previous]);
+    setNotices(previous => [notice, ...previous]);
+    setFeedback(action === "grant" ? "Permissão concedida nesta prévia." : "Permissão revogada nesta prévia.");
+    setReason("");
+    setAction(action === "grant" ? "revoke" : "grant");
+  }
+
+  function resetDemo() {
+    setTarget("");
+    setReason("");
+    setAction("grant");
+    setPermissions({});
+    setEvents([]);
+    setNotices([]);
+    setFeedback("");
+  }
+
+  const actionIsValid = action === "grant" ? !hasPermission : hasPermission;
+
+  return (
+    <main className={styles.page}>
+      <header className={styles.header}>
+        <Link href="/admin/portal" className={styles.back}><ArrowLeft size={15} /> Configuração do portal</Link>
+        <span className={styles.headerTag}><ShieldCheck size={14} /> PERMISSÕES ADMINISTRATIVAS</span>
+      </header>
+
+      <section className={styles.content}>
+        <div className={styles.heading}>
+          <div>
+            <span className={styles.eyebrow}>PORTAL DO CLIENTE · PRÉVIA ADMINISTRATIVA</span>
+            <h1>Permissão para mudar<br /><em>o canal dos avisos.</em></h1>
+            <p>TI concede ou revoga o acesso individualmente, com motivo obrigatório e trilha de auditoria.</p>
+          </div>
+          {(events.length > 0 || notices.length > 0) && <button type="button" className={styles.reset} onClick={resetDemo}>Limpar demonstração</button>}
+        </div>
+
+        <div className={styles.prototypeNotice} role="note">
+          <span><UserRoundCog size={18} /></span>
+          <p><strong>Protótipo local, sem efeito real.</strong> Use somente identificadores fictícios. Nenhuma conta real é consultada, nenhuma permissão é alterada no servidor e nada é persistido. Avisos e auditoria são apenas simulações nesta página.</p>
+        </div>
+
+        <div className={styles.policyStrip}>
+          <div><ShieldCheck size={16} /><span><strong>Quem pode conceder/revogar</strong><small>TI, individualmente por administrador</small></span></div>
+          <div><Clock3 size={16} /><span><strong>Validade da permissão</strong><small>Até TI revogar</small></span></div>
+          <div><History size={16} /><span><strong>Trilha de auditoria</strong><small>12 meses; motivo obrigatório</small></span></div>
+        </div>
+
+        <div className={styles.workspace}>
+          <section className={styles.card} aria-labelledby="change-title">
+            <div className={styles.cardHeading}><span className={styles.step}>01 · AÇÃO DE TI</span><h2 id="change-title">Conceder ou revogar</h2><p>O motivo é obrigatório nas duas ações. A revogação remove a permissão imediatamente na implementação real.</p></div>
+            <form className={styles.form} onSubmit={submitChange}>
+              <label htmlFor="permission-target">Identificador fictício do administrador</label>
+              <input id="permission-target" required maxLength={100} value={target} onChange={event => { setTarget(event.target.value); setFeedback(""); }} placeholder="Ex.: admin-demo-01" autoComplete="off" />
+              <small>Não informe nome, e-mail ou identificador real de funcionário.</small>
+
+              <div className={styles.actionGroup} role="group" aria-label="Ação de permissão">
+                <button type="button" aria-pressed={action === "grant"} className={action === "grant" ? styles.actionSelected : ""} onClick={() => { setAction("grant"); setFeedback(""); }}><UserRoundPlus size={15} /> Conceder</button>
+                <button type="button" aria-pressed={action === "revoke"} className={action === "revoke" ? styles.actionSelected : ""} onClick={() => { setAction("revoke"); setFeedback(""); }} disabled={!hasPermission}><UserRoundX size={15} /> Revogar</button>
+              </div>
+              <label htmlFor="permission-reason">Motivo obrigatório</label>
+              <textarea id="permission-reason" required minLength={5} maxLength={400} value={reason} onChange={event => setReason(event.target.value)} placeholder="Justificativa fictícia para a concessão ou revogação" />
+              <div className={styles.formFooter}><span>{reason.trim().length}/400 caracteres</span><button type="submit" disabled={!normalizedTarget || !reason.trim() || !actionIsValid}>{action === "grant" ? "Simular concessão" : "Simular revogação"} <Check size={15} /></button></div>
+              {feedback && <p className={styles.feedback} role="status">{feedback}</p>}
+            </form>
+          </section>
+
+          <section className={styles.card} aria-labelledby="active-title">
+            <div className={styles.cardHeading}><span className={styles.step}>02 · ESTADO SIMULADO</span><h2 id="active-title">Permissões ativas</h2><p>A lista começa vazia e existe apenas enquanto esta página estiver aberta.</p></div>
+            {activePermissions.length === 0 ? (
+              <div className={styles.empty}><ShieldCheck size={20} /><strong>Nenhuma permissão na prévia</strong><span>Conceda uma usando um identificador de demonstração.</span></div>
+            ) : (
+              <ul className={styles.activeList}>{activePermissions.map(identifier => <li key={identifier}><span className={styles.statusDot} /><span><strong>{identifier}</strong><small>Pode alterar o canal dos avisos · até revogação</small></span><span className={styles.activeTag}>ATIVA</span></li>)}</ul>
+            )}
+          </section>
+        </div>
+
+        <div className={styles.columns}>
+          <section className={styles.subCard} aria-labelledby="notice-title">
+            <div className={styles.subHeading}><Bell size={16} /><div><span className={styles.step}>03 · AVISO NO PAINEL</span><h2 id="notice-title">Administrador afetado</h2></div></div>
+            <p className={styles.subIntro}>A concessão ou revogação gera uma mensagem genérica no painel, sem e-mail, motivo ou link. O aviso expira após 30 dias, tenha sido lido ou não.</p>
+            {notices.length === 0 ? <div className={styles.noticeEmpty}>Os avisos simulados aparecerão aqui após uma ação.</div> : <ul className={styles.noticeList}>{notices.map(notice => <li key={notice.id}><span className={styles.noticeIcon}><Bell size={14} /></span><span><strong>{notice.message}</strong><small>Expira em {notice.expiresAt} · sem link</small></span></li>)}</ul>}
+            <small className={styles.channelChangeRule}>Alterações no canal dos avisos são somente auditadas; não notificam outros administradores.</small>
+          </section>
+
+          <section className={styles.subCard} aria-labelledby="audit-title">
+            <div className={styles.subHeading}><History size={16} /><div><span className={styles.step}>04 · REGISTRO SIMULADO</span><h2 id="audit-title">Auditoria</h2></div></div>
+            <p className={styles.subIntro}>No sistema real, manter os registros por 12 meses, sem senhas, tokens completos ou códigos; depois, excluir detalhes.</p>
+            {events.length === 0 ? <div className={styles.noticeEmpty}>As ações demonstrativas aparecerão aqui.</div> : <ul className={styles.auditList}>{events.map(item => <li key={item.id}><div className={styles.auditTop}><strong>{item.action === "grant" ? "Permissão concedida" : "Permissão revogada"}</strong><time>{item.createdAt}</time></div><span>Administrador: {item.target} · Ação por: TI (simulado)</span><p>Motivo: {item.reason}</p></li>)}</ul>}
+          </section>
+        </div>
+
+        <footer className={styles.footer}><span>Somente uma demonstração local: não autentica, não envia avisos e não salva mudanças.</span><Link href="/admin/portal/alertas">Voltar à prévia de alertas <ArrowLeft size={13} /></Link></footer>
+      </section>
+    </main>
+  );
+}

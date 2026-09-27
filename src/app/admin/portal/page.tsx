@@ -69,6 +69,7 @@ export default function PortalAccessAdminPage() {
             <Link className={styles.previewLink} href="/admin/portal/solicitacoes">Prévia de análise de acesso <ArrowUpRight size={15} /></Link>
             <Link className={styles.previewLink} href="/admin/portal/autocadastro">Prévia de autocadastro <ArrowUpRight size={15} /></Link>
             <Link className={styles.previewLink} href="/admin/portal/alertas">Prévia de alertas de segurança <ArrowUpRight size={15} /></Link>
+            <Link className={styles.previewLink} href="/admin/portal/permissoes">Prévia de permissões administrativas <ArrowUpRight size={15} /></Link>
           </div>
         </div>
 
