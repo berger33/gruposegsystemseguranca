@@ -22,8 +22,8 @@ type PanelNotice = {
 };
 
 const demoAdminDirectory = [
-  { id: "id-demo-admin-001", label: "Conta administrativa fictícia 01" },
-  { id: "id-demo-admin-002", label: "Conta administrativa fictícia 02" },
+  { id: "id-demo-admin-001", label: "Conta administrativa fictícia 01", email: "admin-demo-01@example.invalid" },
+  { id: "id-demo-admin-002", label: "Conta administrativa fictícia 02", email: "admin-demo-02@example.invalid" },
 ];
 
 function formatDate(date: Date) {
@@ -32,6 +32,7 @@ function formatDate(date: Date) {
 
 export default function ReminderPermissionsPage() {
   const [target, setTarget] = useState("");
+  const [directorySearch, setDirectorySearch] = useState("");
   const [reason, setReason] = useState("");
   const [action, setAction] = useState<PermissionAction>("grant");
   const [permissions, setPermissions] = useState<Record<string, boolean>>({});
@@ -39,6 +40,11 @@ export default function ReminderPermissionsPage() {
   const [notices, setNotices] = useState<PanelNotice[]>([]);
   const [feedback, setFeedback] = useState("");
   const selectedAdmin = demoAdminDirectory.find(admin => admin.id === target);
+  const filteredAdmins = useMemo(() => {
+    const query = directorySearch.trim().toLocaleLowerCase("pt-BR");
+    if (!query) return demoAdminDirectory;
+    return demoAdminDirectory.filter(admin => `${admin.label} ${admin.email}`.toLocaleLowerCase("pt-BR").includes(query));
+  }, [directorySearch]);
   const hasPermission = Boolean(target && permissions[target]);
   const activePermissions = useMemo(
     () => Object.entries(permissions).filter(([, active]) => active).map(([identifier]) => identifier),
@@ -89,6 +95,7 @@ export default function ReminderPermissionsPage() {
 
   function resetDemo() {
     setTarget("");
+    setDirectorySearch("");
     setReason("");
     setAction("grant");
     setPermissions({});
@@ -131,12 +138,15 @@ export default function ReminderPermissionsPage() {
           <section className={styles.card} aria-labelledby="change-title">
             <div className={styles.cardHeading}><span className={styles.step}>01 · AÇÃO DE TI</span><h2 id="change-title">Conceder ou revogar</h2><p>O motivo é obrigatório nas duas ações. A revogação remove a permissão imediatamente na implementação real.</p></div>
             <form className={styles.form} onSubmit={submitChange}>
+              <label htmlFor="directory-search">Buscar administrador por nome ou e-mail corporativo verificado</label>
+              <input id="directory-search" type="search" value={directorySearch} onChange={event => { setDirectorySearch(event.target.value); setTarget(""); setFeedback(""); }} placeholder="Buscar na lista demonstrativa" autoComplete="off" />
               <label htmlFor="permission-target">Selecionar conta administrativa fictícia</label>
               <select id="permission-target" required value={target} onChange={event => { setTarget(event.target.value); setFeedback(""); }}>
                 <option value="">Escolha uma conta da lista demonstrativa</option>
-                {demoAdminDirectory.map(admin => <option key={admin.id} value={admin.id}>{admin.label} · {admin.id}</option>)}
+                {filteredAdmins.map(admin => <option key={admin.id} value={admin.id}>{admin.label} · {admin.email}</option>)}
               </select>
-              <small>Na implementação real, esta lista virá do diretório de contas administrativas existentes e a permissão será vinculada ao ID interno imutável validado pelo servidor.</small>
+              {filteredAdmins.length === 0 && <small role="status">Nenhuma conta fictícia encontrada para essa busca.</small>}
+              <small>Os e-mails exibidos usam o domínio reservado .invalid e são fictícios. Na implementação real, buscar contas administrativas existentes pelo nome ou e-mail corporativo verificado; vincular e validar a permissão pelo ID interno imutável no servidor.</small>
 
               <div className={styles.actionGroup} role="group" aria-label="Ação de permissão">
                 <button type="button" aria-pressed={action === "grant"} className={action === "grant" ? styles.actionSelected : ""} onClick={() => { setAction("grant"); setFeedback(""); }}><UserRoundPlus size={15} /> Conceder</button>
