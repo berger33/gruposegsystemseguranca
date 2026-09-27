@@ -4,8 +4,11 @@
 
 ## Decisões confirmadas
 
-- O portal começa **por convite**.
-- A administração deverá poder escolher entre convite, solicitação de acesso com aprovação e autocadastro, quando esse módulo for implementado.
+- O portal começa **por convite**. A administração poderá escolher entre convite, solicitação de acesso com aprovação e autocadastro, quando esse módulo for implementado.
+- A verificação do vínculo será feita pelo **cadastro central da empresa** antes de conceder acesso. O cadastro deve ser consultado por pessoa autorizada; esta decisão não significa que exista integração técnica pronta.
+- **Marcelo e TI** podem aprovar solicitações, emitir convites e definir o escopo do acesso. O sistema deverá auditar essas ações.
+- Convites terão validade de **7 dias**, serão de **uso único** e poderão ser revogados antes do uso.
+- Após aceitar o convite e verificar o e-mail, o cliente entrará com **senha + confirmação de e-mail**. Fluxos de recuperação de senha, MFA para clientes e detalhes do canal de convite ainda precisam ser definidos antes da produção.
 - O autocadastro, por si só, **não libera contratos nem documentos**. O vínculo do usuário com o cliente e o escopo autorizado precisam ser verificados no servidor.
 - Não importar nem inventar cadastros, contratos, documentos ou clientes para a prévia.
 - PostgreSQL, autenticação real, persistência das opções e notificações do portal permanecem para a etapa final, conforme a prioridade atual.
@@ -17,7 +20,7 @@ As regras abaixo são uma base técnica para discussão; não ativam comportamen
 1. **Negar por padrão:** ausência de sessão, vínculo ou permissão explícita resulta em acesso negado. Ocultar um botão não substitui autorização no servidor.
 2. **Separar identidade de vínculo:** provar controle de um e-mail/telefone não prova, por si só, que a pessoa representa um cliente nem determina quais contratos pode ver.
 3. **Escopo por cliente em cada requisição:** validar no servidor o usuário, a unidade/filial quando aplicável e o objeto solicitado. Não confiar em IDs enviados pelo navegador.
-4. **Convites revogáveis e de uso limitado:** emitir tokens aleatórios de alta entropia, armazenar somente hash quando possível, impedir reutilização e permitir revogação. Validade, número de usos e canal de entrega ainda não foram definidos.
+4. **Convites revogáveis e de uso limitado:** validade confirmada de 7 dias e uso único; emitir tokens aleatórios de alta entropia, armazenar somente hash quando possível, impedir reutilização e permitir revogação antes do aceite. Canal de entrega ainda não foi definido.
 5. **Aprovação sem concessão excessiva:** uma aprovação deve registrar quem decidiu e limitar o acesso ao escopo expressamente autorizado; não deve liberar todo o conjunto de contratos por padrão.
 6. **Revogação efetiva:** ao remover vínculo ou desativar acesso, revogar convites pendentes e encerrar sessões/credenciais associadas, segundo política definida.
 7. **Auditoria mínima:** registrar emissão, reenvio, revogação, aprovação, recusa, mudança de permissão e autorizações administrativas, sem gravar senhas, tokens completos ou conteúdo desnecessário.
@@ -29,11 +32,8 @@ As regras abaixo são uma base técnica para discussão; não ativam comportamen
 
 | Tema | Pergunta a decidir |
 | --- | --- |
-| Fonte de vínculo | Qual cadastro ou documento comprova que a pessoa pertence a um cliente? Inicialmente haverá validação manual? |
-| Quem administra | Quais papéis podem emitir convites, aprovar pedidos, alterar o modo e revogar acessos? |
-| Destinatário | Quais dados mínimos serão pedidos para convidar uma pessoa e como evitar que o convite seja enviado ao endereço errado? |
-| Validade do convite | Quanto tempo o convite vale? Será de uso único? Pode ser reenviado? Quem pode cancelá-lo? |
-| Autenticação | Senha, link de acesso, outro mecanismo ou combinação? Haverá MFA para clientes? Como funciona recuperação de conta? |
+| Destinatário | Quais dados mínimos serão pedidos para convidar uma pessoa? Confirmar o endereço de e-mail pelo cadastro central antes de enviar; definir reenvio e tratamento de endereço incorreto. |
+| Autenticação | Senha + confirmação de e-mail foram escolhidas. Haverá MFA para clientes? Como funciona recuperação de conta e troca de e-mail? |
 | Solicitação aprovada | Quem recebe a fila, quais estados existem e como o cliente é informado de aprovação ou recusa? |
 | Autocadastro | Quais modos ficam habilitados por cliente/filial? Que prova de vínculo é exigida e quem resolve casos inconclusivos? |
 | Escopo documental | Quais categorias de contrato/documento cada papel pode consultar e por quanto tempo? |

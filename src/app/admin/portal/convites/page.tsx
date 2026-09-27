@@ -65,11 +65,11 @@ export default function InvitationFlowPreviewPage() {
               <span className={styles.rulesIcon}><ShieldCheck size={21} /></span>
               <h2>Antes de um convite real</h2>
               <ul>
-                <li><Check size={14} /> Confirmar o vínculo da pessoa com o cliente.</li>
-                <li><Check size={14} /> Definir quais contratos e documentos poderão ser acessados.</li>
-                <li><Check size={14} /> Estabelecer validade, uso único, reenvio e revogação do convite.</li>
+                <li><Check size={14} /> Conferir o vínculo no cadastro central da empresa.</li>
+                <li><Check size={14} /> Marcelo ou TI define e aprova o escopo de acesso.</li>
+                <li><Check size={14} /> Convite válido por 7 dias, de uso único e revogável antes do aceite.</li>
               </ul>
-              <p>As regras de validade e operação ainda dependem de decisão e implementação.</p>
+              <p>Política definida para orientar o desenvolvimento. O envio e a validação ainda não estão ativos.</p>
             </aside>
           </div>
         ) : stage === "email" ? (
@@ -79,8 +79,8 @@ export default function InvitationFlowPreviewPage() {
             <div className={styles.mailBody}>
               <p>Olá,</p>
               <p>A equipe do Grupo SEG System poderá convidar clientes a acessar a futura Área do Cliente após confirmar a identidade e o vínculo de atendimento.</p>
-              <div className={styles.fakeLink}><span>O link de acesso será disponibilizado após a implementação.</span><strong>LINK NÃO GERADO</strong></div>
-              <p>Nesta demonstração não foi enviado e-mail, criado código de acesso ou concedida autorização.</p>
+              <div className={styles.fakeLink}><span>Convite previsto: válido por 7 dias e de uso único. Link real não é gerado nesta prévia.</span><strong>LINK NÃO GERADO</strong></div>
+              <p>Após a implementação, a pessoa confirmará o e-mail e definirá uma senha. O vínculo será conferido no cadastro central; Marcelo ou TI aprovará o escopo. Nenhuma dessas ações acontece nesta demonstração.</p>
               <p>Grupo SEG System</p>
             </div>
             <div className={styles.previewActions}><button className={styles.secondary} type="button" onClick={() => setStage("compose")}><ArrowLeft size={15} /> Voltar</button><button className={styles.primary} type="button" onClick={() => setStage("acceptance")}>Ver tela de aceite <ArrowRight size={16} /></button></div>
@@ -91,7 +91,7 @@ export default function InvitationFlowPreviewPage() {
               <span className={styles.acceptanceIcon}><UserRoundCheck size={23} /></span>
               <span className={styles.cardKicker}>03 · EXPERIÊNCIA DA PESSOA CONVIDADA</span>
               <h2>Este convite ainda não está ativo.</h2>
-              <p>O fluxo real deverá validar um link assinado e confirmar o vínculo antes de permitir a criação de uma conta.</p>
+              <p>O fluxo real deverá aceitar o convite uma única vez, confirmar o e-mail e consultar o cadastro central antes de criar a conta e liberar somente o escopo aprovado por Marcelo ou TI.</p>
               <label htmlFor="invite-code">Código ou link de convite</label>
               <input id="invite-code" type="text" value="Nenhum código foi gerado nesta prévia" readOnly />
               <button className={styles.disabledAction} type="button" disabled>Aceite indisponível</button>
@@ -101,7 +101,8 @@ export default function InvitationFlowPreviewPage() {
               <h3><ShieldCheck size={18} /> Verificações necessárias</h3>
               <div><CircleCheck size={17} /><span><strong>Vínculo confirmado</strong><small>Uma pessoa autorizada verifica a relação com o cliente.</small></span></div>
               <div><CircleCheck size={17} /><span><strong>Permissões definidas</strong><small>O acesso é limitado ao escopo aprovado no servidor.</small></span></div>
-              <div><CircleAlert size={17} /><span><strong>Política do convite pendente</strong><small>Validade, uso único, cancelamento e reenvio precisam ser definidos.</small></span></div>
+              <div><CircleCheck size={17} /><span><strong>Convite com prazo e uso limitados</strong><small>Prazo de 7 dias; uso único; revogável antes do aceite.</small></span></div>
+              <div><CircleCheck size={17} /><span><strong>Entrada com senha e e-mail confirmado</strong><small>O cliente confirma o e-mail e define uma senha após aceitar o convite.</small></span></div>
               <button className={styles.secondary} type="button" onClick={() => setStage("email")}><ArrowLeft size={15} /> Voltar à mensagem</button>
             </aside>
           </section>
