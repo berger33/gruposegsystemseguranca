@@ -23,7 +23,11 @@
    - `LEADS_NOTIFY_EMAIL`: caixa que deve receber os novos pedidos.
 5. Execute `npm test` para validar os casos de entrada sem banco. Depois execute `npm run dev`, acesse o site e envie uma solicitação de teste usando dados próprios; consulte `/admin/leads`. E-mail ausente ou com falha aparece como status no pedido.
 
-Ainda não há provedor SMTP escolhido nem PostgreSQL disponível/configurado neste ambiente. Portanto, o fluxo de ponta a ponta e entrega real de mensagens permanecem **não verificados**. As limitações atuais de rate limit em memória e autenticação administrativa inicial também precisam de endurecimento antes de expor em produção.
+O percurso de banco **foi verificado** contra um PostgreSQL real. Um teste de integração (`npm run test:integration`) sobe a própria instância do servidor, aplica as migrações e confere envio do formulário, gravação em `public_leads`, recusas de mesma origem e de validação, sessão administrativa, listagem com filtro por status, mudança de status e o registro correspondente em `public_lead_status_audit` (inclusive a ausência de duplicidade quando o status se repete). As linhas criadas pelo teste são removidas ao final.
+
+Esse teste é ignorado por `npm test` e só roda com `RUN_DATABASE_INTEGRATION=1`. Ele recusa bancos que não sejam de loopback, a menos que `RUN_DATABASE_INTEGRATION_REMOTE=1` seja definido, para não escrever em um banco de produção por acidente.
+
+A **entrega real de mensagens por SMTP continua não verificada**: nenhum provedor foi escolhido, então `email_status` permanece `not_configured` nos pedidos gravados. As limitações atuais de rate limit em memória e autenticação administrativa inicial também precisam de endurecimento antes de expor em produção.
 
 ## Privacidade e operação
 
