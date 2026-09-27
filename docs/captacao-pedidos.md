@@ -21,7 +21,7 @@
    - `MAIL_USER` e `MAIL_PASSWORD`: autenticação SMTP, quando exigida pelo serviço.
    - `MAIL_FROM`: remetente autorizado pelo provedor, por exemplo o formato de endereço indicado por ele.
    - `LEADS_NOTIFY_EMAIL`: caixa que deve receber os novos pedidos.
-5. Execute `npm run dev`, acesse o site e envie uma solicitação de teste usando dados próprios; depois consulte `/admin/leads`. E-mail ausente ou com falha aparece como status no pedido.
+5. Execute `npm test` para validar os casos de entrada sem banco. Depois execute `npm run dev`, acesse o site e envie uma solicitação de teste usando dados próprios; consulte `/admin/leads`. E-mail ausente ou com falha aparece como status no pedido.
 
 Ainda não há provedor SMTP escolhido nem PostgreSQL disponível/configurado neste ambiente. Portanto, o fluxo de ponta a ponta e entrega real de mensagens permanecem **não verificados**. As limitações atuais de rate limit em memória e autenticação administrativa inicial também precisam de endurecimento antes de expor em produção.
 

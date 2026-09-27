@@ -19,6 +19,7 @@
     "package:layout-09": "npm run build:preview && bash scripts/package-layout-09.sh",
     "package:layout-10": "npm run build:preview && bash scripts/package-layout-10.sh",
     "start": "node server.mjs",
+    "test": "node --test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

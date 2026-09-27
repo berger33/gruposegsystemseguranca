@@ -41,6 +41,7 @@ npm run dev
 Abra `http://localhost:3000`. Para checagem:
 
 ```bash
+npm test
 npm run typecheck
 npm run build
 ```
