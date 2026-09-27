@@ -68,6 +68,7 @@ As regras abaixo são uma base técnica para discussão; não ativam comportamen
 
 ## Estado dos protótipos
 
+- `/cliente/documentos`: prévia vazia da biblioteca de documentos autorizados; não há arquivos, cliente ou links de download reais. Explicita a futura verificação de autorização no servidor para cada consulta/download.
 - `/cliente/painel`: shell visual do futuro painel do cliente, com estados vazios para contratos/serviços e documentos, além de atalho para a prévia de chamados; nenhum registro fictício é apresentado como dado real. Não autentica, não consulta cadastro e não persiste dados.
 - `/cliente/chamados`: demonstração local de abertura e histórico de solicitações em memória, com categoria, título, detalhe limitado a 500 caracteres e estados de exemplo avançáveis pelo usuário. Os identificadores e estados são explicitamente fictícios; nada envia, persiste ou representa protocolo/atendimento real.
 - `/cliente`: página informativa; não autentica e não cria contas. Inclui atalho para a prévia visual do painel.
