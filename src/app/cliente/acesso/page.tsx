@@ -59,7 +59,7 @@ export default function ClientAccessPreviewPage() {
           <section className={styles.card}>
             <span className={styles.icon}><LockKeyhole size={20} /></span>
             <h2>Entrar no portal</h2>
-            <p>O login ainda não está ativo. Use valores fictícios para visualizar a resposta desta tela.</p>
+            <p>O login ainda não está ativo. Use valores fictícios para visualizar a resposta desta tela. A versão real aplicará espera progressiva após tentativas incorretas, sem bloqueio permanente da conta.</p>
             <form onSubmit={simulateLogin}>
               <label htmlFor="login-email">E-mail</label>
               <input id="login-email" type="email" autoComplete="off" required placeholder="teste@exemplo.com" value={email} onChange={event => setEmail(event.target.value)} />
@@ -105,12 +105,13 @@ export default function ClientAccessPreviewPage() {
           <section className={styles.card}>
             <span className={styles.icon}><KeyRound size={20} /></span>
             <h2>Defina uma senha</h2>
-            <p>E-mail demonstrativo confirmado: <strong>{email}</strong>. A política de senha ainda será definida antes da implementação.</p>
+            <p>E-mail demonstrativo confirmado: <strong>{email}</strong>. A senha deverá ter pelo menos 12 caracteres; frases-senha são aceitas, sem exigência de maiúscula, número ou símbolo.</p>
             <form onSubmit={saveDemoPassword}>
               <label htmlFor="new-password">Nova senha fictícia</label>
-              <input id="new-password" type="password" autoComplete="new-password" required placeholder="Não use sua senha verdadeira" value={password} onChange={event => setPassword(event.target.value)} />
+              <input id="new-password" type="password" autoComplete="new-password" required minLength={12} placeholder="12 caracteres ou mais · apenas fictícia" value={password} onChange={event => setPassword(event.target.value)} />
               <label htmlFor="confirm-password">Repita a senha fictícia</label>
-              <input id="confirm-password" type="password" autoComplete="new-password" required placeholder="Repita apenas o valor de teste" value={passwordAgain} onChange={event => setPasswordAgain(event.target.value)} />
+              <input id="confirm-password" type="password" autoComplete="new-password" required minLength={12} placeholder="Repita apenas o valor de teste" value={passwordAgain} onChange={event => setPasswordAgain(event.target.value)} />
+              <small>A validação real também rejeitará senhas comuns; esta prévia verifica apenas tamanho e correspondência.</small>
               {message && <p className={styles.feedback} role="alert">{message}</p>}
               <button type="submit">Pré-visualizar criação de senha <ArrowRight size={15} /></button>
             </form>

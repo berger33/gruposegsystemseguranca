@@ -11,6 +11,8 @@
 - Após aceitar o convite, o cliente entrará com **senha + confirmação de e-mail**. O link de confirmação terá validade de **7 dias**; reenvio limitado a **5 vezes por endereço em 24 horas**, com intervalo mínimo de **2 minutos**, e cada novo link invalida o anterior.
 - Recuperação de senha será por link enviado ao e-mail cadastrado, de **uso único** e validade de **1 hora**. A resposta pública deve ser genérica para não revelar se o e-mail tem conta.
 - MFA será **opcional para clientes** no início do portal, com escolha entre **aplicativo autenticador** e **código por e-mail**. Não será exigida para nenhuma ação do portal; clientes poderão usar todas as funções sem ativá-la. Para recuperação, haverá **códigos de recuperação de uso único**; se o cliente perder todos, poderá pedir ajuda à equipe após verificação de identidade. A implementação, armazenamento seguro/visualização única dos códigos e processo de validação manual ainda precisam ser definidos antes da produção.
+- Senha do cliente: mínimo de **12 caracteres**, aceitando frases-senha sem exigir mistura de maiúsculas, números ou símbolos. Rejeitar senhas comuns; a validação deve ocorrer no servidor.
+- Tentativas de login: limitação progressiva temporária, sem bloqueio permanente da conta, considerando conta e origem. Limiares e tempos exatos serão definidos na revisão técnica antes da produção.
 - O solicitante será notificado por **e-mail** sobre a decisão. Em caso de recusa, usar mensagem **genérica**, sem expor detalhes internos. Os textos da prévia são rascunhos e ainda precisam de revisão antes de uso real.
 - O autocadastro, por si só, **não libera contratos nem documentos**. O vínculo do usuário com o cliente e o escopo autorizado precisam ser verificados no servidor.
 - Não importar nem inventar cadastros, contratos, documentos ou clientes para a prévia.
@@ -36,7 +38,7 @@ As regras abaixo são uma base técnica para discussão; não ativam comportamen
 | Tema | Pergunta a decidir |
 | --- | --- |
 | Destinatário | Quais dados mínimos serão pedidos para convidar uma pessoa? Confirmar o endereço de e-mail pelo cadastro central antes de enviar; definir reenvio e tratamento de endereço incorreto. |
-| Autenticação | Senha + confirmação de e-mail; MFA opcional por aplicativo autenticador ou código por e-mail, com códigos de recuperação e auxílio da equipe após verificação. MFA não será exigida para nenhuma ação do portal. Processo de troca de e-mail ainda deve ser definido. |
+| Autenticação | Senha de 12+ caracteres, sem regras artificiais de composição, com bloqueio de senhas comuns; confirmação de e-mail; MFA opcional por aplicativo autenticador ou código por e-mail; limitação progressiva de tentativas. MFA não será exigida para ações do portal. Processo de troca de e-mail e parâmetros técnicos de limitação ainda devem ser definidos. |
 | Solicitação aprovada | Quem recebe a fila, quais estados existem e como o cliente é informado de aprovação ou recusa? |
 | Autocadastro | Quais modos ficam habilitados por cliente/filial? Que prova de vínculo é exigida e quem resolve casos inconclusivos? |
 | Escopo documental | Quais categorias de contrato/documento cada papel pode consultar e por quanto tempo? |
@@ -58,7 +60,7 @@ As regras abaixo são uma base técnica para discussão; não ativam comportamen
 - `/cliente`: página informativa; não autentica e não cria contas.
 - `/cliente/recuperar-senha`: demonstra solicitação por e-mail com resposta genérica e link de uso único válido por 1 hora; não envia mensagem nem altera senha.
 - `/cliente/seguranca`: demonstra a opção de MFA por aplicativo autenticador ou código por e-mail e recuperação com códigos de uso único/ajuda da equipe; não ativa MFA nem gera códigos reais.
-- `/cliente/acesso`: prévia local do login, aceite demonstrativo de convite, confirmação do e-mail e criação de senha fictícia; não autentica, não envia dados e não cria contas.
+- `/cliente/acesso`: prévia local do login, aceite demonstrativo de convite, confirmação do e-mail e criação de senha fictícia; mostra a regra de senha de 12+ caracteres e a intenção de espera progressiva no login. Não autentica, não envia dados e não cria contas; bloqueio de senhas comuns e throttling precisam de validação no servidor.
 - `/admin/portal`: compara os três modos em memória.
 - `/admin/portal/convites`: prévia sem envio de e-mail, token ou link real; permite simular estados do convite, confirmação e reenvio do e-mail em memória no navegador. Link de confirmação: validade definida de 7 dias; reenvio com limite, invalidando o link anterior (limite exato ainda pendente).
 - `/admin/portal/solicitacoes`: sem registros; permite simular Marcelo ou TI como responsável, a consulta ao cadastro central, escopos e estados da análise. Também exibe rascunhos de e-mail de aprovação e recusa genérica; não envia mensagens. As interações são locais e não alteram permissões.
