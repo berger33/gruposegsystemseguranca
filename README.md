@@ -13,6 +13,10 @@ O formulário **não salva leads nem envia e-mails**: ele abre uma mensagem para
 
 A foto da viatura e o logotipo foram vistos na conversa, mas não estavam acessíveis nos caminhos de anexos informados pelo ambiente; o site usa ilustração e marca tipográfica provisórias até os arquivos estarem disponíveis em `public/brand/`. Antes de publicar, confirmar contatos, conteúdo, licenças, autorização de imagens e política de privacidade.
 
+## Download da prévia
+
+[Baixar prévia estática (.zip)](downloads/seg-system-previa.zip). Extraia todos os arquivos e abra `index.html`. O ZIP é uma **fotografia desta etapa**, não o sistema completo nem uma versão para publicação. Ele é gerado com `npm run build:preview`; recursos futuros com backend não funcionarão em exportação estática.
+
 ## Desenvolvimento
 
 Requer Node.js 20.9+ (testado com Node 22).
