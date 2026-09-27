@@ -81,7 +81,7 @@ export default function SecurityAlertsPreviewPage() {
               <button type="button" aria-pressed={holdReminderChannel === "email"} className={holdReminderChannel === "email" ? styles.reminderSelected : ""} onClick={() => setHoldReminderChannel("email")}>Somente e-mail</button>
               <button type="button" aria-pressed={holdReminderChannel === "both"} className={holdReminderChannel === "both" ? styles.reminderSelected : ""} onClick={() => setHoldReminderChannel("both")}>Painel + e-mail</button>
             </div>
-            <small>Padrão inicial: somente painel. Na versão real, TI concede ou revoga a permissão individualmente para cada administrador; concessões, revogações e mudanças de canal serão auditadas. Aqui, a alteração é temporária e não é salva.</small>
+            <small>Padrão inicial: somente painel. Na versão real, TI concede ou revoga a permissão individualmente para cada administrador; ela permanece ativa até revogação. Concessões, revogações e mudanças de canal serão auditadas. Aqui, a alteração é temporária e não é salva.</small>
           </div>
           {!holdSubmitted ? (
             <form className={styles.holdForm} onSubmit={submitHold}>
