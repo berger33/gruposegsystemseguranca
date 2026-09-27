@@ -30,8 +30,9 @@ Levantamento em 27/09/2026 para orientar o início do desenvolvimento. Conteúdo
 - Interface 04 **Operação**: composição robusta industrial, com grafite, aço, azul e acentos âmbar, grade técnica e imagem conceitual de acesso logístico. Aprovada pelo usuário.
 - Interface 05 **Institucional B2B**: composição formal e corporativa em azul, branco e cinza, com arquitetura visual executiva. Aprovada pelo usuário.
 - Interface 06 **Azul em camadas**: proposta editorial criativa, com azul-cobalto e azul-celeste, geometria gráfica e imagem urbana ilustrativa. Aprovada pelo usuário.
-- Interface 07 **Mapa de cuidado**: proposta em formato de painel com navegação lateral fixa, imagem à esquerda, conteúdo à direita e cartões interativos assimétricos, mantendo a paleta azul. Está em avaliação nesta etapa.
-- O usuário quer revisar **um layout por vez**; depois de cada entrega, aguardar aprovação ou instruções de ajuste antes de começar o seguinte. Restam três layouts depois da aprovação do 07.
+- Interface 07 **Mapa de cuidado**: proposta em painel com navegação lateral fixa, imagem à esquerda, conteúdo à direita e cartões interativos assimétricos. Aprovada pelo usuário.
+- Interface 08 **Núcleo integrado**: proposta de diagrama circular interativo, sem hero fotográfico, serviços posicionados ao redor de um núcleo central; paleta azul e branca. O diagrama é conceitual, criado com CSS, não representa um sistema operacional. Está em avaliação nesta etapa.
+- O usuário quer revisar **um layout por vez**; depois de cada entrega, aguardar aprovação ou instruções de ajuste antes de começar o seguinte. Restam dois layouts depois da aprovação do 08.
 - As composições devem compartilhar conteúdo e fluxos, mas variar de modo perceptível e manter acessibilidade; o painel de seleção/publicação será implementado em etapa posterior.
 
 ## Publicação segura / pendências

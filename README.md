@@ -7,7 +7,7 @@ Sistema em desenvolvimento para o Grupo SEG System. O **plano foi registrado em 
 
 ## Prévia atual
 
-Prévia pública com layouts 01–06 aprovados visualmente pelo usuário. O **layout 07 — Mapa de cuidado** está disponível em `/layout-07` para avaliação; os três restantes serão apresentados um por vez, após aprovação de cada proposta. As imagens novas são conceituais e geradas, não representam funcionários ou instalações reais. Esta aplicação **não está pronta para produção**.
+Prévia pública com layouts 01–07 aprovados visualmente pelo usuário. O **layout 08 — Núcleo integrado** está disponível em `/layout-08` para avaliação; os dois restantes serão apresentados um por vez, após aprovação de cada proposta. As imagens são conceituais e geradas; o diagrama do layout 08 é ilustrativo e criado com CSS. Esta aplicação **não está pronta para produção**.
 
 O formulário **não salva leads nem envia e-mails**: ele abre uma mensagem para o visitante revisar e enviar manualmente no WhatsApp. Portal autenticado, CRM, agendamento confirmado, candidaturas, blog, temas globais e o restante dos módulos ainda serão construídos. Essas áreas aparecem como “Em desenvolvimento”; não existe login ou dado contratual fictício exposto como real. O `robots` está configurado como `noindex` durante a prévia.
 
@@ -22,8 +22,9 @@ A foto da viatura e o logotipo foram vistos na conversa, mas não estavam acess�
 - [Layout 05 — Institucional B2B (.zip)](downloads/layout-05-b2b-preview.zip). Extraia e abra `index.html`; os layouts 01–04 também estão incluídos.
 - [Layout 06 — Azul em camadas (.zip)](downloads/layout-06-azul-editorial-preview.zip). Extraia e abra `index.html`; os layouts 01–05 também estão incluídos.
 - [Layout 07 — Mapa de cuidado (.zip)](downloads/layout-07-mapa-preview.zip). Extraia e abra `index.html`; os layouts 01–06 também estão incluídos.
+- [Layout 08 — Núcleo integrado (.zip)](downloads/layout-08-nucleo-preview.zip). Extraia e abra `index.html`; os layouts 01–07 também estão incluídos.
 
-Os ZIPs são **fotografias visuais desta etapa**, não o sistema completo nem versões para publicação. As prévias não têm backend, e os formulários apenas abrem uma mensagem para revisão e envio manual pelo WhatsApp. Gere os pacotes com `npm run package:layout-02`, `npm run package:layout-03`, `npm run package:layout-04`, `npm run package:layout-05`, `npm run package:layout-06` e `npm run package:layout-07`.
+Os ZIPs são **fotografias visuais desta etapa**, não o sistema completo nem versões para publicação. As prévias não têm backend, e os formulários apenas abrem uma mensagem para revisão e envio manual pelo WhatsApp. Gere os pacotes com `npm run package:layout-02`, `npm run package:layout-03`, `npm run package:layout-04`, `npm run package:layout-05`, `npm run package:layout-06`, `npm run package:layout-07` e `npm run package:layout-08`.
 
 ## Desenvolvimento
 

@@ -12,6 +12,7 @@
     "package:layout-05": "npm run build:preview && bash scripts/package-layout-05.sh",
     "package:layout-06": "npm run build:preview && bash scripts/package-layout-06.sh",
     "package:layout-07": "npm run build:preview && bash scripts/package-layout-07.sh",
+    "package:layout-08": "npm run build:preview && bash scripts/package-layout-08.sh",
     "start": "next start --hostname 0.0.0.0",
     "typecheck": "tsc --noEmit"
   },
