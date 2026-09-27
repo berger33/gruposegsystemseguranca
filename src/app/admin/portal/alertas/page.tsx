@@ -52,7 +52,7 @@ export default function SecurityAlertsPreviewPage() {
             </article>
           )}
         </section>
-        <div className={styles.securityNote}><ShieldCheck size={17} /><p>O e-mail contém apenas o necessário; a análise completa fica no painel protegido. Qualquer administrador com permissão liberada por TI pode analisar. Marcar como analisado não encerra o alerta: somente a resolução explícita o remove dos pendentes, mantendo o registro no histórico.</p></div>
+        <div className={styles.securityNote}><ShieldCheck size={17} /><p>O e-mail contém apenas o necessário; a análise completa fica no painel protegido. Qualquer administrador com permissão liberada por TI pode analisar. Marcar como analisado não encerra o alerta: somente a resolução explícita o remove dos pendentes. Histórico previsto: 12 meses; destino após esse prazo depende da política de retenção.</p></div>
         <footer className={styles.footer}><span>Sem persistência, envio de e-mail, dados pessoais ou log real.</span><Link href="/admin/portal">Voltar à configuração do portal</Link></footer>
       </section>
     </main>
