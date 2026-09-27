@@ -5,6 +5,7 @@ Sistema em desenvolvimento para o Grupo SEG System. O **plano foi registrado em 
 - [Plano de produto e decisões pendentes](docs/plano-produto.md)
 - [Referências de marca e conteúdo público](docs/referencias-marca.md)
 - [Captação de pedidos, painel e SMTP](docs/captacao-pedidos.md)
+- [Portal do cliente: decisões de acesso e segurança](docs/portal-acesso-e-seguranca.md)
 
 ## Prévia atual
 
