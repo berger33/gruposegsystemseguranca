@@ -1,5 +1,6 @@
 "use client";
 
+import ClientPortalNavigation from "@/components/ClientPortalNavigation";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, CircleAlert, KeyRound, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
@@ -50,6 +51,7 @@ export default function ClientAccessPreviewPage() {
         <Link href="/cliente" className={styles.back}><ArrowLeft size={15} /> Área do Cliente</Link>
         <span className={styles.brand}><ShieldCheck size={15} /> GRUPO SEG SYSTEM</span>
       </header>
+      <ClientPortalNavigation />
       <section className={styles.content}>
         <span className={styles.eyebrow}>PORTAL DO CLIENTE · FLUXO DEMONSTRATIVO</span>
         <h1>{stage === "login" ? <>Acesse sua<br /><em>área reservada.</em></> : stage === "invite" ? <>Ative seu<br /><em>convite.</em></> : stage === "confirm" ? <>Confirme seu<br /><em>e-mail.</em></> : stage === "create" ? <>Crie sua<br /><em>senha.</em></> : <>Tudo pronto<br /><em>na prévia.</em></>}</h1>

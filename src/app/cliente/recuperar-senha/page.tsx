@@ -1,5 +1,6 @@
 "use client";
 
+import ClientPortalNavigation from "@/components/ClientPortalNavigation";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CircleAlert, Mail, ShieldCheck } from "lucide-react";
@@ -20,6 +21,7 @@ export default function PasswordRecoveryPreviewPage() {
         <Link href="/cliente" className={styles.back}><ArrowLeft size={15} /> Área do Cliente</Link>
         <span className={styles.headerTag}><ShieldCheck size={14} /> PRÉVIA DE RECUPERAÇÃO</span>
       </header>
+      <ClientPortalNavigation />
       <section className={styles.content}>
         <span className={styles.eyebrow}>PORTAL DO CLIENTE · FLUXO DEMONSTRATIVO</span>
         <h1>Recuperar acesso<br /><em>com segurança.</em></h1>

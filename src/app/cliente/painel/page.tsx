@@ -90,6 +90,7 @@ export default function ClientDashboardPreviewPage() {
           <div className={styles.bottomIcon}><Bell size={18} /></div>
           <div><span className={styles.eyebrow}>PRÓXIMOS FLUXOS</span><h2>Acesso e segurança</h2><p>As telas demonstrativas de convite, login, recuperação e segurança continuam disponíveis para revisão. Não use credenciais reais.</p></div>
           <div className={styles.links}>
+            <Link href="/cliente/conta">Central de conta e segurança <ArrowRight size={14} /></Link>
             <Link href="/cliente/acesso">Convite e login <ArrowRight size={14} /></Link>
             <Link href="/cliente/seguranca">Opções de segurança <ArrowRight size={14} /></Link>
             <Link href="/cliente/recuperar-senha">Recuperação de senha <ArrowRight size={14} /></Link>

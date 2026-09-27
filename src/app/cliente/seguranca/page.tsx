@@ -1,5 +1,6 @@
 "use client";
 
+import ClientPortalNavigation from "@/components/ClientPortalNavigation";
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Check, Mail, ShieldCheck, Smartphone, TriangleAlert } from "lucide-react";
@@ -17,6 +18,7 @@ export default function ClientSecurityPreviewPage() {
         <Link href="/cliente" className={styles.back}><ArrowLeft size={15} /> Área do Cliente</Link>
         <span className={styles.tag}><ShieldCheck size={14} /> SEGURANÇA DA CONTA · PRÉVIA</span>
       </header>
+      <ClientPortalNavigation />
       <section className={styles.content}>
         <span className={styles.eyebrow}>PORTAL DO CLIENTE · CONFIGURAÇÃO DEMONSTRATIVA</span>
         <h1>Uma etapa extra,<br /><em>se você quiser.</em></h1>

@@ -68,6 +68,7 @@ As regras abaixo são uma base técnica para discussão; não ativam comportamen
 
 ## Estado dos protótipos
 
+- `/cliente/conta`: central de atalhos para login/convite, recuperação de senha, MFA e troca de e-mail; usa conteúdo demonstrativo e não cria sessão. A navegação comum destaca esta seção também nas quatro rotas de segurança.
 - As prévias `/cliente/painel`, `/cliente/contratos`, `/cliente/documentos` e `/cliente/chamados` compartilham navegação por abas com indicação visual da rota ativa; não implica autenticação nem autorização real.
 - `/cliente/contratos`: prévia vazia para contratos e informações de serviços; não inventa cadastros, valores, unidades ou escopos. Explicita a validação de identidade, vínculo e escopo em cada requisição real.
 - `/cliente/documentos`: prévia vazia da biblioteca de documentos autorizados; não há arquivos, cliente ou links de download reais. Explicita a futura verificação de autorização no servidor para cada consulta/download.

@@ -1,5 +1,6 @@
 "use client";
 
+import ClientPortalNavigation from "@/components/ClientPortalNavigation";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, CircleAlert, Mail, ShieldCheck } from "lucide-react";
@@ -29,6 +30,7 @@ export default function ChangeEmailPreviewPage() {
         <Link href="/cliente" className={styles.back}><ArrowLeft size={15} /> Área do Cliente</Link>
         <span className={styles.tag}><ShieldCheck size={14} /> SEGURANÇA DA CONTA · PRÉVIA</span>
       </header>
+      <ClientPortalNavigation />
       <section className={styles.content}>
         <span className={styles.eyebrow}>PORTAL DO CLIENTE · TROCA DE E-MAIL</span>
         <h1>Atualize seu<br /><em>endereço de acesso.</em></h1>
