@@ -54,6 +54,7 @@ export default function AccessRequestsPreviewPage() {
   const [nextRequestId, setNextRequestId] = useState(1);
   const [queueFilter, setQueueFilter] = useState<QueueFilter>("all");
   const [queueSearch, setQueueSearch] = useState("");
+  const [queueSort, setQueueSort] = useState<"newest" | "oldest">("newest");
   const [requestEmail, setRequestEmail] = useState("");
   const [validationMessage, setValidationMessage] = useState("");
   const selectedRequest = requests.find(request => request.id === selectedRequestId) ?? null;
@@ -63,7 +64,9 @@ export default function AccessRequestsPreviewPage() {
   const centralRecordChecked = selectedRequest?.centralRecordChecked ?? false;
   const scope = selectedRequest?.scope ?? [];
   const auditEvents = selectedRequest?.auditEvents ?? [];
-  const visibleRequests = requests.filter(request => (queueFilter === "all" || request.status === queueFilter) && requestMatchesQuery(request, queueSearch));
+  const visibleRequests = requests
+    .filter(request => (queueFilter === "all" || request.status === queueFilter) && requestMatchesQuery(request, queueSearch))
+    .sort((first, second) => queueSort === "newest" ? second.id - first.id : first.id - second.id);
 
   function updateSelectedRequest(update: (request: DemoAccessRequest) => DemoAccessRequest) {
     if (selectedRequestId === null) return;
@@ -93,6 +96,7 @@ export default function AccessRequestsPreviewPage() {
     setRequests(current => [created, ...current]);
     setQueueFilter("all");
     setQueueSearch("");
+    setQueueSort("newest");
     setSelectedRequestId(id);
     setNextRequestId(current => current + 1);
     setRequestEmail("");
@@ -105,6 +109,7 @@ export default function AccessRequestsPreviewPage() {
     setNextRequestId(1);
     setQueueFilter("all");
     setQueueSearch("");
+    setQueueSort("newest");
     setRequestEmail("");
     setValidationMessage("");
   }
@@ -216,6 +221,15 @@ export default function AccessRequestsPreviewPage() {
               <label htmlFor="request-search">Buscar por e-mail de demonstração ou ID do pedido</label>
               <input id="request-search" type="search" value={queueSearch} onChange={event => searchRequests(event.target.value)} placeholder="cliente-demo@example.invalid ou DEMO-001" />
               <span>{visibleRequests.length} de {requests.length} pedido(s)</span>
+            </div>
+          )}
+          {requests.length > 0 && (
+            <div className={styles.queueSortRow}>
+              <label htmlFor="request-sort">Ordenação</label>
+              <select id="request-sort" value={queueSort} onChange={event => setQueueSort(event.target.value as "newest" | "oldest")}>
+                <option value="newest">Mais recentes primeiro</option>
+                <option value="oldest">Mais antigos primeiro</option>
+              </select>
             </div>
           )}
           {requests.length === 0 ? (
