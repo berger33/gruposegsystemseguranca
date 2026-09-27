@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "node server.mjs --dev",
     "build": "next build",
+    "db:up": "docker compose --env-file .env.local -f infra/postgres/compose.yaml up -d",
+    "db:down": "docker compose --env-file .env.local -f infra/postgres/compose.yaml down",
     "db:migrate": "node scripts/migrate-site-visual.mjs",
     "build:preview": "STATIC_PREVIEW=1 next build",
     "package:layout-02": "npm run build:preview && bash scripts/package-layout-02.sh",

@@ -10,10 +10,11 @@
 
 ## Configuração local do PostgreSQL
 
-1. Crie um banco PostgreSQL. Não exponha o servidor de banco publicamente; prefira rede privada e TLS quando a aplicação e o banco estiverem em hosts diferentes. Separe um usuário de execução com permissões DML mínimas de um usuário de migração com `CREATE`.
-2. Copie `.env.example` para `.env.local` e configure `DATABASE_URL` para o usuário de execução. Para migrar com a conta privilegiada, configure também `DATABASE_MIGRATION_URL`; se omitida, o comando usa `DATABASE_URL`.
-3. Gere três segredos aleatórios distintos, com ao menos 32 caracteres. Exemplo local: `openssl rand -base64 48`. Configure-os como `SITE_ADMIN_SESSION_SECRET`, `SITE_ADMIN_TOKEN_MARCELO` e `SITE_ADMIN_TOKEN_TI` em `.env.local` ou no cofre de segredos do servidor. Não os versione nem os envie por chat.
-4. Execute `npm run db:migrate` para criar a configuração e a auditoria. A migração insere o layout 06 apenas se ainda não existir uma escolha gravada. Depois, conceda ao usuário de execução apenas `SELECT`/`UPDATE` em `site_visual_config` e `INSERT` na auditoria (incluindo uso da sequence).
+1. **Para desenvolvimento local:** copie `.env.example` para `.env.local`. Gere uma senha de banco URL-safe com `openssl rand -hex 32`; preencha `POSTGRES_PASSWORD` e use a mesma senha em `DATABASE_URL`. O Compose de desenvolvimento vincula a porta somente em `127.0.0.1` e mantém os dados em volume nomeado.
+2. Suba o serviço local com `npm run db:up`. Para produção auto-hospedada, prepare o PostgreSQL no servidor em rede privada; não use o Compose de desenvolvimento como configuração de produção. Separe um usuário de execução com privilégios DML mínimos de um usuário de migração com `CREATE`.
+3. Configure `DATABASE_URL` para o usuário de execução. Para migrar com a conta privilegiada, configure também `DATABASE_MIGRATION_URL`; se omitida, o comando usa `DATABASE_URL`.
+4. Gere três segredos aleatórios distintos, com ao menos 32 caracteres. Exemplo: `openssl rand -base64 48`. Configure-os como `SITE_ADMIN_SESSION_SECRET`, `SITE_ADMIN_TOKEN_MARCELO` e `SITE_ADMIN_TOKEN_TI` em `.env.local` ou no cofre de segredos do servidor. Não os versione nem os envie por chat.
+5. Execute `npm run db:migrate` para criar a configuração e auditoria. A migração insere o layout 06 apenas se ainda não existir uma escolha gravada. Depois, conceda ao usuário de execução apenas `SELECT`/`UPDATE` em `site_visual_config` e `INSERT` na auditoria (incluindo uso da sequence).
 5. Inicie com `npm run dev`, acesse `/admin/visual` e use o token separado do papel desejado. O valor do token é enviado apenas ao endpoint do mesmo site; a sessão posterior usa cookie `HttpOnly`, `SameSite=Lax` e `Secure` quando servido por HTTPS.
 6. Em produção, execute `npm run build` e `npm start` no servidor Node. A configuração de proxy deve encaminhar `/api/site-visual` e `/api/admin/session` para esse mesmo processo. Só ative `TRUST_PROXY=true` quando o proxy de confiança sobrescrever `X-Forwarded-Host`, `X-Forwarded-Proto` e `X-Forwarded-For`; caso contrário, deixe desativado.
 
