@@ -74,6 +74,8 @@ export default function ClientDashboardPreviewPage() {
                 <Link className={styles.moduleLink} href="/cliente/chamados">Abrir prévia de chamados <ArrowRight size={13} /></Link>
               ) : title === "Documentos" ? (
                 <Link className={styles.moduleLink} href="/cliente/documentos">Abrir prévia de documentos <ArrowRight size={13} /></Link>
+              ) : title === "Contratos e serviços" ? (
+                <Link className={styles.moduleLink} href="/cliente/contratos">Abrir prévia de contratos <ArrowRight size={13} /></Link>
               ) : (
                 <div className={styles.emptyState}><span>Nenhum item disponível nesta prévia</span></div>
               )}
