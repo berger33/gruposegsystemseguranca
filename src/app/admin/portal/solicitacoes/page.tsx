@@ -57,6 +57,7 @@ export default function AccessRequestsPreviewPage() {
   const [queueSort, setQueueSort] = useState<"newest" | "oldest">("newest");
   const [requestEmail, setRequestEmail] = useState("");
   const [validationMessage, setValidationMessage] = useState("");
+  const [pendingDecision, setPendingDecision] = useState<"approved" | "declined" | null>(null);
   const selectedRequest = requests.find(request => request.id === selectedRequestId) ?? null;
   const requestCreated = Boolean(selectedRequest);
   const status = selectedRequest?.status ?? "pending";
@@ -124,7 +125,18 @@ export default function AccessRequestsPreviewPage() {
       return;
     }
     setValidationMessage("");
+    setPendingDecision(null);
     if (nextStatus === selectedRequest.status) return;
+    if (nextStatus === "approved" || nextStatus === "declined") {
+      setPendingDecision(nextStatus);
+      return;
+    }
+    applyStatus(nextStatus);
+  }
+
+  function applyStatus(nextStatus: RequestStatus) {
+    if (!selectedRequest || nextStatus === selectedRequest.status) return;
+    setPendingDecision(null);
     const previousStatus = selectedRequest.status;
     const auditEvent: AccessAuditEvent = {
       id: selectedRequest.auditEvents.length + 1,
@@ -171,6 +183,7 @@ export default function AccessRequestsPreviewPage() {
 
   function selectRequest(id: number) {
     setSelectedRequestId(id);
+    setPendingDecision(null);
     setValidationMessage("");
   }
 
@@ -297,6 +310,16 @@ export default function AccessRequestsPreviewPage() {
                   <button key={item.id} type="button" disabled={!requestCreated} className={status === item.id ? styles.statusSelected : ""} aria-pressed={status === item.id} onClick={() => updateStatus(item.id)}>{item.label}</button>
                 ))}
               </div>
+              {pendingDecision && selectedRequest && (
+                <div className={styles.decisionConfirm} role="alertdialog" aria-labelledby="decision-confirm-title" aria-describedby="decision-confirm-description">
+                  <strong id="decision-confirm-title">Confirmar {pendingDecision === "approved" ? "aprovação" : "recusa"} demonstrativa?</strong>
+                  <p id="decision-confirm-description">Pedido DEMO-{String(selectedRequest.id).padStart(3, "0")}. Esta ação altera somente o estado local desta prévia; não envia aviso, cria conta ou concede acesso.</p>
+                  <div>
+                    <button type="button" onClick={() => applyStatus(pendingDecision)}>Confirmar {pendingDecision === "approved" ? "aprovação" : "recusa"}</button>
+                    <button type="button" onClick={() => setPendingDecision(null)}>Cancelar</button>
+                  </div>
+                </div>
+              )}
               <div className={`${styles.outcome} ${status === "approved" ? styles.outcomeApproved : status === "declined" ? styles.outcomeDeclined : ""}`} role="status" aria-live="polite">
                 {status === "approved" ? <CircleCheck size={19} /> : status === "declined" ? <CircleAlert size={19} /> : <Clock3 size={19} />}
                 <div><strong>{statusOptions.find(item => item.id === status)?.label} · responsável: {approver === "marcelo" ? "Marcelo" : "TI / sistema"}</strong><p>{status === "approved" ? `Escopo demonstrativo: ${scopeOptions.filter(item => scope.includes(item.id)).map(item => item.label.toLowerCase()).join(", ")}. Em produção, a decisão exigirá verificação do cadastro central e autorização no servidor.` : status === "declined" ? "Prévia de recusa. Motivo, comunicação e possibilidade de nova solicitação ainda precisam de política definida." : status === "reviewing" ? "A solicitação está em análise; nenhuma permissão é concedida enquanto a verificação e a decisão não forem concluídas." : "Pedido recebido e aguardando análise. Esta mudança é somente demonstrativa."}</p></div>
