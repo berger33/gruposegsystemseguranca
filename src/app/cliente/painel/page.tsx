@@ -1,3 +1,4 @@
+import ClientPortalNavigation from "@/components/ClientPortalNavigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Bell, BriefcaseBusiness, CircleHelp, FileText, Headphones, LockKeyhole, ShieldCheck } from "lucide-react";
@@ -36,6 +37,8 @@ export default function ClientDashboardPreviewPage() {
         </Link>
         <Link className={styles.back} href="/cliente"><ArrowLeft size={15} /> Área do Cliente</Link>
       </header>
+
+      <ClientPortalNavigation />
 
       <section className={styles.content}>
         <div className={styles.previewTag}><span /> PRÉVIA DE INTERFACE · SEM AUTENTICAÇÃO</div>

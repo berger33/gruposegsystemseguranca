@@ -1,3 +1,4 @@
+import ClientPortalNavigation from "@/components/ClientPortalNavigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, BriefcaseBusiness, FileText, LockKeyhole, ShieldCheck, TriangleAlert } from "lucide-react";
@@ -18,6 +19,8 @@ export default function ClientContractsPreviewPage() {
         </Link>
         <Link className={styles.back} href="/cliente/painel"><ArrowLeft size={14} /> Painel do cliente</Link>
       </header>
+
+      <ClientPortalNavigation />
 
       <section className={styles.content}>
         <div className={styles.previewTag}><span /> PRÉVIA · SEM DADOS CONTRATUAIS</div>

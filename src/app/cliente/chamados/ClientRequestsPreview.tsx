@@ -1,5 +1,7 @@
 "use client";
 
+import ClientPortalNavigation from "@/components/ClientPortalNavigation";
+
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, CircleHelp, FileText, Headphones, ShieldCheck, TriangleAlert } from "lucide-react";
@@ -60,6 +62,8 @@ export default function ClientRequestsPreview() {
         </Link>
         <Link className={styles.back} href="/cliente/painel"><ArrowLeft size={14} /> Painel do cliente</Link>
       </header>
+
+      <ClientPortalNavigation />
 
       <section className={styles.content}>
         <div className={styles.previewTag}><span /> FLUXO DEMONSTRATIVO · SEM ENVIO</div>
