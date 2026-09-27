@@ -13,11 +13,13 @@ export default function ChangeEmailPreviewPage() {
   const [newEmail, setNewEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [resendCount, setResendCount] = useState(0);
+  const [reportedUnexpected, setReportedUnexpected] = useState(false);
 
   function requestChange(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setCurrentPassword("");
     setResendCount(0);
+    setReportedUnexpected(false);
     setStage("pending");
   }
 
@@ -49,26 +51,33 @@ export default function ChangeEmailPreviewPage() {
         ) : (
           <section className={styles.card} aria-live="polite">
             <span className={styles.cardIcon}>{stage === "confirmed" ? <Check size={19} /> : <Mail size={19} />}</span>
-            <span className={styles.eyebrow}>{stage === "confirmed" ? "CONFIRMAÇÃO SIMULADA" : "AGUARDANDO CONFIRMAÇÃO"}</span>
-            <h2>{stage === "confirmed" ? "Novo endereço confirmado" : "Verifique o novo endereço"}</h2>
+            <span className={styles.eyebrow}>{stage === "confirmed" ? "CONFIRMAÇÃO SIMULADA" : reportedUnexpected ? "PEDIDO SINALIZADO · PRÉVIA" : "AGUARDANDO CONFIRMAÇÃO"}</span>
+            <h2>{stage === "confirmed" ? "Novo endereço confirmado" : reportedUnexpected ? "Troca cancelada na prévia" : "Verifique o novo endereço"}</h2>
             {stage === "pending" ? (
               <>
                 <p>Um link de confirmação seria enviado para <strong>{newEmail}</strong>. Até confirmar, o e-mail atual <strong>{currentEmail}</strong> continua sendo o endereço da conta.</p>
                 <div className={styles.noticeInline}>
                   <strong>Aviso para o e-mail atual · rascunho</strong>
                   <span><b>Assunto:</b> Solicitação de alteração do e-mail da Área do Cliente</span>
-                  <span>Foi solicitada a alteração do e-mail de acesso da sua conta para <strong>{newEmail}</strong>. Seu endereço atual continuará ativo até a confirmação do novo. Se você não fez este pedido, não confirme a mudança e procure a equipe pelos canais oficiais. Este aviso não contém link de confirmação.</span>
+                  <span>Foi solicitada a alteração do e-mail de acesso da sua conta para <strong>{newEmail}</strong>. Seu endereço atual continuará ativo até a confirmação do novo. Se você não fez este pedido, use o botão abaixo para cancelar a troca e avisar a equipe. Este aviso não contém link de confirmação.</span>
                   <small>RASCUNHO · NÃO ENVIADO</small>
+                  <button className={styles.reportButton} type="button" disabled={reportedUnexpected} onClick={() => setReportedUnexpected(true)}>{reportedUnexpected ? "Pedido sinalizado nesta prévia" : "Simular “Não fui eu”"}</button>
                 </div>
                 <div className={styles.noticeInline}>
                   <strong>Confirmação para o novo e-mail · rascunho</strong>
                   <span><b>Assunto:</b> Confirme o novo e-mail da Área do Cliente</span>
-                  <span>Se você solicitou esta mudança, confirme que controla este endereço pelo link de uso único, válido por 1 hora. Se pedir um novo link, o anterior será invalidado. O e-mail atual continua sendo seu login até a confirmação.</span>
-                  <small>RASCUNHO · LINK NÃO GERADO</small>
+                  <span>{reportedUnexpected ? "A troca foi cancelada na simulação. O link enviado a este endereço seria invalidado e não poderia concluir a alteração." : "Se você solicitou esta mudança, confirme que controla este endereço pelo link de uso único, válido por 1 hora. Se pedir um novo link, o anterior será invalidado. O e-mail atual continua sendo seu login até a confirmação."}</span>
+                  <small>{reportedUnexpected ? "CANCELADO NA PRÉVIA · LINK INVÁLIDO" : "RASCUNHO · LINK NÃO GERADO"}</small>
                 </div>
-                <button type="button" onClick={() => setStage("confirmed")}>Simular confirmação do novo e-mail <Check size={15} /></button>
-                <p className={styles.pendingNote}>Link válido por 1 hora. Até 5 reenvios por endereço em 24 horas, com intervalo mínimo de 2 minutos; cada novo link invalida o anterior. Simulações de reenvio: {resendCount}/5. Nenhuma mensagem foi enviada.</p>
-                <button className={styles.resend} type="button" disabled={resendCount >= 5} onClick={() => setResendCount(count => Math.min(5, count + 1))}>{resendCount >= 5 ? "Limite demonstrativo atingido" : "Simular reenvio do link"}</button>
+                <button type="button" disabled={reportedUnexpected} onClick={() => setStage("confirmed")}>{reportedUnexpected ? "Confirmação bloqueada após sinalização" : "Simular confirmação do novo e-mail"} {!reportedUnexpected && <Check size={15} />}</button>
+                {reportedUnexpected ? (
+                  <p className={styles.pendingNote}>A solicitação seria cancelada, o link invalidado e Marcelo/TI notificados para análise. Nenhuma ação real foi executada.</p>
+                ) : (
+                  <>
+                    <p className={styles.pendingNote}>Link válido por 1 hora. Até 5 reenvios por endereço em 24 horas, com intervalo mínimo de 2 minutos; cada novo link invalida o anterior. Simulações de reenvio: {resendCount}/5. Nenhuma mensagem foi enviada.</p>
+                    <button className={styles.resend} type="button" disabled={resendCount >= 5} onClick={() => setResendCount(count => Math.min(5, count + 1))}>{resendCount >= 5 ? "Limite demonstrativo atingido" : "Simular reenvio do link"}</button>
+                  </>
+                )}
               </>
             ) : (
               <>
