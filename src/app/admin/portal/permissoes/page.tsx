@@ -158,7 +158,7 @@ export default function ReminderPermissionsPage() {
               </select>
               {filteredAdmins.length === 0 && <small role="status">Nenhuma conta fictícia encontrada para essa busca.</small>}
               <small>Os e-mails exibidos usam o domínio reservado .invalid e são fictícios. Na implementação real, buscar contas administrativas existentes pelo nome ou e-mail corporativo verificado; vincular e validar a permissão pelo ID interno imutável no servidor.</small>
-              {selectedAdmin && selectedAdmin.status !== "ativa" && <small className={styles.statusHint} role="status">Conta {statusLabel(selectedAdmin.status).toLowerCase()}: novas concessões são bloqueadas. Se já houver uma permissão, a revogação continua disponível.</small>}
+              {selectedAdmin && selectedAdmin.status !== "ativa" && <small className={styles.statusHint} role="status">Conta {statusLabel(selectedAdmin.status).toLowerCase()}: o status bloqueia o acesso e o uso da permissão enquanto persistir. A permissão já existente continua vinculada até TI revogá-la; novas concessões são bloqueadas e a revogação segue disponível.</small>}
 
               <div className={styles.actionGroup} role="group" aria-label="Ação de permissão">
                 <button type="button" aria-pressed={action === "grant"} className={action === "grant" ? styles.actionSelected : ""} onClick={() => { setAction("grant"); setFeedback(""); }}><UserRoundPlus size={15} /> Conceder</button>
@@ -172,7 +172,7 @@ export default function ReminderPermissionsPage() {
           </section>
 
           <section className={styles.card} aria-labelledby="active-title">
-            <div className={styles.cardHeading}><span className={styles.step}>02 · ESTADO SIMULADO</span><h2 id="active-title">Permissões ativas</h2><p>Uma concessão só pode ser feita a conta ativa; permissões de contas suspensas/desativadas ainda podem ser revogadas.</p></div>
+            <div className={styles.cardHeading}><span className={styles.step}>02 · ESTADO SIMULADO</span><h2 id="active-title">Permissões ativas</h2><p>Conceder somente a contas ativas. Suspensão/desativação bloqueia o uso, mas não revoga a permissão existente; TI pode revogá-la manualmente em qualquer status.</p></div>
             {activePermissions.length === 0 ? (
               <div className={styles.empty}><ShieldCheck size={20} /><strong>Nenhuma permissão na prévia</strong><span>Selecione uma conta fictícia ativa para conceder a permissão.</span></div>
             ) : (
