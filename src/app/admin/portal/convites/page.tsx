@@ -128,6 +128,8 @@ export default function InvitationFlowPreviewPage() {
                   <button key={item.id} type="button" className={`${styles.statusChoice} ${simulatedStatus === item.id ? styles.statusChoiceActive : ""}`} aria-pressed={simulatedStatus === item.id} onClick={() => setSimulatedStatus(item.id)}>{item.label}</button>
                 ))}
               </div>
+              <Link className={styles.primary} href={`/cliente/acesso?demoInvite=${simulatedStatus}`}>Abrir aceite na prévia do cliente <ArrowRight size={14} /></Link>
+              <small className={styles.handoffNote}>Transfere apenas o estado demonstrativo — nunca um token, e-mail ou convite real.</small>
               <h3><ShieldCheck size={18} /> Regras confirmadas</h3>
               <div><CircleCheck size={17} /><span><strong>Vínculo confirmado</strong><small>Uma pessoa autorizada verifica a relação com o cliente.</small></span></div>
               <div><CircleCheck size={17} /><span><strong>Permissões definidas</strong><small>O acesso é limitado ao escopo aprovado no servidor.</small></span></div>

@@ -1,22 +1,43 @@
 "use client";
 
 import ClientPortalNavigation from "@/components/ClientPortalNavigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, CircleAlert, KeyRound, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
 import styles from "./ClientAccess.module.css";
 
 type AccessStage = "login" | "invite" | "confirm" | "create" | "complete";
+type SimulatedInviteStatus = "valid" | "expired" | "used" | "revoked";
+
+const inviteStatusMessages: Record<SimulatedInviteStatus, string> = {
+  valid: "Estado recebido da prévia administrativa: válido. Nenhum código, token ou convite real foi transferido.",
+  expired: "Este convite de demonstração está expirado. O aceite não pode continuar; a equipe precisaria avaliar um novo convite.",
+  used: "Este convite de demonstração já foi utilizado. O aceite não pode continuar.",
+  revoked: "Este convite de demonstração foi revogado. O aceite não pode continuar.",
+};
 
 export default function ClientAccessPreviewPage() {
   const [stage, setStage] = useState<AccessStage>("login");
+  const [linkedInviteStatus, setLinkedInviteStatus] = useState<SimulatedInviteStatus | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordAgain, setPasswordAgain] = useState("");
   const [message, setMessage] = useState("");
 
+  useEffect(() => {
+    const status = new URLSearchParams(window.location.search).get("demoInvite");
+    if (status === "valid" || status === "expired" || status === "used" || status === "revoked") {
+      setLinkedInviteStatus(status);
+      setStage("invite");
+    }
+  }, []);
+
   function startInvitation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (linkedInviteStatus && linkedInviteStatus !== "valid") {
+      setMessage(inviteStatusMessages[linkedInviteStatus]);
+      return;
+    }
     setMessage("");
     setStage("confirm");
   }
@@ -40,6 +61,8 @@ export default function ClientAccessPreviewPage() {
 
   function resetToLogin() {
     setStage("login");
+    setLinkedInviteStatus(null);
+    if (typeof window !== "undefined") window.history.replaceState(window.history.state, "", window.location.pathname);
     setPassword("");
     setPasswordAgain("");
     setMessage("");
@@ -80,13 +103,14 @@ export default function ClientAccessPreviewPage() {
             <span className={styles.icon}><UserRound size={20} /></span>
             <h2>Preparar cadastro por convite</h2>
             <p>Na versão real, o convite será verificado no servidor e o vínculo será conferido no cadastro central.</p>
+            {linkedInviteStatus && <div className={linkedInviteStatus === "valid" ? styles.invitePreviewValid : styles.feedback} role="status">{inviteStatusMessages[linkedInviteStatus]}</div>}
             <form onSubmit={startInvitation}>
-              <label htmlFor="invite-demo-code">Código demonstrativo</label>
-              <input id="invite-demo-code" type="text" autoComplete="off" required placeholder="Código fictício" />
+              {!linkedInviteStatus && <><label htmlFor="invite-demo-code">Código demonstrativo</label><input id="invite-demo-code" type="text" autoComplete="off" required placeholder="Código fictício" /></>}
               <label htmlFor="invite-demo-email">E-mail convidado</label>
               <input id="invite-demo-email" type="email" autoComplete="off" required placeholder="teste@exemplo.com" value={email} onChange={event => setEmail(event.target.value)} />
-              <small>Esta prévia não valida o código. Convites reais serão de uso único e válidos por 7 dias.</small>
-              <button type="submit">Simular convite válido <ArrowRight size={15} /></button>
+              <small>{linkedInviteStatus ? "Informe somente um e-mail fictício. O estado veio da prévia administrativa; nenhum endereço ou token foi compartilhado." : "Esta prévia não valida o código. Convites reais serão de uso único e válidos por 7 dias."}</small>
+              <button type="submit" disabled={linkedInviteStatus !== null && linkedInviteStatus !== "valid"}>{linkedInviteStatus === "valid" ? "Continuar aceite demonstrativo" : linkedInviteStatus ? "Aceite bloqueado para este estado" : "Simular convite válido"} <ArrowRight size={15} /></button>
+              {message && <p className={styles.feedback} role="status">{message}</p>}
             </form>
             <button className={styles.textButton} type="button" onClick={resetToLogin}><ArrowLeft size={14} /> Voltar ao login</button>
           </section>

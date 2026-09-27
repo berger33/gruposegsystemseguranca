@@ -68,6 +68,7 @@ As regras abaixo são uma base técnica para discussão; não ativam comportamen
 
 ## Estado dos protótipos
 
+- O fluxo administrativo de convites oferece um atalho para abrir a prévia do cliente com o estado demonstrativo (válido, expirado, utilizado ou revogado); apenas o estado segue em um parâmetro de URL, nunca token, e-mail ou convite real. Estados inválidos bloqueiam a continuação. Sem autenticação, envio ou persistência.
 - `/cliente/conta`: central de atalhos para login/convite, recuperação de senha, MFA e troca de e-mail; usa conteúdo demonstrativo e não cria sessão. A navegação comum destaca esta seção também nas quatro rotas de segurança.
 - As prévias `/cliente/painel`, `/cliente/contratos`, `/cliente/documentos` e `/cliente/chamados` compartilham navegação por abas com indicação visual da rota ativa; não implica autenticação nem autorização real.
 - `/cliente/contratos`: prévia vazia para contratos e informações de serviços; não inventa cadastros, valores, unidades ou escopos. Explicita a validação de identidade, vínculo e escopo em cada requisição real.
