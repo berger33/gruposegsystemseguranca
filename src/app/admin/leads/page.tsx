@@ -141,7 +141,10 @@ export default function LeadAdminPage() {
     <main className={styles.page}>
       <header className={styles.topbar}>
         <a className={styles.back} href="/"><ArrowLeft size={16} /> Voltar ao site</a>
-        <a className={styles.visualLink} href="/admin/visual">Administração visual <ArrowLeft size={13} /></a>
+        <nav className={styles.topLinks} aria-label="Atalhos administrativos">
+          <a className={styles.visualLink} href="/admin/portal">Prévia da configuração do portal</a>
+          <a className={styles.visualLink} href="/admin/visual">Administração visual <ArrowLeft size={13} /></a>
+        </nav>
       </header>
       <section className={styles.content}>
         <div className={styles.heading}>
