@@ -8,7 +8,8 @@ import styles from "./ReminderPermissions.module.css";
 type PermissionAction = "grant" | "revoke";
 type PermissionEvent = {
   id: number;
-  target: string;
+  targetId: string;
+  targetLabel: string;
   action: PermissionAction;
   reason: string;
   createdAt: string;
@@ -19,6 +20,11 @@ type PanelNotice = {
   createdAt: string;
   expiresAt: string;
 };
+
+const demoAdminDirectory = [
+  { id: "id-demo-admin-001", label: "Conta administrativa fictícia 01" },
+  { id: "id-demo-admin-002", label: "Conta administrativa fictícia 02" },
+];
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(date);
@@ -32,8 +38,8 @@ export default function ReminderPermissionsPage() {
   const [events, setEvents] = useState<PermissionEvent[]>([]);
   const [notices, setNotices] = useState<PanelNotice[]>([]);
   const [feedback, setFeedback] = useState("");
-  const normalizedTarget = target.trim();
-  const hasPermission = Boolean(normalizedTarget && permissions[normalizedTarget.toLocaleLowerCase("pt-BR")]);
+  const selectedAdmin = demoAdminDirectory.find(admin => admin.id === target);
+  const hasPermission = Boolean(target && permissions[target]);
   const activePermissions = useMemo(
     () => Object.entries(permissions).filter(([, active]) => active).map(([identifier]) => identifier),
     [permissions],
@@ -41,10 +47,9 @@ export default function ReminderPermissionsPage() {
 
   function submitChange(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const cleanTarget = normalizedTarget;
     const cleanReason = reason.trim();
-    if (!cleanTarget || !cleanReason) return;
-    const key = cleanTarget.toLocaleLowerCase("pt-BR");
+    if (!selectedAdmin || !cleanReason) return;
+    const key = selectedAdmin.id;
     const currentlyActive = Boolean(permissions[key]);
     if (action === "grant" && currentlyActive) {
       setFeedback("Este identificador já tem a permissão na demonstração.");
@@ -59,7 +64,8 @@ export default function ReminderPermissionsPage() {
     const actionText = action === "grant" ? "concedida" : "revogada";
     const auditEvent: PermissionEvent = {
       id: now.getTime(),
-      target: cleanTarget,
+      targetId: selectedAdmin.id,
+      targetLabel: selectedAdmin.label,
       action,
       reason: cleanReason,
       createdAt: formatDate(now),
@@ -112,7 +118,7 @@ export default function ReminderPermissionsPage() {
 
         <div className={styles.prototypeNotice} role="note">
           <span><UserRoundCog size={18} /></span>
-          <p><strong>Protótipo local, sem efeito real.</strong> Use somente identificadores fictícios. Nenhuma conta real é consultada, nenhuma permissão é alterada no servidor e nada é persistido. Avisos e auditoria são apenas simulações nesta página.</p>
+          <p><strong>Protótipo local, sem efeito real.</strong> A lista abaixo contém apenas duas contas administrativas fictícias. Nenhuma conta real é consultada, nenhuma permissão é alterada no servidor e nada é persistido. Avisos e auditoria são apenas simulações nesta página.</p>
         </div>
 
         <div className={styles.policyStrip}>
@@ -125,9 +131,12 @@ export default function ReminderPermissionsPage() {
           <section className={styles.card} aria-labelledby="change-title">
             <div className={styles.cardHeading}><span className={styles.step}>01 · AÇÃO DE TI</span><h2 id="change-title">Conceder ou revogar</h2><p>O motivo é obrigatório nas duas ações. A revogação remove a permissão imediatamente na implementação real.</p></div>
             <form className={styles.form} onSubmit={submitChange}>
-              <label htmlFor="permission-target">ID interno fictício do administrador</label>
-              <input id="permission-target" required maxLength={100} value={target} onChange={event => { setTarget(event.target.value); setFeedback(""); }} placeholder="Ex.: id-admin-demo-01" autoComplete="off" />
-              <small>Não informe nome, e-mail ou identificador real de funcionário.</small>
+              <label htmlFor="permission-target">Selecionar conta administrativa fictícia</label>
+              <select id="permission-target" required value={target} onChange={event => { setTarget(event.target.value); setFeedback(""); }}>
+                <option value="">Escolha uma conta da lista demonstrativa</option>
+                {demoAdminDirectory.map(admin => <option key={admin.id} value={admin.id}>{admin.label} · {admin.id}</option>)}
+              </select>
+              <small>Na implementação real, esta lista virá do diretório de contas administrativas existentes e a permissão será vinculada ao ID interno imutável validado pelo servidor.</small>
 
               <div className={styles.actionGroup} role="group" aria-label="Ação de permissão">
                 <button type="button" aria-pressed={action === "grant"} className={action === "grant" ? styles.actionSelected : ""} onClick={() => { setAction("grant"); setFeedback(""); }}><UserRoundPlus size={15} /> Conceder</button>
@@ -135,7 +144,7 @@ export default function ReminderPermissionsPage() {
               </div>
               <label htmlFor="permission-reason">Motivo obrigatório</label>
               <textarea id="permission-reason" required minLength={5} maxLength={400} value={reason} onChange={event => setReason(event.target.value)} placeholder="Justificativa fictícia para a concessão ou revogação" />
-              <div className={styles.formFooter}><span>{reason.trim().length}/400 caracteres</span><button type="submit" disabled={!normalizedTarget || !reason.trim() || !actionIsValid}>{action === "grant" ? "Simular concessão" : "Simular revogação"} <Check size={15} /></button></div>
+              <div className={styles.formFooter}><span>{reason.trim().length}/400 caracteres</span><button type="submit" disabled={!selectedAdmin || !reason.trim() || !actionIsValid}>{action === "grant" ? "Simular concessão" : "Simular revogação"} <Check size={15} /></button></div>
               {feedback && <p className={styles.feedback} role="status">{feedback}</p>}
             </form>
           </section>
@@ -145,7 +154,7 @@ export default function ReminderPermissionsPage() {
             {activePermissions.length === 0 ? (
               <div className={styles.empty}><ShieldCheck size={20} /><strong>Nenhuma permissão na prévia</strong><span>Conceda uma usando um identificador de demonstração.</span></div>
             ) : (
-              <ul className={styles.activeList}>{activePermissions.map(identifier => <li key={identifier}><span className={styles.statusDot} /><span><strong>{identifier}</strong><small>Pode alterar o canal dos avisos · até revogação</small></span><span className={styles.activeTag}>ATIVA</span></li>)}</ul>
+              <ul className={styles.activeList}>{activePermissions.map(identifier => { const admin = demoAdminDirectory.find(item => item.id === identifier); return <li key={identifier}><span className={styles.statusDot} /><span><strong>{admin?.label ?? "Conta fictícia"}</strong><small>ID interno de demonstração: {identifier} · até revogação</small></span><span className={styles.activeTag}>ATIVA</span></li>; })}</ul>
             )}
           </section>
         </div>
@@ -161,7 +170,7 @@ export default function ReminderPermissionsPage() {
           <section className={styles.subCard} aria-labelledby="audit-title">
             <div className={styles.subHeading}><History size={16} /><div><span className={styles.step}>04 · REGISTRO SIMULADO</span><h2 id="audit-title">Auditoria</h2></div></div>
             <p className={styles.subIntro}>No sistema real, manter os registros por 12 meses, sem senhas, tokens completos ou códigos; depois, excluir detalhes.</p>
-            {events.length === 0 ? <div className={styles.noticeEmpty}>As ações demonstrativas aparecerão aqui.</div> : <ul className={styles.auditList}>{events.map(item => <li key={item.id}><div className={styles.auditTop}><strong>{item.action === "grant" ? "Permissão concedida" : "Permissão revogada"}</strong><time>{item.createdAt}</time></div><span>Administrador: {item.target} · Ação por: TI (simulado)</span><p>Motivo: {item.reason}</p></li>)}</ul>}
+            {events.length === 0 ? <div className={styles.noticeEmpty}>As ações demonstrativas aparecerão aqui.</div> : <ul className={styles.auditList}>{events.map(item => <li key={item.id}><div className={styles.auditTop}><strong>{item.action === "grant" ? "Permissão concedida" : "Permissão revogada"}</strong><time>{item.createdAt}</time></div><span>Administrador: {item.targetLabel} (ID {item.targetId}) · Ação por: TI (simulado)</span><p>Motivo: {item.reason}</p></li>)}</ul>}
           </section>
         </div>
 
