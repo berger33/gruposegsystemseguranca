@@ -8,6 +8,15 @@ import styles from "./AccessRequests.module.css";
 type RequestStatus = "pending" | "reviewing" | "approved" | "declined";
 type ApproverRole = "marcelo" | "ti";
 type ClientScope = "contracts" | "invoices" | "tickets";
+type AccessAuditEvent = {
+  id: number;
+  previousStatus: RequestStatus | null;
+  nextStatus: RequestStatus;
+  actor: string;
+  scopes: string[];
+  centralRecordChecked: boolean;
+  localTime: string;
+};
 
 const statusOptions: Array<{ id: RequestStatus; label: string }> = [
   { id: "pending", label: "Recebida" },
@@ -30,6 +39,7 @@ export default function AccessRequestsPreviewPage() {
   const [validationMessage, setValidationMessage] = useState("");
   const [requestCreated, setRequestCreated] = useState(false);
   const [requestEmail, setRequestEmail] = useState("");
+  const [auditEvents, setAuditEvents] = useState<AccessAuditEvent[]>([]);
 
   function createDemoRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -39,11 +49,21 @@ export default function AccessRequestsPreviewPage() {
     setCentralRecordChecked(false);
     setScope([]);
     setValidationMessage("");
+    setAuditEvents([{
+      id: 1,
+      previousStatus: null,
+      nextStatus: "pending",
+      actor: "Solicitante fictício",
+      scopes: [],
+      centralRecordChecked: false,
+      localTime: new Date().toLocaleString("pt-BR"),
+    }]);
   }
 
   function resetDemoRequest() {
     setRequestCreated(false);
     setRequestEmail("");
+    setAuditEvents([]);
     setStatus("pending");
     setCentralRecordChecked(false);
     setScope([]);
@@ -60,6 +80,17 @@ export default function AccessRequestsPreviewPage() {
       return;
     }
     setValidationMessage("");
+    if (nextStatus === status) return;
+    const previousStatus = status;
+    setAuditEvents(current => [...current, {
+      id: current.length + 1,
+      previousStatus,
+      nextStatus,
+      actor: approver === "marcelo" ? "Marcelo · simulado" : "TI / sistema · simulado",
+      scopes: scopeOptions.filter(item => scope.includes(item.id)).map(item => item.label),
+      centralRecordChecked,
+      localTime: new Date().toLocaleString("pt-BR"),
+    }]);
     setStatus(nextStatus);
   }
 
@@ -174,6 +205,21 @@ export default function AccessRequestsPreviewPage() {
               <strong>{status === "pending" ? "Pedido recebido" : status === "reviewing" ? "Pedido em análise" : status === "approved" ? "Pedido aprovado na simulação" : "Não foi possível aprovar o pedido neste momento"}</strong>
               <p>{status === "declined" ? "Mensagem genérica, sem detalhes internos. Nenhum e-mail foi enviado." : status === "approved" ? "A aprovação simulada não cria conta, não substitui a verificação do vínculo e não libera contratos ou documentos." : "Nenhum acesso é concedido antes de verificar o vínculo e concluir a decisão no servidor."}</p>
             </div>
+          )}
+          {requestCreated && (
+            <section className={styles.auditSection} aria-labelledby="request-audit-title">
+              <div className={styles.auditHeading}><div><span className={styles.sectionLabel}>TRILHA LOCAL · NÃO PERSISTIDA</span><h3 id="request-audit-title">Histórico da solicitação</h3></div><span>{auditEvents.length} {auditEvents.length === 1 ? "evento" : "eventos"}</span></div>
+              <p className={styles.auditNote}>Registro demonstrativo em memória. O sistema real deverá gravar no servidor o estado, responsável, escopo e data/hora segundo a política aprovada.</p>
+              <ol className={styles.auditList}>
+                {auditEvents.map(event => (
+                  <li key={event.id}>
+                    <div className={styles.auditEventTop}><strong>{event.previousStatus ? `${statusOptions.find(item => item.id === event.previousStatus)?.label} → ${statusOptions.find(item => item.id === event.nextStatus)?.label}` : "Pedido recebido"}</strong><time>Horário local: {event.localTime}</time></div>
+                    <p>Responsável: {event.actor} · Consulta ao cadastro central: {event.centralRecordChecked ? "simulada" : "não realizada"}</p>
+                    <p>Escopo: {event.scopes.length ? event.scopes.join(", ") : "nenhum selecionado"}</p>
+                  </li>
+                ))}
+              </ol>
+            </section>
           )}
         </section>
 
