@@ -9,6 +9,7 @@
 - **Marcelo e TI** podem aprovar solicitações, emitir convites e definir o escopo do acesso. O sistema deverá auditar essas ações.
 - Convites terão validade de **7 dias**, serão de **uso único** e poderão ser revogados antes do uso.
 - Após aceitar o convite e verificar o e-mail, o cliente entrará com **senha + confirmação de e-mail**. Fluxos de recuperação de senha, MFA para clientes e detalhes do canal de convite ainda precisam ser definidos antes da produção.
+- O solicitante será notificado por **e-mail** sobre a decisão. Em caso de recusa, usar mensagem **genérica**, sem expor detalhes internos. Os textos da prévia são rascunhos e ainda precisam de revisão antes de uso real.
 - O autocadastro, por si só, **não libera contratos nem documentos**. O vínculo do usuário com o cliente e o escopo autorizado precisam ser verificados no servidor.
 - Não importar nem inventar cadastros, contratos, documentos ou clientes para a prévia.
 - PostgreSQL, autenticação real, persistência das opções e notificações do portal permanecem para a etapa final, conforme a prioridade atual.
@@ -55,5 +56,5 @@ As regras abaixo são uma base técnica para discussão; não ativam comportamen
 - `/cliente`: página informativa; não autentica e não cria contas.
 - `/admin/portal`: compara os três modos em memória.
 - `/admin/portal/convites`: prévia sem envio de e-mail, token ou link real; permite simular os estados válido, expirado, utilizado e revogado apenas em memória no navegador.
-- `/admin/portal/solicitacoes`: sem registros; permite simular Marcelo ou TI como responsável, a consulta ao cadastro central, escopos e estados da análise. As interações são locais e não alteram permissões.
+- `/admin/portal/solicitacoes`: sem registros; permite simular Marcelo ou TI como responsável, a consulta ao cadastro central, escopos e estados da análise. Também exibe rascunhos de e-mail de aprovação e recusa genérica; não envia mensagens. As interações são locais e não alteram permissões.
 - `/admin/portal/autocadastro`: estados demonstrativos; não coleta dados nem libera acesso.

@@ -122,6 +122,22 @@ export default function AccessRequestsPreviewPage() {
           </div>
         </section>
 
+        <section className={styles.notificationSection} aria-labelledby="notification-title">
+          <div className={styles.decisionIntro}><span className={styles.sectionLabel}>MENSAGENS AO SOLICITANTE · PRÉVIA</span><h2 id="notification-title">Aviso por e-mail</h2><p>Canal escolhido para o fluxo. Revise os rascunhos; esta tela não envia mensagens.</p></div>
+          <div className={styles.messagePreview} aria-live="polite">
+            <div className={styles.messageHeader}><span className={styles.mailBadge}>E-MAIL</span><span className={styles.messageBadge}>RASCUNHO · NÃO ENVIADO</span></div>
+            <strong>Assunto: {status === "declined" ? "Atualização sobre sua solicitação de acesso" : "Solicitação de acesso ao portal aprovada"}</strong>
+            <div className={styles.messageBody}>
+              {status === "declined" ? (
+                <><p>Olá,</p><p>Não foi possível aprovar sua solicitação de acesso à Área do Cliente neste momento.</p><p>Para esclarecer dúvidas ou receber orientação, entre em contato com a equipe pelos canais oficiais da Grupo SEG System.</p><p>Atenciosamente,<br />Grupo SEG System</p></>
+              ) : (
+                <><p>Olá,</p><p>Sua solicitação de acesso à Área do Cliente foi aprovada após análise da equipe.</p><p>As orientações para concluir seu acesso serão encaminhadas separadamente. Esta aprovação, por si só, não libera contratos ou documentos; o acesso dependerá da verificação do vínculo e das permissões autorizadas.</p><p>Atenciosamente,<br />Grupo SEG System</p></>
+              )}
+            </div>
+            <small className={styles.messageFootnote}>Conteúdo provisório para revisão. A aprovação não envia automaticamente um convite e a recusa usa texto genérico, sem expor detalhes internos.</small>
+          </div>
+        </section>
+
         <div className={styles.securityNote}><ShieldCheck size={18} /><p>A aprovação deve ser auditável. Contratos e documentos continuam sujeitos a autorização por cliente no servidor — uma solicitação ou cadastro não libera acesso automaticamente.</p></div>
         <footer className={styles.footer}><span>Protótipo sem dados, persistência, notificações ou decisões reais.</span><Link href="/admin/portal">Voltar aos modos de acesso <ArrowLeft size={13} /></Link></footer>
       </section>
