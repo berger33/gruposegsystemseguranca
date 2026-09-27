@@ -41,11 +41,19 @@ const scopeOptions: Array<{ id: ClientScope; label: string }> = [
   { id: "tickets", label: "Chamados do cliente" },
 ];
 
+function requestMatchesQuery(request: DemoAccessRequest, rawQuery: string) {
+  const query = rawQuery.trim().toLocaleLowerCase("pt-BR");
+  if (!query) return true;
+  const demoId = `demo-${String(request.id).padStart(3, "0")}`.toLocaleLowerCase("pt-BR");
+  return request.email.toLocaleLowerCase("pt-BR").includes(query) || demoId.includes(query);
+}
+
 export default function AccessRequestsPreviewPage() {
   const [requests, setRequests] = useState<DemoAccessRequest[]>([]);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
   const [nextRequestId, setNextRequestId] = useState(1);
   const [queueFilter, setQueueFilter] = useState<QueueFilter>("all");
+  const [queueSearch, setQueueSearch] = useState("");
   const [requestEmail, setRequestEmail] = useState("");
   const [validationMessage, setValidationMessage] = useState("");
   const selectedRequest = requests.find(request => request.id === selectedRequestId) ?? null;
@@ -55,7 +63,7 @@ export default function AccessRequestsPreviewPage() {
   const centralRecordChecked = selectedRequest?.centralRecordChecked ?? false;
   const scope = selectedRequest?.scope ?? [];
   const auditEvents = selectedRequest?.auditEvents ?? [];
-  const visibleRequests = queueFilter === "all" ? requests : requests.filter(request => request.status === queueFilter);
+  const visibleRequests = requests.filter(request => (queueFilter === "all" || request.status === queueFilter) && requestMatchesQuery(request, queueSearch));
 
   function updateSelectedRequest(update: (request: DemoAccessRequest) => DemoAccessRequest) {
     if (selectedRequestId === null) return;
@@ -84,6 +92,7 @@ export default function AccessRequestsPreviewPage() {
     };
     setRequests(current => [created, ...current]);
     setQueueFilter("all");
+    setQueueSearch("");
     setSelectedRequestId(id);
     setNextRequestId(current => current + 1);
     setRequestEmail("");
@@ -95,6 +104,7 @@ export default function AccessRequestsPreviewPage() {
     setSelectedRequestId(null);
     setNextRequestId(1);
     setQueueFilter("all");
+    setQueueSearch("");
     setRequestEmail("");
     setValidationMessage("");
   }
@@ -126,7 +136,13 @@ export default function AccessRequestsPreviewPage() {
 
   function setQueueStatusFilter(filter: QueueFilter) {
     setQueueFilter(filter);
-    if (filter !== "all" && selectedRequest && selectedRequest.status !== filter) setSelectedRequestId(null);
+    if (selectedRequest && ((filter !== "all" && selectedRequest.status !== filter) || !requestMatchesQuery(selectedRequest, queueSearch))) setSelectedRequestId(null);
+    setValidationMessage("");
+  }
+
+  function searchRequests(query: string) {
+    setQueueSearch(query);
+    if (selectedRequest && !requestMatchesQuery(selectedRequest, query)) setSelectedRequestId(null);
     setValidationMessage("");
   }
 
@@ -195,6 +211,13 @@ export default function AccessRequestsPreviewPage() {
               })}
             </div>
           )}
+          {requests.length > 0 && (
+            <div className={styles.queueSearchRow}>
+              <label htmlFor="request-search">Buscar por e-mail de demonstração ou ID do pedido</label>
+              <input id="request-search" type="search" value={queueSearch} onChange={event => searchRequests(event.target.value)} placeholder="cliente-demo@example.invalid ou DEMO-001" />
+              <span>{visibleRequests.length} de {requests.length} pedido(s)</span>
+            </div>
+          )}
           {requests.length === 0 ? (
             <div className={styles.emptyState}>
               <span className={styles.emptyIcon}><FileSearch size={22} /></span>
@@ -202,7 +225,7 @@ export default function AccessRequestsPreviewPage() {
               <p>Use o formulário acima para criar pedidos locais e explorar a revisão.</p>
             </div>
           ) : visibleRequests.length === 0 ? (
-            <div className={styles.filterEmpty}>Nenhuma solicitação com este status nesta demonstração.</div>
+            <div className={styles.filterEmpty}>Nenhuma solicitação corresponde à busca e ao status selecionado.</div>
           ) : (
             <div className={styles.demoRequestList}>
               {visibleRequests.map(request => (
