@@ -52,7 +52,7 @@ export default function SecurityAlertsPreviewPage() {
             </article>
           )}
         </section>
-        <div className={styles.securityNote}><ShieldCheck size={17} /><p>O e-mail contém apenas o necessário; a análise completa fica no painel protegido. Qualquer administrador com permissão liberada por TI pode analisar. Marcar como analisado não encerra o alerta: somente a resolução explícita o remove dos pendentes. Alertas identificáveis: 12 meses, depois exclusão e apenas estatísticas anônimas. Logs de auditoria separados: 12 meses, sem senhas, tokens ou códigos; descarte após o prazo ainda precisa ser definido. Nenhuma exclusão automática está implementada.</p></div>
+        <div className={styles.securityNote}><ShieldCheck size={17} /><p>O e-mail contém apenas o necessário; a análise completa fica no painel protegido. Qualquer administrador com permissão liberada por TI pode analisar. Marcar como analisado não encerra o alerta: somente a resolução explícita o remove dos pendentes. Alertas identificáveis: 12 meses, depois exclusão e apenas estatísticas anônimas. Logs de auditoria separados: 12 meses, sem senhas, tokens ou códigos; depois, excluir os registros detalhados e manter métricas anônimas apenas se necessárias. Exceções legais ou investigações formais precisam de justificativa e prazo próprio. Exclusão automática ainda não está implementada.</p></div>
         <footer className={styles.footer}><span>Sem persistência, envio de e-mail, dados pessoais ou log real.</span><Link href="/admin/portal">Voltar à configuração do portal</Link></footer>
       </section>
     </main>
