@@ -3,6 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, Bell, Check, Clock3, History, ShieldCheck, UserRoundCog, UserRoundPlus, UserRoundX } from "lucide-react";
+import { evaluateManualStatusChange, MANUAL_STATUS_REASON_CATEGORIES, shouldNotifyPermissionRestored, type AdminAccountStatus } from "@/lib/admin-status-preview.mjs";
 import styles from "./ReminderPermissions.module.css";
 
 type PermissionAction = "grant" | "revoke";
@@ -18,8 +19,8 @@ type StatusAuditEvent = {
   id: number;
   targetId: string;
   targetLabel: string;
-  previousStatus: AccountStatus;
-  requestedStatus: AccountStatus;
+  previousStatus: AdminAccountStatus;
+  requestedStatus: AdminAccountStatus;
   outcome: "concluída" | "falhou";
   failureCategory?: string;
   reasonCategory: string;
@@ -35,28 +36,17 @@ type PanelNotice = {
   expiresAt: string;
 };
 
-type AccountStatus = "ativa" | "suspensa" | "desativada";
-
-const demoAdminDirectory: Array<{ id: string; label: string; email: string; status: AccountStatus }> = [
+const demoAdminDirectory: Array<{ id: string; label: string; email: string; status: AdminAccountStatus }> = [
   { id: "id-demo-admin-001", label: "Conta administrativa fictícia 01", email: "admin-demo-01@example.invalid", status: "ativa" },
   { id: "id-demo-admin-002", label: "Conta administrativa fictícia 02", email: "admin-demo-02@example.invalid", status: "suspensa" },
   { id: "id-demo-admin-003", label: "Conta administrativa fictícia 03", email: "admin-demo-03@example.invalid", status: "desativada" },
-];
-
-const manualReasonCategories = [
-  "Mudança de função/vínculo",
-  "Afastamento temporário",
-  "Segurança",
-  "Correção administrativa",
-  "Decisão formal",
-  "Reativação autorizada",
 ];
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(date);
 }
 
-function statusLabel(status: AccountStatus) {
+function statusLabel(status: AdminAccountStatus) {
   return status === "ativa" ? "Ativa" : status === "suspensa" ? "Suspensa" : "Desativada";
 }
 
@@ -66,13 +56,13 @@ export default function ReminderPermissionsPage() {
   const [reason, setReason] = useState("");
   const [action, setAction] = useState<PermissionAction>("grant");
   const [permissions, setPermissions] = useState<Record<string, boolean>>({});
-  const [statusOverrides, setStatusOverrides] = useState<Record<string, AccountStatus>>({});
+  const [statusOverrides, setStatusOverrides] = useState<Record<string, AdminAccountStatus>>({});
   const [events, setEvents] = useState<PermissionEvent[]>([]);
   const [statusEvents, setStatusEvents] = useState<StatusAuditEvent[]>([]);
   const [notices, setNotices] = useState<PanelNotice[]>([]);
   const [feedback, setFeedback] = useState("");
   const [statusFeedback, setStatusFeedback] = useState("");
-  const [requestedStatus, setRequestedStatus] = useState<AccountStatus | "">("");
+  const [requestedStatus, setRequestedStatus] = useState<AdminAccountStatus | "">("");
   const [statusReasonCategory, setStatusReasonCategory] = useState("");
   const [statusDetail, setStatusDetail] = useState("");
   const selectedAdminRecord = demoAdminDirectory.find(admin => admin.id === target);
@@ -139,15 +129,16 @@ export default function ReminderPermissionsPage() {
     if (!selectedAdmin || !requestedStatus || !statusReasonCategory || !statusDetail.trim()) return;
 
     const now = new Date();
-    const isInvalid = selectedAdmin.status === requestedStatus;
+    const transitionResult = evaluateManualStatusChange(selectedAdmin.status, requestedStatus);
+    const isInvalid = transitionResult.outcome === "falhou";
     const auditEvent: StatusAuditEvent = {
       id: now.getTime() + Math.floor(Math.random() * 1000),
       targetId: selectedAdmin.id,
       targetLabel: selectedAdmin.label,
       previousStatus: selectedAdmin.status,
       requestedStatus,
-      outcome: isInvalid ? "falhou" : "concluída",
-      failureCategory: isInvalid ? "transição inválida" : undefined,
+      outcome: transitionResult.outcome,
+      failureCategory: transitionResult.outcome === "falhou" ? transitionResult.failureCategory : undefined,
       reasonCategory: statusReasonCategory,
       detail: statusDetail.trim(),
       actorId: "id-demo-ti-001",
@@ -161,7 +152,7 @@ export default function ReminderPermissionsPage() {
     } else {
       setStatusOverrides(previous => ({ ...previous, [selectedAdmin.id]: requestedStatus }));
       setStatusFeedback(`Status alterado para ${statusLabel(requestedStatus).toLowerCase()} nesta prévia.`);
-      if (requestedStatus === "ativa" && selectedAdmin.status !== "ativa" && permissions[selectedAdmin.id]) {
+      if (shouldNotifyPermissionRestored(selectedAdmin.status, requestedStatus, Boolean(permissions[selectedAdmin.id]))) {
         const expires = new Date(now);
         expires.setDate(expires.getDate() + 30);
         setNotices(previous => [{
@@ -269,8 +260,8 @@ export default function ReminderPermissionsPage() {
             <form className={styles.statusForm} onSubmit={submitStatusChange}>
               <div className={styles.currentStatus}><span>Conta selecionada</span><strong>{selectedAdmin.label}</strong><small>Status atual: {statusLabel(selectedAdmin.status)} · ID fictício: {selectedAdmin.id}</small></div>
               <div className={styles.statusFields}>
-                <div><label htmlFor="requested-status">Novo status</label><select id="requested-status" required value={requestedStatus} onChange={event => { setRequestedStatus(event.target.value as AccountStatus | ""); setStatusFeedback(""); }}><option value="">Escolha o novo status</option><option value="ativa">Ativa · reativar</option><option value="suspensa">Suspensa</option><option value="desativada">Desativada</option></select></div>
-                <div><label htmlFor="status-reason-category">Categoria obrigatória</label><select id="status-reason-category" required value={statusReasonCategory} onChange={event => setStatusReasonCategory(event.target.value)}><option value="">Escolha uma categoria</option>{manualReasonCategories.map(category => <option key={category} value={category}>{category}</option>)}</select></div>
+                <div><label htmlFor="requested-status">Novo status</label><select id="requested-status" required value={requestedStatus} onChange={event => { setRequestedStatus(event.target.value as AdminAccountStatus | ""); setStatusFeedback(""); }}><option value="">Escolha o novo status</option><option value="ativa">Ativa · reativar</option><option value="suspensa">Suspensa</option><option value="desativada">Desativada</option></select></div>
+                <div><label htmlFor="status-reason-category">Categoria obrigatória</label><select id="status-reason-category" required value={statusReasonCategory} onChange={event => setStatusReasonCategory(event.target.value)}><option value="">Escolha uma categoria</option>{MANUAL_STATUS_REASON_CATEGORIES.map(category => <option key={category} value={category}>{category}</option>)}</select></div>
               </div>
               <label htmlFor="status-detail">Detalhe obrigatório · até 500 caracteres</label>
               <textarea id="status-detail" required maxLength={500} value={statusDetail} onChange={event => setStatusDetail(event.target.value)} placeholder="Contexto breve e necessário para a decisão" />
