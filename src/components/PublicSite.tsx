@@ -118,6 +118,11 @@ export default function PublicSite() {
     }
   }
 
+  const selectedAssistantFaq = assistantQuestion === null ? null : questions[assistantQuestion];
+  const handoffMessage = selectedAssistantFaq
+    ? `Olá! Consultei a FAQ do site e gostaria de falar com uma pessoa sobre esta dúvida:\n${selectedAssistantFaq.q}\nResposta apresentada: ${selectedAssistantFaq.a}`
+    : "Olá! Gostaria de falar com uma pessoa da equipe do Grupo SEG System.";
+
   return (
     <div className="site site--layered" id="inicio">
       <div className="preview-bar"><div className="container preview-bar__inner"><span><span className="preview-dot" /> PRÉVIA DE DESENVOLVIMENTO <span className="preview-bar__extra">· Este não é o site publicado</span></span><span>Guarulhos, São Paulo <MapPin size={12} /></span></div></div>
@@ -200,7 +205,37 @@ export default function PublicSite() {
 
       <footer className="footer"><div className="container footer__main"><div className="footer__brand"><Brand compact /><p>Proteção patrimonial, prevenção e soluções integradas para sua operação.</p></div><div><strong>Navegação</strong><a href="#servicos">Serviços</a><a href="#solucoes">Soluções</a><a href="#sobre">Sobre o grupo</a><a href="#duvidas">Dúvidas frequentes</a></div><div><strong>Contato</strong><a href={`tel:+${WHATSAPP}`}><Phone size={15} /> {SITE_PHONE}</a><a href={`mailto:${EMAIL}`}><Mail size={15} /> {EMAIL}</a><span className="footer__address"><MapPin size={15} /> Av. Armando Bei, 305 - Sala 01<br />Vila Nova Bonsucesso, Guarulhos / SP</span></div></div><div className="container footer__bottom"><span>© {new Date().getFullYear()} Grupo SEG System. Prévia em desenvolvimento.</span><span>Dados de contato extraídos do site atual — aguardando confirmação.</span></div></footer>
 
-      <div className="assistant-area">{assistantOpen && <div className="assistant-panel" role="dialog" aria-label="Assistente de dúvidas"><div className="assistant-panel__head"><span className="assistant-panel__avatar"><Headphones size={22} /></span><span><strong>Posso ajudar?</strong><small>FAQ de demonstração · sem IA</small></span><button type="button" aria-label="Fechar assistente" onClick={() => setAssistantOpen(false)}><X size={19} /></button></div><div className="assistant-panel__body"><p className="assistant-bubble">Olá! Escolha uma pergunta para consultar a FAQ ou fale com a nossa equipe.</p>{assistantQuestion !== null && <><p className="assistant-user">{questions[assistantQuestion].q}</p><p className="assistant-bubble">{questions[assistantQuestion].a}</p></>}<div className="assistant-prompts">{questions.map(({q}, i) => <button type="button" key={q} onClick={() => setAssistantQuestion(i)}>{q} <ArrowRight size={14} /></button>)}</div></div><a className="assistant-panel__handoff" href={whatsappLink("Olá! Gostaria de falar com a equipe do Grupo SEG System.")} target="_blank" rel="noopener noreferrer">Falar com uma pessoa <Send size={16} /></a></div>}<button className="assistant-trigger" type="button" onClick={() => setAssistantOpen(!assistantOpen)} aria-label={assistantOpen ? "Fechar assistente" : "Abrir assistente de dúvidas"} aria-expanded={assistantOpen}>{assistantOpen ? <X size={24} /> : <MessageCircle size={25} />}<span>{assistantOpen ? "Fechar" : "Dúvidas?"}</span></button></div>
+      <div className="assistant-area">
+        {assistantOpen && (
+          <section className="assistant-panel" role="dialog" aria-label="Assistente de dúvidas">
+            <div className="assistant-panel__head">
+              <span className="assistant-panel__avatar"><Headphones size={22} /></span>
+              <span><strong>Posso ajudar?</strong><small>Respostas da FAQ · sem IA</small></span>
+              <button type="button" aria-label="Fechar assistente" onClick={() => setAssistantOpen(false)}><X size={19} /></button>
+            </div>
+            <div className="assistant-panel__body" aria-live="polite">
+              <p className="assistant-bubble">Olá! Escolha uma pergunta para consultar a FAQ ou fale com a nossa equipe.</p>
+              {selectedAssistantFaq && <>
+                <p className="assistant-user">{selectedAssistantFaq.q}</p>
+                <p className="assistant-bubble">{selectedAssistantFaq.a}</p>
+              </>}
+              <div className="assistant-prompts">
+                {questions.map(({ q }, index) => (
+                  <button type="button" key={q} aria-pressed={assistantQuestion === index} onClick={() => setAssistantQuestion(index)}>
+                    {q} <ArrowRight size={14} />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <a className="assistant-panel__handoff" href={whatsappLink(handoffMessage)} target="_blank" rel="noopener noreferrer">
+              {selectedAssistantFaq ? "Falar com uma pessoa sobre esta dúvida" : "Falar com uma pessoa"} <Send size={16} />
+            </a>
+          </section>
+        )}
+        <button className="assistant-trigger" type="button" onClick={() => setAssistantOpen(!assistantOpen)} aria-label={assistantOpen ? "Fechar assistente" : "Abrir assistente de dúvidas"} aria-expanded={assistantOpen}>
+          {assistantOpen ? <X size={24} /> : <MessageCircle size={25} />}<span>{assistantOpen ? "Fechar" : "Dúvidas?"}</span>
+        </button>
+      </div>
     </div>
   );
 }
