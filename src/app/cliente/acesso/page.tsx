@@ -59,7 +59,7 @@ export default function ClientAccessPreviewPage() {
           <section className={styles.card}>
             <span className={styles.icon}><LockKeyhole size={20} /></span>
             <h2>Entrar no portal</h2>
-            <p>O login ainda não está ativo. Use valores fictícios para visualizar a resposta desta tela. A versão real aplicará espera progressiva após tentativas incorretas, sem bloqueio permanente da conta.</p>
+            <p>O login ainda não está ativo. Use valores fictícios para visualizar a resposta desta tela. A regra planejada aplica, após a 5ª falha, esperas progressivas de 1, 5 e 15 minutos por conta e origem, sem bloqueio permanente.</p>
             <form onSubmit={simulateLogin}>
               <label htmlFor="login-email">E-mail</label>
               <input id="login-email" type="email" autoComplete="off" required placeholder="teste@exemplo.com" value={email} onChange={event => setEmail(event.target.value)} />
