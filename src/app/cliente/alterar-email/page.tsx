@@ -54,8 +54,18 @@ export default function ChangeEmailPreviewPage() {
             {stage === "pending" ? (
               <>
                 <p>Um link de confirmação seria enviado para <strong>{newEmail}</strong>. Até confirmar, o e-mail atual <strong>{currentEmail}</strong> continua sendo o endereço da conta.</p>
-                <div className={styles.noticeInline}><strong>Aviso ao endereço atual</strong><span>Prévia: foi solicitada uma alteração do e-mail da conta. Se você não reconhece o pedido, entre em contato com a equipe.</span><small>NÃO ENVIADO</small></div>
-                <div className={styles.noticeInline}><strong>Confirmação para o novo endereço</strong><span>Prévia: confirme que você controla este endereço para concluir a mudança.</span><small>LINK NÃO GERADO</small></div>
+                <div className={styles.noticeInline}>
+                  <strong>Aviso para o e-mail atual · rascunho</strong>
+                  <span><b>Assunto:</b> Solicitação de alteração do e-mail da Área do Cliente</span>
+                  <span>Foi solicitada a alteração do endereço de acesso associado à sua conta. Seu e-mail atual continuará ativo até a confirmação do novo endereço. Se você não reconhece esta solicitação, não confirme a mudança e entre em contato com a equipe pelos canais oficiais.</span>
+                  <small>RASCUNHO · NÃO ENVIADO</small>
+                </div>
+                <div className={styles.noticeInline}>
+                  <strong>Confirmação para o novo e-mail · rascunho</strong>
+                  <span><b>Assunto:</b> Confirme o novo e-mail da Área do Cliente</span>
+                  <span>Confirme que você controla este endereço para concluir a alteração. O link será válido por 1 hora e cada reenvio invalida o link anterior. Até a confirmação, use o e-mail atual para entrar.</span>
+                  <small>RASCUNHO · LINK NÃO GERADO</small>
+                </div>
                 <button type="button" onClick={() => setStage("confirmed")}>Simular confirmação do novo e-mail <Check size={15} /></button>
                 <p className={styles.pendingNote}>Link válido por 1 hora. Até 5 reenvios por endereço em 24 horas, com intervalo mínimo de 2 minutos; cada novo link invalida o anterior. Simulações de reenvio: {resendCount}/5. Nenhuma mensagem foi enviada.</p>
                 <button className={styles.resend} type="button" disabled={resendCount >= 5} onClick={() => setResendCount(count => Math.min(5, count + 1))}>{resendCount >= 5 ? "Limite demonstrativo atingido" : "Simular reenvio do link"}</button>
