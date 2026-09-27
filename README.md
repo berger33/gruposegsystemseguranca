@@ -7,7 +7,7 @@ Sistema em desenvolvimento para o Grupo SEG System. O **plano foi registrado em 
 
 ## Prévia atual
 
-Primeiro incremento salvo: site público responsivo com a interface 01 (composição institucional aprovada pelo usuário) e seus fluxos de prévia. O **layout 02 — Central** está disponível em `/layout-02` para avaliação sequencial; os nove layouts seguintes só serão iniciados após aprovação de cada etapa. Inclui seis serviços citados no site atual, montagem de interesse, solicitação via WhatsApp e FAQ fixa. A foto da central é ilustração conceitual gerada, não instalação real da empresa. Esta aplicação **não está pronta para produção**.
+Prévia pública com layout 01 (institucional) e layout 02 (Central tecnológica), ambos aprovados visualmente pelo usuário. O **layout 03 — Presença** está disponível em `/layout-03` para avaliação; os demais serão apresentados um por vez, depois da aprovação de cada proposta. As imagens novas são conceituais e geradas, não representam funcionários ou instalações reais. Esta aplicação **não está pronta para produção**.
 
 O formulário **não salva leads nem envia e-mails**: ele abre uma mensagem para o visitante revisar e enviar manualmente no WhatsApp. Portal autenticado, CRM, agendamento confirmado, candidaturas, blog, temas globais e o restante dos módulos ainda serão construídos. Essas áreas aparecem como “Em desenvolvimento”; não existe login ou dado contratual fictício exposto como real. O `robots` está configurado como `noindex` durante a prévia.
 
@@ -17,8 +17,9 @@ A foto da viatura e o logotipo foram vistos na conversa, mas não estavam acess�
 
 - [Layout 01 — prévia estática original (.zip)](downloads/seg-system-previa.zip). Extraia e abra `index.html`.
 - [Layout 02 — Central (.zip)](downloads/layout-02-central-preview.zip). Extraia e abra `index.html`; `layout-01.html` permite comparar com o primeiro conceito.
+- [Layout 03 — Presença (.zip)](downloads/layout-03-presenca-preview.zip). Extraia e abra `index.html`; o pacote inclui os layouts 01 e 02 para comparação.
 
-Os ZIPs são **fotografias visuais desta etapa**, não o sistema completo nem versões para publicação. O layout 02 pode ser gerado com `npm run package:layout-02`; as prévias não têm backend, e o formulário somente abre uma mensagem para revisão e envio manual pelo WhatsApp.
+Os ZIPs são **fotografias visuais desta etapa**, não o sistema completo nem versões para publicação. As prévias não têm backend, e os formulários apenas abrem uma mensagem para revisão e envio manual pelo WhatsApp. Gere os pacotes com `npm run package:layout-02` e `npm run package:layout-03`.
 
 ## Desenvolvimento
 

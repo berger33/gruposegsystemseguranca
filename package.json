@@ -7,6 +7,7 @@
     "build": "next build",
     "build:preview": "STATIC_PREVIEW=1 next build",
     "package:layout-02": "npm run build:preview && bash scripts/package-layout-02.sh",
+    "package:layout-03": "npm run build:preview && bash scripts/package-layout-03.sh",
     "start": "next start --hostname 0.0.0.0",
     "typecheck": "tsc --noEmit"
   },
