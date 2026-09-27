@@ -66,6 +66,7 @@ export default function PortalAccessAdminPage() {
           <div className={styles.previewLinks}>
             <Link className={styles.previewLink} href="/cliente">Ver página do cliente <ArrowUpRight size={15} /></Link>
             <Link className={styles.previewLink} href="/admin/portal/convites">Prévia do fluxo de convite <ArrowUpRight size={15} /></Link>
+            <Link className={styles.previewLink} href="/admin/portal/solicitacoes">Prévia de análise de acesso <ArrowUpRight size={15} /></Link>
           </div>
         </div>
 
