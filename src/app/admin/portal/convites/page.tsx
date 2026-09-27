@@ -26,6 +26,7 @@ export default function InvitationFlowPreviewPage() {
   const [email, setEmail] = useState("");
   const [simulatedStatus, setSimulatedStatus] = useState<SimulatedInviteStatus>("valid");
   const [emailConfirmed, setEmailConfirmed] = useState(false);
+  const [resendSimulated, setResendSimulated] = useState(false);
 
   function previewInvitation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -37,6 +38,7 @@ export default function InvitationFlowPreviewPage() {
     setEmail("");
     setSimulatedStatus("valid");
     setEmailConfirmed(false);
+    setResendSimulated(false);
   }
 
   return (
@@ -111,9 +113,10 @@ export default function InvitationFlowPreviewPage() {
                 <span className={styles.cardKicker}>CONFIRMAÇÃO DO E-MAIL · SIMULAÇÃO</span>
                 <p><strong>Para:</strong> {email || "endereço de teste"}</p>
                 <p><strong>Assunto:</strong> Confirme seu e-mail para continuar</p>
-                <p>Na implementação, o cliente receberá uma mensagem de confirmação. Clique no controle abaixo apenas para visualizar o estado confirmado; nenhum e-mail ou link real é enviado.</p>
+                <p>Na implementação, o cliente receberá uma mensagem de confirmação. O link terá validade de 7 dias. Clique nos controles abaixo apenas para visualizar os estados; nenhum e-mail ou link real é enviado.</p>
                 <button className={styles.secondary} type="button" aria-pressed={emailConfirmed} onClick={() => setEmailConfirmed(current => !current)}>{emailConfirmed ? "E-mail confirmado · desfazer simulação" : "Simular confirmação do e-mail"}</button>
-                <small className={emailConfirmed ? styles.confirmedNote : ""} role="status">{emailConfirmed ? "E-mail marcado como confirmado nesta demonstração. Isso não cria conta nem libera documentos." : "Aguardando confirmação demonstrativa. Prazo do link, reenvio e recuperação ainda serão definidos."}</small>
+                {!emailConfirmed && <button className={styles.resendButton} type="button" aria-pressed={resendSimulated} onClick={() => setResendSimulated(current => !current)}>{resendSimulated ? "Desfazer prévia do reenvio" : "Simular reenvio do link"}</button>}
+                <small className={emailConfirmed ? styles.confirmedNote : ""} role="status">{emailConfirmed ? "E-mail marcado como confirmado nesta demonstração. Isso não cria conta nem libera documentos." : resendSimulated ? "Reenvio simulado: em produção, o link anterior seria invalidado. Limite de frequência será aplicado; quantidade e intervalo ainda serão definidos." : "Aguardando confirmação demonstrativa. Reenvio terá limite e invalidará o link anterior."}</small>
               </div>
               <small>Esta simulação não autentica nem libera acesso.</small>
             </div>
