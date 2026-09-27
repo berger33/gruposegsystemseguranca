@@ -198,6 +198,7 @@ h1 em, h2 em { color: var(--blue); font-style: normal; }
 .extra-card__icon { display: flex; color: var(--blue); margin-bottom: 24px; }
 .extra-card h3 { font-size: 17px; letter-spacing: -.035em; margin-bottom: 9px; }
 .extra-card p { color: var(--muted); font-size: 12px; line-height: 1.7; }
+.extra-card .text-link { align-self: flex-start; margin-top: 15px; font-size: 10px; }
 .status-pill { margin-top: auto; align-self: start; border-radius: 20px; padding: 6px 10px; background: var(--wash); color: var(--blue); font-size: 9px; font-weight: 800; }
 .faq-section { background: var(--surface); }
 .faq-grid { display: grid; grid-template-columns: .8fr 1fr; gap: 10%; }
