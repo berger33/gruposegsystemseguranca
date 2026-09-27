@@ -70,7 +70,11 @@ export default function ClientDashboardPreviewPage() {
               <span className={styles.moduleLabel}>ÁREA PLANEJADA</span>
               <h3>{title}</h3>
               <p>{description}</p>
-              <div className={styles.emptyState}><span>Nenhum item disponível nesta prévia</span></div>
+              {title === "Solicitações e chamados" ? (
+                <Link className={styles.moduleLink} href="/cliente/chamados">Abrir prévia de chamados <ArrowRight size={13} /></Link>
+              ) : (
+                <div className={styles.emptyState}><span>Nenhum item disponível nesta prévia</span></div>
+              )}
             </article>
           ))}
         </section>

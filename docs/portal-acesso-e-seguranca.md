@@ -68,7 +68,8 @@ As regras abaixo são uma base técnica para discussão; não ativam comportamen
 
 ## Estado dos protótipos
 
-- `/cliente/painel`: shell visual do futuro painel do cliente, com estados vazios para contratos/serviços, documentos e solicitações/chamados; nenhum registro fictício é apresentado como dado real. Não autentica, não consulta cadastro e não persiste dados.
+- `/cliente/painel`: shell visual do futuro painel do cliente, com estados vazios para contratos/serviços e documentos, além de atalho para a prévia de chamados; nenhum registro fictício é apresentado como dado real. Não autentica, não consulta cadastro e não persiste dados.
+- `/cliente/chamados`: demonstração local de abertura de solicitação com categoria, título e detalhe limitado a 500 caracteres. O resultado fica apenas na tela enquanto aberta; não envia, persiste nem representa protocolo real.
 - `/cliente`: página informativa; não autentica e não cria contas. Inclui atalho para a prévia visual do painel.
 - `/cliente/recuperar-senha`: demonstra solicitação por e-mail com resposta genérica e link de uso único válido por 1 hora; não envia mensagem nem altera senha.
 - `/cliente/seguranca`: demonstra a opção de MFA por aplicativo autenticador ou código por e-mail e recuperação com códigos de uso único/ajuda da equipe; não ativa MFA nem gera códigos reais.
