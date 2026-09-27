@@ -20,7 +20,7 @@
     "package:layout-10": "npm run build:preview && bash scripts/package-layout-10.sh",
     "start": "node server.mjs",
     "test": "node --test",
-    "test:integration": "RUN_DATABASE_INTEGRATION=1 node --test tests/lead-flow.integration.test.mjs",
+    "test:integration": "RUN_DATABASE_INTEGRATION=1 node --test --test-concurrency=1 tests/lead-flow.integration.test.mjs tests/client-access.integration.test.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -5,6 +5,7 @@ import next from "next";
 import pg from "pg";
 import nodemailer from "nodemailer";
 import { validateLeadInput } from "./src/lib/public-lead-validation.mjs";
+import { createClientAccessApi } from "./src/server/client-access-api.mjs";
 
 const { loadEnvConfig } = nextEnv;
 const { Pool } = pg;
@@ -136,9 +137,13 @@ function sessionCookie(req, value, maxAge) {
   return `${SESSION_COOKIE}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${cookieSecure(req) ? "; Secure" : ""}`;
 }
 
-function rateLimitAllows(bucket, req, windowMs, maxAttempts) {
+function clientIp(req) {
   const forwardedFor = process.env.TRUST_PROXY === "true" ? req.headers["x-forwarded-for"] : undefined;
-  const ip = String(forwardedFor || req.socket.remoteAddress || "unknown").split(",")[0].trim();
+  return String(forwardedFor || req.socket.remoteAddress || "unknown").split(",")[0].trim();
+}
+
+function rateLimitAllows(bucket, req, windowMs, maxAttempts) {
+  const ip = clientIp(req);
   const now = Date.now();
   const current = (bucket.get(ip) || []).filter(timestamp => now - timestamp < windowMs);
   if (current.length >= maxAttempts) {
@@ -430,6 +435,19 @@ async function handleAdminSession(req, res) {
   });
 }
 
+const publicBaseUrl = (process.env.PUBLIC_BASE_URL || "").trim().replace(/\/+$/, "") || `http://localhost:${port}`;
+
+const clientAccessApi = createClientAccessApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+  cookieSecure,
+  clientIp,
+  baseUrl: publicBaseUrl,
+});
+
 async function routeApi(req, res) {
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
   if (url.pathname === "/api/site-visual") return handleSiteVisual(req, res, url);
@@ -438,8 +456,22 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/leads") return handleAdminLeads(req, res, url);
   const leadMatch = url.pathname.match(/^\/api\/admin\/leads\/([0-9a-f-]{36})$/i);
   if (leadMatch) return handleAdminLeadStatus(req, res, leadMatch[1]);
+  if (url.pathname.startsWith("/api/auth/")) return clientAccessApi.handleAuth(req, res, url);
+  if (url.pathname === "/api/admin/invites") return clientAccessApi.handleAdminInvites(req, res, url);
+  const inviteMatch = url.pathname.match(/^\/api\/admin\/invites\/([0-9a-f-]{36})$/i);
+  if (inviteMatch) return clientAccessApi.handleInviteRevoke(req, res, inviteMatch[1]);
   return json(res, 404, { error: "not_found" });
 }
+
+const API_PATH_MATCH = pathname =>
+  pathname === "/api/site-visual"
+  || pathname === "/api/leads"
+  || pathname === "/api/admin/session"
+  || pathname === "/api/admin/leads"
+  || pathname.startsWith("/api/admin/leads/")
+  || pathname.startsWith("/api/auth/")
+  || pathname === "/api/admin/invites"
+  || pathname.startsWith("/api/admin/invites/");
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
@@ -447,7 +479,7 @@ await app.prepare();
 
 const server = createServer(async (req, res) => {
   const pathname = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`).pathname;
-  if (pathname === "/api/site-visual" || pathname === "/api/leads" || pathname === "/api/admin/session" || pathname === "/api/admin/leads" || pathname.startsWith("/api/admin/leads/")) {
+  if (API_PATH_MATCH(pathname)) {
     await routeApi(req, res);
     return;
   }

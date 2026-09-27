@@ -15,6 +15,17 @@ O formulário integrado do layout 06 envia pedidos à API do servidor, que valid
 
 A foto da viatura e o logotipo foram vistos na conversa, mas não estavam acessíveis nos caminhos de anexos informados pelo ambiente; o site usa ilustração e marca tipográfica provisórias até os arquivos estarem disponíveis em `public/brand/`. Antes de publicar, confirmar contatos, conteúdo, licenças, autorização de imagens e política de privacidade.
 
+## Área logada do cliente — etapa 1 (nova, 27/09/2026)
+
+A primeira camada **real** do portal do cliente está ativa e verificada: convite administrativo (7 dias, uso único, revogável), aceite com senha scrypt (12+ caracteres, comuns recusadas), confirmação de e-mail (7 dias), login com espera progressiva (1/5/15 min após a 5ª falha), sessões revogáveis no servidor, recuperação de senha por link de 1 hora com resposta genérica e trilha de auditoria com categorias fechadas. Rotas reais: `/cliente/entrar`, `/cliente/app` (primeira área protegida), `/cliente/convite`, `/cliente/confirmar-email` e `/cliente/redefinir-senha`; APIs em `/api/auth/*` e `/api/admin/invites*`. As rotas mais antigas de `/cliente/*` e `/admin/portal/*` continuam sendo **prévias** sem autenticação. O fluxo usa a migração `db/migrations/003-client-access.sql` e é coberto por teste de integração contra PostgreSQL real com captura SMTP embutida. Detalhes, limites e o que falta em [portal do cliente](docs/portal-acesso-e-seguranca.md). Para experimentar localmente: configure `.env.local` (copie `.env.example`), rode `npm run db:migrate` e `npm run dev`; emita um convite como administrador:
+
+```bash
+curl -X POST http://localhost:3000/api/admin/session -H "Content-Type: application/json" -H "Origin: http://localhost:3000" -d '{"token":"<SITE_ADMIN_TOKEN_TI>"}' -c cookies.txt
+curl -X POST http://localhost:3000/api/admin/invites -H "Content-Type: application/json" -H "Origin: http://localhost:3000" -b cookies.txt -d '{"email":"voce@exemplo.com"}'
+```
+
+Sem SMTP configurado, a resposta inclui `inviteUrl` para entrega manual pelo WhatsApp; com SMTP, o convite sai por e-mail e o link não aparece na resposta.
+
 ## Download das prévias
 
 - [Layout 01 — prévia estática original (.zip)](downloads/seg-system-previa.zip). Extraia e abra `index.html`.
@@ -47,6 +58,6 @@ npm run typecheck
 npm run build
 ```
 
-`npm test` cobre apenas a validação pura e não precisa de banco. Com `DATABASE_URL` configurada, `npm run test:integration` sobe uma instância própria do servidor e confere o fluxo completo de pedidos contra um PostgreSQL real; ele se recusa a escrever em bancos que não sejam de loopback, salvo `RUN_DATABASE_INTEGRATION_REMOTE=1`.
+`npm test` cobre apenas a validação pura e não precisa de banco. Com `DATABASE_URL` configurada, `npm run test:integration` sobe uma instância própria do servidor e confere, de forma serializada, o fluxo completo de pedidos **e** o fluxo completo de acesso do cliente (convite → aceite → confirmação → login → recuperação de senha) contra um PostgreSQL real, com um servidor SMTP de captura embutido nos testes. Eles só rodam com `RUN_DATABASE_INTEGRATION=1` e se recusam a escrever em bancos que não sejam de loopback, salvo `RUN_DATABASE_INTEGRATION_REMOTE=1`.
 
 Para desenvolver os fluxos de pedidos, configure PostgreSQL e os segredos administrativos conforme [administração e configuração](docs/administracao-visual.md), copie `.env.example` para `.env.local` e execute `npm run db:up` e `npm run db:migrate`. Para alertas por e-mail, preencha `MAIL_HOST`, `MAIL_PORT`, `MAIL_SECURE`, `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_FROM` e `LEADS_NOTIFY_EMAIL` com os dados do serviço SMTP escolhido. Nunca versione credenciais. A autenticação por token é uma base inicial; concluir RBAC completo e 2FA antes da produção. Os ZIPs de download são snapshots estáticos e não incluem esta API.
