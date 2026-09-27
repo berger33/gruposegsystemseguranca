@@ -131,7 +131,7 @@ export default function AccessRequestsPreviewPage() {
               {status === "declined" ? (
                 <><p>Olá,</p><p>Não foi possível aprovar sua solicitação de acesso à Área do Cliente neste momento.</p><p>Para esclarecer dúvidas ou receber orientação, entre em contato com a equipe pelos canais oficiais da Grupo SEG System.</p><p>Atenciosamente,<br />Grupo SEG System</p></>
               ) : (
-                <><p>Olá,</p><p>Sua solicitação de acesso à Área do Cliente foi aprovada após análise da equipe.</p><p>As orientações para concluir seu acesso serão encaminhadas separadamente. Esta aprovação, por si só, não libera contratos ou documentos; o acesso dependerá da verificação do vínculo e das permissões autorizadas.</p><p>Atenciosamente,<br />Grupo SEG System</p></>
+                <><p>Olá,</p><p>Sua solicitação de acesso à Área do Cliente foi aprovada após análise da equipe.</p><p>A equipe informará as próximas etapas após concluir as validações necessárias. Esta mensagem não envia um convite nem libera contratos ou documentos; o acesso dependerá da verificação do vínculo e das permissões autorizadas.</p><p>Atenciosamente,<br />Grupo SEG System</p></>
               )}
             </div>
             <small className={styles.messageFootnote}>Conteúdo provisório para revisão. A aprovação não envia automaticamente um convite e a recusa usa texto genérico, sem expor detalhes internos.</small>
