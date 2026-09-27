@@ -12,10 +12,12 @@ export default function ChangeEmailPreviewPage() {
   const [currentEmail, setCurrentEmail] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
+  const [resendCount, setResendCount] = useState(0);
 
   function requestChange(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setCurrentPassword("");
+    setResendCount(0);
     setStage("pending");
   }
 
@@ -55,11 +57,13 @@ export default function ChangeEmailPreviewPage() {
                 <div className={styles.noticeInline}><strong>Aviso ao endereço atual</strong><span>Prévia: foi solicitada uma alteração do e-mail da conta. Se você não reconhece o pedido, entre em contato com a equipe.</span><small>NÃO ENVIADO</small></div>
                 <div className={styles.noticeInline}><strong>Confirmação para o novo endereço</strong><span>Prévia: confirme que você controla este endereço para concluir a mudança.</span><small>LINK NÃO GERADO</small></div>
                 <button type="button" onClick={() => setStage("confirmed")}>Simular confirmação do novo e-mail <Check size={15} /></button>
-                <p className={styles.pendingNote}>Prazo do link, reenvio e tratamento de sessões ainda precisam ser definidos. A confirmação não é real.</p>
+                <p className={styles.pendingNote}>Link válido por 1 hora. Até 5 reenvios por endereço em 24 horas, com intervalo mínimo de 2 minutos; cada novo link invalida o anterior. Simulações de reenvio: {resendCount}/5. Nenhuma mensagem foi enviada.</p>
+                <button className={styles.resend} type="button" disabled={resendCount >= 5} onClick={() => setResendCount(count => Math.min(5, count + 1))}>{resendCount >= 5 ? "Limite demonstrativo atingido" : "Simular reenvio do link"}</button>
               </>
             ) : (
               <>
                 <p>Na simulação, o endereço da conta mudaria de <strong>{currentEmail}</strong> para <strong>{newEmail}</strong> após a confirmação.</p>
+                <div className={styles.noticeInline}><strong>Sessões existentes</strong><span>Na regra planejada, todas as sessões ativas serão encerradas; será necessário entrar novamente com o novo e-mail.</span></div>
                 <div className={styles.noticeInline}><strong>Etapa concluída apenas na prévia</strong><span>Nenhuma conta foi alterada e nenhum aviso foi enviado.</span></div>
               </>
             )}
