@@ -1,5 +1,11 @@
 # Grupo SEG System Segurança Integrada
 
+## Implementação orientada por agentes
+
+O roteiro completo de correções e evolução está no [Plano mestre de implementação](docs/PLANO-MESTRE-IMPLEMENTACAO.md). Para executar no Arena.ai, use o [Prompt mestre](docs/PROMPT-MASTER-ARENA.md) e mantenha o [Controle de implementação](docs/CONTROLE-IMPLEMENTACAO.md) atualizado.
+
+**Estado documental:** o plano especifica trabalho futuro; sua inclusão não implementa nem homologa funcionalidades. Há divergências entre afirmações históricas abaixo e o código, registradas no capítulo 3 do plano. Revalidar no commit atual antes de considerar qualquer módulo ativo, aprovado ou seguro. Telas demonstrativas e migrações isoladas não comprovam um fluxo funcional.
+
 Sistema em desenvolvimento para o Grupo SEG System. O **plano foi registrado em commit separado antes do início da aplicação** (`5af5ab0`).
 
 - [Plano de produto e decisões pendentes](docs/plano-produto.md)
