@@ -130,6 +130,28 @@ export function createClientSpaceApi(ctx) {
       ctx.json(res, 403, { error: "forbidden" });
       return null;
     }
+    // Vínculo restrito por unidade: se o grant aponta para uma unit_account_id,
+    // a conta consultada deve ser essa unidade ou ter ela como parent.
+    const grantRow = result.rows[0]; // we need grant info; currently only id selected
+    // Re-fetch grant for unit check (simples, idempotente)
+    try {
+      const gRes = await db.query(
+        `SELECT g.unit_account_id FROM client_access_grants g WHERE g.id = $1`,
+        [grantRow.id]
+      );
+      const gUnit = gRes.rows[0];
+      if (gUnit && gUnit.unit_account_id) {
+        const unitCheck = await db.query(
+          `SELECT id FROM client_accounts WHERE id = $1 AND (id = $2 OR parent_account_id = $2)`,
+          [accountId, gUnit.unit_account_id]
+        );
+        if (!unitCheck.rows[0]) {
+          await audit(db, { actorKind: "client", actorId: session.identityId, action, target: accountId, result: "denied", category: "authorization_denied" });
+          ctx.json(res, 403, { error: "forbidden" });
+          return null;
+        }
+      }
+    } catch (e) { /* falha na verificação de unidade, mantém negado por padrão se houver erro */ }
     return result.rows[0].id;
   }
 
@@ -168,12 +190,35 @@ export function createClientSpaceApi(ctx) {
     if (!UUID_PATTERN.test(accountId)) return ctx.json(res, 400, { error: "invalid_account_id" });
     const db = ctx.getPool();
     if (!(await requireAccountScope(db, { req, res, session, accountId, action: "contract_list" }))) return;
+    // Restrição de contratos (vínculo restrito) — deny-by-default
+    let contractFilter = null;
     try {
-      const result = await db.query(
-        `SELECT id, title, service, status, starts_on, ends_on, summary, created_at, updated_at
-         FROM client_contracts WHERE client_account_id = $1 ORDER BY created_at DESC`,
-        [accountId],
+      const grantRes = await db.query(
+        `SELECT contract_scope_mode, allowed_contract_ids FROM client_access_grants WHERE identity_id = $1 AND client_account_id = $2 AND revoked_at IS NULL`,
+        [session.identityId, accountId]
       );
+      const g = grantRes.rows[0];
+      if (g && g.contract_scope_mode === "selected") {
+        const allowed = Array.isArray(g.allowed_contract_ids) ? g.allowed_contract_ids : [];
+        if (allowed.length === 0) return ctx.json(res, 200, { contracts: [] }); // deny all when empty allowlist
+        contractFilter = allowed;
+      }
+    } catch (e) { /* falha silenciosa no filtro, mantém acesso por conta */ }
+    try {
+      let result;
+      if (contractFilter) {
+        result = await db.query(
+          `SELECT id, title, service, status, starts_on, ends_on, summary, created_at, updated_at
+           FROM client_contracts WHERE client_account_id = $1 AND id = ANY($2) ORDER BY created_at DESC`,
+          [accountId, contractFilter],
+        );
+      } else {
+        result = await db.query(
+          `SELECT id, title, service, status, starts_on, ends_on, summary, created_at, updated_at
+           FROM client_contracts WHERE client_account_id = $1 ORDER BY created_at DESC`,
+          [accountId],
+        );
+      }
       return ctx.json(res, 200, { contracts: result.rows });
     } catch (error) {
       return databaseFailure(res, error, "Could not list the client contracts.");

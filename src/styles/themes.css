@@ -1,0 +1,18 @@
+:root {
+  --theme-bg: #f7f6f2;
+  --theme-fg: #1a1a2e;
+  --theme-accent: #8b6f3e;
+  --theme-radius: 4px;
+  --theme-font: 'Georgia', serif;
+  --theme-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+[data-theme="institucional"] { --theme-bg:#f7f6f2; --theme-fg:#1a1a2e; --theme-accent:#8b6f3e; --theme-radius:4px; --theme-font:'Georgia',serif; --theme-shadow:0 2px 12px rgba(0,0,0,0.06); }
+[data-theme="minimalista"] { --theme-bg:#ffffff; --theme-fg:#0a0a0a; --theme-accent:#111111; --theme-radius:2px; --theme-font:'Inter',sans-serif; --theme-shadow:0 1px 4px rgba(0,0,0,0.04); }
+[data-theme="tech"] { --theme-bg:#0b0d12; --theme-fg:#e8e8ee; --theme-accent:#00d4aa; --theme-radius:8px; --theme-font:'JetBrains Mono',monospace; --theme-shadow:0 4px 24px rgba(0,212,170,0.15); }
+[data-theme="acolhedor"] { --theme-bg:#fdf8f3; --theme-fg:#2e1810; --theme-accent:#c27a4e; --theme-radius:24px; --theme-font:'Lora',serif; --theme-shadow:0 6px 24px rgba(194,122,78,0.12); }
+[data-theme="industrial"] { --theme-bg:#e4e2db; --theme-fg:#1f2730; --theme-accent:#7a6e5d; --theme-radius:0px; --theme-font:'Oswald',sans-serif; --theme-shadow:0 8px 16px rgba(31,39,48,0.10); }
+[data-theme="formal-b2b"] { --theme-bg:#f3f1ec; --theme-fg:#15192b; --theme-accent:#2e3d5b; --theme-radius:6px; --theme-font:'Crimson Pro',serif; --theme-shadow:0 2px 10px rgba(21,25,43,0.08); }
+[data-theme="editorial"] { --theme-bg:#fffdf8; --theme-fg:#1a1a1a; --theme-accent:#bfa15f; --theme-radius:6px; --theme-font:'Libre Baskerville',serif; --theme-shadow:0 2px 8px rgba(0,0,0,0.05); }
+[data-theme="app"] { --theme-bg:#f4f6fa; --theme-fg:#0f172a; --theme-accent:#4f8ef7; --theme-radius:16px; --theme-font:'Inter',sans-serif; --theme-shadow:0 10px 30px rgba(79,142,247,0.12); }
+[data-theme="dashboard"] { --theme-bg:#0f1117; --theme-fg:#f0f0f5; --theme-accent:#f59e0b; --theme-radius:8px; --theme-font:'Inter',sans-serif; --theme-shadow:0 4px 24px rgba(245,158,11,0.18); }
+[data-theme="sazonal"] { --theme-bg:#fdfcf5; --theme-fg:#221e1c; --theme-accent:#e07a4e; --theme-radius:12px; --theme-font:'Inter',sans-serif; --theme-shadow:0 8px 20px rgba(224,122,78,0.14); }

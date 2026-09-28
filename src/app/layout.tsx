@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "../styles/themes.css";
 
 export const metadata: Metadata = {
   title: "Grupo SEG System | Segurança Integrada em Guarulhos",

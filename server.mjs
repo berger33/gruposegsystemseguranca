@@ -8,6 +8,7 @@ import nodemailer from "nodemailer";
 import { validateLeadInput } from "./src/lib/public-lead-validation.mjs";
 import { createClientAccessApi } from "./src/server/client-access-api.mjs";
 import { createClientSpaceApi } from "./src/server/client-space-api.mjs";
+import { createClientSecurityApi } from "./src/server/client-security-api.mjs";
 
 const { loadEnvConfig } = nextEnv;
 const { Pool } = pg;
@@ -459,6 +460,7 @@ const clientSpaceApi = createClientSpaceApi({
   readClientSession: clientAccessApi.readClientSession,
   docsDir: (process.env.CLIENT_DOCS_DIR || "").trim() || path.join(process.cwd(), ".data", "documents"),
 });
+const clientSecurityApi = createClientSecurityApi();
 
 async function routeApi(req, res) {
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
@@ -478,6 +480,8 @@ async function routeApi(req, res) {
   const clientDocMatch = url.pathname.match(/^\/api\/client\/documents\/([0-9a-f-]{36})\/download$/i);
   if (clientDocMatch) return clientSpaceApi.handleClientDocumentDownload(req, res, clientDocMatch[1]);
   if (url.pathname === "/api/client/tickets") return clientSpaceApi.handleClientTickets(req, res, url);
+  if (url.pathname === "/api/client/security/mfa/verify") return handleClientMfa(req, res);
+  if (url.pathname === "/api/client/security/email-change") return handleEmailChange(req, res);
   if (url.pathname === "/api/admin/identities") return clientSpaceApi.handleAdminIdentities(req, res, url);
   if (url.pathname === "/api/admin/client-accounts") return clientSpaceApi.handleAdminAccounts(req, res, url);
   const accountMatch = url.pathname.match(/^\/api\/admin\/client-accounts\/([0-9a-f-]{36})$/i);
@@ -537,3 +541,26 @@ server.on("upgrade", (req, socket, head) => upgradeHandler(req, socket, head));
 server.listen(port, hostname, () => {
   console.log(`Grupo SEG System ${dev ? "dev" : "server"} listening on http://${hostname}:${port}`);
 });
+
+async function handleClientMfa(req, res) {
+  const db = getPool();
+  const session = await (clientAccessApi.readClientSession ? clientAccessApi.readClientSession(req) : null);
+  if (!clientSecurityApi) return json(res, 503, { error: "security_not_available" });
+  return clientSecurityApi.handleMfaVerify(req, res, db, session);
+}
+
+async function handleEmailChange(req, res) {
+  const db = getPool();
+  const session = await (clientAccessApi.readClientSession ? clientAccessApi.readClientSession(req) : null);
+  if (!clientSecurityApi) return json(res, 503, { error: "security_not_available" });
+  if (req.method === "POST") {
+    return clientSecurityApi.handleEmailChangeRequest(req, res, db, session);
+  }
+  if (req.method === "PUT") {
+    return clientSecurityApi.handleEmailChangeConfirm(req, res, db, session);
+  }
+  if (req.method === "DELETE") {
+    return clientSecurityApi.handleEmailChangeCancel(req, res, db, session);
+  }
+  return json(res, 405, { error: "method_not_allowed" }, { Allow: "POST, PUT, DELETE" });
+}
