@@ -193,3 +193,11 @@ caracteres proibidos do Windows removidos e apenas a extensão permitida no mapa
   tipo proibido e arquivo > 10 MB rejeitados; chamado aberto só dentro do vínculo; resposta da
   equipe visível ao cliente; trilhas `grant_issue/grant_revoke/ticket_status/document_download`
   conferidas direto no banco.
+
+--- Implementado na sessão retomada (Etapa 3, opção A) ---
+- Migração 005 (cliente): vínculo por contrato (all/selected + allowed_contract_ids) e por unidade (unit_account_id); MFA opcional (auth_mfa com TOTP + recovery_hashes); troca de e-mail (auth_email_change com token, cancelamento "Não fui eu" + alert_generated_at); auditoria expandida.
+- Migração 006 (admin): auth_identities.kind aceita staff; auth_invites para staff; auth_staff_profiles (admin/ti/rh); auditoria aceita actor_kind staff e ações de staff.
+- API: client-security-api.mjs (MFA verify, email change request/confirm/cancel, requireGrantScope); client-space-api.mjs respeita escopo de contrato e unidade; server.mjs rotas /api/client/security/* e inicialização do API de segurança.
+- Painel administrativo: convite por staff substitui tokens compartilhados (identidades individuais); documentação atualizada; site permanece noindex.
+- Dados confirmados pelo proprietário aplicados: endereço, telefone, e-mail, administradores (William/Andreia/Marcelo) — senhas tratadas como comprometidas, não reutilizadas.
+- Decisões ainda pendentes: provedor SMTP, CNPJ/contatos oficiais, logotipo/fotos/licenças, política de privacidade aprovada (minuta em /privacidade, não aprovada), administradores iniciais provisionados via convite seguro (não via chat), hospedagem aberta (não prometida migração automática), retenção automática 12 meses ainda não ativa, backup/restauração ainda não testado.

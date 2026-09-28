@@ -1,0 +1,1 @@
+Logo e viatura do Grupo Seg System Segurança Integrada. Arquivos esperados: 454751406_1061413479159366_4672298606281258831_n.jpg (logo/identidade visual) e 760930005_18113390108485433_9081745454157696816_n.jpg (viatura/evidência). Confirmar licenças de uso e inserir versões finais antes da produção.

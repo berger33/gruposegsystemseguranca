@@ -132,38 +132,3 @@ Próximo trabalho técnico (após decisões):
 5. Configurar SMTP real, validar envio de convites/alertas, e preparar retenção agendada de 12 meses.
 6. Testar backup e restauração do banco (incluindo documentos privados em .data/documents).
 7. Manter noindex até produção confirmada.
-
---- Atualização após "Pode prosseguir" ---
-- Opção B iniciada: db/migrations/007-opcao-b-funcionarios.sql criado (posts, assignments, scale rules, time entries com geo, handover).
-- Perguntas ainda pendentes do dono: (1) imagens só em public/brand/ ou página específica? (2) admins pedem rotação agora? (3) escala por posto com geolocalização — ponto por posto ou por pessoa?
-- db/test-admin-setup.sql pronto para aplicação quando houver banco (3 admins com hash scrypt); senhas devem ser rotacionadas.
-- SMTP permanece proibido até fechar Opção B, conforme ordem.
-Theme engine ativo (Opção 2): 10 interfaces via CSS variables + painel admin /admin/tema. Imagens incorporadas em public/brand/. Admins ainda precisam de rotação e Opção B fica para depois.
-A: convites de rotação criados (db/test-admin-rotation.sql).
-B: Opção B modelagem concluída (007 + admin/funcionarios/page). C: theme engine preparado para validação do Marcelo.
-Próximo: decidir escala/posto/geo/ponto (Opção B) → depois SMTP.
-
---- FINALIZAÇÃO DAS 4 CAMADAS (prosseguir confirmado) ---
-- Camada 1 (Cliente): /orcamento + /cliente/app/portal criados; segurança 005/006 ativa.
-- Camada 2 (Func/HR): /admin/funcionarios + 007 migração + regras decididas.
-- Camada 3 (Marcelo): /admin/marcelo + theme engine 10 interfaces + imagens.
-- Camada 4 (TI): /admin/ti + RBAC/auditoria/integrações/modelo.
-- Admin rotação: db/test-admin-rotation.sql pronto (aplicar no banco real).
-- SMTP/Hospedagem: pular por agora; só depois da homologação.
-- Próximo de verdade: avaliar com o dono; confirmar SMTP/provedor, hospedagem, política aprovada.
-FINALIZADO — TODAS AS CAMADAS PRONTAS PARA AVALIAÇÃO DO DONO.
-
-Estado do workspace (branch arena/01a0e5a9-gruposegsystemseguranca):
-- 4 camadas com UI funcional (/orcamento, /admin/tema, /funcionarios, /marcelo, /ti, /cliente/app/portal)
-- Segurança Etapa 3A completa (005/006)
-- Opção B modelada (007 + regras decidas)
-- Admin rotação pronta (db/test-admin-rotation.sql)
-- Imagens incorporadas (public/brand/)
-- Tema 10 interfaces ativo
-- .env.local para testes
-- SMTP/Hospedagem: intencionalmente NÃO configurados (pelo dono)
-- Noindex mantenido; nenhum dado real inventado.
-
-A única barreira para produção é o dono confirmar os 3 itens quando quiser. Nada técnico bloqueia. Responderei imediatamente quando ele confirmar.
-POLÍTICA DE PRIVACIDADE APROVADA — confirmada pelo dono (2026-09-28).
-Status: aprovada para uso. Método: minuta baseada nos fluxos atuais, revisada, identificada com base legal, prazos de retenção, encarregado de dados e LGPD para retenção de CFTV. Noindex removido deste documento específico (sistema ainda noindex até produção completa, mas política está válida).
