@@ -6,7 +6,59 @@ Sistema em desenvolvimento para o Grupo SEG System. O **plano foi registrado em 
 - [Referências de marca e conteúdo público](docs/referencias-marca.md)
 - [Captação de pedidos, painel e SMTP](docs/captacao-pedidos.md)
 - [Portal do cliente: decisões de acesso e segurança](docs/portal-acesso-e-seguranca.md)
-- [Estado verificado e prompt do próximo passo](docs/proximo-passo.md)
+- [Estado verificado e prompt do próximo passo (histórico)](docs/proximo-passo.md)
+- [Plano de QA e casos da Onda 0](docs/plano-mestre-testes.md)
+- [Evidências do reparo/reteste local da Onda 0](docs/evidencias/QA-onda0-reparo-controlado.md)
+- [Caso e evidências da Onda 1 — segurança RAG](docs/qa-casos-onda1-rag.md)
+- [Caso e evidências da Onda 2 — portal fail-closed](docs/qa-casos-onda2-tenant.md)
+- [Caso e evidências da Onda 3 — A/B em PostgreSQL QA](docs/qa-casos-onda3-tenant-pg.md)
+- [Caso e evidências da Onda 4 — migrações PostgreSQL QA](docs/qa-casos-onda4-migracoes.md)
+- [Caso e evidências da Onda 5 — migrações 001–096 duas vezes e clone QA](docs/qa-casos-onda5-migracoes-integral.md)
+- [Caso e evidências da Onda 6 — HTTP CLI v2 e auditoria](docs/qa-casos-onda6-cli-v2-http.md)
+- [Caso e evidências da Onda 7 — escopo CLI v2 e falha injetada da auditoria](docs/qa-casos-onda7-cli-v2-escopo-auditoria.md)
+- [Onda 8 — backup/restore PostgreSQL: preflight e bloqueio de ferramentas](docs/qa-casos-onda8-backup-restore.md)
+- [Onda 9 — pg_dump/pg_restore reais em bancos sintéticos descartáveis](docs/qa-casos-onda9-restore-real-sintetico.md)
+- [Onda 10 — restore entre clusters e catálogo de backup fail-closed](docs/qa-casos-onda10-backup-clusters-catalogo.md)
+- [Onda 11 — manifesto e bytes sintéticos após restore de banco](docs/qa-casos-onda11-manifesto-arquivo-sintetico.md)
+- [Onda 12 — download HTTP autenticado de arquivo sintético restaurado](docs/qa-casos-onda12-download-arquivo-restaurado.md)
+- [Onda 13 — coadulteração e pin efêmero de manifesto QA](docs/qa-casos-onda13-pin-manifesto-sintetico.md)
+- [Política técnica inicial de backup e recuperação](docs/politica-tecnica-backup-recuperacao.md)
+- [Onda 14 — assinatura destacada e decisão técnica em QA](docs/qa-casos-onda14-politica-assinatura-qa.md)
+- [Onda 15 — inventário sintético e cobertura fail-closed](docs/qa-casos-onda15-inventario-cobertura-sintetica.md)
+- [Onda 16 — contratos de referência CLI v2 e famílias de anexos](docs/qa-casos-onda16-contratos-referencia-arquivo.md)
+- [Onda 17 — provedor local sintético CLI v2, sem integração de produção](docs/qa-casos-onda17-provedor-local-cli-v2-sintetico.md)
+- [Onda 18 — vínculo CLI v2 entre PostgreSQL QA e objeto sintético](docs/qa-casos-onda18-vinculo-cli-v2-pg-objeto.md)
+- [Onda 19 — transporte CLI v2 sintético com restore entre clusters](docs/qa-casos-onda19-transferencia-cli-v2-pg.md)
+- [Onda 20 — falha parcial na importação CLI v2 e classificação QA](docs/qa-casos-onda20-importacao-parcial-cli-v2.md)
+- [Onda 21 — referências assinadas QA de pontos de restauração](docs/qa-casos-onda21-pontos-restauracao-cli-v2.md)
+- [Relatório consolidado detalhado de testes, Ondas 0–21](docs/RELATORIO-CONSOLIDADO-TESTES.md)
+- [Relatório de pendências — todos os 222 requisitos](docs/RELATORIO-PENDENCIAS-COMPLETO.md)
+
+## Download de prévia QA local (não produção)
+
+[Baixar ZIP atualizado de código-fonte e lançadores QA](downloads/seg-system-qa-local.zip) · [SHA-256](downloads/seg-system-qa-local.zip.sha256) · [instruções](LEIA-ME-QA.md). **Dois passos:** extraia o ZIP e execute `INICIAR-QA.bat` no Windows ou `bash INICIAR-QA.sh` no terminal macOS/Linux; depois abra o link `http://localhost:3000` exibido. Precisa de **Node.js 22, npm e internet** para instalar dependências e compilar na primeira execução. Usa PGlite beta **local** e `noindex`; não inclui banco/credenciais, SMTP, Ollama real, `node_modules` ou serviço pronto de produção. Este ZIP **não** é o `dist/seg-system-beta.zip` antigo nem homologa os 222 requisitos. O script é reproduzível: `python3 scripts/build-qa-download.py`; não usar para hospedar com dados reais.
+
+> **QA em 28/09/2026 — Onda 21:** [relatório e resposta sobre quantidade de ondas](docs/qa-casos-onda21-pontos-restauracao-cli-v2.md). Contrato unitário QA classificou versão antiga protegida por ponto assinado externo e objeto desconhecido sem autorizar deleção; chave atacante, ponto ausente/duplicado e bytes históricos faltantes falharam. `npm test` 133/133, typecheck/build 66/66. **Sem PostgreSQL/WAL/PITR real nesta onda; NO-GO.** Não existe número predeterminado de ondas restantes.
+
+> **QA em 28/09/2026 — Onda 20:** [relatório](docs/qa-casos-onda20-importacao-parcial-cli-v2.md). Falha injetada após 1/3 objetos importados no destino QA: compensação restrita ao objeto criado na execução, zero objetos no destino, DB intacto e exit 1/cleanup; arquivo sem referência DB na origem classificado sem exclusão antecipada. Regressões: positivo 3/3, coadulteração recusada, CLI PG 9/9; `npm test` 130/130, typecheck/build 66/66. **NO-GO**: não cobre crash/concorrência nem torna objetos sem referência seguros para apagar; `PLT-DEF-024` permanece aberto.
+
+> **QA em 28/09/2026 — Onda 19:** [relatório](docs/qa-casos-onda19-transferencia-cli-v2-pg.md). Em dois clusters QA independentes, dump/restore PG 96/96 e três objetos A v1/v2+B v1 foram verificados com assinatura Ed25519 e vínculo conta/versão/chave/hash **antes** de importar bytes no destino. Co-adulteração com chave atacante foi recusada com zero objetos importados (exit 1 e cleanup); positivo exit 0 e cleanup, HTTP legado A/B/revogação passou. `npm test` 128/128, typecheck/build 66/66. **NO-GO:** fixture/chave efêmera, sem origem CLI real, KMS/custódia/consistência DB+FS/PITR; `PLT-DEF-024` permanece aberto.
+
+> **QA em 28/09/2026 — Onda 18:** [relatório](docs/qa-casos-onda18-vinculo-cli-v2-pg-objeto.md). PG 17.9 descartável 001–096: documento/versões A/B vinculados a objetos QA; A leu bytes v1/v2, B não leu A, grant revogado cortou escopo, chave DB alterada e byte corrompido falharam. Falha de versão duplicada fez rollback DB **mas deixou objeto QA órfão** até cleanup. Teste PG 1/1, regressão CLI 9/9; `npm test` 125/125, typecheck/build 66/66. **NO-GO:** sem restore DB para destino independente nem custódia/atomicidade operacional; APIs de produção intocadas.
+
+> **QA em 28/09/2026 — Onda 17:** [evidências](docs/qa-casos-onda17-provedor-local-cli-v2-sintetico.md). Contrato local QA de objeto/versão/conta/sha256: bytes sintéticos v1/v2 e import para diretório separado passaram; B, versão/chave divergentes, byte adulterado e path externo foram recusados. **Sem PostgreSQL/HTTP neste lote**, recibos não assinados e API produtiva inalterada; `npm test` 124/124, typecheck/build 66/66. **NO-GO** para armazenamento real ou backup completo.
+
+> **QA em 28/09/2026 — Onda 16:** [evidências](docs/qa-casos-onda16-contratos-referencia-arquivo.md). Contrato local legado distinguido do CLI v2: `file_url`/`storage_key` CLI v2 são metadados sem bytes comprovados no módulo, não streaming privado. QA em dois clusters: 124 colunas candidatas agrupadas em 12 famílias; 1 arquivo legado sintético conferido e 6 ocorrências de metadados CLI v2 sem custódia comprovada. “Full” foi negado (exit 1/cleanup), escopo legado passou, `npm test` 120/120, typecheck/build 66/66. **NO-GO** para backup operacional, sem inferir armazenamento de outras famílias.
+
+> **QA em 28/09/2026 — Onda 15:** [relatório](docs/qa-casos-onda15-inventario-cobertura-sintetica.md). Em dois clusters QA, 124 colunas candidatas de referência a arquivos; um documento legado sintético com bytes restaurados confirmado, **6 ocorrências de metadados CLI v2 não classificadas**. Exigir cobertura “full” falhou deliberadamente (exit 1/cleanup); arquivo legado removido no destino também falhou antes do HTTP. Escopo legado+HTTP passou, `npm test` 117/117, typecheck/build 66/66. **NO-GO**: o inventário do produto não é completo, não há bytes CLI v2 comprovados, PITR/KMS/storage externo ou metas de recuperação medidas.
+
+> **QA em 28/09/2026 — Onda 14:** [relatório](docs/qa-casos-onda14-politica-assinatura-qa.md) e [decisão técnica](docs/politica-tecnica-backup-recuperacao.md). Assinatura Ed25519 **somente para manifesto sintético QA** passou entre clusters (arquivo de 54 bytes, HTTP A/B/revogação); troca de assinatura/chave dentro do pacote foi negada antes de restaurar bytes (exit 1/cleanup). `npm test` 112/112, typecheck/build 66/66. **NO-GO**: sem âncora externa durável/KMS, inventário completo de arquivos, armazenamento imutável, snapshot DB+FS, PITR ou RPO/RTO medidos. O gate documental antigo foi corrigido: API de backup/restore permanece 503, sem sucesso operacional.
+
+> **QA em 28/09/2026 — Onda 13:** [evidências e limites](docs/qa-casos-onda13-pin-manifesto-sintetico.md). A adulteração conjunta de bytes e manifesto sintéticos falha **antes** da escrita quando comparada ao pin original mantido em memória pelo runner QA (exit 1/cleanup); pin ausente é recusado. Pin calculado a partir do pacote adulterado **não autentica** nada — ainda falta âncora independente/custódia aprovada. Restore/HTTP positivo e negativo anterior regressaram; `npm test` 106/106, typecheck e build 66/66. **NO-GO** para backup operacional; nenhuma mudança de API de produção.
+
+> **QA em 28/09/2026 — Onda 12:** [relatório e limites](docs/qa-casos-onda12-download-arquivo-restaurado.md). Após restore em dois clusters QA, HTTP real serviu exatamente 54 bytes sintéticos para A (200 e cabeçalhos seguros), negou B (403) e anônimo (401), e revogação de A no destino cortou acesso (403), preservando conta B e grant A da origem. Arquivo adulterado falhou antes do HTTP (exit 1/cleanup); suíte local 103/103, typecheck e build 66/66. **NO-GO**: um arquivo não comprova backup operacional, manifesto não é autenticado, não há custódia/criptografia, consistência DB+FS sob concorrência, RPO/RTO, CI remoto ou UAT. Nenhuma produção/operador afetado. Histórico anterior:
+
+> **QA em 28/09/2026:** [Onda 11](docs/qa-casos-onda11-manifesto-arquivo-sintetico.md) restaurou DB PostgreSQL 17.9 sintético 001–096 entre dois clusters QA descartáveis (**497 tabelas**, 96 checksums) e, separadamente, **um arquivo sintético de 54 bytes** associado por manifesto a `client_documents` (ID, conta, chave, tamanho, SHA-256); adulteração dos bytes falhou com exit 1 e cleanup após correção de erro no runner. `npm test` **102/102**, typecheck e build 66/66 locais. A API administrativa de backup da Onda 10 continua sem executor: retornos de criação/restore são **503**, registros legados têm status `unverified` e UI é somente leitura. **NO-GO** para produção: o dump não inclui bytes privados, manifesto não é autenticado, não há criptografia/custódia, snapshot DB+FS concorrente, ledger histórico, RPO/RTO, CI remoto ou UAT. Cliente CLI v2 e download privado ainda não homologados. Afirmações históricas abaixo sobre recursos “verificados” não homologam a árvore reconciliada. Não redistribuir ZIP beta antigo nem usar dados reais/publicar sem autorização.
 
 ## Prévia atual
 

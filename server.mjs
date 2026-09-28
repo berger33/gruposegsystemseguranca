@@ -126,7 +126,7 @@ async function getPGlitePoolLazy() {
   if (!pglitePoolPromise) {
     pglitePoolPromise = import('./src/server/pglite-pool.mjs').then(async (mod) => {
       const p = await mod.getPGlitePool();
-      console.log('[DB] Using PGlite fallback (no DATABASE_URL) — .data/pglite — 001-095 auto-migrate');
+      console.log('[DB] Using PGlite beta (schema mínimo; não equivale às migrações PostgreSQL 001–096)');
       return p;
     });
   }
@@ -134,8 +134,8 @@ async function getPGlitePoolLazy() {
 }
 
 function getPool() {
-  // BETA 1-clique: se DATABASE_URL não configurado, usa PGlite (Postgres WASM) local .data/pglite
-  if (!process.env.DATABASE_URL) {
+  // BETA 1-clique: sem DATABASE_URL usa PGlite; QA_PGLITE_ONLY evita atingir banco externo por engano.
+  if (process.env.QA_PGLITE_ONLY === 'true' || !process.env.DATABASE_URL) {
     if (!pool) {
       pool = {
         __isPGliteProxy: true,

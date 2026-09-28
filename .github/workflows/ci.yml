@@ -1,0 +1,42 @@
+name: QA baseline
+
+on:
+  push:
+    branches: [main, 'arena/**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  static-and-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    env:
+      DATABASE_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_PUBLIC_ALLOW_INDEX: 'false'
+      NEXT_PUBLIC_ENV: 'beta'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Check tree, migrations and CI gates
+        run: node scripts/qa-wave0-static.mjs
+      - name: Audit dependencies (high and critical block)
+        run: npm audit --audit-level=high
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit tests (no silent integration skip)
+        run: npm test
+      - name: Build (beta noindex)
+        run: npm run build
+      - name: RAG integration in isolated CI workspace (PGlite beta only)
+        run: npm run test:rag
+      - name: Tenant A/B HTTP integration (temporary localhost PostgreSQL, migrations 001-007)
+        run: npm run test:tenant:pg

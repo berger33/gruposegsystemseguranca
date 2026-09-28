@@ -4,6 +4,8 @@
 
 -- 1. Expandir tipo de identidade para staff (admin, ti, rh) — o modelo já previa.
 ALTER TABLE auth_identities ALTER COLUMN kind TYPE TEXT;
+-- 003 já cria implicitamente kind_check; troque-o antes de ampliar os valores.
+ALTER TABLE auth_identities DROP CONSTRAINT IF EXISTS auth_identities_kind_check;
 ALTER TABLE auth_identities ADD CONSTRAINT auth_identities_kind_check
   CHECK (kind IN ('client','staff'));
 DROP INDEX IF EXISTS auth_identities_kind_email_key;
@@ -12,6 +14,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS auth_identities_kind_email_key
 
 -- 2. Convites aceitam staff.
 ALTER TABLE auth_invites ALTER COLUMN kind TYPE TEXT;
+ALTER TABLE auth_invites DROP CONSTRAINT IF EXISTS auth_invites_kind_check;
 ALTER TABLE auth_invites ADD CONSTRAINT auth_invites_kind_check
   CHECK (kind IN ('client','staff'));
 ALTER TABLE auth_invites ADD COLUMN IF NOT EXISTS role TEXT

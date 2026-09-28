@@ -76,7 +76,7 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
         return json(res,400,{error:'model_must_be_qwen3_1_7b', note:'modelo usado será Ollama com Qwen3 1.7B para garantir que todo mundo consiga ser atendido em fila'});
       }
       try{
-        const { rows } = await pool.query(`INSERT INTO ai_rag_indexes (rag_key, name, description, scope, model_type, model_name, ollama_host, max_queue_size, max_tokens, temperature, created_by_identity) VALUES ($1,$2,$3,$4,'ollama_qwen3_1_7b',$5,$6,$7,$8,$9,$10) RETURNING *`,
+        const { rows } = await pool.query(`INSERT INTO ai_rag_indexes (rag_key, name, description, scope, model_type, model_name, ollama_host, max_queue_size, max_tokens, temperature, created_by_identity, is_approved, is_published) VALUES ($1,$2,$3,$4,'ollama_qwen3_1_7b',$5,$6,$7,$8,$9,$10,false,false) RETURNING *`,
           [rag_key, name, description, scope, model_name, b.ollama_host||'http://localhost:11434', b.max_queue_size||100, b.max_tokens||2048, b.temperature||0.7, sess.identityId||null]);
         await pool.query(`INSERT INTO ai_rag_history (rag_index_id, previous_status, next_status, previous_version, next_version, reason, changed_by_identity, changed_by_name) VALUES ($1,NULL,$2,NULL,$3,$4,$5,$6)`, [rows[0].id, 'rascunho', 1, 'Criação RAG específico por perfil com Ollama Qwen3 1.7B', sess.identityId||null, sess.role||null]);
         await auditLog({ action:'ai_rag_index_create', actor:sess.identityId||'system', target:rows[0].id, meta:{ rag_key, scope, model_name } });
@@ -146,7 +146,8 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
       if(rag_key==='rh' && content.toLowerCase().includes('dados cliente') && content.toLowerCase().includes('cpf cliente')){
         return json(res,400,{error:'rh_rag_cannot_contain_client_pii', note:'RAG RH apenas áreas pertinentes RH'});
       }
-      const { rows } = await pool.query(`INSERT INTO ai_rag_documents (rag_index_id, rag_key, title, content, source, source_type, keywords, is_price_sensitive, is_coverage_sensitive, is_license_sensitive, is_deadline_sensitive, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+      // Não confiar nos defaults do banco beta (legado: true): documento novo é rascunho.
+      const { rows } = await pool.query(`INSERT INTO ai_rag_documents (rag_index_id, rag_key, title, content, source, source_type, keywords, is_price_sensitive, is_coverage_sensitive, is_license_sensitive, is_deadline_sensitive, created_by_identity, is_approved, is_published) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,false,false) RETURNING *`,
         [rag_index_id, rag_key, title, content, source, source_type, keywords, !!b.is_price_sensitive, !!b.is_coverage_sensitive, !!b.is_license_sensitive, !!b.is_deadline_sensitive, sess.identityId||null]);
       // criar chunks simples 500 chars
       const chunkSize=500;
@@ -178,11 +179,14 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
 
   const handleQueries = async (req,res) => {
     const url=new URL(req.url,'http://localhost');
-    const isPublic=url.pathname.startsWith('/api/ai/rag') || url.pathname.startsWith('/api/public/ai');
+    // A rota pública serve SOMENTE perguntas sobre a base pública. Histórico e bases
+    // privadas não podem ser liberados por rag_key controlado pelo navegador.
+    const isPublic=['/api/ai/rag','/api/public/ai/rag','/api/ai/rag/queries'].includes(url.pathname);
     if(!isPublic && !sameOrigin(req)) return json(res,403,{error:'forbidden'});
     const sess=!isPublic ? requireSession(req) : null;
     if(!isPublic && (!sess || !requireRole(sess,['admin','ti']))) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
+      if(isPublic) return json(res,403,{error:'scope_forbidden'});
       const rag_key=url.searchParams.get('rag_key');
       let q=`SELECT * FROM ai_rag_queries WHERE 1=1`;
       const params=[];
@@ -198,9 +202,13 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
       const visitor_name=b.visitor_name?String(b.visitor_name).trim():null;
       const origin=String(b.origin||'site').trim();
       if(!validRagKeys.includes(rag_key)) return json(res,400,{error:'invalid_rag_key', valid: validRagKeys});
+      if(isPublic && rag_key!=='publico') return json(res,403,{error:'scope_forbidden'});
+      // Ainda não existe vínculo tenant/conta no índice cliente: negar mesmo a TI
+      // até que haja escopo verificável no servidor, nunca inferi-lo do body.
+      if(rag_key==='cliente') return json(res,403,{error:'tenant_scope_not_implemented'});
       if(query.length<5||query.length>2000) return json(res,400,{error:'invalid_query'});
       // buscar index
-      const { rows: idxRows } = await pool.query(`SELECT * FROM ai_rag_indexes WHERE rag_key=$1 AND is_active=true LIMIT 1`, [rag_key]);
+      const { rows: idxRows } = await pool.query(`SELECT * FROM ai_rag_indexes WHERE rag_key=$1 AND is_active=true AND is_approved=true AND is_published=true LIMIT 1`, [rag_key]);
       if(!idxRows.length) return json(res,404,{error:'rag_index_not_found'});
       const idx=idxRows[0];
       // buscar documentos aprovados publicados do rag_key pertinente
@@ -209,7 +217,7 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
       const lowerQ=query.toLowerCase();
       let matchedChunks=[];
       try {
-        const { rows: allChunks } = await pool.query(`SELECT c.*, d.source, d.title, d.keywords FROM ai_rag_chunks c JOIN ai_rag_documents d ON d.id=c.document_id WHERE c.rag_key=$1 ORDER BY c.document_id, c.chunk_index ASC LIMIT 50`, [rag_key]);
+        const { rows: allChunks } = await pool.query(`SELECT c.*, d.source, d.title, d.keywords FROM ai_rag_chunks c JOIN ai_rag_documents d ON d.id=c.document_id WHERE c.rag_key=$1 AND d.rag_key=$1 AND d.is_published=true AND d.is_approved=true ORDER BY c.document_id, c.chunk_index ASC LIMIT 50`, [rag_key]);
         for(const c of allChunks){
           const keywords=c.keywords||[];
           if(lowerQ.includes(c.content.toLowerCase().slice(0,30)) || keywords.some((k)=>lowerQ.includes(String(k).toLowerCase()))){
@@ -296,6 +304,13 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
     const b=await readJson(req);
     const protocol=String(b.protocol||'').trim();
     const rag_key=String(b.rag_key||'publico').trim().toLowerCase();
+    const isPublic=['/api/ai/rag/feedback','/api/public/ai/rag/feedback'].includes(new URL(req.url,'http://localhost').pathname);
+    if(isPublic && rag_key!=='publico') return json(res,403,{error:'scope_forbidden'});
+    if(!isPublic){
+      const sess=requireSession(req);
+      if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
+    }
+    if(rag_key==='cliente') return json(res,403,{error:'tenant_scope_not_implemented'});
     const rating=parseInt(b.rating,10);
     const feedback_text=b.feedback_text?String(b.feedback_text).trim().slice(0,1000):null;
     const is_helpful=b.is_helpful!==undefined?!!b.is_helpful:null;
@@ -305,16 +320,13 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
     if(!['cliente','rh','marcelo','publico'].includes(rag_key)) return json(res,400,{error:'invalid_rag_key'});
     if(!rating || rating<1 || rating>5) return json(res,400,{error:'invalid_rating', valid:'1..5'});
     try {
-      // Verifica se protocolo existe em queries ou bot_sessions
-      let query_id=null, bot_session_id=null;
-      try {
-        const { rows } = await pool.query(`SELECT id FROM ai_rag_queries WHERE protocol=$1 LIMIT 1`, [protocol]);
-        if(rows.length) query_id=rows[0].id;
-      } catch {}
-      try {
-        const { rows } = await pool.query(`SELECT id FROM ai_bot_sessions WHERE protocol=$1 LIMIT 1`, [protocol]);
-        if(rows.length) bot_session_id=rows[0].id;
-      } catch {}
+      // Não associar feedback público a protocolo de escopo privado nem aceitar
+      // protocolos inventados. Erro na consulta deve falhar fechado (500), não inserir.
+      const { rows: queryRows } = await pool.query(`SELECT id FROM ai_rag_queries WHERE protocol=$1 AND rag_key=$2 LIMIT 1`, [protocol, rag_key]);
+      const { rows: botRows } = await pool.query(`SELECT id FROM ai_bot_sessions WHERE protocol=$1 AND rag_key=$2 LIMIT 1`, [protocol, rag_key]);
+      const query_id=queryRows[0]?.id||null;
+      const bot_session_id=botRows[0]?.id||null;
+      if(!query_id && !bot_session_id) return json(res,404,{error:'protocol_not_found'});
       const { rows } = await pool.query(`INSERT INTO ai_rag_feedback (protocol, rag_key, query_id, bot_session_id, rating, feedback_text, is_helpful, visitor_name, origin) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
         [protocol, rag_key, query_id, bot_session_id, rating, feedback_text, is_helpful, visitor_name, origin]);
       await auditLog({ action:'ai_rag_feedback', actor: visitor_name||'anonymous', target: rows[0].id, meta:{ protocol, rag_key, rating, is_helpful } });
@@ -387,11 +399,12 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
 
   const handleBotSessions = async (req,res) => {
     const url=new URL(req.url,'http://localhost');
-    const isPublic=url.pathname.startsWith('/api/ai/bot') || url.pathname.startsWith('/api/public/ai/bot') || url.pathname.startsWith('/api/bot');
+    const isPublic=['/api/ai/bot','/api/public/ai/bot','/api/bot'].includes(url.pathname);
     if(!isPublic && !sameOrigin(req)) return json(res,403,{error:'forbidden'});
     const sess=!isPublic ? requireSession(req) : null;
     if(!isPublic && (!sess || !requireRole(sess,['admin','ti']))) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
+      if(isPublic) return json(res,403,{error:'scope_forbidden'});
       const rag_key=url.searchParams.get('rag_key');
       const mode=url.searchParams.get('mode');
       let q=`SELECT * FROM ai_bot_sessions WHERE 1=1`;
@@ -409,6 +422,8 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
       const visitor_name=b.visitor_name?String(b.visitor_name).trim():null;
       const origin=String(b.origin||'site').trim();
       if(!validRagKeys.includes(rag_key)) return json(res,400,{error:'invalid_rag_key'});
+      if(isPublic && rag_key!=='publico') return json(res,403,{error:'scope_forbidden'});
+      if(rag_key==='cliente') return json(res,403,{error:'tenant_scope_not_implemented'});
       if(query.length<5||query.length>2000) return json(res,400,{error:'invalid_query'});
       // buscar config ativa modo desenvolvedor
       const { rows: cfgRows } = await pool.query(`SELECT * FROM ai_bot_config WHERE singleton_id=1 LIMIT 1`);
@@ -447,7 +462,7 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
         status='respondido';
       } else {
         // com_ia: usar RAG específico por perfil com Ollama Qwen3 1.7B fila real + fallback simulado
-        const { rows: idxRows } = await pool.query(`SELECT * FROM ai_rag_indexes WHERE rag_key=$1 AND is_active=true LIMIT 1`, [rag_key]);
+        const { rows: idxRows } = await pool.query(`SELECT * FROM ai_rag_indexes WHERE rag_key=$1 AND is_active=true AND is_approved=true AND is_published=true LIMIT 1`, [rag_key]);
         if(!idxRows.length){
           response=`RAG ${rag_key} não encontrado ou inativo. Modelo Ollama Qwen3 1.7B fila.`;
           status='erro';
@@ -457,7 +472,7 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
           let matchedChunks=[];
           const lowerQ=query.toLowerCase();
           try {
-            const { rows: allChunks } = await pool.query(`SELECT c.*, d.source, d.title, d.keywords FROM ai_rag_chunks c JOIN ai_rag_documents d ON d.id=c.document_id WHERE c.rag_key=$1 ORDER BY c.document_id, c.chunk_index ASC LIMIT 50`, [rag_key]);
+            const { rows: allChunks } = await pool.query(`SELECT c.*, d.source, d.title, d.keywords FROM ai_rag_chunks c JOIN ai_rag_documents d ON d.id=c.document_id WHERE c.rag_key=$1 AND d.rag_key=$1 AND d.is_published=true AND d.is_approved=true ORDER BY c.document_id, c.chunk_index ASC LIMIT 50`, [rag_key]);
             for(const c of allChunks){
               const kw=c.keywords||[];
               if(lowerQ.includes(c.content.toLowerCase().slice(0,30)) || kw.some((k)=>lowerQ.includes(String(k).toLowerCase()))){
