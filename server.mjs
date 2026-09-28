@@ -9,6 +9,93 @@ import { validateLeadInput } from "./src/lib/public-lead-validation.mjs";
 import { createClientAccessApi } from "./src/server/client-access-api.mjs";
 import { createClientSpaceApi } from "./src/server/client-space-api.mjs";
 import { createClientSecurityApi } from "./src/server/client-security-api.mjs";
+import { createAdminRbacApi } from "./src/server/admin-rbac-api.mjs";
+import { createAdminAuditApi } from "./src/server/admin-audit-api.mjs";
+import { createNotificationQueue } from "./src/server/notification-queue.mjs";
+import { createAdminNotificationsApi } from "./src/server/admin-notifications-api.mjs";
+import { createIntegrationsApi } from "./src/server/integrations-api.mjs";
+import { createServiceCatalogApi } from "./src/server/service-catalog-api.mjs";
+import { createFaqApi } from "./src/server/faq-api.mjs";
+import { createCrmApi } from "./src/server/crm-api.mjs";
+import { createEquipmentApi } from "./src/server/equipment-api.mjs";
+import { createInspectionApi } from "./src/server/inspection-api.mjs";
+import { createLaborBudgetApi } from "./src/server/labor-budget-api.mjs";
+import { createTechnicalBudgetApi } from "./src/server/technical-budget-api.mjs";
+import { createCostParameterApi } from "./src/server/cost-parameter-api.mjs";
+import { createPriceScenarioApi } from "./src/server/price-scenario-api.mjs";
+import { createDiscountApi } from "./src/server/discount-api.mjs";
+import { createProposalApi } from "./src/server/proposal-api.mjs";
+import { createProposalDeliveryApi } from "./src/server/proposal-delivery-api.mjs";
+import { createProposalAcceptanceApi } from "./src/server/proposal-acceptance-api.mjs";
+import { createContractApi } from "./src/server/contract-api.mjs";
+import { createContractDetailsApi } from "./src/server/contract-details-api.mjs";
+import { createContractStatusApi } from "./src/server/contract-status-api.mjs";
+import { createContractAmendmentApi } from "./src/server/contract-amendment-api.mjs";
+import { createContractAlertApi } from "./src/server/contract-alert-api.mjs";
+import { createContractDocObligationApi } from "./src/server/contract-doc-obligation-api.mjs";
+import { createContractImplantationApi } from "./src/server/contract-implantation-api.mjs";
+import { createContractClosureApi } from "./src/server/contract-closure-api.mjs";
+import { createContractFiscalApi } from "./src/server/contract-fiscal-api.mjs";
+import { createContractManagementDiaryApi } from "./src/server/contract-management-diary-api.mjs";
+import { createNotificationPreferencesApi } from "./src/server/notification-preferences-api.mjs";
+import { createObservability } from "./src/server/observability.mjs";
+import { createObservabilityApi } from "./src/server/observability-api.mjs";
+import { createHealthcheckApi } from "./src/server/healthcheck-api.mjs";
+import { createBackupApi } from "./src/server/backup-api.mjs";
+import { createPrivacyApi } from "./src/server/privacy-api.mjs";
+import { createLgpdRequestApi } from "./src/server/lgpd-request-api.mjs";
+import { createRetentionApi } from "./src/server/retention-api.mjs";
+import { createIncidentApi } from "./src/server/incident-api.mjs";
+import { createConfigApi } from "./src/server/config-api.mjs";
+import { createDependencyApi } from "./src/server/dependency-api.mjs";
+import { createIntegrationLogApi } from "./src/server/integration-log-api.mjs";
+import { createBudgetApi } from "./src/server/budget-api.mjs";
+import { createEnvApi } from "./src/server/env-api.mjs";
+import { createMaintenanceDocApi } from "./src/server/maintenance-doc-api.mjs";
+import { createHrApi } from "./src/server/hr-api.mjs";
+import { createEmpProfileApi } from "./src/server/emp-profile-api.mjs";
+import { createHrRecruitmentApi } from "./src/server/hr-recruitment-api.mjs";
+import { createHrTerminationApi } from "./src/server/hr-termination-api.mjs";
+import { createHrAbsenceApi } from "./src/server/hr-absence-api.mjs";
+import { createHrBenefitsApi } from "./src/server/hr-benefits-api.mjs";
+import { createHrTrainingApi } from "./src/server/hr-training-api.mjs";
+import { createHrAdvancedApi } from "./src/server/hr-advanced-api.mjs";
+import { createEmpPortalApi } from "./src/server/emp-portal-api.mjs";
+import { createEmpOpsApi } from "./src/server/emp-ops-api.mjs";
+import { createEmpSelfApi } from "./src/server/emp-self-api.mjs";
+import { createEmpAdvanced2Api } from "./src/server/emp-advanced2-api.mjs";
+import { createEmpPwaApi } from "./src/server/emp-pwa-api.mjs";
+import { createOpsApi } from "./src/server/ops-api.mjs";
+import { createOpsAdvancedApi } from "./src/server/ops-advanced-api.mjs";
+import { createOpsAdvanced2Api } from "./src/server/ops-advanced2-api.mjs";
+import { createOpsAdvanced3Api } from "./src/server/ops-advanced3-api.mjs";
+import { createCliApi } from "./src/server/cli-api.mjs";
+import { createCliAdvancedApi } from "./src/server/cli-advanced-api.mjs";
+import { createCliFinanceApi } from "./src/server/cli-finance-api.mjs";
+import { createFinApi } from "./src/server/fin-api.mjs";
+import { createFinAdvancedApi } from "./src/server/fin-advanced-api.mjs";
+import { createFinManagementApi } from "./src/server/fin-management-api.mjs";
+import { createFinBudgetApi } from "./src/server/fin-budget-api.mjs";
+import { createAdmApi } from "./src/server/adm-api.mjs";
+import { createAdmAdvancedApi } from "./src/server/adm-advanced-api.mjs";
+import { createAstApi } from "./src/server/ast-api.mjs";
+import { createAstAdvancedApi } from "./src/server/ast-advanced-api.mjs";
+import { createExtApi } from "./src/server/ext-api.mjs";
+import { createExtAdvancedApi } from "./src/server/ext-advanced-api.mjs";
+import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
+import { createCmsApi } from "./src/server/cms-api.mjs";
+import { createThemeApi } from "./src/server/theme-api.mjs";
+import { createSeoApi } from "./src/server/seo-api.mjs";
+import { createPackageApi } from "./src/server/package-api.mjs";
+import { createOriginMetricsApi } from "./src/server/origin-metrics-api.mjs";
+import { createEmployeeComplaintApi } from "./src/server/employee-complaint-api.mjs";
+import { createPubFaqAssistedApi } from "./src/server/pub-faq-assisted-api.mjs";
+import { createAiRagApi } from "./src/server/ai-rag-api.mjs";
+import { createReportApi } from "./src/server/report-api.mjs";
+import { createCommissionApi } from "./src/server/commission-api.mjs";
+import { createCommercialApi } from "./src/server/commercial-api.mjs";
+import { createPartnershipApi } from "./src/server/partnership-api.mjs";
+import { normalizeEmail, verifyPassword } from "./src/lib/client-auth-core.mjs";
 
 const { loadEnvConfig } = nextEnv;
 const { Pool } = pg;
@@ -24,17 +111,51 @@ const LEAD_WINDOW_MS = 10 * 60 * 1000;
 const LEAD_MAX_ATTEMPTS = 5;
 const loginAttempts = new Map();
 const leadAttempts = new Map();
-const leadStatuses = new Set(["new", "contacted", "closed"]);
+const leadStatuses = new Set(["new", "contacted", "closed", "solicitada", "em_agendamento", "confirmada", "realizada", "cancelada"]);
 let pool;
+let observabilityInstance;
 
 const dev = process.argv.includes("--dev");
 if (!dev && !process.env.NODE_ENV) process.env.NODE_ENV = "production";
 const hostname = process.env.BIND_HOST || "0.0.0.0";
 const port = Number(process.env.PORT || 3000);
 
+let pglitePoolPromise = null;
+
+async function getPGlitePoolLazy() {
+  if (!pglitePoolPromise) {
+    pglitePoolPromise = import('./src/server/pglite-pool.mjs').then(async (mod) => {
+      const p = await mod.getPGlitePool();
+      console.log('[DB] Using PGlite fallback (no DATABASE_URL) — .data/pglite — 001-095 auto-migrate');
+      return p;
+    });
+  }
+  return pglitePoolPromise;
+}
+
 function getPool() {
-  if (!process.env.DATABASE_URL) throw new Error("DATABASE_NOT_CONFIGURED");
-  if (!pool) {
+  // BETA 1-clique: se DATABASE_URL não configurado, usa PGlite (Postgres WASM) local .data/pglite
+  if (!process.env.DATABASE_URL) {
+    if (!pool) {
+      pool = {
+        __isPGliteProxy: true,
+        async query(text, params) {
+          const real = await getPGlitePoolLazy();
+          return real.query(text, params);
+        },
+        async connect() {
+          const real = await getPGlitePoolLazy();
+          return real.connect();
+        }
+      };
+      try {
+        if (observabilityInstance && observabilityInstance.wrapPool) observabilityInstance.wrapPool(pool);
+      } catch {}
+    }
+    return pool;
+  }
+  if (!pool || pool.__isPGliteProxy) {
+    // Se antes era PGlite proxy e agora tem DATABASE_URL, troca para pg
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
       max: Number(process.env.DATABASE_POOL_SIZE || 5),
@@ -42,8 +163,21 @@ function getPool() {
       connectionTimeoutMillis: 5_000,
       application_name: "grupo-seg-system-site",
     });
+    try {
+      if (observabilityInstance && observabilityInstance.wrapPool) observabilityInstance.wrapPool(pool);
+    } catch {}
   }
+  try {
+    if (observabilityInstance && observabilityInstance.wrapPool && !pool.__observabilityWrapped) observabilityInstance.wrapPool(pool);
+  } catch {}
   return pool;
+}
+
+function getObservability() {
+  if (!observabilityInstance) {
+    observabilityInstance = createObservability({ getPool });
+  }
+  return observabilityInstance;
 }
 
 function json(res, status, payload, extraHeaders = {}) {
@@ -102,10 +236,11 @@ function sign(payload, secret) {
   return createHmac("sha256", secret).update(payload).digest("base64url");
 }
 
-function createSession(role) {
+function createSession(role, identityId = null) {
   const secret = sessionSecret();
   if (!secret) throw new Error("SESSION_SECRET_NOT_CONFIGURED");
-  const payload = Buffer.from(JSON.stringify({ role, exp: Date.now() + SESSION_TTL_SECONDS * 1000 })).toString("base64url");
+  const payloadObj = identityId ? { role, identityId, exp: Date.now() + SESSION_TTL_SECONDS * 1000 } : { role, exp: Date.now() + SESSION_TTL_SECONDS * 1000 };
+  const payload = Buffer.from(JSON.stringify(payloadObj)).toString("base64url");
   return { value: `${payload}.${sign(payload, secret)}`, expiresAt: Date.now() + SESSION_TTL_SECONDS * 1000 };
 }
 
@@ -122,8 +257,13 @@ function readSession(req) {
   if (!constantTimeTextMatch(signature, expected)) return null;
   try {
     const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    if (!["marcelo", "ti"].includes(parsed.role) || !Number.isFinite(parsed.exp) || parsed.exp <= Date.now()) return null;
-    return { role: parsed.role, expiresAt: parsed.exp };
+    if (!Number.isFinite(parsed.exp) || parsed.exp <= Date.now()) return null;
+    // Support legacy marcelo/ti tokens and new staff tokens (admin/ti/rh)
+    const validRoles = new Set(["marcelo", "ti", "admin", "rh"]);
+    if (!validRoles.has(parsed.role)) return null;
+    // If identityId present, validate UUID format
+    if (parsed.identityId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(parsed.identityId)) return null;
+    return { role: parsed.role, identityId: parsed.identityId || null, expiresAt: parsed.exp };
   } catch {
     return null;
   }
@@ -215,12 +355,31 @@ async function handleCreateLead(req, res) {
   let database;
   try {
     database = getPool();
+    // PUB-03: deduplicação controlada via dedup_key
+    if (lead.dedupKey) {
+      const existing = await database.query("SELECT id, status FROM public_leads WHERE dedup_key = $1", [lead.dedupKey]);
+      if (existing.rows[0]) {
+        return json(res, 200, { leadId: existing.rows[0].id, emailStatus: "dedup", recorded: true, dedup: true, status: existing.rows[0].status });
+      }
+    }
+
+    const ipHash = createHash("sha256").update(clientIp(req)).digest("hex");
+    const userAgent = String(req.headers["user-agent"] || "").slice(0,200);
+
     await database.query(
       `INSERT INTO public_leads
-        (id, request_kind, name, phone, city, property_type, services, visit_preference, details, consented_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())`,
-      [id, lead.requestKind, lead.name, lead.phone, lead.city, lead.propertyType, lead.services, lead.visitPreference, lead.details],
+        (id, request_kind, name, phone, city, property_type, services, visit_preference, details, consented_at, origin, campaign, email, channel, dedup_key, consent_version, ip_hash, user_agent, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW(),$10,$11,$12,$13,$14,'v1',$15,$16,'solicitada')`,
+      [id, lead.requestKind, lead.name, lead.phone, lead.city, lead.propertyType, lead.services, lead.visitPreference, lead.details, lead.origin, lead.campaign, lead.email, lead.channel, lead.dedupKey, ipHash, userAgent],
     );
+
+    // Auditar criação de lead (PUB-03)
+    try {
+      await database.query(
+        "INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ('system', $1, 'lead_create', $2, 'allowed', 'none')",
+        [ipHash.slice(0,16), id]
+      );
+    } catch {}
   } catch (error) {
     const unconfigured = error instanceof Error && error.message === "DATABASE_NOT_CONFIGURED";
     const migrationMissing = error && typeof error === "object" && error.code === "42P01";
@@ -263,7 +422,7 @@ async function handleAdminLeads(req, res, url) {
     const limitPos = values.length + 1;
     const offsetPos = values.length + 2;
     const result = await getPool().query(
-      `SELECT id, request_kind, name, phone, city, property_type, services, visit_preference, details, status, email_status, created_at, updated_at
+      `SELECT id, request_kind, name, phone, city, property_type, services, visit_preference, details, status, email_status, origin, campaign, email, channel, responsible, responsible_id, dedup_key, ip_hash, created_at, updated_at
        FROM public_leads ${where} ORDER BY created_at DESC LIMIT $${limitPos} OFFSET $${offsetPos}`,
       listValues,
     );
@@ -288,26 +447,59 @@ async function handleAdminLeadStatus(req, res, leadId) {
   } catch {
     return json(res, 400, { error: "invalid_request" });
   }
-  if (!leadStatuses.has(body?.status)) return json(res, 400, { error: "invalid_status" });
+  const newStatus = body?.status;
+  const responsible = body?.responsible ? String(body.responsible).trim().slice(0,100) : null;
+  const responsibleId = body?.responsible_id || body?.responsibleId || null;
+
+  if (newStatus && !leadStatuses.has(newStatus)) return json(res, 400, { error: "invalid_status" });
+  if (responsibleId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(responsibleId)) return json(res, 400, { error: "invalid_responsible_id" });
+
   let client;
   try {
     client = await getPool().connect();
     await client.query("BEGIN");
-    const current = await client.query("SELECT status FROM public_leads WHERE id = $1 FOR UPDATE", [leadId]);
+    const current = await client.query("SELECT status, responsible FROM public_leads WHERE id = $1 FOR UPDATE", [leadId]);
     if (!current.rows[0]) {
       await client.query("ROLLBACK");
       return json(res, 404, { error: "lead_not_found" });
     }
     const previousStatus = current.rows[0].status;
-    if (previousStatus !== body.status) {
-      await client.query("UPDATE public_leads SET status = $2, updated_at = NOW() WHERE id = $1", [leadId, body.status]);
+    const previousResponsible = current.rows[0].responsible;
+
+    let statusChanged = false;
+    let responsibleChanged = false;
+
+    if (newStatus && previousStatus !== newStatus) {
+      await client.query("UPDATE public_leads SET status = $2, updated_at = NOW() WHERE id = $1", [leadId, newStatus]);
       await client.query(
         "INSERT INTO public_lead_status_audit (lead_id, previous_status, next_status, changed_by) VALUES ($1,$2,$3,$4)",
-        [leadId, previousStatus, body.status, session.role],
+        [leadId, previousStatus, newStatus, session.role],
       );
+      statusChanged = true;
+      // Auditar mudança de status como lead_status_change e visita específica
+      try {
+        const auditAction = ["confirmada","realizada","cancelada","em_agendamento","solicitada"].includes(newStatus) ? "lead_visit_confirm" : "lead_status_change";
+        await client.query(
+          "INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,$3,$4,'allowed','none')",
+          [session.role, session.identityId || session.role, auditAction, `${leadId}:${previousStatus}->${newStatus}`]
+        );
+      } catch {}
     }
+
+    if (responsible !== null || responsibleId) {
+      // Responsável de atendimento - pessoa responsável confirma (PUB-04)
+      await client.query("UPDATE public_leads SET responsible = COALESCE($2, responsible), responsible_id = COALESCE($3, responsible_id), updated_at = NOW() WHERE id = $1", [leadId, responsible, responsibleId]);
+      responsibleChanged = true;
+      try {
+        await client.query(
+          "INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,$3,$4,'allowed','none')",
+          [session.role, session.identityId || session.role, "lead_responsible_assign", `${leadId}:${responsible || responsibleId}`]
+        );
+      } catch {}
+    }
+
     await client.query("COMMIT");
-    return json(res, 200, { leadId, status: body.status, updatedBy: session.role });
+    return json(res, 200, { leadId, status: newStatus || previousStatus, previousStatus, responsible: responsible || previousResponsible, statusChanged, responsibleChanged, updatedBy: session.role, identityId: session.identityId || null });
   } catch (error) {
     if (client) await client.query("ROLLBACK").catch(() => {});
     const unconfigured = error instanceof Error && error.message === "DATABASE_NOT_CONFIGURED";
@@ -400,7 +592,7 @@ async function handleAdminSession(req, res) {
   if (req.method === "GET") {
     const session = readSession(req);
     return session
-      ? json(res, 200, { role: session.role, expiresAt: session.expiresAt })
+      ? json(res, 200, { role: session.role, identityId: session.identityId || null, expiresAt: session.expiresAt })
       : json(res, 401, { error: "admin_session_required" });
   }
 
@@ -419,9 +611,62 @@ async function handleAdminSession(req, res) {
   } catch {
     return json(res, 400, { error: "invalid_request" });
   }
-  const token = String(body?.token || "");
+
   const secret = sessionSecret();
   if (!secret) return json(res, 503, { error: "admin_auth_not_configured" });
+
+  // Staff login via email/password (SEC-04/SEC-05)
+  const emailCandidate = body?.email;
+  const passwordCandidate = body?.password;
+  if (typeof emailCandidate === "string" && typeof passwordCandidate === "string") {
+    const normalized = normalizeEmail(emailCandidate);
+    if (normalized.error) return json(res, 400, { error: "invalid_email" });
+    const email = normalized.value;
+    const password = passwordCandidate;
+    try {
+      const db = getPool();
+      const found = await db.query(
+        `SELECT i.id, i.status, c.password_hash, p.role
+         FROM auth_identities i
+         LEFT JOIN auth_credentials c ON c.identity_id = i.id
+         LEFT JOIN auth_staff_profiles p ON p.identity_id = i.id
+         WHERE i.kind = 'staff' AND i.email = $1`,
+        [email]
+      );
+      const rec = found.rows[0];
+      if (!rec || !rec.password_hash) {
+        // Constant time dummy verification to avoid enumeration
+        await verifyPassword(password, "$s1$16384$8$1$64$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA").catch(() => {});
+        return json(res, 401, { error: "invalid_credentials" });
+      }
+      if (rec.status !== "active" && rec.status !== "pending_email") {
+        return json(res, 401, { error: "invalid_credentials" });
+      }
+      const ok = await verifyPassword(password, rec.password_hash);
+      if (!ok) return json(res, 401, { error: "invalid_credentials" });
+      const role = rec.role || "admin";
+      if (!["admin", "ti", "rh", "marcelo"].includes(role)) return json(res, 403, { error: "role_not_allowed" });
+      const session = createSession(role, rec.id);
+      // Audit staff login
+      try {
+        await db.query(
+          `INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ('staff',$1,'staff_login',$1,'allowed','none')`,
+          [rec.id]
+        );
+      } catch {}
+      return json(res, 200, { role, identityId: rec.id, expiresAt: session.expiresAt }, {
+        "Set-Cookie": sessionCookie(req, session.value, SESSION_TTL_SECONDS),
+      });
+    } catch (error) {
+      const unconfigured = error instanceof Error && error.message === "DATABASE_NOT_CONFIGURED";
+      const migrationMissing = error && typeof error === "object" && error.code === "42P01";
+      if (!unconfigured && !migrationMissing) console.error("Staff login failed.", error);
+      return json(res, 503, { error: unconfigured ? "database_not_configured" : migrationMissing ? "migration_required" : "auth_unavailable" });
+    }
+  }
+
+  // Legacy token flow (marcelo/ti) — to be deprecated after staff accounts provisioned
+  const token = String(body?.token || "");
   const credentials = [
     ["marcelo", process.env.SITE_ADMIN_TOKEN_MARCELO],
     ["ti", process.env.SITE_ADMIN_TOKEN_TI],
@@ -460,9 +705,1182 @@ const clientSpaceApi = createClientSpaceApi({
   readClientSession: clientAccessApi.readClientSession,
   docsDir: (process.env.CLIENT_DOCS_DIR || "").trim() || path.join(process.cwd(), ".data", "documents"),
 });
-const clientSecurityApi = createClientSecurityApi();
+const clientSecurityApi = createClientSecurityApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readClientSession: clientAccessApi.readClientSession,
+  cookieSecure,
+  clientIp,
+  baseUrl: publicBaseUrl,
+});
+const adminRbacApi = createAdminRbacApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const notificationQueue = createNotificationQueue({
+  getPool,
+  observability: getObservability(),
+});
+
+const adminAuditApi = createAdminAuditApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+  clientIp,
+});
+
+const adminNotificationsApi = createAdminNotificationsApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+  notificationQueue,
+  mailer: null, // will be set if nodemailer configured; for now null, process will mark not_configured
+});
+
+const integrationsApi = createIntegrationsApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+  clientIp,
+});
+
+const serviceCatalogApi = createServiceCatalogApi({
+  json,
+  getPool,
+});
+
+const faqApi = createFaqApi({
+  json,
+  getPool,
+});
+
+const crmApi = createCrmApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+  clientIp,
+});
+
+const equipmentApi = createEquipmentApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const inspectionApi = createInspectionApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const laborBudgetApi = createLaborBudgetApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const technicalBudgetApi = createTechnicalBudgetApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const costParameterApi = createCostParameterApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const priceScenarioApi = createPriceScenarioApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const discountApi = createDiscountApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const proposalApi = createProposalApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const proposalDeliveryApi = createProposalDeliveryApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const proposalAcceptanceApi = createProposalAcceptanceApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+  clientIp,
+});
+
+const contractApi = createContractApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const contractDetailsApi = createContractDetailsApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const contractStatusApi = createContractStatusApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const contractAmendmentApi = createContractAmendmentApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const contractAlertApi = createContractAlertApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const contractDocObligationApi = createContractDocObligationApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const contractImplantationApi = createContractImplantationApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const contractClosureApi = createContractClosureApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const contractFiscalApi = createContractFiscalApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const contractManagementDiaryApi = createContractManagementDiaryApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const notificationPreferencesApi = createNotificationPreferencesApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const observability = getObservability();
+
+const observabilityApi = createObservabilityApi({
+  json,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+  observability,
+});
+
+const healthcheckApi = createHealthcheckApi({
+  json,
+  getPool,
+  readAdminSession: readSession,
+  sameOrigin,
+  observability,
+});
+
+const backupApi = createBackupApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const privacyApi = createPrivacyApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const lgpdRequestApi = createLgpdRequestApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const retentionApi = createRetentionApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const incidentApi = createIncidentApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const configApi = createConfigApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const dependencyApi = createDependencyApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const integrationLogApi = createIntegrationLogApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const budgetApi = createBudgetApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const envApi = createEnvApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const maintenanceDocApi = createMaintenanceDocApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const hrApi = createHrApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const empProfileApi = createEmpProfileApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const hrRecruitmentApi = createHrRecruitmentApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const hrTerminationApi = createHrTerminationApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const hrAbsenceApi = createHrAbsenceApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const hrBenefitsApi = createHrBenefitsApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const hrTrainingApi = createHrTrainingApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const hrAdvancedApi = createHrAdvancedApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const empPortalApi = createEmpPortalApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const empOpsApi = createEmpOpsApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const empSelfApi = createEmpSelfApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const empAdvanced2Api = createEmpAdvanced2Api({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const empPwaApi = createEmpPwaApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const opsApi = createOpsApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const opsAdvancedApi = createOpsAdvancedApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const opsAdvanced2Api = createOpsAdvanced2Api({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const opsAdvanced3Api = createOpsAdvanced3Api({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const cliApi = createCliApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const cliAdvancedApi = createCliAdvancedApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const cliFinanceApi = createCliFinanceApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const finApi = createFinApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const finAdvancedApi = createFinAdvancedApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const finManagementApi = createFinManagementApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const finBudgetApi = createFinBudgetApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const admApi = createAdmApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const admAdvancedApi = createAdmAdvancedApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const astApi = createAstApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const astAdvancedApi = createAstAdvancedApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const extApi = createExtApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const extAdvancedApi = createExtAdvancedApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const extReportingApi = createExtReportingApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const cmsApi = createCmsApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const themeApi = createThemeApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const seoApi = createSeoApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const packageApi = createPackageApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const originMetricsApi = createOriginMetricsApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const employeeComplaintApi = createEmployeeComplaintApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const pubFaqAssistedApi = createPubFaqAssistedApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const aiRagApi = createAiRagApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta }) => {
+    try {
+      await getPool().query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [action, actor, target, meta ? JSON.stringify(meta) : null]
+      );
+    } catch {}
+  },
+  sameOrigin,
+  requireSession: readSession,
+  requireRole: (sess, roles) => {
+    const r = (sess.role || sess.userRole || '').toLowerCase();
+    return roles.includes(r) || r === 'admin';
+  },
+});
+
+const reportApi = createReportApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const commissionApi = createCommissionApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const commercialApi = createCommercialApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
+const partnershipApi = createPartnershipApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
 
 async function routeApi(req, res) {
+  const obs = getObservability();
+  const requestId = obs.generateRequestId();
+  const correlationId = req.headers['x-correlation-id'] ? String(req.headers['x-correlation-id']).slice(0,100) : obs.generateCorrelationId(requestId);
+  globalThis.__currentRequestId = requestId;
+  globalThis.__currentCorrelationId = correlationId;
+  const start = Date.now();
+  try { res.setHeader('X-Request-Id', requestId); res.setHeader('X-Correlation-Id', correlationId); } catch {}
+  let routeError = null;
+  let statusForObs = 200;
+  // Monkey-patch json to capture status
+  const originalWriteHead = res.writeHead.bind(res);
+  res.writeHead = function(statusCode, ...args) {
+    statusForObs = statusCode;
+    return originalWriteHead(statusCode, ...args);
+  };
+  try {
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
   if (url.pathname === "/api/site-visual") return handleSiteVisual(req, res, url);
   if (url.pathname === "/api/leads") return handleCreateLead(req, res);
@@ -480,8 +1898,15 @@ async function routeApi(req, res) {
   const clientDocMatch = url.pathname.match(/^\/api\/client\/documents\/([0-9a-f-]{36})\/download$/i);
   if (clientDocMatch) return clientSpaceApi.handleClientDocumentDownload(req, res, clientDocMatch[1]);
   if (url.pathname === "/api/client/tickets") return clientSpaceApi.handleClientTickets(req, res, url);
-  if (url.pathname === "/api/client/security/mfa/verify") return handleClientMfa(req, res);
-  if (url.pathname === "/api/client/security/email-change") return handleEmailChange(req, res);
+  if (url.pathname === "/api/client/security/mfa/activate") return clientSecurityApi.handleMfaActivate(req, res);
+  if (url.pathname === "/api/client/security/mfa/verify") return clientSecurityApi.handleMfaVerify(req, res);
+  if (url.pathname === "/api/client/security/mfa/disable") return clientSecurityApi.handleMfaDisable(req, res);
+  if (url.pathname === "/api/client/security/email-change") {
+    if (req.method === "POST") return clientSecurityApi.handleEmailChangeRequest(req, res);
+    if (req.method === "PUT") return clientSecurityApi.handleEmailChangeConfirm(req, res);
+    if (req.method === "DELETE") return clientSecurityApi.handleEmailChangeCancel(req, res);
+    return json(res, 405, { error: "method_not_allowed" }, { Allow: "POST, PUT, DELETE" });
+  }
   if (url.pathname === "/api/admin/identities") return clientSpaceApi.handleAdminIdentities(req, res, url);
   if (url.pathname === "/api/admin/client-accounts") return clientSpaceApi.handleAdminAccounts(req, res, url);
   const accountMatch = url.pathname.match(/^\/api\/admin\/client-accounts\/([0-9a-f-]{36})$/i);
@@ -498,7 +1923,1537 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/tickets") return clientSpaceApi.handleAdminTickets(req, res, url);
   const ticketMatch = url.pathname.match(/^\/api\/admin\/tickets\/([0-9a-f-]{36})$/i);
   if (ticketMatch) return clientSpaceApi.handleAdminTicketUpdate(req, res, ticketMatch[1]);
+  if (url.pathname === "/api/admin/permissions") {
+    if (req.method === "GET") return adminRbacApi.handleListPermissions(req, res, url);
+    if (req.method === "POST") return adminRbacApi.handleGrantPermission(req, res);
+    return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, POST" });
+  }
+    const permMatch = url.pathname.match(/^\/api\/admin\/permissions\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+  if (permMatch) return adminRbacApi.handleRevokePermission(req, res, permMatch[1]);
+  if (url.pathname === "/api/admin/access-reviews") return adminRbacApi.handleAccessReviews(req, res, url);
+  if (url.pathname === "/api/admin/audit") return adminAuditApi.handleAuditList(req, res, url);
+  if (url.pathname === "/api/admin/audit/export") return adminAuditApi.handleAuditExport(req, res);
+  if (url.pathname === "/api/admin/notifications") {
+    if (req.method === "GET") return adminNotificationsApi.handleList(req, res, url);
+    if (req.method === "POST") return adminNotificationsApi.handleEnqueue(req, res);
+    return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, POST" });
+  }
+  const notifRetryMatch = url.pathname.match(/^\/api\/admin\/notifications\/([0-9a-f-]{36})\/retry$/i);
+  if (notifRetryMatch) return adminNotificationsApi.handleRetry(req, res, notifRetryMatch[1]);
+  if (url.pathname === "/api/admin/notifications/process") return adminNotificationsApi.handleProcess(req, res);
+  if (url.pathname === "/api/admin/integrations") return integrationsApi.handleList(req, res, url);
+  const integrationTestMatch = url.pathname.match(/^\/api\/admin\/integrations\/([^\/]+)\/test$/i);
+  if (integrationTestMatch) return integrationsApi.handleTest(req, res, integrationTestMatch[1]);
+  const integrationMatch = url.pathname.match(/^\/api\/admin\/integrations\/([^\/]+)$/i);
+  if (integrationMatch) return integrationsApi.handleUpdate(req, res, integrationMatch[1]);
+  if (url.pathname === "/api/catalog" || url.pathname === "/api/services") return serviceCatalogApi.handleList(req, res, url);
+  const catalogMatch = url.pathname.match(/^\/api\/catalog\/([^\/]+)$/i) || url.pathname.match(/^\/api\/services\/([^\/]+)$/i);
+  if (catalogMatch) return serviceCatalogApi.handleGet(req, res, catalogMatch[1]);
+  if (url.pathname === "/api/faq") return faqApi.handleList(req, res, url);
+  if (url.pathname === "/api/cases") return faqApi.handleCases(req, res, url);
+  if (url.pathname === "/api/crm/companies") return crmApi.handleCompanies(req, res, url);
+  if (url.pathname === "/api/crm/companies/export") return crmApi.handleExportCompanies(req, res, url);
+  const crmCompanyMatch = url.pathname.match(/^\/api\/crm\/companies\/([0-9a-f-]{36})$/i);
+  if (crmCompanyMatch) return crmApi.handleCompanyById(req, res, crmCompanyMatch[1]);
+  if (url.pathname === "/api/crm/contacts") return crmApi.handleContacts(req, res, url);
+  if (url.pathname === "/api/crm/opportunities") return crmApi.handleOpportunities(req, res, url);
+  const crmOppMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})$/i);
+  if (crmOppMatch) return crmApi.handleOpportunityById(req, res, crmOppMatch[1]);
+  const crmLeadConvertMatch = url.pathname.match(/^\/api\/crm\/leads\/([0-9a-f-]{36})\/convert$/i);
+  if (crmLeadConvertMatch) return crmApi.handleLeadConvert(req, res, crmLeadConvertMatch[1]);
+  if (url.pathname === "/api/crm/imports") return crmApi.handleImportsList(req, res, url);
+  if (url.pathname === "/api/crm/imports/preview") return crmApi.handleImportPreview(req, res);
+  const crmImportCommitMatch = url.pathname.match(/^\/api\/crm\/imports\/([0-9a-f-]{36})\/commit$/i);
+  if (crmImportCommitMatch) return crmApi.handleImportById(req, res, crmImportCommitMatch[1], url);
+  const crmImportMatch = url.pathname.match(/^\/api\/crm\/imports\/([0-9a-f-]{36})$/i);
+  if (crmImportMatch) return crmApi.handleImportById(req, res, crmImportMatch[1], url);
+  if (url.pathname === "/api/crm/equipment") {
+    if (req.method === "GET") return equipmentApi.handleList(req, res, url);
+    if (req.method === "POST") return equipmentApi.handleCreate(req, res);
+    return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, POST" });
+  }
+  const equipmentMatch = url.pathname.match(/^\/api\/crm\/equipment\/([^\/]+)$/i);
+  if (equipmentMatch) return equipmentApi.handleGet(req, res, equipmentMatch[1]);
+  if (url.pathname === "/api/crm/inspection-templates") return inspectionApi.handleTemplates(req, res, url);
+  if (url.pathname === "/api/crm/inspections") return inspectionApi.handleInspections(req, res, url);
+  const inspectionAnswerMatch = url.pathname.match(/^\/api\/crm\/inspections\/([0-9a-f-]{36})\/answers$/i);
+  if (inspectionAnswerMatch) return inspectionApi.handleAnswer(req, res, inspectionAnswerMatch[1]);
+  const inspectionMatch = url.pathname.match(/^\/api\/crm\/inspections\/([0-9a-f-]{36})$/i);
+  if (inspectionMatch) return inspectionApi.handleInspectionById(req, res, inspectionMatch[1]);
+  if (url.pathname === "/api/crm/labor-budgets") return laborBudgetApi.handleBudgets(req, res, url);
+  const laborBudgetItemsMatch = url.pathname.match(/^\/api\/crm\/labor-budgets\/([0-9a-f-]{36})\/items$/i);
+  if (laborBudgetItemsMatch) return laborBudgetApi.handleItems(req, res, laborBudgetItemsMatch[1]);
+  const laborBudgetMatch = url.pathname.match(/^\/api\/crm\/labor-budgets\/([0-9a-f-]{36})$/i);
+  if (laborBudgetMatch) return laborBudgetApi.handleBudgetById(req, res, laborBudgetMatch[1]);
+  if (url.pathname === "/api/crm/technical-budgets") return technicalBudgetApi.handleBudgets(req, res, url);
+  const technicalBudgetItemsMatch = url.pathname.match(/^\/api\/crm\/technical-budgets\/([0-9a-f-]{36})\/items$/i);
+  if (technicalBudgetItemsMatch) return technicalBudgetApi.handleItems(req, res, technicalBudgetItemsMatch[1]);
+  const technicalBudgetMatch = url.pathname.match(/^\/api\/crm\/technical-budgets\/([0-9a-f-]{36})$/i);
+  if (technicalBudgetMatch) return technicalBudgetApi.handleBudgetById(req, res, technicalBudgetMatch[1]);
+  if (url.pathname === "/api/crm/cost-parameters/essential-check") return costParameterApi.handleEssentialCheck(req, res);
+  if (url.pathname === "/api/crm/cost-parameters") return costParameterApi.handleParams(req, res, url);
+  const costParamMatch = url.pathname.match(/^\/api\/crm\/cost-parameters\/([0-9a-f-]{36})$/i);
+  if (costParamMatch) return costParameterApi.handleParamById(req, res, costParamMatch[1]);
+  if (url.pathname === "/api/crm/price-scenarios") return priceScenarioApi.handleScenarios(req, res, url);
+  const priceScenarioMatch = url.pathname.match(/^\/api\/crm\/price-scenarios\/([0-9a-f-]{36})$/i);
+  if (priceScenarioMatch) return priceScenarioApi.handleScenarioById(req, res, priceScenarioMatch[1]);
+  if (url.pathname === "/api/crm/discount-policies") return discountApi.handlePolicies(req, res, url);
+  const discountPolicyMatch = url.pathname.match(/^\/api\/crm\/discount-policies\/([0-9a-f-]{36})$/i);
+  if (discountPolicyMatch) return discountApi.handlePolicyById(req, res, discountPolicyMatch[1]);
+  if (url.pathname === "/api/crm/discount-requests") return discountApi.handleRequests(req, res, url);
+  const discountRequestMatch = url.pathname.match(/^\/api\/crm\/discount-requests\/([0-9a-f-]{36})$/i);
+  if (discountRequestMatch) return discountApi.handleRequestById(req, res, discountRequestMatch[1]);
+  if (url.pathname === "/api/crm/proposals") return proposalApi.handleProposals(req, res, url);
+  const proposalPdfMatch = url.pathname.match(/^\/api\/crm\/proposals\/([0-9a-f-]{36})\/pdf$/i);
+  if (proposalPdfMatch) return proposalApi.handlePdf(req, res, proposalPdfMatch[1]);
+  const proposalVersionsMatch = url.pathname.match(/^\/api\/crm\/proposals\/([0-9a-f-]{36})\/versions$/i);
+  if (proposalVersionsMatch) return proposalApi.handleVersions(req, res, proposalVersionsMatch[1]);
+  const proposalVersionMatch = url.pathname.match(/^\/api\/crm\/proposals\/([0-9a-f-]{36})\/versions\/([0-9]+)$/i);
+  if (proposalVersionMatch) return proposalApi.handleVersionByNumber(req, res, proposalVersionMatch[1], proposalVersionMatch[2]);
+  const proposalItemsMatch = url.pathname.match(/^\/api\/crm\/proposals\/([0-9a-f-]{36})\/items$/i);
+  if (proposalItemsMatch) return proposalApi.handleItems(req, res, proposalItemsMatch[1]);
+  const proposalDeliveriesMatch = url.pathname.match(/^\/api\/crm\/proposal-deliveries$/i);
+  if (proposalDeliveriesMatch) return proposalDeliveryApi.handleDeliveries(req, res, url);
+  const proposalDeliveryMatch = url.pathname.match(/^\/api\/crm\/proposal-deliveries\/([0-9a-f-]{36})$/i);
+  if (proposalDeliveryMatch) return proposalDeliveryApi.handleDeliveryById(req, res, proposalDeliveryMatch[1]);
+  if (url.pathname === "/api/crm/proposal-acceptance-links") return proposalAcceptanceApi.handleLinks(req, res, url);
+  const acceptanceLinkMatch = url.pathname.match(/^\/api\/crm\/proposal-acceptance-links\/([0-9a-f-]{36})$/i);
+  if (acceptanceLinkMatch) return proposalAcceptanceApi.handleLinkById(req, res, acceptanceLinkMatch[1]);
+  const acceptByTokenMatch = url.pathname.match(/^\/api\/crm\/proposals\/accept\/([^\/]+)$/i);
+  if (acceptByTokenMatch) return proposalAcceptanceApi.handleAcceptByToken(req, res, acceptByTokenMatch[1]);
+  if (url.pathname === "/api/crm/reports") return reportApi.handleAllReports(req, res, url);
+  if (url.pathname === "/api/crm/reports/conversion") return reportApi.handleConversion(req, res, url);
+  if (url.pathname === "/api/crm/reports/sales-cycle") return reportApi.handleSalesCycle(req, res, url);
+  if (url.pathname === "/api/crm/reports/overdue-tasks") return reportApi.handleOverdueTasks(req, res, url);
+  if (url.pathname === "/api/crm/reports/loss-reasons") return reportApi.handleLossReasons(req, res, url);
+  if (url.pathname === "/api/crm/reports/pipeline") return reportApi.handlePipeline(req, res, url);
+  if (url.pathname === "/api/crm/reports/weighted-forecast") return reportApi.handleWeightedForecast(req, res, url);
+  if (url.pathname === "/api/crm/goals") return commissionApi.handleGoals(req, res, url);
+  const goalMatch = url.pathname.match(/^\/api\/crm\/goals\/([0-9a-f-]{36})$/i);
+  if (goalMatch) return commissionApi.handleGoalById(req, res, goalMatch[1]);
+  if (url.pathname === "/api/crm/commission-rules") return commissionApi.handleRules(req, res, url);
+  const ruleMatch = url.pathname.match(/^\/api\/crm\/commission-rules\/([0-9a-f-]{36})$/i);
+  if (ruleMatch) return commissionApi.handleRuleById(req, res, ruleMatch[1]);
+  if (url.pathname === "/api/crm/commissions") return commissionApi.handleCommissions(req, res, url);
+  const commissionMatch = url.pathname.match(/^\/api\/crm\/commissions\/([0-9a-f-]{36})$/i);
+  if (commissionMatch) return commissionApi.handleCommissionById(req, res, commissionMatch[1]);
+  if (url.pathname === "/api/crm/commercial-library") return commercialApi.handleLibrary(req, res, url);
+  const libraryMatch = url.pathname.match(/^\/api\/crm\/commercial-library\/([0-9a-f-]{36})$/i);
+  if (libraryMatch) return commercialApi.handleLibraryById(req, res, libraryMatch[1]);
+  if (url.pathname === "/api/crm/campaigns") return commercialApi.handleCampaigns(req, res, url);
+  const campaignTargetsMatch = url.pathname.match(/^\/api\/crm\/campaigns\/([0-9a-f-]{36})\/targets$/i);
+  if (campaignTargetsMatch) return commercialApi.handleCampaignTargets(req, res, campaignTargetsMatch[1]);
+  const campaignMatch = url.pathname.match(/^\/api\/crm\/campaigns\/([0-9a-f-]{36})$/i);
+  if (campaignMatch) return commercialApi.handleCampaignById(req, res, campaignMatch[1]);
+  if (url.pathname === "/api/crm/proposal-comparisons") return commercialApi.handleComparisons(req, res, url);
+  const comparisonMatch = url.pathname.match(/^\/api\/crm\/proposal-comparisons\/([0-9a-f-]{36})$/i);
+  if (comparisonMatch) return commercialApi.handleComparisonById(req, res, comparisonMatch[1]);
+  if (url.pathname === "/api/crm/partners") return partnershipApi.handlePartners(req, res, url);
+  const partnerMatch = url.pathname.match(/^\/api\/crm\/partners\/([0-9a-f-]{36})$/i);
+  if (partnerMatch) return partnershipApi.handlePartnerById(req, res, partnerMatch[1]);
+  if (url.pathname === "/api/crm/referrals") return partnershipApi.handleReferrals(req, res, url);
+  const referralMatch = url.pathname.match(/^\/api\/crm\/referrals\/([0-9a-f-]{36})$/i);
+  if (referralMatch) return partnershipApi.handleReferralById(req, res, referralMatch[1]);
+  if (url.pathname === "/api/crm/renewals") return partnershipApi.handleRenewals(req, res, url);
+  const renewalMatch = url.pathname.match(/^\/api\/crm\/renewals\/([0-9a-f-]{36})$/i);
+  if (renewalMatch) return partnershipApi.handleRenewalById(req, res, renewalMatch[1]);
+  if (url.pathname === "/api/crm/partnership-metrics") return partnershipApi.handleMetrics(req, res, url);
+  const contractPostsMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/posts$/i);
+  if (contractPostsMatch) return contractDetailsApi.handlePosts(req, res, contractPostsMatch[1]);
+  const contractSlaMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/sla$/i);
+  if (contractSlaMatch) return contractDetailsApi.handleSla(req, res, contractSlaMatch[1]);
+  const contractObligMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/obligations$/i);
+  if (contractObligMatch) return contractDetailsApi.handleObligations(req, res, contractObligMatch[1]);
+  const contractExclMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/exclusions$/i);
+  if (contractExclMatch) return contractDetailsApi.handleExclusions(req, res, contractExclMatch[1]);
+  const contractSchedMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/schedule$/i);
+  if (contractSchedMatch) return contractDetailsApi.handleSchedule(req, res, contractSchedMatch[1]);
+  const contractStatusHistoryMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/status-history$/i);
+  if (contractStatusHistoryMatch) return contractStatusApi.handleStatusHistory(req, res, contractStatusHistoryMatch[1]);
+  const contractStatusMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/status$/i);
+  if (contractStatusMatch) return contractStatusApi.handleStatusTransition(req, res, contractStatusMatch[1]);
+  const contractSignatureMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/signature$/i);
+  if (contractSignatureMatch) return contractStatusApi.handleSignatureEvent(req, res, contractSignatureMatch[1]);
+  const contractAmendmentDetailMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/amendments\/([0-9a-f-]{36})$/i);
+  if (contractAmendmentDetailMatch) return contractAmendmentApi.handleAmendmentById(req, res, contractAmendmentDetailMatch[1], contractAmendmentDetailMatch[2]);
+  const contractAmendmentsMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/amendments$/i);
+  if (contractAmendmentsMatch) return contractAmendmentApi.handleAmendments(req, res, contractAmendmentsMatch[1]);
+  const contractAlertRuleDetailMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/alert-rules\/([0-9a-f-]{36})$/i);
+  if (contractAlertRuleDetailMatch) return contractAlertApi.handleAlertRuleById(req, res, contractAlertRuleDetailMatch[1], contractAlertRuleDetailMatch[2]);
+  const contractAlertRulesMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/alert-rules$/i);
+  if (contractAlertRulesMatch) return contractAlertApi.handleAlertRules(req, res, contractAlertRulesMatch[1]);
+  const contractAlertDetailMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/alerts\/([0-9a-f-]{36})$/i);
+  if (contractAlertDetailMatch) return contractAlertApi.handleAlertById(req, res, contractAlertDetailMatch[1], contractAlertDetailMatch[2]);
+  const contractAlertsMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/alerts$/i);
+  if (contractAlertsMatch) return contractAlertApi.handleAlerts(req, res, contractAlertsMatch[1]);
+  const contractDocObligDetailMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/doc-obligations\/([0-9a-f-]{36})$/i);
+  if (contractDocObligDetailMatch) return contractDocObligationApi.handleObligationById(req, res, contractDocObligDetailMatch[1], contractDocObligDetailMatch[2]);
+  const contractDocObligMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/doc-obligations$/i);
+  if (contractDocObligMatch) return contractDocObligationApi.handleObligations(req, res, contractDocObligMatch[1]);
+  const companyDocObligMatch = url.pathname.match(/^\/api\/crm\/companies\/([0-9a-f-]{36})\/doc-obligations$/i);
+  if (companyDocObligMatch) return contractDocObligationApi.handleByCompany(req, res, companyDocObligMatch[1]);
+  const implantationStepMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/implantation\/steps\/([^\/]+)$/i);
+  if (implantationStepMatch) return contractImplantationApi.handleStepById(req, res, implantationStepMatch[1], implantationStepMatch[2]);
+  const implantationStepsMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/implantation\/steps$/i);
+  if (implantationStepsMatch) return contractImplantationApi.handleSteps(req, res, implantationStepsMatch[1]);
+  const implantationBlockResolveMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/implantation\/blocks\/([0-9a-f-]{36})\/resolve$/i);
+  if (implantationBlockResolveMatch) return contractImplantationApi.handleBlockResolve(req, res, implantationBlockResolveMatch[1], implantationBlockResolveMatch[2]);
+  const implantationBlocksMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/implantation\/blocks$/i);
+  if (implantationBlocksMatch) return contractImplantationApi.handleBlocks(req, res, implantationBlocksMatch[1]);
+  const implantationExceptionDetailMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/implantation\/exceptions\/([0-9a-f-]{36})$/i);
+  if (implantationExceptionDetailMatch) return contractImplantationApi.handleExceptionById(req, res, implantationExceptionDetailMatch[1], implantationExceptionDetailMatch[2]);
+  const implantationExceptionsMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/implantation\/exceptions$/i);
+  if (implantationExceptionsMatch) return contractImplantationApi.handleExceptions(req, res, implantationExceptionsMatch[1]);
+  const contractImplantMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/implantation$/i);
+  if (contractImplantMatch) return contractImplantationApi.handleImplantation(req, res, contractImplantMatch[1]);
+  const closureStepsMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/closure\/steps$/i);
+  if (closureStepsMatch) return contractClosureApi.handleSteps(req, res, closureStepsMatch[1]);
+  const closureRevocationsMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/closure\/revocations$/i);
+  if (closureRevocationsMatch) return contractClosureApi.handleRevocations(req, res, closureRevocationsMatch[1]);
+  const closureMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/closure$/i);
+  if (closureMatch) return contractClosureApi.handleClosure(req, res, closureMatch[1]);
+  // CON-10 fiscal dossier
+  if (url.pathname === "/api/crm/management-diary/search" || url.pathname === "/api/crm/management-diary") {
+    return contractManagementDiaryApi.handleSearch(req, res);
+  }
+  const fiscalEvidenceMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/fiscal-dossiers\/([0-9a-f-]{36})\/evidences$/i);
+  if (fiscalEvidenceMatch) return contractFiscalApi.handleEvidences(req, res, fiscalEvidenceMatch[1], fiscalEvidenceMatch[2]);
+  const fiscalMeasurementByIdMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/fiscal-dossiers\/([0-9a-f-]{36})\/measurements\/([0-9a-f-]{36})$/i);
+  if (fiscalMeasurementByIdMatch) return contractFiscalApi.handleMeasurementById(req, res, fiscalMeasurementByIdMatch[1], fiscalMeasurementByIdMatch[2], fiscalMeasurementByIdMatch[3]);
+  const fiscalMeasurementsMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/fiscal-dossiers\/([0-9a-f-]{36})\/measurements$/i);
+  if (fiscalMeasurementsMatch) return contractFiscalApi.handleMeasurements(req, res, fiscalMeasurementsMatch[1], fiscalMeasurementsMatch[2]);
+  const fiscalDossierByIdMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/fiscal-dossiers\/([0-9a-f-]{36})$/i);
+  if (fiscalDossierByIdMatch) return contractFiscalApi.handleDossierById(req, res, fiscalDossierByIdMatch[1], fiscalDossierByIdMatch[2]);
+  const fiscalDossiersMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/fiscal-dossiers$/i);
+  if (fiscalDossiersMatch) return contractFiscalApi.handleDossiers(req, res, fiscalDossiersMatch[1]);
+  // CON-11 management diary
+  const diaryByIdMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/management-diary\/([0-9a-f-]{36})$/i);
+  if (diaryByIdMatch) return contractManagementDiaryApi.handleDiaryById(req, res, diaryByIdMatch[1], diaryByIdMatch[2]);
+  const diaryMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/management-diary$/i);
+  if (diaryMatch) return contractManagementDiaryApi.handleDiary(req, res, diaryMatch[1]);
+  // PLT-05 notification preferences/templates
+  if (url.pathname === "/api/crm/notification-preferences" || url.pathname === "/api/admin/notification-preferences") {
+    return notificationPreferencesApi.handlePreferences(req, res);
+  }
+  const notifTemplateByIdMatch = url.pathname.match(/^\/api\/crm\/notification-templates\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/admin\/notification-templates\/([0-9a-f-]{36})$/i);
+  if (notifTemplateByIdMatch) return notificationPreferencesApi.handleTemplateById(req, res, notifTemplateByIdMatch[1]);
+  if (url.pathname === "/api/crm/notification-templates" || url.pathname === "/api/admin/notification-templates") {
+    return notificationPreferencesApi.handleTemplates(req, res);
+  }
+  if (url.pathname === "/api/crm/contracts/from-proposal") return contractApi.handleCreateFromProposal(req, res);
+  const contractUnitsMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/units$/i);
+  if (contractUnitsMatch) return contractApi.handleContractUnits(req, res, contractUnitsMatch[1]);
+  const contractResponsiblesMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/responsibles$/i);
+  if (contractResponsiblesMatch) return contractApi.handleContractResponsibles(req, res, contractResponsiblesMatch[1]);
+  const contractDocsMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/documents$/i);
+  if (contractDocsMatch) return contractApi.handleContractDocuments(req, res, contractDocsMatch[1]);
+  const crmContractMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})$/i);
+  if (crmContractMatch) return contractApi.handleContractById(req, res, crmContractMatch[1]);
+  if (url.pathname === "/api/crm/contracts") return contractApi.handleContracts(req, res, url);
+  const proposalMatch = url.pathname.match(/^\/api\/crm\/proposals\/([0-9a-f-]{36})$/i);
+  if (proposalMatch) return proposalApi.handleProposalById(req, res, proposalMatch[1]);
+  // PLT-06 observability
+  if (url.pathname === "/api/admin/observability" || url.pathname === "/api/crm/observability") {
+    return observabilityApi.handleMetrics(req, res);
+  }
+  const obsAlertMatch = url.pathname.match(/^\/api\/admin\/observability\/alerts\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/observability\/alerts\/([0-9a-f-]{36})$/i);
+  if (obsAlertMatch) return observabilityApi.handleAlertAction(req, res, obsAlertMatch[1]);
+  if (url.pathname === "/api/admin/observability/metrics" || url.pathname === "/api/crm/observability/metrics") {
+    return observabilityApi.handleMetrics(req, res);
+  }
+  // PLT-07 healthcheck/liveness/readiness
+  if (url.pathname === "/api/health/live" || url.pathname === "/api/health/liveness" || url.pathname === "/health/live") {
+    return healthcheckApi.handleLive(req, res);
+  }
+  if (url.pathname === "/api/health/ready" || url.pathname === "/api/health/readiness" || url.pathname === "/health/ready") {
+    return healthcheckApi.handleReady(req, res);
+  }
+  if (url.pathname === "/api/health" || url.pathname === "/health" || url.pathname === "/api/healthcheck") {
+    return healthcheckApi.handleHealth(req, res);
+  }
+  if (url.pathname === "/api/admin/operational" || url.pathname === "/api/admin/health" || url.pathname === "/api/crm/operational") {
+    if (url.searchParams.get('history') === 'true' || url.searchParams.get('type') === 'history') {
+      return healthcheckApi.handleOperationalHistory(req, res);
+    }
+    return healthcheckApi.handleHealth(req, res);
+  }
+  if (url.pathname === "/api/admin/operational/history" || url.pathname === "/api/crm/operational/history") {
+    return healthcheckApi.handleOperationalHistory(req, res);
+  }
+  // PLT-08 backup
+  if (url.pathname === "/api/admin/backups" || url.pathname === "/api/crm/backups") {
+    return backupApi.handleBackupJobs(req, res);
+  }
+  const backupByIdMatch = url.pathname.match(/^\/api\/admin\/backups\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/backups\/([0-9a-f-]{36})$/i);
+  if (backupByIdMatch) return backupApi.handleBackupById(req, res, backupByIdMatch[1]);
+  if (url.pathname === "/api/admin/backups/restores" || url.pathname === "/api/crm/backups/restores" || url.pathname === "/api/admin/backups/restore" || url.pathname === "/api/crm/backups/restore") {
+    return backupApi.handleRestore(req, res);
+  }
+  if (url.pathname === "/api/admin/backups/retention" || url.pathname === "/api/crm/backups/retention") {
+    return backupApi.handleRetention(req, res);
+  }
+  // PLT-09 privacy
+  if (url.pathname === "/api/admin/privacy/inventory" || url.pathname === "/api/crm/privacy/inventory" || url.pathname === "/api/privacy/inventory") {
+    return privacyApi.handleInventory(req, res);
+  }
+  const privacyPolicyByIdMatch = url.pathname.match(/^\/api\/admin\/privacy\/policies\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/privacy\/policies\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/privacy\/policies\/([0-9a-f-]{36})$/i);
+  if (privacyPolicyByIdMatch) return privacyApi.handlePolicyById(req, res, privacyPolicyByIdMatch[1]);
+  if (url.pathname === "/api/admin/privacy/policies" || url.pathname === "/api/crm/privacy/policies" || url.pathname === "/api/privacy/policies" || url.pathname === "/api/privacy") {
+    return privacyApi.handlePolicies(req, res);
+  }
+  // PLT-10 LGPD requests
+  if (url.pathname === "/api/lgpd/requests" || url.pathname === "/api/privacy/requests" || url.pathname === "/api/public/lgpd" || url.pathname === "/api/admin/lgpd/requests" || url.pathname === "/api/crm/lgpd/requests" || url.pathname === "/api/admin/privacy/requests") {
+    return lgpdRequestApi.handleRequests(req, res);
+  }
+  const lgpdByIdMatch = url.pathname.match(/^\/api\/admin\/lgpd\/requests\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/lgpd\/requests\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/admin\/privacy\/requests\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/lgpd\/requests\/([0-9a-f-]{36})$/i);
+  if (lgpdByIdMatch) return lgpdRequestApi.handleRequestById(req, res, lgpdByIdMatch[1]);
+  // PLT-11 retention
+  if (url.pathname === "/api/admin/retention/policies" || url.pathname === "/api/crm/retention/policies" || url.pathname === "/api/privacy/retention/policies" || url.pathname === "/api/admin/privacy/retention") {
+    return retentionApi.handlePolicies(req, res);
+  }
+  if (url.pathname === "/api/admin/retention/exceptions" || url.pathname === "/api/crm/retention/exceptions" || url.pathname === "/api/privacy/retention/exceptions") {
+    return retentionApi.handleExceptions(req, res);
+  }
+  const retentionExcByIdMatch = url.pathname.match(/^\/api\/admin\/retention\/exceptions\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/retention\/exceptions\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/privacy\/retention\/exceptions\/([0-9a-f-]{36})$/i);
+  if (retentionExcByIdMatch) return retentionApi.handleExceptionById(req, res, retentionExcByIdMatch[1]);
+  if (url.pathname === "/api/admin/retention/disposal/jobs" || url.pathname === "/api/crm/retention/disposal/jobs" || url.pathname === "/api/admin/disposal/jobs" || url.pathname === "/api/privacy/disposal/jobs") {
+    return retentionApi.handleJobs(req, res);
+  }
+  const disposalJobByIdMatch = url.pathname.match(/^\/api\/admin\/retention\/disposal\/jobs\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/retention\/disposal\/jobs\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/admin\/disposal\/jobs\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/privacy\/disposal\/jobs\/([0-9a-f-]{36})$/i);
+  if (disposalJobByIdMatch) return retentionApi.handleJobById(req, res, disposalJobByIdMatch[1]);
+  if (url.pathname === "/api/admin/retention/disposal/logs" || url.pathname === "/api/crm/retention/disposal/logs" || url.pathname === "/api/admin/disposal/logs" || url.pathname === "/api/privacy/disposal/logs") {
+    return retentionApi.handleLogs(req, res);
+  }
+  // PLT-12 incident response
+  if (url.pathname === "/api/admin/incidents" || url.pathname === "/api/crm/incidents" || url.pathname === "/api/security/incidents") {
+    return incidentApi.handleIncidents(req, res);
+  }
+  const incidentByIdMatch = url.pathname.match(/^\/api\/admin\/incidents\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/incidents\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/security\/incidents\/([0-9a-f-]{36})$/i);
+  if (incidentByIdMatch) return incidentApi.handleIncidentById(req, res, incidentByIdMatch[1]);
+  if (url.pathname === "/api/admin/incidents/evidences" || url.pathname === "/api/crm/incidents/evidences" || url.pathname === "/api/security/incidents/evidences") {
+    return incidentApi.handleEvidences(req, res);
+  }
+  if (url.pathname === "/api/admin/incidents/actions" || url.pathname === "/api/crm/incidents/actions" || url.pathname === "/api/security/incidents/actions") {
+    return incidentApi.handleActions(req, res);
+  }
+  if (url.pathname === "/api/admin/incidents/communications" || url.pathname === "/api/crm/incidents/communications" || url.pathname === "/api/security/incidents/communications") {
+    return incidentApi.handleCommunications(req, res);
+  }
+  // PLT-13 config flags maintenance rollout
+  if (url.pathname === "/api/admin/config/flags" || url.pathname === "/api/crm/config/flags" || url.pathname === "/api/config/flags") {
+    return configApi.handleFlags(req, res);
+  }
+  const configFlagByIdMatch = url.pathname.match(/^\/api\/admin\/config\/flags\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/config\/flags\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/config\/flags\/([0-9a-f-]{36})$/i);
+  if (configFlagByIdMatch) return configApi.handleFlagById(req, res, configFlagByIdMatch[1]);
+  if (url.pathname === "/api/admin/config/maintenance" || url.pathname === "/api/crm/config/maintenance" || url.pathname === "/api/config/maintenance") {
+    return configApi.handleMaintenance(req, res);
+  }
+  if (url.pathname === "/api/admin/config/rollouts" || url.pathname === "/api/crm/config/rollouts" || url.pathname === "/api/config/rollouts") {
+    return configApi.handleRollouts(req, res);
+  }
+  // PLT-14 dependencies
+  if (url.pathname === "/api/admin/dependencies/audits" || url.pathname === "/api/crm/dependencies/audits" || url.pathname === "/api/dependencies/audits") {
+    return dependencyApi.handleAudits(req, res);
+  }
+  if (url.pathname === "/api/admin/dependencies/vulnerabilities" || url.pathname === "/api/crm/dependencies/vulnerabilities" || url.pathname === "/api/dependencies/vulnerabilities") {
+    return dependencyApi.handleVulns(req, res);
+  }
+  if (url.pathname === "/api/admin/dependencies/updates" || url.pathname === "/api/crm/dependencies/updates" || url.pathname === "/api/dependencies/updates") {
+    return dependencyApi.handleUpdates(req, res);
+  }
+  if (url.pathname === "/api/admin/dependencies/lockfile" || url.pathname === "/api/crm/dependencies/lockfile" || url.pathname === "/api/dependencies/lockfile") {
+    return dependencyApi.handleLockfile(req, res);
+  }
+  // PLT-15 integration logs webhooks reconciliation
+  if (url.pathname === "/api/admin/integrations/jobs" || url.pathname === "/api/crm/integrations/jobs" || url.pathname === "/api/integrations/jobs") {
+    return integrationLogApi.handleJobs(req, res);
+  }
+  if (url.pathname === "/api/admin/integrations/logs" || url.pathname === "/api/crm/integrations/logs" || url.pathname === "/api/integrations/logs") {
+    return integrationLogApi.handleLogs(req, res);
+  }
+  if (url.pathname === "/api/admin/integrations/webhooks" || url.pathname === "/api/crm/integrations/webhooks" || url.pathname === "/api/integrations/webhooks") {
+    return integrationLogApi.handleWebhooks(req, res);
+  }
+  if (url.pathname === "/api/admin/integrations/webhooks/deliveries" || url.pathname === "/api/crm/integrations/webhooks/deliveries" || url.pathname === "/api/integrations/webhooks/deliveries") {
+    return integrationLogApi.handleWebhookDeliveries(req, res);
+  }
+  if (url.pathname === "/api/admin/integrations/reconciliation" || url.pathname === "/api/crm/integrations/reconciliation" || url.pathname === "/api/integrations/reconciliation") {
+    return integrationLogApi.handleReconciliation(req, res);
+  }
+  // PLT-16 operational budget usage alerts
+  if (url.pathname === "/api/admin/budgets" || url.pathname === "/api/crm/budgets" || url.pathname === "/api/budgets") {
+    return budgetApi.handleBudgets(req, res);
+  }
+  if (url.pathname === "/api/admin/usage/metrics" || url.pathname === "/api/crm/usage/metrics" || url.pathname === "/api/usage/metrics") {
+    return budgetApi.handleMetrics(req, res);
+  }
+  if (url.pathname === "/api/admin/usage/alerts" || url.pathname === "/api/crm/usage/alerts" || url.pathname === "/api/usage/alerts") {
+    return budgetApi.handleAlerts(req, res);
+  }
+  // PLT-17 env isolation
+  if (url.pathname === "/api/admin/environments" || url.pathname === "/api/crm/environments" || url.pathname === "/api/environments") {
+    return envApi.handleEnvs(req, res);
+  }
+  if (url.pathname === "/api/admin/environments/checks" || url.pathname === "/api/crm/environments/checks" || url.pathname === "/api/environments/checks") {
+    return envApi.handleChecks(req, res);
+  }
+  // PLT-18 maintenance docs
+  if (url.pathname === "/api/admin/maintenance/docs" || url.pathname === "/api/crm/maintenance/docs" || url.pathname === "/api/maintenance/docs" || url.pathname === "/api/docs") {
+    return maintenanceDocApi.handleDocs(req, res);
+  }
+  const maintDocByIdMatch = url.pathname.match(/^\/api\/admin\/maintenance\/docs\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/maintenance\/docs\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/maintenance\/docs\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/docs\/([0-9a-f-]{36})$/i);
+  if (maintDocByIdMatch) return maintenanceDocApi.handleDocById(req, res, maintDocByIdMatch[1]);
+  // HR-01 cadastro profissional separado de login
+  if (url.pathname === "/api/admin/hr/employees" || url.pathname === "/api/crm/hr/employees" || url.pathname === "/api/hr/employees") {
+    return hrApi.handleEmployees(req, res);
+  }
+  const hrEmpByIdMatch = url.pathname.match(/^\/api\/admin\/hr\/employees\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/hr\/employees\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/hr\/employees\/([0-9a-f-]{36})$/i);
+  if (hrEmpByIdMatch) return hrApi.handleEmployeeById(req, res, hrEmpByIdMatch[1]);
+  if (url.pathname === "/api/admin/hr/admissions" || url.pathname === "/api/crm/hr/admissions" || url.pathname === "/api/hr/admissions") {
+    return hrApi.handleAdmissions(req, res);
+  }
+  const hrAdmissionByIdMatch = url.pathname.match(/^\/api\/admin\/hr\/admissions\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/hr\/admissions\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/hr\/admissions\/([0-9a-f-]{36})$/i);
+  if (hrAdmissionByIdMatch) return hrApi.handleAdmissionById(req, res, hrAdmissionByIdMatch[1]);
+  if (url.pathname === "/api/admin/hr/admission-progress" || url.pathname === "/api/crm/hr/admission-progress" || url.pathname === "/api/hr/admission-progress") {
+    return hrApi.handleAdmissionProgress(req, res);
+  }
+  // EMP-01 perfil próprio
+  if (url.pathname === "/api/employee/profile" || url.pathname === "/api/crm/employee/profile" || url.pathname === "/api/admin/employee/profile" || url.pathname === "/api/hr/my-profile" || url.pathname === "/api/admin/hr/my-profile") {
+    return empProfileApi.handleMyProfile(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/profile-updates" || url.pathname === "/api/crm/hr/profile-updates" || url.pathname === "/api/hr/profile-updates" || url.pathname === "/api/admin/employee/profile-updates") {
+    return empProfileApi.handleUpdateRequests(req, res);
+  }
+  // HR-03 recrutamento
+  if (url.pathname === "/api/admin/hr/vacancies" || url.pathname === "/api/crm/hr/vacancies" || url.pathname === "/api/hr/vacancies") {
+    return hrRecruitmentApi.handleVacancies(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/candidates" || url.pathname === "/api/crm/hr/candidates" || url.pathname === "/api/hr/candidates") {
+    return hrRecruitmentApi.handleCandidates(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/interviews" || url.pathname === "/api/crm/hr/interviews" || url.pathname === "/api/hr/interviews") {
+    return hrRecruitmentApi.handleInterviews(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/talent-pool" || url.pathname === "/api/crm/hr/talent-pool" || url.pathname === "/api/hr/talent-pool") {
+    return hrRecruitmentApi.handleTalentPool(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/dossiers" || url.pathname === "/api/crm/hr/dossiers" || url.pathname === "/api/hr/dossiers" || url.pathname === "/api/admin/hr/employee-dossiers") {
+    return hrRecruitmentApi.handleDossiers(req, res);
+  }
+  // HR-07 desligamento
+  if (url.pathname === "/api/admin/hr/terminations" || url.pathname === "/api/crm/hr/terminations" || url.pathname === "/api/hr/terminations") {
+    return hrTerminationApi.handleTerminations(req, res);
+  }
+  const hrTerminationByIdMatch = url.pathname.match(/^\/api\/admin\/hr\/terminations\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/hr\/terminations\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/hr\/terminations\/([0-9a-f-]{36})$/i);
+  if (hrTerminationByIdMatch) return hrTerminationApi.handleTerminationById(req, res, hrTerminationByIdMatch[1]);
+  if (url.pathname === "/api/admin/hr/termination-progress" || url.pathname === "/api/crm/hr/termination-progress" || url.pathname === "/api/hr/termination-progress") {
+    return hrTerminationApi.handleTerminationProgress(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/status-policies" || url.pathname === "/api/crm/hr/status-policies" || url.pathname === "/api/hr/status-policies") {
+    return hrTerminationApi.handleStatusPolicies(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/vacation-periods" || url.pathname === "/api/crm/hr/vacation-periods" || url.pathname === "/api/hr/vacation-periods") {
+    return hrTerminationApi.handleVacationPeriods(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/vacation-requests" || url.pathname === "/api/crm/hr/vacation-requests" || url.pathname === "/api/hr/vacation-requests") {
+    return hrTerminationApi.handleVacationRequests(req, res);
+  }
+  // HR-10 afastamentos
+  if (url.pathname === "/api/admin/hr/absences" || url.pathname === "/api/crm/hr/absences" || url.pathname === "/api/hr/absences") {
+    return hrAbsenceApi.handleAbsences(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/time-entries" || url.pathname === "/api/crm/hr/time-entries" || url.pathname === "/api/hr/time-entries") {
+    return hrAbsenceApi.handleTimeEntries(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/time-corrections" || url.pathname === "/api/crm/hr/time-corrections" || url.pathname === "/api/hr/time-corrections") {
+    return hrAbsenceApi.handleTimeCorrections(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/competence-closures" || url.pathname === "/api/crm/hr/competence-closures" || url.pathname === "/api/hr/competence-closures") {
+    return hrAbsenceApi.handleCompetenceClosures(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/work-rules" || url.pathname === "/api/crm/hr/work-rules" || url.pathname === "/api/hr/work-rules") {
+    return hrAbsenceApi.handleWorkRules(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/hour-bank" || url.pathname === "/api/crm/hr/hour-bank" || url.pathname === "/api/hr/hour-bank") {
+    return hrAbsenceApi.handleHourBank(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/hour-movements" || url.pathname === "/api/crm/hr/hour-movements" || url.pathname === "/api/hr/hour-movements") {
+    return hrAbsenceApi.handleHourMovements(req, res);
+  }
+  // HR-13 benefícios
+  if (url.pathname === "/api/admin/hr/benefit-catalog" || url.pathname === "/api/crm/hr/benefit-catalog" || url.pathname === "/api/hr/benefit-catalog") {
+    return hrBenefitsApi.handleBenefitCatalog(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/benefit-enrollments" || url.pathname === "/api/crm/hr/benefit-enrollments" || url.pathname === "/api/hr/benefit-enrollments") {
+    return hrBenefitsApi.handleBenefitEnrollments(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/benefit-requests" || url.pathname === "/api/crm/hr/benefit-requests" || url.pathname === "/api/hr/benefit-requests") {
+    return hrBenefitsApi.handleBenefitRequests(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/benefit-conferences" || url.pathname === "/api/crm/hr/benefit-conferences" || url.pathname === "/api/hr/benefit-conferences") {
+    return hrBenefitsApi.handleBenefitConferences(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/benefit-exports" || url.pathname === "/api/crm/hr/benefit-exports" || url.pathname === "/api/hr/benefit-exports") {
+    return hrBenefitsApi.handleBenefitExports(req, res);
+  }
+  // HR-14 adiantamentos/reembolsos
+  if (url.pathname === "/api/admin/hr/advance-policies" || url.pathname === "/api/crm/hr/advance-policies" || url.pathname === "/api/hr/advance-policies") {
+    return hrBenefitsApi.handleAdvancePolicies(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/advance-requests" || url.pathname === "/api/crm/hr/advance-requests" || url.pathname === "/api/hr/advance-requests") {
+    return hrBenefitsApi.handleAdvanceRequests(req, res);
+  }
+  // HR-15 saúde ocupacional
+  if (url.pathname === "/api/admin/hr/occupational-requirements" || url.pathname === "/api/crm/hr/occupational-requirements" || url.pathname === "/api/hr/occupational-requirements") {
+    return hrBenefitsApi.handleOccupationalRequirements(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/occupational-agenda" || url.pathname === "/api/crm/hr/occupational-agenda" || url.pathname === "/api/hr/occupational-agenda") {
+    return hrBenefitsApi.handleOccupationalAgenda(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/occupational-documents" || url.pathname === "/api/crm/hr/occupational-documents" || url.pathname === "/api/hr/occupational-documents") {
+    return hrBenefitsApi.handleOccupationalDocuments(req, res);
+  }
+  // HR-16 integração contabilidade/SST
+  if (url.pathname === "/api/admin/hr/integration-exports" || url.pathname === "/api/crm/hr/integration-exports" || url.pathname === "/api/hr/integration-exports") {
+    return hrBenefitsApi.handleIntegrationExports(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/integration-receipts" || url.pathname === "/api/crm/hr/integration-receipts" || url.pathname === "/api/hr/integration-receipts") {
+    return hrBenefitsApi.handleIntegrationReceipts(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/integration-errors" || url.pathname === "/api/crm/hr/integration-errors" || url.pathname === "/api/hr/integration-errors") {
+    return hrBenefitsApi.handleIntegrationErrors(req, res);
+  }
+  // HR-17 treinamento
+  if (url.pathname === "/api/admin/hr/training-catalog" || url.pathname === "/api/crm/hr/training-catalog" || url.pathname === "/api/hr/training-catalog") {
+    return hrTrainingApi.handleTrainingCatalog(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/training-requirements" || url.pathname === "/api/crm/hr/training-requirements" || url.pathname === "/api/hr/training-requirements") {
+    return hrTrainingApi.handleTrainingRequirements(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/training-sessions" || url.pathname === "/api/crm/hr/training-sessions" || url.pathname === "/api/hr/training-sessions") {
+    return hrTrainingApi.handleTrainingSessions(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/training-enrollments" || url.pathname === "/api/crm/hr/training-enrollments" || url.pathname === "/api/hr/training-enrollments") {
+    return hrTrainingApi.handleTrainingEnrollments(req, res);
+  }
+  // HR-18 competências
+  if (url.pathname === "/api/admin/hr/competency-catalog" || url.pathname === "/api/crm/hr/competency-catalog" || url.pathname === "/api/hr/competency-catalog") {
+    return hrTrainingApi.handleCompetencyCatalog(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/competency-requirements" || url.pathname === "/api/crm/hr/competency-requirements" || url.pathname === "/api/hr/competency-requirements") {
+    return hrTrainingApi.handleCompetencyRequirements(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/employee-competencies" || url.pathname === "/api/crm/hr/employee-competencies" || url.pathname === "/api/hr/employee-competencies") {
+    return hrTrainingApi.handleEmployeeCompetencies(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/competency-evaluations" || url.pathname === "/api/crm/hr/competency-evaluations" || url.pathname === "/api/hr/competency-evaluations") {
+    return hrTrainingApi.handleCompetencyEvaluations(req, res);
+  }
+  // HR-19 uniformes/EPI
+  if (url.pathname === "/api/admin/hr/uniform-catalog" || url.pathname === "/api/crm/hr/uniform-catalog" || url.pathname === "/api/hr/uniform-catalog") {
+    return hrTrainingApi.handleUniformCatalog(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/uniform-deliveries" || url.pathname === "/api/crm/hr/uniform-deliveries" || url.pathname === "/api/hr/uniform-deliveries") {
+    return hrTrainingApi.handleUniformDeliveries(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/uniform-returns" || url.pathname === "/api/crm/hr/uniform-returns" || url.pathname === "/api/hr/uniform-returns") {
+    return hrTrainingApi.handleUniformReturns(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/uniform-requests" || url.pathname === "/api/crm/hr/uniform-requests" || url.pathname === "/api/hr/uniform-requests") {
+    return hrTrainingApi.handleUniformRequests(req, res);
+  }
+  // HR-20 fechamento DP
+  if (url.pathname === "/api/admin/hr/dp-closures" || url.pathname === "/api/crm/hr/dp-closures" || url.pathname === "/api/hr/dp-closures") {
+    return hrTrainingApi.handleDpClosures(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/dp-variables" || url.pathname === "/api/crm/hr/dp-variables" || url.pathname === "/api/hr/dp-variables") {
+    return hrTrainingApi.handleDpVariables(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/dp-documents" || url.pathname === "/api/crm/hr/dp-documents" || url.pathname === "/api/hr/dp-documents") {
+    return hrTrainingApi.handleDpDocuments(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/dp-exports" || url.pathname === "/api/crm/hr/dp-exports" || url.pathname === "/api/hr/dp-exports") {
+    return hrTrainingApi.handleDpExports(req, res);
+  }
+  // HR-21 holerites/informes fonte autorizada
+  if (url.pathname === "/api/admin/hr/payroll-sources" || url.pathname === "/api/crm/hr/payroll-sources" || url.pathname === "/api/hr/payroll-sources") {
+    return hrAdvancedApi.handlePayrollSources(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/payroll-imports" || url.pathname === "/api/crm/hr/payroll-imports" || url.pathname === "/api/hr/payroll-imports") {
+    return hrAdvancedApi.handlePayrollImports(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/payroll-documents" || url.pathname === "/api/crm/hr/payroll-documents" || url.pathname === "/api/hr/payroll-documents") {
+    return hrAdvancedApi.handlePayrollDocuments(req, res);
+  }
+  // HR-22 avaliações planos desenvolvimento
+  if (url.pathname === "/api/admin/hr/evaluation-criteria" || url.pathname === "/api/crm/hr/evaluation-criteria" || url.pathname === "/api/hr/evaluation-criteria") {
+    return hrAdvancedApi.handleEvaluationCriteria(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/evaluations" || url.pathname === "/api/crm/hr/evaluations" || url.pathname === "/api/hr/evaluations") {
+    return hrAdvancedApi.handleEvaluations(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/development-plans" || url.pathname === "/api/crm/hr/development-plans" || url.pathname === "/api/hr/development-plans") {
+    return hrAdvancedApi.handleDevPlans(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/development-actions" || url.pathname === "/api/crm/hr/development-actions" || url.pathname === "/api/hr/development-actions") {
+    return hrAdvancedApi.handleDevActions(req, res);
+  }
+  // HR-23 atendimento interno
+  if (url.pathname === "/api/admin/hr/support-tickets" || url.pathname === "/api/crm/hr/support-tickets" || url.pathname === "/api/hr/support-tickets") {
+    return hrAdvancedApi.handleSupportTickets(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/support-messages" || url.pathname === "/api/crm/hr/support-messages" || url.pathname === "/api/hr/support-messages") {
+    return hrAdvancedApi.handleSupportMessages(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/support-attachments" || url.pathname === "/api/crm/hr/support-attachments" || url.pathname === "/api/hr/support-attachments") {
+    return hrAdvancedApi.handleSupportAttachments(req, res);
+  }
+  // HR-24 indicadores
+  if (url.pathname === "/api/admin/hr/indicator-definitions" || url.pathname === "/api/crm/hr/indicator-definitions" || url.pathname === "/api/hr/indicator-definitions") {
+    return hrAdvancedApi.handleIndicatorDefinitions(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/indicator-snapshots" || url.pathname === "/api/crm/hr/indicator-snapshots" || url.pathname === "/api/hr/indicator-snapshots") {
+    return hrAdvancedApi.handleIndicatorSnapshots(req, res);
+  }
+  // EMP-02 próximo plantão
+  if (url.pathname === "/api/admin/hr/shift-assignments" || url.pathname === "/api/crm/hr/shift-assignments" || url.pathname === "/api/hr/shift-assignments") {
+    return empPortalApi.handleShiftAssignments(req, res);
+  }
+  // EMP-03 escala
+  if (url.pathname === "/api/admin/hr/schedule-versions" || url.pathname === "/api/crm/hr/schedule-versions" || url.pathname === "/api/hr/schedule-versions") {
+    return empPortalApi.handleScheduleVersions(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/schedule-entries" || url.pathname === "/api/crm/hr/schedule-entries" || url.pathname === "/api/hr/schedule-entries") {
+    return empPortalApi.handleScheduleEntries(req, res);
+  }
+  // EMP-04 jornada individual
+  if (url.pathname === "/api/admin/hr/journey-proofs" || url.pathname === "/api/crm/hr/journey-proofs" || url.pathname === "/api/hr/journey-proofs") {
+    return empPortalApi.handleJourneyProofs(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/journey-corrections" || url.pathname === "/api/crm/hr/journey-corrections" || url.pathname === "/api/hr/journey-corrections") {
+    return empPortalApi.handleJourneyCorrections(req, res);
+  }
+  // EMP-05 aviso ausência/atraso
+  if (url.pathname === "/api/admin/hr/absence-notices" || url.pathname === "/api/crm/hr/absence-notices" || url.pathname === "/api/hr/absence-notices") {
+    return empPortalApi.handleAbsenceNotices(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/absence-followups" || url.pathname === "/api/crm/hr/absence-followups" || url.pathname === "/api/hr/absence-followups") {
+    return empPortalApi.handleAbsenceFollowups(req, res);
+  }
+  // EMP-06 troca plantão
+  if (url.pathname === "/api/admin/hr/shift-swaps" || url.pathname === "/api/crm/hr/shift-swaps" || url.pathname === "/api/hr/shift-swaps") {
+    return empOpsApi.handleShiftSwaps(req, res);
+  }
+  // EMP-07 passagem serviço
+  if (url.pathname === "/api/admin/hr/handover-records" || url.pathname === "/api/crm/hr/handover-records" || url.pathname === "/api/hr/handover-records") {
+    return empOpsApi.handleHandovers(req, res);
+  }
+  // EMP-08 ocorrência
+  if (url.pathname === "/api/admin/hr/occurrences" || url.pathname === "/api/crm/hr/occurrences" || url.pathname === "/api/hr/occurrences") {
+    return empOpsApi.handleOccurrences(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/occurrence-attachments" || url.pathname === "/api/crm/hr/occurrence-attachments" || url.pathname === "/api/hr/occurrence-attachments") {
+    return empOpsApi.handleOccurrenceAttachments(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/occurrence-actions" || url.pathname === "/api/crm/hr/occurrence-actions" || url.pathname === "/api/hr/occurrence-actions") {
+    return empOpsApi.handleOccurrenceActions(req, res);
+  }
+  // EMP-09 procedimentos posto
+  if (url.pathname === "/api/admin/hr/post-procedures" || url.pathname === "/api/crm/hr/post-procedures" || url.pathname === "/api/hr/post-procedures") {
+    return empOpsApi.handlePostProcedures(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/procedure-acks" || url.pathname === "/api/crm/hr/procedure-acks" || url.pathname === "/api/hr/procedure-acks") {
+    return empOpsApi.handleProcedureAcks(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/support-contacts-ops" || url.pathname === "/api/crm/hr/support-contacts-ops" || url.pathname === "/api/hr/support-contacts-ops") {
+    return empOpsApi.handleSupportContacts(req, res);
+  }
+  // EMP-10 documentos solicitados
+  if (url.pathname === "/api/admin/hr/document-submissions" || url.pathname === "/api/crm/hr/document-submissions" || url.pathname === "/api/hr/document-submissions") {
+    return empSelfApi.handleDocumentSubmissions(req, res);
+  }
+  // EMP-11 holerites próprios acesso privado histórico disponibilização fonte autorizada
+  if (url.pathname === "/api/admin/hr/own-doc-access-logs" || url.pathname === "/api/crm/hr/own-doc-access-logs" || url.pathname === "/api/hr/own-doc-access-logs") {
+    return empSelfApi.handleOwnDocAccessLogs(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/doc-availability" || url.pathname === "/api/crm/hr/doc-availability" || url.pathname === "/api/hr/doc-availability") {
+    return empSelfApi.handleDocAvailability(req, res);
+  }
+  // EMP-12 férias/afastamentos/benefícios/reembolsos
+  if (url.pathname === "/api/admin/hr/self-requests" || url.pathname === "/api/crm/hr/self-requests" || url.pathname === "/api/hr/self-requests") {
+    return empSelfApi.handleSelfRequests(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/self-request-followups" || url.pathname === "/api/crm/hr/self-request-followups" || url.pathname === "/api/hr/self-request-followups") {
+    return empSelfApi.handleSelfRequestFollowups(req, res);
+  }
+  // EMP-13 uniformes/EPI entrega recibo solicitação troca devolução
+  if (url.pathname === "/api/admin/hr/uniform-self-requests" || url.pathname === "/api/crm/hr/uniform-self-requests" || url.pathname === "/api/hr/uniform-self-requests") {
+    return empSelfApi.handleUniformSelfRequests(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/uniform-receipts" || url.pathname === "/api/crm/hr/uniform-receipts" || url.pathname === "/api/hr/uniform-receipts") {
+    return empSelfApi.handleUniformReceipts(req, res);
+  }
+  // EMP-14 cursos e reciclagens
+  if (url.pathname === "/api/admin/hr/course-enrollments" || url.pathname === "/api/crm/hr/course-enrollments" || url.pathname === "/api/hr/course-enrollments") {
+    return empAdvanced2Api.handleCourseEnrollments(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/course-proofs" || url.pathname === "/api/crm/hr/course-proofs" || url.pathname === "/api/hr/course-proofs") {
+    return empAdvanced2Api.handleCourseProofs(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/course-alerts" || url.pathname === "/api/crm/hr/course-alerts" || url.pathname === "/api/hr/course-alerts" || url.pathname === "/api/admin/hr/course-expiry-alerts" || url.pathname === "/api/crm/hr/course-expiry-alerts" || url.pathname === "/api/hr/course-expiry-alerts") {
+    return empAdvanced2Api.handleCourseAlerts(req, res);
+  }
+  // EMP-15 comunicados direcionados
+  if (url.pathname === "/api/admin/hr/communications" || url.pathname === "/api/crm/hr/communications" || url.pathname === "/api/hr/communications") {
+    return empAdvanced2Api.handleCommunications(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/communication-reads" || url.pathname === "/api/crm/hr/communication-reads" || url.pathname === "/api/hr/communication-reads") {
+    return empAdvanced2Api.handleCommunicationReads(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/notifications-center" || url.pathname === "/api/crm/hr/notifications-center" || url.pathname === "/api/hr/notifications-center" || url.pathname === "/api/employee/notifications" || url.pathname === "/api/hr/my-notifications") {
+    return empAdvanced2Api.handleNotificationsCenter(req, res);
+  }
+  // EMP-16 atendimento RH
+  if (url.pathname === "/api/admin/hr/hr-tickets" || url.pathname === "/api/crm/hr/hr-tickets" || url.pathname === "/api/hr/hr-tickets" || url.pathname === "/api/admin/hr/employee-hr-tickets") {
+    return empAdvanced2Api.handleHrTickets(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/hr-messages" || url.pathname === "/api/crm/hr/hr-messages" || url.pathname === "/api/hr/hr-messages" || url.pathname === "/api/admin/hr/employee-hr-messages") {
+    return empAdvanced2Api.handleHrMessages(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/hr-attachments" || url.pathname === "/api/crm/hr/hr-attachments" || url.pathname === "/api/hr/hr-attachments" || url.pathname === "/api/admin/hr/employee-hr-attachments") {
+    return empAdvanced2Api.handleHrAttachments(req, res);
+  }
+  // EMP-17 canal confidencial
+  if (url.pathname === "/api/admin/hr/confidential-policies" || url.pathname === "/api/crm/hr/confidential-policies" || url.pathname === "/api/hr/confidential-policies") {
+    return empAdvanced2Api.handleConfidentialPolicies(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/confidential-reports" || url.pathname === "/api/crm/hr/confidential-reports" || url.pathname === "/api/hr/confidential-reports") {
+    return empAdvanced2Api.handleConfidentialReports(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/confidential-messages" || url.pathname === "/api/crm/hr/confidential-messages" || url.pathname === "/api/hr/confidential-messages") {
+    return empAdvanced2Api.handleConfidentialMessages(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/confidential-attachments" || url.pathname === "/api/crm/hr/confidential-attachments" || url.pathname === "/api/hr/confidential-attachments") {
+    return empAdvanced2Api.handleConfidentialAttachments(req, res);
+  }
+  // EMP-18 PWA instalável e fila offline limitada
+  if (url.pathname === "/api/pwa/manifest.json" || url.pathname === "/api/hr/pwa-manifest" || url.pathname === "/manifest.json") {
+    return empPwaApi.handleManifest(req, res);
+  }
+  if (url.pathname === "/api/pwa/sw.js" || url.pathname === "/api/hr/pwa-sw" || url.pathname === "/sw.js") {
+    return empPwaApi.handleServiceWorker(req, res);
+  }
+  if (url.pathname === "/api/pwa/offline" || url.pathname === "/offline.html") {
+    return empPwaApi.handleOfflinePage(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/pwa-configs" || url.pathname === "/api/crm/hr/pwa-configs" || url.pathname === "/api/hr/pwa-configs") {
+    return empPwaApi.handlePwaConfigs(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/offline-queue" || url.pathname === "/api/crm/hr/offline-queue" || url.pathname === "/api/hr/offline-queue") {
+    return empPwaApi.handleOfflineQueue(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/offline-conflicts" || url.pathname === "/api/crm/hr/offline-conflicts" || url.pathname === "/api/hr/offline-conflicts") {
+    return empPwaApi.handleOfflineConflicts(req, res);
+  }
+  // EMP-19 FAQ interna acessível
+  if (url.pathname === "/api/admin/hr/faq-internal" || url.pathname === "/api/crm/hr/faq-internal" || url.pathname === "/api/hr/faq-internal" || url.pathname === "/api/employee/faq") {
+    return empPwaApi.handleFaqInternal(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/faq-access-logs" || url.pathname === "/api/crm/hr/faq-access-logs" || url.pathname === "/api/hr/faq-access-logs") {
+    return empPwaApi.handleFaqAccessLogs(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/accessibility-preferences" || url.pathname === "/api/crm/hr/accessibility-preferences" || url.pathname === "/api/hr/accessibility-preferences" || url.pathname === "/api/employee/accessibility") {
+    return empPwaApi.handleAccessibilityPreferences(req, res);
+  }
+  // OPS-01 estrutura cliente → unidade → posto físico → necessidade por turno → alocação; cargo/função entidade própria
+  if (url.pathname === "/api/admin/hr/ops-job-roles" || url.pathname === "/api/crm/hr/ops-job-roles" || url.pathname === "/api/hr/ops-job-roles") {
+    return opsApi.handleJobRoles(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-posts" || url.pathname === "/api/crm/hr/ops-posts" || url.pathname === "/api/hr/ops-posts" || url.pathname === "/api/ops/posts") {
+    return opsApi.handlePosts(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-shift-templates" || url.pathname === "/api/crm/hr/ops-shift-templates" || url.pathname === "/api/hr/ops-shift-templates" || url.pathname === "/api/ops/shift-templates") {
+    return opsApi.handleShiftTemplates(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-post-shift-needs" || url.pathname === "/api/crm/hr/ops-post-shift-needs" || url.pathname === "/api/hr/ops-post-shift-needs") {
+    return opsApi.handlePostShiftNeeds(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-allocations" || url.pathname === "/api/crm/hr/ops-allocations" || url.pathname === "/api/hr/ops-allocations" || url.pathname === "/api/ops/allocations") {
+    return opsApi.handleAllocations(req, res);
+  }
+  // OPS-02 dimensionamento
+  if (url.pathname === "/api/admin/hr/ops-dimensioning" || url.pathname === "/api/crm/hr/ops-dimensioning" || url.pathname === "/api/hr/ops-dimensioning" || url.pathname === "/api/ops/dimensioning") {
+    return opsApi.handleDimensioning(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-coverage-gaps" || url.pathname === "/api/crm/hr/ops-coverage-gaps" || url.pathname === "/api/hr/ops-coverage-gaps" || url.pathname === "/api/ops/coverage-gaps") {
+    return opsApi.handleCoverageGaps(req, res);
+  }
+  // OPS-03 escala rascunho/publicada/revisada
+  if (url.pathname === "/api/admin/hr/ops-schedule-versions" || url.pathname === "/api/crm/hr/ops-schedule-versions" || url.pathname === "/api/hr/ops-schedule-versions" || url.pathname === "/api/ops/schedule-versions") {
+    return opsApi.handleScheduleVersions(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-schedule-entries" || url.pathname === "/api/crm/hr/ops-schedule-entries" || url.pathname === "/api/hr/ops-schedule-entries" || url.pathname === "/api/ops/schedule-entries") {
+    return opsApi.handleScheduleEntries(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-schedule-acks" || url.pathname === "/api/crm/hr/ops-schedule-acks" || url.pathname === "/api/hr/ops-schedule-acks" || url.pathname === "/api/ops/schedule-acks") {
+    return opsApi.handleScheduleAcks(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-schedule-history" || url.pathname === "/api/crm/hr/ops-schedule-history" || url.pathname === "/api/hr/ops-schedule-history") {
+    return opsApi.handleScheduleHistory(req, res);
+  }
+  // OPS-04 regras jornada/descanso + qualificações + validações
+  if (url.pathname === "/api/admin/hr/ops-work-rules" || url.pathname === "/api/crm/hr/ops-work-rules" || url.pathname === "/api/hr/ops-work-rules" || url.pathname === "/api/ops/work-rules") {
+    return opsApi.handleWorkRules(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-qualifications" || url.pathname === "/api/crm/hr/ops-qualifications" || url.pathname === "/api/hr/ops-qualifications" || url.pathname === "/api/ops/qualifications") {
+    return opsApi.handleQualifications(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-validations" || url.pathname === "/api/crm/hr/ops-validations" || url.pathname === "/api/hr/ops-validations" || url.pathname === "/api/ops/validations") {
+    return opsApi.handleValidations(req, res);
+  }
+  // OPS-05 cobertura ausências pendência aprovação decisão humana + candidatos disponibilidade/qualificação distância score + comunicação
+  if (url.pathname === "/api/admin/hr/ops-coverage-requests" || url.pathname === "/api/crm/hr/ops-coverage-requests" || url.pathname === "/api/hr/ops-coverage-requests" || url.pathname === "/api/ops/coverage-requests") {
+    return opsAdvancedApi.handleCoverageRequests(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-substitution-candidates" || url.pathname === "/api/crm/hr/ops-substitution-candidates" || url.pathname === "/api/hr/ops-substitution-candidates" || url.pathname === "/api/ops/substitution-candidates") {
+    return opsAdvancedApi.handleSubstitutionCandidates(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-coverage-communications" || url.pathname === "/api/crm/hr/ops-coverage-communications" || url.pathname === "/api/hr/ops-coverage-communications" || url.pathname === "/api/ops/coverage-communications") {
+    return opsAdvancedApi.handleCoverageCommunications(req, res);
+  }
+  // OPS-06 passagem posto origem/destino pendências chaves equipamentos ocorrências status aceite/escalonamento
+  if (url.pathname === "/api/admin/hr/ops-handovers" || url.pathname === "/api/crm/hr/ops-handovers" || url.pathname === "/api/hr/ops-handovers" || url.pathname === "/api/ops/handovers") {
+    return opsAdvancedApi.handleHandovers(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-handover-escalations" || url.pathname === "/api/crm/hr/ops-handover-escalations" || url.pathname === "/api/hr/ops-handover-escalations" || url.pathname === "/api/ops/handover-escalations") {
+    return opsAdvancedApi.handleHandoverEscalations(req, res);
+  }
+  // OPS-07 livro ocorrências protocolo categoria/severidade privada retificação histórico imutável evidências proporcionais
+  if (url.pathname === "/api/admin/hr/ops-occurrence-book" || url.pathname === "/api/crm/hr/ops-occurrence-book" || url.pathname === "/api/hr/ops-occurrence-book" || url.pathname === "/api/ops/occurrence-book") {
+    return opsAdvancedApi.handleOccurrenceBook(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-occurrence-evidences" || url.pathname === "/api/crm/hr/ops-occurrence-evidences" || url.pathname === "/api/hr/ops-occurrence-evidences" || url.pathname === "/api/ops/occurrence-evidences") {
+    return opsAdvancedApi.handleOccurrenceEvidences(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-occurrence-actions" || url.pathname === "/api/crm/hr/ops-occurrence-actions" || url.pathname === "/api/hr/ops-occurrence-actions" || url.pathname === "/api/ops/occurrence-actions") {
+    return opsAdvancedApi.handleOccurrenceActions(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-occurrence-history" || url.pathname === "/api/crm/hr/ops-occurrence-history" || url.pathname === "/api/hr/ops-occurrence-history" || url.pathname === "/api/ops/occurrence-history") {
+    return opsAdvancedApi.handleOccurrenceHistory(req, res);
+  }
+  // OPS-08 checklists versão frequência itens obrigatórios evidências proporcionais instâncias
+  if (url.pathname === "/api/admin/hr/ops-checklist-templates" || url.pathname === "/api/crm/hr/ops-checklist-templates" || url.pathname === "/api/hr/ops-checklist-templates" || url.pathname === "/api/ops/checklist-templates") {
+    return opsAdvancedApi.handleChecklistTemplates(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-checklist-instances" || url.pathname === "/api/crm/hr/ops-checklist-instances" || url.pathname === "/api/hr/ops-checklist-instances" || url.pathname === "/api/ops/checklist-instances") {
+    return opsAdvancedApi.handleChecklistInstances(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-checklist-items" || url.pathname === "/api/crm/hr/ops-checklist-items" || url.pathname === "/api/hr/ops-checklist-items" || url.pathname === "/api/ops/checklist-items") {
+    return opsAdvancedApi.handleChecklistItems(req, res);
+  }
+  // OPS-09 visitas supervisão, inspeções e planos ação prazo responsável verificação
+  if (url.pathname === "/api/admin/hr/ops-supervision-visits" || url.pathname === "/api/crm/hr/ops-supervision-visits" || url.pathname === "/api/hr/ops-supervision-visits" || url.pathname === "/api/ops/supervision-visits") {
+    return opsAdvanced2Api.handleSupervisionVisits(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-supervision-inspections" || url.pathname === "/api/crm/hr/ops-supervision-inspections" || url.pathname === "/api/hr/ops-supervision-inspections" || url.pathname === "/api/ops/supervision-inspections") {
+    return opsAdvanced2Api.handleSupervisionInspections(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-supervision-action-plans" || url.pathname === "/api/crm/hr/ops-supervision-action-plans" || url.pathname === "/api/hr/ops-supervision-action-plans" || url.pathname === "/api/ops/supervision-action-plans") {
+    return opsAdvanced2Api.handleSupervisionActionPlans(req, res);
+  }
+  // OPS-10 rondas pontos verificação prevenção replay localização indisponível evidência auditável GPS/QR isolado não prova execução
+  if (url.pathname === "/api/admin/hr/ops-patrols" || url.pathname === "/api/crm/hr/ops-patrols" || url.pathname === "/api/hr/ops-patrols" || url.pathname === "/api/ops/patrols") {
+    return opsAdvanced2Api.handlePatrols(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-patrol-points" || url.pathname === "/api/crm/hr/ops-patrol-points" || url.pathname === "/api/hr/ops-patrol-points" || url.pathname === "/api/ops/patrol-points") {
+    return opsAdvanced2Api.handlePatrolPoints(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-patrol-replay-logs" || url.pathname === "/api/crm/hr/ops-patrol-replay-logs" || url.pathname === "/api/hr/ops-patrol-replay-logs" || url.pathname === "/api/ops/patrol-replay-logs") {
+    return opsAdvanced2Api.handlePatrolReplayLogs(req, res);
+  }
+  // OPS-11 chaves rádios materiais equipamentos guarda transferência devolução
+  if (url.pathname === "/api/admin/hr/ops-keys" || url.pathname === "/api/crm/hr/ops-keys" || url.pathname === "/api/hr/ops-keys" || url.pathname === "/api/ops/keys") {
+    return opsAdvanced2Api.handleKeys(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-key-movements" || url.pathname === "/api/crm/hr/ops-key-movements" || url.pathname === "/api/hr/ops-key-movements" || url.pathname === "/api/ops/key-movements") {
+    return opsAdvanced2Api.handleKeyMovements(req, res);
+  }
+  // OPS-12 relatórios periódicos cliente revisão conteúdo privacidade
+  if (url.pathname === "/api/admin/hr/ops-client-reports" || url.pathname === "/api/crm/hr/ops-client-reports" || url.pathname === "/api/hr/ops-client-reports" || url.pathname === "/api/ops/client-reports") {
+    return opsAdvanced2Api.handleClientReports(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-client-report-attachments" || url.pathname === "/api/crm/hr/ops-client-report-attachments" || url.pathname === "/api/hr/ops-client-report-attachments" || url.pathname === "/api/ops/client-report-attachments") {
+    return opsAdvanced2Api.handleClientReportAttachments(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-client-report-history" || url.pathname === "/api/crm/hr/ops-client-report-history" || url.pathname === "/api/hr/ops-client-report-history" || url.pathname === "/api/ops/client-report-history") {
+    return opsAdvanced2Api.handleClientReportHistory(req, res);
+  }
+  // OPS-13 métricas cobertura tempo descoberto incidentes visitas reincidência fonte janela
+  if (url.pathname === "/api/admin/hr/ops-metrics-definitions" || url.pathname === "/api/crm/hr/ops-metrics-definitions" || url.pathname === "/api/hr/ops-metrics-definitions" || url.pathname === "/api/ops/metrics-definitions") {
+    return opsAdvanced3Api.handleMetricsDefinitions(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-metrics-snapshots" || url.pathname === "/api/crm/hr/ops-metrics-snapshots" || url.pathname === "/api/hr/ops-metrics-snapshots" || url.pathname === "/api/ops/metrics-snapshots") {
+    return opsAdvanced3Api.handleMetricsSnapshots(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-metrics-reincidence" || url.pathname === "/api/crm/hr/ops-metrics-reincidence" || url.pathname === "/api/hr/ops-metrics-reincidence" || url.pathname === "/api/ops/metrics-reincidence") {
+    return opsAdvanced3Api.handleMetricsReincidence(req, res);
+  }
+  // OPS-14 escalas assistidas/automáticas depois regras validadas conflitos motivos revisão humana antes publicar
+  if (url.pathname === "/api/admin/hr/ops-assisted-proposals" || url.pathname === "/api/crm/hr/ops-assisted-proposals" || url.pathname === "/api/hr/ops-assisted-proposals" || url.pathname === "/api/ops/assisted-proposals") {
+    return opsAdvanced3Api.handleAssistedProposals(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-assisted-entries" || url.pathname === "/api/crm/hr/ops-assisted-entries" || url.pathname === "/api/hr/ops-assisted-entries" || url.pathname === "/api/ops/assisted-entries") {
+    return opsAdvanced3Api.handleAssistedEntries(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-assisted-conflicts" || url.pathname === "/api/crm/hr/ops-assisted-conflicts" || url.pathname === "/api/hr/ops-assisted-conflicts" || url.pathname === "/api/ops/assisted-conflicts") {
+    return opsAdvanced3Api.handleAssistedConflicts(req, res);
+  }
+  // OPS-15 supervisão limpeza rotinas por ambiente consumo não conformidades
+  if (url.pathname === "/api/admin/hr/ops-cleaning-environments" || url.pathname === "/api/crm/hr/ops-cleaning-environments" || url.pathname === "/api/hr/ops-cleaning-environments" || url.pathname === "/api/ops/cleaning-environments") {
+    return opsAdvanced3Api.handleCleaningEnvironments(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-cleaning-routines" || url.pathname === "/api/crm/hr/ops-cleaning-routines" || url.pathname === "/api/hr/ops-cleaning-routines" || url.pathname === "/api/ops/cleaning-routines") {
+    return opsAdvanced3Api.handleCleaningRoutines(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-cleaning-executions" || url.pathname === "/api/crm/hr/ops-cleaning-executions" || url.pathname === "/api/hr/ops-cleaning-executions" || url.pathname === "/api/ops/cleaning-executions") {
+    return opsAdvanced3Api.handleCleaningExecutions(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-cleaning-nonconformities" || url.pathname === "/api/crm/hr/ops-cleaning-nonconformities" || url.pathname === "/api/hr/ops-cleaning-nonconformities" || url.pathname === "/api/ops/cleaning-nonconformities") {
+    return opsAdvanced3Api.handleCleaningNonconformities(req, res);
+  }
+  // OPS-16 eventos monitoramento via conector fila reconhecimento escalonamento não é central 24h não armazena vídeo
+  if (url.pathname === "/api/admin/hr/ops-monitoring-connectors" || url.pathname === "/api/crm/hr/ops-monitoring-connectors" || url.pathname === "/api/hr/ops-monitoring-connectors" || url.pathname === "/api/ops/monitoring-connectors") {
+    return opsAdvanced3Api.handleMonitoringConnectors(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-monitoring-events" || url.pathname === "/api/crm/hr/ops-monitoring-events" || url.pathname === "/api/hr/ops-monitoring-events" || url.pathname === "/api/ops/monitoring-events") {
+    return opsAdvanced3Api.handleMonitoringEvents(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-monitoring-event-history" || url.pathname === "/api/crm/hr/ops-monitoring-event-history" || url.pathname === "/api/hr/ops-monitoring-event-history" || url.pathname === "/api/ops/monitoring-event-history") {
+    return opsAdvanced3Api.handleMonitoringEventHistory(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ops-monitoring-escalations" || url.pathname === "/api/crm/hr/ops-monitoring-escalations" || url.pathname === "/api/hr/ops-monitoring-escalations" || url.pathname === "/api/ops/monitoring-escalations") {
+    return opsAdvanced3Api.handleMonitoringEscalations(req, res);
+  }
+  // CLI-01 entrada única e rotas antigas
+  if (url.pathname === "/api/admin/hr/cli-entry-points" || url.pathname === "/api/crm/hr/cli-entry-points" || url.pathname === "/api/hr/cli-entry-points" || url.pathname === "/api/cli/entry-points") {
+    return cliApi.handleEntryPoints(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/cli-old-routes" || url.pathname === "/api/crm/hr/cli-old-routes" || url.pathname === "/api/hr/cli-old-routes" || url.pathname === "/api/cli/old-routes") {
+    return cliApi.handleOldRoutes(req, res);
+  }
+  // CLI-02 contatos e papéis por conta/unidade/contrato delegação autorizada sem ampliação escopo
+  if (url.pathname === "/api/admin/hr/cli-client-contacts" || url.pathname === "/api/crm/hr/cli-client-contacts" || url.pathname === "/api/hr/cli-client-contacts" || url.pathname === "/api/cli/client-contacts") {
+    return cliApi.handleClientContacts(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/cli-contact-scopes" || url.pathname === "/api/crm/hr/cli-contact-scopes" || url.pathname === "/api/hr/cli-contact-scopes" || url.pathname === "/api/cli/contact-scopes") {
+    return cliApi.handleContactScopes(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/cli-contact-delegate" || url.pathname === "/api/crm/hr/cli-contact-delegate" || url.pathname === "/api/hr/cli-contact-delegate" || url.pathname === "/api/cli/contact-delegate") {
+    return cliApi.handleDelegateContact(req, res);
+  }
+  // CLI-03 contratos itens vigência escopo claro conteúdo interno não publicado auto
+  if (url.pathname === "/api/admin/hr/cli-contract-items" || url.pathname === "/api/crm/hr/cli-contract-items" || url.pathname === "/api/hr/cli-contract-items" || url.pathname === "/api/cli/contract-items") {
+    return cliApi.handleContractItems(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/cli-contract-scopes" || url.pathname === "/api/crm/hr/cli-contract-scopes" || url.pathname === "/api/hr/cli-contract-scopes" || url.pathname === "/api/cli/contract-scopes") {
+    return cliApi.handleContractScopes(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/cli-contract-vigencia" || url.pathname === "/api/crm/hr/cli-contract-vigencia" || url.pathname === "/api/hr/cli-contract-vigencia" || url.pathname === "/api/cli/contract-vigencia") {
+    return cliApi.handleContractVigencia(req, res);
+  }
+  // CLI-04 documentos categoria validade versão busca download privado autorização testada todos caminhos
+  if (url.pathname === "/api/admin/hr/cli-document-categories" || url.pathname === "/api/crm/hr/cli-document-categories" || url.pathname === "/api/hr/cli-document-categories" || url.pathname === "/api/cli/document-categories") {
+    return cliApi.handleDocumentCategories(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/cli-client-documents-v2" || url.pathname === "/api/crm/hr/cli-client-documents-v2" || url.pathname === "/api/hr/cli-client-documents-v2" || url.pathname === "/api/cli/client-documents-v2" || url.pathname === "/api/client/documents-v2") {
+    return cliApi.handleClientDocumentsV2(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/cli-document-versions" || url.pathname === "/api/crm/hr/cli-document-versions" || url.pathname === "/api/hr/cli-document-versions" || url.pathname === "/api/cli/document-versions") {
+    return cliApi.handleDocumentVersions(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/cli-document-download" || url.pathname === "/api/crm/hr/cli-document-download" || url.pathname === "/api/hr/cli-document-download" || url.pathname === "/api/cli/document-download" || url.pathname === "/api/client/document-download") {
+    return cliApi.handleDocumentDownload(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/cli-document-access-logs" || url.pathname === "/api/crm/hr/cli-document-access-logs" || url.pathname === "/api/hr/cli-document-access-logs" || url.pathname === "/api/cli/document-access-logs") {
+    return cliApi.handleDocumentAccessLogs(req, res);
+  }
+  // CLI-05/06 chamados protocolo categoria prioridade responsável mensagens anexos SLA histórico estados reabertura motivo pausas SLA explicitamente definidas
+  if (url.pathname === "/api/admin/hr/cli-tickets-v2" || url.pathname === "/api/crm/hr/cli-tickets-v2" || url.pathname === "/api/hr/cli-tickets-v2" || url.pathname === "/api/cli/tickets-v2" || url.pathname === "/api/client/tickets-v2") {
+    return cliAdvancedApi.handleTicketsV2(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/cli-ticket-messages" || url.pathname === "/api/crm/hr/cli-ticket-messages" || url.pathname === "/api/hr/cli-ticket-messages" || url.pathname === "/api/cli/ticket-messages") {
+    return cliAdvancedApi.handleTicketMessages(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/cli-ticket-attachments" || url.pathname === "/api/crm/hr/cli-ticket-attachments" || url.pathname === "/api/hr/cli-ticket-attachments" || url.pathname === "/api/cli/ticket-attachments") {
+    return cliAdvancedApi.handleTicketAttachments(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/cli-ticket-history" || url.pathname === "/api/crm/hr/cli-ticket-history" || url.pathname === "/api/hr/cli-ticket-history" || url.pathname === "/api/cli/ticket-history") {
+    return cliAdvancedApi.handleTicketHistory(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/cli-ticket-sla-pauses" || url.pathname === "/api/crm/hr/cli-ticket-sla-pauses" || url.pathname === "/api/hr/cli-ticket-sla-pauses" || url.pathname === "/api/cli/ticket-sla-pauses") {
+    return cliAdvancedApi.handleTicketSlaPauses(req, res);
+  }
+  // CLI-07 agenda visita/manutenção confirmação reagendamento histórico
+  if (url.pathname === "/api/admin/hr/cli-visits" || url.pathname === "/api/crm/hr/cli-visits" || url.pathname === "/api/hr/cli-visits" || url.pathname === "/api/cli/visits" || url.pathname === "/api/client/visits") {
+    return cliAdvancedApi.handleVisits(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/cli-visit-history" || url.pathname === "/api/crm/hr/cli-visit-history" || url.pathname === "/api/hr/cli-visit-history" || url.pathname === "/api/cli/visit-history") {
+    return cliAdvancedApi.handleVisitHistory(req, res);
+  }
+  // CLI-08 relatórios execução medição/aceite revisão
+  if (url.pathname === "/api/admin/hr/cli-reports-v2" || url.pathname === "/api/crm/hr/cli-reports-v2" || url.pathname === "/api/hr/cli-reports-v2" || url.pathname === "/api/cli/reports-v2" || url.pathname === "/api/client/reports-v2") {
+    return cliAdvancedApi.handleReportsV2(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/cli-report-history-v2" || url.pathname === "/api/crm/hr/cli-report-history-v2" || url.pathname === "/api/hr/cli-report-history-v2" || url.pathname === "/api/cli/report-history-v2") {
+    return cliAdvancedApi.handleReportHistoryV2(req, res);
+  }
+  // CLI-09 cobranças fiscais comprovantes somente quando financeiro integrado dados própria conta
+  if (url.pathname === "/api/admin/hr/cli-charges-v2" || url.pathname === "/api/crm/hr/cli-charges-v2" || url.pathname === "/api/hr/cli-charges-v2" || url.pathname === "/api/cli/charges-v2" || url.pathname === "/api/client/charges-v2") {
+    return cliFinanceApi.handleChargesV2(req, res);
+  }
+  // CLI-10 solicitação serviço adicional gera oportunidade CRM origem responsável
+  if (url.pathname === "/api/admin/hr/cli-service-requests" || url.pathname === "/api/crm/hr/cli-service-requests" || url.pathname === "/api/hr/cli-service-requests" || url.pathname === "/api/cli/service-requests" || url.pathname === "/api/client/service-requests") {
+    return cliFinanceApi.handleServiceRequests(req, res);
+  }
+  // CLI-11 satisfação pós-atendimento periódica plano ação risco renovação baseado em fatos
+  if (url.pathname === "/api/admin/hr/cli-satisfaction-surveys" || url.pathname === "/api/crm/hr/cli-satisfaction-surveys" || url.pathname === "/api/hr/cli-satisfaction-surveys" || url.pathname === "/api/cli/satisfaction-surveys") {
+    return cliFinanceApi.handleSatisfactionSurveys(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/cli-satisfaction-action-plans" || url.pathname === "/api/crm/hr/cli-satisfaction-action-plans" || url.pathname === "/api/hr/cli-satisfaction-action-plans" || url.pathname === "/api/cli/satisfaction-action-plans") {
+    return cliFinanceApi.handleSatisfactionActionPlans(req, res);
+  }
+  // CLI-12 renovação comunicação contratual registro sem bloquear indiscriminadamente portal por inadimplência
+  if (url.pathname === "/api/admin/hr/cli-renewal-communications" || url.pathname === "/api/crm/hr/cli-renewal-communications" || url.pathname === "/api/hr/cli-renewal-communications" || url.pathname === "/api/cli/renewal-communications") {
+    return cliFinanceApi.handleRenewalCommunications(req, res);
+  }
+  // CLI-13 modos convite solicitação com aprovação autocadastro configuráveis vínculo verificado servidor autocadastro nunca libera contratos sozinho
+  if (url.pathname === "/api/admin/hr/cli-portal-mode-configs" || url.pathname === "/api/crm/hr/cli-portal-mode-configs" || url.pathname === "/api/hr/cli-portal-mode-configs" || url.pathname === "/api/cli/portal-mode-configs") {
+    return cliFinanceApi.handlePortalModeConfigs(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/cli-portal-access-requests" || url.pathname === "/api/crm/hr/cli-portal-access-requests" || url.pathname === "/api/hr/cli-portal-access-requests" || url.pathname === "/api/cli/portal-access-requests" || url.pathname === "/api/client/portal-access-requests") {
+    return cliFinanceApi.handlePortalAccessRequests(req, res);
+  }
+  // CLI-14 segurança conta MFA opcional gestão sessões troca e-mail concluída fluxos backend real
+  if (url.pathname === "/api/admin/hr/cli-security-events" || url.pathname === "/api/crm/hr/cli-security-events" || url.pathname === "/api/hr/cli-security-events" || url.pathname === "/api/cli/security-events") {
+    return cliFinanceApi.handleSecurityEvents(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/cli-email-change-requests" || url.pathname === "/api/crm/hr/cli-email-change-requests" || url.pathname === "/api/hr/cli-email-change-requests" || url.pathname === "/api/cli/email-change-requests" || url.pathname === "/api/client/email-change-requests") {
+    return cliFinanceApi.handleEmailChangeRequests(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/cli-sessions" || url.pathname === "/api/crm/hr/cli-sessions" || url.pathname === "/api/hr/cli-sessions" || url.pathname === "/api/cli/sessions") {
+    return cliFinanceApi.handleSessions(req, res);
+  }
+  // FIN-01/02/03/04 contas receber/pagar fornecedores centro custo recorrência idempotente pagamento parcial estorno baixa auditada nunca apagar saldo silenciosa
+  if (url.pathname === "/api/admin/hr/fin-suppliers" || url.pathname === "/api/crm/hr/fin-suppliers" || url.pathname === "/api/hr/fin-suppliers" || url.pathname === "/api/fin/suppliers") {
+    return finApi.handleSuppliers(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-cost-centers" || url.pathname === "/api/crm/hr/fin-cost-centers" || url.pathname === "/api/hr/fin-cost-centers" || url.pathname === "/api/fin/cost-centers") {
+    return finApi.handleCostCenters(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-recurrence-rules" || url.pathname === "/api/crm/hr/fin-recurrence-rules" || url.pathname === "/api/hr/fin-recurrence-rules" || url.pathname === "/api/fin/recurrence-rules") {
+    return finApi.handleRecurrenceRules(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-receivables" || url.pathname === "/api/crm/hr/fin-receivables" || url.pathname === "/api/hr/fin-receivables" || url.pathname === "/api/fin/receivables") {
+    return finApi.handleReceivables(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-payables" || url.pathname === "/api/crm/hr/fin-payables" || url.pathname === "/api/hr/fin-payables" || url.pathname === "/api/fin/payables") {
+    return finApi.handlePayables(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-payments" || url.pathname === "/api/crm/hr/fin-payments" || url.pathname === "/api/hr/fin-payments" || url.pathname === "/api/fin/payments") {
+    return finApi.handlePayments(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-payment-history" || url.pathname === "/api/crm/hr/fin-payment-history" || url.pathname === "/api/hr/fin-payment-history" || url.pathname === "/api/fin/payment-history") {
+    return finApi.handlePaymentHistory(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-attachments" || url.pathname === "/api/crm/hr/fin-attachments" || url.pathname === "/api/hr/fin-attachments" || url.pathname === "/api/fin/attachments") {
+    return finApi.handleAttachments(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-generate-recurring" || url.pathname === "/api/crm/hr/fin-generate-recurring" || url.pathname === "/api/hr/fin-generate-recurring" || url.pathname === "/api/fin/generate-recurring") {
+    return finApi.handleGenerateRecurring(req, res);
+  }
+  // FIN-05 conciliação bancária importação/extrato/provedor sugestão/confirmação evitar duplicar UNIQUE(receivable,bank) e bank_ref
+  if (url.pathname === "/api/admin/hr/fin-bank-statements" || url.pathname === "/api/crm/hr/fin-bank-statements" || url.pathname === "/api/hr/fin-bank-statements" || url.pathname === "/api/fin/bank-statements") {
+    return finAdvancedApi.handleBankStatements(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-bank-transactions" || url.pathname === "/api/crm/hr/fin-bank-transactions" || url.pathname === "/api/hr/fin-bank-transactions" || url.pathname === "/api/fin/bank-transactions") {
+    return finAdvancedApi.handleBankTransactions(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-conciliations" || url.pathname === "/api/crm/hr/fin-conciliations" || url.pathname === "/api/hr/fin-conciliations" || url.pathname === "/api/fin/conciliations") {
+    return finAdvancedApi.handleConciliations(req, res);
+  }
+  // FIN-06 política cobrança responsável lembretes sem mensagens reais sem bloqueio automático histórico imutável
+  if (url.pathname === "/api/admin/hr/fin-collection-policies" || url.pathname === "/api/crm/hr/fin-collection-policies" || url.pathname === "/api/hr/fin-collection-policies" || url.pathname === "/api/fin/collection-policies") {
+    return finAdvancedApi.handleCollectionPolicies(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-collection-reminders" || url.pathname === "/api/crm/hr/fin-collection-reminders" || url.pathname === "/api/hr/fin-collection-reminders" || url.pathname === "/api/fin/collection-reminders") {
+    return finAdvancedApi.handleCollectionReminders(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-collection-history" || url.pathname === "/api/crm/hr/fin-collection-history" || url.pathname === "/api/hr/fin-collection-history" || url.pathname === "/api/fin/collection-history") {
+    return finAdvancedApi.handleCollectionHistory(req, res);
+  }
+  // FIN-07 fluxo caixa previsto/realizado saldo vencidos próximos aging bucket
+  if (url.pathname === "/api/admin/hr/fin-cashflow-snapshots" || url.pathname === "/api/crm/hr/fin-cashflow-snapshots" || url.pathname === "/api/hr/fin-cashflow-snapshots" || url.pathname === "/api/fin/cashflow-snapshots") {
+    return finAdvancedApi.handleCashflowSnapshots(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-aging-receivables" || url.pathname === "/api/crm/hr/fin-aging-receivables" || url.pathname === "/api/hr/fin-aging-receivables" || url.pathname === "/api/fin/aging-receivables") {
+    return finAdvancedApi.handleAgingReceivables(req, res);
+  }
+  // FIN-08 custo por cliente/contrato/posto importação custos pessoal/equipamento/material/supervisão rateio documentado
+  if (url.pathname === "/api/admin/hr/fin-cost-imports" || url.pathname === "/api/crm/hr/fin-cost-imports" || url.pathname === "/api/hr/fin-cost-imports" || url.pathname === "/api/fin/cost-imports") {
+    return finAdvancedApi.handleCostImports(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-costs" || url.pathname === "/api/crm/hr/fin-costs" || url.pathname === "/api/hr/fin-costs" || url.pathname === "/api/fin/costs") {
+    return finAdvancedApi.handleCosts(req, res);
+  }
+  // FIN-09 resultado gerencial por contrato receita contratada faturada recebida custos caixa margem sem dados completos exibida como incompleta
+  if (url.pathname === "/api/admin/hr/fin-management-results" || url.pathname === "/api/crm/hr/fin-management-results" || url.pathname === "/api/hr/fin-management-results" || url.pathname === "/api/fin/management-results") {
+    return finManagementApi.handleManagementResults(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-result-history" || url.pathname === "/api/crm/hr/fin-result-history" || url.pathname === "/api/hr/fin-result-history" || url.pathname === "/api/fin/result-history") {
+    return finManagementApi.handleResultHistory(req, res);
+  }
+  // FIN-10 despesas/reembolsos compras alçada evidência segregação solicitar/aprovar
+  if (url.pathname === "/api/admin/hr/fin-expenses" || url.pathname === "/api/crm/hr/fin-expenses" || url.pathname === "/api/hr/fin-expenses" || url.pathname === "/api/fin/expenses") {
+    return finManagementApi.handleExpenses(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-expense-history" || url.pathname === "/api/crm/hr/fin-expense-history" || url.pathname === "/api/hr/fin-expense-history" || url.pathname === "/api/fin/expense-history") {
+    return finManagementApi.handleExpenseHistory(req, res);
+  }
+  // FIN-11 integração contábil/fiscal provedor determinar NFS-e/NF-e ou outra obrigação conforme atividade sem assumir uma nota para tudo
+  if (url.pathname === "/api/admin/hr/fin-fiscal-providers" || url.pathname === "/api/crm/hr/fin-fiscal-providers" || url.pathname === "/api/hr/fin-fiscal-providers" || url.pathname === "/api/fin/fiscal-providers") {
+    return finManagementApi.handleFiscalProviders(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-fiscal-obligations" || url.pathname === "/api/crm/hr/fin-fiscal-obligations" || url.pathname === "/api/hr/fin-fiscal-obligations" || url.pathname === "/api/fin/fiscal-obligations") {
+    return finManagementApi.handleFiscalObligations(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-fiscal-documents" || url.pathname === "/api/crm/hr/fin-fiscal-documents" || url.pathname === "/api/hr/fin-fiscal-documents" || url.pathname === "/api/fin/fiscal-documents") {
+    return finManagementApi.handleFiscalDocuments(req, res);
+  }
+  // FIN-12 boletos/Pix/gateway somente após seleção e sandbox validar assinatura webhook replay idempotência conciliação sem cobrança real em testes
+  if (url.pathname === "/api/admin/hr/fin-payment-gateways" || url.pathname === "/api/crm/hr/fin-payment-gateways" || url.pathname === "/api/hr/fin-payment-gateways" || url.pathname === "/api/fin/payment-gateways") {
+    return finManagementApi.handleGateways(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-gateway-webhooks" || url.pathname === "/api/crm/hr/fin-gateway-webhooks" || url.pathname === "/api/hr/fin-gateway-webhooks" || url.pathname === "/api/fin/gateway-webhooks") {
+    return finManagementApi.handleWebhooks(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-gateway-charges" || url.pathname === "/api/crm/hr/fin-gateway-charges" || url.pathname === "/api/hr/fin-gateway-charges" || url.pathname === "/api/fin/gateway-charges") {
+    return finManagementApi.handleCharges(req, res);
+  }
+  // FIN-13 orçamento gerencial e cenários de expansão com premissas explícitas não prometer resultado
+  if (url.pathname === "/api/admin/hr/fin-budgets" || url.pathname === "/api/crm/hr/fin-budgets" || url.pathname === "/api/hr/fin-budgets" || url.pathname === "/api/fin/budgets") {
+    return finBudgetApi.handleBudgets(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-budget-scenarios" || url.pathname === "/api/crm/hr/fin-budget-scenarios" || url.pathname === "/api/hr/fin-budget-scenarios" || url.pathname === "/api/fin/budget-scenarios") {
+    return finBudgetApi.handleBudgetScenarios(req, res);
+  }
+  // FIN-14 exportação do período com trilha filtros totais conciliáveis e acesso limitado do contador
+  if (url.pathname === "/api/admin/hr/fin-exports" || url.pathname === "/api/crm/hr/fin-exports" || url.pathname === "/api/hr/fin-exports" || url.pathname === "/api/fin/exports") {
+    return finBudgetApi.handleExports(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-export-logs" || url.pathname === "/api/crm/hr/fin-export-logs" || url.pathname === "/api/hr/fin-export-logs" || url.pathname === "/api/fin/export-logs") {
+    return finBudgetApi.handleExportLogs(req, res);
+  }
+  // FIN-15 fechamento de competência e reabertura autorizada preservar versões de relatório
+  if (url.pathname === "/api/admin/hr/fin-competence-closures" || url.pathname === "/api/crm/hr/fin-competence-closures" || url.pathname === "/api/hr/fin-competence-closures" || url.pathname === "/api/fin/competence-closures") {
+    return finBudgetApi.handleClosures(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-report-versions" || url.pathname === "/api/crm/hr/fin-report-versions" || url.pathname === "/api/hr/fin-report-versions" || url.pathname === "/api/fin/report-versions") {
+    return finBudgetApi.handleReportVersions(req, res);
+  }
+  // FIN-16 comissões ligadas à regra CRM-25 provisão e revisão não pagar automaticamente
+  if (url.pathname === "/api/admin/hr/fin-commission-provisions" || url.pathname === "/api/crm/hr/fin-commission-provisions" || url.pathname === "/api/hr/fin-commission-provisions" || url.pathname === "/api/fin/commission-provisions") {
+    return finBudgetApi.handleCommissionProvisions(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-commission-provision-history" || url.pathname === "/api/crm/hr/fin-commission-provision-history" || url.pathname === "/api/hr/fin-commission-provision-history" || url.pathname === "/api/fin/commission-provision-history") {
+    return finBudgetApi.handleCommissionProvisionHistory(req, res);
+  }
+  // ADM-01 painel meu dia com pendências reais prioridade responsável e ação
+  if (url.pathname === "/api/admin/hr/adm-my-day" || url.pathname === "/api/crm/hr/adm-my-day" || url.pathname === "/api/hr/adm-my-day" || url.pathname === "/api/adm/my-day") {
+    return admApi.handleMyDay(req, res);
+  }
+  // ADM-02 visão comercial leads novos oportunidades paradas propostas próximas ações
+  if (url.pathname === "/api/admin/hr/adm-commercial-snapshots" || url.pathname === "/api/crm/hr/adm-commercial-snapshots" || url.pathname === "/api/hr/adm-commercial-snapshots" || url.pathname === "/api/adm/commercial-snapshots") {
+    return admApi.handleCommercialSnapshots(req, res);
+  }
+  // ADM-03 visão operacional cobertura ocorrências críticas SLA implantação
+  if (url.pathname === "/api/admin/hr/adm-operational-snapshots" || url.pathname === "/api/crm/hr/adm-operational-snapshots" || url.pathname === "/api/hr/adm-operational-snapshots" || url.pathname === "/api/adm/operational-snapshots") {
+    return admApi.handleOperationalSnapshots(req, res);
+  }
+  // ADM-04 visão financeira fonte competência saldo vencimentos margem por contrato
+  if (url.pathname === "/api/admin/hr/adm-financial-snapshots" || url.pathname === "/api/crm/hr/adm-financial-snapshots" || url.pathname === "/api/hr/adm-financial-snapshots" || url.pathname === "/api/adm/financial-snapshots") {
+    return admApi.handleFinancialSnapshots(req, res);
+  }
+  // ADM-05 contratos próximos de renovar reclamações reincidentes risco de perda justificado
+  if (url.pathname === "/api/admin/hr/adm-renewal-risks" || url.pathname === "/api/crm/hr/adm-renewal-risks" || url.pathname === "/api/hr/adm-renewal-risks" || url.pathname === "/api/adm/renewal-risks") {
+    return admApi.handleRenewalRisks(req, res);
+  }
+  // ADM-06 aprovação unificada descontos compras despesas exceções alçadas por valor/escopo
+  if (url.pathname === "/api/admin/hr/adm-approvals" || url.pathname === "/api/crm/hr/adm-approvals" || url.pathname === "/api/hr/adm-approvals" || url.pathname === "/api/adm/approvals") {
+    return admApi.handleApprovals(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/adm-approval-history" || url.pathname === "/api/crm/hr/adm-approval-history" || url.pathname === "/api/hr/adm-approval-history" || url.pathname === "/api/adm/approval-history") {
+    return admApi.handleApprovalHistory(req, res);
+  }
+  // ADM-07 busca autorizada favoritos filtros salvos atalhos com contexto
+  if (url.pathname === "/api/admin/hr/adm-search-favorites" || url.pathname === "/api/crm/hr/adm-search-favorites" || url.pathname === "/api/hr/adm-search-favorites" || url.pathname === "/api/adm/search-favorites") {
+    return admAdvancedApi.handleSearchFavorites(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/adm-saved-filters" || url.pathname === "/api/crm/hr/adm-saved-filters" || url.pathname === "/api/hr/adm-saved-filters" || url.pathname === "/api/adm/saved-filters") {
+    return admAdvancedApi.handleSavedFilters(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/adm-shortcuts" || url.pathname === "/api/crm/hr/adm-shortcuts" || url.pathname === "/api/hr/adm-shortcuts" || url.pathname === "/api/adm/shortcuts") {
+    return admAdvancedApi.handleShortcuts(req, res);
+  }
+  // ADM-08 relatórios exportáveis e agendados destinatários autorizados registrar geração/envio limitar dados
+  if (url.pathname === "/api/admin/hr/adm-reports" || url.pathname === "/api/crm/hr/adm-reports" || url.pathname === "/api/hr/adm-reports" || url.pathname === "/api/adm/reports") {
+    return admAdvancedApi.handleReports(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/adm-report-logs" || url.pathname === "/api/crm/hr/adm-report-logs" || url.pathname === "/api/hr/adm-report-logs" || url.pathname === "/api/adm/report-logs") {
+    return admAdvancedApi.handleReportLogs(req, res);
+  }
+  // ADM-09 configurações de negócio versionadas catálogo preços alçadas conteúdo SLA preferências
+  if (url.pathname === "/api/admin/hr/adm-business-configs" || url.pathname === "/api/crm/hr/adm-business-configs" || url.pathname === "/api/hr/adm-business-configs" || url.pathname === "/api/adm/business-configs") {
+    return admAdvancedApi.handleBusinessConfigs(req, res);
+  }
+  // ADM-10 metas e cenários comparação prevista/realizada sem confundir estimativa com resultado
+  if (url.pathname === "/api/admin/hr/adm-goals-comparison" || url.pathname === "/api/crm/hr/adm-goals-comparison" || url.pathname === "/api/hr/adm-goals-comparison" || url.pathname === "/api/adm/goals-comparison") {
+    return admAdvancedApi.handleGoalsComparison(req, res);
+  }
+  // ADM-11 trilha e diário de decisões CON-11 acessíveis conforme permissão
+  if (url.pathname === "/api/admin/hr/adm-management-diary-access" || url.pathname === "/api/crm/hr/adm-management-diary-access" || url.pathname === "/api/hr/adm-management-diary-access" || url.pathname === "/api/adm/management-diary-access") {
+    return admAdvancedApi.handleDiaryAccess(req, res);
+  }
+  // ADM-12 análises de expansão qualidade e oportunidades adicionais alimentadas pelos módulos reais
+  if (url.pathname === "/api/admin/hr/adm-expansion-analyses" || url.pathname === "/api/crm/hr/adm-expansion-analyses" || url.pathname === "/api/hr/adm-expansion-analyses" || url.pathname === "/api/adm/expansion-analyses") {
+    return admAdvancedApi.handleExpansionAnalyses(req, res);
+  }
+  // AST-01 produtos/SKU fornecedores unidade medida custo local estoque mínimo
+  if (url.pathname === "/api/admin/hr/ast-suppliers" || url.pathname === "/api/crm/hr/ast-suppliers" || url.pathname === "/api/hr/ast-suppliers" || url.pathname === "/api/ast/suppliers") {
+    return astApi.handleSuppliers(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ast-products" || url.pathname === "/api/crm/hr/ast-products" || url.pathname === "/api/hr/ast-products" || url.pathname === "/api/ast/products") {
+    return astApi.handleProducts(req, res);
+  }
+  // AST-02 entradas/saídas/transferências/ajustes histórico saldo derivado movimentos consistentes
+  if (url.pathname === "/api/admin/hr/ast-stock-movements" || url.pathname === "/api/crm/hr/ast-stock-movements" || url.pathname === "/api/hr/ast-stock-movements" || url.pathname === "/api/ast/stock-movements") {
+    return astApi.handleStockMovements(req, res);
+  }
+  // AST-03 reserva para proposta/implantação sem confundir reserva com saída liberação cancelamento
+  if (url.pathname === "/api/admin/hr/ast-reservations" || url.pathname === "/api/crm/hr/ast-reservations" || url.pathname === "/api/hr/ast-reservations" || url.pathname === "/api/ast/reservations") {
+    return astApi.handleReservations(req, res);
+  }
+  // AST-04 equipamentos serializados por cliente/posto/colaborador proprietário garantia manutenção termo guarda
+  if (url.pathname === "/api/admin/hr/ast-serialized-assets" || url.pathname === "/api/crm/hr/ast-serialized-assets" || url.pathname === "/api/hr/ast-serialized-assets" || url.pathname === "/api/ast/serialized-assets") {
+    return astApi.handleSerializedAssets(req, res);
+  }
+  // AST-05 entrega/devolução avaria/perda fotos pertinentes conferência
+  if (url.pathname === "/api/admin/hr/ast-deliveries" || url.pathname === "/api/crm/hr/ast-deliveries" || url.pathname === "/api/hr/ast-deliveries" || url.pathname === "/api/ast/deliveries") {
+    return astApi.handleDeliveries(req, res);
+  }
+  // AST-06 requisição cotação seleção aprovação pedido recebimento vínculo conta a pagar
+  if (url.pathname === "/api/admin/hr/ast-requisitions" || url.pathname === "/api/crm/hr/ast-requisitions" || url.pathname === "/api/hr/ast-requisitions" || url.pathname === "/api/ast/requisitions") {
+    return astApi.handleRequisitions(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ast-quotations" || url.pathname === "/api/crm/hr/ast-quotations" || url.pathname === "/api/hr/ast-quotations" || url.pathname === "/api/ast/quotations") {
+    return astApi.handleQuotations(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ast-purchase-orders" || url.pathname === "/api/crm/hr/ast-purchase-orders" || url.pathname === "/api/hr/ast-purchase-orders" || url.pathname === "/api/ast/purchase-orders") {
+    return astApi.handlePurchaseOrders(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ast-requisition-history" || url.pathname === "/api/crm/hr/ast-requisition-history" || url.pathname === "/api/hr/ast-requisition-history" || url.pathname === "/api/ast/requisition-history") {
+    return astApi.handleRequisitionHistory(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ast-order-history" || url.pathname === "/api/crm/hr/ast-order-history" || url.pathname === "/api/hr/ast-order-history" || url.pathname === "/api/ast/order-history") {
+    return astApi.handleOrderHistory(req, res);
+  }
+  // AST-07 inventário físico divergências ajuste aprovado
+  if (url.pathname === "/api/admin/hr/ast-inventories" || url.pathname === "/api/crm/hr/ast-inventories" || url.pathname === "/api/hr/ast-inventories" || url.pathname === "/api/ast/inventories") {
+    return astAdvancedApi.handleInventories(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ast-inventory-items" || url.pathname === "/api/crm/hr/ast-inventory-items" || url.pathname === "/api/hr/ast-inventory-items" || url.pathname === "/api/ast/inventory-items") {
+    return astAdvancedApi.handleInventoryItems(req, res);
+  }
+  // AST-08 ordem serviço solicitante contrato técnico agenda diagnóstico checklist peças execução
+  if (url.pathname === "/api/admin/hr/ast-service-orders" || url.pathname === "/api/crm/hr/ast-service-orders" || url.pathname === "/api/hr/ast-service-orders" || url.pathname === "/api/ast/service-orders") {
+    return astAdvancedApi.handleServiceOrders(req, res);
+  }
+  // AST-09 evidências antes/depois aceite garantia retorno custo acesso cliente somente aprovado
+  if (url.pathname === "/api/admin/hr/ast-service-order-evidences" || url.pathname === "/api/crm/hr/ast-service-order-evidences" || url.pathname === "/api/hr/ast-service-order-evidences" || url.pathname === "/api/ast/service-order-evidences") {
+    return astAdvancedApi.handleServiceOrderEvidences(req, res);
+  }
+  // AST-10 manutenção preventiva/corretiva periodicidade alerta próxima visita histórico por ativo
+  if (url.pathname === "/api/admin/hr/ast-maintenance-plans" || url.pathname === "/api/crm/hr/ast-maintenance-plans" || url.pathname === "/api/hr/ast-maintenance-plans" || url.pathname === "/api/ast/maintenance-plans") {
+    return astAdvancedApi.handleMaintenancePlans(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ast-maintenance-executions" || url.pathname === "/api/crm/hr/ast-maintenance-executions" || url.pathname === "/api/hr/ast-maintenance-executions" || url.pathname === "/api/ast/maintenance-executions") {
+    return astAdvancedApi.handleMaintenanceExecutions(req, res);
+  }
+  // AST-11 dossiê técnico CFTV modelos localização autorizada garantia documentação senhas fora cadastro/log comum
+  if (url.pathname === "/api/admin/hr/ast-cftv-dossiers" || url.pathname === "/api/crm/hr/ast-cftv-dossiers" || url.pathname === "/api/hr/ast-cftv-dossiers" || url.pathname === "/api/ast/cftv-dossiers") {
+    return astAdvancedApi.handleCftvDossiers(req, res);
+  }
+  // AST-12 materiais limpeza consumo por local reposição comparação previsto
+  if (url.pathname === "/api/admin/hr/ast-cleaning-materials" || url.pathname === "/api/crm/hr/ast-cleaning-materials" || url.pathname === "/api/hr/ast-cleaning-materials" || url.pathname === "/api/ast/cleaning-materials") {
+    return astAdvancedApi.handleCleaningMaterials(req, res);
+  }
+  // EXT-01 frota própria existir histórico/custo por veículo alerta manutenção
+  if (url.pathname === "/api/admin/hr/ext-fleet-vehicles" || url.pathname === "/api/crm/hr/ext-fleet-vehicles" || url.pathname === "/api/hr/ext-fleet-vehicles" || url.pathname === "/api/ext/fleet-vehicles") {
+    return extApi.handleFleetVehicles(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ext-fleet-fuel-logs" || url.pathname === "/api/crm/hr/ext-fleet-fuel-logs" || url.pathname === "/api/hr/ext-fleet-fuel-logs" || url.pathname === "/api/ext/fleet-fuel-logs") {
+    return extApi.handleFleetFuelLogs(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ext-fleet-maintenance-logs" || url.pathname === "/api/crm/hr/ext-fleet-maintenance-logs" || url.pathname === "/api/hr/ext-fleet-maintenance-logs" || url.pathname === "/api/ext/fleet-maintenance-logs") {
+    return extApi.handleFleetMaintenanceLogs(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ext-fleet-documents" || url.pathname === "/api/crm/hr/ext-fleet-documents" || url.pathname === "/api/hr/ext-fleet-documents" || url.pathname === "/api/ext/fleet-documents") {
+    return extApi.handleFleetDocuments(req, res);
+  }
+  // EXT-02 terceiros acessam só OS/contrato autorizado perdem acesso ao término
+  if (url.pathname === "/api/admin/hr/ext-third-parties" || url.pathname === "/api/crm/hr/ext-third-parties" || url.pathname === "/api/hr/ext-third-parties" || url.pathname === "/api/ext/third-parties") {
+    return extApi.handleThirdParties(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ext-third-party-documents" || url.pathname === "/api/crm/hr/ext-third-party-documents" || url.pathname === "/api/hr/ext-third-party-documents" || url.pathname === "/api/ext/third-party-documents") {
+    return extApi.handleThirdPartyDocuments(req, res);
+  }
+  // EXT-03 licitações checklist alerta por edital dossiê versionado
+  if (url.pathname === "/api/admin/hr/ext-bidding-notices" || url.pathname === "/api/crm/hr/ext-bidding-notices" || url.pathname === "/api/hr/ext-bidding-notices" || url.pathname === "/api/ext/bidding-notices") {
+    return extApi.handleBiddingNotices(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ext-bidding-documents" || url.pathname === "/api/crm/hr/ext-bidding-documents" || url.pathname === "/api/hr/ext-bidding-documents" || url.pathname === "/api/ext/bidding-documents") {
+    return extApi.handleBiddingDocuments(req, res);
+  }
+  // EXT-04 portal fornecedores fornecedor não vê concorrente nem dados de RH
+  if (url.pathname === "/api/admin/hr/ext-supplier-portal-quotations" || url.pathname === "/api/crm/hr/ext-supplier-portal-quotations" || url.pathname === "/api/hr/ext-supplier-portal-quotations" || url.pathname === "/api/ext/supplier-portal-quotations") {
+    return extApi.handleSupplierPortalQuotations(req, res);
+  }
+  // EXT-05 qualidade encerrar apenas com evidência e responsável
+  if (url.pathname === "/api/admin/hr/ext-quality-nonconformities" || url.pathname === "/api/crm/hr/ext-quality-nonconformities" || url.pathname === "/api/hr/ext-quality-nonconformities" || url.pathname === "/api/ext/quality-nonconformities") {
+    return extApi.handleQualityNonconformities(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ext-quality-actions" || url.pathname === "/api/crm/hr/ext-quality-actions" || url.pathname === "/api/hr/ext-quality-actions" || url.pathname === "/api/ext/quality-actions") {
+    return extApi.handleQualityActions(req, res);
+  }
+  // EXT-06 satisfação resposta gera acompanhamento sem expor funcionário
+  if (url.pathname === "/api/admin/hr/ext-satisfaction-surveys" || url.pathname === "/api/crm/hr/ext-satisfaction-surveys" || url.pathname === "/api/hr/ext-satisfaction-surveys" || url.pathname === "/api/ext/satisfaction-surveys") {
+    return extApi.handleSatisfactionSurveys(req, res);
+  }
+  // EXT-07 compliance vencimento gera tarefa documento privado
+  if (url.pathname === "/api/admin/hr/ext-compliance-documents" || url.pathname === "/api/crm/hr/ext-compliance-documents" || url.pathname === "/api/hr/ext-compliance-documents" || url.pathname === "/api/ext/compliance-documents") {
+    return extAdvancedApi.handleComplianceDocuments(req, res);
+  }
+  // EXT-08 base conhecimento procedimentos versionados busca acesso ciência usuário encontra apenas conteúdo de seu escopo
+  if (url.pathname === "/api/admin/hr/ext-knowledge-base" || url.pathname === "/api/crm/hr/ext-knowledge-base" || url.pathname === "/api/hr/ext-knowledge-base" || url.pathname === "/api/ext/knowledge-base") {
+    return extAdvancedApi.handleKnowledgeBase(req, res);
+  }
+  // EXT-09 expansão premissas e fonte visíveis sem projeção vendida como certeza
+  if (url.pathname === "/api/admin/hr/ext-expansion-plans" || url.pathname === "/api/crm/hr/ext-expansion-plans" || url.pathname === "/api/hr/ext-expansion-plans" || url.pathname === "/api/ext/expansion-plans") {
+    return extAdvancedApi.handleExpansionPlans(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ext-expansion-scenarios" || url.pathname === "/api/crm/hr/ext-expansion-scenarios" || url.pathname === "/api/hr/ext-expansion-scenarios" || url.pathname === "/api/ext/expansion-scenarios") {
+    return extAdvancedApi.handleExpansionScenarios(req, res);
+  }
+  // EXT-10 continuidade operacional simulado documentado com responsáveis
+  if (url.pathname === "/api/admin/hr/ext-continuity-plans" || url.pathname === "/api/crm/hr/ext-continuity-plans" || url.pathname === "/api/hr/ext-continuity-plans" || url.pathname === "/api/ext/continuity-plans") {
+    return extAdvancedApi.handleContinuityPlans(req, res);
+  }
+  // EXT-11 analytics A/B experimento reversível resultado sem dados inventados
+  if (url.pathname === "/api/admin/hr/ext-analytics-experiments" || url.pathname === "/api/crm/hr/ext-analytics-experiments" || url.pathname === "/api/hr/ext-analytics-experiments" || url.pathname === "/api/ext/analytics-experiments") {
+    return extAdvancedApi.handleAnalyticsExperiments(req, res);
+  }
+  // EXT-12 editor visual avançado permissão real recarga consistente e rollback
+  if (url.pathname === "/api/admin/hr/ext-visual-tokens" || url.pathname === "/api/crm/hr/ext-visual-tokens" || url.pathname === "/api/hr/ext-visual-tokens" || url.pathname === "/api/ext/visual-tokens") {
+    return extAdvancedApi.handleVisualTokens(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ext-visual-layouts" || url.pathname === "/api/crm/hr/ext-visual-layouts" || url.pathname === "/api/hr/ext-visual-layouts" || url.pathname === "/api/ext/visual-layouts") {
+    return extAdvancedApi.handleVisualLayouts(req, res);
+  }
+  // EXT-13 relatório programado gerado apenas de dados reais escopo cliente autorizado sem dado inventado sem dado não autorizado
+  if (url.pathname === "/api/admin/hr/ext-periodic-reports" || url.pathname === "/api/crm/hr/ext-periodic-reports" || url.pathname === "/api/hr/ext-periodic-reports" || url.pathname === "/api/ext/periodic-reports") {
+    return extReportingApi.handlePeriodicReports(req, res);
+  }
+  // EXT-14 inteligência comercial justificativa obrigatória uso bloqueado sem aprovação humana
+  if (url.pathname === "/api/admin/hr/ext-commercial-intelligence" || url.pathname === "/api/crm/hr/ext-commercial-intelligence" || url.pathname === "/api/hr/ext-commercial-intelligence" || url.pathname === "/api/ext/commercial-intelligence") {
+    return extReportingApi.handleCommercialIntelligence(req, res);
+  }
+  // EXT-15 emergencial apoio testar recebimento e atendimento antes disponibilizar
+  if (url.pathname === "/api/admin/hr/ext-emergency-channels" || url.pathname === "/api/crm/hr/ext-emergency-channels" || url.pathname === "/api/hr/ext-emergency-channels" || url.pathname === "/api/ext/emergency-channels") {
+    return extReportingApi.handleEmergencyChannels(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ext-emergency-tests" || url.pathname === "/api/crm/hr/ext-emergency-tests" || url.pathname === "/api/hr/ext-emergency-tests" || url.pathname === "/api/ext/emergency-tests") {
+    return extReportingApi.handleEmergencyTests(req, res);
+  }
+  // EXT-16 central monitoramento/vídeo projeto separado privacidade aprovada antes implantação
+  if (url.pathname === "/api/admin/hr/ext-central-projects" || url.pathname === "/api/crm/hr/ext-central-projects" || url.pathname === "/api/hr/ext-central-projects" || url.pathname === "/api/ext/central-projects") {
+    return extReportingApi.handleCentralProjects(req, res);
+  }
+  // EXT-17 biometria facial projeto separado privacidade aprovada não coletar por padrão
+  if (url.pathname === "/api/admin/hr/ext-biometry-projects" || url.pathname === "/api/crm/hr/ext-biometry-projects" || url.pathname === "/api/hr/ext-biometry-projects" || url.pathname === "/api/ext/biometry-projects") {
+    return extReportingApi.handleBiometryProjects(req, res);
+  }
+  // AI-10 automação determinística vencimentos distribuição tarefas cobrança interna antes agentes autônomos AI-01..09 desligado
+  if (url.pathname === "/api/admin/hr/ext-ai-automations" || url.pathname === "/api/crm/hr/ext-ai-automations" || url.pathname === "/api/hr/ext-ai-automations" || url.pathname === "/api/ext/ai-automations" || url.pathname === "/api/ai/automations") {
+    return extReportingApi.handleAiAutomations(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/ext-ai-automation-logs" || url.pathname === "/api/crm/hr/ext-ai-automation-logs" || url.pathname === "/api/hr/ext-ai-automation-logs" || url.pathname === "/api/ext/ai-automation-logs" || url.pathname === "/api/ai/automation-logs") {
+    return extReportingApi.handleAiAutomationLogs(req, res);
+  }
+  // PUB-06 CMS páginas FAQ cases blog vagas rascunho/revisão/publicação histórico reversão
+  if (url.pathname === "/api/admin/cms-contents" || url.pathname === "/api/cms-contents" || url.pathname === "/api/public/cms-contents") {
+    return cmsApi.handleContents(req, res);
+  }
+  const cmsContentByIdMatch = url.pathname.match(/^\/api\/admin\/cms-contents\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/cms-contents\/([0-9a-f-]{36})$/i);
+  if (cmsContentByIdMatch) return cmsApi.handleContentById(req, res, cmsContentByIdMatch[1]);
+  if (url.pathname === "/api/admin/cms-contents/revert" || url.pathname === "/api/cms-contents/revert") {
+    return cmsApi.handleRevert(req, res);
+  }
+  // public CMS published only
+  if (url.pathname === "/api/cms" || url.pathname === "/api/public/cms" || url.pathname === "/api/seo/cms") {
+    return cmsApi.handleContents(req, res);
+  }
+  // PUB-07 temas preview publicação autorizada rollback preferência dia/noite separada
+  if (url.pathname === "/api/admin/themes" || url.pathname === "/api/themes" || url.pathname === "/api/public/themes") {
+    return themeApi.handleThemes(req, res);
+  }
+  const themeByIdMatch = url.pathname.match(/^\/api\/admin\/themes\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/themes\/([0-9a-f-]{36})$/i);
+  if (themeByIdMatch) return themeApi.handleThemeById(req, res, themeByIdMatch[1]);
+  if (url.pathname === "/api/admin/theme-previews" || url.pathname === "/api/themes/preview" || url.pathname === "/api/public/theme-previews" || url.pathname.startsWith("/api/theme-previews")) {
+    return themeApi.handlePreview(req, res);
+  }
+  if (url.pathname === "/api/admin/theme-preferences" || url.pathname === "/api/theme-preferences" || url.pathname === "/api/public/theme-preferences") {
+    return themeApi.handlePreferences(req, res);
+  }
+  if (url.pathname === "/api/admin/themes/rollback" || url.pathname === "/api/themes/rollback") {
+    return themeApi.handleRollback(req, res);
+  }
+  // PUB-08 SEO técnico títulos sitemap redirects verificação domínio noindex preservado
+  if (url.pathname === "/api/admin/seo-configs" || url.pathname === "/api/seo-configs" || url.pathname === "/api/seo") {
+    return seoApi.handleConfigs(req, res);
+  }
+  if (url.pathname === "/api/admin/seo-redirects" || url.pathname === "/api/seo-redirects") {
+    return seoApi.handleRedirects(req, res);
+  }
+  if (url.pathname === "/api/admin/seo-sitemap" || url.pathname === "/api/seo-sitemap" || url.pathname === "/api/sitemap" || url.pathname.endsWith("sitemap.xml")) {
+    return seoApi.handleSitemap(req, res);
+  }
+  if (url.pathname === "/api/admin/domain-verifications" || url.pathname === "/api/domain-verifications" || url.pathname === "/api/seo/domain-verifications") {
+    return seoApi.handleDomainVerification(req, res);
+  }
+  // PUB-09 montador pacote comparador serviços e planos somente catálogo e regras aprovadas
+  if (url.pathname === "/api/admin/package-rules" || url.pathname === "/api/package-rules") {
+    return packageApi.handleRules(req, res);
+  }
+  if (url.pathname === "/api/admin/service-packages" || url.pathname === "/api/service-packages" || url.pathname === "/api/packages" || url.pathname === "/api/public/packages") {
+    return packageApi.handlePackages(req, res);
+  }
+  if (url.pathname === "/api/admin/package-comparisons" || url.pathname === "/api/package-comparisons") {
+    return packageApi.handleComparisons(req, res);
+  }
+  // PUB-10 mensuração origem conversão A/B testes minimização dados
+  if (url.pathname === "/api/admin/origin-metrics" || url.pathname === "/api/origin-metrics" || url.pathname === "/api/public/origin-metrics") {
+    return originMetricsApi.handleOriginMetrics(req, res);
+  }
+  if (url.pathname === "/api/admin/conversion-events" || url.pathname === "/api/conversion-events") {
+    return originMetricsApi.handleConversionEvents(req, res);
+  }
+  if (url.pathname === "/api/admin/ab-tests" || url.pathname === "/api/ab-tests" || url.pathname === "/api/public/ab-tests") {
+    return originMetricsApi.handleAbTests(req, res);
+  }
+  // CLI-15 reclamação colaborador canal restrito RH mínimo
+  if (url.pathname === "/api/admin/employee-complaints" || url.pathname === "/api/employee-complaints" || url.pathname === "/api/cli/employee-complaints") {
+    return employeeComplaintApi.handleComplaints(req, res);
+  }
+  const empComplaintByIdMatch = url.pathname.match(/^\/api\/admin\/employee-complaints\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/employee-complaints\/([0-9a-f-]{36})$/i);
+  if (empComplaintByIdMatch) return employeeComplaintApi.handleComplaintById(req, res, empComplaintByIdMatch[1]);
+  if (url.pathname === "/api/admin/employee-complaint-messages" || url.pathname === "/api/employee-complaint-messages") {
+    return employeeComplaintApi.handleMessages(req, res);
+  }
+  if (url.pathname === "/api/admin/employee-complaint-evidences" || url.pathname === "/api/employee-complaint-evidences") {
+    return employeeComplaintApi.handleEvidences(req, res);
+  }
+  if (url.pathname === "/api/admin/employee-complaint-hr-shares" || url.pathname === "/api/employee-complaint-hr-shares") {
+    return employeeComplaintApi.handleHrShare(req, res);
+  }
+  // PUB-02 páginas por serviço e segmento contato claro FAQ revisada cases autorizados acessibilidade navegação desempenho
+  if (url.pathname === "/api/admin/pub-segments" || url.pathname === "/api/pub-segments" || url.pathname === "/api/segments" || url.pathname === "/api/public/segments" || url.pathname === "/api/pub/segments") {
+    return pubFaqAssistedApi.handleSegments(req, res);
+  }
+  if (url.pathname === "/api/admin/pub-performance" || url.pathname === "/api/pub-performance" || url.pathname === "/api/performance-metrics") {
+    return pubFaqAssistedApi.handlePerformance(req, res);
+  }
+  if (url.pathname === "/api/admin/pub-accessibility" || url.pathname === "/api/pub-accessibility" || url.pathname === "/api/accessibility-checks") {
+    return pubFaqAssistedApi.handleAccessibility(req, res);
+  }
+  // PUB-05 FAQ assistida e transferência humana bot não inventa preço/cobertura/licença/prazo
+  if (url.pathname === "/api/admin/faq-assisted-rules" || url.pathname === "/api/faq-assisted-rules" || url.pathname === "/api/pub/faq-rules") {
+    return pubFaqAssistedApi.handleRules(req, res);
+  }
+  if (url.pathname === "/api/faq-assisted" || url.pathname === "/api/public/faq-assisted" || url.pathname === "/api/pub/faq-sessions" || url.pathname === "/api/admin/faq-assisted-sessions" || url.pathname === "/api/admin/pub-faq-sessions") {
+    return pubFaqAssistedApi.handleSessions(req, res);
+  }
+  if (url.pathname === "/api/faq-assisted-messages" || url.pathname === "/api/pub/faq-messages" || url.pathname === "/api/admin/faq-assisted-messages") {
+    return pubFaqAssistedApi.handleMessages(req, res);
+  }
+  if (url.pathname === "/api/faq-assisted-handoff" || url.pathname === "/api/pub/handoff-requests" || url.pathname === "/api/admin/faq-handoff" || url.pathname === "/api/admin/human-handoff") {
+    return pubFaqAssistedApi.handleHandoff(req, res);
+  }
+  // AI RAG 3 separados cliente/RH/Marcelo Ollama Qwen3 1.7B fila + bot modes sem_ia/com_ia/whatsapp + feedback + custo/token
+  if (url.pathname === "/api/admin/ai-rag-indexes" || url.pathname === "/api/ai-rag-indexes" || url.pathname === "/api/ai/rag-indexes") {
+    return aiRagApi.handleIndexes(req, res);
+  }
+  if (url.pathname === "/api/admin/ai-rag-documents" || url.pathname === "/api/ai-rag-documents" || url.pathname === "/api/ai/rag-documents") {
+    return aiRagApi.handleDocuments(req, res);
+  }
+  if (url.pathname === "/api/admin/ai-rag-queries" || url.pathname === "/api/ai-rag-queries" || url.pathname === "/api/ai/rag" || url.pathname === "/api/public/ai/rag" || url.pathname === "/api/ai/rag/queries") {
+    return aiRagApi.handleQueries(req, res);
+  }
+  if (url.pathname === "/api/ai/rag/feedback" || url.pathname === "/api/public/ai/rag/feedback" || url.pathname === "/api/admin/ai-rag-feedback") {
+    return aiRagApi.handleFeedback(req, res);
+  }
+  if (url.pathname === "/api/admin/ai-rag-cost" || url.pathname === "/api/ai/rag/cost" || url.pathname === "/api/ai-rag-cost-tracking") {
+    return aiRagApi.handleCostTracking(req, res);
+  }
+  if (url.pathname === "/api/admin/ai-bot-config" || url.pathname === "/api/ai-bot-config" || url.pathname === "/api/ai/bot-config") {
+    return aiRagApi.handleBotConfig(req, res);
+  }
+  if (url.pathname === "/api/ai/bot" || url.pathname === "/api/public/ai/bot" || url.pathname === "/api/bot" || url.pathname === "/api/admin/ai-bot-sessions" || url.pathname === "/api/ai/bot-sessions") {
+    return aiRagApi.handleBotSessions(req, res);
+  }
+  if (url.pathname === "/api/admin/ai-rag-chunks" || url.pathname === "/api/ai-rag-chunks" || url.pathname === "/api/ai/rag-chunks") {
+    return aiRagApi.handleChunks(req, res);
+  }
   return json(res, 404, { error: "not_found" });
+  } catch (e) {
+    routeError = e;
+    statusForObs = 500;
+    console.error(`[${requestId}] routeApi error`, e?.message);
+    try { return json(res, 500, { error: "internal_error", request_id: requestId }); } catch { res.statusCode = 500; res.end(); }
+  } finally {
+    const duration = Date.now() - start;
+    try {
+      const session = readSession(req);
+      const userKind = session?.role || null;
+      const userId = session?.identityId || null;
+      const ip = req.headers['x-forwarded-for'] ? String(req.headers['x-forwarded-for']).split(',')[0].trim() : req.socket?.remoteAddress || null;
+      const ua = req.headers['user-agent'] || null;
+      const urlForLog = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+      obs.recordHttp({
+        request_id: requestId,
+        correlation_id: correlationId,
+        method: req.method,
+        path: urlForLog.pathname,
+        status_code: statusForObs,
+        duration_ms: duration,
+        user_kind: userKind,
+        user_id: userId,
+        ip,
+        user_agent: ua,
+        error: routeError,
+      });
+    } catch {}
+    // Clear globals
+    try { globalThis.__currentRequestId = null; globalThis.__currentCorrelationId = null; } catch {}
+  }
 }
 
 const API_PATH_MATCH = pathname =>
@@ -521,7 +3476,1415 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/admin/documents"
   || pathname.startsWith("/api/admin/documents/")
   || pathname === "/api/admin/tickets"
-  || pathname.startsWith("/api/admin/tickets/");
+  || pathname.startsWith("/api/admin/tickets/")
+  || pathname === "/api/admin/permissions"
+  || pathname.startsWith("/api/admin/permissions/")
+  || pathname === "/api/admin/access-reviews"
+  || pathname === "/api/admin/audit"
+  || pathname === "/api/admin/audit/export"
+  || pathname === "/api/admin/notifications"
+  || pathname.startsWith("/api/admin/notifications/")
+  || pathname === "/api/admin/integrations"
+  || pathname.startsWith("/api/admin/integrations/")
+  || pathname === "/api/catalog"
+  || pathname === "/api/services"
+  || pathname.startsWith("/api/catalog/")
+  || pathname.startsWith("/api/services/")
+  || pathname === "/api/faq"
+  || pathname === "/api/cases"
+  || pathname === "/api/crm/companies"
+  || pathname.startsWith("/api/crm/companies/")
+  || pathname === "/api/crm/contacts"
+  || pathname === "/api/crm/opportunities"
+  || pathname.startsWith("/api/crm/opportunities/")
+  || pathname.startsWith("/api/crm/leads/")
+  || pathname === "/api/crm/imports"
+  || pathname === "/api/crm/imports/preview"
+  || pathname.startsWith("/api/crm/imports/")
+  || pathname === "/api/crm/equipment"
+  || pathname.startsWith("/api/crm/equipment/")
+  || pathname === "/api/crm/inspection-templates"
+  || pathname === "/api/crm/inspections"
+  || pathname.startsWith("/api/crm/inspections/")
+  || pathname === "/api/crm/labor-budgets"
+  || pathname.startsWith("/api/crm/labor-budgets/")
+  || pathname === "/api/crm/technical-budgets"
+  || pathname.startsWith("/api/crm/technical-budgets/")
+  || pathname === "/api/crm/cost-parameters"
+  || pathname.startsWith("/api/crm/cost-parameters/")
+  || pathname === "/api/crm/price-scenarios"
+  || pathname.startsWith("/api/crm/price-scenarios/")
+  || pathname === "/api/crm/discount-policies"
+  || pathname.startsWith("/api/crm/discount-policies/")
+  || pathname === "/api/crm/discount-requests"
+  || pathname.startsWith("/api/crm/discount-requests/")
+  || pathname === "/api/crm/proposals"
+  || pathname.startsWith("/api/crm/proposals/")
+  || pathname === "/api/crm/proposal-deliveries"
+  || pathname.startsWith("/api/crm/proposal-deliveries/")
+  || pathname === "/api/crm/proposal-acceptance-links"
+  || pathname.startsWith("/api/crm/proposal-acceptance-links/")
+  || pathname.startsWith("/api/crm/proposals/accept/")
+  || pathname === "/api/crm/contracts"
+  || pathname.startsWith("/api/crm/contracts/")
+  || pathname === "/api/crm/contracts/from-proposal"
+  || pathname === "/api/crm/reports"
+  || pathname.startsWith("/api/crm/reports/")
+  || pathname === "/api/crm/goals"
+  || pathname.startsWith("/api/crm/goals/")
+  || pathname === "/api/crm/commission-rules"
+  || pathname.startsWith("/api/crm/commission-rules/")
+  || pathname === "/api/crm/commissions"
+  || pathname.startsWith("/api/crm/commissions/")
+  || pathname === "/api/crm/commercial-library"
+  || pathname.startsWith("/api/crm/commercial-library/")
+  || pathname === "/api/crm/campaigns"
+  || pathname.startsWith("/api/crm/campaigns/")
+  || pathname === "/api/crm/proposal-comparisons"
+  || pathname.startsWith("/api/crm/proposal-comparisons/")
+  || pathname === "/api/crm/partners"
+  || pathname.startsWith("/api/crm/partners/")
+  || pathname === "/api/crm/referrals"
+  || pathname.startsWith("/api/crm/referrals/")
+  || pathname === "/api/crm/renewals"
+  || pathname.startsWith("/api/crm/renewals/")
+  || pathname === "/api/crm/partnership-metrics"
+  || pathname === "/api/crm/notification-preferences"
+  || pathname === "/api/admin/notification-preferences"
+  || pathname === "/api/crm/notification-templates"
+  || pathname.startsWith("/api/crm/notification-templates/")
+  || pathname === "/api/admin/notification-templates"
+  || pathname.startsWith("/api/admin/notification-templates/")
+  || pathname === "/api/crm/observability"
+  || pathname === "/api/admin/observability"
+  || pathname.startsWith("/api/crm/observability/")
+  || pathname.startsWith("/api/admin/observability/")
+  || pathname === "/api/health"
+  || pathname === "/health"
+  || pathname === "/api/healthcheck"
+  || pathname === "/api/health/live"
+  || pathname === "/api/health/liveness"
+  || pathname === "/health/live"
+  || pathname === "/api/health/ready"
+  || pathname === "/api/health/readiness"
+  || pathname === "/health/ready"
+  || pathname === "/api/admin/operational"
+  || pathname === "/api/admin/health"
+  || pathname === "/api/crm/operational"
+  || pathname.startsWith("/api/admin/operational/")
+  || pathname.startsWith("/api/crm/operational/")
+  || pathname === "/api/admin/backups"
+  || pathname === "/api/crm/backups"
+  || pathname.startsWith("/api/admin/backups/")
+  || pathname.startsWith("/api/crm/backups/")
+  || pathname === "/api/admin/privacy/inventory"
+  || pathname === "/api/crm/privacy/inventory"
+  || pathname === "/api/privacy/inventory"
+  || pathname === "/api/admin/privacy/policies"
+  || pathname === "/api/crm/privacy/policies"
+  || pathname === "/api/privacy/policies"
+  || pathname === "/api/privacy"
+  || pathname.startsWith("/api/admin/privacy/policies/")
+  || pathname.startsWith("/api/crm/privacy/policies/")
+  || pathname.startsWith("/api/privacy/policies/")
+  || pathname === "/api/lgpd/requests"
+  || pathname === "/api/privacy/requests"
+  || pathname === "/api/public/lgpd"
+  || pathname === "/api/admin/lgpd/requests"
+  || pathname === "/api/crm/lgpd/requests"
+  || pathname === "/api/admin/privacy/requests"
+  || pathname.startsWith("/api/admin/lgpd/requests/")
+  || pathname.startsWith("/api/crm/lgpd/requests/")
+  || pathname.startsWith("/api/admin/privacy/requests/")
+  || pathname.startsWith("/api/lgpd/requests/")
+  || pathname === "/api/admin/retention/policies"
+  || pathname === "/api/crm/retention/policies"
+  || pathname === "/api/privacy/retention/policies"
+  || pathname === "/api/admin/privacy/retention"
+  || pathname === "/api/admin/retention/exceptions"
+  || pathname === "/api/crm/retention/exceptions"
+  || pathname === "/api/privacy/retention/exceptions"
+  || pathname.startsWith("/api/admin/retention/exceptions/")
+  || pathname.startsWith("/api/crm/retention/exceptions/")
+  || pathname.startsWith("/api/privacy/retention/exceptions/")
+  || pathname === "/api/admin/retention/disposal/jobs"
+  || pathname === "/api/crm/retention/disposal/jobs"
+  || pathname === "/api/admin/disposal/jobs"
+  || pathname === "/api/privacy/disposal/jobs"
+  || pathname.startsWith("/api/admin/retention/disposal/jobs/")
+  || pathname.startsWith("/api/crm/retention/disposal/jobs/")
+  || pathname.startsWith("/api/admin/disposal/jobs/")
+  || pathname.startsWith("/api/privacy/disposal/jobs/")
+  || pathname === "/api/admin/retention/disposal/logs"
+  || pathname === "/api/crm/retention/disposal/logs"
+  || pathname === "/api/admin/disposal/logs"
+  || pathname === "/api/privacy/disposal/logs"
+  || pathname === "/api/admin/incidents"
+  || pathname === "/api/crm/incidents"
+  || pathname === "/api/security/incidents"
+  || pathname.startsWith("/api/admin/incidents/")
+  || pathname.startsWith("/api/crm/incidents/")
+  || pathname.startsWith("/api/security/incidents/")
+  || pathname === "/api/admin/config/flags"
+  || pathname === "/api/crm/config/flags"
+  || pathname === "/api/config/flags"
+  || pathname.startsWith("/api/admin/config/flags/")
+  || pathname.startsWith("/api/crm/config/flags/")
+  || pathname.startsWith("/api/config/flags/")
+  || pathname === "/api/admin/config/maintenance"
+  || pathname === "/api/crm/config/maintenance"
+  || pathname === "/api/config/maintenance"
+  || pathname === "/api/admin/config/rollouts"
+  || pathname === "/api/crm/config/rollouts"
+  || pathname === "/api/config/rollouts"
+  || pathname === "/api/admin/dependencies/audits"
+  || pathname === "/api/crm/dependencies/audits"
+  || pathname === "/api/dependencies/audits"
+  || pathname === "/api/admin/dependencies/vulnerabilities"
+  || pathname === "/api/crm/dependencies/vulnerabilities"
+  || pathname === "/api/dependencies/vulnerabilities"
+  || pathname === "/api/admin/dependencies/updates"
+  || pathname === "/api/crm/dependencies/updates"
+  || pathname === "/api/dependencies/updates"
+  || pathname === "/api/admin/dependencies/lockfile"
+  || pathname === "/api/crm/dependencies/lockfile"
+  || pathname === "/api/dependencies/lockfile"
+  || pathname === "/api/admin/integrations/jobs"
+  || pathname === "/api/crm/integrations/jobs"
+  || pathname === "/api/integrations/jobs"
+  || pathname === "/api/admin/integrations/logs"
+  || pathname === "/api/crm/integrations/logs"
+  || pathname === "/api/integrations/logs"
+  || pathname === "/api/admin/integrations/webhooks"
+  || pathname === "/api/crm/integrations/webhooks"
+  || pathname === "/api/integrations/webhooks"
+  || pathname === "/api/admin/integrations/webhooks/deliveries"
+  || pathname === "/api/crm/integrations/webhooks/deliveries"
+  || pathname === "/api/integrations/webhooks/deliveries"
+  || pathname === "/api/admin/integrations/reconciliation"
+  || pathname === "/api/crm/integrations/reconciliation"
+  || pathname === "/api/integrations/reconciliation"
+  || pathname === "/api/admin/budgets"
+  || pathname === "/api/crm/budgets"
+  || pathname === "/api/budgets"
+  || pathname === "/api/admin/usage/metrics"
+  || pathname === "/api/crm/usage/metrics"
+  || pathname === "/api/usage/metrics"
+  || pathname === "/api/admin/usage/alerts"
+  || pathname === "/api/crm/usage/alerts"
+  || pathname === "/api/usage/alerts"
+  || pathname === "/api/admin/environments"
+  || pathname === "/api/crm/environments"
+  || pathname === "/api/environments"
+  || pathname === "/api/admin/environments/checks"
+  || pathname === "/api/crm/environments/checks"
+  || pathname === "/api/environments/checks"
+  || pathname === "/api/admin/maintenance/docs"
+  || pathname === "/api/crm/maintenance/docs"
+  || pathname === "/api/maintenance/docs"
+  || pathname === "/api/docs"
+  || pathname.startsWith("/api/admin/maintenance/docs/")
+  || pathname.startsWith("/api/crm/maintenance/docs/")
+  || pathname.startsWith("/api/maintenance/docs/")
+  || pathname.startsWith("/api/docs/")
+  || pathname === "/api/admin/hr/employees"
+  || pathname === "/api/crm/hr/employees"
+  || pathname === "/api/hr/employees"
+  || pathname.startsWith("/api/admin/hr/employees/")
+  || pathname.startsWith("/api/crm/hr/employees/")
+  || pathname.startsWith("/api/hr/employees/")
+  || pathname === "/api/admin/hr/admissions"
+  || pathname === "/api/crm/hr/admissions"
+  || pathname === "/api/hr/admissions"
+  || pathname.startsWith("/api/admin/hr/admissions/")
+  || pathname.startsWith("/api/crm/hr/admissions/")
+  || pathname.startsWith("/api/hr/admissions/")
+  || pathname === "/api/admin/hr/admission-progress"
+  || pathname === "/api/crm/hr/admission-progress"
+  || pathname === "/api/hr/admission-progress"
+  || pathname === "/api/employee/profile"
+  || pathname === "/api/crm/employee/profile"
+  || pathname === "/api/admin/employee/profile"
+  || pathname === "/api/hr/my-profile"
+  || pathname === "/api/admin/hr/my-profile"
+  || pathname === "/api/admin/hr/profile-updates"
+  || pathname === "/api/crm/hr/profile-updates"
+  || pathname === "/api/hr/profile-updates"
+  || pathname === "/api/admin/employee/profile-updates"
+  || pathname === "/api/admin/hr/vacancies"
+  || pathname === "/api/crm/hr/vacancies"
+  || pathname === "/api/hr/vacancies"
+  || pathname === "/api/admin/hr/candidates"
+  || pathname === "/api/crm/hr/candidates"
+  || pathname === "/api/hr/candidates"
+  || pathname === "/api/admin/hr/interviews"
+  || pathname === "/api/crm/hr/interviews"
+  || pathname === "/api/hr/interviews"
+  || pathname === "/api/admin/hr/talent-pool"
+  || pathname === "/api/crm/hr/talent-pool"
+  || pathname === "/api/hr/talent-pool"
+  || pathname === "/api/admin/hr/dossiers"
+  || pathname === "/api/crm/hr/dossiers"
+  || pathname === "/api/hr/dossiers"
+  || pathname === "/api/admin/hr/employee-dossiers"
+  || pathname === "/api/admin/hr/terminations"
+  || pathname === "/api/crm/hr/terminations"
+  || pathname === "/api/hr/terminations"
+  || pathname.startsWith("/api/admin/hr/terminations/")
+  || pathname.startsWith("/api/crm/hr/terminations/")
+  || pathname.startsWith("/api/hr/terminations/")
+  || pathname === "/api/admin/hr/termination-progress"
+  || pathname === "/api/crm/hr/termination-progress"
+  || pathname === "/api/hr/termination-progress"
+  || pathname === "/api/admin/hr/status-policies"
+  || pathname === "/api/crm/hr/status-policies"
+  || pathname === "/api/hr/status-policies"
+  || pathname === "/api/admin/hr/vacation-periods"
+  || pathname === "/api/crm/hr/vacation-periods"
+  || pathname === "/api/hr/vacation-periods"
+  || pathname === "/api/admin/hr/vacation-requests"
+  || pathname === "/api/crm/hr/vacation-requests"
+  || pathname === "/api/hr/vacation-requests"
+  || pathname === "/api/admin/hr/absences"
+  || pathname === "/api/crm/hr/absences"
+  || pathname === "/api/hr/absences"
+  || pathname === "/api/admin/hr/time-entries"
+  || pathname === "/api/crm/hr/time-entries"
+  || pathname === "/api/hr/time-entries"
+  || pathname === "/api/admin/hr/time-corrections"
+  || pathname === "/api/crm/hr/time-corrections"
+  || pathname === "/api/hr/time-corrections"
+  || pathname === "/api/admin/hr/competence-closures"
+  || pathname === "/api/crm/hr/competence-closures"
+  || pathname === "/api/hr/competence-closures"
+  || pathname === "/api/admin/hr/work-rules"
+  || pathname === "/api/crm/hr/work-rules"
+  || pathname === "/api/hr/work-rules"
+  || pathname === "/api/admin/hr/hour-bank"
+  || pathname === "/api/crm/hr/hour-bank"
+  || pathname === "/api/hr/hour-bank"
+  || pathname === "/api/admin/hr/hour-movements"
+  || pathname === "/api/crm/hr/hour-movements"
+  || pathname === "/api/hr/hour-movements"
+  || pathname === "/api/admin/hr/benefit-catalog"
+  || pathname === "/api/crm/hr/benefit-catalog"
+  || pathname === "/api/hr/benefit-catalog"
+  || pathname === "/api/admin/hr/benefit-enrollments"
+  || pathname === "/api/crm/hr/benefit-enrollments"
+  || pathname === "/api/hr/benefit-enrollments"
+  || pathname === "/api/admin/hr/benefit-requests"
+  || pathname === "/api/crm/hr/benefit-requests"
+  || pathname === "/api/hr/benefit-requests"
+  || pathname === "/api/admin/hr/benefit-conferences"
+  || pathname === "/api/crm/hr/benefit-conferences"
+  || pathname === "/api/hr/benefit-conferences"
+  || pathname === "/api/admin/hr/benefit-exports"
+  || pathname === "/api/crm/hr/benefit-exports"
+  || pathname === "/api/hr/benefit-exports"
+  || pathname === "/api/admin/hr/advance-policies"
+  || pathname === "/api/crm/hr/advance-policies"
+  || pathname === "/api/hr/advance-policies"
+  || pathname === "/api/admin/hr/advance-requests"
+  || pathname === "/api/crm/hr/advance-requests"
+  || pathname === "/api/hr/advance-requests"
+  || pathname === "/api/admin/hr/occupational-requirements"
+  || pathname === "/api/crm/hr/occupational-requirements"
+  || pathname === "/api/hr/occupational-requirements"
+  || pathname === "/api/admin/hr/occupational-agenda"
+  || pathname === "/api/crm/hr/occupational-agenda"
+  || pathname === "/api/hr/occupational-agenda"
+  || pathname === "/api/admin/hr/occupational-documents"
+  || pathname === "/api/crm/hr/occupational-documents"
+  || pathname === "/api/hr/occupational-documents"
+  || pathname === "/api/admin/hr/integration-exports"
+  || pathname === "/api/crm/hr/integration-exports"
+  || pathname === "/api/hr/integration-exports"
+  || pathname === "/api/admin/hr/integration-receipts"
+  || pathname === "/api/crm/hr/integration-receipts"
+  || pathname === "/api/hr/integration-receipts"
+  || pathname === "/api/admin/hr/integration-errors"
+  || pathname === "/api/crm/hr/integration-errors"
+  || pathname === "/api/hr/integration-errors"
+  || pathname === "/api/admin/hr/training-catalog"
+  || pathname === "/api/crm/hr/training-catalog"
+  || pathname === "/api/hr/training-catalog"
+  || pathname === "/api/admin/hr/training-requirements"
+  || pathname === "/api/crm/hr/training-requirements"
+  || pathname === "/api/hr/training-requirements"
+  || pathname === "/api/admin/hr/training-sessions"
+  || pathname === "/api/crm/hr/training-sessions"
+  || pathname === "/api/hr/training-sessions"
+  || pathname === "/api/admin/hr/training-enrollments"
+  || pathname === "/api/crm/hr/training-enrollments"
+  || pathname === "/api/hr/training-enrollments"
+  || pathname === "/api/admin/hr/competency-catalog"
+  || pathname === "/api/crm/hr/competency-catalog"
+  || pathname === "/api/hr/competency-catalog"
+  || pathname === "/api/admin/hr/competency-requirements"
+  || pathname === "/api/crm/hr/competency-requirements"
+  || pathname === "/api/hr/competency-requirements"
+  || pathname === "/api/admin/hr/employee-competencies"
+  || pathname === "/api/crm/hr/employee-competencies"
+  || pathname === "/api/hr/employee-competencies"
+  || pathname === "/api/admin/hr/competency-evaluations"
+  || pathname === "/api/crm/hr/competency-evaluations"
+  || pathname === "/api/hr/competency-evaluations"
+  || pathname === "/api/admin/hr/uniform-catalog"
+  || pathname === "/api/crm/hr/uniform-catalog"
+  || pathname === "/api/hr/uniform-catalog"
+  || pathname === "/api/admin/hr/uniform-deliveries"
+  || pathname === "/api/crm/hr/uniform-deliveries"
+  || pathname === "/api/hr/uniform-deliveries"
+  || pathname === "/api/admin/hr/uniform-returns"
+  || pathname === "/api/crm/hr/uniform-returns"
+  || pathname === "/api/hr/uniform-returns"
+  || pathname === "/api/admin/hr/uniform-requests"
+  || pathname === "/api/crm/hr/uniform-requests"
+  || pathname === "/api/hr/uniform-requests"
+  || pathname === "/api/admin/hr/dp-closures"
+  || pathname === "/api/crm/hr/dp-closures"
+  || pathname === "/api/hr/dp-closures"
+  || pathname === "/api/admin/hr/dp-variables"
+  || pathname === "/api/crm/hr/dp-variables"
+  || pathname === "/api/hr/dp-variables"
+  || pathname === "/api/admin/hr/dp-documents"
+  || pathname === "/api/crm/hr/dp-documents"
+  || pathname === "/api/hr/dp-documents"
+  || pathname === "/api/admin/hr/dp-exports"
+  || pathname === "/api/crm/hr/dp-exports"
+  || pathname === "/api/hr/dp-exports"
+  || pathname === "/api/admin/hr/payroll-sources"
+  || pathname === "/api/crm/hr/payroll-sources"
+  || pathname === "/api/hr/payroll-sources"
+  || pathname === "/api/admin/hr/payroll-imports"
+  || pathname === "/api/crm/hr/payroll-imports"
+  || pathname === "/api/hr/payroll-imports"
+  || pathname === "/api/admin/hr/payroll-documents"
+  || pathname === "/api/crm/hr/payroll-documents"
+  || pathname === "/api/hr/payroll-documents"
+  || pathname === "/api/admin/hr/evaluation-criteria"
+  || pathname === "/api/crm/hr/evaluation-criteria"
+  || pathname === "/api/hr/evaluation-criteria"
+  || pathname === "/api/admin/hr/evaluations"
+  || pathname === "/api/crm/hr/evaluations"
+  || pathname === "/api/hr/evaluations"
+  || pathname === "/api/admin/hr/development-plans"
+  || pathname === "/api/crm/hr/development-plans"
+  || pathname === "/api/hr/development-plans"
+  || pathname === "/api/admin/hr/development-actions"
+  || pathname === "/api/crm/hr/development-actions"
+  || pathname === "/api/hr/development-actions"
+  || pathname === "/api/admin/hr/support-tickets"
+  || pathname === "/api/crm/hr/support-tickets"
+  || pathname === "/api/hr/support-tickets"
+  || pathname === "/api/admin/hr/support-messages"
+  || pathname === "/api/crm/hr/support-messages"
+  || pathname === "/api/hr/support-messages"
+  || pathname === "/api/admin/hr/support-attachments"
+  || pathname === "/api/crm/hr/support-attachments"
+  || pathname === "/api/hr/support-attachments"
+  || pathname === "/api/admin/hr/indicator-definitions"
+  || pathname === "/api/crm/hr/indicator-definitions"
+  || pathname === "/api/hr/indicator-definitions"
+  || pathname === "/api/admin/hr/indicator-snapshots"
+  || pathname === "/api/crm/hr/indicator-snapshots"
+  || pathname === "/api/hr/indicator-snapshots"
+  || pathname === "/api/admin/hr/shift-assignments"
+  || pathname === "/api/crm/hr/shift-assignments"
+  || pathname === "/api/hr/shift-assignments"
+  || pathname === "/api/admin/hr/schedule-versions"
+  || pathname === "/api/crm/hr/schedule-versions"
+  || pathname === "/api/hr/schedule-versions"
+  || pathname === "/api/admin/hr/schedule-entries"
+  || pathname === "/api/crm/hr/schedule-entries"
+  || pathname === "/api/hr/schedule-entries"
+  || pathname === "/api/admin/hr/journey-proofs"
+  || pathname === "/api/crm/hr/journey-proofs"
+  || pathname === "/api/hr/journey-proofs"
+  || pathname === "/api/admin/hr/journey-corrections"
+  || pathname === "/api/crm/hr/journey-corrections"
+  || pathname === "/api/hr/journey-corrections"
+  || pathname === "/api/admin/hr/absence-notices"
+  || pathname === "/api/crm/hr/absence-notices"
+  || pathname === "/api/hr/absence-notices"
+  || pathname === "/api/admin/hr/absence-followups"
+  || pathname === "/api/crm/hr/absence-followups"
+  || pathname === "/api/hr/absence-followups"
+  || pathname === "/api/admin/hr/shift-swaps"
+  || pathname === "/api/crm/hr/shift-swaps"
+  || pathname === "/api/hr/shift-swaps"
+  || pathname === "/api/admin/hr/handover-records"
+  || pathname === "/api/crm/hr/handover-records"
+  || pathname === "/api/hr/handover-records"
+  || pathname === "/api/admin/hr/occurrences"
+  || pathname === "/api/crm/hr/occurrences"
+  || pathname === "/api/hr/occurrences"
+  || pathname === "/api/admin/hr/occurrence-attachments"
+  || pathname === "/api/crm/hr/occurrence-attachments"
+  || pathname === "/api/hr/occurrence-attachments"
+  || pathname === "/api/admin/hr/occurrence-actions"
+  || pathname === "/api/crm/hr/occurrence-actions"
+  || pathname === "/api/hr/occurrence-actions"
+  || pathname === "/api/admin/hr/post-procedures"
+  || pathname === "/api/crm/hr/post-procedures"
+  || pathname === "/api/hr/post-procedures"
+  || pathname === "/api/admin/hr/procedure-acks"
+  || pathname === "/api/crm/hr/procedure-acks"
+  || pathname === "/api/hr/procedure-acks"
+  || pathname === "/api/admin/hr/support-contacts-ops"
+  || pathname === "/api/crm/hr/support-contacts-ops"
+  || pathname === "/api/hr/support-contacts-ops"
+  || pathname === "/api/admin/hr/document-submissions"
+  || pathname === "/api/crm/hr/document-submissions"
+  || pathname === "/api/hr/document-submissions"
+  || pathname === "/api/admin/hr/own-doc-access-logs"
+  || pathname === "/api/crm/hr/own-doc-access-logs"
+  || pathname === "/api/hr/own-doc-access-logs"
+  || pathname === "/api/admin/hr/doc-availability"
+  || pathname === "/api/crm/hr/doc-availability"
+  || pathname === "/api/hr/doc-availability"
+  || pathname === "/api/admin/hr/self-requests"
+  || pathname === "/api/crm/hr/self-requests"
+  || pathname === "/api/hr/self-requests"
+  || pathname === "/api/admin/hr/self-request-followups"
+  || pathname === "/api/crm/hr/self-request-followups"
+  || pathname === "/api/hr/self-request-followups"
+  || pathname === "/api/admin/hr/uniform-self-requests"
+  || pathname === "/api/crm/hr/uniform-self-requests"
+  || pathname === "/api/hr/uniform-self-requests"
+  || pathname === "/api/admin/hr/uniform-receipts"
+  || pathname === "/api/crm/hr/uniform-receipts"
+  || pathname === "/api/hr/uniform-receipts"
+  || pathname === "/api/admin/hr/course-enrollments"
+  || pathname === "/api/crm/hr/course-enrollments"
+  || pathname === "/api/hr/course-enrollments"
+  || pathname === "/api/admin/hr/course-proofs"
+  || pathname === "/api/crm/hr/course-proofs"
+  || pathname === "/api/hr/course-proofs"
+  || pathname === "/api/admin/hr/course-alerts"
+  || pathname === "/api/crm/hr/course-alerts"
+  || pathname === "/api/hr/course-alerts"
+  || pathname === "/api/admin/hr/course-expiry-alerts"
+  || pathname === "/api/crm/hr/course-expiry-alerts"
+  || pathname === "/api/hr/course-expiry-alerts"
+  || pathname === "/api/admin/hr/communications"
+  || pathname === "/api/crm/hr/communications"
+  || pathname === "/api/hr/communications"
+  || pathname === "/api/admin/hr/communication-reads"
+  || pathname === "/api/crm/hr/communication-reads"
+  || pathname === "/api/hr/communication-reads"
+  || pathname === "/api/admin/hr/notifications-center"
+  || pathname === "/api/crm/hr/notifications-center"
+  || pathname === "/api/hr/notifications-center"
+  || pathname === "/api/employee/notifications"
+  || pathname === "/api/hr/my-notifications"
+  || pathname === "/api/admin/hr/hr-tickets"
+  || pathname === "/api/crm/hr/hr-tickets"
+  || pathname === "/api/hr/hr-tickets"
+  || pathname === "/api/admin/hr/employee-hr-tickets"
+  || pathname === "/api/admin/hr/hr-messages"
+  || pathname === "/api/crm/hr/hr-messages"
+  || pathname === "/api/hr/hr-messages"
+  || pathname === "/api/admin/hr/employee-hr-messages"
+  || pathname === "/api/admin/hr/hr-attachments"
+  || pathname === "/api/crm/hr/hr-attachments"
+  || pathname === "/api/hr/hr-attachments"
+  || pathname === "/api/admin/hr/employee-hr-attachments"
+  || pathname === "/api/admin/hr/confidential-policies"
+  || pathname === "/api/crm/hr/confidential-policies"
+  || pathname === "/api/hr/confidential-policies"
+  || pathname === "/api/admin/hr/confidential-reports"
+  || pathname === "/api/crm/hr/confidential-reports"
+  || pathname === "/api/hr/confidential-reports"
+  || pathname === "/api/admin/hr/confidential-messages"
+  || pathname === "/api/crm/hr/confidential-messages"
+  || pathname === "/api/hr/confidential-messages"
+  || pathname === "/api/admin/hr/confidential-attachments"
+  || pathname === "/api/crm/hr/confidential-attachments"
+  || pathname === "/api/hr/confidential-attachments"
+  || pathname === "/api/pwa/manifest.json"
+  || pathname === "/api/hr/pwa-manifest"
+  || pathname === "/manifest.json"
+  || pathname === "/api/pwa/sw.js"
+  || pathname === "/api/hr/pwa-sw"
+  || pathname === "/sw.js"
+  || pathname === "/api/pwa/offline"
+  || pathname === "/offline.html"
+  || pathname === "/api/admin/hr/pwa-configs"
+  || pathname === "/api/crm/hr/pwa-configs"
+  || pathname === "/api/hr/pwa-configs"
+  || pathname === "/api/admin/hr/offline-queue"
+  || pathname === "/api/crm/hr/offline-queue"
+  || pathname === "/api/hr/offline-queue"
+  || pathname === "/api/admin/hr/offline-conflicts"
+  || pathname === "/api/crm/hr/offline-conflicts"
+  || pathname === "/api/hr/offline-conflicts"
+  || pathname === "/api/admin/hr/faq-internal"
+  || pathname === "/api/crm/hr/faq-internal"
+  || pathname === "/api/hr/faq-internal"
+  || pathname === "/api/employee/faq"
+  || pathname === "/api/admin/hr/faq-access-logs"
+  || pathname === "/api/crm/hr/faq-access-logs"
+  || pathname === "/api/hr/faq-access-logs"
+  || pathname === "/api/admin/hr/accessibility-preferences"
+  || pathname === "/api/crm/hr/accessibility-preferences"
+  || pathname === "/api/hr/accessibility-preferences"
+  || pathname === "/api/employee/accessibility"
+  || pathname === "/api/admin/hr/ops-job-roles"
+  || pathname === "/api/crm/hr/ops-job-roles"
+  || pathname === "/api/hr/ops-job-roles"
+  || pathname === "/api/admin/hr/ops-posts"
+  || pathname === "/api/crm/hr/ops-posts"
+  || pathname === "/api/hr/ops-posts"
+  || pathname === "/api/ops/posts"
+  || pathname === "/api/admin/hr/ops-shift-templates"
+  || pathname === "/api/crm/hr/ops-shift-templates"
+  || pathname === "/api/hr/ops-shift-templates"
+  || pathname === "/api/ops/shift-templates"
+  || pathname === "/api/admin/hr/ops-post-shift-needs"
+  || pathname === "/api/crm/hr/ops-post-shift-needs"
+  || pathname === "/api/hr/ops-post-shift-needs"
+  || pathname === "/api/admin/hr/ops-allocations"
+  || pathname === "/api/crm/hr/ops-allocations"
+  || pathname === "/api/hr/ops-allocations"
+  || pathname === "/api/ops/allocations"
+  || pathname === "/api/admin/hr/ops-dimensioning"
+  || pathname === "/api/crm/hr/ops-dimensioning"
+  || pathname === "/api/hr/ops-dimensioning"
+  || pathname === "/api/ops/dimensioning"
+  || pathname === "/api/admin/hr/ops-coverage-gaps"
+  || pathname === "/api/crm/hr/ops-coverage-gaps"
+  || pathname === "/api/hr/ops-coverage-gaps"
+  || pathname === "/api/ops/coverage-gaps"
+  || pathname === "/api/admin/hr/ops-schedule-versions"
+  || pathname === "/api/crm/hr/ops-schedule-versions"
+  || pathname === "/api/hr/ops-schedule-versions"
+  || pathname === "/api/ops/schedule-versions"
+  || pathname === "/api/admin/hr/ops-schedule-entries"
+  || pathname === "/api/crm/hr/ops-schedule-entries"
+  || pathname === "/api/hr/ops-schedule-entries"
+  || pathname === "/api/ops/schedule-entries"
+  || pathname === "/api/admin/hr/ops-schedule-acks"
+  || pathname === "/api/crm/hr/ops-schedule-acks"
+  || pathname === "/api/hr/ops-schedule-acks"
+  || pathname === "/api/ops/schedule-acks"
+  || pathname === "/api/admin/hr/ops-schedule-history"
+  || pathname === "/api/crm/hr/ops-schedule-history"
+  || pathname === "/api/hr/ops-schedule-history"
+  || pathname === "/api/admin/hr/ops-work-rules"
+  || pathname === "/api/crm/hr/ops-work-rules"
+  || pathname === "/api/hr/ops-work-rules"
+  || pathname === "/api/ops/work-rules"
+  || pathname === "/api/admin/hr/ops-qualifications"
+  || pathname === "/api/crm/hr/ops-qualifications"
+  || pathname === "/api/hr/ops-qualifications"
+  || pathname === "/api/ops/qualifications"
+  || pathname === "/api/admin/hr/ops-validations"
+  || pathname === "/api/crm/hr/ops-validations"
+  || pathname === "/api/hr/ops-validations"
+  || pathname === "/api/ops/validations"
+  || pathname === "/api/admin/hr/ops-coverage-requests"
+  || pathname === "/api/crm/hr/ops-coverage-requests"
+  || pathname === "/api/hr/ops-coverage-requests"
+  || pathname === "/api/ops/coverage-requests"
+  || pathname === "/api/admin/hr/ops-substitution-candidates"
+  || pathname === "/api/crm/hr/ops-substitution-candidates"
+  || pathname === "/api/hr/ops-substitution-candidates"
+  || pathname === "/api/ops/substitution-candidates"
+  || pathname === "/api/admin/hr/ops-coverage-communications"
+  || pathname === "/api/crm/hr/ops-coverage-communications"
+  || pathname === "/api/hr/ops-coverage-communications"
+  || pathname === "/api/ops/coverage-communications"
+  || pathname === "/api/admin/hr/ops-handovers"
+  || pathname === "/api/crm/hr/ops-handovers"
+  || pathname === "/api/hr/ops-handovers"
+  || pathname === "/api/ops/handovers"
+  || pathname === "/api/admin/hr/ops-handover-escalations"
+  || pathname === "/api/crm/hr/ops-handover-escalations"
+  || pathname === "/api/hr/ops-handover-escalations"
+  || pathname === "/api/ops/handover-escalations"
+  || pathname === "/api/admin/hr/ops-occurrence-book"
+  || pathname === "/api/crm/hr/ops-occurrence-book"
+  || pathname === "/api/hr/ops-occurrence-book"
+  || pathname === "/api/ops/occurrence-book"
+  || pathname === "/api/admin/hr/ops-occurrence-evidences"
+  || pathname === "/api/crm/hr/ops-occurrence-evidences"
+  || pathname === "/api/hr/ops-occurrence-evidences"
+  || pathname === "/api/ops/occurrence-evidences"
+  || pathname === "/api/admin/hr/ops-occurrence-actions"
+  || pathname === "/api/crm/hr/ops-occurrence-actions"
+  || pathname === "/api/hr/ops-occurrence-actions"
+  || pathname === "/api/ops/occurrence-actions"
+  || pathname === "/api/admin/hr/ops-occurrence-history"
+  || pathname === "/api/crm/hr/ops-occurrence-history"
+  || pathname === "/api/hr/ops-occurrence-history"
+  || pathname === "/api/ops/occurrence-history"
+  || pathname === "/api/admin/hr/ops-checklist-templates"
+  || pathname === "/api/crm/hr/ops-checklist-templates"
+  || pathname === "/api/hr/ops-checklist-templates"
+  || pathname === "/api/ops/checklist-templates"
+  || pathname === "/api/admin/hr/ops-checklist-instances"
+  || pathname === "/api/crm/hr/ops-checklist-instances"
+  || pathname === "/api/hr/ops-checklist-instances"
+  || pathname === "/api/ops/checklist-instances"
+  || pathname === "/api/admin/hr/ops-checklist-items"
+  || pathname === "/api/crm/hr/ops-checklist-items"
+  || pathname === "/api/hr/ops-checklist-items"
+  || pathname === "/api/ops/checklist-items"
+  || pathname === "/api/admin/hr/ops-supervision-visits"
+  || pathname === "/api/crm/hr/ops-supervision-visits"
+  || pathname === "/api/hr/ops-supervision-visits"
+  || pathname === "/api/ops/supervision-visits"
+  || pathname === "/api/admin/hr/ops-supervision-inspections"
+  || pathname === "/api/crm/hr/ops-supervision-inspections"
+  || pathname === "/api/hr/ops-supervision-inspections"
+  || pathname === "/api/ops/supervision-inspections"
+  || pathname === "/api/admin/hr/ops-supervision-action-plans"
+  || pathname === "/api/crm/hr/ops-supervision-action-plans"
+  || pathname === "/api/hr/ops-supervision-action-plans"
+  || pathname === "/api/ops/supervision-action-plans"
+  || pathname === "/api/admin/hr/ops-patrols"
+  || pathname === "/api/crm/hr/ops-patrols"
+  || pathname === "/api/hr/ops-patrols"
+  || pathname === "/api/ops/patrols"
+  || pathname === "/api/admin/hr/ops-patrol-points"
+  || pathname === "/api/crm/hr/ops-patrol-points"
+  || pathname === "/api/hr/ops-patrol-points"
+  || pathname === "/api/ops/patrol-points"
+  || pathname === "/api/admin/hr/ops-patrol-replay-logs"
+  || pathname === "/api/crm/hr/ops-patrol-replay-logs"
+  || pathname === "/api/hr/ops-patrol-replay-logs"
+  || pathname === "/api/ops/patrol-replay-logs"
+  || pathname === "/api/admin/hr/ops-keys"
+  || pathname === "/api/crm/hr/ops-keys"
+  || pathname === "/api/hr/ops-keys"
+  || pathname === "/api/ops/keys"
+  || pathname === "/api/admin/hr/ops-key-movements"
+  || pathname === "/api/crm/hr/ops-key-movements"
+  || pathname === "/api/hr/ops-key-movements"
+  || pathname === "/api/ops/key-movements"
+  || pathname === "/api/admin/hr/ops-client-reports"
+  || pathname === "/api/crm/hr/ops-client-reports"
+  || pathname === "/api/hr/ops-client-reports"
+  || pathname === "/api/ops/client-reports"
+  || pathname === "/api/admin/hr/ops-client-report-attachments"
+  || pathname === "/api/crm/hr/ops-client-report-attachments"
+  || pathname === "/api/hr/ops-client-report-attachments"
+  || pathname === "/api/ops/client-report-attachments"
+  || pathname === "/api/admin/hr/ops-client-report-history"
+  || pathname === "/api/crm/hr/ops-client-report-history"
+  || pathname === "/api/hr/ops-client-report-history"
+  || pathname === "/api/ops/client-report-history"
+  || pathname === "/api/admin/hr/ops-metrics-definitions"
+  || pathname === "/api/crm/hr/ops-metrics-definitions"
+  || pathname === "/api/hr/ops-metrics-definitions"
+  || pathname === "/api/ops/metrics-definitions"
+  || pathname === "/api/admin/hr/ops-metrics-snapshots"
+  || pathname === "/api/crm/hr/ops-metrics-snapshots"
+  || pathname === "/api/hr/ops-metrics-snapshots"
+  || pathname === "/api/ops/metrics-snapshots"
+  || pathname === "/api/admin/hr/ops-metrics-reincidence"
+  || pathname === "/api/crm/hr/ops-metrics-reincidence"
+  || pathname === "/api/hr/ops-metrics-reincidence"
+  || pathname === "/api/ops/metrics-reincidence"
+  || pathname === "/api/admin/hr/ops-assisted-proposals"
+  || pathname === "/api/crm/hr/ops-assisted-proposals"
+  || pathname === "/api/hr/ops-assisted-proposals"
+  || pathname === "/api/ops/assisted-proposals"
+  || pathname === "/api/admin/hr/ops-assisted-entries"
+  || pathname === "/api/crm/hr/ops-assisted-entries"
+  || pathname === "/api/hr/ops-assisted-entries"
+  || pathname === "/api/ops/assisted-entries"
+  || pathname === "/api/admin/hr/ops-assisted-conflicts"
+  || pathname === "/api/crm/hr/ops-assisted-conflicts"
+  || pathname === "/api/hr/ops-assisted-conflicts"
+  || pathname === "/api/ops/assisted-conflicts"
+  || pathname === "/api/admin/hr/ops-cleaning-environments"
+  || pathname === "/api/crm/hr/ops-cleaning-environments"
+  || pathname === "/api/hr/ops-cleaning-environments"
+  || pathname === "/api/ops/cleaning-environments"
+  || pathname === "/api/admin/hr/ops-cleaning-routines"
+  || pathname === "/api/crm/hr/ops-cleaning-routines"
+  || pathname === "/api/hr/ops-cleaning-routines"
+  || pathname === "/api/ops/cleaning-routines"
+  || pathname === "/api/admin/hr/ops-cleaning-executions"
+  || pathname === "/api/crm/hr/ops-cleaning-executions"
+  || pathname === "/api/hr/ops-cleaning-executions"
+  || pathname === "/api/ops/cleaning-executions"
+  || pathname === "/api/admin/hr/ops-cleaning-nonconformities"
+  || pathname === "/api/crm/hr/ops-cleaning-nonconformities"
+  || pathname === "/api/hr/ops-cleaning-nonconformities"
+  || pathname === "/api/ops/cleaning-nonconformities"
+  || pathname === "/api/admin/hr/ops-monitoring-connectors"
+  || pathname === "/api/crm/hr/ops-monitoring-connectors"
+  || pathname === "/api/hr/ops-monitoring-connectors"
+  || pathname === "/api/ops/monitoring-connectors"
+  || pathname === "/api/admin/hr/ops-monitoring-events"
+  || pathname === "/api/crm/hr/ops-monitoring-events"
+  || pathname === "/api/hr/ops-monitoring-events"
+  || pathname === "/api/ops/monitoring-events"
+  || pathname === "/api/admin/hr/ops-monitoring-event-history"
+  || pathname === "/api/crm/hr/ops-monitoring-event-history"
+  || pathname === "/api/hr/ops-monitoring-event-history"
+  || pathname === "/api/ops/monitoring-event-history"
+  || pathname === "/api/admin/hr/ops-monitoring-escalations"
+  || pathname === "/api/crm/hr/ops-monitoring-escalations"
+  || pathname === "/api/hr/ops-monitoring-escalations"
+  || pathname === "/api/ops/monitoring-escalations"
+  || pathname === "/api/admin/hr/cli-entry-points"
+  || pathname === "/api/crm/hr/cli-entry-points"
+  || pathname === "/api/hr/cli-entry-points"
+  || pathname === "/api/cli/entry-points"
+  || pathname === "/api/admin/hr/cli-old-routes"
+  || pathname === "/api/crm/hr/cli-old-routes"
+  || pathname === "/api/hr/cli-old-routes"
+  || pathname === "/api/cli/old-routes"
+  || pathname === "/api/admin/hr/cli-client-contacts"
+  || pathname === "/api/crm/hr/cli-client-contacts"
+  || pathname === "/api/hr/cli-client-contacts"
+  || pathname === "/api/cli/client-contacts"
+  || pathname === "/api/admin/hr/cli-contact-scopes"
+  || pathname === "/api/crm/hr/cli-contact-scopes"
+  || pathname === "/api/hr/cli-contact-scopes"
+  || pathname === "/api/cli/contact-scopes"
+  || pathname === "/api/admin/hr/cli-contact-delegate"
+  || pathname === "/api/crm/hr/cli-contact-delegate"
+  || pathname === "/api/hr/cli-contact-delegate"
+  || pathname === "/api/cli/contact-delegate"
+  || pathname === "/api/admin/hr/cli-contract-items"
+  || pathname === "/api/crm/hr/cli-contract-items"
+  || pathname === "/api/hr/cli-contract-items"
+  || pathname === "/api/cli/contract-items"
+  || pathname === "/api/admin/hr/cli-contract-scopes"
+  || pathname === "/api/crm/hr/cli-contract-scopes"
+  || pathname === "/api/hr/cli-contract-scopes"
+  || pathname === "/api/cli/contract-scopes"
+  || pathname === "/api/admin/hr/cli-contract-vigencia"
+  || pathname === "/api/crm/hr/cli-contract-vigencia"
+  || pathname === "/api/hr/cli-contract-vigencia"
+  || pathname === "/api/cli/contract-vigencia"
+  || pathname === "/api/admin/hr/cli-document-categories"
+  || pathname === "/api/crm/hr/cli-document-categories"
+  || pathname === "/api/hr/cli-document-categories"
+  || pathname === "/api/cli/document-categories"
+  || pathname === "/api/admin/hr/cli-client-documents-v2"
+  || pathname === "/api/crm/hr/cli-client-documents-v2"
+  || pathname === "/api/hr/cli-client-documents-v2"
+  || pathname === "/api/cli/client-documents-v2"
+  || pathname === "/api/client/documents-v2"
+  || pathname === "/api/admin/hr/cli-document-versions"
+  || pathname === "/api/crm/hr/cli-document-versions"
+  || pathname === "/api/hr/cli-document-versions"
+  || pathname === "/api/cli/document-versions"
+  || pathname === "/api/admin/hr/cli-document-download"
+  || pathname === "/api/crm/hr/cli-document-download"
+  || pathname === "/api/hr/cli-document-download"
+  || pathname === "/api/cli/document-download"
+  || pathname === "/api/client/document-download"
+  || pathname === "/api/admin/hr/cli-document-access-logs"
+  || pathname === "/api/crm/hr/cli-document-access-logs"
+  || pathname === "/api/hr/cli-document-access-logs"
+  || pathname === "/api/cli/document-access-logs"
+  || pathname === "/api/admin/hr/cli-tickets-v2"
+  || pathname === "/api/crm/hr/cli-tickets-v2"
+  || pathname === "/api/hr/cli-tickets-v2"
+  || pathname === "/api/cli/tickets-v2"
+  || pathname === "/api/client/tickets-v2"
+  || pathname === "/api/admin/hr/cli-ticket-messages"
+  || pathname === "/api/crm/hr/cli-ticket-messages"
+  || pathname === "/api/hr/cli-ticket-messages"
+  || pathname === "/api/cli/ticket-messages"
+  || pathname === "/api/admin/hr/cli-ticket-attachments"
+  || pathname === "/api/crm/hr/cli-ticket-attachments"
+  || pathname === "/api/hr/cli-ticket-attachments"
+  || pathname === "/api/cli/ticket-attachments"
+  || pathname === "/api/admin/hr/cli-ticket-history"
+  || pathname === "/api/crm/hr/cli-ticket-history"
+  || pathname === "/api/hr/cli-ticket-history"
+  || pathname === "/api/cli/ticket-history"
+  || pathname === "/api/admin/hr/cli-ticket-sla-pauses"
+  || pathname === "/api/crm/hr/cli-ticket-sla-pauses"
+  || pathname === "/api/hr/cli-ticket-sla-pauses"
+  || pathname === "/api/cli/ticket-sla-pauses"
+  || pathname === "/api/admin/hr/cli-visits"
+  || pathname === "/api/crm/hr/cli-visits"
+  || pathname === "/api/hr/cli-visits"
+  || pathname === "/api/cli/visits"
+  || pathname === "/api/client/visits"
+  || pathname === "/api/admin/hr/cli-visit-history"
+  || pathname === "/api/crm/hr/cli-visit-history"
+  || pathname === "/api/hr/cli-visit-history"
+  || pathname === "/api/cli/visit-history"
+  || pathname === "/api/admin/hr/cli-reports-v2"
+  || pathname === "/api/crm/hr/cli-reports-v2"
+  || pathname === "/api/hr/cli-reports-v2"
+  || pathname === "/api/cli/reports-v2"
+  || pathname === "/api/client/reports-v2"
+  || pathname === "/api/admin/hr/cli-report-history-v2"
+  || pathname === "/api/crm/hr/cli-report-history-v2"
+  || pathname === "/api/hr/cli-report-history-v2"
+  || pathname === "/api/cli/report-history-v2"
+  || pathname === "/api/admin/hr/cli-charges-v2"
+  || pathname === "/api/crm/hr/cli-charges-v2"
+  || pathname === "/api/hr/cli-charges-v2"
+  || pathname === "/api/cli/charges-v2"
+  || pathname === "/api/client/charges-v2"
+  || pathname === "/api/admin/hr/cli-service-requests"
+  || pathname === "/api/crm/hr/cli-service-requests"
+  || pathname === "/api/hr/cli-service-requests"
+  || pathname === "/api/cli/service-requests"
+  || pathname === "/api/client/service-requests"
+  || pathname === "/api/admin/hr/cli-satisfaction-surveys"
+  || pathname === "/api/crm/hr/cli-satisfaction-surveys"
+  || pathname === "/api/hr/cli-satisfaction-surveys"
+  || pathname === "/api/cli/satisfaction-surveys"
+  || pathname === "/api/admin/hr/cli-satisfaction-action-plans"
+  || pathname === "/api/crm/hr/cli-satisfaction-action-plans"
+  || pathname === "/api/hr/cli-satisfaction-action-plans"
+  || pathname === "/api/cli/satisfaction-action-plans"
+  || pathname === "/api/admin/hr/cli-renewal-communications"
+  || pathname === "/api/crm/hr/cli-renewal-communications"
+  || pathname === "/api/hr/cli-renewal-communications"
+  || pathname === "/api/cli/renewal-communications"
+  || pathname === "/api/admin/hr/cli-portal-mode-configs"
+  || pathname === "/api/crm/hr/cli-portal-mode-configs"
+  || pathname === "/api/hr/cli-portal-mode-configs"
+  || pathname === "/api/cli/portal-mode-configs"
+  || pathname === "/api/admin/hr/cli-portal-access-requests"
+  || pathname === "/api/crm/hr/cli-portal-access-requests"
+  || pathname === "/api/hr/cli-portal-access-requests"
+  || pathname === "/api/cli/portal-access-requests"
+  || pathname === "/api/client/portal-access-requests"
+  || pathname === "/api/admin/hr/cli-security-events"
+  || pathname === "/api/crm/hr/cli-security-events"
+  || pathname === "/api/hr/cli-security-events"
+  || pathname === "/api/cli/security-events"
+  || pathname === "/api/admin/hr/cli-email-change-requests"
+  || pathname === "/api/crm/hr/cli-email-change-requests"
+  || pathname === "/api/hr/cli-email-change-requests"
+  || pathname === "/api/cli/email-change-requests"
+  || pathname === "/api/client/email-change-requests"
+  || pathname === "/api/admin/hr/cli-sessions"
+  || pathname === "/api/crm/hr/cli-sessions"
+  || pathname === "/api/hr/cli-sessions"
+  || pathname === "/api/cli/sessions"
+  || pathname === "/api/admin/hr/fin-suppliers"
+  || pathname === "/api/crm/hr/fin-suppliers"
+  || pathname === "/api/hr/fin-suppliers"
+  || pathname === "/api/fin/suppliers"
+  || pathname === "/api/admin/hr/fin-cost-centers"
+  || pathname === "/api/crm/hr/fin-cost-centers"
+  || pathname === "/api/hr/fin-cost-centers"
+  || pathname === "/api/fin/cost-centers"
+  || pathname === "/api/admin/hr/fin-recurrence-rules"
+  || pathname === "/api/crm/hr/fin-recurrence-rules"
+  || pathname === "/api/hr/fin-recurrence-rules"
+  || pathname === "/api/fin/recurrence-rules"
+  || pathname === "/api/admin/hr/fin-receivables"
+  || pathname === "/api/crm/hr/fin-receivables"
+  || pathname === "/api/hr/fin-receivables"
+  || pathname === "/api/fin/receivables"
+  || pathname === "/api/admin/hr/fin-payables"
+  || pathname === "/api/crm/hr/fin-payables"
+  || pathname === "/api/hr/fin-payables"
+  || pathname === "/api/fin/payables"
+  || pathname === "/api/admin/hr/fin-payments"
+  || pathname === "/api/crm/hr/fin-payments"
+  || pathname === "/api/hr/fin-payments"
+  || pathname === "/api/fin/payments"
+  || pathname === "/api/admin/hr/fin-payment-history"
+  || pathname === "/api/crm/hr/fin-payment-history"
+  || pathname === "/api/hr/fin-payment-history"
+  || pathname === "/api/fin/payment-history"
+  || pathname === "/api/admin/hr/fin-attachments"
+  || pathname === "/api/crm/hr/fin-attachments"
+  || pathname === "/api/hr/fin-attachments"
+  || pathname === "/api/fin/attachments"
+  || pathname === "/api/admin/hr/fin-generate-recurring"
+  || pathname === "/api/crm/hr/fin-generate-recurring"
+  || pathname === "/api/hr/fin-generate-recurring"
+  || pathname === "/api/fin/generate-recurring"
+  || pathname === "/api/admin/hr/fin-bank-statements"
+  || pathname === "/api/crm/hr/fin-bank-statements"
+  || pathname === "/api/hr/fin-bank-statements"
+  || pathname === "/api/fin/bank-statements"
+  || pathname === "/api/admin/hr/fin-bank-transactions"
+  || pathname === "/api/crm/hr/fin-bank-transactions"
+  || pathname === "/api/hr/fin-bank-transactions"
+  || pathname === "/api/fin/bank-transactions"
+  || pathname === "/api/admin/hr/fin-conciliations"
+  || pathname === "/api/crm/hr/fin-conciliations"
+  || pathname === "/api/hr/fin-conciliations"
+  || pathname === "/api/fin/conciliations"
+  || pathname === "/api/admin/hr/fin-collection-policies"
+  || pathname === "/api/crm/hr/fin-collection-policies"
+  || pathname === "/api/hr/fin-collection-policies"
+  || pathname === "/api/fin/collection-policies"
+  || pathname === "/api/admin/hr/fin-collection-reminders"
+  || pathname === "/api/crm/hr/fin-collection-reminders"
+  || pathname === "/api/hr/fin-collection-reminders"
+  || pathname === "/api/fin/collection-reminders"
+  || pathname === "/api/admin/hr/fin-collection-history"
+  || pathname === "/api/crm/hr/fin-collection-history"
+  || pathname === "/api/hr/fin-collection-history"
+  || pathname === "/api/fin/collection-history"
+  || pathname === "/api/admin/hr/fin-cashflow-snapshots"
+  || pathname === "/api/crm/hr/fin-cashflow-snapshots"
+  || pathname === "/api/hr/fin-cashflow-snapshots"
+  || pathname === "/api/fin/cashflow-snapshots"
+  || pathname === "/api/admin/hr/fin-aging-receivables"
+  || pathname === "/api/crm/hr/fin-aging-receivables"
+  || pathname === "/api/hr/fin-aging-receivables"
+  || pathname === "/api/fin/aging-receivables"
+  || pathname === "/api/admin/hr/fin-cost-imports"
+  || pathname === "/api/crm/hr/fin-cost-imports"
+  || pathname === "/api/hr/fin-cost-imports"
+  || pathname === "/api/fin/cost-imports"
+  || pathname === "/api/admin/hr/fin-costs"
+  || pathname === "/api/crm/hr/fin-costs"
+  || pathname === "/api/hr/fin-costs"
+  || pathname === "/api/fin/costs"
+  || pathname === "/api/admin/hr/fin-management-results"
+  || pathname === "/api/crm/hr/fin-management-results"
+  || pathname === "/api/hr/fin-management-results"
+  || pathname === "/api/fin/management-results"
+  || pathname === "/api/admin/hr/fin-result-history"
+  || pathname === "/api/crm/hr/fin-result-history"
+  || pathname === "/api/hr/fin-result-history"
+  || pathname === "/api/fin/result-history"
+  || pathname === "/api/admin/hr/fin-expenses"
+  || pathname === "/api/crm/hr/fin-expenses"
+  || pathname === "/api/hr/fin-expenses"
+  || pathname === "/api/fin/expenses"
+  || pathname === "/api/admin/hr/fin-expense-history"
+  || pathname === "/api/crm/hr/fin-expense-history"
+  || pathname === "/api/hr/fin-expense-history"
+  || pathname === "/api/fin/expense-history"
+  || pathname === "/api/admin/hr/fin-fiscal-providers"
+  || pathname === "/api/crm/hr/fin-fiscal-providers"
+  || pathname === "/api/hr/fin-fiscal-providers"
+  || pathname === "/api/fin/fiscal-providers"
+  || pathname === "/api/admin/hr/fin-fiscal-obligations"
+  || pathname === "/api/crm/hr/fin-fiscal-obligations"
+  || pathname === "/api/hr/fin-fiscal-obligations"
+  || pathname === "/api/fin/fiscal-obligations"
+  || pathname === "/api/admin/hr/fin-fiscal-documents"
+  || pathname === "/api/crm/hr/fin-fiscal-documents"
+  || pathname === "/api/hr/fin-fiscal-documents"
+  || pathname === "/api/fin/fiscal-documents"
+  || pathname === "/api/admin/hr/fin-payment-gateways"
+  || pathname === "/api/crm/hr/fin-payment-gateways"
+  || pathname === "/api/hr/fin-payment-gateways"
+  || pathname === "/api/fin/payment-gateways"
+  || pathname === "/api/admin/hr/fin-gateway-webhooks"
+  || pathname === "/api/crm/hr/fin-gateway-webhooks"
+  || pathname === "/api/hr/fin-gateway-webhooks"
+  || pathname === "/api/fin/gateway-webhooks"
+  || pathname === "/api/admin/hr/fin-gateway-charges"
+  || pathname === "/api/crm/hr/fin-gateway-charges"
+  || pathname === "/api/hr/fin-gateway-charges"
+  || pathname === "/api/fin/gateway-charges"
+  || pathname === "/api/admin/hr/fin-budgets"
+  || pathname === "/api/crm/hr/fin-budgets"
+  || pathname === "/api/hr/fin-budgets"
+  || pathname === "/api/fin/budgets"
+  || pathname === "/api/admin/hr/fin-budget-scenarios"
+  || pathname === "/api/crm/hr/fin-budget-scenarios"
+  || pathname === "/api/hr/fin-budget-scenarios"
+  || pathname === "/api/fin/budget-scenarios"
+  || pathname === "/api/admin/hr/fin-exports"
+  || pathname === "/api/crm/hr/fin-exports"
+  || pathname === "/api/hr/fin-exports"
+  || pathname === "/api/fin/exports"
+  || pathname === "/api/admin/hr/fin-export-logs"
+  || pathname === "/api/crm/hr/fin-export-logs"
+  || pathname === "/api/hr/fin-export-logs"
+  || pathname === "/api/fin/export-logs"
+  || pathname === "/api/admin/hr/fin-competence-closures"
+  || pathname === "/api/crm/hr/fin-competence-closures"
+  || pathname === "/api/hr/fin-competence-closures"
+  || pathname === "/api/fin/competence-closures"
+  || pathname === "/api/admin/hr/fin-report-versions"
+  || pathname === "/api/crm/hr/fin-report-versions"
+  || pathname === "/api/hr/fin-report-versions"
+  || pathname === "/api/fin/report-versions"
+  || pathname === "/api/admin/hr/fin-commission-provisions"
+  || pathname === "/api/crm/hr/fin-commission-provisions"
+  || pathname === "/api/hr/fin-commission-provisions"
+  || pathname === "/api/fin/commission-provisions"
+  || pathname === "/api/admin/hr/fin-commission-provision-history"
+  || pathname === "/api/crm/hr/fin-commission-provision-history"
+  || pathname === "/api/hr/fin-commission-provision-history"
+  || pathname === "/api/fin/commission-provision-history"
+  || pathname === "/api/admin/hr/adm-my-day"
+  || pathname === "/api/crm/hr/adm-my-day"
+  || pathname === "/api/hr/adm-my-day"
+  || pathname === "/api/adm/my-day"
+  || pathname === "/api/admin/hr/adm-commercial-snapshots"
+  || pathname === "/api/crm/hr/adm-commercial-snapshots"
+  || pathname === "/api/hr/adm-commercial-snapshots"
+  || pathname === "/api/adm/commercial-snapshots"
+  || pathname === "/api/admin/hr/adm-operational-snapshots"
+  || pathname === "/api/crm/hr/adm-operational-snapshots"
+  || pathname === "/api/hr/adm-operational-snapshots"
+  || pathname === "/api/adm/operational-snapshots"
+  || pathname === "/api/admin/hr/adm-financial-snapshots"
+  || pathname === "/api/crm/hr/adm-financial-snapshots"
+  || pathname === "/api/hr/adm-financial-snapshots"
+  || pathname === "/api/adm/financial-snapshots"
+  || pathname === "/api/admin/hr/adm-renewal-risks"
+  || pathname === "/api/crm/hr/adm-renewal-risks"
+  || pathname === "/api/hr/adm-renewal-risks"
+  || pathname === "/api/adm/renewal-risks"
+  || pathname === "/api/admin/hr/adm-approvals"
+  || pathname === "/api/crm/hr/adm-approvals"
+  || pathname === "/api/hr/adm-approvals"
+  || pathname === "/api/adm/approvals"
+  || pathname === "/api/admin/hr/adm-approval-history"
+  || pathname === "/api/crm/hr/adm-approval-history"
+  || pathname === "/api/hr/adm-approval-history"
+  || pathname === "/api/adm/approval-history"
+  || pathname === "/api/admin/hr/adm-search-favorites"
+  || pathname === "/api/crm/hr/adm-search-favorites"
+  || pathname === "/api/hr/adm-search-favorites"
+  || pathname === "/api/adm/search-favorites"
+  || pathname === "/api/admin/hr/adm-saved-filters"
+  || pathname === "/api/crm/hr/adm-saved-filters"
+  || pathname === "/api/hr/adm-saved-filters"
+  || pathname === "/api/adm/saved-filters"
+  || pathname === "/api/admin/hr/adm-shortcuts"
+  || pathname === "/api/crm/hr/adm-shortcuts"
+  || pathname === "/api/hr/adm-shortcuts"
+  || pathname === "/api/adm/shortcuts"
+  || pathname === "/api/admin/hr/adm-reports"
+  || pathname === "/api/crm/hr/adm-reports"
+  || pathname === "/api/hr/adm-reports"
+  || pathname === "/api/adm/reports"
+  || pathname === "/api/admin/hr/adm-report-logs"
+  || pathname === "/api/crm/hr/adm-report-logs"
+  || pathname === "/api/hr/adm-report-logs"
+  || pathname === "/api/adm/report-logs"
+  || pathname === "/api/admin/hr/adm-business-configs"
+  || pathname === "/api/crm/hr/adm-business-configs"
+  || pathname === "/api/hr/adm-business-configs"
+  || pathname === "/api/adm/business-configs"
+  || pathname === "/api/admin/hr/adm-goals-comparison"
+  || pathname === "/api/crm/hr/adm-goals-comparison"
+  || pathname === "/api/hr/adm-goals-comparison"
+  || pathname === "/api/adm/goals-comparison"
+  || pathname === "/api/admin/hr/adm-management-diary-access"
+  || pathname === "/api/crm/hr/adm-management-diary-access"
+  || pathname === "/api/hr/adm-management-diary-access"
+  || pathname === "/api/adm/management-diary-access"
+  || pathname === "/api/admin/hr/adm-expansion-analyses"
+  || pathname === "/api/crm/hr/adm-expansion-analyses"
+  || pathname === "/api/hr/adm-expansion-analyses"
+  || pathname === "/api/adm/expansion-analyses"
+  || pathname === "/api/admin/hr/ast-suppliers"
+  || pathname === "/api/crm/hr/ast-suppliers"
+  || pathname === "/api/hr/ast-suppliers"
+  || pathname === "/api/ast/suppliers"
+  || pathname === "/api/admin/hr/ast-products"
+  || pathname === "/api/crm/hr/ast-products"
+  || pathname === "/api/hr/ast-products"
+  || pathname === "/api/ast/products"
+  || pathname === "/api/admin/hr/ast-stock-movements"
+  || pathname === "/api/crm/hr/ast-stock-movements"
+  || pathname === "/api/hr/ast-stock-movements"
+  || pathname === "/api/ast/stock-movements"
+  || pathname === "/api/admin/hr/ast-reservations"
+  || pathname === "/api/crm/hr/ast-reservations"
+  || pathname === "/api/hr/ast-reservations"
+  || pathname === "/api/ast/reservations"
+  || pathname === "/api/admin/hr/ast-serialized-assets"
+  || pathname === "/api/crm/hr/ast-serialized-assets"
+  || pathname === "/api/hr/ast-serialized-assets"
+  || pathname === "/api/ast/serialized-assets"
+  || pathname === "/api/admin/hr/ast-deliveries"
+  || pathname === "/api/crm/hr/ast-deliveries"
+  || pathname === "/api/hr/ast-deliveries"
+  || pathname === "/api/ast/deliveries"
+  || pathname === "/api/admin/hr/ast-requisitions"
+  || pathname === "/api/crm/hr/ast-requisitions"
+  || pathname === "/api/hr/ast-requisitions"
+  || pathname === "/api/ast/requisitions"
+  || pathname === "/api/admin/hr/ast-quotations"
+  || pathname === "/api/crm/hr/ast-quotations"
+  || pathname === "/api/hr/ast-quotations"
+  || pathname === "/api/ast/quotations"
+  || pathname === "/api/admin/hr/ast-purchase-orders"
+  || pathname === "/api/crm/hr/ast-purchase-orders"
+  || pathname === "/api/hr/ast-purchase-orders"
+  || pathname === "/api/ast/purchase-orders"
+  || pathname === "/api/admin/hr/ast-requisition-history"
+  || pathname === "/api/crm/hr/ast-requisition-history"
+  || pathname === "/api/hr/ast-requisition-history"
+  || pathname === "/api/ast/requisition-history"
+  || pathname === "/api/admin/hr/ast-order-history"
+  || pathname === "/api/crm/hr/ast-order-history"
+  || pathname === "/api/hr/ast-order-history"
+  || pathname === "/api/ast/order-history"
+  || pathname === "/api/admin/hr/ast-inventories"
+  || pathname === "/api/crm/hr/ast-inventories"
+  || pathname === "/api/hr/ast-inventories"
+  || pathname === "/api/ast/inventories"
+  || pathname === "/api/admin/hr/ast-inventory-items"
+  || pathname === "/api/crm/hr/ast-inventory-items"
+  || pathname === "/api/hr/ast-inventory-items"
+  || pathname === "/api/ast/inventory-items"
+  || pathname === "/api/admin/hr/ast-service-orders"
+  || pathname === "/api/crm/hr/ast-service-orders"
+  || pathname === "/api/hr/ast-service-orders"
+  || pathname === "/api/ast/service-orders"
+  || pathname === "/api/admin/hr/ast-service-order-evidences"
+  || pathname === "/api/crm/hr/ast-service-order-evidences"
+  || pathname === "/api/hr/ast-service-order-evidences"
+  || pathname === "/api/ast/service-order-evidences"
+  || pathname === "/api/admin/hr/ast-maintenance-plans"
+  || pathname === "/api/crm/hr/ast-maintenance-plans"
+  || pathname === "/api/hr/ast-maintenance-plans"
+  || pathname === "/api/ast/maintenance-plans"
+  || pathname === "/api/admin/hr/ast-maintenance-executions"
+  || pathname === "/api/crm/hr/ast-maintenance-executions"
+  || pathname === "/api/hr/ast-maintenance-executions"
+  || pathname === "/api/ast/maintenance-executions"
+  || pathname === "/api/admin/hr/ast-cftv-dossiers"
+  || pathname === "/api/crm/hr/ast-cftv-dossiers"
+  || pathname === "/api/hr/ast-cftv-dossiers"
+  || pathname === "/api/ast/cftv-dossiers"
+  || pathname === "/api/admin/hr/ast-cleaning-materials"
+  || pathname === "/api/crm/hr/ast-cleaning-materials"
+  || pathname === "/api/hr/ast-cleaning-materials"
+  || pathname === "/api/ast/cleaning-materials"
+  || pathname === "/api/admin/hr/ext-fleet-vehicles"
+  || pathname === "/api/crm/hr/ext-fleet-vehicles"
+  || pathname === "/api/hr/ext-fleet-vehicles"
+  || pathname === "/api/ext/fleet-vehicles"
+  || pathname === "/api/admin/hr/ext-fleet-fuel-logs"
+  || pathname === "/api/crm/hr/ext-fleet-fuel-logs"
+  || pathname === "/api/hr/ext-fleet-fuel-logs"
+  || pathname === "/api/ext/fleet-fuel-logs"
+  || pathname === "/api/admin/hr/ext-fleet-maintenance-logs"
+  || pathname === "/api/crm/hr/ext-fleet-maintenance-logs"
+  || pathname === "/api/hr/ext-fleet-maintenance-logs"
+  || pathname === "/api/ext/fleet-maintenance-logs"
+  || pathname === "/api/admin/hr/ext-fleet-documents"
+  || pathname === "/api/crm/hr/ext-fleet-documents"
+  || pathname === "/api/hr/ext-fleet-documents"
+  || pathname === "/api/ext/fleet-documents"
+  || pathname === "/api/admin/hr/ext-third-parties"
+  || pathname === "/api/crm/hr/ext-third-parties"
+  || pathname === "/api/hr/ext-third-parties"
+  || pathname === "/api/ext/third-parties"
+  || pathname === "/api/admin/hr/ext-third-party-documents"
+  || pathname === "/api/crm/hr/ext-third-party-documents"
+  || pathname === "/api/hr/ext-third-party-documents"
+  || pathname === "/api/ext/third-party-documents"
+  || pathname === "/api/admin/hr/ext-bidding-notices"
+  || pathname === "/api/crm/hr/ext-bidding-notices"
+  || pathname === "/api/hr/ext-bidding-notices"
+  || pathname === "/api/ext/bidding-notices"
+  || pathname === "/api/admin/hr/ext-bidding-documents"
+  || pathname === "/api/crm/hr/ext-bidding-documents"
+  || pathname === "/api/hr/ext-bidding-documents"
+  || pathname === "/api/ext/bidding-documents"
+  || pathname === "/api/admin/hr/ext-supplier-portal-quotations"
+  || pathname === "/api/crm/hr/ext-supplier-portal-quotations"
+  || pathname === "/api/hr/ext-supplier-portal-quotations"
+  || pathname === "/api/ext/supplier-portal-quotations"
+  || pathname === "/api/admin/hr/ext-quality-nonconformities"
+  || pathname === "/api/crm/hr/ext-quality-nonconformities"
+  || pathname === "/api/hr/ext-quality-nonconformities"
+  || pathname === "/api/ext/quality-nonconformities"
+  || pathname === "/api/admin/hr/ext-quality-actions"
+  || pathname === "/api/crm/hr/ext-quality-actions"
+  || pathname === "/api/hr/ext-quality-actions"
+  || pathname === "/api/ext/quality-actions"
+  || pathname === "/api/admin/hr/ext-satisfaction-surveys"
+  || pathname === "/api/crm/hr/ext-satisfaction-surveys"
+  || pathname === "/api/hr/ext-satisfaction-surveys"
+  || pathname === "/api/ext/satisfaction-surveys"
+  || pathname === "/api/admin/hr/ext-compliance-documents"
+  || pathname === "/api/crm/hr/ext-compliance-documents"
+  || pathname === "/api/hr/ext-compliance-documents"
+  || pathname === "/api/ext/compliance-documents"
+  || pathname === "/api/admin/hr/ext-knowledge-base"
+  || pathname === "/api/crm/hr/ext-knowledge-base"
+  || pathname === "/api/hr/ext-knowledge-base"
+  || pathname === "/api/ext/knowledge-base"
+  || pathname === "/api/admin/hr/ext-expansion-plans"
+  || pathname === "/api/crm/hr/ext-expansion-plans"
+  || pathname === "/api/hr/ext-expansion-plans"
+  || pathname === "/api/ext/expansion-plans"
+  || pathname === "/api/admin/hr/ext-expansion-scenarios"
+  || pathname === "/api/crm/hr/ext-expansion-scenarios"
+  || pathname === "/api/hr/ext-expansion-scenarios"
+  || pathname === "/api/ext/expansion-scenarios"
+  || pathname === "/api/admin/hr/ext-continuity-plans"
+  || pathname === "/api/crm/hr/ext-continuity-plans"
+  || pathname === "/api/hr/ext-continuity-plans"
+  || pathname === "/api/ext/continuity-plans"
+  || pathname === "/api/admin/hr/ext-analytics-experiments"
+  || pathname === "/api/crm/hr/ext-analytics-experiments"
+  || pathname === "/api/hr/ext-analytics-experiments"
+  || pathname === "/api/ext/analytics-experiments"
+  || pathname === "/api/admin/hr/ext-visual-tokens"
+  || pathname === "/api/crm/hr/ext-visual-tokens"
+  || pathname === "/api/hr/ext-visual-tokens"
+  || pathname === "/api/ext/visual-tokens"
+  || pathname === "/api/admin/hr/ext-visual-layouts"
+  || pathname === "/api/crm/hr/ext-visual-layouts"
+  || pathname === "/api/hr/ext-visual-layouts"
+  || pathname === "/api/ext/visual-layouts"
+  || pathname === "/api/admin/hr/ext-periodic-reports"
+  || pathname === "/api/crm/hr/ext-periodic-reports"
+  || pathname === "/api/hr/ext-periodic-reports"
+  || pathname === "/api/ext/periodic-reports"
+  || pathname === "/api/admin/hr/ext-commercial-intelligence"
+  || pathname === "/api/crm/hr/ext-commercial-intelligence"
+  || pathname === "/api/hr/ext-commercial-intelligence"
+  || pathname === "/api/ext/commercial-intelligence"
+  || pathname === "/api/admin/hr/ext-emergency-channels"
+  || pathname === "/api/crm/hr/ext-emergency-channels"
+  || pathname === "/api/hr/ext-emergency-channels"
+  || pathname === "/api/ext/emergency-channels"
+  || pathname === "/api/admin/hr/ext-emergency-tests"
+  || pathname === "/api/crm/hr/ext-emergency-tests"
+  || pathname === "/api/hr/ext-emergency-tests"
+  || pathname === "/api/ext/emergency-tests"
+  || pathname === "/api/admin/hr/ext-central-projects"
+  || pathname === "/api/crm/hr/ext-central-projects"
+  || pathname === "/api/hr/ext-central-projects"
+  || pathname === "/api/ext/central-projects"
+  || pathname === "/api/admin/hr/ext-biometry-projects"
+  || pathname === "/api/crm/hr/ext-biometry-projects"
+  || pathname === "/api/hr/ext-biometry-projects"
+  || pathname === "/api/ext/biometry-projects"
+  || pathname === "/api/admin/hr/ext-ai-automations"
+  || pathname === "/api/crm/hr/ext-ai-automations"
+  || pathname === "/api/hr/ext-ai-automations"
+  || pathname === "/api/ext/ai-automations"
+  || pathname === "/api/ai/automations"
+  || pathname === "/api/admin/hr/ext-ai-automation-logs"
+  || pathname === "/api/crm/hr/ext-ai-automation-logs"
+  || pathname === "/api/hr/ext-ai-automation-logs"
+  || pathname === "/api/ext/ai-automation-logs"
+  || pathname === "/api/ai/automation-logs"
+  || pathname === "/api/admin/cms-contents"
+  || pathname === "/api/cms-contents"
+  || pathname === "/api/public/cms-contents"
+  || pathname.startsWith("/api/admin/cms-contents/")
+  || pathname.startsWith("/api/cms-contents/")
+  || pathname === "/api/cms"
+  || pathname === "/api/public/cms"
+  || pathname === "/api/seo/cms"
+  || pathname === "/api/admin/themes"
+  || pathname === "/api/themes"
+  || pathname === "/api/public/themes"
+  || pathname.startsWith("/api/admin/themes/")
+  || pathname.startsWith("/api/themes/")
+  || pathname === "/api/admin/theme-previews"
+  || pathname === "/api/themes/preview"
+  || pathname === "/api/public/theme-previews"
+  || pathname.startsWith("/api/theme-previews")
+  || pathname === "/api/admin/theme-preferences"
+  || pathname === "/api/theme-preferences"
+  || pathname === "/api/public/theme-preferences"
+  || pathname === "/api/admin/themes/rollback"
+  || pathname === "/api/themes/rollback"
+  || pathname === "/api/admin/seo-configs"
+  || pathname === "/api/seo-configs"
+  || pathname === "/api/seo"
+  || pathname === "/api/admin/seo-redirects"
+  || pathname === "/api/seo-redirects"
+  || pathname === "/api/admin/seo-sitemap"
+  || pathname === "/api/seo-sitemap"
+  || pathname === "/api/sitemap"
+  || pathname.endsWith("sitemap.xml")
+  || pathname === "/api/admin/domain-verifications"
+  || pathname === "/api/domain-verifications"
+  || pathname === "/api/seo/domain-verifications"
+  || pathname === "/api/admin/package-rules"
+  || pathname === "/api/package-rules"
+  || pathname === "/api/admin/service-packages"
+  || pathname === "/api/service-packages"
+  || pathname === "/api/packages"
+  || pathname === "/api/public/packages"
+  || pathname === "/api/admin/package-comparisons"
+  || pathname === "/api/package-comparisons"
+  || pathname === "/api/admin/origin-metrics"
+  || pathname === "/api/origin-metrics"
+  || pathname === "/api/public/origin-metrics"
+  || pathname === "/api/admin/conversion-events"
+  || pathname === "/api/conversion-events"
+  || pathname === "/api/admin/ab-tests"
+  || pathname === "/api/ab-tests"
+  || pathname === "/api/public/ab-tests"
+  || pathname === "/api/admin/employee-complaints"
+  || pathname === "/api/employee-complaints"
+  || pathname === "/api/cli/employee-complaints"
+  || pathname.startsWith("/api/admin/employee-complaints/")
+  || pathname.startsWith("/api/employee-complaints/")
+  || pathname === "/api/admin/employee-complaint-messages"
+  || pathname === "/api/employee-complaint-messages"
+  || pathname === "/api/admin/employee-complaint-evidences"
+  || pathname === "/api/employee-complaint-evidences"
+  || pathname === "/api/admin/employee-complaint-hr-shares"
+  || pathname === "/api/employee-complaint-hr-shares"
+  || pathname === "/api/admin/pub-segments"
+  || pathname === "/api/pub-segments"
+  || pathname === "/api/segments"
+  || pathname === "/api/public/segments"
+  || pathname === "/api/pub/segments"
+  || pathname === "/api/admin/pub-performance"
+  || pathname === "/api/pub-performance"
+  || pathname === "/api/performance-metrics"
+  || pathname === "/api/admin/pub-accessibility"
+  || pathname === "/api/pub-accessibility"
+  || pathname === "/api/accessibility-checks"
+  || pathname === "/api/admin/faq-assisted-rules"
+  || pathname === "/api/faq-assisted-rules"
+  || pathname === "/api/pub/faq-rules"
+  || pathname === "/api/faq-assisted"
+  || pathname === "/api/public/faq-assisted"
+  || pathname === "/api/pub/faq-sessions"
+  || pathname === "/api/admin/faq-assisted-sessions"
+  || pathname === "/api/admin/pub-faq-sessions"
+  || pathname === "/api/faq-assisted-messages"
+  || pathname === "/api/pub/faq-messages"
+  || pathname === "/api/admin/faq-assisted-messages"
+  || pathname === "/api/faq-assisted-handoff"
+  || pathname === "/api/pub/handoff-requests"
+  || pathname === "/api/admin/faq-handoff"
+  || pathname === "/api/admin/human-handoff"
+  || pathname === "/api/admin/ai-rag-indexes"
+  || pathname === "/api/ai-rag-indexes"
+  || pathname === "/api/ai/rag-indexes"
+  || pathname === "/api/admin/ai-rag-documents"
+  || pathname === "/api/ai-rag-documents"
+  || pathname === "/api/ai/rag-documents"
+  || pathname === "/api/admin/ai-rag-queries"
+  || pathname === "/api/ai-rag-queries"
+  || pathname === "/api/ai/rag"
+  || pathname === "/api/public/ai/rag"
+  || pathname === "/api/ai/rag/queries"
+  || pathname === "/api/ai/rag/feedback"
+  || pathname === "/api/public/ai/rag/feedback"
+  || pathname === "/api/admin/ai-rag-feedback"
+  || pathname === "/api/admin/ai-rag-cost"
+  || pathname === "/api/ai/rag/cost"
+  || pathname === "/api/ai-rag-cost-tracking"
+  || pathname === "/api/admin/ai-bot-config"
+  || pathname === "/api/ai-bot-config"
+  || pathname === "/api/ai/bot-config"
+  || pathname === "/api/ai/bot"
+  || pathname === "/api/public/ai/bot"
+  || pathname === "/api/bot"
+  || pathname === "/api/admin/ai-bot-sessions"
+  || pathname === "/api/ai/bot-sessions"
+  || pathname === "/api/admin/ai-rag-chunks"
+  || pathname === "/api/ai-rag-chunks"
+  || pathname === "/api/ai/rag-chunks";
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
@@ -541,26 +4904,3 @@ server.on("upgrade", (req, socket, head) => upgradeHandler(req, socket, head));
 server.listen(port, hostname, () => {
   console.log(`Grupo SEG System ${dev ? "dev" : "server"} listening on http://${hostname}:${port}`);
 });
-
-async function handleClientMfa(req, res) {
-  const db = getPool();
-  const session = await (clientAccessApi.readClientSession ? clientAccessApi.readClientSession(req) : null);
-  if (!clientSecurityApi) return json(res, 503, { error: "security_not_available" });
-  return clientSecurityApi.handleMfaVerify(req, res, db, session);
-}
-
-async function handleEmailChange(req, res) {
-  const db = getPool();
-  const session = await (clientAccessApi.readClientSession ? clientAccessApi.readClientSession(req) : null);
-  if (!clientSecurityApi) return json(res, 503, { error: "security_not_available" });
-  if (req.method === "POST") {
-    return clientSecurityApi.handleEmailChangeRequest(req, res, db, session);
-  }
-  if (req.method === "PUT") {
-    return clientSecurityApi.handleEmailChangeConfirm(req, res, db, session);
-  }
-  if (req.method === "DELETE") {
-    return clientSecurityApi.handleEmailChangeCancel(req, res, db, session);
-  }
-  return json(res, 405, { error: "method_not_allowed" }, { Allow: "POST, PUT, DELETE" });
-}
