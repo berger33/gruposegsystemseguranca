@@ -20,6 +20,8 @@
 | `PLT-MIG-001`, `npm run test:migrations:pg` | exit 0; 97/97, reaplicação com checksum, clone preservado, mutação deliberada em migração 006 rejeitada no clone, cleanup true. |
 | `TENANT-SEG-001`, `npm run test:tenant:pg` | **9/9**, exit 0, cleanup true **após ajuste da fixture para incluir a migração aditiva 097**. Uma primeira execução falhou (coluna nova ausente na fixture com apenas 001–007); não foi contada como passe. |
 | `PLT-SMK-001`/`PLT-CI-001`; `npm run typecheck`; `npm run build` | Estático 5/5; typecheck e build exit 0. |
+| `TENANT-SEG-003` (`npm run test:cli-v2:pg`) | **9/9**, exit 0; cluster temporário removido. |
+| PR #6 / CI remoto para `d7639d7` | [GitHub Actions 36511564929](https://github.com/berger33/gruposegsystemseguranca/actions/runs/36511564929) **verde** (install/audit, static, unit, typecheck, build, RAG e tenant A/B). O rótulo da etapa tenant foi corrigido para mencionar a fixture 097; o commit de rótulo exige novo check próprio. |
 
 Houve uma primeira falha QA-HOM-006 causada por diferença de erro (`auth_unavailable` vs `mfa_login_unavailable`) para segredo legado; o servidor foi corrigido para resposta explícita 503 e o smoke final passou. Logs em `/tmp/mfa-{ci,unit-final,type-final,static,migrations,http-extra,tenant-final,build}.log`, temporários/não versionados. **Não copiar senhas, QR, códigos ou chaves para relatórios/logs**. `--verify` não imprime esses segredos.
 
