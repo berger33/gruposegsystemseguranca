@@ -12,16 +12,18 @@ import { fileURLToPath } from 'node:url';
 import { hashPassword } from '../src/lib/client-auth-core.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const verify = process.argv.includes('--verify');
+const simulateWin1252 = process.argv.includes('--verify-win1252');
+const verify = process.argv.includes('--verify') || simulateWin1252;
 const preflightOnly = process.argv.includes('--preflight');
-const unsupported = process.argv.filter(arg => arg.startsWith('--') && !['--verify', '--preflight'].includes(arg));
+const unsupported = process.argv.filter(arg => arg.startsWith('--') && !['--verify', '--verify-win1252', '--preflight'].includes(arg));
 const refused = ['DATABASE_URL', 'DATABASE_MIGRATION_URL', 'ALLOW_REMOTE_MIGRATIONS',
   'QA_PGLITE_ONLY', 'CLIENT_DOCS_DIR', 'PGLITE_DATA_DIR', 'PGHOST', 'PGSERVICE',
   'SITE_ADMIN_SESSION_SECRET', 'SITE_ADMIN_TOKEN_TI', 'SITE_ADMIN_TOKEN_MARCELO',
   'MAIL_HOST', 'MAIL_USER', 'MAIL_PASSWORD', 'OLLAMA_HOST', 'TRUST_PROXY', 'PUBLIC_BASE_URL'];
 
 async function preflight() {
-  if (unsupported.length || (verify && preflightOnly)) throw new Error('qa_unknown_option');
+  if (unsupported.length || (verify && preflightOnly) ||
+      (simulateWin1252 && process.platform === 'win32')) throw new Error('qa_unknown_option');
   if (process.versions.node.split('.')[0] !== '22') throw new Error('qa_requires_node_22');
   for (const key of refused) if (process.env[key]) throw new Error(`qa_env_refused_${key}`);
   for (const name of await readdir(root)) if (name === '.env' || name.startsWith('.env.')) {
@@ -51,6 +53,22 @@ function assertWebPortFree() {
     server.once('error', () => reject(new Error('qa_port_3000_busy_close_the_old_preview_before_install')));
     server.listen(3000, '127.0.0.1', () => server.close(resolve));
   });
+}
+
+// The cluster itself may use WIN1252 on Windows. Create a fresh UTF8 database
+// from template0 using ASCII-only SQL while connected to its default database.
+// No existing DB can be touched: engine owns only the mkdtemp cluster above.
+async function createUtf8QaDatabase(engine) {
+  const admin = engine.getPgClient('postgres', '127.0.0.1');
+  try {
+    await admin.connect();
+    const { rows: [cluster] } = await admin.query('SHOW server_encoding');
+    if (simulateWin1252 && cluster.server_encoding !== 'WIN1252') throw new Error('qa_win1252_simulation_failed');
+    console.log(`QA-HOM-001_CLUSTER_ENCODING: ${cluster.server_encoding} (cluster descartável, não DB da aplicação)`);
+    await admin.query("CREATE DATABASE seg_qa_homologacao WITH TEMPLATE template0 ENCODING 'UTF8' LC_COLLATE 'C' LC_CTYPE 'C'");
+  } finally {
+    await admin.end().catch(() => {});
+  }
 }
 
 function randomPassword() { return randomBytes(24).toString('base64url'); }
@@ -193,10 +211,11 @@ const pgPassword = randomBytes(24).toString('hex');
 const databaseUrl = `postgresql://seg_qa:${pgPassword}@127.0.0.1:${port}/seg_qa_homologacao`;
 const pgEngine = new EmbeddedPostgres({
   databaseDir: path.join(directory, 'data'), port, user: 'seg_qa', password: pgPassword,
-  // Windows can default to WIN1252. The SQL migrations contain Unicode (e.g. arrows),
-  // so initdb must create an UTF8 cluster independent of the Windows system locale.
-  // C is available on PostgreSQL's supported platforms, including Windows.
-  persistent: false, initdbFlags: ['--locale=C', '--encoding=UTF8'],
+  // Do NOT force UTF8 in initdb: on Portuguese Windows its internal bootstrap
+  // fails on locale data (0xe7); the default cluster DID start there. The
+  // disposable application database is created as UTF8 from template0 below.
+  persistent: false,
+  ...(simulateWin1252 ? { initdbFlags: ['--locale=C', '--encoding=WIN1252'] } : {}),
   postgresFlags: ['-c', 'listen_addresses=127.0.0.1'],
   onLog: () => {},
   onError: error => console.error('QA_HOM_PG_ERROR', String(error).replaceAll(pgPassword, '[redacted]').slice(0, 250)),
@@ -211,9 +230,9 @@ let result = 1;
 try {
   await pgEngine.initialise();
   await pgEngine.start();
-  await pgEngine.createDatabase('seg_qa_homologacao');
+  await createUtf8QaDatabase(pgEngine);
   pool = new pg.Pool({ connectionString: databaseUrl, max: 2 });
-  // Fail closed *before* migrations if the OS-created DB or client uses WIN1252.
+  // Fail closed *before* migrations if the application DB or client uses WIN1252.
   // A round-trip probe ensures that non-ASCII SQL literals are transferable too.
   const { rows: [encoding] } = await pool.query(`SELECT current_setting('server_encoding') AS server_encoding,
     current_setting('client_encoding') AS client_encoding, $1::text AS probe`, ['QA → UTF-8']);
