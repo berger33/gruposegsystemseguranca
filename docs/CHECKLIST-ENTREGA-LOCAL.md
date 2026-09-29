@@ -225,10 +225,10 @@ funil inicial novo → qualificação → vistoria/diagnóstico → proposta em 
 
 ## CRM-07
 kanban e tabela, filtros, busca, tarefas vencidas, histórico de ligações/reuniões, anexos e notas internas autorizadas.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Sem UI; a própria página `/admin/crm` documenta "estrutura pronta em 014 (tasks, interactions, visits)" — ou seja, schema existe, tela não.
-- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão.
-- Pendência / fronteira externa / aceite humano: Kanban, filtros, busca, tarefas vencidas, histórico de ligações/reuniões, anexos e notas internas continuam sem tela.
+- Estado: em_execucao
+- Tela / API / dados / autorização: /admin/crm → Abrir tarefas; OpportunityTasks.tsx; GET/POST de tarefas por oportunidade e PATCH de status. Responsável/autor derivados da sessão; mesma restrição no detalhe legado. Tarefa e auditoria em transação. Migração 104.
+- Integração e evidência (teste, resultado, commit): código 7bab313, PR #13; Actions 36604855660: L04 2/2 HTTP+Chromium+PostgreSQL, sem skips, mais migrações/replay/checksum 104/104. Actions 36604855633: baseline aprovado. Criação, prazo vencido, filtro, recarga, conclusão, negação cruzada, conflito e rollback de auditoria comprovados.
+- Pendência / fronteira externa / aceite humano: CRM-07 NÃO concluído. Histórico de interações, anexos/notas, paginação, tarefas de equipe/delegação/edição e revisão completa de kanban/filtros ainda pendentes. Lista pessoal limitada a 200 por oportunidade. Aceite humano/Windows não executado.
 
 ## CRM-08
 agenda de visitas e reuniões, responsável, participantes, confirmação, reagendamento e cancelamento. Links/calendário externo somente por integração configurada.
