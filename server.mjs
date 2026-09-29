@@ -5407,7 +5407,21 @@ await app.prepare();
 const server = createServer(async (req, res) => {
   const pathname = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`).pathname;
   if (API_PATH_MATCH(pathname)) {
-    await routeApi(req, res);
+    try {
+      await routeApi(req, res);
+    } catch (error) {
+      // Sem esta rede de proteção, qualquer erro não tratado dentro de um
+      // handler rejeitava esta callback e a requisição ficava SEM RESPOSTA até
+      // o cliente desistir (foi o que aconteceu com um erro 42P08 no PATCH da
+      // FAQ assistida). Agora vira 500 com corpo curto, sem vazar detalhe.
+      console.error("api_route_failed", pathname, String(error?.message || error).slice(0, 300));
+      if (!res.headersSent) {
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "internal_error" }));
+      } else {
+        res.destroy();
+      }
+    }
     return;
   }
   await handle(req, res);

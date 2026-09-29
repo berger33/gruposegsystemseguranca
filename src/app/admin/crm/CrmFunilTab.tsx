@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch, Badge, btn, btnPrimary, card, colors, ErrorBox, fmtDate, input, label, Notice, SectionTitle, td, th } from "./crm-ui";
 
 type Opportunity = {
@@ -34,7 +34,12 @@ export default function CrmFunilTab() {
   const [lossReason, setLossReason] = useState("");
   const [reopenReason, setReopenReason] = useState("");
 
+  // Guarda de resposta atrasada: sem isto, a busca de um filtro antigo
+  // pode chegar depois e sobrescrever o resultado do filtro atual.
+  const requestSeq = useRef(0);
   const load = useCallback(async () => {
+    const seq = ++requestSeq.current;
+
     setError("");
     try {
       const params = new URLSearchParams();
@@ -43,6 +48,7 @@ export default function CrmFunilTab() {
       if (filter.search) params.set("search", filter.search);
       params.set("limit", "200");
       const data = await apiFetch(`/api/crm/opportunities?${params.toString()}`);
+      if (seq !== requestSeq.current) return;
       setOpps(data.opportunities || []);
     } catch (e: any) { setError(e.message); }
     try {

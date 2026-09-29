@@ -98,8 +98,8 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
       const nextStatus=status||cur.status;
       const valid=['rascunho','em_revisao','aprovado','publicado','arquivado','rejeitado'];
       if(!valid.includes(nextStatus)) return json(res,400,{error:'invalid_status'});
-      const { rows } = await pool.query(`UPDATE ai_rag_indexes SET status=$2, is_approved=COALESCE($3,is_approved), is_published=COALESCE($4,is_published), approved_by_identity=CASE WHEN $3=true OR $2 IN ('aprovado','publicado') THEN $5 ELSE approved_by_identity END, approved_by_name=CASE WHEN $3=true OR $2 IN ('aprovado','publicado') THEN $6 ELSE approved_by_name END, approved_at=CASE WHEN $3=true OR $2 IN ('aprovado','publicado') THEN NOW() ELSE approved_at END, version=version+1, updated_at=NOW() WHERE id=$1 RETURNING *`,
-        [id, nextStatus, is_approved, is_published, sess.identityId||null, sess.role||null]);
+      const { rows } = await pool.query(`UPDATE ai_rag_indexes SET status=$2, is_approved=COALESCE($3,is_approved), is_published=COALESCE($4,is_published), approved_by_identity=CASE WHEN $3=true OR $7 IN ('aprovado','publicado') THEN $5 ELSE approved_by_identity END, approved_by_name=CASE WHEN $3=true OR $7 IN ('aprovado','publicado') THEN $6 ELSE approved_by_name END, approved_at=CASE WHEN $3=true OR $7 IN ('aprovado','publicado') THEN NOW() ELSE approved_at END, version=version+1, updated_at=NOW() WHERE id=$1 RETURNING *`,
+        [id, nextStatus, is_approved, is_published, sess.identityId||null, sess.role||null, nextStatus]);
       await pool.query(`INSERT INTO ai_rag_history (rag_index_id, previous_status, next_status, previous_version, next_version, reason, changed_by_identity, changed_by_name) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [id, cur.status, nextStatus, cur.version, rows[0].version, reason, sess.identityId||null, sess.role||null]);
       await auditLog({ action: nextStatus==='publicado'?'ai_rag_publish':'ai_rag_update', actor:sess.identityId||'system', target:id, meta:{ status: nextStatus } });
       return json(res,200,rows[0]);

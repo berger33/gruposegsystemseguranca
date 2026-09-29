@@ -1,7 +1,10 @@
+// Token de preview é credencial de acesso: precisa de aleatoriedade criptográfica,
+// não de Math.random.
+import { randomBytes } from 'node:crypto';
 export function createThemeApi({ pool, auditLog, sameOrigin, requireSession, requireRole }) {
   const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
   const readJson = async (req) => { const chunks=[]; for await (const c of req) chunks.push(c); const raw=Buffer.concat(chunks).toString('utf8'); if(!raw) return {}; try{ return JSON.parse(raw);} catch{ return {}; } };
-  const genToken = () => { const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; let t=''; for(let i=0;i<32;i++) t+=chars[Math.floor(Math.random()*chars.length)]; return t; };
+  const genToken = () => randomBytes(24).toString('base64url').slice(0, 32);
 
   const handleThemes = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});

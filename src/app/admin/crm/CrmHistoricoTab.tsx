@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch, Badge, btn, btnPrimary, card, colors, ErrorBox, fmtDate, input, label, Notice, SectionTitle } from "./crm-ui";
 
 type Interaction = {
@@ -32,13 +32,19 @@ export default function CrmHistoricoTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Guarda de resposta atrasada: sem isto, a busca de um filtro antigo
+  // pode chegar depois e sobrescrever o resultado do filtro atual.
+  const requestSeq = useRef(0);
   const load = useCallback(async () => {
+    const seq = ++requestSeq.current;
+
     if (!companyId) { setInteractions([]); return; }
     setError("");
     try {
       const params = new URLSearchParams({ company_id: companyId, limit: "100" });
       if (typeFilter) params.set("type", typeFilter);
       const data = await apiFetch(`/api/crm/interactions?${params.toString()}`);
+      if (seq !== requestSeq.current) return;
       setInteractions(data.interactions || []);
       setOpen({});
       setAttachments({});

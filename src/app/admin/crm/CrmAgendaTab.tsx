@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch, Badge, btn, btnPrimary, card, colors, ErrorBox, fmtDate, fmtDay, input, label, Notice, SectionTitle } from "./crm-ui";
 
 type Visit = {
@@ -29,7 +29,12 @@ export default function CrmAgendaTab() {
   const [rescheduleFor, setRescheduleFor] = useState<string | null>(null);
   const [newDate, setNewDate] = useState("");
 
+  // Guarda de resposta atrasada: sem isto, a busca de um filtro antigo
+  // pode chegar depois e sobrescrever o resultado do filtro atual.
+  const requestSeq = useRef(0);
   const load = useCallback(async () => {
+    const seq = ++requestSeq.current;
+
     setError("");
     try {
       const params = new URLSearchParams();
@@ -38,6 +43,7 @@ export default function CrmAgendaTab() {
       if (filter.upcomingOnly) params.set("from", new Date(Date.now() - 24 * 3600 * 1000).toISOString());
       params.set("limit", "200");
       const data = await apiFetch(`/api/crm/visits?${params.toString()}`);
+      if (seq !== requestSeq.current) return;
       setVisits(data.visits || []);
     } catch (e: any) { setError(e.message); }
   }, [filter]);

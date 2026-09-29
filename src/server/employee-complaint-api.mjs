@@ -1,8 +1,11 @@
+// `require` não existe em módulo ESM: o antigo try/catch engolia o ReferenceError
+// e devolvia null, gravando evento sem hash nenhum. O import é estático agora.
+import { createHash } from 'node:crypto';
 export function createEmployeeComplaintApi({ pool, auditLog, sameOrigin, requireSession, requireRole }) {
   const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
   const readJson = async (req) => { const chunks=[]; for await (const c of req) chunks.push(c); const raw=Buffer.concat(chunks).toString('utf8'); if(!raw) return {}; try{ return JSON.parse(raw);} catch{ return {}; } };
   const generateProtocol = (prefix) => { const d=new Date(); const y=d.getFullYear().toString(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); const rand=Math.random().toString(36).substring(2,6).toUpperCase(); return `${prefix}-${y}${m}${day}-${rand}`; };
-  const hashValue = (v) => { try{ const crypto=require('node:crypto'); return crypto.createHash('sha256').update(String(v)).digest('hex'); } catch{ return null; } };
+  const hashValue = (v) => createHash('sha256').update(String(v)).digest('hex');
 
   const handleComplaints = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});

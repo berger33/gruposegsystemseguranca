@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch, Badge, btn, btnPrimary, card, colors, ErrorBox, fmtDate, input, label, Notice, SectionTitle, td, th } from "./crm-ui";
 
 type Company = {
@@ -29,7 +29,12 @@ export default function CrmEmpresasTab() {
   const [preview, setPreview] = useState<{ batchId: string; report: any; rows: ImportRow[] } | null>(null);
   const [importResult, setImportResult] = useState<any>(null);
 
+  // Guarda de resposta atrasada: sem isto, a busca de um filtro antigo
+  // pode chegar depois e sobrescrever o resultado do filtro atual.
+  const requestSeq = useRef(0);
   const load = useCallback(async () => {
+    const seq = ++requestSeq.current;
+
     setError("");
     try {
       const params = new URLSearchParams();
@@ -38,6 +43,7 @@ export default function CrmEmpresasTab() {
       if (filter.status) params.set("status", filter.status);
       params.set("limit", "100");
       const data = await apiFetch(`/api/crm/companies?${params.toString()}`);
+      if (seq !== requestSeq.current) return;
       setCompanies(data.companies || []);
       setTotal(data.total || 0);
     } catch (e: any) { setError(e.message); }

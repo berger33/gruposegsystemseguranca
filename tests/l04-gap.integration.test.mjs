@@ -41,6 +41,7 @@ async function waitForServer(url, timeoutMs = 90_000) {
 async function api(pathname, { method = 'GET', body, cookie, raw = false, sendOrigin = true, foreignOrigin = false } = {}) {
   const response = await fetch(`${baseUrl}${pathname}`, {
     method,
+    signal: AbortSignal.timeout(45_000),
     headers: {
       accept: 'application/json',
       ...(body !== undefined ? { 'content-type': 'application/json' } : {}),
@@ -146,11 +147,16 @@ function cookiePairs(cookieHeader) {
   });
 }
 
+function mark(step, label) {
+  console.log(`# GAP-A passo ${step}: ${label}`);
+}
+
 const isoIn = (days, hours = 0) => new Date(Date.now() + days * 86400000 + hours * 3600000).toISOString();
 
 test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeout: 240_000 }, async () => {
   // -------------------------------------------------------------------
   // 0) A migração 104 precisa estar aplicada no banco descartável.
+  mark('0', 'A migração 104 precisa estar aplicada no banco descartável.');
   // -------------------------------------------------------------------
   const { rows: migRows } = await pool.query(
     `SELECT COUNT(*)::int AS total FROM __migrations WHERE filename = '104-l04-crm-engagement.sql'`);
@@ -158,6 +164,7 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
 
   // -------------------------------------------------------------------
   // 1) Controles negativos das rotas novas: sem sessão e com origem estranha.
+  mark('1', 'Controles negativos das rotas novas: sem sessão e com origem estranha.');
   // -------------------------------------------------------------------
   for (const route of ['/api/crm/tasks', '/api/crm/visits', '/api/crm/cadences', '/api/crm/portfolio']) {
     const anon = await api(route);
@@ -171,6 +178,7 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
 
   // -------------------------------------------------------------------
   // 2) Captação pública real (sem credencial de admin) — alimenta PUB-10.
+  mark('2', 'Captação pública real (sem credencial de admin) — alimenta PUB-10.');
   // -------------------------------------------------------------------
   const leadPayload = {
     requestKind: 'quote', name: 'Visitante Sintético GAP', phone: '(11) 96655-4433', city: 'Guarulhos',
@@ -184,6 +192,7 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
 
   // -------------------------------------------------------------------
   // 3) Identidades: comercial (CRM) e TI (site público).
+  mark('3', 'Identidades: comercial (CRM) e TI (site público).');
   // -------------------------------------------------------------------
   S.comercial = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
   S.ti = await provisionAndLoginStaff(pool, api, { role: 'ti' });
@@ -196,6 +205,7 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
 
   // -------------------------------------------------------------------
   // 4) CRM-01/CRM-02 — cadastro central e contatos, campo a campo.
+  mark('4', 'CRM-01/CRM-02 — cadastro central e contatos, campo a campo.');
   // -------------------------------------------------------------------
   const matriz = await api('/api/crm/companies', {
     method: 'POST', cookie: com,
@@ -255,6 +265,7 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
 
   // -------------------------------------------------------------------
   // 5) CRM-03 — importação CSV com prévia, dedup e exportação neutralizada.
+  mark('5', 'CRM-03 — importação CSV com prévia, dedup e exportação neutralizada.');
   // -------------------------------------------------------------------
   const csv = [
     'Empresa,CNPJ,Cidade,Tipo',
@@ -294,6 +305,7 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
 
   // -------------------------------------------------------------------
   // 6) CRM-04/05/06 — conversão deduplicada, oportunidade campo a campo,
+  mark('6', 'CRM-04/05/06 — conversão deduplicada, oportunidade campo a campo,');
   //    funil com motivo de perda obrigatório e reabertura auditada.
   // -------------------------------------------------------------------
   const convert = await api(`/api/crm/leads/${S.leadId}/convert`, {
@@ -354,6 +366,7 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
 
   // -------------------------------------------------------------------
   // 7) CRM-07 — tarefas, vencidas, filtros, transições e auditoria.
+  mark('7', 'CRM-07 — tarefas, vencidas, filtros, transições e auditoria.');
   // -------------------------------------------------------------------
   const t1 = await api('/api/crm/tasks', {
     method: 'POST', cookie: com,
@@ -410,6 +423,7 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
 
   // -------------------------------------------------------------------
   // 8) CRM-07 — histórico de ligações/reuniões, nota interna e anexos.
+  mark('8', 'CRM-07 — histórico de ligações/reuniões, nota interna e anexos.');
   // -------------------------------------------------------------------
   const ligacao = await api('/api/crm/interactions', {
     method: 'POST', cookie: com,
@@ -471,6 +485,7 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
 
   // -------------------------------------------------------------------
   // 9) CRM-08 — agenda de visitas: confirmar, reagendar, realizar, cancelar.
+  mark('9', 'CRM-08 — agenda de visitas: confirmar, reagendar, realizar, cancelar.');
   // -------------------------------------------------------------------
   const semData = await api('/api/crm/visits', { method: 'POST', cookie: com, body: { company_id: S.matrizId, title: 'Sem data' } });
   assert.equal(semData.status, 400);
@@ -532,6 +547,7 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
 
   // -------------------------------------------------------------------
   // 10) CRM-09 — cadências como tarefas, com adesão idempotente.
+  mark('10', 'CRM-09 — cadências como tarefas, com adesão idempotente.');
   // -------------------------------------------------------------------
   const cadences = await api('/api/crm/cadences', { cookie: com });
   assert.equal(cadences.status, 200);
@@ -570,6 +586,7 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
 
   // -------------------------------------------------------------------
   // 11) CRM-10 — carteira: sem próxima ação, renovação, reativação e grupos.
+  mark('11', 'CRM-10 — carteira: sem próxima ação, renovação, reativação e grupos.');
   // -------------------------------------------------------------------
   const semProxima = await api('/api/crm/opportunities', {
     method: 'POST', cookie: com, body: { company_id: S.matrizId, title: 'Retorno sobre parceria QA GAP', priority: 'media' },
@@ -610,6 +627,7 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
 
   // -------------------------------------------------------------------
   // 12) PUB — papel errado é recusado antes de qualquer efeito.
+  mark('12', 'PUB — papel errado é recusado antes de qualquer efeito.');
   // -------------------------------------------------------------------
   const comercialNoCms = await api('/api/admin/cms-contents', {
     method: 'POST', cookie: com, body: { slug: 'nao-deve-existir-gap', title: 'Bloqueado', content: 'x'.repeat(60) },
@@ -618,6 +636,7 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
 
   // -------------------------------------------------------------------
   // 13) PUB-06 — CMS: rascunho, aprovação, publicação, histórico e reversão.
+  mark('13', 'PUB-06 — CMS: rascunho, aprovação, publicação, histórico e reversão.');
   // -------------------------------------------------------------------
   const cms = await api('/api/admin/cms-contents', {
     method: 'POST', cookie: tiCk,
@@ -658,6 +677,7 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
 
   // -------------------------------------------------------------------
   // 14) PUB-07 — tema: preview, aprovação, publicação, preferência e rollback.
+  mark('14', 'PUB-07 — tema: preview, aprovação, publicação, preferência e rollback.');
   // -------------------------------------------------------------------
   const theme = await api('/api/admin/themes', {
     method: 'POST', cookie: tiCk,
@@ -680,7 +700,15 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
     method: 'PATCH', cookie: tiCk, body: { id: S.themeId, status: 'publicado', make_active: true, reason: 'Publicação autorizada do tema no gate' },
   });
   assert.equal(published.status, 200, JSON.stringify(published.body));
-  assert.equal(published.body.is_active, true);
+  assert.equal(published.body.is_published, true);
+  // O PATCH devolve a linha capturada antes do UPDATE de ativação, então
+  // `is_active` no corpo é estado velho; a ativação de verdade é conferida
+  // relendo a listagem de temas ativos (prova por HTTP, não pelo eco do POST).
+  const active = await api('/api/admin/themes?active=true', { cookie: tiCk });
+  assert.equal(active.status, 200);
+  const activeItems = active.body.items || active.body.themes || active.body;
+  assert.ok(Array.isArray(activeItems) ? activeItems.some(x => x.id === S.themeId) : false,
+    `tema publicado com make_active deve ficar ativo: ${JSON.stringify(active.body).slice(0, 300)}`);
 
   const pref = await api('/api/admin/theme-preferences', { method: 'POST', cookie: tiCk, body: { theme_mode: 'escuro', theme_key: 'qa-gap-tema' } });
   assert.ok([200, 201].includes(pref.status), JSON.stringify(pref.body));
@@ -696,6 +724,7 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
 
   // -------------------------------------------------------------------
   // 15) PUB-08 — SEO: noindex preservado, redirect, sitemap e domínio.
+  mark('15', 'PUB-08 — SEO: noindex preservado, redirect, sitemap e domínio.');
   // -------------------------------------------------------------------
   const seo = await api('/api/admin/seo-configs', {
     method: 'POST', cookie: tiCk,
@@ -745,6 +774,7 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
 
   // -------------------------------------------------------------------
   // 16) PUB-09 — montador de pacote sobre o catálogo validado e comparador.
+  mark('16', 'PUB-09 — montador de pacote sobre o catálogo validado e comparador.');
   // -------------------------------------------------------------------
   const catalog = await api('/api/catalog');
   assert.equal(catalog.status, 200);
@@ -752,19 +782,29 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
   assert.ok(services.length >= 2, 'catálogo publicado precisa de ao menos dois serviços');
   const svcIds = services.slice(0, 2).map(s => s.id);
 
+  // A guarda `no_approved_rules` é global (exige ao menos uma regra aprovada no
+  // catálogo de regras), e a migração 091 já semeia regras aprovadas. Para
+  // exercitar a guarda de verdade, a fixture suspende temporariamente as
+  // aprovações existentes e depois as restaura — o julgamento continua sendo do
+  // servidor, por HTTP.
+  const { rows: suspended } = await pool.query(
+    `UPDATE pub_package_rules SET is_approved=false WHERE is_approved=true RETURNING id`);
   const semRegra = await api('/api/admin/service-packages', {
     method: 'POST', cookie: tiCk,
     body: { name: 'Pacote sem regra QA GAP', description: 'Tentativa antes de qualquer regra aprovada.', service_ids: svcIds },
   });
-  assert.equal(semRegra.status, 400);
+  assert.equal(semRegra.status, 400, JSON.stringify(semRegra.body));
   assert.equal(semRegra.body.error, 'no_approved_rules', 'pacote exige regra aprovada antes (PUB-09)');
+  if (suspended.length > 0) {
+    await pool.query(`UPDATE pub_package_rules SET is_approved=true WHERE id = ANY($1::uuid[])`, [suspended.map(r => r.id)]);
+  }
 
-  const rule = await api('/api/admin/service-package-rules', {
+  const rule = await api('/api/admin/package-rules', {
     method: 'POST', cookie: tiCk,
     body: { rule_key: 'qa-gap-preco-minimo', name: 'Preço mínimo QA GAP', description: 'Regra sintética exigida pelo gate para montar pacote.', rule_type: 'preco_minimo', rule_data: { min: 100 } },
   });
   assert.equal(rule.status, 201, JSON.stringify(rule.body));
-  const ruleApproved = await api('/api/admin/service-package-rules', { method: 'PATCH', cookie: tiCk, body: { id: rule.body.id, is_approved: true, reason: 'Aprovada para uso no gate' } });
+  const ruleApproved = await api('/api/admin/package-rules', { method: 'PATCH', cookie: tiCk, body: { id: rule.body.id, is_approved: true, reason: 'Aprovada para uso no gate' } });
   assert.equal(ruleApproved.status, 200, JSON.stringify(ruleApproved.body));
 
   const svcInvalido = await api('/api/admin/service-packages', {
@@ -785,6 +825,29 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
   });
   assert.equal(pkg2.status, 201, JSON.stringify(pkg2.body));
 
+  const demoPublicado = await api('/api/admin/service-packages', {
+    method: 'POST', cookie: tiCk,
+    body: { name: 'Pacote demo QA GAP', description: 'Demonstração nunca vai ao ar publicada.', service_ids: svcIds, is_demo: true, is_published: true },
+  });
+  assert.equal(demoPublicado.status, 400);
+  assert.equal(demoPublicado.body.error, 'demo_cannot_be_published', 'demonstração não é publicada (PUB-09)');
+
+  const comparativoCedo = await api('/api/admin/package-comparisons', {
+    method: 'POST', cookie: tiCk,
+    body: { title: 'Comparativo prematuro QA GAP', package_ids: [pkg1.body.id, pkg2.body.id], notes: 'Comparar antes da aprovação deve ser recusado.' },
+  });
+  assert.equal(comparativoCedo.status, 400);
+  assert.equal(comparativoCedo.body.error, 'packages_not_approved', 'comparador só usa pacote aprovado (PUB-09)');
+
+  for (const pkg of [pkg1, pkg2]) {
+    const aprovado = await api('/api/admin/service-packages', {
+      method: 'PATCH', cookie: tiCk, body: { id: pkg.body.id, status: 'aprovado', reason: 'Aprovação do pacote no gate' },
+    });
+    assert.equal(aprovado.status, 200, JSON.stringify(aprovado.body));
+    assert.equal(aprovado.body.is_approved, true);
+    assert.equal(aprovado.body.is_published, false, 'aprovar não publica sozinho');
+  }
+
   const comparison = await api('/api/admin/package-comparisons', {
     method: 'POST', cookie: tiCk,
     body: { title: 'Comparativo QA GAP', package_ids: [pkg1.body.id, pkg2.body.id], notes: 'Comparativo sintético do gate L04.' },
@@ -796,6 +859,7 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
 
   // -------------------------------------------------------------------
   // 17) PUB-10 — métricas de origem/conversão com minimização e A/B com guarda.
+  mark('17', 'PUB-10 — métricas de origem/conversão com minimização e A/B com guarda.');
   // -------------------------------------------------------------------
   const excede = await api('/api/admin/origin-metrics', {
     method: 'POST', cookie: tiCk,
@@ -851,6 +915,7 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
 
   // -------------------------------------------------------------------
   // 18) PUB-02/PUB-05 — FAQ assistida com guardas e transferência humana.
+  mark('18', 'PUB-02/PUB-05 — FAQ assistida com guardas e transferência humana.');
   // -------------------------------------------------------------------
   const precoInventado = await api('/api/admin/faq-assisted-rules', {
     method: 'POST', cookie: tiCk,
@@ -919,6 +984,8 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
 test('L04 GAP-B: /admin/crm e /admin/site navegáveis em Chromium real', { skip: !RUN, timeout: 240_000 }, async (t) => {
   if (!S.comercial) return t.skip('GAP-A não concluiu — sem dados para navegar');
 
+  // Um navegador por persona: este Chromium empacotado roda em processo único
+  // e não sobrevive ao encerramento do primeiro contexto.
   const browser = await launchBrowser();
   try {
     // ----------------------------------------------------------------
@@ -940,7 +1007,11 @@ test('L04 GAP-B: /admin/crm e /admin/site navegáveis em Chromium real', { skip:
 
     // Empresas: busca real filtra a lista
     await page.getByLabel('Buscar empresa').fill('Unidade Filha QA GAP');
-    await page.getByText('Unidade Filha QA GAP').first().waitFor({ timeout: 20_000 });
+    // A lista é a fonte da prova; o mesmo nome também existe como <option> no
+    // seletor de matriz do formulário, então a busca é escopada à tabela.
+    const empresasTable = page.getByRole('table').first();
+    await empresasTable.getByText('Unidade Filha QA GAP').first().waitFor({ timeout: 20_000 });
+    await empresasTable.getByText('unidade de grupo').first().waitFor({ timeout: 20_000 });
     await assertNoHorizontalScroll(page, '/admin/crm (empresas, 1440px)');
 
     // Funil: kanban mostra a oportunidade e o detalhe traz o histórico de estágios
@@ -953,20 +1024,24 @@ test('L04 GAP-B: /admin/crm e /admin/site navegáveis em Chromium real', { skip:
     // Tarefas: tarefa vencida sinalizada e cadência visível
     await page.getByRole('button', { name: /Tarefas & cadências/ }).click();
     await page.getByText('Ligar para a matriz QA GAP').first().waitFor({ timeout: 30_000 });
-    await page.getByText('vencida').first().waitFor({ timeout: 20_000 });
+    await page.getByText('vencida', { exact: true }).first().waitFor({ timeout: 20_000 });
     await page.getByText(/cadência prospeccao-inicial/).first().waitFor({ timeout: 20_000 });
     await assertNoHorizontalScroll(page, '/admin/crm (tarefas, 1440px)');
 
     // Agenda: visita realizada aparece com estado
     await page.getByRole('button', { name: /Agenda de visitas/ }).click();
     await page.getByText('Vistoria técnica QA GAP').first().waitFor({ timeout: 30_000 });
-    await page.getByText('realizada').first().waitFor({ timeout: 20_000 });
+    await page.getByText('realizada', { exact: true }).first().waitFor({ timeout: 20_000 });
 
     // Histórico: linha do tempo com ligação e anexo listado
     await page.getByRole('button', { name: /Histórico & anexos/ }).click();
     await page.getByLabel('Empresa').first().selectOption({ label: 'Grupo Matriz QA GAP' });
+    await page.getByText(/Linha do tempo \(\d+\)/).waitFor({ timeout: 30_000 });
     await page.getByText('Ligação de qualificação QA GAP').first().waitFor({ timeout: 30_000 });
-    await page.getByText('Nota interna QA GAP').first().waitFor({ timeout: 20_000 });
+    const timelineText = await page.locator('body').innerText();
+    assert.ok(timelineText.includes('Nota interna QA GAP'),
+      `nota interna deve aparecer na linha do tempo: ${timelineText.slice(0, 1200)}`);
+    assert.ok(timelineText.includes('Anexos (1)'), 'o anexo da ligação é contado na linha do tempo');
 
     // Carteira: números e listas da CRM-10
     await page.getByRole('button', { name: /Carteira & renovação/ }).click();
@@ -982,13 +1057,17 @@ test('L04 GAP-B: /admin/crm e /admin/site navegáveis em Chromium real', { skip:
     await assertNoHorizontalScroll(page, '/admin/crm (carteira, 390px)');
 
     assert.deepEqual(failures, [], 'nenhum erro de console/rede/5xx em /admin/crm');
-    await context.close();
+  } finally {
+    await browser.close();
+  }
 
-    // ----------------------------------------------------------------
-    // /admin/site com a identidade de TI: os seis componentes conectados.
-    // ----------------------------------------------------------------
+  // ----------------------------------------------------------------
+  // /admin/site com a identidade de TI: os seis componentes conectados.
+  // ----------------------------------------------------------------
+  const tiBrowser = await launchBrowser();
+  try {
     const siteFailures = [];
-    const tiContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'pt-BR' });
+    const tiContext = await tiBrowser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'pt-BR' });
     await tiContext.addCookies(cookiePairs(S.ti.cookie));
     const sitePage = await tiContext.newPage();
     trackFailures(sitePage, siteFailures);
@@ -1017,11 +1096,16 @@ test('L04 GAP-B: /admin/crm e /admin/site navegáveis em Chromium real', { skip:
     await sitePage.getByText(/l04-gap/).first().waitFor({ timeout: 30_000 });
 
     await sitePage.getByRole('button', { name: /FAQ assistida & segmentos/ }).click();
-    await sitePage.getByText(/qa-gap-atendimento/).first().waitFor({ timeout: 30_000 });
+    // As listas do componente PUB-02/05 vivem dentro de <details> fechados:
+    // o gate abre como um operador abriria.
+    await sitePage.getByText(/Regras FAQ assistida \(\d+\)/).click();
+    await sitePage.getByText('qa-gap-atendimento').first().waitFor({ timeout: 30_000 });
+    await sitePage.getByText(/Segmentos validados \(\d+\)/).click();
+    await sitePage.getByText(/qa-gap-condominio/).first().waitFor({ timeout: 30_000 });
 
+    await assertNoHorizontalScroll(sitePage, '/admin/site (1440px)');
     assert.deepEqual(siteFailures, [], 'nenhum erro de console/rede/5xx em /admin/site');
-    await tiContext.close();
   } finally {
-    await browser.close();
+    await tiBrowser.close();
   }
 });
