@@ -1,8 +1,14 @@
+import { randomBytes } from "node:crypto";
+
 export function createPubFaqAssistedApi({ pool, auditLog, sameOrigin, requireSession, requireRole }) {
   const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
   const readJson = async (req) => { const chunks=[]; for await (const c of req) chunks.push(c); const raw=Buffer.concat(chunks).toString('utf8'); if(!raw) return {}; try{ return JSON.parse(raw);} catch{ return {}; } };
   const generateProtocol = (prefix) => { const d=new Date(); const y=d.getFullYear().toString(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); const rand=Math.random().toString(36).substring(2,6).toUpperCase(); return `${prefix}-${y}${m}${day}-${rand}`; };
-  const generateToken = (len=32) => { try{ const crypto=require('node:crypto'); return crypto.randomBytes(len).toString('hex').slice(0,len); } catch{ return Math.random().toString(36).substring(2, 2+len); } };
+  // `require` não existe em módulo ESM: a chamada anterior lançava sempre e
+  // caía no fallback Math.random(), que gerava 11 caracteres previsíveis —
+  // curto demais para o CHECK da tabela (20..200) e inaceitável como token de
+  // sessão. Agora o token é criptográfico e não há caminho alternativo fraco.
+  const generateToken = (len=32) => randomBytes(Math.ceil(len/2)).toString('hex').slice(0,len);
 
   const handleSegments = async (req,res) => {
     const url=new URL(req.url,'http://localhost');
@@ -134,7 +140,7 @@ export function createPubFaqAssistedApi({ pool, auditLog, sameOrigin, requireSes
       if((nextStatus==='publicado'||is_published) && !cur.is_approved && !is_approved){
         return json(res,400,{error:'must_be_approved_before_publish', note:'FAQ assistida revisão competente antes de publicar'});
       }
-      const { rows } = await pool.query(`UPDATE pub_faq_assisted_rules SET status=$2, is_approved=COALESCE($3,is_approved), is_published=COALESCE($4,is_published), approved_by_identity=CASE WHEN $3=true OR $2 IN ('aprovado','publicado') THEN $5 ELSE approved_by_identity END, approved_by_name=CASE WHEN $3=true OR $2 IN ('aprovado','publicado') THEN $6 ELSE approved_by_name END, approved_at=CASE WHEN $3=true OR $2 IN ('aprovado','publicado') THEN NOW() ELSE approved_at END, version=version+1, updated_at=NOW() WHERE id=$1 RETURNING *`,
+      const { rows } = await pool.query(`UPDATE pub_faq_assisted_rules SET status=$2::pub_faq_assisted_status, is_approved=COALESCE($3,is_approved), is_published=COALESCE($4,is_published), approved_by_identity=CASE WHEN $3=true OR $2 IN ('aprovado','publicado') THEN $5 ELSE approved_by_identity END, approved_by_name=CASE WHEN $3=true OR $2 IN ('aprovado','publicado') THEN $6 ELSE approved_by_name END, approved_at=CASE WHEN $3=true OR $2 IN ('aprovado','publicado') THEN NOW() ELSE approved_at END, version=version+1, updated_at=NOW() WHERE id=$1 RETURNING *`,
         [id, nextStatus, is_approved, is_published, sess.identityId||null, sess.role||null]);
       await pool.query(`INSERT INTO pub_faq_assisted_history (rule_id, previous_version, next_version, previous_status, next_status, reason, changed_by_identity, changed_by_name) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [id, cur.version, rows[0].version, cur.status, nextStatus, reason, sess.identityId||null, sess.role||null]);
       await auditLog({ action: nextStatus==='publicado'?'faq_assisted_rule_publish':'faq_assisted_rule_update', actor:sess.identityId||'system', target:id, meta:{ status: nextStatus, is_approved: rows[0].is_approved } });

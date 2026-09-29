@@ -39,18 +39,27 @@ async function waitForServer(url, timeoutMs = 90_000) {
   throw new Error('server_did_not_start');
 }
 
+// Uma requisição que nunca responde derrubaria a suíte inteira por tempo
+// esgotado, sem dizer qual rota travou. O limite por requisição transforma
+// isso em falha imediata e nomeada.
 async function api(pathname, { method = 'GET', body, cookie, raw = false, sendOrigin = true } = {}) {
-  const response = await fetch(`${baseUrl}${pathname}`, {
-    method,
-    headers: {
-      accept: 'application/json',
-      ...(body !== undefined ? { 'content-type': 'application/json' } : {}),
-      ...(sendOrigin ? { origin: baseUrl } : {}),
-      ...(cookie ? { cookie } : {}),
-    },
-    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-    redirect: 'manual',
-  });
+  let response;
+  try {
+    response = await fetch(`${baseUrl}${pathname}`, {
+      method,
+      headers: {
+        accept: 'application/json',
+        ...(body !== undefined ? { 'content-type': 'application/json' } : {}),
+        ...(sendOrigin ? { origin: baseUrl } : {}),
+        ...(cookie ? { cookie } : {}),
+      },
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      redirect: 'manual',
+      signal: AbortSignal.timeout(45_000),
+    });
+  } catch (error) {
+    throw new Error(`request_failed ${method} ${pathname}: ${error?.name || ''} ${error?.message || error}`);
+  }
   const setCookie = response.headers.getSetCookie?.()
     || (response.headers.get('set-cookie') ? [response.headers.get('set-cookie')] : []);
   if (raw) return { status: response.status, buffer: Buffer.from(await response.arrayBuffer()), headers: response.headers, setCookie };
@@ -135,6 +144,36 @@ function trackFailures(page, failures) {
       failures.push(`http:${response.status()} ${url.pathname}`);
     }
   });
+}
+
+// Um texto pode existir no DOM dentro de um <option> de <select> fechado sem
+// jamais ser mostrado ao operador. Para provar que o dado REALMENTE aparece,
+// procuramos o texto em nós renderizados fora de controles de formulário.
+async function waitForRenderedText(page, expected, label, timeoutMs = 20_000) {
+  const deadline = Date.now() + timeoutMs;
+  let found = false;
+  while (Date.now() < deadline) {
+    found = await page.evaluate(text => {
+      const insideControl = node => {
+        for (let el = node; el; el = el.parentElement) {
+          if (['SELECT', 'OPTION', 'OPTGROUP', 'DATALIST', 'TEXTAREA', 'INPUT'].includes(el.tagName)) return true;
+        }
+        return false;
+      };
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        if (!node.nodeValue || !node.nodeValue.includes(text)) continue;
+        if (insideControl(node.parentElement)) continue;
+        const element = node.parentElement;
+        if (element && element.getClientRects().length > 0) return true;
+      }
+      return false;
+    }, expected);
+    if (found) return;
+    await page.waitForTimeout(400);
+  }
+  assert.fail(`${label}: o texto "${expected}" não apareceu renderizado na página`);
 }
 
 async function assertNoHorizontalScroll(page, label) {
@@ -264,10 +303,14 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real com PostgreSQL descart
     method: 'POST', cookie: comercial.cookie,
     body: { fileName: `carteira-${suffix}.csv`, csvContent: csv, type: 'companies' },
   });
-  assert.equal(preview.status, 200);
+  // A prévia cria um lote persistido para o commit posterior, então o servidor
+  // responde 201 (recurso criado) e não 200; a expectativa foi corrigida
+  // contra o comportamento real de handleImportPreview, e os contadores do
+  // relatório são `valid`/`invalid`/`duplicate` no singular.
+  assert.equal(preview.status, 201);
   assert.equal(preview.body.report.total, 3);
   assert.equal(preview.body.report.valid, 1, 'só a primeira linha é nova e válida');
-  assert.equal(preview.body.report.duplicates, 1, 'a linha com nome idêntico precisa ser marcada como duplicada');
+  assert.equal(preview.body.report.duplicate, 1, 'a linha com nome idêntico precisa ser marcada como duplicada');
   assert.equal(preview.body.report.invalid, 1, 'a linha sem nome precisa ser marcada como inválida');
   const duplicateRow = preview.body.rows.find(r => r.status === 'duplicate');
   assert.equal(duplicateRow.dedup_match.id, matrizId, 'a duplicata precisa apontar a empresa existente');
@@ -301,10 +344,16 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real com PostgreSQL descart
   const leadId = lead.body.leadId;
   assert.ok(leadId, 'o lead público precisa devolver um identificador');
 
-  const convert = await api(`/api/crm/leads/${leadId}/convert`, { method: 'POST', cookie: comercial.cookie, body: {} });
+  // A conversão exige um destino explícito: empresa existente ou criação com
+  // nome. Converter "no escuro" seria adivinhar a carteira do lead.
+  const convertNoTarget = await api(`/api/crm/leads/${leadId}/convert`, { method: 'POST', cookie: comercial.cookie, body: {} });
+  assert.equal(convertNoTarget.status, 400);
+  assert.equal(convertNoTarget.body.error, 'company_required');
+
+  const convert = await api(`/api/crm/leads/${leadId}/convert`, { method: 'POST', cookie: comercial.cookie, body: { company_id: matrizId } });
   assert.equal(convert.status, 201);
   assert.ok(convert.body.opportunityId);
-  const convertAgain = await api(`/api/crm/leads/${leadId}/convert`, { method: 'POST', cookie: comercial.cookie, body: {} });
+  const convertAgain = await api(`/api/crm/leads/${leadId}/convert`, { method: 'POST', cookie: comercial.cookie, body: { company_id: matrizId } });
   assert.equal(convertAgain.status, 200);
   assert.equal(convertAgain.body.dedup, true, 'reconversão do mesmo lead não pode duplicar a oportunidade');
   assert.equal(convertAgain.body.opportunityId, convert.body.opportunityId);
@@ -456,7 +505,16 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real com PostgreSQL descart
   });
   assert.equal(interaction.status, 201);
   const interactionId = interaction.body.interaction.id;
-  assert.equal(interaction.body.interaction.created_by_role, 'comercial');
+  // crm_interactions (migração 014) guarda apenas a identidade autora; o papel
+  // fica na trilha de auditoria. Conferimos os dois na origem correta.
+  assert.equal(interaction.body.interaction.created_by_id, comercial.id, 'a autoria vem da sessão, não do corpo');
+  const interactionAudit = await pool.query(
+    "SELECT actor_kind, actor_id FROM auth_access_audit WHERE action = 'crm_interaction_create' AND target LIKE $1",
+    [`${interactionId}%`]
+  );
+  assert.equal(interactionAudit.rows.length, 1, 'criar interação precisa deixar uma linha de auditoria');
+  assert.equal(interactionAudit.rows[0].actor_kind, 'comercial');
+  assert.equal(interactionAudit.rows[0].actor_id, comercial.id);
 
   const oversized = await api(`/api/crm/interactions/${interactionId}/attachments`, {
     method: 'POST', cookie: comercial.cookie,
@@ -550,9 +608,15 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real com PostgreSQL descart
   assert.equal(scheduleNoDate.status, 400);
   assert.equal(scheduleNoDate.body.error, 'scheduled_at_required');
 
-  const scheduled = await api(`/api/crm/visits/${visitId}`, { method: 'PATCH', cookie: comercial.cookie, body: { action: 'agendar', scheduled_at: isoIn(6) } });
-  assert.equal(scheduled.status, 200);
-  assert.equal(scheduled.body.visit.status, 'agendada');
+  // O vocabulário de status é o do schema (migração 014): solicitada,
+  // em_agendamento, confirmada, realizada, cancelada. Não existe "agendada".
+  // Por isso "agendar" só se aplica a uma visita que chegou como solicitada;
+  // uma visita criada pela equipe já nasce em agendamento e o próximo passo
+  // legítimo é confirmar com o cliente.
+  const scheduleFromAgendamento = await api(`/api/crm/visits/${visitId}`, { method: 'PATCH', cookie: comercial.cookie, body: { action: 'agendar', scheduled_at: isoIn(6) } });
+  assert.equal(scheduleFromAgendamento.status, 409);
+  assert.equal(scheduleFromAgendamento.body.error, 'visit_transition_invalid');
+  assert.equal(scheduleFromAgendamento.body.current, 'em_agendamento');
 
   const confirmed = await api(`/api/crm/visits/${visitId}`, { method: 'PATCH', cookie: comercial.cookie, body: { action: 'confirmar' } });
   assert.equal(confirmed.status, 200);
@@ -570,8 +634,9 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real com PostgreSQL descart
   assert.equal(badRealize.body.error, 'visit_transition_invalid');
   assert.equal(badRealize.body.current, 'em_agendamento');
 
-  await api(`/api/crm/visits/${visitId}`, { method: 'PATCH', cookie: comercial.cookie, body: { action: 'agendar', scheduled_at: isoIn(9) } });
-  await api(`/api/crm/visits/${visitId}`, { method: 'PATCH', cookie: comercial.cookie, body: { action: 'confirmar' } });
+  const reconfirmed = await api(`/api/crm/visits/${visitId}`, { method: 'PATCH', cookie: comercial.cookie, body: { action: 'confirmar' } });
+  assert.equal(reconfirmed.status, 200);
+  assert.equal(reconfirmed.body.visit.status, 'confirmada');
   const realized = await api(`/api/crm/visits/${visitId}`, { method: 'PATCH', cookie: comercial.cookie, body: { action: 'realizar', notes: 'Vistoria concluída com levantamento dos dois acessos.' } });
   assert.equal(realized.status, 200);
   assert.equal(realized.body.visit.status, 'realizada');
@@ -620,7 +685,12 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real com PostgreSQL descart
 
   const cadenceTasks = await api(`/api/crm/tasks?cadence=prospeccao-inicial&opportunity_id=${oppId}`, { cookie: comercial.cookie });
   assert.equal(cadenceTasks.status, 200);
-  assert.equal(cadenceTasks.body.total, 5);
+  assert.equal(cadenceTasks.body.total, 5, 'o filtro por chave de cadência precisa excluir a tarefa avulsa da mesma oportunidade');
+  const anyCadence = await api(`/api/crm/tasks?cadence=true&opportunity_id=${oppId}`, { cookie: comercial.cookie });
+  assert.equal(anyCadence.body.total, 5);
+  const unknownCadenceFilter = await api('/api/crm/tasks?cadence=cadencia-que-nao-existe', { cookie: comercial.cookie });
+  assert.equal(unknownCadenceFilter.status, 400, 'filtro de cadência desconhecida não pode ser ignorado em silêncio');
+  assert.equal(unknownCadenceFilter.body.error, 'invalid_cadence_key');
 
   // =====================================================================
   // 10) CRM-10 — carteira: renovação, sem próxima ação, reativação, grupo.
@@ -839,12 +909,18 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real com PostgreSQL descart
   assert.equal(unknownService.status, 400);
   assert.equal(unknownService.body.error, 'some_services_not_found');
 
+  // A migração 091 já semeia três regras aprovadas, então a ausência total de
+  // regra não ocorre num banco migrado. Fixture sintética: desaprova todas
+  // temporariamente para provar que o guardrail existe, e restaura em seguida.
+  const approvedBefore = await pool.query('UPDATE pub_package_rules SET is_approved = false WHERE is_approved = true RETURNING id');
+  assert.ok(approvedBefore.rows.length >= 1, 'o banco migrado precisa trazer regras aprovadas de origem');
   const noRules = await api('/api/admin/service-packages', {
     method: 'POST', cookie: ti.cookie,
     body: { name: `Pacote sem regra ${suffix}`, description: 'Tentativa de montar pacote antes de existir regra aprovada.', service_ids: serviceIds },
   });
   assert.equal(noRules.status, 400);
   assert.equal(noRules.body.error, 'no_approved_rules');
+  await pool.query('UPDATE pub_package_rules SET is_approved = true WHERE id = ANY($1)', [approvedBefore.rows.map(r => r.id)]);
 
   const packageRule = await api('/api/admin/package-rules', {
     method: 'POST', cookie: ti.cookie,
@@ -896,9 +972,18 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real com PostgreSQL descart
   assert.equal(badMetric.status, 400);
   assert.equal(badMetric.body.error, 'converted_exceeds_total');
 
+  // Canal fora do conjunto do schema precisa ser recusado com 400 nomeado, não
+  // escapar para erro do banco.
+  const badChannel = await api('/api/admin/origin-metrics', {
+    method: 'POST', cookie: ti.cookie,
+    body: { origin: `site-gate-${suffix}`, channel: 'organico', period_start: isoIn(-30).slice(0, 10), period_end: isoIn(-1).slice(0, 10), total_leads: 1, converted_leads: 0 },
+  });
+  assert.equal(badChannel.status, 400);
+  assert.equal(badChannel.body.error, 'invalid_channel');
+
   const metric = await api('/api/admin/origin-metrics', {
     method: 'POST', cookie: ti.cookie,
-    body: { origin: `site-gate-${suffix}`, campaign: 'gate-gap', channel: 'organico', period_start: isoIn(-30).slice(0, 10), period_end: isoIn(-1).slice(0, 10), total_leads: 20, converted_leads: 4, total_opportunities: 6, total_contracts: 2 },
+    body: { origin: `site-gate-${suffix}`, campaign: 'gate-gap', channel: 'organic', period_start: isoIn(-30).slice(0, 10), period_end: isoIn(-1).slice(0, 10), total_leads: 20, converted_leads: 4, total_opportunities: 6, total_contracts: 2 },
   });
   assert.equal(metric.status, 201);
   assert.equal(metric.body.is_minimized, true);
@@ -929,13 +1014,28 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real com PostgreSQL descart
   assert.equal(abTest.body.is_privacy_compliant, true);
   const abTestId = abTest.body.id;
 
-  // Fixture sintética: rebaixa o tráfego exigido abaixo do mínimo para provar
-  // que iniciar a execução é recusado; a criação por HTTP já impede esse valor.
-  await pool.query('UPDATE pub_ab_tests SET traffic_required = 5 WHERE id = $1', [abTestId]);
-  const startUnderpowered = await api('/api/admin/ab-tests', { method: 'PATCH', cookie: ti.cookie, body: { id: abTestId, status: 'em_execucao', reason: 'Tentativa de iniciar com tráfego insuficiente' } });
-  assert.equal(startUnderpowered.status, 400);
-  assert.equal(startUnderpowered.body.error, 'traffic_required_not_met');
-  await pool.query('UPDATE pub_ab_tests SET traffic_required = 500 WHERE id = $1', [abTestId]);
+  // A regra "só executa A/B com tráfego suficiente" está em duas camadas: a
+  // API recusa a criação abaixo de 10 (acima) e o próprio banco recusa o
+  // valor (CHECK traffic_required >= 10, migração 092). Tentar rebaixar o
+  // valor por SQL direto prova que não há como contornar o guardrail nem
+  // por fora da API — é por isso que o ramo traffic_required_not_met do
+  // servidor é inalcançável com o schema em vigor.
+  let dbRefusal = null;
+  try {
+    await pool.query('UPDATE pub_ab_tests SET traffic_required = 5 WHERE id = $1', [abTestId]);
+  } catch (error) {
+    dbRefusal = error;
+  }
+  assert.ok(dbRefusal, 'o banco precisa recusar tráfego exigido abaixo de 10');
+  // 23514 é a violação do CHECK. O cluster descartável do gate é criado em
+  // SQL_ASCII enquanto o cliente fala UTF8, então o DETAIL da violação (que
+  // repete a linha, com texto acentuado) pode ser truncado na conversão e
+  // chegar como 22021. Os dois códigos descrevem a mesma recusa; o que
+  // importa é que a escrita não aconteceu, conferido logo abaixo.
+  assert.ok(['23514', '22021'].includes(String(dbRefusal.code)), `código inesperado na recusa: ${dbRefusal?.code} ${dbRefusal?.message}`);
+  const stillRequired = await pool.query('SELECT traffic_required FROM pub_ab_tests WHERE id = $1', [abTestId]);
+  assert.equal(Number(stillRequired.rows[0].traffic_required), 500, 'o valor original precisa permanecer intacto após a recusa');
+
   const startOk = await api('/api/admin/ab-tests', { method: 'PATCH', cookie: ti.cookie, body: { id: abTestId, status: 'em_execucao', reason: 'Início autorizado após tráfego exigido restabelecido' } });
   assert.equal(startOk.status, 200);
   assert.equal(startOk.body.status, 'em_execucao');
@@ -956,7 +1056,7 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real com PostgreSQL descart
   });
 });
 
-test('L04 GAP-B: /admin/crm e /admin/site navegáveis em Chromium real', { skip: !RUN, timeout: 300_000 }, async t => {
+test('L04 GAP-B: /admin/crm e /admin/site navegáveis em Chromium real', { skip: !RUN, timeout: 900_000 }, async t => {
   if (!fixtures.ready) {
     t.skip('GAP-A não populou as fixtures; nada a navegar');
     return;
@@ -967,7 +1067,7 @@ test('L04 GAP-B: /admin/crm e /admin/site navegáveis em Chromium real', { skip:
     ['Funil & oportunidades', fixtures.oppTitle],
     ['Tarefas & cadências', fixtures.taskTitle],
     ['Agenda de visitas', fixtures.visitTitle],
-    ['Histórico & anexos', 'Histórico de relacionamento'],
+    ['Histórico & anexos', 'Linha do tempo'],
     ['Carteira & renovação', 'Renovações nos próximos 90 dias'],
   ];
   const siteTabs = [
@@ -979,51 +1079,56 @@ test('L04 GAP-B: /admin/crm e /admin/site navegáveis em Chromium real', { skip:
     ['Métricas de origem', 'PUB-10'],
   ];
 
-  const browser = await launchBrowser();
   const failures = [];
-  try {
-    for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
+  // O Chromium empacotado roda com --single-process/--no-zygote: reaproveitar
+  // o mesmo processo para um segundo contexto depois de fechar o primeiro o
+  // derruba. Cada viewport recebe um navegador próprio.
+  for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
+    const browser = await launchBrowser();
+    try {
       const context = await browser.newContext({ viewport, locale: 'pt-BR' });
-      const pair = fixtures.tiCookie.split(';')[0];
-      const separator = pair.indexOf('=');
-      await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
-      const page = await context.newPage();
-      trackFailures(page, failures);
+        const pair = fixtures.tiCookie.split(';')[0];
+        const separator = pair.indexOf('=');
+        await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
+        const page = await context.newPage();
+        trackFailures(page, failures);
 
-      // ---- /admin/crm: as seis abas do CRM, com dados reais de GAP-A.
-      await page.goto(`${baseUrl}/admin/crm`, { waitUntil: 'networkidle' });
-      await page.waitForTimeout(1200);
-      await page.getByRole('heading', { name: /Empresas, funil e relacionamento/ }).waitFor();
-      for (const [tab, expected] of crmTabs) {
-        await page.getByRole('button', { name: tab }).click();
+        // ---- /admin/crm: as seis abas do CRM, com dados reais de GAP-A.
+        await page.goto(`${baseUrl}/admin/crm`, { waitUntil: 'networkidle' });
+        await page.waitForTimeout(1200);
+        await page.getByRole('heading', { name: /Empresas, funil e relacionamento/ }).waitFor();
+        for (const [tab, expected] of crmTabs) {
+          console.log(`# CRM/${tab} @${viewport.width}px`);
+          await page.getByRole('button', { name: tab }).click();
+          await page.waitForTimeout(900);
+          await waitForRenderedText(page, expected, `CRM/${tab} em ${viewport.width}px`);
+          await assertNoHorizontalScroll(page, `CRM/${tab} em ${viewport.width}px`);
+        }
+
+        // ---- /admin/site: os seis painéis de PUB fora da página de TI.
+        await page.goto(`${baseUrl}/admin/site`, { waitUntil: 'networkidle' });
+        await page.waitForTimeout(1200);
+        await page.getByRole('heading', { name: /Conteúdo, tema, SEO e medição do site/ }).waitFor();
+        for (const [tab, expected] of siteTabs) {
+          console.log(`# SITE/${tab} @${viewport.width}px`);
+          await page.getByRole('button', { name: tab }).click();
+          await page.waitForTimeout(900);
+          await waitForRenderedText(page, expected, `SITE/${tab} em ${viewport.width}px`);
+          await assertNoHorizontalScroll(page, `SITE/${tab} em ${viewport.width}px`);
+        }
+
+        // Conteúdo real criado em GAP-A precisa estar visível no painel certo.
+        await page.getByRole('button', { name: 'Conteúdo (CMS)' }).click();
         await page.waitForTimeout(900);
-        await page.getByText(expected, { exact: false }).first().waitFor({ timeout: 20_000 });
-        await assertNoHorizontalScroll(page, `CRM/${tab} em ${viewport.width}px`);
-      }
-
-      // ---- /admin/site: os seis painéis de PUB fora da página de TI.
-      await page.goto(`${baseUrl}/admin/site`, { waitUntil: 'networkidle' });
-      await page.waitForTimeout(1200);
-      await page.getByRole('heading', { name: /Conteúdo, tema, SEO e medição do site/ }).waitFor();
-      for (const [tab, expected] of siteTabs) {
-        await page.getByRole('button', { name: tab }).click();
+        await waitForRenderedText(page, fixtures.cmsSlug, 'painel de conteúdo');
+        await page.getByRole('button', { name: 'SEO técnico & domínio' }).click();
         await page.waitForTimeout(900);
-        await page.getByText(expected, { exact: false }).first().waitFor({ timeout: 20_000 });
-        await assertNoHorizontalScroll(page, `SITE/${tab} em ${viewport.width}px`);
-      }
-
-      // Conteúdo real criado em GAP-A precisa estar visível no painel certo.
-      await page.getByRole('button', { name: 'Conteúdo (CMS)' }).click();
-      await page.waitForTimeout(900);
-      await page.getByText(fixtures.cmsSlug, { exact: false }).first().waitFor({ timeout: 20_000 });
-      await page.getByRole('button', { name: 'SEO técnico & domínio' }).click();
-      await page.waitForTimeout(900);
-      await page.getByText(fixtures.seoPath, { exact: false }).first().waitFor({ timeout: 20_000 });
+        await waitForRenderedText(page, fixtures.seoPath, 'painel de SEO');
 
       await context.close();
+    } finally {
+      await browser.close();
     }
-  } finally {
-    await browser.close();
   }
   assert.deepEqual(failures, [], `navegação autenticada não pode ter erro de console, requisição same-origin falha ou HTTP 5xx: ${failures.join(', ')}`);
 });

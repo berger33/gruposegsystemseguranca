@@ -1,7 +1,13 @@
+import { createHash } from "node:crypto";
+
+const ORIGIN_CHANNELS = ['site','whatsapp','phone','referral','other','email','organic','paid','social'];
+
 export function createOriginMetricsApi({ pool, auditLog, sameOrigin, requireSession, requireRole }) {
   const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
   const readJson = async (req) => { const chunks=[]; for await (const c of req) chunks.push(c); const raw=Buffer.concat(chunks).toString('utf8'); if(!raw) return {}; try{ return JSON.parse(raw);} catch{ return {}; } };
-  const hashValue = (v) => { try{ const crypto=require('node:crypto'); return crypto.createHash('sha256').update(String(v)).digest('hex'); } catch{ return null; } };
+  // `require` não existe em módulo ESM: a versão anterior lançava sempre e o
+  // catch devolvia null, de modo que o valor nunca era efetivamente resumido.
+  const hashValue = (v) => createHash('sha256').update(String(v)).digest('hex');
 
   const handleOriginMetrics = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
@@ -31,7 +37,10 @@ export function createOriginMetricsApi({ pool, auditLog, sameOrigin, requireSess
       const notes=b.notes?String(b.notes).trim():null;
       if(origin.length<3||origin.length>100) return json(res,400,{error:'invalid_origin'});
       if(campaign && (campaign.length<3||campaign.length>100)) return json(res,400,{error:'invalid_campaign'});
-      if(channel && (channel.length<1||channel.length>100)) return json(res,400,{error:'invalid_channel'});
+      // O CHECK da tabela (migração 092) aceita um conjunto fechado. Sem esta
+      // validação um canal fora da lista virava erro 500 do banco em vez de
+      // recusa explícita com a lista do que é aceito.
+      if(channel && !ORIGIN_CHANNELS.includes(channel)) return json(res,400,{error:'invalid_channel', allowed:ORIGIN_CHANNELS});
       if(!period_start||!period_end) return json(res,400,{error:'missing_period'});
       if(new Date(period_end) < new Date(period_start)) return json(res,400,{error:'invalid_period_end_before_start'});
       if(!Number.isFinite(total_leads)||total_leads<0) return json(res,400,{error:'invalid_total_leads'});
@@ -155,7 +164,7 @@ export function createOriginMetricsApi({ pool, auditLog, sameOrigin, requireSess
       if(winner && !['A','B','empate','inconclusivo'].includes(winner)) return json(res,400,{error:'invalid_winner'});
       if(nextStatus==='em_execucao' && cur.traffic_required<10) return json(res,400,{error:'traffic_required_not_met', note:'testes A/B somente após tráfego hipótese e tratamento definidos'});
       if(reason.length<10||reason.length>1000) return json(res,400,{error:'invalid_reason'});
-      const { rows } = await pool.query(`UPDATE pub_ab_tests SET status=$2, winner=COALESCE($3,winner), result_data=COALESCE($4,result_data), version=version+1, approved_by_identity=CASE WHEN $2 IN ('aprovado','em_execucao') THEN $5 ELSE approved_by_identity END, approved_by_name=CASE WHEN $2 IN ('aprovado','em_execucao') THEN $6 ELSE approved_by_name END, approved_at=CASE WHEN $2 IN ('aprovado','em_execucao') THEN NOW() ELSE approved_at END, started_at=CASE WHEN $2='em_execucao' THEN NOW() ELSE started_at END, concluded_at=CASE WHEN $2='concluido' THEN NOW() ELSE concluded_at END, updated_at=NOW() WHERE id=$1 RETURNING *`,
+      const { rows } = await pool.query(`UPDATE pub_ab_tests SET status=$2::ab_test_status, winner=COALESCE($3,winner), result_data=COALESCE($4,result_data), version=version+1, approved_by_identity=CASE WHEN $2 IN ('aprovado','em_execucao') THEN $5 ELSE approved_by_identity END, approved_by_name=CASE WHEN $2 IN ('aprovado','em_execucao') THEN $6 ELSE approved_by_name END, approved_at=CASE WHEN $2 IN ('aprovado','em_execucao') THEN NOW() ELSE approved_at END, started_at=CASE WHEN $2='em_execucao' THEN NOW() ELSE started_at END, concluded_at=CASE WHEN $2='concluido' THEN NOW() ELSE concluded_at END, updated_at=NOW() WHERE id=$1 RETURNING *`,
         [id, nextStatus, winner||null, result_data?JSON.stringify(result_data):null, sess.identityId||null, sess.role||null]);
       await pool.query(`INSERT INTO pub_ab_test_history (test_id, previous_status, next_status, reason, changed_by_identity, changed_by_name) VALUES ($1,$2,$3,$4,$5,$6)`, [id, cur.status, nextStatus, reason, sess.identityId||null, sess.role||null]);
       const actionMap={ rascunho:'ab_test_update', em_revisao:'ab_test_update', aprovado:'ab_test_approve', em_execucao:'ab_test_start', concluido:'ab_test_conclude', cancelado:'ab_test_update', arquivado:'ab_test_update' };

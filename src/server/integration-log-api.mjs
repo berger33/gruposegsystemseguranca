@@ -58,7 +58,7 @@ export function createIntegrationLogApi({ pool, auditLog, sameOrigin, requireSes
       const id=String(data.id||''); const status=String(data.status||'').toLowerCase();
       if(!uuidRe().test(id)){ res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_id'})); return; }
       if(!JOB_STATUS.includes(status)){ res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_status'})); return; }
-      const r=await pool.query(`UPDATE integration_jobs SET status=$1, finished_at=CASE WHEN $1 IN ('concluido','falha','cancelado') THEN now() ELSE finished_at END, updated_at=now() WHERE id=$2 RETURNING *`, [status, id]);
+      const r=await pool.query(`UPDATE integration_jobs SET status=$1::integration_job_status, finished_at=CASE WHEN $1 IN ('concluido','falha','cancelado') THEN now() ELSE finished_at END, updated_at=now() WHERE id=$2 RETURNING *`, [status, id]);
       if(!r.rows.length){ res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
       res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({job:r.rows[0]})); return;
     }

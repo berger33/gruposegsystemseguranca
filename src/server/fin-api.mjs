@@ -173,7 +173,7 @@ export function createFinApi({ pool, auditLog, sameOrigin, requireSession, requi
       const cur = await pool.query(`SELECT * FROM fin_accounts_receivable WHERE id=$1`, [id]);
       if (cur.rows.length===0) return json(res,404,{ error:"not_found" });
       const prev = cur.rows[0];
-      await pool.query(`UPDATE fin_accounts_receivable SET status=$2, paid_at=CASE WHEN $2 IN ('pago','recebido') THEN NOW() WHEN $2='cancelado' THEN canceled_at ELSE paid_at END, canceled_at=CASE WHEN $2='cancelado' THEN NOW() ELSE canceled_at END WHERE id=$1`, [id, status]);
+      await pool.query(`UPDATE fin_accounts_receivable SET status=$2::fin_status, paid_at=CASE WHEN $2 IN ('pago','recebido') THEN NOW() WHEN $2='cancelado' THEN canceled_at ELSE paid_at END, canceled_at=CASE WHEN $2='cancelado' THEN NOW() ELSE canceled_at END WHERE id=$1`, [id, status]);
       await pool.query(`INSERT INTO fin_payment_history (account_type, receivable_id, previous_status, next_status, previous_paid_cents, next_paid_cents, changed_by_identity, reason, is_cancelamento) VALUES ('receber',$1,$2,$3,$4,$5,$6,$7,$8)`, [id, prev.status, status, prev.amount_paid_cents, prev.amount_paid_cents, session.identityId||null, reason, status==='cancelado']);
       await auditLog({ action:"fin_receivable_status", actor: session.identityId||"unknown", target: id, meta:{ previous: prev.status, next: status, reason } });
       const { rows } = await pool.query(`SELECT * FROM fin_accounts_receivable WHERE id=$1`, [id]);

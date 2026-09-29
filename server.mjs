@@ -2280,23 +2280,12 @@ const partnershipApi = createPartnershipApi({
   readAdminSession: readSession,
 });
 
-async function routeApi(req, res) {
-  const obs = getObservability();
-  const requestId = obs.generateRequestId();
-  const correlationId = req.headers['x-correlation-id'] ? String(req.headers['x-correlation-id']).slice(0,100) : obs.generateCorrelationId(requestId);
-  globalThis.__currentRequestId = requestId;
-  globalThis.__currentCorrelationId = correlationId;
-  const start = Date.now();
-  try { res.setHeader('X-Request-Id', requestId); res.setHeader('X-Correlation-Id', correlationId); } catch {}
-  let routeError = null;
-  let statusForObs = 200;
-  // Monkey-patch json to capture status
-  const originalWriteHead = res.writeHead.bind(res);
-  res.writeHead = function(statusCode, ...args) {
-    statusForObs = statusCode;
-    return originalWriteHead(statusCode, ...args);
-  };
-  try {
+// A cadeia de despacho vive em sua própria função porque `return promessa`
+// dentro de um try/catch NÃO é capturado pelo catch: a rejeição escaparia
+// como unhandledRejection e a resposta nunca seria escrita, deixando o
+// cliente pendurado até o tempo esgotar. Com a função separada, routeApi faz
+// `return await` e qualquer falha de handler vira 500 registrado.
+async function dispatchApi(req, res) {
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
   if (url.pathname === "/api/site-visual") return handleSiteVisual(req, res, url);
   if (url.pathname === "/api/leads") return handleCreateLead(req, res);
@@ -3921,6 +3910,26 @@ async function routeApi(req, res) {
     return aiRagApi.handleChunks(req, res);
   }
   return json(res, 404, { error: "not_found" });
+}
+
+async function routeApi(req, res) {
+  const obs = getObservability();
+  const requestId = obs.generateRequestId();
+  const correlationId = req.headers['x-correlation-id'] ? String(req.headers['x-correlation-id']).slice(0,100) : obs.generateCorrelationId(requestId);
+  globalThis.__currentRequestId = requestId;
+  globalThis.__currentCorrelationId = correlationId;
+  const start = Date.now();
+  try { res.setHeader('X-Request-Id', requestId); res.setHeader('X-Correlation-Id', correlationId); } catch {}
+  let routeError = null;
+  let statusForObs = 200;
+  // Monkey-patch json to capture status
+  const originalWriteHead = res.writeHead.bind(res);
+  res.writeHead = function(statusCode, ...args) {
+    statusForObs = statusCode;
+    return originalWriteHead(statusCode, ...args);
+  };
+  try {
+    return await dispatchApi(req, res);
   } catch (e) {
     routeError = e;
     statusForObs = 500;

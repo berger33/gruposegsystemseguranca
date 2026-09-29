@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 /**
  * OPS-01/02/03/04 — Operação: estrutura, dimensionamento, escala, validação
  * OPS-01: cliente → unidade → posto físico → necessidade por turno → alocação; cargo/função em entidade própria
@@ -24,7 +25,6 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
     try { return JSON.parse(raw); } catch { return null; }
   }
   function ipHash(req) {
-    const { createHash } = require('node:crypto');
     const fwd = req.headers['x-forwarded-for'];
     const ip = fwd ? String(fwd).split(',')[0].trim() : req.socket?.remoteAddress || 'unknown';
     return createHash('sha256').update(ip).digest('hex').slice(0,32);

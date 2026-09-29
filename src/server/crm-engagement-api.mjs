@@ -142,7 +142,14 @@ export function createCrmEngagementApi(ctx) {
       const companyId = url.searchParams.get("company_id");
       const opportunityId = url.searchParams.get("opportunity_id");
       const search = url.searchParams.get("search");
-      const cadenceOnly = ["1", "true"].includes(url.searchParams.get("cadence") || "");
+      // `cadence=true` devolve só tarefas nascidas de alguma cadência;
+      // `cadence=<chave>` restringe a uma cadência específica. Uma chave
+      // desconhecida é erro explícito: filtro ignorado em silêncio faz o
+      // operador acreditar que está vendo um recorte que não existe.
+      const cadenceParam = url.searchParams.get("cadence");
+      const cadenceOnly = ["1", "true"].includes(cadenceParam || "");
+      const cadenceKey = cadenceParam && !cadenceOnly ? cadenceParam : null;
+      if (cadenceKey && !getCadence(cadenceKey)) return ctx.json(res, 400, { error: "invalid_cadence_key" });
       const limit = Math.min(200, Math.max(1, parseInt(url.searchParams.get("limit") || "100", 10) || 100));
       const offset = Math.max(0, parseInt(url.searchParams.get("offset") || "0", 10) || 0);
 
@@ -164,6 +171,7 @@ export function createCrmEngagementApi(ctx) {
         if (companyId) { conditions.push(`t.company_id = $${idx++}`); values.push(companyId); }
         if (opportunityId) { conditions.push(`t.opportunity_id = $${idx++}`); values.push(opportunityId); }
         if (cadenceOnly) conditions.push("t.cadence_key IS NOT NULL");
+        if (cadenceKey) { conditions.push(`t.cadence_key = $${idx++}`); values.push(cadenceKey); }
         if (search) {
           conditions.push(`(t.title ILIKE $${idx} OR t.description ILIKE $${idx})`);
           values.push(`%${search}%`);
@@ -299,6 +307,13 @@ export function createCrmEngagementApi(ctx) {
         fields.push(`status = $${idx++}`);
         values.push(target);
         auditAction = `crm_task_status_${target}`;
+        // Concluir registra o instante; reabrir apaga o registro anterior para
+        // não deixar uma tarefa aberta exibindo data de conclusão antiga.
+        if (target === "concluida") {
+          fields.push("completed_at = NOW()");
+        } else {
+          fields.push("completed_at = NULL");
+        }
       }
 
       if (body?.title !== undefined) {
