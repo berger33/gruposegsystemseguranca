@@ -4,7 +4,26 @@ Documento de retomada entre sessões. Atualizado a cada lote concluído.
 Referência: `docs/EXECUCAO-ENTREGA-LOCAL.md` (roteiro L00–L10) e
 `docs/PLANO-MESTRE-IMPLEMENTACAO.md` (222 requisitos).
 
-## Continuação mais recente — PUB-10: mensuração de origem e conversão (Arena, 2026-09-29)
+
+## Continuação mais recente — CRM-07 residual: notas internas e campo a campo de CRM-05/06 (Arena, 2026-09-29)
+
+A base desta continuação é `ed50d22` (HEAD de `main` e da branch no início, merge dos PRs #22 e #23), na branch `arena/01a0eef9-gruposegsystemseguranca`. O recorte escolhido é a lacuna 1 de L04: **revisão campo a campo do kanban/tabela de oportunidades herdados de CRM-05/06 e notas internas dedicadas de CRM-07**. A política foi registrada antes da rota em `docs/PROMPT-CONTINUACAO-CRM-NOTAS-KANBAN.md`.
+
+A revisão campo a campo encontrou **dois defeitos reais de borda**: as rotas de oportunidade (`GET /api/crm/opportunities`, `GET/PATCH /api/crm/opportunities/:id`) não aplicavam a política pessoal já registrada para tarefas/interações/visitas/cadências — **qualquer** sessão de staff autenticada (RH, outro comercial, qualquer papel) listava todas as oportunidades de todos, com necessidade, valor, origem e motivo de perda, e podia mudar estágio e valor de oportunidade alheia; e a auditoria dessas mutações era gravada por um auxiliar que engolia falha com `try/catch` (mutação persistia sem trilha). Ambos corrigidos: listagem/detalhe/PATCH agora são do responsável atual (ou do criador enquanto sem responsável), o detalhe legado é 404 para qualquer outra identidade (inclusive participante de visita, cujo caminho de leitura continua sendo a própria agenda), o papel precisa ser da família comercial (RH 403) e toda mutação de oportunidade audita na mesma transação — falha injetada reverte.
+
+Notas internas: tabela nova `crm_opportunity_notes` (corpo 1–4000 com trim no banco, versão otimista incrementada por gatilho no padrão da 109, exclusão lógica coerente com `deleted_at`/`deleted_by_id`), rotas dedicadas `GET/POST /api/crm/opportunities/:id/notes` e `PATCH/DELETE .../notes/:noteId` em `src/server/crm-note-api.mjs`, com auditoria transacional (`crm_note_create`/`crm_note_update`/`crm_note_delete`), paginação real 1–100 e a regra de que **só quem escreveu edita ou exclui a própria nota** — nem o responsável pela oportunidade reescreve palavra de outro autor. Nota nunca aparece em superfície pública, do cliente ou de empresa.
+
+CRM-05 completo: criação (POST direto e conversão de lead) aceita e valida todos os campos — serviço, necessidade, responsável (agora gravado de verdade na conversão, com nome vindo de `auth_identities.display_name`), **unidade validada contra a mesma empresa**, previsão, valor, próxima ação/data, origem, campanha e prioridade; PATCH mantém todos os campos editáveis. **Atribuição é imutável**: `origin`/`campaign`/`responsible_id`/`responsible_name` não são editáveis (400 `field_not_editable`) e `public_lead_id` nunca vem do corpo (400 `server_managed_fields`, decisão CRM-08). Busca e prioridade passaram para o servidor com curinga escapado (`100%` é literal). CRM-06 endurecido: motivo de perda obrigatório também no banco (`NOT VALID`, vale para escrita nova), reabertura de `perdido`/`ganho` exige motivo explícito, audita ação dedicada `crm_opportunity_reopen` e limpa o `loss_reason` corrente (o motivo antigo fica no histórico de estágio); trocar direto entre `ganho` e `perdido` é recusado (400 `invalid_terminal_transition`); `is_won`/`is_lost` não podem divergir do estágio (CHECK no banco). UI: formulário de nova oportunidade com todos os campos, tabela/kanban exibindo serviço/responsável/unidade/previsão/origem/motivo de perda, painel `OpportunitySummary.tsx` com manutenção de campos e movimentação de funil exigindo os motivos na interface, e `OpportunityNotes.tsx`.
+
+Migração `111-crm-opportunity-notes-reopen.sql` (aditiva): tabela de notas com CHECKs, índice parcial e gatilho de versão; CHECKs `NOT VALID` de coerência do funil (aditivos — não reescrevem linha existente do operador, mas valem para toda escrita nova); reafirmação do CHECK de `auth_access_audit` no padrão herdado (falha se a constraint pai sumir), acrescentando `crm_note_create`, `crm_note_update`, `crm_note_delete` e `crm_opportunity_reopen`. **510 tabelas.**
+
+Gate: `npm run test:l04-delivery:pg` **8/8, duas vezes consecutivas** (PostgreSQL 17 descartável, HTTP real, Chromium real sem `--disable-web-security`). O oitavo cenário prova campo a campo: criação com todos os CRM-05 e persistência conferida, controles negativos de cada campo (prioridade inválida, unidade de outra empresa, valor negativo, data de previsão inválida, vínculo de lead forjado, empresa inexistente), imutabilidade de atribuição, manutenção por PATCH incluindo limpeza de unidade, busca literal `100%` sem casar `1000`, filtro de prioridade no servidor, borda pessoal na listagem/detalhe/PATCH/detalhe-de-empresa (outro comercial 404, RH 403, sem sessão 401, origem ausente 403 em mutação), funil completo com histórico de estágios, perda sem motivo recusada, troca direta de terminal recusada, reabertura sem motivo recusada, reabertura limpando motivo, trilha de auditoria completa (`crm_opportunity_reopen` dedicada), rollback por falha de auditoria injetada na reabertura, CHECKs do banco como controle negativo por SQL (perdido sem motivo, bandeira mentindo, nota de whitespace), notas com paginação sem sobreposição/perda, versão otimista por gatilho (inclusive escrita direta no banco), regra de autor (nota de outro autor não é reescrita nem pelo dono), exclusão lógica preservada e não reversível, rollback de criação e edição de nota por falha de auditoria, e a jornada de UI real (formulário completo, cartão e tabela com todos os campos, funil com motivos exigidos, notas criar/editar/excluir, ganho “não é dinheiro recebido”), sem erro de console/5xx e sem rolagem horizontal. Ajustes declarados em cenários preexistentes: as asserções de “detalhe legado 200 com lista vazia” de CRM-07 tarefas/interações/delegação, CRM-09 e CRM-08 passaram a afirmar **404** (regra mais forte), a visão do participante de CRM-08 passou a ser reafirmada pela própria agenda, e o rótulo de busca da UI de oportunidades mudou para refletir que a busca agora é no servidor. Regressão: `qa-wave0-static` 5/5, `test:migrations:pg` 111/111 (replay, clone, checksum negativo, 510 tabelas), `npm test` 186/186, `typecheck` 0 erros, `build` com `/admin/crm`, `git diff --check` limpo, `tsconfig.json`/`next-env.d.ts` restaurados após o dev server do gate.
+
+**Integração com o main atualizado:** esta fatia foi desenvolvida em paralelo à fatia de calendário de CRM-08 (PR #24, branch `arena/01a0ef36`) e à fatia de métricas PUB-10 (PR #26, branch `arena/01a0ef49`). Os conflitos do gate e dos docs foram resolvidos mantendo **todos** os cenários; no gate mesclado, notas/kanban é o oitavo, calendário o nono e PUB-10 o décimo, e a bateria completa foi re-executada sobre o estado mesclado: `test:l04-delivery:pg` **10/10, duas vezes consecutivas**, `test:migrations:pg` 111/111, `npm test` 186/186, `typecheck` 0 erros, `build` ok, `git diff --check` limpo.
+
+L04 continua **parcial**: dentro de CRM-08, a visão de calendário por semana foi entregue em paralelo pelo PR #24 (`arena/01a0ef36`) e restam lembretes/notificações (dependem de provedor/autorização/opt-out) e ações dentro da própria visão (deliberadamente só leitura); CRM-01..04 aguardam revalidação campo a campo (CRM-02 segue sem tela de contato com função); PUB-02/05 e PUB-06..09 seguem com componentes órfãos (PUB-10 foi entregue em paralelo pelo PR #26); CRM-10 está fora por decisão. **CRM-05, CRM-06 e CRM-07 passaram a pronto_local nesta fatia** (provados por gate campo a campo). L05 não foi iniciado.
+
+### Continuação anterior — PUB-10: mensuração de origem e conversão (Arena, 2026-09-29)
 
 A base desta continuação é `fe35b4c` (HEAD de `main` e da branch no início,
 merge do PR #24 — visão de calendário por semana em CRM-08), na branch
@@ -65,7 +84,10 @@ janela errada — a regra não foi afrouxada. Detalhes em
 campo e notas internas), PUB-02/05 e PUB-06..09, e revalidação campo a campo
 de CRM-01..06.
 
-## Continuação anterior — CRM-08 residual: visão de calendário por semana (Arena, 2026-09-29)
+*(Nota de integração: na fusão com a fatia de notas/kanban este cenário passou a
+ser o décimo do gate; a bateria mesclada revalidou 10/10.)*
+
+### Continuação anterior — CRM-08 residual: visão de calendário por semana, somente leitura (Arena, 2026-09-29)
 
 A base desta continuação é `ed50d22` (HEAD de `main` e da branch no início,
 merge dos PRs #22 e #23; a fatia de código é o merge `ea7a1ed`), na branch
@@ -116,6 +138,10 @@ ainda tem revisão campo a campo de kanban/tabela e notas internas; CRM-01..06
 aguardam revalidação campo a campo; PUB-02/05 e PUB-06..10 seguem com
 componentes órfãos; CRM-10 está fora por decisão. L05 não foi iniciado.
 
+*(Nota de integração: na fusão com a fatia de notas/kanban este cenário passou a
+ser o nono do gate; com a integração posterior do PUB-10, a bateria mesclada
+revalidou 10/10.)*
+
 ### Continuação anterior — CRM-08: conflito de horário e vínculo PUB-04 (Arena, 2026-09-29)
 
 A base desta continuação é `fd7a939` (HEAD de `main` e da branch no início, merge do PR #21), na branch `arena/01a0eeda-gruposegsystemseguranca`. O recorte escolhido é a lacuna 2 de L04: **detecção de conflito de horário do responsável e vínculo PUB-04** em CRM-08. Calendário, lembretes e notificação externa continuam fora por decisão. A política foi registrada antes da rota em `docs/PROMPT-CONTINUACAO-CRM-VISITAS-CONFLITO-PUB04.md`.
@@ -164,11 +190,11 @@ PR #13: tarefas pessoais conectadas em /admin/crm, com auditoria atômica e prot
 
 | Campo | Valor |
 |---|---|
-| Branch de trabalho | `arena/01a0ef49-gruposegsystemseguranca` |
-| Base desta sessão | `fe35b4c` (HEAD de `main` e da branch no início, merge do PR #24 — calendário semanal de CRM-08) |
-| Lote ativo | **L04 — PUB-10 (mensuração de origem e conversão) entregue; L04 ainda parcial**. CRM-07 residual (kanban/tabela campo a campo e notas internas), PUB-02/05 e PUB-06..09, revalidação campo a campo de CRM-01..06, lembretes/notificações de CRM-08, testes A/B de PUB-10 e CRM-10 continuam pendentes. |
-| Último gate aprovado | **L04 ampliado: 9/9, duas vezes consecutivas** (núcleo comercial + CRM-07 tarefas + interações + CRM-08 agenda + CRM-09 cadências + CRM-07 prazo/paginação/delegação + CRM-08 conflito/PUB-04 + CRM-08 calendário por semana + PUB-10 mensuração de origem), PostgreSQL descartável, HTTP real e Chromium sem `--disable-web-security`. |
-| Migrações | 001–110 (509 tabelas; sem migração nova nesta continuação — a mensuração é leitura agregada sobre tabelas que já existiam) |
+| Branch de trabalho | `arena/01a0eef9-gruposegsystemseguranca` (integra com o main atualizado pelos merges dos PRs #24 e #26) |
+| Base desta sessão | `ed50d22` (merge dos PRs #22 e #23) + PR #24 (`fe35b4c`, calendário CRM-08) + PR #26 (`b3c1db6`, PUB-10) |
+| Lote ativo | **L04 — CRM-05/06/07 concluídos (notas internas + campo a campo), CRM-08 com calendário semanal e PUB-10 entregue; L04 ainda parcial**. Lembretes/notificações de CRM-08, revalidação campo a campo de CRM-01..04, PUB-02/05/06..09 e CRM-10 continuam pendentes. |
+| Último gate aprovado | **L04 ampliado: 10/10, duas vezes consecutivas** (núcleo comercial + CRM-07 tarefas + interações + CRM-08 agenda + CRM-09 cadências + CRM-07 prazo/paginação/delegação + CRM-08 conflito/PUB-04 + CRM-07 notas/campo a campo CRM-05/06 + CRM-08 calendário por semana + PUB-10 métricas de origem), PostgreSQL descartável, HTTP real e Chromium sem `--disable-web-security`. |
+| Migrações | 001–111 (510 tabelas; 111 adiciona `crm_opportunity_notes` com CHECKs/gatilho, CHECKs `NOT VALID` de coerência do funil e as ações `crm_note_*`/`crm_opportunity_reopen`) |
 | Data | 2026-09-29 |
 
 ## Lotes
@@ -179,7 +205,7 @@ PR #13: tarefas pessoais conectadas em /admin/crm, com auditoria atômica e prot
 | L01 | Identidade, autorização e integridade básica | **parcial ampliado** | SEC-02/04/05/06 + controles dependentes do L03: RBAC sem bypass, escopo, remuneração/saúde e revogação |
 | L02 | Armazenamento, notificações locais, continuidade | **concluído** | 14/14 HTTP em PostgreSQL descartável (revalidado nesta sessão) |
 | L03 | Funcionário e RH | **concluído** | EMP-01..19 e HR-01..24 navegáveis; gate integral aprovado (revalidado nesta sessão) |
-| L04 | Site/captação e comercial | **parcial — PUB-10 (mensuração de origem) entregue; lacunas explícitas** | Núcleo CRM-11..27 provado; CRM-07 tem tarefas com paginação/busca/filtros/edição de prazo e delegação explícita com aceite (decisão de equipe registrada: sem fila ampla), restando revisão campo a campo de kanban/tabela CRM-05/06 e notas internas; CRM-08 tem agenda de responsável/participantes, conflito de horário do responsável, vínculo PUB-04 auditado e visão de calendário por semana (somente leitura), faltando lembretes/notificações (dependem de provedor); CRM-09 tem modelos privados e tarefas manuais, sem automação; PUB-10 tem painel derivado de origem/conversão em `/admin/leads` (somente leitura, minimizado), sem testes A/B por decisão registrada; CRM-10 e PUB-02/05/06..09 continuam pendentes |
+| L04 | Site/captação e comercial | **parcial — CRM-05/06/07, calendário de CRM-08 e PUB-10 concluídos; lacunas explícitas** | Núcleo CRM-11..27 provado; CRM-07 completo (tarefas, interações, anexos, delegação com aceite, kanban/tabela campo a campo e notas internas dedicadas, todos provados por gate); CRM-05/06 prontos (todos os campos, funil com motivo de perda obrigatório no banco e reabertura auditada, borda pessoal nas rotas de oportunidade); CRM-08 tem agenda de responsável/participantes, conflito de horário, vínculo PUB-04 auditado e visão de calendário por semana (somente leitura), faltando lembretes/notificações (dependem de provedor); PUB-10 entregue como painel derivado e somente leitura em `/admin/leads` (PR #26); CRM-09 tem modelos privados e tarefas manuais, sem automação; CRM-01..04 aguardam revalidação campo a campo; CRM-10 e PUB-02/05/06..09 continuam pendentes |
 | L05 | Contratos e implantação | pendente | — |
 | L06 | Operação, patrimônio e manutenção | pendente | — |
 | L07 | Financeiro e Marcelo | pendente | — |
@@ -288,9 +314,9 @@ permanece `a_revalidar`/`pendente` inclui:
 
 ## Próximos três passos
 
-1. Fechar a revisão campo a campo de CRM-07 (kanban/tabela herdados de CRM-05/06, cobertos só no ponto usado pelo gate) e notas internas dedicadas.
-2. Fechar PUB-02/05 e PUB-06..09 (CMS, temas, SEO, montador de pacote — componentes órfãos em `src/app/admin/ti/*Client.tsx`, conectados por domínio) e revalidar CRM-01..06 campo a campo com cenários dedicados.
-3. Só depois avaliar L05. CRM-10 (carteira), automação de mensagens, lembretes/notificações de agenda, testes A/B de PUB-10, Windows, SMTP, hospedagem externa e aceite humano continuam fora, por decisão registrada, até que surjam autorização/provedor e decisão de negócio explícitas.
+1. Revalidar campo a campo CRM-01..04 com cenários dedicados no gate (CRM-02 precisa de tela de contato com função decisor/influenciador/usuário/financeiro com preferências e restrições; unidade de CRM-01 segue sem rota de criação — hoje é fixture).
+2. Fechar PUB-02/05 e PUB-06..09 (CMS, temas, SEO, montador de pacote — componentes órfãos em `src/app/admin/ti/*Client.tsx`, conectar por domínio; PUB-10 já entregue pelo PR #26).
+3. Lembretes/notificações de CRM-08 seguem dependendo de provedor, autorização e opt-out; testes A/B de PUB-10 seguem fora por decisão registrada; CRM-10 (carteira), automação de mensagens, Windows, SMTP, hospedagem externa e aceite humano continuam fora por decisão registrada. Só depois avaliar L05.
 
 ## Retomada executável
 
@@ -502,13 +528,13 @@ proprietário. Os IDs tratados nesta continuação foram atualizados no checklis
 os demais conservam seus estados anteriores.
 
 CRM-07 recebeu tarefas e histórico de interações, anexos, edição/exclusão,
-contato, tipos e paginação; nesta última continuação ganhou também edição de
-prazo com versão otimista, paginação/busca/filtros de tarefas no servidor e a
-delegação explícita com aceite (decisão de equipe registrada: sem fila ampla).
-Continua parcial na revisão campo a campo de kanban/tabela herdados de
-CRM-05/06 e em notas internas dedicadas. CRM-08 segue parcial em conflitos e
-vínculo PUB-04 (calendário/lembretes fora desta entrega). CRM-10 e as lacunas
-PUB continuam pendentes.
+contato, tipos e paginação; ganhou também edição de prazo com versão otimista,
+paginação/busca/filtros de tarefas no servidor, delegação explícita com aceite
+(decisão de equipe registrada: sem fila ampla) e, na última continuação, a
+revisão campo a campo do kanban/tabela de CRM-05/06 e as notas internas
+dedicadas — CRM-05, CRM-06 e CRM-07 estão pronto_local, provados pelo oitavo
+cenário do gate. CRM-08 segue parcial em lembretes e visão de calendário por
+período (fora desta entrega). CRM-10 e as lacunas PUB continuam pendentes.
 
 ## Continuação CRM-08 (commit `7ddd659`)
 

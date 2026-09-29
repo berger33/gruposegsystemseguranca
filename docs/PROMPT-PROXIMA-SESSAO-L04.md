@@ -1,96 +1,109 @@
 # Prompt da próxima sessão — Grupo SEG System (entrega local, L04)
 
-Escrito ao fim da sessão `arena/01a0ef49-gruposegsystemseguranca`
-(PUB-10: mensuração de origem e conversão, painel derivado somente leitura).
-Use este arquivo como prompt de entrada da próxima continuação.
+Escrito ao fim da integração da fatia de notas internas/campo a campo de
+CRM-05/06 (sessão `arena/01a0eef9-gruposegsystemseguranca`, PR #25) com as
+fatias de calendário de CRM-08 (sessão `arena/01a0ef36-gruposegsystemseguranca`,
+PR #24) e de métricas PUB-10 (sessão `arena/01a0ef49-gruposegsystemseguranca`,
+PR #26). Use este arquivo como prompt de entrada da próxima continuação.
 
 ## Estado de entrada
 
-- Base: `main` no commit que fizer merge desta fatia (PR desta sessão sobre
-  `fe35b4c`). **Conferir no disco antes de começar.**
+- Base: `main` após os merges dos PRs #24, #25 e #26 (conferir o SHA no disco
+  antes de começar).
 - Referências obrigatórias antes de qualquer código:
   `docs/ESTADO-EXECUCAO-LOCAL.md`, `docs/CHECKLIST-ENTREGA-LOCAL.md`,
-  `docs/EVIDENCIAS-ENTREGA-LOCAL.md` e
-  `docs/PROMPT-CONTINUACAO-PUB10-METRICAS-ORIGEM.md`.
+  `docs/EVIDENCIAS-ENTREGA-LOCAL.md`,
+  `docs/PROMPT-CONTINUACAO-CRM-NOTAS-KANBAN.md` (fatia notas/kanban),
+  `docs/PROMPT-CONTINUACAO-CRM-AGENDA-CALENDARIO.md` (fatia calendário) e
+  `docs/PROMPT-CONTINUACAO-PUB10-METRICAS-ORIGEM.md` (fatia PUB-10).
 - **L04 permanece PARCIAL. Não iniciar L05.**
-- Última fatia entregue (gate **9/9** duas vezes consecutivas): PUB-10 —
-  `GET /api/admin/leads/metrics?from=&to=` agregando `public_leads` por
-  origem/campanha/canal e cruzando com
-  `crm_opportunities.public_lead_id`/`stage`, mais o painel
-  `src/app/admin/leads/OriginMetricsPanel.tsx` em `/admin/leads`. Somente
-  leitura, sem migração nova.
-- Decisões registradas nessa fatia, que **não devem ser reabertas sem motivo
-  concreto**: `OriginMetricsClient.tsx` descartado (permitiria digitar
-  métrica à mão) e mantido órfão; testes A/B fora (dependem de tráfego,
-  hipótese e tratamento de dados definidos); minimização por construção (só
-  rótulos e inteiros saem da rota, e nenhum parâmetro destrava linha
-  individual); denominador zero devolve `null`, não `0`; janela obrigatória
-  com teto de 366 dias; a rota não grava trilha por consulta; "ganho no
-  funil" nunca significa dinheiro recebido.
-- Migrações 001–110 aplicadas e IMUTÁVEIS; próxima migração livre: **111**
-  (confirmar no disco antes de criar). 509 tabelas.
+- Fatias entregues (gate mesclado 10/10, duas vezes consecutivas):
+  - **CRM-05/06/07 completo** (`arena/01a0eef9`): notas internas dedicadas
+    (`crm_opportunity_notes`, `crm-note-api.mjs`, `OpportunityNotes.tsx`) e
+    campo a campo de oportunidades — todos os campos em criação/manutenção com
+    unidade validada contra a empresa, atribuição imutável, borda pessoal nas
+    rotas de oportunidade (antes abertas a qualquer staff), motivo de perda
+    obrigatório também no banco, reabertura auditada com ação dedicada,
+    proibição de troca direta ganho↔perdido, flags coerentes por CHECK e
+    busca no servidor com curinga escapado.
+  - **CRM-08 com visão de calendário por semana** (`arena/01a0ef36`,
+    PR #24): `MyAgenda.tsx` com alternador lista/semana, somente leitura, sem
+    rota/migração nova (reaproveita `GET /api/crm/visits/agenda?from=&to=`).
+  - **PUB-10 entregue** (`arena/01a0ef49`, PR #26): painel derivado e
+    somente leitura em `/admin/leads`
+    (`GET /api/admin/leads/metrics?from=&to=`, `OriginMetricsPanel.tsx`),
+    minimizado por construção, janela fail-closed, denominador zero = `null`.
+    Testes A/B continuam fora por decisão registrada.
+- Migrações 001–111 aplicadas e IMUTÁVEIS; próxima migração livre: **112**
+  (confirmar no disco antes de criar). 510 tabelas.
+- **CRM-05, CRM-06 e CRM-07 estão pronto_local** (provados por gate campo a
+  campo). CRM-08 tem agenda, conflito, vínculo PUB-04 e calendário semanal.
 - Fora desta entrega, por decisão registrada: CRM-10, automação de mensagens,
-  SMTP, lembretes/notificações da agenda, testes A/B, hospedagem externa,
-  Windows e aceite humano. Não publicar em produção nem contratar serviços.
-- Atenção: pode haver PR aberto de outra sessão tocando CRM-07 (notas
-  internas / campo a campo de CRM-05/06). Verificar `gh pr list` antes de
-  escolher a fatia, para não colidir.
+  SMTP, lembretes/notificações de agenda, ações dentro da visão de calendário
+  (deliberadamente só leitura), testes A/B, hospedagem externa, Windows e
+  aceite humano. Não publicar em produção nem contratar serviços.
 
 ## Lacunas restantes de L04 (escolher UMA fatia vertical)
 
-1. **CRM-07 residual:** revisão campo a campo do kanban/tabela herdados de
-   CRM-05/06 e notas internas dedicadas. *(Checar se já foi coberto por PR de
-   outra sessão antes de atacar.)*
-2. **PUB-06 (CMS)** — páginas/FAQ/cases/blog/vagas com rascunho, revisão,
-   publicação, histórico e reversão. `CmsClient.tsx` é órfão; conectar por
-   domínio, nunca despejar na página de TI.
-3. **PUB-07 (temas)** — preview, publicação autorizada, configuração
-   persistida e rollback, com preferência dia/noite separada da identidade
-   global. `ThemeClient.tsx` órfão; `/admin/tema` existe e não foi
-   revalidada.
-4. **PUB-08 (SEO técnico)** — títulos, sitemap, redirects, verificação de
-   domínio e `noindex` preservado fora de produção. `SeoClient.tsx` órfão.
-5. **PUB-09 (montador de pacote/comparador)** — só a partir do catálogo e de
-   regras aprovadas; nenhum preço de demonstração. `PackageClient.tsx` órfão.
-6. **PUB-02/05** — páginas por serviço/segmento com revisão de acessibilidade
-   e desempenho; FAQ assistida com handoff humano (`PubFaqAssistedClient.tsx`
-   órfão), sem o bot inventar preço, cobertura, licença ou prazo.
-7. **Revalidação campo a campo de CRM-01..06** com cenários dedicados no gate.
+1. **Revalidação campo a campo de CRM-01..04** com cenários dedicados no gate:
+   CRM-02 precisa de tela de contato com função
+   decisor/influenciador/usuário/financeiro com preferências e restrições;
+   CRM-01 segue sem rota de criação/edição de unidade (hoje é fixture SQL);
+   CRM-03/04 (endereços/correção de dados) sem tela dedicada.
+2. **Lacunas PUB:** PUB-02/05 e PUB-06..09 (CMS, temas, SEO, montador de
+   pacote — componentes órfãos em `src/app/admin/ti/*Client.tsx`, conectar
+   por domínio, nunca despejar na página de TI; `OriginMetricsClient.tsx`
+   segue órfão por decisão do PR #26).
+3. **CRM-10 (carteira):** fora por decisão registrada — reabrir apenas com
+   decisão explícita do proprietário.
+4. **Lembretes/notificações de CRM-08:** só entram com provedor, autorização e
+   opt-out operacional decididos pelo proprietário.
+
+## Riscos residuais anotados (não corrigidos, declarados)
+
+- A busca de empresas (CRM-01) segue com curinga não escapado (ILIKE cru).
+- Rotas de empresa/contato/importação em `crm-api.mjs` ainda usam o auxiliar
+  de auditoria que engole falha (`try/catch` mudo) — mutação sem trilha não
+  reverte. As rotas de oportunidade/notas são transacionais desde a 111.
+- `handleAdminLeadStatus` em `server.mjs`: padrão de auditoria "solta" em
+  transação multi-instrução (comportamento confirmado correto hoje; o CHECK
+  da 103 fecha a causa atual, mas o padrão não foi hardenizado).
+- Sessões paralelas: **houve três fatias paralelas nesta rodada** (PRs #24,
+  #25 e #26). Se outra fatia for mesclada no `main` antes desta, o gate e os
+  docs terão conflito de apendo — resolver mantendo **todos** os cenários e
+  re-executar a bateria completa no estado mesclado, como feito nestas
+  integrações. Um commit vazio NÃO dispara o workflow de CI do gate (filtro
+  de paths); qualquer push que re-dispare precisa tocar um arquivo da lista.
+- CI: em caso de falha de gate apenas no runner (bateria local verde com TZ
+  local e TZ=UTC), suspeitar de throttling do runner antes de mudar código;
+  logs podem estar indisponíveis durante incidentes de storage do GitHub
+  Actions.
 
 ## Método (inegociável)
 
 - Registrar as decisões de política ANTES da rota, em
   `docs/PROMPT-CONTINUACAO-<fatia>.md`; sem bypass administrativo;
   fail-closed.
-- **Componente órfão não é destino obrigatório.** Se o componente existente
-  permitir ao usuário fabricar dado (como o CRUD de métricas do PUB-10),
-  descartá-lo explicitamente e entregar a coisa honesta — declarando o
-  descarte na documentação.
-- Nem toda fatia precisa de migração nova: se a lacuna puder ser fechada
-  reaproveitando tabelas, rotas e autorização já existentes, prefira isso.
-  Quando for necessária, a migração é apenas aditiva; preservar o padrão do
-  CHECK de `auth_access_audit` (falhar se a constraint pai sumir, nunca
-  afrouxar).
+- Migração nova apenas aditiva; preservar o padrão do CHECK de
+  `auth_access_audit` (falhar se a constraint pai sumir, nunca afrouxar);
+  CHECKs novos sobre tabela povoada entram `NOT VALID` (valem para escrita
+  nova sem reescrever o passado).
 - Auditoria transacional: falha de auditoria injetada deve reverter a
-  mutação. Fatias somente leitura não precisam disso — mas precisam declarar
-  por que não gravam trilha.
+  mutação.
 - Gate dentro de `tests/l04-delivery.integration.test.mjs`: HTTP real +
   PostgreSQL descartável + Chromium real sem `--disable-web-security` (um
-  navegador por persona; SQL só para fixture/asserção/falha injetada). Ao
-  testar UI assíncrona, aguarde a resposta HTTP real
-  (`page.waitForResponse`); nunca `waitForTimeout` fixo.
-- Cuidado conhecido: o lançamento do Chromium no sandbox ocasionalmente morre
-  com SIGSEGV logo no `launch` — se acontecer sem nenhuma asserção ter
-  falhado, é ruído de ambiente; reexecute antes de investigar o código.
+  navegador por persona; SQL só para fixture/asserção/falha injetada).
 - Atualizar `scripts/migrate-site-visual.mjs` (manifesto) e
-  `scripts/qa-wave0-static.mjs` (`latestMigration`) **se** criar migração.
-- Cuidado conhecido: o dev server do gate reescreve `tsconfig.json` e
-  `next-env.d.ts` (`.next/integration-l04`) — restaurar com `git checkout`
-  antes do commit (`git status --short` deve mostrar só os arquivos que você
-  quis tocar).
+  `scripts/qa-wave0-static.mjs` (`latestMigration`) se criar migração.
+- Cuidado conhecido: o dev server do gate pode reescrever `tsconfig.json`
+  (`.next/integration-l04`) — restaurar com `git checkout` antes do commit.
 - Se um cenário preexistente do gate quebrar por causa de uma regra nova,
   ajustar o cenário e **declarar o ajuste** na documentação — nunca afrouxar
   a regra.
+- Detalhe de UI conhecido: rótulo `<label>` que envolve controle já
+  preenchido carrega o valor no nome acessível (React espelha `defaultValue`
+  como texto da textarea) — usar casamento por substring nos `getByLabel` de
+  controles preenchidos; em `<select>`, usar `<label htmlFor>` + `id`.
 - Documentar honestamente ao final (estado, checklist, evidências e prompt da
   sessão seguinte). Não marcar como concluído o que não foi provado por gate.
 
@@ -106,10 +119,3 @@ npm run typecheck
 npm run build
 git diff --check
 ```
-
-## Fechamento
-
-Commit e push na branch arena fixa da sessão, abrir PR para `main` com a
-fatia, a política registrada e a evidência. Fazer o merge. Não avançar para
-L05 enquanto L04 tiver lacuna aberta. Entregar o prompt completo para
-continuar o projeto em outra sessão.

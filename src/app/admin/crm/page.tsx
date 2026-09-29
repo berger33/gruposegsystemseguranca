@@ -1,25 +1,40 @@
 "use client";
 import { useEffect, useState } from "react";
+import OpportunitySummary from "./OpportunitySummary";
 import OpportunityTasks from "./OpportunityTasks";
 import OpportunityInteractions from "./OpportunityInteractions";
 import OpportunityVisits from "./OpportunityVisits";
+import OpportunityNotes from "./OpportunityNotes";
 import MyAgenda from "./MyAgenda";
 import MyDelegatedTasks from "./MyDelegatedTasks";
 import CadenceClient from "./CadenceClient";
 
 type Company = { id: string; display_name: string; type: string; city: string; segment: string | null; status: string; responsible_name: string | null; };
-type Opportunity = { id: string; title: string; company_id: string; stage: string; priority: string; estimated_value: string | null; next_action: string | null; next_action_date: string | null; is_won: boolean; is_lost: boolean; };
+type Unit = { id: string; display_name: string };
+type Opportunity = {
+  id: string; company_id: string; title: string; stage: string; priority: string;
+  service_name: string | null; need_description: string | null; responsible_name: string | null;
+  unit_id: string | null; unit_name: string | null; forecast_date: string | null;
+  estimated_value: string | null; next_action: string | null; next_action_date: string | null;
+  origin: string | null; campaign: string | null; loss_reason: string | null;
+  is_won: boolean; is_lost: boolean;
+};
 type ImportRow = { row_number: number; raw_data: any; mapped_data: any; status: string; errors: any[]; dedup_match: any; };
 
 export default function CrmPage() {
   const [selectedOpportunity, setSelectedOpportunity] = useState<string | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [opps, setOpps] = useState<Opportunity[]>([]);
+  const [oppsTotal, setOppsTotal] = useState(0);
   const [filter, setFilter] = useState({ type: "", stage: "" });
   const [oppSearch, setOppSearch] = useState("");
+  const [appliedOppSearch, setAppliedOppSearch] = useState("");
   const [oppPriority, setOppPriority] = useState("");
   const [oppView, setOppView] = useState<"kanban" | "tabela">("kanban");
   const [form, setForm] = useState({ displayName: "", city: "", type: "prospect", segment: "" });
+  const [oppForm, setOppForm] = useState({ company_id: "", title: "", service_name: "", need_description: "", priority: "media", forecast_date: "", estimated_value: "", next_action: "", next_action_date: "", origin: "", unit_id: "" });
+  const [oppUnits, setOppUnits] = useState<Unit[]>([]);
+  const [oppFormError, setOppFormError] = useState("");
   const [error, setError] = useState("");
   const [csvContent, setCsvContent] = useState("");
   const [fileName, setFileName] = useState("empresas.csv");
@@ -38,15 +53,28 @@ export default function CrmPage() {
     } catch (e:any) { setError(e.message); }
 
     try {
+      // CRM-07: busca e prioridade aplicadas no servidor (com curinga escapado);
+      // a listagem é pessoal — cada comercial vê só o próprio funil.
       const params = new URLSearchParams();
       if (filter.stage) params.set("stage", filter.stage);
+      if (appliedOppSearch) params.set("search", appliedOppSearch);
+      if (oppPriority) params.set("priority", oppPriority);
       const res = await fetch(`/api/crm/opportunities?${params.toString()}`, { cache: "no-store" });
       const data = await res.json();
-      if (res.ok) setOpps(data.opportunities || []);
+      if (res.ok) { setOpps(data.opportunities || []); setOppsTotal(data.total || 0); }
     } catch {}
   }
 
-  useEffect(() => { load(); }, [filter]);
+  useEffect(() => { load(); }, [filter, appliedOppSearch, oppPriority]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function loadUnits(companyId: string) {
+    if (!companyId) { setOppUnits([]); return; }
+    try {
+      const res = await fetch(`/api/crm/companies/${companyId}`, { cache: "no-store" });
+      const data = await res.json();
+      setOppUnits(res.ok ? (data.units || []) : []);
+    } catch { setOppUnits([]); }
+  }
 
   async function createCompany(e: React.FormEvent) {
     e.preventDefault();
@@ -62,6 +90,35 @@ export default function CrmPage() {
       setForm({ displayName: "", city: "", type: "prospect", segment: "" });
       await load();
     } catch (e:any) { setError(e.message); }
+  }
+
+  async function createOpportunity(e: React.FormEvent) {
+    e.preventDefault();
+    setOppFormError("");
+    try {
+      const res = await fetch("/api/crm/opportunities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          company_id: oppForm.company_id,
+          title: oppForm.title,
+          service_name: oppForm.service_name || null,
+          need_description: oppForm.need_description || null,
+          priority: oppForm.priority,
+          forecast_date: oppForm.forecast_date || null,
+          estimated_value: oppForm.estimated_value === "" ? null : Number(oppForm.estimated_value),
+          next_action: oppForm.next_action || null,
+          next_action_date: oppForm.next_action_date ? new Date(oppForm.next_action_date).toISOString() : null,
+          origin: oppForm.origin || null,
+          unit_id: oppForm.unit_id || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "falha");
+      setOppForm({ company_id: "", title: "", service_name: "", need_description: "", priority: "media", forecast_date: "", estimated_value: "", next_action: "", next_action_date: "", origin: "", unit_id: "" });
+      setOppUnits([]);
+      await load();
+    } catch (e:any) { setOppFormError(e.message); }
   }
 
   async function convertLead() {
@@ -143,7 +200,7 @@ export default function CrmPage() {
   return (
     <main style={{ padding: 24, maxWidth: 1200, margin: "0 auto", fontFamily: "system-ui, sans-serif" }}>
       <h1>CRM — Empresas, contatos e funil (CRM-01..10 + CRM-03 import)</h1>
-      <p style={{ fontSize: 13, opacity: 0.8 }}>Cadastro central de empresas e contatos com tipo prospect/cliente/parceiro sem duplicar entidade (CRM-01), contato com função decisor/influenciador/usuario/financeiro (CRM-02), importar CSV com prévia, validação por linha, mapeamento, relatório, deduplicação revisável e prevenção fórmula maliciosa na exportação (CRM-03), converter lead preservando histórico com deduplicação (CRM-04), oportunidades com serviço, necessidade, responsável, unidade, previsão, valor estimado, próxima ação/data, origem, prioridade, motivo perda (CRM-05), funil novo→qualificação→vistoria→proposta_elaboração→enviada→negociação→ganho/perdido com motivo obrigatório perda e reabertura auditada, não tratar ganho como dinheiro recebido (CRM-06).</p>
+      <p style={{ fontSize: 13, opacity: 0.8 }}>Cadastro central de empresas e contatos com tipo prospect/cliente/parceiro sem duplicar entidade (CRM-01), contato com função decisor/influenciador/usuario/financeiro (CRM-02), importar CSV com prévia, validação por linha, mapeamento, relatório, deduplicação revisável e prevenção fórmula maliciosa na exportação (CRM-03), converter lead preservando histórico com deduplicação (CRM-04), oportunidades com serviço, necessidade, responsável, unidade, previsão, valor estimado, próxima ação/data, origem, prioridade, motivo perda (CRM-05), funil novo→qualificação→vistoria→proposta_elaboração→enviada→negociação→ganho/perdido com motivo obrigatório perda e reabertura auditada, não tratar ganho como dinheiro recebido (CRM-06). O funil é pessoal: cada comercial vê apenas as próprias oportunidades.</p>
 
       <section style={{ marginTop: 16, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
         <h2 style={{ fontSize: 16, margin: 0 }}>Nova empresa (CRM-01)</h2>
@@ -206,7 +263,38 @@ export default function CrmPage() {
         )}
       </section>
 
-      <section style={{ marginTop: 16, display: "flex", gap: 8 }}>
+      <section style={{ marginTop: 16, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
+        <h2 style={{ fontSize: 16, margin: 0 }}>Nova oportunidade (CRM-05)</h2>
+        <p style={{ fontSize: 12, opacity: 0.7 }}>Todos os campos do requisito: serviço, necessidade, responsável (você, gravado na criação), unidade da mesma empresa, previsão, valor estimado, próxima ação/data, origem e prioridade. Origem/campanha e responsável são imutáveis depois de criados; motivo de perda é exigido no funil.</p>
+        <form onSubmit={createOpportunity} style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8, alignItems: "flex-end" }}>
+          <label htmlFor="opp-form-company" style={{ fontSize: 12 }}>Empresa</label>
+          <select id="opp-form-company" value={oppForm.company_id} onChange={e=>{ setOppForm({...oppForm, company_id: e.target.value, unit_id: ""}); loadUnits(e.target.value); }} required style={{ display: "block", padding: 6, minWidth: 180 }}>
+            <option value="">escolher empresa</option>
+            {companies.map(c=><option key={c.id} value={c.id}>{c.display_name}</option>)}
+          </select>
+          <label style={{ fontSize: 12 }}>Título<input value={oppForm.title} onChange={e=>setOppForm({...oppForm, title: e.target.value})} required maxLength={200} style={{ display: "block", padding: 6, minWidth: 200 }} /></label>
+          <label style={{ fontSize: 12 }}>Serviço<input value={oppForm.service_name} onChange={e=>setOppForm({...oppForm, service_name: e.target.value})} maxLength={100} style={{ display: "block", padding: 6 }} /></label>
+          <label style={{ fontSize: 12 }}>Necessidade<input value={oppForm.need_description} onChange={e=>setOppForm({...oppForm, need_description: e.target.value})} maxLength={2000} style={{ display: "block", padding: 6, minWidth: 180 }} /></label>
+          <label htmlFor="opp-form-unit" style={{ fontSize: 12 }}>Unidade</label>
+          <select id="opp-form-unit" value={oppForm.unit_id} onChange={e=>setOppForm({...oppForm, unit_id: e.target.value})} disabled={!oppForm.company_id} style={{ display: "block", padding: 6 }}>
+            <option value="">sem unidade</option>
+            {oppUnits.map(u=><option key={u.id} value={u.id}>{u.display_name}</option>)}
+          </select>
+          <label htmlFor="opp-form-priority" style={{ fontSize: 12 }}>Prioridade</label>
+          <select id="opp-form-priority" value={oppForm.priority} onChange={e=>setOppForm({...oppForm, priority: e.target.value})} style={{ display: "block", padding: 6 }}>
+            {["baixa","media","alta","critica"].map(p=><option key={p} value={p}>{p}</option>)}
+          </select>
+          <label style={{ fontSize: 12 }}>Previsão (fechamento)<input type="date" value={oppForm.forecast_date} onChange={e=>setOppForm({...oppForm, forecast_date: e.target.value})} style={{ display: "block", padding: 6 }} /></label>
+          <label style={{ fontSize: 12 }}>Valor estimado<input type="number" min={0} step="0.01" value={oppForm.estimated_value} onChange={e=>setOppForm({...oppForm, estimated_value: e.target.value})} style={{ display: "block", padding: 6, width: 120 }} /></label>
+          <label style={{ fontSize: 12 }}>Próxima ação<input value={oppForm.next_action} onChange={e=>setOppForm({...oppForm, next_action: e.target.value})} maxLength={200} style={{ display: "block", padding: 6 }} /></label>
+          <label style={{ fontSize: 12 }}>Data da próxima ação<input type="datetime-local" value={oppForm.next_action_date} onChange={e=>setOppForm({...oppForm, next_action_date: e.target.value})} style={{ display: "block", padding: 6 }} /></label>
+          <label style={{ fontSize: 12 }}>Origem<input value={oppForm.origin} onChange={e=>setOppForm({...oppForm, origin: e.target.value})} maxLength={100} style={{ display: "block", padding: 6 }} /></label>
+          <button type="submit" style={{ padding: "6px 12px" }}>Criar oportunidade</button>
+        </form>
+        {oppFormError && <p role="alert" style={{ color: "red" }}>{oppFormError}</p>}
+      </section>
+
+      <section style={{ marginTop: 16, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
         <select value={filter.type} onChange={e=>setFilter({...filter, type: e.target.value})} style={{ padding: 6 }}>
           <option value="">todos tipos</option>
           <option value="prospect">prospect</option>
@@ -217,7 +305,16 @@ export default function CrmPage() {
           <option value="">todos estágios</option>
           {stages.map(s=><option key={s} value={s}>{s}</option>)}
         </select>
-        <button onClick={load} style={{ padding: "6px 12px" }}>Filtrar</button>
+        <form onSubmit={e=>{ e.preventDefault(); setAppliedOppSearch(oppSearch.trim()); }} style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+          <label style={{ fontSize: 12 }}>Buscar oportunidade (título/necessidade)<input value={oppSearch} onChange={e=>setOppSearch(e.target.value)} maxLength={200} style={{ display: "block", padding: 6 }} /></label>
+          <button type="submit" style={{ padding: "6px 12px" }}>Filtrar oportunidades</button>
+        </form>
+        <label htmlFor="opp-filter-priority" style={{ fontSize: 12, padding: 6 }}>Filtrar por prioridade</label>
+        <select id="opp-filter-priority" value={oppPriority} onChange={e=>setOppPriority(e.target.value)} style={{ display: "block", padding: 6 }}>
+          <option value="">todas prioridades</option>
+          {["baixa","media","alta","critica"].map(p=><option key={p} value={p}>{p}</option>)}
+        </select>
+        <button onClick={load} style={{ padding: "6px 12px" }}>Atualizar</button>
       </section>
 
       <section style={{ marginTop: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
@@ -241,64 +338,66 @@ export default function CrmPage() {
           </div>
         </div>
         <div>
-          <h2 style={{ fontSize: 16 }}>Oportunidades ({opps.length}) — CRM-05/06 kanban e tabela</h2>
+          <h2 style={{ fontSize: 16 }}>Oportunidades ({opps.length} de {oppsTotal}) — CRM-05/06 kanban e tabela</h2>
+          <p style={{ fontSize: 11, opacity: 0.7, marginTop: 0 }}>Funil pessoal: só as suas oportunidades aparecem (busca e prioridade aplicadas no servidor, com curinga escapado).</p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8, alignItems: "center" }}>
-            <label style={{ fontSize: 12 }}>Busca por título de oportunidade<input value={oppSearch} onChange={e=>setOppSearch(e.target.value)} maxLength={200} style={{ display: "block", padding: 4 }} /></label>
-            <label style={{ fontSize: 12 }}>Prioridade
-              <select value={oppPriority} onChange={e=>setOppPriority(e.target.value)} style={{ display: "block", padding: 4 }}>
-                <option value="">todas prioridades</option>
-                {["baixa","media","alta","critica"].map(p=><option key={p} value={p}>{p}</option>)}
-              </select>
-            </label>
             <button type="button" onClick={()=>setOppView(view=>view==="kanban"?"tabela":"kanban")} style={{ padding: "6px 12px" }}>
               {oppView==="kanban" ? "Ver em tabela" : "Ver em kanban"}
             </button>
           </div>
-          {(() => {
-            const term = oppSearch.trim().toLocaleLowerCase("pt-BR");
-            const visibleOpps = opps.filter(o => (!term || o.title.toLocaleLowerCase("pt-BR").includes(term)) && (!oppPriority || o.priority === oppPriority));
-            return oppView === "kanban" ? (
+          {(() => (
+            oppView === "kanban" ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8, maxHeight: 500, overflow: "auto", border: "1px solid #eee", padding: 8 }}>
             {stages.map(stage=>(
               <div key={stage} style={{ border: "1px solid #ddd", borderRadius: 6, padding: 8, background: "#f8fafc" }}>
                 <h3 style={{ margin: "0 0 6px", fontSize: 12, textTransform: "uppercase" }}>{stage}</h3>
-                {visibleOpps.filter(o=>o.stage===stage).map(o=>(
+                {opps.filter(o=>o.stage===stage).map(o=>(
                   <article key={o.id} style={{ border: "1px solid #ccc", borderRadius: 4, padding: 6, marginBottom: 6, background: o.is_won ? "#dcfce7" : o.is_lost ? "#fee2e2" : "#fff", fontSize: 11 }}>
                     <strong>{o.title}</strong>
                     <button type="button" onClick={() => setSelectedOpportunity(o.id)}>Abrir tarefas</button>
-                    <p style={{ margin: "2px 0 0" }}>Prioridade: {o.priority} | Valor: {o.estimated_value || "-"}</p>
-                    <p style={{ margin: "2px 0 0" }}>Próxima: {o.next_action || "-"} {o.next_action_date ? new Date(o.next_action_date).toLocaleDateString() : ""}</p>
+                    <p style={{ margin: "2px 0 0" }}>Serviço: {o.service_name || "-"} | Prioridade: {o.priority} | Valor: {o.estimated_value || "-"}</p>
+                    <p style={{ margin: "2px 0 0" }}>Responsável: {o.responsible_name || "-"} | Unidade: {o.unit_name || "-"} | Previsão: {o.forecast_date ? String(o.forecast_date).slice(0, 10) : "-"}</p>
+                    <p style={{ margin: "2px 0 0" }}>Próxima: {o.next_action || "-"} {o.next_action_date ? new Date(o.next_action_date).toLocaleDateString() : ""} | Origem: {o.origin || "-"}</p>
+                    {o.is_lost && <p style={{ margin: "2px 0 0" }}>Motivo de perda: {o.loss_reason || "-"}</p>}
                     <p style={{ margin: "2px 0 0", opacity: 0.7 }}>{o.is_won ? "ganho (não é dinheiro recebido)" : o.is_lost ? "perdido (motivo obrigatório)" : ""}</p>
                   </article>
                 ))}
-                {visibleOpps.filter(o=>o.stage===stage).length===0 && <p style={{ fontSize: 10, opacity: 0.5 }}>vazio</p>}
+                {opps.filter(o=>o.stage===stage).length===0 && <p style={{ fontSize: 10, opacity: 0.5 }}>vazio</p>}
               </div>
             ))}
           </div>
             ) : (
           <div style={{ maxHeight: 500, overflow: "auto", border: "1px solid #eee" }}>
             <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
-              <thead><tr><th>Título</th><th>Estágio</th><th>Prioridade</th><th>Valor</th><th>Próxima ação</th><th></th></tr></thead>
+              <thead><tr><th>Título</th><th>Estágio</th><th>Serviço</th><th>Responsável</th><th>Unidade</th><th>Previsão</th><th>Prioridade</th><th>Valor</th><th>Próxima ação</th><th>Origem</th><th>Motivo de perda</th><th></th></tr></thead>
               <tbody>
-                {visibleOpps.map(o=>(
+                {opps.map(o=>(
                   <tr key={o.id} style={{ borderTop: "1px solid #eee", background: o.is_won ? "#dcfce7" : o.is_lost ? "#fee2e2" : undefined }}>
                     <td>{o.title}</td>
                     <td>{o.stage}</td>
+                    <td>{o.service_name || "-"}</td>
+                    <td>{o.responsible_name || "-"}</td>
+                    <td>{o.unit_name || "-"}</td>
+                    <td>{o.forecast_date ? String(o.forecast_date).slice(0, 10) : "-"}</td>
                     <td>{o.priority}</td>
                     <td>{o.estimated_value || "-"}</td>
                     <td>{o.next_action || "-"} {o.next_action_date ? new Date(o.next_action_date).toLocaleDateString() : ""}</td>
+                    <td>{o.origin || "-"}</td>
+                    <td>{o.is_lost ? (o.loss_reason || "-") : ""}</td>
                     <td><button type="button" onClick={() => setSelectedOpportunity(o.id)}>Abrir tarefas</button></td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {visibleOpps.length===0 && <p style={{ fontSize: 11, opacity: 0.6, padding: 8 }}>Nenhuma oportunidade neste filtro.</p>}
+            {opps.length===0 && <p style={{ fontSize: 11, opacity: 0.6, padding: 8 }}>Nenhuma oportunidade neste filtro.</p>}
           </div>
-            );
-          })()}
-          <p style={{ fontSize: 11, opacity: 0.6, marginTop: 8 }}>CRM-07 kanban e tabela, filtros, busca, tarefas vencidas, histórico ligações/reuniões, anexos e notas internas autorizadas. Tarefas pessoais (com paginação, busca, edição de prazo e delegação explícita com aceite) e histórico de interações: use Abrir tarefas na oportunidade. Delegações recebidas aparecem em Tarefas delegadas a mim. Anexos e agenda de visitas/reuniões (CRM-08) já entregues; cadências manuais (CRM-09) criam tarefas a partir de modelos, sem envio automático; carteira (CRM-10) ainda está pendente.</p>
+            )
+          ))()}
+          <p style={{ fontSize: 11, opacity: 0.6, marginTop: 8 }}>CRM-07 kanban e tabela, filtros, busca, tarefas vencidas, histórico ligações/reuniões, anexos e notas internas autorizadas. Tarefas pessoais (com paginação, busca, edição de prazo e delegação explícita com aceite) e histórico de interações: use Abrir tarefas na oportunidade. Delegações recebidas aparecem em Tarefas delegadas a mim. Anexos, agenda de visitas/reuniões (CRM-08) e notas internas dedicadas já entregues; cadências manuais (CRM-09) criam tarefas a partir de modelos, sem envio automático; carteira (CRM-10) ainda está pendente.</p>
         </div>
       </section>
+      {selectedOpportunity && <OpportunitySummary key={"summary-" + selectedOpportunity} opportunityId={selectedOpportunity} />}
+      {selectedOpportunity && <OpportunityNotes key={"notes-" + selectedOpportunity} opportunityId={selectedOpportunity} />}
       {selectedOpportunity && <OpportunityTasks key={selectedOpportunity} opportunityId={selectedOpportunity} />}
       {selectedOpportunity && <OpportunityInteractions key={"interactions-" + selectedOpportunity} opportunityId={selectedOpportunity} />}
       {selectedOpportunity && <OpportunityVisits key={"visits-" + selectedOpportunity} opportunityId={selectedOpportunity} />}
