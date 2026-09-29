@@ -4,7 +4,15 @@ Documento de retomada entre sessões. Atualizado a cada lote concluído.
 Referência: `docs/EXECUCAO-ENTREGA-LOCAL.md` (roteiro L00–L10) e
 `docs/PLANO-MESTRE-IMPLEMENTACAO.md` (222 requisitos).
 
-## Continuação mais recente — CRM-07, interações completas (Arena, 2026-09-29)
+## Continuação mais recente — CRM-09, cadências manuais (Arena, 2026-09-29)
+
+A base desta continuação é `5a2e6a7` (HEAD da branch Arena e de `main` no início), na branch `arena/01a0eea3-gruposegsystemseguranca`. O recorte Opção C implementa CRM-09 verticalmente em `108-crm-manual-cadences.sql`, `src/server/crm-cadence-api.mjs` e `/admin/crm`: modelos privados por comercial, passos com intervalo/canal/responsável, aplicação somente à própria oportunidade e materialização imediata de tarefas manuais. Não há envio automático de mensagem.
+
+A política foi registrada antes da rota: somente identidade ativa com papel `comercial` cria, edita, arquiva e aplica seus modelos; outro comercial, admin, Marcelo, TI e RH não fazem bypass. O contato da oportunidade é obrigatório e precisa estar ativo; opt-out bloqueia novas aplicações e cancela passos pendentes. Oportunidade ganha/perdida e contato desativado também encerram a cadência e cancelam somente tarefas abertas/em andamento. Tarefas concluídas não são reabertas. A rota legada de detalhe passou a filtrar `stages` pela mesma propriedade da oportunidade.
+
+O gate CRM-09 prova UI real em Chromium e HTTP + PostgreSQL descartável: criação/edição/recarregamento do modelo e aplicação pela UI, outro usuário/papel/sessão/origem/método/campos inválidos, propriedade da oportunidade, deduplicação, opt-out, ganho, contato inativo, auditoria e rollback por falha de auditoria. A decisão de automação de mensagens permanece pendente de autorização, opt-out operacional e provedor; esta fatia não envia nada.
+
+### Continuação anterior — CRM-07, interações completas (Arena, 2026-09-29)
 
 A base real desta sessão foi `05f258f` (`main` após o ajuste documental do PR #15), na branch `arena/01a0ee5c-gruposegsystemseguranca`. O recorte **Opção A** do prompt anterior foi entregue no código `c69685f`: interações agora aceitam os sete tipos do schema, contato ativo da mesma empresa, paginação real, edição com versão otimista, exclusão lógica e anexos privados. Os anexos reutilizam o provider local de L02 (`CLIENT_DOCS_DIR`/`.data/documents`) com chave aleatória, SHA-256, verificação de integridade antes do download e autorização da oportunidade; nunca recebem URL pública. As ações `create`, `update`, `delete`, `attachment_create` e `attachment_download` têm auditoria própria e transacional, sem copiar detalhes sensíveis para a auditoria.
 
@@ -20,11 +28,11 @@ PR #13: tarefas pessoais conectadas em /admin/crm, com auditoria atômica e prot
 
 | Campo | Valor |
 |---|---|
-| Branch de trabalho | `arena/01a0ee5c-gruposegsystemseguranca` |
-| Base desta sessão | `05f258f` (main após PR #15 documental) |
-| Lote ativo | **L04** — jornada comercial central, tarefas pessoais e histórico de interações ampliado; próximo recorte recomendado é CRM-08. CMS/tema/SEO/comparador (PUB-06..09) e CRM-09/10 continuam pendentes. |
-| Último gate aprovado | **L04 ampliado**: 3/3 (jornada central + tarefas pessoais + interações completas), executado localmente no sandbox Arena em `c69685f`. L02/L03 integrais não reexecutados nesta continuação (sem evidência de regressão que o exigisse). |
-| Migrações | 001–106 (505 tabelas; 104 tarefas, 105 criação de interação, 106 edição/exclusão/anexos de interação) |
+| Branch de trabalho | `arena/01a0eea3-gruposegsystemseguranca` |
+| Base desta sessão | `5a2e6a7` (HEAD de `main` e da branch no início) |
+| Lote ativo | **L04 — CRM-09 entregue localmente, L04 ainda parcial**. CRM-10, CRM-07 equipe/delegação/prazo/paginação e lacunas CRM-08/PUB continuam pendentes. |
+| Último gate aprovado | **L04 ampliado: 5/5** (núcleo comercial + CRM-07 tarefas + interações + CRM-08 agenda + CRM-09 cadências), PostgreSQL descartável, HTTP real e Chromium sem `--disable-web-security`. |
+| Migrações | 001–108 (509 tabelas; 108 adiciona modelos/passos/aplicações de cadência, opt-out e bloqueio transacional de tarefas pendentes) |
 | Data | 2026-09-29 |
 
 ## Lotes
@@ -35,7 +43,7 @@ PR #13: tarefas pessoais conectadas em /admin/crm, com auditoria atômica e prot
 | L01 | Identidade, autorização e integridade básica | **parcial ampliado** | SEC-02/04/05/06 + controles dependentes do L03: RBAC sem bypass, escopo, remuneração/saúde e revogação |
 | L02 | Armazenamento, notificações locais, continuidade | **concluído** | 14/14 HTTP em PostgreSQL descartável (revalidado nesta sessão) |
 | L03 | Funcionário e RH | **concluído** | EMP-01..19 e HR-01..24 navegáveis; gate integral aprovado (revalidado nesta sessão) |
-| L04 | Site/captação e comercial | **parcial — jornada central concluída, CRM-07 em execução** | CRM-11..27 conectados em `/admin/comercial` e provados ponta a ponta; CRM-01..06 herdados de `/admin/crm` (não revalidados a fundo); PUB-01/03/04 provados; CRM-07 tem tarefas pessoais e histórico com anexos/edição/exclusão/contato/tipos/paginação, mas faltam equipe/delegação e revisão integral de tarefas/kanban/filtros; PUB-06..09/CRM-08..10/PUB-10 ainda órfãos |
+| L04 | Site/captação e comercial | **parcial — CRM-09 entregue; lacunas explícitas** | Núcleo CRM-11..27 provado; CRM-07 tem tarefas/interações, mas ainda faltam equipe/delegação/prazo/paginação e revisão integral de kanban/filtros; CRM-08 tem agenda de responsável/participantes, mas faltam calendário/conflitos/PUB-04; CRM-09 tem modelos privados e tarefas manuais, sem automação; CRM-10 e PUB-06..09/PUB-10 continuam pendentes |
 | L05 | Contratos e implantação | pendente | — |
 | L06 | Operação, patrimônio e manutenção | pendente | — |
 | L07 | Financeiro e Marcelo | pendente | — |
@@ -144,9 +152,9 @@ permanece `a_revalidar`/`pendente` inclui:
 
 ## Próximos três passos
 
-1. Implementar CRM-08 (agenda de visitas/reuniões), documentando antes a regra de responsável/participantes e corrigindo o vazamento residual de `visits` na rota legada de detalhe.
-2. Depois CRM-09 (cadências manuais) e CRM-10 (carteira), sempre com evidência HTTP + Chromium + PostgreSQL por recorte.
-3. Fechar as lacunas PUB (02/05/06/07/08/09/10), delegação/equipe e revalidar CRM-01..06/CRM-07 antes de declarar L04 concluído. Windows fica em L10.
+1. Fechar CRM-10 (carteira) sem misturar automação de mensagens, e manter CRM-09 sem envio externo.
+2. Resolver as lacunas de CRM-07 (equipe/delegação, edição de prazo, paginação e revisão integral de kanban/busca/filtros) e CRM-08 (calendário, conflitos e vínculo PUB-04).
+3. Fechar PUB-02/05/06/07/08/09/10 e revalidar CRM-01..06; só depois avaliar L05. Windows, SMTP, hospedagem externa e aceite humano continuam para L10/aceite correspondente.
 
 ## Retomada executável
 
@@ -328,10 +336,11 @@ honestamente no checklist item a item:**
 - CRM-01..06: herdados de `/admin/crm` (página anterior a esta sessão), não
   revalidados a fundo — usados apenas indiretamente pelo gate L04 (a
   conversão de lead cria empresa/oportunidade real);
-- CRM-07..10 (kanban, filtros, tarefas, histórico de interações, agenda de
-  visitas, cadências, carteira): a própria página `/admin/crm` se
-  autodocumenta como "estrutura pronta" — schema existe (tabelas `tasks`,
-  `interactions`, `visits` da migração 014), tela não existe.
+- CRM-07/08/10: tarefas/interações e agenda existem em `/admin/crm`, mas
+  continuam parciais nas lacunas registradas; carteira CRM-10 ainda não tem
+  jornada. CRM-09 deixou de ser schema órfão nesta continuação: modelos e
+  tarefas manuais estão montados em `CadenceClient.tsx`, sem automação de
+  mensagens.
 
 **Risco residual anotado, não corrigido:** `handleAdminLeadStatus` em
 `server.mjs` faz um insert de auditoria "solto" dentro de uma transação
@@ -346,17 +355,17 @@ hardenizado (faltaria isolar a auditoria em sua própria sub-transação ou
 ## O que NÃO está pronto
 
 O sistema ainda não está integralmente entregue: PUB-02/05/06/07/08/09/10 e
-CRM-01..10 do L04 (ver acima), L05–L10 e as cinco jornadas finais do L10 não
-foram executados. SMTP e hospedagem externa permanecem fora do escopo; Windows
-ainda exige aceite no equipamento do proprietário. Os 43 IDs do L03 e os 37
-IDs de PUB/CRM do L04 foram atualizados no checklist com a evidência local
-desta e da sessão anterior; os demais continuam com seus estados anteriores.
+CRM-01..08/10 do L04 (ver acima), L05–L10 e as cinco jornadas finais do L10 não
+foram executados integralmente. CRM-09 foi entregue somente no recorte manual
+descrito abaixo; automação de mensagens continua fora. SMTP e hospedagem
+externa permanecem fora do escopo; Windows ainda exige aceite no equipamento do
+proprietário. Os IDs tratados nesta continuação foram atualizados no checklist;
+os demais conservam seus estados anteriores.
 
-CRM-07 recebeu, nesta continuação, o histórico de interações (ligação/reunião/
-nota) além das tarefas pessoais do PR #13 — ambos providos e provados, mas
-CRM-07 continua parcial: faltam anexos, edição/exclusão de registros,
-delegação/equipe, paginação e os demais tipos de interação já previstos no
-schema. CRM-08/09/10 continuam apenas como schema, sem tela.
+CRM-07 recebeu tarefas e histórico de interações, anexos, edição/exclusão,
+contato, tipos e paginação — mas continua parcial em equipe/delegação, prazo e
+revisão integral de kanban/busca/filtros. CRM-08 segue parcial em calendário,
+conflitos e vínculo PUB-04. CRM-10 e as lacunas PUB continuam pendentes.
 
 ## Continuação CRM-08 (commit `7ddd659`)
 
@@ -371,14 +380,54 @@ de staff é exposto. Reagendar zera confirmações; cancelar exige motivo; estad
 `realizada`/`cancelada` são finais. O vazamento residual de `visits` na rota
 legada `GET /api/crm/opportunities/:id` foi fechado com a mesma política.
 
-Provas: `npm run test:migrations:pg` 107/107 (506 tabelas, replay, clone e
-checksum negativo) e `npm run test:l04-delivery:pg` 4/4 com HTTP real, Chromium
-real e PostgreSQL descartável, além de `npm test` 186/186, `npm run typecheck`
-0 erros e `npm run build` com 70 rotas.
+Provas históricas do CRM-08: `npm run test:migrations:pg` 107/107 (506 tabelas,
+replay, clone e checksum negativo) e `npm run test:l04-delivery:pg` 4/4 com
+HTTP real, Chromium real e PostgreSQL descartável. Nesta continuação, a rota
+legada também passou a proteger `stages` por propriedade.
 
 L04 continua **PARCIAL**. CRM-08 ainda não tem lembretes, visão de calendário,
 detecção de conflito de horário nem vínculo com PUB-04; CRM-07 segue sem
-delegação/equipe, edição de prazo e paginação de tarefas; `stages` da rota
-legada segue sem borda de propriedade; CRM-09/10, lacunas PUB e a revalidação
-campo a campo de CRM-01..06 continuam pendentes. Sem SMTP, hospedagem externa
-ou aceite Windows/humano.
+delegação/equipe, edição de prazo e revisão integral de tarefas/kanban/busca;
+CRM-10, lacunas PUB e a revalidação campo a campo de CRM-01..06 continuam
+pendentes. Sem SMTP, hospedagem externa ou aceite Windows/humano.
+
+## Continuação CRM-09 — cadências manuais (migração 108)
+
+A UI em `/admin/crm` (`CadenceClient.tsx`) permite ao comercial criar/editar/
+arquivar modelos privados e definir passos com título, intervalo de 0–365 dias,
+canal sugerido e responsável derivado da sessão. Aplicar o modelo materializa
+uma tarefa por passo com data futura calculada, responsável da sessão e o canal
+apenas como metadado. Não há worker ou envio de e-mail/WhatsApp.
+
+Rotas novas: `GET/POST /api/crm/cadences/templates`, `PATCH
+/api/crm/cadences/templates/:id`, `GET/POST
+/api/crm/opportunities/:id/cadences` e `PATCH
+/api/crm/opportunities/:id/cadence-contact`. Só `comercial` ativo opera
+modelos/aplicações; cada oportunidade segue a mesma borda individual de CRM-07.
+Outro comercial, admin, Marcelo, TI, RH, sessão ausente e origem inválida são
+negados conforme o caso. Aplicação é idempotente por modelo/oportunidade/
+contato, captura o estado e não duplica tarefas.
+
+Decisões da fatia, registradas antes da rota:
+- criação, edição, arquivamento e aplicação de modelos: apenas o comercial
+  proprietário, sem bypass administrativo; passos usados ficam imutáveis;
+- aplicação em oportunidade de outra pessoa: proibida, mesmo para outro
+  comercial e papéis administrativos;
+- opt-out do contato: bloqueia novas aplicações e cancela tarefas de cadência
+  abertas/em andamento; não ressuscita tarefa nem envia mensagem;
+- oportunidade ganha/perdida: encerra a aplicação correspondente e cancela só
+  pendências abertas/em andamento, preservando concluídas;
+- contato desativado: encerra aplicações e cancela pendências pelo mesmo
+  critério; o banco também mantém a razão do bloqueio;
+- automação de mensagem: não autorizada nesta entrega; fica para decisão de
+  negócio sobre autorização, base de opt-out e provedor antes de qualquer
+  worker. Sem SMTP/provedor externo.
+
+Gate CRM-09: `npm run test:l04-delivery:pg` passou 5/5 (inclui os quatro
+recortes anteriores e o quinto cenário novo), com PostgreSQL descartável, HTTP
+real e Chromium real sem `--disable-web-security`; SQL apenas para fixtures,
+asserções, desativação sintética de contato e trigger de falha de auditoria.
+`npm run test:migrations:pg` passou 108/108 em primeira aplicação/replay, clone
+e checksum negativo. Regressão no SHA desta continuação: `npm test` 186/186,
+`npm run typecheck` 0 erros, `npm run build` 70 rotas e `git diff --check`
+sem erros; `next-env.d.ts`/`tsconfig.json` ficaram limpos.

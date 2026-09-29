@@ -523,7 +523,19 @@ export function createCrmApi(ctx) {
         const opp = await db.query("SELECT * FROM crm_opportunities WHERE id = $1", [id]);
         if (!opp.rows[0]) return ctx.json(res, 404, { error: "opportunity_not_found" });
         const [stages, tasks, interactions, visits] = await Promise.all([
-          db.query("SELECT * FROM crm_opportunity_stages WHERE opportunity_id = $1 ORDER BY created_at DESC", [id]),
+          // CRM-09: the legacy detail route must apply the opportunity ownership
+          // boundary to stages too; an authenticated staff role is not a grant.
+          db.query(
+            `SELECT s.* FROM crm_opportunity_stages s
+              WHERE s.opportunity_id = $1
+                AND EXISTS (
+                  SELECT 1 FROM crm_opportunities o
+                   WHERE o.id = $1
+                     AND (o.responsible_id = $2 OR (o.responsible_id IS NULL AND o.created_by_id = $2))
+                )
+              ORDER BY s.created_at DESC`,
+            [id, session.identityId],
+          ),
           db.query("SELECT * FROM crm_tasks WHERE opportunity_id = $1 AND responsible_id = $2 AND EXISTS (SELECT 1 FROM crm_opportunities o WHERE o.id=$1 AND (o.responsible_id=$2 OR (o.responsible_id IS NULL AND o.created_by_id=$2))) ORDER BY due_date NULLS LAST, created_at DESC LIMIT 200", [id, ["comercial", "admin", "marcelo", "ti"].includes(session.role) ? session.identityId : null]),
           // CRM-07: the interaction history follows the exact same ownership
           // rule as the dedicated /interactions endpoint below, so this
