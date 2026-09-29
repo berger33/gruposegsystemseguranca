@@ -13,7 +13,7 @@
 // As funções puras ficam separadas do acesso a banco para poderem ser testadas
 // sem PostgreSQL; a validação real continua consultando o banco.
 
-export const STAFF_ROLES = Object.freeze(["admin", "ti", "rh", "marcelo"]);
+export const STAFF_ROLES = Object.freeze(["admin", "ti", "rh", "marcelo", "supervisor", "comercial", "financeiro"]);
 export const STAFF_SESSION_TTL_SECONDS = 8 * 60 * 60;
 // Sessão privilegiada sem MFA vive menos: reduz a janela enquanto o operador
 // ainda não cadastrou o autenticador. Não é substituto de MFA.

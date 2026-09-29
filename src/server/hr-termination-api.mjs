@@ -6,7 +6,7 @@ const VACATION_REQUEST_STATUS=['solicitado','em_analise','aprovado','rejeitado',
 function sanitize(v,max=2000){ if(typeof v!=='string') return ''; return v.trim().slice(0,max); }
 function uuidRe(){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i; }
 
-export function createHrTerminationApi({ pool, auditLog, sameOrigin, requireSession, requireRole }){
+export function createHrTerminationApi({ pool, auditLog, sameOrigin, requireSession, requireRole, employeeSessionStore }){
   async function handleTerminations(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
@@ -79,8 +79,9 @@ export function createHrTerminationApi({ pool, auditLog, sameOrigin, requireSess
         const empCur=await pool.query('SELECT * FROM hr_employees WHERE id=$1',[cur.rows[0].employee_id]);
         if(empCur.rows.length){
           await pool.query(`UPDATE hr_employees SET status='desligado', updated_by=$1, updated_by_id=$2, updated_at=now() WHERE id=$3`, [by, byId, cur.rows[0].employee_id]);
-          await pool.query(`INSERT INTO hr_employee_history (employee_id, previous_status, next_status, effective_date, reason, changed_by, changed_by_id) VALUES ($1,$2,$3,$4,$5,$6,$7)`, [cur.rows[0].employee_id, empCur.rows[0].status, 'desligado', cur.rows[0].termination_date, cur.rows[0].reason||'Desligamento concluído checklist', by, byId]);
+          await pool.query(`INSERT INTO hr_employee_history (employee_id, previous_cargo, next_cargo, previous_status, next_status, effective_date, reason, changed_by, changed_by_id) VALUES ($1,$2,$2,$3,$4,$5,$6,$7,$8)`, [cur.rows[0].employee_id, empCur.rows[0].cargo, empCur.rows[0].status, 'desligado', cur.rows[0].termination_date, cur.rows[0].reason||'Desligamento concluído checklist', by, byId]);
         }
+        // UPDATE hr_employees dispara a revogação L03 no banco antes da resposta.
         await auditLog({ action:'hr_termination_complete', actor: by, target: id, meta:{ employee_id:cur.rows[0].employee_id } });
       }
       res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({termination:r.rows[0]})); return;

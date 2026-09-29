@@ -8,7 +8,7 @@ function sanitize(v,max=2000){ if(typeof v!=='string') return ''; return v.trim(
 function uuidRe(){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i; }
 function hashCpf(cpf){ if(!cpf) return null; const digits=String(cpf).replace(/\D/g,''); if(digits.length!==11) return null; return crypto.createHash('sha256').update(digits).digest('hex'); }
 
-export function createHrApi({ pool, auditLog, sameOrigin, requireSession, requireRole }){
+export function createHrApi({ pool, auditLog, sameOrigin, requireSession, requireRole, employeeSessionStore }){
   async function handleEmployees(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
@@ -84,6 +84,7 @@ export function createHrApi({ pool, auditLog, sameOrigin, requireSession, requir
       const next_filial=data.filial!=null? sanitize(data.filial,200): undefined;
       const next_status=data.status? String(data.status).toLowerCase(): undefined;
       const next_remuneracao=data.remuneracao_atual!=null? parseFloat(data.remuneracao_atual): undefined;
+      if(next_remuneracao!==undefined && !requireRole(sess,['admin','ti'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'compensation_permission_required'})); return; }
       const effective_date=data.effective_date? String(data.effective_date): new Date().toISOString().slice(0,10);
       const reason=sanitize(data.reason||'',1000);
       const by=sess.username||sess.user||'unknown'; const byId=sess.userId||sess.id||null;
@@ -105,6 +106,8 @@ export function createHrApi({ pool, auditLog, sameOrigin, requireSession, requir
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
         [id, prev.cargo, next_cargo||prev.cargo, prev.lotacao, next_lotacao!==undefined? next_lotacao: prev.lotacao, prev.remuneracao_atual, next_remuneracao!==undefined? next_remuneracao: prev.remuneracao_atual, prev.empregador, next_empregador!==undefined? next_empregador: prev.empregador, prev.filial, next_filial!==undefined? next_filial: prev.filial, prev.status, next_status||prev.status, effective_date, reason||null, by, byId]);
       const action = next_status && prev.status!==next_status? 'hr_employee_status_change' : 'hr_employee_update';
+      // O trigger L03 revoga e avança o epoch em toda mudança para status bloqueado,
+      // inclusive se a alteração vier de outro caminho administrativo.
       await auditLog({ action, actor: by, target: id, meta:{ previous_status: prev.status, next_status: next_status||prev.status } });
       res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({employee:r.rows[0]})); return;
     }

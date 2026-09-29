@@ -8,12 +8,12 @@ Referência: `docs/EXECUCAO-ENTREGA-LOCAL.md` (roteiro L00–L10) e
 
 | Campo | Valor |
 |---|---|
-| Branch de trabalho | `arena/01a0eb6f-gruposegsystemseguranca` |
-| Base escolhida (L00) | `931e028` (merge do PR #6 em `main`) |
-| Último commit | `6b117f0` — L01/SEC-04,05,06 |
-| Lote ativo | **L02** (armazenamento, notificações locais, continuidade) — não iniciado |
-| Último gate aprovado | **L01** (identidade, autorização e integridade básica) |
-| Migrações | 001–099 (499 tabelas) |
+| Branch de trabalho | `arena/01a0eba8-gruposegsystemseguranca` |
+| Base escolhida (L00–L02) | `c4cfc58` (merge do PR #7 em `main`) |
+| Último commit | `c4cfc58` na base; L03 está no patchset desta branch |
+| Lote ativo | **L04** somente como próximo lote; L03 encerrado e não houve implementação de L04 |
+| Último gate aprovado | **L03** (funcionário e RH, HTTP + navegador real + PostgreSQL descartável) |
+| Migrações | 001–102 (504 tabelas) |
 | Data | 2026-09-29 |
 
 ## Lotes
@@ -21,9 +21,9 @@ Referência: `docs/EXECUCAO-ENTREGA-LOCAL.md` (roteiro L00–L10) e
 | Lote | Escopo | Estado | Gate |
 |---|---|---|---|
 | L00 | Base íntegra e controle confiável | **concluído** | aprovado |
-| L01 | Identidade, autorização e integridade básica | **parcial** | aprovado para SEC-02/04/05/06; resta o restante do escopo (abaixo) |
-| L02 | Armazenamento, notificações locais, continuidade | pendente | — |
-| L03 | Funcionário e RH | pendente | — |
+| L01 | Identidade, autorização e integridade básica | **parcial ampliado** | SEC-02/04/05/06 + controles dependentes do L03: RBAC sem bypass, escopo, remuneração/saúde e revogação |
+| L02 | Armazenamento, notificações locais, continuidade | **concluído** | 14/14 HTTP em PostgreSQL descartável |
+| L03 | Funcionário e RH | **concluído** | EMP-01..19 e HR-01..24 navegáveis; gate integral aprovado |
 | L04 | Site/captação e comercial | pendente | — |
 | L05 | Contratos e implantação | pendente | — |
 | L06 | Operação, patrimônio e manutenção | pendente | — |
@@ -137,38 +137,32 @@ atacados, e permanecem `a_revalidar`/`pendente`:
 
 ## Próximos três passos
 
-1. **L02 — provider local de arquivos privados.** Bytes reais, chave gerada pelo
-   servidor, escopo por conta/contrato, hash, versão, proteção contra traversal,
-   download autenticado. Gate: upload/download, negação de outro usuário,
-   persistência após reinício.
-2. **L02 — caixa de saída local + fila durável de notificações** com
-   deduplicação, retries, backoff e histórico. Nenhum estado "entregue".
-3. **L00/L03 — navegação por domínio.** Conectar os 82 componentes órfãos a
-   rotas reais com autorização por papel, começando pelos domínios do L03
-   (funcionário/RH), em vez de reconstruir telas.
+1. **Iniciar L04, sem reabrir L03:** site/captação e comercial, seguindo o gate
+   definido em `docs/EXECUCAO-ENTREGA-LOCAL.md`.
+2. **Preservar o gate L03 em toda regressão:** duas identidades de funcionário,
+   navegador móvel/desktop, PostgreSQL descartável e negação cruzada.
+3. **Reservar o aceite no Windows para L10:** Linux validou a entrega local; o
+   equipamento-alvo ainda deverá provar instalação, persistência e reinício.
 
 ## Retomada executável
 
 ```bash
 npm ci
-npm run test:unit                    # 177 testes, sem banco
+npm run test:unit                    # 180 testes, sem banco
 
 # Gates em PostgreSQL real e descartável (nenhum toca banco do operador).
 # Exigem DATABASE_URL e DATABASE_MIGRATION_URL vazias.
-npm run test:staff-auth:pg           # L01 — 21 testes HTTP
-npm run test:migrations:pg           # migrações 001–101
-npm run test:l02-delivery:pg         # L02 — 14 testes HTTP (arquivos, fila, caixa local)
-npm run test:tenant:pg               # escopo do espaço do cliente
-npm run test:client-access:pg        # acesso/convite/MFA de cliente
-npm run test:cli-v2:pg               # documentos v2 e auditoria
-npm run test:demo-local:pg           # demo persistente + backup frio + restauração isolada
-npm run test:backup-restore:pg       # dump lógico (exige pg_dump/pg_restore 17)
+npm run test:migrations:pg           # migrações 001–102 + replay + checksum negativo
+npm run test:l02-delivery:pg         # L02 — 14 testes HTTP
+npm run test:l03-delivery:pg         # L03 — HTTP, duas identidades e Chromium headless
+npm run test:staff-auth:pg           # L01 — autenticação de staff
 
-npx tsc --noEmit && npx next build
+npm run typecheck && npm run build
 ```
 
-Nenhum comando acima precisa de segredo. Os clusters PostgreSQL são temporários
-(`embedded-postgres`), criados e removidos pelo próprio script.
+O gate L03 usa `embedded-postgres`, Playwright e o Chromium empacotado em
+`@sparticuz/chromium`; não baixa navegador durante a execução. Nenhum comando
+acima precisa de segredo.
 
 ## L02 — entrega local de arquivos, fila e comunicação (commit `4b95616`)
 
@@ -206,10 +200,41 @@ verde. A trilha de **cópia fria com manifesto e sha256 por arquivo**, essa sim,
 foi exercitada e passa, incluindo restauração em cluster isolado verificada por
 HTTP (`npm run test:demo-local:pg`, QA-HOM-009).
 
+## L03 — funcionário e RH (concluído localmente)
+
+`/funcionario` é um portal móvel próprio, com identidade de empregado separada
+da sessão de staff. `/admin/funcionarios` contém a jornada operacional principal
+e conecta, no grupo “Processos HR-01..24”, os sete módulos históricos de RH.
+Assim, EMP-01..19 e HR-01..24 deixaram de ser componentes órfãos.
+
+O gate `npm run test:l03-delivery:pg` aplica as migrações 001–102 num PostgreSQL
+descartável, inicia o servidor real, usa duas identidades de empregados e abre
+as duas interfaces em Chromium headless. Ele prova:
+
+- titular derivado exclusivamente da sessão e negação cruzada de perfil,
+  documentos, escala, ponto, curso, uniforme/EPI e holerite;
+- admissão, credencial temporária, troca obrigatória de senha e revogação por
+  senha, papel, suspensão ou desligamento;
+- upload privado com bytes/hash, revisão, publicação salarial por fonte
+  autorizada e concessão salarial separada;
+- escala versionada, correção, ausência, troca, passagem, ocorrência, curso,
+  fechamento demonstrativo e acesso ao holerite próprio;
+- recibo operacional de uniforme sem alegação de assinatura qualificada;
+- fila offline no navegador limitada à ciência de procedimento, chave por
+  empregado, idempotência/conflito no servidor e nenhuma cache de documentos
+  médicos ou salariais;
+- navegação móvel em 390×844 e RH em 1440×1000, sem rolagem horizontal nem
+  respostas de API com erro durante o percurso.
+
+Controles de L01 concluídos como dependência do lote: RBAC granular sem bypass
+de admin/TI, aliases legados cobertos pela mesma borda, escopos
+organização/unidade/contrato/próprio, remuneração e saúde separadas, e invalidação
+material de sessões após alterações de papel, permissão, senha ou status.
+
 ## O que NÃO está pronto
 
-O sistema **não** está funcionando integralmente. O que existe hoje é uma base
-de dados e de API extensa, com a camada de autenticação administrativa agora
-endurecida e provada, mas sem navegação que ligue o usuário às funções. Nenhuma
-das cinco jornadas finais (A–E do L10) foi executada. Os 222 IDs seguem em
-`a_revalidar`, exceto os do L01 registrados acima.
+O sistema ainda não está integralmente entregue: L04–L10 e as cinco jornadas
+finais do L10 não foram executados. SMTP e hospedagem externa permanecem fora do
+escopo; Windows ainda exige aceite no equipamento do proprietário. Apenas os
+43 IDs do L03 foram promovidos no checklist com a evidência local atual; os
+demais continuam com seus estados anteriores.

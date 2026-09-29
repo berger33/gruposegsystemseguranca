@@ -226,3 +226,95 @@ version 17`. Os binários não existem neste sandbox e não há pacote instaláv
 A suíte **não cria banco e não reporta sucesso** — a ausência fica visível.
 Deve ser executada no alvo Windows, onde o PostgreSQL 17 instala essas
 ferramentas.
+
+
+## L03 — funcionário e RH (patchset da branch `arena/01a0eba8-gruposegsystemseguranca`)
+
+Comando principal: `QA_VERBOSE=1 npm run test:l03-delivery:pg`.
+
+Resultado final: **1 teste integral aprovado, 0 reprovados, 0 ignorados**. O
+runner criou um PostgreSQL 17 exclusivo, aplicou 001–102, iniciou o servidor
+HTTP real, executou o percurso de API e o percurso de interface em Chromium e
+removeu o cluster (`QA_L03_PG_TEMP_CLEANED: true`).
+
+### Prova pela interface, não por tela demonstrativa
+
+O próprio gate abre `/admin/funcionarios` em 1440×1000 e `/funcionario` em
+390×844. Pela interface ele:
+
+1. cria o cadastro profissional fictício e o fluxo de admissão;
+2. gera acesso individual de funcionário e captura a credencial temporária;
+3. publica uma versão de escala e um próximo plantão;
+4. entra no portal móvel, troca a senha temporária e autentica novamente;
+5. envia um arquivo privado; RH o localiza e aprova;
+6. dá ciência na escala, solicita correção de ponto e informa ausência;
+7. coloca uma ciência de procedimento na fila com o navegador offline,
+   restaura a rede e espera o recebimento pelo servidor;
+8. fecha competência demonstrativa, publica holerite de fonte autorizada e
+   confirma que o link próprio inicia download;
+9. abre os sete grupos de processos HR-01..24, exigindo cabeçalhos reais e
+   nenhuma resposta inesperada das APIs;
+10. conclui desligamento e comprova que a sessão employee existente foi
+    materialmente revogada.
+
+O percurso também recusa rolagem horizontal na largura móvel e na largura do
+painel RH. `playwright` usa o Chromium local de `@sparticuz/chromium`; o gate
+não depende de download externo do navegador.
+
+### Isolamento e controles negativos por HTTP
+
+O mesmo teste usa dois funcionários distintos A/B e comprova que o servidor
+ignora `employee_id` malicioso vindo do navegador. B recebe 404 ao tentar
+alcançar documento, comprovante de curso, ponto, recibo de EPI e holerite de A.
+Perfil, escala e listagens são sempre derivados do cookie employee.
+
+Também ficaram provados:
+
+- cookie de staff não autentica funcionário e cookie employee não concede RH;
+- mudança de papel revoga sessão de staff já emitida;
+- troca de senha employee revoga a sessão usada na própria troca;
+- suspensão/desligamento e bloqueio de identidade revogam no banco por trigger;
+- aliases `/api/hr`, `/api/admin/hr` e `/api/crm/hr` passam pela mesma borda
+  granular; supervisor sem concessão recebe 403;
+- RH sem `employees.compensation.*` vê salário mascarado e não abre/publica
+  folha; após concessão explícita, a operação é permitida;
+- saúde ocupacional usa `employees.health.read/write`, separada do cadastro;
+- fila offline é limitada a tipos aprovados, separa horário do dispositivo e
+  recebimento do servidor, deduplica retry e registra conflito de chave/payload;
+- o service worker exclui portal/API employee e conteúdo salarial/médico de
+  cache.
+
+### Artefatos
+
+- `db/migrations/102-l03-employee-self-service-security.sql`
+- `src/server/employee-session.mjs`
+- `src/server/employee-api.mjs`
+- `src/app/funcionario/EmployeePortal.tsx`
+- `src/app/admin/funcionarios/RhWorkspace.tsx`
+- `tests/l03-security.test.mjs`
+- `tests/l03-delivery.integration.test.mjs`
+- `scripts/qa-l03-delivery-postgres.mjs`
+
+### Regressões executadas
+
+| Gate | Resultado |
+|---|---|
+| `npm run test:unit` | **180/180** |
+| `npm run test:l03-delivery:pg` | **1/1**, HTTP + navegador + PostgreSQL |
+| `npm run test:l02-delivery:pg` | **14/14** |
+| `npm run test:migrations:pg` | **102/102**, replay idempotente, clone adulterado recusado, 504 tabelas |
+| `npm run typecheck` | 0 erros |
+| `npm run build` | sucesso, 69 páginas, incluindo `/funcionario` e `/admin/funcionarios` |
+| `node --check` nos módulos editados | sucesso |
+
+### Fronteiras honestas
+
+- “Fonte autorizada”, fechamento e integrações de DP permanecem fluxos locais
+  demonstrativos; não significam cálculo trabalhista oficial, envio eSocial,
+  entrega de fornecedor ou validação contábil.
+- A confirmação de uniforme/EPI é recibo operacional, não assinatura
+  eletrônica qualificada.
+- O canal confidencial é restrito, mas não anônimo; pedido de anonimato falha
+  explicitamente com `anonymous_not_supported`.
+- Não houve SMTP, hospedagem externa ou execução no Windows. O aceite no
+  equipamento-alvo pertence ao L10.
