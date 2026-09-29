@@ -22,8 +22,8 @@ export function createInspectionApi(ctx) {
     } catch {}
   }
 
-  function requireAdminSession(req, res) {
-    const session = ctx.readAdminSession(req);
+  async function requireAdminSession(req, res) {
+    const session = await ctx.readAdminSession(req);
     if (!session) {
       ctx.json(res, 401, { error: "admin_session_required" });
       return null;
@@ -38,7 +38,7 @@ export function createInspectionApi(ctx) {
   }
 
   async function handleTemplates(req, res, url) {
-    const session = requireAdminSession(req, res);
+    const session = await requireAdminSession(req, res);
     if (!session) return;
     if (!requireSameOrigin(req, res)) return;
     if (req.method !== "GET") return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
@@ -62,7 +62,7 @@ export function createInspectionApi(ctx) {
   }
 
   async function handleInspections(req, res, url) {
-    const session = requireAdminSession(req, res);
+    const session = await requireAdminSession(req, res);
     if (!session) return;
     const db = ctx.getPool();
 
@@ -166,7 +166,7 @@ export function createInspectionApi(ctx) {
   }
 
   async function handleInspectionById(req, res, id) {
-    const session = requireAdminSession(req, res);
+    const session = await requireAdminSession(req, res);
     if (!session) return;
     const db = ctx.getPool();
     if (!isValidUuid(id)) return ctx.json(res, 400, { error: "invalid_inspection_id" });
@@ -240,7 +240,7 @@ export function createInspectionApi(ctx) {
   }
 
   async function handleAnswer(req, res, inspectionId) {
-    const session = requireAdminSession(req, res);
+    const session = await requireAdminSession(req, res);
     if (!session) return;
     if (!requireSameOrigin(req, res)) return;
     if (!isValidUuid(inspectionId)) return ctx.json(res, 400, { error: "invalid_inspection_id" });

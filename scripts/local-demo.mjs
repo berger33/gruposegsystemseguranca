@@ -154,7 +154,14 @@ async function ledgerIsCurrent(db, installationId) {
   if (marker.length !== 1 || marker[0].installation_id !== installationId) fail('demo_installation_marker_mismatch');
   const files = (await readdir(path.join(project, 'db/migrations'))).filter(f => /^\d{3}-.*\.sql$/.test(f));
   const { rows } = await db.query('SELECT filename, checksum FROM __migrations');
-  if (files.length !== 98 || rows.length !== files.length) fail('demo_schema_upgrade_requires_separate_backup_review');
+  // O gate real do upgrade é "o que está aplicado NESTA instalação difere do
+  // que está no disco" — verificado pela contagem abaixo e, item a item, pelos
+  // checksums logo adiante. Havia também um literal `files.length !== 98`:
+  // uma segunda cópia do tamanho do ledger que ninguém atualiza ao adicionar
+  // migração. Ele ficou para trás em 099 e passou a reprovar toda execução,
+  // inclusive em instalação íntegra. Removido: o disco é a fonte de verdade e
+  // scripts/migrate-site-visual.mjs já falha fechado se disco ≠ manifesto.
+  if (rows.length !== files.length) fail('demo_schema_upgrade_requires_separate_backup_review');
   for (const file of files) {
     const value = rows.find(row => row.filename === file)?.checksum;
     const expected = createHash('sha256').update(await readFile(path.join(project, 'db/migrations', file))).digest('hex');

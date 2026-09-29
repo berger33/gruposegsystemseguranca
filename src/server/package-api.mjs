@@ -5,7 +5,7 @@ export function createPackageApi({ pool, auditLog, sameOrigin, requireSession, r
 
   const handleRules = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM pub_package_rules ORDER BY rule_key ASC LIMIT 200`);
@@ -52,7 +52,7 @@ export function createPackageApi({ pool, auditLog, sameOrigin, requireSession, r
     const url=new URL(req.url,'http://localhost');
     const isPublic=url.pathname.startsWith('/api/packages') || url.pathname.startsWith('/api/public/packages');
     if(!isPublic && !sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=!isPublic ? requireSession(req) : null;
+    const sess=!isPublic ? await requireSession(req) : null;
     if(!isPublic && (!sess || !requireRole(sess,['admin','ti']))) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const status=url.searchParams.get('status');
@@ -120,7 +120,7 @@ export function createPackageApi({ pool, auditLog, sameOrigin, requireSession, r
 
   const handleComparisons = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM pub_package_comparisons ORDER BY created_at DESC LIMIT 100`);

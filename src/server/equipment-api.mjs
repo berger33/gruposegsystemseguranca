@@ -10,8 +10,8 @@ export function createEquipmentApi(ctx) {
     } catch {}
   }
 
-  function requireAdminSession(req, res) {
-    const session = ctx.readAdminSession(req);
+  async function requireAdminSession(req, res) {
+    const session = await ctx.readAdminSession(req);
     if (!session) {
       ctx.json(res, 401, { error: "admin_session_required" });
       return null;
@@ -26,7 +26,7 @@ export function createEquipmentApi(ctx) {
   }
 
   async function handleList(req, res, url) {
-    const session = requireAdminSession(req, res);
+    const session = await requireAdminSession(req, res);
     if (!session) return;
     if (!requireSameOrigin(req, res)) return;
     if (req.method !== "GET") return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
@@ -58,7 +58,7 @@ export function createEquipmentApi(ctx) {
   }
 
   async function handleGet(req, res, id) {
-    const session = requireAdminSession(req, res);
+    const session = await requireAdminSession(req, res);
     if (!session) return;
     if (!requireSameOrigin(req, res)) return;
     if (req.method !== "GET") return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
@@ -75,7 +75,7 @@ export function createEquipmentApi(ctx) {
   }
 
   async function handleCreate(req, res) {
-    const session = requireAdminSession(req, res);
+    const session = await requireAdminSession(req, res);
     if (!session) return;
     if (!requireSameOrigin(req, res)) return;
     if (req.method !== "POST") return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "POST" });

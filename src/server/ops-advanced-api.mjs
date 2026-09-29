@@ -23,7 +23,7 @@ export function createOpsAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
 
   // ---- OPS-05 Coverage Requests ----
   async function handleCoverageRequests(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -89,7 +89,7 @@ export function createOpsAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
 
   // ---- OPS-05 Substitution Candidates ----
   async function handleSubstitutionCandidates(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -175,7 +175,7 @@ export function createOpsAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
 
   // ---- OPS-05 Coverage Communications ----
   async function handleCoverageCommunications(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -213,7 +213,7 @@ export function createOpsAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
 
   // ---- OPS-06 Handovers ----
   async function handleHandovers(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -290,7 +290,7 @@ export function createOpsAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   }
 
   async function handleHandoverEscalations(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -306,7 +306,7 @@ export function createOpsAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
 
   // ---- OPS-07 Occurrence Book ----
   async function handleOccurrenceBook(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -388,7 +388,7 @@ export function createOpsAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   }
 
   async function handleOccurrenceEvidences(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -422,7 +422,7 @@ export function createOpsAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   }
 
   async function handleOccurrenceActions(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -470,7 +470,7 @@ export function createOpsAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   }
 
   async function handleOccurrenceHistory(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -486,7 +486,7 @@ export function createOpsAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
 
   // ---- OPS-08 Checklist Templates ----
   async function handleChecklistTemplates(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -545,7 +545,7 @@ export function createOpsAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
 
   // ---- OPS-08 Checklist Instances ----
   async function handleChecklistInstances(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -618,7 +618,7 @@ export function createOpsAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   }
 
   async function handleChecklistItems(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');

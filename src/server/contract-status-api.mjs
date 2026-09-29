@@ -34,7 +34,7 @@ export function createContractStatusApi({ json, readJson, sameOrigin, getPool, r
   async function handleStatusHistory(req, res, contractId) {
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, { Allow: 'GET' });
 
@@ -53,7 +53,7 @@ export function createContractStatusApi({ json, readJson, sameOrigin, getPool, r
   async function handleStatusTransition(req, res, contractId) {
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' }, { Allow: 'POST' });
 
@@ -229,7 +229,7 @@ export function createContractStatusApi({ json, readJson, sameOrigin, getPool, r
     // Evento separado para registrar assinatura sem mudar status (útil para distinguir)
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (req.method !== 'POST') return json(res, 405, { error: 'method_not_allowed' }, { Allow: 'POST' });
 

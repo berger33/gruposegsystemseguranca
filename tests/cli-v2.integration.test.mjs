@@ -6,6 +6,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import path from 'node:path';
 import pg from 'pg';
+import { provisionStaff } from './helpers/staff-login.mjs';
 
 const projectRoot = path.resolve(import.meta.dirname, '..');
 const databaseUrl = process.env.DATABASE_MIGRATION_URL || '';
@@ -25,10 +26,14 @@ async function freePort() {
   });
 }
 
-function staffCookie(role) {
-  const payload = Buffer.from(JSON.stringify({ role, identityId: randomUUID(), exp: Date.now() + 3600_000 })).toString('base64url');
-  const signature = createHmac('sha256', SESSION_SECRET).update(payload).digest('base64url');
-  return `seg_admin_session=${payload}.${signature}`;
+// L01/SEC-04: cookie forjado não vale mais (a sessão tem estado no servidor).
+// Para provar AUTORIZAÇÃO (403) e não apenas autenticação (401), o teste
+// precisa de uma sessão de RH legítima, obtida pelo login real.
+async function staffCookieFor(pool, api, role) {
+  const staff = await provisionStaff(pool, { role });
+  const login = await api('/api/admin/session', { method: 'POST', body: { email: staff.email, password: staff.password } });
+  assert.equal(login.status, 200, `login ${role}: ${JSON.stringify(login.body)}`);
+  return login.setCookie.map(c => c.split(';')[0]).join('; ');
 }
 
 async function ready(child, logs) {
@@ -78,7 +83,7 @@ test('TENANT-SEG-003 / PLT-AUD-003: HTTP CLI v2 docs staff-only, legacy client s
     VALUES ($1,$2,'QA contrato B','QA serviço sintético','ti')`, [contractB, accountB]);
   await pool.query("INSERT INTO auth_sessions (id, identity_id, token_hash, expires_at) VALUES ($1,$2,$3,NOW() + INTERVAL '1 hour')", [randomUUID(), idA, createHash('sha256').update(tokenA).digest('hex')]);
   const cookieA = `seg_client_session=${tokenA}`;
-  const rhCookie = staffCookie('rh');
+
   const docA = randomUUID(), docB = randomUUID();
   for (const [id, account, suffix] of [[docA, accountA, 'A'], [docB, accountB, 'B']]) {
     await pool.query(`INSERT INTO cli_client_documents_v2 (id, client_account_id, title, file_name, file_url, storage_key, status)
@@ -104,10 +109,13 @@ test('TENANT-SEG-003 / PLT-AUD-003: HTTP CLI v2 docs staff-only, legacy client s
     return { status: response.status, body: parsed, setCookie: response.headers.getSetCookie?.() || [] };
   }
 
-  const login = await api('/api/admin/session', { method: 'POST', body: { token: ADMIN_TOKEN } });
+  // L01/SEC-05: conta individual de staff; o token compartilhado é recusado.
+  const staff = await provisionStaff(pool, { role: 'ti' });
+  const login = await api('/api/admin/session', { method: 'POST', body: { email: staff.email, password: staff.password } });
   assert.equal(login.status, 200, JSON.stringify(login.body));
   const adminCookie = login.setCookie.map(c => c.split(';')[0]).join('; ');
   assert.match(adminCookie, /seg_admin_session=/);
+  const rhCookie = await staffCookieFor(pool, api, 'rh');
 
   await t.test('PLT-BAK-001: backup/restore HTTP não criam sucesso simulado e legado não é certificado', async () => {
     const legacyId = randomUUID();
@@ -212,7 +220,9 @@ test('TENANT-SEG-003 / PLT-AUD-003: HTTP CLI v2 docs staff-only, legacy client s
     const newId = inserted.body.document.id;
     const { rows: audit } = await pool.query("SELECT id, action, actor, target FROM audit_log WHERE action='cli_document_create' AND target=$1", [newId]);
     assert.equal(audit.length, 1, 'audit_log deve registrar criação no caminho HTTP real');
-    assert.equal(audit[0].actor, 'ti');
+    // L01: a auditoria passa a identificar a PESSOA (identityId), não o papel.
+    assert.equal(audit[0].actor, staff.id,
+      'auditoria sensível precisa identificar a identidade individual, não apenas o papel');
     const download = await api(`/api/cli/document-download?document_id=${docA}`, { cookie: adminCookie });
     assert.equal(download.status, 200, JSON.stringify(download.body));
     assert.equal(download.body.download_url, '/qa/secret-A');

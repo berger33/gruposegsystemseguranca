@@ -18,6 +18,7 @@
 
 import { randomUUID } from "node:crypto";
 import nodemailer from "nodemailer";
+import { resolveDeliveryTarget, LOCAL_OUTBOX_LABEL } from "./local-outbox.mjs";
 import { decryptMfaSecret, mfaKey, verifyMfaCode, hashRecoveryCode } from "../lib/client-mfa.mjs";
 import {
   CONFIRM_EMAIL_TTL_MS,
@@ -114,7 +115,32 @@ async function sendAuthEmail({ to, subject, text }) {
   return "sent";
 }
 
-async function trySendAuthEmail(options) {
+/**
+ * L02 — entrega de comunicação de autenticação.
+ * Sem SMTP (o caso desta entrega), grava na CAIXA LOCAL e devolve
+ * "local_outbox". Nunca devolve "sent" sem envio real.
+ */
+async function trySendAuthEmail(options, localOutbox = null) {
+  const target = resolveDeliveryTarget();
+  if (target === "local_outbox") {
+    if (!localOutbox) return "not_configured";
+    try {
+      await localOutbox.deliver({
+        recipientKind: options.recipientKind || "client",
+        recipientId: options.recipientId || null,
+        recipientAddress: options.to,
+        channel: "email",
+        template: options.template || "auth_message",
+        subject: options.subject,
+        body: options.text,
+        expiresAt: options.expiresAt || null,
+      });
+      return "local_outbox";
+    } catch (error) {
+      console.error("Local outbox delivery failed.", { subject: options.subject, message: errorMessage(error) });
+      return "failed";
+    }
+  }
   try {
     return await sendAuthEmail(options);
   } catch (error) {
@@ -563,7 +589,10 @@ export function createClientAccessApi(ctx) {
         "Se você não esperava este cadastro, ignore esta mensagem.",
         "Grupo SEG System Segurança Integrada",
       ].join("\n"),
-    });
+      recipientKind: "client",
+      recipientId: identityId,
+      template: "client_email_confirm",
+    }, ctx.localOutbox);
     return ctx.json(res, 201, { ok: true, email: inviteEmail, status: "pending_email", emailStatus });
   }
 
@@ -676,7 +705,10 @@ export function createClientAccessApi(ctx) {
       }
       if (rawToken) {
         const link = `${ctx.baseUrl}${pagePath}?token=${rawToken}`;
-        await trySendAuthEmail({ to: email.value, subject: emailSubject, text: buildEmailText(link) });
+        await trySendAuthEmail({
+          to: email.value, subject: emailSubject, text: buildEmailText(link),
+          recipientKind: "client", template: "client_access_link",
+        }, ctx.localOutbox);
       }
       return ctx.json(res, 202, generic);
     };
@@ -775,7 +807,7 @@ export function createClientAccessApi(ctx) {
   }
 
   async function requireAdminSession(req, res) {
-    const session = ctx.readAdminSession(req);
+    const session = await ctx.readAdminSession(req);
     if (!session) {
       ctx.json(res, 401, { error: "admin_session_required" });
       return null;
@@ -786,7 +818,7 @@ export function createClientAccessApi(ctx) {
   // Only an individually authenticated, currently active TI staff member may
   // approve an identity check. A legacy shared TI/Marcelo token has no actor ID.
   async function manualVerifier(req, res) {
-    const session = ctx.readAdminSession(req);
+    const session = await ctx.readAdminSession(req);
     if (!session) { ctx.json(res, 401, { error: 'admin_session_required' }); return null; }
     if (session.role !== 'ti' || !session.identityId) {
       ctx.json(res, 403, { error: 'individual_ti_required' }); return null;
@@ -944,15 +976,20 @@ export function createClientAccessApi(ctx) {
         "Se você não esperava este convite, ignore esta mensagem.",
         "Grupo SEG System Segurança Integrada",
       ].join("\n"),
-    });
+      recipientKind: "client",
+      template: "client_invite",
+      expiresAt,
+    }, ctx.localOutbox);
     return ctx.json(res, 201, {
       inviteId,
       email: email.value,
       expiresAt: expiresAt.getTime(),
       emailStatus,
-      // Sem SMTP configurado, a entrega manual (ex.: WhatsApp) é o caminho oficial desta etapa;
-      // o link só é devolvido ao administrador quando o e-mail não saiu.
-      ...(emailStatus === "sent" ? {} : { inviteUrl }),
+      // L02: com a caixa local o convite já está guardado e auditado, então o
+      // token não precisa ser ecoado na resposta. Ele só volta quando não há
+      // nenhum destino (nem SMTP, nem caixa local) e a entrega é manual.
+      ...(emailStatus === "sent" || emailStatus === "local_outbox" ? {} : { inviteUrl }),
+      deliveryNotice: emailStatus === "local_outbox" ? LOCAL_OUTBOX_LABEL : undefined,
     });
   }
 

@@ -5,7 +5,7 @@ export function createThemeApi({ pool, auditLog, sameOrigin, requireSession, req
 
   const handleThemes = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
@@ -93,7 +93,7 @@ export function createThemeApi({ pool, auditLog, sameOrigin, requireSession, req
 
   const handleThemeById = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     const url=new URL(req.url,'http://localhost');
     const parts=url.pathname.split('/');
@@ -112,7 +112,7 @@ export function createThemeApi({ pool, auditLog, sameOrigin, requireSession, req
 
   const handlePreview = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='POST'){
       const b=await readJson(req);
@@ -141,7 +141,7 @@ export function createThemeApi({ pool, auditLog, sameOrigin, requireSession, req
 
   const handlePreferences = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM pub_theme_preferences WHERE user_identity=$1`, [sess.identityId]);
@@ -163,7 +163,7 @@ export function createThemeApi({ pool, auditLog, sameOrigin, requireSession, req
 
   const handleRollback = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method!=='POST') return json(res,405,{error:'method_not_allowed'});
     const b=await readJson(req);

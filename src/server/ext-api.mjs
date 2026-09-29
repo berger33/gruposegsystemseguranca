@@ -6,7 +6,7 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
   // EXT-01 frota
   const handleFleetVehicles = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM ext_fleet_vehicles ORDER BY plate ASC LIMIT 200`);
@@ -59,7 +59,7 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   const handleFleetFuelLogs = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
@@ -94,7 +94,7 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   const handleFleetMaintenanceLogs = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
@@ -131,7 +131,7 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   const handleFleetDocuments = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
@@ -170,7 +170,7 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
   // EXT-02 terceiros
   const handleThirdParties = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT tp.*, c.title as contract_title FROM ext_third_parties tp LEFT JOIN crm_contracts c ON c.id=tp.contract_id ORDER BY tp.name ASC LIMIT 200`);
@@ -222,7 +222,7 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   const handleThirdPartyDocuments = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
@@ -259,7 +259,7 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
   // EXT-03 licitações
   const handleBiddingNotices = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM ext_bidding_notices ORDER BY deadline_date ASC LIMIT 200`);
@@ -308,7 +308,7 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   const handleBiddingDocuments = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
@@ -347,7 +347,7 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
   // EXT-04 portal fornecedores
   const handleSupplierPortalQuotations = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT q.*, s.name as supplier_name, p.name as product_name FROM ext_supplier_portal_quotations q LEFT JOIN ast_suppliers s ON s.id=q.supplier_id LEFT JOIN ast_products p ON p.id=q.product_id ORDER BY q.created_at DESC LIMIT 200`);
@@ -391,7 +391,7 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
   // EXT-05 qualidade
   const handleQualityNonconformities = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM ext_quality_nonconformities ORDER BY created_at DESC LIMIT 200`);
@@ -444,7 +444,7 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   const handleQualityActions = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
@@ -492,7 +492,7 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
   // EXT-06 satisfação
   const handleSatisfactionSurveys = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT s.*, ca.name as client_name FROM ext_satisfaction_surveys s LEFT JOIN client_accounts ca ON ca.id=s.client_account_id ORDER BY s.created_at DESC LIMIT 200`);

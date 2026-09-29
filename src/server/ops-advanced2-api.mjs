@@ -32,7 +32,7 @@ export function createOpsAdvanced2Api({ pool, auditLog, sameOrigin, requireSessi
 
   // ---- OPS-09 Visitas Supervisão ----
   async function handleSupervisionVisits(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -106,7 +106,7 @@ export function createOpsAdvanced2Api({ pool, auditLog, sameOrigin, requireSessi
   }
 
   async function handleSupervisionInspections(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -158,7 +158,7 @@ export function createOpsAdvanced2Api({ pool, auditLog, sameOrigin, requireSessi
   }
 
   async function handleSupervisionActionPlans(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -229,7 +229,7 @@ export function createOpsAdvanced2Api({ pool, auditLog, sameOrigin, requireSessi
 
   // ---- OPS-10 Rondas ----
   async function handlePatrols(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -286,7 +286,7 @@ export function createOpsAdvanced2Api({ pool, auditLog, sameOrigin, requireSessi
   }
 
   async function handlePatrolPoints(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -380,7 +380,7 @@ export function createOpsAdvanced2Api({ pool, auditLog, sameOrigin, requireSessi
   }
 
   async function handlePatrolReplayLogs(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method !== 'GET') return send(res,405,{error:'method_not_allowed'});
     const url = new URL(req.url, 'http://localhost');
@@ -398,7 +398,7 @@ export function createOpsAdvanced2Api({ pool, auditLog, sameOrigin, requireSessi
 
   // ---- OPS-11 Chaves ----
   async function handleKeys(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -457,7 +457,7 @@ export function createOpsAdvanced2Api({ pool, auditLog, sameOrigin, requireSessi
   }
 
   async function handleKeyMovements(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -518,7 +518,7 @@ export function createOpsAdvanced2Api({ pool, auditLog, sameOrigin, requireSessi
 
   // ---- OPS-12 Relatórios Cliente ----
   async function handleClientReports(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -621,7 +621,7 @@ export function createOpsAdvanced2Api({ pool, auditLog, sameOrigin, requireSessi
   }
 
   async function handleClientReportAttachments(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -657,7 +657,7 @@ export function createOpsAdvanced2Api({ pool, auditLog, sameOrigin, requireSessi
   }
 
   async function handleClientReportHistory(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method !== 'GET') return send(res,405,{error:'method_not_allowed'});
     const url = new URL(req.url, 'http://localhost');

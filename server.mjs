@@ -1,4 +1,4 @@
-import { createHmac, createHash, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHmac, createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { createServer } from "node:http";
 import path from "node:path";
 import nextEnv from "@next/env";
@@ -6,6 +6,11 @@ import next from "next";
 import pg from "pg";
 import nodemailer from "nodemailer";
 import { validateLeadInput } from "./src/lib/public-lead-validation.mjs";
+import { decryptMfaSecret, verifyMfaCode, hashRecoveryCode, mfaKey } from "./src/lib/client-mfa.mjs";
+import {
+  createStaffSessionStore, evaluateStaffLogin, evaluateLegacyTokenPolicy, isUuid,
+} from "./src/server/staff-session.mjs";
+import { createLocalOutbox, LOCAL_OUTBOX_LABEL, resolveDeliveryTarget } from "./src/server/local-outbox.mjs";
 import { createClientAccessApi } from "./src/server/client-access-api.mjs";
 import { createClientSpaceApi } from "./src/server/client-space-api.mjs";
 import { createClientSecurityApi } from "./src/server/client-security-api.mjs";
@@ -106,7 +111,9 @@ const SESSION_COOKIE = "seg_admin_session";
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
 const MAX_BODY_BYTES = 8 * 1024;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
-const LOGIN_MAX_ATTEMPTS = 8;
+// Configurável para permitir suítes de integração que fazem muitos logins.
+// O padrão de produção continua 8 por IP a cada 15 minutos.
+const LOGIN_MAX_ATTEMPTS = Math.max(1, Number(process.env.ADMIN_LOGIN_MAX_ATTEMPTS || 8));
 const LEAD_WINDOW_MS = 10 * 60 * 1000;
 const LEAD_MAX_ATTEMPTS = 5;
 const loginAttempts = new Map();
@@ -236,15 +243,28 @@ function sign(payload, secret) {
   return createHmac("sha256", secret).update(payload).digest("base64url");
 }
 
-function createSession(role, identityId = null) {
+const staffSessionStore = createStaffSessionStore({ getPool, randomUUID });
+// L02 — caixa de saída local; substitui SMTP nesta entrega.
+const localOutbox = createLocalOutbox({ getPool, randomUUID });
+
+// L01/SEC-04: a sessão de staff passa a ter estado no servidor. O cookie carrega
+// apenas um identificador assinado; papel, status, epoch e revogação vêm do
+// banco a cada requisição. Assinatura válida NÃO é mais suficiente.
+async function createStaffSessionCookie({ identityId, role, epoch, mfaVerified, req }) {
   const secret = sessionSecret();
   if (!secret) throw new Error("SESSION_SECRET_NOT_CONFIGURED");
-  const payloadObj = identityId ? { role, identityId, exp: Date.now() + SESSION_TTL_SECONDS * 1000 } : { role, exp: Date.now() + SESSION_TTL_SECONDS * 1000 };
-  const payload = Buffer.from(JSON.stringify(payloadObj)).toString("base64url");
-  return { value: `${payload}.${sign(payload, secret)}`, expiresAt: Date.now() + SESSION_TTL_SECONDS * 1000 };
+  const created = await staffSessionStore.create({
+    identityId, role, epoch, mfaVerified,
+    ipHash: createHash("sha256").update(clientIp(req)).digest("hex").slice(0, 32),
+    userAgent: req.headers["user-agent"],
+  });
+  const payload = Buffer.from(JSON.stringify({ sid: created.id, exp: created.expiresAt })).toString("base64url");
+  return { value: `${payload}.${sign(payload, secret)}`, expiresAt: created.expiresAt, ttlSeconds: created.ttlSeconds };
 }
 
-function readSession(req) {
+// Extrai e confere apenas a assinatura/expiração do cookie. Barato e sem banco;
+// é um pré-filtro, nunca a decisão final.
+function readSessionEnvelope(req) {
   const secret = sessionSecret();
   if (!secret) return null;
   const cookieHeader = String(req.headers.cookie || "");
@@ -253,20 +273,40 @@ function readSession(req) {
   const value = cookie.slice(SESSION_COOKIE.length + 1);
   const [payload, signature] = value.split(".");
   if (!payload || !signature) return null;
-  const expected = sign(payload, secret);
-  if (!constantTimeTextMatch(signature, expected)) return null;
+  if (!constantTimeTextMatch(signature, sign(payload, secret))) return null;
   try {
     const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
     if (!Number.isFinite(parsed.exp) || parsed.exp <= Date.now()) return null;
-    // Support legacy marcelo/ti tokens and new staff tokens (admin/ti/rh)
-    const validRoles = new Set(["marcelo", "ti", "admin", "rh"]);
-    if (!validRoles.has(parsed.role)) return null;
-    // If identityId present, validate UUID format
-    if (parsed.identityId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(parsed.identityId)) return null;
-    return { role: parsed.role, identityId: parsed.identityId || null, expiresAt: parsed.exp };
+    if (!isUuid(parsed.sid)) return null;
+    return { sid: parsed.sid, exp: parsed.exp };
   } catch {
     return null;
   }
+}
+
+/**
+ * Decisão autoritativa de sessão administrativa.
+ * Fail-closed: erro de banco nega em vez de preservar acesso (SEC-02).
+ */
+async function readSession(req) {
+  const envelope = readSessionEnvelope(req);
+  if (!envelope) return null;
+  let verdict;
+  try {
+    verdict = await staffSessionStore.validate(envelope.sid);
+  } catch (error) {
+    // Indisponibilidade do banco NÃO concede sessão administrativa.
+    console.error("Staff session validation failed.", error?.message);
+    return null;
+  }
+  if (!verdict.valid) return null;
+  return {
+    role: verdict.role,
+    identityId: verdict.identityId,
+    sessionId: verdict.sessionId,
+    mfaVerified: Boolean(verdict.mfaVerifiedAt),
+    expiresAt: verdict.expiresAt,
+  };
 }
 
 function cookieSecure(req) {
@@ -403,7 +443,7 @@ async function handleCreateLead(req, res) {
 }
 
 async function handleAdminLeads(req, res, url) {
-  const session = readSession(req);
+  const session = await readSession(req);
   if (!session) return json(res, 401, { error: "admin_session_required" });
   if (!['marcelo', 'ti'].includes(session.role)) return json(res, 403, { error: "forbidden" });
   if (req.method !== "GET") return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
@@ -439,7 +479,7 @@ async function handleAdminLeads(req, res, url) {
 async function handleAdminLeadStatus(req, res, leadId) {
   if (req.method !== "PATCH") return json(res, 405, { error: "method_not_allowed" }, { Allow: "PATCH" });
   if (!sameOrigin(req)) return json(res, 403, { error: "same_origin_required" });
-  const session = readSession(req);
+  const session = await readSession(req);
   if (!session) return json(res, 401, { error: "admin_session_required" });
   if (!['marcelo', 'ti'].includes(session.role)) return json(res, 403, { error: "forbidden" });
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(leadId)) return json(res, 400, { error: "invalid_lead_id" });
@@ -543,7 +583,7 @@ async function handleSiteVisual(req, res, url) {
 
   if (req.method !== "PUT") return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, PUT" });
   if (!sameOrigin(req)) return json(res, 403, { error: "same_origin_required" });
-  const session = readSession(req);
+  const session = await readSession(req);
   if (!session) return json(res, 401, { error: "admin_session_required" });
 
   let body;
@@ -592,14 +632,25 @@ async function handleSiteVisual(req, res, url) {
 
 async function handleAdminSession(req, res) {
   if (req.method === "GET") {
-    const session = readSession(req);
+    const session = await readSession(req);
     return session
-      ? json(res, 200, { role: session.role, identityId: session.identityId || null, expiresAt: session.expiresAt })
+      ? json(res, 200, {
+          role: session.role,
+          identityId: session.identityId || null,
+          mfaVerified: session.mfaVerified,
+          expiresAt: session.expiresAt,
+        })
       : json(res, 401, { error: "admin_session_required" });
   }
 
   if (req.method === "DELETE") {
     if (!sameOrigin(req)) return json(res, 403, { error: "same_origin_required" });
+    // L01: logout revoga de verdade no servidor; apagar o cookie não bastava,
+    // uma cópia do cookie continuaria válida até expirar.
+    const envelope = readSessionEnvelope(req);
+    if (envelope) {
+      try { await staffSessionStore.revoke(envelope.sid, "logout"); } catch { /* cookie sai de qualquer forma */ }
+    }
     return json(res, 200, { ok: true }, { "Set-Cookie": sessionCookie(req, "", 0) });
   }
 
@@ -628,10 +679,13 @@ async function handleAdminSession(req, res) {
     try {
       const db = getPool();
       const found = await db.query(
-        `SELECT i.id, i.status, c.password_hash, p.role
+        `SELECT i.id, i.status, i.session_epoch, c.password_hash, p.role,
+                (p.identity_id IS NOT NULL) AS has_profile,
+                (m.activated_at IS NOT NULL) AS mfa_active, m.totp_secret_encrypted AS mfa_secret
          FROM auth_identities i
          LEFT JOIN auth_credentials c ON c.identity_id = i.id
          LEFT JOIN auth_staff_profiles p ON p.identity_id = i.id
+         LEFT JOIN auth_mfa m ON m.identity_id = i.id
          WHERE i.kind = 'staff' AND i.email = $1`,
         [email]
       );
@@ -641,23 +695,44 @@ async function handleAdminSession(req, res) {
         await verifyPassword(password, "$s1$16384$8$1$64$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA").catch(() => {});
         return json(res, 401, { error: "invalid_credentials" });
       }
-      if (rec.status !== "active" && rec.status !== "pending_email") {
-        return json(res, 401, { error: "invalid_credentials" });
-      }
       const ok = await verifyPassword(password, rec.password_hash);
       if (!ok) return json(res, 401, { error: "invalid_credentials" });
-      const role = rec.role || "admin";
-      if (!["admin", "ti", "rh", "marcelo"].includes(role)) return json(res, 403, { error: "role_not_allowed" });
-      const session = createSession(role, rec.id);
-      // Audit staff login
-      try {
-        await db.query(
-          `INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ('staff',$1,'staff_login',$1,'allowed','none')`,
-          [rec.id]
-        );
-      } catch {}
-      return json(res, 200, { role, identityId: rec.id, expiresAt: session.expiresAt }, {
-        "Set-Cookie": sessionCookie(req, session.value, SESSION_TTL_SECONDS),
+
+      // L01/SEC-04: sem fallback para "admin"; identidade inativa ou sem perfil
+      // de staff não recebe papel algum.
+      const verdict = evaluateStaffLogin({ status: rec.status, role: rec.role, hasProfile: rec.has_profile });
+      if (!verdict.allowed) {
+        await staffAudit(db, rec.id, verdict.reason === "staff_profile_missing" ? "staff_profile_missing" : "staff_login_denied", "denied");
+        return json(res, verdict.status, { error: verdict.reason });
+      }
+      const role = verdict.role;
+
+      // L01/SEC-06: senha sozinha não emite sessão privilegiada quando há MFA.
+      if (rec.mfa_active) {
+        try {
+          decryptMfaSecret(rec.mfa_secret, rec.id);
+          const challenge = randomBytes(32).toString("base64url");
+          await db.query("UPDATE auth_mfa_challenges SET used_at = NOW() WHERE identity_id = $1 AND used_at IS NULL", [rec.id]);
+          await db.query(
+            `INSERT INTO auth_mfa_challenges (id, identity_id, token_hash, expires_at)
+             VALUES ($1,$2,$3,NOW() + INTERVAL '5 minutes')`,
+            [randomUUID(), rec.id, createHash("sha256").update(challenge).digest("hex")]
+          );
+          await staffAudit(db, rec.id, "staff_mfa_challenge_issue", "allowed");
+          // 202 + desafio NÃO é sessão autenticada: nenhum cookie é emitido aqui.
+          return json(res, 202, { mfaRequired: true, challenge });
+        } catch {
+          // Chave ausente/inválida nunca rebaixa para "senha somente".
+          return json(res, 503, { error: "mfa_login_unavailable" });
+        }
+      }
+
+      const session = await createStaffSessionCookie({
+        identityId: rec.id, role, epoch: rec.session_epoch, mfaVerified: false, req,
+      });
+      await staffAudit(db, rec.id, "staff_login", "allowed");
+      return json(res, 200, { role, identityId: rec.id, expiresAt: session.expiresAt, mfaEnabled: false }, {
+        "Set-Cookie": sessionCookie(req, session.value, session.ttlSeconds),
       });
     } catch (error) {
       const unconfigured = error instanceof Error && error.message === "DATABASE_NOT_CONFIGURED";
@@ -667,22 +742,219 @@ async function handleAdminSession(req, res) {
     }
   }
 
-  // Legacy token flow (marcelo/ti) — to be deprecated after staff accounts provisioned
+  // L01/SEC-05: tokens compartilhados só sobrevivem como bootstrap.
+  // Recusados por padrão; e mesmo com a flag ligada, desligam-se sozinhos assim
+  // que existir a primeira identidade de staff provisionada. Nunca emitem
+  // sessão anônima: o bootstrap cria/usa uma identidade individual auditável.
   const token = String(body?.token || "");
   const credentials = [
     ["marcelo", process.env.SITE_ADMIN_TOKEN_MARCELO],
     ["ti", process.env.SITE_ADMIN_TOKEN_TI],
   ];
-  if (!credentials.some(([, value]) => value && value.length >= 32)) {
-    return json(res, 503, { error: "admin_auth_not_configured" });
+  const tokensConfigured = credentials.some(([, value]) => value && value.length >= 32);
+
+  let provisionedStaffCount = 0;
+  try {
+    provisionedStaffCount = await staffSessionStore.countProvisionedStaff();
+  } catch (error) {
+    // Fail-closed: sem conseguir provar que ainda não há contas individuais,
+    // o token compartilhado não vale.
+    console.error("Could not count provisioned staff.", error?.message);
+    return json(res, 503, { error: "auth_unavailable" });
   }
+
+  const policy = evaluateLegacyTokenPolicy({
+    enabledFlag: process.env.SITE_ADMIN_LEGACY_TOKENS,
+    provisionedStaffCount,
+    tokensConfigured,
+  });
+  if (!policy.allowed) {
+    try {
+      await getPool().query(
+        `INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category)
+         VALUES ('system', NULL, 'staff_legacy_token_refused', $1, 'denied', 'none')`,
+        [policy.reason]
+      );
+    } catch {}
+    return json(res, policy.reason === "admin_auth_not_configured" ? 503 : 403, { error: policy.reason });
+  }
+
   const match = credentials.find(([, value]) => value && value.length >= 32 && constantTimeTextMatch(token, value));
   if (!match) return json(res, 401, { error: "invalid_admin_credential" });
 
-  const session = createSession(match[0]);
-  return json(res, 200, { role: match[0], expiresAt: session.expiresAt }, {
-    "Set-Cookie": sessionCookie(req, session.value, SESSION_TTL_SECONDS),
+  // Mesmo no bootstrap a sessão recebe identidade individual e registro no
+  // servidor, para que a auditoria identifique uma pessoa e a revogação funcione.
+  let bootstrapIdentityId;
+  try {
+    bootstrapIdentityId = await ensureBootstrapStaffIdentity(match[0]);
+  } catch (error) {
+    console.error("Could not provision the bootstrap staff identity.", error?.message);
+    return json(res, 503, { error: "auth_unavailable" });
+  }
+
+  const session = await createStaffSessionCookie({
+    identityId: bootstrapIdentityId, role: match[0], epoch: 0, mfaVerified: false, req,
   });
+  await staffAudit(getPool(), bootstrapIdentityId, "staff_legacy_token_login", "allowed");
+  return json(res, 200, {
+    role: match[0],
+    identityId: bootstrapIdentityId,
+    expiresAt: session.expiresAt,
+    bootstrap: true,
+    warning: "legacy_shared_token_bootstrap: crie uma conta individual; este acesso expira sozinho quando houver staff provisionado.",
+  }, {
+    "Set-Cookie": sessionCookie(req, session.value, session.ttlSeconds),
+  });
+}
+
+/**
+ * L01/SEC-06 — conclusão do desafio MFA de staff.
+ * Só aqui a sessão privilegiada é emitida. O desafio é de uso único, expira em
+ * 5 minutos, limita tentativas e protege contra reutilização de código TOTP
+ * (last_used_step) e de código de recuperação (array_remove).
+ */
+async function handleAdminMfaComplete(req, res) {
+  if (req.method !== "POST") return json(res, 405, { error: "method_not_allowed" }, { Allow: "POST" });
+  if (!sameOrigin(req)) return json(res, 403, { error: "same_origin_required" });
+  if (!rateLimitAllows(loginAttempts, req, LOGIN_WINDOW_MS, LOGIN_MAX_ATTEMPTS)) {
+    return json(res, 429, { error: "too_many_attempts" }, { "Retry-After": "900" });
+  }
+  if (!sessionSecret()) return json(res, 503, { error: "admin_auth_not_configured" });
+
+  let body;
+  try { body = await readJson(req); } catch { return json(res, 400, { error: "invalid_request" }); }
+  const challenge = typeof body?.challenge === "string" ? body.challenge : "";
+  const code = typeof body?.code === "string" ? body.code.trim().toLowerCase() : "";
+  if (!challenge || challenge.length > 200 || !(/^\d{6}$/.test(code) || hashRecoveryCode(code))) {
+    return json(res, 400, { error: "invalid_request" });
+  }
+
+  let client;
+  try {
+    mfaKey();
+    const db = getPool();
+    client = await db.connect();
+    await client.query("BEGIN");
+    const { rows: [entry] } = await client.query(
+      `SELECT c.id AS challenge_id, c.identity_id, c.expires_at, c.used_at, c.attempts,
+              i.status, i.session_epoch,
+              p.role AS profile_role, (p.identity_id IS NOT NULL) AS has_profile,
+              m.totp_secret_encrypted, m.recovery_hashes, m.activated_at, m.last_used_step
+         FROM auth_mfa_challenges c
+         JOIN auth_identities i ON i.id = c.identity_id AND i.kind = 'staff'
+         JOIN auth_mfa m ON m.identity_id = i.id
+         LEFT JOIN auth_staff_profiles p ON p.identity_id = i.id
+        WHERE c.token_hash = $1
+        FOR UPDATE OF c, m`,
+      [createHash("sha256").update(challenge).digest("hex")]
+    );
+
+    const verdict = entry
+      ? evaluateStaffLogin({ status: entry.status, role: entry.profile_role, hasProfile: entry.has_profile })
+      : { allowed: false };
+    if (!entry || entry.used_at || entry.attempts >= 5 || new Date(entry.expires_at) <= new Date()
+        || !entry.activated_at || !verdict.allowed) {
+      await client.query("ROLLBACK");
+      return json(res, 401, { error: "mfa_challenge_invalid" });
+    }
+
+    const recoveryHash = hashRecoveryCode(code);
+    let valid = false;
+    if (recoveryHash && (entry.recovery_hashes || []).includes(recoveryHash)) {
+      // Código de recuperação é consumido: não serve duas vezes.
+      await client.query(
+        `UPDATE auth_mfa SET recovery_hashes = array_remove(recovery_hashes, $2),
+                last_verified_at = NOW(), attempts_since_verified = 0
+          WHERE identity_id = $1`,
+        [entry.identity_id, recoveryHash]
+      );
+      valid = true;
+    } else if (!recoveryHash) {
+      const result = await verifyMfaCode(entry.totp_secret_encrypted, entry.identity_id, code, entry.last_used_step);
+      if (result.valid) {
+        // Só avança se o passo for estritamente maior: bloqueia replay do mesmo TOTP.
+        const updated = await client.query(
+          `UPDATE auth_mfa SET last_used_step = $2, last_verified_at = NOW(), attempts_since_verified = 0
+            WHERE identity_id = $1 AND (last_used_step IS NULL OR last_used_step < $2)
+            RETURNING identity_id`,
+          [entry.identity_id, result.timeStep]
+        );
+        valid = updated.rowCount === 1;
+      }
+    }
+
+    if (!valid) {
+      await client.query("UPDATE auth_mfa_challenges SET attempts = attempts + 1 WHERE id = $1", [entry.challenge_id]);
+      await client.query("COMMIT");
+      await staffAudit(getPool(), entry.identity_id, "staff_mfa_challenge_denied", "denied");
+      return json(res, 401, { error: "mfa_code_invalid" });
+    }
+
+    await client.query("UPDATE auth_mfa_challenges SET used_at = NOW() WHERE id = $1", [entry.challenge_id]);
+    await client.query("COMMIT");
+
+    const session = await createStaffSessionCookie({
+      identityId: entry.identity_id, role: verdict.role, epoch: entry.session_epoch, mfaVerified: true, req,
+    });
+    await staffAudit(getPool(), entry.identity_id, "staff_mfa_challenge_verify", "allowed");
+    return json(res, 200, {
+      role: verdict.role, identityId: entry.identity_id, expiresAt: session.expiresAt, mfaEnabled: true,
+    }, { "Set-Cookie": sessionCookie(req, session.value, session.ttlSeconds) });
+  } catch (error) {
+    if (client) await client.query("ROLLBACK").catch(() => {});
+    if (error instanceof Error && error.message === "MFA_KEY_NOT_CONFIGURED") {
+      return json(res, 503, { error: "mfa_login_unavailable" });
+    }
+    console.error("Could not complete the staff MFA challenge.", error?.message);
+    return json(res, 503, { error: "auth_unavailable" });
+  } finally {
+    client?.release();
+  }
+}
+
+/** Auditoria de staff que nunca derruba o fluxo de autenticação. */
+async function staffAudit(db, identityId, action, result) {
+  try {
+    await db.query(
+      `INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category)
+       VALUES ('staff', $1, $2, $1, $3, 'none')`,
+      [identityId, action, result]
+    );
+  } catch (error) {
+    console.error("Could not record the staff audit entry.", error?.message);
+  }
+}
+
+/**
+ * Identidade individual mínima usada apenas pelo bootstrap por token
+ * compartilhado. Sem credencial de senha: não é login alternativo, é só um
+ * sujeito auditável enquanto o operador não cria a primeira conta real.
+ */
+async function ensureBootstrapStaffIdentity(role) {
+  const db = getPool();
+  const email = `bootstrap+${role}@local.invalid`;
+  const existing = await db.query(
+    "SELECT id FROM auth_identities WHERE kind = 'staff' AND email = $1",
+    [email]
+  );
+  if (existing.rows[0]) return existing.rows[0].id;
+  const id = randomUUID();
+  await db.query(
+    `INSERT INTO auth_identities (id, kind, email, display_name, status)
+     VALUES ($1,'staff',$2,$3,'active')
+     ON CONFLICT DO NOTHING`,
+    [id, email, `Bootstrap ${role}`]
+  );
+  const row = await db.query("SELECT id FROM auth_identities WHERE kind = 'staff' AND email = $1", [email]);
+  const identityId = row.rows[0].id;
+  // O perfil é obrigatório: a validação de sessão exige papel vindo do banco.
+  await db.query(
+    `INSERT INTO auth_staff_profiles (identity_id, role, assigned_by, is_bootstrap)
+     VALUES ($1,$2,'legacy_bootstrap',TRUE)
+     ON CONFLICT (identity_id) DO UPDATE SET role = EXCLUDED.role`,
+    [identityId, role]
+  );
+  return identityId;
 }
 
 const publicBaseUrl = (process.env.PUBLIC_BASE_URL || "").trim().replace(/\/+$/, "") || `http://localhost:${port}`;
@@ -696,6 +968,7 @@ const clientAccessApi = createClientAccessApi({
   cookieSecure,
   clientIp,
   baseUrl: publicBaseUrl,
+  localOutbox,
 });
 
 const clientSpaceApi = createClientSpaceApi({
@@ -728,6 +1001,7 @@ const adminRbacApi = createAdminRbacApi({
 const notificationQueue = createNotificationQueue({
   getPool,
   observability: getObservability(),
+  localOutbox,
 });
 
 const adminAuditApi = createAdminAuditApi({
@@ -1887,6 +2161,7 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/site-visual") return handleSiteVisual(req, res, url);
   if (url.pathname === "/api/leads") return handleCreateLead(req, res);
   if (url.pathname === "/api/admin/session") return handleAdminSession(req, res);
+  if (url.pathname === "/api/admin/session/mfa") return handleAdminMfaComplete(req, res);
   if (url.pathname === "/api/admin/leads") return handleAdminLeads(req, res, url);
   const leadMatch = url.pathname.match(/^\/api\/admin\/leads\/([0-9a-f-]{36})$/i);
   if (leadMatch) return handleAdminLeadStatus(req, res, leadMatch[1]);
@@ -1947,6 +2222,40 @@ async function routeApi(req, res) {
   const notifRetryMatch = url.pathname.match(/^\/api\/admin\/notifications\/([0-9a-f-]{36})\/retry$/i);
   if (notifRetryMatch) return adminNotificationsApi.handleRetry(req, res, notifRetryMatch[1]);
   if (url.pathname === "/api/admin/notifications/process") return adminNotificationsApi.handleProcess(req, res);
+  // L02 — caixa de saída local (substitui SMTP). Somente sessão de staff.
+  if (url.pathname === "/api/admin/outbox") {
+    if (req.method !== "GET") return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
+    const session = await readSession(req);
+    if (!session) return json(res, 401, { error: "admin_session_required" });
+    try {
+      const page = await localOutbox.list({
+        actorId: session.identityId,
+        limit: Number(url.searchParams.get("limit") || 50),
+        offset: Number(url.searchParams.get("offset") || 0),
+        status: url.searchParams.get("status"),
+        recipient: url.searchParams.get("recipient"),
+      });
+      return json(res, 200, { ...page, deliveryMode: resolveDeliveryTarget(), notice: LOCAL_OUTBOX_LABEL });
+    } catch (error) {
+      console.error("Local outbox list failed.", error);
+      return json(res, 503, { error: "outbox_unavailable" });
+    }
+  }
+  const outboxReadMatch = url.pathname.match(/^\/api\/admin\/outbox\/([0-9a-f-]{36})$/i);
+  if (outboxReadMatch) {
+    if (req.method !== "GET") return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
+    const session = await readSession(req);
+    if (!session) return json(res, 401, { error: "admin_session_required" });
+    try {
+      const message = await localOutbox.read({ id: outboxReadMatch[1], actorId: session.identityId });
+      if (!message) return json(res, 404, { error: "outbox_message_not_found" });
+      if (message.expired) return json(res, 410, { error: "outbox_message_expired" });
+      return json(res, 200, { message, notice: LOCAL_OUTBOX_LABEL });
+    } catch (error) {
+      console.error("Local outbox read failed.", error);
+      return json(res, 503, { error: "outbox_unavailable" });
+    }
+  }
   if (url.pathname === "/api/admin/integrations") return integrationsApi.handleList(req, res, url);
   const integrationTestMatch = url.pathname.match(/^\/api\/admin\/integrations\/([^\/]+)\/test$/i);
   if (integrationTestMatch) return integrationsApi.handleTest(req, res, integrationTestMatch[1]);
@@ -3437,7 +3746,7 @@ async function routeApi(req, res) {
   } finally {
     const duration = Date.now() - start;
     try {
-      const session = readSession(req);
+      const session = await readSession(req);
       const userKind = session?.role || null;
       const userId = session?.identityId || null;
       const ip = req.headers['x-forwarded-for'] ? String(req.headers['x-forwarded-for']).split(',')[0].trim() : req.socket?.remoteAddress || null;
@@ -3466,6 +3775,7 @@ const API_PATH_MATCH = pathname =>
   pathname === "/api/site-visual"
   || pathname === "/api/leads"
   || pathname === "/api/admin/session"
+  || pathname === "/api/admin/session/mfa"
   || pathname === "/api/admin/leads"
   || pathname.startsWith("/api/admin/leads/")
   || pathname.startsWith("/api/auth/")
@@ -3492,6 +3802,8 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/admin/audit/export"
   || pathname === "/api/admin/notifications"
   || pathname.startsWith("/api/admin/notifications/")
+  || pathname === "/api/admin/outbox"
+  || pathname.startsWith("/api/admin/outbox/")
   || pathname === "/api/admin/integrations"
   || pathname.startsWith("/api/admin/integrations/")
   || pathname === "/api/catalog"

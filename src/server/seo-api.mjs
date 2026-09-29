@@ -6,7 +6,7 @@ export function createSeoApi({ pool, auditLog, sameOrigin, requireSession, requi
     const url=new URL(req.url,'http://localhost');
     const isPublic=url.pathname.startsWith('/api/seo') && !url.pathname.includes('/admin');
     if(!isPublic && !sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=!isPublic ? requireSession(req) : null;
+    const sess=!isPublic ? await requireSession(req) : null;
     if(!isPublic && (!sess || !requireRole(sess,['admin','ti']))) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const search=url.searchParams.get('search');
@@ -78,7 +78,7 @@ export function createSeoApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   const handleRedirects = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM seo_redirects ORDER BY old_path ASC LIMIT 200`);
@@ -126,7 +126,7 @@ export function createSeoApi({ pool, auditLog, sameOrigin, requireSession, requi
     if(req.method==='GET'){
       if(url.pathname.includes('/admin') || url.pathname.includes('/hr')){
         if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-        const sess=requireSession(req);
+        const sess=await requireSession(req);
         if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
         const { rows } = await pool.query(`SELECT * FROM seo_sitemap_entries ORDER BY url ASC LIMIT 500`);
         if(isXml){
@@ -154,7 +154,7 @@ export function createSeoApi({ pool, auditLog, sameOrigin, requireSession, requi
     }
     if(req.method==='POST' || req.method==='PATCH'){
       if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-      const sess=requireSession(req);
+      const sess=await requireSession(req);
       if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
       const b=await readJson(req);
       const action=b.action||'update';
@@ -184,7 +184,7 @@ export function createSeoApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   const handleDomainVerification = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM domain_verifications ORDER BY domain ASC LIMIT 100`);

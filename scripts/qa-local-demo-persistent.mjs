@@ -94,7 +94,13 @@ try {
     (SELECT count(*)::int FROM auth_identities WHERE kind='client') AS clients,
     (SELECT count(*)::int FROM client_accounts) AS accounts,
     (SELECT count(*)::int FROM client_contracts) AS contracts`);
-  if (JSON.stringify(before) !== JSON.stringify({ migrations:98,staff:3,clients:0,accounts:2,contracts:1 })) throw new Error('demo_seed_counts_mismatch');
+  // A contagem de migrações vem do disco: fixá-la como literal só cria um
+  // segundo lugar para esquecer de atualizar (aconteceu em 099 e 100).
+  // As demais contagens são a semente da demo e continuam explícitas.
+  const expectedMigrations = (await readdir(path.join(root,'db/migrations'))).filter(f => /^\d{3}-.*\.sql$/.test(f)).length;
+  if (JSON.stringify(before) !== JSON.stringify({ migrations:expectedMigrations,staff:3,clients:0,accounts:2,contracts:1 })) {
+    throw new Error(`demo_seed_counts_mismatch: ${JSON.stringify(before)} != ${JSON.stringify({ migrations:expectedMigrations,staff:3,clients:0,accounts:2,contracts:1 })}`);
+  }
   expect(await request('/api/client/accounts'), 401, 'ANON_DENIED');
   const tiLogin = await request('/api/admin/session', { email:ti[1], password:ti[2] });
   expect(tiLogin, 200, 'TI_INDIVIDUAL_LOGIN');
@@ -106,8 +112,20 @@ try {
   const email = 'qa.demo.cliente@example.invalid', password = randomBytes(24).toString('base64url');
   const invite = await request('/api/admin/invites', { email, scopeNote:'Demo fictícia QA' }, tiLogin.cookie);
   expect(invite, 201, 'CLIENT_INVITED');
-  if (invite.data.emailStatus !== 'not_configured') throw new Error('demo_smtp_must_be_off');
-  const accepted = await request('/api/auth/invite/accept', { token:new URL(invite.data.inviteUrl).searchParams.get('token'),
+  // L02: sem SMTP o convite é gravado na CAIXA LOCAL. O estado honesto é
+  // 'local_outbox' (nunca 'sent'), e o token deixa de ser ecoado na resposta —
+  // o operador o obtém abrindo a mensagem, que é o caminho real e auditado.
+  if (invite.data.emailStatus !== 'local_outbox') throw new Error(`demo_smtp_must_be_off: ${invite.data.emailStatus}`);
+  if (invite.data.inviteUrl) throw new Error('demo_invite_token_leaked_in_response');
+  const box = await request(`/api/admin/outbox?recipient=${encodeURIComponent(email)}`, undefined, tiLogin.cookie);
+  expect(box, 200, 'LOCAL_OUTBOX_LISTED');
+  if (box.data.messages?.length !== 1) throw new Error('demo_invite_not_in_local_outbox');
+  if (box.data.messages[0].body) throw new Error('demo_outbox_list_leaked_body');
+  const opened = await request(`/api/admin/outbox/${box.data.messages[0].id}`, undefined, tiLogin.cookie);
+  expect(opened, 200, 'LOCAL_OUTBOX_OPENED');
+  const inviteToken = /\/cliente\/convite\?token=([A-Za-z0-9_-]+)/.exec(opened.data.message?.body || '')?.[1];
+  if (!inviteToken) throw new Error('demo_invite_token_not_in_local_outbox');
+  const accepted = await request('/api/auth/invite/accept', { token:inviteToken,
     displayName:'Cliente Fictício de QA', password });
   expect(accepted, 201, 'CLIENT_PENDING');
   expect(await request('/api/auth/login', { email,password }), 403, 'PENDING_DENIED');

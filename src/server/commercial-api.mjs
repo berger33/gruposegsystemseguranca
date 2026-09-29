@@ -14,7 +14,7 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
   // Library
   async function handleLibrary(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -72,7 +72,7 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
   async function handleLibraryById(req, res, id) {
     if (!isUuid(id)) return bad(res, 'invalid_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -140,7 +140,7 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
   // Campaigns
   async function handleCampaigns(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -200,7 +200,7 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
   async function handleCampaignById(req, res, id) {
     if (!isUuid(id)) return bad(res, 'invalid_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -257,7 +257,7 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
   async function handleCampaignTargets(req, res, campaignId) {
     if (!isUuid(campaignId)) return bad(res, 'invalid_campaign_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -298,7 +298,7 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
   // Proposal Comparisons
   async function handleComparisons(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -380,7 +380,7 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
   async function handleComparisonById(req, res, id) {
     if (!isUuid(id)) return bad(res, 'invalid_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, { Allow: 'GET' });

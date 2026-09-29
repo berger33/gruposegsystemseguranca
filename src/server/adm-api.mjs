@@ -7,9 +7,9 @@ export function createAdmApi({ pool, auditLog, sameOrigin, requireSession, requi
     const rnd = Math.random().toString(36).substring(2,6).toUpperCase();
     return `${prefix}-${y}${m}${day}-${rnd}`;
   };
-  const getSession = (req) => { try { return requireSession(req); } catch { return null; } };
-  const checkAuth = (req, res) => {
-    const sess = getSession(req);
+  const getSession = async (req) => { try { return await requireSession(req); } catch { return null; } };
+  const checkAuth = async (req, res) => {
+    const sess = await getSession(req);
     if (!sess) { res.writeHead(401, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return null; }
     const r = (sess.role||'').toLowerCase();
     if (!['admin','ti','marcelo','financeiro','finance'].includes(r) && r!=='admin') {
@@ -26,7 +26,7 @@ export function createAdmApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   // ADM-01 meu dia
   const handleMyDay = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
       const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
       const status = url.searchParams.get('status');
@@ -97,7 +97,7 @@ export function createAdmApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   // ADM-02 comercial
   const handleCommercialSnapshots = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
       try {
         const { rows } = await pool.query(`SELECT * FROM adm_commercial_snapshots ORDER BY snapshot_date DESC LIMIT 200`);
@@ -139,7 +139,7 @@ export function createAdmApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   // ADM-03 operacional
   const handleOperationalSnapshots = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
       try {
         const { rows } = await pool.query(`SELECT * FROM adm_operational_snapshots ORDER BY snapshot_date DESC LIMIT 200`);
@@ -181,7 +181,7 @@ export function createAdmApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   // ADM-04 financeiro
   const handleFinancialSnapshots = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
       const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
       const competence = url.searchParams.get('competence_date');
@@ -231,7 +231,7 @@ export function createAdmApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   // ADM-05 renewal risks
   const handleRenewalRisks = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
       const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
       const risk_level = url.searchParams.get('risk_level');
@@ -297,7 +297,7 @@ export function createAdmApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   // ADM-06 aprovação unificada
   const handleApprovals = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
       const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
       const status = url.searchParams.get('status');
@@ -384,7 +384,7 @@ export function createAdmApi({ pool, auditLog, sameOrigin, requireSession, requi
   };
 
   const handleApprovalHistory = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method !== 'GET') { res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'})); return; }
     const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
     const approval_id = url.searchParams.get('approval_id');

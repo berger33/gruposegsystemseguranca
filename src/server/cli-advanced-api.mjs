@@ -11,7 +11,7 @@ function generateProtocol(prefix) {
 
 export function createCliAdvancedApi({ pool, auditLog, sameOrigin, requireSession, requireRole }) {
   async function ensureAuth(req, res, roles) {
-    const session = requireSession(req);
+    const session = await requireSession(req);
     if (!session) { res.writeHead(401, { "Content-Type":"application/json" }); res.end(JSON.stringify({ error:"unauthorized" })); return null; }
     // Sessão de staff não comprova vínculo a uma conta cliente. Até existir
     // autorização por escopo em cada recurso v2, negar RH/comercial aqui.

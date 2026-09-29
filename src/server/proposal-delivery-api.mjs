@@ -15,7 +15,7 @@ export function createProposalDeliveryApi({ json, readJson, sameOrigin, getPool,
 
   async function handleDeliveries(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -91,7 +91,7 @@ export function createProposalDeliveryApi({ json, readJson, sameOrigin, getPool,
   async function handleDeliveryById(req, res, id) {
     if (!isUuid(id)) return bad(res, 'invalid_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {

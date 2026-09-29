@@ -11,7 +11,7 @@ function generateProtocol(prefix) {
 
 export function createCliFinanceApi({ pool, auditLog, sameOrigin, requireSession, requireRole }) {
   async function ensureAuth(req, res, roles) {
-    const session = requireSession(req);
+    const session = await requireSession(req);
     if (!session) { res.writeHead(401, { "Content-Type":"application/json" }); res.end(JSON.stringify({ error:"unauthorized" })); return null; }
     // Sem vínculo por conta validado nas rotas CLI-09..14, só admin/ti têm
     // acesso global. Não interpretar cookie de staff RH como grant do cliente.

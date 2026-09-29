@@ -68,7 +68,7 @@ export function createProposalApi({ json, readJson, sameOrigin, getPool, readAdm
 
   async function handleProposals(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -180,7 +180,7 @@ export function createProposalApi({ json, readJson, sameOrigin, getPool, readAdm
   async function handleProposalById(req, res, id) {
     if (!isUuid(id)) return bad(res, 'invalid_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -383,7 +383,7 @@ export function createProposalApi({ json, readJson, sameOrigin, getPool, readAdm
   async function handleItems(req, res, proposalId) {
     if (!isUuid(proposalId)) return bad(res, 'invalid_proposal_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -460,7 +460,7 @@ export function createProposalApi({ json, readJson, sameOrigin, getPool, readAdm
   async function handleVersions(req, res, proposalId) {
     if (!isUuid(proposalId)) return bad(res, 'invalid_proposal_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, { Allow: 'GET' });
     try {
@@ -477,7 +477,7 @@ export function createProposalApi({ json, readJson, sameOrigin, getPool, readAdm
     const v = parseInt(version, 10);
     if (isNaN(v) || v < 1) return bad(res, 'invalid_version');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, { Allow: 'GET' });
     try {
@@ -494,7 +494,7 @@ export function createProposalApi({ json, readJson, sameOrigin, getPool, readAdm
     if (!isUuid(proposalId)) return bad(res, 'invalid_proposal_id');
     // PDF pode ser acessado com sessão admin ou com token? Para CRM-19, PDF gerado a partir da mesma versão persistida
     // Permitir admin session
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
 

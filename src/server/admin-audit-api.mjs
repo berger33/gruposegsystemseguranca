@@ -68,7 +68,7 @@ export function createAdminAuditApi(ctx) {
   }
 
   async function requireAdminSession(req, res) {
-    const session = ctx.readAdminSession(req);
+    const session = await ctx.readAdminSession(req);
     if (!session) {
       ctx.json(res, 401, { error: "admin_session_required" });
       return null;

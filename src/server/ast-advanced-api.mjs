@@ -22,7 +22,7 @@ export function createAstAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   // AST-07 inventário físico divergências ajuste aprovado
   const handleInventories = async (req, res) => {
     if (!sameOrigin(req)) return json(res, 403, { error: 'forbidden' });
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess || !requireRole(sess, ['admin','ti','rh','financeiro'])) return json(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const { rows } = await pool.query(`SELECT * FROM ast_inventories ORDER BY created_at DESC LIMIT 200`);
@@ -78,7 +78,7 @@ export function createAstAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
 
   const handleInventoryItems = async (req, res) => {
     if (!sameOrigin(req)) return json(res, 403, { error: 'forbidden' });
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess || !requireRole(sess, ['admin','ti','rh','financeiro'])) return json(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -134,7 +134,7 @@ export function createAstAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   // AST-08 OS
   const handleServiceOrders = async (req, res) => {
     if (!sameOrigin(req)) return json(res, 403, { error: 'forbidden' });
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess || !requireRole(sess, ['admin','ti','rh','financeiro'])) return json(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const { rows } = await pool.query(`SELECT so.*, ca.name as client_name FROM ast_service_orders so LEFT JOIN client_accounts ca ON ca.id=so.client_account_id ORDER BY so.created_at DESC LIMIT 200`);
@@ -192,7 +192,7 @@ export function createAstAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   // AST-09 evidências antes/depois aceite garantia retorno custo acesso cliente somente aprovado
   const handleServiceOrderEvidences = async (req, res) => {
     if (!sameOrigin(req)) return json(res, 403, { error: 'forbidden' });
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess || !requireRole(sess, ['admin','ti','rh','financeiro'])) return json(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -251,7 +251,7 @@ export function createAstAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   // AST-10 manutenção preventiva/corretiva periodicidade alerta próxima visita histórico por ativo
   const handleMaintenancePlans = async (req, res) => {
     if (!sameOrigin(req)) return json(res, 403, { error: 'forbidden' });
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess || !requireRole(sess, ['admin','ti','rh','financeiro'])) return json(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -304,7 +304,7 @@ export function createAstAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
 
   const handleMaintenanceExecutions = async (req, res) => {
     if (!sameOrigin(req)) return json(res, 403, { error: 'forbidden' });
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess || !requireRole(sess, ['admin','ti','rh','financeiro'])) return json(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -355,7 +355,7 @@ export function createAstAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   // AST-11 dossiê técnico CFTV modelos localização autorizada garantia documentação senhas fora cadastro/log comum
   const handleCftvDossiers = async (req, res) => {
     if (!sameOrigin(req)) return json(res, 403, { error: 'forbidden' });
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess || !requireRole(sess, ['admin','ti','rh','financeiro'])) return json(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const { rows } = await pool.query(`SELECT * FROM ast_cftv_dossiers ORDER BY created_at DESC LIMIT 200`);
@@ -418,7 +418,7 @@ export function createAstAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   // AST-12 materiais limpeza consumo por local reposição comparação previsto
   const handleCleaningMaterials = async (req, res) => {
     if (!sameOrigin(req)) return json(res, 403, { error: 'forbidden' });
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess || !requireRole(sess, ['admin','ti','rh','financeiro'])) return json(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const { rows } = await pool.query(`SELECT cm.*, p.sku, p.name as product_name FROM ast_cleaning_materials cm JOIN ast_products p ON p.id=cm.product_id ORDER BY cm.period_start DESC LIMIT 200`);

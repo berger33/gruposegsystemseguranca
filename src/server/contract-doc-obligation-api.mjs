@@ -41,7 +41,7 @@ export function createContractDocObligationApi({ json, readJson, sameOrigin, get
     // contractId pode ser company_id? Para CON-06 por cliente/contrato, suportamos ambos via query? Mas rota é por contrato
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -119,7 +119,7 @@ export function createContractDocObligationApi({ json, readJson, sameOrigin, get
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!isUuid(obligationId)) return bad(res, 'invalid_obligation_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -253,7 +253,7 @@ export function createContractDocObligationApi({ json, readJson, sameOrigin, get
   async function handleByCompany(req, res, companyId) {
     if (!isUuid(companyId)) return bad(res, 'invalid_company_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {

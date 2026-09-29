@@ -44,7 +44,7 @@ export function createContractImplantationApi({ json, readJson, sameOrigin, getP
   async function handleImplantation(req, res, contractId) {
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -135,7 +135,7 @@ export function createContractImplantationApi({ json, readJson, sameOrigin, getP
   async function handleSteps(req, res, contractId) {
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -174,7 +174,7 @@ export function createContractImplantationApi({ json, readJson, sameOrigin, getP
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!STEP_IDS.includes(stepId) && !isUuid(stepId)) return bad(res, 'invalid_step_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'PATCH') {
@@ -233,7 +233,7 @@ export function createContractImplantationApi({ json, readJson, sameOrigin, getP
   async function handleBlocks(req, res, contractId) {
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -286,7 +286,7 @@ export function createContractImplantationApi({ json, readJson, sameOrigin, getP
   async function handleExceptions(req, res, contractId) {
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -359,7 +359,7 @@ export function createContractImplantationApi({ json, readJson, sameOrigin, getP
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!isUuid(exceptionId)) return bad(res, 'invalid_exception_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -438,7 +438,7 @@ export function createContractImplantationApi({ json, readJson, sameOrigin, getP
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!isUuid(blockId)) return bad(res, 'invalid_block_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (req.method !== 'PATCH') return json(res, 405, { error: 'method_not_allowed' }, { Allow: 'PATCH' });
 

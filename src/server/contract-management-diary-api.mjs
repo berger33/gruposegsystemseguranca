@@ -36,7 +36,7 @@ export function createContractManagementDiaryApi({ json, readJson, sameOrigin, g
   async function handleDiary(req, res, contractId) {
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     // Acesso restrito: apenas admin, ti, rh? Verifica role
     if (!['admin','ti','rh'].includes(session.role)) {
@@ -150,7 +150,7 @@ export function createContractManagementDiaryApi({ json, readJson, sameOrigin, g
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!isUuid(entryId)) return bad(res, 'invalid_entry_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (!['admin','ti','rh'].includes(session.role)) {
       return json(res, 403, { error: 'restricted_access' });
@@ -209,7 +209,7 @@ export function createContractManagementDiaryApi({ json, readJson, sameOrigin, g
   async function handleSearch(req, res) {
     // Busca global com acesso restrito
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (!['admin','ti','rh'].includes(session.role)) {
       return json(res, 403, { error: 'restricted_access' });

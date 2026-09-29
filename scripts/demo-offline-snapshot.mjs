@@ -169,7 +169,12 @@ async function restoredDatabaseCheck(target, cfg) {
     const { rows:[record] } = await pool.query(`SELECT
       (SELECT count(*)::int FROM seg_demo_bootstrap WHERE installation_id=$1) AS marker,
       (SELECT count(*)::int FROM __migrations WHERE checksum IS NOT NULL) AS ledger`,[cfg.installationId]);
-    if (record.marker !== 1 || record.ledger !== 98) fail('snapshot_restored_database_mismatch');
+    // O ledger esperado vem do disco. Fixá-lo como literal (era 98) cria mais
+    // um ponto de esquecimento a cada migração nova — e já estava defasado.
+    const ledgerOnDisk = (await readdir(path.join(project,'db/migrations'))).filter(f => /^\d{3}-.*\.sql$/.test(f)).length;
+    if (record.marker !== 1 || record.ledger !== ledgerOnDisk) {
+      fail(`snapshot_restored_database_mismatch: marker=${record.marker} ledger=${record.ledger} esperado=${ledgerOnDisk}`);
+    }
   } finally {
     if (startTimer) clearTimeout(startTimer);
     await pool?.end();

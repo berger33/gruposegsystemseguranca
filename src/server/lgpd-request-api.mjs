@@ -72,7 +72,7 @@ export function createLgpdRequestApi({ json, readJson, sameOrigin, getPool, read
 
     // Admin list
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (!['admin','ti','rh'].includes(session.role)) return json(res, 403, { error: 'lgpd_restricted_admin_ti_rh' });
 
@@ -113,7 +113,7 @@ export function createLgpdRequestApi({ json, readJson, sameOrigin, getPool, read
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!UUID_RE.test(requestId)) return json(res, 400, { error: 'invalid_request_id' });
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (!['admin','ti','rh'].includes(session.role)) return json(res, 403, { error: 'lgpd_restricted' });
 

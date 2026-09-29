@@ -6,7 +6,7 @@ export function createExtReportingApi({ pool, auditLog, sameOrigin, requireSessi
   // EXT-13 relatorio programado
   const handlePeriodicReports = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM ext_periodic_reports ORDER BY created_at DESC LIMIT 200`);
@@ -58,7 +58,7 @@ export function createExtReportingApi({ pool, auditLog, sameOrigin, requireSessi
   // EXT-14 inteligencia comercial
   const handleCommercialIntelligence = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM ext_commercial_intelligence ORDER BY created_at DESC LIMIT 200`);
@@ -110,7 +110,7 @@ export function createExtReportingApi({ pool, auditLog, sameOrigin, requireSessi
   // EXT-15 emergencial apoio
   const handleEmergencyChannels = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM ext_emergency_channels ORDER BY name ASC LIMIT 200`);
@@ -157,7 +157,7 @@ export function createExtReportingApi({ pool, auditLog, sameOrigin, requireSessi
 
   const handleEmergencyTests = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
@@ -191,7 +191,7 @@ export function createExtReportingApi({ pool, auditLog, sameOrigin, requireSessi
   // EXT-16 central monitoramento / video
   const handleCentralProjects = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM ext_central_projects ORDER BY created_at DESC LIMIT 200`);
@@ -242,7 +242,7 @@ export function createExtReportingApi({ pool, auditLog, sameOrigin, requireSessi
   // EXT-17 biometria facial
   const handleBiometryProjects = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM ext_biometry_projects ORDER BY created_at DESC LIMIT 200`);
@@ -296,7 +296,7 @@ export function createExtReportingApi({ pool, auditLog, sameOrigin, requireSessi
   // AI-10 automações determinísticas
   const handleAiAutomations = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM ext_ai_deterministic_automations ORDER BY name ASC LIMIT 200`);
@@ -337,7 +337,7 @@ export function createExtReportingApi({ pool, auditLog, sameOrigin, requireSessi
 
   const handleAiAutomationLogs = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');

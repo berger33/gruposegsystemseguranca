@@ -22,7 +22,7 @@ export function createAstApi({ pool, auditLog, sameOrigin, requireSession, requi
   // AST-01 produtos/SKU fornecedores unidade custo local estoque mínimo
   const handleSuppliers = async (req, res) => {
     if (!sameOrigin(req)) return json(res, 403, { error: 'forbidden' });
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess || !requireRole(sess, ['admin','ti','rh','financeiro'])) return json(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const { rows } = await pool.query(`SELECT * FROM ast_suppliers ORDER BY name ASC LIMIT 200`);
@@ -56,7 +56,7 @@ export function createAstApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   const handleProducts = async (req, res) => {
     if (!sameOrigin(req)) return json(res, 403, { error: 'forbidden' });
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess || !requireRole(sess, ['admin','ti','rh','financeiro'])) return json(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -125,7 +125,7 @@ export function createAstApi({ pool, auditLog, sameOrigin, requireSession, requi
   // AST-02 entradas/saídas/transferências/ajustes histórico saldo derivado movimentos consistentes
   const handleStockMovements = async (req, res) => {
     if (!sameOrigin(req)) return json(res, 403, { error: 'forbidden' });
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess || !requireRole(sess, ['admin','ti','rh','financeiro'])) return json(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -170,7 +170,7 @@ export function createAstApi({ pool, auditLog, sameOrigin, requireSession, requi
   // AST-03 reserva para proposta/implantação sem confundir reserva com saída liberação cancelamento
   const handleReservations = async (req, res) => {
     if (!sameOrigin(req)) return json(res, 403, { error: 'forbidden' });
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess || !requireRole(sess, ['admin','ti','rh','financeiro'])) return json(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -249,7 +249,7 @@ export function createAstApi({ pool, auditLog, sameOrigin, requireSession, requi
   // AST-04 equipamentos serializados por cliente/posto/colaborador proprietário garantia manutenção termo guarda
   const handleSerializedAssets = async (req, res) => {
     if (!sameOrigin(req)) return json(res, 403, { error: 'forbidden' });
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess || !requireRole(sess, ['admin','ti','rh','financeiro'])) return json(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -323,7 +323,7 @@ export function createAstApi({ pool, auditLog, sameOrigin, requireSession, requi
   // AST-05 entrega/devolução avaria/perda fotos pertinentes conferência
   const handleDeliveries = async (req, res) => {
     if (!sameOrigin(req)) return json(res, 403, { error: 'forbidden' });
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess || !requireRole(sess, ['admin','ti','rh','financeiro'])) return json(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -371,7 +371,7 @@ export function createAstApi({ pool, auditLog, sameOrigin, requireSession, requi
   // AST-06 requisição cotação seleção aprovação pedido recebimento vínculo conta a pagar
   const handleRequisitions = async (req, res) => {
     if (!sameOrigin(req)) return json(res, 403, { error: 'forbidden' });
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess || !requireRole(sess, ['admin','ti','rh','financeiro'])) return json(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const { rows } = await pool.query(`SELECT r.*, p.sku, p.name as product_name FROM ast_requisitions r LEFT JOIN ast_products p ON p.id=r.product_id ORDER BY r.created_at DESC LIMIT 200`);
@@ -420,7 +420,7 @@ export function createAstApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   const handleQuotations = async (req, res) => {
     if (!sameOrigin(req)) return json(res, 403, { error: 'forbidden' });
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess || !requireRole(sess, ['admin','ti','rh','financeiro'])) return json(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -474,7 +474,7 @@ export function createAstApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   const handlePurchaseOrders = async (req, res) => {
     if (!sameOrigin(req)) return json(res, 403, { error: 'forbidden' });
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess || !requireRole(sess, ['admin','ti','rh','financeiro'])) return json(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const { rows } = await pool.query(`SELECT o.*, s.name as supplier_name, r.protocol as requisition_protocol FROM ast_purchase_orders o LEFT JOIN ast_suppliers s ON s.id=o.supplier_id LEFT JOIN ast_requisitions r ON r.id=o.requisition_id ORDER BY o.created_at DESC LIMIT 200`);
@@ -536,7 +536,7 @@ export function createAstApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   const handleRequisitionHistory = async (req, res) => {
     if (!sameOrigin(req)) return json(res, 403, { error: 'forbidden' });
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess || !requireRole(sess, ['admin','ti'])) return json(res, 401, { error: 'unauthorized' });
     const url = new URL(req.url, 'http://localhost');
     const requisition_id = url.searchParams.get('requisition_id');
@@ -547,7 +547,7 @@ export function createAstApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   const handleOrderHistory = async (req, res) => {
     if (!sameOrigin(req)) return json(res, 403, { error: 'forbidden' });
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess || !requireRole(sess, ['admin','ti'])) return json(res, 401, { error: 'unauthorized' });
     const url = new URL(req.url, 'http://localhost');
     const order_id = url.searchParams.get('order_id');

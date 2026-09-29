@@ -26,7 +26,7 @@ export function createContractAmendmentApi({ json, readJson, sameOrigin, getPool
   async function handleAmendments(req, res, contractId) {
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -130,7 +130,7 @@ export function createContractAmendmentApi({ json, readJson, sameOrigin, getPool
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!isUuid(amendmentId)) return bad(res, 'invalid_amendment_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {

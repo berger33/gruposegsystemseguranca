@@ -7,6 +7,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import nextEnv from "@next/env";
 import pg from "pg";
+import { provisionStaff, STAFF_TEST_PASSWORD } from "./helpers/staff-login.mjs";
+
+// L01/SEC-05: sessão administrativa por conta individual; o token compartilhado
+// é recusado por padrão. Provisiona sob demanda e devolve o corpo do login.
+async function staffCredentials(pool) {
+  const staff = await provisionStaff(pool, { role: "ti" });
+  return { email: staff.email, password: STAFF_TEST_PASSWORD };
+}
 
 const { loadEnvConfig } = nextEnv;
 const { Pool } = pg;
@@ -189,7 +197,9 @@ function extractLink(message, pathFragment) {
 async function applyMigrations() {
   const pool = new Pool({ connectionString: databaseUrl, max: 1 });
   try {
-    for (const filename of ["001-site-visual.sql","002-public-leads.sql","003-client-access.sql","004-client-space.sql","005-client-security.sql","006-admin-identities.sql","007-opcao-b-funcionarios.sql", "097-client-mfa-session.sql", "098-client-manual-verification.sql"]) {
+    for (const filename of ["001-site-visual.sql","002-public-leads.sql","003-client-access.sql","004-client-space.sql","005-client-security.sql","006-admin-identities.sql","007-opcao-b-funcionarios.sql", "011-audit-and-notifications.sql", "097-client-mfa-session.sql", "098-client-manual-verification.sql", "099-sec-staff-session-hardening.sql",
+  "100-l02-local-outbox.sql",
+  "101-l02-document-integrity.sql"]) {
       const sql = await readFile(path.join(projectRoot, "db/migrations", filename), "utf8");
       await pool.query(sql);
     }
@@ -306,7 +316,7 @@ test("client access works end to end against a real PostgreSQL", testOptions, as
     assert.equal(anonymous.status, 401);
     assert.deepEqual(anonymous.body, { error: "admin_session_required" });
 
-    const session = await api("/api/admin/session", { method: "POST", body: { token: ADMIN_TOKEN_TI } });
+    const session = await api("/api/admin/session", { method: "POST", body: await staffCredentials(pool) });
     assert.equal(session.status, 200);
     adminCookie = session.setCookie.map(item => item.split(";")[0]).join("; ");
 

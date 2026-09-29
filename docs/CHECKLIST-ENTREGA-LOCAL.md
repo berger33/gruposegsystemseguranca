@@ -8,17 +8,17 @@ Não copiar "verificado" de relatório histórico sem verificar a versão entreg
 
 ## SEC-01
 Inventariar rotas, APIs, tabelas, jobs, permissões e documentação no commit atual Aceite: Mapa com real/parcial/prévia/ausente e divergências documentadas
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: em_execucao
+- Tela / API / dados / autorização: Inventário do L00 registrado em docs/ESTADO-EXECUCAO-LOCAL.md e docs/EVIDENCIAS-ENTREGA-LOCAL.md.
+- Integração e evidência (teste, resultado, commit): L00: 222 IDs únicos confirmados; 82/82 componentes administrativos órfãos; 5 achados do plano mestre revalidados como já corrigidos — commit 6b117f0.
+- Pendência / fronteira externa / aceite humano: Falta o mapa completo rota-a-rota por ID (real/parcial/prévia/ausente).
 
 ## SEC-02
 Corrigir verificações de escopo para negar por padrão em qualquer erro Aceite: Testar usuário A/B, outra unidade/contrato e falha de banco sem retorno de dados
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local (parcial)
+- Tela / API / dados / autorização: Sessão administrativa: `server.mjs` readSession + `src/server/staff-session.mjs`; tabela `auth_staff_sessions`; nega por padrão em erro de banco.
+- Integração e evidência (teste, resultado, commit): `npm run test:staff-auth:pg` 21/21 (cenários 12,13,14) + `tests/staff-session-await-guard.test.mjs` 4/4 — commit 6b117f0.
+- Pendência / fronteira externa / aceite humano: Parcial: cobre autenticação de staff. Escopo por unidade/contrato em consultas de negócio ainda a revalidar (L02+).
 
 ## SEC-03
 Associar documentos a conta/unidade/contrato/classificação e aplicar autorização uniforme Aceite: Lista, busca, download, exportação e links respeitam o mesmo escopo
@@ -29,24 +29,24 @@ Associar documentos a conta/unidade/contrato/classificação e aplicar autoriza�
 
 ## SEC-04
 Login individual de staff, papéis, convites e revogação Aceite: Andreia acessa RH; funcionário não acessa RH geral; auditoria identifica pessoa
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: em_execucao (autenticação e revogação prontas; navegação por papel ausente)
+- Tela / API / dados / autorização: `POST /api/admin/session` (e-mail/senha) e `GET /api/admin/session`; tabelas auth_identities, auth_credentials, auth_staff_profiles, auth_staff_sessions; papel vem do banco.
+- Integração e evidência (teste, resultado, commit): `npm run test:staff-auth:pg` cenários 1-10: sem perfil 403, pending_email 401, suspensão/rebaixamento/epoch derrubam sessão, auditoria com identityId — commit 6b117f0.
+- Pendência / fronteira externa / aceite humano: NÃO atende ainda o aceite completo: "Andreia acessa RH" exige tela de RH acessível, e os 82 componentes administrativos continuam órfãos (ver L00-9). Papéis atuais: admin|ti|rh|marcelo; supervisor/comercial/financeiro não unificados. Convites de staff não revalidados. Aceite humano pendente.
 
 ## SEC-05
 Substituir tokens compartilhados por autenticação individual com migração controlada Aceite: Credenciais legadas desligadas após contas válidas; recuperação administrativa documentada
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: Token compartilhado recusado por padrão em `POST /api/admin/session`; exige SITE_ADMIN_LEGACY_TOKENS=true e desliga-se quando há conta individual; bootstrap cria identidade auditável.
+- Integração e evidência (teste, resultado, commit): `npm run test:staff-auth:pg` cenário 11 (403 legacy_admin_tokens_disabled) + `tests/staff-auth-hardening.test.mjs` 16/16; suítes tenant/client-access/cli-v2 migradas para login individual — commit 6b117f0.
+- Pendência / fronteira externa / aceite humano: Procedimento de recuperação administrativa documentado em docs/ESTADO-EXECUCAO-LOCAL.md; sem aceite humano.
 
 ## SEC-06
 MFA padrão por biblioteca mantida, desafio no login, recuperação e rate limit Aceite: Senha sozinha não emite sessão privilegiada; TOTP/recovery inválido ou reutilizado negado
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `POST /api/admin/session` devolve 202+desafio quando há MFA; `POST /api/admin/session/mfa` conclui; tabelas auth_mfa e auth_mfa_challenges.
+- Integração e evidência (teste, resultado, commit): `npm run test:staff-auth:pg` cenários 15,16,18,19,20,21: senha sozinha não emite sessão, TOTP replay negado, recuperação de uso único, limite de 5 tentativas, expiração, rate limit 429 — commit 6b117f0.
+- Pendência / fronteira externa / aceite humano: Chave CLIENT_MFA_ENCRYPTION_KEY ausente mantém MFA indisponível (503), nunca rebaixa para senha. Aceite humano pendente.
 
 ## SEC-07
 Corrigir troca de e-mail e handlers HTTP Aceite: Senha atual verificada, novo e-mail confirmado, token único/expirável, atualização atômica, aviso antigo e sessões revogadas
@@ -57,17 +57,17 @@ Corrigir troca de e-mail e handlers HTTP Aceite: Senha atual verificada, novo e-
 
 ## SEC-08
 Migrações rastreadas e executáveis Aceite: Banco vazio e upgrade de snapshot sintético passam; constraints corretas, repetição do runner segura
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `scripts/migrate-site-visual.mjs` (manifesto 001-099) e tabela `__migrations` com checksum e lock consultivo.
+- Integração e evidência (teste, resultado, commit): `npm run test:migrations:pg`: banco vazio 99/99 e 499 tabelas; segunda passagem idempotente; clone adulterado recusado com migration_checksum_mismatch — commit 6b117f0.
+- Pendência / fronteira externa / aceite humano: Contagens fixas substituídas por leitura do disco. Não executado em Windows.
 
 ## SEC-09
 Reparar suíte e testar APIs reais Aceite: Testes não substituem chamada HTTP por SQL demonstrativo; dependências e CI reproduzíveis
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: em_execucao
+- Tela / API / dados / autorização: Suítes: test:unit (177) e gates em PostgreSQL real por HTTP.
+- Integração e evidência (teste, resultado, commit): L01: nova suíte HTTP real `scripts/qa-staff-auth-postgres.mjs` 21/21; suítes existentes migradas de token compartilhado/cookie forjado para login individual; nenhuma expectativa foi apagada — commit 6b117f0.
+- Pendência / fronteira externa / aceite humano: Cobertura ainda concentrada em autenticação e infraestrutura; jornadas de negócio sem teste de ponta a ponta.
 
 ## SEC-10
 Consolidar orçamento/simulador e catálogo Aceite: Só confirmar após persistência; preço fictício ausente do fluxo real; sem modo administrativo público
@@ -883,10 +883,10 @@ contratos, itens de serviço, vigência, documentos e escopo claro; conteúdo t�
 
 ## CLI-04
 documentos com categoria/validade/versão, busca e download privado; autorização testada em todos os caminhos.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: em_execucao
+- Tela / API / dados / autorização: POST /api/admin/documents grava bytes reais em ctx.docsDir com chave de 24 bytes gerada pelo servidor (48 hex, validada por STORAGE_KEY_PATTERN antes de path.join) e content_sha256; GET /api/admin/documents/:id/download e /api/client/documents/:id/download exigem sessão.
+- Integração e evidência (teste, resultado, commit): tests/l02-delivery.integration.test.mjs 1 a 5, commit 4b95616: bytes conferidos em disco; nome "../../../../etc/passwd" não vira caminho e nada é escrito fora do diretório; download sem sessão 401; adulteração do arquivo em disco devolve 409 document_integrity_failed em vez de servir bytes trocados; documento de outra conta negado pela rota do cliente.
+- Pendência / fronteira externa / aceite humano: Faltam categoria com validade e versionamento de documento (a tabela client_documents ainda não tem versão nem vencimento) e a busca por documento. A migração 101 também corrigiu CHECK (uploaded_by IN ('marcelo','ti')), que rejeitava os papéis admin/rh criados no L01.
 
 ## CLI-05
 chamados com protocolo, categoria, prioridade, responsável, mensagens, anexos, SLA e histórico.
@@ -1268,17 +1268,17 @@ integrações com status configurado/não configurado/falha, último processamen
 
 ## PLT-04
 fila durável de notificações com destinatário autorizado, deduplicação, tentativas, backoff, falha final e reprocessamento.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: POST/GET /api/admin/notifications, POST /api/admin/notifications/:id/retry, POST /api/admin/notifications/process (sessão de staff). Tabela notification_queue com dedup_key único parcial, attempts/max_attempts, next_attempt_at e escada de backoff 1/5/15/60/240 min; estados queued, sending, local_outbox, failed, dead.
+- Integração e evidência (teste, resultado, commit): tests/l02-delivery.integration.test.mjs 6, 7 e 8 (HTTP real + PostgreSQL descartável), commit 4b95616. Dois defeitos corrigidos e provados por controle negativo: (a) isValidUuid com 4 grupos recusava todo UUID canônico; (b) reivindicação não atômica permitia entrega dupla — com o código antigo restaurado o teste 8 falha com "entregue 2 vezes".
+- Pendência / fronteira externa / aceite humano: A tela de operação da fila ainda não existe; o consumo é por API. Reprocessamento manual exposto, mas sem agendador automático em execução contínua.
 
 ## PLT-05
 notificações no painel, e-mail e canais externos configurados, preferências e templates revisados; nenhuma informação médica em assunto/push.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: em_execucao
+- Tela / API / dados / autorização: Canal de e-mail roteado para a caixa de saída LOCAL (src/server/local-outbox.mjs); GET /api/admin/outbox e /api/admin/outbox/:id sob sessão de staff. Preferências e templates existem em 043-plt05-notifications.sql.
+- Integração e evidência (teste, resultado, commit): tests/l02-delivery.integration.test.mjs 9 a 14, commit 4b95616: estado gravado é local_outbox e sent_at permanece nulo; nenhuma resposta contém "enviado"/"entregue"; listagem não devolve o corpo; leitura é contada e auditada; mensagem vencida responde 410.
+- Pendência / fronteira externa / aceite humano: SMTP está fora do escopo por decisão do cliente: não há e-mail real. Falta a tela de painel de notificações e a revisão de conteúdo de templates (assunto/push sem informação médica) ainda não foi verificada por teste.
 
 ## PLT-06
 observabilidade de HTTP/jobs/DB, correlação por request/event ID, métricas e alertas acionáveis, sem segredos.
@@ -1296,10 +1296,10 @@ healthcheck/liveness/readiness, degradação explícita de dependências e paine
 
 ## PLT-08
 backup de banco e documentos, criptografia, acesso, retenção e restauração testada em ambiente isolado.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: em_execucao
+- Tela / API / dados / autorização: scripts/demo-offline-snapshot.mjs: cópia fria de pgdata + documents com manifest.json (formato seg-demo-cold-copy-v1) contendo caminho, bytes e sha256 por arquivo; restauração em diretório e cluster isolados, sem sobrescrever a origem.
+- Integração e evidência (teste, resultado, commit): npm run test:demo-local:pg (QA-HOM-009), commit 4b95616: backup a quente é recusado com o lock do runner; a restauração isolada confere marcador de instalação, ledger de migrações e todos os checksums, sobe PostgreSQL próprio e valida por HTTP que o cliente enxerga a conta A e não a B.
+- Pendência / fronteira externa / aceite humano: A trilha de dump lógico (npm run test:backup-restore:pg) NÃO foi exercitada neste ambiente: exige pg_dump/pg_restore 17, que não existem no sandbox Linux (o pacote embedded-postgres traz apenas initdb, pg_ctl e postgres) e não há pacote disponível. A suíte recusa de forma explícita e não cria banco. No alvo Windows o PostgreSQL 17 instala esses binários e a suíte deve ser executada lá. Criptografia em repouso e política de retenção ainda não implementadas.
 
 ## PLT-09
 política de privacidade completa, inventário de dados/finalidades, bases aplicáveis, destinatários, prazos, contatos e direitos; revisão competente antes de publicar.

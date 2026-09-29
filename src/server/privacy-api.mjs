@@ -15,7 +15,7 @@ export function createPrivacyApi({ json, readJson, sameOrigin, getPool, readAdmi
 
   async function handleInventory(req, res) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -46,7 +46,7 @@ export function createPrivacyApi({ json, readJson, sameOrigin, getPool, readAdmi
     }
 
     if (req.method === 'POST' || req.method === 'PUT') {
-      if (!['admin','ti'].includes(readAdminSession(req)?.role)) return json(res, 403, { error: 'privacy_inventory_restricted_admin_ti' });
+      if (!['admin','ti'].includes(await readAdminSession(req)?.role)) return json(res, 403, { error: 'privacy_inventory_restricted_admin_ti' });
       let body;
       try { body = await readJson(req, 10 * 1024); } catch { return json(res, 400, { error: 'invalid_json' }); }
       const data_category = String(body?.data_category || body?.dataCategory || '').toLowerCase();
@@ -72,7 +72,7 @@ export function createPrivacyApi({ json, readJson, sameOrigin, getPool, readAdmi
 
       try {
         const pool = getPool();
-        const session = readAdminSession(req);
+        const session = await readAdminSession(req);
         const up = await pool.query(
           `INSERT INTO privacy_data_inventory (id, data_category, data_field, description, purpose, legal_basis, legal_basis_detail, retention_days, retention_description, recipients, is_sensitive, is_required, source, created_by, created_by_id)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
@@ -104,7 +104,7 @@ export function createPrivacyApi({ json, readJson, sameOrigin, getPool, readAdmi
 
   async function handlePolicies(req, res) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -175,7 +175,7 @@ export function createPrivacyApi({ json, readJson, sameOrigin, getPool, readAdmi
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!UUID_RE.test(policyId)) return json(res, 400, { error: 'invalid_policy_id' });
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {

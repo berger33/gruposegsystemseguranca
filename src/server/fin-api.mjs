@@ -9,7 +9,7 @@ function generateProtocol(prefix) {
 
 export function createFinApi({ pool, auditLog, sameOrigin, requireSession, requireRole }) {
   async function ensureAuth(req, res, roles) {
-    const session = requireSession(req);
+    const session = await requireSession(req);
     if (!session) { res.writeHead(401, { "Content-Type":"application/json" }); res.end(JSON.stringify({ error:"unauthorized" })); return null; }
     if (roles && !requireRole(session, roles)) { res.writeHead(403, { "Content-Type":"application/json" }); res.end(JSON.stringify({ error:"forbidden" })); return null; }
     if (!sameOrigin(req)) { res.writeHead(403, { "Content-Type":"application/json" }); res.end(JSON.stringify({ error:"origin_forbidden" })); return null; }

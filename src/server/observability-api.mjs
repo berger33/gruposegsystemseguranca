@@ -1,7 +1,7 @@
 export function createObservabilityApi({ json, sameOrigin, getPool, readAdminSession, observability }) {
   async function handleMetrics(req, res) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (!['admin','ti'].includes(session.role)) return json(res, 403, { error: 'observability_restricted_admin_ti' });
 
@@ -94,7 +94,7 @@ export function createObservabilityApi({ json, sameOrigin, getPool, readAdminSes
 
   async function handleAlertAction(req, res, alertId) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (!['admin','ti'].includes(session.role)) return json(res, 403, { error: 'observability_restricted' });
 

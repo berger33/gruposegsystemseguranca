@@ -6,7 +6,7 @@ export function createExtAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   // EXT-07 compliance
   const handleComplianceDocuments = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM ext_compliance_documents ORDER BY expiry_date ASC LIMIT 200`);
@@ -63,7 +63,7 @@ export function createExtAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   // EXT-08 base conhecimento
   const handleKnowledgeBase = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
@@ -127,7 +127,7 @@ export function createExtAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   // EXT-09 expansão/unidades
   const handleExpansionPlans = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM ext_expansion_plans ORDER BY created_at DESC LIMIT 200`);
@@ -173,7 +173,7 @@ export function createExtAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
 
   const handleExpansionScenarios = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
@@ -209,7 +209,7 @@ export function createExtAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   // EXT-10 continuidade operacional
   const handleContinuityPlans = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT cp.*, ca.name as client_name FROM ext_continuity_plans cp LEFT JOIN client_accounts ca ON ca.id=cp.client_account_id ORDER BY cp.next_test_due ASC LIMIT 200`);
@@ -257,7 +257,7 @@ export function createExtAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   // EXT-11 analytics/A-B
   const handleAnalyticsExperiments = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM ext_analytics_experiments ORDER BY created_at DESC LIMIT 200`);
@@ -304,7 +304,7 @@ export function createExtAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   // EXT-12 editor visual avançado
   const handleVisualTokens = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM ext_visual_tokens ORDER BY token_key ASC, version DESC LIMIT 200`);
@@ -354,7 +354,7 @@ export function createExtAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
 
   const handleVisualLayouts = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM ext_visual_layouts ORDER BY layout_key ASC, version DESC LIMIT 200`);
