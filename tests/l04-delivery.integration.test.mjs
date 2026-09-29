@@ -921,3 +921,203 @@ test('CRM-07: interações completas — tipos, contato, anexo privado, correç�
   assert.deepEqual(interactionAudit.rows.map(row => row.action), ['crm_interaction_create', 'crm_interaction_update', 'crm_interaction_update', 'crm_interaction_delete']);
   assert.ok(interactionAudit.rows.every(row => row.actor_id === owner.id));
 });
+
+test('CRM-08: agenda de visitas/reuniões — responsável, participante, confirmação, reagendamento e cancelamento', { skip: !RUN, timeout: 180_000 }, async () => {
+  const owner = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const participant = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const stranger = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const rh = await provisionAndLoginStaff(pool, api, { role: 'rh' });
+  const company = await api('/api/crm/companies', { method: 'POST', cookie: owner.cookie, body: { displayName: 'Empresa agenda ' + randomUUID(), city: 'Barueri', type: 'prospect' } });
+  assert.equal(company.status, 201, JSON.stringify(company.body));
+  const contact = await api('/api/crm/contacts', { method: 'POST', cookie: owner.cookie, body: { company_id: company.body.company.id, display_name: 'Contato CRM-08 ' + randomUUID(), email: `${randomUUID()}@example.test`, role: 'decisor' } });
+  assert.equal(contact.status, 201, JSON.stringify(contact.body));
+  const opportunity = await api('/api/crm/opportunities', { method: 'POST', cookie: owner.cookie, body: { company_id: company.body.company.id, title: 'Agenda de vistoria ' + randomUUID() } });
+  assert.equal(opportunity.status, 201, JSON.stringify(opportunity.body));
+  const opportunityId = opportunity.body.opportunity.id;
+  const endpoint = '/api/crm/opportunities/' + opportunityId + '/visits';
+  const future = new Date(Date.now() + 3 * 24 * 3600 * 1000);
+  const laterFuture = new Date(Date.now() + 6 * 24 * 3600 * 1000);
+
+  // Sessão, papel, propriedade, origem e método continuam negados na nova superfície.
+  assert.equal((await api(endpoint)).status, 401);
+  assert.equal((await api(endpoint, { cookie: rh.cookie })).status, 403);
+  assert.equal((await api(endpoint, { cookie: stranger.cookie })).status, 404);
+  assert.equal((await api(endpoint, { method: 'POST', cookie: owner.cookie, sendOrigin: false, body: {} })).status, 403);
+  assert.equal((await api(endpoint, { method: 'DELETE', cookie: owner.cookie })).status, 405);
+  assert.equal((await api('/api/crm/visits/agenda', { method: 'POST', cookie: owner.cookie, body: {} })).status, 405);
+
+  // Entradas inválidas e campos de atribuição do servidor.
+  const forged = await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: 'Forjada', scheduled_at: future.toISOString(), responsible_id: stranger.id } });
+  assert.equal(forged.status, 400);
+  assert.equal(forged.body.error, 'server_managed_fields');
+  assert.equal((await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: 'Passado', scheduled_at: '2020-01-02T10:00:00.000Z' } })).body.error, 'scheduled_at_must_be_future');
+  assert.equal((await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: 'Duração inválida', scheduled_at: future.toISOString(), duration_minutes: 5 } })).body.error, 'invalid_duration');
+  assert.equal((await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: ' ', scheduled_at: future.toISOString() } })).body.error, 'invalid_title');
+  const unknownParticipant = await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: 'Convite impossível', scheduled_at: future.toISOString(), participant_emails: [`${randomUUID()}@exemplo.invalid`] } });
+  assert.equal(unknownParticipant.status, 400);
+  assert.equal(unknownParticipant.body.error, 'participant_not_available');
+  assert.equal((await pool.query('SELECT count(*)::int AS total FROM crm_visits WHERE opportunity_id=$1', [opportunityId])).rows[0].total, 0, 'convite inválido não pode deixar visita órfã');
+
+  // Jornada real do responsável pelo navegador: agendar com contato e convidado.
+  const browser = await launchBrowser();
+  const failures = [];
+  let visitId;
+  const visitTitle = 'Vistoria técnica no cliente';
+  try {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'pt-BR' });
+    const pair = owner.cookie.split(';')[0], separator = pair.indexOf('=');
+    await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
+    const page = await context.newPage();
+    trackFailures(page, failures);
+    await page.goto(baseUrl + '/admin/crm', { waitUntil: 'networkidle' });
+    await page.waitForTimeout(800);
+    await page.getByRole('article').filter({ hasText: opportunity.body.opportunity.title }).getByRole('button', { name: 'Abrir tarefas' }).click();
+    const section = page.getByRole('region', { name: 'Agenda de visitas e reuniões da oportunidade' });
+    await section.getByLabel('Título da visita', { exact: true }).fill(visitTitle);
+    const pad = value => String(value).padStart(2, '0');
+    const localFuture = `${future.getFullYear()}-${pad(future.getMonth() + 1)}-${pad(future.getDate())}T${pad(future.getHours())}:${pad(future.getMinutes())}`;
+    await section.getByLabel('Data e hora', { exact: true }).fill(localFuture);
+    await section.getByLabel('Duração (minutos)', { exact: true }).selectOption('90');
+    await section.getByLabel('Contato da empresa (opcional)', { exact: true }).selectOption({ label: contact.body.contact.display_name });
+    await section.getByLabel('Observações (opcional)', { exact: true }).fill('Levar checklist de vistoria.');
+    await section.getByLabel('Participantes por e-mail (opcional, separados por vírgula)', { exact: true }).fill(participant.email);
+    const [scheduled] = await Promise.all([
+      page.waitForResponse(response => response.url().endsWith(endpoint) && response.request().method() === 'POST'),
+      section.getByRole('button', { name: 'Agendar visita', exact: true }).click(),
+    ]);
+    assert.equal(scheduled.status(), 201);
+    visitId = (await scheduled.json()).visit.id;
+    await section.getByText('Visita agendada.', { exact: true }).waitFor();
+
+    // Persistência real: recarregar e reencontrar a visita e o convidado.
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForTimeout(500);
+    await page.getByRole('article').filter({ hasText: opportunity.body.opportunity.title }).getByRole('button', { name: 'Abrir tarefas' }).click();
+    const visitArticle = section.getByRole('article', { name: 'Visita ' + visitTitle });
+    await visitArticle.getByText('Solicitada: ' + visitTitle, { exact: true }).waitFor();
+    await visitArticle.getByText(new RegExp(participant.email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '.*pendente')).waitFor();
+    await context.close();
+  } finally { await browser.close(); }
+
+  // O convidado responde por si, pela própria agenda, em navegador e sessão
+  // separados (o Chromium empacotado roda em --single-process: um navegador
+  // por persona é mais estável do que dois contextos simultâneos).
+  const participantBrowser = await launchBrowser();
+  try {
+    const participantContext = await participantBrowser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'pt-BR' });
+    const participantPair = participant.cookie.split(';')[0], participantSeparator = participantPair.indexOf('=');
+    await participantContext.addCookies([{ name: participantPair.slice(0, participantSeparator), value: participantPair.slice(participantSeparator + 1), url: baseUrl }]);
+    const participantPage = await participantContext.newPage();
+    trackFailures(participantPage, failures);
+    await participantPage.goto(baseUrl + '/admin/crm', { waitUntil: 'networkidle' });
+    const agenda = participantPage.getByRole('region', { name: 'Minha agenda de visitas e reuniões' });
+    const agendaItem = agenda.getByRole('article', { name: 'Agenda ' + visitTitle });
+    await agendaItem.waitFor();
+    const [confirmed] = await Promise.all([
+      participantPage.waitForResponse(response => response.url().endsWith(`${endpoint}/${visitId}/response`) && response.request().method() === 'POST'),
+      agendaItem.getByRole('button', { name: 'Confirmar presença na agenda', exact: true }).click(),
+    ]);
+    assert.equal(confirmed.status(), 200);
+    await agenda.getByText('Presença confirmada.', { exact: true }).waitFor();
+    await participantContext.close();
+  } finally { await participantBrowser.close(); }
+  assert.deepEqual(failures, []);
+
+  // Escopo do participante: enxerga a visita em que foi convidado e nada além.
+  const participantList = await api(endpoint, { cookie: participant.cookie });
+  assert.equal(participantList.status, 200);
+  assert.equal(participantList.body.viewer.is_responsible, false);
+  assert.deepEqual(participantList.body.contacts, [], 'convidado não recebe a agenda de contatos da empresa');
+  assert.equal(participantList.body.visits.length, 1);
+  assert.equal(participantList.body.visits[0].viewer_response, 'confirmado');
+  assert.equal((await api(endpoint, { cookie: stranger.cookie })).status, 404);
+  const strangerAgenda = await api('/api/crm/visits/agenda', { cookie: stranger.cookie });
+  assert.equal(strangerAgenda.status, 200);
+  assert.equal(strangerAgenda.body.visits.some(item => item.id === visitId), false);
+  const participantAgenda = await api('/api/crm/visits/agenda', { cookie: participant.cookie });
+  assert.equal(participantAgenda.body.visits.find(item => item.id === visitId).viewer_is_responsible, false);
+  const ownerAgenda = await api('/api/crm/visits/agenda', { cookie: owner.cookie });
+  assert.equal(ownerAgenda.body.visits.find(item => item.id === visitId).viewer_is_responsible, true);
+  assert.equal((await api('/api/crm/visits/agenda?from=amanha', { cookie: owner.cookie })).status, 400);
+
+  // A rota legada de detalhe obedece à mesma política de agenda.
+  const strangerDetail = await api('/api/crm/opportunities/' + opportunityId, { cookie: stranger.cookie });
+  assert.equal(strangerDetail.status, 200);
+  assert.deepEqual(strangerDetail.body.visits, [], 'detalhe legado não pode vazar a agenda para fora da política');
+  const participantDetail = await api('/api/crm/opportunities/' + opportunityId, { cookie: participant.cookie });
+  assert.equal(participantDetail.body.visits.length, 1);
+
+  // Participante não reagenda, não cancela, não convida e não remove ninguém.
+  let current = (await api(endpoint, { cookie: owner.cookie })).body.visits.find(item => item.id === visitId);
+  assert.equal(current.participants[0].response, 'confirmado');
+  assert.equal((await api(`${endpoint}/${visitId}`, { method: 'PATCH', cookie: participant.cookie, body: { expected_version: current.version, scheduled_at: laterFuture.toISOString() } })).status, 404);
+  assert.equal((await api(`${endpoint}/${visitId}`, { method: 'PATCH', cookie: participant.cookie, body: { expected_version: current.version, status: 'cancelada', cancel_reason: 'tentativa indevida' } })).status, 404);
+  assert.equal((await api(`${endpoint}/${visitId}/participants`, { method: 'POST', cookie: participant.cookie, body: { expected_version: current.version, email: stranger.email } })).status, 404);
+  assert.equal((await api(`${endpoint}/${visitId}/participants/${participant.id}`, { method: 'DELETE', cookie: participant.cookie, body: { expected_version: current.version } })).status, 404);
+  assert.equal((await api(`${endpoint}/${visitId}/response`, { method: 'POST', cookie: stranger.cookie, body: { expected_version: current.version, response: 'confirmado' } })).status, 404);
+  assert.equal((await api(`${endpoint}/${visitId}/response`, { method: 'POST', cookie: owner.cookie, body: { expected_version: current.version, response: 'confirmado' } })).status, 404, 'responsável não responde como participante');
+
+  // Convite adicional pelo responsável e conflito de versão otimista.
+  const invited = await api(`${endpoint}/${visitId}/participants`, { method: 'POST', cookie: owner.cookie, body: { expected_version: current.version, email: stranger.email.toUpperCase() } });
+  assert.equal(invited.status, 201, JSON.stringify(invited.body));
+  assert.equal(invited.body.participants.length, 2);
+  assert.equal((await api(`${endpoint}/${visitId}/participants`, { method: 'POST', cookie: owner.cookie, body: { expected_version: current.version, email: stranger.email } })).status, 409);
+  const removed = await api(`${endpoint}/${visitId}/participants/${stranger.id}`, { method: 'DELETE', cookie: owner.cookie, body: { expected_version: invited.body.version } });
+  assert.equal(removed.status, 200, JSON.stringify(removed.body));
+  assert.equal(removed.body.participants.length, 1);
+
+  // Reagendar zera as confirmações e devolve o ciclo ao início.
+  current = (await api(endpoint, { cookie: owner.cookie })).body.visits.find(item => item.id === visitId);
+  assert.equal((await api(`${endpoint}/${visitId}`, { method: 'PATCH', cookie: owner.cookie, body: { expected_version: current.version - 1, scheduled_at: laterFuture.toISOString() } })).status, 409);
+  const rescheduled = await api(`${endpoint}/${visitId}`, { method: 'PATCH', cookie: owner.cookie, body: { expected_version: current.version, scheduled_at: laterFuture.toISOString() } });
+  assert.equal(rescheduled.status, 200, JSON.stringify(rescheduled.body));
+  assert.equal(rescheduled.body.visit.status, 'solicitada');
+  assert.equal(rescheduled.body.visit.reschedule_count, 1);
+  assert.equal(rescheduled.body.visit.participants[0].response, 'pendente');
+  assert.equal(rescheduled.body.visit.participants[0].responded_at, null);
+
+  // Confirmação do agendamento, transições inválidas e cancelamento com motivo.
+  const confirmedVisit = await api(`${endpoint}/${visitId}`, { method: 'PATCH', cookie: owner.cookie, body: { expected_version: rescheduled.body.visit.version, status: 'confirmada' } });
+  assert.equal(confirmedVisit.status, 200);
+  assert.equal(confirmedVisit.body.visit.status, 'confirmada');
+  assert.equal((await api(`${endpoint}/${visitId}`, { method: 'PATCH', cookie: owner.cookie, body: { expected_version: confirmedVisit.body.visit.version, status: 'solicitada' } })).status, 409);
+  assert.equal((await api(`${endpoint}/${visitId}`, { method: 'PATCH', cookie: owner.cookie, body: { expected_version: confirmedVisit.body.visit.version, status: 'cancelada' } })).body.error, 'cancel_reason_required');
+  const respondedAgain = await api(`${endpoint}/${visitId}/response`, { method: 'POST', cookie: participant.cookie, body: { expected_version: confirmedVisit.body.visit.version, response: 'recusado' } });
+  assert.equal(respondedAgain.status, 200);
+  assert.equal(respondedAgain.body.participants[0].response, 'recusado');
+
+  // Falha de auditoria injetada: nenhuma visita é aceita sem trilha durável.
+  await pool.query(`CREATE FUNCTION qa_reject_visit_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.action = 'crm_visit_create' THEN RAISE EXCEPTION 'qa audit failure'; END IF; RETURN NEW; END $$`);
+  await pool.query('CREATE TRIGGER qa_reject_visit_audit BEFORE INSERT ON auth_access_audit FOR EACH ROW EXECUTE FUNCTION qa_reject_visit_audit()');
+  try {
+    assert.equal((await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: 'Deve reverter', scheduled_at: laterFuture.toISOString() } })).status, 503);
+    assert.equal((await pool.query('SELECT count(*)::int AS total FROM crm_visits WHERE opportunity_id=$1', [opportunityId])).rows[0].total, 1);
+  } finally {
+    await pool.query('DROP TRIGGER qa_reject_visit_audit ON auth_access_audit');
+    await pool.query('DROP FUNCTION qa_reject_visit_audit()');
+  }
+
+  const cancelled = await api(`${endpoint}/${visitId}`, { method: 'PATCH', cookie: owner.cookie, body: { expected_version: confirmedVisit.body.visit.version, status: 'cancelada', cancel_reason: 'Cliente pediu adiamento indefinido' } });
+  assert.equal(cancelled.status, 200, JSON.stringify(cancelled.body));
+  assert.equal(cancelled.body.visit.status, 'cancelada');
+  assert.equal(cancelled.body.visit.cancel_reason, 'Cliente pediu adiamento indefinido');
+  assert.equal((await api(`${endpoint}/${visitId}`, { method: 'PATCH', cookie: owner.cookie, body: { expected_version: cancelled.body.visit.version, title: 'Reabrir na marra' } })).status, 409);
+  assert.equal((await api(`${endpoint}/${visitId}/response`, { method: 'POST', cookie: participant.cookie, body: { expected_version: cancelled.body.visit.version, response: 'confirmado' } })).status, 409);
+
+  const stored = await pool.query('SELECT responsible_id,created_by_id,company_id,status,cancelled_by_id,reschedule_count FROM crm_visits WHERE id=$1', [visitId]);
+  assert.equal(stored.rows[0].responsible_id, owner.id);
+  assert.equal(stored.rows[0].created_by_id, owner.id);
+  assert.equal(stored.rows[0].company_id, company.body.company.id);
+  assert.equal(stored.rows[0].status, 'cancelada');
+  assert.equal(stored.rows[0].cancelled_by_id, owner.id);
+  assert.equal(stored.rows[0].reschedule_count, 1);
+  const visitAudit = await pool.query('SELECT action, actor_id FROM auth_access_audit WHERE target=$1 ORDER BY created_at, id', [visitId]);
+  assert.deepEqual(visitAudit.rows.map(row => row.action), [
+    'crm_visit_participant_add', 'crm_visit_create', 'crm_visit_response',
+    'crm_visit_participant_add', 'crm_visit_participant_remove',
+    'crm_visit_reschedule', 'crm_visit_status', 'crm_visit_response', 'crm_visit_cancel',
+  ]);
+  assert.equal(visitAudit.rows.filter(row => row.actor_id === participant.id).length, 2, 'as respostas do convidado são atribuídas a ele');
+  assert.equal(visitAudit.rows.filter(row => row.actor_id === owner.id).length, 7);
+});

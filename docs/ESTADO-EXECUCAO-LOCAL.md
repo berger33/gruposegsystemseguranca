@@ -357,3 +357,28 @@ nota) além das tarefas pessoais do PR #13 — ambos providos e provados, mas
 CRM-07 continua parcial: faltam anexos, edição/exclusão de registros,
 delegação/equipe, paginação e os demais tipos de interação já previstos no
 schema. CRM-08/09/10 continuam apenas como schema, sem tela.
+
+## Continuação CRM-08 (commit `7ddd659`)
+
+A agenda de visitas/reuniões deixou de ser apenas schema. `/admin/crm` passou a
+ter a agenda da oportunidade e a agenda pessoal, servidas por
+`src/server/crm-visit-api.mjs` e pela migração 107 (versão otimista, motivo e
+marcas de cancelamento, contador de reagendamento e `crm_visit_participants`
+com resposta individual). A política de escopo foi decidida e registrada antes
+da rota: responsável gerencia, participante convidado apenas vê a própria
+agenda e responde por si, papel administrativo não é bypass e nenhum diretório
+de staff é exposto. Reagendar zera confirmações; cancelar exige motivo; estados
+`realizada`/`cancelada` são finais. O vazamento residual de `visits` na rota
+legada `GET /api/crm/opportunities/:id` foi fechado com a mesma política.
+
+Provas: `npm run test:migrations:pg` 107/107 (506 tabelas, replay, clone e
+checksum negativo) e `npm run test:l04-delivery:pg` 4/4 com HTTP real, Chromium
+real e PostgreSQL descartável, além de `npm test` 186/186, `npm run typecheck`
+0 erros e `npm run build` com 70 rotas.
+
+L04 continua **PARCIAL**. CRM-08 ainda não tem lembretes, visão de calendário,
+detecção de conflito de horário nem vínculo com PUB-04; CRM-07 segue sem
+delegação/equipe, edição de prazo e paginação de tarefas; `stages` da rota
+legada segue sem borda de propriedade; CRM-09/10, lacunas PUB e a revalidação
+campo a campo de CRM-01..06 continuam pendentes. Sem SMTP, hospedagem externa
+ou aceite Windows/humano.
