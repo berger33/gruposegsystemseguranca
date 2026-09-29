@@ -19,7 +19,7 @@ export function createContractAlertApi({ json, readJson, sameOrigin, getPool, re
   async function handleAlertRules(req, res, contractId) {
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -85,7 +85,7 @@ export function createContractAlertApi({ json, readJson, sameOrigin, getPool, re
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!isUuid(ruleId)) return bad(res, 'invalid_rule_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -141,7 +141,7 @@ export function createContractAlertApi({ json, readJson, sameOrigin, getPool, re
   async function handleAlerts(req, res, contractId) {
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -267,7 +267,7 @@ export function createContractAlertApi({ json, readJson, sameOrigin, getPool, re
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!isUuid(alertId)) return bad(res, 'invalid_alert_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {

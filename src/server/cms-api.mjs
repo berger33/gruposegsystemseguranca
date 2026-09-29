@@ -6,7 +6,7 @@ export function createCmsApi({ pool, auditLog, sameOrigin, requireSession, requi
     const url = new URL(req.url,'http://localhost');
     const isPublic = url.pathname.startsWith('/api/cms') || url.pathname.startsWith('/api/public/cms');
     if(!isPublic && !sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess = !isPublic ? requireSession(req) : null;
+    const sess = !isPublic ? await requireSession(req) : null;
     if(!isPublic && (!sess || !requireRole(sess,['admin','ti']))) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const content_type = url.searchParams.get('type');
@@ -110,7 +110,7 @@ export function createCmsApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   const handleContentById = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     const url=new URL(req.url,'http://localhost');
     const parts=url.pathname.split('/');
@@ -128,7 +128,7 @@ export function createCmsApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   const handleRevert = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method!=='POST') return json(res,405,{error:'method_not_allowed'});
     const b=await readJson(req);

@@ -22,7 +22,7 @@ export function createCliApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   // ---- CLI-01 Entrada única e rotas antigas ----
   async function handleEntryPoints(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     // Sem vínculo por conta verificado nesta API; acesso global apenas admin/ti.
     if (!requireRole(sess,['admin','ti'])) return send(res,403,{error:'forbidden'});
@@ -34,7 +34,7 @@ export function createCliApi({ pool, auditLog, sameOrigin, requireSession, requi
   }
 
   async function handleOldRoutes(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     // Sem vínculo por conta verificado nesta API; acesso global apenas admin/ti.
     if (!requireRole(sess,['admin','ti'])) return send(res,403,{error:'forbidden'});
@@ -69,7 +69,7 @@ export function createCliApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   // ---- CLI-02 Contatos e papéis por conta/unidade/contrato ----
   async function handleClientContacts(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     // Sem vínculo por conta verificado nesta API; acesso global apenas admin/ti.
     if (!requireRole(sess,['admin','ti'])) return send(res,403,{error:'forbidden'});
@@ -130,7 +130,7 @@ export function createCliApi({ pool, auditLog, sameOrigin, requireSession, requi
   }
 
   async function handleContactScopes(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     // Sem vínculo por conta verificado nesta API; acesso global apenas admin/ti.
     if (!requireRole(sess,['admin','ti'])) return send(res,403,{error:'forbidden'});
@@ -179,7 +179,7 @@ export function createCliApi({ pool, auditLog, sameOrigin, requireSession, requi
   }
 
   async function handleDelegateContact(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     // Sem vínculo por conta verificado nesta API; acesso global apenas admin/ti.
     if (!requireRole(sess,['admin','ti'])) return send(res,403,{error:'forbidden'});
@@ -214,7 +214,7 @@ export function createCliApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   // ---- CLI-03 Contratos itens vigência escopo ----
   async function handleContractItems(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     // Sem vínculo por conta verificado nesta API; acesso global apenas admin/ti.
     if (!requireRole(sess,['admin','ti'])) return send(res,403,{error:'forbidden'});
@@ -255,7 +255,7 @@ export function createCliApi({ pool, auditLog, sameOrigin, requireSession, requi
   }
 
   async function handleContractScopes(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     // Sem vínculo por conta verificado nesta API; acesso global apenas admin/ti.
     if (!requireRole(sess,['admin','ti'])) return send(res,403,{error:'forbidden'});
@@ -297,7 +297,7 @@ export function createCliApi({ pool, auditLog, sameOrigin, requireSession, requi
   }
 
   async function handleContractVigencia(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     // Sem vínculo por conta verificado nesta API; acesso global apenas admin/ti.
     if (!requireRole(sess,['admin','ti'])) return send(res,403,{error:'forbidden'});
@@ -335,7 +335,7 @@ export function createCliApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   // ---- CLI-04 Documentos categoria validade versão busca download privado autorização testada ----
   async function handleDocumentCategories(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     // Sem vínculo por conta verificado nesta API; acesso global apenas admin/ti.
     if (!requireRole(sess,['admin','ti'])) return send(res,403,{error:'forbidden'});
@@ -350,7 +350,7 @@ export function createCliApi({ pool, auditLog, sameOrigin, requireSession, requi
     // requireSession recebe a sessão de staff (não o cookie do portal cliente).
     // Até existir autorização de cliente com escopo v2 comprovado, só admin/ti
     // podem consultar metadados, independentemente do alias da rota.
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (!requireRole(sess,['admin','ti'])) return send(res,403,{error:'forbidden'});
     if (req.method === 'GET') {
@@ -483,7 +483,7 @@ export function createCliApi({ pool, auditLog, sameOrigin, requireSession, requi
   }
 
   async function handleDocumentVersions(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (!requireRole(sess,['admin','ti'])) return send(res,403,{error:'forbidden'});
     if (req.method === 'GET') {
@@ -523,7 +523,7 @@ export function createCliApi({ pool, auditLog, sameOrigin, requireSession, requi
   }
 
   async function handleDocumentDownload(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (!requireRole(sess,['admin','ti'])) return send(res,403,{error:'forbidden'});
     if (req.method !== 'GET') return send(res,405,{error:'method_not_allowed'});
@@ -545,7 +545,7 @@ export function createCliApi({ pool, auditLog, sameOrigin, requireSession, requi
   }
 
   async function handleDocumentAccessLogs(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (!requireRole(sess,['admin','ti'])) return send(res,403,{error:'forbidden'});
     if (req.method !== 'GET') return send(res,405,{error:'method_not_allowed'});

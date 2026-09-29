@@ -9,6 +9,9 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createQaCliV2LocalProvider } from '../scripts/qa-cli-v2-local-provider.mjs';
 import { signQaManifest, verifyQaManifest, publicKeyFingerprint } from '../scripts/qa-detached-manifest-signature.mjs';
+import { readdirSync } from 'node:fs';
+const EXPECTED_MIGRATIONS = readdirSync(new URL('../db/migrations/', import.meta.url))
+  .filter(f => /^\d{3}-.*\.sql$/.test(f)).length;
 
 const enabled = process.env.RUN_CLI_V2_OBJECT_QA === '1';
 test('PLT-BAK-001 / CLI-04: schema PG de conta/documento/versão e objeto QA independente',
@@ -45,7 +48,8 @@ test('PLT-BAK-001 / CLI-04: schema PG de conta/documento/versão e objeto QA ind
       pinnedFingerprint: fingerprint }), /qa_signature_invalid/);
 
     const { rows: [ledger] } = await pool.query('SELECT count(*)::int AS n FROM __migrations');
-    assert.equal(ledger.n, 98);
+    // Derivado do disco: o teste não pode quebrar a cada nova migração.
+    assert.equal(ledger.n, EXPECTED_MIGRATIONS);
     await pool.query("INSERT INTO client_accounts(id,display_name,created_by) VALUES ($1,'QA Contract A','ti'),($2,'QA Contract B','ti')", [accountA, accountB]);
     await pool.query("INSERT INTO auth_identities(id,kind,email,status,verification_method,verified_at) VALUES ($1,'client','qa-object-a@exemplo.invalid','active','email_link',NOW()),($2,'client','qa-object-b@exemplo.invalid','active','email_link',NOW())", [identityA, identityB]);
     await pool.query("INSERT INTO client_access_grants(id,identity_id,client_account_id,reason,granted_by) VALUES ($1,$2,$3,'QA A','ti'),($4,$5,$6,'QA B','ti')", [randomUUID(), identityA, accountA, randomUUID(), identityB, accountB]);
@@ -133,5 +137,5 @@ test('PLT-BAK-001 / CLI-04: schema PG de conta/documento/versão e objeto QA ind
     await assert.rejects(target.read({ authorizedAccountId: accountA,
       document: { id: docA, client_account_id: accountA }, version: dbVersion, receipt: rA2 }), /qa_object_sha256_mismatch/);
     assert.equal(poolHadError, false);
-    console.log('QA_CLI_V2_OBJECT_VERIFIED: PG 98/98; A v1/v2 bytes exact; B cross-account denied; A revoke denied; B own preserved; DB key mismatch/missing/corrupt bytes denied; signed QA receipts (ephemeral key)');
+    console.log(`QA_CLI_V2_OBJECT_VERIFIED: PG ${EXPECTED_MIGRATIONS}/${EXPECTED_MIGRATIONS}; A v1/v2 bytes exact; B cross-account denied; A revoke denied; B own preserved; DB key mismatch/missing/corrupt bytes denied; signed QA receipts (ephemeral key)`);
   });

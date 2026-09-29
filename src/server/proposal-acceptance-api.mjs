@@ -18,7 +18,7 @@ export function createProposalAcceptanceApi({ json, readJson, sameOrigin, getPoo
 
   async function handleLinks(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -306,7 +306,7 @@ export function createProposalAcceptanceApi({ json, readJson, sameOrigin, getPoo
   async function handleLinkById(req, res, id) {
     if (!isUuid(id)) return bad(res, 'invalid_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {

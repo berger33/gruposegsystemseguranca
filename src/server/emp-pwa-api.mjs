@@ -37,7 +37,7 @@ export function createEmpPwaApi({ pool, auditLog, sameOrigin, requireSession, re
 
   // ---- PWA Configs ----
   async function handlePwaConfigs(req, res) {
-    const session = requireSession(req);
+    const session = await requireSession(req);
     if (!session) return sendJson(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       try {
@@ -166,7 +166,7 @@ export function createEmpPwaApi({ pool, auditLog, sameOrigin, requireSession, re
 
   // ---- Offline Queue ----
   async function handleOfflineQueue(req, res) {
-    const session = requireSession(req);
+    const session = await requireSession(req);
     if (!session) return sendJson(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -295,7 +295,7 @@ export function createEmpPwaApi({ pool, auditLog, sameOrigin, requireSession, re
   }
 
   async function handleOfflineConflicts(req, res) {
-    const session = requireSession(req);
+    const session = await requireSession(req);
     if (!session) return sendJson(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -344,7 +344,7 @@ export function createEmpPwaApi({ pool, auditLog, sameOrigin, requireSession, re
 
   // ---- FAQ Interna ----
   async function handleFaqInternal(req, res) {
-    const session = requireSession(req);
+    const session = await requireSession(req);
     if (!session) return sendJson(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -446,7 +446,7 @@ export function createEmpPwaApi({ pool, auditLog, sameOrigin, requireSession, re
   }
 
   async function handleFaqAccessLogs(req, res) {
-    const session = requireSession(req);
+    const session = await requireSession(req);
     if (!session) return sendJson(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -496,7 +496,7 @@ export function createEmpPwaApi({ pool, auditLog, sameOrigin, requireSession, re
   }
 
   async function handleAccessibilityPreferences(req, res) {
-    const session = requireSession(req);
+    const session = await requireSession(req);
     if (!session) return sendJson(res, 401, { error: 'unauthorized' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');

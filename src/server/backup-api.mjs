@@ -22,7 +22,7 @@ export function createBackupApi({ json, readJson, sameOrigin, getPool, readAdmin
 
   async function handleBackupJobs(req, res) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (!['admin','ti'].includes(session.role)) return json(res, 403, { error: 'backup_restricted_admin_ti' });
 
@@ -65,7 +65,7 @@ export function createBackupApi({ json, readJson, sameOrigin, getPool, readAdmin
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!UUID_RE.test(backupId)) return json(res, 400, { error: 'invalid_backup_id' });
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (!['admin','ti'].includes(session.role)) return json(res, 403, { error: 'backup_restricted' });
 
@@ -91,7 +91,7 @@ export function createBackupApi({ json, readJson, sameOrigin, getPool, readAdmin
 
   async function handleRestore(req, res) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (!['admin','ti'].includes(session.role)) return json(res, 403, { error: 'backup_restricted' });
 
@@ -124,7 +124,7 @@ export function createBackupApi({ json, readJson, sameOrigin, getPool, readAdmin
 
   async function handleRetention(req, res) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (!['admin','ti'].includes(session.role)) return json(res, 403, { error: 'retention_restricted' });
 

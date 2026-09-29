@@ -8,7 +8,7 @@ export function createDiscountApi({ json, readJson, sameOrigin, getPool, readAdm
 
   async function handlePolicies(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -80,7 +80,7 @@ export function createDiscountApi({ json, readJson, sameOrigin, getPool, readAdm
   async function handlePolicyById(req, res, id) {
     if (!isUuid(id)) return bad(res, 'invalid_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -124,7 +124,7 @@ export function createDiscountApi({ json, readJson, sameOrigin, getPool, readAdm
 
   async function handleRequests(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -242,7 +242,7 @@ export function createDiscountApi({ json, readJson, sameOrigin, getPool, readAdm
   async function handleRequestById(req, res, id) {
     if (!isUuid(id)) return bad(res, 'invalid_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {

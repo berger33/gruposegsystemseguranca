@@ -8,11 +8,11 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
     return `${prefix}-${y}${m}${day}-${rnd}`;
   };
 
-  const getSession = (req) => {
-    try { return requireSession(req); } catch { return null; }
+  const getSession = async (req) => {
+    try { return await requireSession(req); } catch { return null; }
   };
-  const checkAuth = (req, res) => {
-    const sess = getSession(req);
+  const checkAuth = async (req, res) => {
+    const sess = await getSession(req);
     if (!sess) { res.writeHead(401, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return null; }
     if (!requireRole(sess, ['admin','ti','financeiro','finance','rh'])) {
       // allow admin only fallback
@@ -36,7 +36,7 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
 
   // FIN-09 resultado gerencial
   const handleManagementResults = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
       const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
       const contract_id = url.searchParams.get('contract_id');
@@ -153,7 +153,7 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
   };
 
   const handleResultHistory = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method !== 'GET') { res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'})); return; }
     const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
     const result_id = url.searchParams.get('result_id');
@@ -171,7 +171,7 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
 
   // FIN-10 despesas
   const handleExpenses = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
       const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
       const status = url.searchParams.get('status');
@@ -279,7 +279,7 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
   };
 
   const handleExpenseHistory = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method !== 'GET') { res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'})); return; }
     const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
     const expense_id = url.searchParams.get('expense_id');
@@ -295,7 +295,7 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
 
   // FIN-11 fiscal
   const handleFiscalProviders = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
       try {
         const { rows } = await pool.query(`SELECT * FROM fin_fiscal_providers ORDER BY created_at DESC LIMIT 200`);
@@ -344,7 +344,7 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
   };
 
   const handleFiscalObligations = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
       const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
       const contract_id = url.searchParams.get('contract_id');
@@ -418,7 +418,7 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
   };
 
   const handleFiscalDocuments = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
       const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
       const obligation_id = url.searchParams.get('obligation_id');
@@ -471,7 +471,7 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
 
   // FIN-12 gateway
   const handleGateways = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
       try {
         const { rows } = await pool.query(`SELECT * FROM fin_payment_gateways ORDER BY created_at DESC LIMIT 200`);
@@ -523,7 +523,7 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
   };
 
   const handleWebhooks = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
       const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
       const gateway_id = url.searchParams.get('gateway_id');
@@ -600,7 +600,7 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
   };
 
   const handleCharges = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
       const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
       const gateway_id = url.searchParams.get('gateway_id');

@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import nextEnv from "@next/env";
 import pg from "pg";
 import { hashPassword } from "../src/lib/client-auth-core.mjs";
+import { provisionAndLoginStaff } from "./helpers/staff-login.mjs";
 
 const { loadEnvConfig } = nextEnv;
 const { Pool } = pg;
@@ -66,7 +67,7 @@ async function freePort() {
 async function applyMigrations() {
   const pool = new Pool({ connectionString: databaseUrl, max: 1 });
   try {
-    for (const filename of ["001-site-visual.sql", "002-public-leads.sql", "003-client-access.sql", "004-client-space.sql", "005-client-security.sql", "006-admin-identities.sql", "007-opcao-b-funcionarios.sql", "097-client-mfa-session.sql", "098-client-manual-verification.sql"]) {
+    for (const filename of ["001-site-visual.sql", "002-public-leads.sql", "003-client-access.sql", "004-client-space.sql", "005-client-security.sql", "006-admin-identities.sql", "007-opcao-b-funcionarios.sql", "097-client-mfa-session.sql", "098-client-manual-verification.sql", "099-sec-staff-session-hardening.sql"]) {
       const sql = await readFile(path.join(projectRoot, "db/migrations", filename), "utf8");
       await pool.query(sql);
     }
@@ -199,9 +200,10 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     await pool.query("INSERT INTO auth_credentials (identity_id, password_hash) VALUES ($1,$2)", [identityA, passwordHash]);
     await pool.query("INSERT INTO auth_credentials (identity_id, password_hash) VALUES ($1,$2)", [identityB, passwordHash]);
 
-    const session = await api("/api/admin/session", { method: "POST", body: { token: ADMIN_TOKEN_TI } });
-    assert.equal(session.status, 200);
-    adminCookie = session.setCookie.map(item => item.split(";")[0]).join("; ");
+    // L01/SEC-05: sessão administrativa vem de conta individual, não de token
+    // compartilhado (que agora é recusado por padrão).
+    const staff = await provisionAndLoginStaff(pool, api, { role: "ti" });
+    adminCookie = staff.cookie;
     assert.match(adminCookie, /^[^=]+=/);
   });
 

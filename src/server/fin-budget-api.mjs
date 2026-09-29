@@ -7,9 +7,9 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
     const rnd = Math.random().toString(36).substring(2,6).toUpperCase();
     return `${prefix}-${y}${m}${day}-${rnd}`;
   };
-  const getSession = (req) => { try { return requireSession(req); } catch { return null; } };
-  const checkAuth = (req, res) => {
-    const sess = getSession(req);
+  const getSession = async (req) => { try { return await requireSession(req); } catch { return null; } };
+  const checkAuth = async (req, res) => {
+    const sess = await getSession(req);
     if (!sess) { res.writeHead(401, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return null; }
     const r = (sess.role||'').toLowerCase();
     if (!['admin','ti','financeiro','finance'].includes(r)) {
@@ -22,7 +22,7 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
   });
 
   const handleBudgets = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
       const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
       const status = url.searchParams.get('status');
@@ -87,7 +87,7 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
   };
 
   const handleBudgetScenarios = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
       const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
       const budget_id = url.searchParams.get('budget_id');
@@ -136,7 +136,7 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
   };
 
   const handleExports = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
       const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
       const status = url.searchParams.get('status');
@@ -210,7 +210,7 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
   };
 
   const handleExportLogs = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method !== 'GET') { res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'})); return; }
     const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
     const export_id = url.searchParams.get('export_id');
@@ -225,7 +225,7 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
   };
 
   const handleClosures = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
       const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
       const status = url.searchParams.get('status');
@@ -308,7 +308,7 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
   };
 
   const handleReportVersions = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method !== 'GET') { res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'})); return; }
     const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
     const closure_id = url.searchParams.get('closure_id');
@@ -323,7 +323,7 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
   };
 
   const handleCommissionProvisions = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
       const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
       const rule_id = url.searchParams.get('rule_id');
@@ -408,7 +408,7 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
   };
 
   const handleCommissionProvisionHistory = async (req, res) => {
-    const sess = checkAuth(req, res); if (!sess) return;
+    const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method !== 'GET') { res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'})); return; }
     const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
     const provision_id = url.searchParams.get('provision_id');

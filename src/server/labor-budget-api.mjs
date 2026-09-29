@@ -35,8 +35,8 @@ export function createLaborBudgetApi(ctx) {
     } catch {}
   }
 
-  function requireAdminSession(req, res) {
-    const session = ctx.readAdminSession(req);
+  async function requireAdminSession(req, res) {
+    const session = await ctx.readAdminSession(req);
     if (!session) {
       ctx.json(res, 401, { error: "admin_session_required" });
       return null;
@@ -51,7 +51,7 @@ export function createLaborBudgetApi(ctx) {
   }
 
   async function handleBudgets(req, res, url) {
-    const session = requireAdminSession(req, res);
+    const session = await requireAdminSession(req, res);
     if (!session) return;
     const db = ctx.getPool();
 
@@ -121,7 +121,7 @@ export function createLaborBudgetApi(ctx) {
   }
 
   async function handleBudgetById(req, res, id) {
-    const session = requireAdminSession(req, res);
+    const session = await requireAdminSession(req, res);
     if (!session) return;
     const db = ctx.getPool();
     if (!isValidUuid(id)) return ctx.json(res, 400, { error: "invalid_budget_id" });
@@ -220,7 +220,7 @@ export function createLaborBudgetApi(ctx) {
   }
 
   async function handleItems(req, res, budgetId) {
-    const session = requireAdminSession(req, res);
+    const session = await requireAdminSession(req, res);
     if (!session) return;
     if (!isValidUuid(budgetId)) return ctx.json(res, 400, { error: "invalid_budget_id" });
     const db = ctx.getPool();

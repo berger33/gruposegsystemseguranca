@@ -5,7 +5,7 @@ export function createOriginMetricsApi({ pool, auditLog, sameOrigin, requireSess
 
   const handleOriginMetrics = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
@@ -64,7 +64,7 @@ export function createOriginMetricsApi({ pool, auditLog, sameOrigin, requireSess
   const handleConversionEvents = async (req,res) => {
     if(req.method==='GET'){
       if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-      const sess=requireSession(req);
+      const sess=await requireSession(req);
       if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
       const url=new URL(req.url,'http://localhost');
       const origin=url.searchParams.get('origin');
@@ -102,7 +102,7 @@ export function createOriginMetricsApi({ pool, auditLog, sameOrigin, requireSess
 
   const handleAbTests = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');

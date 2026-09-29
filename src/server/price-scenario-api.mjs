@@ -31,7 +31,7 @@ export function createPriceScenarioApi({ json, readJson, sameOrigin, getPool, re
 
   async function handleScenarios(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (req.method === 'GET') {
       const companyId = url.searchParams.get('companyId') || url.searchParams.get('company_id');
@@ -113,7 +113,7 @@ export function createPriceScenarioApi({ json, readJson, sameOrigin, getPool, re
   async function handleScenarioById(req, res, id) {
     if (!isUuid(id)) return bad(res, 'invalid_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (req.method === 'GET') {
       try { const pool = getPool(); const r = await pool.query('SELECT * FROM crm_price_scenarios WHERE id = $1', [id]); if (!r.rows[0]) return json(res, 404, { error: 'not_found' }); return json(res, 200, { scenario: r.rows[0] }); } catch (e) { return json(res, 503, { error: 'price_scenario_unavailable' }); }

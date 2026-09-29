@@ -101,7 +101,7 @@ export function createHealthcheckApi({ json, getPool, readAdminSession, sameOrig
     if (isOperationalPanel) {
       if (sameOrigin && !sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
       if (readAdminSession) {
-        const session = readAdminSession(req);
+        const session = await readAdminSession(req);
         if (!session) return json(res, 401, { error: 'admin_session_required' });
         if (!['admin','ti'].includes(session.role)) return json(res, 403, { error: 'operational_panel_restricted_admin_ti' });
       }
@@ -111,7 +111,7 @@ export function createHealthcheckApi({ json, getPool, readAdminSession, sameOrig
     try {
       const pool = getPool();
       if (readAdminSession) {
-        const session = readAdminSession(req);
+        const session = await readAdminSession(req);
         if (session) {
           await pool.query("INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,'healthcheck_query',$3,'allowed','none')", [session.role, session.identityId || session.role, result.overall_status]).catch(() => {});
         }
@@ -123,7 +123,7 @@ export function createHealthcheckApi({ json, getPool, readAdminSession, sameOrig
 
   async function handleOperationalHistory(req, res) {
     if (sameOrigin && !sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (!['admin','ti'].includes(session.role)) return json(res, 403, { error: 'operational_panel_restricted' });
 

@@ -8,7 +8,7 @@ export function createPubFaqAssistedApi({ pool, auditLog, sameOrigin, requireSes
     const url=new URL(req.url,'http://localhost');
     const isPublic=url.pathname.startsWith('/api/segments') || url.pathname.startsWith('/api/public/segments') || url.pathname.startsWith('/api/pub/segments');
     if(!isPublic && !sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=!isPublic ? requireSession(req) : null;
+    const sess=!isPublic ? await requireSession(req) : null;
     if(!isPublic && (!sess || !requireRole(sess,['admin','ti']))) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const published=url.searchParams.get('published');
@@ -61,7 +61,7 @@ export function createPubFaqAssistedApi({ pool, auditLog, sameOrigin, requireSes
 
   const handleRules = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
@@ -147,7 +147,7 @@ export function createPubFaqAssistedApi({ pool, auditLog, sameOrigin, requireSes
     const url=new URL(req.url,'http://localhost');
     const isPublic=url.pathname.startsWith('/api/faq-assisted') || url.pathname.startsWith('/api/public/faq-assisted');
     if(!isPublic && !sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=!isPublic ? requireSession(req) : null;
+    const sess=!isPublic ? await requireSession(req) : null;
     if(!isPublic && (!sess || !requireRole(sess,['admin','ti']))) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const protocol=url.searchParams.get('protocol');
@@ -211,7 +211,7 @@ export function createPubFaqAssistedApi({ pool, auditLog, sameOrigin, requireSes
     }
     if(req.method==='PATCH'){
       if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-      const sessAdmin=requireSession(req);
+      const sessAdmin=await requireSession(req);
       if(!sessAdmin || !requireRole(sessAdmin,['admin','ti'])) return json(res,401,{error:'unauthorized'});
       const b=await readJson(req);
       const id=b.id;
@@ -259,7 +259,7 @@ export function createPubFaqAssistedApi({ pool, auditLog, sameOrigin, requireSes
 
   const handleHandoff = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess) return json(res,401,{error:'unauthorized'});
     const isAdmin=requireRole(sess,['admin','ti']);
     if(req.method==='GET'){
@@ -310,7 +310,7 @@ export function createPubFaqAssistedApi({ pool, auditLog, sameOrigin, requireSes
 
   const handlePerformance = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM pub_page_performance_metrics ORDER BY measured_at DESC LIMIT 200`);
@@ -335,7 +335,7 @@ export function createPubFaqAssistedApi({ pool, auditLog, sameOrigin, requireSes
 
   const handleAccessibility = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM pub_accessibility_checks ORDER BY checked_at DESC LIMIT 200`);

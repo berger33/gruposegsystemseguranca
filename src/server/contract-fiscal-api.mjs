@@ -19,7 +19,7 @@ export function createContractFiscalApi({ json, readJson, sameOrigin, getPool, r
   async function handleDossiers(req, res, contractId) {
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -77,7 +77,7 @@ export function createContractFiscalApi({ json, readJson, sameOrigin, getPool, r
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!isUuid(dossierId)) return bad(res, 'invalid_dossier_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -125,7 +125,7 @@ export function createContractFiscalApi({ json, readJson, sameOrigin, getPool, r
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!isUuid(dossierId)) return bad(res, 'invalid_dossier_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -182,7 +182,7 @@ export function createContractFiscalApi({ json, readJson, sameOrigin, getPool, r
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!isUuid(measurementId)) return bad(res, 'invalid_measurement_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'PATCH') {
@@ -217,7 +217,7 @@ export function createContractFiscalApi({ json, readJson, sameOrigin, getPool, r
     if (!isUuid(contractId)) return bad(res, 'invalid_contract_id');
     if (!isUuid(dossierId)) return bad(res, 'invalid_dossier_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {

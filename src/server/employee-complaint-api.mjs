@@ -6,7 +6,7 @@ export function createEmployeeComplaintApi({ pool, auditLog, sameOrigin, require
 
   const handleComplaints = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess) return json(res,401,{error:'unauthorized'});
     const isAdmin = requireRole(sess,['admin','ti']);
     const isRH = requireRole(sess,['rh']);
@@ -83,7 +83,7 @@ export function createEmployeeComplaintApi({ pool, auditLog, sameOrigin, require
 
   const handleComplaintById = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess) return json(res,401,{error:'unauthorized'});
     const isAdmin=requireRole(sess,['admin','ti']);
     const isRH=requireRole(sess,['rh']);
@@ -115,7 +115,7 @@ export function createEmployeeComplaintApi({ pool, auditLog, sameOrigin, require
 
   const handleMessages = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess) return json(res,401,{error:'unauthorized'});
     const url=new URL(req.url,'http://localhost');
     const complaint_id=url.searchParams.get('complaint_id') || (await readJson(req)).complaint_id;
@@ -148,7 +148,7 @@ export function createEmployeeComplaintApi({ pool, auditLog, sameOrigin, require
 
   const handleEvidences = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
@@ -180,7 +180,7 @@ export function createEmployeeComplaintApi({ pool, auditLog, sameOrigin, require
 
   const handleHrShare = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='POST'){
       const b=await readJson(req);

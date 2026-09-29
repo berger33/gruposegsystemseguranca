@@ -31,7 +31,7 @@ export function createOpsAdvanced3Api({ pool, auditLog, sameOrigin, requireSessi
 
   // ---- OPS-13 Métricas ----
   async function handleMetricsDefinitions(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method === 'GET') {
       try {
@@ -85,7 +85,7 @@ export function createOpsAdvanced3Api({ pool, auditLog, sameOrigin, requireSessi
   }
 
   async function handleMetricsSnapshots(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -133,7 +133,7 @@ export function createOpsAdvanced3Api({ pool, auditLog, sameOrigin, requireSessi
   }
 
   async function handleMetricsReincidence(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -175,7 +175,7 @@ export function createOpsAdvanced3Api({ pool, auditLog, sameOrigin, requireSessi
 
   // ---- OPS-14 Escalas assistidas ----
   async function handleAssistedProposals(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -252,7 +252,7 @@ export function createOpsAdvanced3Api({ pool, auditLog, sameOrigin, requireSessi
   }
 
   async function handleAssistedEntries(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -324,7 +324,7 @@ export function createOpsAdvanced3Api({ pool, auditLog, sameOrigin, requireSessi
   }
 
   async function handleAssistedConflicts(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -356,7 +356,7 @@ export function createOpsAdvanced3Api({ pool, auditLog, sameOrigin, requireSessi
 
   // ---- OPS-15 Limpeza ----
   async function handleCleaningEnvironments(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -391,7 +391,7 @@ export function createOpsAdvanced3Api({ pool, auditLog, sameOrigin, requireSessi
   }
 
   async function handleCleaningRoutines(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -426,7 +426,7 @@ export function createOpsAdvanced3Api({ pool, auditLog, sameOrigin, requireSessi
   }
 
   async function handleCleaningExecutions(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -464,7 +464,7 @@ export function createOpsAdvanced3Api({ pool, auditLog, sameOrigin, requireSessi
   }
 
   async function handleCleaningNonconformities(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -531,7 +531,7 @@ export function createOpsAdvanced3Api({ pool, auditLog, sameOrigin, requireSessi
 
   // ---- OPS-16 Monitoramento ----
   async function handleMonitoringConnectors(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method === 'GET') {
       try {
@@ -582,7 +582,7 @@ export function createOpsAdvanced3Api({ pool, auditLog, sameOrigin, requireSessi
   }
 
   async function handleMonitoringEvents(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
@@ -668,7 +668,7 @@ export function createOpsAdvanced3Api({ pool, auditLog, sameOrigin, requireSessi
   }
 
   async function handleMonitoringEventHistory(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method !== 'GET') return send(res,405,{error:'method_not_allowed'});
     const url = new URL(req.url, 'http://localhost');
@@ -681,7 +681,7 @@ export function createOpsAdvanced3Api({ pool, auditLog, sameOrigin, requireSessi
   }
 
   async function handleMonitoringEscalations(req, res) {
-    const sess = requireSession(req);
+    const sess = await requireSession(req);
     if (!sess) return send(res,401,{error:'unauthorized'});
     if (req.method !== 'GET') return send(res,405,{error:'method_not_allowed'});
     const url = new URL(req.url, 'http://localhost');

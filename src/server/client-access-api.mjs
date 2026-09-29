@@ -775,7 +775,7 @@ export function createClientAccessApi(ctx) {
   }
 
   async function requireAdminSession(req, res) {
-    const session = ctx.readAdminSession(req);
+    const session = await ctx.readAdminSession(req);
     if (!session) {
       ctx.json(res, 401, { error: "admin_session_required" });
       return null;
@@ -786,7 +786,7 @@ export function createClientAccessApi(ctx) {
   // Only an individually authenticated, currently active TI staff member may
   // approve an identity check. A legacy shared TI/Marcelo token has no actor ID.
   async function manualVerifier(req, res) {
-    const session = ctx.readAdminSession(req);
+    const session = await ctx.readAdminSession(req);
     if (!session) { ctx.json(res, 401, { error: 'admin_session_required' }); return null; }
     if (session.role !== 'ti' || !session.identityId) {
       ctx.json(res, 403, { error: 'individual_ti_required' }); return null;

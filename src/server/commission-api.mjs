@@ -14,7 +14,7 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
   // Goals
   async function handleGoals(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -78,7 +78,7 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
   async function handleGoalById(req, res, id) {
     if (!isUuid(id)) return bad(res, 'invalid_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -127,7 +127,7 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
   // Commission Rules
   async function handleRules(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -190,7 +190,7 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
   async function handleRuleById(req, res, id) {
     if (!isUuid(id)) return bad(res, 'invalid_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -239,7 +239,7 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
   // Commissions
   async function handleCommissions(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {
@@ -320,7 +320,7 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
   async function handleCommissionById(req, res, id) {
     if (!isUuid(id)) return bad(res, 'invalid_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
-    const session = readAdminSession(req);
+    const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
 
     if (req.method === 'GET') {

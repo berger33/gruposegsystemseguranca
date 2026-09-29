@@ -54,7 +54,7 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
 
   const handleIndexes = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM ai_rag_indexes ORDER BY rag_key ASC LIMIT 100`);
@@ -109,7 +109,7 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
 
   const handleDocuments = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
@@ -183,7 +183,7 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
     // privadas não podem ser liberados por rag_key controlado pelo navegador.
     const isPublic=['/api/ai/rag','/api/public/ai/rag','/api/ai/rag/queries'].includes(url.pathname);
     if(!isPublic && !sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=!isPublic ? requireSession(req) : null;
+    const sess=!isPublic ? await requireSession(req) : null;
     if(!isPublic && (!sess || !requireRole(sess,['admin','ti']))) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       if(isPublic) return json(res,403,{error:'scope_forbidden'});
@@ -307,7 +307,7 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
     const isPublic=['/api/ai/rag/feedback','/api/public/ai/rag/feedback'].includes(new URL(req.url,'http://localhost').pathname);
     if(isPublic && rag_key!=='publico') return json(res,403,{error:'scope_forbidden'});
     if(!isPublic){
-      const sess=requireSession(req);
+      const sess=await requireSession(req);
       if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     }
     if(rag_key==='cliente') return json(res,403,{error:'tenant_scope_not_implemented'});
@@ -339,7 +339,7 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
 
   const handleCostTracking = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
@@ -359,7 +359,7 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
 
   const handleBotConfig = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM ai_bot_config WHERE singleton_id=1 LIMIT 1`);
@@ -401,7 +401,7 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
     const url=new URL(req.url,'http://localhost');
     const isPublic=['/api/ai/bot','/api/public/ai/bot','/api/bot'].includes(url.pathname);
     if(!isPublic && !sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=!isPublic ? requireSession(req) : null;
+    const sess=!isPublic ? await requireSession(req) : null;
     if(!isPublic && (!sess || !requireRole(sess,['admin','ti']))) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       if(isPublic) return json(res,403,{error:'scope_forbidden'});
@@ -539,7 +539,7 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
 
   const handleChunks = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=requireSession(req);
+    const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
