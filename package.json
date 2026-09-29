@@ -43,7 +43,8 @@
     "test:backup-restore:pg:cli-partial": "QA_RESTORE_SEPARATE_CLUSTERS=1 QA_RESTORE_INCLUDE_SYNTHETIC_FILE=1 QA_RESTORE_VERIFY_HTTP=1 QA_RESTORE_VERIFY_SIGNATURE=1 QA_RESTORE_INCLUDE_CLI_V2_OBJECTS=1 QA_RESTORE_INJECT_CLI_V2_PARTIAL=1 node scripts/qa-backup-restore-postgres.mjs",
     "test:integration": "RUN_DATABASE_INTEGRATION=1 node --test --test-concurrency=1 tests/lead-flow.integration.test.mjs tests/client-access.integration.test.mjs tests/client-space.integration.test.mjs",
     "typecheck": "tsc --noEmit",
-    "test:staff-auth:pg": "node scripts/qa-staff-auth-postgres.mjs"
+    "test:staff-auth:pg": "node scripts/qa-staff-auth-postgres.mjs",
+    "test:l02-delivery:pg": "node scripts/qa-l02-delivery-postgres.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",

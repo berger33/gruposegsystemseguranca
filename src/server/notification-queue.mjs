@@ -4,7 +4,11 @@ const ALLOWED_RECIPIENT_KINDS = new Set(["client","staff","lead","system","marce
 const ALLOWED_CHANNELS = new Set(["email","whatsapp","sms","push","webhook","internal"]);
 
 function isValidUuid(v) {
-  return typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+  // L02: faltava um grupo (8-4-4-12 em vez de 8-4-4-4-12), então TODO UUID
+  // canônico era considerado inválido e enqueue() lançava
+  // invalid_recipient_id_uuid_format para qualquer destinatário real.
+  return typeof v === "string"
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 }
 
 function isValidEmail(email) {
@@ -17,8 +21,24 @@ function backoffDelay(attempts) {
   return delays[Math.min(attempts, delays.length-1)];
 }
 
+/** Corpo legível da notificação na caixa local. Sem inventar formatação de e-mail. */
+function renderLocalBody(row) {
+  const lines = [
+    `Template: ${row.template}`,
+    `Destinatário: ${row.recipient_email || row.recipient_id || "(sistema)"}`,
+    `Canal solicitado: ${row.channel}`,
+    "",
+    "Conteúdo:",
+    JSON.stringify(row.payload ?? {}, null, 2),
+    "",
+    "Esta mensagem NÃO foi enviada por e-mail. Ela está disponível apenas na",
+    "caixa de saída local desta instalação (SMTP fora do escopo da entrega).",
+  ];
+  return lines.join("\n").slice(0, 20000);
+}
+
 export function createNotificationQueue(ctx) {
-  // ctx: { getPool, mailer?, observability? }
+  // ctx: { getPool, mailer?, observability?, localOutbox? }
 
   async function audit(db, { action, target, result, actorKind, actorId }) {
     try {
@@ -98,23 +118,68 @@ export function createNotificationQueue(ctx) {
     const db = ctx.getPool();
     const obs = ctx.observability || null;
     const startAll = Date.now();
-    // Select due notifications
+    // L02 — reivindicação ATÔMICA.
+    // O código anterior fazia SELECT ... FOR UPDATE SKIP LOCKED direto no pool,
+    // fora de qualquer transação: o bloqueio era liberado no fim do próprio
+    // SELECT, então dois trabalhadores concorrentes selecionavam as MESMAS
+    // linhas e processavam a notificação duas vezes. Um UPDATE ... RETURNING
+    // decide o vencedor no próprio banco, em uma única instrução.
+    const claimToken = crypto.randomUUID();
     const due = await db.query(
-      `SELECT * FROM notification_queue WHERE status IN ('queued','failed') AND next_attempt_at <= NOW() ORDER BY next_attempt_at ASC LIMIT $1 FOR UPDATE SKIP LOCKED`,
-      [batchSize]
+      `UPDATE notification_queue SET
+          status = 'sending',
+          attempts = attempts + 1,
+          claimed_at = NOW(),
+          claim_token = $2,
+          updated_at = NOW()
+        WHERE id IN (
+          SELECT id FROM notification_queue
+           WHERE status IN ('queued','failed')
+             AND next_attempt_at <= NOW()
+           ORDER BY next_attempt_at ASC
+           LIMIT $1
+           FOR UPDATE SKIP LOCKED
+        )
+        RETURNING *`,
+      [batchSize, claimToken]
     );
 
     const results = [];
     for (const row of due.rows) {
       const id = row.id;
       try {
-        await db.query("UPDATE notification_queue SET status = 'sending', attempts = attempts + 1, updated_at = NOW() WHERE id = $1", [id]);
-
+        // status/attempts já foram aplicados pela reivindicação atômica acima.
         let sendResult = "not_configured";
         let error = null;
 
-        // Try to send based on channel
-        if (row.channel === "email") {
+        // L02 — sem SMTP, o canal de e-mail entrega na CAIXA LOCAL em vez de
+        // acumular tentativas até 'dead'. O estado resultante é
+        // 'local_outbox', jamais 'sent': não houve envio.
+        if (row.channel === "email" && !mailer && ctx.localOutbox && row.recipient_email) {
+          try {
+            const written = await ctx.localOutbox.deliver({
+              notificationId: row.id,
+              recipientKind: row.recipient_kind,
+              recipientId: isValidUuid(row.recipient_id) ? row.recipient_id : null,
+              recipientAddress: row.recipient_email,
+              channel: "email",
+              template: row.template,
+              subject: `[${row.template}] Notificação Grupo SEG (caixa local)`,
+              body: renderLocalBody(row),
+            });
+            await db.query(
+              "UPDATE notification_queue SET status = 'local_outbox', last_error = NULL, updated_at = NOW() WHERE id = $1",
+              [id]
+            );
+            await audit(db, { action: "notification_local_outbox", target: id, result: "allowed" });
+            results.push({ id, status: "local_outbox", outboxId: written.id, notice: written.label });
+            if (obs) obs.recordJob({ job_name: 'notification_send', status: 'success', duration_ms: Date.now() - startAll, attempts: row.attempts, metadata: { channel: row.channel, template: row.template, delivery: 'local_outbox' } });
+            continue;
+          } catch (e) {
+            error = String(e.message).slice(0, 1000);
+            sendResult = "failed";
+          }
+        } else if (row.channel === "email") {
           if (mailer && row.recipient_email) {
             try {
               // mailer is nodemailer transport? We use ctx.mailer as function trySend?
@@ -147,9 +212,10 @@ export function createNotificationQueue(ctx) {
           await db.query("UPDATE notification_queue SET status = 'sent', sent_at = NOW(), last_error = NULL, updated_at = NOW() WHERE id = $1", [id]);
           await audit(db, { action: "notification_send", target: id, result: "allowed" });
           results.push({ id, status: "sent" });
-          if (obs) obs.recordJob({ job_name: 'notification_send', correlation_id: globalThis.__currentCorrelationId || null, request_id: globalThis.__currentRequestId || null, status: 'success', duration_ms: Date.now() - startAll, attempts: row.attempts + 1, metadata: { channel: row.channel, template: row.template } });
+          if (obs) obs.recordJob({ job_name: 'notification_send', correlation_id: globalThis.__currentCorrelationId || null, request_id: globalThis.__currentRequestId || null, status: 'success', duration_ms: Date.now() - startAll, attempts: row.attempts, metadata: { channel: row.channel, template: row.template } });
         } else {
-          const attempts = row.attempts + 1;
+          // RETURNING * já traz attempts incrementado pela reivindicação.
+          const attempts = row.attempts;
           const maxAttempts = row.max_attempts;
           if (attempts >= maxAttempts) {
             await db.query("UPDATE notification_queue SET status = 'dead', last_error = $2, next_attempt_at = NOW() + INTERVAL '1 day', updated_at = NOW() WHERE id = $1", [id, error || sendResult]);

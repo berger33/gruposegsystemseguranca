@@ -109,13 +109,15 @@ const files = [
   '096-ai-rag-feedback-custo-token-rollback.sql',
   '097-client-mfa-session.sql',
   '098-client-manual-verification.sql',
-  '099-sec-staff-session-hardening.sql'
+  '099-sec-staff-session-hardening.sql',
+  '100-l02-local-outbox.sql',
+  '101-l02-document-integrity.sql'
 ];
 
 async function main() {
   const actual = (await readdir(dir)).filter(f => /^\d{3}-.*\.sql$/.test(f)).sort();
-  if (files.length !== 99 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
-    throw new Error('migration_manifest_mismatch: compare 001–099 with db/migrations before connecting');
+  if (files.length !== 101 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
+    throw new Error('migration_manifest_mismatch: compare 001–101 with db/migrations before connecting');
   }
   const urlText = process.env.DATABASE_MIGRATION_URL || process.env.DATABASE_URL;
   if (!urlText) throw new Error('DATABASE_MIGRATION_URL or DATABASE_URL is required');
@@ -163,7 +165,7 @@ async function main() {
         throw error;
       }
     }
-    console.log('Migration ledger verified: 001–099 (PostgreSQL only)');
+    console.log('Migration ledger verified: 001–101 (PostgreSQL only)');
   } finally {
     client?.release();
     await pool.end();

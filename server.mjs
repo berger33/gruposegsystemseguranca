@@ -10,6 +10,7 @@ import { decryptMfaSecret, verifyMfaCode, hashRecoveryCode, mfaKey } from "./src
 import {
   createStaffSessionStore, evaluateStaffLogin, evaluateLegacyTokenPolicy, isUuid,
 } from "./src/server/staff-session.mjs";
+import { createLocalOutbox, LOCAL_OUTBOX_LABEL, resolveDeliveryTarget } from "./src/server/local-outbox.mjs";
 import { createClientAccessApi } from "./src/server/client-access-api.mjs";
 import { createClientSpaceApi } from "./src/server/client-space-api.mjs";
 import { createClientSecurityApi } from "./src/server/client-security-api.mjs";
@@ -243,6 +244,8 @@ function sign(payload, secret) {
 }
 
 const staffSessionStore = createStaffSessionStore({ getPool, randomUUID });
+// L02 — caixa de saída local; substitui SMTP nesta entrega.
+const localOutbox = createLocalOutbox({ getPool, randomUUID });
 
 // L01/SEC-04: a sessão de staff passa a ter estado no servidor. O cookie carrega
 // apenas um identificador assinado; papel, status, epoch e revogação vêm do
@@ -965,6 +968,7 @@ const clientAccessApi = createClientAccessApi({
   cookieSecure,
   clientIp,
   baseUrl: publicBaseUrl,
+  localOutbox,
 });
 
 const clientSpaceApi = createClientSpaceApi({
@@ -997,6 +1001,7 @@ const adminRbacApi = createAdminRbacApi({
 const notificationQueue = createNotificationQueue({
   getPool,
   observability: getObservability(),
+  localOutbox,
 });
 
 const adminAuditApi = createAdminAuditApi({
@@ -2217,6 +2222,40 @@ async function routeApi(req, res) {
   const notifRetryMatch = url.pathname.match(/^\/api\/admin\/notifications\/([0-9a-f-]{36})\/retry$/i);
   if (notifRetryMatch) return adminNotificationsApi.handleRetry(req, res, notifRetryMatch[1]);
   if (url.pathname === "/api/admin/notifications/process") return adminNotificationsApi.handleProcess(req, res);
+  // L02 — caixa de saída local (substitui SMTP). Somente sessão de staff.
+  if (url.pathname === "/api/admin/outbox") {
+    if (req.method !== "GET") return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
+    const session = await readSession(req);
+    if (!session) return json(res, 401, { error: "admin_session_required" });
+    try {
+      const page = await localOutbox.list({
+        actorId: session.identityId,
+        limit: Number(url.searchParams.get("limit") || 50),
+        offset: Number(url.searchParams.get("offset") || 0),
+        status: url.searchParams.get("status"),
+        recipient: url.searchParams.get("recipient"),
+      });
+      return json(res, 200, { ...page, deliveryMode: resolveDeliveryTarget(), notice: LOCAL_OUTBOX_LABEL });
+    } catch (error) {
+      console.error("Local outbox list failed.", error);
+      return json(res, 503, { error: "outbox_unavailable" });
+    }
+  }
+  const outboxReadMatch = url.pathname.match(/^\/api\/admin\/outbox\/([0-9a-f-]{36})$/i);
+  if (outboxReadMatch) {
+    if (req.method !== "GET") return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
+    const session = await readSession(req);
+    if (!session) return json(res, 401, { error: "admin_session_required" });
+    try {
+      const message = await localOutbox.read({ id: outboxReadMatch[1], actorId: session.identityId });
+      if (!message) return json(res, 404, { error: "outbox_message_not_found" });
+      if (message.expired) return json(res, 410, { error: "outbox_message_expired" });
+      return json(res, 200, { message, notice: LOCAL_OUTBOX_LABEL });
+    } catch (error) {
+      console.error("Local outbox read failed.", error);
+      return json(res, 503, { error: "outbox_unavailable" });
+    }
+  }
   if (url.pathname === "/api/admin/integrations") return integrationsApi.handleList(req, res, url);
   const integrationTestMatch = url.pathname.match(/^\/api\/admin\/integrations\/([^\/]+)\/test$/i);
   if (integrationTestMatch) return integrationsApi.handleTest(req, res, integrationTestMatch[1]);
@@ -3763,6 +3802,8 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/admin/audit/export"
   || pathname === "/api/admin/notifications"
   || pathname.startsWith("/api/admin/notifications/")
+  || pathname === "/api/admin/outbox"
+  || pathname.startsWith("/api/admin/outbox/")
   || pathname === "/api/admin/integrations"
   || pathname.startsWith("/api/admin/integrations/")
   || pathname === "/api/catalog"

@@ -12,8 +12,8 @@
 //   download revalida o vínculo e é auditado.
 
 import { createReadStream } from "node:fs";
-import { mkdir, stat, writeFile } from "node:fs/promises";
-import { randomBytes, randomUUID } from "node:crypto";
+import { mkdir, stat, writeFile, readFile } from "node:fs/promises";
+import { randomBytes, randomUUID, createHash } from "node:crypto";
 import path from "node:path";
 import {
   MAX_DOCUMENT_BYTES,
@@ -276,6 +276,21 @@ export function createClientSpaceApi(ctx) {
     } catch {
       console.error("Document file missing on private storage.", { documentId: document.id });
       return ctx.json(res, 404, { error: "document_file_missing" });
+    }
+    // L02 — conferência de integridade antes de entregar um byte. Um arquivo
+    // trocado ou truncado por fora do sistema não é servido silenciosamente.
+    if (document.content_sha256) {
+      if (fileStat.size !== Number(document.size_bytes)) {
+        console.error("Document size mismatch on private storage.", { documentId: document.id });
+        await audit(ctx.getPool(), { ...auditContext, action: "document_download", target: document.id, result: "denied" });
+        return ctx.json(res, 409, { error: "document_integrity_failed" });
+      }
+      const actual = createHash("sha256").update(await readFile(filePath)).digest("hex");
+      if (actual !== document.content_sha256) {
+        console.error("Document hash mismatch on private storage.", { documentId: document.id });
+        await audit(ctx.getPool(), { ...auditContext, action: "document_download", target: document.id, result: "denied" });
+        return ctx.json(res, 409, { error: "document_integrity_failed" });
+      }
     }
     const safeName = document.original_filename.replace(/["\\]/g, "_") || "documento";
     res.writeHead(200, {
@@ -678,16 +693,23 @@ export function createClientSpaceApi(ctx) {
         if (!account.rows[0]) return ctx.json(res, 404, { error: "account_not_found" });
         await mkdir(ctx.docsDir, { recursive: true });
         const storageKey = randomBytes(24).toString("hex");
+        // L02: a chave é gerada pelo servidor (24 bytes aleatórios em hex) e
+        // nunca deriva do nome enviado pelo cliente — é o que torna o caminho
+        // imune a travessia. O hash é calculado sobre os bytes efetivamente
+        // gravados e conferido em toda leitura.
+        const contentSha256 = createHash("sha256").update(content).digest("hex");
         await writeFile(path.join(ctx.docsDir, storageKey), content);
         const documentId = randomUUID();
         await db.query(
           `INSERT INTO client_documents
-             (id, client_account_id, title, category, original_filename, content_type, size_bytes, storage_key, uploaded_by)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-          [documentId, accountId, meta.value.title, meta.value.category, meta.value.originalFilename, meta.value.contentType, content.length, storageKey, session.role],
+             (id, client_account_id, title, category, original_filename, content_type, size_bytes,
+              storage_key, uploaded_by, uploaded_by_identity, content_sha256)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+          [documentId, accountId, meta.value.title, meta.value.category, meta.value.originalFilename,
+           meta.value.contentType, content.length, storageKey, session.role, session.identityId ?? null, contentSha256],
         );
         await audit(db, { actorKind: session.role, action: "document_upload", target: documentId, result: "allowed" });
-        return ctx.json(res, 201, { documentId, sizeBytes: content.length, contentType: meta.value.contentType });
+        return ctx.json(res, 201, { documentId, sizeBytes: content.length, contentType: meta.value.contentType, contentSha256 });
       } catch (error) {
         return databaseFailure(res, error, "Could not store the client document.");
       }
