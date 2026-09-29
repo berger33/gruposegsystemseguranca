@@ -212,6 +212,7 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
     body: {
       display_name: 'Grupo Matriz QA GAP', document_ref: '11444777000161', document_type: 'cnpj',
       segment: 'Condomínio residencial', city: 'Guarulhos', state: 'SP', type: 'prospect',
+      channels: ['telefone', 'whatsapp', 'indicacao'],
       responsible_name: 'QA Comercial', origin: 'indicacao', campaign: 'l04-gap', notes: 'Matriz sintética do gate.',
     },
   });
@@ -222,6 +223,10 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
   assert.equal(matriz.body.company.state, 'SP');
   assert.equal(matriz.body.company.origin, 'indicacao');
   assert.equal(matriz.body.company.campaign, 'l04-gap');
+  assert.equal(matriz.body.company.responsible_name, 'QA Comercial');
+  const canais = typeof matriz.body.company.channels === 'string'
+    ? JSON.parse(matriz.body.company.channels) : matriz.body.company.channels;
+  assert.deepEqual(canais, ['telefone', 'whatsapp', 'indicacao'], 'canais de relacionamento persistidos (CRM-01)');
 
   const filha = await api('/api/crm/companies', {
     method: 'POST', cookie: com,
@@ -327,6 +332,8 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
       need_description: 'Substituir portaria terceirizada com custo alto.', responsible_name: 'QA Comercial',
       forecast_date: isoIn(30).slice(0, 10), estimated_value: 18500.5,
       next_action: 'Agendar vistoria técnica', next_action_date: isoIn(3), origin: 'indicacao', priority: 'alta',
+      // Tentativa deliberada de escolher o dono pelo cliente: o servidor ignora.
+      responsible_id: randomUUID(), responsible_name: 'Pessoa Inventada',
     },
   });
   assert.equal(opp.status, 201, JSON.stringify(opp.body));
@@ -336,6 +343,20 @@ test('L04 GAP-A: CRM-01..10 e PUB-02/05..10 por HTTP real', { skip: !RUN, timeou
   assert.equal(opp.body.opportunity.priority, 'alta');
   assert.equal(Number(opp.body.opportunity.estimated_value), 18500.5);
   assert.equal(opp.body.opportunity.next_action, 'Agendar vistoria técnica');
+  assert.equal(opp.body.opportunity.responsible_id, S.comercial.id, 'responsável vem da sessão, não do corpo (CRM-05)');
+  assert.equal(opp.body.opportunity.responsible_name, 'comercial');
+  assert.equal(opp.body.opportunity.need_description, 'Substituir portaria terceirizada com custo alto.');
+  assert.equal(String(opp.body.opportunity.forecast_date).slice(0, 10), isoIn(30).slice(0, 10));
+
+  // A unidade do grupo também sustenta oportunidade própria, sem duplicar a matriz.
+  const oppUnidade = await api('/api/crm/opportunities', {
+    method: 'POST', cookie: com,
+    body: { company_id: S.filhaId, title: 'CFTV para a unidade filha QA GAP', service_name: 'Câmeras e CFTV', priority: 'baixa', next_action: 'Levantar pontos de câmera', next_action_date: isoIn(6) },
+  });
+  assert.equal(oppUnidade.status, 201, JSON.stringify(oppUnidade.body));
+  const porUnidade = await api(`/api/crm/opportunities?companyId=${S.filhaId}`, { cookie: com });
+  assert.equal(porUnidade.status, 200);
+  assert.equal(porUnidade.body.opportunities.length, 1, 'filtro por empresa isola a unidade (CRM-05)');
 
   const semMotivo = await api(`/api/crm/opportunities/${S.matrizOppId}`, { method: 'PATCH', cookie: com, body: { stage: 'perdido' } });
   assert.equal(semMotivo.status, 400);
