@@ -121,13 +121,14 @@ const files = [
   '108-crm-manual-cadences.sql',
   '109-crm-task-delegation.sql',
   '110-crm-visit-conflict-lead-link.sql',
-  '111-crm-opportunity-notes-reopen.sql'
+  '111-crm-opportunity-notes-reopen.sql',
+  '112-pub08-seo-redirect-audit-action.sql'
 ];
 
 async function main() {
   const actual = (await readdir(dir)).filter(f => /^\d{3}-.*\.sql$/.test(f)).sort();
-  if (files.length !== 111 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
-    throw new Error('migration_manifest_mismatch: compare 001–110 with db/migrations before connecting');
+  if (files.length !== 112 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
+    throw new Error('migration_manifest_mismatch: compare 001–112 with db/migrations before connecting');
   }
   const urlText = process.env.DATABASE_MIGRATION_URL || process.env.DATABASE_URL;
   if (!urlText) throw new Error('DATABASE_MIGRATION_URL or DATABASE_URL is required');
@@ -175,7 +176,7 @@ async function main() {
         throw error;
       }
     }
-    console.log('Migration ledger verified: 001–111 (PostgreSQL only)');
+    console.log('Migration ledger verified: 001–112 (PostgreSQL only)');
   } finally {
     client?.release();
     await pool.end();

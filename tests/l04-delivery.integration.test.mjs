@@ -2437,3 +2437,242 @@ test('PUB-10: mensuração de origem e conversão — agregado derivado, minimiz
   } finally { await browser.close(); }
   assert.deepEqual(failures, []);
 });
+
+test('PUB-08: SEO técnico — robots/sitemap derivados, noindex fail-closed e redirect real', { skip: !RUN, timeout: 300_000 }, async () => {
+  const ti = await provisionAndLoginStaff(pool, api, { role: 'ti' });
+  const comercial = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const tag = randomUUID().slice(0, 8);
+
+  // --- 1. robots.txt: fora de produção nega tudo e não anuncia mapa nenhum.
+  // O gate roda com as variáveis padrão, exatamente como a entrega local.
+  const robots = await api('/robots.txt');
+  assert.equal(robots.status, 200, JSON.stringify(robots.body));
+  assert.match(String(robots.body), /^User-agent: \*$/m);
+  assert.match(String(robots.body), /^Disallow: \/$/m);
+  assert.equal(String(robots.body).includes('Sitemap:'), false, 'sem liberação não há sitemap para anunciar');
+  assert.equal(robots.headers.get('x-robots-tag'), 'noindex, nofollow');
+
+  // --- 2. sitemap.xml: enquanto não há liberação, não existe mapa publicado.
+  const sitemap = await api('/sitemap.xml');
+  assert.equal(sitemap.status, 404, JSON.stringify(sitemap.body));
+  assert.equal(String(sitemap.body).trim(), 'sitemap_not_published');
+  // Não há parâmetro que destrave a publicação.
+  const forced = await api('/sitemap.xml?released=true&force=1&preview=1');
+  assert.equal(forced.status, 404, 'nenhum parâmetro pode liberar a indexação');
+
+  // --- 3. Prévia autorizada: fail-closed em sessão, papel e método.
+  const previewPath = '/api/admin/seo/sitemap-preview';
+  assert.equal((await api(previewPath)).status, 401);
+  assert.equal((await api(previewPath)).body.error, 'admin_session_required');
+  const previewWrongRole = await api(previewPath, { cookie: comercial.cookie });
+  assert.equal(previewWrongRole.status, 403, JSON.stringify(previewWrongRole.body));
+  const previewWrongMethod = await api(previewPath, { method: 'POST', cookie: ti.cookie, body: { url: '/inventada' } });
+  assert.equal(previewWrongMethod.status, 405, JSON.stringify(previewWrongMethod.body));
+  assert.equal(previewWrongMethod.headers.get('allow'), 'GET');
+
+  const preview = await api(previewPath, { cookie: ti.cookie });
+  assert.equal(preview.status, 200, JSON.stringify(preview.body));
+  assert.equal(preview.body.released, false, 'a prévia não pode dizer que está liberado');
+  assert.equal(preview.body.derived, true);
+  assert.ok(Array.isArray(preview.body.paths) && preview.body.paths.length >= 10, 'a prévia precisa derivar as rotas reais');
+  // O mapa é derivado do catálogo: os seis serviços validados entram.
+  assert.ok(preview.body.paths.includes(`/servicos/${encodeURIComponent('Câmeras e CFTV')}`), 'página de serviço precisa vir do catálogo');
+  assert.ok(preview.body.paths.includes('/segmentos/condominios_residenciais'));
+  // Nenhuma superfície interna ou prévia de layout no documento.
+  for (const proibido of ['/admin', '/api/', '/cliente', '/funcionario', '/layout-0', '/qa/', '/proposta']) {
+    assert.equal(preview.body.xml.includes(proibido), false, `${proibido} não pode aparecer no sitemap`);
+  }
+  // Nada de campo inventado.
+  for (const inventado of ['<lastmod>', '<priority>', '<changefreq>']) {
+    assert.equal(preview.body.xml.includes(inventado), false, `${inventado} não tem fonte verdadeira`);
+  }
+
+  // --- 4. O mapa não promete página que não existe: cada URL é buscada de verdade.
+  for (const path of preview.body.paths) {
+    const page = await api(path, { raw: true });
+    assert.equal(page.status, 200, `o sitemap lista ${path}, que precisa responder 200`);
+    const html = page.buffer.toString('utf8');
+    const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    assert.ok(title && title[1].trim().length > 0, `${path} precisa ter <title> não vazio`);
+  }
+
+  // --- 5. Vazamento fechado: rascunho de SEO não é mais leitura pública.
+  for (const leaky of ['/api/seo', '/api/seo-configs']) {
+    const anonymous = await api(leaky);
+    assert.equal(anonymous.status, 401, `${leaky} não pode devolver rascunho interno a anônimo`);
+    assert.equal(anonymous.body.error, 'admin_session_required');
+  }
+  assert.equal((await api('/api/seo-configs', { cookie: comercial.cookie })).status, 403, 'papel sem SEO recebe 403, não 401');
+
+  // --- 6. Redirect: negação antes de qualquer regra de conteúdo.
+  const redirectPath = '/api/admin/seo-redirects';
+  const oldPath = `/promo-portaria-${tag}`;
+  const valid = { old_path: oldPath, new_path: '/servicos', redirect_type: '301', reason: 'Endereço de campanha antigo apontado para a página de serviços.' };
+  assert.equal((await api(redirectPath, { method: 'POST', body: valid })).status, 401);
+  assert.equal((await api(redirectPath, { method: 'POST', cookie: comercial.cookie, body: valid })).status, 403);
+  // Sem Origin não passa: a proteção CSRF continua valendo para mutação.
+  assert.equal((await api(redirectPath, { method: 'POST', cookie: ti.cookie, body: valid, sendOrigin: false })).status, 403);
+
+  // --- 7. Recusa de cada caminho perigoso, com erro nomeado.
+  const recusas = [
+    [{ old_path: oldPath, new_path: 'https://evil.test/x' }, 'invalid_path', 'redirect externo absoluto'],
+    [{ old_path: oldPath, new_path: '//evil.test/x' }, 'invalid_path', 'relativo a protocolo'],
+    [{ old_path: oldPath, new_path: '/servicos\\..\\admin' }, 'invalid_path', 'barra invertida'],
+    [{ old_path: '/promo com espaco', new_path: '/servicos' }, 'invalid_path', 'espaço no caminho'],
+    [{ old_path: '/servicos', new_path: '/faq' }, 'cannot_shadow_existing_route', 'sombra de rota pública real'],
+    [{ old_path: '/admin/leads', new_path: '/servicos' }, 'cannot_shadow_existing_route', 'sombra de área administrativa'],
+    [{ old_path: '/api/leads', new_path: '/servicos' }, 'cannot_shadow_existing_route', 'sombra de API'],
+    [{ old_path: '/sitemap.xml', new_path: '/servicos' }, 'cannot_shadow_existing_route', 'sombra do próprio sitemap'],
+    [{ old_path: oldPath, new_path: '/pagina-que-nao-existe' }, 'redirect_target_not_public', 'destino inexistente'],
+    [{ old_path: oldPath, new_path: '/admin/leads' }, 'redirect_target_not_public', 'destino em área interna'],
+    // Ajuste declarado: a primeira redação esperava `cannot_shadow_existing_route`
+    // aqui. A regra recusa antes, com erro mais preciso — o cenário foi
+    // corrigido para afirmar o erro certo; a regra não foi afrouxada.
+    [{ old_path: oldPath, new_path: oldPath }, 'cannot_redirect_to_self', 'laço sobre si mesmo'],
+    [{ old_path: oldPath, new_path: '/servicos', redirect_type: '418' }, 'invalid_redirect_type', 'status inventado'],
+    [{ old_path: oldPath, new_path: '/servicos', reason: 'curto' }, 'invalid_reason', 'motivo abaixo do mínimo'],
+    [{ old_path: oldPath, new_path: '/servicos', id: randomUUID() }, 'server_managed_fields', 'campo do servidor vindo do cliente'],
+  ];
+  for (const [body, expected, label] of recusas) {
+    const refused = await api(redirectPath, { method: 'POST', cookie: ti.cookie, body });
+    assert.equal(refused.status, 400, `${label}: ${JSON.stringify(refused.body)}`);
+    assert.equal(refused.body.error, expected, `${label} precisa ser recusado como ${expected}`);
+  }
+  // Ajuste declarado: a primeira redação exigia a tabela inteira vazia. A
+  // migração 090 já semeia quatro redirects (imutável), então a asserção certa
+  // é que NENHUMA das tentativas recusadas virou linha.
+  const tentativasRecusadas = [oldPath, '/servicos', '/admin/leads', '/api/leads', '/sitemap.xml', '/promo com espaco'];
+  const vazou = await pool.query('SELECT old_path FROM seo_redirects WHERE old_path = ANY($1::text[])', [tentativasRecusadas]);
+  assert.deepEqual(vazou.rows, [], 'nenhuma recusa pode ter gravado linha');
+
+  // --- 7b. Os redirects semeados pela migração 090 passam a ter consequência
+  // real pela primeira vez. Três têm ORIGEM em prefixo reservado
+  // (`/cliente/acesso`, `/cliente/login`, `/admin/funcionarios`): a regra de
+  // salto reservado os torna inertes, então a página real continua servida —
+  // é o que impede a ativação dos redirects de derrubar rota existente.
+  const rotaRealSombreada = await api('/cliente/acesso', { raw: true });
+  assert.equal(rotaRealSombreada.status, 200, '/cliente/acesso tem redirect semeado ativo, mas é rota real: precisa continuar servindo a página');
+  assert.equal((await pool.query("SELECT is_active FROM seo_redirects WHERE old_path = '/cliente/acesso'")).rows[0]?.is_active, true,
+    'a linha semeada continua ativa no banco — o que a neutraliza é a regra de prefixo reservado, não uma edição da migração');
+  // O único semeado com origem fora de área reservada passa a funcionar como
+  // o próprio texto dele sempre alegou.
+  const semeadoVivo = await api('/servicos/cerca-eletrica', { raw: true });
+  assert.equal(semeadoVivo.status, 302, JSON.stringify(semeadoVivo.status));
+  assert.equal(semeadoVivo.headers.get('location'), '/servicos');
+
+  // Cadeia: fixture por SQL de uma linha anterior a uma mudança de catálogo
+  // (destino que hoje não é mais rota pública). Só assim a segunda barreira
+  // fica alcançável — as duas regras anteriores já impedem o caso comum.
+  const staleTarget = `/servicos/Servico-Descontinuado-${tag}`;
+  await pool.query(
+    "INSERT INTO seo_redirects (old_path, new_path, redirect_type, is_active) VALUES ($1,$2,'301',true)",
+    [`/promo-legado-${tag}`, staleTarget],
+  );
+  const chained = await api(redirectPath, { method: 'POST', cookie: ti.cookie, body: { old_path: staleTarget, new_path: '/servicos' } });
+  assert.equal(chained.status, 400, JSON.stringify(chained.body));
+  assert.equal(chained.body.error, 'redirect_chain_not_allowed');
+  await pool.query('DELETE FROM seo_redirects WHERE old_path = $1', [`/promo-legado-${tag}`]);
+
+  // --- 8. Falha de auditoria injetada: sem trilha, o redirect não nasce.
+  await pool.query(`CREATE FUNCTION qa_reject_seo_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.action = 'seo_redirect_create' THEN RAISE EXCEPTION 'qa audit failure'; END IF; RETURN NEW; END $$`);
+  await pool.query('CREATE TRIGGER qa_reject_seo_audit BEFORE INSERT ON auth_access_audit FOR EACH ROW EXECUTE FUNCTION qa_reject_seo_audit()');
+  try {
+    const blocked = await api(redirectPath, { method: 'POST', cookie: ti.cookie, body: valid });
+    assert.equal(blocked.status, 503, JSON.stringify(blocked.body));
+    assert.equal((await pool.query('SELECT count(*)::int AS total FROM seo_redirects WHERE old_path = $1', [oldPath])).rows[0].total, 0,
+      'falha de trilha precisa reverter a criação do redirect');
+  } finally {
+    await pool.query('DROP TRIGGER qa_reject_seo_audit ON auth_access_audit');
+    await pool.query('DROP FUNCTION qa_reject_seo_audit()');
+  }
+
+  // --- 9. Criação válida, com trilha na mesma transação.
+  const created = await api(redirectPath, { method: 'POST', cookie: ti.cookie, body: valid });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  assert.equal(created.body.redirect.old_path, oldPath);
+  assert.equal(created.body.redirect.new_path, '/servicos');
+  const trail = await pool.query(
+    "SELECT actor_kind, action, target FROM auth_access_audit WHERE action = 'seo_redirect_create' AND target LIKE $1",
+    [`${created.body.redirect.id}%`],
+  );
+  assert.equal(trail.rows.length, 1, 'a criação precisa ter exatamente uma linha de trilha');
+  assert.equal(trail.rows[0].actor_kind, 'ti');
+  assert.equal((await api(redirectPath, { method: 'POST', cookie: ti.cookie, body: valid })).body.error, 'duplicate_old_path');
+
+  // --- 9b. A migração 112 AMPLIOU a lista de ações aceitas; não a afrouxou.
+  // O 201 acima só é possível porque 'seo_redirect_create' voltou a ser aceito
+  // (as migrações 099/100/103 redigitaram o CHECK e apagaram 148 valores da
+  // lista da 093). Aqui provamos que a ampliação foi cirúrgica: uma ação que
+  // ninguém autorizou continua recusada pelo banco.
+  await assert.rejects(
+    () => pool.query(
+      "INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ('ti', $1, 'seo_redirect_bogus', 'x', 'allowed', 'none')",
+      [ti.id],
+    ),
+    (error) => error.code === '23514' && String(error.constraint) === 'auth_access_audit_action_check',
+    'ação não autorizada precisa continuar recusada pelo CHECK de auth_access_audit',
+  );
+
+  // --- 10. O redirect REDIRECIONA de verdade (era só linha em tabela antes).
+  const hop = await api(`${oldPath}?utm=gate-${tag}`, { raw: true });
+  assert.equal(hop.status, 301, 'o endereço antigo precisa responder 301');
+  assert.equal(hop.headers.get('location'), `/servicos?utm=gate-${tag}`, 'a query original é preservada');
+  // Método que não é GET/HEAD nunca é desviado.
+  assert.notEqual((await api(oldPath, { method: 'POST', cookie: ti.cookie, body: {} })).status, 301);
+  // Desativar volta a servir a página original.
+  const disabled = await api(redirectPath, { method: 'PATCH', cookie: ti.cookie, body: { id: created.body.redirect.id, is_active: false } });
+  assert.equal(disabled.status, 200, JSON.stringify(disabled.body));
+  assert.notEqual((await api(oldPath, { raw: true })).status, 301, 'redirect inativo não pode desviar');
+  const reenabled = await api(redirectPath, { method: 'PATCH', cookie: ti.cookie, body: { id: created.body.redirect.id, is_active: true } });
+  assert.equal(reenabled.status, 200, JSON.stringify(reenabled.body));
+  // Ligar e desligar o desvio é mudança de estado do site público: cada uma
+  // deixa a sua própria linha de trilha, na mesma transação da escrita.
+  const updateTrail = await pool.query(
+    "SELECT actor_kind FROM auth_access_audit WHERE action = 'seo_redirect_update' AND target LIKE $1",
+    [`${created.body.redirect.id}%`],
+  );
+  assert.equal(updateTrail.rows.length, 2, 'cada alteração precisa de uma linha de trilha');
+  assert.deepEqual([...new Set(updateTrail.rows.map(row => row.actor_kind))], ['ti']);
+
+  // --- 11. Verificação de domínio: o caminho que fabricava o fato é recusado.
+  const domain = await api('/api/admin/domain-verifications', {
+    method: 'POST', cookie: ti.cookie,
+    body: { domain: `gate-${tag}.exemplo.test`, verification_method: 'dns_txt', verification_token: `token-${tag}-abcdefghij` },
+  });
+  assert.equal(domain.status, 201, JSON.stringify(domain.body));
+  assert.equal(domain.body.status, 'pendente');
+  const faked = await api('/api/admin/domain-verifications', { method: 'PATCH', cookie: ti.cookie, body: { id: domain.body.id, status: 'verificado' } });
+  assert.equal(faked.status, 400, JSON.stringify(faked.body));
+  assert.equal(faked.body.error, 'domain_verification_not_supported');
+  assert.equal((await pool.query('SELECT status FROM domain_verifications WHERE id = $1', [domain.body.id])).rows[0].status, 'pendente',
+    'nenhum domínio pode ficar verificado sem verificação real');
+
+  // --- 12. Navegador real: o visitante sai do endereço antigo e chega na página.
+  const browser = await launchBrowser();
+  const failures = [];
+  try {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'pt-BR' });
+    const page = await context.newPage();
+    trackFailures(page, failures);
+    // Espera a resposta real do endereço antigo (301), nunca um timeout fixo.
+    const [hopResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().includes(oldPath)),
+      page.goto(`${baseUrl}${oldPath}?utm=gate-${tag}`, { waitUntil: 'domcontentloaded' }),
+    ]);
+    assert.equal(hopResponse.status(), 301);
+    assert.equal(new URL(page.url()).pathname, '/servicos', 'o navegador precisa terminar na página de destino');
+    assert.equal(new URL(page.url()).searchParams.get('utm'), `gate-${tag}`);
+    await page.getByRole('heading', { name: 'Serviços', level: 1 }).waitFor();
+    await assertNoHorizontalScroll(page, 'a página de destino do redirect');
+
+    // robots.txt visto pelo próprio navegador continua negando tudo.
+    const robotsResponse = await page.goto(`${baseUrl}/robots.txt`, { waitUntil: 'domcontentloaded' });
+    assert.equal(robotsResponse.status(), 200);
+    assert.match(await robotsResponse.text(), /Disallow: \/$/m);
+    const sitemapResponse = await page.goto(`${baseUrl}/sitemap.xml`, { waitUntil: 'domcontentloaded' });
+    assert.equal(sitemapResponse.status(), 404);
+    await context.close();
+  } finally { await browser.close(); }
+  assert.deepEqual(failures, []);
+});

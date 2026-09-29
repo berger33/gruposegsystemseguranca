@@ -4,10 +4,13 @@ export function createSeoApi({ pool, auditLog, sameOrigin, requireSession, requi
 
   const handleConfigs = async (req,res) => {
     const url=new URL(req.url,'http://localhost');
-    const isPublic=url.pathname.startsWith('/api/seo') && !url.pathname.includes('/admin');
-    if(!isPublic && !sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=!isPublic ? await requireSession(req) : null;
-    if(!isPublic && (!sess || !requireRole(sess,['admin','ti']))) return json(res,401,{error:'unauthorized'});
+    // PUB-08: antes, QUALQUER caminho sem `/admin` era tratado como público e
+    // devolvia todas as linhas, inclusive `is_published=false` — rascunho
+    // interno exposto a anônimo. Não há consumidor público destas rotas.
+    if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
+    const sess=await requireSession(req);
+    if(!sess) return json(res,401,{error:'admin_session_required'});
+    if(!requireRole(sess,['admin','ti','marcelo'])) return json(res,403,{error:'forbidden'});
     if(req.method==='GET'){
       const search=url.searchParams.get('search');
       const published=url.searchParams.get('published');
@@ -76,116 +79,19 @@ export function createSeoApi({ pool, auditLog, sameOrigin, requireSession, requi
     return json(res,405,{error:'method_not_allowed'});
   };
 
-  const handleRedirects = async (req,res) => {
-    if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=await requireSession(req);
-    if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
-    if(req.method==='GET'){
-      const { rows } = await pool.query(`SELECT * FROM seo_redirects ORDER BY old_path ASC LIMIT 200`);
-      return json(res,200,{items:rows});
-    }
-    if(req.method==='POST'){
-      const b=await readJson(req);
-      const old_path=String(b.old_path||'').trim();
-      const new_path=String(b.new_path||'').trim();
-      const redirect_type=String(b.redirect_type||'301').trim();
-      const reason=b.reason?String(b.reason).trim():null;
-      const is_active=b.is_active!==undefined?!!b.is_active:true;
-      if(old_path.length<1||old_path.length>500) return json(res,400,{error:'invalid_old_path'});
-      if(new_path.length<1||new_path.length>500) return json(res,400,{error:'invalid_new_path'});
-      if(old_path===new_path) return json(res,400,{error:'cannot_redirect_to_self'});
-      const valid=['301','302','307','308'];
-      if(!valid.includes(redirect_type)) return json(res,400,{error:'invalid_redirect_type'});
-      if(reason && (reason.length<10||reason.length>1000)) return json(res,400,{error:'invalid_reason'});
-      try{
-        const { rows } = await pool.query(`INSERT INTO seo_redirects (old_path, new_path, redirect_type, is_active, reason, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`, [old_path, new_path, redirect_type, is_active, reason, sess.identityId||null]);
-        await auditLog({ action:'seo_redirect_create', actor:sess.identityId||'system', target:rows[0].id, meta:{ old_path, new_path, redirect_type } });
-        return json(res,201,rows[0]);
-      } catch(e){ if(e.code==='23505') return json(res,409,{error:'duplicate_old_path'}); throw e; }
-    }
-    if(req.method==='PATCH'){
-      const b=await readJson(req);
-      const id=b.id;
-      if(!id) return json(res,400,{error:'missing_id'});
-      const { rows: existing } = await pool.query(`SELECT * FROM seo_redirects WHERE id=$1`, [id]);
-      if(!existing.length) return json(res,404,{error:'not_found'});
-      const is_active=b.is_active!==undefined?!!b.is_active:existing[0].is_active;
-      const new_path=b.new_path?String(b.new_path).trim():existing[0].new_path;
-      if(new_path.length<1||new_path.length>500) return json(res,400,{error:'invalid_new_path'});
-      if(new_path===existing[0].old_path) return json(res,400,{error:'cannot_redirect_to_self'});
-      const { rows } = await pool.query(`UPDATE seo_redirects SET new_path=$2, is_active=$3, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, new_path, is_active]);
-      await auditLog({ action:'seo_redirect_update', actor:sess.identityId||'system', target:id, meta:{ new_path, is_active } });
-      return json(res,200,rows[0]);
-    }
-    return json(res,405,{error:'method_not_allowed'});
-  };
-
-  const handleSitemap = async (req,res) => {
-    const url=new URL(req.url,'http://localhost');
-    const isXml=url.pathname.endsWith('.xml') || url.searchParams.get('format')==='xml';
-    if(req.method==='GET'){
-      if(url.pathname.includes('/admin') || url.pathname.includes('/hr')){
-        if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-        const sess=await requireSession(req);
-        if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
-        const { rows } = await pool.query(`SELECT * FROM seo_sitemap_entries ORDER BY url ASC LIMIT 500`);
-        if(isXml){
-          let xml=`<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n`;
-          for(const r of rows.filter(x=>x.is_included)){
-            xml+=`  <url><loc>${r.url}</loc><lastmod>${r.lastmod.toISOString().split('T')[0]}</lastmod><changefreq>${r.changefreq}</changefreq><priority>${r.priority}</priority></url>\n`;
-          }
-          xml+=`</urlset>`;
-          res.writeHead(200,{'Content-Type':'application/xml'}); res.end(xml); return;
-        }
-        return json(res,200,{items:rows, note:'sitemap preserva noindex até produção liberada; is_included false enquanto noindex true'});
-      } else {
-        // public sitemap - only included
-        const { rows } = await pool.query(`SELECT * FROM seo_sitemap_entries WHERE is_included=true ORDER BY url ASC LIMIT 500`);
-        if(isXml){
-          let xml=`<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n`;
-          for(const r of rows){
-            xml+=`  <url><loc>${r.url}</loc><lastmod>${r.lastmod.toISOString().split('T')[0]}</lastmod><changefreq>${r.changefreq}</changefreq><priority>${r.priority}</priority></url>\n`;
-          }
-          xml+=`</urlset>`;
-          res.writeHead(200,{'Content-Type':'application/xml'}); res.end(xml); return;
-        }
-        return json(res,200,{items:rows});
-      }
-    }
-    if(req.method==='POST' || req.method==='PATCH'){
-      if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-      const sess=await requireSession(req);
-      if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
-      const b=await readJson(req);
-      const action=b.action||'update';
-      if(action==='rebuild'){
-        // rebuild from seo_configs where is_published true and is_noindex false
-        const { rows: configs } = await pool.query(`SELECT * FROM seo_configs WHERE is_published=true AND is_noindex=false`);
-        for(const c of configs){
-          await pool.query(`INSERT INTO seo_sitemap_entries (url, priority, changefreq, is_included, source) VALUES ($1,$2,$3,true,$4) ON CONFLICT (url) DO UPDATE SET priority=$2, changefreq=$3, is_included=true, updated_at=NOW()`, [c.canonical_url||c.path, c.sitemap_priority, c.changefreq, 'rebuild from seo_configs']);
-        }
-        await auditLog({ action:'seo_sitemap_update', actor:sess.identityId||'system', target:'rebuild', meta:{ count: configs.length } });
-        return json(res,200,{rebuilt: configs.length});
-      }
-      const urlPath=b.url?String(b.url).trim():null;
-      const priority=b.priority!=null?Number(b.priority):0.5;
-      const changefreq=String(b.changefreq||'weekly').trim();
-      const is_included=b.is_included!==undefined?!!b.is_included:true;
-      if(!urlPath||urlPath.length<5||urlPath.length>1000) return json(res,400,{error:'invalid_url'});
-      if(!Number.isFinite(priority)||priority<0||priority>1) return json(res,400,{error:'invalid_priority'});
-      const validFreq=['always','hourly','daily','weekly','monthly','yearly','never'];
-      if(!validFreq.includes(changefreq)) return json(res,400,{error:'invalid_changefreq'});
-      const { rows } = await pool.query(`INSERT INTO seo_sitemap_entries (url, priority, changefreq, is_included, source) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (url) DO UPDATE SET priority=$2, changefreq=$3, is_included=$4, updated_at=NOW() RETURNING *`, [urlPath, priority, changefreq, is_included, b.source||'manual']);
-      await auditLog({ action:'seo_sitemap_update', actor:sess.identityId||'system', target:rows[0].id, meta:{ url: urlPath, is_included } });
-      return json(res,200,rows[0]);
-    }
-    return json(res,405,{error:'method_not_allowed'});
-  };
+  // PUB-08: `handleRedirects` e `handleSitemap` foram REMOVIDOS daqui.
+  // O sitemap digitado à mão (`seo_sitemap_entries`) deixou de ser fonte de
+  // verdade — `/sitemap.xml` passa a ser derivado das rotas públicas reais em
+  // `src/server/seo-technical-api.mjs`, com XML escapado —, e os redirects
+  // passaram a ser aplicados de fato na requisição, com regra de sombra,
+  // destino, cadeia e trilha na mesma transação. Ver
+  // `docs/PROMPT-CONTINUACAO-PUB08-SEO-TECNICO.md`.
 
   const handleDomainVerification = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
     const sess=await requireSession(req);
-    if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
+    if(!sess) return json(res,401,{error:'admin_session_required'});
+    if(!requireRole(sess,['admin','ti','marcelo'])) return json(res,403,{error:'forbidden'});
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM domain_verifications ORDER BY domain ASC LIMIT 100`);
       return json(res,200,{items:rows, note:'verificação de domínio na liberação; preservar noindex até verificado'});
@@ -212,6 +118,16 @@ export function createSeoApi({ pool, auditLog, sameOrigin, requireSession, requi
       if(!id) return json(res,400,{error:'missing_id'});
       const valid=['pendente','verificado','falha','expirado'];
       if(status && !valid.includes(status)) return json(res,400,{error:'invalid_status'});
+      // PUB-08: declarar um domínio "verificado" à mão é fabricar o fato que o
+      // portão deveria provar — verificação real exige consultar DNS ou buscar
+      // um arquivo no domínio, fronteira externa fora desta entrega local.
+      // Registrar "pendente" continua valendo; declarar verificado, não.
+      if(status==='verificado'){
+        return json(res,400,{
+          error:'domain_verification_not_supported',
+          note:'A verificação real (DNS/HTTP no domínio) não é executável nesta entrega local; nenhum controle desta fatia depende deste registro.',
+        });
+      }
       const { rows: existing } = await pool.query(`SELECT * FROM domain_verifications WHERE id=$1`, [id]);
       if(!existing.length) return json(res,404,{error:'not_found'});
       const nextStatus=status||existing[0].status;
@@ -222,5 +138,5 @@ export function createSeoApi({ pool, auditLog, sameOrigin, requireSession, requi
     return json(res,405,{error:'method_not_allowed'});
   };
 
-  return { handleConfigs, handleRedirects, handleSitemap, handleDomainVerification };
+  return { handleConfigs, handleDomainVerification };
 }
