@@ -1,21 +1,23 @@
 # Prompt da próxima sessão — Grupo SEG System (entrega local, L04)
 
 Escrito ao fim da integração da fatia de notas internas/campo a campo de
-CRM-05/06 (sessão `arena/01a0eef9-gruposegsystemseguranca`, PR #25) com a
-fatia de calendário de CRM-08 (sessão `arena/01a0ef36-gruposegsystemseguranca`,
-PR #24). Use este arquivo como prompt de entrada da próxima continuação.
+CRM-05/06 (sessão `arena/01a0eef9-gruposegsystemseguranca`, PR #25) com as
+fatias de calendário de CRM-08 (sessão `arena/01a0ef36-gruposegsystemseguranca`,
+PR #24) e de métricas PUB-10 (sessão `arena/01a0ef49-gruposegsystemseguranca`,
+PR #26). Use este arquivo como prompt de entrada da próxima continuação.
 
 ## Estado de entrada
 
-- Base: `main` após os merges dos PRs #24 e #25 (conferir o SHA no disco antes
-  de começar).
+- Base: `main` após os merges dos PRs #24, #25 e #26 (conferir o SHA no disco
+  antes de começar).
 - Referências obrigatórias antes de qualquer código:
   `docs/ESTADO-EXECUCAO-LOCAL.md`, `docs/CHECKLIST-ENTREGA-LOCAL.md`,
   `docs/EVIDENCIAS-ENTREGA-LOCAL.md`,
-  `docs/PROMPT-CONTINUACAO-CRM-NOTAS-KANBAN.md` (fatia notas/kanban) e
-  `docs/PROMPT-CONTINUACAO-CRM-AGENDA-CALENDARIO.md` (fatia calendário).
+  `docs/PROMPT-CONTINUACAO-CRM-NOTAS-KANBAN.md` (fatia notas/kanban),
+  `docs/PROMPT-CONTINUACAO-CRM-AGENDA-CALENDARIO.md` (fatia calendário) e
+  `docs/PROMPT-CONTINUACAO-PUB10-METRICAS-ORIGEM.md` (fatia PUB-10).
 - **L04 permanece PARCIAL. Não iniciar L05.**
-- Fatias entregues (gate mesclado 9/9, duas vezes consecutivas):
+- Fatias entregues (gate mesclado 10/10, duas vezes consecutivas):
   - **CRM-05/06/07 completo** (`arena/01a0eef9`): notas internas dedicadas
     (`crm_opportunity_notes`, `crm-note-api.mjs`, `OpportunityNotes.tsx`) e
     campo a campo de oportunidades — todos os campos em criação/manutenção com
@@ -27,14 +29,19 @@ PR #24). Use este arquivo como prompt de entrada da próxima continuação.
   - **CRM-08 com visão de calendário por semana** (`arena/01a0ef36`,
     PR #24): `MyAgenda.tsx` com alternador lista/semana, somente leitura, sem
     rota/migração nova (reaproveita `GET /api/crm/visits/agenda?from=&to=`).
+  - **PUB-10 entregue** (`arena/01a0ef49`, PR #26): painel derivado e
+    somente leitura em `/admin/leads`
+    (`GET /api/admin/leads/metrics?from=&to=`, `OriginMetricsPanel.tsx`),
+    minimizado por construção, janela fail-closed, denominador zero = `null`.
+    Testes A/B continuam fora por decisão registrada.
 - Migrações 001–111 aplicadas e IMUTÁVEIS; próxima migração livre: **112**
   (confirmar no disco antes de criar). 510 tabelas.
 - **CRM-05, CRM-06 e CRM-07 estão pronto_local** (provados por gate campo a
   campo). CRM-08 tem agenda, conflito, vínculo PUB-04 e calendário semanal.
 - Fora desta entrega, por decisão registrada: CRM-10, automação de mensagens,
   SMTP, lembretes/notificações de agenda, ações dentro da visão de calendário
-  (deliberadamente só leitura), hospedagem externa, Windows e aceite humano.
-  Não publicar em produção nem contratar serviços.
+  (deliberadamente só leitura), testes A/B, hospedagem externa, Windows e
+  aceite humano. Não publicar em produção nem contratar serviços.
 
 ## Lacunas restantes de L04 (escolher UMA fatia vertical)
 
@@ -43,10 +50,10 @@ PR #24). Use este arquivo como prompt de entrada da próxima continuação.
    decisor/influenciador/usuário/financeiro com preferências e restrições;
    CRM-01 segue sem rota de criação/edição de unidade (hoje é fixture SQL);
    CRM-03/04 (endereços/correção de dados) sem tela dedicada.
-2. **Lacunas PUB:** PUB-02/05 e PUB-06..10 (CMS, temas, SEO, montador de
-   pacote, painel de métricas de origem/conversão — componentes órfãos em
-   `src/app/admin/ti/*Client.tsx`, conectar por domínio, nunca despejar na
-   página de TI).
+2. **Lacunas PUB:** PUB-02/05 e PUB-06..09 (CMS, temas, SEO, montador de
+   pacote — componentes órfãos em `src/app/admin/ti/*Client.tsx`, conectar
+   por domínio, nunca despejar na página de TI; `OriginMetricsClient.tsx`
+   segue órfão por decisão do PR #26).
 3. **CRM-10 (carteira):** fora por decisão registrada — reabrir apenas com
    decisão explícita do proprietário.
 4. **Lembretes/notificações de CRM-08:** só entram com provedor, autorização e
@@ -61,10 +68,16 @@ PR #24). Use este arquivo como prompt de entrada da próxima continuação.
 - `handleAdminLeadStatus` em `server.mjs`: padrão de auditoria "solta" em
   transação multi-instrução (comportamento confirmado correto hoje; o CHECK
   da 103 fecha a causa atual, mas o padrão não foi hardenizado).
-- Sessões paralelas: se outra fatia for mesclada no `main` antes desta, o gate
-  e os docs terão conflito de apendo — resolver mantendo **ambos** os cenários
-  e re-executar a bateria no estado mesclado, como feito na integração dos
-  PRs #24/#25.
+- Sessões paralelas: **houve três fatias paralelas nesta rodada** (PRs #24,
+  #25 e #26). Se outra fatia for mesclada no `main` antes desta, o gate e os
+  docs terão conflito de apendo — resolver mantendo **todos** os cenários e
+  re-executar a bateria completa no estado mesclado, como feito nestas
+  integrações. Um commit vazio NÃO dispara o workflow de CI do gate (filtro
+  de paths); qualquer push que re-dispare precisa tocar um arquivo da lista.
+- CI: em caso de falha de gate apenas no runner (bateria local verde com TZ
+  local e TZ=UTC), suspeitar de throttling do runner antes de mudar código;
+  logs podem estar indisponíveis durante incidentes de storage do GitHub
+  Actions.
 
 ## Método (inegociável)
 

@@ -991,6 +991,126 @@ empresa/oportunidade/visitas pela API real.
   pendentes. CRM-10, automação de mensagens, SMTP, calendário externo,
   hospedagem externa, Windows e aceite humano seguem fora por decisão.
 
+---
+
+## L04 — PUB-10: mensuração de origem e conversão (painel derivado)
+
+Sessão `arena/01a0ef49-gruposegsystemseguranca`, sobre `main @ fe35b4c`.
+Política registrada ANTES da rota em
+`docs/PROMPT-CONTINUACAO-PUB10-METRICAS-ORIGEM.md`.
+
+Ambiente: Linux x86_64, Node v22.22.3, npm 10.9.8, PostgreSQL 17.9
+(`embedded-postgres`, cluster descartável por execução), Chromium real sem
+`--disable-web-security`.
+
+### Comandos e resultados observados
+
+| # | Cenário | Comando | Esperado | Observado |
+|---|---|---|---|---|
+| PUB10-1 | Verificações estáticas | `node scripts/qa-wave0-static.mjs` | 5/5 | `RESUMO: 5/5`, migrações 001–110 contínuas |
+| PUB10-2 | Migrações em banco descartável | `npm run test:migrations:pg` | 110/110, 509 tabelas | `CHECKSUMMED=110/110 TABLES=509->509`, `SECOND_EXIT=0` |
+| PUB10-3 | Migração adulterada recusada | idem (clone mutado) | recusa sem rebaseline | `migration_checksum_mismatch: 006`, exit 1 tratado |
+| PUB10-4 | Gate de entrega (1ª execução) | `npm run test:l04-delivery:pg` | tudo passa | **9/9**, `L04_DELIVERY_TEST_EXIT: 0` |
+| PUB10-5 | Gate de entrega (2ª consecutiva) | idem | tudo passa | **9/9**, `L04_DELIVERY_TEST_EXIT: 0` |
+| PUB10-6 | Suíte unitária | `npm test` | tudo passa | 186/186 |
+| PUB10-7 | Tipos | `npm run typecheck` | 0 erros | 0 erros |
+| PUB10-8 | Build | `npm run build` | sucesso | sucesso |
+| PUB10-9 | Higiene do diff | `git diff --check` | limpo | limpo |
+
+Nenhuma migração foi criada: a fatia é leitura agregada sobre tabelas que já
+existiam. `scripts/qa-wave0-static.mjs` (`latestMigration`) e
+`scripts/migrate-site-visual.mjs` permaneceram intocados. Próxima migração
+livre continua **111**.
+
+### O que o cenário novo do gate prova
+
+Cenário `PUB-10: mensuração de origem e conversão — agregado derivado,
+minimizado e fail-closed`, em `tests/l04-delivery.integration.test.mjs`.
+HTTP real + PostgreSQL descartável + Chromium real; SQL usado só para montar
+a fixture de leads e o vínculo lead→oportunidade.
+
+1. **Fail-closed de acesso.** Anônimo em `GET /api/admin/leads/metrics` →
+   401 `admin_session_required`. Identidade real com papel `rh` → 403.
+   `POST` na rota → 405 com cabeçalho `Allow: GET`. Não existe parâmetro,
+   cabeçalho ou variável de ambiente que libere o acesso.
+2. **Fail-closed de janela.** `from=ontem` → 400 `invalid_period`;
+   `from > to` → 400 `invalid_period`; `from=2026-02-31` (data que não
+   existe, e que o `Date` do JS "consertaria" silenciosamente para 03/03) →
+   400 `invalid_period`; janela de 2020 até hoje → 400 `period_too_long`.
+   Não há consulta "tudo desde sempre" por esta rota.
+3. **Agregado derivado correto.** Fixture com 3 pedidos na origem A dentro da
+   janela de 30 dias (1 confirmado, 1 realizado, 1 solicitado), 1 pedido na
+   origem B sem conversão, 1 pedido sem origem declarada e 1 pedido da
+   origem A com 40 dias — este último **não** é contado, provando que o
+   período filtra de verdade. Duas oportunidades reais criadas pela API são
+   vinculadas por `public_lead_id` (uma delas em `stage='ganho'`). Resultado
+   conferido: origem A com `leads=3`, `visitsConfirmed=2`, `converted=2`,
+   `won=1`, `conversionRate=66.67`, `winRate=33.33`.
+4. **Distinção entre "zero" e "sem base".** Origem B, que tem pedidos e
+   nenhuma conversão, devolve `conversionRate=0`. Uma janela sem nenhum
+   pedido (janeiro/2019) devolve `rows: []`, `totals.leads=0` e
+   `totals.conversionRate=null` — "não há base para calcular" nunca é
+   apresentado como "a taxa é zero".
+5. **Rótulo explícito para origem ausente.** Lead com origem em branco e
+   campanha/canal nulos aparece como `(não informado)` nos três campos; não
+   some do agregado e não tem origem inferida de IP, referer ou user agent.
+6. **Minimização provada, não prometida.** Asserção explícita de que o JSON
+   da resposta não contém o telefone, o e-mail, o nome nem nenhum dos ids de
+   lead da fixture; de que as chaves de cada linha são apenas
+   `origin/campaign/channel/leads/visitsConfirmed/converted/won/conversionRate/winRate`;
+   e de que `&detail=1&raw=true&include=leads` não destrava dado por-lead.
+   O mesmo é verificado no DOM renderizado.
+7. **Navegador real, no domínio certo.** Chromium com sessão real de
+   `comercial` abre `/admin/leads` (não `/admin/ti`), aguarda a resposta HTTP
+   real de `/api/admin/leads/metrics` com `page.waitForResponse` (nunca
+   `waitForTimeout`), lê 4 pedidos na janela padrão de 90 dias, encurta o
+   período para 30 dias, aguarda a nova resposta real e passa a ler 3.
+   Também é verificado que o painel **não** tem nenhum botão de
+   criar/salvar/registrar métrica, e que não gera rolagem horizontal.
+8. Nenhum erro de console, requisição same-origin falhada ou resposta 5xx em
+   toda a navegação.
+
+### Ajuste declarado durante a fatia
+
+A primeira redação do cenário assumia que o painel abriria já na janela de 30
+dias usada nas asserções por HTTP, e leu 4 pedidos onde esperava 3. O padrão
+do painel é 90 dias, e o pedido de 40 dias atrás entra nele legitimamente.
+**A regra não foi afrouxada**: o cenário passou a afirmar os dois valores
+(4 em 90 dias, 3 em 30 dias), o que prova melhor que o filtro de período é
+real. Registrado aqui como exige o método.
+
+### Limites honestos deste recorte
+
+- **Testes A/B não foram implementados** e não têm rota nem tela. O próprio
+  requisito PUB-10 os condiciona a "tráfego, hipótese e tratamento de dados
+  definidos"; nenhuma das três coisas existe hoje, e o sistema não tem
+  tráfego real. Entregar o mecanismo antes disso seria entregar um botão que
+  ninguém pode usar com honestidade.
+- **`src/app/admin/ti/OriginMetricsClient.tsx` foi descartado para esta
+  finalidade e continua órfão.** É um CRUD onde um humano digitaria
+  `total_leads`, `converted_leads`, `total_opportunities` e
+  `total_contracts` à mão — número de conversão inventado com aparência de
+  relatório oficial. As tabelas da migração 092 (`pub10_origin_metrics`,
+  `pub10_conversion_events`, `pub10_ab_tests`) continuam existindo (migrações
+  são imutáveis), sem tela, e não são fonte de verdade de nada.
+- A rota **não grava trilha por consulta**, por decisão registrada: é leitura
+  agregada sem dado pessoal identificável, e uma linha de auditoria por render
+  de painel degradaria `auth_access_audit`. Como não há mutação, também não há
+  nesta fatia o cenário de "falha de auditoria injetada reverte a mutação".
+- "Ganho no funil" é decisão comercial registrada em `crm_opportunities.stage`
+  — **não** significa dinheiro recebido, mesma ressalva já registrada em
+  CRM-06.
+- Estados legados pré-PUB-04 (`new`, `contacted`, `closed`) contam em
+  "pedidos", mas nunca em "visita confirmada" nem em "convertido": não há como
+  saber o que significavam, e chutar seria fabricar.
+- Fora do recorte: exportação (CSV/PDF), gráficos, comparação entre períodos,
+  atribuição multi-toque, contrato como degrau do funil e qualquer envio a
+  ferramenta externa de analytics.
+- Continuam pendentes em L04: CRM-07 residual (kanban/tabela campo a campo e
+  notas internas), PUB-02/05 e PUB-06..09, e a revalidação campo a campo de
+  CRM-01..06. CRM-10, automação de mensagens, SMTP, lembretes da agenda,
+  hospedagem externa, Windows e aceite humano seguem fora por decisão.
+
 *(Nota de integração: na fusão com a fatia de notas/kanban, este cenário passou a
 ser o nono do gate; a bateria mesclada revalidou 9/9 em duas execuções
 consecutivas.)*
@@ -1134,25 +1254,33 @@ consecutivas.)*
   preferências/restrições) continua sem tela dedicada; CRM-01..04 aguardam
   revalidação campo a campo.
 
+### Integração com os PRs #24 (calendário CRM-08) e #26 (PUB-10)
 
-### Integração com o PR #24 (calendário de CRM-08)
+Esta fatia foi desenvolvida em paralela à fatia de calendário de CRM-08
+(PR #24, branch `arena/01a0ef36`) e à fatia de métricas de origem/conversão
+PUB-10 (PR #26, branch `arena/01a0ef49`). Nos merges para o `main`
+atualizado, os conflitos do gate e dos docs foram resolvidos mantendo
+**todos** os cenários — no gate mesclado, notas/kanban é o oitavo, calendário
+o nono e PUB-10 o décimo — e a bateria completa foi re-executada sobre o
+estado final: `node scripts/qa-wave0-static.mjs` 5/5, `npm run
+test:migrations:pg` 111/111 (replay, clone, checksum negativo, 510 tabelas),
+`npm run test:l04-delivery:pg` **10/10, duas vezes consecutivas**, `npm test`
+186/186, `npm run typecheck` 0 erros, `npm run build` ok, `git diff --check`
+limpo. Nenhuma regra de proteção foi afrouxada na resolução.
 
-Esta fatia foi desenvolvida em paralelo à fatia de calendário de CRM-08
-(PR #24, branch `arena/01a0ef36`). No merge para o `main` atualizado, os
-conflitos do gate e dos docs foram resolvidos mantendo **os dois** cenários —
-o de calendário passou a ser o **nono** — e a bateria completa foi
-re-executada sobre o estado mesclado: `node scripts/qa-wave0-static.mjs` 5/5,
-`npm run test:migrations:pg` 111/111 (replay, clone, checksum negativo, 510
-tabelas), `npm run test:l04-delivery:pg` **9/9, duas vezes consecutivas**,
-`npm test` 186/186, `npm run typecheck` 0 erros, `npm run build` ok,
-`git diff --check` limpo. Nenhuma regra de proteção foi afrouxada na resolução
-(ambos os cenários novos preservados na íntegra).
+Ajuste declarado pós-integração (CI): a primeira execução do gate no CI
+falhou (etapa do gate, exit 1, em runner visivelmente lentificado durante o
+incidente de storage do GitHub Actions — os logs da execução ficaram
+indisponíveis por EOF no blob). Sem log para diagnosticar e com a bateria
+local verde (9/9 com TZ local e com TZ=UTC naquele ponto), os timeouts de
+runtime dos dois cenários desta fatia foram ampliados apenas como orçamento
+de infraestrutura — cenário de notas/kanban 180s→240s e cenário de calendário
+120s→180s — sem tocar em nenhuma asserção, espera ou regra de proteção.
 
-Ajuste declarado pós-integração: a primeira execução do gate no CI falhou
-(etapa do gate, exit 1, em runner visivelmente lentificado durante o incidente
-de storage do GitHub Actions — os logs da execução ficaram indisponíveis por
-EOF no blob). Sem log para diagnosticar e com a bateria local verde 3x
-(9/9 com TZ local e com TZ=UTC), os timeouts de runtime dos dois cenários
-novos foram ampliados apenas como orçamento de infraestrutura — cenário de
-notas/kanban 180s→240s e cenário de calendário 120s→180s — sem tocar em
-nenhuma asserção, espera ou regra de proteção.
+Ajuste declarado pós-integração (cenário PUB-10): na fusão com o PR #26, a
+fixture SQL do cenário de PUB-10 gravava `stage='ganho'` sem acertar a
+bandeira `is_won`, o que a migração 111 desta fatia passou a recusar no banco
+(CHECK `crm_opportunities_won_flag_check`, `NOT VALID`, vale para escrita
+nova). A fixture passou a gravar `is_won = true` junto com o estágio. A regra
+não foi afrouxada — o cenário é que precisou respeitar a coerência nova; sem
+o ajuste, o gate mesclado fechava em 9/10.
