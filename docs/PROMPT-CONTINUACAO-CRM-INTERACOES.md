@@ -7,9 +7,10 @@ O roteiro L00–L10 contém 222 requisitos. SMTP e hospedagem externa continuam 
 
 ## Base conferida e patch desta continuação
 
-- Base de partida real: `05f258f5385c755724e6908a650da116766d9e69` (`main` após o ajuste documental do PR #15). O histórico anterior que cita `927cb8d` é contextual; não é a ref atual.
-- Branch usada nesta sessão: `arena/01a0ee5c-gruposegsystemseguranca`.
-- Código do recorte: `c69685f` — `feat(crm-07): complete interaction follow-up`.
+- A implementação partiu de `05f258f5385c755724e6908a650da116766d9e69` (`main` após o ajuste documental do PR #15). O histórico anterior que cita `927cb8d` é contextual, não é uma base para restaurar.
+- **Código já integrado:** PR #16 (`https://github.com/berger33/gruposegsystemseguranca/pull/16`) foi mesclado em `main` no commit `a7682117b36b651384bd49a836fa2aa8443728fc`. Comece a próxima sessão conferindo o SHA atual da branch Arena e de `main`; não restaure refs históricas.
+- Código do recorte: `c69685f` — `feat(crm-07): complete interaction follow-up`; documentação/evidências: `fb46930`.
+- CI do PR #16 verde: L04 CRM delivery (`crm-postgres-browser`) e QA baseline (`static-and-smoke`).
 - Escolha executada: **Opção A**, ampliação do histórico de interações. A agenda CRM-08 não foi iniciada neste recorte.
 
 ### Entregue no CRM-07
