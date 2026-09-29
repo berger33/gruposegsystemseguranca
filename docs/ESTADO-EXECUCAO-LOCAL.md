@@ -5,7 +5,91 @@ Referência: `docs/EXECUCAO-ENTREGA-LOCAL.md` (roteiro L00–L10) e
 `docs/PLANO-MESTRE-IMPLEMENTACAO.md` (222 requisitos).
 
 
-## Continuação mais recente — CRM-07 residual: notas internas e campo a campo de CRM-05/06 (Arena, 2026-09-29)
+## Continuação mais recente — PUB-08: SEO técnico (Arena, 2026-09-29)
+
+Base: `main @ b3c1db6` (merge do PR #26, PUB-10), na branch
+`arena/01a0ef61-gruposegsystemseguranca`. Durante a sessão o **PR #25 foi
+mergeado** por fora (`main @ 8f52137`); esta branch **incorporou `origin/main`
+por merge, sem conflito**, e a bateria foi re-executada sobre o estado
+mesclado. A política foi registrada ANTES da rota em
+`docs/PROMPT-CONTINUACAO-PUB08-SEO-TECNICO.md`.
+
+Fatia entregue: **PUB-08 — SEO técnico**. O que existia era uma casca: não
+havia `/robots.txt`; o sitemap era *digitado à mão* numa tabela
+(`seo_sitemap_entries`) e montado sem escapar XML; os redirects eram só linhas
+numa tabela que **nenhum ponto do servidor consultava**; `GET /api/seo` e
+`GET /api/seo-configs` eram públicos e devolviam inclusive
+`is_published = false`; papel errado recebia 401 em vez de 403; e o `PATCH` de
+domínio gravava `verificado` sem verificar nada.
+
+O que passou a existir:
+
+- **`GET /robots.txt`** (novo) e **`GET /sitemap.xml`**, ambos derivados do
+  código em `src/lib/seo-technical.mjs` / `src/server/seo-technical-api.mjs`.
+  As 17 URLs vêm das rotas estáticas reais + `PUBLIC_SERVICES` + os segmentos;
+  para ter **uma** fonte, `src/lib/segment-examples.ts` virou `.mjs` + `.d.mts`
+  (mesmo padrão de `service-catalog.mjs`), sem mudança de conteúdo.
+- **`noindex` fail-closed**: só libera com `NEXT_PUBLIC_ENV=production` **e**
+  `NEXT_PUBLIC_ALLOW_INDEX=true`. Fora disso, `Disallow: /` sem anunciar mapa,
+  `X-Robots-Tag: noindex, nofollow` e `/sitemap.xml` **404** — não há parâmetro,
+  cabeçalho ou papel que destrave.
+- **`GET /api/admin/seo/sitemap-preview`**: revisão autenticada do XML que
+  *seria* publicado, sem publicar nada.
+- **Redirects que redirecionam**: `GET/POST/PATCH /api/admin/seo-redirects`
+  cadastra com regra fail-closed (caminho interno absoluto, sem laço, sem
+  sombrear rota existente, destino obrigatoriamente público, sem cadeia) e o
+  servidor resolve **um único salto** no caminho da requisição, antes do Next,
+  só em GET/HEAD, preservando a query.
+- **Vazamento fechado**: `/api/seo` e `/api/seo-configs` deixaram de ter
+  caminho público; papel errado agora é 403.
+- **Auditoria transacional**: criar/alterar redirect grava a trilha em
+  `auth_access_audit` na mesma transação; falha injetada devolve 503 e reverte.
+
+**Achado que obrigou uma migração:** o gate provou que a suposição da política
+("as ações já estão no CHECK desde a 090") era **falsa**. As migrações 099,
+100 e 103 **redigitaram a lista inteira** do CHECK `auth_access_audit_action_check`
+em vez de ampliá-la e, com isso, apagaram **148 valores** que existiam na lista
+da 093 — todas as ações de SEO, CMS, temas, pacotes, origem/conversão e
+reclamação. O defeito ficou invisível porque quase todo gravador de trilha do
+projeto embrulha o `INSERT` em `try {} catch {}`. Criada a migração **112**
+(aditiva, no padrão da 110/111: aninha a definição anterior, falha se a
+constraint pai sumir e se `actor_kind` deixar de aceitar `'ti'`), que
+reautoriza **apenas** `seo_redirect_create` e `seo_redirect_update` — as duas
+que esta fatia escreve e prova. **As outras 146 continuam fora da lista e
+ficam declaradas como achado aberto.** Migrações **001–112**, **510 tabelas**;
+001–111 permanecem imutáveis.
+
+Descartes declarados: **`SeoClient.tsx` permanece órfão e descartado** (permite
+digitar qualquer URL no sitemap, `robots` livre e "Marcar verificado" num
+clique); `seo_sitemap_entries` e `seo_configs` deixam de ser fonte de verdade;
+a coluna `hits` não é incrementada; `/layout-01..10`, `/qa/modulos` e
+`/proposta/aceite/[token]` ficam fora do sitemap. **Verificação de domínio fica
+FORA por fronteira externa** (DNS/HTTP no domínio real) e o caminho que
+fabricava o fato foi fechado com 400 `domain_verification_not_supported`.
+
+Outros dois achados registrados: (1) a regra de **cadeia** é hoje
+estruturalmente inalcançável pelo cadastro (origem nunca é rota pública e
+destino sempre é) e fica como segunda barreira porque o catálogo de serviços
+muda — no gate ela só é alcançável por fixture SQL; (2) a migração 090 **semeia
+quatro redirects**, e os três com origem sob `/cliente` e `/admin` nascem
+**inertes** pela regra de prefixo reservado, de modo que `/cliente/acesso`
+continua servindo a página real.
+
+Gate: `npm run test:l04-delivery:pg` **11/11, duas vezes consecutivas**
+(PostgreSQL descartável, HTTP real, Chromium real sem `--disable-web-security`,
+`page.waitForResponse` em vez de espera fixa). Regressão: `qa-wave0-static`
+5/5, `test:migrations:pg` **112/112 checksums e 510 tabelas** (replay, clone e
+mismatch negativo), `npm test` **196/196**, `typecheck` 0 erros, `build` OK,
+`git diff --check` limpo, `tsconfig.json`/`next-env.d.ts` restaurados após o
+dev server do gate.
+
+L04 continua **PARCIAL** e **L05 não foi iniciado**. PUB-08 passa a *parcial*
+(SEO técnico provado; verificação de domínio declaradamente fora). Seguem em
+aberto: PUB-02/05/06/07/09 com componentes órfãos, CRM-01..04 aguardando
+revalidação campo a campo, lembretes/notificações de agenda e CRM-10 fora por
+decisão.
+
+### Continuação anterior — CRM-07 residual: notas internas e campo a campo de CRM-05/06 (Arena, 2026-09-29)
 
 A base desta continuação é `ed50d22` (HEAD de `main` e da branch no início, merge dos PRs #22 e #23), na branch `arena/01a0eef9-gruposegsystemseguranca`. O recorte escolhido é a lacuna 1 de L04: **revisão campo a campo do kanban/tabela de oportunidades herdados de CRM-05/06 e notas internas dedicadas de CRM-07**. A política foi registrada antes da rota em `docs/PROMPT-CONTINUACAO-CRM-NOTAS-KANBAN.md`.
 

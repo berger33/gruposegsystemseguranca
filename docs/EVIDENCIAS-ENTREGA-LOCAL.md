@@ -1284,3 +1284,159 @@ bandeira `is_won`, o que a migração 111 desta fatia passou a recusar no banco
 nova). A fixture passou a gravar `is_won = true` junto com o estágio. A regra
 não foi afrouxada — o cenário é que precisou respeitar a coerência nova; sem
 o ajuste, o gate mesclado fechava em 9/10.
+
+## L04 — PUB-08: SEO técnico (branch `arena/01a0ef61-gruposegsystemseguranca`)
+
+Base da sessão: `main @ b3c1db6` (merge do PR #26). Durante a sessão o PR #25
+foi mergeado por fora e esta branch **incorporou `origin/main` (`8f52137`) por
+merge, sem conflito em nenhum arquivo**; toda a bateria abaixo foi executada
+**sobre o estado mesclado**, com o gate já contendo os 11 cenários.
+
+### Política registrada antes da rota
+
+`docs/PROMPT-CONTINUACAO-PUB08-SEO-TECNICO.md` — oito decisões escritas antes
+de qualquer linha de rota, mais a dependência declarada do PR #25, os três
+achados da execução e a justificativa da migração 112.
+
+### O defeito que existia (verificado no código, antes de mexer)
+
+| # | Defeito | Onde |
+|---|---|---|
+| 1 | Não existia `/robots.txt`; rastreador recebia 404 do Next | ausência de rota |
+| 2 | Sitemap **digitado à mão** em `seo_sitemap_entries`, sem relação com as rotas reais | `src/server/seo-api.mjs` |
+| 3 | XML montado por concatenação crua (`` `<loc>${r.url}</loc>` ``), sem escapar | idem |
+| 4 | `seo_redirects` **nunca consultada** no caminho da requisição: cadastrar redirect não mudava nada | `server.mjs` |
+| 5 | `GET /api/seo` e `/api/seo-configs` públicos devolvendo inclusive `is_published=false` | `handleConfigs` |
+| 6 | Mutações não transacionais, auditoria engolida por `try {} catch {}` em `audit_log` | idem |
+| 7 | Papel errado recebia **401** em vez de 403 | idem |
+| 8 | `PATCH` de domínio gravava `verificado` **sem verificar nada** | `handleDomainVerification` |
+
+### Comandos e resultados observados
+
+| # | Cenário | Comando | Esperado | Observado |
+|---|---|---|---|---|
+| PUB08-1 | Instalação pelo lockfile | `npm ci` | sem dependência ausente | exit 0 |
+| PUB08-2 | Estáticas de onda 0 | `node scripts/qa-wave0-static.mjs` | 5/5 | `5/5 ... Migrações SQL 001–112 contínuas e únicas`, exit 0 |
+| PUB08-3 | Migrações em banco descartável | `npm run test:migrations:pg` | replay + clone + mismatch | `CHECKSUMMED=112/112 TABLES=510->510`, `migration_checksum_mismatch: 006` recusado sem rebaseline, `QA_CLONE_RESTORE: 112/112 checksums preserved` |
+| PUB08-4 | Gate de entrega (1ª) | `npm run test:l04-delivery:pg` | 11/11 | `# pass 11 # fail 0`, `L04_DELIVERY_TEST_EXIT: 0` |
+| PUB08-5 | Gate de entrega (2ª consecutiva) | idem | 11/11 | `# pass 11 # fail 0`, `L04_DELIVERY_TEST_EXIT: 0` |
+| PUB08-6 | Unidade | `npm test` | tudo passa | **196/196** (186 antes + 10 de `tests/seo-technical.test.mjs`) |
+| PUB08-7 | Tipos | `npm run typecheck` | 0 erros | 0 erros |
+| PUB08-8 | Build | `npm run build` | sucesso | sucesso (as 3 páginas de segmento e as 6 de serviço seguem pré-renderadas após a troca `.ts`→`.mjs`) |
+| PUB08-9 | Higiene do patch | `git diff --check` | limpo | limpo; `tsconfig.json`/`next-env.d.ts` restaurados após o dev server do gate |
+
+### Cenário 11 do gate L04 — o que é provado
+
+1. **robots fail-closed** — `/robots.txt` 200 com `User-agent: *` e
+   `Disallow: /`, **sem** linha `Sitemap:`, e `X-Robots-Tag: noindex, nofollow`.
+2. **Sem mapa publicado** — `/sitemap.xml` 404 com corpo `sitemap_not_published`,
+   e `?released=true&force=1&preview=1` **não destrava** (segue 404).
+3. **Prévia fail-closed** — 401 sem sessão (`admin_session_required`), 403 com
+   papel `comercial`, 405 em POST com `Allow: GET`, 200 para `ti`.
+4. **Sitemap derivado, não digitado** — o XML da prévia não contém `/admin`,
+   `/api/`, `/cliente`, `/funcionario`, `/layout-0`, `/qa/` nem `/proposta`, e
+   não traz `<lastmod>`, `<priority>` ou `<changefreq>` (não há fonte
+   verdadeira para nenhum dos três).
+5. **Título é coisa conferida** — cada uma das **17 URLs** derivadas é buscada
+   por **HTTP real** e precisa responder 200 com `<title>` não vazio.
+6. **Vazamento fechado** — `GET /api/seo` e `GET /api/seo-configs` anônimos
+   401 e com papel `comercial` 403.
+7. **14 recusas nomeadas no cadastro**, nenhuma gravando linha: destino
+   externo absoluto, `//` relativo a protocolo, barra invertida, espaço no
+   caminho, sombra de rota pública real, sombra de `/admin`, sombra de `/api`,
+   sombra do próprio `/sitemap.xml`, destino inexistente, destino em área
+   interna, laço sobre si mesmo, status inventado, motivo abaixo do mínimo e
+   campo gerido pelo servidor vindo do cliente. A contagem é **escopada aos
+   `old_path` tentados** porque a migração 090 já semeia quatro linhas.
+8. **Seeds da 090 (achado)** — `/cliente/acesso` tem redirect semeado **ativo**
+   e mesmo assim responde 200 servindo a página real (a regra de prefixo
+   reservado o torna inerte; a linha continua ativa no banco, conferida por
+   SQL); `/servicos/cerca-eletrica` — o único semeado com origem fora de área
+   reservada — passa a responder **302 → `/servicos`** pela primeira vez.
+9. **Cadeia** — alcançável só por **fixture SQL** que simula linha anterior a
+   uma mudança de catálogo; recusada com `redirect_chain_not_allowed`.
+10. **Auditoria transacional** — gatilho `qa_reject_seo_audit` injetado em
+    `auth_access_audit` faz a criação devolver **503** e deixa **zero** linha
+    em `seo_redirects`.
+11. **Trilha** — criação 201 com **exatamente uma** linha
+    (`seo_redirect_create`, `actor_kind='ti'`), 2ª tentativa
+    `duplicate_old_path`, e **uma linha por alteração** de `is_active`
+    (`seo_redirect_update`, duas no total).
+12. **A migração 112 ampliou, não afrouxou** — `INSERT` direto com
+    `action='seo_redirect_bogus'` continua recusado pelo banco com `23514` em
+    `auth_access_audit_action_check`.
+13. **Salto real** — `/promo-portaria-<tag>?utm=…` responde **301** com
+    `Location` preservando a query; `POST` no mesmo caminho **não** é desviado;
+    `is_active=false` para de desviar e `true` volta a desviar.
+14. **Domínio** — `PATCH` com `verificado` devolve 400
+    `domain_verification_not_supported` e a linha continua `pendente` (SQL).
+15. **Chromium real** (sem `--disable-web-security`) sai de `/promo-portaria`
+    e chega em `/servicos` com `h1` "Serviços", usando `page.waitForResponse`
+    na resposta do endereço antigo — nunca espera fixa —, sem rolagem
+    horizontal e sem erro de console.
+
+### Achado grave registrado — o CHECK de auditoria perdeu 148 ações em 099/100/103
+
+O gate falhou com
+`new row for relation "auth_access_audit" violates check constraint "auth_access_audit_action_check"`
+ao criar o redirect. A causa **não** era a fatia: as migrações **099, 100 e
+103 redigitaram a lista inteira** do CHECK em vez de ampliá-la. Comparando a
+lista vigente na 093 (289 valores) com a vigente na 103 (265 valores),
+**148 valores desapareceram** — entre eles `seo_config_create`,
+`seo_config_update`, `seo_redirect_create`, `seo_redirect_update`,
+`seo_sitemap_update`, `domain_verification_create`,
+`domain_verification_verify`, todos os `cms_content_*`, `theme_*`, `package_*`,
+`origin_metric_*`, `ab_test_*` e `cli_complaint_*`. O comentário daquelas
+migrações afirma "mantém todas as anteriores"; a lista digitada não mantém.
+
+Ficou invisível porque quase todo gravador de trilha do projeto embrulha o
+`INSERT` em `try {} catch {}` — a trilha simplesmente não era escrita. Só
+apareceu agora porque esta fatia grava **na mesma transação e sem engolir
+erro**.
+
+**Correção:** `db/migrations/112-pub08-seo-redirect-audit-action.sql`, aditiva,
+no padrão da 110/111 — lê a definição vigente com `pg_get_constraintdef`,
+**falha** (`audit_action_constraint_missing`) se a constraint pai sumir,
+**falha** (`audit_actor_kind_ti_missing`) se `actor_kind` deixar de aceitar
+`'ti'`, e reescreve como `CHECK ((definição anterior) OR action IN (…))`.
+Reautoriza **apenas** `seo_redirect_create` e `seo_redirect_update`, as duas
+que esta fatia escreve e prova por portão.
+
+**Achado aberto (não corrigido de propósito):** os outros **146 valores
+continuam fora da lista**. Qualquer rota que grave uma daquelas ações em
+`auth_access_audit` hoje perde a trilha em silêncio (pelo `catch {}`) ou
+falha. Reautorizar em bloco seria "autorizar" trilha de caminhos que nenhum
+portão desta entrega exercita — inventar cobertura. Fica registrado aqui para
+a fatia que for corrigir cada domínio com portão próprio.
+
+### Ajustes declarados em cenários desta fatia (regra nunca afrouxada)
+
+1. A primeira redação esperava `cannot_shadow_existing_route` para
+   `/faq → /faq`. A regra recusa **antes**, com erro mais preciso
+   (`cannot_redirect_to_self`), porque o laço é checado antes da sombra. O
+   **cenário** foi corrigido; a regra, não. Ambas as saídas são 400 e ambas
+   recusam a gravação.
+2. A primeira redação exigia `seo_redirects` **inteira vazia** depois das
+   recusas. A migração 090 (imutável) já semeia quatro linhas, então a
+   asserção certa é que **nenhuma das tentativas recusadas** virou linha —
+   e o bloco 7b passou a provar os seeds explicitamente.
+
+### Limites honestos deste recorte
+
+- **A indexação não foi ligada.** Tudo foi provado no estado fail-closed, que
+  é o estado da entrega local. Nada é publicado em produção.
+- **Verificação de domínio fica FORA** (fronteira externa: DNS/HTTP no domínio
+  real). O que a fatia fez foi **fechar o caminho que fabricava o fato**.
+  Nenhum controle desta fatia depende dessa tabela.
+- **`SeoClient.tsx` foi descartado para esta finalidade e permanece órfão** —
+  mesmo tratamento dado a `OriginMetricsClient.tsx` em PUB-10.
+  `seo_sitemap_entries` e `seo_configs` continuam existindo, sem tela, e
+  **não são fonte de verdade de nada**.
+- **Não há tela de administração de redirects**: a fatia entregou API e
+  comportamento provados por portão, não interface.
+- A coluna `hits` continua 0: contar exigiria escrever no banco a cada
+  requisição pública (mesmo problema de trilha-por-leitura recusado em PUB-10).
+- Fora: curinga/regex, redirect por domínio, `/layout-01..10`, `/qa/modulos` e
+  `/proposta/aceite/[token]` no sitemap.
+- **L04 continua PARCIAL e L05 não foi iniciado.** Aceite humano pendente;
+  nada foi executado em Windows.

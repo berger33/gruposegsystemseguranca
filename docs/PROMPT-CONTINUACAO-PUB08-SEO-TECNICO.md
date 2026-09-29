@@ -7,27 +7,32 @@ Este documento registra as **decisões de política ANTES da rota**, como exige
 o método das sessões anteriores. Nada aqui é implementado sem estar escrito
 aqui primeiro.
 
-## Dependência declarada — PR #25 (CRM-07) segue aberto
+## Dependência declarada — PR #25 (CRM-07): estava aberto, foi mergeado durante a sessão
 
 O PR #25 (`arena/01a0eef9`, CRM-07 — notas internas e campo a campo de
 CRM-05/06) estava **aberto e em conflito** (`CONFLICTING`/`DIRTY`) contra
-`main` no início desta sessão. Por decisão do usuário, ele é **preservado** e
+`main` no início desta sessão. Por decisão do usuário, ele foi **preservado** e
 esta fatia foi escolhida para **não disputar os mesmos arquivos**:
 
 - Esta fatia **não toca** `src/server/crm-api.mjs`, `src/server/crm-note-api.mjs`
   nem `src/app/admin/crm/*`.
-- Esta fatia **não cria migração**, portanto **não disputa o número 111**,
-  que o PR #25 reivindica (`111-crm-opportunity-notes-reopen.sql`).
-  Conferência feita nas **24 branches do GitHub** (não só em `main`): nenhuma
-  outra reserva 111+; a primeira realmente livre depois do #25 é a **112**.
+- Esta fatia **não disputou o número 111**, que o PR #25 reivindicava
+  (`111-crm-opportunity-notes-reopen.sql`).
 - Em `server.mjs`, os trechos alterados aqui (bloco de imports por volta da
   linha 99, criação do handler de SEO, seção de rotas PUB-08, `API_PATH_MATCH`
   e o `createServer` final) ficam a mais de cem linhas dos três pontos que o
   PR #25 altera (linha 5, linha ~1175 e linha ~2501, todos na seção CRM).
 
-**Consequência registrada:** CRM-07 e L04 **não podem ser considerados
-concluídos** enquanto o PR #25 não for rebaseado, tiver o conflito resolvido e
-seu gate reexecutado. Esta entrega não substitui nem revalida aquele trabalho.
+**Atualização durante esta sessão:** o conflito foi resolvido fora desta
+sessão e o **PR #25 foi mergeado** em `main @ 8f52137`. Esta branch
+**incorporou `origin/main` por merge**, sem conflito em nenhum arquivo, e o
+gate voltou a rodar com **os 11 cenários** (os 10 anteriores, já incluindo o
+de CRM-07, mais o de PUB-08). A migração **111 passou a ser fato em `main`**;
+nova conferência nas branches do GitHub confirmou que **112 é a primeira
+livre**, e é a que esta fatia usa (ver a seção *Migração*).
+
+**Consequência registrada:** L04 **continua PARCIAL**. Esta entrega não
+revalida o trabalho de CRM-07 além do que o gate compartilhado já executa.
 
 ## Problema
 
@@ -216,9 +221,11 @@ problema de trilha-por-leitura recusado em PUB-10). A coluna `hits` continua
   linha e grava `auth_access_audit` (`seo_redirect_create` /
   `seo_redirect_update`, `actor_kind = papel da sessão`,
   `actor_id = identidade`) **na mesma transação**, e só então confirma. Falha
-  de auditoria injetada reverte a mutação e a rota devolve 503. As ações já
-  existem no CHECK desde a migração 090, e da 099 em diante as migrações
-  preservam a definição anterior em vez de reescrevê-la.
+  de auditoria injetada reverte a mutação e a rota devolve 503.
+  A trilha **não** usa o `auditLog` de `createSeoApi`: aquele escreve em
+  `audit_log` dentro de `try {} catch {}`, ou seja, perde a trilha em silêncio.
+  (A suposição inicial de que as ações já estavam autorizadas se mostrou
+  **falsa** ao executar o gate; ver a seção *Migração*.)
 - As leituras (`/robots.txt`, `/sitemap.xml`, prévia, listagem) **não gravam
   trilha por consulta**, pelo mesmo motivo registrado em PUB-10: são leituras
   sem dado pessoal, e auditar cada requisição de rastreador degradaria a
@@ -254,19 +261,106 @@ serve, e continua sem tela. Em vez de inventar um CMS de títulos, o gate
 real e precisa responder 200 com um `<title>` não vazio. Título passa a ser
 coisa conferida, não coisa digitada.
 
-## Migração
+## Migração — 112, criada porque o gate provou que a suposição era falsa
 
-**Nenhuma.** As tabelas vêm da migração 090 e as ações de auditoria
-(`seo_redirect_create`, `seo_redirect_update`, `seo_config_create`,
-`seo_config_update`, `seo_sitemap_update`, `domain_verification_create`,
-`domain_verification_verify`) já estão no CHECK de `auth_access_audit`.
-Migrações permanecem **001–110** (509 tabelas); **111 está reservada pelo
-PR #25**; a primeira livre depois dela é a **112**.
-`scripts/qa-wave0-static.mjs` (`latestMigration = 110`) e
-`scripts/migrate-site-visual.mjs` **não mudam** — a regra do método só manda
-atualizá-los quando a fatia cria migração.
+**A intenção era não criar migração.** A política escrita antes da rota dizia
+que as ações de auditoria de SEO já estavam autorizadas desde a migração 090.
+**O gate provou o contrário**, e o achado está registrado aqui em vez de
+contornado:
 
-## Prova pretendida no gate
+> `POST /api/admin/seo/redirects` devolvia **503**, com
+> `new row for relation "auth_access_audit" violates check constraint
+> "auth_access_audit_action_check"`.
+
+Causa: as migrações **099, 100 e 103 redigitaram a lista inteira** do CHECK em
+vez de ampliá-la. O comentário delas afirma "mantém todas as anteriores"; a
+lista digitada **não mantém**. Comparando a lista vigente na 093 com a vigente
+na 103, **148 valores desapareceram**, entre eles **todas** as ações de SEO,
+CMS, temas, pacotes, origem/conversão e reclamação:
+`seo_config_create`, `seo_config_update`, `seo_redirect_create`,
+`seo_redirect_update`, `seo_sitemap_update`, `domain_verification_create`,
+`domain_verification_verify`, `cms_content_*`, `theme_*`, `package_*`,
+`origin_metric_*`, `ab_test_*`, `cli_complaint_*`, entre outras.
+
+O defeito ficou invisível por dois anos de migrações porque quase todo
+gravador de trilha do projeto embrulha o `INSERT` em `try {} catch {}` — a
+trilha simplesmente não era escrita, sem ninguém perceber. Só apareceu agora
+porque esta fatia grava a trilha **na mesma transação e sem engolir erro**.
+
+**`db/migrations/112-pub08-seo-redirect-audit-action.sql`** — aditiva,
+seguindo o padrão da 110/111: lê a definição vigente com
+`pg_get_constraintdef`, **falha** (`audit_action_constraint_missing`) se a
+constraint pai sumir, e reescreve como `CHECK ((definição anterior) OR action
+IN (...))`. Nunca afrouxa: apenas aninha. Além disso **falha**
+(`audit_actor_kind_ti_missing`) se `auth_access_audit_actor_kind_check` deixar
+de aceitar `'ti'`, que é o `actor_kind` que esta fatia grava. É idempotente.
+
+**Escopo deliberadamente estreito:** a 112 reautoriza **apenas os dois valores
+que esta fatia escreve e prova por portão** — `seo_redirect_create` e
+`seo_redirect_update`. Os outros 146 continuam fora da lista. Reautorizar em
+bloco seria "autorizar" trilha de caminhos que nenhum portão desta entrega
+exercita — inventar cobertura. **O restante fica declarado como achado aberto**
+em `docs/EVIDENCIAS-ENTREGA-LOCAL.md`: qualquer rota que grave uma daquelas
+ações em `auth_access_audit` hoje perde a trilha (silenciosamente, pelo
+`catch {}`) ou falha.
+
+O gate prova os dois lados: o `201` com uma linha de trilha por escrita **e**
+que uma ação não autorizada (`seo_redirect_bogus`) continua sendo recusada
+pelo banco com `23514` — ou seja, a ampliação foi cirúrgica, não afrouxamento.
+
+Consequências de registro: migrações passam a ser **001–112** (510 tabelas,
+com a 111 do PR #25 já em `main`); `scripts/migrate-site-visual.mjs` recebe a
+112 no manifesto e `scripts/qa-wave0-static.mjs` passa a `latestMigration = 112`.
+As migrações **001–111 permanecem imutáveis**.
+
+## Achados registrados durante a execução (não contornados)
+
+### 1. A regra de cadeia é hoje estruturalmente inalcançável pelo cadastro
+
+Com a Decisão 5 valendo, **origem ∉ rotas públicas** e **destino ∈ rotas
+públicas**. Para existir cadeia `A→B→C` seria preciso que um mesmo caminho
+fosse destino de um redirect (logo, rota pública) e origem de outro (logo,
+não pública) ao mesmo tempo. **É impossível pelo cadastro.**
+
+A checagem **fica** no código, como segunda barreira, porque a premissa pode
+mudar sem aviso: **o catálogo de serviços muda**. Se `PUBLIC_SERVICES` perder
+um serviço, `/servicos/<aquele serviço>` deixa de ser rota pública e passa a
+poder ser cadastrado como origem — e aí pode já existir um redirect antigo
+apontando para ele. Removida a checagem, nasceria a cadeia.
+
+No gate, portanto, a cadeia só é alcançável por **fixture SQL** que simula uma
+linha gravada antes da mudança de catálogo. Está declarado no cenário.
+
+### 2. Tentativa de laço em rota reservada é recusada como laço, não como sombra
+
+`/faq → /faq` devolve `cannot_redirect_to_self`, não `cannot_shadow_existing_route`:
+a ordem de validação checa o laço antes da sombra. A expectativa do cenário
+foi ajustada para o comportamento real; **a regra não foi afrouxada** (as duas
+saídas são 400 e ambas recusam a gravação).
+
+### 3. A migração 090 semeia quatro redirects, e três nascem inertes
+
+A 090 (imutável) já insere em `seo_redirects`:
+
+| `old_path` | `new_path` | tipo | ativo |
+| --- | --- | --- | --- |
+| `/cliente/acesso` | `/cliente/entrar` | 301 | sim |
+| `/cliente/login` | `/cliente/entrar` | 301 | sim |
+| `/servicos/cerca-eletrica` | `/servicos` | 302 | sim |
+| `/admin/funcionarios` | `/admin/ti` | 302 | não |
+
+Os três com origem sob prefixo reservado (`/cliente`, `/admin`) ficam
+**inertes**: o caminho da requisição pula a consulta para prefixo reservado,
+então `/cliente/acesso` continua servindo a página real mesmo com a linha
+ativa no banco. Só `/servicos/cerca-eletrica` passa a desviar de fato.
+
+**Esses seeds não são retro-validados** pela política de cadastro (nenhum
+deles seria aceito hoje: origem sob rota reservada). Migração é imutável;
+apagá-los ou reescrevê-los seria mexer no passado. Ficam registrados aqui, e
+o gate **prova** que existem (bloco 7b) para que nenhuma asserção futura
+confunda "linha semeada" com "linha criada pelo teste".
+
+## Prova executada no gate
 
 Unidade (`tests/seo-technical.test.mjs`, dentro de `npm test`) sobre o módulo
 puro: robots fora de produção e em produção liberada, sitemap nos dois
@@ -297,3 +391,11 @@ real + PostgreSQL descartável + Chromium real, sem `--disable-web-security`):
 8. Vazamento fechado: `GET /api/seo` e `/api/seo-configs` anônimos → 401.
 9. Verificação de domínio: `PATCH` com `verificado` → 400
    `domain_verification_not_supported`, e a linha continua `pendente`.
+10. Trilha: a criação deixa **exatamente uma** linha com `actor_kind = 'ti'`, e
+    cada alteração de `is_active` deixa a sua (duas no total). Uma ação **não**
+    autorizada (`seo_redirect_bogus`) continua sendo recusada pelo banco com
+    `23514` em `auth_access_audit_action_check` — a migração 112 ampliou, não
+    afrouxou.
+11. As 14 recusas nomeadas do cadastro não gravam nada: a contagem é escopada
+    aos `old_path` tentados, porque a migração 090 já semeia quatro linhas
+    (achado 3 acima).
