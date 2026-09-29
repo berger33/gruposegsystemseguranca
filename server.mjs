@@ -1,5 +1,6 @@
 import { createCrmTaskApi } from "./src/server/crm-task-api.mjs";
 import { createCrmInteractionApi } from "./src/server/crm-interaction-api.mjs";
+import { createCrmVisitApi } from "./src/server/crm-visit-api.mjs";
 import { createHmac, createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { createServer } from "node:http";
 import path from "node:path";
@@ -1154,6 +1155,10 @@ const crmInteractionApi = createCrmInteractionApi({
   // metadata has its own authorization boundary; blobs never receive a URL.
   docsDir: (process.env.CLIENT_DOCS_DIR || "").trim() || path.join(process.cwd(), ".data", "documents"),
 });
+
+// CRM-08: agenda de visitas/reuniões. Responsável gerencia; participante
+// convidado apenas enxerga a própria agenda e responde por si.
+const crmVisitApi = createCrmVisitApi({ json, readJson, sameOrigin, getPool, readAdminSession: readSession });
 
 const crmApi = createCrmApi({
   json,
@@ -2445,6 +2450,17 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/crm/opportunities") return crmApi.handleOpportunities(req, res, url);
   const crmTaskMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/tasks(?:\/([0-9a-f-]{36}))?$/i);
   if (crmTaskMatch) return crmTaskApi(req, res, crmTaskMatch[1], crmTaskMatch[2] || null);
+  if (url.pathname === "/api/crm/visits/agenda") return crmVisitApi.handleAgenda(req, res, url);
+  const crmVisitParticipantMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/visits\/([0-9a-f-]{36})\/participants\/([0-9a-f-]{36})$/i);
+  if (crmVisitParticipantMatch) return crmVisitApi.handleVisits(req, res, crmVisitParticipantMatch[1], crmVisitParticipantMatch[2], 'participants', crmVisitParticipantMatch[3], url);
+  const crmVisitParticipantsMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/visits\/([0-9a-f-]{36})\/participants$/i);
+  if (crmVisitParticipantsMatch) return crmVisitApi.handleVisits(req, res, crmVisitParticipantsMatch[1], crmVisitParticipantsMatch[2], 'participants', null, url);
+  const crmVisitResponseMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/visits\/([0-9a-f-]{36})\/response$/i);
+  if (crmVisitResponseMatch) return crmVisitApi.handleVisits(req, res, crmVisitResponseMatch[1], crmVisitResponseMatch[2], 'response', null, url);
+  const crmVisitItemMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/visits\/([0-9a-f-]{36})$/i);
+  if (crmVisitItemMatch) return crmVisitApi.handleVisits(req, res, crmVisitItemMatch[1], crmVisitItemMatch[2], null, null, url);
+  const crmVisitsMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/visits$/i);
+  if (crmVisitsMatch) return crmVisitApi.handleVisits(req, res, crmVisitsMatch[1], null, null, null, url);
   const crmInteractionAttachmentDownloadMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/interactions\/([0-9a-f-]{36})\/attachments\/([0-9a-f-]{36})\/download$/i);
   if (crmInteractionAttachmentDownloadMatch) return crmInteractionApi(req, res, crmInteractionAttachmentDownloadMatch[1], crmInteractionAttachmentDownloadMatch[2], crmInteractionAttachmentDownloadMatch[3], 'download', url);
   const crmInteractionAttachmentsMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/interactions\/([0-9a-f-]{36})\/attachments$/i);
@@ -4000,6 +4016,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/crm/contacts"
   || pathname === "/api/crm/opportunities"
   || pathname.startsWith("/api/crm/opportunities/")
+  || pathname === "/api/crm/visits/agenda"
   || pathname.startsWith("/api/crm/leads/")
   || pathname === "/api/crm/imports"
   || pathname === "/api/crm/imports/preview"

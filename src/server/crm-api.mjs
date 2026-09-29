@@ -529,7 +529,19 @@ export function createCrmApi(ctx) {
           // rule as the dedicated /interactions endpoint below, so this
           // legacy detail route can never leak it to an unauthorized viewer.
           db.query("SELECT * FROM crm_interactions WHERE opportunity_id = $1 AND deleted_at IS NULL AND EXISTS (SELECT 1 FROM crm_opportunities o WHERE o.id=$1 AND (o.responsible_id=$2 OR (o.responsible_id IS NULL AND o.created_by_id=$2))) ORDER BY occurred_at DESC LIMIT 50", [id, ["comercial", "admin", "marcelo", "ti"].includes(session.role) ? session.identityId : null]),
-          db.query("SELECT * FROM crm_visits WHERE opportunity_id = $1 ORDER BY scheduled_at DESC", [id]),
+          // CRM-08: a agenda segue exatamente a política da rota dedicada
+          // /visits — responsável pela oportunidade ou participante convidado
+          // da própria visita. Esta rota legada não é mais um atalho de leitura.
+          db.query(
+            `SELECT * FROM crm_visits v
+              WHERE v.opportunity_id = $1
+                AND (
+                  EXISTS (SELECT 1 FROM crm_opportunities o WHERE o.id=$1 AND (o.responsible_id=$2 OR (o.responsible_id IS NULL AND o.created_by_id=$2)))
+                  OR EXISTS (SELECT 1 FROM crm_visit_participants p WHERE p.visit_id=v.id AND p.identity_id=$2)
+                )
+              ORDER BY v.scheduled_at DESC LIMIT 200`,
+            [id, ["comercial", "admin", "marcelo", "ti"].includes(session.role) ? session.identityId : null],
+          ),
         ]);
         return ctx.json(res, 200, { opportunity: opp.rows[0], stages: stages.rows, tasks: tasks.rows, interactions: interactions.rows, visits: visits.rows });
       } catch (e) {
