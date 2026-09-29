@@ -10,7 +10,7 @@ Referência: `docs/EXECUCAO-ENTREGA-LOCAL.md` (roteiro L00–L10) e
 |---|---|
 | Branch de trabalho | `arena/01a0eba8-gruposegsystemseguranca` |
 | Base escolhida (L00–L02) | `c4cfc58` (merge do PR #7 em `main`) |
-| Referência entregue | PR #10 na branch desta sessão; base `c4cfc58`; commits L03 preservados na própria branch |
+| Referência entregue | PR #10 incorporado a `main` em `17165b5`; branch da sessão preservada em `31ade86` |
 | Lote ativo | **L04** somente como próximo lote; L03 encerrado e não houve implementação de L04 |
 | Último gate aprovado | **L03** (funcionário e RH, HTTP + navegador real + PostgreSQL descartável) |
 | Migrações | 001–102 (504 tabelas) |
@@ -104,24 +104,20 @@ Contenção: `tests/staff-session-await-guard.test.mjs` quebra o build se o padr
 voltar. A guarda foi validada injetando uma violação real (ela acusou) e
 revertendo.
 
-### O que do L01 continua pendente
+### O que do L01 continua pendente após o L03
 
-O gate aprovado cobre SEC-02/04/05/06 e a base de sessão. Ainda **não** foram
-atacados, e permanecem `a_revalidar`/`pendente`:
+O L03 ampliou o catálogo de staff, retirou o bypass de admin/TI, implementou
+escopos `own`/unidade/conta/contrato e separou remuneração e saúde. Esses pontos
+não devem ser reabertos sem uma regressão concreta. O restante de L01 que ainda
+permanece `a_revalidar`/`pendente` inclui:
 
-- Unificação de papéis funcionário/supervisor/comercial/financeiro (hoje o
-  catálogo de staff é `admin|ti|rh|marcelo`); preferir permissões a condicionais
-  de nome espalhadas.
-- RBAC: propriedade real em `own`, escopo de unidade/conta/contrato, retirada de
-  bypass provisório. Existe `010-rbac-permissions.sql` e `admin-rbac-api.mjs`,
-  mas o uso efetivo por rota não foi revalidado.
-- Máscara de remuneração em registro, histórico, alteração, exportação e perfil;
-  separar saúde de cadastro geral.
-- Auditoria sensível durável com transação/outbox por operação.
-- Revisão dos limites de corpo, método, origem/CSRF e erros sanitizados em
-  **todos** os fluxos (o L01 verificou os de autenticação).
-- `evaluateStaffLogin` ainda não é aplicado aos fluxos de convite/provisionamento
-  de staff (só ao login).
+- auditoria sensível durável com transação/outbox em todas as operações;
+- revisão sistemática de limites de corpo, método, origem/CSRF e erros
+  sanitizados nos fluxos que ainda não passaram por um lote;
+- aplicação e prova das mesmas regras de identidade nos fluxos de
+  convite/provisionamento de staff, não apenas no login;
+- os demais IDs SEC cujo checklist ainda não contém evidência executada,
+  especialmente troca de e-mail, privacidade, abuso e identidade.
 
 ## Bloqueios reais
 
