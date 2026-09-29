@@ -28,24 +28,26 @@ add('PLT-SMK-001', 'Dependências runtime declaradas em manifest e lockfile', [
 ]);
 
 const migrationDir = path.join(root, 'db', 'migrations');
+const latestMigration = 102;
+const migrationRange = Array.from({ length: latestMigration }, (_, i) => i + 1);
 const sqlFiles = fs.existsSync(migrationDir) ? fs.readdirSync(migrationDir).filter(f => /^\d{3}-.*\.sql$/.test(f)) : [];
 const byNumber = new Map();
 for (const file of sqlFiles) {
   const n = Number(file.slice(0, 3));
   byNumber.set(n, [...(byNumber.get(n) || []), file]);
 }
-const missingMigrations = Array.from({ length: 98 }, (_, i) => i + 1).filter(n => !byNumber.has(n));
+const missingMigrations = migrationRange.filter(n => !byNumber.has(n));
 const duplicateNumbers = [...byNumber.entries()].filter(([, files]) => files.length > 1).map(([n]) => n);
-const unexpectedNumbers = [...byNumber.keys()].filter(n => n < 1 || n > 98);
-add('PLT-MIG-001', 'Migrações SQL 001–098 contínuas e únicas', [
+const unexpectedNumbers = [...byNumber.keys()].filter(n => n < 1 || n > latestMigration);
+add('PLT-MIG-001', `Migrações SQL 001–${latestMigration} contínuas e únicas`, [
   ...(missingMigrations.length ? [`faltam números: ${missingMigrations.map(n => String(n).padStart(3, '0')).join(', ')}`] : []),
   ...(duplicateNumbers.length ? [`números duplicados: ${duplicateNumbers.join(', ')}`] : []),
   ...(unexpectedNumbers.length ? [`números fora do baseline: ${unexpectedNumbers.join(', ')}`] : []),
 ]);
 const migrator = read('scripts/migrate-site-visual.mjs');
 const declared = new Set([...migrator.matchAll(/["'](\d{3}-[^"']+\.sql)["']/g)].map(m => Number(m[1].slice(0, 3))));
-const notScheduled = Array.from({ length: 98 }, (_, i) => i + 1).filter(n => !declared.has(n));
-add('PLT-MIG-001', 'Migrações 001–098 registradas no migrador PG', notScheduled.length
+const notScheduled = migrationRange.filter(n => !declared.has(n));
+add('PLT-MIG-001', `Migrações 001–${latestMigration} registradas no migrador PG`, notScheduled.length
   ? [`não agendadas: ${notScheduled.map(n => String(n).padStart(3, '0')).join(', ')}`] : []);
 
 const workflow = '.github/workflows/ci.yml';
