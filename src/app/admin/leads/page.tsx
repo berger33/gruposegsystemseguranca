@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { ArrowLeft, Check, LogOut, Mail, MessageCircle, RefreshCw, Shield, UserRound } from "lucide-react";
 import styles from "./LeadAdmin.module.css";
 
-type AdminRole = "marcelo" | "ti";
-type LeadStatus = "new" | "contacted" | "closed";
+type AdminRole = "marcelo" | "ti" | "comercial" | "admin";
+type LeadStatus = "solicitada" | "em_agendamento" | "confirmada" | "realizada" | "cancelada" | "new" | "contacted" | "closed";
 type Lead = {
   id: string;
   request_kind: "quote" | "visit";
@@ -21,8 +21,28 @@ type Lead = {
   created_at: string;
 };
 
-const roleNames: Record<AdminRole, string> = { marcelo: "Marcelo · administração", ti: "TI · sistema" };
-const statusLabels: Record<LeadStatus, string> = { new: "Novo", contacted: "Em contato", closed: "Concluído" };
+const roleNames: Record<AdminRole, string> = { marcelo: "Marcelo · administração", ti: "TI · sistema", comercial: "Comercial", admin: "Administração" };
+const statusLabels: Record<LeadStatus, string> = {
+  solicitada: "Solicitada",
+  em_agendamento: "Em agendamento",
+  confirmada: "Confirmada",
+  realizada: "Realizada",
+  cancelada: "Cancelada",
+  // Compatibilidade com registros antigos (pré PUB-04).
+  new: "Novo",
+  contacted: "Em contato",
+  closed: "Concluído",
+};
+const statusStyleKey: Record<LeadStatus, "new" | "contacted" | "closed"> = {
+  solicitada: "new",
+  em_agendamento: "contacted",
+  confirmada: "contacted",
+  realizada: "closed",
+  cancelada: "closed",
+  new: "new",
+  contacted: "contacted",
+  closed: "closed",
+};
 
 function explainApiError(code: string) {
   if (code === "database_not_configured") return "O PostgreSQL ainda não está configurado no servidor.";
@@ -33,7 +53,8 @@ function explainApiError(code: string) {
 
 export default function LeadAdminPage() {
   const [role, setRole] = useState<AdminRole | null>(null);
-  const [token, setToken] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [leads, setLeads] = useState<Lead[]>([]);
   const [total, setTotal] = useState(0);
   const [filter, setFilter] = useState<"all" | LeadStatus>("all");
@@ -51,7 +72,7 @@ export default function LeadAdminPage() {
         fetch(`/api/admin/leads?limit=100${selectedFilter === "all" ? "" : `&status=${selectedFilter}`}`, { cache: "no-store" }),
       ]);
       const sessionData = await sessionResponse.json().catch(() => ({}));
-      if (!sessionResponse.ok || (sessionData.role !== "marcelo" && sessionData.role !== "ti")) {
+      if (!sessionResponse.ok || !["marcelo", "ti", "comercial", "admin"].includes(sessionData.role)) {
         setRole(null);
         setLeads([]);
         setLoading(false);
@@ -80,16 +101,20 @@ export default function LeadAdminPage() {
       const response = await fetch("/api/admin/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({ email, password }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
+        if (data.mfaRequired) throw new Error("Esta conta exige verificação MFA; entre pelo fluxo com segundo fator.");
         if (data.error === "admin_auth_not_configured") throw new Error("A autenticação administrativa ainda não está configurada no servidor.");
         if (data.error === "too_many_attempts") throw new Error("Muitas tentativas. Aguarde antes de tentar novamente.");
-        throw new Error("Chave administrativa inválida ou indisponível.");
+        throw new Error("Credencial inválida ou indisponível.");
+      }
+      if (!["marcelo", "ti", "comercial", "admin"].includes(data.role)) {
+        throw new Error("Esta conta não tem acesso à fila de atendimento.");
       }
       setRole(data.role);
-      setToken("");
+      setPassword("");
       setNotice("Acesso autenticado.");
       await loadLeads(filter);
     } catch (cause) {
@@ -120,6 +145,30 @@ export default function LeadAdminPage() {
     }
   }
 
+  async function convertLead(lead: Lead) {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const response = await fetch(`/api/crm/leads/${lead.id}/convert`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ create_company: true, company_name: lead.name }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(explainApiError(data.error));
+      setNotice(
+        data.dedup
+          ? `Lead de ${lead.name} já tinha sido convertido — oportunidade ${String(data.opportunityId).slice(0, 8)} reaproveitada (sem duplicar).`
+          : `Lead de ${lead.name} convertido em oportunidade ${String(data.opportunityId).slice(0, 8)}. Continue em Empresas & funil (CRM).`,
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Não foi possível converter o lead.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function logout() {
     setBusy(true);
     try {
@@ -142,6 +191,8 @@ export default function LeadAdminPage() {
       <header className={styles.topbar}>
         <a className={styles.back} href="/"><ArrowLeft size={16} /> Voltar ao site</a>
         <nav className={styles.topLinks} aria-label="Atalhos administrativos">
+          <a className={styles.visualLink} href="/admin/crm">Empresas &amp; funil (CRM)</a>
+          <a className={styles.visualLink} href="/admin/comercial">Workspace comercial</a>
           <a className={styles.visualLink} href="/admin/portal">Prévia da configuração do portal</a>
           <a className={styles.visualLink} href="/admin/visual">Administração visual <ArrowLeft size={13} /></a>
         </nav>
@@ -156,10 +207,12 @@ export default function LeadAdminPage() {
           <section className={styles.loginCard}>
             <span className={styles.loginIcon}><Shield size={24} /></span>
             <h2>Acesso restrito</h2>
-            <p>Entre com sua credencial administrativa para consultar os pedidos.</p>
+            <p>Entre com sua conta individual de staff (marcelo, ti, admin ou comercial) para consultar os pedidos.</p>
             <form onSubmit={login}>
-              <label htmlFor="leads-token">Chave administrativa</label>
-              <input id="leads-token" type="password" autoComplete="current-password" minLength={32} required value={token} onChange={event => setToken(event.target.value)} />
+              <label htmlFor="leads-email">E-mail</label>
+              <input id="leads-email" type="email" autoComplete="username" required value={email} onChange={event => setEmail(event.target.value)} />
+              <label htmlFor="leads-password">Senha</label>
+              <input id="leads-password" type="password" autoComplete="current-password" required value={password} onChange={event => setPassword(event.target.value)} />
               <button type="submit" disabled={busy}>{busy ? "Verificando…" : "Entrar no painel"}</button>
             </form>
           </section>
@@ -170,7 +223,12 @@ export default function LeadAdminPage() {
               <div className={styles.controls}>
                 <label htmlFor="lead-filter">Filtrar</label>
                 <select id="lead-filter" value={filter} onChange={event => setSelectedFilter(event.target.value as "all" | LeadStatus)}>
-                  <option value="all">Todos</option><option value="new">Novos</option><option value="contacted">Em contato</option><option value="closed">Concluídos</option>
+                  <option value="all">Todos</option>
+                  <option value="solicitada">Solicitada</option>
+                  <option value="em_agendamento">Em agendamento</option>
+                  <option value="confirmada">Confirmada</option>
+                  <option value="realizada">Realizada</option>
+                  <option value="cancelada">Cancelada</option>
                 </select>
                 <button className={styles.refresh} type="button" onClick={() => void loadLeads(filter)} disabled={loading} aria-label="Atualizar pedidos"><RefreshCw size={16} /></button>
               </div>
@@ -186,7 +244,7 @@ export default function LeadAdminPage() {
                     <article className={styles.card} key={lead.id}>
                       <div className={styles.cardTop}>
                         <div><span className={styles.kind}>{lead.request_kind === "visit" ? "Solicitação de visita" : "Pedido de orçamento"}</span><h2>{lead.name}</h2></div>
-                        <span className={`${styles.status} ${styles[`status_${lead.status}`]}`}>{statusLabels[lead.status]}</span>
+                        <span className={`${styles.status} ${styles[`status_${statusStyleKey[lead.status] ?? "new"}`]}`}>{statusLabels[lead.status] ?? lead.status}</span>
                       </div>
                       <p className={styles.date}>{new Date(lead.created_at).toLocaleString("pt-BR", { dateStyle: "medium", timeStyle: "short" })}</p>
                       <div className={styles.detailsGrid}>
@@ -200,8 +258,13 @@ export default function LeadAdminPage() {
                         <span className={`${styles.emailStatus} ${styles[`email_${lead.email_status}`]}`}><Mail size={14} /> E-mail: {lead.email_status === "sent" ? "enviado" : lead.email_status === "failed" ? "falhou" : "não configurado"}</span>
                         <div className={styles.actions}>
                           <a className={styles.whatsapp} href={`https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`} target="_blank" rel="noopener noreferrer"><MessageCircle size={15} /> WhatsApp</a>
+                          <button type="button" className={styles.whatsapp} disabled={busy} onClick={() => void convertLead(lead)}>Converter em oportunidade (CRM-04)</button>
                           <select aria-label={`Alterar status do pedido de ${lead.name}`} value={lead.status} onChange={event => void updateStatus(lead, event.target.value as LeadStatus)} disabled={busy}>
-                            <option value="new">Novo</option><option value="contacted">Em contato</option><option value="closed">Concluído</option>
+                            <option value="solicitada">Solicitada</option>
+                            <option value="em_agendamento">Em agendamento</option>
+                            <option value="confirmada">Confirmada</option>
+                            <option value="realizada">Realizada</option>
+                            <option value="cancelada">Cancelada</option>
                           </select>
                         </div>
                       </div>

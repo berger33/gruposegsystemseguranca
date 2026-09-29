@@ -8,12 +8,11 @@ Referência: `docs/EXECUCAO-ENTREGA-LOCAL.md` (roteiro L00–L10) e
 
 | Campo | Valor |
 |---|---|
-| Branch de trabalho | `arena/01a0eba8-gruposegsystemseguranca` |
-| Base escolhida (L00–L02) | `c4cfc58` (merge do PR #7 em `main`) |
-| Referência entregue | PR #10 incorporado a `main` em `17165b5`; branch da sessão preservada em `31ade86` |
-| Lote ativo | **L04** somente como próximo lote; L03 encerrado e não houve implementação de L04 |
-| Último gate aprovado | **L03** (funcionário e RH, HTTP + navegador real + PostgreSQL descartável) |
-| Migrações | 001–102 (504 tabelas) |
+| Branch de trabalho | `arena/01a0ed3d-gruposegsystemseguranca` |
+| Base desta sessão | `5899146` (= `origin/main`, PR #11 "Docs: reconciliar estado após merge do L03") |
+| Lote ativo | **L04** — jornada comercial central entregue e provada; CMS/tema/SEO/comparador/kanban/tarefas (PUB-06..09, CRM-07..10) ficam para a próxima sessão |
+| Último gate aprovado | **L04** (site/captação/comercial, HTTP real + Chromium real + PostgreSQL descartável, `npm run test:l04-delivery:pg`), com L02 e L03 revalidados verdes na mesma sessão |
+| Migrações | 001–103 (504 tabelas; 103 é aditiva/retrocompatível) |
 | Data | 2026-09-29 |
 
 ## Lotes
@@ -22,9 +21,9 @@ Referência: `docs/EXECUCAO-ENTREGA-LOCAL.md` (roteiro L00–L10) e
 |---|---|---|---|
 | L00 | Base íntegra e controle confiável | **concluído** | aprovado |
 | L01 | Identidade, autorização e integridade básica | **parcial ampliado** | SEC-02/04/05/06 + controles dependentes do L03: RBAC sem bypass, escopo, remuneração/saúde e revogação |
-| L02 | Armazenamento, notificações locais, continuidade | **concluído** | 14/14 HTTP em PostgreSQL descartável |
-| L03 | Funcionário e RH | **concluído** | EMP-01..19 e HR-01..24 navegáveis; gate integral aprovado |
-| L04 | Site/captação e comercial | pendente | — |
+| L02 | Armazenamento, notificações locais, continuidade | **concluído** | 14/14 HTTP em PostgreSQL descartável (revalidado nesta sessão) |
+| L03 | Funcionário e RH | **concluído** | EMP-01..19 e HR-01..24 navegáveis; gate integral aprovado (revalidado nesta sessão) |
+| L04 | Site/captação e comercial | **parcial — jornada central concluída** | CRM-11..27 conectados em `/admin/comercial` e provados ponta a ponta; CRM-01..06 herdados de `/admin/crm` (não revalidados a fundo); PUB-01/03/04 provados; PUB-06..09/CRM-07..10/PUB-10 ainda órfãos |
 | L05 | Contratos e implantação | pendente | — |
 | L06 | Operação, patrimônio e manutenção | pendente | — |
 | L07 | Financeiro e Marcelo | pendente | — |
@@ -144,21 +143,24 @@ permanece `a_revalidar`/`pendente` inclui:
 
 ```bash
 npm ci
-npm run test:unit                    # 180 testes, sem banco
+npm run test:unit                    # 186 testes, sem banco
 
 # Gates em PostgreSQL real e descartável (nenhum toca banco do operador).
 # Exigem DATABASE_URL e DATABASE_MIGRATION_URL vazias.
-npm run test:migrations:pg           # migrações 001–102 + replay + checksum negativo
+npm run test:migrations:pg           # migrações 001–103 + replay + checksum negativo
 npm run test:l02-delivery:pg         # L02 — 14 testes HTTP
 npm run test:l03-delivery:pg         # L03 — HTTP, duas identidades e Chromium headless
+npm run test:l04-delivery:pg         # L04 — HTTP, Chromium real, jornada comercial completa
 npm run test:staff-auth:pg           # L01 — autenticação de staff
 
 npm run typecheck && npm run build
 ```
 
-O gate L03 usa `embedded-postgres`, Playwright e o Chromium empacotado em
-`@sparticuz/chromium`; não baixa navegador durante a execução. Nenhum comando
-acima precisa de segredo.
+Os gates L03 e L04 usam `embedded-postgres`, Playwright e o Chromium
+empacotado em `@sparticuz/chromium`; não baixam navegador durante a execução.
+Nenhum comando acima precisa de segredo. **Atenção:** `node_modules/` não é
+persistido entre sessões neste ambiente — rode `npm ci` no início de toda
+sessão nova antes de qualquer gate.
 
 ## L02 — entrega local de arquivos, fila e comunicação (commit `4b95616`)
 
@@ -227,10 +229,116 @@ de admin/TI, aliases legados cobertos pela mesma borda, escopos
 organização/unidade/contrato/próprio, remuneração e saúde separadas, e invalidação
 material de sessões após alterações de papel, permissão, senha ou status.
 
+## L04 — site, captação e comercial (jornada central concluída)
+
+Gate `npm run test:l04-delivery:pg` (`scripts/qa-l04-delivery-postgres.mjs` →
+`tests/l04-delivery.integration.test.mjs`) sobe PostgreSQL 17 descartável,
+aplica 001–103, inicia `server.mjs` real e percorre em Chromium real e HTTP
+direto: visitante anônimo em `/servicos`→`/contato` (captura de lead com
+protocolo/consentimento/origem/campanha real, dedup/antispam por controle
+negativo) → duas identidades de staff `comercial` distintas com RBAC
+genuinamente diferente (só uma tem `proposals.approve_discount`) → conversão
+de lead em oportunidade (idempotente) → vistoria → orçamento de mão de obra e
+técnico → cenário de preço (incl. controle negativo de denominador inválido)
+→ pedido de desconto com negação por autoaprovação, negação por falta de
+permissão e aprovação real cruzada → edição de item pós-aprovação reabrindo a
+aprovação (CRM-18) → proposta versionada com trava de item pós-envio (409) e
+PDF real (bytes/cabeçalho conferidos) → entrega honesta (só caixa local,
+nunca finge "entregue") → aceite seguro por link (`/proposta/aceite/[token]`,
+tela pública nova) com token forjado 404, versão divergente 409, link
+expirado 410, aceite real e reuso 410 → contrato mínimo idempotente (CRM-23)
+→ varredura final autenticada de `/admin/leads` e `/admin/comercial` sem
+rolagem horizontal, sem erro de console/5xx. Passou duas vezes consecutivas;
+revalidado novamente ao final desta sessão junto com `npm test` (186/186),
+`test:l02-delivery:pg` (14/14), `test:l03-delivery:pg` (1/1),
+`test:migrations:pg` (103/103, 504 tabelas), `test:rag`, `tsc --noEmit` e
+`next build` (72 rotas, incluindo `/admin/comercial` e
+`/proposta/aceite/[token]`) — todos verdes, sem regressão.
+
+### Achado principal do L04: trilha de auditoria quebrada desde a origem
+
+`auth_access_audit.action` e `auth_access_audit.actor_kind` tinham um `CHECK`
+desatualizado desde muito antes desta sessão: cerca de **175 valores de
+`action`** já usados em `src/server/*.mjs` nos domínios `crm_*`, `cli_*`,
+`ops_*`, `hr_*` e `emp_*` eram silenciosamente rejeitados pelo banco. Como os
+inserts de auditoria estavam em `try/catch` mudo, nada quebrava na hora — mas
+nenhuma dessas ações jamais gravou uma linha de auditoria. Corrigido de forma
+aditiva na migração `103-l04-comercial-role-widening.sql` (mesma migração
+também amplia `crm_companies.created_by` e `public_lead_status_audit.changed_by`
+para aceitar os papéis `comercial`/`financeiro`, que já eram válidos em
+`auth_staff_profiles` desde a migração 102, mas não nessas duas tabelas).
+
+### Outros defeitos reais encontrados e corrigidos no L04
+
+1. `src/server/discount-api.mjs`: a verificação de alçada (CRM-18) era um
+   bloco que nunca bloqueava nada (comentário "para simplicidade, apenas
+   auditar") — qualquer papel, incluindo o próprio solicitante, podia aprovar
+   qualquer desconto. Corrigido: bloqueio de autoaprovação verificado primeiro,
+   depois `hasPermission()` real contra `auth_permissions`, sem bypass por
+   papel/admin.
+2. `src/server/proposal-acceptance-api.mjs`: `require('node:crypto')` dentro de
+   um módulo ESM — `ReferenceError` mudo (dentro de `try/catch`) que degradava
+   o hash de IP do aceite. Corrigido para usar o `createHash` já importado.
+3. `src/lib/public-lead-validation.mjs` descartava silenciosamente
+   `origin`/`campaign`/`channel`/`email` enviados pelo formulário real de
+   `/contato` — o PUB-03 (rastreio de origem/campanha) nunca teria funcionado
+   mesmo com a tela certa. Corrigido com validação explícita desses campos.
+4. `handleCreateLead` confiava em um `dedupKey` vindo do navegador — forjável
+   por um cliente malicioso para colidir ou "roubar" o protocolo de outra
+   pessoa. Corrigido: a chave passou a ser derivada só no servidor.
+5. `AiBotWidget.tsx` disparava, em toda página pública, uma requisição não
+   autenticada a um endpoint só-admin (`/api/ai-bot-config`), gerando 401 em
+   série no console. Corrigido: só busca quando `showDevConfig` está ativo.
+6. `/admin/leads/page.tsx` tinha um formulário de login do modelo antigo
+   (token compartilhado), incompatível com a sessão real de e-mail/senha — a
+   tela principal de caixa de entrada de leads estava, na prática,
+   inacessível para um funcionário real. Substituída por login real.
+
+### O que o L04 entrega e o que fica para a próxima sessão
+
+**Entregue e provado:** captação pública real (PUB-01/03/04); conversão de
+lead; todo o núcleo comercial CRM-11..27 (catálogo/equipamento, vistoria,
+orçamento MO/técnico, parâmetros de custo, cenário de preço, alçada de
+desconto real, proposta versionada com PDF real, entrega honesta, aceite
+seguro com UI nova, contrato mínimo idempotente, relatórios/comissões/
+biblioteca/parcerias conectados) — tudo em `/admin/comercial`
+(`ComercialWorkspace.tsx`, novo).
+
+**Não entregue nesta sessão (órfão ou não revalidado), documentado
+honestamente no checklist item a item:**
+
+- PUB-02/05 (páginas por segmento e FAQ assistida com handoff humano);
+- PUB-06 (CMS), PUB-07 (temas), PUB-08 (SEO técnico) — componentes existem em
+  `src/app/admin/ti/*Client.tsx`, nenhum conectado a uma página;
+- PUB-09 (montador de pacote/comparador) — `/orcamento` deixou de simular
+  preço, mas o montador/comparador administrativo (`PackageClient.tsx`)
+  continua desconectado;
+- PUB-10 (painel de métricas de origem/conversão/A-B) —
+  `OriginMetricsClient.tsx` desconectado; os dados brutos (origem/campanha)
+  já são persistidos e aparecem em `/admin/leads`, mas sem análise;
+- CRM-01..06: herdados de `/admin/crm` (página anterior a esta sessão), não
+  revalidados a fundo — usados apenas indiretamente pelo gate L04 (a
+  conversão de lead cria empresa/oportunidade real);
+- CRM-07..10 (kanban, filtros, tarefas, histórico de interações, agenda de
+  visitas, cadências, carteira): a própria página `/admin/crm` se
+  autodocumenta como "estrutura pronta" — schema existe (tabelas `tasks`,
+  `interactions`, `visits` da migração 014), tela não existe.
+
+**Risco residual anotado, não corrigido:** `handleAdminLeadStatus` em
+`server.mjs` faz um insert de auditoria "solto" dentro de uma transação
+multi-instrução sem `SAVEPOINT` — se esse insert falhar (por exemplo por um
+futuro `CHECK` que volte a ficar desatualizado), toda a transação de mudança
+de status pode ser revertida silenciosamente por causa só do log. O
+comportamento correto hoje foi confirmado (a migração 103 fechou o `CHECK`
+que causaria isso agora), mas o padrão em si não foi estruturalmente
+hardenizado (faltaria isolar a auditoria em sua própria sub-transação ou
+`SAVEPOINT`).
+
 ## O que NÃO está pronto
 
-O sistema ainda não está integralmente entregue: L04–L10 e as cinco jornadas
-finais do L10 não foram executados. SMTP e hospedagem externa permanecem fora do
-escopo; Windows ainda exige aceite no equipamento do proprietário. Apenas os
-43 IDs do L03 foram promovidos no checklist com a evidência local atual; os
-demais continuam com seus estados anteriores.
+O sistema ainda não está integralmente entregue: PUB-02/05/06/07/08/09/10 e
+CRM-01..10 do L04 (ver acima), L05–L10 e as cinco jornadas finais do L10 não
+foram executados. SMTP e hospedagem externa permanecem fora do escopo; Windows
+ainda exige aceite no equipamento do proprietário. Os 43 IDs do L03 e os 37
+IDs de PUB/CRM do L04 foram atualizados no checklist com a evidência local
+desta e da sessão anterior; os demais continuam com seus estados anteriores.

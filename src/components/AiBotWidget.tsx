@@ -47,7 +47,12 @@ export default function AiBotWidget({ defaultRagKey = "publico" as "cliente"|"rh
       if(data.config) setConfig(data.config);
     }catch{}
   }
-  useEffect(()=>{ if (defaultRagKey === "publico") loadConfig(); },[defaultRagKey]);
+  // A configuração de modo/host só é usada no painel de desenvolvedor
+  // (showDevConfig). Chamar aqui incondicionalmente batia num endpoint
+  // admin-only (/api/ai-bot-config) para todo visitante público, gerando
+  // 401 de console em toda página pública que usa o widget sem nunca
+  // exibir nada com o resultado.
+  useEffect(()=>{ if (showDevConfig && defaultRagKey === "publico") loadConfig(); },[defaultRagKey, showDevConfig]);
 
   async function ask(e: React.FormEvent, customQuery?: string){
     e.preventDefault();

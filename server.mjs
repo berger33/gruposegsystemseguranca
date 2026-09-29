@@ -470,12 +470,20 @@ async function handleCreateLead(req, res) {
   let database;
   try {
     database = getPool();
-    // PUB-03: deduplicação controlada via dedup_key
-    if (lead.dedupKey) {
-      const existing = await database.query("SELECT id, status FROM public_leads WHERE dedup_key = $1", [lead.dedupKey]);
-      if (existing.rows[0]) {
-        return json(res, 200, { leadId: existing.rows[0].id, emailStatus: "dedup", recorded: true, dedup: true, status: existing.rows[0].status });
-      }
+    // PUB-03: deduplicação controlada — a chave nunca vem do navegador (um
+    // cliente malicioso poderia forjar a de outra pessoa para bloqueá-la ou
+    // "roubar" um protocolo existente). O servidor deriva a chave do próprio
+    // pedido dentro de uma janela curta, para que um refresh/duplo clique não
+    // crie um segundo lead, sem impedir um pedido novo e legítimo depois.
+    const DEDUP_WINDOW_MS = 30 * 60 * 1000;
+    const dedupBucket = Math.floor(Date.now() / DEDUP_WINDOW_MS);
+    const phoneDigits = lead.phone.replace(/\D/g, "");
+    const dedupKey = createHash("sha256")
+      .update([lead.requestKind, phoneDigits, lead.city.toLowerCase(), [...lead.services].sort().join(","), dedupBucket].join("|"))
+      .digest("hex");
+    const existing = await database.query("SELECT id, status FROM public_leads WHERE dedup_key = $1", [dedupKey]);
+    if (existing.rows[0]) {
+      return json(res, 200, { leadId: existing.rows[0].id, emailStatus: "dedup", recorded: true, dedup: true, status: existing.rows[0].status });
     }
 
     const ipHash = createHash("sha256").update(clientIp(req)).digest("hex");
@@ -485,7 +493,7 @@ async function handleCreateLead(req, res) {
       `INSERT INTO public_leads
         (id, request_kind, name, phone, city, property_type, services, visit_preference, details, consented_at, origin, campaign, email, channel, dedup_key, consent_version, ip_hash, user_agent, status)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW(),$10,$11,$12,$13,$14,'v1',$15,$16,'solicitada')`,
-      [id, lead.requestKind, lead.name, lead.phone, lead.city, lead.propertyType, lead.services, lead.visitPreference, lead.details, lead.origin, lead.campaign, lead.email, lead.channel, lead.dedupKey, ipHash, userAgent],
+      [id, lead.requestKind, lead.name, lead.phone, lead.city, lead.propertyType, lead.services, lead.visitPreference, lead.details, lead.origin, lead.campaign, lead.email, lead.channel, dedupKey, ipHash, userAgent],
     );
 
     // Auditar criação de lead (PUB-03)
@@ -520,7 +528,7 @@ async function handleCreateLead(req, res) {
 async function handleAdminLeads(req, res, url) {
   const session = await readSession(req);
   if (!session) return json(res, 401, { error: "admin_session_required" });
-  if (!['marcelo', 'ti'].includes(session.role)) return json(res, 403, { error: "forbidden" });
+  if (!['marcelo', 'ti', 'comercial', 'admin'].includes(session.role)) return json(res, 403, { error: "forbidden" });
   if (req.method !== "GET") return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
   const limit = Math.min(100, Math.max(1, Number.parseInt(url.searchParams.get("limit") || "50", 10) || 50));
   const offset = Math.min(10_000, Math.max(0, Number.parseInt(url.searchParams.get("offset") || "0", 10) || 0));
@@ -556,7 +564,7 @@ async function handleAdminLeadStatus(req, res, leadId) {
   if (!sameOrigin(req)) return json(res, 403, { error: "same_origin_required" });
   const session = await readSession(req);
   if (!session) return json(res, 401, { error: "admin_session_required" });
-  if (!['marcelo', 'ti'].includes(session.role)) return json(res, 403, { error: "forbidden" });
+  if (!['marcelo', 'ti', 'comercial', 'admin'].includes(session.role)) return json(res, 403, { error: "forbidden" });
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(leadId)) return json(res, 400, { error: "invalid_lead_id" });
   let body;
   try {
@@ -1195,6 +1203,7 @@ const discountApi = createDiscountApi({
   sameOrigin,
   getPool,
   readAdminSession: readSession,
+  hasPermission,
 });
 
 const proposalApi = createProposalApi({

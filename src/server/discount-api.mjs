@@ -1,4 +1,4 @@
-export function createDiscountApi({ json, readJson, sameOrigin, getPool, readAdminSession }) {
+export function createDiscountApi({ json, readJson, sameOrigin, getPool, readAdminSession, hasPermission }) {
   const VALID_POLICY_STATUS = new Set(['rascunho','em_revisao','aprovado','arquivado']);
   const VALID_REQUEST_STATUS = new Set(['rascunho','solicitado','em_analise','aprovado','rejeitado','arquivado','expirado']);
   const VALID_SCOPE = new Set(['global','company','opportunity','service','technical_budget','labor_budget','price_scenario','outro']);
@@ -269,20 +269,26 @@ export function createDiscountApi({ json, readJson, sameOrigin, getPool, readAdm
 
         // Motivo obrigatório para aprovação/rejeição
         if (st === 'aprovado') {
-          // Verificar alçada: buscar política
-          if (current.policy_id) {
-            try {
-              const pool = getPool();
-              const polRes = await pool.query('SELECT * FROM crm_discount_policies WHERE id = $1', [current.policy_id]);
-              const pol = polRes.rows[0];
-              if (pol && pol.requires_approval) {
-                // Verificar se solicitante tem alçada? Aqui exigimos aprovador diferente de solicitante e role adequada
-                if (pol.approver_role && pol.approver_role !== session.role && session.role !== 'admin') {
-                  // Permitir admin sempre, mas se role específica exigir, bloquear se não for
-                  // Para simplicidade, apenas auditar
-                }
-              }
-            } catch {}
+          // Alçada real (CRM-18): sem bypass por papel (nem admin/ti) e sem autoaprovação.
+          // A concessão proposals.approve_discount vem do servidor (auth_permissions),
+          // nunca do papel declarado na sessão nem de um campo enviado pelo navegador.
+          if (current.requester_id && session.identityId && current.requester_id === session.identityId) {
+            try { const pool = getPool(); await pool.query("INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,'crm_discount_request_self_approval_denied',$3,'denied','none')", [session.role, session.identityId || session.role, id]); } catch {}
+            return json(res, 403, { error: 'self_approval_forbidden' });
+          }
+          let approverAllowed = false;
+          try {
+            const pool = getPool();
+            approverAllowed = await hasPermission(pool, {
+              identityId: session.identityId,
+              permission: 'proposals.approve_discount',
+              accountId: current.company_id || null,
+              contractId: null,
+            });
+          } catch { approverAllowed = false; }
+          if (!approverAllowed) {
+            try { const pool = getPool(); await pool.query("INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,'crm_discount_request_approval_denied',$3,'denied','none')", [session.role, session.identityId || session.role, id]); } catch {}
+            return json(res, 403, { error: 'discount_approval_permission_required', permission: 'proposals.approve_discount' });
           }
 
           fields.push(`approver_id = $${idx++}`); vals.push(session.identityId || null);

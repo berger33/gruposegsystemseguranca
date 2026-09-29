@@ -194,7 +194,7 @@ export function createProposalAcceptanceApi({ json, readJson, sameOrigin, getPoo
           return json(res, 409, { error: 'version_mismatch_link_bound_to_version', link_version: link.proposal_version, proposal_version: proposal.version });
         }
 
-        const ipHash = clientIp ? (() => { try { const { createHash } = require('node:crypto'); return createHash('sha256').update(String(clientIp(req) || 'unknown')).digest('hex').slice(0,32); } catch { return null; } })() : null;
+        const ipHash = clientIp ? (() => { try { return createHash('sha256').update(String(clientIp(req) || 'unknown')).digest('hex').slice(0,32); } catch { return null; } })() : null;
         const userAgent = req.headers['user-agent'] ? String(req.headers['user-agent']).slice(0,500) : null;
 
         // Marcar link como usado

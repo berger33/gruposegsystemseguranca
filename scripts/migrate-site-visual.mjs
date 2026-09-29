@@ -112,12 +112,13 @@ const files = [
   '099-sec-staff-session-hardening.sql',
   '100-l02-local-outbox.sql',
   '101-l02-document-integrity.sql',
-  '102-l03-employee-self-service-security.sql'
+  '102-l03-employee-self-service-security.sql',
+  '103-l04-comercial-role-widening.sql'
 ];
 
 async function main() {
   const actual = (await readdir(dir)).filter(f => /^\d{3}-.*\.sql$/.test(f)).sort();
-  if (files.length !== 102 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
+  if (files.length !== 103 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
     throw new Error('migration_manifest_mismatch: compare 001–102 with db/migrations before connecting');
   }
   const urlText = process.env.DATABASE_MIGRATION_URL || process.env.DATABASE_URL;
