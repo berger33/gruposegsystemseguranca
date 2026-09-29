@@ -1,17 +1,18 @@
 # Prompt da próxima sessão — Grupo SEG System (entrega local, L04)
 
 Atualizado ao fim da fatia **PUB-08 — SEO técnico**
-(sessão `arena/01a0ef61-gruposegsystemseguranca`), que partiu de `main @ b3c1db6`
-e incorporou por merge o `main @ 8f52137` (PR #25, mergeado durante a sessão).
+(sessão `arena/01a0ef61-gruposegsystemseguranca`, **PR #27, mergeado em
+`main @ 0f0fb70`**), que partiu de `main @ b3c1db6` e incorporou por merge o
+`main @ 8f52137` (PR #25, mergeado durante a sessão).
 As fatias anteriores desta rodada foram calendário de CRM-08 (PR #24), notas
 internas/campo a campo de CRM-05/06 (PR #25) e métricas PUB-10 (PR #26).
 Use este arquivo como prompt de entrada da próxima continuação.
 
 ## Estado de entrada
 
-- Base: `main` após os merges dos PRs #24, #25, #26 e do PR de PUB-08
-  (conferir o SHA no disco antes de começar — **sempre confirmar o HEAD real
-  antes de escrever qualquer código**).
+- Base: **`main @ 0f0fb70`** (merges dos PRs #24, #25, #26 e #27) — conferir o
+  SHA no disco antes de começar: **sempre confirmar o HEAD real antes de
+  escrever qualquer código**.
 - Referências obrigatórias antes de qualquer código:
   `docs/ESTADO-EXECUCAO-LOCAL.md`, `docs/CHECKLIST-ENTREGA-LOCAL.md`,
   `docs/EVIDENCIAS-ENTREGA-LOCAL.md`,
