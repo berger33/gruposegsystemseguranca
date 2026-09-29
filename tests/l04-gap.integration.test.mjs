@@ -1037,10 +1037,17 @@ test('L04 GAP-B: /admin/crm e /admin/site navegáveis em Chromium real', { skip:
     await page.getByRole('button', { name: /Histórico & anexos/ }).click();
     await page.getByLabel('Empresa').first().selectOption({ label: 'Grupo Matriz QA GAP' });
     await page.getByText(/Linha do tempo \(\d+\)/).waitFor({ timeout: 30_000 });
-    await page.getByText('Ligação de qualificação QA GAP').first().waitFor({ timeout: 30_000 });
-    const timelineText = await page.locator('body').innerText();
+    let timelineText = '';
+    const timelineDeadline = Date.now() + 30_000;
+    while (Date.now() < timelineDeadline) {
+      timelineText = await page.locator('body').innerText();
+      if (timelineText.includes('Ligação de qualificação QA GAP') && timelineText.includes('Nota interna QA GAP')) break;
+      await page.waitForTimeout(500);
+    }
+    assert.ok(timelineText.includes('Ligação de qualificação QA GAP'),
+      `ligação deve aparecer na linha do tempo. Tela: ${timelineText.slice(0, 2000)}`);
     assert.ok(timelineText.includes('Nota interna QA GAP'),
-      `nota interna deve aparecer na linha do tempo: ${timelineText.slice(0, 1200)}`);
+      `nota interna deve aparecer na linha do tempo. Tela: ${timelineText.slice(0, 2000)}`);
     assert.ok(timelineText.includes('Anexos (1)'), 'o anexo da ligação é contado na linha do tempo');
 
     // Carteira: números e listas da CRM-10

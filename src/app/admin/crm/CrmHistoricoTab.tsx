@@ -25,11 +25,12 @@ export default function CrmHistoricoTab() {
       try {
         const data = await apiFetch("/api/crm/companies?limit=200");
         setCompanies(data.companies || []);
-        if (!companyId && data.companies?.length) setCompanyId(data.companies[0].id);
+        // Atualização funcional de propósito: em desenvolvimento o efeito de
+        // montagem roda duas vezes e a closure guarda o companyId do primeiro
+        // render — ler o valor anterior evita desfazer a escolha do operador.
+        if (data.companies?.length) setCompanyId((prev) => prev || data.companies[0].id);
       } catch (e: any) { setError(e.message); }
     })();
-    // seleção inicial só na montagem
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Guarda de resposta atrasada: sem isto, a busca de um filtro antigo
