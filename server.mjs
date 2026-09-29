@@ -2459,8 +2459,15 @@ async function routeApi(req, res) {
   if (crmCadenceOptOutMatch) return crmCadenceApi.handleOptOut(req, res, crmCadenceOptOutMatch[1]);
   const crmCadenceOpportunityMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/cadences$/i);
   if (crmCadenceOpportunityMatch) return crmCadenceApi.handleOpportunity(req, res, crmCadenceOpportunityMatch[1]);
+  const crmTaskDelegationMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/tasks\/([0-9a-f-]{36})\/delegation$/i);
+  if (crmTaskDelegationMatch) return crmTaskApi.handleDelegation(req, res, crmTaskDelegationMatch[1], crmTaskDelegationMatch[2]);
   const crmTaskMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/tasks(?:\/([0-9a-f-]{36}))?$/i);
-  if (crmTaskMatch) return crmTaskApi(req, res, crmTaskMatch[1], crmTaskMatch[2] || null);
+  if (crmTaskMatch) return crmTaskApi.handleTasks(req, res, crmTaskMatch[1], crmTaskMatch[2] || null, url);
+  if (url.pathname === "/api/crm/tasks/delegated") return crmTaskApi.handleDelegatedList(req, res, url);
+  const crmDelegatedResponseMatch = url.pathname.match(/^\/api\/crm\/tasks\/delegated\/([0-9a-f-]{36})\/response$/i);
+  if (crmDelegatedResponseMatch) return crmTaskApi.handleDelegatedResponse(req, res, crmDelegatedResponseMatch[1]);
+  const crmDelegatedItemMatch = url.pathname.match(/^\/api\/crm\/tasks\/delegated\/([0-9a-f-]{36})$/i);
+  if (crmDelegatedItemMatch) return crmTaskApi.handleDelegatedItem(req, res, crmDelegatedItemMatch[1]);
   if (url.pathname === "/api/crm/visits/agenda") return crmVisitApi.handleAgenda(req, res, url);
   const crmVisitParticipantMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/visits\/([0-9a-f-]{36})\/participants\/([0-9a-f-]{36})$/i);
   if (crmVisitParticipantMatch) return crmVisitApi.handleVisits(req, res, crmVisitParticipantMatch[1], crmVisitParticipantMatch[2], 'participants', crmVisitParticipantMatch[3], url);
@@ -4030,6 +4037,8 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/crm/opportunities"
   || pathname.startsWith("/api/crm/opportunities/")
   || pathname === "/api/crm/visits/agenda"
+  || pathname === "/api/crm/tasks/delegated"
+  || pathname.startsWith("/api/crm/tasks/delegated/")
   || pathname.startsWith("/api/crm/leads/")
   || pathname === "/api/crm/imports"
   || pathname === "/api/crm/imports/preview"

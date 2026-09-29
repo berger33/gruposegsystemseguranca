@@ -4,6 +4,7 @@ import OpportunityTasks from "./OpportunityTasks";
 import OpportunityInteractions from "./OpportunityInteractions";
 import OpportunityVisits from "./OpportunityVisits";
 import MyAgenda from "./MyAgenda";
+import MyDelegatedTasks from "./MyDelegatedTasks";
 import CadenceClient from "./CadenceClient";
 
 type Company = { id: string; display_name: string; type: string; city: string; segment: string | null; status: string; responsible_name: string | null; };
@@ -15,6 +16,9 @@ export default function CrmPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [opps, setOpps] = useState<Opportunity[]>([]);
   const [filter, setFilter] = useState({ type: "", stage: "" });
+  const [oppSearch, setOppSearch] = useState("");
+  const [oppPriority, setOppPriority] = useState("");
+  const [oppView, setOppView] = useState<"kanban" | "tabela">("kanban");
   const [form, setForm] = useState({ displayName: "", city: "", type: "prospect", segment: "" });
   const [error, setError] = useState("");
   const [csvContent, setCsvContent] = useState("");
@@ -238,11 +242,27 @@ export default function CrmPage() {
         </div>
         <div>
           <h2 style={{ fontSize: 16 }}>Oportunidades ({opps.length}) — CRM-05/06 kanban e tabela</h2>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8, alignItems: "center" }}>
+            <label style={{ fontSize: 12 }}>Busca por título de oportunidade<input value={oppSearch} onChange={e=>setOppSearch(e.target.value)} maxLength={200} style={{ display: "block", padding: 4 }} /></label>
+            <label style={{ fontSize: 12 }}>Prioridade
+              <select value={oppPriority} onChange={e=>setOppPriority(e.target.value)} style={{ display: "block", padding: 4 }}>
+                <option value="">todas prioridades</option>
+                {["baixa","media","alta","critica"].map(p=><option key={p} value={p}>{p}</option>)}
+              </select>
+            </label>
+            <button type="button" onClick={()=>setOppView(view=>view==="kanban"?"tabela":"kanban")} style={{ padding: "6px 12px" }}>
+              {oppView==="kanban" ? "Ver em tabela" : "Ver em kanban"}
+            </button>
+          </div>
+          {(() => {
+            const term = oppSearch.trim().toLocaleLowerCase("pt-BR");
+            const visibleOpps = opps.filter(o => (!term || o.title.toLocaleLowerCase("pt-BR").includes(term)) && (!oppPriority || o.priority === oppPriority));
+            return oppView === "kanban" ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8, maxHeight: 500, overflow: "auto", border: "1px solid #eee", padding: 8 }}>
             {stages.map(stage=>(
               <div key={stage} style={{ border: "1px solid #ddd", borderRadius: 6, padding: 8, background: "#f8fafc" }}>
                 <h3 style={{ margin: "0 0 6px", fontSize: 12, textTransform: "uppercase" }}>{stage}</h3>
-                {opps.filter(o=>o.stage===stage).map(o=>(
+                {visibleOpps.filter(o=>o.stage===stage).map(o=>(
                   <article key={o.id} style={{ border: "1px solid #ccc", borderRadius: 4, padding: 6, marginBottom: 6, background: o.is_won ? "#dcfce7" : o.is_lost ? "#fee2e2" : "#fff", fontSize: 11 }}>
                     <strong>{o.title}</strong>
                     <button type="button" onClick={() => setSelectedOpportunity(o.id)}>Abrir tarefas</button>
@@ -251,17 +271,39 @@ export default function CrmPage() {
                     <p style={{ margin: "2px 0 0", opacity: 0.7 }}>{o.is_won ? "ganho (não é dinheiro recebido)" : o.is_lost ? "perdido (motivo obrigatório)" : ""}</p>
                   </article>
                 ))}
-                {opps.filter(o=>o.stage===stage).length===0 && <p style={{ fontSize: 10, opacity: 0.5 }}>vazio</p>}
+                {visibleOpps.filter(o=>o.stage===stage).length===0 && <p style={{ fontSize: 10, opacity: 0.5 }}>vazio</p>}
               </div>
             ))}
           </div>
-          <p style={{ fontSize: 11, opacity: 0.6, marginTop: 8 }}>CRM-07 kanban e tabela, filtros, busca, tarefas vencidas, histórico ligações/reuniões, anexos e notas internas autorizadas. Tarefas pessoais e histórico de interações: use Abrir tarefas na oportunidade. Anexos e agenda de visitas/reuniões (CRM-08) já entregues; cadências manuais (CRM-09) criam tarefas a partir de modelos, sem envio automático; carteira (CRM-10) ainda está pendente.</p>
+            ) : (
+          <div style={{ maxHeight: 500, overflow: "auto", border: "1px solid #eee" }}>
+            <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
+              <thead><tr><th>Título</th><th>Estágio</th><th>Prioridade</th><th>Valor</th><th>Próxima ação</th><th></th></tr></thead>
+              <tbody>
+                {visibleOpps.map(o=>(
+                  <tr key={o.id} style={{ borderTop: "1px solid #eee", background: o.is_won ? "#dcfce7" : o.is_lost ? "#fee2e2" : undefined }}>
+                    <td>{o.title}</td>
+                    <td>{o.stage}</td>
+                    <td>{o.priority}</td>
+                    <td>{o.estimated_value || "-"}</td>
+                    <td>{o.next_action || "-"} {o.next_action_date ? new Date(o.next_action_date).toLocaleDateString() : ""}</td>
+                    <td><button type="button" onClick={() => setSelectedOpportunity(o.id)}>Abrir tarefas</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {visibleOpps.length===0 && <p style={{ fontSize: 11, opacity: 0.6, padding: 8 }}>Nenhuma oportunidade neste filtro.</p>}
+          </div>
+            );
+          })()}
+          <p style={{ fontSize: 11, opacity: 0.6, marginTop: 8 }}>CRM-07 kanban e tabela, filtros, busca, tarefas vencidas, histórico ligações/reuniões, anexos e notas internas autorizadas. Tarefas pessoais (com paginação, busca, edição de prazo e delegação explícita com aceite) e histórico de interações: use Abrir tarefas na oportunidade. Delegações recebidas aparecem em Tarefas delegadas a mim. Anexos e agenda de visitas/reuniões (CRM-08) já entregues; cadências manuais (CRM-09) criam tarefas a partir de modelos, sem envio automático; carteira (CRM-10) ainda está pendente.</p>
         </div>
       </section>
       {selectedOpportunity && <OpportunityTasks key={selectedOpportunity} opportunityId={selectedOpportunity} />}
       {selectedOpportunity && <OpportunityInteractions key={"interactions-" + selectedOpportunity} opportunityId={selectedOpportunity} />}
       {selectedOpportunity && <OpportunityVisits key={"visits-" + selectedOpportunity} opportunityId={selectedOpportunity} />}
       {selectedOpportunity && <CadenceClient key={"cadence-" + selectedOpportunity} opportunityId={selectedOpportunity} />}
+      <MyDelegatedTasks />
       <MyAgenda />
     </main>
   );

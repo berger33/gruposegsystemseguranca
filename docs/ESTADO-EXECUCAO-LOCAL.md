@@ -4,7 +4,17 @@ Documento de retomada entre sessões. Atualizado a cada lote concluído.
 Referência: `docs/EXECUCAO-ENTREGA-LOCAL.md` (roteiro L00–L10) e
 `docs/PLANO-MESTRE-IMPLEMENTACAO.md` (222 requisitos).
 
-## Continuação mais recente — CRM-09, cadências manuais (Arena, 2026-09-29)
+## Continuação mais recente — CRM-07: prazo, paginação e delegação com aceite (Arena, 2026-09-29)
+
+A base desta continuação é `942b3fc` (HEAD de `main` e da branch no início, merge do PR #20), na branch `arena/01a0eeb7-gruposegsystemseguranca`. A decisão de negócio pendente de CRM-07 foi tomada e registrada antes da rota (`docs/PROMPT-CONTINUACAO-CRM-TAREFAS-DELEGACAO.md`): **existe delegação explícita entre comerciais, com aceite, e não existe visibilidade de equipe ampla**. A fatia entrega, na migração `108`→`109-crm-task-delegation.sql`, versão otimista incrementada por gatilho do banco, campos de delegação com CHECK de coerência e de não-autodelegação, índice parcial e seis ações novas de auditoria.
+
+`src/server/crm-task-api.mjs` foi reescrita como objeto de handlers: GET paginado de verdade (1–100, `offset` até 10000, `total`) com filtros de situação, busca por título com curinga escapado e vencidas no servidor; PATCH com uma única operação por chamada (transição por `expected_status` OU prazo por `expected_version`); `POST/DELETE .../delegation`; `GET /api/crm/tasks/delegated`; `POST .../response`; `PATCH /api/crm/tasks/delegated/:id`. Política: só o responsável pela oportunidade delega, apenas para staff ativo `comercial`, por e-mail exato com erro genérico único (sem oráculo de diretório); pendente congela o dono e pode ser revogada; recusa devolve; aceite transfere `responsible_id` e as transições passam a ser exclusivas do delegado; tarefa de cadência (CRM-09) não é delegável; o delegado recebe contexto mínimo (tarefa, empresa, título da oportunidade, quem delegou) e nenhum outro acesso à oportunidade; a rota legada de detalhe não deixa a tarefa delegada sumir do dono. Papel administrativo não delega nem recebe. Revogação após aceite ficou fora por decisão. UI: `OpportunityTasks.tsx` ganhou paginação/busca/filtros/edição de prazo/delegação, novo `MyDelegatedTasks.tsx` sempre visível, e o kanban de oportunidades ganhou busca por título, filtro de prioridade e alternância kanban/tabela.
+
+Gate: `npm run test:l04-delivery:pg` **6/6, duas vezes consecutivas** (PostgreSQL 17 descartável, HTTP real, Chromium real sem `--disable-web-security`; segundo navegador/sessão para o delegado). O sexto cenário prova paginação sem sobreposição nem perda (34 tarefas), controles negativos de parâmetros, busca literal `100%` com escape de curinga, conflito de versão real na edição de prazo, todos os caminhos de delegação (negações, erro genérico idêntico, cadência, pendente/revogada/recusada/aceita, transferência conferida no banco, borda do delegado, auditoria por ator e rollback por falha de auditoria injetada no aceite) e a jornada de UI completa dono→delegado→dono. Regressão: `qa-wave0-static` 5/5, `test:migrations:pg` 109/109 (replay, clone, checksum negativo, 509 tabelas), `npm test` 186/186, `typecheck` 0 erros, `build` com `/admin/crm`, `git diff --check` limpo, `tsconfig.json` restaurado após o dev server do gate reescrevê-lo.
+
+L04/CRM-07 continuam parciais nas lacunas registradas: revisão campo a campo de kanban/tabela herdados de CRM-05/06 e notas internas dedicadas; CRM-08 (conflitos/PUB-04), CRM-10, lacunas PUB e revalidação CRM-01..06 seguem pendentes. Fora desta entrega, por decisão: CRM-10, automação de mensagens, SMTP, calendário/lembretes adicionais, hospedagem externa, Windows e aceite humano.
+
+### Continuação anterior — CRM-09, cadências manuais (Arena, 2026-09-29)
 
 A base desta continuação é `5a2e6a7` (HEAD da branch Arena e de `main` no início), na branch `arena/01a0eea3-gruposegsystemseguranca`. O recorte Opção C implementa CRM-09 verticalmente em `108-crm-manual-cadences.sql`, `src/server/crm-cadence-api.mjs` e `/admin/crm`: modelos privados por comercial, passos com intervalo/canal/responsável, aplicação somente à própria oportunidade e materialização imediata de tarefas manuais. Não há envio automático de mensagem.
 
@@ -28,11 +38,11 @@ PR #13: tarefas pessoais conectadas em /admin/crm, com auditoria atômica e prot
 
 | Campo | Valor |
 |---|---|
-| Branch de trabalho | `arena/01a0eea3-gruposegsystemseguranca` |
-| Base desta sessão | `5a2e6a7` (HEAD de `main` e da branch no início) |
-| Lote ativo | **L04 — CRM-09 entregue localmente, L04 ainda parcial**. CRM-10, CRM-07 equipe/delegação/prazo/paginação e lacunas CRM-08/PUB continuam pendentes. |
-| Último gate aprovado | **L04 ampliado: 5/5** (núcleo comercial + CRM-07 tarefas + interações + CRM-08 agenda + CRM-09 cadências), PostgreSQL descartável, HTTP real e Chromium sem `--disable-web-security`. |
-| Migrações | 001–108 (509 tabelas; 108 adiciona modelos/passos/aplicações de cadência, opt-out e bloqueio transacional de tarefas pendentes) |
+| Branch de trabalho | `arena/01a0eeb7-gruposegsystemseguranca` |
+| Base desta sessão | `942b3fc` (HEAD de `main` e da branch no início, merge do PR #20) |
+| Lote ativo | **L04 — CRM-07 prazo/paginação/delegação entregues; L04 ainda parcial**. CRM-08 conflitos/PUB-04, CRM-10, lacunas PUB e revalidação CRM-01..06 continuam pendentes. |
+| Último gate aprovado | **L04 ampliado: 6/6, duas vezes consecutivas** (núcleo comercial + CRM-07 tarefas + interações + CRM-08 agenda + CRM-09 cadências + CRM-07 prazo/paginação/delegação), PostgreSQL descartável, HTTP real e Chromium sem `--disable-web-security`. |
+| Migrações | 001–109 (509 tabelas; 109 adiciona versão otimista por gatilho, campos de delegação com CHECK de coerência e seis ações de auditoria) |
 | Data | 2026-09-29 |
 
 ## Lotes
@@ -43,7 +53,7 @@ PR #13: tarefas pessoais conectadas em /admin/crm, com auditoria atômica e prot
 | L01 | Identidade, autorização e integridade básica | **parcial ampliado** | SEC-02/04/05/06 + controles dependentes do L03: RBAC sem bypass, escopo, remuneração/saúde e revogação |
 | L02 | Armazenamento, notificações locais, continuidade | **concluído** | 14/14 HTTP em PostgreSQL descartável (revalidado nesta sessão) |
 | L03 | Funcionário e RH | **concluído** | EMP-01..19 e HR-01..24 navegáveis; gate integral aprovado (revalidado nesta sessão) |
-| L04 | Site/captação e comercial | **parcial — CRM-09 entregue; lacunas explícitas** | Núcleo CRM-11..27 provado; CRM-07 tem tarefas/interações, mas ainda faltam equipe/delegação/prazo/paginação e revisão integral de kanban/filtros; CRM-08 tem agenda de responsável/participantes, mas faltam calendário/conflitos/PUB-04; CRM-09 tem modelos privados e tarefas manuais, sem automação; CRM-10 e PUB-06..09/PUB-10 continuam pendentes |
+| L04 | Site/captação e comercial | **parcial — CRM-07 prazo/paginação/delegação entregues; lacunas explícitas** | Núcleo CRM-11..27 provado; CRM-07 tem tarefas com paginação/busca/filtros/edição de prazo e delegação explícita com aceite (decisão de equipe registrada: sem fila ampla), restando revisão campo a campo de kanban/tabela CRM-05/06 e notas internas; CRM-08 tem agenda de responsável/participantes, mas faltam conflitos/PUB-04 (calendário/lembretes fora desta entrega); CRM-09 tem modelos privados e tarefas manuais, sem automação; CRM-10 e PUB-06..09/PUB-10 continuam pendentes |
 | L05 | Contratos e implantação | pendente | — |
 | L06 | Operação, patrimônio e manutenção | pendente | — |
 | L07 | Financeiro e Marcelo | pendente | — |
@@ -363,9 +373,13 @@ proprietário. Os IDs tratados nesta continuação foram atualizados no checklis
 os demais conservam seus estados anteriores.
 
 CRM-07 recebeu tarefas e histórico de interações, anexos, edição/exclusão,
-contato, tipos e paginação — mas continua parcial em equipe/delegação, prazo e
-revisão integral de kanban/busca/filtros. CRM-08 segue parcial em calendário,
-conflitos e vínculo PUB-04. CRM-10 e as lacunas PUB continuam pendentes.
+contato, tipos e paginação; nesta última continuação ganhou também edição de
+prazo com versão otimista, paginação/busca/filtros de tarefas no servidor e a
+delegação explícita com aceite (decisão de equipe registrada: sem fila ampla).
+Continua parcial na revisão campo a campo de kanban/tabela herdados de
+CRM-05/06 e em notas internas dedicadas. CRM-08 segue parcial em conflitos e
+vínculo PUB-04 (calendário/lembretes fora desta entrega). CRM-10 e as lacunas
+PUB continuam pendentes.
 
 ## Continuação CRM-08 (commit `7ddd659`)
 

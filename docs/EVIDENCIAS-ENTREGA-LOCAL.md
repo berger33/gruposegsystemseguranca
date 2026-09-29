@@ -760,3 +760,58 @@ SHA histórico é reutilizado como prova desta branch.
 `next-env.d.ts` e `tsconfig.json` foram conferidos após gates/build e não ficaram
 apontando para `.next/integration-l04`; não há alterações automáticas desses
 arquivos no patch.
+
+## Continuação CRM-07 — prazo, paginação e delegação com aceite (branch `arena/01a0eeb7-gruposegsystemseguranca`)
+
+Base `942b3fc` (merge do PR #20). Decisões registradas antes da rota em
+`docs/PROMPT-CONTINUACAO-CRM-TAREFAS-DELEGACAO.md`: delegação explícita entre
+comerciais com aceite, sem visibilidade de equipe ampla; tarefa de cadência não
+delegável; erro genérico único para qualquer problema de destinatário; uma
+operação por PATCH; paginação/busca/filtros no servidor.
+
+### O que o sexto cenário do gate prova (HTTP + Chromium + PostgreSQL descartável)
+
+- Paginação real com 34 tarefas: `total`/`limit`/`offset` no servidor, páginas
+  sem sobreposição nem perda (união conferida), controles negativos de
+  `limit`/`offset`/`status`/`q`/`overdue` (nove casos 400).
+- Busca com curinga escapado: `q=100%` devolve somente o título com `100%`
+  literal, não todo título contendo `100`.
+- Edição de prazo com `expected_version`: sucesso incrementa a versão pelo
+  gatilho do banco; versão velha 409; tarefa encerrada 409; datas inválidas e
+  campos geridos pelo servidor 400; operação mista (estado+prazo) 400.
+- Delegação: 401 sem sessão, 403 RH/origem ausente, 400 e-mail inválido, 404
+  para não-dono; erro genérico idêntico (`delegate_not_available`) para
+  destinatário RH, inexistente e autodelegação; tarefa concluída 409; tarefa de
+  cadência (fixture SQL de template/passo/contato/enrollment) 409.
+- Ciclo de vida: pendente congela o dono (estado, prazo e redelegação 409);
+  recusa devolve o controle e permite redelegar; revogação limpa a delegação e
+  some da visão do delegado; aceite transfere `responsible_id` (conferido por
+  SQL), mantém a tarefa visível para o dono (lista e rota legada), nega dono e
+  estranho e deixa as transições exclusivas do delegado.
+- Auditoria: sequência `crm_task_create` → `crm_task_delegate` →
+  `crm_task_delegation_accept` → `crm_task_delegated_status` com o ator correto
+  em cada linha; `crm_task_update` na edição de prazo; falha de auditoria
+  injetada no aceite devolve 503 e não transfere nada (rollback provado).
+- UI real: o dono busca a oportunidade e a tarefa, edita o prazo, delega pelo
+  e-mail; o delegado, em segundo navegador/sessão, aceita e conclui em
+  “Tarefas delegadas a mim”; o dono recarrega e vê o estado `aceita`; sem erro
+  de console/5xx e sem rolagem horizontal nas duas sessões.
+
+### Comandos e resultados
+
+| Comando | Resultado |
+|---|---|
+| `npm ci` | 82 pacotes, 0 vulnerabilidades, exit 0 |
+| `node scripts/qa-wave0-static.mjs` | 5/5; migrações 001–109 contínuas e agendadas |
+| `npm run test:migrations:pg` | 109/109 primeira aplicação e replay; 509 tabelas; clone/checksum negativo aprovados |
+| `npm run test:l04-delivery:pg` | 6/6; duas execuções consecutivas; exit 0 |
+| `npm test` | 186/186, exit 0 |
+| `npm run typecheck` | 0 erros, exit 0 |
+| `npm run build` | sucesso, `/admin/crm` compilada, exit 0 |
+| `git diff --check` | sem erro |
+
+`tsconfig.json` foi reescrito pelo dev server do gate (includes de
+`.next/integration-l04`) e restaurado com `git checkout` antes do commit;
+`npx tsc --noEmit` foi reexecutado depois da restauração e continuou com 0
+erros. Nenhum resultado de SHA histórico é reutilizado como prova desta
+continuação.
