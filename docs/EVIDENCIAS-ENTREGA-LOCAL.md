@@ -595,3 +595,85 @@ foi inferida. `stages` e `visits` da rota legada ainda carecem da mesma borda de
 propriedade e devem ser corrigidos quando CRM-06/CRM-08 forem tocados.
 CRM-08/09/10, lacunas PUB, aceite humano e execução Windows continuam
 pendentes. Não houve SMTP, hospedagem externa, mensagem real ou publicação.
+
+## Continuação CRM-08 — agenda de visitas e reuniões (commit `7ddd659`)
+
+### Política de escopo registrada antes da rota
+
+- **Responsável**: a identidade que detém a oportunidade (`responsible_id`, ou
+  `created_by_id` enquanto não houver responsável). Só ela agenda, edita,
+  reagenda, confirma, conclui, cancela e gerencia participantes.
+- **Participante**: identidade de staff ativa convidada explicitamente. Vê
+  apenas as visitas em que foi incluída e responde somente por si
+  (`confirmado`/`recusado`). Não reagenda, não cancela, não convida terceiros
+  e não passa a enxergar a oportunidade, os contatos nem as demais visitas.
+- Papel administrativo **não** é bypass: `comercial`, `admin`, `marcelo` e
+  `ti` obedecem à mesma regra de propriedade.
+- Nenhum diretório de staff é exposto: o convite é feito pelo e-mail exato e o
+  erro é o mesmo para inexistente, não-staff e inativo.
+- Reagendar zera todas as confirmações (uma confirmação vale para a data
+  confirmada, nunca para a seguinte) e devolve a visita a `solicitada`.
+- Cancelar exige motivo, inclusive no banco (`crm_visits_cancel_reason_check`).
+- `realizada` e `cancelada` são finais: não há reabertura silenciosa.
+
+### Comandos executados nesta continuação
+
+| Comando | Resultado |
+| --- | --- |
+| `npm ci` | 82 pacotes, 0 vulnerabilidades |
+| `node scripts/qa-wave0-static.mjs` | 5/5 (migrações 001–107 contínuas e agendadas) |
+| `npm run test:migrations:pg` | 107/107 na primeira aplicação e no replay; 506→506 tabelas; clone TEMPLATE preservou checksums; adulteração do 006 recusada (controle negativo) |
+| `npm run test:l04-delivery:pg` | 4/4 com PostgreSQL descartável, HTTP real e Chromium real (sem `--disable-web-security`) |
+| `npm test` | 186/186 |
+| `npm run typecheck` | 0 erros |
+| `npm run build` | sucesso, 70 rotas; alteração automática de `tsconfig.json` por `.next/integration-l04` conferida e descartada |
+
+### Cenário CRM-08 exercitado pelo gate L04
+
+1. Quatro identidades: dona da oportunidade, convidada, comercial alheia e RH.
+   Empresa, contato ativo e oportunidade criados por HTTP pela dona.
+2. Negações: sem sessão 401; RH 403; comercial alheia 404; origem ausente 403;
+   `DELETE` na coleção e `POST` na agenda pessoal 405.
+3. Entradas inválidas: atribuição forjada (`responsible_id`) 400
+   `server_managed_fields`; data no passado; duração fora de 15–480; título
+   vazio; convidado inexistente. O convite impossível **não** deixa visita
+   órfã (contagem conferida no banco).
+4. Chromium entra em `/admin/crm` com a sessão da dona, agenda a visita com
+   contato, duração, observações e convidado por e-mail; recarrega a página e
+   reencontra a visita `Solicitada` com o convidado `pendente`.
+5. Em navegador e sessão separados, a convidada abre `/admin/crm`, encontra a
+   visita em “Minha agenda de visitas e reuniões” e confirma a presença pela
+   UI real (200 na rota `/response`).
+6. Escopo conferido por HTTP: a convidada lista somente a visita em que foi
+   incluída e não recebe a agenda de contatos da empresa; a comercial alheia
+   recebe 404 na listagem, não vê nada na agenda pessoal e continua sem visitas
+   no detalhe legado — que agora obedece à mesma política e mostra a visita
+   para a convidada.
+7. A convidada recebe 404 ao tentar reagendar, cancelar, convidar e remover
+   participante; a dona recebe 404 ao tentar responder como participante; a
+   comercial alheia recebe 404 ao tentar responder.
+8. Convite adicional pela dona (e-mail em caixa alta é resolvido), convite
+   repetido 409, remoção do participante 200. Versão desatualizada 409 em
+   reagendamento e em convite.
+9. Reagendamento: `reschedule_count` vai a 1, status volta a `solicitada` e a
+   resposta da convidada volta a `pendente` com `responded_at` nulo.
+10. Confirmação do agendamento, transição inválida 409, cancelamento sem motivo
+    400 e resposta posterior da convidada ainda aceita enquanto a visita vive.
+11. Trigger temporário que rejeita `crm_visit_create` devolve 503 e mantém a
+    contagem de visitas — agenda e auditoria são atômicas.
+12. Cancelamento com motivo grava `cancel_reason`/`cancelled_by_id`; depois
+    disso, edição e resposta recebem 409 `visit_status_final`.
+13. Auditoria conferida no banco descartável, em ordem:
+    `crm_visit_participant_add`, `crm_visit_create`, `crm_visit_response`,
+    `crm_visit_participant_add`, `crm_visit_participant_remove`,
+    `crm_visit_reschedule`, `crm_visit_status`, `crm_visit_response`,
+    `crm_visit_cancel` — com o ator correto em cada linha (duas do convidado).
+
+### Limites que permanecem honestos no CRM-08
+
+Não há lembrete/notificação da agenda (dependeria de provedor), visão de
+calendário por semana/mês, detecção de conflito de horário do responsável nem
+vínculo com os estados de visita do PUB-04. Integração com calendário externo
+segue fora do escopo local. `stages` da rota legada de detalhe continua sem a
+borda de propriedade. CRM-09/10, lacunas PUB, revalidação de CRM-01..06,
+aceite humano/Windows, SMTP e hospedagem externa continuam pendentes.
