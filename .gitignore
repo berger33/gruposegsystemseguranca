@@ -9,3 +9,7 @@ dist/
 .DS_Store
 *.tsbuildinfo
 .data/
+
+# geracao de imagens (Python)
+__pycache__/
+*.pyc
