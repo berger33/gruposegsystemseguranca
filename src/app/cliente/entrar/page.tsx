@@ -35,6 +35,8 @@ export default function ClientSignInPage() {
         setError("Muitas tentativas seguidas. Aguarde alguns minutos e tente novamente.");
       } else if (data.error === "database_not_configured" || data.error === "migration_required") {
         setError("A área de acesso está temporariamente indisponível. Tente novamente mais tarde.");
+      } else if (data.error === "mfa_login_unavailable") {
+        setError("Esta conta exige uma verificação adicional que ainda não está disponível. Fale com a equipe responsável; sua senha não foi rejeitada.");
       } else {
         setError("E-mail ou senha não conferem. Verifique os dados e tente novamente.");
       }

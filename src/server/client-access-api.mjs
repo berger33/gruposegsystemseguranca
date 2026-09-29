@@ -171,9 +171,11 @@ export function createClientAccessApi(ctx) {
     try {
       result = await db.query(
         `SELECT s.id AS session_id, s.expires_at, s.revoked_at,
-                i.id AS identity_id, i.email, i.display_name, i.status
+                i.id AS identity_id, i.email, i.display_name, i.status,
+                (m.activated_at IS NOT NULL) AS mfa_active
          FROM auth_sessions s
          JOIN auth_identities i ON i.id = s.identity_id
+         LEFT JOIN auth_mfa m ON m.identity_id = i.id
          WHERE s.token_hash = $1`,
         [hashToken(raw)],
       );
@@ -185,6 +187,9 @@ export function createClientAccessApi(ctx) {
     }
     const row = result.rows[0];
     if (!row || row.revoked_at) return null;
+    // No challenge flow is available yet. Invalidate even pre-existing sessions
+    // for activated MFA identities rather than allowing password-only access.
+    if (row.mfa_active) return null;
     if (new Date(row.expires_at).getTime() <= Date.now()) return null;
     if (row.status === "suspended" || row.status === "disabled") {
       await db
@@ -248,9 +253,11 @@ export function createClientAccessApi(ctx) {
     let record;
     try {
       const found = await db.query(
-        `SELECT i.id, i.status, i.display_name, c.password_hash
+        `SELECT i.id, i.status, i.display_name, c.password_hash,
+                (m.activated_at IS NOT NULL) AS mfa_active
          FROM auth_identities i
          LEFT JOIN auth_credentials c ON c.identity_id = i.id
+         LEFT JOIN auth_mfa m ON m.identity_id = i.id
          WHERE i.kind = 'client' AND i.email = $1`,
         [email.value],
       );
@@ -269,6 +276,12 @@ export function createClientAccessApi(ctx) {
     if (record.status === "suspended" || record.status === "disabled") {
       await audit(db, { actorKind: "client", actorId: record.id, action: "login", target: record.id, result: "denied", category: "authorization_denied" });
       return ctx.json(res, 401, { error: "invalid_credentials" });
+    }
+    // A valid password is not sufficient once MFA has been activated. Until a
+    // real TOTP challenge/recovery flow is implemented, do not issue a session.
+    if (record.mfa_active) {
+      await audit(db, { actorKind: "client", actorId: record.id, action: "login", target: record.id, result: "denied", category: "authorization_denied" });
+      return ctx.json(res, 503, { error: "mfa_login_unavailable" });
     }
 
     try {

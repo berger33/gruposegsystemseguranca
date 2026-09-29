@@ -141,7 +141,7 @@ async function request(url, init) {
   const response = await fetch(`http://127.0.0.1:3000${url}`, init);
   return { status: response.status, data: await response.json().catch(() => ({})), cookie: response.headers.get('set-cookie')?.split(';')[0] || '' };
 }
-async function smoke(identities, marceloToken) {
+async function smoke(identities, marceloToken, pool) {
   const origin = 'http://127.0.0.1:3000';
   async function login(body) {
     return request('/api/admin/session', { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: JSON.stringify(body) });
@@ -184,6 +184,27 @@ async function smoke(identities, marceloToken) {
     throw new Error('qa_smoke_client_tenant_scope_broken');
   }
   console.log('QA-HOM-004_CLIENT_B_NOT_VISIBLE: true (one QA-only grant).');
+  // SEC-06/07: historical handlers must never pretend to activate MFA or
+  // change an e-mail before there is a verified challenge and delivery channel.
+  const mfaPath = '/api/client/security/mfa/activate';
+  const changePath = '/api/client/security/email-change';
+  const post = (path, headers) => request(path, { method: 'POST', headers: { origin, 'content-type': 'application/json', ...headers }, body: '{}' });
+  expect(await post(mfaPath), 401, '005_MFA_ANON_DENIED');
+  expect(await post(mfaPath, { cookie: client.cookie }), 503, '005_MFA_EXPLICIT_UNAVAILABLE');
+  expect(await post(changePath, { cookie: client.cookie }), 503, '005_EMAIL_CHANGE_EXPLICIT_UNAVAILABLE');
+  expect(await request(mfaPath, { method: 'POST', headers: { cookie: client.cookie, origin: 'https://foreign.invalid' }, body: '{}' }), 403, '005_MFA_FOREIGN_ORIGIN_DENIED');
+  // A legacy record with activated_at must not let a password-only login (or an
+  // earlier cookie) bypass the absent challenge. This DB is synthetic + disposable.
+  await pool.query("INSERT INTO auth_mfa (identity_id, totp_secret_encrypted, activated_at) VALUES ($1,'qa-disabled-legacy-secret',NOW())", [identities[3].id]);
+  try {
+    expect(await request('/api/auth/me', { headers: { cookie: client.cookie } }), 401, '005_OLD_COOKIE_MFA_DENIED');
+    const blocked = await request('/api/auth/login', { method: 'POST', headers: { origin, 'content-type': 'application/json' },
+      body: JSON.stringify({ email: identities[3].email, password: identities[3].password }) });
+    expect(blocked, 503, '005_MFA_PASSWORD_ONLY_DENIED');
+    if (blocked.cookie || blocked.data.error !== 'mfa_login_unavailable') throw new Error('qa_mfa_password_bypass');
+  } finally {
+    await pool.query('DELETE FROM auth_mfa WHERE identity_id = $1', [identities[3].id]);
+  }
 }
 
 async function waitForHealth(child, timeoutMs = 180_000) {
@@ -251,7 +272,7 @@ try {
   web = spawnChild(['server.mjs', '--dev'], { ...env, QA_MIGRATION_ONLY: '' });
   await waitForHealth(web);
   if (verify) {
-    await smoke(identities, marceloToken);
+    await smoke(identities, marceloToken, pool);
     result = 0;
   } else {
     console.log('\n=== HOMOLOGAÇÃO LOCAL, SOMENTE NESTE TERMINAL ===');

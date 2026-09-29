@@ -34,3 +34,7 @@
 **Pendências:** teste Windows do binário PostgreSQL embutido; UI e RBAC completos; troca do token Marcelo por identidade individual; conferência de revogação de sessão staff; matriz de 222 requisitos; dados de documentos/bytes e backup; UAT por papel; validação jurídica/trabalhista/fiscal; carga/pentest exclusivamente com autorização específica em staging isolado.
 
 **Próximo passo:** instalar ZIP separado em Windows isolado; anotar resultado de `INICIAR-HOMOLOGACAO.bat`, smoke sem segredos e roteiro manual por papel. Aguardar `CONTINUAR` para lotes amplos, não promover produção.
+
+## Atualização posterior — QA-HOM-005 (`SEC-06`, `SEC-07`)
+
+O usuário confirmou posteriormente que abriu o esboço no Windows; isso corrige apenas o estado de **abertura visual** descrito acima, não homologa os 222 requisitos. No primeiro lote P0 seguinte, o runner `--verify` ganhou negativas HTTP para as rotas de segurança do cliente: anônimo 401, autenticado 503 explícito (MFA e troca de e-mail ainda não implementados), origem estrangeira 403, cookie antigo após MFA sintético 401 e senha correta com MFA sintético ativo 503 sem cookie. Em Linux, 96/96 migrações, smoke completo e cleanup true, exit 0; unitários 147/147, typecheck e build exit 0. Detalhes, limites e próxima ação: [QA-HOM-005](evidencias/QA-HOM-005-seguranca-cliente-fail-closed.md). **Não se trata de MFA funcional, Windows revalidado nem autorização do Funnel.**
