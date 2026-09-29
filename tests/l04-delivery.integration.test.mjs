@@ -74,6 +74,7 @@ before(async () => {
       SITE_ADMIN_SESSION_SECRET: `${randomUUID()}${randomUUID()}`,
       EMPLOYEE_SESSION_SECRET: `${randomUUID()}${randomUUID()}`,
       ADMIN_LOGIN_MAX_ATTEMPTS: '200',
+      LEAD_MAX_ATTEMPTS: '200',
       OLLAMA_ENABLED: 'false',
       MAIL_HOST: '',
       SITE_ADMIN_LEGACY_TOKENS: '',
@@ -1091,7 +1092,10 @@ test('CRM-08: agenda de visitas/reuniões — responsável, participante, confir
     BEGIN IF NEW.action = 'crm_visit_create' THEN RAISE EXCEPTION 'qa audit failure'; END IF; RETURN NEW; END $$`);
   await pool.query('CREATE TRIGGER qa_reject_visit_audit BEFORE INSERT ON auth_access_audit FOR EACH ROW EXECUTE FUNCTION qa_reject_visit_audit()');
   try {
-    assert.equal((await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: 'Deve reverter', scheduled_at: laterFuture.toISOString() } })).status, 503);
+    // Faixa livre: desde a migração 110 a sobreposição é recusada antes da
+    // auditoria, e o que se prova aqui é o rollback por falha de trilha.
+    const freeSlot = new Date(laterFuture.getTime() + 3 * 24 * 3600 * 1000);
+    assert.equal((await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: 'Deve reverter', scheduled_at: freeSlot.toISOString() } })).status, 503);
     assert.equal((await pool.query('SELECT count(*)::int AS total FROM crm_visits WHERE opportunity_id=$1', [opportunityId])).rows[0].total, 1);
   } finally {
     await pool.query('DROP TRIGGER qa_reject_visit_audit ON auth_access_audit');
@@ -1582,4 +1586,185 @@ test('CRM-07: prazo, paginação, busca e delegação explícita com aceite', { 
   assert.equal(finalD[0].status, 'concluida');
   assert.equal(finalD[0].responsible_id, delegate.id);
   assert.equal(finalD[0].delegation_status, 'aceita');
+});
+
+test('CRM-08: conflito de horário do responsável e vínculo PUB-04 do lead público', { skip: !RUN, timeout: 180_000 }, async () => {
+  const owner = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const other = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+
+  // Lead público real (PUB-03), sem sessão, convertido em oportunidade.
+  const phone = `11${String(900000000 + Math.floor(Math.random() * 89999999))}`;
+  const lead = await api('/api/leads', {
+    method: 'POST',
+    body: { requestKind: 'visit', name: 'Visitante PUB-04 ' + randomUUID().slice(0, 8), phone, city: 'Guarulhos', propertyType: 'Condomínio', services: ['Câmeras e CFTV'], visitPreference: 'Manhã, dias úteis', consent: true, origin: 'contato', campaign: 'site', channel: 'site' },
+  });
+  assert.equal(lead.status, 201, JSON.stringify(lead.body));
+  const leadId = lead.body.leadId;
+  assert.equal((await pool.query('SELECT status FROM public_leads WHERE id=$1', [leadId])).rows[0].status, 'solicitada');
+  const convert = await api(`/api/crm/leads/${leadId}/convert`, { method: 'POST', cookie: owner.cookie, body: { create_company: true, company_name: 'Empresa PUB-04 ' + randomUUID().slice(0, 8) } });
+  assert.equal(convert.status, 201, JSON.stringify(convert.body));
+  const opportunityId = convert.body.opportunityId;
+  const endpoint = '/api/crm/opportunities/' + opportunityId + '/visits';
+
+  const slotA = new Date(Date.now() + 5 * 24 * 3600 * 1000);
+  slotA.setSeconds(0, 0);
+  const plus = minutes => new Date(slotA.getTime() + minutes * 60 * 1000);
+
+  // Agendamento inicial: o vínculo com o lead vem da oportunidade, não do corpo.
+  const forgedLink = await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: 'Forjar lead', scheduled_at: plus(0).toISOString(), public_lead_id: randomUUID() } });
+  assert.equal(forgedLink.status, 400, JSON.stringify(forgedLink.body));
+  assert.equal(forgedLink.body.error, 'server_managed_fields', 'o vínculo com o lead não pode vir do cliente');
+  const visitA = await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: 'Vistoria do lead público', scheduled_at: plus(0).toISOString() } });
+  assert.equal(visitA.status, 201, JSON.stringify(visitA.body));
+  const visitAId = visitA.body.visit.id;
+  const storedA = await pool.query('SELECT public_lead_id,lead_sync_status,duration_minutes FROM crm_visits WHERE id=$1', [visitAId]);
+  assert.equal(storedA.rows[0].public_lead_id, leadId, 'a visita precisa herdar o lead da oportunidade');
+  assert.equal(storedA.rows[0].lead_sync_status, null, 'agendar ainda não é reserva confirmada');
+  assert.equal(storedA.rows[0].duration_minutes, null);
+
+  // Conflito de horário: mesma faixa e faixa sobreposta são recusadas.
+  const sameSlot = await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: 'Mesma faixa', scheduled_at: plus(0).toISOString(), duration_minutes: 60 } });
+  assert.equal(sameSlot.status, 409, JSON.stringify(sameSlot.body));
+  assert.equal(sameSlot.body.error, 'visit_schedule_conflict');
+  assert.equal(sameSlot.body.conflict.id, visitAId);
+  const overlap = await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: 'Sobreposição parcial', scheduled_at: plus(30).toISOString(), duration_minutes: 60 } });
+  assert.equal(overlap.status, 409);
+  assert.equal(overlap.body.error, 'visit_schedule_conflict');
+  const beforeOverlap = await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: 'Sobreposição por trás', scheduled_at: plus(-30).toISOString(), duration_minutes: 60 } });
+  assert.equal(beforeOverlap.status, 409);
+  assert.equal((await pool.query('SELECT count(*)::int AS total FROM crm_visits WHERE opportunity_id=$1', [opportunityId])).rows[0].total, 1, 'conflito não pode deixar visita gravada');
+
+  // Encostar não é conflito: a visita seguinte começa quando a primeira termina.
+  const touching = await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: 'Logo em seguida', scheduled_at: plus(60).toISOString(), duration_minutes: 60 } });
+  assert.equal(touching.status, 201, JSON.stringify(touching.body));
+  const visitBId = touching.body.visit.id;
+
+  // O conflito é do responsável: outro comercial usa a mesma faixa livremente.
+  const otherCompany = await api('/api/crm/companies', { method: 'POST', cookie: other.cookie, body: { displayName: 'Empresa paralela ' + randomUUID(), city: 'Osasco', type: 'prospect' } });
+  const otherOpportunity = await api('/api/crm/opportunities', { method: 'POST', cookie: other.cookie, body: { company_id: otherCompany.body.company.id, title: 'Agenda paralela ' + randomUUID() } });
+  const otherVisit = await api('/api/crm/opportunities/' + otherOpportunity.body.opportunity.id + '/visits', { method: 'POST', cookie: other.cookie, body: { title: 'Mesma hora, outra pessoa', scheduled_at: plus(0).toISOString(), duration_minutes: 60 } });
+  assert.equal(otherVisit.status, 201, 'a agenda de um comercial não bloqueia a de outro');
+
+  // Reagendar e esticar a duração para cima de outra visita também é recusado.
+  let current = (await api(endpoint, { cookie: owner.cookie })).body.visits.find(item => item.id === visitAId);
+  const rescheduleClash = await api(`${endpoint}/${visitAId}`, { method: 'PATCH', cookie: owner.cookie, body: { expected_version: current.version, scheduled_at: plus(75).toISOString() } });
+  assert.equal(rescheduleClash.status, 409);
+  assert.equal(rescheduleClash.body.error, 'visit_schedule_conflict');
+  assert.equal(rescheduleClash.body.conflict.id, visitBId);
+  const stretchClash = await api(`${endpoint}/${visitAId}`, { method: 'PATCH', cookie: owner.cookie, body: { expected_version: current.version, duration_minutes: 120 } });
+  assert.equal(stretchClash.status, 409);
+  assert.equal((await pool.query('SELECT version,scheduled_at FROM crm_visits WHERE id=$1', [visitAId])).rows[0].version, current.version, 'conflito não pode consumir versão');
+
+  // Confirmar a visita confirma o lead público (PUB-04), na mesma transação.
+  const confirmedA = await api(`${endpoint}/${visitAId}`, { method: 'PATCH', cookie: owner.cookie, body: { expected_version: current.version, status: 'confirmada' } });
+  assert.equal(confirmedA.status, 200, JSON.stringify(confirmedA.body));
+  assert.deepEqual(confirmedA.body.lead_sync, { lead_id: leadId, previous_status: 'solicitada', status: 'confirmada' });
+  assert.equal((await pool.query('SELECT status FROM public_leads WHERE id=$1', [leadId])).rows[0].status, 'confirmada');
+  const leadHistory = async () => (await pool.query('SELECT previous_status,next_status FROM public_lead_status_audit WHERE lead_id=$1 ORDER BY id', [leadId])).rows;
+  assert.deepEqual(await leadHistory(), [{ previous_status: 'solicitada', next_status: 'confirmada' }]);
+  const leadAudit = async () => (await pool.query("SELECT action FROM auth_access_audit WHERE target LIKE $1 AND action LIKE 'lead_%' ORDER BY created_at, id", [leadId + ':%'])).rows.map(row => row.action);
+  assert.deepEqual(await leadAudit(), ['lead_visit_confirm']);
+
+  // Confirmar a segunda visita não duplica a propagação (lead já confirmado).
+  const visitB = (await api(endpoint, { cookie: owner.cookie })).body.visits.find(item => item.id === visitBId);
+  const confirmedB = await api(`${endpoint}/${visitBId}`, { method: 'PATCH', cookie: owner.cookie, body: { expected_version: visitB.version, status: 'confirmada' } });
+  assert.equal(confirmedB.status, 200);
+  assert.equal(confirmedB.body.lead_sync, null);
+  assert.deepEqual(await leadAudit(), ['lead_visit_confirm']);
+
+  // Cancelar uma visita com outra viva no mesmo lead não cancela o atendimento.
+  const cancelledB = await api(`${endpoint}/${visitBId}`, { method: 'PATCH', cookie: owner.cookie, body: { expected_version: confirmedB.body.visit.version, status: 'cancelada', cancel_reason: 'Encaixe desnecessário' } });
+  assert.equal(cancelledB.status, 200);
+  assert.equal(cancelledB.body.lead_sync, null, 'ainda há visita viva para este lead');
+  assert.equal((await pool.query('SELECT status FROM public_leads WHERE id=$1', [leadId])).rows[0].status, 'confirmada');
+
+  // Reagendar derruba a confirmação: não se promete horário sem reserva real.
+  const rescheduledA = await api(`${endpoint}/${visitAId}`, { method: 'PATCH', cookie: owner.cookie, body: { expected_version: confirmedA.body.visit.version, scheduled_at: plus(24 * 60).toISOString() } });
+  assert.equal(rescheduledA.status, 200, JSON.stringify(rescheduledA.body));
+  assert.equal(rescheduledA.body.visit.status, 'solicitada');
+  assert.deepEqual(rescheduledA.body.lead_sync, { lead_id: leadId, previous_status: 'confirmada', status: 'em_agendamento' });
+  assert.deepEqual(await leadAudit(), ['lead_visit_confirm', 'lead_status_change']);
+  const reconfirmedA = await api(`${endpoint}/${visitAId}`, { method: 'PATCH', cookie: owner.cookie, body: { expected_version: rescheduledA.body.visit.version, status: 'confirmada' } });
+  assert.equal(reconfirmedA.status, 200);
+  assert.equal(reconfirmedA.body.lead_sync.status, 'confirmada');
+
+  // Falha de auditoria injetada no vínculo: a visita não muda sem trilha.
+  await pool.query(`CREATE FUNCTION qa_reject_lead_cancel_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.action = 'lead_visit_cancel' THEN RAISE EXCEPTION 'qa audit failure'; END IF; RETURN NEW; END $$`);
+  await pool.query('CREATE TRIGGER qa_reject_lead_cancel_audit BEFORE INSERT ON auth_access_audit FOR EACH ROW EXECUTE FUNCTION qa_reject_lead_cancel_audit()');
+  try {
+    const blocked = await api(`${endpoint}/${visitAId}`, { method: 'PATCH', cookie: owner.cookie, body: { expected_version: reconfirmedA.body.visit.version, status: 'cancelada', cancel_reason: 'Deve reverter junto com o lead' } });
+    assert.equal(blocked.status, 503, JSON.stringify(blocked.body));
+    assert.equal((await pool.query('SELECT status FROM crm_visits WHERE id=$1', [visitAId])).rows[0].status, 'confirmada');
+    assert.equal((await pool.query('SELECT status FROM public_leads WHERE id=$1', [leadId])).rows[0].status, 'confirmada');
+  } finally {
+    await pool.query('DROP TRIGGER qa_reject_lead_cancel_audit ON auth_access_audit');
+    await pool.query('DROP FUNCTION qa_reject_lead_cancel_audit()');
+  }
+
+  // Cancelamento efetivo: sem visita viva, o lead é cancelado com trilha PUB-04.
+  const cancelledA = await api(`${endpoint}/${visitAId}`, { method: 'PATCH', cookie: owner.cookie, body: { expected_version: reconfirmedA.body.visit.version, status: 'cancelada', cancel_reason: 'Cliente desistiu da visita' } });
+  assert.equal(cancelledA.status, 200, JSON.stringify(cancelledA.body));
+  assert.equal(cancelledA.body.lead_sync.status, 'cancelada');
+  assert.equal((await pool.query('SELECT status FROM public_leads WHERE id=$1', [leadId])).rows[0].status, 'cancelada');
+  assert.deepEqual(await leadAudit(), ['lead_visit_confirm', 'lead_status_change', 'lead_visit_confirm', 'lead_visit_cancel']);
+
+  // Visita realizada fecha o atendimento; depois disso o lead fica congelado.
+  const visitC = await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: 'Visita efetiva', scheduled_at: plus(48 * 60).toISOString(), duration_minutes: 60 } });
+  assert.equal(visitC.status, 201, JSON.stringify(visitC.body));
+  const doneC = await api(`${endpoint}/${visitC.body.visit.id}`, { method: 'PATCH', cookie: owner.cookie, body: { expected_version: visitC.body.visit.version, status: 'realizada' } });
+  assert.equal(doneC.status, 200);
+  assert.equal(doneC.body.lead_sync.status, 'realizada');
+  const visitD = await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: 'Depois do atendimento', scheduled_at: plus(72 * 60).toISOString(), duration_minutes: 60 } });
+  const cancelledD = await api(`${endpoint}/${visitD.body.visit.id}`, { method: 'PATCH', cookie: owner.cookie, body: { expected_version: visitD.body.visit.version, status: 'cancelada', cancel_reason: 'Agendamento redundante' } });
+  assert.equal(cancelledD.status, 200);
+  assert.equal(cancelledD.body.lead_sync, null, 'lead realizado não é reaberto nem cancelado por visita nova');
+  assert.equal((await pool.query('SELECT status FROM public_leads WHERE id=$1', [leadId])).rows[0].status, 'realizada');
+  assert.equal((await pool.query("SELECT count(*)::int AS total FROM auth_access_audit WHERE action='crm_visit_lead_sync'")).rows[0].total >= 5, true);
+
+  // PUB-04 manual: a trilha distingue cancelamento de confirmação.
+  const manualLead = await api('/api/leads', {
+    method: 'POST',
+    body: { requestKind: 'visit', name: 'Visitante manual ' + randomUUID().slice(0, 8), phone: `11${String(910000000 + Math.floor(Math.random() * 79999999))}`, city: 'Guarulhos', propertyType: 'Empresa ou comércio', services: ['Portaria e Controle de Acesso'], visitPreference: 'Tarde, dias úteis', consent: true, origin: 'contato', campaign: 'site', channel: 'site' },
+  });
+  assert.equal(manualLead.status, 201, JSON.stringify(manualLead.body));
+  const manualId = manualLead.body.leadId;
+  assert.equal((await api(`/api/admin/leads/${manualId}`, { method: 'PATCH', cookie: owner.cookie, body: { status: 'em_agendamento' } })).status, 200);
+  assert.equal((await api(`/api/admin/leads/${manualId}`, { method: 'PATCH', cookie: owner.cookie, body: { status: 'cancelada' } })).status, 200);
+  const manualAudit = (await pool.query("SELECT action FROM auth_access_audit WHERE target LIKE $1 AND action LIKE 'lead_%' ORDER BY created_at, id", [manualId + ':%'])).rows.map(row => row.action);
+  assert.deepEqual(manualAudit, ['lead_status_change', 'lead_visit_cancel']);
+
+  // Visita viva para o percurso de UI (as anteriores estão finais).
+  const visitE = await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: 'Visita viva da interface', scheduled_at: plus(96 * 60).toISOString(), duration_minutes: 60 } });
+  assert.equal(visitE.status, 201, JSON.stringify(visitE.body));
+  const opportunityTitle = (await api('/api/crm/opportunities/' + opportunityId, { cookie: owner.cookie })).body.opportunity.title;
+
+  // Jornada de UI real: o selo do lead aparece e o conflito é explicado.
+  const browser = await launchBrowser();
+  const failures = [];
+  try {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'pt-BR' });
+    const pair = owner.cookie.split(';')[0], separator = pair.indexOf('=');
+    await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
+    const page = await context.newPage();
+    trackFailures(page, failures);
+    await page.goto(baseUrl + '/admin/crm', { waitUntil: 'networkidle' });
+    await page.waitForTimeout(800);
+    await page.getByRole('article').filter({ hasText: opportunityTitle }).getByRole('button', { name: 'Abrir tarefas' }).click();
+    const section = page.getByRole('region', { name: 'Agenda de visitas e reuniões da oportunidade' });
+    await section.getByRole('article', { name: 'Visita Visita efetiva' }).getByText('Lead público vinculado (PUB-04) — situação propagada: Realizada', { exact: true }).waitFor();
+    const pad = value => String(value).padStart(2, '0');
+    const clashDate = plus(96 * 60 + 30);
+    await section.getByLabel('Título da visita', { exact: true }).fill('Conflito pela interface');
+    await section.getByLabel('Data e hora', { exact: true }).fill(`${clashDate.getFullYear()}-${pad(clashDate.getMonth() + 1)}-${pad(clashDate.getDate())}T${pad(clashDate.getHours())}:${pad(clashDate.getMinutes())}`);
+    await section.getByLabel('Duração (minutos)', { exact: true }).selectOption('60');
+    const [clashResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().endsWith(endpoint) && response.request().method() === 'POST'),
+      section.getByRole('button', { name: 'Agendar visita', exact: true }).click(),
+    ]);
+    assert.equal(clashResponse.status(), 409);
+    await section.getByText('Conflito de agenda: você já tem uma visita ocupando esse horário. Reagende ou cancele a outra antes.', { exact: true }).waitFor();
+    await context.close();
+  } finally { await browser.close(); }
+  assert.deepEqual(failures, []);
 });

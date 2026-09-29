@@ -123,7 +123,15 @@ const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 // O padrão de produção continua 8 por IP a cada 15 minutos.
 const LOGIN_MAX_ATTEMPTS = Math.max(1, Number(process.env.ADMIN_LOGIN_MAX_ATTEMPTS || 8));
 const LEAD_WINDOW_MS = 10 * 60 * 1000;
-const LEAD_MAX_ATTEMPTS = 5;
+// Antispam de PUB-03: 5 envios por IP a cada 10 minutos. O teto é
+// configurável apenas por variável de ambiente do próprio servidor (mesmo
+// padrão de ADMIN_LOGIN_MAX_ATTEMPTS), para que o gate consiga exercitar
+// várias jornadas públicas na mesma execução sem afrouxar o padrão de
+// produção; valor inválido cai no padrão seguro.
+const LEAD_MAX_ATTEMPTS = (() => {
+  const configured = Number(process.env.LEAD_MAX_ATTEMPTS);
+  return Number.isSafeInteger(configured) && configured >= 1 && configured <= 1000 ? configured : 5;
+})();
 const loginAttempts = new Map();
 const employeeLoginAttempts = new Map();
 const leadAttempts = new Map();
@@ -605,26 +613,28 @@ async function handleAdminLeadStatus(req, res, leadId) {
         [leadId, previousStatus, newStatus, session.role],
       );
       statusChanged = true;
-      // Auditar mudança de status como lead_status_change e visita específica
-      try {
-        const auditAction = ["confirmada","realizada","cancelada","em_agendamento","solicitada"].includes(newStatus) ? "lead_visit_confirm" : "lead_status_change";
-        await client.query(
-          "INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,$3,$4,'allowed','none')",
-          [session.role, session.identityId || session.role, auditAction, `${leadId}:${previousStatus}->${newStatus}`]
-        );
-      } catch {}
+      // PUB-04: a trilha distingue confirmação de cancelamento. Antes, QUALQUER
+      // transição de visita — inclusive 'cancelada' — era auditada como
+      // `lead_visit_confirm`, e a falha de auditoria era engolida: o status
+      // mudava sem trilha. Agora o mapeamento é fiel e a falha reverte tudo.
+      const auditAction = ["confirmada", "realizada"].includes(newStatus) ? "lead_visit_confirm"
+        : newStatus === "cancelada" ? "lead_visit_cancel"
+          : "lead_status_change";
+      await client.query(
+        "INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,$3,$4,'allowed','none')",
+        [session.role, session.identityId || session.role, auditAction, `${leadId}:${previousStatus}->${newStatus}`]
+      );
     }
 
     if (responsible !== null || responsibleId) {
       // Responsável de atendimento - pessoa responsável confirma (PUB-04)
       await client.query("UPDATE public_leads SET responsible = COALESCE($2, responsible), responsible_id = COALESCE($3, responsible_id), updated_at = NOW() WHERE id = $1", [leadId, responsible, responsibleId]);
       responsibleChanged = true;
-      try {
-        await client.query(
-          "INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,$3,$4,'allowed','none')",
-          [session.role, session.identityId || session.role, "lead_responsible_assign", `${leadId}:${responsible || responsibleId}`]
-        );
-      } catch {}
+      // Sem trilha durável na mesma transação, a atribuição não é confirmada.
+      await client.query(
+        "INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,$3,$4,'allowed','none')",
+        [session.role, session.identityId || session.role, "lead_responsible_assign", `${leadId}:${responsible || responsibleId}`]
+      );
     }
 
     await client.query("COMMIT");
