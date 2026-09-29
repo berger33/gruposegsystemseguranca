@@ -487,3 +487,34 @@ O primeiro gate remoto falhou com 503 ao criar tarefa. A 103 não incluía `crm_
 CRM-07 continua em execução: este recorte entrega tarefas PESSOAIS, não todo o requisito. Não inclui delegação/equipe, edição de prazo, anexos, histórico de interações, agenda ou cadências. Lista até 200 tarefas por oportunidade; sem paginação. O teste de conflito comprova versão de status desatualizada; não é ensaio de carga concorrente.
 Sem aceite Windows/mobile deste recorte, sem aceite humano e sem validação de IA real. L02/L03 integrais não foram reexecutados nesta continuação; o baseline cobre seus recortes próprios, não todos esses gates.
 O PR permanece sem merge automático. Documentação posterior ao SHA acima não altera o código validado.
+
+## L04 / CRM-07 — histórico de interações (ligação/reunião/nota), continuação Arena (2026-09-29)
+Código validado: `7c56a6facb0a710a9bf112a998742205afe730c8`, branch `arena/01a0ee3c-gruposegsystemseguranca` (já contém o PR #13 mesclado em `ec450b6`).
+Execução inteiramente no sandbox Arena (Linux). Nenhuma instalação nem execução no computador do proprietário.
+
+### O que este recorte entrega
+- `GET/POST /api/crm/opportunities/:id/interactions` (`src/server/crm-interaction-api.mjs`), roteado em `server.mjs`.
+- Tipo restrito nesta fatia a `ligacao`/`reuniao`/`nota` (o schema `crm_interactions`, da migração 014, também aceita `email`/`whatsapp`/`visita`/`outro`, deixados para um próximo recorte explícito).
+- Mesma regra de propriedade das tarefas pessoais (PR #13): só quem é `responsible_id` da oportunidade, ou `created_by_id` quando ela não tem responsável, lê ou grava o histórico. comercial/admin/marcelo/ti todos sujeitos à mesma checagem; nenhum bypass administrativo.
+- Autoria (`created_by_id`), `company_id` e `opportunity_id` sempre derivados no servidor a partir da sessão e da oportunidade; qualquer um desses campos no corpo da requisição é recusado com `server_managed_fields`.
+- `occurred_at` opcional (padrão `NOW()`), aceita registro tardio no passado, mas recusa data mais de 5 minutos no futuro (`invalid_occurred_at`) para não maquiar o histórico.
+- Mutação e auditoria (`crm_interaction_create`) na mesma transação; falha de auditoria reverte a inserção e nunca reconhece sucesso não auditado (provado por controle negativo, ver abaixo).
+- UI `OpportunityInteractions.tsx` conectada em `/admin/crm`, ao lado de `OpportunityTasks.tsx`, sob o mesmo botão "Abrir tarefas" da oportunidade.
+- Nova migração `105-crm-interaction-audit.sql`: a 104 não incluía `crm_interaction_create` no `CHECK` de auditoria. Segue o mesmo padrão da 104 — preserva a expressão existente (incluindo os eventos que a 104 já tinha acrescentado) e soma apenas o novo evento, sem tocar 001-104 já aplicadas. Manifesto (`scripts/migrate-site-visual.mjs`) e verificador estático (`scripts/qa-wave0-static.mjs`) atualizados para 001–105.
+
+### Achado corrigido: vazamento pré-existente na rota legada de detalhe
+A rota legada `GET /api/crm/opportunities/:id` (`src/server/crm-api.mjs`, anterior a esta sessão) devolvia `SELECT * FROM crm_interactions WHERE opportunity_id = $1` **sem nenhuma checagem de propriedade** — qualquer staff autenticado (inclusive RH, financeiro etc., já que essa rota usa só `requireAdminSession`, não uma lista de papéis) podia ler o histórico de interações de qualquer oportunidade sabendo o UUID. Isso era exatamente o tipo de vazamento por "rota alternativa" que o CRM-07 de tarefas já havia fechado para `crm_tasks`, mas que ainda não existia para interações porque a tabela era só schema até agora. Corrigido aplicando a mesma subconsulta de propriedade usada na rota dedicada. Não foi tocado o comportamento de `stages`/`visits` na mesma rota, que continuam sem essa restrição — risco residual anotado abaixo, não introduzido por este recorte.
+
+### Resultados executados
+- `npm ci`: 82 pacotes, 0 vulnerabilidades.
+- `npm run test:unit`: 186/186.
+- `npx tsc --noEmit`: 0 erros.
+- `npm run test:migrations:pg`: 105/105 na primeira aplicação e no replay; 504 tabelas preservadas; controle negativo de checksum (`006-admin-identities.sql` adulterada) recusado como esperado.
+- `npm run test:l04-delivery:pg`: 3 testes (jornada comercial central + tarefas pessoais + histórico de interações), 3 aprovados, 0 falhas. Executado 7 vezes consecutivas nesta sessão: 6/7 verde: uma execução isolada (sem log completo capturado) devolveu 1 falha não reproduzida nas 6 demais, incluindo 3 execuções consecutivas imediatamente após — tratado como ruído do sandbox compartilhado, não como defeito do código; não há repetição do mesmo ponto de falha em nenhuma outra execução.
+- `npm run build`: sucesso, 72 rotas (inclui `/admin/crm`); `tsconfig.json`/`next-env.d.ts` conferidos após a execução — a única diferença automática (`tsconfig.json` ganhando as entradas de tipos do diretório de build da integração L04) foi descartada, preservando o arquivo original do repositório.
+- Novo cenário Chromium real: identidade comercial cria empresa/oportunidade por HTTP; abre `/admin/crm`, registra ligação com detalhes; recarrega a página e confirma que a interação persiste; outro comercial recebe 404 no endpoint dedicado e lista vazia na rota legada de detalhe.
+- Negativos reais: sem sessão 401; RH 403; outro comercial 404 (dedicado) e `interactions: []` (rota legada); origem incorreta 403; método `DELETE` 405; tipo fora do escopo (`whatsapp`) 400; título vazio 400; data futura 400; autoria forjada (`created_by_id`) 400 `server_managed_fields`.
+- SQL usado apenas para conferir autoria/auditoria e injetar a falha de auditoria (gatilho `qa_reject_interaction_audit`, removido em `finally`); a mutação sob teste é sempre HTTP.
+
+### Limites deste recorte
+Este recorte NÃO conclui CRM-07. Ainda faltam: anexos e notas com upload; edição/exclusão de uma interação registrada (o histórico atual é apenas append-only); vínculo com `contact_id` (schema já suporta, API não aceita); tipos `email`/`whatsapp`/`visita`/`outro`; paginação (lista limitada a 200 por oportunidade, igual às tarefas); qualquer noção de equipe/delegação (a regra de propriedade é a mesma unipessoal das tarefas, documentada explicitamente, não uma omissão). `stages`/`visits` na rota legada de detalhe continuam sem a mesma restrição de propriedade — risco residual, não corrigido nesta sessão porque está fora do escopo de interações (fica para CRM-06/CRM-08). CRM-08 (agenda), CRM-09 (cadências) e CRM-10 (carteira) permanecem como schema sem tela. Sem aceite Windows/mobile, sem aceite humano, sem SMTP e sem hospedagem externa nesta etapa.
