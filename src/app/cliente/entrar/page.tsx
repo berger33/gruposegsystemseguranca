@@ -46,6 +46,8 @@ export default function ClientSignInPage() {
         setError("A área de acesso está temporariamente indisponível. Tente novamente mais tarde.");
       } else if (data.error === "mfa_login_unavailable") {
         setError("Esta conta exige uma verificação adicional que ainda não está disponível. Fale com a equipe responsável; sua senha não foi rejeitada.");
+      } else if (data.error === 'verification_required') {
+        setError('O cadastro ainda aguarda conferência pela equipe. Por enquanto, confirme o andamento com a administração.');
       } else {
         setError("E-mail ou senha não conferem. Verifique os dados e tente novamente.");
       }

@@ -63,7 +63,7 @@ try {
   console.log(`QA_CLI_V2_READY: 127.0.0.1:${port}/${database}; senha omitida; cluster novo.`);
   const migrated = await run(['scripts/migrate-site-visual.mjs']);
   if (migrated !== 0) throw new Error(`qa_cli_v2_migrations_failed_exit_${migrated}`);
-  console.log('QA_CLI_V2_MIGRATIONS: 97/97 on disposable database');
+  console.log('QA_CLI_V2_MIGRATIONS: 98/98 on disposable database');
   if (objectContract) {
     result = await run(['--test', 'tests/qa-cli-v2-object-pg.integration.test.mjs'],
       { RUN_CLI_V2_OBJECT_QA: '1', QA_MIGRATION_ONLY: '' });

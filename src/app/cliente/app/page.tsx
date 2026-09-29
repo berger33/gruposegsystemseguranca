@@ -91,7 +91,7 @@ export default function ClientAppPage() {
           <div className={appStyles.metaItem}>
             <span>Situação do e-mail</span>
             <strong className={session.emailConfirmed ? styles.statusOk : styles.statusWarn}>
-              {session.emailConfirmed ? "Confirmado" : "Aguardando confirmação"}
+              {session.emailConfirmed ? "Confirmado por link" : "Não confirmado · identidade conferida manualmente"}
             </strong>
           </div>
           <div className={appStyles.metaItem}>
@@ -102,7 +102,7 @@ export default function ClientAppPage() {
         {!session.emailConfirmed ? (
           <p className={`${styles.message} ${styles.messageInfo}`} role="status" style={{ marginTop: 14 }}>
             <CheckCircle2 size={16} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
-            <span>Enviamos um link de confirmação para o seu e-mail (válido por 7 dias). Confirme para não perder o acesso.</span>
+            <span>Sua identidade foi conferida manualmente pela equipe. Ainda não foi confirmada a posse deste e-mail; nenhum link foi enviado enquanto SMTP estiver desativado.</span>
           </p>
         ) : null}
       </section>

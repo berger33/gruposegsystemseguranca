@@ -29,7 +29,7 @@ async function preflight() {
   for (const name of await readdir(root)) if (name === '.env' || name.startsWith('.env.')) {
     if (name !== '.env.example') throw new Error(`qa_env_file_refused_${name}`);
   }
-  await access(path.join(root, 'db/migrations/097-client-mfa-session.sql'));
+  await access(path.join(root, 'db/migrations/098-client-manual-verification.sql'));
   // Fail before npm ci (which can take minutes on Windows) when the old preview is still open.
   // Check again immediately before starting: another program can take the port meanwhile.
   await assertWebPortFree();
@@ -85,8 +85,9 @@ async function seed(pool) {
     await client.query('BEGIN');
     for (const item of identities) {
       item.id = randomUUID();
-      await client.query(`INSERT INTO auth_identities (id, kind, email, display_name, status)
-        VALUES ($1,$2,$3,$4,'active')`, [item.id, item.role ? 'staff' : 'client', item.email, `QA fictício ${item.label}`]);
+      await client.query(`INSERT INTO auth_identities (id, kind, email, display_name, status, verification_method, verified_at)
+        VALUES ($1,$2,$3,$4,'active',$5,$6)`, [item.id, item.role ? 'staff' : 'client', item.email,
+        `QA fictício ${item.label}`, item.role ? null : 'email_link', item.role ? null : new Date()]);
       await client.query(`INSERT INTO auth_credentials (identity_id, password_hash)
         VALUES ($1,$2)`, [item.id, await hashPassword(item.password)]);
       if (item.role) await client.query(`INSERT INTO auth_staff_profiles (identity_id, role, assigned_by)
@@ -247,6 +248,65 @@ async function smoke(identities, marceloToken, pool) {
   expect(await auth('/api/client/security/mfa/disable', { password: identities[3].password, code: activated.data.recoveryCodes[1] }, verified.cookie), 200, '006_DISABLE');
   expect(await request('/api/auth/me', { headers: { cookie: verified.cookie } }), 401, '006_REVOKED_AFTER_DISABLE');
   expect(await mfaLogin(), 200, '006_PASSWORD_LOGIN_AFTER_DISABLE');
+  // Existing active records without evidence of verification do not inherit a
+  // confirmed status merely because an older version stored status='active'.
+  await pool.query('UPDATE auth_identities SET verification_method=NULL, verified_at=NULL WHERE id=$1', [identities[3].id]);
+  try {
+    expect(await mfaLogin(), 403, '007_LEGACY_UNVERIFIED_LOGIN_DENIED');
+  } finally {
+    await pool.query("UPDATE auth_identities SET verification_method='email_link', verified_at=NOW() WHERE id=$1", [identities[3].id]);
+  }
+
+  // QA-HOM-007: no SMTP and no existing client identity may silently become
+  // 'email confirmed'. A signed individual TI session plus re-auth and a
+  // documented independent human check are mandatory for manual activation.
+  const pendingEmail = 'manual.qa@example.invalid';
+  const pendingPassword = randomPassword();
+  const created = await auth('/api/admin/invites', { email: pendingEmail, scopeNote: 'Somente QA sintético sem dados reais' }, ti.cookie);
+  expect(created, 201, '007_INVITE_CREATED');
+  if (created.data.emailStatus !== 'not_configured' || !created.data.inviteUrl) throw new Error('qa_manual_invite_delivery_mismatch');
+  const accepted = await auth('/api/auth/invite/accept', {
+    token: new URL(created.data.inviteUrl).searchParams.get('token'), password: pendingPassword, displayName: 'Cliente Manual Fictício',
+  });
+  expect(accepted, 201, '007_INVITE_ACCEPTED_PENDING');
+  if (accepted.data.status !== 'pending_email' || accepted.data.emailStatus !== 'not_configured') throw new Error('qa_manual_pending_expected');
+  const pendingLogin = () => auth('/api/auth/login', { email: pendingEmail, password: pendingPassword });
+  const blockedPending = await pendingLogin(); expect(blockedPending, 403, '007_PENDING_LOGIN_DENIED');
+  if (blockedPending.cookie) throw new Error('qa_pending_cookie_issued');
+  expect(await request('/api/admin/client-verifications'), 401, '007_ANON_QUEUE_DENIED');
+  expect(await request('/api/admin/client-verifications', { headers: { cookie: rh.cookie } }), 403, '007_RH_QUEUE_DENIED');
+  expect(await request('/api/admin/client-verifications', { headers: { cookie: marcelo.cookie } }), 403, '007_LEGACY_QUEUE_DENIED');
+  const queue = await request('/api/admin/client-verifications', { headers: { cookie: ti.cookie } });
+  expect(queue, 200, '007_INDIVIDUAL_TI_QUEUE');
+  const target = queue.data.pending?.find(row => row.email === pendingEmail);
+  if (!target) throw new Error('qa_manual_identity_not_listed');
+  const approvalPath = `/api/admin/client-verifications/${target.id}/approve`;
+  const review = { expectedEmail: pendingEmail, method: 'known_contact_callback',
+    reason: 'QA fictício: retorno feito para contato previamente conhecido pela equipe.', password: identities[0].password };
+  expect(await auth(approvalPath, { ...review, password: 'wrong' }, ti.cookie), 403, '007_TI_WRONG_PASSWORD_DENIED');
+  expect(await auth(approvalPath, { ...review, expectedEmail: 'other@example.invalid' }, ti.cookie), 409, '007_WRONG_TARGET_DENIED');
+  expect(await auth(approvalPath, review, rh.cookie), 403, '007_RH_APPROVAL_DENIED');
+  const approved = await auth(approvalPath, review, ti.cookie);
+  expect(approved, 200, '007_MANUAL_APPROVAL');
+  if (approved.data.emailConfirmed !== false || approved.data.verificationMethod !== 'manual') throw new Error('qa_manual_claimed_email_verified');
+  expect(await auth(approvalPath, review, ti.cookie), 409, '007_REPEAT_APPROVAL_DENIED');
+  const loginManual = await pendingLogin(); expect(loginManual, 200, '007_MANUAL_CLIENT_LOGIN');
+  const manualMe = await request('/api/auth/me', { headers: { cookie: loginManual.cookie } });
+  expect(manualMe, 200, '007_MANUAL_SESSION');
+  if (manualMe.data.emailConfirmed || manualMe.data.verificationMethod !== 'manual') throw new Error('qa_manual_email_claim_mismatch');
+  const manualAccess = await request('/api/client/accounts', { headers: { cookie: loginManual.cookie } });
+  expect(manualAccess, 200, '007_MANUAL_UNSCOPED_LIST');
+  if (manualAccess.data.accounts?.length !== 0) throw new Error('qa_manual_client_gained_unapproved_grant');
+  const { rows: [storedReview] } = await pool.query(`SELECT i.verification_method, v.staff_identity_id,
+    (SELECT count(*)::int FROM auth_email_tokens t WHERE t.identity_id=i.id AND t.kind='confirm_email' AND t.superseded_at IS NOT NULL) AS invalidated
+    FROM auth_identities i JOIN client_manual_verifications v ON v.identity_id=i.id WHERE i.id=$1`, [target.id]);
+  const { rows: [auditReview] } = await pool.query(`SELECT count(*)::int AS events FROM auth_access_audit
+    WHERE action='account_status' AND actor_kind='staff' AND actor_id=$1 AND target=$2 AND result='allowed'`, [identities[0].id, target.id]);
+  if (storedReview.verification_method !== 'manual' || storedReview.staff_identity_id !== identities[0].id ||
+      storedReview.invalidated < 1 || auditReview.events !== 1) {
+    throw new Error('qa_manual_review_not_auditable_or_email_token_not_revoked');
+  }
+  console.log('QA-HOM-007_AUDIT: individual TI, audit event, confirmation token invalidated, no grant for newly approved synthetic client.');
 }
 
 async function waitForHealth(child, timeoutMs = 180_000) {
@@ -308,9 +368,9 @@ try {
   const migrator = spawnChild(['scripts/migrate-site-visual.mjs'], env);
   if (await exited(migrator) !== 0) throw new Error('qa_migrations_failed');
   const { rows } = await pool.query('SELECT count(*)::int AS count FROM __migrations WHERE checksum IS NOT NULL');
-  if (rows[0].count !== 97) throw new Error(`qa_migrations_expected_97_got_${rows[0].count}`);
+  if (rows[0].count !== 98) throw new Error(`qa_migrations_expected_98_got_${rows[0].count}`);
   const identities = await seed(pool);
-  console.log('QA-HOM-001: 97/97 migrações no PostgreSQL novo; 4 identidades e 2 empresas 100% fictícias.');
+  console.log('QA-HOM-001: 98/98 migrações no PostgreSQL novo; 4 identidades e 2 empresas 100% fictícias.');
   web = spawnChild(['server.mjs', '--dev'], { ...env, QA_MIGRATION_ONLY: '' });
   await waitForHealth(web);
   if (verify) {

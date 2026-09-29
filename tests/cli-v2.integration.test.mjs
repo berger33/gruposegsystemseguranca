@@ -41,7 +41,7 @@ async function ready(child, logs) {
   throw new Error('server did not start: ' + logs.join('').slice(-700));
 }
 
-test('TENANT-SEG-003 / PLT-AUD-003: HTTP CLI v2 docs staff-only, legacy client scope and audit on PG 001–097', testOptions, async t => {
+test('TENANT-SEG-003 / PLT-AUD-003: HTTP CLI v2 docs staff-only, legacy client scope and audit on PG 001–098', testOptions, async t => {
   const pool = new pg.Pool({ connectionString: databaseUrl, max: 3 });
   const files = new Map();
   for (const name of ['next-env.d.ts', 'tsconfig.json']) files.set(name, await readFile(path.join(projectRoot, name), 'utf8').catch(() => null));
@@ -70,7 +70,7 @@ test('TENANT-SEG-003 / PLT-AUD-003: HTTP CLI v2 docs staff-only, legacy client s
 
   const idA = randomUUID(), idB = randomUUID(), accountA = randomUUID(), accountB = randomUUID();
   const tokenA = randomBytes(32).toString('hex');
-  await pool.query("INSERT INTO auth_identities (id, kind, email, status) VALUES ($1,'client','qa-a@exemplo.invalid','active'),($2,'client','qa-b@exemplo.invalid','active')", [idA, idB]);
+  await pool.query("INSERT INTO auth_identities (id, kind, email, status, verification_method, verified_at) VALUES ($1,'client','qa-a@exemplo.invalid','active','email_link',NOW()),($2,'client','qa-b@exemplo.invalid','active','email_link',NOW())", [idA, idB]);
   await pool.query("INSERT INTO client_accounts (id, display_name, created_by) VALUES ($1,'QA Conta A','ti'),($2,'QA Conta B','ti')", [accountA, accountB]);
   await pool.query("INSERT INTO client_access_grants (id, identity_id, client_account_id, reason, granted_by) VALUES ($1,$2,$3,'QA synthetic only','ti')", [randomUUID(), idA, accountA]);
   const contractB = randomUUID();

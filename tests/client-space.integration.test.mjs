@@ -66,7 +66,7 @@ async function freePort() {
 async function applyMigrations() {
   const pool = new Pool({ connectionString: databaseUrl, max: 1 });
   try {
-    for (const filename of ["001-site-visual.sql", "002-public-leads.sql", "003-client-access.sql", "004-client-space.sql", "005-client-security.sql", "006-admin-identities.sql", "007-opcao-b-funcionarios.sql", "097-client-mfa-session.sql"]) {
+    for (const filename of ["001-site-visual.sql", "002-public-leads.sql", "003-client-access.sql", "004-client-space.sql", "005-client-security.sql", "006-admin-identities.sql", "007-opcao-b-funcionarios.sql", "097-client-mfa-session.sql", "098-client-manual-verification.sql"]) {
       const sql = await readFile(path.join(projectRoot, "db/migrations", filename), "utf8");
       await pool.query(sql);
     }
@@ -188,11 +188,11 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     identityA = randomUUID();
     identityB = randomUUID();
     await pool.query(
-      "INSERT INTO auth_identities (id, kind, email, display_name, status) VALUES ($1,'client',$2,$3,'active')",
+      "INSERT INTO auth_identities (id, kind, email, display_name, status, verification_method, verified_at) VALUES ($1,'client',$2,$3,'active','email_link',NOW())",
       [identityA, clientAEmail, "Cliente A Integração"],
     );
     await pool.query(
-      "INSERT INTO auth_identities (id, kind, email, display_name, status) VALUES ($1,'client',$2,$3,'active')",
+      "INSERT INTO auth_identities (id, kind, email, display_name, status, verification_method, verified_at) VALUES ($1,'client',$2,$3,'active','email_link',NOW())",
       [identityB, clientBEmail, "Cliente B Integração"],
     );
     cleanupIds.push(identityA, identityB);

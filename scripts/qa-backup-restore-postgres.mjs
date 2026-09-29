@@ -152,7 +152,7 @@ async function snapshot(pool, idA, idB, docA, docB, legacyDocId = null, expected
     (SELECT count(*)::int FROM client_documents WHERE id=$5) AS legacy_files,
     (SELECT count(*)::int FROM audit_log WHERE action='qa_restore_source') AS operational_audit,
     (SELECT count(*)::int FROM auth_access_audit WHERE actor_id='qa_restore_source') AS access_audit`, [idA, idB, docA, docB, legacyDocId]);
-  if (ledger.length !== 97 || ledger.some(x => !x.checksum) || values.tables < 400 || values.foreign_keys < 1 ||
+  if (ledger.length !== 98 || ledger.some(x => !x.checksum) || values.tables < 400 || values.foreign_keys < 1 ||
       values.accounts !== 2 || values.grants_a !== 1 || values.grants_b !== (expectedHttp ? 1 : 0) ||
       values.sessions !== (expectedHttp ? 2 : 0) || values.docs !== 2 || values.versions !== (expectedCli ? 3 : 1) || values.legacy_files !== (legacyDocId ? 1 : 0) ||
       values.operational_audit !== 1 || values.access_audit !== 1) throw new Error('qa_restore_snapshot_invalid');
@@ -183,7 +183,7 @@ try {
   // listener, o processo aborta antes do finally remover os dois diretórios.
   sourcePool.on('error', error => { poolHadError = true; result = 1; console.error('QA_RESTORE_SOURCE_POOL_ERROR', redact(error?.message || error).slice(0, 180)); });
   const [accountA, accountB, identityA, grantA, docA, docB] = Array.from({ length: 6 }, () => randomUUID());
-  await sourcePool.query("INSERT INTO auth_identities(id,kind,email,status) VALUES ($1,'client','qa-backup-a@exemplo.invalid','active')", [identityA]);
+  await sourcePool.query("INSERT INTO auth_identities(id,kind,email,status,verification_method,verified_at) VALUES ($1,'client','qa-backup-a@exemplo.invalid','active','email_link',NOW())", [identityA]);
   await sourcePool.query("INSERT INTO client_accounts(id,display_name,created_by) VALUES ($1,'QA Backup A','ti'),($2,'QA Backup B','ti')", [accountA, accountB]);
   await sourcePool.query("INSERT INTO client_access_grants(id,identity_id,client_account_id,reason,granted_by) VALUES ($1,$2,$3,'QA synthetic only','ti')", [grantA, identityA, accountA]);
   let identityB, tokenA, tokenB;
@@ -191,7 +191,7 @@ try {
     identityB = randomUUID();
     tokenA = randomBytes(32).toString('hex');
     tokenB = randomBytes(32).toString('hex');
-    await sourcePool.query("INSERT INTO auth_identities(id,kind,email,status) VALUES ($1,'client','qa-backup-b@exemplo.invalid','active')", [identityB]);
+    await sourcePool.query("INSERT INTO auth_identities(id,kind,email,status,verification_method,verified_at) VALUES ($1,'client','qa-backup-b@exemplo.invalid','active','email_link',NOW())", [identityB]);
     await sourcePool.query("INSERT INTO client_access_grants(id,identity_id,client_account_id,reason,granted_by) VALUES ($1,$2,$3,'QA synthetic B only','ti')", [randomUUID(), identityB, accountB]);
     for (const [identity, token] of [[identityA, tokenA], [identityB, tokenB]]) {
       await sourcePool.query("INSERT INTO auth_sessions(id,identity_id,token_hash,expires_at) VALUES ($1,$2,$3,NOW() + INTERVAL '1 hour')",
@@ -374,7 +374,7 @@ try {
     console.log('QA_RESTORE_CLI_SCOPE_VERIFIED: A grant revoked after HTTP, B object remains accessible in destination QA');
   }
   if (poolHadError) throw new Error('qa_restore_pool_unavailable');
-  console.log(`QA_RESTORE_VERIFIED: ${separateClusters ? 'two independent clusters' : 'two separate DBs'}, ${after.values.tables} tables, 97/97 checksums, A/B grants, documents, versions, both audit catalogs, source unchanged; restored migrator exit 0`);
+  console.log(`QA_RESTORE_VERIFIED: ${separateClusters ? 'two independent clusters' : 'two separate DBs'}, ${after.values.tables} tables, 98/98 checksums, A/B grants, documents, versions, both audit catalogs, source unchanged; restored migrator exit 0`);
   result = 0;
 } catch (error) {
   console.error('QA_RESTORE_FAILED', redact(error?.message || error).slice(0, 350));

@@ -125,6 +125,7 @@ export default function ClientAdminPage() {
                 <ShieldCheck size={13} aria-hidden="true" />
                 {roleNames[role]}
               </span>
+              {role === 'ti' ? <Link href="/admin/verificacao-manual" className={styles.ghostButton}>Verificação manual</Link> : null}
               <button type="button" className={styles.ghostButton} onClick={logout}>
                 <LogOut size={13} aria-hidden="true" />
                 Sair

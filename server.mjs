@@ -1892,6 +1892,9 @@ async function routeApi(req, res) {
   if (leadMatch) return handleAdminLeadStatus(req, res, leadMatch[1]);
   if (url.pathname.startsWith("/api/auth/")) return clientAccessApi.handleAuth(req, res, url);
   if (url.pathname === "/api/admin/invites") return clientAccessApi.handleAdminInvites(req, res, url);
+  if (url.pathname === "/api/admin/client-verifications") return clientAccessApi.handleManualVerificationList(req, res);
+  const approvalMatch = url.pathname.match(/^\/api\/admin\/client-verifications\/([0-9a-f-]{36})\/approve$/i);
+  if (approvalMatch) return clientAccessApi.handleManualVerificationApprove(req, res, approvalMatch[1]);
   const inviteMatch = url.pathname.match(/^\/api\/admin\/invites\/([0-9a-f-]{36})$/i);
   if (inviteMatch) return clientAccessApi.handleInviteRevoke(req, res, inviteMatch[1]);
   if (url.pathname === "/api/client/accounts") return clientSpaceApi.handleClientAccounts(req, res);
@@ -3468,6 +3471,8 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/auth/")
   || pathname === "/api/admin/invites"
   || pathname.startsWith("/api/admin/invites/")
+  || pathname === "/api/admin/client-verifications"
+  || pathname.startsWith("/api/admin/client-verifications/")
   || pathname.startsWith("/api/client/")
   || pathname === "/api/admin/identities"
   || pathname === "/api/admin/client-accounts"

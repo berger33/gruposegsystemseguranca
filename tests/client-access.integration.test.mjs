@@ -189,7 +189,7 @@ function extractLink(message, pathFragment) {
 async function applyMigrations() {
   const pool = new Pool({ connectionString: databaseUrl, max: 1 });
   try {
-    for (const filename of ["001-site-visual.sql","002-public-leads.sql","003-client-access.sql","004-client-space.sql","005-client-security.sql","006-admin-identities.sql","007-opcao-b-funcionarios.sql", "097-client-mfa-session.sql"]) {
+    for (const filename of ["001-site-visual.sql","002-public-leads.sql","003-client-access.sql","004-client-space.sql","005-client-security.sql","006-admin-identities.sql","007-opcao-b-funcionarios.sql", "097-client-mfa-session.sql", "098-client-manual-verification.sql"]) {
       const sql = await readFile(path.join(projectRoot, "db/migrations", filename), "utf8");
       await pool.query(sql);
     }
@@ -443,6 +443,32 @@ test("client access works end to end against a real PostgreSQL", testOptions, as
     await pool.query("DELETE FROM auth_login_throttle WHERE email = $1", [clientEmail]);
   });
 
+  await t.test("pending verification cannot create a client session", async () => {
+    const pendingLogin = await api("/api/auth/login", { method: "POST", body: { email: clientEmail, password: "frase senha azul 99 cadeado" } });
+    assert.equal(pendingLogin.status, 403);
+    assert.deepEqual(pendingLogin.body, { error: 'verification_required' });
+    assert.equal(pendingLogin.setCookie.length, 0);
+    const existing = await pool.query('SELECT count(*)::int AS total FROM auth_sessions WHERE identity_id=$1', [identityId]);
+    assert.equal(existing.rows[0].total, 0);
+  });
+
+  await t.test("the confirmation link activates the account exactly once", async () => {
+    const first = await api("/api/auth/confirm-email", { method: "POST", body: { token: confirmationToken } });
+    assert.equal(first.status, 200);
+    assert.equal(first.body.ok, true);
+
+    const second = await api("/api/auth/confirm-email", { method: "POST", body: { token: confirmationToken } });
+    assert.equal(second.status, 400);
+    assert.deepEqual(second.body, { error: "confirmation_link_invalid" });
+
+    const verified = await pool.query("SELECT status, verification_method FROM auth_identities WHERE id=$1", [identityId]);
+    assert.equal(verified.rows[0].status, 'active');
+    assert.equal(verified.rows[0].verification_method, 'email_link');
+
+    const unknown = await api("/api/auth/confirm-email", { method: "POST", body: { token: "token-inexistente" } });
+    assert.equal(unknown.status, 400);
+  });
+
   let clientCookie = null;
   await t.test("valid login creates a revocable server-side session", async () => {
     const anonymous = await api("/api/auth/me");
@@ -452,7 +478,7 @@ test("client access works end to end against a real PostgreSQL", testOptions, as
     const login = await api("/api/auth/login", { method: "POST", body: { email: clientEmail, password: "frase senha azul 99 cadeado" } });
     assert.equal(login.status, 200);
     assert.equal(login.body.ok, true);
-    assert.equal(login.body.emailConfirmed, false);
+    assert.equal(login.body.emailConfirmed, true);
     const sessionCookieLine = login.setCookie.find(line => line.startsWith("seg_client_session="));
     assert.ok(sessionCookieLine, "cookie de sessão do cliente ausente");
     assert.match(sessionCookieLine, /HttpOnly/);
@@ -468,24 +494,7 @@ test("client access works end to end against a real PostgreSQL", testOptions, as
     const me = await api("/api/auth/me", { cookie: clientCookie });
     assert.equal(me.status, 200);
     assert.equal(me.body.email, clientEmail);
-    assert.equal(me.body.emailConfirmed, false);
-  });
-
-  await t.test("the confirmation link activates the account exactly once", async () => {
-    const first = await api("/api/auth/confirm-email", { method: "POST", body: { token: confirmationToken } });
-    assert.equal(first.status, 200);
-    assert.equal(first.body.ok, true);
-
-    const second = await api("/api/auth/confirm-email", { method: "POST", body: { token: confirmationToken } });
-    assert.equal(second.status, 400);
-    assert.deepEqual(second.body, { error: "confirmation_link_invalid" });
-
-    const me = await api("/api/auth/me", { cookie: clientCookie });
     assert.equal(me.body.emailConfirmed, true);
-    assert.equal(me.body.status, "active");
-
-    const unknown = await api("/api/auth/confirm-email", { method: "POST", body: { token: "token-inexistente" } });
-    assert.equal(unknown.status, 400);
   });
 
   await t.test("password recovery is generic in public and rotates the credential via e-mail link", async () => {

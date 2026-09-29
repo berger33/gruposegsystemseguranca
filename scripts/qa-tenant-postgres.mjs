@@ -9,7 +9,8 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.RUN_DATABASE_INTEGRATION_REMOTE === '1') {
+const clientAccess = process.argv.length === 3 && process.argv[2] === '--client-access';
+if ((process.argv.length > 2 && !clientAccess) || process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.RUN_DATABASE_INTEGRATION_REMOTE === '1') {
   console.error('QA_PG_REFUSED: unset DATABASE_URL, DATABASE_MIGRATION_URL and RUN_DATABASE_INTEGRATION_REMOTE before running this local-only test.');
   process.exit(2);
 }
@@ -42,7 +43,7 @@ try {
   await postgres.start();
   await postgres.createDatabase(database);
   console.log(`QA_PG_READY: 127.0.0.1:${port}/${database}; cluster temporário exclusivo; segredo omitido.`);
-  const child = spawn(process.execPath, ['--test', '--test-concurrency=1', 'tests/client-space.integration.test.mjs'], {
+  const child = spawn(process.execPath, ['--test', '--test-concurrency=1', clientAccess ? 'tests/client-access.integration.test.mjs' : 'tests/client-space.integration.test.mjs'], {
     cwd: path.resolve(import.meta.dirname, '..'),
     env: {
       ...process.env,
@@ -57,7 +58,7 @@ try {
     child.once('error', reject);
     child.once('exit', code => resolve(code ?? 1));
   });
-  console.log(`TENANT_SEG_001_TEST_EXIT: ${result}`);
+  console.log(`${clientAccess ? 'CLIENT_ACCESS_PG' : 'TENANT_SEG_001'}_TEST_EXIT: ${result}`);
 } catch (error) {
   console.error('QA_PG_FAILED', String(error?.message || error).replaceAll(password, '[redacted]').slice(0, 500));
   result = 1;
