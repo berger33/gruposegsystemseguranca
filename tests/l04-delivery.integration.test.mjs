@@ -2600,6 +2600,20 @@ test('PUB-08: SEO técnico — robots/sitemap derivados, noindex fail-closed e r
   assert.equal(trail.rows[0].actor_kind, 'ti');
   assert.equal((await api(redirectPath, { method: 'POST', cookie: ti.cookie, body: valid })).body.error, 'duplicate_old_path');
 
+  // --- 9b. A migração 112 AMPLIOU a lista de ações aceitas; não a afrouxou.
+  // O 201 acima só é possível porque 'seo_redirect_create' voltou a ser aceito
+  // (as migrações 099/100/103 redigitaram o CHECK e apagaram 148 valores da
+  // lista da 093). Aqui provamos que a ampliação foi cirúrgica: uma ação que
+  // ninguém autorizou continua recusada pelo banco.
+  await assert.rejects(
+    () => pool.query(
+      "INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ('ti', $1, 'seo_redirect_bogus', 'x', 'allowed', 'none')",
+      [ti.id],
+    ),
+    (error) => error.code === '23514' && String(error.constraint) === 'auth_access_audit_action_check',
+    'ação não autorizada precisa continuar recusada pelo CHECK de auth_access_audit',
+  );
+
   // --- 10. O redirect REDIRECIONA de verdade (era só linha em tabela antes).
   const hop = await api(`${oldPath}?utm=gate-${tag}`, { raw: true });
   assert.equal(hop.status, 301, 'o endereço antigo precisa responder 301');
@@ -2612,6 +2626,14 @@ test('PUB-08: SEO técnico — robots/sitemap derivados, noindex fail-closed e r
   assert.notEqual((await api(oldPath, { raw: true })).status, 301, 'redirect inativo não pode desviar');
   const reenabled = await api(redirectPath, { method: 'PATCH', cookie: ti.cookie, body: { id: created.body.redirect.id, is_active: true } });
   assert.equal(reenabled.status, 200, JSON.stringify(reenabled.body));
+  // Ligar e desligar o desvio é mudança de estado do site público: cada uma
+  // deixa a sua própria linha de trilha, na mesma transação da escrita.
+  const updateTrail = await pool.query(
+    "SELECT actor_kind FROM auth_access_audit WHERE action = 'seo_redirect_update' AND target LIKE $1",
+    [`${created.body.redirect.id}%`],
+  );
+  assert.equal(updateTrail.rows.length, 2, 'cada alteração precisa de uma linha de trilha');
+  assert.deepEqual([...new Set(updateTrail.rows.map(row => row.actor_kind))], ['ti']);
 
   // --- 11. Verificação de domínio: o caminho que fabricava o fato é recusado.
   const domain = await api('/api/admin/domain-verifications', {
