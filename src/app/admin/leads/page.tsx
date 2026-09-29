@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { ArrowLeft, Check, LogOut, Mail, MessageCircle, RefreshCw, Shield, UserRound } from "lucide-react";
+import OriginMetricsPanel from "./OriginMetricsPanel";
 import styles from "./LeadAdmin.module.css";
 
 type AdminRole = "marcelo" | "ti" | "comercial" | "admin";
@@ -273,6 +274,7 @@ export default function LeadAdminPage() {
                 })}
               </div>
             )}
+            <OriginMetricsPanel />
           </>
         )}
         {notice && <p className={styles.notice} role="status"><Check size={15} /> {notice}</p>}

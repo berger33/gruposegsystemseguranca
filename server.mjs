@@ -537,6 +537,122 @@ async function handleCreateLead(req, res) {
   return json(res, 201, { leadId: id, emailStatus, recorded: true });
 }
 
+// PUB-10: mensuração de origem e conversão. Painel DERIVADO e somente
+// leitura — todo número vem de COUNT sobre registros que o sistema já grava
+// (public_leads + crm_opportunities). Não existe escrita de métrica: um
+// número de conversão digitado à mão não é mensuração, é invenção com cara
+// de relatório. Política completa em
+// docs/PROMPT-CONTINUACAO-PUB10-METRICAS-ORIGEM.md.
+const LEAD_METRICS_MAX_WINDOW_DAYS = 366;
+const LEAD_METRICS_DEFAULT_WINDOW_DAYS = 90;
+const LEAD_METRICS_UNKNOWN_LABEL = "(não informado)";
+
+function parseLeadMetricsDay(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  // Rejeita datas que o Date "conserta" sozinho (ex.: 2026-02-31 → 03-03).
+  if (parsed.toISOString().slice(0, 10) !== value) return null;
+  return parsed;
+}
+
+function leadMetricsRate(numerator, denominator) {
+  // Denominador zero devolve null, nunca 0: "não há base para calcular" é
+  // diferente de "a taxa é zero".
+  if (!denominator) return null;
+  return Math.round((numerator / denominator) * 10000) / 100;
+}
+
+async function handleAdminLeadMetrics(req, res, url) {
+  const session = await readSession(req);
+  if (!session) return json(res, 401, { error: "admin_session_required" });
+  if (!['marcelo', 'ti', 'comercial', 'admin'].includes(session.role)) return json(res, 403, { error: "forbidden" });
+  if (req.method !== "GET") return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
+
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const rawFrom = url.searchParams.get("from");
+  const rawTo = url.searchParams.get("to");
+  const todayUtc = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
+  const to = rawTo === null ? todayUtc : parseLeadMetricsDay(rawTo);
+  const from = rawFrom === null ? new Date(todayUtc.getTime() - (LEAD_METRICS_DEFAULT_WINDOW_DAYS - 1) * DAY_MS) : parseLeadMetricsDay(rawFrom);
+  if (!from || !to) return json(res, 400, { error: "invalid_period" });
+  if (from.getTime() > to.getTime()) return json(res, 400, { error: "invalid_period" });
+  const windowDays = Math.round((to.getTime() - from.getTime()) / DAY_MS) + 1;
+  if (windowDays > LEAD_METRICS_MAX_WINDOW_DAYS) return json(res, 400, { error: "period_too_long" });
+  // `to` é inclusivo: o corte real é o início do dia seguinte.
+  const toExclusive = new Date(to.getTime() + DAY_MS);
+
+  try {
+    const result = await getPool().query(
+      `WITH janela AS (
+         SELECT l.id,
+                COALESCE(NULLIF(btrim(l.origin), ''), $3) AS origem,
+                COALESCE(NULLIF(btrim(l.campaign), ''), $3) AS campanha,
+                COALESCE(NULLIF(btrim(l.channel), ''), $3) AS canal,
+                l.status
+           FROM public_leads l
+          WHERE l.created_at >= $1 AND l.created_at < $2
+       ),
+       vinculo AS (
+         SELECT j.id,
+                j.origem, j.campanha, j.canal, j.status,
+                EXISTS (SELECT 1 FROM crm_opportunities o WHERE o.public_lead_id = j.id) AS convertido,
+                EXISTS (SELECT 1 FROM crm_opportunities o WHERE o.public_lead_id = j.id AND o.stage = 'ganho') AS ganho
+           FROM janela j
+       )
+       SELECT origem, campanha, canal,
+              COUNT(*)::int AS leads,
+              COUNT(*) FILTER (WHERE status IN ('confirmada','realizada'))::int AS visitas_confirmadas,
+              COUNT(*) FILTER (WHERE convertido)::int AS convertidos,
+              COUNT(*) FILTER (WHERE ganho)::int AS ganhos
+         FROM vinculo
+        GROUP BY origem, campanha, canal
+        ORDER BY leads DESC, origem ASC, campanha ASC, canal ASC`,
+      [from.toISOString(), toExclusive.toISOString(), LEAD_METRICS_UNKNOWN_LABEL],
+    );
+
+    // Somente rótulos e inteiros saem daqui. Nenhuma coluna por-lead
+    // (id, nome, telefone, e-mail, ip_hash, user_agent, dedup_key) é
+    // projetada em nenhum ponto — e não há parâmetro que faça isso mudar.
+    const rows = result.rows.map(row => ({
+      origin: row.origem,
+      campaign: row.campanha,
+      channel: row.canal,
+      leads: row.leads,
+      visitsConfirmed: row.visitas_confirmadas,
+      converted: row.convertidos,
+      won: row.ganhos,
+      conversionRate: leadMetricsRate(row.convertidos, row.leads),
+      winRate: leadMetricsRate(row.ganhos, row.leads),
+    }));
+    const totals = rows.reduce((acc, row) => ({
+      leads: acc.leads + row.leads,
+      visitsConfirmed: acc.visitsConfirmed + row.visitsConfirmed,
+      converted: acc.converted + row.converted,
+      won: acc.won + row.won,
+    }), { leads: 0, visitsConfirmed: 0, converted: 0, won: 0 });
+
+    return json(res, 200, {
+      from: from.toISOString().slice(0, 10),
+      to: to.toISOString().slice(0, 10),
+      windowDays,
+      rows,
+      totals: {
+        ...totals,
+        conversionRate: leadMetricsRate(totals.converted, totals.leads),
+        winRate: leadMetricsRate(totals.won, totals.leads),
+      },
+      minimized: true,
+      role: session.role,
+    });
+  } catch (error) {
+    const unconfigured = error instanceof Error && error.message === "DATABASE_NOT_CONFIGURED";
+    const migrationMissing = error && typeof error === "object" && error.code === "42P01";
+    if (!unconfigured) console.error("Could not compute the lead origin metrics.", error);
+    return json(res, 503, { error: unconfigured ? "database_not_configured" : migrationMissing ? "migration_required" : "lead_metrics_unavailable" });
+  }
+}
+
 async function handleAdminLeads(req, res, url) {
   const session = await readSession(req);
   if (!session) return json(res, 401, { error: "admin_session_required" });
@@ -2353,6 +2469,7 @@ async function routeApi(req, res) {
     if (!(await authorizeLegacyHrRequest(req, res, url))) return;
   }
   if (url.pathname === "/api/admin/leads") return handleAdminLeads(req, res, url);
+  if (url.pathname === "/api/admin/leads/metrics") return handleAdminLeadMetrics(req, res, url);
   const leadMatch = url.pathname.match(/^\/api\/admin\/leads\/([0-9a-f-]{36})$/i);
   if (leadMatch) return handleAdminLeadStatus(req, res, leadMatch[1]);
   if (url.pathname.startsWith("/api/auth/")) return clientAccessApi.handleAuth(req, res, url);
