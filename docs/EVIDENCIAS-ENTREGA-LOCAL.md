@@ -990,3 +990,123 @@ empresa/oportunidade/visitas pela API real.
   (PUB-02/05/06..10) e revalidação campo a campo de CRM-01..06 continuam
   pendentes. CRM-10, automação de mensagens, SMTP, calendário externo,
   hospedagem externa, Windows e aceite humano seguem fora por decisão.
+
+---
+
+## L04 — PUB-10: mensuração de origem e conversão (painel derivado)
+
+Sessão `arena/01a0ef49-gruposegsystemseguranca`, sobre `main @ fe35b4c`.
+Política registrada ANTES da rota em
+`docs/PROMPT-CONTINUACAO-PUB10-METRICAS-ORIGEM.md`.
+
+Ambiente: Linux x86_64, Node v22.22.3, npm 10.9.8, PostgreSQL 17.9
+(`embedded-postgres`, cluster descartável por execução), Chromium real sem
+`--disable-web-security`.
+
+### Comandos e resultados observados
+
+| # | Cenário | Comando | Esperado | Observado |
+|---|---|---|---|---|
+| PUB10-1 | Verificações estáticas | `node scripts/qa-wave0-static.mjs` | 5/5 | `RESUMO: 5/5`, migrações 001–110 contínuas |
+| PUB10-2 | Migrações em banco descartável | `npm run test:migrations:pg` | 110/110, 509 tabelas | `CHECKSUMMED=110/110 TABLES=509->509`, `SECOND_EXIT=0` |
+| PUB10-3 | Migração adulterada recusada | idem (clone mutado) | recusa sem rebaseline | `migration_checksum_mismatch: 006`, exit 1 tratado |
+| PUB10-4 | Gate de entrega (1ª execução) | `npm run test:l04-delivery:pg` | tudo passa | **9/9**, `L04_DELIVERY_TEST_EXIT: 0` |
+| PUB10-5 | Gate de entrega (2ª consecutiva) | idem | tudo passa | **9/9**, `L04_DELIVERY_TEST_EXIT: 0` |
+| PUB10-6 | Suíte unitária | `npm test` | tudo passa | 186/186 |
+| PUB10-7 | Tipos | `npm run typecheck` | 0 erros | 0 erros |
+| PUB10-8 | Build | `npm run build` | sucesso | sucesso |
+| PUB10-9 | Higiene do diff | `git diff --check` | limpo | limpo |
+
+Nenhuma migração foi criada: a fatia é leitura agregada sobre tabelas que já
+existiam. `scripts/qa-wave0-static.mjs` (`latestMigration`) e
+`scripts/migrate-site-visual.mjs` permaneceram intocados. Próxima migração
+livre continua **111**.
+
+### O que o cenário novo do gate prova
+
+Cenário `PUB-10: mensuração de origem e conversão — agregado derivado,
+minimizado e fail-closed`, em `tests/l04-delivery.integration.test.mjs`.
+HTTP real + PostgreSQL descartável + Chromium real; SQL usado só para montar
+a fixture de leads e o vínculo lead→oportunidade.
+
+1. **Fail-closed de acesso.** Anônimo em `GET /api/admin/leads/metrics` →
+   401 `admin_session_required`. Identidade real com papel `rh` → 403.
+   `POST` na rota → 405 com cabeçalho `Allow: GET`. Não existe parâmetro,
+   cabeçalho ou variável de ambiente que libere o acesso.
+2. **Fail-closed de janela.** `from=ontem` → 400 `invalid_period`;
+   `from > to` → 400 `invalid_period`; `from=2026-02-31` (data que não
+   existe, e que o `Date` do JS "consertaria" silenciosamente para 03/03) →
+   400 `invalid_period`; janela de 2020 até hoje → 400 `period_too_long`.
+   Não há consulta "tudo desde sempre" por esta rota.
+3. **Agregado derivado correto.** Fixture com 3 pedidos na origem A dentro da
+   janela de 30 dias (1 confirmado, 1 realizado, 1 solicitado), 1 pedido na
+   origem B sem conversão, 1 pedido sem origem declarada e 1 pedido da
+   origem A com 40 dias — este último **não** é contado, provando que o
+   período filtra de verdade. Duas oportunidades reais criadas pela API são
+   vinculadas por `public_lead_id` (uma delas em `stage='ganho'`). Resultado
+   conferido: origem A com `leads=3`, `visitsConfirmed=2`, `converted=2`,
+   `won=1`, `conversionRate=66.67`, `winRate=33.33`.
+4. **Distinção entre "zero" e "sem base".** Origem B, que tem pedidos e
+   nenhuma conversão, devolve `conversionRate=0`. Uma janela sem nenhum
+   pedido (janeiro/2019) devolve `rows: []`, `totals.leads=0` e
+   `totals.conversionRate=null` — "não há base para calcular" nunca é
+   apresentado como "a taxa é zero".
+5. **Rótulo explícito para origem ausente.** Lead com origem em branco e
+   campanha/canal nulos aparece como `(não informado)` nos três campos; não
+   some do agregado e não tem origem inferida de IP, referer ou user agent.
+6. **Minimização provada, não prometida.** Asserção explícita de que o JSON
+   da resposta não contém o telefone, o e-mail, o nome nem nenhum dos ids de
+   lead da fixture; de que as chaves de cada linha são apenas
+   `origin/campaign/channel/leads/visitsConfirmed/converted/won/conversionRate/winRate`;
+   e de que `&detail=1&raw=true&include=leads` não destrava dado por-lead.
+   O mesmo é verificado no DOM renderizado.
+7. **Navegador real, no domínio certo.** Chromium com sessão real de
+   `comercial` abre `/admin/leads` (não `/admin/ti`), aguarda a resposta HTTP
+   real de `/api/admin/leads/metrics` com `page.waitForResponse` (nunca
+   `waitForTimeout`), lê 4 pedidos na janela padrão de 90 dias, encurta o
+   período para 30 dias, aguarda a nova resposta real e passa a ler 3.
+   Também é verificado que o painel **não** tem nenhum botão de
+   criar/salvar/registrar métrica, e que não gera rolagem horizontal.
+8. Nenhum erro de console, requisição same-origin falhada ou resposta 5xx em
+   toda a navegação.
+
+### Ajuste declarado durante a fatia
+
+A primeira redação do cenário assumia que o painel abriria já na janela de 30
+dias usada nas asserções por HTTP, e leu 4 pedidos onde esperava 3. O padrão
+do painel é 90 dias, e o pedido de 40 dias atrás entra nele legitimamente.
+**A regra não foi afrouxada**: o cenário passou a afirmar os dois valores
+(4 em 90 dias, 3 em 30 dias), o que prova melhor que o filtro de período é
+real. Registrado aqui como exige o método.
+
+### Limites honestos deste recorte
+
+- **Testes A/B não foram implementados** e não têm rota nem tela. O próprio
+  requisito PUB-10 os condiciona a "tráfego, hipótese e tratamento de dados
+  definidos"; nenhuma das três coisas existe hoje, e o sistema não tem
+  tráfego real. Entregar o mecanismo antes disso seria entregar um botão que
+  ninguém pode usar com honestidade.
+- **`src/app/admin/ti/OriginMetricsClient.tsx` foi descartado para esta
+  finalidade e continua órfão.** É um CRUD onde um humano digitaria
+  `total_leads`, `converted_leads`, `total_opportunities` e
+  `total_contracts` à mão — número de conversão inventado com aparência de
+  relatório oficial. As tabelas da migração 092 (`pub10_origin_metrics`,
+  `pub10_conversion_events`, `pub10_ab_tests`) continuam existindo (migrações
+  são imutáveis), sem tela, e não são fonte de verdade de nada.
+- A rota **não grava trilha por consulta**, por decisão registrada: é leitura
+  agregada sem dado pessoal identificável, e uma linha de auditoria por render
+  de painel degradaria `auth_access_audit`. Como não há mutação, também não há
+  nesta fatia o cenário de "falha de auditoria injetada reverte a mutação".
+- "Ganho no funil" é decisão comercial registrada em `crm_opportunities.stage`
+  — **não** significa dinheiro recebido, mesma ressalva já registrada em
+  CRM-06.
+- Estados legados pré-PUB-04 (`new`, `contacted`, `closed`) contam em
+  "pedidos", mas nunca em "visita confirmada" nem em "convertido": não há como
+  saber o que significavam, e chutar seria fabricar.
+- Fora do recorte: exportação (CSV/PDF), gráficos, comparação entre períodos,
+  atribuição multi-toque, contrato como degrau do funil e qualquer envio a
+  ferramenta externa de analytics.
+- Continuam pendentes em L04: CRM-07 residual (kanban/tabela campo a campo e
+  notas internas), PUB-02/05 e PUB-06..09, e a revalidação campo a campo de
+  CRM-01..06. CRM-10, automação de mensagens, SMTP, lembretes da agenda,
+  hospedagem externa, Windows e aceite humano seguem fora por decisão.

@@ -4,7 +4,68 @@ Documento de retomada entre sessões. Atualizado a cada lote concluído.
 Referência: `docs/EXECUCAO-ENTREGA-LOCAL.md` (roteiro L00–L10) e
 `docs/PLANO-MESTRE-IMPLEMENTACAO.md` (222 requisitos).
 
-## Continuação mais recente — CRM-08 residual: visão de calendário por semana (Arena, 2026-09-29)
+## Continuação mais recente — PUB-10: mensuração de origem e conversão (Arena, 2026-09-29)
+
+A base desta continuação é `fe35b4c` (HEAD de `main` e da branch no início,
+merge do PR #24 — visão de calendário por semana em CRM-08), na branch
+`arena/01a0ef49-gruposegsystemseguranca`.
+
+Fatia entregue: **PUB-10 — mensuração de origem e conversão**, como painel
+**derivado e somente leitura**, no domínio de atendimento (`/admin/leads`).
+A política foi registrada ANTES da rota em
+`docs/PROMPT-CONTINUACAO-PUB10-METRICAS-ORIGEM.md`.
+
+O que passou a existir:
+
+- `GET /api/admin/leads/metrics?from=&to=` (`handleAdminLeadMetrics` em
+  `server.mjs`): agrega `public_leads` por origem/campanha/canal dentro de um
+  período e cruza com `crm_opportunities.public_lead_id`/`stage` para medir
+  quatro degraus observáveis — pedidos, visitas confirmadas, convertidos em
+  oportunidade e ganhos no funil. Taxas são calculadas pelo servidor sobre
+  esses inteiros, nunca digitadas.
+- `src/app/admin/leads/OriginMetricsPanel.tsx`, renderizado em
+  `/admin/leads` abaixo da fila de pedidos, com seletor de período.
+
+Decisões de política registradas nesta fatia:
+
+- **`OriginMetricsClient.tsx` foi descartado para esta finalidade e continua
+  órfão.** É um CRUD onde um humano digitaria `total_leads` e
+  `converted_leads` à mão: isso não é mensuração, é número inventado com
+  aparência de relatório oficial. As tabelas da migração 092 continuam
+  existindo, sem tela e sem serem fonte de verdade de nada.
+- Autorização idêntica à de `GET /api/admin/leads` (`marcelo`, `ti`,
+  `comercial`, `admin`); sem sessão 401, papel fora da lista 403, método
+  diferente de GET 405. Sem bypass de nenhum tipo.
+- Minimização por construção: só rótulos e inteiros saem da rota. Nenhuma
+  coluna por-lead é projetada em ponto algum, e não existe parâmetro que
+  destrave linha individual.
+- Janela fail-closed: formato inválido ou `from > to` → 400 `invalid_period`;
+  acima de 366 dias → 400 `period_too_long`. Não há consulta "tudo desde
+  sempre" por esta rota.
+- Denominador zero devolve `null`, não `0`: "não há base para calcular" é
+  diferente de "a taxa é zero".
+- A rota não grava trilha por consulta (leitura agregada sem dado pessoal;
+  auditar cada render degradaria `auth_access_audit`). Como não há mutação,
+  não há nesta fatia o cenário de auditoria transacional.
+- **Testes A/B continuam fora**, por decisão registrada: o requisito os
+  condiciona a tráfego, hipótese e tratamento de dados definidos, e nenhuma
+  das três coisas existe.
+
+Sem migração nova: 001–110 seguem imutáveis, 509 tabelas, próxima livre
+**111**. Gate `npm run test:l04-delivery:pg` **9/9 duas vezes consecutivas**,
+com cenário novo cobrindo 401/403/405, quatro variações de janela inválida,
+agregados conferidos contra fixture, distinção entre 0 e `null`, rótulo
+`(não informado)`, minimização provada no JSON e no DOM, e Chromium real
+lendo 4 pedidos em 90 dias e 3 em 30 dias. Ajuste declarado: o cenário foi
+corrigido para afirmar os dois valores depois de a primeira redação assumir
+janela errada — a regra não foi afrouxada. Detalhes em
+`docs/EVIDENCIAS-ENTREGA-LOCAL.md`.
+
+**L04 continua PARCIAL.** Pendentes: CRM-07 residual (kanban/tabela campo a
+campo e notas internas), PUB-02/05 e PUB-06..09, e revalidação campo a campo
+de CRM-01..06.
+
+## Continuação anterior — CRM-08 residual: visão de calendário por semana (Arena, 2026-09-29)
 
 A base desta continuação é `ed50d22` (HEAD de `main` e da branch no início,
 merge dos PRs #22 e #23; a fatia de código é o merge `ea7a1ed`), na branch
@@ -103,11 +164,11 @@ PR #13: tarefas pessoais conectadas em /admin/crm, com auditoria atômica e prot
 
 | Campo | Valor |
 |---|---|
-| Branch de trabalho | `arena/01a0ef36-gruposegsystemseguranca` |
-| Base desta sessão | `ed50d22` (HEAD de `main` e da branch no início, merge dos PRs #22 e #23; a fatia de código é o merge `ea7a1ed`) |
-| Lote ativo | **L04 — CRM-08 visão de calendário por semana entregue; L04 ainda parcial**. Lembretes/notificações de CRM-08 e ações dentro da visão de calendário, revisão campo a campo de CRM-01..06 e do kanban CRM-05/06, notas internas de CRM-07, CRM-10 e lacunas PUB continuam pendentes. |
-| Último gate aprovado | **L04 ampliado: 8/8, duas vezes consecutivas** (núcleo comercial + CRM-07 tarefas + interações + CRM-08 agenda + CRM-09 cadências + CRM-07 prazo/paginação/delegação + CRM-08 conflito/PUB-04 + CRM-08 calendário por semana), PostgreSQL descartável, HTTP real e Chromium sem `--disable-web-security`. |
-| Migrações | 001–110 (509 tabelas; sem migração nova nesta continuação — a visão de calendário reaproveita o endpoint já existente) |
+| Branch de trabalho | `arena/01a0ef49-gruposegsystemseguranca` |
+| Base desta sessão | `fe35b4c` (HEAD de `main` e da branch no início, merge do PR #24 — calendário semanal de CRM-08) |
+| Lote ativo | **L04 — PUB-10 (mensuração de origem e conversão) entregue; L04 ainda parcial**. CRM-07 residual (kanban/tabela campo a campo e notas internas), PUB-02/05 e PUB-06..09, revalidação campo a campo de CRM-01..06, lembretes/notificações de CRM-08, testes A/B de PUB-10 e CRM-10 continuam pendentes. |
+| Último gate aprovado | **L04 ampliado: 9/9, duas vezes consecutivas** (núcleo comercial + CRM-07 tarefas + interações + CRM-08 agenda + CRM-09 cadências + CRM-07 prazo/paginação/delegação + CRM-08 conflito/PUB-04 + CRM-08 calendário por semana + PUB-10 mensuração de origem), PostgreSQL descartável, HTTP real e Chromium sem `--disable-web-security`. |
+| Migrações | 001–110 (509 tabelas; sem migração nova nesta continuação — a mensuração é leitura agregada sobre tabelas que já existiam) |
 | Data | 2026-09-29 |
 
 ## Lotes
@@ -118,7 +179,7 @@ PR #13: tarefas pessoais conectadas em /admin/crm, com auditoria atômica e prot
 | L01 | Identidade, autorização e integridade básica | **parcial ampliado** | SEC-02/04/05/06 + controles dependentes do L03: RBAC sem bypass, escopo, remuneração/saúde e revogação |
 | L02 | Armazenamento, notificações locais, continuidade | **concluído** | 14/14 HTTP em PostgreSQL descartável (revalidado nesta sessão) |
 | L03 | Funcionário e RH | **concluído** | EMP-01..19 e HR-01..24 navegáveis; gate integral aprovado (revalidado nesta sessão) |
-| L04 | Site/captação e comercial | **parcial — CRM-08 conflito/PUB-04/calendário semanal entregues; lacunas explícitas** | Núcleo CRM-11..27 provado; CRM-07 tem tarefas com paginação/busca/filtros/edição de prazo e delegação explícita com aceite (decisão de equipe registrada: sem fila ampla), restando revisão campo a campo de kanban/tabela CRM-05/06 e notas internas; CRM-08 tem agenda de responsável/participantes, conflito de horário do responsável, vínculo PUB-04 auditado e visão de calendário por semana (somente leitura), faltando lembretes/notificações (dependem de provedor); CRM-09 tem modelos privados e tarefas manuais, sem automação; CRM-10 e PUB-06..09/PUB-10 continuam pendentes |
+| L04 | Site/captação e comercial | **parcial — PUB-10 (mensuração de origem) entregue; lacunas explícitas** | Núcleo CRM-11..27 provado; CRM-07 tem tarefas com paginação/busca/filtros/edição de prazo e delegação explícita com aceite (decisão de equipe registrada: sem fila ampla), restando revisão campo a campo de kanban/tabela CRM-05/06 e notas internas; CRM-08 tem agenda de responsável/participantes, conflito de horário do responsável, vínculo PUB-04 auditado e visão de calendário por semana (somente leitura), faltando lembretes/notificações (dependem de provedor); CRM-09 tem modelos privados e tarefas manuais, sem automação; PUB-10 tem painel derivado de origem/conversão em `/admin/leads` (somente leitura, minimizado), sem testes A/B por decisão registrada; CRM-10 e PUB-02/05/06..09 continuam pendentes |
 | L05 | Contratos e implantação | pendente | — |
 | L06 | Operação, patrimônio e manutenção | pendente | — |
 | L07 | Financeiro e Marcelo | pendente | — |
@@ -228,8 +289,8 @@ permanece `a_revalidar`/`pendente` inclui:
 ## Próximos três passos
 
 1. Fechar a revisão campo a campo de CRM-07 (kanban/tabela herdados de CRM-05/06, cobertos só no ponto usado pelo gate) e notas internas dedicadas.
-2. Fechar PUB-02/05 e PUB-06..10 (CMS, temas, SEO, montador de pacote, painel de métricas — componentes órfãos em `src/app/admin/ti/*Client.tsx`) e revalidar CRM-01..06 campo a campo com cenários dedicados.
-3. Só depois avaliar L05. CRM-10 (carteira), automação de mensagens, lembretes/notificações de agenda, Windows, SMTP, hospedagem externa e aceite humano continuam fora, por decisão registrada, até que surjam autorização/provedor e decisão de negócio explícitas.
+2. Fechar PUB-02/05 e PUB-06..09 (CMS, temas, SEO, montador de pacote — componentes órfãos em `src/app/admin/ti/*Client.tsx`, conectados por domínio) e revalidar CRM-01..06 campo a campo com cenários dedicados.
+3. Só depois avaliar L05. CRM-10 (carteira), automação de mensagens, lembretes/notificações de agenda, testes A/B de PUB-10, Windows, SMTP, hospedagem externa e aceite humano continuam fora, por decisão registrada, até que surjam autorização/provedor e decisão de negócio explícitas.
 
 ## Retomada executável
 
@@ -405,9 +466,12 @@ honestamente no checklist item a item:**
 - PUB-09 (montador de pacote/comparador) — `/orcamento` deixou de simular
   preço, mas o montador/comparador administrativo (`PackageClient.tsx`)
   continua desconectado;
-- PUB-10 (painel de métricas de origem/conversão/A-B) —
-  `OriginMetricsClient.tsx` desconectado; os dados brutos (origem/campanha)
-  já são persistidos e aparecem em `/admin/leads`, mas sem análise;
+- PUB-10: a **mensuração** foi entregue (painel derivado de origem/conversão
+  em `/admin/leads`, somente leitura e minimizado, provado por gate). Ficam
+  fora, por decisão registrada, os **testes A/B** (dependem de tráfego,
+  hipótese e tratamento de dados definidos) e exportação/gráficos.
+  `OriginMetricsClient.tsx` foi **descartado** para esta finalidade e
+  continua órfão: permitiria digitar métrica à mão;
 - CRM-01..06: herdados de `/admin/crm` (página anterior a esta sessão), não
   revalidados a fundo — usados apenas indiretamente pelo gate L04 (a
   conversão de lead cria empresa/oportunidade real);

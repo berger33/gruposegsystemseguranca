@@ -1867,3 +1867,165 @@ test('CRM-08: visão de calendário por período/semana na agenda pessoal (somen
   } finally { await browser.close(); }
   assert.deepEqual(failures, []);
 });
+
+test('PUB-10: mensuração de origem e conversão — agregado derivado, minimizado e fail-closed', { skip: !RUN, timeout: 150_000 }, async () => {
+  const comercial = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const rh = await provisionAndLoginStaff(pool, api, { role: 'rh' });
+
+  // --- Fixture por SQL (só fixture; toda leitura medida é pela rota real).
+  const tag = randomUUID().slice(0, 8);
+  const originA = `gate-origem-a-${tag}`;
+  const originB = `gate-origem-b-${tag}`;
+  const campaign = `gate-campanha-${tag}`;
+  const phoneFixture = '+55 11 98888-7777';
+  const emailFixture = `pub10-${tag}@exemplo.test`;
+  const leadIds = [];
+  async function seedLead({ origin, campaignValue, status, daysAgo, channel = 'site' }) {
+    const id = randomUUID();
+    await pool.query(
+      `INSERT INTO public_leads (id, request_kind, name, phone, city, property_type, services, details, status, consented_at, created_at, updated_at, origin, campaign, channel, email)
+       VALUES ($1,'quote',$2,$3,'Guarulhos','Empresa ou comércio',ARRAY['portaria'],'fixture PUB-10',$4,NOW(),NOW() - ($5 || ' days')::interval,NOW(),$6,$7,$8,$9)`,
+      [id, `Lead PUB10 ${tag}`, phoneFixture, status, String(daysAgo), origin, campaignValue, channel, emailFixture],
+    );
+    leadIds.push(id);
+    return id;
+  }
+
+  // Origem A: 3 pedidos na janela (1 confirmado, 1 realizado→convertido e ganho, 1 solicitado).
+  const aConfirmed = await seedLead({ origin: originA, campaignValue: campaign, status: 'confirmada', daysAgo: 2 });
+  const aWon = await seedLead({ origin: originA, campaignValue: campaign, status: 'realizada', daysAgo: 3 });
+  const aOpen = await seedLead({ origin: originA, campaignValue: campaign, status: 'solicitada', daysAgo: 4 });
+  // Origem B: 1 pedido sem conversão nenhuma → taxa 0% (há base), não null.
+  await seedLead({ origin: originB, campaignValue: campaign, status: 'solicitada', daysAgo: 1 });
+  // Sem origem declarada: precisa virar o rótulo "(não informado)", nunca sumir
+  // e nunca ser inferido de IP/referer.
+  await seedLead({ origin: '   ', campaignValue: null, status: 'solicitada', daysAgo: 1, channel: null });
+  // Fora da janela consultada (40 dias atrás): não pode entrar em nada.
+  await seedLead({ origin: originA, campaignValue: campaign, status: 'realizada', daysAgo: 40 });
+
+  const company = await api('/api/crm/companies', { method: 'POST', cookie: comercial.cookie, body: { displayName: 'Empresa PUB10 ' + tag, city: 'Guarulhos', type: 'prospect' } });
+  assert.equal(company.status, 201, JSON.stringify(company.body));
+  const won = await api('/api/crm/opportunities', { method: 'POST', cookie: comercial.cookie, body: { company_id: company.body.company.id, title: 'Oportunidade ganha PUB10 ' + tag } });
+  assert.equal(won.status, 201, JSON.stringify(won.body));
+  const converted = await api('/api/crm/opportunities', { method: 'POST', cookie: comercial.cookie, body: { company_id: company.body.company.id, title: 'Oportunidade aberta PUB10 ' + tag } });
+  assert.equal(converted.status, 201, JSON.stringify(converted.body));
+  await pool.query("UPDATE crm_opportunities SET public_lead_id = $2, stage = 'ganho' WHERE id = $1", [won.body.opportunity.id, aWon]);
+  await pool.query('UPDATE crm_opportunities SET public_lead_id = $2 WHERE id = $1', [converted.body.opportunity.id, aConfirmed]);
+
+  const metricsPath = '/api/admin/leads/metrics';
+  const from = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+  const to = new Date().toISOString().slice(0, 10);
+  const window = `?from=${from}&to=${to}`;
+
+  // --- Fail-closed: sem sessão, papel errado e método errado.
+  const anonymous = await api(metricsPath + window);
+  assert.equal(anonymous.status, 401, JSON.stringify(anonymous.body));
+  assert.equal(anonymous.body.error, 'admin_session_required');
+  const wrongRole = await api(metricsPath + window, { cookie: rh.cookie });
+  assert.equal(wrongRole.status, 403, JSON.stringify(wrongRole.body));
+  const wrongMethod = await api(metricsPath, { method: 'POST', cookie: comercial.cookie, body: { origin: 'inventada', total_leads: 999 } });
+  assert.equal(wrongMethod.status, 405, JSON.stringify(wrongMethod.body));
+  assert.equal(wrongMethod.headers.get('allow'), 'GET');
+
+  // --- Fail-closed na janela.
+  for (const badWindow of ['?from=ontem&to=' + to, `?from=${to}&to=2000-01-01`, '?from=2026-02-31&to=' + to]) {
+    const bad = await api(metricsPath + badWindow, { cookie: comercial.cookie });
+    assert.equal(bad.status, 400, badWindow + ' → ' + JSON.stringify(bad.body));
+    assert.equal(bad.body.error, 'invalid_period');
+  }
+  const tooLong = await api(metricsPath + `?from=2020-01-01&to=${to}`, { cookie: comercial.cookie });
+  assert.equal(tooLong.status, 400, JSON.stringify(tooLong.body));
+  assert.equal(tooLong.body.error, 'period_too_long');
+
+  // --- Agregado correto.
+  const metrics = await api(metricsPath + window, { cookie: comercial.cookie });
+  assert.equal(metrics.status, 200, JSON.stringify(metrics.body));
+  assert.equal(metrics.body.minimized, true);
+  assert.equal(metrics.body.from, from);
+  assert.equal(metrics.body.to, to);
+  const rowA = metrics.body.rows.find(row => row.origin === originA);
+  assert.ok(rowA, 'a origem A precisa aparecer no agregado');
+  assert.equal(rowA.leads, 3, 'o pedido de 40 dias atrás está fora da janela e não pode ser contado');
+  assert.equal(rowA.visitsConfirmed, 2);
+  assert.equal(rowA.converted, 2);
+  assert.equal(rowA.won, 1);
+  assert.equal(rowA.conversionRate, 66.67);
+  assert.equal(rowA.winRate, 33.33);
+  const rowB = metrics.body.rows.find(row => row.origin === originB);
+  assert.ok(rowB, 'a origem B precisa aparecer mesmo sem nenhuma conversão');
+  assert.equal(rowB.leads, 1);
+  assert.equal(rowB.converted, 0);
+  assert.equal(rowB.conversionRate, 0, 'com base existente e zero conversões, a taxa é 0 — não null');
+  const unknown = metrics.body.rows.find(row => row.campaign === '(não informado)' && row.channel === '(não informado)');
+  assert.ok(unknown, 'lead sem origem/campanha/canal precisa cair no rótulo explícito, não sumir');
+  assert.equal(unknown.origin, '(não informado)');
+
+  // Janela vazia: sem base, a taxa vem null (nunca 0, que seria "medimos e deu zero").
+  const emptyWindow = await api(metricsPath + '?from=2019-01-01&to=2019-01-31', { cookie: comercial.cookie });
+  assert.equal(emptyWindow.status, 200, JSON.stringify(emptyWindow.body));
+  assert.deepEqual(emptyWindow.body.rows, []);
+  assert.equal(emptyWindow.body.totals.leads, 0);
+  assert.equal(emptyWindow.body.totals.conversionRate, null);
+
+  // --- Minimização: nenhum dado pessoal atravessa a rota.
+  const serialized = JSON.stringify(metrics.body);
+  assert.equal(serialized.includes(phoneFixture), false, 'telefone do lead não pode vazar no agregado');
+  assert.equal(serialized.includes(emailFixture), false, 'e-mail do lead não pode vazar no agregado');
+  assert.equal(serialized.includes(`Lead PUB10 ${tag}`), false, 'nome do lead não pode vazar no agregado');
+  for (const id of leadIds) assert.equal(serialized.includes(id), false, 'id de lead não pode vazar no agregado');
+  const allowedKeys = new Set(['origin', 'campaign', 'channel', 'leads', 'visitsConfirmed', 'converted', 'won', 'conversionRate', 'winRate']);
+  for (const row of metrics.body.rows) {
+    for (const key of Object.keys(row)) assert.equal(allowedKeys.has(key), true, `chave inesperada no agregado: ${key}`);
+  }
+  // Não existe parâmetro que faça a rota devolver linha individual.
+  const tryDetail = await api(metricsPath + window + '&detail=1&raw=true&include=leads', { cookie: comercial.cookie });
+  assert.equal(tryDetail.status, 200);
+  assert.equal(JSON.stringify(tryDetail.body).includes(phoneFixture), false, 'nenhum parâmetro pode destravar dado por-lead');
+
+  // --- Navegador real: o painel vive no domínio de atendimento (/admin/leads).
+  const browser = await launchBrowser();
+  const failures = [];
+  try {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'pt-BR' });
+    const pair = comercial.cookie.split(';')[0], separator = pair.indexOf('=');
+    await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
+    const page = await context.newPage();
+    trackFailures(page, failures);
+    // A primeira carga do painel é assíncrona: espera a resposta HTTP real,
+    // nunca um timeout fixo, que poderia ler o estado "Calculando…".
+    const [firstLoad] = await Promise.all([
+      page.waitForResponse(response => response.url().includes('/api/admin/leads/metrics?') && response.request().method() === 'GET'),
+      page.goto(baseUrl + '/admin/leads', { waitUntil: 'domcontentloaded' }),
+    ]);
+    assert.equal(firstLoad.status(), 200);
+    const panel = page.getByTestId('origin-metrics-panel');
+    await panel.getByTestId('origin-metrics-table').waitFor();
+    await panel.getByTestId(`origin-metrics-row-${originA}`).waitFor();
+    // Janela padrão do painel = 90 dias, então o pedido de 40 dias atrás entra:
+    // 4 pedidos. Isso já prova que o período não é decorativo.
+    assert.equal(await panel.getByTestId(`metrics-leads-${originA}`).innerText(), '4');
+
+    // Encurtando para os mesmos 30 dias da asserção por HTTP, o pedido antigo
+    // sai e sobram 3. A releitura é assíncrona: espera a resposta real.
+    await panel.locator('#metrics-from').fill(from);
+    const [narrowed] = await Promise.all([
+      page.waitForResponse(response => response.url().includes(`/api/admin/leads/metrics?from=${from}`) && response.request().method() === 'GET'),
+      panel.getByTestId('origin-metrics-refresh').click(),
+    ]);
+    assert.equal(narrowed.status(), 200);
+    await panel.getByTestId('origin-metrics-table').waitFor();
+    await panel.getByTestId(`origin-metrics-row-${originA}`).waitFor();
+    assert.equal(await panel.getByTestId(`metrics-leads-${originA}`).innerText(), '3');
+    assert.equal(await panel.getByTestId(`metrics-converted-${originA}`).innerText(), '2');
+    assert.equal(await panel.getByTestId(`metrics-won-${originA}`).innerText(), '1');
+    // O painel não oferece nenhum caminho para digitar métrica.
+    assert.equal(await panel.getByRole('button', { name: /criar|salvar|registrar/i }).count(), 0, 'o painel PUB-10 não pode ter escrita de métrica');
+    // Nenhum dado pessoal do lead é renderizado no painel.
+    const panelText = await panel.innerText();
+    assert.equal(panelText.includes(phoneFixture), false);
+    assert.equal(panelText.includes(emailFixture), false);
+    await assertNoHorizontalScroll(page, 'o painel de mensuração de origem');
+    await context.close();
+  } finally { await browser.close(); }
+  assert.deepEqual(failures, []);
+});
