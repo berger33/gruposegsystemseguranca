@@ -707,6 +707,9 @@ test('CRM-07: tarefas pessoais por oportunidade, navegador e negação cruzada',
     await context.close();
   } finally { await browser.close(); }
   assert.deepEqual(failures, []);
+  const otherDetail = await api('/api/crm/opportunities/' + opportunityId, { cookie: other.cookie });
+  assert.equal(otherDetail.status, 200);
+  assert.deepEqual(otherDetail.body.tasks, [], 'legacy detail must not expose personal tasks');
   const saved = await api(endpoint, { cookie: owner.cookie });
   assert.equal(saved.body.tasks.find(t => t.id === taskId).status, 'concluida');
   assert.equal((await api(endpoint + '/' + taskId, { method: 'PATCH', cookie: other.cookie, body: { expected_status: 'concluida', status: 'aberta' } })).status, 404);
