@@ -6,9 +6,133 @@ Este arquivo foi criado junto ao plano mestre. Nenhum item foi implementado ou h
 ## Documentos
 - [Plano mestre](PLANO-MESTRE-IMPLEMENTACAO.md)
 - [Plano mestre 2026-09-28](plano-mestre-implementacao-2026-09-28.md)
-- [Prompt de execução e retomada](PROMPT-MASTER-ARENA.md)
-- [Instalação beta 1-clique](README-INSTALACAO.md)
+- [Prompt de retomada disponível (histórico)](PROMPT-PROXIMA-SESSAO.md)
+- [Guia de desenvolvimento local](../README.md)
+- [QA-HOM-008 — demo sintético persistente local, ainda NO-GO Windows/dados reais/link](evidencias/QA-HOM-008-demo-local-persistente.md)
+- [QA-HOM-009 — cópia fria e restauração isolada do demo sintético, sem backup operacional](evidencias/QA-HOM-009-copia-fria-demo-sintetico.md)
+- [Instruções do demo local persistente (não instalação final)](demo-local-persistente.md)
 - [Homologação RAG beta](homologacao-rag-beta.md)
+- [Plano mestre de testes QA (estratégia aprovada)](plano-mestre-testes.md)
+- [Casos detalhados e execução da Onda 0](qa-casos-onda0.md)
+- [RAG-SEG-001 — Onda 1, caso/execução de segurança](qa-casos-onda1-rag.md)
+- [TENANT-SEG-002 — Onda 2, falha injetada no portal](qa-casos-onda2-tenant.md)
+- [TENANT-SEG-001 — Onda 3, A/B em PostgreSQL local descartável](qa-casos-onda3-tenant-pg.md)
+- [PLT-MIG-001 — Onda 4, migrações PostgreSQL QA](qa-casos-onda4-migracoes.md)
+- [PLT-MIG-001 — Onda 5, 001–096 duas passagens e clone](qa-casos-onda5-migracoes-integral.md)
+- [TENANT-SEG-003 / PLT-AUD-003 — Onda 6, HTTP CLI v2](qa-casos-onda6-cli-v2-http.md)
+- [TENANT-SEG-004 / PLT-AUD-004 — Onda 7, escopo e rollback](qa-casos-onda7-cli-v2-escopo-auditoria.md)
+- [PLT-BAK-001 / PLT-MIG-001 — Onda 8, preflight restore bloqueado](qa-casos-onda8-backup-restore.md)
+- [PLT-BAK-001 / PLT-MIG-001 — Onda 9, restore sintético real](qa-casos-onda9-restore-real-sintetico.md)
+- [PLT-BAK-001 / PLT-08 — Onda 10, dois clusters e fail-closed](qa-casos-onda10-backup-clusters-catalogo.md)
+- [PLT-BAK-001 — Onda 11, manifesto e arquivo sintético](qa-casos-onda11-manifesto-arquivo-sintetico.md)
+- [PLT-BAK-001 / CLIENTE-SEG-001 — Onda 12, HTTP após restore sintético](qa-casos-onda12-download-arquivo-restaurado.md)
+- [PLT-BAK-001 — Onda 13, coadulteração e pin efêmero QA](qa-casos-onda13-pin-manifesto-sintetico.md)
+- [Política técnica inicial de backup/recuperação — alvo, não serviço](politica-tecnica-backup-recuperacao.md)
+- [PLT-BAK-001 — Onda 14, assinatura destacada QA](qa-casos-onda14-politica-assinatura-qa.md)
+- [PLT-BAK-001 — Onda 15, inventário sintético parcial](qa-casos-onda15-inventario-cobertura-sintetica.md)
+- [PLT-BAK-001 — Onda 16, contratos de referência CLI v2 e famílias](qa-casos-onda16-contratos-referencia-arquivo.md)
+- [PLT-BAK-001 — Onda 17, provedor QA local de objetos sintéticos](qa-casos-onda17-provedor-local-cli-v2-sintetico.md)
+- [PLT-BAK-001 — Onda 18, vínculo PG CLI v2 ↔ objeto QA](qa-casos-onda18-vinculo-cli-v2-pg-objeto.md)
+- [PLT-BAK-001 — Onda 19, transporte CLI v2 QA entre clusters](qa-casos-onda19-transferencia-cli-v2-pg.md)
+- [PLT-BAK-001 — Onda 20, falha parcial CLI v2 e classificação conservadora](qa-casos-onda20-importacao-parcial-cli-v2.md)
+- [PLT-BAK-001 — Onda 21, referências assinadas de pontos QA](qa-casos-onda21-pontos-restauracao-cli-v2.md)
+
+## Checkpoint QA — Onda 21 (2026-09-28, somente contrato unitário)
+
+- `PLT-BAK-001`: [relatório](qa-casos-onda21-pontos-restauracao-cli-v2.md): dois pontos de referência CLI v2 inventados com listas assinadas e âncora pública fora do pacote; A v1 referenciada apenas historicamente foi protegida, objeto desconhecido não autorizado para deleção. Chave atacante/ponto ausente/duplicado/byte histórico faltante recusados. `npm test` 133/133, typecheck/build 66/66; **sem DB/WAL/PITR real** ou API de produção neste lote. `PLT-DEF-024`/`PLT-DEF-022` abertos; **NO-GO**, 222 IDs sem promoção. Não existe número total fixo de ondas: fechar gates depende de decisão/evidência externas.
+
+## Checkpoint QA — Onda 20 (2026-09-28, somente QA descartável)
+
+- `PLT-BAK-001`/`CLIENTE-SEG-001`: [relatório](qa-casos-onda20-importacao-parcial-cli-v2.md): falha controlada depois de importar 1/3 objetos CLI v2 no DB restaurado em cluster independente; compensação estritamente do arquivo escrito, nenhum byte no destino, DB inalterado, exit 1/cleanup (não promoveu restore). Um objeto da origem sem referência DB foi classificado e retido até cleanup, não deletado automaticamente. Unitário preservou arquivo desconhecido, retry 3/3 passou, symlink recusado. Regressões positivo 3/3 e coadulteração falha; CLI PG 9/9, objeto PG 1/1, `npm test` 130/130, typecheck/build 66/66. `PLT-DEF-024`/`PLT-DEF-022` ainda abertos; nenhum rollback atômico DB+FS ou GC seguro operacional: **NO-GO**, 222 requisitos inalterados.
+
+## Checkpoint QA — Onda 19 (2026-09-28, dois clusters e objetos inventados)
+
+- `PLT-BAK-001`/`CLIENTE-SEG-001`: [relatório](qa-casos-onda19-transferencia-cli-v2-pg.md): dump/restore 96/96, 497 tabelas e três objetos CLI v2 A v1/v2+B v1 sintéticos. Assinatura/fingerprint externo ao pacote e vínculo DB/bytes/hash/conta conferidos antes da importação: positivo exit 0/cleanup. Co-adulteração assinada por atacante: exit 1, **zero objetos importados**, cleanup. HTTP legado A/B/revogação, CLI PG 9/9, objeto PG 1/1, `npm test` 128/128, typecheck/build 66/66. `PLT-DEF-024` e ausência de storage real/custódia/atomicidade permanecem; **NO-GO**, 222 IDs sem promoção.
+
+## Checkpoint QA — Onda 18 (2026-09-28, PG e arquivos QA descartáveis)
+
+- `PLT-BAK-001`/`CLIENTE-SEG-001`: [documento/versão PG ↔ bytes QA](qa-casos-onda18-vinculo-cli-v2-pg-objeto.md): em cluster PostgreSQL 17.9 recém-criado, 96/96 migrações, versões A v1/v2 e objeto B próprios, escopo SQL do **teste** negou B→A/A→B e revogação A, bytes SHA-256 no provedor QA exatos; chave DB alterada, objeto ausente/corrompido negados. Rollback PG para versão duplicada deixou arquivo órfão (`PLT-DEF-024`, aberto). PG 1/1 TAP, regressão CLI 9/9, `npm test` 125/125, typecheck/build 66/66. **Sem HTTP cliente nem restore DB**, API produtiva inalterada: **NO-GO**; 222 requisitos não promovidos.
+
+## Checkpoint QA — Onda 17 (2026-09-28, somente arquivos e IDs sintéticos)
+
+- `PLT-BAK-001`/`CLIENTE-SEG-001`: [contrato de objeto QA](qa-casos-onda17-provedor-local-cli-v2-sintetico.md): versões 1/2 com bytes SHA-256, vínculo ID/conta/versão/chave e import para pasta QA isolada. B, chave/versão/ID divergente, byte adulterado, objeto ausente e path externo recusados em unitários 4/4; `npm test` 124/124, typecheck/build 66/66. Não usa DB/HTTP neste lote, recibos não assinados e API CLI v2/backup intacta: **NO-GO**; `PLT-DEF-022` aberto, 222 requisitos sem promoção.
+
+## Checkpoint QA — Onda 16 (2026-09-28, somente sintéticos)
+
+- `PLT-BAK-001`: [contratos de referência](qa-casos-onda16-contratos-referencia-arquivo.md). CLI v2 aceita `file_url`/`storage_key` e retorna URL como metadado para admin/ti; sem bytes, escritor ou streaming privado comprovados nesse módulo. QA em dois clusters: 124 colunas candidatas em 12 famílias, 1 arquivo legado sintético com bytes conferidos e 6 ocorrências CLI v2 sem custódia provada; escopo legado exit 0/cleanup, full recusado exit 1/cleanup. `npm test` 120/120, typecheck/build 66/66. **NO-GO**, `PLT-DEF-022` aberto; 222 requisitos não promovidos.
+
+## Checkpoint QA — Onda 15 (2026-09-28, dois clusters QA)
+
+- `PLT-BAK-001`: [cobertura parcial fail-closed](qa-casos-onda15-inventario-cobertura-sintetica.md). Scanner do catálogo PostgreSQL sintético achou 124 colunas candidatas e **6 ocorrências não classificadas de `file_url`/`storage_key` CLI v2**; verificou só 1 arquivo legado de 54 bytes no destino por DB/manifesto/bytes, negou órfão/ausência/corrupção em unitários. Escopo legado+assinatura+HTTP A/B passou exit 0/cleanup; exigência de “full” negada `qa_inventory_unresolved_references` exit 1/cleanup; arquivo faltante exit 1/cleanup antes do HTTP. `npm test` 117/117, typecheck/build 66/66. **NO-GO**: scanner não equivale a inventário exaustivo, ausência de bytes CLI v2 e armazenamento externo, KMS, consistência concorrente/PITR/RPO/RTO. 222 requisitos não promovidos.
+
+## Checkpoint QA — Onda 14 (2026-09-28, somente sintéticos)
+
+- `PLT-BAK-001`: [política técnica delegada e ensaio](qa-casos-onda14-politica-assinatura-qa.md). Escopo alvo DB+WAL+todos os arquivos privados inventariados, cópias fora do host criptografadas/imutáveis, retenção técnica alvo 35 dias+12 pontos mensais sujeita a validação LGPD/custos, assinatura assimétrica com âncora externa e custódia segregada Marcelo/TI, RPO≤1h/RTO≤4h **propostos, não medidos**. Protótipo QA Ed25519 com chave pública fora do pacote restaurou 54 bytes sintéticos e HTTP A/B após dois clusters, exit 0/cleanup; substituição de manifesto+bytes+assinatura/chave no pacote foi negada **exit 1/cleanup** antes dos bytes. Gate de produção documental corrigido: API PLT-08 continua 503/não verificada. `npm test` 112/112, typecheck e build 66/66. Sem inventário total, KMS/custódia persistente, snapshot concorrente, WAL e storage externo: **NO-GO**; 222 requisitos sem promoção.
+
+## Checkpoint QA — Onda 13 (2026-09-28, apenas dados sintéticos)
+
+- `PLT-BAK-001`: [ensaio de coadulteração](qa-casos-onda13-pin-manifesto-sintetico.md). Byte + hash do manifesto alterados juntos: pin original guardado em memória do runner QA agora é obrigatório e verificado **antes** de gravar arquivo; negativo exit 1/cleanup, sem liberar HTTP. Pin originado do pacote adulterado é aceito e **não** comprova autenticidade independente. Positivo HTTP/restore exit 0, negativo antigo de byte exit 1, ambos com cleanup. `npm test` 106/106, typecheck e build 66/66. `PLT-DEF-019` corrigido **só no protótipo QA** (pin antes da escrita). **NO-GO**: falta política aprovada de chaves/custódia, confiança fora da execução, consistência DB+FS concorrente, RPO/RTO/CI/UAT; 222 requisitos mantêm estado.
+
+## Checkpoint QA — Onda 12 (2026-09-28, dois clusters QA, HTTP loopback)
+
+- `PLT-BAK-001`/`CLIENTE-SEG-001`: [download de um arquivo sintético restaurado](qa-casos-onda12-download-arquivo-restaurado.md). Sessões/grants A/B criados antes do dump; após restore DB+arquivo de 54 bytes, rota real retornou A **200 com bytes exatos/cabeçalhos seguros**, B **403**, anônimo **401**; revogar A apenas no destino causou **403** imediato, mantendo B isolada e grant da origem ativo. Trilha de acesso verificada com espera limitada para auditoria assíncrona. Negativo de corrupção do arquivo **exit 1/cleanup**, positivo **exit 0/cleanup**. `npm test` **103/103**, typecheck e build 66/66. **NO-GO** para backup ou portal operacional: apenas uma fixture sintética, manifesto não autenticado, sem criptografia/custódia, consistência concorrente, RPO/RTO/CI/UAT. 222 requisitos não foram promovidos.
+
+## Checkpoint QA — Onda 11 (2026-09-28, PostgreSQL/FS QA descartáveis)
+
+- `PLT-BAK-001`/`CLIENTE-SEG-001`: [protótipo DB+arquivo sintético](qa-casos-onda11-manifesto-arquivo-sintetico.md). Em dois clusters QA 17.9, restore 497 tabelas/96 hashes e **1 arquivo A de 54 bytes** separado do DB, com manifesto ID→conta→chave→tamanho→SHA-256, restaurado em outro diretório após comparação; exit 0/cleanup. Byte adulterado sem mudar tamanho rejeitado **exit 1**, sem certificar restore; primeiro negativo encontrou erro idle `pg.Pool` que deixou uma pasta QA, removida manualmente; listeners corrigiram e reteste negativo confirmou cleanup. Chave traversal e conta divergente negadas em unitários. Runner recusa `CLIENT_DOCS_DIR` externo no modo arquivo. `npm test` **102/102**, typecheck exit 0, build 66/66. **NO-GO**: manifesto não autenticado, sem criptografia, consistência DB/FS concorrente, política de custódia/retention ou bytes via HTTP; 222 requisitos rastreados sem promoção.
+
+## Checkpoint QA — Onda 10 (2026-09-28, PostgreSQL QA descartável)
+
+- `PLT-BAK-001`/`PLT-08`: [dois clusters QA e contenção de sucesso simulado](qa-casos-onda10-backup-clusters-catalogo.md). `pg_dump`/`pg_restore` 17.9 entre dois clusters novos: **497 tabelas**, ledger 96/96, A/B e trilhas conferidos, origem inalterada; arquivo corrompido **exit 1/cleanup**; modo de um cluster regressou exit 0. Baseline da API de backup falhou **2/3 testes**: POST gerava job falso e GET tratava status histórico como evidência. Corrigido: POST/PATCH/DELETE de backup e POST restore **503**, GET mascara `success`/`is_restore_tested` como não verificados (originais em `recorded_*`), UI somente leitura; UUID por ID corrigido. HTTP QA **9/9 TAP**, unitários **97/97**, typecheck/build 66/66. Bytes em `CLIENT_DOCS_DIR` estão **fora** do DB; política de arquivos, custódia, criptografia, ledgers reais, RPO/RTO/CI/UAT pendentes. **NO-GO**, 222 requisitos sem promoção automática. Próximo lote condicionado a política de arquivos aprovada.
+
+## Checkpoint QA — Onda 9 (2026-09-28, PostgreSQL QA descartável)
+
+- `PLT-BAK-001`/`PLT-MIG-001`: [ensaio e limites](qa-casos-onda9-restore-real-sintetico.md): `pg_dump`/`pg_restore` **17.9** compilados em `/tmp` de tag PG 17.9, não adicionados à aplicação. Runner em cluster 17.9 loopback e **dois bancos novos separados** (não TEMPLATE) restaurou arquivo custom sintético de **2.494.229 bytes**; **497** tabelas, 96/96 hashes, A/B e grants, documento/versão, ambos catálogos de auditoria, FKs e fingerprint de amostra corresponderam. Reaplicação migrador no destino exit 0; origem inalterada; cleanup. Arquivo propositalmente corrompido causou exit 1 e cleanup. `npm test` **94/94**, typecheck exit 0, build 66/66. **PASSOU no recorte sintético mesmo cluster, NO-GO geral**: falta backup de arquivos, criptografia/custódia, restore entre clusters, ledgers reais, RPO/RTO/CI/UAT; 222 requisitos sem promoção automática. Nenhum deploy.
+
+## Checkpoint QA — Onda 8 (2026-09-28, preflight local)
+
+- `PLT-BAK-001`/`PLT-MIG-001`: [Onda 8](qa-casos-onda8-backup-restore.md) preparou runner isolado para `pg_dump`/`pg_restore` em duas bases sintéticas novas, **mas não realizou dump/restore**: ferramentas 17 ausentes e cliente 14 incompatível. URL de operador e binários ausentes/incompatíveis recusados antes de criar cluster (**exit 2**); `npm test` **94/94**, typecheck exit 0 e build 66/66. Runner positivo não testado. **NO-GO**, sem promoção dos 222 requisitos. Próximo passo após `CONTINUAR`: obter ferramentas compatíveis no QA, executar ensaio e verificar saída; sem banco preexistente.
+
+## Checkpoint QA — Onda 7 (2026-09-28, PostgreSQL QA descartável)
+
+- `TENANT-SEG-004`/`PLT-AUD-004`: [baseline, correções e testes](qa-casos-onda7-cli-v2-escopo-auditoria.md). Falhas reproduzidas: RH leu contatos A/B (200); trigger de auditoria rejeitou evento, mas POST persistiu documento (201). Reteste PG 001–096 **8/8 TAP**, 0 skip, cleanup: nove handlers passaram a restringir consultas globais a admin/ti; criação de documento+versão+auditoria transacional retorna 503/rollback sob falha injetada. POST v2 é indisponível no beta PGlite proxy por falta de isolamento exclusivo. `npm test` **92/92**, typecheck exit 0, build 66/66. Bloqueio ao cliente v2 **não** equivale a funcionalidade homologada; demais escritas/auditorias, download privado, escopo completo, restore real e CI remoto pendentes. **NO-GO**, 222 requisitos rastreados sem promoção automática. Próximo lote, após `CONTINUAR`: avaliar `pg_dump`/`pg_restore` em base sintética separada.
+
+## Checkpoint QA — Onda 6 (2026-09-28, PostgreSQL QA descartável)
+
+- `TENANT-SEG-003`/`PLT-AUD-003`: [ensaio HTTP A/B e auditoria](qa-casos-onda6-cli-v2-http.md) em PG 001–096 novo **5/5 TAP**, 0 skip, cleanup. Cookie de cliente do portal não obtém listagem/download v2 (**401**); RH não lê/grava documentos v2 e não lista chamados/relatórios/cobranças pelos aliases testados (**403**); admin/ti preserva operações internas e a criação/download de metadados deixou eventos em `audit_log`. Revogação negou portal legado (403). Runner recusou URL predefinida (exit 2). `npm test` 91/91, typecheck exit 0 e build 66/66. Download v2 ainda entrega URL, não bytes privados; falha de auditoria não testada e outros handlers CLI não homologados. **NO-GO**, 222 requisitos sem promoção automática. Próximo lote: matriz por recurso/exportações e falha injetada na trilha, seguido de backup/restore real em cópia sintética.
+
+## Checkpoint QA — Onda 5 (2026-09-28, PostgreSQL QA descartável)
+
+- `PLT-MIG-001` [execução/evidências da Onda 5](qa-casos-onda5-migracoes-integral.md): **96/96 em primeira e segunda aplicação, exit 0**, 497 tabelas sem variação e amostra de auditoria preservada. Clone QA isolado criado via TEMPLATE, mutado e substituído pela origem descartável: 96 checksums preservados; mismatch sintético da 006 detectado com exit 1, **sem rebaseline**. Isso não é `pg_dump`/`pg_restore` nem upgrade de DB real. `audit_log` operacional e `auth_access_audit` de acesso são catálogos separados; eventos HTTP e módulos v2 ainda não homologados. Seeds demonstrativos de FAQ/RAG, políticas de cobrança e alegações de desempenho/acessibilidade não foram promovidos a aprovados. `npm test` 91/91, typecheck exit 0 e build 66/66. Os **222 requisitos** permanecem rastreados, sem promoção automática. **NO-GO** para migração de base existente/produção; checksums históricos, CI, restore real e UAT pendentes.
+
+## Checkpoint QA — Onda 4 (2026-09-28, PostgreSQL QA local)
+
+- `PLT-MIG-001` [runner local protegido e evidências](qa-casos-onda4-migracoes.md): migrações **001–074/96** aplicadas em banco novo PostgreSQL 17.9; migração **075 falha** por `audit_log` inexistente (`PLT-DEF-008`). Retenção 011 preservada (3 registros legados) e PLT-11 criada (10 políticas UUID); três regras trabalhistas sintéticas não aprovadas/não ativas. Runner recusa URL predefinida (exit 2), limpa cluster QA; `npm test` 91/91 e `tsc --noEmit` exit 0. Segunda aplicação 001–096, restore e upgrade de ledgers existentes **não executados**. Checksums da 006 e de outras migrações editadas exigem reconciliação manual, nunca rebaseline automático. **NO-GO**; próximo lote: reconciliar auditoria 075–078, retestar integralmente e avaliar restore somente em cópia isolada. Os **222 requisitos** continuam rastreados, não automaticamente verificados.
+
+## Checkpoint QA — Onda 3 (2026-09-28, PostgreSQL QA local)
+
+- `TENANT-SEG-001` [executado em recorte real PostgreSQL 17.9](qa-casos-onda3-tenant-pg.md) com duas contas/identidades **sintéticas**, DB `seg_qa_tenant` descartável em loopback, migrações **001–007**, servidor HTTP e storage privados: **9/9 TAP (8 subtestes + pai), 0 skip**, A/B em contratos, allowlist, unidade, downloads, tickets e revogação. Binário de `embedded-postgres` é devDependency; diretório QA removido. **Não equivale a isolamento SaaS completo/exportações v2/concorrência**, nem PG 001–096.
+- Primeira falha: `006` já encontrava CHECKs de `003`, reparado localmente; novo checksum exige reconciliação controlada para DBs previamente migrados, nunca rebaseline automático. Segunda: recursão de telemetria no pool PG (`PLT-OBS-001`), reparada e coberta por 2 testes. Regressão `npm test` **91/91**, typecheck, build beta 66/66, RAG fallback 14/14, preflight 5/5 e npm audit 0 vulnerabilidades reportadas. CI remoto não executado.
+- `PLT-MIG-001` dinâmico **FALHOU** em outro banco QA: 001–020 aplicadas, **021** requer `set_updated_at()` ainda inexistente (`PLT-DEF-002`); 001–096 e rollback não validados. Release **NO-GO**, UAT e política pendentes. Próximo lote: corrigir migração/ordem com ledger preservado e repetir em DB descartável; depois isolamento das rotas CLI v2/export e corrida de grants. Os **222 IDs** abaixo permanecem rastreados sem promoção automática a verificado. Nenhum push/merge/deploy ou banco remoto.
+
+## Checkpoint QA — Onda 2 (2026-09-28, sem publicação)
+
+- `TENANT-SEG-002` [detalhado e executado em memória](qa-casos-onda2-tenant.md): antes, 5/14 testes passavam e 9 falhavam; após correção fail-closed no vínculo de unidade e allowlist, **14/14** passaram. `npm test` **89/89 sem skips**, typecheck e build beta **66/66**, preflight 5/5, integração RAG em PGlite temporário 14/14 registros custo e audit de deps 0 vulnerabilidades reportadas. São provas locais, **não** do PostgreSQL.
+- `SEG-AUD-001` reproduzido/mitigado localmente, **aberto** para validação HTTP/PG e corrida de revogação; `RAG-DEF-001` segue aberto para tenant, papéis e revisão legado. PostgreSQL QA, CI remoto, homologação humana e política aprovada ainda pendentes. **NO-GO** produção. Os **222 IDs** continuam rastreados sem promoção a verificado; próximo bloco `TENANT-SEG-001` A/B requer E2 isolado e autorizado.
+- Nenhum commit, push, merge, deploy, serviço contratado ou banco externo alterado.
+
+## Checkpoint QA — Onda 1 (2026-09-28, sem publicação)
+
+- `RAG-SEG-001` detalhado e **parcial no recorte local**: 29 testes unitários de autorização novos (75/75 total), PGlite isolado: negação anônima para cliente/RH/Marcelo, histórico negado, rascunho fora de fontes, feedback de escopo verificado, 14/14 registros custo/token. Typecheck e build 66 páginas passaram; três páginas de assistente privado exibem bloqueio, não funcionalidades homologadas. [Critérios, evidências e limites](qa-casos-onda1-rag.md).
+- `RAG-DEF-001` mitigado localmente, **não encerrado**: revisar bancos beta legados com publicação padrão indevida, autorizar cliente por conta/grant e RH/Marcelo por papel real em E2 isolado, CI remoto e PG ainda não executados. `SEG-AUD-001` permanece P0 pendente. **NO-GO** produção.
+- Os **222 IDs de requisitos** abaixo continuam registrados, sem promoção automática a `verificado`. Próximo bloco sugerido: `TENANT-SEG-002` com erro de banco injetado e resposta fail-closed; depois `TENANT-SEG-001` A/B. Nenhum commit, push, merge, deploy ou serviço externo real.
+
+## Checkpoint QA — Onda 0 (2026-09-28, branch arena/01a0e96a-gruposegsystemseguranca)
+
+- Base `5b4b200`; [inventário e decisões](qa-auditoria-fase0.md), [falha inicial](evidencias/QA-onda0-PLT-SMK-001-preflight.md), [reparo/testes locais](evidencias/QA-onda0-reparo-controlado.md). Estratégia de testes aprovada pelo usuário; não equivale a homologação do produto.
+- PLT-SMK-001 passou **somente no recorte local beta**: preflight 5/5, npm ci, typecheck, npm test 46 pass sem skips, build 66 páginas, RAG fallback em PGlite isolado com 12 registros custo/token via API QA e smoke HTTP 7/7 em loopback. Preservadas as implementações existentes divergentes do ZIP; nenhuma .env.beta com credenciais de exemplo foi restaurada. Nenhum commit/push/merge/deploy.
+- PLT-CI-001 parcial (workflow fonte criado, CI remoto não executado); PLT-MIG-001 parcial (001–096 presentes/manifestados, PG/rollback não executados). `SEG-AUD-001` fail-open potencial ainda P0 sem teste/fix; `RAG-DEF-001` novo P0: RAG privado respondeu HTTP 201 sem sessão no teste local sintético, autorização não comprovada (ver evidência). Homologação humana, integrações reais, Docker, Ollama, regra CLT/CCT/fiscal e política aprovada pendentes. **NO-GO** produção; não publicar nem contratar serviços automaticamente.
+- Registro abaixo mantém **222 IDs de requisitos distintos** e seus estados anteriores; resultados QA não os promovem automaticamente a `verificado`. Próximo bloco: negar RAG não público a sessões anônimas, adicionar teste negativo; depois `TENANT-SEG-002` com falha injetada/correção fail-closed e `TENANT-SEG-001` A/B em banco de teste isolado.
 
 ## Checkpoint atual
 - Data/hora: 2026-09-28T21:42Z BRT (F10+1 lote58 — AllowIndex condicional produção gate + Feedback RAG + Custo/Token tracking + Widgets feedback UI + 12 testes integração 38ms + migration 096)

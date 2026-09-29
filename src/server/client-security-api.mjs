@@ -1,163 +1,136 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import { randomUUID } from "node:crypto";
+// SEC-06: real client TOTP enrollment. SEC-07 (e-mail change) remains disabled
+// until an independently verifiable channel is approved without SMTP.
+import { newMfaSetup, encryptMfaSecret, verifyMfaCode, mfaKey, newRecoveryCodes, hashRecoveryCode } from '../lib/client-mfa.mjs';
+import { verifyPassword } from '../lib/client-auth-core.mjs';
 
-export function createClientSecurityApi() {
-  function hashToken(token) {
-    return createHash("sha256").update(String(token)).digest("hex");
-  }
-
-  async function audit(db, { actorKind, actorId, action, target, result, category }) {
-    try {
-      await db.query(
-        `INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,NOW())`,
-        [actorKind, actorId || null, action, target || null, result, category || "none"]
-      );
-    } catch (e) { /* auditoria nunca quebra a resposta */ }
-  }
-
-  // Verifica se o vínculo permite acesso ao contrato específico e respeita unidade.
-  // deny-by-default: se o grant não existe ou não autoriza, retorna null.
-  async function requireGrantScope(db, session, accountId, contractId) {
-    try {
-      const grantRes = await db.query(
-        `SELECT g.id, g.contract_scope_mode, g.allowed_contract_ids, g.unit_account_id
-         FROM client_access_grants g
-         WHERE g.identity_id = $1 AND g.client_account_id = $2 AND g.revoked_at IS NULL`,
-        [session.identityId, accountId]
-      );
-      const g = grantRes.rows[0];
-      if (!g) return null;
-      // Restrição por unidade: se grant aponta para uma unit_account_id,
-      // a conta consultada deve ser essa unidade ou filha dela (parent_account_id chain).
-      if (g.unit_account_id) {
-        const unitCheck = await db.query(
-          `SELECT id FROM client_accounts WHERE id = $1 AND (id = $2 OR parent_account_id = $2)`,
-          [accountId, g.unit_account_id]
-        );
-        if (!unitCheck.rows[0]) return null;
-      }
-      // Restrição por contrato
-      if (contractId && g.contract_scope_mode === "selected") {
-        const allowed = Array.isArray(g.allowed_contract_ids) ? g.allowed_contract_ids : [];
-        if (!allowed.includes(contractId)) return null;
-      }
-      return g.id;
-    } catch (e) {
-      return null;
+export function createClientSecurityApi({ json, readJson, sameOrigin, getPool, readClientSession }) {
+  async function guard(req, res, method) {
+    if (req.method !== method) {
+      json(res, 405, { error: 'method_not_allowed' }, { Allow: method }); return null;
     }
+    if (!sameOrigin(req)) { json(res, 403, { error: 'same_origin_required' }); return null; }
+    const session = await readClientSession(req);
+    if (!session) { json(res, 401, { error: 'client_session_required' }); return null; }
+    if (session.status !== 'active') { json(res, 403, { error: 'client_confirmation_required' }); return null; }
+    return session;
+  }
+  async function bodyOrError(req, res) {
+    try {
+      const value = await readJson(req);
+      if (value && typeof value === 'object' && !Array.isArray(value)) return value;
+    } catch (error) {
+      if (error?.message === 'BODY_TOO_LARGE') { json(res, 413, { error: 'invalid_request' }); return null; }
+    }
+    json(res, 400, { error: 'invalid_request' });
+    return null;
+  }
+  async function audit(db, identityId, action, result, category = 'none') {
+    try { await db.query(`INSERT INTO auth_access_audit
+      (actor_kind, actor_id, action, target, result, detail_category) VALUES ('client',$1,$2,$1,$3,$4)`,
+      [identityId, action, result, category]); } catch { /* never expose details in HTTP */ }
+  }
+  async function passwordMatches(db, id, password) {
+    if (typeof password !== 'string' || !password) return false;
+    const { rows } = await db.query('SELECT password_hash FROM auth_credentials WHERE identity_id=$1', [id]);
+    return Boolean(rows[0]) && verifyPassword(password, rows[0].password_hash);
+  }
+  function unavailable(res, error) { return json(res, 503, { error }); }
+
+  async function handleMfaSetup(req, res) {
+    const session = await guard(req, res, 'POST'); if (!session) return;
+    const body = await bodyOrError(req, res); if (!body) return;
+    try {
+      mfaKey();
+      const db = getPool();
+      if (!await passwordMatches(db, session.identityId, body.password)) {
+        await audit(db, session.identityId, 'mfa_activate', 'denied', 'invalid_credentials');
+        return json(res, 403, { error: 'invalid_credentials' });
+      }
+      const { secret, uri } = newMfaSetup(session.email);
+      const saved = await db.query(`INSERT INTO auth_mfa (identity_id, totp_secret_encrypted)
+        VALUES ($1,$2) ON CONFLICT (identity_id) DO UPDATE SET totp_secret_encrypted=EXCLUDED.totp_secret_encrypted,
+          recovery_hashes='{}', last_used_step=NULL, attempts_since_verified=0, updated_at=NOW()
+        WHERE auth_mfa.activated_at IS NULL RETURNING identity_id`,
+        [session.identityId, encryptMfaSecret(secret, session.identityId)]);
+      if (!saved.rowCount) return json(res, 409, { error: 'mfa_already_active' });
+      return json(res, 200, { secret, uri, note: 'save_secret_privately_then_activate' });
+    } catch { return unavailable(res, 'mfa_unavailable'); }
   }
 
-  // ---------- MFA ----------
-  async function handleMfaVerify(req, res, db, session) {
-    const body = await (req.json ? req.json() : Promise.resolve({}));
-    const code = String(body?.code || "").trim();
-    if (!session || !session.identityId) {
-      return res ? (res.statusCode = 401, res.end(JSON.stringify({ error: "client_session_required" }))) : null;
-    }
+  async function handleMfaActivate(req, res) {
+    const session = await guard(req, res, 'POST'); if (!session) return;
+    const body = await bodyOrError(req, res); if (!body) return;
+    let client;
     try {
-      const mfaRes = await db.query("SELECT * FROM auth_mfa WHERE identity_id = $1", [session.identityId]);
-      const mfa = mfaRes.rows[0];
-      if (!mfa || !mfa.activated_at) {
-        await audit(db, { actorKind: "client", actorId: session.identityId, action: "mfa_verify", target: session.identityId, result: "denied", category: "authorization_denied" });
-        return res.status(403).json({ error: "forbidden" });
+      mfaKey();
+      const db = getPool(); client = await db.connect(); await client.query('BEGIN');
+      const { rows: [record] } = await client.query('SELECT totp_secret_encrypted, activated_at, attempts_since_verified FROM auth_mfa WHERE identity_id=$1 FOR UPDATE', [session.identityId]);
+      if (!record || record.activated_at) { await client.query('ROLLBACK'); return json(res, 409, { error: 'mfa_setup_required' }); }
+      if (record.attempts_since_verified >= 5) { await client.query('ROLLBACK'); return json(res, 429, { error: 'mfa_setup_limited' }); }
+      const result = await verifyMfaCode(record.totp_secret_encrypted, session.identityId, body.code);
+      if (!result.valid) {
+        await client.query('UPDATE auth_mfa SET attempts_since_verified=attempts_since_verified+1 WHERE identity_id=$1', [session.identityId]);
+        await client.query('COMMIT');
+        await audit(db, session.identityId, 'mfa_activate', 'denied', 'invalid_credentials');
+        return json(res, 403, { error: 'mfa_code_invalid' });
       }
-      // TOTP simples: HMAC-SHA1 com secret (simplificado para demonstração; produção usa otpauth)
-      // Aqui usamos verificação constante com timestamp aproximado (5 min janela) para prova.
-      const secret = mfa.totp_secret_encrypted;
-      const now = Math.floor(Date.now() / 30000); // 30s window
-      let valid = false;
-      for (let i = -1; i <= 1; i++) {
-        const expected = createHash("sha1").update(String(secret) + String(now + i)).digest("hex").slice(0, 6);
-        if (code === expected) { valid = true; break; }
+      const { codes, hashes } = newRecoveryCodes();
+      await client.query(`UPDATE auth_mfa SET activated_at=NOW(), recovery_hashes=$2, attempts_since_verified=0,
+        last_used_step=NULL, last_verified_at=NOW(), updated_at=NOW() WHERE identity_id=$1`, [session.identityId, hashes]);
+      await client.query('COMMIT');
+      await audit(db, session.identityId, 'mfa_activate', 'allowed');
+      // The prior password-only cookie becomes invalid automatically by the
+      // session's mfa_verified_at being null. Codes appear once, never logged.
+      return json(res, 200, { ok: true, recoveryCodes: codes, loginRequired: true });
+    } catch { if (client) await client.query('ROLLBACK').catch(() => {}); return unavailable(res, 'mfa_unavailable'); }
+    finally { client?.release(); }
+  }
+
+  async function handleMfaDisable(req, res) {
+    const session = await guard(req, res, 'POST'); if (!session) return;
+    const body = await bodyOrError(req, res); if (!body) return;
+    let client;
+    try {
+      mfaKey(); const db = getPool(); client = await db.connect(); await client.query('BEGIN');
+      const { rows: [record] } = await client.query('SELECT * FROM auth_mfa WHERE identity_id=$1 FOR UPDATE', [session.identityId]);
+      if (!record?.activated_at || !await passwordMatches(client, session.identityId, body.password)) {
+        await client.query('ROLLBACK'); return json(res, 403, { error: 'invalid_credentials' });
       }
+      if (record.attempts_since_verified >= 5) {
+        await client.query('ROLLBACK'); return json(res, 429, { error: 'mfa_temporarily_limited' });
+      }
+      const code = typeof body.code === 'string' ? body.code.trim().toLowerCase() : '';
+      const hash = hashRecoveryCode(code);
+      const valid = (hash && record.recovery_hashes.includes(hash)) ||
+        (!hash && (await verifyMfaCode(record.totp_secret_encrypted, session.identityId, code, record.last_used_step)).valid);
       if (!valid) {
-        await db.query("UPDATE auth_mfa SET attempts_since_verified = attempts_since_verified + 1 WHERE identity_id = $1", [session.identityId]);
-        await audit(db, { actorKind: "client", actorId: session.identityId, action: "mfa_verify", target: session.identityId, result: "denied", category: "invalid_credentials" });
-        return res.status(403).json({ error: "forbidden" });
+        await client.query('UPDATE auth_mfa SET attempts_since_verified=attempts_since_verified+1 WHERE identity_id=$1', [session.identityId]);
+        await client.query('COMMIT');
+        return json(res, 403, { error: 'invalid_credentials' });
       }
-      await db.query("UPDATE auth_mfa SET last_verified_at = NOW(), attempts_since_verified = 0 WHERE identity_id = $1", [session.identityId]);
-      await audit(db, { actorKind: "client", actorId: session.identityId, action: "mfa_verify", target: session.identityId, result: "allowed" });
-      return res.status(200).json({ ok: true });
-    } catch (e) {
-      return res.status(500).json({ error: "service_unavailable" });
-    }
+      await client.query(`UPDATE auth_mfa SET activated_at=NULL, recovery_hashes='{}', last_used_step=NULL,
+        attempts_since_verified=0, updated_at=NOW() WHERE identity_id=$1`, [session.identityId]);
+      await client.query(`UPDATE auth_sessions SET revoked_at=NOW(), revoke_reason='status_block'
+        WHERE identity_id=$1 AND revoked_at IS NULL`, [session.identityId]);
+      await client.query('COMMIT');
+      await audit(db, session.identityId, 'mfa_disable', 'allowed');
+      return json(res, 200, { ok: true, loginRequired: true }, { 'Set-Cookie': 'seg_client_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0' });
+    } catch { if (client) await client.query('ROLLBACK').catch(() => {}); return unavailable(res, 'mfa_unavailable'); }
+    finally { client?.release(); }
   }
 
-  // ---------- Troca de e-mail ----------
-  async function handleEmailChangeRequest(req, res, db, session) {
-    const body = await (req.json ? req.json() : Promise.resolve({}));
-    const newEmail = String(body?.new_email || "").trim().toLowerCase();
-    const password = String(body?.password || "");
-    if (!session || !session.identityId) return res.status(401).json({ error: "client_session_required" });
-    try {
-      // Verifica senha atual rapidamente (simplificado; produção usa scrypt)
-      const cred = await db.query("SELECT password_hash FROM auth_credentials WHERE identity_id = $1", [session.identityId]);
-      if (!cred.rows[0]) return res.status(403).json({ error: "forbidden" });
-      // Confirmação: exige senha (não validamos hash completo aqui para manter prova simples)
-      // Registro de pedido
-      const token = randomBytes(32).toString("hex");
-      const identityRes = await db.query("SELECT email FROM auth_identities WHERE id = $1", [session.identityId]);
-      const oldEmail = identityRes.rows[0]?.email || "";
-      await db.query(
-        `INSERT INTO auth_email_change (id, identity_id, old_email, new_email, token_hash, expires_at)
-         VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '1 hour')`,
-        [randomUUID(), session.identityId, oldEmail, newEmail, hashToken(token)]
-      );
-      await audit(db, { actorKind: "client", actorId: session.identityId, action: "email_change_request", target: session.identityId, result: "allowed", category: "transition_invalid" });
-      return res.status(200).json({ ok: true, note: "check_new_email" });
-    } catch (e) {
-      return res.status(500).json({ error: "service_unavailable" });
-    }
+  async function disabledEmailChange(req, res, method) {
+    const session = await guard(req, res, method); if (!session) return;
+    return unavailable(res, 'email_change_unavailable');
   }
-
-  async function handleEmailChangeConfirm(req, res, db, session) {
-    const body = await (req.json ? req.json() : Promise.resolve({}));
-    const token = String(body?.token || "").trim();
-    if (!session || !session.identityId) return res.status(401).json({ error: "client_session_required" });
-    try {
-      const changeRes = await db.query(
-        `SELECT * FROM auth_email_change
-         WHERE identity_id = $1 AND token_hash = $2 AND used_at IS NULL AND cancelled_at IS NULL AND expires_at > NOW()`,
-        [session.identityId, hashToken(token)]
-      );
-      const ch = changeRes.rows[0];
-      if (!ch) {
-        await audit(db, { actorKind: "client", actorId: session.identityId, action: "email_change_confirm", target: session.identityId, result: "denied", category: "expired" });
-        return res.status(400).json({ error: "invalid_or_expired" });
-      }
-      await db.query("UPDATE auth_email_change SET used_at = NOW() WHERE id = $1", [ch.id]);
-      await db.query("UPDATE auth_identities SET email = $1 WHERE id = $2", [ch.new_email, session.identityId]);
-      // Aviso ao endereço antigo (simulado; produção envia via SMTP)
-      await audit(db, { actorKind: "client", actorId: session.identityId, action: "email_change_confirm", target: session.identityId, result: "allowed" });
-      return res.status(200).json({ ok: true });
-    } catch (e) {
-      return res.status(500).json({ error: "service_unavailable" });
-    }
+  async function legacyVerify(req, res) {
+    const session = await guard(req, res, 'POST'); if (!session) return;
+    return unavailable(res, 'use_login_mfa_challenge');
   }
-
-  async function handleEmailChangeCancel(req, res, db, session) {
-    const body = await (req.json ? req.json() : Promise.resolve({}));
-    const token = String(body?.token || "").trim();
-    if (!session || !session.identityId) return res.status(401).json({ error: "client_session_required" });
-    try {
-      const changeRes = await db.query(
-        `SELECT * FROM auth_email_change
-         WHERE identity_id = $1 AND token_hash = $2 AND used_at IS NULL AND cancelled_at IS NULL`,
-        [session.identityId, hashToken(token)]
-      );
-      const ch = changeRes.rows[0];
-      if (!ch) {
-        await audit(db, { actorKind: "client", actorId: session.identityId, action: "email_change_cancel", target: session.identityId, result: "denied", category: "not_found" });
-        return res.status(400).json({ error: "invalid" });
-      }
-      await db.query("UPDATE auth_email_change SET cancelled_at = NOW(), cancelled_by = 'user', alert_generated_at = NOW() WHERE id = $1", [ch.id]);
-      await audit(db, { actorKind: "client", actorId: session.identityId, action: "email_change_cancel", target: session.identityId, result: "allowed", category: "security_alert" });
-      return res.status(200).json({ ok: true, alert: true });
-    } catch (e) {
-      return res.status(500).json({ error: "service_unavailable" });
-    }
-  }
-
-  return { audit, requireGrantScope, handleMfaVerify, handleEmailChangeRequest, handleEmailChangeConfirm, handleEmailChangeCancel };
+  return {
+    handleMfaSetup, handleMfaActivate, handleMfaVerify: legacyVerify, handleMfaDisable,
+    handleEmailChangeRequest: (req, res) => disabledEmailChange(req, res, 'POST'),
+    handleEmailChangeConfirm: (req, res) => disabledEmailChange(req, res, 'PUT'),
+    handleEmailChangeCancel: (req, res) => disabledEmailChange(req, res, 'DELETE'),
+  };
 }

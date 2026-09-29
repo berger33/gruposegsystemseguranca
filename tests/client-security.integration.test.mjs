@@ -12,7 +12,7 @@ const projectRoot = process.cwd();
 async function applyMigrations(pool) {
   for (const f of [
     "001-site-visual.sql","002-public-leads.sql","003-client-access.sql",
-    "004-client-space.sql","005-client-security.sql","006-admin-identities.sql"
+    "004-client-space.sql","005-client-security.sql","006-admin-identities.sql","097-client-mfa-session.sql", "098-client-manual-verification.sql"
   ]) {
     const sql = await readFile(path.join(projectRoot, "db/migrations", f), "utf8");
     await pool.query(sql);

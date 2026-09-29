@@ -101,7 +101,7 @@ function InviteAcceptInner() {
           Sua conta foi criada para <strong>{done.email}</strong>.{" "}
           {done.emailStatus === "sent"
             ? "Enviamos um link de confirmação para o seu e-mail (válido por 7 dias). Confirme o endereço para concluir a ativação."
-            : "O aviso por e-mail não foi enviado automaticamente neste ambiente; fale com a equipe para confirmar seu endereço."}
+            : "Não foi enviado e-mail neste ambiente. A equipe precisa conferir sua identidade manualmente antes de liberar o acesso; isso não confirma a posse do e-mail."}
         </p>
         <div className={styles.actions}>
           <Link href="/cliente/entrar" className={styles.submit} style={{ textDecoration: "none" }}>

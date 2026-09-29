@@ -18,6 +18,7 @@
 
 import { randomUUID } from "node:crypto";
 import nodemailer from "nodemailer";
+import { decryptMfaSecret, mfaKey, verifyMfaCode, hashRecoveryCode } from "../lib/client-mfa.mjs";
 import {
   CONFIRM_EMAIL_TTL_MS,
   INVITE_TTL_MS,
@@ -170,10 +171,12 @@ export function createClientAccessApi(ctx) {
     let result;
     try {
       result = await db.query(
-        `SELECT s.id AS session_id, s.expires_at, s.revoked_at,
-                i.id AS identity_id, i.email, i.display_name, i.status
+        `SELECT s.id AS session_id, s.expires_at, s.revoked_at, s.mfa_verified_at,
+                i.id AS identity_id, i.email, i.display_name, i.status, i.verification_method,
+                m.activated_at AS mfa_activated_at, m.totp_secret_encrypted AS mfa_secret
          FROM auth_sessions s
          JOIN auth_identities i ON i.id = s.identity_id
+         LEFT JOIN auth_mfa m ON m.identity_id = i.id
          WHERE s.token_hash = $1`,
         [hashToken(raw)],
       );
@@ -185,6 +188,12 @@ export function createClientAccessApi(ctx) {
     }
     const row = result.rows[0];
     if (!row || row.revoked_at) return null;
+    // MFA proof belongs to THIS session and must postdate the most recent
+    // activation. Legacy password-only cookies never gain access retroactively.
+    if (row.mfa_activated_at) {
+      try { decryptMfaSecret(row.mfa_secret, row.identity_id); } catch { return null; }
+      if (!row.mfa_verified_at || new Date(row.mfa_verified_at) < new Date(row.mfa_activated_at)) return null;
+    }
     if (new Date(row.expires_at).getTime() <= Date.now()) return null;
     if (row.status === "suspended" || row.status === "disabled") {
       await db
@@ -199,6 +208,10 @@ export function createClientAccessApi(ctx) {
       });
       return null;
     }
+    // A password-only session created while awaiting review is never promoted
+    // by a later approval. Legacy active identities with unknown provenance
+    // must be reviewed instead of being implicitly treated as verified.
+    if (row.status !== 'active' || !['email_link', 'manual'].includes(row.verification_method)) return null;
     db.query("UPDATE auth_sessions SET last_seen_at = NOW() WHERE id = $1", [row.session_id]).catch(() => {});
     return {
       sessionId: row.session_id,
@@ -206,6 +219,8 @@ export function createClientAccessApi(ctx) {
       email: row.email,
       displayName: row.display_name,
       status: row.status,
+      verificationMethod: row.verification_method,
+      mfaEnabled: Boolean(row.mfa_activated_at),
       expiresAt: new Date(row.expires_at).getTime(),
     };
   }
@@ -248,9 +263,11 @@ export function createClientAccessApi(ctx) {
     let record;
     try {
       const found = await db.query(
-        `SELECT i.id, i.status, i.display_name, c.password_hash
+        `SELECT i.id, i.status, i.verification_method, i.display_name, c.password_hash,
+                (m.activated_at IS NOT NULL) AS mfa_active, m.totp_secret_encrypted AS mfa_secret
          FROM auth_identities i
          LEFT JOIN auth_credentials c ON c.identity_id = i.id
+         LEFT JOIN auth_mfa m ON m.identity_id = i.id
          WHERE i.kind = 'client' AND i.email = $1`,
         [email.value],
       );
@@ -266,9 +283,26 @@ export function createClientAccessApi(ctx) {
       await registerLoginFailure(db, email.value, originHash, record?.id || null);
       return ctx.json(res, 401, { error: "invalid_credentials" });
     }
-    if (record.status === "suspended" || record.status === "disabled") {
+    if (record.status !== "active" || !['email_link', 'manual'].includes(record.verification_method)) {
       await audit(db, { actorKind: "client", actorId: record.id, action: "login", target: record.id, result: "denied", category: "authorization_denied" });
-      return ctx.json(res, 401, { error: "invalid_credentials" });
+      return ctx.json(res, record.status === 'pending_email' || record.status === 'active' ? 403 : 401,
+        { error: record.status === 'pending_email' || record.status === 'active' ? 'verification_required' : 'invalid_credentials' });
+    }
+    // A valid password is not sufficient once MFA is active. A short-lived,
+    // one-use challenge is NOT an authenticated session/cookie.
+    if (record.mfa_active) {
+      try {
+        decryptMfaSecret(record.mfa_secret, record.id);
+        const challenge = generateToken();
+        await db.query("UPDATE auth_mfa_challenges SET used_at = NOW() WHERE identity_id = $1 AND used_at IS NULL", [record.id]);
+        await db.query(`INSERT INTO auth_mfa_challenges (id, identity_id, token_hash, expires_at)
+          VALUES ($1,$2,$3,NOW() + INTERVAL '5 minutes')`, [randomUUID(), record.id, hashToken(challenge)]);
+        await audit(db, { actorKind: 'client', actorId: record.id, action: 'mfa_challenge_issue', target: record.id, result: 'allowed' });
+        return ctx.json(res, 202, { mfaRequired: true, challenge });
+      } catch {
+        // Bad/missing key and legacy plaintext secrets must NEVER downgrade MFA.
+        return ctx.json(res, 503, { error: 'mfa_login_unavailable' });
+      }
     }
 
     try {
@@ -289,9 +323,81 @@ export function createClientAccessApi(ctx) {
       return databaseFailure(ctx, res, error, "Could not create the client session.");
     }
     await audit(db, { actorKind: "client", actorId: record.id, action: "login", target: record.id, result: "allowed" });
-    return ctx.json(res, 200, { ok: true, status: record.status, emailConfirmed: record.status === "active" }, {
+    return ctx.json(res, 200, { ok: true, status: record.status,
+      verificationMethod: record.verification_method, emailConfirmed: record.verification_method === 'email_link' }, {
       "Set-Cookie": clientCookie(req, token, Math.floor(SESSION_TTL_MS / 1000)),
     });
+  }
+
+  async function handleMfaComplete(req, res) {
+    if (!requireMethod(req, res, ['POST'])) return;
+    if (!requireSameOrigin(req, res)) return;
+    const body = await readJsonOr400(req, res);
+    if (body === undefined) return;
+    const challenge = typeof body?.challenge === 'string' ? body.challenge : '';
+    const code = typeof body?.code === 'string' ? body.code.trim().toLowerCase() : '';
+    if (!challenge || challenge.length > 200 || !(/^\d{6}$/.test(code) || hashRecoveryCode(code))) {
+      return ctx.json(res, 400, { error: 'invalid_request' });
+    }
+    let db, client;
+    try {
+      mfaKey();
+      db = ctx.getPool();
+      client = await db.connect();
+      await client.query('BEGIN');
+      const { rows: [entry] } = await client.query(`SELECT c.id AS challenge_id, c.identity_id, c.expires_at,
+          c.used_at, c.attempts, i.status, i.verification_method, i.email, m.totp_secret_encrypted,
+          m.recovery_hashes, m.activated_at, m.last_used_step
+        FROM auth_mfa_challenges c
+        JOIN auth_identities i ON i.id = c.identity_id
+        JOIN auth_mfa m ON m.identity_id = i.id
+        WHERE c.token_hash = $1 AND i.kind = 'client' FOR UPDATE OF c, m`, [hashToken(challenge)]);
+      if (!entry || entry.used_at || entry.attempts >= 5 || new Date(entry.expires_at) <= new Date() ||
+          !entry.activated_at || entry.status !== 'active' || !['email_link', 'manual'].includes(entry.verification_method)) {
+        await client.query('ROLLBACK');
+        return ctx.json(res, 401, { error: 'mfa_challenge_invalid' });
+      }
+      const originHash = hashOrigin(ctx.clientIp(req));
+      const throttle = await client.query('SELECT locked_until FROM auth_login_throttle WHERE email=$1 AND origin_hash=$2', [entry.email, originHash]);
+      if (throttle.rows[0]?.locked_until && new Date(throttle.rows[0].locked_until) > new Date()) {
+        await client.query('ROLLBACK');
+        return ctx.json(res, 429, { error: 'temporarily_limited' });
+      }
+      const recoveryHash = hashRecoveryCode(code);
+      let valid = false;
+      if (recoveryHash && entry.recovery_hashes.includes(recoveryHash)) {
+        await client.query('UPDATE auth_mfa SET recovery_hashes = array_remove(recovery_hashes, $2), last_verified_at=NOW(), attempts_since_verified=0 WHERE identity_id=$1', [entry.identity_id, recoveryHash]);
+        valid = true;
+      } else if (!recoveryHash) {
+        const result = await verifyMfaCode(entry.totp_secret_encrypted, entry.identity_id, code, entry.last_used_step);
+        if (result.valid) {
+          const updated = await client.query(`UPDATE auth_mfa SET last_used_step=$2, last_verified_at=NOW(), attempts_since_verified=0
+            WHERE identity_id=$1 AND (last_used_step IS NULL OR last_used_step < $2) RETURNING identity_id`, [entry.identity_id, result.timeStep]);
+          valid = updated.rowCount === 1;
+        }
+      }
+      if (!valid) {
+        await client.query('UPDATE auth_mfa_challenges SET attempts=attempts+1 WHERE id=$1', [entry.challenge_id]);
+        await client.query('COMMIT');
+        await registerLoginFailure(db, entry.email, originHash, entry.identity_id);
+        return ctx.json(res, 401, { error: 'mfa_code_invalid' });
+      }
+      const token = generateToken();
+      const expiresAt = Date.now() + SESSION_TTL_MS;
+      await client.query('UPDATE auth_mfa_challenges SET used_at=NOW() WHERE id=$1', [entry.challenge_id]);
+      await client.query(`INSERT INTO auth_sessions (id, identity_id, token_hash, expires_at, ip_hash, user_agent, mfa_verified_at)
+        VALUES ($1,$2,$3,$4,$5,$6,NOW())`, [randomUUID(), entry.identity_id, hashToken(token), new Date(expiresAt), originHash,
+        String(req.headers['user-agent'] || '').slice(0, 200)]);
+      await client.query('DELETE FROM auth_login_throttle WHERE email=$1 AND origin_hash=$2', [entry.email, originHash]);
+      await client.query('COMMIT');
+      await audit(db, { actorKind: 'client', actorId: entry.identity_id, action: 'mfa_challenge_verify', target: entry.identity_id, result: 'allowed' });
+      return ctx.json(res, 200, { ok: true, status: entry.status,
+        verificationMethod: entry.verification_method, emailConfirmed: entry.verification_method === 'email_link' },
+        { 'Set-Cookie': clientCookie(req, token, Math.floor(SESSION_TTL_MS / 1000)) });
+    } catch (error) {
+      if (client) await client.query('ROLLBACK').catch(() => {});
+      return databaseFailure(ctx, res, error, 'Could not complete the MFA challenge.');
+    } finally { client?.release(); }
   }
 
   async function registerLoginFailure(db, email, originHash, identityId) {
@@ -354,7 +460,9 @@ export function createClientAccessApi(ctx) {
       email: session.email,
       displayName: session.displayName,
       status: session.status,
-      emailConfirmed: session.status === "active",
+      verificationMethod: session.verificationMethod,
+      emailConfirmed: session.verificationMethod === 'email_link',
+      mfaEnabled: session.mfaEnabled,
       expiresAt: session.expiresAt,
     });
   }
@@ -497,10 +605,14 @@ export function createClientAccessApi(ctx) {
         "UPDATE auth_email_tokens SET superseded_at = NOW() WHERE identity_id = $1 AND kind = 'confirm_email' AND used_at IS NULL AND superseded_at IS NULL",
         [row.identity_id],
       );
-      await client.query(
-        "UPDATE auth_identities SET status = 'active', updated_at = NOW() WHERE id = $1 AND status = 'pending_email'",
+      const activated = await client.query(
+        "UPDATE auth_identities SET status = 'active', verification_method='email_link', verified_at=NOW(), updated_at = NOW() WHERE id = $1 AND status = 'pending_email'",
         [row.identity_id],
       );
+      if (activated.rowCount !== 1) {
+        await client.query('ROLLBACK');
+        return ctx.json(res, 400, { error: 'confirmation_link_invalid' });
+      }
       await client.query("COMMIT");
       await audit(db, { actorKind: "client", actorId: row.identity_id, action: "email_confirm", target: row.identity_id, result: "allowed" });
       return ctx.json(res, 200, { ok: true });
@@ -671,6 +783,115 @@ export function createClientAccessApi(ctx) {
     return session;
   }
 
+  // Only an individually authenticated, currently active TI staff member may
+  // approve an identity check. A legacy shared TI/Marcelo token has no actor ID.
+  async function manualVerifier(req, res) {
+    const session = ctx.readAdminSession(req);
+    if (!session) { ctx.json(res, 401, { error: 'admin_session_required' }); return null; }
+    if (session.role !== 'ti' || !session.identityId) {
+      ctx.json(res, 403, { error: 'individual_ti_required' }); return null;
+    }
+    try {
+      const db = ctx.getPool();
+      const found = await db.query(`SELECT i.id, i.email, c.password_hash
+        FROM auth_identities i JOIN auth_staff_profiles p ON p.identity_id=i.id
+        JOIN auth_credentials c ON c.identity_id=i.id
+        WHERE i.id=$1 AND i.kind='staff' AND i.status='active' AND p.role='ti'`, [session.identityId]);
+      if (!found.rows[0]) { ctx.json(res, 403, { error: 'individual_ti_required' }); return null; }
+      return { db, staff: found.rows[0] };
+    } catch (error) {
+      databaseFailure(ctx, res, error, 'Could not validate the manual verifier.'); return null;
+    }
+  }
+
+  async function handleManualVerificationList(req, res) {
+    if (!requireMethod(req, res, ['GET'])) return;
+    const verifier = await manualVerifier(req, res); if (!verifier) return;
+    try {
+      const { rows } = await verifier.db.query(`SELECT i.id, i.email, i.display_name, i.status, i.created_at
+        FROM auth_identities i WHERE i.kind='client' AND
+        (i.status='pending_email' OR (i.status='active' AND i.verification_method IS NULL))
+        AND EXISTS (SELECT 1 FROM auth_invites v WHERE v.used_by_identity=i.id AND v.used_at IS NOT NULL)
+        ORDER BY i.created_at DESC LIMIT 100`);
+      return ctx.json(res, 200, { pending: rows });
+    } catch (error) { return databaseFailure(ctx, res, error, 'Could not list pending clients.'); }
+  }
+
+  async function handleManualVerificationApprove(req, res, identityId) {
+    if (!requireMethod(req, res, ['POST'])) return;
+    if (!requireSameOrigin(req, res)) return;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identityId)) {
+      return ctx.json(res, 400, { error: 'invalid_identity' });
+    }
+    const verifier = await manualVerifier(req, res); if (!verifier) return;
+    // Manual check is a temporary exception while SMTP is deliberately off;
+    // never silently substitute it for a configured e-mail confirmation path.
+    if (process.env.MAIL_HOST) return ctx.json(res, 409, { error: 'manual_verification_disabled_with_smtp' });
+    const body = await readJsonOr400(req, res); if (body === undefined) return;
+    const expectedEmail = normalizeEmail(body?.expectedEmail);
+    const method = body?.method;
+    const reason = typeof body?.reason === 'string' ? body.reason.trim() : '';
+    if (expectedEmail.error || !['in_person', 'known_contact_callback'].includes(method) ||
+        reason.length < 30 || reason.length > 500 || typeof body?.password !== 'string') {
+      return ctx.json(res, 400, { error: 'manual_review_fields_required' });
+    }
+    // Re-auth is rate-limited in PostgreSQL by individual staff identity and
+    // origin; the signed role cookie alone must not authorize this mutation.
+    const originHash = hashOrigin(ctx.clientIp(req));
+    try {
+      const throttle = await verifier.db.query('SELECT failures, locked_until, last_failure_at FROM auth_login_throttle WHERE email=$1 AND origin_hash=$2',
+        [verifier.staff.email, originHash]);
+      const current = throttle.rows[0];
+      if (current?.locked_until && new Date(current.locked_until).getTime() > Date.now()) {
+        return ctx.json(res, 429, { error: 'temporarily_limited' });
+      }
+      if (!await verifyPassword(body.password, verifier.staff.password_hash)) {
+        const failures = current && !throttleShouldReset(new Date(current.last_failure_at).getTime(), Date.now()) ? current.failures + 1 : 1;
+        const delay = loginThrottleDelaySeconds(failures);
+        await verifier.db.query(`INSERT INTO auth_login_throttle (email, origin_hash, failures, locked_until, last_failure_at)
+          VALUES ($1,$2,$3,$4,NOW()) ON CONFLICT (email,origin_hash) DO UPDATE SET
+          failures=$3, locked_until=$4, last_failure_at=NOW(), updated_at=NOW()`,
+          [verifier.staff.email, originHash, failures, delay ? new Date(Date.now() + delay * 1000) : null]);
+        await audit(verifier.db, { actorKind: 'staff', actorId: verifier.staff.id, action: 'account_status',
+          target: identityId, result: 'denied', category: 'invalid_credentials' });
+        return ctx.json(res, 403, { error: 'invalid_credentials' });
+      }
+    } catch (error) { return databaseFailure(ctx, res, error, 'Could not re-authenticate manual verifier.'); }
+    let client;
+    try {
+      client = await verifier.db.connect(); await client.query('BEGIN');
+      const { rows: [target] } = await client.query(`SELECT id, email, status, verification_method
+        FROM auth_identities WHERE id=$1 AND kind='client' FOR UPDATE`, [identityId]);
+      if (!target || target.email !== expectedEmail.value ||
+          !(target.status === 'pending_email' || (target.status === 'active' && !target.verification_method))) {
+        await client.query('ROLLBACK'); return ctx.json(res, 409, { error: 'verification_not_pending' });
+      }
+      // An accepted invitation is required; staff may not manufacture a client
+      // identity and simply assert that it was verified out of band.
+      const invite = await client.query('SELECT id FROM auth_invites WHERE used_by_identity=$1 AND used_at IS NOT NULL', [identityId]);
+      if (!invite.rowCount) {
+        await client.query('ROLLBACK'); return ctx.json(res, 409, { error: 'accepted_invite_required' });
+      }
+      await client.query(`INSERT INTO client_manual_verifications
+        (id, identity_id, staff_identity_id, method, reason) VALUES ($1,$2,$3,$4,$5)`,
+        [randomUUID(), identityId, verifier.staff.id, method, reason]);
+      await client.query(`UPDATE auth_identities SET status='active', verification_method='manual',
+        verified_at=NOW(), updated_at=NOW() WHERE id=$1`, [identityId]);
+      await client.query(`UPDATE auth_email_tokens SET superseded_at=NOW()
+        WHERE identity_id=$1 AND kind='confirm_email' AND used_at IS NULL AND superseded_at IS NULL`, [identityId]);
+      await client.query(`UPDATE auth_sessions SET revoked_at=NOW(), revoke_reason='status_block'
+        WHERE identity_id=$1 AND revoked_at IS NULL`, [identityId]);
+      await client.query(`INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category)
+        VALUES ('staff',$1,'account_status',$2,'allowed','none')`, [verifier.staff.id, identityId]);
+      await client.query('DELETE FROM auth_login_throttle WHERE email=$1 AND origin_hash=$2', [verifier.staff.email, originHash]);
+      await client.query('COMMIT');
+      return ctx.json(res, 200, { ok: true, verificationMethod: 'manual', emailConfirmed: false });
+    } catch (error) {
+      if (client) await client.query('ROLLBACK').catch(() => {});
+      return databaseFailure(ctx, res, error, 'Could not approve the manual client check.');
+    } finally { client?.release(); }
+  }
+
   async function handleInviteCreate(req, res) {
     if (!requireMethod(req, res, ["POST"])) return;
     if (!requireSameOrigin(req, res)) return;
@@ -680,6 +901,11 @@ export function createClientAccessApi(ctx) {
     if (body === undefined) return;
     const email = normalizeEmail(body?.email);
     if (email.error) return ctx.json(res, 400, { error: "invalid_email" });
+    // The opt-in offline demonstration never invites a real mailbox. This is
+    // not a global validation rule for other deployments with SMTP configured.
+    if (process.env.SEG_LOCAL_DEMO_ONLY === 'true' && !email.value.endsWith('@example.invalid')) {
+      return ctx.json(res, 400, { error: 'demo_synthetic_address_required' });
+    }
     const displayName = sanitizeDisplayName(body?.displayName);
     if (displayName.error) return ctx.json(res, 400, { error: displayName.error });
     const scopeNote = typeof body?.scopeNote === "string" && body.scopeNote.trim() ? body.scopeNote.trim() : null;
@@ -815,6 +1041,8 @@ export function createClientAccessApi(ctx) {
         return handleLogin(req, res);
       case "/api/auth/logout":
         return handleLogout(req, res);
+      case "/api/auth/mfa/complete":
+        return handleMfaComplete(req, res);
       case "/api/auth/me":
         return handleMe(req, res);
       case "/api/auth/invite/inspect":
@@ -844,6 +1072,8 @@ export function createClientAccessApi(ctx) {
     handleAuth,
     handleAdminInvites,
     handleInviteRevoke,
+    handleManualVerificationList,
+    handleManualVerificationApprove,
     readClientSession,
   };
 }

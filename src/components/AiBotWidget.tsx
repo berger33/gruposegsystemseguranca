@@ -47,7 +47,7 @@ export default function AiBotWidget({ defaultRagKey = "publico" as "cliente"|"rh
       if(data.config) setConfig(data.config);
     }catch{}
   }
-  useEffect(()=>{ loadConfig(); },[]);
+  useEffect(()=>{ if (defaultRagKey === "publico") loadConfig(); },[defaultRagKey]);
 
   async function ask(e: React.FormEvent, customQuery?: string){
     e.preventDefault();
@@ -57,7 +57,7 @@ export default function AiBotWidget({ defaultRagKey = "publico" as "cliente"|"rh
     setError("");
     setAnswer(null);
     try{
-      const ragKey = (config?.default_rag_key as any) || defaultRagKey;
+      const ragKey = defaultRagKey === "publico" ? "publico" : defaultRagKey; // configuração não amplia o escopo público
       const res = await fetch("/api/ai/bot", {
         method:"POST",
         headers:{ "Content-Type":"application/json" },
@@ -126,6 +126,15 @@ export default function AiBotWidget({ defaultRagKey = "publico" as "cliente"|"rh
   const modelName = config?.model_name || "qwen3:1.7b";
   const colors = MODE_COLORS[activeMode] || MODE_COLORS.com_ia;
 
+  if (defaultRagKey !== "publico") {
+    return (
+      <section style={{ border:`2px solid ${colors.border}`, borderRadius:14, padding:20, background:colors.bg, marginTop:20 }}>
+        <h3>Bot {defaultRagKey} — indisponível nesta versão</h3>
+        <p>Atendimento privado desativado até autorização e isolamento de dados serem comprovados. Não envie dados pessoais ao bot público.</p>
+      </section>
+    );
+  }
+
   return (
     <section style={{ border:`2px solid ${colors.border}`, borderRadius:14, padding:20, background: colors.bg, marginTop:20, boxShadow:"0 4px 12px rgba(0,0,0,0.08)" }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10 }}>
@@ -136,7 +145,7 @@ export default function AiBotWidget({ defaultRagKey = "publico" as "cliente"|"rh
               Assistente SEG System — {activeMode==="sem_ia"?"Bot sem IA":activeMode==="com_ia"?`Bot com IA ${modelName} (beta)`:"WhatsApp"}
             </h3>
             <p style={{ margin:"2px 0 0", fontSize:11, opacity:0.7 }}>
-              RAG padrão {config?.default_rag_key||defaultRagKey} • fila Ollama Qwen3 1.7B garante atendimento • {isBeta?"beta padrão":"produção"}
+              Assistente público • Ollama não verificado nesta sessão; fallback beta • {isBeta?"beta":"configuração não homologada"}
             </p>
           </div>
         </div>
@@ -150,9 +159,9 @@ export default function AiBotWidget({ defaultRagKey = "publico" as "cliente"|"rh
 
       <p style={{ fontSize:13, opacity:0.85, margin:"14px 0 0", lineHeight:1.5 }}>
         {activeMode==="sem_ia" && "Bot baseado em regras aprovadas (pub_faq_assisted_rules), sem LLM, sem invenção preço/cobertura/licença/prazo, transferência humana quando sensível ou fora base."}
-        {activeMode==="com_ia" && `Bot com IA RAG separado por perfil cliente/RH/Marcelo, modelo Ollama ${modelName} Qwen3 1.7B, max_queue ${config?.max_queue_size||100}, fila para garantir atendimento todo mundo em fila, base aprovada apenas área pertinente. Quando Ollama indisponível, fallback simulado com base aprovada.`}
+        {activeMode==="com_ia" && `Assistente de informações públicas em beta. Modelo configurado ${modelName}, sujeito a disponibilidade; se indisponível, resposta de fallback a partir da base pública publicada. Os assistentes privados aguardam autorização e homologação.`}
         {activeMode==="whatsapp" && `Redirecionamento para WhatsApp ${config?.whatsapp_number||"551134372217"} com mensagem template preservando protocolo {protocol} {query}. Sem bot, direto humano.`}
-        {" "}Padrão entrega beta/versão testes completa: chatbot com IA. Modo desenvolvedor permite alterar dinâmica sem_ia/com_ia/whatsapp.
+        {" "}Funcionalidade beta, sem garantia de resposta por IA real ou atendimento humano automático.
       </p>
 
       {showDevConfig && config && (

@@ -89,6 +89,12 @@ export function createClientSpaceApi(ctx) {
       ctx.json(res, 401, { error: "admin_session_required" });
       return null;
     }
+    // The legacy account/grant schema only accepts these two roles as actors.
+    // In particular, a valid RH cookie must never expose client accounts.
+    if (!['marcelo', 'ti'].includes(session.role)) {
+      ctx.json(res, 403, { error: "forbidden" });
+      return null;
+    }
     return session;
   }
 
@@ -130,28 +136,33 @@ export function createClientSpaceApi(ctx) {
       ctx.json(res, 403, { error: "forbidden" });
       return null;
     }
-    // Vínculo restrito por unidade: se o grant aponta para uma unit_account_id,
-    // a conta consultada deve ser essa unidade ou ter ela como parent.
-    const grantRow = result.rows[0]; // we need grant info; currently only id selected
-    // Re-fetch grant for unit check (simples, idempotente)
+    // Vínculo restrito por unidade: qualquer erro na releitura do grant ou na
+    // consulta da unidade deve impedir o acesso, não tratá-lo como irrestrito.
+    let unitGrant;
+    let unitAllowed = true;
     try {
-      const gRes = await db.query(
-        `SELECT g.unit_account_id FROM client_access_grants g WHERE g.id = $1`,
-        [grantRow.id]
+      const grant = await db.query(
+        `SELECT g.unit_account_id FROM client_access_grants g
+         WHERE g.id = $1 AND g.identity_id = $2 AND g.client_account_id = $3 AND g.revoked_at IS NULL`,
+        [result.rows[0].id, session.identityId, accountId],
       );
-      const gUnit = gRes.rows[0];
-      if (gUnit && gUnit.unit_account_id) {
+      unitGrant = grant.rows[0];
+      if (unitGrant?.unit_account_id) {
         const unitCheck = await db.query(
           `SELECT id FROM client_accounts WHERE id = $1 AND (id = $2 OR parent_account_id = $2)`,
-          [accountId, gUnit.unit_account_id]
+          [accountId, unitGrant.unit_account_id],
         );
-        if (!unitCheck.rows[0]) {
-          await audit(db, { actorKind: "client", actorId: session.identityId, action, target: accountId, result: "denied", category: "authorization_denied" });
-          ctx.json(res, 403, { error: "forbidden" });
-          return null;
-        }
+        unitAllowed = Boolean(unitCheck.rows[0]);
       }
-    } catch (e) { /* falha na verificação de unidade, mantém negado por padrão se houver erro */ }
+    } catch (error) {
+      databaseFailure(res, error, "Could not verify the client unit scope.");
+      return null;
+    }
+    if (!unitGrant || !unitAllowed) {
+      await audit(db, { actorKind: "client", actorId: session.identityId, action, target: accountId, result: "denied", category: "authorization_denied" });
+      ctx.json(res, 403, { error: "forbidden" });
+      return null;
+    }
     return result.rows[0].id;
   }
 
@@ -198,12 +209,20 @@ export function createClientSpaceApi(ctx) {
         [session.identityId, accountId]
       );
       const g = grantRes.rows[0];
-      if (g && g.contract_scope_mode === "selected") {
+      // Sem linha = grant revogado entre verificações; modo inválido = dado
+      // inconsistente. Nenhuma das situações pode virar consulta sem filtro.
+      if (!g || !["all", "selected"].includes(g.contract_scope_mode)) {
+        await audit(db, { actorKind: "client", actorId: session.identityId, action: "contract_list", target: accountId, result: "denied", category: "authorization_denied" });
+        return ctx.json(res, 403, { error: "forbidden" });
+      }
+      if (g.contract_scope_mode === "selected") {
         const allowed = Array.isArray(g.allowed_contract_ids) ? g.allowed_contract_ids : [];
         if (allowed.length === 0) return ctx.json(res, 200, { contracts: [] }); // deny all when empty allowlist
         contractFilter = allowed;
       }
-    } catch (e) { /* falha silenciosa no filtro, mantém acesso por conta */ }
+    } catch (error) {
+      return databaseFailure(res, error, "Could not verify the client contract scope.");
+    }
     try {
       let result;
       if (contractFilter) {

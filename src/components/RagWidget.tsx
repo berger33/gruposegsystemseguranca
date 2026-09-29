@@ -107,6 +107,15 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
     finally{ setFeedbackLoading(false); }
   }
 
+  if (ragKey !== "publico") {
+    return (
+      <section style={{ border:`2px solid ${colors.border}`, borderRadius:12, padding:20, background:colors.bg, marginTop:20 }}>
+        <h3>{title} — indisponível nesta versão</h3>
+        <p>Consultas privadas aguardam validação de sessão, papel e, no portal do cliente, vínculo à conta. Não envie dados pessoais ao assistente público.</p>
+      </section>
+    );
+  }
+
   return (
     <section style={{ border:`2px solid ${colors.border}`, borderRadius:12, padding:20, background: colors.bg, marginTop:20, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, flexWrap:"wrap" }}>

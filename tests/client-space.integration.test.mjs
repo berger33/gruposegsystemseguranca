@@ -66,7 +66,7 @@ async function freePort() {
 async function applyMigrations() {
   const pool = new Pool({ connectionString: databaseUrl, max: 1 });
   try {
-    for (const filename of ["001-site-visual.sql", "002-public-leads.sql", "003-client-access.sql", "004-client-space.sql", "005-client-security.sql", "006-admin-identities.sql", "007-opcao-b-funcionarios.sql"]) {
+    for (const filename of ["001-site-visual.sql", "002-public-leads.sql", "003-client-access.sql", "004-client-space.sql", "005-client-security.sql", "006-admin-identities.sql", "007-opcao-b-funcionarios.sql", "097-client-mfa-session.sql", "098-client-manual-verification.sql"]) {
       const sql = await readFile(path.join(projectRoot, "db/migrations", filename), "utf8");
       await pool.query(sql);
     }
@@ -188,11 +188,11 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     identityA = randomUUID();
     identityB = randomUUID();
     await pool.query(
-      "INSERT INTO auth_identities (id, kind, email, display_name, status) VALUES ($1,'client',$2,$3,'active')",
+      "INSERT INTO auth_identities (id, kind, email, display_name, status, verification_method, verified_at) VALUES ($1,'client',$2,$3,'active','email_link',NOW())",
       [identityA, clientAEmail, "Cliente A Integração"],
     );
     await pool.query(
-      "INSERT INTO auth_identities (id, kind, email, display_name, status) VALUES ($1,'client',$2,$3,'active')",
+      "INSERT INTO auth_identities (id, kind, email, display_name, status, verification_method, verified_at) VALUES ($1,'client',$2,$3,'active','email_link',NOW())",
       [identityB, clientBEmail, "Cliente B Integração"],
     );
     cleanupIds.push(identityA, identityB);
@@ -403,6 +403,38 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     assert.equal(listA.body.contracts[0].title, "Supervisão e ronda — sede");
     assert.equal(listA.body.contracts[0].status, "active");
 
+    // Duas contas A/B reais no PostgreSQL QA: sessão A não pode listar B e vice-versa.
+    const secondA = await api("/api/admin/contracts", {
+      method: "POST",
+      body: { accountId: accountA1, title: "Outro contrato sintético A", service: "Supervisão e Ronda" },
+      cookie: adminCookie,
+    });
+    assert.equal(secondA.status, 201);
+    cleanupIds.push(secondA.body.contractId);
+    const ownB = await api("/api/admin/contracts", {
+      method: "POST",
+      body: { accountId: accountA2, title: "Contrato sintético B", service: "Supervisão e Ronda" },
+      cookie: adminCookie,
+    });
+    assert.equal(ownB.status, 201);
+    cleanupIds.push(ownB.body.contractId);
+    const listB = await api(`/api/client/contracts?account=${accountA2}`, { cookie: cookieB });
+    assert.equal(listB.status, 200);
+    assert.deepEqual(listB.body.contracts.map(item => item.id), [ownB.body.contractId]);
+    const crossAtoB = await api(`/api/client/contracts?account=${accountA2}`, { cookie: cookieA });
+    assert.equal(crossAtoB.status, 403);
+    assert.deepEqual(crossAtoB.body, { error: "forbidden" });
+
+    // Mesmo dentro da conta A, allowlist selecionada não pode incluir C2.
+    await pool.query(`UPDATE client_access_grants SET contract_scope_mode='selected', allowed_contract_ids=$2 WHERE id=$1`, [grantA1, [contractId]]);
+    const selected = await api(`/api/client/contracts?account=${accountA1}`, { cookie: cookieA });
+    assert.equal(selected.status, 200);
+    assert.deepEqual(selected.body.contracts.map(item => item.id), [contractId]);
+    await pool.query(`UPDATE client_access_grants SET allowed_contract_ids='{}' WHERE id=$1`, [grantA1]);
+    const empty = await api(`/api/client/contracts?account=${accountA1}`, { cookie: cookieA });
+    assert.deepEqual(empty.body, { contracts: [] });
+    await pool.query(`UPDATE client_access_grants SET contract_scope_mode='all' WHERE id=$1`, [grantA1]);
+
     // Negação por padrão: B pediu um cadastro que não é dele. Resposta genérica e auditada.
     const cross = await api(`/api/client/contracts?account=${accountA1}`, { cookie: cookieB });
     assert.equal(cross.status, 403);
@@ -419,6 +451,13 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     assert.equal(suspendedAccount.status, 403);
     assert.deepEqual(suspendedAccount.body, { error: "forbidden" });
 
+    // Restrição de unidade incompatível com A1: não presumir acesso irrestrito.
+    await pool.query('UPDATE client_access_grants SET unit_account_id=$2 WHERE id=$1', [grantA1, accountA2]);
+    const unitDenied = await api(`/api/client/contracts?account=${accountA1}`, { cookie: cookieA });
+    assert.equal(unitDenied.status, 403);
+    assert.deepEqual(unitDenied.body, { error: "forbidden" });
+    await pool.query('UPDATE client_access_grants SET unit_account_id=NULL WHERE id=$1', [grantA1]);
+
     const ended = await api(`/api/admin/contracts/${contractId}`, {
       method: "PATCH",
       body: { status: "ended" },
@@ -426,7 +465,7 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     });
     assert.equal(ended.status, 200);
     const relisted = await api(`/api/client/contracts?account=${accountA1}`, { cookie: cookieA });
-    assert.equal(relisted.body.contracts[0].status, "ended");
+    assert.equal(relisted.body.contracts.find(item => item.id === contractId)?.status, "ended");
   });
 
   let documentId = null;
@@ -467,6 +506,31 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     assert.equal(listA.status, 200);
     assert.equal(listA.body.documents.length, 1);
     assert.equal(listA.body.documents[0].original_filename, "relatorio-integracao.txt");
+
+    const listBFromA = await api(`/api/client/documents?account=${accountA2}`, { cookie: cookieA });
+    assert.equal(listBFromA.status, 403);
+    assert.deepEqual(listBFromA.body, { error: "forbidden" });
+    const payloadB = Buffer.from('DOCUMENTO-SINTETICO-B-NAO-EXIBIR-PARA-A');
+    const createdB = await api('/api/admin/documents', {
+      method: 'POST',
+      body: { accountId: accountA2, title: 'Documento da conta B', category: 'Teste', filename: 'qa-b.txt', contentBase64: payloadB.toString('base64') },
+      cookie: adminCookie,
+    });
+    assert.equal(createdB.status, 201, JSON.stringify(createdB.body));
+    cleanupIds.push(createdB.body.documentId);
+    const listB = await api(`/api/client/documents?account=${accountA2}`, { cookie: cookieB });
+    assert.equal(listB.status, 200);
+    assert.deepEqual(listB.body.documents.map(item => item.id), [createdB.body.documentId]);
+    const ownB = await fetch(`${origin}/api/client/documents/${createdB.body.documentId}/download`, {
+      headers: { Origin: origin, Cookie: cookieB },
+    });
+    assert.equal(ownB.status, 200);
+    assert.deepEqual(Buffer.from(await ownB.arrayBuffer()), payloadB);
+    const crossB = await fetch(`${origin}/api/client/documents/${createdB.body.documentId}/download`, {
+      headers: { Origin: origin, Cookie: cookieA },
+    });
+    assert.equal(crossB.status, 403);
+    assert.deepEqual(await crossB.json(), { error: "forbidden" });
 
     const downloadResponse = await fetch(`${origin}/api/client/documents/${documentId}/download`, {
       headers: { Origin: origin, Cookie: cookieA },
@@ -556,6 +620,25 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     assert.equal(listA.status, 200);
     assert.equal(listA.body.tickets.length, 1);
     assert.equal(listA.body.tickets[0].status, "open");
+    const crossList = await api(`/api/client/tickets?account=${accountA1}`, { cookie: cookieB });
+    assert.equal(crossList.status, 403);
+    const ownB = await api('/api/client/tickets', {
+      method: 'POST',
+      body: { accountId: accountA2, category: 'Outro assunto', title: 'Chamado sintético B', details: 'Somente conta B pode ler.' },
+      cookie: cookieB,
+    });
+    assert.equal(ownB.status, 201);
+    cleanupIds.push(ownB.body.ticketId);
+    const listB = await api(`/api/client/tickets?account=${accountA2}`, { cookie: cookieB });
+    assert.deepEqual(listB.body.tickets.map(item => item.id), [ownB.body.ticketId]);
+    const crossAtoB = await api(`/api/client/tickets?account=${accountA2}`, { cookie: cookieA });
+    assert.equal(crossAtoB.status, 403);
+    const crossWrite = await api('/api/client/tickets', {
+      method: 'POST',
+      body: { accountId: accountA2, category: 'Outro assunto', title: 'A não é B', details: 'Pedido não autorizado.' },
+      cookie: cookieA,
+    });
+    assert.equal(crossWrite.status, 403);
 
     const adminList = await api(`/api/admin/tickets?status=open&account=${accountA1}`, { cookie: adminCookie });
     assert.equal(adminList.status, 200);
@@ -603,6 +686,21 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     const contracts = await api(`/api/client/contracts?account=${accountA1}`, { cookie: cookieA });
     assert.equal(contracts.status, 403);
     assert.deepEqual(contracts.body, { error: "forbidden" });
+    const documents = await api(`/api/client/documents?account=${accountA1}`, { cookie: cookieA });
+    assert.equal(documents.status, 403);
+    const download = await api(`/api/client/documents/${documentId}/download`, { cookie: cookieA });
+    assert.equal(download.status, 403);
+    const tickets = await api(`/api/client/tickets?account=${accountA1}`, { cookie: cookieA });
+    assert.equal(tickets.status, 403);
+    const blockedWrite = await api('/api/client/tickets', {
+      method: 'POST',
+      body: { accountId: accountA1, category: 'Outro assunto', title: 'Após revogação', details: 'Deve ser negado.' },
+      cookie: cookieA,
+    });
+    assert.equal(blockedWrite.status, 403);
+    const bUnaffected = await api(`/api/client/contracts?account=${accountA2}`, { cookie: cookieB });
+    assert.equal(bUnaffected.status, 200);
+    assert.equal(bUnaffected.body.contracts.length, 1);
 
     const again = await api(`/api/admin/grants/${grantA1}`, {
       method: "DELETE",

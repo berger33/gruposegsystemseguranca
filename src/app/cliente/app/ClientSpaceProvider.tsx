@@ -9,6 +9,8 @@ export type ClientSessionInfo = {
   displayName: string | null;
   status: string;
   emailConfirmed: boolean;
+  verificationMethod: 'manual' | 'email_link';
+  mfaEnabled: boolean;
   expiresAt: number;
 };
 

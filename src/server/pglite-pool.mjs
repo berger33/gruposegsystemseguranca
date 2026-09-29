@@ -106,7 +106,10 @@ const MIGRATIONS_LIST = [
 
 function getPGliteInstance() {
   if (pgliteInstance) return pgliteInstance;
-  const dataDir = path.join(process.cwd(), '.data', 'pglite');
+  // Testes podem apontar para um diretório exclusivo sem limpar o PGlite do usuário.
+  const dataDir = process.env.PGLITE_DATA_DIR
+    ? path.resolve(process.env.PGLITE_DATA_DIR)
+    : path.join(process.cwd(), '.data', 'pglite');
   fs.mkdirSync(dataDir, { recursive: true });
   pgliteInstance = new PGlite(dataDir);
   return pgliteInstance;

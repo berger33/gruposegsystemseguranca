@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BriefcaseBusiness, FileText, Headphones, LayoutDashboard, LogOut } from "lucide-react";
+import { BriefcaseBusiness, FileText, Headphones, LayoutDashboard, LogOut, ShieldCheck } from "lucide-react";
 import { useClientSpace } from "./ClientSpaceProvider";
 import styles from "./ClientApp.module.css";
 
@@ -11,6 +11,7 @@ const destinations = [
   { href: "/cliente/app/contratos", label: "Contratos", icon: BriefcaseBusiness },
   { href: "/cliente/app/documentos", label: "Documentos", icon: FileText },
   { href: "/cliente/app/chamados", label: "Chamados", icon: Headphones },
+  { href: "/cliente/app/seguranca", label: "Segurança", icon: ShieldCheck },
 ];
 
 export default function ClientAppNavigation() {

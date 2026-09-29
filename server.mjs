@@ -126,7 +126,7 @@ async function getPGlitePoolLazy() {
   if (!pglitePoolPromise) {
     pglitePoolPromise = import('./src/server/pglite-pool.mjs').then(async (mod) => {
       const p = await mod.getPGlitePool();
-      console.log('[DB] Using PGlite fallback (no DATABASE_URL) — .data/pglite — 001-095 auto-migrate');
+      console.log('[DB] Using PGlite beta (schema mínimo; não equivale às migrações PostgreSQL 001–096)');
       return p;
     });
   }
@@ -134,8 +134,8 @@ async function getPGlitePoolLazy() {
 }
 
 function getPool() {
-  // BETA 1-clique: se DATABASE_URL não configurado, usa PGlite (Postgres WASM) local .data/pglite
-  if (!process.env.DATABASE_URL) {
+  // BETA 1-clique: sem DATABASE_URL usa PGlite; QA_PGLITE_ONLY evita atingir banco externo por engano.
+  if (process.env.QA_PGLITE_ONLY === 'true' || !process.env.DATABASE_URL) {
     if (!pool) {
       pool = {
         __isPGliteProxy: true,
@@ -405,6 +405,7 @@ async function handleCreateLead(req, res) {
 async function handleAdminLeads(req, res, url) {
   const session = readSession(req);
   if (!session) return json(res, 401, { error: "admin_session_required" });
+  if (!['marcelo', 'ti'].includes(session.role)) return json(res, 403, { error: "forbidden" });
   if (req.method !== "GET") return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
   const limit = Math.min(100, Math.max(1, Number.parseInt(url.searchParams.get("limit") || "50", 10) || 50));
   const offset = Math.min(10_000, Math.max(0, Number.parseInt(url.searchParams.get("offset") || "0", 10) || 0));
@@ -440,6 +441,7 @@ async function handleAdminLeadStatus(req, res, leadId) {
   if (!sameOrigin(req)) return json(res, 403, { error: "same_origin_required" });
   const session = readSession(req);
   if (!session) return json(res, 401, { error: "admin_session_required" });
+  if (!['marcelo', 'ti'].includes(session.role)) return json(res, 403, { error: "forbidden" });
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(leadId)) return json(res, 400, { error: "invalid_lead_id" });
   let body;
   try {
@@ -1890,6 +1892,9 @@ async function routeApi(req, res) {
   if (leadMatch) return handleAdminLeadStatus(req, res, leadMatch[1]);
   if (url.pathname.startsWith("/api/auth/")) return clientAccessApi.handleAuth(req, res, url);
   if (url.pathname === "/api/admin/invites") return clientAccessApi.handleAdminInvites(req, res, url);
+  if (url.pathname === "/api/admin/client-verifications") return clientAccessApi.handleManualVerificationList(req, res);
+  const approvalMatch = url.pathname.match(/^\/api\/admin\/client-verifications\/([0-9a-f-]{36})\/approve$/i);
+  if (approvalMatch) return clientAccessApi.handleManualVerificationApprove(req, res, approvalMatch[1]);
   const inviteMatch = url.pathname.match(/^\/api\/admin\/invites\/([0-9a-f-]{36})$/i);
   if (inviteMatch) return clientAccessApi.handleInviteRevoke(req, res, inviteMatch[1]);
   if (url.pathname === "/api/client/accounts") return clientSpaceApi.handleClientAccounts(req, res);
@@ -1898,6 +1903,7 @@ async function routeApi(req, res) {
   const clientDocMatch = url.pathname.match(/^\/api\/client\/documents\/([0-9a-f-]{36})\/download$/i);
   if (clientDocMatch) return clientSpaceApi.handleClientDocumentDownload(req, res, clientDocMatch[1]);
   if (url.pathname === "/api/client/tickets") return clientSpaceApi.handleClientTickets(req, res, url);
+  if (url.pathname === "/api/client/security/mfa/setup") return clientSecurityApi.handleMfaSetup(req, res);
   if (url.pathname === "/api/client/security/mfa/activate") return clientSecurityApi.handleMfaActivate(req, res);
   if (url.pathname === "/api/client/security/mfa/verify") return clientSecurityApi.handleMfaVerify(req, res);
   if (url.pathname === "/api/client/security/mfa/disable") return clientSecurityApi.handleMfaDisable(req, res);
@@ -3465,6 +3471,8 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/auth/")
   || pathname === "/api/admin/invites"
   || pathname.startsWith("/api/admin/invites/")
+  || pathname === "/api/admin/client-verifications"
+  || pathname.startsWith("/api/admin/client-verifications/")
   || pathname.startsWith("/api/client/")
   || pathname === "/api/admin/identities"
   || pathname === "/api/admin/client-accounts"

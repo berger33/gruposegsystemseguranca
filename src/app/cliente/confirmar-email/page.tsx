@@ -103,8 +103,7 @@ function ConfirmResendForm() {
     return (
       <p className={`${styles.message} ${styles.messageInfo}`} role="status">
         <span>
-          Se houver um cadastro aguardando confirmação neste endereço, um novo link será enviado.
-          Por segurança, não confirmamos se o e-mail existe.
+          Se houver um cadastro aguardando confirmação, a equipe poderá orientar sobre o acesso. Um pedido de link não garante envio: sem SMTP configurado, nenhuma mensagem é entregue. Por segurança, não confirmamos se o e-mail existe.
         </span>
       </p>
     );
