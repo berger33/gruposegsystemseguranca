@@ -193,7 +193,11 @@ const pgPassword = randomBytes(24).toString('hex');
 const databaseUrl = `postgresql://seg_qa:${pgPassword}@127.0.0.1:${port}/seg_qa_homologacao`;
 const pgEngine = new EmbeddedPostgres({
   databaseDir: path.join(directory, 'data'), port, user: 'seg_qa', password: pgPassword,
-  persistent: false, postgresFlags: ['-c', 'listen_addresses=127.0.0.1'],
+  // Windows can default to WIN1252. The SQL migrations contain Unicode (e.g. arrows),
+  // so initdb must create an UTF8 cluster independent of the Windows system locale.
+  // C is available on PostgreSQL's supported platforms, including Windows.
+  persistent: false, initdbFlags: ['--locale=C', '--encoding=UTF8'],
+  postgresFlags: ['-c', 'listen_addresses=127.0.0.1'],
   onLog: () => {},
   onError: error => console.error('QA_HOM_PG_ERROR', String(error).replaceAll(pgPassword, '[redacted]').slice(0, 250)),
 });
@@ -208,12 +212,19 @@ try {
   await pgEngine.initialise();
   await pgEngine.start();
   await pgEngine.createDatabase('seg_qa_homologacao');
+  pool = new pg.Pool({ connectionString: databaseUrl, max: 2 });
+  // Fail closed *before* migrations if the OS-created DB or client uses WIN1252.
+  // A round-trip probe ensures that non-ASCII SQL literals are transferable too.
+  const { rows: [encoding] } = await pool.query(`SELECT current_setting('server_encoding') AS server_encoding,
+    current_setting('client_encoding') AS client_encoding, $1::text AS probe`, ['QA → UTF-8']);
+  if (encoding.server_encoding !== 'UTF8' || encoding.client_encoding !== 'UTF8' ||
+      encoding.probe !== 'QA → UTF-8') throw new Error('qa_utf8_required_before_migrations');
+  console.log('QA-HOM-001_ENCODING: server=UTF8 client=UTF8 Unicode round-trip OK.');
   const secret = randomBytes(32).toString('base64url');
   const marceloToken = randomBytes(32).toString('base64url');
   const env = sanitizedEnv(databaseUrl, directory, secret, marceloToken);
   const migrator = spawnChild(['scripts/migrate-site-visual.mjs'], env);
   if (await exited(migrator) !== 0) throw new Error('qa_migrations_failed');
-  pool = new pg.Pool({ connectionString: databaseUrl, max: 2 });
   const { rows } = await pool.query('SELECT count(*)::int AS count FROM __migrations WHERE checksum IS NOT NULL');
   if (rows[0].count !== 96) throw new Error(`qa_migrations_expected_96_got_${rows[0].count}`);
   const identities = await seed(pool);
