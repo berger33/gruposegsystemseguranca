@@ -2,6 +2,8 @@
 
 Data: 2026-09-28. Fonte de verdade de estados: [controle de implementação](CONTROLE-IMPLEMENTACAO.md); este relatório **não altera automaticamente** os estados históricos nem considera um teste parcial homologação de módulo. [Relatório de testes](RELATORIO-CONSOLIDADO-TESTES.md) e [gate de produção](PRODUCAO-GATE.md). O sistema pode ser baixado para **prévia local sintética**, mas **NO-GO para produção, dados reais e backup operacional**. Não há quantidade fixa de ondas restantes: o trabalho depende de decisão humana, infraestrutura, provedores, UAT e riscos aceitos.
 
+**Atualização de escopo posterior à fotografia abaixo:** o proprietário determinou que a meta da entrega local inclui **todos os 222 IDs**, inclusive `AI-02`, `AI-03`, `AI-04`, `AI-05`, `AI-07` e `AI-08`, que aparecem historicamente como “condicional dispensado”. Esses seis estão **reabertos para entrega/aceite**, não concluídos nem dispensados nesta meta. Apenas SMTP e hospedagem externa foram adiados. Divergências e dependências externas devem ser reportadas por ID com opções; consultar [avaliação da entrega local](AVALIACAO-ENTREGA-LOCAL-COMPLETA.md). O quadro e os estados linha a linha abaixo permanecem como **fotografia histórica**, não estado de aceite atualizado.
+
 ## Inventário objetivo do controle
 
 | Estado registrado | Quantidade | Interpretação necessária |
