@@ -524,7 +524,7 @@ export function createCrmApi(ctx) {
         if (!opp.rows[0]) return ctx.json(res, 404, { error: "opportunity_not_found" });
         const [stages, tasks, interactions, visits] = await Promise.all([
           db.query("SELECT * FROM crm_opportunity_stages WHERE opportunity_id = $1 ORDER BY created_at DESC", [id]),
-          db.query("SELECT * FROM crm_tasks WHERE opportunity_id = $1 ORDER BY due_date NULLS LAST, created_at DESC", [id]),
+          db.query("SELECT * FROM crm_tasks WHERE opportunity_id = $1 AND responsible_id = $2 AND EXISTS (SELECT 1 FROM crm_opportunities o WHERE o.id=$1 AND (o.responsible_id=$2 OR (o.responsible_id IS NULL AND o.created_by_id=$2))) ORDER BY due_date NULLS LAST, created_at DESC LIMIT 200", [id, ["comercial", "admin", "marcelo", "ti"].includes(session.role) ? session.identityId : null]),
           db.query("SELECT * FROM crm_interactions WHERE opportunity_id = $1 ORDER BY occurred_at DESC LIMIT 50", [id]),
           db.query("SELECT * FROM crm_visits WHERE opportunity_id = $1 ORDER BY scheduled_at DESC", [id]),
         ]);

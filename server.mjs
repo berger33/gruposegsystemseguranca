@@ -1,3 +1,4 @@
+import { createCrmTaskApi } from "./src/server/crm-task-api.mjs";
 import { createHmac, createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { createServer } from "node:http";
 import path from "node:path";
@@ -1139,6 +1140,8 @@ const faqApi = createFaqApi({
   json,
   getPool,
 });
+
+const crmTaskApi = createCrmTaskApi({ json, readJson, sameOrigin, getPool, readAdminSession: readSession });
 
 const crmApi = createCrmApi({
   json,
@@ -2428,6 +2431,8 @@ async function routeApi(req, res) {
   if (crmCompanyMatch) return crmApi.handleCompanyById(req, res, crmCompanyMatch[1]);
   if (url.pathname === "/api/crm/contacts") return crmApi.handleContacts(req, res, url);
   if (url.pathname === "/api/crm/opportunities") return crmApi.handleOpportunities(req, res, url);
+  const crmTaskMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/tasks(?:\/([0-9a-f-]{36}))?$/i);
+  if (crmTaskMatch) return crmTaskApi(req, res, crmTaskMatch[1], crmTaskMatch[2] || null);
   const crmOppMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})$/i);
   if (crmOppMatch) return crmApi.handleOpportunityById(req, res, crmOppMatch[1]);
   const crmLeadConvertMatch = url.pathname.match(/^\/api\/crm\/leads\/([0-9a-f-]{36})\/convert$/i);

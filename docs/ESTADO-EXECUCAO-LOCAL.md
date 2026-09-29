@@ -4,15 +4,19 @@ Documento de retomada entre sessões. Atualizado a cada lote concluído.
 Referência: `docs/EXECUCAO-ENTREGA-LOCAL.md` (roteiro L00–L10) e
 `docs/PLANO-MESTRE-IMPLEMENTACAO.md` (222 requisitos).
 
+## Continuação mais recente — tarefas CRM-07
+
+PR #13: tarefas pessoais conectadas em /admin/crm, com auditoria atômica e proteção por responsável também na rota legada. Código validado `7bab313`: CI baseline e gate L04 (2/2, HTTP/Chromium/PostgreSQL) aprovados; migrações 104/104 e replay aprovados. L04 e CRM-07 permanecem parciais. Ver evidência detalhada e `PROMPT-CONTINUACAO-CRM-TAREFAS.md`. Os resultados dos lotes anteriores abaixo são históricos, não novas execuções desta continuação.
+
 ## Situação atual
 
 | Campo | Valor |
 |---|---|
-| Branch de trabalho | `arena/01a0ed3d-gruposegsystemseguranca` |
-| Base desta sessão | `5899146` (= `origin/main`, PR #11 "Docs: reconciliar estado após merge do L03") |
+| Branch de trabalho | `codex/l04-crm-tarefas` (PR #13, ainda não mesclado) |
+| Base desta sessão | `4aaa1d2` (main, PR #12) |
 | Lote ativo | **L04** — jornada comercial central entregue e provada; CMS/tema/SEO/comparador/kanban/tarefas (PUB-06..09, CRM-07..10) ficam para a próxima sessão |
-| Último gate aprovado | **L04** (site/captação/comercial, HTTP real + Chromium real + PostgreSQL descartável, `npm run test:l04-delivery:pg`), com L02 e L03 revalidados verdes na mesma sessão |
-| Migrações | 001–103 (504 tabelas; 103 é aditiva/retrocompatível) |
+| Último gate aprovado | **L04 ampliado**: 2/2 (jornada central + tarefas pessoais), GitHub Actions em `7bab313`. L02/L03 integrais não reexecutados nesta continuação. |
+| Migrações | 001–104 (504 tabelas; 104 amplia auditoria de tarefas) |
 | Data | 2026-09-29 |
 
 ## Lotes
@@ -132,12 +136,9 @@ permanece `a_revalidar`/`pendente` inclui:
 
 ## Próximos três passos
 
-1. **Iniciar L04, sem reabrir L03:** site/captação e comercial, seguindo o gate
-   definido em `docs/EXECUCAO-ENTREGA-LOCAL.md`.
-2. **Preservar o gate L03 em toda regressão:** duas identidades de funcionário,
-   navegador móvel/desktop, PostgreSQL descartável e negação cruzada.
-3. **Reservar o aceite no Windows para L10:** Linux validou a entrega local; o
-   equipamento-alvo ainda deverá provar instalação, persistência e reinício.
+1. Conferir/incorporar o PR #13 preservando mudanças posteriores; não repetir a implementação de tarefas pessoais.
+2. Continuar CRM-07 com histórico de ligações/reuniões/notas e depois CRM-08/09 (agenda/cadências); evidência por recorte. CRM-10 permanece pendente.
+3. Fechar as lacunas PUB e revalidar CRM-01..06 antes de declarar L04 concluído. Windows fica em L10.
 
 ## Retomada executável
 

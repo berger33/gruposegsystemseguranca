@@ -1,11 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
+import OpportunityTasks from "./OpportunityTasks";
 
 type Company = { id: string; display_name: string; type: string; city: string; segment: string | null; status: string; responsible_name: string | null; };
 type Opportunity = { id: string; title: string; company_id: string; stage: string; priority: string; estimated_value: string | null; next_action: string | null; next_action_date: string | null; is_won: boolean; is_lost: boolean; };
 type ImportRow = { row_number: number; raw_data: any; mapped_data: any; status: string; errors: any[]; dedup_match: any; };
 
 export default function CrmPage() {
+  const [selectedOpportunity, setSelectedOpportunity] = useState<string | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [opps, setOpps] = useState<Opportunity[]>([]);
   const [filter, setFilter] = useState({ type: "", stage: "" });
@@ -239,6 +241,7 @@ export default function CrmPage() {
                 {opps.filter(o=>o.stage===stage).map(o=>(
                   <article key={o.id} style={{ border: "1px solid #ccc", borderRadius: 4, padding: 6, marginBottom: 6, background: o.is_won ? "#dcfce7" : o.is_lost ? "#fee2e2" : "#fff", fontSize: 11 }}>
                     <strong>{o.title}</strong>
+                    <button type="button" onClick={() => setSelectedOpportunity(o.id)}>Abrir tarefas</button>
                     <p style={{ margin: "2px 0 0" }}>Prioridade: {o.priority} | Valor: {o.estimated_value || "-"}</p>
                     <p style={{ margin: "2px 0 0" }}>Próxima: {o.next_action || "-"} {o.next_action_date ? new Date(o.next_action_date).toLocaleDateString() : ""}</p>
                     <p style={{ margin: "2px 0 0", opacity: 0.7 }}>{o.is_won ? "ganho (não é dinheiro recebido)" : o.is_lost ? "perdido (motivo obrigatório)" : ""}</p>
@@ -248,9 +251,10 @@ export default function CrmPage() {
               </div>
             ))}
           </div>
-          <p style={{ fontSize: 11, opacity: 0.6, marginTop: 8 }}>CRM-07 kanban e tabela, filtros, busca, tarefas vencidas, histórico ligações/reuniões, anexos e notas internas autorizadas. CRM-08 agenda visitas, CRM-09 cadências como tarefas, CRM-10 carteira renovação/upsell/reativação — estrutura pronta em 014 (tasks, interactions, visits).</p>
+          <p style={{ fontSize: 11, opacity: 0.6, marginTop: 8 }}>CRM-07 kanban e tabela, filtros, busca, tarefas vencidas, histórico ligações/reuniões, anexos e notas internas autorizadas. Tarefas pessoais: use Abrir tarefas na oportunidade. Agenda, interações, cadências e carteira ainda estão pendentes.</p>
         </div>
       </section>
+      {selectedOpportunity && <OpportunityTasks key={selectedOpportunity} opportunityId={selectedOpportunity} />}
     </main>
   );
 }

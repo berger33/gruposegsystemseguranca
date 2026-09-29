@@ -643,3 +643,97 @@ test('L04: visitante público, comercial e aprovador — catálogo até aceite c
   const leakCheck = JSON.stringify(oversizedBody.body);
   assert.doesNotMatch(leakCheck, /at Object|at Module|node_modules|\.js:\d+:\d+/, 'respostas de erro não podem vazar stack trace');
 });
+
+test('CRM-07: tarefas pessoais por oportunidade, navegador e negação cruzada', { skip: !RUN, timeout: 120_000 }, async () => {
+  const owner = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const other = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const rh = await provisionAndLoginStaff(pool, api, { role: 'rh' });
+  const company = await api('/api/crm/companies', { method: 'POST', cookie: owner.cookie, body: { displayName: 'Empresa tarefas ' + randomUUID(), city: 'Guarulhos', type: 'prospect' } });
+  assert.equal(company.status, 201, JSON.stringify(company.body));
+  const opportunity = await api('/api/crm/opportunities', { method: 'POST', cookie: owner.cookie, body: { company_id: company.body.company.id, title: 'Acompanhamento de tarefas ' + randomUUID() } });
+  assert.equal(opportunity.status, 201, JSON.stringify(opportunity.body));
+  const opportunityId = opportunity.body.opportunity.id;
+  const endpoint = '/api/crm/opportunities/' + opportunityId + '/tasks';
+  assert.equal((await api(endpoint)).status, 401);
+  assert.equal((await api(endpoint, { cookie: rh.cookie })).status, 403);
+  assert.equal((await api(endpoint, { cookie: other.cookie })).status, 404);
+  assert.equal((await api(endpoint, { method: 'POST', cookie: owner.cookie, sendOrigin: false, body: {} })).status, 403);
+  assert.equal((await api(endpoint, { method: 'DELETE', cookie: owner.cookie })).status, 405);
+  const due = '2020-01-15T12:00:00.000Z';
+  const forged = await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: 'Forjada', due_date: due, responsible_id: other.id } });
+  assert.equal(forged.status, 400);
+  assert.equal(forged.body.error, 'server_managed_fields');
+  assert.equal((await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: 'Sem data válida', due_date: 'ontem' } })).status, 400);
+  assert.equal((await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: ' ', due_date: due } })).status, 400);
+
+  const browser = await launchBrowser();
+  const failures = [];
+  let taskId;
+  try {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'pt-BR' });
+    const pair = owner.cookie.split(';')[0], separator = pair.indexOf('=');
+    await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
+    const page = await context.newPage();
+    trackFailures(page, failures);
+    await page.goto(baseUrl + '/admin/crm', { waitUntil: 'networkidle' });
+    await page.waitForTimeout(800);
+    const card = page.getByRole('article').filter({ hasText: opportunity.body.opportunity.title });
+    await card.getByRole('button', { name: 'Abrir tarefas' }).click();
+    const section = page.getByRole('region', { name: 'Minhas tarefas da oportunidade' });
+    await section.getByLabel('Título da tarefa', { exact: true }).fill('Ligar para confirmar a vistoria');
+    await section.getByLabel('Prazo da tarefa', { exact: true }).fill('2020-01-15T12:00');
+    const [created] = await Promise.all([
+      page.waitForResponse(r => r.url().endsWith(endpoint) && r.request().method() === 'POST'),
+      section.getByRole('button', { name: 'Criar tarefa', exact: true }).click(),
+    ]);
+    assert.equal(created.status(), 201);
+    taskId = (await created.json()).task.id;
+    await section.getByText('Tarefa salva.', { exact: true }).waitFor();
+    await section.getByLabel('Somente vencidas').check();
+    await section.getByText('Ligar para confirmar a vistoria', { exact: true }).waitFor();
+
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForTimeout(500);
+    await page.getByRole('article').filter({ hasText: opportunity.body.opportunity.title }).getByRole('button', { name: 'Abrir tarefas' }).click();
+    await section.getByText('Ligar para confirmar a vistoria', { exact: true }).waitFor();
+    const [completed] = await Promise.all([
+      page.waitForResponse(r => r.url().endsWith(endpoint + '/' + taskId) && r.request().method() === 'PATCH'),
+      section.getByRole('button', { name: 'Concluir', exact: true }).click(),
+    ]);
+    assert.equal(completed.status(), 200);
+    await section.getByText('Situação da tarefa atualizada.', { exact: true }).waitFor();
+    await section.getByLabel('Somente vencidas').check();
+    await section.getByText('Nenhuma tarefa neste filtro.', { exact: true }).waitFor();
+    await context.close();
+  } finally { await browser.close(); }
+  assert.deepEqual(failures, []);
+  const otherDetail = await api('/api/crm/opportunities/' + opportunityId, { cookie: other.cookie });
+  assert.equal(otherDetail.status, 200);
+  assert.deepEqual(otherDetail.body.tasks, [], 'legacy detail must not expose personal tasks');
+  const saved = await api(endpoint, { cookie: owner.cookie });
+  assert.equal(saved.body.tasks.find(t => t.id === taskId).status, 'concluida');
+  assert.equal((await api(endpoint + '/' + taskId, { method: 'PATCH', cookie: other.cookie, body: { expected_status: 'concluida', status: 'aberta' } })).status, 404);
+  const stale = await api(endpoint + '/' + taskId, { method: 'PATCH', cookie: owner.cookie, body: { expected_status: 'aberta', status: 'concluida' } });
+  assert.equal(stale.status, 409);
+  const { rows: attribution } = await pool.query('SELECT responsible_id, created_by_id, company_id FROM crm_tasks WHERE id=$1', [taskId]);
+  assert.equal(attribution[0].responsible_id, owner.id);
+  assert.equal(attribution[0].created_by_id, owner.id);
+  assert.equal(attribution[0].company_id, company.body.company.id);
+  const audit = await pool.query("SELECT action, actor_id FROM auth_access_audit WHERE target=$1 ORDER BY created_at", [taskId]);
+  assert.deepEqual(audit.rows.map(r => r.action), ['crm_task_create', 'crm_task_status']);
+  assert.ok(audit.rows.every(r => r.actor_id === owner.id));
+
+  // Inject a real DB audit failure, proving that HTTP never persists an
+  // unaudited task. Fixture only: the mutation under test is HTTP.
+  await pool.query(`CREATE FUNCTION qa_reject_task_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.action = 'crm_task_create' THEN RAISE EXCEPTION 'qa audit failure'; END IF; RETURN NEW; END $$`);
+  await pool.query('CREATE TRIGGER qa_reject_task_audit BEFORE INSERT ON auth_access_audit FOR EACH ROW EXECUTE FUNCTION qa_reject_task_audit()');
+  try {
+    assert.equal((await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: 'Deve reverter', due_date: due } })).status, 503);
+    const count = await pool.query('SELECT count(*)::int AS total FROM crm_tasks WHERE opportunity_id=$1', [opportunityId]);
+    assert.equal(count.rows[0].total, 1);
+  } finally {
+    await pool.query('DROP TRIGGER qa_reject_task_audit ON auth_access_audit');
+    await pool.query('DROP FUNCTION qa_reject_task_audit()');
+  }
+});
