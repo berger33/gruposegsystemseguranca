@@ -7,6 +7,7 @@ Sistema em desenvolvimento para o Grupo SEG System. O **plano foi registrado em 
 - [Captação de pedidos, painel e SMTP](docs/captacao-pedidos.md)
 - [Portal do cliente: decisões de acesso e segurança](docs/portal-acesso-e-seguranca.md)
 - [Estado verificado e prompt do próximo passo](docs/proximo-passo.md)
+- [Comunicação visual por e-mail — plano e catálogo de 200 imagens para funcionários](docs/comunicacao-visual/README.md)
 
 ## Prévia atual
 
