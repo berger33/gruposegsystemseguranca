@@ -6,7 +6,8 @@ de entrada da próxima continuação.
 
 ## Estado de entrada
 
-- Base: `main` após o merge do PR desta sessão (CRM-08 conflito/PUB-04).
+- Base: `main @ ea7a1ed` (merge do PR #22, CRM-08 conflito de horário + vínculo
+  PUB-04). Conferir no disco antes de começar.
 - Referências obrigatórias antes de qualquer código:
   `docs/ESTADO-EXECUCAO-LOCAL.md`, `docs/CHECKLIST-ENTREGA-LOCAL.md`,
   `docs/EVIDENCIAS-ENTREGA-LOCAL.md` e
