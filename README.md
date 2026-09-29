@@ -4,7 +4,7 @@
 
 Para explorar papéis sintéticos e um PostgreSQL local descartável, use o pacote separado `downloads/seg-system-homologacao-local.zip` e leia [LEIA-ME-HOMOLOGACAO.md](LEIA-ME-HOMOLOGACAO.md). Abra `/qa/modulos` **apenas** com o novo lançador de homologação; o pacote `seg-system-qa-local.zip` continua sendo uma prévia PGlite sem credenciais. O índice identifica módulos operacionais, protótipos e bloqueios, sem prometer homologação dos 222 requisitos. Nenhum pacote é produção.
 
-[Veja a avaliação de lacunas para entrega local completa](docs/AVALIACAO-ENTREGA-LOCAL-COMPLETA.md) antes de tratar o ZIP como sistema pronto para o cliente.
+[Veja a avaliação de lacunas para entrega local completa](docs/AVALIACAO-ENTREGA-LOCAL-COMPLETA.md) antes de tratar o ZIP como sistema pronto para o cliente. **Atenção:** o ZIP de homologação publicado anteriormente é uma fotografia com 96 migrações; o código-fonte atual já contém a migração aditiva 097 e o MFA cliente. O ZIP antigo **não recebe essas correções** e não deve ser exposto via link externo ou usado como instalação persistente.
 
 Sistema em desenvolvimento para o Grupo SEG System. O **plano foi registrado em commit separado antes do início da aplicação** (`5af5ab0`).
 

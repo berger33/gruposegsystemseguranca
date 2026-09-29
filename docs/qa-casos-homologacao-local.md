@@ -38,3 +38,7 @@
 ## Atualização posterior — QA-HOM-005 (`SEC-06`, `SEC-07`)
 
 O usuário confirmou posteriormente que abriu o esboço no Windows; isso corrige apenas o estado de **abertura visual** descrito acima, não homologa os 222 requisitos. No primeiro lote P0 seguinte, o runner `--verify` ganhou negativas HTTP para as rotas de segurança do cliente: anônimo 401, autenticado 503 explícito (MFA e troca de e-mail ainda não implementados), origem estrangeira 403, cookie antigo após MFA sintético 401 e senha correta com MFA sintético ativo 503 sem cookie. Em Linux, 96/96 migrações, smoke completo e cleanup true, exit 0; unitários 147/147, typecheck e build exit 0. Detalhes, limites e próxima ação: [QA-HOM-005](evidencias/QA-HOM-005-seguranca-cliente-fail-closed.md). **Não se trata de MFA funcional, Windows revalidado nem autorização do Funnel.**
+
+## Atualização posterior — QA-HOM-006 (MFA real de cliente)
+
+O runner fonte agora contempla a migração aditiva **097** e valida MFA TOTP cliente com chave AES-GCM de QA, desafio de login 202 **sem cookie**, sessão somente depois da prova, recuperação de uso único, replay/expiração negados, desativação e revogação. Isso é novo código, **não** atualização retroativa do ZIP QA entregue anteriormente. Evidências, falhas intermediárias corrigidas e limites: [QA-HOM-006](evidencias/QA-HOM-006-mfa-cliente-real.md). SMTP desativado, Funnel não iniciado; Windows ainda requer reteste do novo lote.

@@ -9,7 +9,7 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { hashPassword } from '../src/lib/client-auth-core.mjs';
+import { hashPassword, hashToken } from '../src/lib/client-auth-core.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const simulateWin1252 = process.argv.includes('--verify-win1252');
@@ -18,7 +18,7 @@ const preflightOnly = process.argv.includes('--preflight');
 const unsupported = process.argv.filter(arg => arg.startsWith('--') && !['--verify', '--verify-win1252', '--preflight'].includes(arg));
 const refused = ['DATABASE_URL', 'DATABASE_MIGRATION_URL', 'ALLOW_REMOTE_MIGRATIONS',
   'QA_PGLITE_ONLY', 'CLIENT_DOCS_DIR', 'PGLITE_DATA_DIR', 'PGHOST', 'PGSERVICE',
-  'SITE_ADMIN_SESSION_SECRET', 'SITE_ADMIN_TOKEN_TI', 'SITE_ADMIN_TOKEN_MARCELO',
+  'SITE_ADMIN_SESSION_SECRET', 'SITE_ADMIN_TOKEN_TI', 'SITE_ADMIN_TOKEN_MARCELO', 'CLIENT_MFA_ENCRYPTION_KEY',
   'MAIL_HOST', 'MAIL_USER', 'MAIL_PASSWORD', 'OLLAMA_HOST', 'TRUST_PROXY', 'PUBLIC_BASE_URL'];
 
 async function preflight() {
@@ -29,7 +29,7 @@ async function preflight() {
   for (const name of await readdir(root)) if (name === '.env' || name.startsWith('.env.')) {
     if (name !== '.env.example') throw new Error(`qa_env_file_refused_${name}`);
   }
-  await access(path.join(root, 'db/migrations/096-ai-rag-feedback-custo-token-rollback.sql'));
+  await access(path.join(root, 'db/migrations/097-client-mfa-session.sql'));
   // Fail before npm ci (which can take minutes on Windows) when the old preview is still open.
   // Check again immediately before starting: another program can take the port meanwhile.
   await assertWebPortFree();
@@ -122,6 +122,7 @@ function sanitizedEnv(databaseUrl, temp, sessionSecret, marceloToken) {
     NODE_ENV: 'development', NEXT_TELEMETRY_DISABLED: '1', NEXT_PUBLIC_ALLOW_INDEX: 'false',
     NEXT_PUBLIC_ENV: 'beta', QA_HOMOLOGATION_MODE: 'true',
     SITE_ADMIN_SESSION_SECRET: sessionSecret, SITE_ADMIN_TOKEN_MARCELO: marceloToken,
+    CLIENT_MFA_ENCRYPTION_KEY: randomBytes(32).toString('base64url'),
     OLLAMA_ENABLED: 'false', MAIL_HOST: '', CLIENT_DOCS_DIR: path.join(temp, 'documents'),
     NEXT_DISABLE_HTTPS: 'true' };
   return env;
@@ -142,6 +143,7 @@ async function request(url, init) {
   return { status: response.status, data: await response.json().catch(() => ({})), cookie: response.headers.get('set-cookie')?.split(';')[0] || '' };
 }
 async function smoke(identities, marceloToken, pool) {
+  const { generate } = await import('otplib');
   const origin = 'http://127.0.0.1:3000';
   async function login(body) {
     return request('/api/admin/session', { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: JSON.stringify(body) });
@@ -190,7 +192,7 @@ async function smoke(identities, marceloToken, pool) {
   const changePath = '/api/client/security/email-change';
   const post = (path, headers) => request(path, { method: 'POST', headers: { origin, 'content-type': 'application/json', ...headers }, body: '{}' });
   expect(await post(mfaPath), 401, '005_MFA_ANON_DENIED');
-  expect(await post(mfaPath, { cookie: client.cookie }), 503, '005_MFA_EXPLICIT_UNAVAILABLE');
+  expect(await post(mfaPath, { cookie: client.cookie }), 409, '005_MFA_SETUP_REQUIRED');
   expect(await post(changePath, { cookie: client.cookie }), 503, '005_EMAIL_CHANGE_EXPLICIT_UNAVAILABLE');
   expect(await request(mfaPath, { method: 'POST', headers: { cookie: client.cookie, origin: 'https://foreign.invalid' }, body: '{}' }), 403, '005_MFA_FOREIGN_ORIGIN_DENIED');
   // A legacy record with activated_at must not let a password-only login (or an
@@ -205,6 +207,46 @@ async function smoke(identities, marceloToken, pool) {
   } finally {
     await pool.query('DELETE FROM auth_mfa WHERE identity_id = $1', [identities[3].id]);
   }
+  // SEC-06 real vertical path: password -> setup -> TOTP -> session-bound
+  // challenge -> scoped resource, then single-use recovery and disable.
+  const auth = (url, body, cookie = '') => request(url, { method: 'POST',
+    headers: { origin, 'content-type': 'application/json', ...(cookie ? { cookie } : {}) }, body: JSON.stringify(body) });
+  expect(await auth('/api/client/security/mfa/setup', { password: 'wrong' }, client.cookie), 403, '006_SETUP_WRONG_PASSWORD');
+  const setup = await auth('/api/client/security/mfa/setup', { password: identities[3].password }, client.cookie);
+  expect(setup, 200, '006_SETUP');
+  if (!setup.data.uri?.startsWith('otpauth://') || !setup.data.secret) throw new Error('qa_mfa_setup_secret_missing');
+  const otp = await generate({ secret: setup.data.secret });
+  const wrong = otp === '000000' ? '111111' : '000000';
+  expect(await auth(mfaPath, { code: wrong }, client.cookie), 403, '006_ACTIVATE_WRONG_CODE');
+  const activated = await auth(mfaPath, { code: otp }, client.cookie);
+  expect(activated, 200, '006_ACTIVATE');
+  if (activated.data.recoveryCodes?.length !== 8) throw new Error('qa_mfa_recovery_codes_missing');
+  const { rows: [storedMfa] } = await pool.query('SELECT totp_secret_encrypted, recovery_hashes FROM auth_mfa WHERE identity_id=$1', [identities[3].id]);
+  if (!storedMfa.totp_secret_encrypted.startsWith('v1:') || storedMfa.totp_secret_encrypted.includes(setup.data.secret) ||
+      storedMfa.recovery_hashes.some(hash => activated.data.recoveryCodes.includes(hash))) throw new Error('qa_mfa_secrets_not_protected_at_rest');
+  console.log('QA-HOM-006_AT_REST: encrypted TOTP and hashed recovery codes.');
+  expect(await request('/api/auth/me', { headers: { cookie: client.cookie } }), 401, '006_OLD_COOKIE_REVOKED');
+  const mfaLogin = () => auth('/api/auth/login', { email: identities[3].email, password: identities[3].password });
+  const first = await mfaLogin(); expect(first, 202, '006_CHALLENGE');
+  if (first.cookie || !first.data.challenge) throw new Error('qa_mfa_session_issued_before_code');
+  expect(await auth('/api/auth/mfa/complete', { challenge: first.data.challenge, code: wrong }), 401, '006_WRONG_CODE');
+  const verified = await auth('/api/auth/mfa/complete', { challenge: first.data.challenge, code: otp });
+  expect(verified, 200, '006_TOTP_LOGIN');
+  if (!verified.cookie) throw new Error('qa_mfa_session_cookie_missing');
+  expect(await auth('/api/auth/mfa/complete', { challenge: first.data.challenge, code: otp }), 401, '006_REPLAY_CHALLENGE_DENIED');
+  expect(await request('/api/client/accounts', { headers: { cookie: verified.cookie } }), 200, '006_MFA_SCOPED_ACCOUNT');
+  const second = await mfaLogin(); expect(second, 202, '006_SECOND_CHALLENGE');
+  const recoveryCode = activated.data.recoveryCodes[0];
+  expect(await auth('/api/auth/mfa/complete', { challenge: second.data.challenge, code: recoveryCode }), 200, '006_RECOVERY_LOGIN');
+  const third = await mfaLogin(); expect(third, 202, '006_THIRD_CHALLENGE');
+  expect(await auth('/api/auth/mfa/complete', { challenge: third.data.challenge, code: recoveryCode }), 401, '006_RECOVERY_REPLAY_DENIED');
+  expect(await auth('/api/auth/mfa/complete', { challenge: third.data.challenge, code: otp }), 401, '006_TOTP_TIME_STEP_REPLAY_DENIED');
+  const expiring = await mfaLogin(); expect(expiring, 202, '006_EXPIRING_CHALLENGE');
+  await pool.query("UPDATE auth_mfa_challenges SET expires_at=NOW()-INTERVAL '1 second' WHERE token_hash=$1", [hashToken(expiring.data.challenge)]);
+  expect(await auth('/api/auth/mfa/complete', { challenge: expiring.data.challenge, code: activated.data.recoveryCodes[2] }), 401, '006_EXPIRED_CHALLENGE_DENIED');
+  expect(await auth('/api/client/security/mfa/disable', { password: identities[3].password, code: activated.data.recoveryCodes[1] }, verified.cookie), 200, '006_DISABLE');
+  expect(await request('/api/auth/me', { headers: { cookie: verified.cookie } }), 401, '006_REVOKED_AFTER_DISABLE');
+  expect(await mfaLogin(), 200, '006_PASSWORD_LOGIN_AFTER_DISABLE');
 }
 
 async function waitForHealth(child, timeoutMs = 180_000) {
@@ -266,9 +308,9 @@ try {
   const migrator = spawnChild(['scripts/migrate-site-visual.mjs'], env);
   if (await exited(migrator) !== 0) throw new Error('qa_migrations_failed');
   const { rows } = await pool.query('SELECT count(*)::int AS count FROM __migrations WHERE checksum IS NOT NULL');
-  if (rows[0].count !== 96) throw new Error(`qa_migrations_expected_96_got_${rows[0].count}`);
+  if (rows[0].count !== 97) throw new Error(`qa_migrations_expected_97_got_${rows[0].count}`);
   const identities = await seed(pool);
-  console.log('QA-HOM-001: 96/96 migrações no PostgreSQL novo; 4 identidades e 2 empresas 100% fictícias.');
+  console.log('QA-HOM-001: 97/97 migrações no PostgreSQL novo; 4 identidades e 2 empresas 100% fictícias.');
   web = spawnChild(['server.mjs', '--dev'], { ...env, QA_MIGRATION_ONLY: '' });
   await waitForHealth(web);
   if (verify) {

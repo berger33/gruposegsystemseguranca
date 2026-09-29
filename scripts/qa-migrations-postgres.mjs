@@ -70,7 +70,7 @@ async function verifyIsolatedCloneRestore() {
     clone = new pg.Pool({ connectionString: cloneUrl, max: 1 });
     const { rows: ledgerBefore } = await clone.query('SELECT filename, checksum FROM __migrations ORDER BY filename');
     const tableCount = await clone.query("SELECT count(*)::int AS count FROM pg_tables WHERE schemaname='public'");
-    if (ledgerBefore.length !== 96) throw new Error('qa_clone_incomplete_ledger');
+    if (ledgerBefore.length !== 97) throw new Error('qa_clone_incomplete_ledger');
     await clone.query("DELETE FROM data_retention_policies_legacy WHERE id='audit_12m'");
     await clone.query("INSERT INTO audit_log (action, actor, target) VALUES ('qa_clone_mutation','qa_synthetic','qa-only')");
     const { rows: [changed] } = await clone.query(`SELECT
@@ -95,7 +95,7 @@ async function verifyIsolatedCloneRestore() {
         restored.mutation_count !== 0 || restored.table_count !== tableCount.rows[0].count) {
       throw new Error('qa_clone_restore_mismatch');
     }
-    console.log(`QA_CLONE_RESTORE: 96/96 checksums preserved; legacy 2->3; synthetic mutation 1->0; tables ${restored.table_count}; TEMPLATE only`);
+    console.log(`QA_CLONE_RESTORE: 97/97 checksums preserved; legacy 2->3; synthetic mutation 1->0; tables ${restored.table_count}; TEMPLATE only`);
   } finally {
     await clone?.end();
     if (adminConnected) await admin.end();
@@ -112,7 +112,7 @@ try {
   pool = new pg.Pool({ connectionString, max: 1 });
   const firstExit = await runMigrator(1);
   const { rows: first } = await pool.query('SELECT count(*)::int AS count FROM __migrations WHERE checksum IS NOT NULL');
-  console.log(`QA_MIGRATIONS_FIRST_EXIT=${firstExit} CHECKSUMMED=${first[0].count}/96`);
+  console.log(`QA_MIGRATIONS_FIRST_EXIT=${firstExit} CHECKSUMMED=${first[0].count}/97`);
   if (first[0].count >= 49) {
     const { rows: [retention] } = await pool.query(`
       SELECT (SELECT count(*)::int FROM data_retention_policies_legacy) AS legacy_count,
@@ -161,14 +161,14 @@ try {
     console.log(`QA_SYNTHETIC_APPROVAL_GATE: ${JSON.stringify(approval)}`);
     if (Object.values(approval).some(v => v !== 0)) throw new Error('qa_unreviewed_seed_enabled');
   }
-  if (firstExit === 0 && first[0].count === 96) {
+  if (firstExit === 0 && first[0].count === 97) {
     const tablesBefore = await pool.query("SELECT count(*)::int AS count FROM pg_tables WHERE schemaname='public'");
     const secondExit = await runMigrator(2);
     const { rows: second } = await pool.query('SELECT count(*)::int AS count FROM __migrations WHERE checksum IS NOT NULL');
     const tablesAfter = await pool.query("SELECT count(*)::int AS count FROM pg_tables WHERE schemaname='public'");
     const { rows: [auditAfter] } = await pool.query('SELECT count(*)::int AS count FROM audit_log WHERE id=$1 AND action=$2', [auditSampleId, 'crm_retention_policy_create']);
-    console.log(`QA_MIGRATIONS_SECOND_EXIT=${secondExit} CHECKSUMMED=${second[0].count}/96 TABLES=${tablesBefore.rows[0].count}->${tablesAfter.rows[0].count} AUDIT_SAMPLE=${auditAfter.count}`);
-    result = secondExit === 0 && second[0].count === 96 && tablesBefore.rows[0].count === tablesAfter.rows[0].count && auditAfter.count === 1 ? 0 : 1;
+    console.log(`QA_MIGRATIONS_SECOND_EXIT=${secondExit} CHECKSUMMED=${second[0].count}/97 TABLES=${tablesBefore.rows[0].count}->${tablesAfter.rows[0].count} AUDIT_SAMPLE=${auditAfter.count}`);
+    result = secondExit === 0 && second[0].count === 97 && tablesBefore.rows[0].count === tablesAfter.rows[0].count && auditAfter.count === 1 ? 0 : 1;
     if (result === 0) {
       await pool.end(); pool = undefined; // TEMPLATE exige zero conexões à base origem.
       await verifyIsolatedCloneRestore();

@@ -18,6 +18,7 @@
 
 import { randomUUID } from "node:crypto";
 import nodemailer from "nodemailer";
+import { decryptMfaSecret, mfaKey, verifyMfaCode, hashRecoveryCode } from "../lib/client-mfa.mjs";
 import {
   CONFIRM_EMAIL_TTL_MS,
   INVITE_TTL_MS,
@@ -170,9 +171,9 @@ export function createClientAccessApi(ctx) {
     let result;
     try {
       result = await db.query(
-        `SELECT s.id AS session_id, s.expires_at, s.revoked_at,
+        `SELECT s.id AS session_id, s.expires_at, s.revoked_at, s.mfa_verified_at,
                 i.id AS identity_id, i.email, i.display_name, i.status,
-                (m.activated_at IS NOT NULL) AS mfa_active
+                m.activated_at AS mfa_activated_at, m.totp_secret_encrypted AS mfa_secret
          FROM auth_sessions s
          JOIN auth_identities i ON i.id = s.identity_id
          LEFT JOIN auth_mfa m ON m.identity_id = i.id
@@ -187,9 +188,12 @@ export function createClientAccessApi(ctx) {
     }
     const row = result.rows[0];
     if (!row || row.revoked_at) return null;
-    // No challenge flow is available yet. Invalidate even pre-existing sessions
-    // for activated MFA identities rather than allowing password-only access.
-    if (row.mfa_active) return null;
+    // MFA proof belongs to THIS session and must postdate the most recent
+    // activation. Legacy password-only cookies never gain access retroactively.
+    if (row.mfa_activated_at) {
+      try { decryptMfaSecret(row.mfa_secret, row.identity_id); } catch { return null; }
+      if (!row.mfa_verified_at || new Date(row.mfa_verified_at) < new Date(row.mfa_activated_at)) return null;
+    }
     if (new Date(row.expires_at).getTime() <= Date.now()) return null;
     if (row.status === "suspended" || row.status === "disabled") {
       await db
@@ -211,6 +215,7 @@ export function createClientAccessApi(ctx) {
       email: row.email,
       displayName: row.display_name,
       status: row.status,
+      mfaEnabled: Boolean(row.mfa_activated_at),
       expiresAt: new Date(row.expires_at).getTime(),
     };
   }
@@ -254,7 +259,7 @@ export function createClientAccessApi(ctx) {
     try {
       const found = await db.query(
         `SELECT i.id, i.status, i.display_name, c.password_hash,
-                (m.activated_at IS NOT NULL) AS mfa_active
+                (m.activated_at IS NOT NULL) AS mfa_active, m.totp_secret_encrypted AS mfa_secret
          FROM auth_identities i
          LEFT JOIN auth_credentials c ON c.identity_id = i.id
          LEFT JOIN auth_mfa m ON m.identity_id = i.id
@@ -277,11 +282,21 @@ export function createClientAccessApi(ctx) {
       await audit(db, { actorKind: "client", actorId: record.id, action: "login", target: record.id, result: "denied", category: "authorization_denied" });
       return ctx.json(res, 401, { error: "invalid_credentials" });
     }
-    // A valid password is not sufficient once MFA has been activated. Until a
-    // real TOTP challenge/recovery flow is implemented, do not issue a session.
+    // A valid password is not sufficient once MFA is active. A short-lived,
+    // one-use challenge is NOT an authenticated session/cookie.
     if (record.mfa_active) {
-      await audit(db, { actorKind: "client", actorId: record.id, action: "login", target: record.id, result: "denied", category: "authorization_denied" });
-      return ctx.json(res, 503, { error: "mfa_login_unavailable" });
+      try {
+        decryptMfaSecret(record.mfa_secret, record.id);
+        const challenge = generateToken();
+        await db.query("UPDATE auth_mfa_challenges SET used_at = NOW() WHERE identity_id = $1 AND used_at IS NULL", [record.id]);
+        await db.query(`INSERT INTO auth_mfa_challenges (id, identity_id, token_hash, expires_at)
+          VALUES ($1,$2,$3,NOW() + INTERVAL '5 minutes')`, [randomUUID(), record.id, hashToken(challenge)]);
+        await audit(db, { actorKind: 'client', actorId: record.id, action: 'mfa_challenge_issue', target: record.id, result: 'allowed' });
+        return ctx.json(res, 202, { mfaRequired: true, challenge });
+      } catch {
+        // Bad/missing key and legacy plaintext secrets must NEVER downgrade MFA.
+        return ctx.json(res, 503, { error: 'mfa_login_unavailable' });
+      }
     }
 
     try {
@@ -305,6 +320,76 @@ export function createClientAccessApi(ctx) {
     return ctx.json(res, 200, { ok: true, status: record.status, emailConfirmed: record.status === "active" }, {
       "Set-Cookie": clientCookie(req, token, Math.floor(SESSION_TTL_MS / 1000)),
     });
+  }
+
+  async function handleMfaComplete(req, res) {
+    if (!requireMethod(req, res, ['POST'])) return;
+    if (!requireSameOrigin(req, res)) return;
+    const body = await readJsonOr400(req, res);
+    if (body === undefined) return;
+    const challenge = typeof body?.challenge === 'string' ? body.challenge : '';
+    const code = typeof body?.code === 'string' ? body.code.trim().toLowerCase() : '';
+    if (!challenge || challenge.length > 200 || !(/^\d{6}$/.test(code) || hashRecoveryCode(code))) {
+      return ctx.json(res, 400, { error: 'invalid_request' });
+    }
+    let db, client;
+    try {
+      mfaKey();
+      db = ctx.getPool();
+      client = await db.connect();
+      await client.query('BEGIN');
+      const { rows: [entry] } = await client.query(`SELECT c.id AS challenge_id, c.identity_id, c.expires_at,
+          c.used_at, c.attempts, i.status, i.email, m.totp_secret_encrypted,
+          m.recovery_hashes, m.activated_at, m.last_used_step
+        FROM auth_mfa_challenges c
+        JOIN auth_identities i ON i.id = c.identity_id
+        JOIN auth_mfa m ON m.identity_id = i.id
+        WHERE c.token_hash = $1 AND i.kind = 'client' FOR UPDATE OF c, m`, [hashToken(challenge)]);
+      if (!entry || entry.used_at || entry.attempts >= 5 || new Date(entry.expires_at) <= new Date() ||
+          !entry.activated_at || ['disabled', 'suspended'].includes(entry.status)) {
+        await client.query('ROLLBACK');
+        return ctx.json(res, 401, { error: 'mfa_challenge_invalid' });
+      }
+      const originHash = hashOrigin(ctx.clientIp(req));
+      const throttle = await client.query('SELECT locked_until FROM auth_login_throttle WHERE email=$1 AND origin_hash=$2', [entry.email, originHash]);
+      if (throttle.rows[0]?.locked_until && new Date(throttle.rows[0].locked_until) > new Date()) {
+        await client.query('ROLLBACK');
+        return ctx.json(res, 429, { error: 'temporarily_limited' });
+      }
+      const recoveryHash = hashRecoveryCode(code);
+      let valid = false;
+      if (recoveryHash && entry.recovery_hashes.includes(recoveryHash)) {
+        await client.query('UPDATE auth_mfa SET recovery_hashes = array_remove(recovery_hashes, $2), last_verified_at=NOW(), attempts_since_verified=0 WHERE identity_id=$1', [entry.identity_id, recoveryHash]);
+        valid = true;
+      } else if (!recoveryHash) {
+        const result = await verifyMfaCode(entry.totp_secret_encrypted, entry.identity_id, code, entry.last_used_step);
+        if (result.valid) {
+          const updated = await client.query(`UPDATE auth_mfa SET last_used_step=$2, last_verified_at=NOW(), attempts_since_verified=0
+            WHERE identity_id=$1 AND (last_used_step IS NULL OR last_used_step < $2) RETURNING identity_id`, [entry.identity_id, result.timeStep]);
+          valid = updated.rowCount === 1;
+        }
+      }
+      if (!valid) {
+        await client.query('UPDATE auth_mfa_challenges SET attempts=attempts+1 WHERE id=$1', [entry.challenge_id]);
+        await client.query('COMMIT');
+        await registerLoginFailure(db, entry.email, originHash, entry.identity_id);
+        return ctx.json(res, 401, { error: 'mfa_code_invalid' });
+      }
+      const token = generateToken();
+      const expiresAt = Date.now() + SESSION_TTL_MS;
+      await client.query('UPDATE auth_mfa_challenges SET used_at=NOW() WHERE id=$1', [entry.challenge_id]);
+      await client.query(`INSERT INTO auth_sessions (id, identity_id, token_hash, expires_at, ip_hash, user_agent, mfa_verified_at)
+        VALUES ($1,$2,$3,$4,$5,$6,NOW())`, [randomUUID(), entry.identity_id, hashToken(token), new Date(expiresAt), originHash,
+        String(req.headers['user-agent'] || '').slice(0, 200)]);
+      await client.query('DELETE FROM auth_login_throttle WHERE email=$1 AND origin_hash=$2', [entry.email, originHash]);
+      await client.query('COMMIT');
+      await audit(db, { actorKind: 'client', actorId: entry.identity_id, action: 'mfa_challenge_verify', target: entry.identity_id, result: 'allowed' });
+      return ctx.json(res, 200, { ok: true, status: entry.status, emailConfirmed: entry.status === 'active' },
+        { 'Set-Cookie': clientCookie(req, token, Math.floor(SESSION_TTL_MS / 1000)) });
+    } catch (error) {
+      if (client) await client.query('ROLLBACK').catch(() => {});
+      return databaseFailure(ctx, res, error, 'Could not complete the MFA challenge.');
+    } finally { client?.release(); }
   }
 
   async function registerLoginFailure(db, email, originHash, identityId) {
@@ -368,6 +453,7 @@ export function createClientAccessApi(ctx) {
       displayName: session.displayName,
       status: session.status,
       emailConfirmed: session.status === "active",
+      mfaEnabled: session.mfaEnabled,
       expiresAt: session.expiresAt,
     });
   }
@@ -828,6 +914,8 @@ export function createClientAccessApi(ctx) {
         return handleLogin(req, res);
       case "/api/auth/logout":
         return handleLogout(req, res);
+      case "/api/auth/mfa/complete":
+        return handleMfaComplete(req, res);
       case "/api/auth/me":
         return handleMe(req, res);
       case "/api/auth/invite/inspect":

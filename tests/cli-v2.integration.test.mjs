@@ -41,7 +41,7 @@ async function ready(child, logs) {
   throw new Error('server did not start: ' + logs.join('').slice(-700));
 }
 
-test('TENANT-SEG-003 / PLT-AUD-003: HTTP CLI v2 docs staff-only, legacy client scope and audit on PG 001–096', testOptions, async t => {
+test('TENANT-SEG-003 / PLT-AUD-003: HTTP CLI v2 docs staff-only, legacy client scope and audit on PG 001–097', testOptions, async t => {
   const pool = new pg.Pool({ connectionString: databaseUrl, max: 3 });
   const files = new Map();
   for (const name of ['next-env.d.ts', 'tsconfig.json']) files.set(name, await readFile(path.join(projectRoot, name), 'utf8').catch(() => null));

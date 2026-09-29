@@ -133,5 +133,5 @@ test('PLT-BAK-001 / CLI-04: schema PG de conta/documento/versão e objeto QA ind
     await assert.rejects(target.read({ authorizedAccountId: accountA,
       document: { id: docA, client_account_id: accountA }, version: dbVersion, receipt: rA2 }), /qa_object_sha256_mismatch/);
     assert.equal(poolHadError, false);
-    console.log('QA_CLI_V2_OBJECT_VERIFIED: PG 96/96; A v1/v2 bytes exact; B cross-account denied; A revoke denied; B own preserved; DB key mismatch/missing/corrupt bytes denied; signed QA receipts (ephemeral key)');
+    console.log('QA_CLI_V2_OBJECT_VERIFIED: PG 97/97; A v1/v2 bytes exact; B cross-account denied; A revoke denied; B own preserved; DB key mismatch/missing/corrupt bytes denied; signed QA receipts (ephemeral key)');
   });

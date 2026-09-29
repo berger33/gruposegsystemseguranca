@@ -1900,6 +1900,7 @@ async function routeApi(req, res) {
   const clientDocMatch = url.pathname.match(/^\/api\/client\/documents\/([0-9a-f-]{36})\/download$/i);
   if (clientDocMatch) return clientSpaceApi.handleClientDocumentDownload(req, res, clientDocMatch[1]);
   if (url.pathname === "/api/client/tickets") return clientSpaceApi.handleClientTickets(req, res, url);
+  if (url.pathname === "/api/client/security/mfa/setup") return clientSecurityApi.handleMfaSetup(req, res);
   if (url.pathname === "/api/client/security/mfa/activate") return clientSecurityApi.handleMfaActivate(req, res);
   if (url.pathname === "/api/client/security/mfa/verify") return clientSecurityApi.handleMfaVerify(req, res);
   if (url.pathname === "/api/client/security/mfa/disable") return clientSecurityApi.handleMfaDisable(req, res);

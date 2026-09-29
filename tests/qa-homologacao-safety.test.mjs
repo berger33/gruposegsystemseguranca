@@ -7,7 +7,7 @@ import { createServer } from 'node:net';
 const cwd = path.resolve(import.meta.dirname, '..');
 const runner = 'scripts/qa-homologacao-local.mjs';
 const names = ['DATABASE_URL', 'DATABASE_MIGRATION_URL', 'CLIENT_DOCS_DIR',
-  'SITE_ADMIN_TOKEN_TI', 'OLLAMA_HOST', 'QA_PGLITE_ONLY'];
+  'SITE_ADMIN_TOKEN_TI', 'CLIENT_MFA_ENCRYPTION_KEY', 'OLLAMA_HOST', 'QA_PGLITE_ONLY'];
 
 test('QA-HOM-001 preflight accepts only clean local input (no server or DB started)', () => {
   const env = { ...process.env };
