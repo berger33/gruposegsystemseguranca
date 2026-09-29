@@ -8,6 +8,8 @@ export default function ThemeClient() {
   const [detail, setDetail] = useState<any>(null);
   const [pref, setPref] = useState<any>(null);
   const [prefForm, setPrefForm] = useState({ theme_mode:"sistema", theme_key:"" });
+  const [previewUrl, setPreviewUrl] = useState("/?preview=tema");
+  const [rollbackReason, setRollbackReason] = useState("Rollback para a versão anterior aprovada");
 
   const load = async () => {
     try{
@@ -40,12 +42,20 @@ export default function ThemeClient() {
         <textarea placeholder='layout JSON {"sections":"default"}' value={form.layout} onChange={e=>setForm({...form, layout:e.target.value})} style={{width:"100%", minHeight:60}} />
         <button onClick={async()=>{ try{ const cfg=JSON.parse(form.config||"{}"); const tok=JSON.parse(form.tokens||"{}"); const lay=JSON.parse(form.layout||"{}"); await post("/api/admin/themes", {...form, config:cfg, tokens:tok, layout:lay}); setMsg("tema criado rascunho versionado"); load(); } catch(e:any){ setMsg(e.message);} }}>Criar tema rascunho</button>
       </div>
-      <ul>{items.map((t:any)=><li key={t.id}>{t.theme_key} v{t.version} {t.name} status:{t.status} pub:{String(t.is_published)} ativo:{String(t.is_active)} preview:{t.preview_url?.slice(0,40)} <button onClick={async()=>{ try{ const d=await fetch(`/api/admin/themes/${t.id}`).then(r=>r.json()); setDetail(d);} catch(e:any){ setMsg(e.message);} }}>Ver histórico</button> <button onClick={async()=>{ try{ await post("/api/admin/themes", {id:t.id, status:"em_revisao", reason:"Envio para revisão tema"}, "PATCH"); setMsg("tema em revisão"); load(); } catch(e:any){ setMsg(e.message);} }}>Revisão</button> <button onClick={async()=>{ try{ await post("/api/admin/themes", {id:t.id, status:"aprovado", reason:"Aprovação competente tema antes publicação autorizada"}, "PATCH"); setMsg("tema aprovado"); load(); } catch(e:any){ setMsg(e.message);} }}>Aprovar</button> <button onClick={async()=>{ try{ await post("/api/admin/themes", {id:t.id, status:"publicado", make_active:true, reason:"Publicação autorizada tema configuração persistida"}, "PATCH"); setMsg("tema publicado autorizado e ativado persistido"); load(); } catch(e:any){ setMsg(e.message);} }}>Publicar e ativar</button> <button onClick={async()=>{ try{ const preview_url=prompt("preview_url 5..1000")||t.preview_url||"/"; const r=await post("/api/admin/theme-previews", {theme_id:t.id, preview_url}); setMsg(`preview criado token ${r.preview_token?.substring(0,8)} expira ${r.expires_at} — preview publicação autorizada`); } catch(e:any){ setMsg(e.message);} }}>Criar preview</button></li>)}</ul>
+      <p style={{margin:"4px 0"}}>
+        <label htmlFor="theme-preview-url">URL de prévia (5 a 1000 caracteres)</label>{" "}
+        <input id="theme-preview-url" value={previewUrl} onChange={e=>setPreviewUrl(e.target.value)} style={{minWidth:240}} />
+      </p>
+      <ul>{items.map((t:any)=><li key={t.id}>{t.theme_key} v{t.version} {t.name} status:{t.status} pub:{String(t.is_published)} ativo:{String(t.is_active)} preview:{t.preview_url?.slice(0,40)} <button onClick={async()=>{ try{ const d=await fetch(`/api/admin/themes/${t.id}`).then(r=>r.json()); setDetail(d);} catch(e:any){ setMsg(e.message);} }}>Ver histórico</button> <button onClick={async()=>{ try{ await post("/api/admin/themes", {id:t.id, status:"em_revisao", reason:"Envio para revisão tema"}, "PATCH"); setMsg("tema em revisão"); load(); } catch(e:any){ setMsg(e.message);} }}>Revisão</button> <button onClick={async()=>{ try{ await post("/api/admin/themes", {id:t.id, status:"aprovado", reason:"Aprovação competente tema antes publicação autorizada"}, "PATCH"); setMsg("tema aprovado"); load(); } catch(e:any){ setMsg(e.message);} }}>Aprovar</button> <button onClick={async()=>{ try{ await post("/api/admin/themes", {id:t.id, status:"publicado", make_active:true, reason:"Publicação autorizada tema configuração persistida"}, "PATCH"); setMsg("tema publicado autorizado e ativado persistido"); load(); } catch(e:any){ setMsg(e.message);} }}>Publicar e ativar</button> <button onClick={async()=>{ try{ const preview_url=previewUrl.trim()||t.preview_url||"/"; const r=await post("/api/admin/theme-previews", {theme_id:t.id, preview_url}); setMsg(`preview criado token ${r.preview_token?.substring(0,8)} expira ${r.expires_at} — preview publicação autorizada`); } catch(e:any){ setMsg(e.message);} }}>Criar preview</button></li>)}</ul>
 
       {detail && <div style={{marginTop:16, padding:12, border:"1px solid #999", background:"#f9f9f9"}}>
         <h4>Detalhe {detail.theme?.theme_key} v{detail.theme?.version} — rollback</h4>
         <h5>Versões snapshot</h5>
-        <ul>{(detail.versions||[]).map((v:any)=><li key={v.id}>v{v.version} {v.change_summary?.slice(0,80)} <button onClick={async()=>{ try{ const reason=prompt("Motivo rollback 10..1000")||"Rollback tema"; await post("/api/admin/themes/rollback", {theme_id:detail.theme.id, version:v.version, reason}); setMsg(`rollback para v${v.version} nova versão revertido`); load(); } catch(e:any){ setMsg(e.message);} }}>Rollback para v{v.version}</button></li>)}</ul>
+        <p style={{margin:"4px 0"}}>
+          <label htmlFor="theme-rollback-reason">Motivo do rollback (10 a 1000 caracteres)</label>{" "}
+          <input id="theme-rollback-reason" value={rollbackReason} onChange={e=>setRollbackReason(e.target.value)} style={{minWidth:280}} />
+        </p>
+        <ul>{(detail.versions||[]).map((v:any)=><li key={v.id}>v{v.version} {v.change_summary?.slice(0,80)} <button onClick={async()=>{ try{ const reason=rollbackReason.trim()||"Rollback tema para versão anterior"; await post("/api/admin/themes/rollback", {theme_id:detail.theme.id, version:v.version, reason}); setMsg(`rollback para v${v.version} nova versão revertido`); load(); } catch(e:any){ setMsg(e.message);} }}>Rollback para v{v.version}</button></li>)}</ul>
         <h5>Histórico imutável</h5>
         <ul>{(detail.history||[]).map((h:any)=><li key={h.id}>v{h.previous_version}→v{h.next_version} {h.previous_status}→{h.next_status} {h.reason?.slice(0,80)}</li>)}</ul>
         <h5>Previews</h5>

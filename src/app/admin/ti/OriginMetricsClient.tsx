@@ -9,6 +9,7 @@ export default function OriginMetricsClient() {
   const [metricForm, setMetricForm] = useState({ origin:"", campaign:"", channel:"", period_start:"", period_end:"", total_leads:0, converted_leads:0, total_opportunities:0, total_contracts:0, notes:"" });
   const [eventForm, setEventForm] = useState({ event_type:"lead_received", origin:"", campaign:"", channel:"", lead_id:"", ip:"", user_agent:"" });
   const [abForm, setAbForm] = useState({ test_key:"", hypothesis:"", description:"", metric_name:"", traffic_required:100, treatment:"", variant_a:"{}", variant_b:"{}" });
+  const [abWinner, setAbWinner] = useState("inconclusivo");
 
   const load = async () => {
     try{
@@ -77,7 +78,13 @@ export default function OriginMetricsClient() {
         <textarea placeholder='variant_b JSON {"title":"..."}' value={abForm.variant_b} onChange={e=>setAbForm({...abForm, variant_b:e.target.value})} style={{width:"100%", minHeight:60}} />
         <button onClick={async()=>{ try{ const va=JSON.parse(abForm.variant_a||"{}"); const vb=JSON.parse(abForm.variant_b||"{}"); await post("/api/admin/ab-tests", {...abForm, variant_a:va, variant_b:vb}); setMsg("A/B criado hipótese tratamento definidos minimização"); load(); } catch(e:any){ setMsg(e.message);} }}>Criar A/B</button>
       </div>
-      <ul>{abtests.map((a:any)=><li key={a.id}>{a.test_key} status:{a.status} hipótese:{a.hypothesis?.slice(0,60)} metric:{a.metric_name} tráfegoReq:{a.traffic_required} winner:{a.winner||"—"} privacy:{String(a.is_privacy_compliant)} tratamento:{a.treatment?.slice(0,60)} <button onClick={async()=>{ try{ await post("/api/admin/ab-tests", {id:a.id, status:"aprovado", reason:"Aprovação A/B hipótese e tratamento definidos minimização tráfego verificado"}, "PATCH"); setMsg("A/B aprovado"); load(); } catch(e:any){ setMsg(e.message);} }}>Aprovar</button> <button onClick={async()=>{ try{ await post("/api/admin/ab-tests", {id:a.id, status:"em_execucao", reason:"Início execução A/B após tráfego e hipótese definidos"}, "PATCH"); setMsg("A/B em execução somente após tráfego"); load(); } catch(e:any){ setMsg(e.message);} }}>Iniciar execução</button> <button onClick={async()=>{ try{ const winner=prompt("winner A/B/empate/inconclusivo")||"A"; await post("/api/admin/ab-tests", {id:a.id, status:"concluido", winner, result_data:{conclusion:"resultado"}, reason:"Conclusão A/B minimização"}, "PATCH"); setMsg(`A/B concluído winner ${winner}`); load(); } catch(e:any){ setMsg(e.message);} }}>Concluir</button></li>)}</ul>
+      <p style={{margin:"4px 0"}}>
+        <label htmlFor="ab-winner">Resultado a registrar na conclusão</label>{" "}
+        <select id="ab-winner" value={abWinner} onChange={e=>setAbWinner(e.target.value)}>
+          <option value="A">A</option><option value="B">B</option><option value="empate">empate</option><option value="inconclusivo">inconclusivo</option>
+        </select>
+      </p>
+      <ul>{abtests.map((a:any)=><li key={a.id}>{a.test_key} status:{a.status} hipótese:{a.hypothesis?.slice(0,60)} metric:{a.metric_name} tráfegoReq:{a.traffic_required} winner:{a.winner||"—"} privacy:{String(a.is_privacy_compliant)} tratamento:{a.treatment?.slice(0,60)} <button onClick={async()=>{ try{ await post("/api/admin/ab-tests", {id:a.id, status:"aprovado", reason:"Aprovação A/B hipótese e tratamento definidos minimização tráfego verificado"}, "PATCH"); setMsg("A/B aprovado"); load(); } catch(e:any){ setMsg(e.message);} }}>Aprovar</button> <button onClick={async()=>{ try{ await post("/api/admin/ab-tests", {id:a.id, status:"em_execucao", reason:"Início execução A/B após tráfego e hipótese definidos"}, "PATCH"); setMsg("A/B em execução somente após tráfego"); load(); } catch(e:any){ setMsg(e.message);} }}>Iniciar execução</button> <button onClick={async()=>{ try{ const winner=abWinner; await post("/api/admin/ab-tests", {id:a.id, status:"concluido", winner, result_data:{conclusion:"resultado"}, reason:"Conclusão A/B minimização"}, "PATCH"); setMsg(`A/B concluído winner ${winner}`); load(); } catch(e:any){ setMsg(e.message);} }}>Concluir</button></li>)}</ul>
     </section>
   );
 }

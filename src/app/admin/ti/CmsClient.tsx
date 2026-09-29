@@ -6,6 +6,7 @@ export default function CmsClient() {
   const [msg, setMsg] = useState("");
   const [form, setForm] = useState({ slug:"", title:"", excerpt:"", content:"", content_type:"pagina", tags:"", seo_title:"", seo_description:"", is_authorized:false, metadata:"{}" });
   const [detail, setDetail] = useState<any>(null);
+  const [revertReason, setRevertReason] = useState("Reversão para versão anterior revisada");
 
   const load = async () => {
     try{
@@ -46,7 +47,11 @@ export default function CmsClient() {
         <h4>Detalhe {detail.content?.slug} v{detail.content?.version} — versões e histórico</h4>
         <p>Título: {detail.content?.title} | Tipo: {detail.content?.content_type} | Status: {detail.content?.status}</p>
         <h5>Versões (snapshot JSONB, change_summary)</h5>
-        <ul>{(detail.versions||[]).map((v:any)=><li key={v.id}>v{v.version} {v.change_summary?.slice(0,80)} por {v.created_by_name||"system"} <button onClick={async()=>{ try{ const reason=prompt("Motivo reversão 10..1000")||"Reversão para versão anterior"; await post("/api/admin/cms-contents/revert", {content_id:detail.content.id, version:v.version, reason}); setMsg(`revertido para v${v.version} nova versão rascunho criada`); load(); } catch(e:any){ setMsg(e.message);} }}>Reverter para v{v.version}</button></li>)}</ul>
+        <p style={{margin:"4px 0"}}>
+          <label htmlFor="cms-revert-reason">Motivo da reversão (10 a 1000 caracteres)</label>{" "}
+          <input id="cms-revert-reason" value={revertReason} onChange={e=>setRevertReason(e.target.value)} style={{minWidth:280}} />
+        </p>
+        <ul>{(detail.versions||[]).map((v:any)=><li key={v.id}>v{v.version} {v.change_summary?.slice(0,80)} por {v.created_by_name||"system"} <button onClick={async()=>{ try{ const reason=revertReason.trim()||"Reversão para versão anterior revisada"; await post("/api/admin/cms-contents/revert", {content_id:detail.content.id, version:v.version, reason}); setMsg(`revertido para v${v.version} nova versão rascunho criada`); load(); } catch(e:any){ setMsg(e.message);} }}>Reverter para v{v.version}</button></li>)}</ul>
         <h5>Histórico imutável</h5>
         <ul>{(detail.history||[]).map((h:any)=><li key={h.id}>v{h.previous_version}→v{h.next_version} {h.previous_status}→{h.next_status} motivo:{h.reason?.slice(0,100)} por {h.changed_by_name}</li>)}</ul>
       </div>}
