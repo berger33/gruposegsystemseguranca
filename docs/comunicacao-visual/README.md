@@ -13,8 +13,16 @@ demais principais).
 | [02-plano-mestre-200-imagens.md](02-plano-mestre-200-imagens.md) | **Plano mestre**: identidade visual, especificações, fluxo de produção, LGPD, roadmap e integração com o sistema |
 | [03-catalogo-200-imagens.md](03-catalogo-200-imagens.md) | **Catálogo das 200 imagens** com textos (manchete, apoio, CTA, assunto) e direção visual por item |
 | [04-catalogo-imagens.csv](04-catalogo-imagens.csv) | Planilha de controle de produção (onda, prioridade, formato, status, arquivo sugerido) — 200 linhas |
-| [producao/](producao/) | Imagens geradas **em revisão** (aguardam aprovação RH/Marcelo antes de irem para `public/emails/`); `onda-0-montagem.jpg` é a folha de contato do lote-guia |
+| [producao/](producao/) | Imagens geradas **em revisão** (aguardam aprovação RH/Marcelo antes de irem para `public/emails/`); montagens `*-montagem.jpg` são as folhas de contato de cada lote |
+| [producao/brand/](producao/brand/) | **Logo oficial** recortado (`logo-oficial.png`) — referência obrigatória e exclusiva em todas as peças |
 | [mockups/](mockups/) | 3 mockups **conceituais** de referência (boas-vindas, recuperação de senha, aniversário) — não oficiais |
+
+## Regra do logo (definitiva)
+
+**Usar sempre o logotipo oficial do Grupo SEG System** (escudo azul "GRUPO / SEG SYSTEM /
+SEGURANÇA INTEGRADA"), reproduzido fielmente — fonte: `public/brand/454751406_..._n.jpg`,
+recorte em `producao/brand/logo-oficial.png`. **Nunca usar outro logo**, símbolo inventado ou
+versão estilizada. Decisão do responsável em 29/09/2026; o Lote 2 foi refeito sob esta regra.
 
 ## Resumo da distribuição
 

@@ -98,8 +98,13 @@ campanhas, com o azul da marca no rodapé/assinatura.
 
 ### 4.3 Elementos fixos de composição
 
-1. **Assinatura de marca**: escudo azul (marca provisória até o logotipo oficial) no canto
-   superior esquerdo + wordmark "GRUPO SEG SYSTEM · SEGURANÇA INTEGRADA".
+1. **Assinatura de marca**: **logotipo oficial do Grupo SEG System** (escudo azul com "GRUPO",
+   "SEG SYSTEM" e "SEGURANÇA INTEGRADA"). Arquivo de referência:
+   `public/brand/454751406_1061413479159366_4672298606281258831_n.jpg`, com recorte limpo em
+   `docs/comunicacao-visual/producao/brand/logo-oficial.png`. **Regra definitiva: reproduzir
+   o logotipo oficial fielmente em todas as peças — nunca redesenhar, recolorir, estilizar ou
+   substituir por outro símbolo.** Em fundos escuros, aplicar sobre chip branco arredondado
+   para preservar fidelidade e legibilidade.
 2. **Barra de identidade**: faixa fina azul-cobalto com "Comunicação interna" para e-mails
    institucionais; "Acesso e segurança" para transacionais; "Parabéns / Felicidades" para
    aniversário.

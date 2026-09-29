@@ -10,6 +10,12 @@
 1080×1080, "mural" quando banner de corredor 1200×400). **CTA** = botão em HTML (não embutido
 na arte).
 
+> **Regra do logo (definitiva):** toda menção a "escudo" na direção visual significa o
+> **logotipo oficial** (`public/brand/454751406_..._n.jpg` / recorte
+> `producao/brand/logo-oficial.png`), reproduzido fielmente — **nunca usar outro logo**,
+> símbolo inventado ou versão estilizada. Ícones decorativos (cadeado, ampulheta, relógio,
+> refresh etc.) não substituem nem imitam o logo.
+
 **Contagem:** A (boas-vindas) 35 · B (conta e acesso) 45 · C (datas comemorativas) 100 ·
 D (comunicados internos) 20 → **200**.
 
