@@ -9,6 +9,7 @@ Este arquivo foi criado junto ao plano mestre. Nenhum item foi implementado ou h
 - [Prompt de retomada disponível (histórico)](PROMPT-PROXIMA-SESSAO.md)
 - [Guia de desenvolvimento local](../README.md)
 - [QA-HOM-008 — demo sintético persistente local, ainda NO-GO Windows/dados reais/link](evidencias/QA-HOM-008-demo-local-persistente.md)
+- [QA-HOM-009 — cópia fria e restauração isolada do demo sintético, sem backup operacional](evidencias/QA-HOM-009-copia-fria-demo-sintetico.md)
 - [Instruções do demo local persistente (não instalação final)](demo-local-persistente.md)
 - [Homologação RAG beta](homologacao-rag-beta.md)
 - [Plano mestre de testes QA (estratégia aprovada)](plano-mestre-testes.md)

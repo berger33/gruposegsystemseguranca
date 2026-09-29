@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// QA-HOM-008: isolated integration test of the opt-in persistent preview.
-// Creates exactly one owned mkdtemp path, removes ONLY that path after stop.
+// QA-HOM-008/009: isolated persistent preview and cold snapshot integration.
+// Creates exclusively owned mkdtemp paths, removes ONLY those paths after stop.
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { chmod, mkdtemp, readFile, readdir, rm, rmdir, stat } from 'node:fs/promises';
@@ -14,7 +14,9 @@ if (process.argv.length !== 2 || ['DATABASE_URL','DATABASE_MIGRATION_URL','CLIEN
 }
 const root = path.resolve(import.meta.dirname, '..');
 const dir = await mkdtemp(path.join(tmpdir(), 'seg-demo-qa-'));
-await rmdir(dir); // initialiseDirectory requires an exclusively NEW path
+const snapshotDir = await mkdtemp(path.join(tmpdir(), 'seg-demo-qa-backup-'));
+const restoredDir = await mkdtemp(path.join(tmpdir(), 'seg-demo-qa-restored-'));
+for (const fresh of [dir,snapshotDir,restoredDir]) await rmdir(fresh); // new destinations only
 const port = await new Promise((resolve, reject) => {
   const probe = createServer(); probe.once('error', reject);
   probe.listen(0, '127.0.0.1', () => { const p = probe.address().port; probe.close(() => resolve(p)); });
@@ -26,11 +28,24 @@ const env = { PATH: process.env.PATH || process.env.Path || '', SystemRoot: proc
   SEG_DEMO_TEST_MODE: '1', SEG_DEMO_TEST_DIR: dir, SEG_DEMO_WEB_PORT: String(port) };
 let child, pool, result = 1;
 const logs = [];
-function spawnDemo(action) {
-  const proc = spawn(process.execPath, ['scripts/local-demo.mjs',action], { cwd: root, env, stdio: ['ignore','pipe','pipe'] });
+function spawnDemo(action, overrides = {}) {
+  const proc = spawn(process.execPath, ['scripts/local-demo.mjs',action], { cwd: root, env: { ...env, ...overrides }, stdio: ['ignore','pipe','pipe'] });
   proc.stdout.on('data', data => logs.push(String(data)));
   proc.stderr.on('data', data => logs.push(String(data)));
   return proc;
+}
+async function snapshot(...args) {
+  const proc = spawn(process.execPath, ['scripts/demo-offline-snapshot.mjs',...args],
+    { cwd: root, env, stdio: ['ignore','pipe','pipe'] });
+  const output = [];
+  proc.stdout.on('data', bytes => output.push(String(bytes)));
+  proc.stderr.on('data', bytes => output.push(String(bytes)));
+  // 'exit' may fire before stdout/stderr pipes are drained (especially after
+  // embedded-postgres' async exit hook); 'close' includes the final marker.
+  const code = await new Promise((resolve,reject) => {
+    proc.once('error',reject); proc.once('close',n => resolve(n ?? 1));
+  });
+  return { code, output:output.join('') };
 }
 function exitOf(proc) {
   if (proc.exitCode !== null) return Promise.resolve(proc.exitCode);
@@ -123,9 +138,31 @@ try {
       scoped.data.accounts.some(row => row.id === accountB.id)) throw new Error('demo_cross_account_exposure');
   const changed = await pool.query("UPDATE client_accounts SET notes='QA-HOM-008 persisted mutation, fictional only' WHERE id=$1",[accountA.id]);
   if (changed.rowCount !== 1) throw new Error('demo_synthetic_mutation_missing');
+  const runningBackup = await snapshot('--backup', snapshotDir);
+  if (runningBackup.code !== 1 || !runningBackup.output.includes('EEXIST')) throw new Error('demo_live_snapshot_not_refused');
+  if ((await readdir(tmpdir())).includes(path.basename(snapshotDir))) throw new Error('demo_live_snapshot_created');
+  console.log('QA-HOM-009_LIVE_BACKUP_REFUSED: runner lock held; no snapshot written');
   await pool.end(); pool = undefined;
   await stop();
   if ((await readdir(dir)).includes('run.lock')) throw new Error('demo_run_lock_left_after_graceful_stop');
+  const copied = await snapshot('--backup', snapshotDir);
+  if (copied.code !== 0 || !copied.output.includes('DEMO_SNAPSHOT_COLD_COPY_OK')) throw new Error('demo_cold_copy_failed');
+  const verified = await snapshot('--verify', snapshotDir);
+  if (verified.code !== 0 || !verified.output.includes('DEMO_SNAPSHOT_SELF_CHECK_OK')) throw new Error('demo_snapshot_verify_failed');
+  const restored = await snapshot('--restore-copy', snapshotDir, restoredDir);
+  if (restored.code !== 0 || !restored.output.includes('DEMO_RESTORE_ISOLATED_COPY_OK')) {
+    throw new Error(`demo_isolated_restore_failed exit=${restored.code}: ${restored.output.slice(0,480)}`);
+  }
+  if (!(await readdir(restoredDir)).includes('documents')) throw new Error('demo_empty_documents_dir_not_restored');
+  console.log('QA-HOM-009_COPY_RESTORE: cold copy + self-check + isolated PostgreSQL marker/ledger + empty documents dir; no source overwrite');
+  logs.length = 0; child = spawnDemo('--start', { SEG_DEMO_TEST_DIR:restoredDir }); await ready(child);
+  const restoredAccess = await request('/api/client/accounts', undefined, clientLogin.cookie);
+  expect(restoredAccess, 200, 'RESTORED_HTTP_CLIENT');
+  if (restoredAccess.data.accounts?.length !== 1 || restoredAccess.data.accounts[0].id !== accountA.id) {
+    throw new Error('demo_restored_http_scope_mismatch');
+  }
+  await stop();
+  console.log('QA-HOM-009_RESTORED_HTTP_SCOPE: client A visible, B hidden, original source left stopped');
   if (process.platform !== 'win32') {
     const cfgFile = path.join(dir,'config.json');
     await chmod(cfgFile, 0o644);
@@ -163,8 +200,8 @@ try {
   // The runner created exactly this mkdtemp path and no other; it never
   // touches the operator's default profile directory or any configured DB.
   if (child?.exitCode !== null) {
-    await rm(dir, { recursive:true, force:true });
-    console.log('QA-HOM-008_TEMP_CLEANED: true');
+    for (const owned of [dir,snapshotDir,restoredDir]) await rm(owned, { recursive:true, force:true });
+    console.log('QA-HOM-008/009_TEMP_CLEANED: true');
   } else { console.error('QA-HOM-008_TEMP_LEFT_FOR_INSPECTION: child still running'); result = 1; }
 }
 process.exit(result);

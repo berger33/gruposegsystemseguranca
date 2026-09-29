@@ -2,7 +2,7 @@
 
 ## Demonstração local persistente — apenas massa fictícia
 
-A versão **fonte atual**, não os ZIPs históricos, possui [início local persistente e guia Windows](docs/demo-local-persistente.md): `INICIAR-DEMO-LOCAL.bat`. Ele cria banco PostgreSQL **exclusivo no perfil do usuário**, sem SMTP/Funnel e sem dados reais; ainda **não é instalador Windows homologado, backup nem sistema completo**. Ensaio Linux isolado: `npm run test:demo-local:pg` ([QA-HOM-008](docs/evidencias/QA-HOM-008-demo-local-persistente.md)). Não copiar chaves ou dados da prévia anterior.
+A versão **fonte atual**, não os ZIPs históricos, possui [início local persistente e guia Windows](docs/demo-local-persistente.md): `INICIAR-DEMO-LOCAL.bat`. Ele cria banco PostgreSQL **exclusivo no perfil do usuário**, sem SMTP/Funnel e sem dados reais; ainda **não é instalador Windows homologado, backup nem sistema completo**. Ensaio Linux isolado: `npm run test:demo-local:pg` ([QA-HOM-008](docs/evidencias/QA-HOM-008-demo-local-persistente.md) e [cópia fria/restore QA-HOM-009](docs/evidencias/QA-HOM-009-copia-fria-demo-sintetico.md)). A cópia do demo contém segredos em claro, não é backup operacional. Não copiar chaves ou dados da prévia anterior.
 
 ## Homologação funcional **separada** da prévia PGlite
 
