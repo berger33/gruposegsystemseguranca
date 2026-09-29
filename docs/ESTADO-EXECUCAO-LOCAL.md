@@ -4,9 +4,13 @@ Documento de retomada entre sessões. Atualizado a cada lote concluído.
 Referência: `docs/EXECUCAO-ENTREGA-LOCAL.md` (roteiro L00–L10) e
 `docs/PLANO-MESTRE-IMPLEMENTACAO.md` (222 requisitos).
 
-## Continuação mais recente — histórico de interações CRM-07 (Arena, 2026-09-29)
+## Continuação mais recente — CRM-07, interações completas (Arena, 2026-09-29)
 
-PR #13 (tarefas pessoais) já está mesclado em `main`/`ec450b6` e presente nesta branch Arena — nenhum trabalho daquele PR foi refeito. Nesta continuação, o recorte seguinte de CRM-07 recomendado pelo prompt de continuidade foi implementado: histórico de interações (ligação/reunião/nota) por oportunidade, com a mesma regra de propriedade das tarefas pessoais, autoria/empresa derivadas no servidor, auditoria atômica (`crm_interaction_create`) e migração 105. Também foi corrigido um vazamento pré-existente na rota legada de detalhe da oportunidade, que devolvia `crm_interactions` de qualquer oportunidade sem checar propriedade. Código validado `7c56a6f`. **PR #14 aberto, CI verde (L04 CRM delivery + QA baseline) e mesclado em `main` no commit `927cb8d`; a branch Arena foi sincronizada (fast-forward) para esse mesmo commit — não há divergência pendente entre `main` e a branch Arena.** L04 e CRM-07 permanecem parciais — ver evidência detalhada e o novo `docs/PROMPT-CONTINUACAO-CRM-INTERACOES.md`.
+A base real desta sessão foi `05f258f` (`main` após o ajuste documental do PR #15), na branch `arena/01a0ee5c-gruposegsystemseguranca`. O recorte **Opção A** do prompt anterior foi entregue no código `c69685f`: interações agora aceitam os sete tipos do schema, contato ativo da mesma empresa, paginação real, edição com versão otimista, exclusão lógica e anexos privados. Os anexos reutilizam o provider local de L02 (`CLIENT_DOCS_DIR`/`.data/documents`) com chave aleatória, SHA-256, verificação de integridade antes do download e autorização da oportunidade; nunca recebem URL pública. As ações `create`, `update`, `delete`, `attachment_create` e `attachment_download` têm auditoria própria e transacional, sem copiar detalhes sensíveis para a auditoria.
+
+A interface em `/admin/crm` foi ampliada (tipos, seletor de contato, upload, download, edição, confirmação de exclusão e páginas de 25). A exclusão preserva os bytes e a linha para auditoria, marca `deleted_at`/`deleted_by_id` e a remove de todas as leituras normais, inclusive na rota legada de detalhe. A política continua individual: só o responsável atual da oportunidade, ou quem a criou quando ainda não há responsável, lê e altera; não foi criado bypass por papel. Equipe/delegação continua pendente por decisão explícita.
+
+Migração `106-crm-interaction-follow-up.sql` acrescenta controle de versão, remoção lógica, metadados de anexos e novos eventos de auditoria, sem modificar 001–105. O gate L04 agora prova por HTTP + Chromium + PostgreSQL descartável: UI cria ligação com contato e TXT, recarrega, edita; download entrega bytes privados corretos; outro comercial recebe 404; todos os tipos, paginação, conflito e remoção lógica funcionam; falhas de auditoria injetadas revertem criação e exclusão. Confira o prompt e a evidência. L04/CRM-07 continuam parciais: ainda há tarefas sem equipe/delegação/paginação/edição de prazo e a revisão completa de kanban/filtros.
 
 ### Continuação anterior — tarefas CRM-07
 
@@ -16,11 +20,11 @@ PR #13: tarefas pessoais conectadas em /admin/crm, com auditoria atômica e prot
 
 | Campo | Valor |
 |---|---|
-| Branch de trabalho | `arena/01a0ee3c-gruposegsystemseguranca` (já contém o PR #13 mesclado em `ec450b6`) |
-| Base desta sessão | `ec450b6` (main, PR #13 mesclado) |
-| Lote ativo | **L04** — jornada comercial central e tarefas pessoais entregues e provadas; histórico de interações entregue nesta continuação; CMS/tema/SEO/comparador (PUB-06..09) e CRM-08/09/10 ficam para as próximas sessões |
-| Último gate aprovado | **L04 ampliado**: 3/3 (jornada central + tarefas pessoais + histórico de interações), executado localmente no sandbox Arena em `7c56a6f`. L02/L03 integrais não reexecutados nesta continuação (sem evidência de regressão que o exigisse). |
-| Migrações | 001–105 (504 tabelas; 104 amplia auditoria de tarefas, 105 amplia auditoria de interações) |
+| Branch de trabalho | `arena/01a0ee5c-gruposegsystemseguranca` |
+| Base desta sessão | `05f258f` (main após PR #15 documental) |
+| Lote ativo | **L04** — jornada comercial central, tarefas pessoais e histórico de interações ampliado; próximo recorte recomendado é CRM-08. CMS/tema/SEO/comparador (PUB-06..09) e CRM-09/10 continuam pendentes. |
+| Último gate aprovado | **L04 ampliado**: 3/3 (jornada central + tarefas pessoais + interações completas), executado localmente no sandbox Arena em `c69685f`. L02/L03 integrais não reexecutados nesta continuação (sem evidência de regressão que o exigisse). |
+| Migrações | 001–106 (505 tabelas; 104 tarefas, 105 criação de interação, 106 edição/exclusão/anexos de interação) |
 | Data | 2026-09-29 |
 
 ## Lotes
@@ -31,7 +35,7 @@ PR #13: tarefas pessoais conectadas em /admin/crm, com auditoria atômica e prot
 | L01 | Identidade, autorização e integridade básica | **parcial ampliado** | SEC-02/04/05/06 + controles dependentes do L03: RBAC sem bypass, escopo, remuneração/saúde e revogação |
 | L02 | Armazenamento, notificações locais, continuidade | **concluído** | 14/14 HTTP em PostgreSQL descartável (revalidado nesta sessão) |
 | L03 | Funcionário e RH | **concluído** | EMP-01..19 e HR-01..24 navegáveis; gate integral aprovado (revalidado nesta sessão) |
-| L04 | Site/captação e comercial | **parcial — jornada central concluída, CRM-07 em execução** | CRM-11..27 conectados em `/admin/comercial` e provados ponta a ponta; CRM-01..06 herdados de `/admin/crm` (não revalidados a fundo); PUB-01/03/04 provados; CRM-07 tem tarefas pessoais e histórico de interações provados, faltam anexos/edição/equipe; PUB-06..09/CRM-08..10/PUB-10 ainda órfãos |
+| L04 | Site/captação e comercial | **parcial — jornada central concluída, CRM-07 em execução** | CRM-11..27 conectados em `/admin/comercial` e provados ponta a ponta; CRM-01..06 herdados de `/admin/crm` (não revalidados a fundo); PUB-01/03/04 provados; CRM-07 tem tarefas pessoais e histórico com anexos/edição/exclusão/contato/tipos/paginação, mas faltam equipe/delegação e revisão integral de tarefas/kanban/filtros; PUB-06..09/CRM-08..10/PUB-10 ainda órfãos |
 | L05 | Contratos e implantação | pendente | — |
 | L06 | Operação, patrimônio e manutenção | pendente | — |
 | L07 | Financeiro e Marcelo | pendente | — |
@@ -140,9 +144,9 @@ permanece `a_revalidar`/`pendente` inclui:
 
 ## Próximos três passos
 
-1. Ampliar o histórico de interações (anexos/notas com upload, edição/exclusão, vínculo com contato, tipos email/whatsapp/visita/outro) ou avançar para CRM-08 (agenda de visitas/reuniões) — ver `docs/PROMPT-CONTINUACAO-CRM-INTERACOES.md` para o detalhamento e a ordem recomendada.
+1. Implementar CRM-08 (agenda de visitas/reuniões), documentando antes a regra de responsável/participantes e corrigindo o vazamento residual de `visits` na rota legada de detalhe.
 2. Depois CRM-09 (cadências manuais) e CRM-10 (carteira), sempre com evidência HTTP + Chromium + PostgreSQL por recorte.
-3. Fechar as lacunas PUB (02/05/06/07/08/09/10) e revalidar CRM-01..06 antes de declarar L04 concluído. Windows fica em L10.
+3. Fechar as lacunas PUB (02/05/06/07/08/09/10), delegação/equipe e revalidar CRM-01..06/CRM-07 antes de declarar L04 concluído. Windows fica em L10.
 
 ## Retomada executável
 
