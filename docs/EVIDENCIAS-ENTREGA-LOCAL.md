@@ -465,3 +465,105 @@ gate passar a partir dali — nenhuma expectativa de teste foi enfraquecida para
   uma futura regressão de constraint.
 - Não houve SMTP, hospedagem externa ou execução no Windows nesta etapa
   também. O aceite no equipamento-alvo pertence ao L10.
+
+---
+
+# L04 — fechamento de lacunas (CRM-01..10 e PUB-02/05..10)
+
+Sessão dedicada a fechar o que o L04 tinha deixado em aberto: os componentes
+órfãos de administração do site, as telas inexistentes de CRM-07..10 e a
+revalidação campo a campo de CRM-01..06.
+
+## Gate
+
+`npm run test:l04-gap:pg` — `tests/l04-gap.integration.test.mjs` +
+`scripts/qa-l04-gap-postgres.mjs`. PostgreSQL descartável real (`seg_qa_l04gap`,
+`embedded-postgres`), servidor de verdade (`server.mjs --dev`) atendendo em
+porta própria, e Chromium real (`@sparticuz/chromium`, sem
+`--disable-web-security`). Nenhuma prova por SQL direto nem por chamada de
+função interna: tudo passa pela borda HTTP.
+
+Resultado da execução final: **`# pass 2  # fail 0`**, `L04_GAP_TEST_EXIT: 0`.
+
+- **GAP-A** — 10 rotas de engajamento recusam anônimo (401
+  `admin_session_required`) antes de qualquer sessão existir; mutação sem
+  mesma origem é recusada mesmo com sessão válida (403). Duas identidades
+  distintas (`comercial` e `ti`) criadas e autenticadas pelo fluxo de login
+  real. Todo o restante de CRM-01..10 e PUB-02/05..10 é exercitado com essas
+  sessões, incluindo os ramos negativos.
+- **GAP-B** — Chromium autenticado percorre as seis abas de `/admin/crm` e as
+  seis de `/admin/site` em 1440×1000 e 390×844, conferindo em cada uma que o
+  dado criado por GAP-A aparece **renderizado** (texto fora de controles de
+  formulário — um `<option>` dentro de um `<select>` fechado não conta como
+  tela entregue), sem rolagem horizontal e sem erro de console ou de rede
+  same-origin.
+
+## Seis defeitos reais que só o gate revelou
+
+1. **`server.mjs` pendurava o cliente em qualquer erro de API.** `routeApi`
+   fazia `return handler(...)` dentro de um `try` — uma promessa devolvida não
+   é capturada pelo `catch`, então toda rejeição virava `unhandledRejection` e
+   a resposta jamais era escrita. O sintoma era o teste estourando o tempo
+   sem pista. O corpo do dispatcher foi extraído para `dispatchApi(req, res)`
+   e `routeApi` passou a fazer `return await`: agora falha vira 500 registrado.
+2. **Token de sessão da FAQ pública era previsível.** `generateToken` usava
+   `require()` dentro de módulo ESM — o que lança sempre — e o `catch` caía
+   num `Math.random()` de 11 caracteres. Corrigido para `randomBytes`.
+3. **Minimização de dados era aparente, não real.** O mesmo `require()` em
+   módulo ESM anulava o hash de IP e user-agent em `origin-metrics-api` e
+   `employee-complaint-api`, e o `ipHash` de `ops-api`: a função **sempre
+   retornava null**. Corrigido para `createHash` importado.
+4. **Seis endpoints `PATCH` de status estavam quebrados no banco.** O padrão
+   `status=$2 ... CASE WHEN $2 IN (...)` sobre coluna enum faz o PostgreSQL
+   recusar por tipo inconsistente. Afetava `ai-rag`, `cli-advanced`,
+   `employee-complaint`, `fin`, `integration-log` e `ab-tests` — corrigido com
+   cast explícito para o enum de cada tabela.
+5. **`?cadence=<chave>` era ignorado em silêncio** e devolvia todas as
+   tarefas; e concluir tarefa não registrava o instante (migração 105 criou
+   `crm_tasks.completed_at`).
+6. **Canal de origem fora do conjunto do schema virava 500**; agora devolve
+   400 `invalid_channel` com a lista permitida.
+
+## Correções de expectativa do próprio teste
+
+Quando o teste e o servidor discordaram, o comportamento correto do servidor
+prevaleceu e a razão ficou escrita no teste: a prévia de importação responde
+201 (não 200); converter lead exige destino explícito, porque o servidor se
+recusa a inventar a empresa; `crm_visits` não tem estado "agendada"; a
+migração 091 já semeia regras de pacote aprovadas, então o ramo
+`no_approved_rules` só é alcançável desaprovando-as por fixture; e
+`traffic_required < 10` é barrado pelo `CHECK` do schema antes de chegar ao
+guardrail da aplicação — a prova é a recusa do banco com o valor intacto.
+
+## Regressão executada nesta sessão
+
+| Verificação | Resultado |
+| --- | --- |
+| `npm test` | 186/186 |
+| `npx tsc --noEmit` | limpo |
+| `npm run build` | sucesso (`next-env.d.ts` revertido depois) |
+| `npm run test:migrations:pg` | 105/105 checksums, 505 tabelas, clone adulterado recusado |
+| `npm run test:l02-delivery:pg` | 14/14 |
+| `npm run test:l03-delivery:pg` | 1/1 |
+| `npm run test:l04-delivery:pg` | 1/1 |
+| `npm run test:rag` | verde |
+| `npm run test:l04-gap:pg` | 2/2 |
+
+## Arquivos desta etapa
+
+- `db/migrations/104-l04-crm-engagement.sql`, `db/migrations/105-crm-task-completed-at.sql`
+- `src/server/crm-engagement-api.mjs`, `src/lib/commercial-cadences.mjs`
+- `src/app/admin/crm/` (workspace de 6 abas) e `src/app/admin/site/` (6 abas)
+- `server.mjs` (`dispatchApi` + roteamento das 10 rotas nas duas camadas)
+- `tests/l04-gap.integration.test.mjs`, `scripts/qa-l04-gap-postgres.mjs`
+
+## Fronteiras honestas deste fechamento
+
+- Nada aqui prova SMTP, hospedagem externa ou Windows — a agenda não notifica
+  ninguém, a cadência só cria tarefa humana e nenhuma mensagem é disparada.
+- O comparador de pacotes provado é o administrativo; não existe comparador
+  público para o visitante.
+- Preview visual de tema e preferência dia/noite não foram provados — apenas
+  publicação autorizada e rollback versionado.
+- Antivírus em anexo, curadoria humana da base da FAQ e aprovação comercial de
+  preços/regras continuam fora do que a execução local pode atestar.

@@ -307,22 +307,30 @@ biblioteca/parcerias conectados) — tudo em `/admin/comercial`
 **Não entregue nesta sessão (órfão ou não revalidado), documentado
 honestamente no checklist item a item:**
 
-- PUB-02/05 (páginas por segmento e FAQ assistida com handoff humano);
-- PUB-06 (CMS), PUB-07 (temas), PUB-08 (SEO técnico) — componentes existem em
-  `src/app/admin/ti/*Client.tsx`, nenhum conectado a uma página;
-- PUB-09 (montador de pacote/comparador) — `/orcamento` deixou de simular
-  preço, mas o montador/comparador administrativo (`PackageClient.tsx`)
-  continua desconectado;
-- PUB-10 (painel de métricas de origem/conversão/A-B) —
-  `OriginMetricsClient.tsx` desconectado; os dados brutos (origem/campanha)
-  já são persistidos e aparecem em `/admin/leads`, mas sem análise;
-- CRM-01..06: herdados de `/admin/crm` (página anterior a esta sessão), não
-  revalidados a fundo — usados apenas indiretamente pelo gate L04 (a
-  conversão de lead cria empresa/oportunidade real);
-- CRM-07..10 (kanban, filtros, tarefas, histórico de interações, agenda de
-  visitas, cadências, carteira): a própria página `/admin/crm` se
-  autodocumenta como "estrutura pronta" — schema existe (tabelas `tasks`,
-  `interactions`, `visits` da migração 014), tela não existe.
+As lacunas listadas abaixo **foram fechadas** na sessão de fechamento do L04
+(gate `npm run test:l04-gap:pg`, `# pass 2 # fail 0`), e o checklist foi
+atualizado item a item com a evidência de execução:
+
+- PUB-02/05 (FAQ assistida com handoff), PUB-06 (CMS), PUB-07 (temas),
+  PUB-08 (SEO técnico), PUB-09 (montador/comparador administrativo) e
+  PUB-10 (métricas de origem e testes A/B) deixaram de ser componentes
+  órfãos: todos os seis estão conectados em `/admin/site`, cada um em sua
+  aba, com os guardrails provados por HTTP real e a tela percorrida por
+  Chromium em 1440×1000 e 390×844;
+- CRM-01..06 foram revalidados campo a campo por HTTP real (tipo de empresa,
+  UF, status, função de compra do contato, e-mail inválido, prévia e commit
+  de importação com deduplicação, exportação sem fórmula executável,
+  conversão de lead a partir de pedido público anônimo, campos da
+  oportunidade, estágios do funil com motivo obrigatório de perda);
+- CRM-07..10 ganharam tela de verdade em `/admin/crm` — tarefas com filtros e
+  vencidas, histórico de interações com anexos verificados por hash, agenda
+  de visitas com transições explícitas, cadências como fila de tarefas
+  humanas e painel de carteira/renovação.
+
+O fechamento também corrigiu seis defeitos que só a execução real expôs — o
+mais grave deles em `server.mjs`, onde qualquer erro de API deixava o cliente
+pendurado sem resposta em vez de devolver 500. O relato completo está em
+`docs/EVIDENCIAS-ENTREGA-LOCAL.md`, seção "L04 — fechamento de lacunas".
 
 **Risco residual anotado, não corrigido:** `handleAdminLeadStatus` em
 `server.mjs` faz um insert de auditoria "solto" dentro de uma transação
@@ -336,9 +344,10 @@ hardenizado (faltaria isolar a auditoria em sua própria sub-transação ou
 
 ## O que NÃO está pronto
 
-O sistema ainda não está integralmente entregue: PUB-02/05/06/07/08/09/10 e
-CRM-01..10 do L04 (ver acima), L05–L10 e as cinco jornadas finais do L10 não
-foram executados. SMTP e hospedagem externa permanecem fora do escopo; Windows
+O sistema ainda não está integralmente entregue: L05–L10 e as cinco jornadas
+finais do L10 não foram executados. O L04 está fechado localmente (PUB e CRM
+de 01 a 10), mas "fechado localmente" significa provado por gate nesta
+máquina, não homologado pelo proprietário. SMTP e hospedagem externa permanecem fora do escopo; Windows
 ainda exige aceite no equipamento do proprietário. Os 43 IDs do L03 e os 37
 IDs de PUB/CRM do L04 foram atualizados no checklist com a evidência local
 desta e da sessão anterior; os demais continuam com seus estados anteriores.

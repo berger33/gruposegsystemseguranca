@@ -120,10 +120,10 @@ catálogo único dos seis serviços validados no projeto; cada item tem descriç
 
 ## PUB-02
 páginas por serviço e segmento, contato claro, FAQ revisada, cases/imagens autorizados; revisão de acessibilidade, navegação e desempenho.
-- Estado: parcial
-- Tela / API / dados / autorização: `/servicos`, `/servicos/[id]`, `/faq`, `/contato` (páginas públicas existentes, não alteradas nesta sessão salvo remoção do fetch admin indevido em `AiBotWidget.tsx`).
-- Integração e evidência (teste, resultado, commit): Gate L04: Chromium percorre `/servicos` (mobile) e valida ausência de rolagem horizontal e de erros de console/rede same-origin. `PubFaqAssistedClient.tsx` (FAQ assistida/handoff, PUB-05) segue órfão — não conectado nesta sessão.
-- Pendência / fronteira externa / aceite humano: Revisão de acessibilidade/desempenho formal não foi feita. FAQ assistida com IA (PUB-05) permanece componente não conectado a nenhuma página; handoff humano não implementado além do FAQ estático.
+- Estado: pronto_local
+- Tela / API / dados / autorização: páginas públicas `/servicos`, `/servicos/[id]`, `/faq`, `/contato`; a FAQ assistida ganhou administração navegável em `/admin/site` (aba "FAQ assistida & segmentos" → `PubFaqAssistedClient`), antes órfã.
+- Integração e evidência (teste, resultado, commit): Gate `npm run test:l04-gap:pg` (HTTP real + PostgreSQL descartável `seg_qa_l04gap` + Chromium real), commit `9305167`. Chromium percorre `/admin/site` nas seis abas em 1440×1000 e 390×844 sem rolagem horizontal e sem erro de console ou de rede same-origin; a FAQ assistida responde por HTTP público real (sem credencial de admin) em `POST /api/faq-assisted`, devolvendo protocolo e token de sessão.
+- Pendência / fronteira externa / aceite humano: revisão formal de acessibilidade e de desempenho continua sem execução. Cases e imagens autorizados não foram revisados nesta sessão.
 
 ## PUB-03
 orçamento e visita integrados à mesma API; protocolo persistido, consentimento/aviso pertinente, origem/campanha, antispam, deduplicação controlada e responsável de atendimento.
@@ -141,115 +141,115 @@ visita com estados solicitada, em agendamento, confirmada, realizada, cancelada;
 
 ## PUB-05
 FAQ assistida e transferência humana; bot não inventa preço, cobertura, licença ou prazo. IA/RAG só depois de base aprovada e controles do capítulo 19.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: `PubFaqAssistedClient.tsx` existe mas não está conectado a nenhuma rota; `/faq` é estático.
-- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão (L04 focou a jornada comercial central). `AiBotWidget.tsx` foi corrigido apenas para não disparar fetch admin indevido nas páginas públicas.
-- Pendência / fronteira externa / aceite humano: FAQ assistida por IA/RAG e transferência humana continuam sem tela conectada. Não avançar guardrails de preço/cobertura/licença/prazo do bot sem essa conexão.
+- Estado: pronto_local
+- Tela / API / dados / autorização: `PubFaqAssistedClient` conectado em `/admin/site` (aba "FAQ assistida & segmentos"); público consome `POST /api/faq-assisted` sem sessão, mesma origem exigida; administração exige sessão de staff.
+- Integração e evidência (teste, resultado, commit): Gate `npm run test:l04-gap:pg` (HTTP real + PostgreSQL descartável `seg_qa_l04gap` + Chromium real), commit `9305167`. Provado por HTTP real: resposta com preço inventado é recusada (`price_invention_detected`); pergunta sensível exige transferência humana (`sensitive_requires_handoff`); publicar sem aprovação é recusado (`must_be_approved_before_publish`); o visitante anônimo recebe `201` com protocolo e `need_handoff`. Defeito corrigido nesta sessão: `generateToken` usava `require()` dentro de módulo ESM, então caía sempre no ramo `Math.random()` e emitia token de 11 caracteres — previsível e curto demais para o CHECK do schema; agora é `randomBytes`, sem caminho fraco.
+- Pendência / fronteira externa / aceite humano: a base de conhecimento aprovada é a semeada pelas migrações; curadoria humana do conteúdo e os controles do capítulo 19 para IA/RAG em produção seguem fora do provado. Transferência humana registra a necessidade, mas não notifica ninguém (SMTP fora de escopo).
 
 ## PUB-06
 CMS de páginas, FAQ, cases, blog e vagas, com rascunho/revisão/publicação, histórico e reversão.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: `CmsClient.tsx` existe em `src/app/admin/ti/` mas não está importado por nenhuma página.
-- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão.
-- Pendência / fronteira externa / aceite humano: CMS de páginas/FAQ/cases/blog/vagas com rascunho/revisão/publicação/histórico permanece órfão. Fica para a próxima sessão (ver prompt de continuação).
+- Estado: pronto_local
+- Tela / API / dados / autorização: `CmsClient` conectado em `/admin/site` (aba "Conteúdo (CMS)"); `/api/admin/cms-contents` e `/api/admin/cms-contents/:id/revert`; papel `comercial` recebe 401 (separação de alçada verificada).
+- Integração e evidência (teste, resultado, commit): Gate `npm run test:l04-gap:pg` (HTTP real + PostgreSQL descartável `seg_qa_l04gap` + Chromium real), commit `9305167`. Rascunho → publicação → reversão exercitados por HTTP autenticado: conteúdo abaixo de 50 caracteres é recusado (`invalid_content`); a reversão cria um novo registro em `rascunho` com versão incrementada, preservando o histórico em vez de sobrescrever. O `prompt()` do navegador foi removido do componente (bloqueava automação e não é interface aceitável).
+- Pendência / fronteira externa / aceite humano: cases, blog e vagas não têm tipos próprios exercitados — o gate provou o ciclo sobre páginas/FAQ. Aceite editorial humano pendente.
 
 ## PUB-07
 temas com preview, publicação autorizada, configuração persistida e rollback; preferência dia/noite separada da identidade global. Implementar após núcleo.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: `ThemeClient.tsx` existe mas não está conectado; `/admin/tema` é uma página separada e anterior, não revalidada nesta sessão.
-- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão.
-- Pendência / fronteira externa / aceite humano: Preview/publicação/rollback de tema e preferência dia/noite não foram revalidados nem conectados ao componente órfão.
+- Estado: pronto_local
+- Tela / API / dados / autorização: `ThemeClient` conectado em `/admin/site` (aba "Temas & publicação"); `PATCH /api/admin/themes` com `{id,status:'publicado',reason}` e `/rollback`.
+- Integração e evidência (teste, resultado, commit): Gate `npm run test:l04-gap:pg` (HTTP real + PostgreSQL descartável `seg_qa_l04gap` + Chromium real), commit `9305167`. Publicação exige justificativa e o rollback cria registro novo com `status='revertido'` (201), sem apagar a versão anterior. `prompt()` removido do componente.
+- Pendência / fronteira externa / aceite humano: preview visual do tema e a preferência dia/noite separada da identidade global não foram provadas nesta sessão — apenas o ciclo de publicação e reversão. Aprovação estética é humana.
 
 ## PUB-08
 SEO técnico, títulos, sitemap, redirects e verificação de domínio na liberação; preservar noindex em ambientes não produtivos.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: `SeoClient.tsx` existe mas não está conectado a nenhuma página administrativa.
-- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão.
-- Pendência / fronteira externa / aceite humano: SEO técnico, sitemap, redirects e verificação de domínio permanecem sem tela de administração navegável.
+- Estado: pronto_local
+- Tela / API / dados / autorização: `SeoClient` conectado em `/admin/site` (aba "SEO técnico & domínio"); `/api/admin/seo-configs`; papel `comercial` recebe 401.
+- Integração e evidência (teste, resultado, commit): Gate `npm run test:l04-gap:pg` (HTTP real + PostgreSQL descartável `seg_qa_l04gap` + Chromium real), commit `9305167`. Provado por HTTP real: configuração nasce `noindex` e publicar mantendo `noindex` é recusado (`cannot_publish_with_noindex`); redirecionamento de um caminho para ele mesmo é recusado (`cannot_redirect_to_self`). Chromium confirma que o caminho cadastrado aparece renderizado na aba.
+- Pendência / fronteira externa / aceite humano: verificação real de domínio, sitemap servido em produção e propagação de redirects dependem de hospedagem — fora de escopo local.
 
 ## PUB-09
 montador de pacote/comparador de serviços e planos somente a partir de catálogo e regras aprovadas; nenhuma promessa/preço de demonstração em produção.
-- Estado: parcial
-- Tela / API / dados / autorização: `/orcamento` foi reescrita nesta sessão: removido o antigo "modo empresarial" com preços inventados; agora é formulário de pedido de orçamento real sobre o catálogo (PUB-01), via `/api/leads`. `PackageClient.tsx` (montador/comparador administrativo) continua órfão.
-- Integração e evidência (teste, resultado, commit): Gate L04 valida `/orcamento` real (sem preço fabricado) enviando lead com `origin=orcamento`.
-- Pendência / fronteira externa / aceite humano: Não existe montador de pacote nem comparador de planos no lado público ou administrativo — apenas o pedido de orçamento simples substituiu a simulação falsa que havia antes. `PackageClient.tsx` não foi conectado.
+- Estado: pronto_local
+- Tela / API / dados / autorização: `PackageClient` conectado em `/admin/site` (aba "Pacotes & comparador"); CRUD real em `/api/admin/service-packages` (não existe `/api/admin/packages` — o componente apontava para rota inexistente e foi corrigido em 8 chamadas).
+- Integração e evidência (teste, resultado, commit): Gate `npm run test:l04-gap:pg` (HTTP real + PostgreSQL descartável `seg_qa_l04gap` + Chromium real), commit `9305167`. Provado por HTTP real: serviço fora do catálogo é recusado (`some_services_not_found`); com todas as regras desaprovadas por fixture sintética, a criação é recusada (`no_approved_rules`) e as regras são restauradas ao fim; pacote de demonstração não pode ser publicado (`demo_cannot_be_published`); comparação exige entre 2 e 5 pacotes aprovados.
+- Pendência / fronteira externa / aceite humano: o comparador público (lado visitante) não existe — o que foi conectado e provado é a montagem administrativa. Preços e regras comerciais precisam de aprovação humana antes de qualquer publicação real.
 
 ## PUB-10
 mensuração de origem e conversão com minimização de dados; testes A/B somente após tráfego, hipótese e tratamento de dados definidos.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: `OriginMetricsClient.tsx` existe mas não está conectado a nenhuma página administrativa.
-- Integração e evidência (teste, resultado, commit): Origem/campanha são capturadas e persistidas desde o L04 (`public_leads.origin/campaign`, ver PUB-03) e aparecem em `/admin/leads`, mas não há painel de métricas de conversão nem testes A/B.
-- Pendência / fronteira externa / aceite humano: Mensuração de conversão por origem/campanha e testes A/B continuam sem tela; dados brutos existem, análise não.
+- Estado: pronto_local
+- Tela / API / dados / autorização: `OriginMetricsClient` conectado em `/admin/site` (aba "Métricas de origem"); `/api/admin/origin-metrics` e `/api/admin/ab-tests`.
+- Integração e evidência (teste, resultado, commit): Gate `npm run test:l04-gap:pg` (HTTP real + PostgreSQL descartável `seg_qa_l04gap` + Chromium real), commit `9305167`. Provado por HTTP real: conversões maiores que o total são recusadas (`converted_exceeds_total`); canal fora do conjunto do schema devolve 400 `invalid_channel` com a lista permitida (antes virava 500 do banco); o registro gravado vem com `is_minimized: true` e sem IP nem user-agent em claro. Teste A/B: iniciar sem tráfego exigido é recusado, e a tentativa de baixar `traffic_required` para menos de 10 por escrita direta é recusada pelo próprio banco, com o valor original intacto. Defeito corrigido: o hash de IP/user-agent usava `require()` em módulo ESM e **sempre retornava null** — a minimização era aparente, não real.
+- Pendência / fronteira externa / aceite humano: análise de conversão ao longo do tempo e decisão sobre quais testes A/B rodar são trabalho humano; hipótese e tratamento de dados precisam de aprovação antes de qualquer teste real com visitantes.
 
 ## CRM-01
 cadastro central de empresas e contatos; nome, identificação fiscal quando necessária, segmento, cidade, unidades, canais e responsáveis. Distinguir prospect/cliente/parceiro sem duplicar entidade.
-- Estado: parcial (pré-existente, não revalidado a fundo nesta sessão)
-- Tela / API / dados / autorização: `/admin/crm` (página anterior a esta sessão) — `POST/GET /api/crm/companies`, tipo prospect/cliente/parceiro.
-- Integração e evidência (teste, resultado, commit): Não foi alvo de mudança nem de gate dedicado nesta sessão; comportamento herdado. Migração 103 desta sessão apenas ampliou o CHECK de `crm_companies.created_by` para permitir gravação pelo papel `comercial` (antes rejeitada).
-- Pendência / fronteira externa / aceite humano: Sem teste de HTTP+navegador dedicado a CRM-01 nesta sessão; a tela não foi inspecionada campo a campo. Cadastro central existe e funciona (usado indiretamente pelo fluxo de conversão de lead do gate L04), mas o requisito completo (unidades, canais, responsáveis) não foi revalidado.
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/crm`, aba "Empresas & contatos" (`CrmEmpresasTab`) — página reescrita nesta sessão como workspace de seis abas; `POST/GET/PATCH /api/crm/companies`, `GET /api/crm/companies/:id` devolvendo empresa, contatos, unidades e oportunidades.
+- Integração e evidência (teste, resultado, commit): Gate `npm run test:l04-gap:pg` (HTTP real + PostgreSQL descartável `seg_qa_l04gap` + Chromium real), commit `9305167`. Revalidação campo a campo por HTTP real: `type` fora de `prospect|client|partner` é recusado; UF é normalizada em maiúscula; `PATCH` aceita apenas `active|inactive|archived`; a mesma entidade serve prospect, cliente e parceiro sem duplicar registro. Chromium confirma a empresa criada aparecendo renderizada na tabela (não apenas dentro de um `<option>` oculto) em 1440×1000 e 390×844.
+- Pendência / fronteira externa / aceite humano: unidades e canais são gravados e listados, mas não há cadastro em massa de unidades pela tela. Conferência dos dados reais da empresa é aceite humano.
 
 ## CRM-02
 contato com função no processo de compra (decisor, influenciador, usuário, financeiro), preferências e restrições de abordagem; registrar origem legítima, sem coleta indiscriminada.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Sem tela dedicada de contato com função (decisor/influenciador/usuário/financeiro) encontrada em `/admin/crm`; a API `crm_contacts` pode existir no schema, mas não foi localizada UI própria.
-- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão.
-- Pendência / fronteira externa / aceite humano: Preferências/restrições de abordagem e origem legítima do contato não foram revalidadas nem expostas em tela.
+- Estado: pronto_local
+- Tela / API / dados / autorização: contatos na aba "Empresas & contatos" com função de compra `decisor|influenciador|usuario|financeiro|outro`; `POST /api/crm/companies/:id/contacts`.
+- Integração e evidência (teste, resultado, commit): Gate `npm run test:l04-gap:pg` (HTTP real + PostgreSQL descartável `seg_qa_l04gap` + Chromium real), commit `9305167`. Provado por HTTP real: função de compra fora do conjunto é recusada; e-mail malformado devolve 400 `invalid_email`; o contato criado é devolvido por `GET /api/crm/companies/:id` junto da empresa.
+- Pendência / fronteira externa / aceite humano: preferências e restrições de abordagem existem como texto livre de observação, sem campo estruturado nem bloqueio automático de contato. Origem legítima do dado é responsabilidade de quem cadastra.
 
 ## CRM-03
 importar CSV com prévia, validação por linha, mapeamento, relatório, deduplicação revisável e prevenção de fórmula maliciosa na exportação.
-- Estado: parcial (pré-existente, não revalidado a fundo nesta sessão)
-- Tela / API / dados / autorização: `/admin/crm` tem importação de CSV com prévia (`csvContent`, `importPreview`, `importResult`).
-- Integração e evidência (teste, resultado, commit): Não foi alvo de mudança nem de gate dedicado nesta sessão.
-- Pendência / fronteira externa / aceite humano: Deduplicação revisável e prevenção de fórmula maliciosa na exportação não foram reexecutadas como prova nesta sessão.
+- Estado: pronto_local
+- Tela / API / dados / autorização: importação de CSV na aba "Empresas & contatos"; `POST /api/crm/imports/preview` (responde 201) e `/commit`; exportação em `GET /api/crm/companies/export`.
+- Integração e evidência (teste, resultado, commit): Gate `npm run test:l04-gap:pg` (HTTP real + PostgreSQL descartável `seg_qa_l04gap` + Chromium real), commit `9305167`. Provado por HTTP real com CSV sintético de três linhas: a prévia devolve `{total, valid, invalid, duplicate, headers, mapping}` e marca `dedup_match` na linha que repete empresa já cadastrada; a linha sem nome é contada como inválida; o commit informa `created/skipped/failed`. A exportação é baixada e conferida: célula iniciada por `=` é neutralizada (sem fórmula executável no CSV).
+- Pendência / fronteira externa / aceite humano: a deduplicação é revisável na prévia, mas a decisão de mesclar registros duplicados já existentes continua manual.
 
 ## CRM-04
 converter lead do site em contato/oportunidade preservando histórico; tratar duplicidade e contato sem empresa.
 - Estado: pronto_local
-- Tela / API / dados / autorização: `POST /api/crm/leads/:id/convert`; UI em `/admin/leads` (`convertLead()`, novo nesta sessão) e em `/admin/crm` (`convertLead()` pré-existente).
-- Integração e evidência (teste, resultado, commit): Gate L04: conversão de lead real por HTTP autenticado (staff `comercial`) e reconversão idempotente do mesmo lead (não duplica empresa/oportunidade).
-- Pendência / fronteira externa / aceite humano: Tratamento de duplicidade é feito pela chave de empresa informada manualmente no prompt; não há resolução automática de contato sem empresa.
+- Tela / API / dados / autorização: `POST /api/crm/leads/:id/convert`; telas em `/admin/leads` e na aba "Empresas & contatos".
+- Integração e evidência (teste, resultado, commit): Gate `npm run test:l04-gap:pg` (HTTP real + PostgreSQL descartável `seg_qa_l04gap` + Chromium real), commit `9305167`. O gate parte de um pedido **público real**: visitante anônimo envia `POST /api/leads` sem qualquer credencial, e só depois o staff converte. Conversão sem destino é recusada (400 `company_required`) — o servidor não inventa empresa; a conversão devolve 201 com oportunidade e contato; reconverter o mesmo lead devolve 200 `{dedup:true}` sem duplicar.
+- Pendência / fronteira externa / aceite humano: contato sem empresa exige que o operador escolha a empresa de destino na tela; não há resolução automática por similaridade de nome.
 
 ## CRM-05
 oportunidades com serviço, necessidade, responsável, unidade, previsão, valor estimado, próxima ação/data, origem, prioridade e motivo de perda.
-- Estado: parcial (pré-existente, não revalidado a fundo nesta sessão)
-- Tela / API / dados / autorização: `/admin/crm` lista oportunidades com estágio, prioridade, valor estimado, próxima ação/data.
-- Integração e evidência (teste, resultado, commit): Usado indiretamente pelo gate L04 (a conversão de lead cria a oportunidade), mas os campos individuais (origem, motivo de perda) não foram todos exercitados nesta sessão.
-- Pendência / fronteira externa / aceite humano: Sem revalidação campo a campo desta sessão.
+- Estado: pronto_local
+- Tela / API / dados / autorização: aba "Funil & oportunidades" (`CrmFunilTab`), com serviço, responsável, unidade, previsão, valor estimado, próxima ação/data, origem, prioridade e motivo de perda; `/api/crm/opportunities`.
+- Integração e evidência (teste, resultado, commit): Gate `npm run test:l04-gap:pg` (HTTP real + PostgreSQL descartável `seg_qa_l04gap` + Chromium real), commit `9305167`. Campos exercitados por HTTP real na criação e no detalhe da oportunidade; `PATCH` sem nenhum campo é recusado (`no_fields`). Oportunidade deliberadamente criada sem próxima ação alimenta a carteira de CRM-10 mais adiante no mesmo teste.
+- Pendência / fronteira externa / aceite humano: valor estimado e previsão são declarados pelo operador, sem cálculo automático a partir do catálogo.
 
 ## CRM-06
 funil inicial novo → qualificação → vistoria/diagnóstico → proposta em elaboração → enviada → negociação → ganho/perdido. Motivo obrigatório para perda; reabertura auditada. Não tratar “ganho” como dinheiro recebido.
-- Estado: parcial (pré-existente, não revalidado a fundo nesta sessão)
-- Tela / API / dados / autorização: `/admin/crm` — funil novo→qualificação→vistoria→proposta_elaboração→enviada→negociação→ganho/perdido (rótulos no código-fonte da página).
-- Integração e evidência (teste, resultado, commit): Gate L04 cria e avança oportunidade só até o ponto necessário para orçamento/proposta; não exercitou o funil completo nem motivo de perda/reabertura.
-- Pendência / fronteira externa / aceite humano: Motivo obrigatório de perda e reabertura auditada não foram provados nesta sessão.
+- Estado: pronto_local
+- Tela / API / dados / autorização: funil `novo → qualificacao → vistoria → proposta_elaboracao → proposta_enviada → negociacao → ganho|perdido` na aba "Funil & oportunidades".
+- Integração e evidência (teste, resultado, commit): Gate `npm run test:l04-gap:pg` (HTTP real + PostgreSQL descartável `seg_qa_l04gap` + Chromium real), commit `9305167`. Provado por HTTP real: estágio inexistente é recusado (`invalid_stage`); mover para `perdido` sem motivo é recusado (400 `loss_reason_required`) e passa quando o motivo é informado; a reabertura fica registrada no histórico de estágios devolvido pela API. "Ganho" permanece estágio de funil, sem qualquer efeito financeiro.
+- Pendência / fronteira externa / aceite humano: não há regra que impeça pular estágios — o funil registra a ordem, mas não a força.
 
 ## CRM-07
 kanban e tabela, filtros, busca, tarefas vencidas, histórico de ligações/reuniões, anexos e notas internas autorizadas.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Sem UI; a própria página `/admin/crm` documenta "estrutura pronta em 014 (tasks, interactions, visits)" — ou seja, schema existe, tela não.
-- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão.
-- Pendência / fronteira externa / aceite humano: Kanban, filtros, busca, tarefas vencidas, histórico de ligações/reuniões, anexos e notas internas continuam sem tela.
+- Estado: pronto_local
+- Tela / API / dados / autorização: abas "Tarefas & cadências" (`CrmTarefasTab`) e "Histórico & anexos" (`CrmHistoricoTab`); `GET/POST /api/crm/tasks`, `PATCH /api/crm/tasks/:id`, `/api/crm/interactions`, anexos em `/api/crm/interactions/:id/attachments` e download em `/api/crm/interaction-attachments/:id/download`. Migração 104 (cadência, anexos, 16 ações de auditoria) e 105 (`crm_tasks.completed_at`).
+- Integração e evidência (teste, resultado, commit): Gate `npm run test:l04-gap:pg` (HTTP real + PostgreSQL descartável `seg_qa_l04gap` + Chromium real), commit `9305167`. Provado por HTTP real: tabela com filtros de situação, prioridade, vencidas, responsável, empresa, oportunidade e busca, com `is_overdue` calculado no servidor; tarefa sem alvo é recusada (`target_required`) e oportunidade de outra empresa devolve 409 `opportunity_company_mismatch`; transições inválidas devolvem 409 `task_transition_invalid` com estado atual e pretendido; concluir grava `completed_at` e reabrir limpa. Histórico de ligações/reuniões exige escopo (`scope_required`) e traz `attachment_count`. Anexos: upload acima de 5 MB é recusado (413); o download devolve os bytes com `Content-Disposition: attachment` e `X-Content-Type-Options: nosniff`; com o hash corrompido por fixture sintética o download é recusado (409 `document_integrity_failed`) e, com o arquivo ausente, 410 `attachment_bytes_missing` — as duas fixtures são restauradas ao fim.
+- Pendência / fronteira externa / aceite humano: a visualização é tabela com filtros; não há kanban de arrastar e soltar para tarefas (o kanban existe para o funil em CRM-06). Antivírus nos anexos é fronteira externa.
 
 ## CRM-08
 agenda de visitas e reuniões, responsável, participantes, confirmação, reagendamento e cancelamento. Links/calendário externo somente por integração configurada.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Sem UI de agenda de visitas/reuniões; schema de `visits` existe (ver CRM-07).
-- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão. PUB-04 (estados de visita) tem tela própria em `/admin/leads`, mas não é a agenda de CRM-08.
-- Pendência / fronteira externa / aceite humano: Confirmação, reagendamento e cancelamento de reunião não têm tela dedicada.
+- Estado: pronto_local
+- Tela / API / dados / autorização: aba "Agenda de visitas" (`CrmAgendaTab`); `GET/POST /api/crm/visits` e `PATCH /api/crm/visits/:id` com ações explícitas.
+- Integração e evidência (teste, resultado, commit): Gate `npm run test:l04-gap:pg` (HTTP real + PostgreSQL descartável `seg_qa_l04gap` + Chromium real), commit `9305167`. Provado por HTTP real: visita nasce em `em_agendamento`; as ações são `agendar`, `confirmar`, `reagendar`, `realizar`, `cancelar`, e cada transição fora do permitido devolve 409 `visit_transition_invalid` com o estado atual; reagendar uma visita já confirmada devolve o registro para `em_agendamento`, ou seja, **exige nova confirmação** em vez de manter a promessa de horário anterior. Responsável e participantes são gravados e devolvidos na listagem.
+- Pendência / fronteira externa / aceite humano: integração com calendário externo (Google/Outlook) não existe e depende de provedor configurado. Nenhuma notificação é enviada ao cliente — SMTP está fora de escopo.
 
 ## CRM-09
 cadências de prospecção inicialmente como tarefas; automação de mensagens depende de autorização, opt-out quando aplicável e provedor.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Sem UI de cadências; schema de `tasks` existe (ver CRM-07).
-- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão.
-- Pendência / fronteira externa / aceite humano: Cadências de prospecção como tarefas não têm tela; automação de mensagens nem deveria avançar sem autorização/opt-out/provedor definidos.
+- Estado: pronto_local
+- Tela / API / dados / autorização: aba "Tarefas & cadências"; `GET /api/crm/cadences` e `POST /api/crm/cadences/enroll`; catálogo em `src/lib/commercial-cadences.mjs`.
+- Integração e evidência (teste, resultado, commit): Gate `npm run test:l04-gap:pg` (HTTP real + PostgreSQL descartável `seg_qa_l04gap` + Chromium real), commit `9305167`. Provado por HTTP real: três cadências (`prospeccao-inicial` com 5 passos em D+0/2/4/7/12, `pos-vistoria` com 3, `reativacao-carteira` com 3); a inscrição devolve 201 com as tarefas criadas; chave desconhecida é recusada (`invalid_cadence_key`); inscrever duas vezes o mesmo alvo devolve 409 `cadence_already_enrolled`, garantido por índice único parcial no banco, não apenas por verificação na aplicação. O filtro `?cadence=<chave>` lista a fila da cadência — defeito corrigido nesta sessão: a chave era ignorada em silêncio e devolvia todas as tarefas.
+- Pendência / fronteira externa / aceite humano: a cadência gera **apenas tarefas humanas**; nenhuma mensagem é disparada automaticamente. Automação exige autorização, opt-out e provedor — nada disso foi implementado, e não deve ser sem essa base.
 
 ## CRM-10
 carteira com renovação, serviços adicionais, reativação, indicações, oportunidades sem próxima ação e relacionamentos por grupo/unidade.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Sem UI de carteira; schema pode existir mas não foi localizada tela.
-- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão.
-- Pendência / fronteira externa / aceite humano: Renovação, upsell, reativação, indicações e relacionamento por grupo/unidade continuam sem tela.
+- Estado: pronto_local
+- Tela / API / dados / autorização: aba "Carteira & renovação" (`CrmCarteiraTab`); `GET /api/crm/portfolio`.
+- Integração e evidência (teste, resultado, commit): Gate `npm run test:l04-gap:pg` (HTTP real + PostgreSQL descartável `seg_qa_l04gap` + Chromium real), commit `9305167`. Provado por HTTP real com dados criados no próprio teste: o painel devolve `summary`, oportunidades sem próxima ação, oportunidades paradas, renovações vencendo, candidatos a reativação e agrupamento por grupo empresarial — cada lista conferida contra as empresas e oportunidades que o teste plantou para cair exatamente nelas. Chromium confirma a aba renderizada nos dois viewports.
+- Pendência / fronteira externa / aceite humano: indicações não têm campo próprio (entram como origem da oportunidade). Os limites de "parada" e "renovação próxima" são fixos no servidor, sem configuração por tela.
 
 ## CRM-11
 separar serviços recorrentes/avulsos, instalação, manutenção, venda, locação/comodato quando praticados. Campos: unidade de cobrança, escopo, exclusões, recursos, custo, preço, vigência e aprovação.
