@@ -118,6 +118,16 @@ def redimensionar_altura(img, altura):
     return img.resize((round(img.width * altura / img.height), altura), Image.LANCZOS)
 
 
+def _dilatar(mascara, px):
+    """Dilata uma máscara 'L' em px (MaxFilter aceita tamanhos pequenos; encadeia se preciso)."""
+    if px <= 0:
+        return mascara
+    while px > 4:
+        mascara = mascara.filter(ImageFilter.MaxFilter(9))
+        px -= 4
+    return mascara.filter(ImageFilter.MaxFilter(2 * px + 1))
+
+
 def escudo_mascara(altura, recolorir=None, contorno=(0, 0, 0), contorno_px=0):
     """Silhueta do escudo do logotipo (fonte real da marca), opcionalmente recolorida."""
     esc = redimensionar_altura(carregar_logos()["escudo-marinho"], altura)
@@ -130,22 +140,71 @@ def escudo_mascara(altura, recolorir=None, contorno=(0, 0, 0), contorno_px=0):
     return esc
 
 
-def escudo_simples(altura, cor_preenchimento=MARINHO, contorno=OURO, contorno_px=6, brilho=False):
-    """Escudo recolorido (navy sólido + contorno dourado) para ícones e botões."""
-    esc = escudo_mascara(altura + contorno_px * 2, contorno=contorno, contorno_px=contorno_px)
-    a = esc.getchannel("A").point(lambda v: 255 if v > 96 else 0)
-    solido = Image.new("RGBA", esc.size, cor_preenchimento + (0,))
-    solido.putalpha(a)
-    if brilho:
-        solido = Image.alpha_composite(solido, _vide_escudo(esc.size, a))
-    return Image.alpha_composite(esc, solido) if False else Image.alpha_composite(solido, esc)
+def escudo_simples(altura, preenchimento=MARINHO, contorno=OURO, contorno_px=6, brilho=True, limiar=110):
+    """Escudo chapado (preenchimento + contorno) a partir da silhueta real do logotipo.
+
+    Mantém o alinhamento entre contorno e corpo (sem recorte por bbox).
+    """
+    base = redimensionar_altura(carregar_logos()["escudo-marinho"], altura)
+    pad = contorno_px
+    tela = (base.width + pad * 2, base.height + pad * 2)
+
+    m = base.getchannel("A").point(lambda v: 255 if v > limiar else 0)
+    mascara = Image.new("L", tela, 0)
+    mascara.paste(m, (pad, pad))
+
+    corpo = Image.new("RGBA", tela, (0, 0, 0, 0))
+    chapado = Image.new("RGBA", tela, tuple(preenchimento) + (255,))
+    chapado.putalpha(mascara)
+    corpo.alpha_composite(chapado)
+    if brilho:  # luz suave no topo, presa à silhueta
+        g = gradiente_vertical(tela[0], tela[1], [(0, .20), (.55, 0), (1, .10)], BRANCO)
+        g.putalpha(Image.composite(g.getchannel("A"), Image.new("L", tela, 0), mascara))
+        corpo.alpha_composite(g)
+
+    saida = Image.new("RGBA", tela, (0, 0, 0, 0))
+    if pad:
+        halo = Image.new("RGBA", tela, tuple(contorno) + (0,))
+        halo.putalpha(_dilatar(mascara, pad).filter(ImageFilter.GaussianBlur(0.6)))
+        saida.alpha_composite(halo)
+    saida.alpha_composite(corpo)
+    return saida.crop(_bbox(saida, 8))
 
 
-def _vide_escudo(size, mascara):
-    """Leve luz no topo do escudo (dá volume sem alterar a silhueta)."""
-    g = gradiente_vertical(size[0], size[1], [(0, 0.22), (.55, 0.0), (1, 0.10)], BRANCO)
-    g.putalpha(Image.composite(g.getchannel("A"), Image.new("L", size, 0), mascara))
-    return g
+def botao_superficie(w, h, cor_a, cor_b, angulo=-40, contorno=None, contorno_alfa=205, contorno_largura=3,
+                     brilho=0.13, escurecer_topo=0.0, sombra=6, margem=8, raio=20, anel=None, anel_folga=3,
+                     anel_largura=3, opacidade=255, interior=None):
+    """Superfície de botão RGBA (sem texto): o CSS/aplicação escreve o rótulo por cima.
+
+    `interior` permite uma segunda cor para o miolo (efeito de estado pressionado).
+    """
+    m = margem
+    corpo = placa(w - 2 * m, h - 2 * m, raio, cor_a, cor_b, angulo,
+                  contorno=contorno, largura_contorno=contorno_largura, alfa_contorno=contorno_alfa, brilho=brilho)
+    if interior:
+        camada = gradiente_linear(corpo.width, corpo.height, [(0, .35), (1, .85)], angulo, interior[0], interior[1])
+        mascara = Image.new("L", corpo.size, 0)
+        ImageDraw.Draw(mascara).rounded_rectangle([0, 0, corpo.width - 1, corpo.height - 1], raio, fill=255)
+        mascara = mascara.point(lambda v: int(v * 0.55))
+        corpo = Image.alpha_composite(corpo, Image.composite(camada, Image.new("RGBA", corpo.size, (0, 0, 0, 0)), mascara))
+    if escurecer_topo:
+        corpo.alpha_composite(gradiente_vertical(corpo.width, corpo.height, [(0, escurecer_topo), (.45, escurecer_topo * .25), (1, 0)], (2, 8, 18)))
+
+    tela = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    if sombra:
+        so = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        so.paste(corpo, (m, m + 2))
+        so = so.filter(ImageFilter.GaussianBlur(sombra))
+        so.putalpha(so.getchannel("A").point(lambda v: int(v * 0.50)))
+        tela.alpha_composite(so)
+    if anel is not None:
+        ImageDraw.Draw(tela).rounded_rectangle([m - anel_folga, m - anel_folga, w - m + anel_folga - 1, h - m + anel_folga - 1],
+                                              raio + anel_folga, outline=tuple(anel) + (255,), width=anel_largura)
+    tela.alpha_composite(corpo, (m, m))
+    if opacidade < 255:
+        tela.putalpha(tela.getchannel("A").point(lambda v: int(v * opacidade / 255)))
+    return tela
+
 
 
 # ---------------------------------------------------------------- fontes / texto
@@ -234,7 +293,7 @@ def gradiente_linear(w, h, pontos, angulo=-40, cor_a=MARINHO, cor_b=MARINHO_3):
     a = math.radians(angulo)
     yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
     t = xx * math.cos(a) + yy * math.sin(a)
-    t = (t - t.min()) / max(t.ptp(), 1e-6)
+    t = (t - t.min()) / max(float(np.ptp(t)), 1e-6)
     alfa = np.interp(t, [p[0] for p in pontos], [p[1] for p in pontos])[..., None]
     ca = np.array(cor_a, np.float32)
     cb = np.array(cor_b, np.float32)
