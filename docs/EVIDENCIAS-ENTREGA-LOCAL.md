@@ -445,14 +445,17 @@ gate passar a partir dali — nenhuma expectativa de teste foi enfraquecida para
 - CRM-01..06 vêm de `/admin/crm`, uma página anterior a esta sessão — foram
   usados indiretamente pelo gate (conversão de lead cria empresa/oportunidade
   real) mas não foram revalidados campo a campo nesta sessão.
+  **Superado**: ver “L04 — fechamento de lacunas” mais abaixo.
 - CRM-07..10 (kanban, filtros, tarefas, histórico, agenda, cadências,
   carteira) continuam apenas como schema — a própria página `/admin/crm` se
   autodocumenta assim; nenhuma tela foi construída para eles.
+  **Superado**: ver “L04 — fechamento de lacunas” mais abaixo.
 - PUB-02/05/06/07/08/09/10: FAQ assistida com handoff, CMS, temas, SEO técnico,
   montador/comparador administrativo e painel de métricas de origem/A-B
   continuam com componentes órfãos (`PubFaqAssistedClient.tsx`,
   `CmsClient.tsx`, `ThemeClient.tsx`, `SeoClient.tsx`, `PackageClient.tsx`,
   `OriginMetricsClient.tsx`) — nenhum foi tocado ou conectado nesta sessão.
+  **Superado**: ver “L04 — fechamento de lacunas” mais abaixo.
 - O aceite de proposta é explicitamente "aceite simples", nunca chamado de
   assinatura eletrônica qualificada. A entrega de proposta nunca declara
   "entregue"/"lido" sem prova local explícita — não há e nunca houve SMTP real.
@@ -465,3 +468,94 @@ gate passar a partir dali — nenhuma expectativa de teste foi enfraquecida para
   uma futura regressão de constraint.
 - Não houve SMTP, hospedagem externa ou execução no Windows nesta etapa
   também. O aceite no equipamento-alvo pertence ao L10.
+
+---
+
+## L04 — fechamento de lacunas (branch `arena/01a0ee0d-gruposegsystemseguranca`)
+
+Commit verificado: `d0e2220`. Base da sessão: `4aaa1d2` (merge do L04).
+
+Objetivo declarado pelo usuário: fechar as lacunas do L04 **antes** de abrir o
+L05 — CRM-07..10 (sem tela), CRM-01..06 (nunca revalidados campo a campo) e os
+seis componentes PUB órfãos, conectados **no domínio certo**, nunca despejados
+na página de TI.
+
+### O que passou a existir
+
+| Artefato | Papel |
+|---|---|
+| `db/migrations/104-l04-crm-engagement.sql` | amplia o `CHECK` de `auth_access_audit.action` (265→281 ações), adiciona `cadence_key`/`cadence_step` em `crm_tasks` com dois índices únicos parciais, índice de vencimento e a tabela `crm_interaction_attachments` |
+| `src/lib/commercial-cadences.mjs` | três cadências congeladas em código (`prospeccao-inicial` 0/2/4/7/12 dias, `pos-vistoria`, `reativacao-carteira`) |
+| `src/server/crm-engagement-api.mjs` | dez rotas novas: tarefas, interações, anexos, download, visitas, cadências e carteira |
+| `src/app/admin/crm/*` | workspace reescrito com seis abas (empresas, funil, tarefas, agenda, histórico, carteira) |
+| `src/app/admin/site/*` | domínio novo que conecta os seis componentes PUB órfãos sob papel `admin`/`ti` |
+| `tests/l04-gap.integration.test.mjs` + `scripts/qa-l04-gap-postgres.mjs` | gate GAP-A (HTTP) e GAP-B (Chromium), banco descartável `seg_qa_l04gap` |
+
+### Percurso provado pelo gate, na ordem
+
+| # | Cenário | Perfil | Resultado observado |
+|---|---|---|---|
+| G-0 | Migração 104 aplicada | — | 1 linha em `__migrations` |
+| G-1 | `/api/crm/tasks`, `/visits`, `/cadences`, `/portfolio` sem sessão | anônimo | `401 admin_session_required` nas quatro |
+| G-2 | `POST /api/crm/tasks` com origem estranha e sessão válida | comercial | `403 same_origin_required` |
+| G-3 | Captação pública | visitante sem credencial | protocolo criado por `POST /api/leads` |
+| G-4 | CRM-01/02 campo a campo | comercial | tipo inválido `400 invalid_type`; papel de compra inválido `400 invalid_buying_role`; `channels`, `parent_company_id`, `restrictions`, `is_primary` conferidos na volta |
+| G-5 | CRM-03 importação/exportação | comercial | prévia 1 válida / 1 duplicada / 1 inválida; commit grava só a válida; export neutraliza `=` (`'=SEG Perigo QA GAP`) |
+| G-6 | CRM-04 conversão | comercial | 201 na primeira, `dedup:true` na segunda |
+| G-7 | CRM-05 responsável | comercial | `responsible_id`/`responsible_name` falsos no corpo são ignorados; grava a identidade da sessão |
+| G-8 | CRM-06 perda e reabertura | comercial | `400 loss_reason_required`; com motivo `is_lost=true`; reabertura com motivo volta `is_lost=false` e as duas transições ficam em `crm_opportunity_stages` |
+| G-9 | CRM-07 tarefas | comercial | vencida com `is_overdue`; `scope_required` sem escopo; máquina de estados com `409 task_transition_invalid` em cancelada; auditoria `crm_task_create`/`_status_concluida`/`_status_cancelada` |
+| G-10 | CRM-07 histórico e anexos | comercial | ligação + nota interna filtráveis; anexo baixado íntegro com `nosniff`/`no-store`; anônimo `401`; 5,4 MB `413 attachment_too_large`; bytes adulterados em disco → `409 document_integrity_failed` |
+| G-11 | CRM-08 agenda | comercial | nasce `em_agendamento`; confirmar → reagendar (volta a `em_agendamento`) → confirmar → realizar; estado final `409 visit_transition_invalid`; auditoria de criação, reagendamento e realização |
+| G-12 | CRM-09 cadências | comercial | adesão materializa 5 tarefas com intervalo de 12 dias entre a primeira e a última; repetir `409 cadence_already_enrolled`; empresa trocada `409 opportunity_company_mismatch` |
+| G-13 | CRM-10 carteira | comercial | sem próxima ação, renovação em 90 dias, candidata a reativação e grupo com `children_count=1` |
+| G-14 | Papel errado no site público | comercial | `401` em `POST /api/admin/cms-contents` |
+| G-15 | PUB-06 CMS | ti | rascunho→revisão→aprovado→publicado; leitura pública sem sessão; reversão cria versão 2 em `rascunho` |
+| G-16 | PUB-07 tema | ti | preview com token; publicação com `make_active` confirmada por `?active=true`; preferência `escuro` separada; rollback `revertido` |
+| G-17 | PUB-08 SEO | ti | `is_noindex` nasce `true`; `400 cannot_publish_with_noindex`; `cannot_redirect_to_self`; sitemap recebe a página; domínio não nasce verificado |
+| G-18 | PUB-09 pacotes | ti | `400 no_approved_rules` sem regra aprovada; `some_services_not_found`; `demo_cannot_be_published`; `packages_not_approved` antes da aprovação |
+| G-19 | PUB-10 métricas | ti | `converted_exceeds_total`; métrica agregada sem IP; evento só com `sha256` de IP/UA; `invalid_hypothesis` no A/B fraco |
+| G-20 | PUB-02/05 FAQ assistida | ti + visitante | `400 price_invention_detected`; visitante sem sessão recebe a resposta publicada com `need_handoff=true`; handoff pendente aparece para a equipe e é concluído; segmento publicado é lido em `/api/segments` |
+| G-21 | `/admin/crm` no Chromium | comercial | seis abas; busca filtra a tabela e mostra “unidade de grupo”; histórico de estágios com motivo da perda; tarefa marcada “vencida”; visita “realizada”; linha do tempo com ligação, nota e “Anexos (1)”; carteira com os quatro blocos; sem rolagem horizontal em 1440px e 390px; zero erro de console/rede/5xx |
+| G-22 | `/admin/site` no Chromium | ti | seis abas; CMS, tema, SEO, pacotes, métricas e FAQ (abrindo os `<details>`) exibem os registros criados por HTTP; zero erro de console/rede/5xx |
+
+### Defeitos reais que o gate expôs e que foram corrigidos
+
+| Defeito | Sintoma reproduzido | Correção |
+|---|---|---|
+| `PATCH /api/admin/faq-assisted-rules` usava o mesmo parâmetro como enum e como texto | PostgreSQL `42P08 inconsistent types deduced for parameter $2` → rejeição não tratada → **a requisição ficava sem resposta para sempre** (o cliente só saía por timeout). Publicar regra de FAQ era impossível | o texto passou a viajar em um parâmetro próprio; mesma armadilha corrigida em `ai-rag-api.mjs`, cujo `status` também é enum |
+| Dispatcher de API sem rede de proteção | qualquer erro não tratado em handler deixava a conexão pendurada sem resposta | `server.mjs` envolve `routeApi` em `try/catch` e responde `500 internal_error` (ou derruba a conexão se o cabeçalho já saiu) |
+| `require('node:crypto')` dentro de módulo ESM | o `try/catch` engolia o `ReferenceError`: `origin-metrics-api` e `employee-complaint-api` gravavam **hash nulo**; `pub-faq-assisted-api` caía em `Math.random()` para gerar token; `ops-api` lançaria a cada chamada de `ipHash` | import estático de `createHash`/`randomBytes` nos quatro módulos |
+| Token de preview de tema por `Math.random()` | credencial de acesso previsível | `randomBytes(24).toString('base64url')` |
+| Abas do CRM sobrescritas por resposta atrasada | resultado de um filtro antigo chegava depois e substituía o atual | contador de sequência por requisição nas cinco abas com filtro |
+| Efeito de montagem desfazia a escolha do operador | em desenvolvimento o efeito roda duas vezes e a closure guardava o valor do primeiro render: a empresa selecionada na aba Histórico voltava sozinha para a primeira da lista (falha intermitente reproduzida três vezes) | atualização funcional `setCompanyId(prev => prev || ...)` |
+
+### Varredura completa após o fechamento
+
+| Comando | Resultado |
+|---|---|
+| `npm test` | 186/186, exit 0 |
+| `npx tsc --noEmit` | 0 erros |
+| `npm run build` | sucesso (`next-env.d.ts`/`tsconfig.json` revertidos depois) |
+| `npm run test:migrations:pg` | `104/104` checksums, `TABLES=505`, controle negativo `006` ainda recusado |
+| `npm run test:l02-delivery:pg` | 14/14, exit 0 |
+| `npm run test:l03-delivery:pg` | 1/1, exit 0 |
+| `npm run test:l04-delivery:pg` | 1/1, exit 0 |
+| `npm run test:l04-gap:pg` | 2/2, exit 0 — executado **três vezes com `.next/integration-l04gap` apagado** para descartar dependência de cache de compilação |
+| `npm run test:rag` | passou (PGlite isolado) |
+
+### Fronteiras honestas do fechamento
+
+- Nenhuma tela pública nova foi criada: CMS, tema, SEO, pacotes e métricas são
+  administrados em `/admin/site`, e o site público continua sem consumir esses
+  conteúdos (só a FAQ assistida e as páginas de segmento têm leitura pública).
+- “Notas internas autorizadas” (CRM-07) hoje significam visíveis a qualquer
+  staff autenticado: não há compartimentação por papel dentro do CRM.
+- Cadências não disparam mensagem alguma — por decisão do requisito, viram
+  tarefa com prazo, e o texto da tarefa diz isso ao operador.
+- Acessibilidade e desempenho (PUB-02) continuam sem medição formal.
+- `PATCH /api/admin/themes` ainda devolve `is_active` desatualizado no corpo;
+  a ativação real é conferida por releitura. O eco não foi alterado para não
+  mexer em contrato fora do lote.
+- SMTP, hospedagem externa, calendário externo, antivírus de anexo e execução
+  em Windows continuam fora de escopo. O aceite no equipamento-alvo é L10.

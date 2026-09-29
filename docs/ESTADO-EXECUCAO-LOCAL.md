@@ -8,11 +8,11 @@ Referência: `docs/EXECUCAO-ENTREGA-LOCAL.md` (roteiro L00–L10) e
 
 | Campo | Valor |
 |---|---|
-| Branch de trabalho | `arena/01a0ed3d-gruposegsystemseguranca` |
-| Base desta sessão | `5899146` (= `origin/main`, PR #11 "Docs: reconciliar estado após merge do L03") |
-| Lote ativo | **L04** — jornada comercial central entregue e provada; CMS/tema/SEO/comparador/kanban/tarefas (PUB-06..09, CRM-07..10) ficam para a próxima sessão |
-| Último gate aprovado | **L04** (site/captação/comercial, HTTP real + Chromium real + PostgreSQL descartável, `npm run test:l04-delivery:pg`), com L02 e L03 revalidados verdes na mesma sessão |
-| Migrações | 001–103 (504 tabelas; 103 é aditiva/retrocompatível) |
+| Branch de trabalho | `arena/01a0ee0d-gruposegsystemseguranca` |
+| Base desta sessão | `4aaa1d2` (= `origin/main`, merge do PR #12 com o L04) |
+| Lote ativo | **L04 — fechamento de lacunas concluído**: CRM-01..10 e PUB-02/05..10 conectados, navegáveis e provados. Próximo lote a abrir: **L05** |
+| Último gate aprovado | **L04 GAP** (`npm run test:l04-gap:pg`, HTTP real + Chromium real + PostgreSQL descartável), com L02, L03, L04 e migrações revalidados verdes na mesma sessão |
+| Migrações | 001–104 (505 tabelas; 104 é aditiva/retrocompatível) |
 | Data | 2026-09-29 |
 
 ## Lotes
@@ -23,7 +23,7 @@ Referência: `docs/EXECUCAO-ENTREGA-LOCAL.md` (roteiro L00–L10) e
 | L01 | Identidade, autorização e integridade básica | **parcial ampliado** | SEC-02/04/05/06 + controles dependentes do L03: RBAC sem bypass, escopo, remuneração/saúde e revogação |
 | L02 | Armazenamento, notificações locais, continuidade | **concluído** | 14/14 HTTP em PostgreSQL descartável (revalidado nesta sessão) |
 | L03 | Funcionário e RH | **concluído** | EMP-01..19 e HR-01..24 navegáveis; gate integral aprovado (revalidado nesta sessão) |
-| L04 | Site/captação e comercial | **parcial — jornada central concluída** | CRM-11..27 conectados em `/admin/comercial` e provados ponta a ponta; CRM-01..06 herdados de `/admin/crm` (não revalidados a fundo); PUB-01/03/04 provados; PUB-06..09/CRM-07..10/PUB-10 ainda órfãos |
+| L04 | Site/captação e comercial | **concluído** | CRM-11..27 em `/admin/comercial` (gate L04) e, no fechamento de lacunas, CRM-01..10 em `/admin/crm` + PUB-02/05..10 em `/admin/site` (gate L04 GAP). PUB-02 segue `parcial`: falta medição formal de acessibilidade/desempenho |
 | L05 | Contratos e implantação | pendente | — |
 | L06 | Operação, patrimônio e manutenção | pendente | — |
 | L07 | Financeiro e Marcelo | pendente | — |
@@ -304,8 +304,8 @@ seguro com UI nova, contrato mínimo idempotente, relatórios/comissões/
 biblioteca/parcerias conectados) — tudo em `/admin/comercial`
 (`ComercialWorkspace.tsx`, novo).
 
-**Não entregue nesta sessão (órfão ou não revalidado), documentado
-honestamente no checklist item a item:**
+**Não entregue na sessão do L04 original (órfão ou não revalidado) — todos
+fechados depois, ver “Fechamento de lacunas do L04” abaixo:**
 
 - PUB-02/05 (páginas por segmento e FAQ assistida com handoff humano);
 - PUB-06 (CMS), PUB-07 (temas), PUB-08 (SEO técnico) — componentes existem em
@@ -334,11 +334,51 @@ que causaria isso agora), mas o padrão em si não foi estruturalmente
 hardenizado (faltaria isolar a auditoria em sua própria sub-transação ou
 `SAVEPOINT`).
 
+## Fechamento de lacunas do L04 (concluído)
+
+Escopo decidido pelo usuário: fechar as lacunas do L04 **antes** de abrir o
+L05. Base `4aaa1d2`, commits `feee64f` → `d0e2220`.
+
+**Entregue e provado por execução:**
+
+- **CRM-07..10** ganharam servidor e tela: migração `104-l04-crm-engagement.sql`,
+  `src/lib/commercial-cadences.mjs`, `src/server/crm-engagement-api.mjs` (dez
+  rotas) e as abas “Tarefas & cadências”, “Agenda de visitas”, “Histórico &
+  anexos” e “Carteira & renovação” em `/admin/crm`.
+- **CRM-01..06** foram revalidados campo a campo por HTTP (canais, unidade de
+  grupo, papel de compra, restrições, importação/exportação, responsável
+  derivado da sessão, motivo de perda obrigatório e reabertura auditada) e
+  ganharam as abas “Empresas & contatos” e “Funil & oportunidades” (kanban e
+  tabela).
+- **PUB-02/05/06/07/08/09/10**: os seis componentes órfãos de
+  `src/app/admin/ti/` passaram a ser servidos por **`/admin/site`**, um domínio
+  próprio para o site público — nunca despejados na página de TI.
+- Gate novo `npm run test:l04-gap:pg` (GAP-A por HTTP, GAP-B em Chromium real),
+  executado três vezes com o diretório de build apagado.
+
+**Defeitos reais encontrados pelo gate e corrigidos** (detalhe em
+`docs/EVIDENCIAS-ENTREGA-LOCAL.md`): publicação de regra de FAQ assistida
+deixava a requisição pendurada para sempre (erro `42P08` mais rejeição não
+tratada; mesma armadilha corrigida no módulo de RAG); o dispatcher de API não
+respondia nada quando um handler falhava; quatro módulos usavam `require` em
+ESM e por isso gravavam hash nulo ou geravam token com `Math.random()`; o
+token de preview de tema era previsível; e duas corridas de interface no CRM
+novo (resposta atrasada e efeito de montagem sobrescrevendo a escolha do
+operador).
+
+**Ainda em aberto dentro do L04:** PUB-02 continua `parcial` porque não houve
+medição formal de acessibilidade/desempenho; o site público não consome o CMS;
+não há vitrine pública de pacotes; notas internas não têm compartimentação por
+papel.
+
 ## O que NÃO está pronto
 
-O sistema ainda não está integralmente entregue: PUB-02/05/06/07/08/09/10 e
-CRM-01..10 do L04 (ver acima), L05–L10 e as cinco jornadas finais do L10 não
-foram executados. SMTP e hospedagem externa permanecem fora do escopo; Windows
-ainda exige aceite no equipamento do proprietário. Os 43 IDs do L03 e os 37
-IDs de PUB/CRM do L04 foram atualizados no checklist com a evidência local
-desta e da sessão anterior; os demais continuam com seus estados anteriores.
+O sistema ainda não está integralmente entregue: L05–L10 e as cinco jornadas
+finais do L10 não foram executados. SMTP, hospedagem externa, calendário
+externo e antivírus de anexo permanecem fora do escopo; Windows ainda exige
+aceite no equipamento do proprietário. Os 43 IDs do L03 e os 37 IDs de PUB/CRM
+do L04 estão no checklist com evidência local; os demais continuam com seus
+estados anteriores.
+
+**Risco residual não corrigido** (herdado): `handleAdminLeadStatus` em
+`server.mjs` ainda audita dentro da transação sem `SAVEPOINT`.
