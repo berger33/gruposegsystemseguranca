@@ -57,6 +57,7 @@ Galeria de revisão: `public/ui/preview.html` (abra no navegador; caminhos relat
 | 13 | 10 ícones de navegação — reverso (branco) | 20 | `public/ui/icones/navegacao-reverso/` |
 | 14 | 10 peças de marca (escudos, monogramas, medalhões, favicon) | 10 | `public/ui/icones/marca/` |
 | 15 | 10 ícones de ação e status (busca, filtro, editar, excluir, imprimir, compartilhar, sino, baixar, atualizar, expandir) | 20 | `public/ui/icones/acoes/` |
+| 16 | 10 cabeçalhos (1200×400) com placas novas: vigilância noturna, condomínios, infraestrutura crítica, corporativo, central de operação 24h, logística e portos, perímetro monitorado, acesso corporativo, cobertura e rotas, vigilância ativa | 10 | `public/email/cabecalhos/` |
 
 Os lotes de ícones gravam o arquivo principal de 256 px e o derivado de 64 px para menus e atalhos
 (por isso cada lote aparece com 20 arquivos). O total de peças principais é 150.
@@ -73,6 +74,31 @@ Os lotes de ícones gravam o arquivo principal de 256 px e o derivado de 64 px p
   expandir.
 - **Marca**: escudo (marinho, branco, dourado, chapado), monograma GS (3 cores), medalhão (512 e
   256 px), favicon 64 px.
+
+## Pacotes de entrega
+
+Cada lote tem um ZIP em `downloads/imagens/`, com `LEIA-ME.txt` (lista de arquivos, convenções de
+marca e limites de uso). O pacote `imagens-seg-system-completo.zip` reúne tudo (peças, galeria e
+catálogo). Regerar:
+
+```bash
+/tmp/venv/bin/python scripts/imagens/entregar.py   # refaz os 16 ZIPs + pacote completo
+```
+
+| ZIP | Conteúdo |
+| --- | --- |
+| `lote-01-email-fundacao.zip` | cabeçalhos 01–05 e rodapés 01–05 |
+| `lote-02-email-cabecalhos-alternativos.zip` | cabeçalhos 11–20 |
+| `lote-03-email-rodapes-alternativos.zip` | rodapés 06–15 |
+| `lote-04-email-cabecalhos-compactos.zip` | cabeçalhos 21–30 (1200×200) |
+| `lote-05-email-compactos-assinaturas.zip` | rodapés 16–17, faixas 01–04, assinaturas 01–04 |
+| `lote-06-botoes-institucionais.zip` | botões 01–10 |
+| `lote-07-botoes-estados-acao.zip` | botões 11–20 |
+| `lote-08..13-icones-*.zip` | ícones de serviço, operação e navegação (marinho e reverso) |
+| `lote-14-marca-escudo-monograma.zip` | escudos, monogramas, medalhões, favicon e recortes do logotipo |
+| `lote-15-icones-acao-status.zip` | ícones de ação e status |
+| `lote-16-email-vigilancia-condominios.zip` | cabeçalhos 31–40 |
+| `imagens-seg-system-completo.zip` | acervo completo + galeria + catálogo |
 
 ## Reprodução
 

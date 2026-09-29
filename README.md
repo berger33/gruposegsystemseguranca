@@ -47,6 +47,22 @@ em [`public/ui/preview.html`](public/ui/preview.html):
 - **Logotipo** recortado do arquivo real da marca em `public/brand/logo/` (logo, escudo e texto,
   versões marinho e reversa) — nenhum elemento de marca é gerado por IA.
 
+### Download dos lotes
+
+Um ZIP por lote (16 lotes) e o acervo completo, em `downloads/imagens/`:
+
+- [lote 01 — cabeçalhos e rodapés de e-mail](downloads/imagens/lote-01-email-fundacao.zip)
+- [lote 02 — cabeçalhos alternativos](downloads/imagens/lote-02-email-cabecalhos-alternativos.zip) · [lote 03 — rodapés alternativos](downloads/imagens/lote-03-email-rodapes-alternativos.zip)
+- [lote 04 — cabeçalhos compactos](downloads/imagens/lote-04-email-cabecalhos-compactos.zip) · [lote 05 — compactos, faixas e assinaturas](downloads/imagens/lote-05-email-compactos-assinaturas.zip)
+- [lote 06 — botões institucionais](downloads/imagens/lote-06-botoes-institucionais.zip) · [lote 07 — botões de estado e ação](downloads/imagens/lote-07-botoes-estados-acao.zip)
+- [lote 08 — ícones de serviço](downloads/imagens/lote-08-icones-servico.zip) · [lote 09 — ícones de operação](downloads/imagens/lote-09-icones-operacao.zip) · [lote 10 — ícones de navegação](downloads/imagens/lote-10-icones-navegacao.zip)
+- [lote 11 — ícones de serviço reversos](downloads/imagens/lote-11-icones-servico-reverso.zip) · [lote 12 — operação reversos](downloads/imagens/lote-12-icones-operacao-reverso.zip) · [lote 13 — navegação reversos](downloads/imagens/lote-13-icones-navegacao-reverso.zip)
+- [lote 14 — marca, escudo e monograma](downloads/imagens/lote-14-marca-escudo-monograma.zip) · [lote 15 — ícones de ação e status](downloads/imagens/lote-15-icones-acao-status.zip)
+- [lote 16 — vigilância, condomínios e operação](downloads/imagens/lote-16-email-vigilancia-condominios.zip)
+- [acervo completo (peças + galeria + catálogo)](downloads/imagens/imagens-seg-system-completo.zip)
+
+Cada ZIP traz um `LEIA-ME.txt` com a lista de arquivos, as convenções de marca e os limites de uso.
+
 Catálogo, convenções e como reproduzir: [docs/imagens-catalogo.md](docs/imagens-catalogo.md).
 Fundos fotográficos são ilustrações conceituais, não registros de instalações ou pessoas da empresa.
 

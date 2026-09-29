@@ -72,10 +72,31 @@ def galeria_icones():
     return "".join(blocos)
 
 
+def galeria_downloads():
+    """Lista os ZIPs de entrega (um por lote) com tamanho e link direto."""
+    pacotes = sorted((RAIZ / "downloads/imagens").glob("*.zip"))
+    if not pacotes:
+        return ""
+    itens = []
+    for p in pacotes:
+        kb = p.stat().st_size / 1024
+        tam = f"{kb/1024:.1f} MB" if kb > 1024 else f"{kb:.0f} KB"
+        itens.append(
+            f'<li><a href="../../downloads/imagens/{p.name}" download>'
+            f'<strong>{p.stem.replace("-", " ")}</strong><span>{tam}</span></a></li>')
+    return ('<h2>Pacotes para download</h2>'
+            '<p class="nota">Um ZIP por lote, com LEIA-ME (lista de arquivos e convenções de marca). '
+            'O pacote completo reúne as 150 peças, a galeria e o catálogo.</p>'
+            f'<ul class="pacotes">{"".join(itens)}</ul>')
+
+
 def main():
-    total = len(list((RAIZ / "public/ui/botoes").glob("*.png"))) \
-        + len(list((RAIZ / "public/ui/icones").rglob("*.png"))) \
-        + len([p for d in ("cabecalhos", "rodapes", "faixas", "assinaturas") for p in (RAIZ / "public/email" / d).glob("*.jpg")])
+    n_email = len([p for d in ("cabecalhos", "rodapes", "faixas", "assinaturas")
+                   for p in (RAIZ / "public/email" / d).glob("*.jpg")])
+    n_botoes = len(list((RAIZ / "public/ui/botoes").glob("*.png")))
+    n_icones = len(list((RAIZ / "public/ui/icones").rglob("*-256.png"))) + len(list((RAIZ / "public/ui/icones/marca").glob("*.png")))
+    total = n_email + n_botoes + len(list((RAIZ / "public/ui/icones").rglob("*.png")))
+    por_familia = (f"{n_email} peças de e-mail + {n_botoes} botões + {n_icones} ícones e peças de marca")
     html_saida = f"""<!doctype html>
 <html lang="pt-BR">
 <meta charset="utf-8">
@@ -105,15 +126,22 @@ def main():
   .card img {{ max-width:100%; max-height:170px; display:block; }}
   .grade.icones img {{ max-height:74px; }}
   figcaption {{ font-size:11px; color:#5d7186; word-break:break-word; }}
+  ul.pacotes {{ list-style:none; margin:0; padding:0; display:grid; gap:10px;
+                grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); }}
+  ul.pacotes a {{ display:flex; justify-content:space-between; align-items:center; gap:10px;
+                  background:#fff; border:1px solid var(--linha); border-radius:8px; padding:12px 14px;
+                  font-size:13px; color:var(--navy); }}
+  ul.pacotes a:hover {{ border-color:var(--ouro); }}
+  ul.pacotes span {{ color:#7188a0; font-size:12px; flex:none; }}
   .nota {{ background:#fff; border:1px solid var(--linha); border-left:4px solid var(--ouro); border-radius:8px;
            padding:14px 16px; font-size:13px; line-height:1.6; }}
   footer {{ padding:24px 34px 50px; color:#6b7d91; font-size:12px; }}
 </style>
 <header>
-  <h1>Grupo SEG System — 150 imagens para e-mail, sistema e site</h1>
-  <p>50 peças de e-mail (cabeçalhos, rodapés, faixas e assinaturas) + 100 botões e ícones de interface.
+  <h1>Grupo SEG System — imagens para e-mail, sistema e site</h1>
+  <p>{por_familia} — mais derivados 64 px, recortes do logotipo e 16 ZIPs de entrega por lote.
      Logotipo e monograma vêm do arquivo real da marca; botões e ícones não têm texto embutido.</p>
-  <span class="selo">15 lotes · {total} arquivos gerados</span>
+  <span class="selo">16 lotes entregues</span>
 </header>
 <main>
   <h2>E-mail</h2>
@@ -130,6 +158,7 @@ def main():
   <p class="nota">Traço uniforme, 256 px para o sistema e 64 px para menus e atalhos (favicon na pasta de marca).
      Versões marinho, branca e dourada cobrem fundos claros e escuros.</p>
   {galeria_icones()}
+  {galeria_downloads()}
 </main>
 <footer>Arquivos em <code>public/email/</code> e <code>public/ui/</code> · gerados por
   <code>scripts/imagens/</code> (Pillow + NumPy, fontes OFL Cinzel e Cormorant Garamond).</footer>
