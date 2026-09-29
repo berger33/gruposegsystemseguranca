@@ -518,3 +518,80 @@ A rota legada `GET /api/crm/opportunities/:id` (`src/server/crm-api.mjs`, anteri
 
 ### Limites deste recorte
 Este recorte NÃO conclui CRM-07. Ainda faltam: anexos e notas com upload; edição/exclusão de uma interação registrada (o histórico atual é apenas append-only); vínculo com `contact_id` (schema já suporta, API não aceita); tipos `email`/`whatsapp`/`visita`/`outro`; paginação (lista limitada a 200 por oportunidade, igual às tarefas); qualquer noção de equipe/delegação (a regra de propriedade é a mesma unipessoal das tarefas, documentada explicitamente, não uma omissão). `stages`/`visits` na rota legada de detalhe continuam sem a mesma restrição de propriedade — risco residual, não corrigido nesta sessão porque está fora do escopo de interações (fica para CRM-06/CRM-08). CRM-08 (agenda), CRM-09 (cadências) e CRM-10 (carteira) permanecem como schema sem tela. Sem aceite Windows/mobile, sem aceite humano, sem SMTP e sem hospedagem externa nesta etapa.
+
+## L04 / CRM-07 — interações: anexos, correção, remoção, contato, tipos e paginação (Arena, 2026-09-29)
+
+Código validado: `c69685f` (`feat(crm-07): complete interaction follow-up`), sobre a
+base `05f258f`. Ambiente: Linux x86_64, Node v22.22.3, npm 10.9.8,
+PostgreSQL 17.9 por `embedded-postgres`, Chromium empacotado em
+`@sparticuz/chromium`. Nenhuma destas execuções prova Windows ou envolve banco,
+arquivo ou comunicação do proprietário.
+
+### Mudança comprovada
+
+- Migração `106-crm-interaction-follow-up.sql` acrescenta `updated_at`,
+  `version`, `deleted_at` e `deleted_by_id` a `crm_interactions`; cria
+  `crm_interaction_attachments` com chave aleatória de 48 hex, SHA-256,
+  tipo/tamanho permitidos e FK restritiva; acrescenta os quatro eventos de
+  auditoria sem editar 001–105.
+- `src/server/crm-interaction-api.mjs` implementa GET paginado, POST com todos
+  os tipos previstos, PATCH otimista, DELETE lógico, upload privado e download
+  privado. Somente o responsável atual (ou criador enquanto a oportunidade não
+  tem responsável) opera a oportunidade; papéis administrativos não fazem
+  bypass. O contato precisa ser ativo e da empresa derivada no servidor.
+- Arquivo é escrito exclusivamente no provider privado L02 (`CLIENT_DOCS_DIR`
+  no gate), com modo 0600, chave não derivada do nome, SHA-256 e checagem de
+  tamanho/hash antes da resposta. Não há URL pública. Falha antes do commit
+  remove bytes sem metadado confirmado.
+- `OpportunityInteractions.tsx` está conectado a `/admin/crm` e expõe os sete
+  tipos, contato, upload na criação e em registro existente, download,
+  edição, confirmação da remoção lógica e navegação por páginas de 25.
+- A rota legada de detalhe continua usando a regra de propriedade e passou a
+  filtrar `deleted_at IS NULL` para não reexpor uma interação removida.
+
+### Gates executados
+
+| Comando | Resultado observado |
+|---|---|
+| `npm ci` | 82 pacotes instalados; auditoria npm: 0 vulnerabilidades |
+| `node scripts/qa-wave0-static.mjs` | 5/5: imports, lockfile, 001–106 contínuas, manifesto PG e CI obrigatória |
+| `npm run test:migrations:pg` | 106/106 na primeira aplicação e no replay; 505→505 tabelas; clone TEMPLATE preservou os checksums; adulteração de checksum 006 recusada (controle negativo esperado) |
+| `npm run test:l04-delivery:pg` | 3/3: jornada comercial anterior, tarefas pessoais e cenário CRM-07 ampliado; PostgreSQL descartável, HTTP real e Chromium real |
+| `npm run test:unit` | 186 testes aprovados, 0 falhas |
+| `npm run typecheck` | 0 erros |
+| `npm run build` | sucesso; 70 rotas; alterações automáticas de `next-env.d.ts`/`tsconfig.json` por `.next/integration-l04` foram conferidas e descartadas |
+
+### Cenário CRM-07 exercitado pelo gate L04
+
+1. Duas identidades `comercial` distintas e uma `rh`; a dona cria empresa,
+   contato ativo, segunda empresa/contato de controle e oportunidade por HTTP.
+2. Sem sessão recebe 401; RH 403; outro comercial 404; origem ausente 403;
+   DELETE na coleção 405; autoria forjada, tipo inválido, contato de outra
+   empresa, título vazio e data futura recebem 400.
+3. Trigger temporário que rejeita `crm_interaction_create` faz o POST retornar
+   503 e mantém a contagem em zero — criação e auditoria são atômicas.
+4. Chromium entra em `/admin/crm`, cria uma ligação com contato e arquivo TXT
+   sintético; recarrega; abre a edição e troca para reunião. Persistência,
+   seletor de contato, upload e atualização são verificados pela UI real.
+5. Outro comercial não lista, não altera nem baixa o anexo. A dona baixa o TXT
+   por rota autenticada: bytes exatos, `text/plain` e `Cache-Control: private,
+   no-store`.
+6. PATCH de versão desatualizada recebe 409; PATCH atual muda para WhatsApp e
+   limpa o contato. POSTs posteriores provam `email`, `visita`, `nota` e
+   `outro`. `limit=2&offset=0/2` prova total, próximo e anterior; limite 101
+   é recusado.
+7. Trigger temporário que rejeita `crm_interaction_delete` devolve 503 e deixa
+   `deleted_at`/versão intactos. Sem o trigger, DELETE marca o registro com o
+   ator correto, remove da listagem e também bloqueia novo download. Auditoria
+   de criação/duas correções/remoção e de upload/download é consultada no banco
+   descartável; os fluxos sob prova continuam HTTP.
+
+### Limites que permanecem honestos
+
+O recorte fecha as lacunas da Opção A, não CRM-07 inteiro: tarefas continuam
+pessoais e sem delegação/equipe, edição de prazo ou paginação; kanban/tabela,
+busca e filtros completos não foram revalidados. A regra futura de equipe não
+foi inferida. `stages` e `visits` da rota legada ainda carecem da mesma borda de
+propriedade e devem ser corrigidos quando CRM-06/CRM-08 forem tocados.
+CRM-08/09/10, lacunas PUB, aceite humano e execução Windows continuam
+pendentes. Não houve SMTP, hospedagem externa, mensagem real ou publicação.

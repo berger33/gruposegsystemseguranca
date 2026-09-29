@@ -59,6 +59,9 @@ try {
     RUN_DATABASE_INTEGRATION: '1', DATABASE_URL: databaseUrl, DATABASE_MIGRATION_URL: '',
     RUN_DATABASE_INTEGRATION_REMOTE: '', QA_PGLITE_ONLY: '', ALLOW_REMOTE_MIGRATIONS: '',
     OLLAMA_ENABLED: 'false', MAIL_HOST: '', NEXT_TELEMETRY_DISABLED: '1',
+    // Os anexos CRM reutilizam o provider privado do L02, isolado no mesmo
+    // diretório temporário que o gate remove no finally.
+    CLIENT_DOCS_DIR: path.join(directory, 'private-documents'),
     // @sparticuz/chromium inclui as bibliotecas AL2023 necessárias ao gate de
     // interface; a flag apenas seleciona esse pacote local, sem usar AWS.
     AWS_EXECUTION_ENV: 'AWS_Lambda_nodejs22.x',

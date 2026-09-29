@@ -1144,7 +1144,16 @@ const faqApi = createFaqApi({
 
 const crmTaskApi = createCrmTaskApi({ json, readJson, sameOrigin, getPool, readAdminSession: readSession });
 
-const crmInteractionApi = createCrmInteractionApi({ json, readJson, sameOrigin, getPool, readAdminSession: readSession });
+const crmInteractionApi = createCrmInteractionApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+  // Reuse the L02 private local-file provider directory. CRM attachment
+  // metadata has its own authorization boundary; blobs never receive a URL.
+  docsDir: (process.env.CLIENT_DOCS_DIR || "").trim() || path.join(process.cwd(), ".data", "documents"),
+});
 
 const crmApi = createCrmApi({
   json,
@@ -2436,8 +2445,14 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/crm/opportunities") return crmApi.handleOpportunities(req, res, url);
   const crmTaskMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/tasks(?:\/([0-9a-f-]{36}))?$/i);
   if (crmTaskMatch) return crmTaskApi(req, res, crmTaskMatch[1], crmTaskMatch[2] || null);
+  const crmInteractionAttachmentDownloadMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/interactions\/([0-9a-f-]{36})\/attachments\/([0-9a-f-]{36})\/download$/i);
+  if (crmInteractionAttachmentDownloadMatch) return crmInteractionApi(req, res, crmInteractionAttachmentDownloadMatch[1], crmInteractionAttachmentDownloadMatch[2], crmInteractionAttachmentDownloadMatch[3], 'download', url);
+  const crmInteractionAttachmentsMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/interactions\/([0-9a-f-]{36})\/attachments$/i);
+  if (crmInteractionAttachmentsMatch) return crmInteractionApi(req, res, crmInteractionAttachmentsMatch[1], crmInteractionAttachmentsMatch[2], null, 'attachments', url);
+  const crmInteractionItemMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/interactions\/([0-9a-f-]{36})$/i);
+  if (crmInteractionItemMatch) return crmInteractionApi(req, res, crmInteractionItemMatch[1], crmInteractionItemMatch[2], null, null, url);
   const crmInteractionMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/interactions$/i);
-  if (crmInteractionMatch) return crmInteractionApi(req, res, crmInteractionMatch[1]);
+  if (crmInteractionMatch) return crmInteractionApi(req, res, crmInteractionMatch[1], null, null, null, url);
   const crmOppMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})$/i);
   if (crmOppMatch) return crmApi.handleOpportunityById(req, res, crmOppMatch[1]);
   const crmLeadConvertMatch = url.pathname.match(/^\/api\/crm\/leads\/([0-9a-f-]{36})\/convert$/i);
