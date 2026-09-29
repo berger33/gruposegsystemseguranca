@@ -4,7 +4,58 @@ Documento de retomada entre sessões. Atualizado a cada lote concluído.
 Referência: `docs/EXECUCAO-ENTREGA-LOCAL.md` (roteiro L00–L10) e
 `docs/PLANO-MESTRE-IMPLEMENTACAO.md` (222 requisitos).
 
-## Continuação mais recente — CRM-08: conflito de horário e vínculo PUB-04 (Arena, 2026-09-29)
+## Continuação mais recente — CRM-08 residual: visão de calendário por semana (Arena, 2026-09-29)
+
+A base desta continuação é `ed50d22` (HEAD de `main` e da branch no início,
+merge dos PRs #22 e #23; a fatia de código é o merge `ea7a1ed`), na branch
+`arena/01a0ef36-gruposegsystemseguranca`. O recorte escolhido é a lacuna 2 de
+L04 (`docs/PROMPT-PROXIMA-SESSAO-L04.md`): **visão de calendário por
+período/semana na agenda pessoal de CRM-08**. A política foi registrada antes
+do código em `docs/PROMPT-CONTINUACAO-CRM-AGENDA-CALENDARIO.md`.
+
+`MyAgenda.tsx` ganhou um alternador "Ver em lista" / "Ver por semana". A
+visão semanal navega por "Semana anterior"/"Semana atual"/"Próxima semana"
+(segunda a domingo, fuso local do navegador) e agrupa os compromissos por
+dia. Decisão central: **não foi criada nenhuma rota, coluna ou migração
+nova** — a visão reaproveita exatamente o mesmo `GET
+/api/crm/visits/agenda?from=&to=` já existente e já autorizado desde CRM-08
+(migração 107/110), então a mesma política de escopo (só responsável/
+participante, sem bypass administrativo, sem exposição de agenda alheia) se
+aplica automaticamente, sem trabalho extra de autorização. A visão de
+calendário é deliberadamente **somente leitura**: confirmar/recusar
+presença, reagendar e cancelar continuam exclusivos da lista, para não
+duplicar controle de versão otimista em duas superfícies — decisão de
+escopo explícita, registrada no prompt da fatia.
+
+Migrações continuam 001–110 (509 tabelas), sem nenhuma migração nova nesta
+fatia — confirmado por `qa-wave0-static` e `test:migrations:pg` antes e
+depois da mudança.
+
+Gate: `npm run test:l04-delivery:pg` **8/8, duas vezes consecutivas**
+(PostgreSQL 17 descartável, HTTP real, Chromium real sem
+`--disable-web-security`). O oitavo cenário prova, por HTTP e Chromium reais:
+alternância lista↔semana sem quebrar a lista pré-existente (a espera da
+resposta real do endpoint evita uma corrida com o estado "carregando" da
+UI); uma visita "perto" (2 dias à frente) aparecendo no dia certo da semana
+atual ou, no pior caso próximo da virada de semana, da seguinte
+(nome do dia da semana e data calculados independentemente pelo teste e
+comparados ao rótulo acessível da UI); uma visita "distante" (20 dias à
+frente) nunca aparecendo em nenhuma das duas janelas; uma semana totalmente
+no passado sem nenhuma das duas; e volta à lista preservando ambas as
+visitas, sem erro de console/rede/5xx. Regressão: `qa-wave0-static` 5/5,
+`test:migrations:pg` 110/110 (replay, clone, checksum negativo, 509
+tabelas, inalterado), `npm test` 186/186, `typecheck` 0 erros, `build` com
+`/admin/crm`, `git diff --check` limpo (`tsconfig.json`/`next-env.d.ts`
+restaurados após o dev server do gate reescrevê-los).
+
+L04 continua **parcial**: dentro de CRM-08, faltam lembretes/notificações
+(dependem de provedor/autorização/opt-out, nenhum decidido) e qualquer ação
+dentro da própria visão de calendário (deliberadamente só leitura); CRM-07
+ainda tem revisão campo a campo de kanban/tabela e notas internas; CRM-01..06
+aguardam revalidação campo a campo; PUB-02/05 e PUB-06..10 seguem com
+componentes órfãos; CRM-10 está fora por decisão. L05 não foi iniciado.
+
+### Continuação anterior — CRM-08: conflito de horário e vínculo PUB-04 (Arena, 2026-09-29)
 
 A base desta continuação é `fd7a939` (HEAD de `main` e da branch no início, merge do PR #21), na branch `arena/01a0eeda-gruposegsystemseguranca`. O recorte escolhido é a lacuna 2 de L04: **detecção de conflito de horário do responsável e vínculo PUB-04** em CRM-08. Calendário, lembretes e notificação externa continuam fora por decisão. A política foi registrada antes da rota em `docs/PROMPT-CONTINUACAO-CRM-VISITAS-CONFLITO-PUB04.md`.
 
@@ -52,11 +103,11 @@ PR #13: tarefas pessoais conectadas em /admin/crm, com auditoria atômica e prot
 
 | Campo | Valor |
 |---|---|
-| Branch de trabalho | `arena/01a0eeda-gruposegsystemseguranca` |
-| Base desta sessão | `fd7a939` (HEAD de `main` e da branch no início, merge do PR #21) |
-| Lote ativo | **L04 — CRM-08 conflito de horário e vínculo PUB-04 entregues; L04 ainda parcial**. Lembretes/calendário de CRM-08, revisão campo a campo de CRM-01..06 e do kanban CRM-05/06, notas internas de CRM-07, CRM-10 e lacunas PUB continuam pendentes. |
-| Último gate aprovado | **L04 ampliado: 7/7, duas vezes consecutivas** (núcleo comercial + CRM-07 tarefas + interações + CRM-08 agenda + CRM-09 cadências + CRM-07 prazo/paginação/delegação + CRM-08 conflito/PUB-04), PostgreSQL descartável, HTTP real e Chromium sem `--disable-web-security`. |
-| Migrações | 001–110 (509 tabelas; 110 adiciona marcas de propagação ao lead com CHECK de coerência, índices parciais de conflito e a ação `crm_visit_lead_sync`) |
+| Branch de trabalho | `arena/01a0ef36-gruposegsystemseguranca` |
+| Base desta sessão | `ed50d22` (HEAD de `main` e da branch no início, merge dos PRs #22 e #23; a fatia de código é o merge `ea7a1ed`) |
+| Lote ativo | **L04 — CRM-08 visão de calendário por semana entregue; L04 ainda parcial**. Lembretes/notificações de CRM-08 e ações dentro da visão de calendário, revisão campo a campo de CRM-01..06 e do kanban CRM-05/06, notas internas de CRM-07, CRM-10 e lacunas PUB continuam pendentes. |
+| Último gate aprovado | **L04 ampliado: 8/8, duas vezes consecutivas** (núcleo comercial + CRM-07 tarefas + interações + CRM-08 agenda + CRM-09 cadências + CRM-07 prazo/paginação/delegação + CRM-08 conflito/PUB-04 + CRM-08 calendário por semana), PostgreSQL descartável, HTTP real e Chromium sem `--disable-web-security`. |
+| Migrações | 001–110 (509 tabelas; sem migração nova nesta continuação — a visão de calendário reaproveita o endpoint já existente) |
 | Data | 2026-09-29 |
 
 ## Lotes
@@ -67,7 +118,7 @@ PR #13: tarefas pessoais conectadas em /admin/crm, com auditoria atômica e prot
 | L01 | Identidade, autorização e integridade básica | **parcial ampliado** | SEC-02/04/05/06 + controles dependentes do L03: RBAC sem bypass, escopo, remuneração/saúde e revogação |
 | L02 | Armazenamento, notificações locais, continuidade | **concluído** | 14/14 HTTP em PostgreSQL descartável (revalidado nesta sessão) |
 | L03 | Funcionário e RH | **concluído** | EMP-01..19 e HR-01..24 navegáveis; gate integral aprovado (revalidado nesta sessão) |
-| L04 | Site/captação e comercial | **parcial — CRM-08 conflito/PUB-04 entregues; lacunas explícitas** | Núcleo CRM-11..27 provado; CRM-07 tem tarefas com paginação/busca/filtros/edição de prazo e delegação explícita com aceite (decisão de equipe registrada: sem fila ampla), restando revisão campo a campo de kanban/tabela CRM-05/06 e notas internas; CRM-08 tem agenda de responsável/participantes, conflito de horário do responsável e vínculo PUB-04 auditado, faltando lembretes/notificações e visão de calendário por período (fora desta entrega); CRM-09 tem modelos privados e tarefas manuais, sem automação; CRM-10 e PUB-06..09/PUB-10 continuam pendentes |
+| L04 | Site/captação e comercial | **parcial — CRM-08 conflito/PUB-04/calendário semanal entregues; lacunas explícitas** | Núcleo CRM-11..27 provado; CRM-07 tem tarefas com paginação/busca/filtros/edição de prazo e delegação explícita com aceite (decisão de equipe registrada: sem fila ampla), restando revisão campo a campo de kanban/tabela CRM-05/06 e notas internas; CRM-08 tem agenda de responsável/participantes, conflito de horário do responsável, vínculo PUB-04 auditado e visão de calendário por semana (somente leitura), faltando lembretes/notificações (dependem de provedor); CRM-09 tem modelos privados e tarefas manuais, sem automação; CRM-10 e PUB-06..09/PUB-10 continuam pendentes |
 | L05 | Contratos e implantação | pendente | — |
 | L06 | Operação, patrimônio e manutenção | pendente | — |
 | L07 | Financeiro e Marcelo | pendente | — |
@@ -176,9 +227,9 @@ permanece `a_revalidar`/`pendente` inclui:
 
 ## Próximos três passos
 
-1. Fechar CRM-10 (carteira) sem misturar automação de mensagens, e manter CRM-09 sem envio externo.
-2. Resolver as lacunas de CRM-07 (equipe/delegação, edição de prazo, paginação e revisão integral de kanban/busca/filtros) e CRM-08 (calendário, conflitos e vínculo PUB-04).
-3. Fechar PUB-02/05/06/07/08/09/10 e revalidar CRM-01..06; só depois avaliar L05. Windows, SMTP, hospedagem externa e aceite humano continuam para L10/aceite correspondente.
+1. Fechar a revisão campo a campo de CRM-07 (kanban/tabela herdados de CRM-05/06, cobertos só no ponto usado pelo gate) e notas internas dedicadas.
+2. Fechar PUB-02/05 e PUB-06..10 (CMS, temas, SEO, montador de pacote, painel de métricas — componentes órfãos em `src/app/admin/ti/*Client.tsx`) e revalidar CRM-01..06 campo a campo com cenários dedicados.
+3. Só depois avaliar L05. CRM-10 (carteira), automação de mensagens, lembretes/notificações de agenda, Windows, SMTP, hospedagem externa e aceite humano continuam fora, por decisão registrada, até que surjam autorização/provedor e decisão de negócio explícitas.
 
 ## Retomada executável
 

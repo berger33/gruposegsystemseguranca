@@ -1768,3 +1768,102 @@ test('CRM-08: conflito de horário do responsável e vínculo PUB-04 do lead pú
   } finally { await browser.close(); }
   assert.deepEqual(failures, []);
 });
+
+test('CRM-08: visão de calendário por período/semana na agenda pessoal (somente leitura)', { skip: !RUN, timeout: 120_000 }, async () => {
+  const owner = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const company = await api('/api/crm/companies', { method: 'POST', cookie: owner.cookie, body: { displayName: 'Empresa calendário ' + randomUUID(), city: 'Osasco', type: 'prospect' } });
+  assert.equal(company.status, 201, JSON.stringify(company.body));
+  const opportunity = await api('/api/crm/opportunities', { method: 'POST', cookie: owner.cookie, body: { company_id: company.body.company.id, title: 'Oportunidade calendário ' + randomUUID() } });
+  assert.equal(opportunity.status, 201, JSON.stringify(opportunity.body));
+  const opportunityId = opportunity.body.opportunity.id;
+  const endpoint = '/api/crm/opportunities/' + opportunityId + '/visits';
+
+  // "Perto" cai sempre na semana atual ou, no pior caso (hoje é domingo do
+  // calendário seg-dom), na semana seguinte. "Distante" nunca cai em nenhuma
+  // das duas, o que prova que o filtro de período é real, não decorativo.
+  const closeAt = new Date(Date.now() + 2 * 24 * 3600 * 1000);
+  const farAt = new Date(Date.now() + 20 * 24 * 3600 * 1000);
+  const closeTitle = 'Visita perto no calendário';
+  const farTitle = 'Visita distante no calendário';
+  const closeVisit = await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: closeTitle, scheduled_at: closeAt.toISOString() } });
+  assert.equal(closeVisit.status, 201, JSON.stringify(closeVisit.body));
+  const farVisit = await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: farTitle, scheduled_at: farAt.toISOString() } });
+  assert.equal(farVisit.status, 201, JSON.stringify(farVisit.body));
+
+  const WEEKDAY_NAMES = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  const pad2 = value => String(value).padStart(2, '0');
+  const dayLabel = date => `Dia da agenda ${WEEKDAY_NAMES[date.getDay()]} ${pad2(date.getDate())}/${pad2(date.getMonth() + 1)}`;
+
+  const browser = await launchBrowser();
+  const failures = [];
+  try {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'pt-BR' });
+    const pair = owner.cookie.split(';')[0], separator = pair.indexOf('=');
+    await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
+    const page = await context.newPage();
+    trackFailures(page, failures);
+    await page.goto(baseUrl + '/admin/crm', { waitUntil: 'networkidle' });
+    const agenda = page.getByRole('region', { name: 'Minha agenda de visitas e reuniões' });
+    await agenda.getByRole('article', { name: 'Agenda ' + closeTitle }).waitFor();
+
+    // Alterna para a visão semanal sem perder a lista original (a lista
+    // continua montada por trás, só oculta pela condição de renderização).
+    // A busca da semana é assíncrona: cada navegação espera a resposta real
+    // do MESMO endpoint /api/crm/visits/agenda antes de olhar o DOM.
+    function waitForWeekFetch(page) {
+      return page.waitForResponse(response => response.url().includes('/api/crm/visits/agenda?') && response.url().includes('from=') && response.request().method() === 'GET');
+    }
+    const [firstWeekLoad] = await Promise.all([
+      waitForWeekFetch(page),
+      agenda.getByRole('button', { name: 'Ver por semana', exact: true }).click(),
+    ]);
+    assert.equal(firstWeekLoad.status(), 200);
+    const week = agenda.getByRole('region', { name: 'Semana da agenda' });
+    await week.getByText('Esta visão é somente leitura. Para confirmar, recusar, reagendar ou cancelar, use a lista.', { exact: true }).waitFor();
+    await week.getByText('Carregando a semana…').waitFor({ state: 'detached' });
+
+    async function dayHasVisit(date, title) {
+      const region = week.getByRole('article', { name: dayLabel(date) });
+      if (await region.count() === 0) return false;
+      return (await region.getByText(new RegExp(title)).count()) > 0;
+    }
+
+    let foundCloseInCurrent = await dayHasVisit(closeAt, closeTitle);
+    assert.equal(await dayHasVisit(farAt, farTitle), false, 'a visita distante não pode aparecer na semana atual');
+    if (!foundCloseInCurrent) {
+      const [nextWeekLoad] = await Promise.all([
+        waitForWeekFetch(page),
+        week.getByRole('button', { name: 'Próxima semana', exact: true }).click(),
+      ]);
+      assert.equal(nextWeekLoad.status(), 200);
+      await week.getByText('Carregando a semana…').waitFor({ state: 'detached' }).catch(() => {});
+      foundCloseInCurrent = await dayHasVisit(closeAt, closeTitle);
+      assert.equal(foundCloseInCurrent, true, 'a visita próxima precisa aparecer na semana atual ou na seguinte');
+      assert.equal(await dayHasVisit(farAt, farTitle), false, 'a visita distante não pode aparecer na semana seguinte');
+      const [backToCurrentLoad] = await Promise.all([
+        waitForWeekFetch(page),
+        week.getByRole('button', { name: 'Semana atual', exact: true }).click(),
+      ]);
+      assert.equal(backToCurrentLoad.status(), 200);
+      await week.getByText('Carregando a semana…').waitFor({ state: 'detached' }).catch(() => {});
+      assert.equal(await dayHasVisit(closeAt, closeTitle), false, 'ao voltar para a semana atual, a visita da semana seguinte não pode reaparecer');
+    }
+
+    // Semana totalmente no passado: nenhuma das duas visitas aparece.
+    const [previousWeekLoad] = await Promise.all([
+      waitForWeekFetch(page),
+      week.getByRole('button', { name: 'Semana anterior', exact: true }).click(),
+    ]);
+    assert.equal(previousWeekLoad.status(), 200);
+    await week.getByText('Carregando a semana…').waitFor({ state: 'detached' }).catch(() => {});
+    assert.equal(await dayHasVisit(closeAt, closeTitle), false, 'semana passada não pode conter uma visita futura');
+    assert.equal(await dayHasVisit(farAt, farTitle), false, 'semana passada não pode conter uma visita futura');
+
+    // Volta para a lista original: nada foi perdido pela navegação semanal.
+    await agenda.getByRole('button', { name: 'Ver em lista', exact: true }).click();
+    await agenda.getByRole('article', { name: 'Agenda ' + closeTitle }).waitFor();
+    await agenda.getByRole('article', { name: 'Agenda ' + farTitle }).waitFor();
+    await context.close();
+  } finally { await browser.close(); }
+  assert.deepEqual(failures, []);
+});
