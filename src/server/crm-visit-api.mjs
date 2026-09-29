@@ -18,7 +18,22 @@ import { randomUUID } from 'node:crypto';
 //   * Reagendar zera todas as confirmações: uma confirmação vale para a data
 //     confirmada, nunca para a data seguinte.
 
+//   * Conflito de horário (migração 110): a faixa [início, início+duração) do
+//     RESPONSÁVEL não pode sobrepor outra visita viva dele. Participante
+//     convidado não gera conflito (ele pode recusar; e a agenda de terceiro
+//     não é exposta). Duração nula vale 60 minutos. Fail-closed, sem
+//     parâmetro de força e sem exceção por papel.
+//   * Vínculo PUB-04: quando a oportunidade veio de um lead público, a visita
+//     carrega `public_lead_id` e propaga, na mesma transação,
+//     confirmada/realizada → `lead_visit_confirm`, cancelada (sem outra visita
+//     viva) → `lead_visit_cancel` e reagendamento → `lead_status_change`
+//     (a confirmação cai junto com a reserva). Lead `realizada` é congelado.
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Duração assumida quando a visita não declara uma: assumir zero deixaria
+// passar sobreposição real.
+const DEFAULT_CONFLICT_MINUTES = 60;
+const ACTIVE_VISIT_STATUSES = ['solicitada', 'em_agendamento', 'confirmada'];
 const COMMERCIAL_ROLES = ['comercial', 'admin', 'marcelo', 'ti'];
 const RESPONSES = new Set(['confirmado', 'recusado']);
 const MAX_PARTICIPANTS = 10;
@@ -86,9 +101,88 @@ export function createCrmVisitApi(ctx) {
     );
   }
 
+  /**
+   * Serializa as mutações de agenda de um mesmo responsável dentro da
+   * transação. Sem isso, duas requisições simultâneas passariam as duas pela
+   * consulta de conflito e gravariam sobreposição.
+   */
+  async function lockAgenda(client, responsibleId) {
+    await client.query(
+      "SELECT pg_advisory_xact_lock(hashtext('crm_visit_agenda:' || $1::text)::bigint)",
+      [responsibleId],
+    );
+  }
+
+  /**
+   * Conflito de horário do responsável (CRM-08). Só visitas vivas reservam
+   * faixa; encostar (fim == início) não é conflito. A consulta é restrita às
+   * visitas do próprio responsável: a resposta nunca revela agenda alheia.
+   */
+  async function findConflict(client, { responsibleId, scheduledAt, durationMinutes, excludeVisitId = null }) {
+    const minutes = Number.isSafeInteger(durationMinutes) && durationMinutes > 0
+      ? durationMinutes : DEFAULT_CONFLICT_MINUTES;
+    const found = await client.query(
+      `SELECT id,title,scheduled_at,duration_minutes,status
+         FROM crm_visits
+        WHERE responsible_id=$1
+          AND status = ANY($2::text[])
+          AND ($5::uuid IS NULL OR id <> $5)
+          AND tstzrange(scheduled_at, scheduled_at + (COALESCE(duration_minutes,$6) * INTERVAL '1 minute'), '[)')
+              && tstzrange($3::timestamptz, $3::timestamptz + ($4 * INTERVAL '1 minute'), '[)')
+        ORDER BY scheduled_at ASC, id ASC
+        LIMIT 1`,
+      [responsibleId, ACTIVE_VISIT_STATUSES, scheduledAt, minutes, excludeVisitId, DEFAULT_CONFLICT_MINUTES],
+    );
+    return found.rows[0] || null;
+  }
+
+  /**
+   * Vínculo PUB-04. Propaga o estado da visita para o lead público de origem,
+   * na mesma transação da mutação, com as três trilhas (histórico do lead,
+   * auditoria PUB-04 e `crm_visit_lead_sync`). Falha aqui reverte a mutação.
+   * Lead `realizada` é congelado; `cancelada` só é propagada quando não sobra
+   * nenhuma outra visita viva do mesmo lead.
+   */
+  async function syncLead(client, session, { visitId, leadId, visitStatus }) {
+    if (!leadId) return null;
+    const target = visitStatus === 'confirmada' ? 'confirmada'
+      : visitStatus === 'realizada' ? 'realizada'
+        : visitStatus === 'cancelada' ? 'cancelada'
+          : visitStatus === 'reagendada' ? 'em_agendamento' : null;
+    if (!target) return null;
+    if (target === 'cancelada' || target === 'em_agendamento') {
+      const alive = await client.query(
+        `SELECT 1 FROM crm_visits
+          WHERE public_lead_id=$1 AND id<>$2 AND status = ANY($3::text[]) LIMIT 1`,
+        [leadId, visitId, ACTIVE_VISIT_STATUSES],
+      );
+      // Outra visita viva do mesmo lead mantém o atendimento de pé.
+      if (alive.rows[0]) return null;
+    }
+    const lead = await client.query('SELECT status FROM public_leads WHERE id=$1 FOR UPDATE', [leadId]);
+    const previous = lead.rows[0]?.status;
+    if (!previous) return null;
+    // Atendimento já realizado não é reaberto nem cancelado por visita nova.
+    if (previous === 'realizada' || previous === target) return null;
+    await client.query('UPDATE public_leads SET status=$2, updated_at=NOW() WHERE id=$1', [leadId, target]);
+    await client.query(
+      'INSERT INTO public_lead_status_audit (lead_id, previous_status, next_status, changed_by) VALUES ($1,$2,$3,$4)',
+      [leadId, previous, target, session.role],
+    );
+    const action = target === 'cancelada' ? 'lead_visit_cancel'
+      : target === 'em_agendamento' ? 'lead_status_change' : 'lead_visit_confirm';
+    await audit(client, session, action, `${leadId}:${previous}->${target}`);
+    await audit(client, session, 'crm_visit_lead_sync', visitId);
+    await client.query(
+      'UPDATE crm_visits SET lead_sync_status=$2, lead_sync_at=NOW() WHERE id=$1',
+      [visitId, target],
+    );
+    return { lead_id: leadId, previous_status: previous, status: target };
+  }
+
   async function ownerFor(client, opportunityId, identityId) {
     const result = await client.query(
-      `SELECT id, company_id FROM crm_opportunities
+      `SELECT id, company_id, public_lead_id FROM crm_opportunities
         WHERE id=$1 AND (responsible_id=$2 OR (responsible_id IS NULL AND created_by_id=$2))
         FOR SHARE`,
       [opportunityId, identityId],
@@ -101,7 +195,8 @@ export function createCrmVisitApi(ctx) {
     const owner = await ownerFor(client, opportunityId, identityId);
     if (!owner) return { error: 'opportunity_not_found', status: 404 };
     const found = await client.query(
-      `SELECT id,company_id,status,version,scheduled_at FROM crm_visits
+      `SELECT id,company_id,status,version,scheduled_at,duration_minutes,public_lead_id,lead_sync_status
+         FROM crm_visits
         WHERE id=$1 AND opportunity_id=$2 AND responsible_id=$3 FOR UPDATE`,
       [visitId, opportunityId, identityId],
     );
@@ -183,7 +278,8 @@ export function createCrmVisitApi(ctx) {
         client.query(
           `SELECT v.id,v.title,v.status,v.scheduled_at,v.duration_minutes,v.notes,v.contact_id,
                   v.version,v.cancel_reason,v.cancelled_at,v.reschedule_count,v.rescheduled_at,
-                  v.created_at,v.updated_at,c.display_name AS contact_name
+                  v.created_at,v.updated_at,v.public_lead_id,v.lead_sync_status,
+                  c.display_name AS contact_name
              FROM crm_visits v
              LEFT JOIN crm_contacts c ON c.id=v.contact_id
             WHERE ${scopeSql}
@@ -246,7 +342,7 @@ export function createCrmVisitApi(ctx) {
         client.query(`SELECT count(*)::int AS total FROM crm_visits v WHERE ${where}`, [session.identityId, from, to]),
         client.query(
           `SELECT v.id,v.opportunity_id,v.title,v.status,v.scheduled_at,v.duration_minutes,
-                  v.version,v.cancel_reason,v.reschedule_count,
+                  v.version,v.cancel_reason,v.reschedule_count,v.public_lead_id,v.lead_sync_status,
                   (v.responsible_id=$1) AS viewer_is_responsible,
                   co.display_name AS company_name
              FROM crm_visits v
@@ -284,7 +380,7 @@ export function createCrmVisitApi(ctx) {
 
   async function create(req, res, session, opportunityId) {
     const body = await readMutation(req, res); if (!body) return;
-    if (['responsible_id', 'created_by_id', 'company_id', 'opportunity_id', 'version', 'status', 'participants', 'cancelled_at', 'cancelled_by_id', 'reschedule_count'].some(key => Object.hasOwn(body, key))) {
+    if (['responsible_id', 'created_by_id', 'company_id', 'opportunity_id', 'version', 'status', 'participants', 'cancelled_at', 'cancelled_by_id', 'reschedule_count', 'public_lead_id', 'lead_sync_status', 'lead_sync_at'].some(key => Object.hasOwn(body, key))) {
       return ctx.json(res, 400, { error: 'server_managed_fields' });
     }
     const title = text(body.title, 200);
@@ -322,6 +418,21 @@ export function createCrmVisitApi(ctx) {
         await client.query('ROLLBACK'); transaction = false;
         return ctx.json(res, 400, { error: contact.error });
       }
+      // Conflito de horário do responsável: fail-closed, sem força.
+      await lockAgenda(client, session.identityId);
+      const clash = await findConflict(client, {
+        responsibleId: session.identityId, scheduledAt, durationMinutes: duration.value,
+      });
+      if (clash) {
+        await client.query('ROLLBACK'); transaction = false;
+        return ctx.json(res, 409, {
+          error: 'visit_schedule_conflict',
+          conflict: {
+            id: clash.id, title: clash.title, status: clash.status,
+            scheduled_at: clash.scheduled_at, duration_minutes: clash.duration_minutes,
+          },
+        });
+      }
       const invited = [];
       for (const email of emails) {
         const staff = await resolveStaffByEmail(client, email.trim());
@@ -334,11 +445,13 @@ export function createCrmVisitApi(ctx) {
       const visitId = randomUUID();
       const inserted = await client.query(
         `INSERT INTO crm_visits
-           (id,company_id,opportunity_id,contact_id,title,responsible_id,scheduled_at,duration_minutes,status,notes,created_by_id)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'solicitada',$9,$6)
+           (id,company_id,opportunity_id,contact_id,title,responsible_id,scheduled_at,duration_minutes,status,notes,created_by_id,public_lead_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'solicitada',$9,$6,$10)
          RETURNING id,title,status,scheduled_at,duration_minutes,notes,contact_id,version,
-                   cancel_reason,cancelled_at,reschedule_count,rescheduled_at,created_at,updated_at`,
-        [visitId, owner.company_id, opportunityId, contactId, title, session.identityId, scheduledAt, duration.value, notes],
+                   cancel_reason,cancelled_at,reschedule_count,rescheduled_at,created_at,updated_at,
+                   public_lead_id,lead_sync_status`,
+        // O vínculo PUB-04 vem da oportunidade, nunca do corpo da requisição.
+        [visitId, owner.company_id, opportunityId, contactId, title, session.identityId, scheduledAt, duration.value, notes, owner.public_lead_id],
       );
       for (const staff of invited) {
         await client.query(
@@ -364,7 +477,7 @@ export function createCrmVisitApi(ctx) {
 
   async function update(req, res, session, opportunityId, visitId) {
     const body = await readMutation(req, res); if (!body) return;
-    if (['responsible_id', 'created_by_id', 'company_id', 'opportunity_id', 'version', 'participants', 'cancelled_at', 'cancelled_by_id', 'reschedule_count'].some(key => Object.hasOwn(body, key))) {
+    if (['responsible_id', 'created_by_id', 'company_id', 'opportunity_id', 'version', 'participants', 'cancelled_at', 'cancelled_by_id', 'reschedule_count', 'public_lead_id', 'lead_sync_status', 'lead_sync_at'].some(key => Object.hasOwn(body, key))) {
       return ctx.json(res, 400, { error: 'server_managed_fields' });
     }
     const expectedVersion = parseExpectedVersion(body.expected_version);
@@ -439,6 +552,31 @@ export function createCrmVisitApi(ctx) {
       }
       const rescheduled = Boolean(values.scheduledAt)
         && values.scheduledAt.getTime() !== new Date(current.scheduled_at).getTime();
+      // Conflito de horário: recheca ao mover a faixa (data ou duração) e ao
+      // confirmar — confirmar é o momento em que o horário vira promessa.
+      const durationChanged = Object.hasOwn(values, 'duration')
+        && values.duration !== current.duration_minutes;
+      if (rescheduled || durationChanged || values.status === 'confirmada') {
+        const effectiveDate = values.scheduledAt || new Date(current.scheduled_at);
+        const effectiveDuration = Object.hasOwn(values, 'duration') ? values.duration : current.duration_minutes;
+        await lockAgenda(client, session.identityId);
+        const clash = await findConflict(client, {
+          responsibleId: session.identityId,
+          scheduledAt: effectiveDate,
+          durationMinutes: effectiveDuration,
+          excludeVisitId: visitId,
+        });
+        if (clash) {
+          await client.query('ROLLBACK'); transaction = false;
+          return ctx.json(res, 409, {
+            error: 'visit_schedule_conflict',
+            conflict: {
+              id: clash.id, title: clash.title, status: clash.status,
+              scheduled_at: clash.scheduled_at, duration_minutes: clash.duration_minutes,
+            },
+          });
+        }
+      }
       const sets = ['version=version+1', 'updated_at=NOW()'];
       const params = [visitId];
       const push = (fragment, value) => { params.push(value); sets.push(`${fragment}=$${params.length}`); };
@@ -464,7 +602,8 @@ export function createCrmVisitApi(ctx) {
       const updated = await client.query(
         `UPDATE crm_visits SET ${sets.join(',')} WHERE id=$1
          RETURNING id,title,status,scheduled_at,duration_minutes,notes,contact_id,version,
-                   cancel_reason,cancelled_at,reschedule_count,rescheduled_at,created_at,updated_at`,
+                   cancel_reason,cancelled_at,reschedule_count,rescheduled_at,created_at,updated_at,
+                   public_lead_id,lead_sync_status`,
         params,
       );
       if (rescheduled) {
@@ -477,6 +616,15 @@ export function createCrmVisitApi(ctx) {
         : rescheduled ? 'crm_visit_reschedule'
           : values.status ? 'crm_visit_status' : 'crm_visit_update';
       await audit(client, session, action, visitId);
+      // Vínculo PUB-04, na mesma transação: sem a trilha do lead, a visita não
+      // muda de estado. Reagendar derruba a confirmação do lead.
+      const leadSync = await syncLead(client, session, {
+        visitId,
+        leadId: current.public_lead_id,
+        visitStatus: values.status === 'cancelada' ? 'cancelada'
+          : rescheduled ? 'reagendada'
+            : values.status || null,
+      });
       const byVisit = await participantsOf(client, [visitId]);
       const named = updated.rows[0].contact_id
         ? await client.query('SELECT display_name FROM crm_contacts WHERE id=$1', [updated.rows[0].contact_id])
@@ -487,7 +635,8 @@ export function createCrmVisitApi(ctx) {
       visit.participants = byVisit.get(visitId) || [];
       visit.viewer_is_responsible = true;
       visit.viewer_response = null;
-      return ctx.json(res, 200, { visit }, { 'Cache-Control': 'private, no-store' });
+      if (leadSync) visit.lead_sync_status = leadSync.status;
+      return ctx.json(res, 200, { visit, lead_sync: leadSync }, { 'Cache-Control': 'private, no-store' });
     } catch {
       if (transaction) await client?.query('ROLLBACK').catch(() => {});
       return ctx.json(res, 503, { error: 'crm_visits_unavailable' });

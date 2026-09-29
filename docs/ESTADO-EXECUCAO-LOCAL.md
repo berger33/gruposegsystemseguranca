@@ -4,7 +4,21 @@ Documento de retomada entre sessões. Atualizado a cada lote concluído.
 Referência: `docs/EXECUCAO-ENTREGA-LOCAL.md` (roteiro L00–L10) e
 `docs/PLANO-MESTRE-IMPLEMENTACAO.md` (222 requisitos).
 
-## Continuação mais recente — CRM-07: prazo, paginação e delegação com aceite (Arena, 2026-09-29)
+## Continuação mais recente — CRM-08: conflito de horário e vínculo PUB-04 (Arena, 2026-09-29)
+
+A base desta continuação é `fd7a939` (HEAD de `main` e da branch no início, merge do PR #21), na branch `arena/01a0eeda-gruposegsystemseguranca`. O recorte escolhido é a lacuna 2 de L04: **detecção de conflito de horário do responsável e vínculo PUB-04** em CRM-08. Calendário, lembretes e notificação externa continuam fora por decisão. A política foi registrada antes da rota em `docs/PROMPT-CONTINUACAO-CRM-VISITAS-CONFLITO-PUB04.md`.
+
+Conflito: a faixa `[início, início+duração)` do **responsável** não pode sobrepor outra visita viva dele (`solicitada`/`em_agendamento`/`confirmada`); duração nula vale 60 minutos; encostar não é conflito; participante convidado não bloqueia (ele pode recusar, e a agenda alheia não é exposta — a checagem só olha as visitas do próprio ator, então a resposta de conflito não vira oráculo). É fail-closed: `409 visit_schedule_conflict`, sem parâmetro de força e sem exceção por papel administrativo. A corrida real é serializada por `pg_advisory_xact_lock` por identidade responsável dentro da transação. A recheca ocorre na criação, ao mover data/duração e ao confirmar.
+
+Vínculo PUB-04: quando a oportunidade veio de lead público, a visita herda `public_lead_id` **da oportunidade** (nunca do corpo da requisição — o campo passou a ser recusado como `server_managed_fields`) e propaga, na mesma transação: `confirmada`/`realizada` → lead confirmado/realizado com `lead_visit_confirm`; `cancelada` → lead cancelado com `lead_visit_cancel`, **apenas se não sobrar outra visita viva do mesmo lead**; reagendamento → lead volta a `em_agendamento` com `lead_status_change` (não se promete horário sem reserva real). Lead `realizada` é congelado. Cada propagação escreve `public_lead_status_audit`, a ação PUB-04 em `auth_access_audit` e `crm_visit_lead_sync`; falha de qualquer trilha reverte a mutação da visita. Correção associada em `PATCH /api/admin/leads/:id`: a rota auditava **qualquer** transição de visita (inclusive cancelamento) como `lead_visit_confirm` e engolia a falha de auditoria com `try {} catch {}` — agora o mapeamento é fiel e a falha reverte a transição. O teto de antispam de PUB-03 passou a aceitar `LEAD_MAX_ATTEMPTS` por ambiente (padrão seguro 5/10min, mesmo padrão de `ADMIN_LOGIN_MAX_ATTEMPTS`) para o gate exercitar várias jornadas públicas sem afrouxar produção.
+
+Migração `110-crm-visit-conflict-lead-link.sql` (aditiva): `lead_sync_status`/`lead_sync_at` com CHECK de coerência e de exigência do lead, índices parciais de conflito e de lead, e reafirmação do CHECK de `auth_access_audit` no padrão herdado — falha se a constraint pai sumir **ou se as ações PUB-04 desaparecerem**, nunca afrouxa.
+
+Gate: `npm run test:l04-delivery:pg` **7/7, duas vezes consecutivas** (PostgreSQL 17 descartável, HTTP real, Chromium real sem `--disable-web-security`). O sétimo cenário prova lead público real convertido, recusa do vínculo forjado, conflito por faixa igual/sobreposta/por trás, encostar permitido, agenda de outro comercial livre na mesma hora, conflito ao reagendar e ao esticar duração sem consumir versão, propagação de confirmação/realização/cancelamento com e sem outra visita viva, queda da confirmação no reagendamento, congelamento do lead realizado, rollback por falha de auditoria injetada em `lead_visit_cancel`, trilha correta na rota manual de PUB-04 e jornada de UI (selo do lead e mensagem de conflito). O cenário CRM-08 anterior foi ajustado em um ponto: a visita usada para provar rollback de auditoria passou a usar faixa livre, porque a sobreposição agora é recusada antes da auditoria. Regressão: `qa-wave0-static` 5/5, `test:migrations:pg` 110/110 (replay, clone, checksum negativo, 509 tabelas), `npm test` 186/186, `typecheck` 0 erros, `build` com `/admin/crm`, `git diff --check` limpo.
+
+L04 continua **parcial**: CRM-08 ainda não tem lembretes/notificações nem visão de calendário por período; CRM-07 ainda tem revisão campo a campo de kanban/tabela e notas internas; CRM-01..06 aguardam revalidação campo a campo; PUB-02/05 e PUB-06..10 seguem com componentes órfãos; CRM-10 está fora por decisão. L05 não foi iniciado.
+
+### Continuação anterior — CRM-07: prazo, paginação e delegação com aceite (Arena, 2026-09-29)
 
 A base desta continuação é `942b3fc` (HEAD de `main` e da branch no início, merge do PR #20), na branch `arena/01a0eeb7-gruposegsystemseguranca`. A decisão de negócio pendente de CRM-07 foi tomada e registrada antes da rota (`docs/PROMPT-CONTINUACAO-CRM-TAREFAS-DELEGACAO.md`): **existe delegação explícita entre comerciais, com aceite, e não existe visibilidade de equipe ampla**. A fatia entrega, na migração `108`→`109-crm-task-delegation.sql`, versão otimista incrementada por gatilho do banco, campos de delegação com CHECK de coerência e de não-autodelegação, índice parcial e seis ações novas de auditoria.
 
@@ -38,11 +52,11 @@ PR #13: tarefas pessoais conectadas em /admin/crm, com auditoria atômica e prot
 
 | Campo | Valor |
 |---|---|
-| Branch de trabalho | `arena/01a0eeb7-gruposegsystemseguranca` |
-| Base desta sessão | `942b3fc` (HEAD de `main` e da branch no início, merge do PR #20) |
-| Lote ativo | **L04 — CRM-07 prazo/paginação/delegação entregues; L04 ainda parcial**. CRM-08 conflitos/PUB-04, CRM-10, lacunas PUB e revalidação CRM-01..06 continuam pendentes. |
-| Último gate aprovado | **L04 ampliado: 6/6, duas vezes consecutivas** (núcleo comercial + CRM-07 tarefas + interações + CRM-08 agenda + CRM-09 cadências + CRM-07 prazo/paginação/delegação), PostgreSQL descartável, HTTP real e Chromium sem `--disable-web-security`. |
-| Migrações | 001–109 (509 tabelas; 109 adiciona versão otimista por gatilho, campos de delegação com CHECK de coerência e seis ações de auditoria) |
+| Branch de trabalho | `arena/01a0eeda-gruposegsystemseguranca` |
+| Base desta sessão | `fd7a939` (HEAD de `main` e da branch no início, merge do PR #21) |
+| Lote ativo | **L04 — CRM-08 conflito de horário e vínculo PUB-04 entregues; L04 ainda parcial**. Lembretes/calendário de CRM-08, revisão campo a campo de CRM-01..06 e do kanban CRM-05/06, notas internas de CRM-07, CRM-10 e lacunas PUB continuam pendentes. |
+| Último gate aprovado | **L04 ampliado: 7/7, duas vezes consecutivas** (núcleo comercial + CRM-07 tarefas + interações + CRM-08 agenda + CRM-09 cadências + CRM-07 prazo/paginação/delegação + CRM-08 conflito/PUB-04), PostgreSQL descartável, HTTP real e Chromium sem `--disable-web-security`. |
+| Migrações | 001–110 (509 tabelas; 110 adiciona marcas de propagação ao lead com CHECK de coerência, índices parciais de conflito e a ação `crm_visit_lead_sync`) |
 | Data | 2026-09-29 |
 
 ## Lotes
@@ -53,7 +67,7 @@ PR #13: tarefas pessoais conectadas em /admin/crm, com auditoria atômica e prot
 | L01 | Identidade, autorização e integridade básica | **parcial ampliado** | SEC-02/04/05/06 + controles dependentes do L03: RBAC sem bypass, escopo, remuneração/saúde e revogação |
 | L02 | Armazenamento, notificações locais, continuidade | **concluído** | 14/14 HTTP em PostgreSQL descartável (revalidado nesta sessão) |
 | L03 | Funcionário e RH | **concluído** | EMP-01..19 e HR-01..24 navegáveis; gate integral aprovado (revalidado nesta sessão) |
-| L04 | Site/captação e comercial | **parcial — CRM-07 prazo/paginação/delegação entregues; lacunas explícitas** | Núcleo CRM-11..27 provado; CRM-07 tem tarefas com paginação/busca/filtros/edição de prazo e delegação explícita com aceite (decisão de equipe registrada: sem fila ampla), restando revisão campo a campo de kanban/tabela CRM-05/06 e notas internas; CRM-08 tem agenda de responsável/participantes, mas faltam conflitos/PUB-04 (calendário/lembretes fora desta entrega); CRM-09 tem modelos privados e tarefas manuais, sem automação; CRM-10 e PUB-06..09/PUB-10 continuam pendentes |
+| L04 | Site/captação e comercial | **parcial — CRM-08 conflito/PUB-04 entregues; lacunas explícitas** | Núcleo CRM-11..27 provado; CRM-07 tem tarefas com paginação/busca/filtros/edição de prazo e delegação explícita com aceite (decisão de equipe registrada: sem fila ampla), restando revisão campo a campo de kanban/tabela CRM-05/06 e notas internas; CRM-08 tem agenda de responsável/participantes, conflito de horário do responsável e vínculo PUB-04 auditado, faltando lembretes/notificações e visão de calendário por período (fora desta entrega); CRM-09 tem modelos privados e tarefas manuais, sem automação; CRM-10 e PUB-06..09/PUB-10 continuam pendentes |
 | L05 | Contratos e implantação | pendente | — |
 | L06 | Operação, patrimônio e manutenção | pendente | — |
 | L07 | Financeiro e Marcelo | pendente | — |

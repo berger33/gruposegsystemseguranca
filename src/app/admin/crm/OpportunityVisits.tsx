@@ -4,6 +4,9 @@ import { useEffect, useState, type FormEvent } from "react";
 // CRM-08 — agenda de visitas/reuniões da oportunidade.
 // Responsável agenda, reagenda, confirma, conclui, cancela e convida.
 // Participante convidado apenas visualiza e responde por si.
+// O horário do responsável é exclusivo: sobreposição é recusada pelo servidor.
+// Quando a oportunidade veio de um lead público (PUB-03), a situação da visita
+// é propagada ao lead (PUB-04) e mostrada como selo nesta lista.
 
 type Participant = {
   identity_id: string; display_name: string; email: string;
@@ -14,6 +17,7 @@ type Visit = {
   notes: string | null; contact_id: string | null; contact_name?: string | null; version: number;
   cancel_reason: string | null; cancelled_at: string | null; reschedule_count: number;
   rescheduled_at: string | null; created_at: string; updated_at: string;
+  public_lead_id: string | null; lead_sync_status: string | null;
   participants: Participant[]; viewer_is_responsible: boolean; viewer_response: string | null;
 };
 type Contact = { id: string; display_name: string };
@@ -49,6 +53,7 @@ const errors: Record<string, string> = {
   visit_status_conflict: "Essa transição de situação não é permitida.",
   visit_status_final: "A visita já foi concluída ou cancelada.",
   visit_version_conflict: "A visita mudou em outra tela. Atualize a agenda antes de tentar novamente.",
+  visit_schedule_conflict: "Conflito de agenda: você já tem uma visita ocupando esse horário. Reagende ou cancele a outra antes.",
   cancel_reason_required: "Informe o motivo do cancelamento (mínimo 3 caracteres).",
   expected_version_required: "Atualize a agenda antes de alterar esta visita.",
   visit_update_required: "Nada a alterar nesta visita.",
@@ -203,6 +208,7 @@ export default function OpportunityVisits({ opportunityId }: { opportunityId: st
       <p>
         O responsável pela oportunidade agenda, reagenda, conclui e cancela. Participantes convidados
         veem apenas as visitas em que foram incluídos e respondem somente por si. Reagendar zera as confirmações.
+        Duas visitas suas não podem ocupar o mesmo horário, e visitas vindas de um lead público atualizam o lead.
       </p>
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
@@ -246,6 +252,12 @@ export default function OpportunityVisits({ opportunityId }: { opportunityId: st
                   <article aria-label={`Visita ${visit.title}`}>
                     <strong>{statusLabels[visit.status] || visit.status}: {visit.title}</strong>
                     <p>{new Date(visit.scheduled_at).toLocaleString("pt-BR")}{visit.duration_minutes ? ` — ${visit.duration_minutes} min` : ""}{visit.contact_name ? ` — Contato: ${visit.contact_name}` : ""}</p>
+                    {visit.public_lead_id && (
+                      <p>
+                        Lead público vinculado (PUB-04)
+                        {visit.lead_sync_status ? ` — situação propagada: ${statusLabels[visit.lead_sync_status] || visit.lead_sync_status}` : " — nada propagado ainda"}
+                      </p>
+                    )}
                     {visit.reschedule_count > 0 && <p>Reagendamentos: {visit.reschedule_count}</p>}
                     {visit.cancel_reason && <p>Motivo do cancelamento: {visit.cancel_reason}</p>}
                     {visit.notes && <p>{visit.notes}</p>}

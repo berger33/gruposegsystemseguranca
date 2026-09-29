@@ -815,3 +815,91 @@ operação por PATCH; paginação/busca/filtros no servidor.
 `npx tsc --noEmit` foi reexecutado depois da restauração e continuou com 0
 erros. Nenhum resultado de SHA histórico é reutilizado como prova desta
 continuação.
+
+## Continuação CRM-08 — conflito de horário e vínculo PUB-04 (branch `arena/01a0eeda-gruposegsystemseguranca`)
+
+Base da sessão: `fd7a939` (HEAD de `main` e da branch, merge do PR #21).
+Política registrada antes da rota em
+`docs/PROMPT-CONTINUACAO-CRM-VISITAS-CONFLITO-PUB04.md`.
+Migração nova: `110-crm-visit-conflict-lead-link.sql` (aditiva; 001–109
+intactas).
+
+### Comandos e resultados observados
+
+| Comando | Esperado | Observado |
+|---|---|---|
+| `npm ci` | instalação reproduzível | exit 0 |
+| `node scripts/qa-wave0-static.mjs` | 5/5 | 5/5, migrações 001–110 contínuas e registradas no migrador |
+| `npm run test:migrations:pg` | replay + clone + checksum negativo | `CHECKSUMMED=110/110`, `TABLES=509->509`, clone rejeita `006` sem rebaseline |
+| `npm run test:l04-delivery:pg` (1ª) | todos os cenários | **7/7**, exit 0 |
+| `npm run test:l04-delivery:pg` (2ª consecutiva) | reprodutível | **7/7**, exit 0 |
+| `npm test` | suíte unitária | 186/186 |
+| `npm run typecheck` | 0 erros | 0 erros |
+| `npm run build` | build com `/admin/crm` | sucesso |
+| `git diff --check` | limpo | limpo |
+
+### Cenário 7 do gate L04 — o que é provado
+
+Tudo por HTTP real contra o servidor real, PostgreSQL 17 descartável e
+Chromium real sem `--disable-web-security`. SQL só como fixture, asserção ou
+falha injetada.
+
+1. **Origem pública real:** lead criado em `POST /api/leads` sem sessão
+   (`status='solicitada'`) e convertido em oportunidade por
+   `POST /api/crm/leads/:id/convert`.
+2. **Vínculo não é do cliente:** `public_lead_id` no corpo do agendamento é
+   recusado com `server_managed_fields`; a visita criada herda o lead da
+   oportunidade (conferido no banco) e nasce sem propagação
+   (`lead_sync_status IS NULL`).
+3. **Conflito:** faixa idêntica → `409 visit_schedule_conflict` apontando a
+   visita ocupante; sobreposição à frente (+30 min) e atrás (−30 min) também
+   recusadas; nenhuma visita é gravada nos três casos. Encostar
+   (início == fim da anterior) é aceito. Outro comercial agenda a **mesma
+   hora** na própria oportunidade sem obstáculo: o conflito é do responsável.
+4. **Conflito em alteração:** reagendar para cima de outra visita e esticar a
+   duração até sobrepô-la retornam 409, e a versão da visita **não** é
+   consumida (conferido no banco).
+5. **Propagação PUB-04:** confirmar a visita leva o lead de `solicitada` a
+   `confirmada` com `lead_visit_confirm` e uma linha em
+   `public_lead_status_audit`; confirmar uma segunda visita do mesmo lead não
+   duplica nada; cancelar uma visita com outra viva **não** cancela o lead;
+   reagendar devolve o lead a `em_agendamento` com `lead_status_change`
+   (não se promete horário sem reserva real); reconfirmar volta a confirmar.
+6. **Auditoria transacional:** gatilho que rejeita `lead_visit_cancel` faz o
+   cancelamento responder 503 e deixa visita e lead intocados.
+7. **Fechamento e congelamento:** cancelamento efetivo → lead `cancelada` com
+   `lead_visit_cancel`; visita `realizada` → lead `realizada`; visita
+   posterior cancelada **não** reabre nem cancela o lead realizado.
+8. **PUB-04 manual:** em um segundo lead, `PATCH /api/admin/leads/:id` grava
+   `lead_status_change` para `em_agendamento` e `lead_visit_cancel` para
+   `cancelada` — antes, qualquer transição de visita virava
+   `lead_visit_confirm`, e a falha de auditoria era engolida.
+9. **UI real:** o responsável abre `/admin/crm`, encontra na agenda o selo
+   “Lead público vinculado (PUB-04) — situação propagada: Realizada” e recebe
+   a mensagem dedicada de conflito ao tentar agendar em horário ocupado
+   (resposta 409 observada na rede), sem erro de console nem falha de rede
+   same-origin.
+
+### Ajuste em cenário preexistente
+
+No cenário CRM-08 anterior, a visita usada para provar rollback de auditoria
+era agendada exatamente sobre a visita já reagendada. Com a migração 110 essa
+criação passa a ser recusada por conflito **antes** da auditoria, o que
+mascararia o que o cenário prova; a visita passou a usar uma faixa livre. Nada
+mais foi afrouxado.
+
+### Limites honestos deste recorte
+
+- Conflito considera apenas o **responsável**. Participante convidado não
+  bloqueia (pode recusar) e a agenda de terceiros nunca é consultada nem
+  revelada. Não há detecção de conflito de sala, veículo ou equipe.
+- Não existe parâmetro de força: para dobrar um horário é preciso cancelar ou
+  reagendar a visita que o ocupa.
+- A propagação é unidirecional CRM → lead. Mudar o lead em `/admin/leads` não
+  mexe na agenda comercial.
+- Lembretes, notificações e visão de calendário por período continuam fora;
+  SMTP, calendário externo, hospedagem, Windows e aceite humano seguem fora
+  por decisão registrada.
+- O teto de antispam de PUB-03 ganhou a variável `LEAD_MAX_ATTEMPTS` (padrão
+  5/10 min preservado, teto 1000, valor inválido cai no padrão). Só o gate a
+  usa; nenhum caminho de requisição pode alterá-la.
