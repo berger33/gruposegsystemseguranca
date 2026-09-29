@@ -76,6 +76,12 @@ LOTES = [
      lambda: icones("acoes")),
     (16, "email-vigilancia-condominios", "Cabeçalhos 31–40 (vigilância noturna, condomínios, infraestrutura, corporativo, central 24h, logística, perímetro, acesso, rotas, vigilância ativa)",
      lambda: arquivos_email("cabecalho", prazo_numeros(31, 40))),
+    (18, "icones-modulos-gestao", "Ícones de módulos e gestão 01–10 (treinamento, uniformes, férias, folha, contas a receber e a pagar, conciliação, metas, assistente de IA, indicadores)",
+     lambda: icones("modulos")),
+    (19, "icones-modulos-reverso", "Ícones de módulos e gestão reversos (branco, para fundo escuro)",
+     lambda: icones("modulos-reverso")),
+    (20, "selos-status", "10 selos de status coloridos (aprovado, pendente, atrasado, em análise, concluído, cancelado, em execução, aguardando, urgente, bloqueado)",
+     lambda: icones("status")),
     (17, "site-banners-hero", "10 banners/hero do site (1600×600): institucional, monitoramento, condomínios, logística e portos, tecnologia, acesso, perímetro, vigilância noturna, cobertura e rotas, vigilância ativa",
      lambda: sorted((RAIZ / "public/site/hero").glob("hero-*.jpg"))),
 ]

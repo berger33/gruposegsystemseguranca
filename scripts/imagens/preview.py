@@ -17,7 +17,10 @@ FAMILIAS_ICONES = [
     ("Ícones de serviço (reverso, branco)", "public/ui/icones/servicos-reverso"),
     ("Ícones de operação (reverso, branco)", "public/ui/icones/operacao-reverso"),
     ("Ícones de navegação (reverso, branco)", "public/ui/icones/navegacao-reverso"),
+    ("Ícones de módulos e gestão (traço marinho)", "public/ui/icones/modulos"),
+    ("Ícones de módulos e gestão (reverso, branco)", "public/ui/icones/modulos-reverso"),
     ("Ícones de ação e status", "public/ui/icones/acoes"),
+    ("Selos de status coloridos", "public/ui/icones/status"),
     ("Peças de marca", "public/ui/icones/marca"),
 ]
 

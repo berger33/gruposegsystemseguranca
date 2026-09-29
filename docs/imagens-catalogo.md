@@ -60,6 +60,9 @@ Os ZIPs ficam em `downloads/imagens/` (um por lote) e podem ser baixados pelo Gi
 | 13 | 10 ícones de navegação — reverso (branco) | 20 | `public/ui/icones/navegacao-reverso/` |
 | 14 | 10 peças de marca (escudos, monogramas, medalhões, favicon) | 10 | `public/ui/icones/marca/` |
 | 15 | 10 ícones de ação e status (busca, filtro, editar, excluir, imprimir, compartilhar, sino, baixar, atualizar, expandir) | 20 | `public/ui/icones/acoes/` |
+| 18 | 10 ícones de módulos e gestão (treinamento, uniformes, férias, folha de pagamento, contas a receber e a pagar, conciliação, metas/orçamento, assistente de IA, indicadores) | 20 | `public/ui/icones/modulos/` |
+| 19 | 10 ícones de módulos e gestão — reverso (branco) | 20 | `public/ui/icones/modulos-reverso/` |
+| 20 | 10 selos de status coloridos (aprovado, pendente, atrasado, em análise, concluído, cancelado, em execução, aguardando, urgente, bloqueado) | 20 | `public/ui/icones/status/` |
 | 17 | 10 banners/hero do site (1600×600): institucional, monitoramento, condomínios, logística e portos, tecnologia, acesso corporativo, perímetro monitorado, vigilância noturna, cobertura e rotas, vigilância ativa | 10 | `public/site/hero/` |
 | 16 | 10 cabeçalhos (1200×400) com placas novas: vigilância noturna, condomínios, infraestrutura crítica, corporativo, central de operação 24h, logística e portos, perímetro monitorado, acesso corporativo, cobertura e rotas, vigilância ativa | 10 | `public/email/cabecalhos/` |
 
@@ -74,6 +77,11 @@ Os lotes de ícones gravam o arquivo principal de 256 px e o derivado de 64 px p
   comunicação.
 - **Navegação**: início, painel, serviços, clientes, financeiro, documentos, usuários, configurações,
   ajuda, sair.
+- **Módulos e gestão**: treinamento, uniformes, férias, folha de pagamento, contas a receber, contas a
+  pagar, conciliação bancária, metas/orçamento, assistente de IA, indicadores.
+- **Selos de status**: círculos coloridos com glifo branco, para tabelas e filtros do sistema —
+  aprovado, pendente, atrasado, em análise, concluído, cancelado, em execução, aguardando, urgente,
+  bloqueado (256 e 64 px, cores com contraste AA sobre fundo claro).
 - **Ação/status**: busca, filtro, editar, excluir, imprimir, compartilhar, sino, download, atualizar,
   expandir.
 - **Marca**: escudo (marinho, branco, dourado, chapado), monograma GS (3 cores), medalhão (512 e
@@ -103,6 +111,9 @@ catálogo). Regerar:
 | `lote-15-icones-acao-status.zip` | ícones de ação e status |
 | `lote-16-email-vigilancia-condominios.zip` | cabeçalhos 31–40 |
 | `lote-17-site-banners-hero.zip` | banners/hero do site (1600×600) |
+| `lote-18-icones-modulos-gestao.zip` | ícones de módulos e gestão (marinho) |
+| `lote-19-icones-modulos-reverso.zip` | ícones de módulos e gestão (reverso) |
+| `lote-20-selos-status.zip` | selos de status coloridos |
 | `imagens-seg-system-completo.zip` | acervo completo + galeria + catálogo |
 
 ## Reprodução

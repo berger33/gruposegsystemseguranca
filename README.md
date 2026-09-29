@@ -44,9 +44,10 @@ em [`public/ui/preview.html`](public/ui/preview.html):
 - **Botões (20 peças)** em `public/ui/botoes/` — superfícies PNG com transparência (primário,
   secundário, dourado, vidro, CTA, barra fixa, chip, sucesso, aviso, erro, destrutivo, fantasma,
   desabilitado e carregando). O rótulo é escrito em HTML/CSS.
-- **Ícones (80 peças + derivados 64 px)** em `public/ui/icones/` — serviço, operação, navegação e ação
-  em traço marinho e nas versões reversas brancas, além das peças de marca (escudo, monograma GS e
-  medalhão) em `public/ui/icones/marca/`.
+- **Ícones (110 peças + derivados 64 px)** em `public/ui/icones/` — serviço, operação, navegação e ação
+  em traço marinho e nas versões reversas brancas, ícones de módulos e gestão (folha, contas,
+  conciliação, metas, assistente de IA, indicadores), selos de status coloridos e as peças de marca
+  (escudo, monograma GS e medalhão) em `public/ui/icones/marca/`.
 - **Logotipo** recortado do arquivo real da marca em `public/brand/logo/` (logo, escudo e texto,
   versões marinho e reversa) — nenhum elemento de marca é gerado por IA.
 
@@ -62,6 +63,7 @@ Um ZIP por lote (16 lotes) e o acervo completo, em `downloads/imagens/`:
 - [lote 11 — ícones de serviço reversos](downloads/imagens/lote-11-icones-servico-reverso.zip) · [lote 12 — operação reversos](downloads/imagens/lote-12-icones-operacao-reverso.zip) · [lote 13 — navegação reversos](downloads/imagens/lote-13-icones-navegacao-reverso.zip)
 - [lote 14 — marca, escudo e monograma](downloads/imagens/lote-14-marca-escudo-monograma.zip) · [lote 15 — ícones de ação e status](downloads/imagens/lote-15-icones-acao-status.zip)
 - [lote 16 — vigilância, condomínios e operação](downloads/imagens/lote-16-email-vigilancia-condominios.zip) · [lote 17 — banners/hero do site](downloads/imagens/lote-17-site-banners-hero.zip)
+- [lote 18 — ícones de módulos e gestão](downloads/imagens/lote-18-icones-modulos-gestao.zip) · [lote 19 — módulos reversos](downloads/imagens/lote-19-icones-modulos-reverso.zip) · [lote 20 — selos de status](downloads/imagens/lote-20-selos-status.zip)
 - [acervo completo (peças + galeria + catálogo)](downloads/imagens/imagens-seg-system-completo.zip)
 
 Cada ZIP traz um `LEIA-ME.txt` com a lista de arquivos, as convenções de marca e os limites de uso.

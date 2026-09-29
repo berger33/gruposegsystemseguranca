@@ -1,6 +1,6 @@
 # Pacotes de imagens — Grupo SEG System
 
-18 ZIPs: um por lote (17 lotes) + o acervo completo. Todos versionados nesta pasta e publicados na
+21 ZIPs: um por lote (20 lotes) + o acervo completo. Todos versionados nesta pasta e publicados na
 branch `arena/01a0eb32-gruposegsystemseguranca`.
 
 | Arquivo | Conteúdo |
@@ -22,6 +22,9 @@ branch `arena/01a0eb32-gruposegsystemseguranca`.
 | `lote-15-icones-acao-status.zip` | ícones de ação e status |
 | `lote-16-email-vigilancia-condominios.zip` | cabeçalhos 31–40 |
 | `lote-17-site-banners-hero.zip` | banners/hero do site (1600×600) |
+| `lote-18-icones-modulos-gestao.zip` | ícones de módulos e gestão (marinho, 256 + 64 px) |
+| `lote-19-icones-modulos-reverso.zip` | ícones de módulos e gestão reversos (branco) |
+| `lote-20-selos-status.zip` | selos de status coloridos (256 + 64 px) |
 | `imagens-seg-system-completo.zip` | acervo completo + galeria + catálogo |
 
 Download direto (funciona sem login):
