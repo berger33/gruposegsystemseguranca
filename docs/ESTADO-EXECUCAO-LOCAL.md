@@ -10,7 +10,7 @@ Referência: `docs/EXECUCAO-ENTREGA-LOCAL.md` (roteiro L00–L10) e
 |---|---|
 | Branch de trabalho | `arena/01a0eba8-gruposegsystemseguranca` |
 | Base escolhida (L00–L02) | `c4cfc58` (merge do PR #7 em `main`) |
-| Último commit | `c4cfc58` na base; L03 está no patchset desta branch |
+| Referência entregue | PR #10 na branch desta sessão; base `c4cfc58`; commits L03 preservados na própria branch |
 | Lote ativo | **L04** somente como próximo lote; L03 encerrado e não houve implementação de L04 |
 | Último gate aprovado | **L03** (funcionário e RH, HTTP + navegador real + PostgreSQL descartável) |
 | Migrações | 001–102 (504 tabelas) |

@@ -307,6 +307,7 @@ Também ficaram provados:
 | `npm run typecheck` | 0 erros |
 | `npm run build` | sucesso, 69 páginas, incluindo `/funcionario` e `/admin/funcionarios` |
 | `node --check` nos módulos editados | sucesso |
+| GitHub `QA baseline` (PR #10) | sucesso: static, audit, typecheck, unit, build, RAG, tenant A/B e restart sintético |
 
 ### Fronteiras honestas
 
