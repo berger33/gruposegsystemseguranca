@@ -76,6 +76,8 @@ LOTES = [
      lambda: icones("acoes")),
     (16, "email-vigilancia-condominios", "Cabeçalhos 31–40 (vigilância noturna, condomínios, infraestrutura, corporativo, central 24h, logística, perímetro, acesso, rotas, vigilância ativa)",
      lambda: arquivos_email("cabecalho", prazo_numeros(31, 40))),
+    (17, "site-banners-hero", "10 banners/hero do site (1600×600): institucional, monitoramento, condomínios, logística e portos, tecnologia, acesso, perímetro, vigilância noturna, cobertura e rotas, vigilância ativa",
+     lambda: sorted((RAIZ / "public/site/hero").glob("hero-*.jpg"))),
 ]
 
 LEIA_ME = """GRUPO SEG SYSTEM — {titulo}
@@ -127,7 +129,8 @@ def main():
         print(f"lote-{num:02d}-{slug}.zip  {n:3d} arquivos  {tam/1024:7.0f} KB")
 
     # pacote completo (todas as peças + galeria + catálogo)
-    completos = [p for p in EMAIL.rglob("*.jpg")] + [p for p in UI.rglob("*") if p.suffix in (".png", ".html")] \
+    completos = [p for p in EMAIL.rglob("*.jpg")] + sorted((RAIZ / "public/site/hero").glob("*.jpg")) \
+        + [p for p in UI.rglob("*") if p.suffix in (".png", ".html")] \
         + em_marca([f"{n}.png" for n in ("logo-marinho", "logo-reverso", "escudo-marinho", "escudo-reverso",
                                         "texto-marinho", "texto-reverso")]) \
         + [RAIZ / "docs/imagens-catalogo.md"]

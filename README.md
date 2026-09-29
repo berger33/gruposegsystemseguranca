@@ -38,6 +38,9 @@ em [`public/ui/preview.html`](public/ui/preview.html):
 
 - **E-mail (50 peças)** em `public/email/` — cabeçalhos, rodapés, faixas/divisores e assinaturas em
   JPEG 1200 px de largura (exibição a 600 px em 2x), com fundo opaco para compatibilidade.
+- **Site (10 peças)** em `public/site/hero/` — banners 1600×600 para a página inicial e páginas internas
+  (institucional, monitoramento, condomínios, logística, tecnologia, acesso, perímetro, vigilância
+  noturna, cobertura e rotas).
 - **Botões (20 peças)** em `public/ui/botoes/` — superfícies PNG com transparência (primário,
   secundário, dourado, vidro, CTA, barra fixa, chip, sucesso, aviso, erro, destrutivo, fantasma,
   desabilitado e carregando). O rótulo é escrito em HTML/CSS.
@@ -58,7 +61,7 @@ Um ZIP por lote (16 lotes) e o acervo completo, em `downloads/imagens/`:
 - [lote 08 — ícones de serviço](downloads/imagens/lote-08-icones-servico.zip) · [lote 09 — ícones de operação](downloads/imagens/lote-09-icones-operacao.zip) · [lote 10 — ícones de navegação](downloads/imagens/lote-10-icones-navegacao.zip)
 - [lote 11 — ícones de serviço reversos](downloads/imagens/lote-11-icones-servico-reverso.zip) · [lote 12 — operação reversos](downloads/imagens/lote-12-icones-operacao-reverso.zip) · [lote 13 — navegação reversos](downloads/imagens/lote-13-icones-navegacao-reverso.zip)
 - [lote 14 — marca, escudo e monograma](downloads/imagens/lote-14-marca-escudo-monograma.zip) · [lote 15 — ícones de ação e status](downloads/imagens/lote-15-icones-acao-status.zip)
-- [lote 16 — vigilância, condomínios e operação](downloads/imagens/lote-16-email-vigilancia-condominios.zip)
+- [lote 16 — vigilância, condomínios e operação](downloads/imagens/lote-16-email-vigilancia-condominios.zip) · [lote 17 — banners/hero do site](downloads/imagens/lote-17-site-banners-hero.zip)
 - [acervo completo (peças + galeria + catálogo)](downloads/imagens/imagens-seg-system-completo.zip)
 
 Cada ZIP traz um `LEIA-ME.txt` com a lista de arquivos, as convenções de marca e os limites de uso.
@@ -68,6 +71,7 @@ Fundos fotográficos são ilustrações conceituais, não registros de instalaç
 
 ## Download das prévias
 
+- [Página de downloads das artes (ZIPs por lote)](public/downloads.html) · [galeria de revisão](public/ui/preview.html).
 - [Layout 01 — prévia estática original (.zip)](downloads/seg-system-previa.zip). Extraia e abra `index.html`.
 - [Layout 02 — Central (.zip)](downloads/layout-02-central-preview.zip). Extraia e abra `index.html`; `layout-01.html` permite comparar com o primeiro conceito.
 - [Layout 03 — Presença (.zip)](downloads/layout-03-presenca-preview.zip). Extraia e abra `index.html`; o pacote inclui os layouts anteriores para comparação.

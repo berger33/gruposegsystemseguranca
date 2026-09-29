@@ -8,6 +8,8 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
 
+FAMILIAS_HERO = ("Banners/hero do site (1600×600)", "public/site/hero", "hero-*.jpg")
+
 FAMILIAS_ICONES = [
     ("Ícones de serviço (traço marinho)", "public/ui/icones/servicos"),
     ("Ícones de operação (traço marinho)", "public/ui/icones/operacao"),
@@ -46,6 +48,18 @@ def galeria_email():
     return "".join(blocos)
 
 
+def galeria_site():
+    pasta, padrao = FAMILIAS_HERO[1], FAMILIAS_HERO[2]
+    arquivos = sorted((RAIZ / pasta).glob(padrao))
+    if not arquivos:
+        return ""
+    cartoes = "".join(
+        cartao(f"../{pasta.split('public/', 1)[1]}/{p.name}", p.stem.replace("-", " "))
+        for p in arquivos)
+    return (f'<h3>{FAMILIAS_HERO[0]} <small>{len(arquivos)} arquivos</small></h3>'
+            f'<div class="grade wide">{cartoes}</div>')
+
+
 def galeria_botoes():
     arquivos = sorted((RAIZ / "public/ui/botoes").glob("*.png"))
     claro = "".join(cartao(f"botoes/{p.name}", p.stem.replace("-", " "), fundo="#f4f6f9") for p in arquivos)
@@ -81,9 +95,10 @@ def galeria_downloads():
     for p in pacotes:
         kb = p.stat().st_size / 1024
         tam = f"{kb/1024:.1f} MB" if kb > 1024 else f"{kb:.0f} KB"
+        github = ("https://github.com/berger33/gruposegsystemseguranca/raw/"
+                  f"arena/01a0eb32-gruposegsystemseguranca/downloads/imagens/{p.name}")
         itens.append(
-            f'<li><a href="../../downloads/imagens/{p.name}" download>'
-            f'<strong>{p.stem.replace("-", " ")}</strong><span>{tam}</span></a></li>')
+            f'<li><a href="{github}"><strong>{p.stem.replace("-", " ")}</strong><span>{tam} · GitHub</span></a></li>')
     return ('<h2>Pacotes para download</h2>'
             '<p class="nota">Um ZIP por lote, com LEIA-ME (lista de arquivos e convenções de marca). '
             'O pacote completo reúne as 150 peças, a galeria e o catálogo.</p>'
@@ -95,8 +110,9 @@ def main():
                    for p in (RAIZ / "public/email" / d).glob("*.jpg")])
     n_botoes = len(list((RAIZ / "public/ui/botoes").glob("*.png")))
     n_icones = len(list((RAIZ / "public/ui/icones").rglob("*-256.png"))) + len(list((RAIZ / "public/ui/icones/marca").glob("*.png")))
-    total = n_email + n_botoes + len(list((RAIZ / "public/ui/icones").rglob("*.png")))
-    por_familia = (f"{n_email} peças de e-mail + {n_botoes} botões + {n_icones} ícones e peças de marca")
+    n_hero = len(list((RAIZ / "public/site/hero").glob("*.jpg")))
+    total = n_email + n_hero + n_botoes + len(list((RAIZ / "public/ui/icones").rglob("*.png")))
+    por_familia = (f"{n_email} peças de e-mail + {n_hero} banners de site + {n_botoes} botões + {n_icones} ícones e peças de marca")
     html_saida = f"""<!doctype html>
 <html lang="pt-BR">
 <meta charset="utf-8">
@@ -141,13 +157,18 @@ def main():
   <h1>Grupo SEG System — imagens para e-mail, sistema e site</h1>
   <p>{por_familia} — mais derivados 64 px, recortes do logotipo e 16 ZIPs de entrega por lote.
      Logotipo e monograma vêm do arquivo real da marca; botões e ícones não têm texto embutido.</p>
-  <span class="selo">16 lotes entregues</span>
+  <span class="selo">17 lotes entregues</span>
 </header>
 <main>
   <h2>E-mail</h2>
   <p class="nota">Peças geradas a 1200 px de largura (exibição a 600 px em telas 2x), JPEG com fundo opaco para
      compatibilidade. Telefones, endereço e razão social ficam no HTML do e-mail — nunca fixos na imagem.</p>
   {galeria_email()}
+
+  <h2>Site</h2>
+  <p class="nota">Banners de página inicial e internas a 1600×600, com logotipo real da marca, fio dourado e
+     tagline. O botão de ação entra por CSS/HTML sobre a peça — o banner não embute CTA nem contato.</p>
+  {galeria_site()}
 
   <h2>Botões</h2>
   <p class="nota">Superfícies em PNG com transparência (480×112, CTA 600×140, chip 320×84, barra 1200×108).

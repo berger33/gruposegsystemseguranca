@@ -1,10 +1,13 @@
 # Catálogo de imagens — e-mail, botões e ícones (150 peças em 15 lotes)
 
-Galeria de revisão: `public/ui/preview.html` (abra no navegador; caminhos relativos).
+Galeria de revisão: `public/ui/preview.html` · página de downloads: `public/downloads.html`.
+Os ZIPs ficam em `downloads/imagens/` (um por lote) e podem ser baixados pelo GitHub:
+`https://github.com/berger33/gruposegsystemseguranca/raw/arena/01a0eb32-gruposegsystemseguranca/downloads/imagens/<arquivo>.zip`.
 
 | Família | Peças | Onde |
 | --- | --- | --- |
-| E-mail (cabeçalhos, rodapés, faixas, assinaturas) | 50 | `public/email/` |
+| E-mail (cabeçalhos, rodapés, faixas, assinaturas) | 60 | `public/email/` |
+| Site (banners/hero 1600×600) | 10 | `public/site/hero/` |
 | Botões (superfícies de interface) | 20 | `public/ui/botoes/` |
 | Ícones (serviço, operação, navegação, reverso, ação, marca) | 80 + derivados 64 px | `public/ui/icones/` |
 | Logotipo e peças de marca (recortes do arquivo real) | 6 + 10 | `public/brand/logo/`, `public/ui/icones/marca/` |
@@ -57,6 +60,7 @@ Galeria de revisão: `public/ui/preview.html` (abra no navegador; caminhos relat
 | 13 | 10 ícones de navegação — reverso (branco) | 20 | `public/ui/icones/navegacao-reverso/` |
 | 14 | 10 peças de marca (escudos, monogramas, medalhões, favicon) | 10 | `public/ui/icones/marca/` |
 | 15 | 10 ícones de ação e status (busca, filtro, editar, excluir, imprimir, compartilhar, sino, baixar, atualizar, expandir) | 20 | `public/ui/icones/acoes/` |
+| 17 | 10 banners/hero do site (1600×600): institucional, monitoramento, condomínios, logística e portos, tecnologia, acesso corporativo, perímetro monitorado, vigilância noturna, cobertura e rotas, vigilância ativa | 10 | `public/site/hero/` |
 | 16 | 10 cabeçalhos (1200×400) com placas novas: vigilância noturna, condomínios, infraestrutura crítica, corporativo, central de operação 24h, logística e portos, perímetro monitorado, acesso corporativo, cobertura e rotas, vigilância ativa | 10 | `public/email/cabecalhos/` |
 
 Os lotes de ícones gravam o arquivo principal de 256 px e o derivado de 64 px para menus e atalhos
@@ -98,6 +102,7 @@ catálogo). Regerar:
 | `lote-14-marca-escudo-monograma.zip` | escudos, monogramas, medalhões, favicon e recortes do logotipo |
 | `lote-15-icones-acao-status.zip` | ícones de ação e status |
 | `lote-16-email-vigilancia-condominios.zip` | cabeçalhos 31–40 |
+| `lote-17-site-banners-hero.zip` | banners/hero do site (1600×600) |
 | `imagens-seg-system-completo.zip` | acervo completo + galeria + catálogo |
 
 ## Reprodução
