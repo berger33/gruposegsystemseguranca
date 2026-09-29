@@ -737,3 +737,92 @@ test('CRM-07: tarefas pessoais por oportunidade, navegador e negação cruzada',
     await pool.query('DROP FUNCTION qa_reject_task_audit()');
   }
 });
+
+test('CRM-07: histórico de interações por oportunidade, navegador e negação cruzada', { skip: !RUN, timeout: 120_000 }, async () => {
+  const owner = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const other = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const rh = await provisionAndLoginStaff(pool, api, { role: 'rh' });
+  const company = await api('/api/crm/companies', { method: 'POST', cookie: owner.cookie, body: { displayName: 'Empresa interações ' + randomUUID(), city: 'Guarulhos', type: 'prospect' } });
+  assert.equal(company.status, 201, JSON.stringify(company.body));
+  const opportunity = await api('/api/crm/opportunities', { method: 'POST', cookie: owner.cookie, body: { company_id: company.body.company.id, title: 'Acompanhamento de interações ' + randomUUID() } });
+  assert.equal(opportunity.status, 201, JSON.stringify(opportunity.body));
+  const opportunityId = opportunity.body.opportunity.id;
+  const endpoint = '/api/crm/opportunities/' + opportunityId + '/interactions';
+
+  assert.equal((await api(endpoint)).status, 401);
+  assert.equal((await api(endpoint, { cookie: rh.cookie })).status, 403);
+  assert.equal((await api(endpoint, { cookie: other.cookie })).status, 404);
+  assert.equal((await api(endpoint, { method: 'POST', cookie: owner.cookie, sendOrigin: false, body: {} })).status, 403);
+  assert.equal((await api(endpoint, { method: 'DELETE', cookie: owner.cookie })).status, 405);
+  const forged = await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { type: 'nota', title: 'Forjada', created_by_id: other.id } });
+  assert.equal(forged.status, 400);
+  assert.equal(forged.body.error, 'server_managed_fields');
+  assert.equal((await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { type: 'whatsapp', title: 'Fora de escopo' } })).status, 400);
+  assert.equal((await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { type: 'nota', title: ' ' } })).status, 400);
+  assert.equal((await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { type: 'nota', title: 'Data futura', occurred_at: '2099-01-01T00:00:00.000Z' } })).status, 400);
+
+  const browser = await launchBrowser();
+  const failures = [];
+  let interactionId;
+  try {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'pt-BR' });
+    const pair = owner.cookie.split(';')[0], separator = pair.indexOf('=');
+    await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
+    const page = await context.newPage();
+    trackFailures(page, failures);
+    await page.goto(baseUrl + '/admin/crm', { waitUntil: 'networkidle' });
+    await page.waitForTimeout(800);
+    const card = page.getByRole('article').filter({ hasText: opportunity.body.opportunity.title });
+    await card.getByRole('button', { name: 'Abrir tarefas' }).click();
+    const section = page.getByRole('region', { name: 'Histórico de interações da oportunidade' });
+    await section.getByLabel('Tipo', { exact: true }).selectOption('ligacao');
+    await section.getByLabel('Título', { exact: true }).fill('Ligação de alinhamento da vistoria');
+    await section.getByLabel('Detalhes (opcional)', { exact: true }).fill('Cliente confirmou disponibilidade na quinta-feira.');
+    const [created] = await Promise.all([
+      page.waitForResponse(r => r.url().endsWith(endpoint) && r.request().method() === 'POST'),
+      section.getByRole('button', { name: 'Registrar interação', exact: true }).click(),
+    ]);
+    assert.equal(created.status(), 201);
+    interactionId = (await created.json()).interaction.id;
+    await section.getByText('Interação registrada.', { exact: true }).waitFor();
+    await section.getByText('Ligação: Ligação de alinhamento da vistoria', { exact: true }).waitFor();
+
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForTimeout(500);
+    await page.getByRole('article').filter({ hasText: opportunity.body.opportunity.title }).getByRole('button', { name: 'Abrir tarefas' }).click();
+    await section.getByText('Ligação: Ligação de alinhamento da vistoria', { exact: true }).waitFor();
+    await context.close();
+  } finally { await browser.close(); }
+  assert.deepEqual(failures, []);
+
+  const otherDetail = await api('/api/crm/opportunities/' + opportunityId, { cookie: other.cookie });
+  assert.equal(otherDetail.status, 200);
+  assert.deepEqual(otherDetail.body.interactions, [], 'legacy detail must not expose interactions outside ownership rule');
+  assert.equal((await api(endpoint, { cookie: other.cookie })).status, 404);
+
+  const saved = await api(endpoint, { cookie: owner.cookie });
+  assert.equal(saved.status, 200);
+  assert.equal(saved.body.interactions.find(i => i.id === interactionId)?.type, 'ligacao');
+
+  const { rows: attribution } = await pool.query('SELECT created_by_id, company_id, type FROM crm_interactions WHERE id=$1', [interactionId]);
+  assert.equal(attribution[0].created_by_id, owner.id);
+  assert.equal(attribution[0].company_id, company.body.company.id);
+  assert.equal(attribution[0].type, 'ligacao');
+  const audit = await pool.query("SELECT action, actor_id FROM auth_access_audit WHERE target=$1 ORDER BY created_at", [interactionId]);
+  assert.deepEqual(audit.rows.map(r => r.action), ['crm_interaction_create']);
+  assert.ok(audit.rows.every(r => r.actor_id === owner.id));
+
+  // Inject a real DB audit failure, proving that HTTP never persists an
+  // unaudited interaction. Fixture only: the mutation under test is HTTP.
+  await pool.query(`CREATE FUNCTION qa_reject_interaction_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.action = 'crm_interaction_create' THEN RAISE EXCEPTION 'qa audit failure'; END IF; RETURN NEW; END $$`);
+  await pool.query('CREATE TRIGGER qa_reject_interaction_audit BEFORE INSERT ON auth_access_audit FOR EACH ROW EXECUTE FUNCTION qa_reject_interaction_audit()');
+  try {
+    assert.equal((await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { type: 'nota', title: 'Deve reverter' } })).status, 503);
+    const count = await pool.query('SELECT count(*)::int AS total FROM crm_interactions WHERE opportunity_id=$1', [opportunityId]);
+    assert.equal(count.rows[0].total, 1);
+  } finally {
+    await pool.query('DROP TRIGGER qa_reject_interaction_audit ON auth_access_audit');
+    await pool.query('DROP FUNCTION qa_reject_interaction_audit()');
+  }
+});
