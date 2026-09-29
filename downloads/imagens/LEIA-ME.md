@@ -1,6 +1,6 @@
 # Pacotes de imagens — Grupo SEG System
 
-21 ZIPs: um por lote (20 lotes) + o acervo completo. Todos versionados nesta pasta e publicados na
+23 ZIPs: um por lote (22 lotes) + o acervo completo. Todos versionados nesta pasta e publicados na
 branch `arena/01a0eb32-gruposegsystemseguranca`.
 
 | Arquivo | Conteúdo |
@@ -25,6 +25,8 @@ branch `arena/01a0eb32-gruposegsystemseguranca`.
 | `lote-18-icones-modulos-gestao.zip` | ícones de módulos e gestão (marinho, 256 + 64 px) |
 | `lote-19-icones-modulos-reverso.zip` | ícones de módulos e gestão reversos (branco) |
 | `lote-20-selos-status.zip` | selos de status coloridos (256 + 64 px) |
+| `lote-21-icones-navegacao-dourado.zip` | ícones de navegação em dourado (256 + 64 px) |
+| `lote-22-site-cards-servicos.zip` | cards de serviço do site (800×500) |
 | `imagens-seg-system-completo.zip` | acervo completo + galeria + catálogo |
 
 Download direto (funciona sem login):

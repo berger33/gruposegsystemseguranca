@@ -38,7 +38,8 @@ em [`public/ui/preview.html`](public/ui/preview.html):
 
 - **E-mail (50 peças)** em `public/email/` — cabeçalhos, rodapés, faixas/divisores e assinaturas em
   JPEG 1200 px de largura (exibição a 600 px em 2x), com fundo opaco para compatibilidade.
-- **Site (10 peças)** em `public/site/hero/` — banners 1600×600 para a página inicial e páginas internas
+- **Site (20 peças)** em `public/site/` — banners 1600×600 (`hero/`) e cards de serviço 800×500
+  (`servicos/`, para a grade de serviços). Banners 1600×600 para a página inicial e páginas internas
   (institucional, monitoramento, condomínios, logística, tecnologia, acesso, perímetro, vigilância
   noturna, cobertura e rotas).
 - **Botões (20 peças)** em `public/ui/botoes/` — superfícies PNG com transparência (primário,
@@ -63,6 +64,7 @@ Um ZIP por lote (16 lotes) e o acervo completo, em `downloads/imagens/`:
 - [lote 11 — ícones de serviço reversos](downloads/imagens/lote-11-icones-servico-reverso.zip) · [lote 12 — operação reversos](downloads/imagens/lote-12-icones-operacao-reverso.zip) · [lote 13 — navegação reversos](downloads/imagens/lote-13-icones-navegacao-reverso.zip)
 - [lote 14 — marca, escudo e monograma](downloads/imagens/lote-14-marca-escudo-monograma.zip) · [lote 15 — ícones de ação e status](downloads/imagens/lote-15-icones-acao-status.zip)
 - [lote 16 — vigilância, condomínios e operação](downloads/imagens/lote-16-email-vigilancia-condominios.zip) · [lote 17 — banners/hero do site](downloads/imagens/lote-17-site-banners-hero.zip)
+- [lote 21 — ícones de navegação em dourado](downloads/imagens/lote-21-icones-navegacao-dourado.zip) · [lote 22 — cards de serviço do site](downloads/imagens/lote-22-site-cards-servicos.zip)
 - [lote 18 — ícones de módulos e gestão](downloads/imagens/lote-18-icones-modulos-gestao.zip) · [lote 19 — módulos reversos](downloads/imagens/lote-19-icones-modulos-reverso.zip) · [lote 20 — selos de status](downloads/imagens/lote-20-selos-status.zip)
 - [acervo completo (peças + galeria + catálogo)](downloads/imagens/imagens-seg-system-completo.zip)
 

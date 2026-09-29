@@ -21,6 +21,7 @@ FAMILIAS_ICONES = [
     ("Ícones de módulos e gestão (reverso, branco)", "public/ui/icones/modulos-reverso"),
     ("Ícones de ação e status", "public/ui/icones/acoes"),
     ("Selos de status coloridos", "public/ui/icones/status"),
+    ("Ícones de navegação em dourado", "public/ui/icones/navegacao-dourado"),
     ("Peças de marca", "public/ui/icones/marca"),
 ]
 
@@ -52,15 +53,18 @@ def galeria_email():
 
 
 def galeria_site():
-    pasta, padrao = FAMILIAS_HERO[1], FAMILIAS_HERO[2]
-    arquivos = sorted((RAIZ / pasta).glob(padrao))
-    if not arquivos:
-        return ""
-    cartoes = "".join(
-        cartao(f"../{pasta.split('public/', 1)[1]}/{p.name}", p.stem.replace("-", " "))
-        for p in arquivos)
-    return (f'<h3>{FAMILIAS_HERO[0]} <small>{len(arquivos)} arquivos</small></h3>'
-            f'<div class="grade wide">{cartoes}</div>')
+    blocos = []
+    for titulo, pasta, padrao in (FAMILIAS_HERO,
+                                  ("Cards de serviço (800×500)", "public/site/servicos", "servico-*.jpg")):
+        arquivos = sorted((RAIZ / pasta).glob(padrao))
+        if not arquivos:
+            continue
+        cartoes = "".join(
+            cartao(f"../{pasta.split('public/', 1)[1]}/{p.name}", p.stem.replace("-", " "))
+            for p in arquivos)
+        blocos.append(f'<h3>{titulo} <small>{len(arquivos)} arquivos</small></h3>'
+                      f'<div class="grade wide">{cartoes}</div>')
+    return "".join(blocos)
 
 
 def galeria_botoes():
@@ -113,7 +117,8 @@ def main():
                    for p in (RAIZ / "public/email" / d).glob("*.jpg")])
     n_botoes = len(list((RAIZ / "public/ui/botoes").glob("*.png")))
     n_icones = len(list((RAIZ / "public/ui/icones").rglob("*-256.png"))) + len(list((RAIZ / "public/ui/icones/marca").glob("*.png")))
-    n_hero = len(list((RAIZ / "public/site/hero").glob("*.jpg")))
+    n_hero = len(list((RAIZ / "public/site/hero").glob("*.jpg"))) \
+        + len(list((RAIZ / "public/site/servicos").glob("*.jpg")))
     total = n_email + n_hero + n_botoes + len(list((RAIZ / "public/ui/icones").rglob("*.png")))
     por_familia = (f"{n_email} peças de e-mail + {n_hero} banners de site + {n_botoes} botões + {n_icones} ícones e peças de marca")
     html_saida = f"""<!doctype html>

@@ -76,6 +76,10 @@ LOTES = [
      lambda: icones("acoes")),
     (16, "email-vigilancia-condominios", "Cabeçalhos 31–40 (vigilância noturna, condomínios, infraestrutura, corporativo, central 24h, logística, perímetro, acesso, rotas, vigilância ativa)",
      lambda: arquivos_email("cabecalho", prazo_numeros(31, 40))),
+    (21, "icones-navegacao-dourado", "10 ícones de navegação em dourado (barra lateral navy e cabeçalhos escuros)",
+     lambda: icones("navegacao-dourado")),
+    (22, "site-cards-servicos", "10 cards de serviço para o site (800×500): monitoramento, portaria, ronda, CFTV, acesso, escolta, condomínios, indústria, tecnologia e zeladoria",
+     lambda: sorted((RAIZ / "public/site/servicos").glob("servico-*.jpg"))),
     (18, "icones-modulos-gestao", "Ícones de módulos e gestão 01–10 (treinamento, uniformes, férias, folha, contas a receber e a pagar, conciliação, metas, assistente de IA, indicadores)",
      lambda: icones("modulos")),
     (19, "icones-modulos-reverso", "Ícones de módulos e gestão reversos (branco, para fundo escuro)",
@@ -135,7 +139,7 @@ def main():
         print(f"lote-{num:02d}-{slug}.zip  {n:3d} arquivos  {tam/1024:7.0f} KB")
 
     # pacote completo (todas as peças + galeria + catálogo)
-    completos = [p for p in EMAIL.rglob("*.jpg")] + sorted((RAIZ / "public/site/hero").glob("*.jpg")) \
+    completos = [p for p in EMAIL.rglob("*.jpg")] + sorted((RAIZ / "public/site").rglob("*.jpg")) \
         + [p for p in UI.rglob("*") if p.suffix in (".png", ".html")] \
         + em_marca([f"{n}.png" for n in ("logo-marinho", "logo-reverso", "escudo-marinho", "escudo-reverso",
                                         "texto-marinho", "texto-reverso")]) \

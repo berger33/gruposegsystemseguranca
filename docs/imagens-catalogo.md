@@ -8,6 +8,7 @@ Os ZIPs ficam em `downloads/imagens/` (um por lote) e podem ser baixados pelo Gi
 | --- | --- | --- |
 | E-mail (cabeçalhos, rodapés, faixas, assinaturas) | 60 | `public/email/` |
 | Site (banners/hero 1600×600) | 10 | `public/site/hero/` |
+| Site (cards de serviço 800×500) | 10 | `public/site/servicos/` |
 | Botões (superfícies de interface) | 20 | `public/ui/botoes/` |
 | Ícones (serviço, operação, navegação, reverso, ação, marca) | 80 + derivados 64 px | `public/ui/icones/` |
 | Logotipo e peças de marca (recortes do arquivo real) | 6 + 10 | `public/brand/logo/`, `public/ui/icones/marca/` |
@@ -60,6 +61,8 @@ Os ZIPs ficam em `downloads/imagens/` (um por lote) e podem ser baixados pelo Gi
 | 13 | 10 ícones de navegação — reverso (branco) | 20 | `public/ui/icones/navegacao-reverso/` |
 | 14 | 10 peças de marca (escudos, monogramas, medalhões, favicon) | 10 | `public/ui/icones/marca/` |
 | 15 | 10 ícones de ação e status (busca, filtro, editar, excluir, imprimir, compartilhar, sino, baixar, atualizar, expandir) | 20 | `public/ui/icones/acoes/` |
+| 21 | 10 ícones de navegação em dourado (barra lateral navy e cabeçalhos escuros) | 20 | `public/ui/icones/navegacao-dourado/` |
+| 22 | 10 cards de serviço do site (800×500): monitoramento, portaria, ronda, CFTV, acesso, escolta, condomínios, indústria e logística, tecnologia e dados, zeladoria | 10 | `public/site/servicos/` |
 | 18 | 10 ícones de módulos e gestão (treinamento, uniformes, férias, folha de pagamento, contas a receber e a pagar, conciliação, metas/orçamento, assistente de IA, indicadores) | 20 | `public/ui/icones/modulos/` |
 | 19 | 10 ícones de módulos e gestão — reverso (branco) | 20 | `public/ui/icones/modulos-reverso/` |
 | 20 | 10 selos de status coloridos (aprovado, pendente, atrasado, em análise, concluído, cancelado, em execução, aguardando, urgente, bloqueado) | 20 | `public/ui/icones/status/` |
@@ -111,6 +114,8 @@ catálogo). Regerar:
 | `lote-15-icones-acao-status.zip` | ícones de ação e status |
 | `lote-16-email-vigilancia-condominios.zip` | cabeçalhos 31–40 |
 | `lote-17-site-banners-hero.zip` | banners/hero do site (1600×600) |
+| `lote-21-icones-navegacao-dourado.zip` | ícones de navegação em dourado |
+| `lote-22-site-cards-servicos.zip` | cards de serviço do site (800×500) |
 | `lote-18-icones-modulos-gestao.zip` | ícones de módulos e gestão (marinho) |
 | `lote-19-icones-modulos-reverso.zip` | ícones de módulos e gestão (reverso) |
 | `lote-20-selos-status.zip` | selos de status coloridos |
