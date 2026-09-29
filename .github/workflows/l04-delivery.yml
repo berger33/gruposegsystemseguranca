@@ -1,0 +1,33 @@
+name: L04 CRM delivery
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'server.mjs'
+      - 'tests/l04-delivery.integration.test.mjs'
+      - 'scripts/qa-l04-delivery-postgres.mjs'
+      - 'db/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/l04-delivery.yml'
+permissions:
+  contents: read
+jobs:
+  crm-postgres-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: L04 HTTP, PostgreSQL descartável e Chromium
+        run: npm run test:l04-delivery:pg
