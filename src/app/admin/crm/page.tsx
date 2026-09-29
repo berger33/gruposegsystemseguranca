@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import OpportunityTasks from "./OpportunityTasks";
+import OpportunityInteractions from "./OpportunityInteractions";
 
 type Company = { id: string; display_name: string; type: string; city: string; segment: string | null; status: string; responsible_name: string | null; };
 type Opportunity = { id: string; title: string; company_id: string; stage: string; priority: string; estimated_value: string | null; next_action: string | null; next_action_date: string | null; is_won: boolean; is_lost: boolean; };
@@ -251,10 +252,11 @@ export default function CrmPage() {
               </div>
             ))}
           </div>
-          <p style={{ fontSize: 11, opacity: 0.6, marginTop: 8 }}>CRM-07 kanban e tabela, filtros, busca, tarefas vencidas, histórico ligações/reuniões, anexos e notas internas autorizadas. Tarefas pessoais: use Abrir tarefas na oportunidade. Agenda, interações, cadências e carteira ainda estão pendentes.</p>
+          <p style={{ fontSize: 11, opacity: 0.6, marginTop: 8 }}>CRM-07 kanban e tabela, filtros, busca, tarefas vencidas, histórico ligações/reuniões, anexos e notas internas autorizadas. Tarefas pessoais e histórico de interações: use Abrir tarefas na oportunidade. Anexos, agenda, cadências e carteira ainda estão pendentes.</p>
         </div>
       </section>
       {selectedOpportunity && <OpportunityTasks key={selectedOpportunity} opportunityId={selectedOpportunity} />}
+      {selectedOpportunity && <OpportunityInteractions key={"interactions-" + selectedOpportunity} opportunityId={selectedOpportunity} />}
     </main>
   );
 }
