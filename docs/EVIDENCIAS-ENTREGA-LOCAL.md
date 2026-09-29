@@ -465,3 +465,25 @@ gate passar a partir dali — nenhuma expectativa de teste foi enfraquecida para
   uma futura regressão de constraint.
 - Não houve SMTP, hospedagem externa ou execução no Windows nesta etapa
   também. O aceite no equipamento-alvo pertence ao L10.
+
+## L04 / CRM-07 — tarefas pessoais (PR #13, 2026-09-29)
+Código validado: `7bab31360492d7b46375690f8fdfa17ce0a31933`, branch `codex/l04-crm-tarefas`, base main `4aaa1d2`.
+Execução inteiramente no GitHub Actions (Linux). No computador do proprietário foi apenas lido o anexo fornecido; nenhum checkout, instalação ou teste do projeto local.
+
+### Resultados executados
+- [L04 CRM delivery](https://github.com/berger33/gruposegsystemseguranca/actions/runs/36604855660): aprovado.
+- Migrações 001–104: primeira aplicação 104/104; replay 104/104; 504 tabelas preservadas; controle negativo de checksum recusado conforme esperado; clone sintético com checksums preservados. Clone TEMPLATE não é prova de backup físico.
+- `npm run test:l04-delivery:pg`: 2 testes, 2 aprovados, 0 falhas, 0 ignorados. Jornada comercial central anterior preservada.
+- Novo cenário: identidade comercial cria empresa/oportunidade por HTTP; navega /admin/crm em Chromium, abre tarefas, cria prazo vencido, filtra, recarrega e conclui; recarga preserva a tarefa e conclusão a retira do filtro de vencidas.
+- Negativos reais: sem sessão 401, RH 403, outro comercial 404, ausência de origem 403, método incorreto 405, data/título inválidos 400, autoria forjada 400, status desatualizado 409.
+- Detalhe legado da oportunidade não expõe tarefas pessoais ao outro comercial.
+- SQL usado apenas para verificar autoria/auditoria e injetar falha de auditoria. POST com falha injetada retorna 503 e não persiste tarefa; trigger removido em finally.
+- [QA baseline](https://github.com/berger33/gruposegsystemseguranca/actions/runs/36604855633): árvore/migrações, audit de dependências, typecheck, unitários, build, RAG PGlite, isolamento cliente A/B e reinício sintético aprovados.
+
+### Correção descoberta pelo teste
+O primeiro gate remoto falhou com 503 ao criar tarefa. A 103 não incluía `crm_task_create`/`crm_task_status` no CHECK de auditoria; a transação abortou corretamente. A nova `104-crm-task-audit.sql` mantém a expressão anterior e acrescenta apenas esses eventos, sem editar migrações aplicadas. Manifesto e verificador atualizados para 104. Novo gate passou sem relaxar a expectativa.
+
+### Limites
+CRM-07 continua em execução: este recorte entrega tarefas PESSOAIS, não todo o requisito. Não inclui delegação/equipe, edição de prazo, anexos, histórico de interações, agenda ou cadências. Lista até 200 tarefas por oportunidade; sem paginação. O teste de conflito comprova versão de status desatualizada; não é ensaio de carga concorrente.
+Sem aceite Windows/mobile deste recorte, sem aceite humano e sem validação de IA real. L02/L03 integrais não foram reexecutados nesta continuação; o baseline cobre seus recortes próprios, não todos esses gates.
+O PR permanece sem merge automático. Documentação posterior ao SHA acima não altera o código validado.
