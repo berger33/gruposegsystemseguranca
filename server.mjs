@@ -98,6 +98,9 @@ import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
 import { createCmsApi } from "./src/server/cms-api.mjs";
 import { createThemeApi } from "./src/server/theme-api.mjs";
 import { createSeoApi } from "./src/server/seo-api.mjs";
+// PUB-08: robots/sitemap derivados do código e redirects que de fato
+// redirecionam. Política em docs/PROMPT-CONTINUACAO-PUB08-SEO-TECNICO.md.
+import { createSeoTechnicalApi } from "./src/server/seo-technical-api.mjs";
 import { createPackageApi } from "./src/server/package-api.mjs";
 import { createOriginMetricsApi } from "./src/server/origin-metrics-api.mjs";
 import { createEmployeeComplaintApi } from "./src/server/employee-complaint-api.mjs";
@@ -2296,6 +2299,11 @@ const seoApi = createSeoApi({
   },
 });
 
+// PUB-08 — SEO técnico servido de verdade: `/robots.txt` e `/sitemap.xml`
+// derivados das rotas públicas reais (fail-closed fora de produção), prévia
+// autorizada para revisão e redirects com trilha na mesma transação.
+const seoTechnicalApi = createSeoTechnicalApi({ json, readJson, sameOrigin, getPool, readAdminSession: readSession });
+
 const packageApi = createPackageApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -3984,14 +3992,21 @@ async function routeApi(req, res) {
     return themeApi.handleRollback(req, res);
   }
   // PUB-08 SEO técnico títulos sitemap redirects verificação domínio noindex preservado
+  // `/robots.txt` e `/sitemap.xml` são derivados do código e fail-closed fora
+  // de produção; nenhum dos dois lê tabela editável.
+  if (url.pathname === "/robots.txt") return seoTechnicalApi.handleRobotsTxt(req, res);
+  if (url.pathname === "/sitemap.xml") return seoTechnicalApi.handleSitemapXml(req, res);
   if (url.pathname === "/api/admin/seo-configs" || url.pathname === "/api/seo-configs" || url.pathname === "/api/seo") {
     return seoApi.handleConfigs(req, res);
   }
   if (url.pathname === "/api/admin/seo-redirects" || url.pathname === "/api/seo-redirects") {
-    return seoApi.handleRedirects(req, res);
+    return seoTechnicalApi.handleRedirects(req, res);
   }
-  if (url.pathname === "/api/admin/seo-sitemap" || url.pathname === "/api/seo-sitemap" || url.pathname === "/api/sitemap" || url.pathname.endsWith("sitemap.xml")) {
-    return seoApi.handleSitemap(req, res);
+  // O sitemap deixou de ter loja de linhas digitadas: toda leitura
+  // administrativa é a prévia derivada do que seria publicado.
+  if (url.pathname === "/api/admin/seo/sitemap-preview" || url.pathname === "/api/admin/seo-sitemap"
+    || url.pathname === "/api/seo-sitemap" || url.pathname === "/api/sitemap") {
+    return seoTechnicalApi.handleSitemapPreview(req, res);
   }
   if (url.pathname === "/api/admin/domain-verifications" || url.pathname === "/api/domain-verifications" || url.pathname === "/api/seo/domain-verifications") {
     return seoApi.handleDomainVerification(req, res);
@@ -5466,10 +5481,14 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/seo"
   || pathname === "/api/admin/seo-redirects"
   || pathname === "/api/seo-redirects"
+  || pathname === "/api/admin/seo/sitemap-preview"
   || pathname === "/api/admin/seo-sitemap"
   || pathname === "/api/seo-sitemap"
   || pathname === "/api/sitemap"
-  || pathname.endsWith("sitemap.xml")
+  // PUB-08: exatamente estes dois caminhos, nunca `.../sitemap.xml` em
+  // qualquer profundidade, que o `endsWith` anterior capturava por engano.
+  || pathname === "/sitemap.xml"
+  || pathname === "/robots.txt"
   || pathname === "/api/admin/domain-verifications"
   || pathname === "/api/domain-verifications"
   || pathname === "/api/seo/domain-verifications"
@@ -5563,6 +5582,20 @@ const server = createServer(async (req, res) => {
   const pathname = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`).pathname;
   if (API_PATH_MATCH(pathname)) {
     await routeApi(req, res);
+    return;
+  }
+  // PUB-08: antes de entregar ao Next, um único salto de redirect cadastrado.
+  // Só GET/HEAD, `Location` sempre interno, query preservada. Falha de banco
+  // não redireciona (a página é servida normalmente) — redirect não é controle
+  // de autorização e não pode derrubar o site público.
+  const redirect = await seoTechnicalApi.resolveRedirect(req, pathname);
+  if (redirect) {
+    res.writeHead(redirect.status, {
+      Location: redirect.location,
+      "Cache-Control": "no-store, max-age=0",
+      "Content-Length": 0,
+    });
+    res.end();
     return;
   }
   await handle(req, res);

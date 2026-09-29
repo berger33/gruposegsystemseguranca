@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SEGMENT_EXAMPLES } from "@/lib/segment-examples";
+import { SEGMENT_EXAMPLES } from "@/lib/segment-examples.mjs";
 
 type PageProps = { params: Promise<{ key: string }> };
 

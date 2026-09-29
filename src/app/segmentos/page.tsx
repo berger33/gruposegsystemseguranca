@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SEGMENT_EXAMPLES } from "@/lib/segment-examples";
+import { SEGMENT_EXAMPLES } from "@/lib/segment-examples.mjs";
 
 export const metadata = {
   title: "Segmentos — Grupo SEG System",
