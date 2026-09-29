@@ -1781,7 +1781,7 @@ test('CRM-08: conflito de horário do responsável e vínculo PUB-04 do lead pú
   assert.deepEqual(failures, []);
 });
 
-test('CRM-07/05/06: campo a campo de oportunidades, funil com reabertura auditada e notas internas', { skip: !RUN, timeout: 180_000 }, async () => {
+test('CRM-07/05/06: campo a campo de oportunidades, funil com reabertura auditada e notas internas', { skip: !RUN, timeout: 240_000 }, async () => {
   const owner = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
   const other = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
   const rh = await provisionAndLoginStaff(pool, api, { role: 'rh' });
@@ -2173,7 +2173,7 @@ test('CRM-07/05/06: campo a campo de oportunidades, funil com reabertura auditad
   assert.deepEqual(failures, [], `jornada CRM-05/06/07 não deve ter erro de console/HTTP 5xx: ${failures.join(', ')}`);
 });
 
-test('CRM-08: visão de calendário por período/semana na agenda pessoal (somente leitura)', { skip: !RUN, timeout: 120_000 }, async () => {
+test('CRM-08: visão de calendário por período/semana na agenda pessoal (somente leitura)', { skip: !RUN, timeout: 180_000 }, async () => {
   const owner = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
   const company = await api('/api/crm/companies', { method: 'POST', cookie: owner.cookie, body: { displayName: 'Empresa calendário ' + randomUUID(), city: 'Osasco', type: 'prospect' } });
   assert.equal(company.status, 201, JSON.stringify(company.body));

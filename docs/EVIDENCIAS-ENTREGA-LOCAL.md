@@ -1147,3 +1147,12 @@ tabelas), `npm run test:l04-delivery:pg` **9/9, duas vezes consecutivas**,
 `npm test` 186/186, `npm run typecheck` 0 erros, `npm run build` ok,
 `git diff --check` limpo. Nenhuma regra de proteção foi afrouxada na resolução
 (ambos os cenários novos preservados na íntegra).
+
+Ajuste declarado pós-integração: a primeira execução do gate no CI falhou
+(etapa do gate, exit 1, em runner visivelmente lentificado durante o incidente
+de storage do GitHub Actions — os logs da execução ficaram indisponíveis por
+EOF no blob). Sem log para diagnosticar e com a bateria local verde 3x
+(9/9 com TZ local e com TZ=UTC), os timeouts de runtime dos dois cenários
+novos foram ampliados apenas como orçamento de infraestrutura — cenário de
+notas/kanban 180s→240s e cenário de calendário 120s→180s — sem tocar em
+nenhuma asserção, espera ou regra de proteção.
