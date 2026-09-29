@@ -1310,3 +1310,276 @@ test('CRM-09: modelos privados, tarefas manuais, opt-out e encerramento da cadê
   assert.ok(auditRows.rows.every(row => row.actor_id === owner.id));
   assert.equal(taskIds.length, 1);
 });
+
+test('CRM-07: prazo, paginação, busca e delegação explícita com aceite', { skip: !RUN, timeout: 180_000 }, async () => {
+  const owner = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const delegate = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const stranger = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const rh = await provisionAndLoginStaff(pool, api, { role: 'rh' });
+  const company = await api('/api/crm/companies', { method: 'POST', cookie: owner.cookie, body: { displayName: 'Empresa delegação ' + randomUUID(), city: 'Guarulhos', type: 'prospect' } });
+  assert.equal(company.status, 201, JSON.stringify(company.body));
+  const companyId = company.body.company.id;
+  const opportunity = await api('/api/crm/opportunities', { method: 'POST', cookie: owner.cookie, body: { company_id: companyId, title: 'Jornada de delegação ' + randomUUID() } });
+  assert.equal(opportunity.status, 201, JSON.stringify(opportunity.body));
+  const opportunityId = opportunity.body.opportunity.id;
+  const endpoint = '/api/crm/opportunities/' + opportunityId + '/tasks';
+  const due = '2020-01-15T12:00:00.000Z';
+
+  async function createTask(title) {
+    const created = await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title, due_date: due } });
+    assert.equal(created.status, 201, JSON.stringify(created.body));
+    assert.equal(created.body.task.version, 1);
+    assert.equal(created.body.task.delegation_status, null);
+    return created.body.task;
+  }
+  for (let index = 1; index <= 25; index += 1) await createTask(`Preenchimento ${String(index).padStart(2, '0')} qa-fill`);
+  const taskEdit = await createTask('Edição de prazo qa-edit');
+  const taskPct = await createTask('Meta 100% qa-pct');
+  await createTask('Meta 100 reais qa-pct');
+  const taskConc = await createTask('Concluir cedo qa-conc');
+  const taskCad = await createTask('Cadência fixa qa-cad');
+  const taskA = await createTask('Delegável A qa-del');
+  const taskB = await createTask('Delegável B qa-del');
+  const taskC = await createTask('Delegável C qa-del');
+  const taskD = await createTask('Delegável pela interface qa-ui');
+
+  // Real pagination: limit/offset/total on the server, not a fixed LIMIT 200.
+  const firstPage = await api(endpoint, { cookie: owner.cookie });
+  assert.equal(firstPage.status, 200);
+  assert.equal(firstPage.body.total, 34);
+  assert.equal(firstPage.body.limit, 25);
+  assert.equal(firstPage.body.offset, 0);
+  assert.equal(firstPage.body.tasks.length, 25);
+  const secondPage = await api(endpoint + '?offset=25', { cookie: owner.cookie });
+  assert.equal(secondPage.body.tasks.length, 9);
+  assert.equal(secondPage.body.total, 34);
+  const slice = await api(endpoint + '?limit=5&offset=5', { cookie: owner.cookie });
+  assert.equal(slice.body.tasks.length, 5);
+  const union = new Set([...firstPage.body.tasks, ...secondPage.body.tasks].map(t => t.id));
+  assert.equal(union.size, 34, 'pages must not overlap nor drop rows');
+  for (const bad of ['?limit=0', '?limit=101', '?offset=-1', '?offset=20000', '?limit=abc', '?status=qualquer', '?q=', '?overdue=2', `?q=${'a'.repeat(201)}`]) {
+    assert.equal((await api(endpoint + bad, { cookie: owner.cookie })).status, 400, bad);
+  }
+
+  // Server-side search escapes LIKE wildcards: '100%' must match only the
+  // literal percent title, not every title containing '100'.
+  const bySuffix = await api(endpoint + '?q=qa-del', { cookie: owner.cookie });
+  assert.equal(bySuffix.body.total, 3);
+  const byPercent = await api(endpoint + '?q=' + encodeURIComponent('100%'), { cookie: owner.cookie });
+  assert.equal(byPercent.body.total, 1);
+  assert.equal(byPercent.body.tasks[0].id, taskPct.id);
+
+  // One operation per PATCH: state transition OR due-date edit, never both.
+  assert.equal((await api(endpoint + '/' + taskEdit.id, { method: 'PATCH', cookie: owner.cookie, body: {} })).status, 400);
+  const mixed = await api(endpoint + '/' + taskEdit.id, { method: 'PATCH', cookie: owner.cookie, body: { status: 'concluida', expected_status: 'aberta', due_date: '2030-05-10T12:00:00.000Z', expected_version: 1 } });
+  assert.equal(mixed.status, 400);
+  assert.equal(mixed.body.error, 'invalid_operation');
+  assert.equal((await api(endpoint + '/' + taskEdit.id, { method: 'PATCH', cookie: owner.cookie, body: { due_date: 'ontem', expected_version: 1 } })).status, 400);
+  assert.equal((await api(endpoint + '/' + taskEdit.id, { method: 'PATCH', cookie: owner.cookie, body: { due_date: '2030-05-10T12:00:00.000Z', expected_version: 0 } })).status, 400);
+  assert.equal((await api(endpoint + '/' + taskEdit.id, { method: 'PATCH', cookie: owner.cookie, body: { due_date: '2030-05-10T12:00:00.000Z', expected_version: 1, version: 9 } })).status, 400);
+
+  // Optimistic due-date edit: version comes from the database trigger.
+  const edited = await api(endpoint + '/' + taskEdit.id, { method: 'PATCH', cookie: owner.cookie, body: { due_date: '2030-05-10T12:00:00.000Z', expected_version: 1 } });
+  assert.equal(edited.status, 200, JSON.stringify(edited.body));
+  assert.equal(edited.body.task.version, 2);
+  assert.equal(new Date(edited.body.task.due_date).toISOString(), '2030-05-10T12:00:00.000Z');
+  const staleEdit = await api(endpoint + '/' + taskEdit.id, { method: 'PATCH', cookie: owner.cookie, body: { due_date: '2031-01-01T12:00:00.000Z', expected_version: 1 } });
+  assert.equal(staleEdit.status, 409);
+  assert.equal(staleEdit.body.error, 'task_version_conflict');
+
+  assert.equal((await api(endpoint + '/' + taskConc.id, { method: 'PATCH', cookie: owner.cookie, body: { expected_status: 'aberta', status: 'concluida' } })).status, 200);
+  const editClosed = await api(endpoint + '/' + taskConc.id, { method: 'PATCH', cookie: owner.cookie, body: { due_date: '2030-05-10T12:00:00.000Z', expected_version: 2 } });
+  assert.equal(editClosed.status, 409);
+  assert.equal(editClosed.body.error, 'task_not_open');
+
+  // Server-side filters: status and overdue.
+  const concluded = await api(endpoint + '?status=concluida', { cookie: owner.cookie });
+  assert.equal(concluded.body.total, 1);
+  assert.equal(concluded.body.tasks[0].id, taskConc.id);
+  const overdue = await api(endpoint + '?overdue=1', { cookie: owner.cookie });
+  assert.equal(overdue.body.total, 32, 'concluded and future-dated tasks are not overdue');
+
+  // Delegation borders. Only active `comercial` identities participate and
+  // every target problem returns the same generic error (no staff oracle).
+  const delegation = id => endpoint + '/' + id + '/delegation';
+  assert.equal((await api(delegation(taskA.id), { method: 'POST', body: { email: delegate.email } })).status, 401);
+  assert.equal((await api(delegation(taskA.id), { method: 'POST', cookie: rh.cookie, body: { email: delegate.email } })).status, 403);
+  assert.equal((await api(delegation(taskA.id), { method: 'POST', cookie: owner.cookie, sendOrigin: false, body: { email: delegate.email } })).status, 403);
+  assert.equal((await api(delegation(taskA.id), { method: 'POST', cookie: owner.cookie, body: { email: 'não é e-mail' } })).status, 400);
+  assert.equal((await api(delegation(taskA.id), { method: 'POST', cookie: stranger.cookie, body: { email: delegate.email } })).status, 404);
+  const toRh = await api(delegation(taskA.id), { method: 'POST', cookie: owner.cookie, body: { email: rh.email } });
+  const toGhost = await api(delegation(taskA.id), { method: 'POST', cookie: owner.cookie, body: { email: 'ninguem-' + randomUUID().slice(0, 8) + '@exemplo.invalid' } });
+  const toSelf = await api(delegation(taskA.id), { method: 'POST', cookie: owner.cookie, body: { email: owner.email } });
+  for (const denied of [toRh, toGhost, toSelf]) {
+    assert.equal(denied.status, 404);
+    assert.equal(denied.body.error, 'delegate_not_available');
+  }
+  assert.equal((await api(delegation(taskConc.id), { method: 'POST', cookie: owner.cookie, body: { email: delegate.email } })).body.error, 'task_not_open');
+
+  // CRM-09 cadence tasks stay private to the comercial who applied them.
+  const templateId = randomUUID(), stepId = randomUUID(), contactId = randomUUID(), enrollmentId = randomUUID();
+  await pool.query('INSERT INTO crm_cadence_templates (id,name,owner_id) VALUES ($1,$2,$3)', [templateId, 'Fixture delegação', owner.id]);
+  await pool.query("INSERT INTO crm_cadence_steps (id,template_id,step_order,title,interval_days,suggested_channel,responsible_id) VALUES ($1,$2,1,'Passo fixture',0,'ligacao',$3)", [stepId, templateId, owner.id]);
+  await pool.query("INSERT INTO crm_contacts (id,company_id,display_name,status) VALUES ($1,$2,'Contato fixture','active')", [contactId, companyId]);
+  await pool.query('INSERT INTO crm_cadence_enrollments (id,template_id,opportunity_id,contact_id,applied_by_id) VALUES ($1,$2,$3,$4,$5)', [enrollmentId, templateId, opportunityId, contactId, owner.id]);
+  await pool.query("UPDATE crm_tasks SET cadence_enrollment_id=$2, cadence_step_id=$3, suggested_channel='ligacao' WHERE id=$1", [taskCad.id, enrollmentId, stepId]);
+  const cadenceDenied = await api(delegation(taskCad.id), { method: 'POST', cookie: owner.cookie, body: { email: delegate.email } });
+  assert.equal(cadenceDenied.status, 409);
+  assert.equal(cadenceDenied.body.error, 'cadence_task_not_delegable');
+
+  // Happy path: pending delegation freezes the owner's write access.
+  const pendingA = await api(delegation(taskA.id), { method: 'POST', cookie: owner.cookie, body: { email: delegate.email } });
+  assert.equal(pendingA.status, 200, JSON.stringify(pendingA.body));
+  assert.equal(pendingA.body.task.delegation_status, 'pendente');
+  assert.equal(pendingA.body.task.delegated_to_email, delegate.email);
+  assert.equal((await api(endpoint + '/' + taskA.id, { method: 'PATCH', cookie: owner.cookie, body: { expected_status: 'aberta', status: 'concluida' } })).body.error, 'task_delegated');
+  assert.equal((await api(endpoint + '/' + taskA.id, { method: 'PATCH', cookie: owner.cookie, body: { due_date: '2030-05-10T12:00:00.000Z', expected_version: 2 } })).body.error, 'task_delegated');
+  assert.equal((await api(delegation(taskA.id), { method: 'POST', cookie: owner.cookie, body: { email: delegate.email } })).body.error, 'task_delegated');
+
+  // The delegate sees the pending task with minimum context; nobody else does.
+  assert.equal((await api('/api/crm/tasks/delegated', { cookie: rh.cookie })).status, 403);
+  assert.equal((await api('/api/crm/tasks/delegated?limit=0', { cookie: delegate.cookie })).status, 400);
+  const delegatedList = await api('/api/crm/tasks/delegated', { cookie: delegate.cookie });
+  assert.equal(delegatedList.status, 200);
+  const listedA = delegatedList.body.tasks.find(t => t.id === taskA.id);
+  assert.ok(listedA, 'delegate must see the pending delegation');
+  assert.equal(listedA.opportunity_title, opportunity.body.opportunity.title);
+  assert.equal(listedA.company_name, company.body.company.display_name);
+  assert.ok(listedA.delegated_by_name);
+  assert.equal(Object.hasOwn(listedA, 'estimated_value'), false, 'no opportunity value leaks to the delegate');
+  const strangerList = await api('/api/crm/tasks/delegated', { cookie: stranger.cookie });
+  assert.equal(strangerList.body.total, 0);
+  assert.equal((await api('/api/crm/tasks/delegated/' + taskA.id + '/response', { method: 'POST', cookie: stranger.cookie, body: { accept: true } })).status, 404);
+  assert.equal((await api('/api/crm/tasks/delegated/' + taskA.id + '/response', { method: 'POST', cookie: delegate.cookie, body: { accept: 'sim' } })).status, 400);
+
+  // Decline returns full control to the owner; revoke clears a pending one.
+  assert.equal((await api(delegation(taskB.id), { method: 'POST', cookie: owner.cookie, body: { email: delegate.email } })).status, 200);
+  assert.equal((await api('/api/crm/tasks/delegated/' + taskB.id + '/response', { method: 'POST', cookie: delegate.cookie, body: { accept: false } })).status, 200);
+  const afterDecline = await api(endpoint + '?q=qa-del', { cookie: owner.cookie });
+  assert.equal(afterDecline.body.tasks.find(t => t.id === taskB.id).delegation_status, 'recusada');
+  assert.equal((await api(endpoint + '/' + taskB.id, { method: 'PATCH', cookie: owner.cookie, body: { expected_status: 'aberta', status: 'em_andamento' } })).status, 200);
+  assert.equal((await api(delegation(taskB.id), { method: 'POST', cookie: owner.cookie, body: { email: delegate.email } })).status, 200);
+  const revoked = await api(delegation(taskB.id), { method: 'DELETE', cookie: owner.cookie });
+  assert.equal(revoked.status, 200);
+  assert.equal(revoked.body.task.delegation_status, null);
+  assert.equal((await api(delegation(taskB.id), { method: 'DELETE', cookie: owner.cookie })).body.error, 'no_pending_delegation');
+  const listAfterRevoke = await api('/api/crm/tasks/delegated', { cookie: delegate.cookie });
+  assert.equal(listAfterRevoke.body.tasks.some(t => t.id === taskB.id), false);
+
+  // Acceptance transfers the task responsibility and only then the delegate
+  // (and nobody else) transitions its state.
+  assert.equal((await api('/api/crm/tasks/delegated/' + taskA.id + '/response', { method: 'POST', cookie: delegate.cookie, body: { accept: true } })).status, 200);
+  const { rows: afterAccept } = await pool.query('SELECT responsible_id, delegation_status FROM crm_tasks WHERE id=$1', [taskA.id]);
+  assert.equal(afterAccept[0].responsible_id, delegate.id);
+  assert.equal(afterAccept[0].delegation_status, 'aceita');
+  const ownerStillSees = await api(endpoint + '?q=qa-del', { cookie: owner.cookie });
+  assert.equal(ownerStillSees.body.tasks.find(t => t.id === taskA.id).delegation_status, 'aceita');
+  const legacyOwner = await api('/api/crm/opportunities/' + opportunityId, { cookie: owner.cookie });
+  assert.equal(legacyOwner.body.tasks.some(t => t.id === taskA.id), true, 'accepted delegation must not vanish from the owner');
+  const legacyDelegate = await api('/api/crm/opportunities/' + opportunityId, { cookie: delegate.cookie });
+  assert.deepEqual(legacyDelegate.body.tasks, [], 'the delegate gains no access to the opportunity itself');
+  assert.equal((await api(endpoint, { cookie: delegate.cookie })).status, 404);
+  assert.equal((await api(endpoint + '/' + taskA.id, { method: 'PATCH', cookie: owner.cookie, body: { expected_status: 'aberta', status: 'concluida' } })).body.error, 'task_delegated');
+  assert.equal((await api(delegation(taskA.id), { method: 'DELETE', cookie: owner.cookie })).body.error, 'delegation_already_accepted');
+  assert.equal((await api('/api/crm/tasks/delegated/' + taskA.id, { method: 'PATCH', cookie: stranger.cookie, body: { expected_status: 'aberta', status: 'em_andamento' } })).status, 404);
+  assert.equal((await api('/api/crm/tasks/delegated/' + taskA.id, { method: 'PATCH', cookie: delegate.cookie, body: { expected_status: 'aberta', status: 'reaberta' } })).status, 400);
+  assert.equal((await api('/api/crm/tasks/delegated/' + taskA.id, { method: 'PATCH', cookie: delegate.cookie, body: { expected_status: 'em_andamento', status: 'concluida' } })).status, 409);
+  assert.equal((await api('/api/crm/tasks/delegated/' + taskA.id, { method: 'PATCH', cookie: delegate.cookie, body: { expected_status: 'aberta', status: 'em_andamento' } })).status, 200);
+
+  const auditA = await pool.query('SELECT action, actor_id FROM auth_access_audit WHERE target=$1 ORDER BY created_at, id', [taskA.id]);
+  assert.deepEqual(auditA.rows.map(r => r.action), ['crm_task_create', 'crm_task_delegate', 'crm_task_delegation_accept', 'crm_task_delegated_status']);
+  assert.deepEqual(auditA.rows.map(r => r.actor_id), [owner.id, owner.id, delegate.id, delegate.id]);
+  const auditEdit = await pool.query("SELECT action FROM auth_access_audit WHERE target=$1 AND action='crm_task_update'", [taskEdit.id]);
+  assert.equal(auditEdit.rows.length, 1);
+
+  // Injected audit failure: acceptance must roll back entirely.
+  assert.equal((await api(delegation(taskC.id), { method: 'POST', cookie: owner.cookie, body: { email: delegate.email } })).status, 200);
+  await pool.query(`CREATE FUNCTION qa_reject_delegation_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.action = 'crm_task_delegation_accept' THEN RAISE EXCEPTION 'qa audit failure'; END IF; RETURN NEW; END $$`);
+  await pool.query('CREATE TRIGGER qa_reject_delegation_audit BEFORE INSERT ON auth_access_audit FOR EACH ROW EXECUTE FUNCTION qa_reject_delegation_audit()');
+  try {
+    assert.equal((await api('/api/crm/tasks/delegated/' + taskC.id + '/response', { method: 'POST', cookie: delegate.cookie, body: { accept: true } })).status, 503);
+    const { rows: unchanged } = await pool.query('SELECT responsible_id, delegation_status FROM crm_tasks WHERE id=$1', [taskC.id]);
+    assert.equal(unchanged[0].responsible_id, owner.id);
+    assert.equal(unchanged[0].delegation_status, 'pendente');
+  } finally {
+    await pool.query('DROP TRIGGER qa_reject_delegation_audit ON auth_access_audit');
+    await pool.query('DROP FUNCTION qa_reject_delegation_audit()');
+  }
+  assert.equal((await api('/api/crm/tasks/delegated/' + taskC.id + '/response', { method: 'POST', cookie: delegate.cookie, body: { accept: true } })).status, 200);
+
+  // Real browser: owner searches/edits/delegates; delegate accepts and works.
+  const browser = await launchBrowser();
+  const failures = [];
+  try {
+    const ownerContext = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'pt-BR' });
+    const ownerPair = owner.cookie.split(';')[0], ownerSep = ownerPair.indexOf('=');
+    await ownerContext.addCookies([{ name: ownerPair.slice(0, ownerSep), value: ownerPair.slice(ownerSep + 1), url: baseUrl }]);
+    const ownerPage = await ownerContext.newPage();
+    trackFailures(ownerPage, failures);
+    await ownerPage.goto(baseUrl + '/admin/crm', { waitUntil: 'networkidle' });
+    await ownerPage.waitForTimeout(800);
+    await ownerPage.getByLabel('Busca por título de oportunidade').fill(opportunity.body.opportunity.title);
+    const card = ownerPage.getByRole('article').filter({ hasText: opportunity.body.opportunity.title });
+    await card.getByRole('button', { name: 'Abrir tarefas' }).click();
+    const section = ownerPage.getByRole('region', { name: 'Minhas tarefas da oportunidade' });
+    await section.getByLabel('Buscar por título').fill('qa-ui');
+    await section.getByRole('button', { name: 'Buscar tarefas', exact: true }).click();
+    await section.getByText('Delegável pela interface qa-ui', { exact: true }).waitFor();
+    await section.getByText('1 tarefa(s) neste filtro', { exact: false }).waitFor();
+    await section.getByRole('button', { name: 'Editar prazo', exact: true }).click();
+    await section.getByLabel('Novo prazo').fill('2031-01-15T09:30');
+    const [dueEdited] = await Promise.all([
+      ownerPage.waitForResponse(r => r.url().includes(endpoint + '/' + taskD.id) && r.request().method() === 'PATCH'),
+      section.getByRole('button', { name: 'Salvar prazo', exact: true }).click(),
+    ]);
+    assert.equal(dueEdited.status(), 200);
+    await section.getByText('Prazo da tarefa atualizado.', { exact: true }).waitFor();
+    await section.getByLabel('E-mail do comercial').fill(delegate.email);
+    const [delegatedD] = await Promise.all([
+      ownerPage.waitForResponse(r => r.url().endsWith('/delegation') && r.request().method() === 'POST'),
+      section.getByRole('button', { name: 'Delegar', exact: true }).click(),
+    ]);
+    assert.equal(delegatedD.status(), 200);
+    await section.getByRole('button', { name: 'Revogar delegação', exact: true }).waitFor();
+    await assertNoHorizontalScroll(ownerPage, '/admin/crm do delegante');
+
+    // Second real browser/session for the delegate, like the CRM-08 scenario.
+    const delegateBrowser = await launchBrowser();
+    try {
+      const delegateContext = await delegateBrowser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'pt-BR' });
+      const delegatePair = delegate.cookie.split(';')[0], delegateSep = delegatePair.indexOf('=');
+      await delegateContext.addCookies([{ name: delegatePair.slice(0, delegateSep), value: delegatePair.slice(delegateSep + 1), url: baseUrl }]);
+      const delegatePage = await delegateContext.newPage();
+      trackFailures(delegatePage, failures);
+      await delegatePage.goto(baseUrl + '/admin/crm', { waitUntil: 'networkidle' });
+      await delegatePage.waitForTimeout(800);
+      const inbox = delegatePage.getByRole('region', { name: 'Tarefas delegadas a mim' });
+      const row = inbox.getByRole('listitem').filter({ hasText: 'Delegável pela interface qa-ui' });
+      await row.getByRole('button', { name: 'Aceitar delegação', exact: true }).click();
+      await inbox.getByText('Delegação aceita. A tarefa agora é sua.', { exact: true }).waitFor();
+      const [doneD] = await Promise.all([
+        delegatePage.waitForResponse(r => r.url().includes('/api/crm/tasks/delegated/' + taskD.id) && r.request().method() === 'PATCH'),
+        inbox.getByRole('listitem').filter({ hasText: 'Delegável pela interface qa-ui' }).getByRole('button', { name: 'Concluir delegada', exact: true }).click(),
+      ]);
+      assert.equal(doneD.status(), 200);
+      await inbox.getByText('Situação da tarefa delegada atualizada.', { exact: true }).waitFor();
+      await assertNoHorizontalScroll(delegatePage, '/admin/crm do delegado');
+      await delegateContext.close();
+    } finally { await delegateBrowser.close(); }
+
+    await ownerPage.reload({ waitUntil: 'networkidle' });
+    await ownerPage.waitForTimeout(500);
+    await ownerPage.getByRole('article').filter({ hasText: opportunity.body.opportunity.title }).getByRole('button', { name: 'Abrir tarefas' }).click();
+    const sectionAfter = ownerPage.getByRole('region', { name: 'Minhas tarefas da oportunidade' });
+    await sectionAfter.getByLabel('Buscar por título').fill('qa-ui');
+    await sectionAfter.getByRole('button', { name: 'Buscar tarefas', exact: true }).click();
+    await sectionAfter.getByText('aceita. Somente o delegado altera a situação.', { exact: false }).waitFor();
+    await ownerContext.close();
+  } finally { await browser.close(); }
+  assert.deepEqual(failures, []);
+  const { rows: finalD } = await pool.query('SELECT status, responsible_id, delegation_status FROM crm_tasks WHERE id=$1', [taskD.id]);
+  assert.equal(finalD[0].status, 'concluida');
+  assert.equal(finalD[0].responsible_id, delegate.id);
+  assert.equal(finalD[0].delegation_status, 'aceita');
+});

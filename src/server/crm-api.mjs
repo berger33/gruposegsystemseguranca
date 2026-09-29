@@ -536,7 +536,7 @@ export function createCrmApi(ctx) {
               ORDER BY s.created_at DESC`,
             [id, session.identityId],
           ),
-          db.query("SELECT * FROM crm_tasks WHERE opportunity_id = $1 AND responsible_id = $2 AND EXISTS (SELECT 1 FROM crm_opportunities o WHERE o.id=$1 AND (o.responsible_id=$2 OR (o.responsible_id IS NULL AND o.created_by_id=$2))) ORDER BY due_date NULLS LAST, created_at DESC LIMIT 200", [id, ["comercial", "admin", "marcelo", "ti"].includes(session.role) ? session.identityId : null]),
+          db.query("SELECT * FROM crm_tasks WHERE opportunity_id = $1 AND (responsible_id = $2 OR delegated_by_id = $2) AND EXISTS (SELECT 1 FROM crm_opportunities o WHERE o.id=$1 AND (o.responsible_id=$2 OR (o.responsible_id IS NULL AND o.created_by_id=$2))) ORDER BY due_date NULLS LAST, created_at DESC LIMIT 200", [id, ["comercial", "admin", "marcelo", "ti"].includes(session.role) ? session.identityId : null]),
           // CRM-07: the interaction history follows the exact same ownership
           // rule as the dedicated /interactions endpoint below, so this
           // legacy detail route can never leak it to an unauthorized viewer.
