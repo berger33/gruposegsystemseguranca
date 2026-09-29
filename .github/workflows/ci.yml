@@ -38,5 +38,7 @@ jobs:
         run: npm run build
       - name: RAG integration in isolated CI workspace (PGlite beta only)
         run: npm run test:rag
-      - name: Tenant A/B HTTP integration (temporary localhost PostgreSQL, migrations 001-007 + 097)
+      - name: Tenant A/B HTTP integration (temporary localhost PostgreSQL, migrations 001-007 + 097-098)
         run: npm run test:tenant:pg
+      - name: QA-HOM-008 persistent synthetic restart (isolated localhost PostgreSQL)
+        run: npm run test:demo-local:pg

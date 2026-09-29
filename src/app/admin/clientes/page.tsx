@@ -8,6 +8,7 @@ import GrantsSection from "./GrantsSection";
 import ContractsSection from "./ContractsSection";
 import DocumentsSection from "./DocumentsSection";
 import TicketsSection from "./TicketsSection";
+import InvitesSection from "./InvitesSection";
 import { callApi, jsonInit, type AdminAccount } from "./admin-shared";
 import styles from "./AdminClientes.module.css";
 
@@ -21,6 +22,9 @@ const roleNames: Record<AdminRole, string> = { marcelo: "Marcelo · administraç
 export default function ClientAdminPage() {
   const [role, setRole] = useState<AdminRole | null>(null);
   const [token, setToken] = useState("");
+  const [loginMode, setLoginMode] = useState<"individual" | "legacy">("individual");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [accounts, setAccounts] = useState<AdminAccount[] | null>(null);
   const [checking, setChecking] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -64,15 +68,16 @@ export default function ClientAdminPage() {
       const response = await fetch("/api/admin/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify(loginMode === "individual" ? { email, password } : { token }),
       });
       const data = await response.json().catch(() => ({}));
+      setPassword("");
       if (!response.ok) {
         if (data.error === "admin_auth_not_configured") {
           throw new Error("A autenticação administrativa ainda não está configurada no servidor.");
         }
         if (data.error === "too_many_attempts") throw new Error("Muitas tentativas. Aguarde antes de tentar novamente.");
-        throw new Error("Chave administrativa inválida ou indisponível.");
+        throw new Error(loginMode === "individual" ? "Conta individual ou senha inválida." : "Chave administrativa inválida ou indisponível.");
       }
       setRole(data.role);
       setToken("");
@@ -138,24 +143,29 @@ export default function ClientAdminPage() {
           <section className={styles.card} aria-labelledby="gate-title">
             <h1 id="gate-title">Administração de clientes</h1>
             <p className={styles.hint}>
-              Use a chave administrativa (marcelo ou TI) configurada no ambiente. A sessão administrativa
-              expira em 8 horas, usa cookie HttpOnly e é separada do portal do cliente.
+              Prefira conta individual de TI. A sessão administrativa expira em 8 horas,
+              usa cookie HttpOnly e é separada do portal do cliente. No demo local não há chave legada.
             </p>
+            <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
+              <button type="button" onClick={() => setLoginMode("individual")}>Conta individual</button>
+              <button type="button" onClick={() => setLoginMode("legacy")}>Chave legada (outros ambientes)</button>
+            </div>
             <form className={styles.formGrid} onSubmit={login} noValidate>
-              <div className={styles.field}>
-                <label htmlFor="admin-token">Chave administrativa</label>
-                <input
-                  id="admin-token"
-                  type="password"
-                  minLength={32}
-                  value={token}
-                  onChange={event => setToken(event.target.value)}
-                  placeholder="Chave marcelo ou TI do ambiente"
-                  autoComplete="off"
-                  required
-                />
-              </div>
-              <button className={styles.submit} type="submit" disabled={busy || token.trim().length < 32}>
+              {loginMode === "individual" ? <>
+                <div className={styles.field}>
+                  <label htmlFor="admin-email">E-mail individual de TI</label>
+                  <input id="admin-email" type="email" value={email} onChange={event => setEmail(event.target.value)} required autoComplete="username" />
+                </div>
+                <div className={styles.field}>
+                  <label htmlFor="admin-password">Senha individual</label>
+                  <input id="admin-password" type="password" value={password} onChange={event => setPassword(event.target.value)} required autoComplete="current-password" />
+                </div>
+              </> : <div className={styles.field}>
+                <label htmlFor="admin-token">Chave administrativa legada</label>
+                <input id="admin-token" type="password" minLength={32} value={token}
+                  onChange={event => setToken(event.target.value)} autoComplete="off" required />
+              </div>}
+              <button className={styles.submit} type="submit" disabled={busy || (loginMode === "individual" ? !email || !password : token.trim().length < 32)}>
                 {busy ? "Verificando…" : "Entrar"}
               </button>
             </form>
@@ -176,6 +186,7 @@ export default function ClientAdminPage() {
                 relevante vai para a trilha de auditoria sem conter dados sensíveis.
               </p>
             </section>
+            {role === 'ti' ? <InvitesSection /> : null}
             <AccountsSection accounts={accounts} reloadAccounts={loadAccounts} />
             <GrantsSection accounts={accounts} />
             <ContractsSection accounts={accounts} />

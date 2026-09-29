@@ -901,6 +901,11 @@ export function createClientAccessApi(ctx) {
     if (body === undefined) return;
     const email = normalizeEmail(body?.email);
     if (email.error) return ctx.json(res, 400, { error: "invalid_email" });
+    // The opt-in offline demonstration never invites a real mailbox. This is
+    // not a global validation rule for other deployments with SMTP configured.
+    if (process.env.SEG_LOCAL_DEMO_ONLY === 'true' && !email.value.endsWith('@example.invalid')) {
+      return ctx.json(res, 400, { error: 'demo_synthetic_address_required' });
+    }
     const displayName = sanitizeDisplayName(body?.displayName);
     if (displayName.error) return ctx.json(res, 400, { error: displayName.error });
     const scopeNote = typeof body?.scopeNote === "string" && body.scopeNote.trim() ? body.scopeNote.trim() : null;

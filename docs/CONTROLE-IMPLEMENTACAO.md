@@ -8,6 +8,8 @@ Este arquivo foi criado junto ao plano mestre. Nenhum item foi implementado ou h
 - [Plano mestre 2026-09-28](plano-mestre-implementacao-2026-09-28.md)
 - [Prompt de retomada disponível (histórico)](PROMPT-PROXIMA-SESSAO.md)
 - [Guia de desenvolvimento local](../README.md)
+- [QA-HOM-008 — demo sintético persistente local, ainda NO-GO Windows/dados reais/link](evidencias/QA-HOM-008-demo-local-persistente.md)
+- [Instruções do demo local persistente (não instalação final)](demo-local-persistente.md)
 - [Homologação RAG beta](homologacao-rag-beta.md)
 - [Plano mestre de testes QA (estratégia aprovada)](plano-mestre-testes.md)
 - [Casos detalhados e execução da Onda 0](qa-casos-onda0.md)

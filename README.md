@@ -1,10 +1,14 @@
 # Grupo SEG System
 
+## Demonstração local persistente — apenas massa fictícia
+
+A versão **fonte atual**, não os ZIPs históricos, possui [início local persistente e guia Windows](docs/demo-local-persistente.md): `INICIAR-DEMO-LOCAL.bat`. Ele cria banco PostgreSQL **exclusivo no perfil do usuário**, sem SMTP/Funnel e sem dados reais; ainda **não é instalador Windows homologado, backup nem sistema completo**. Ensaio Linux isolado: `npm run test:demo-local:pg` ([QA-HOM-008](docs/evidencias/QA-HOM-008-demo-local-persistente.md)). Não copiar chaves ou dados da prévia anterior.
+
 ## Homologação funcional **separada** da prévia PGlite
 
-Para explorar papéis sintéticos e um PostgreSQL local descartável, use o pacote separado `downloads/seg-system-homologacao-local.zip` e leia [LEIA-ME-HOMOLOGACAO.md](LEIA-ME-HOMOLOGACAO.md). Abra `/qa/modulos` **apenas** com o novo lançador de homologação; o pacote `seg-system-qa-local.zip` continua sendo uma prévia PGlite sem credenciais. O índice identifica módulos operacionais, protótipos e bloqueios, sem prometer homologação dos 222 requisitos. Nenhum pacote é produção.
+Para explorar papéis sintéticos e um PostgreSQL local descartável, use o pacote separado `downloads/seg-system-homologacao-local.zip` e leia [LEIA-ME-HOMOLOGACAO.md](LEIA-ME-HOMOLOGACAO.md). No pacote descartável, abra `/qa/modulos` com o lançador de homologação; o demo persistente usa o seu próprio lançador acima; o pacote `seg-system-qa-local.zip` continua sendo uma prévia PGlite sem credenciais. O índice identifica módulos operacionais, protótipos e bloqueios, sem prometer homologação dos 222 requisitos. Nenhum pacote é produção.
 
-[Veja a avaliação de lacunas para entrega local completa](docs/AVALIACAO-ENTREGA-LOCAL-COMPLETA.md) antes de tratar o ZIP como sistema pronto para o cliente. **Atenção:** o ZIP de homologação publicado anteriormente é uma fotografia com 96 migrações; o código-fonte atual já contém a migração aditiva 097 e o MFA cliente. O ZIP antigo **não recebe essas correções** e não deve ser exposto via link externo ou usado como instalação persistente.
+[Veja a avaliação de lacunas para entrega local completa](docs/AVALIACAO-ENTREGA-LOCAL-COMPLETA.md) antes de tratar o ZIP como sistema pronto para o cliente. **Atenção:** o ZIP de homologação publicado anteriormente é uma fotografia com 96 migrações; o código-fonte atual já contém as migrações aditivas 097–098, MFA cliente e revisão manual de identidade. O ZIP antigo **não recebe essas correções** e não deve ser exposto via link externo ou usado como instalação persistente.
 
 Sistema em desenvolvimento para o Grupo SEG System. O **plano foi registrado em commit separado antes do início da aplicação** (`5af5ab0`).
 
