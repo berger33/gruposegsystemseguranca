@@ -13,6 +13,7 @@ demais principais).
 | [02-plano-mestre-200-imagens.md](02-plano-mestre-200-imagens.md) | **Plano mestre**: identidade visual, especificações, fluxo de produção, LGPD, roadmap e integração com o sistema |
 | [03-catalogo-200-imagens.md](03-catalogo-200-imagens.md) | **Catálogo das 200 imagens** com textos (manchete, apoio, CTA, assunto) e direção visual por item |
 | [04-catalogo-imagens.csv](04-catalogo-imagens.csv) | Planilha de controle de produção (onda, prioridade, formato, status, arquivo sugerido) — 200 linhas |
+| [producao/](producao/) | Imagens geradas **em revisão** (aguardam aprovação RH/Marcelo antes de irem para `public/emails/`); `onda-0-montagem.jpg` é a folha de contato do lote-guia |
 | [mockups/](mockups/) | 3 mockups **conceituais** de referência (boas-vindas, recuperação de senha, aniversário) — não oficiais |
 
 ## Resumo da distribuição
