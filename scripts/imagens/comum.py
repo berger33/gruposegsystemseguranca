@@ -128,6 +128,25 @@ def _dilatar(mascara, px):
     return mascara.filter(ImageFilter.MaxFilter(2 * px + 1))
 
 
+def _silhueta_cheia(mascara, limiar=64):
+    """Fecha a silhueta: preenche cada linha entre o primeiro e o último pixel (remove furos internos).
+
+    O PNG recortado do logotipo tem alfa baixo nas áreas douradas (a arte interna), o que
+    deixaria buracos ao recolorir o escudo. O escudo é convexo na horizontal em cada linha,
+    então preencher faixas por linha devolve o corpo sólido sem alterar o contorno.
+    """
+    a = np.asarray(mascara) > limiar
+    saida = np.zeros_like(a)
+    for y in range(a.shape[0]):
+        xs = np.flatnonzero(a[y])
+        if xs.size:
+            saida[y, xs[0]:xs[-1] + 1] = True
+    suave = (Image.fromarray((saida * 255).astype(np.uint8), "L")
+             .filter(ImageFilter.GaussianBlur(1.1))
+             .point(lambda v: 255 if v > 128 else 0))
+    return suave.filter(ImageFilter.GaussianBlur(0.5))
+
+
 def escudo_mascara(altura, recolorir=None, contorno=(0, 0, 0), contorno_px=0):
     """Silhueta do escudo do logotipo (fonte real da marca), opcionalmente recolorida."""
     esc = redimensionar_altura(carregar_logos()["escudo-marinho"], altura)
@@ -149,7 +168,7 @@ def escudo_simples(altura, preenchimento=MARINHO, contorno=OURO, contorno_px=6, 
     pad = contorno_px
     tela = (base.width + pad * 2, base.height + pad * 2)
 
-    m = base.getchannel("A").point(lambda v: 255 if v > limiar else 0)
+    m = _silhueta_cheia(base.getchannel("A"), limiar)
     mascara = Image.new("L", tela, 0)
     mascara.paste(m, (pad, pad))
 
