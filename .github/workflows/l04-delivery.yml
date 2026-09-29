@@ -7,6 +7,8 @@ on:
       - 'server.mjs'
       - 'tests/l04-delivery.integration.test.mjs'
       - 'scripts/qa-l04-delivery-postgres.mjs'
+      - 'scripts/migrate-site-visual.mjs'
+      - 'scripts/qa-wave0-static.mjs'
       - 'db/migrations/**'
       - 'package*.json'
       - '.github/workflows/l04-delivery.yml'
@@ -29,5 +31,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - name: Migrações, replay e checksum em PostgreSQL descartável
+        run: npm run test:migrations:pg
       - name: L04 HTTP, PostgreSQL descartável e Chromium
         run: npm run test:l04-delivery:pg
