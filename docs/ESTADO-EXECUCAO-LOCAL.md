@@ -156,17 +156,55 @@ npm run test:unit                    # 177 testes, sem banco
 # Gates em PostgreSQL real e descartável (nenhum toca banco do operador).
 # Exigem DATABASE_URL e DATABASE_MIGRATION_URL vazias.
 npm run test:staff-auth:pg           # L01 — 21 testes HTTP
-npm run test:migrations:pg           # migrações 001–099
+npm run test:migrations:pg           # migrações 001–101
+npm run test:l02-delivery:pg         # L02 — 14 testes HTTP (arquivos, fila, caixa local)
 npm run test:tenant:pg               # escopo do espaço do cliente
 npm run test:client-access:pg        # acesso/convite/MFA de cliente
 npm run test:cli-v2:pg               # documentos v2 e auditoria
-npm run test:backup-restore:pg       # backup/restauração
+npm run test:demo-local:pg           # demo persistente + backup frio + restauração isolada
+npm run test:backup-restore:pg       # dump lógico (exige pg_dump/pg_restore 17)
 
 npx tsc --noEmit && npx next build
 ```
 
 Nenhum comando acima precisa de segredo. Os clusters PostgreSQL são temporários
 (`embedded-postgres`), criados e removidos pelo próprio script.
+
+## L02 — entrega local de arquivos, fila e comunicação (commit `4b95616`)
+
+Concluído e provado por HTTP real contra PostgreSQL descartável
+(`npm run test:l02-delivery:pg`, 14 testes):
+
+| Frente | O que mudou | Prova |
+| --- | --- | --- |
+| Arquivos privados | Chave de 24 bytes gerada pelo servidor, `content_sha256` gravado e **conferido em todo download** | testes 1–5; adulteração em disco devolve 409 |
+| Travessia de caminho | Nome enviado pelo cliente nunca vira caminho | teste 2: `../../../../etc/passwd` não escapa do diretório |
+| Fila de notificações | Reivindicação atômica (`UPDATE ... RETURNING`) no lugar de `SELECT ... FOR UPDATE SKIP LOCKED` fora de transação | teste 8 + controle negativo: com o código antigo, "entregue 2 vezes" |
+| Regex de UUID | `isValidUuid` tinha 4 grupos e recusava todo UUID canônico | teste 6 + controle negativo |
+| Caixa de saída local | Estado `local_outbox`, `sent_at` nulo, corpo oculto na listagem, leitura auditada, vencida 410 | testes 9–14 |
+
+Dois defeitos foram **provados por controle negativo**: o código antigo foi
+restaurado, a suíte foi executada e exatamente o teste correspondente falhou.
+Sem isso, um teste verde não distingue "corrigido" de "nunca quebrado".
+
+### Correções colaterais encontradas durante o L02
+
+- `client_documents.uploaded_by` tinha `CHECK IN ('marcelo','ti')` e passou a
+  rejeitar os papéis `admin`/`rh` criados no L01 — regressão latente que
+  derrubaria qualquer upload desses perfis. Corrigida na migração 101.
+- Três contagens de migração fixas em literal (`98`) em `local-demo.mjs`,
+  `qa-local-demo-persistent.mjs` e `demo-offline-snapshot.mjs` estavam
+  defasadas desde a 099 e reprovavam instalação íntegra. Agora derivam do disco.
+
+### Limitação declarada do L02
+
+A trilha de **dump lógico** (`npm run test:backup-restore:pg`) não foi
+exercitada: exige `pg_dump`/`pg_restore` 17, ausentes neste sandbox Linux
+(`embedded-postgres` traz apenas `initdb`, `pg_ctl` e `postgres`) e sem pacote
+disponível. A suíte recusa de forma explícita e não cria banco — não é um falso
+verde. A trilha de **cópia fria com manifesto e sha256 por arquivo**, essa sim,
+foi exercitada e passa, incluindo restauração em cluster isolado verificada por
+HTTP (`npm run test:demo-local:pg`, QA-HOM-009).
 
 ## O que NÃO está pronto
 

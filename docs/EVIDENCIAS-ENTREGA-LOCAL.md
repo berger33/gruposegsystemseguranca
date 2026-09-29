@@ -163,3 +163,66 @@ diretório `db/migrations`, para não quebrarem a cada migração nova.
   de latência sob carga.
 - Nenhum teste foi executado em Windows.
 - Nenhuma verificação em navegador real: os 21 cenários são HTTP.
+
+
+## L02 — arquivos, fila e caixa local (commit `4b95616`)
+
+Comando: `npm run test:l02-delivery:pg`
+(servidor real com `--dev`, PostgreSQL descartável `embedded-postgres`,
+migrações 001–101, `MAIL_HOST` e `MAIL_FROM` vazios de propósito).
+
+Resultado: **14 aprovados, 0 reprovados**.
+
+| # | Cenário | Verificação |
+| --- | --- | --- |
+| 1 | Upload grava bytes reais | arquivo lido do disco é idêntico ao enviado; chave `^[0-9a-f]{48}$`; `content_sha256` confere; autor é a identidade |
+| 2 | Travessia de caminho | `../../../../etc/passwd` não gera arquivo fora de `docsDir` |
+| 3 | Download autenticado | sem cookie 401; com cookie os bytes exatos, `nosniff` e `no-store` |
+| 4 | Integridade | arquivo trocado em disco ⇒ 409 `document_integrity_failed`, nada é servido |
+| 5 | Isolamento entre contas | documento da conta A negado pela rota do cliente |
+| 6 | UUID canônico aceito | regressão do regex de 4 grupos |
+| 7 | Deduplicação | mesma `dedup_key` duas vezes ⇒ 1 linha na fila |
+| 8 | Concorrência | dois `process` simultâneos ⇒ nenhuma notificação entregue duas vezes |
+| 9 | Caixa local | status `local_outbox`, `sent_at` nulo, mensagem gravada |
+| 10 | Honestidade da resposta | nenhuma resposta contém "enviado", "entregue", "sent" ou "delivered" |
+| 11 | Sigilo da listagem | sem sessão 401; listagem não traz corpo nem token |
+| 12 | Leitura auditada | 401 sem sessão; `read_count` 1 e 2; duas linhas `local_outbox_read` na auditoria |
+| 13 | Expiração | mensagem vencida ⇒ 410 e conteúdo não vaza |
+| 14 | Convite de cliente | `emailStatus = local_outbox`, `inviteUrl` ausente, link recuperável na caixa local |
+
+### Controles negativos executados
+
+Um teste verde não prova que havia defeito. Os dois defeitos centrais do L02
+foram reintroduzidos e a suíte reexecutada:
+
+| Defeito reintroduzido | Resultado |
+| --- | --- |
+| `isValidUuid` com 4 grupos | 13 aprovados, **teste 6 reprovado** com `invalid_recipient_id_uuid_format` |
+| `SELECT ... FOR UPDATE SKIP LOCKED` fora de transação | 13 aprovados, **teste 8 reprovado**: `notificação cb7d1c8f-... foi entregue 2 vezes` |
+
+Em ambos os casos o código correto foi restaurado e a suíte voltou a 14/14.
+
+### Varredura completa após o L02
+
+| Suíte | Resultado |
+| --- | --- |
+| `test:unit` | 177 aprovados |
+| `test:staff-auth:pg` | 21 aprovados |
+| `test:l02-delivery:pg` | 14 aprovados |
+| `test:tenant:pg` | 9 aprovados |
+| `test:client-access:pg` | 15 aprovados |
+| `test:cli-v2:pg` | 9 aprovados |
+| `test:cli-v2:pg:objects` | 1 aprovado |
+| `test:migrations:pg` | `CHECKSUMMED=101/101`, `TABLES=500->500`, replay idempotente, adulteração recusada |
+| `test:demo-local:pg` | QA-HOM-008/009 completos, incluindo backup frio e restauração isolada verificada por HTTP |
+| `npx tsc --noEmit` | 0 erros |
+| `npx next build` | sucesso |
+
+### Suíte que NÃO pôde ser executada
+
+`npm run test:backup-restore:pg` e `:clusters` recusam com
+`QA_RESTORE_CLIENT_MISSING_OR_INCOMPATIBLE: requires pg_dump and pg_restore
+version 17`. Os binários não existem neste sandbox e não há pacote instalável.
+A suíte **não cria banco e não reporta sucesso** — a ausência fica visível.
+Deve ser executada no alvo Windows, onde o PostgreSQL 17 instala essas
+ferramentas.
