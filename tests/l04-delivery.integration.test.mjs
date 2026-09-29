@@ -1121,3 +1121,192 @@ test('CRM-08: agenda de visitas/reuniões — responsável, participante, confir
   assert.equal(visitAudit.rows.filter(row => row.actor_id === participant.id).length, 2, 'as respostas do convidado são atribuídas a ele');
   assert.equal(visitAudit.rows.filter(row => row.actor_id === owner.id).length, 7);
 });
+
+test('CRM-09: modelos privados, tarefas manuais, opt-out e encerramento da cadência', { skip: !RUN, timeout: 180_000 }, async () => {
+  const owner = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const other = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const rh = await provisionAndLoginStaff(pool, api, { role: 'rh' });
+  const company = await api('/api/crm/companies', {
+    method: 'POST', cookie: owner.cookie,
+    body: { displayName: 'Empresa cadência ' + randomUUID(), city: 'Guarulhos', type: 'prospect' },
+  });
+  assert.equal(company.status, 201, JSON.stringify(company.body));
+  const contact = await api('/api/crm/contacts', {
+    method: 'POST', cookie: owner.cookie,
+    body: { company_id: company.body.company.id, display_name: 'Contato cadência L04', email: `cadencia-${randomUUID()}@exemplo.invalid` },
+  });
+  assert.equal(contact.status, 201, JSON.stringify(contact.body));
+  const opportunity = await api('/api/crm/opportunities', {
+    method: 'POST', cookie: owner.cookie,
+    body: { company_id: company.body.company.id, contact_id: contact.body.contact.id, title: 'Oportunidade cadência L04' },
+  });
+  assert.equal(opportunity.status, 201, JSON.stringify(opportunity.body));
+  const opportunityId = opportunity.body.opportunity.id;
+  const templateEndpoint = '/api/crm/cadences/templates';
+  const cadenceEndpoint = `/api/crm/opportunities/${opportunityId}/cadences`;
+
+  assert.equal((await api(templateEndpoint)).status, 401);
+  assert.equal((await api(templateEndpoint, { cookie: rh.cookie })).status, 403);
+  assert.equal((await api(cadenceEndpoint, { cookie: other.cookie })).status, 404);
+  assert.equal((await api(cadenceEndpoint, { method: 'POST', cookie: owner.cookie, sendOrigin: false, body: {} })).status, 403);
+  assert.equal((await api(templateEndpoint, { method: 'DELETE', cookie: owner.cookie })).status, 405);
+  const forgedTemplate = await api(templateEndpoint, {
+    method: 'POST', cookie: owner.cookie,
+    body: { name: 'Forjado', owner_id: other.id, steps: [{ title: 'Não', interval_days: 0, suggested_channel: 'ligacao' }] },
+  });
+  assert.equal(forgedTemplate.status, 400);
+  assert.equal(forgedTemplate.body.error, 'server_managed_fields');
+  assert.equal((await api(templateEndpoint, { method: 'POST', cookie: owner.cookie, body: { name: 'Sem passos', steps: [] } })).status, 400);
+
+  const browser = await launchBrowser();
+  const failures = [];
+  let templateId;
+  let taskIds = [];
+  try {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'pt-BR' });
+    const pair = owner.cookie.split(';')[0], separator = pair.indexOf('=');
+    await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
+    const page = await context.newPage();
+    trackFailures(page, failures);
+    await page.goto(`${baseUrl}/admin/crm`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(800);
+    const card = page.getByRole('article').filter({ hasText: opportunity.body.opportunity.title });
+    await card.getByRole('button', { name: 'Abrir tarefas' }).click();
+    const cadence = page.getByRole('region', { name: 'Cadências manuais de prospecção' });
+    await cadence.getByRole('heading', { name: 'CRM-09 — Cadências manuais' }).waitFor();
+    await cadence.getByLabel('Nome do modelo', { exact: true }).fill('Primeiro contato manual');
+    await cadence.getByLabel('Descrição (opcional)', { exact: true }).fill('Sequência sintética sem envio automático.');
+    await cadence.getByLabel('Tarefa', { exact: true }).fill('Ligar para o contato');
+    await cadence.getByLabel('Intervalo (dias)', { exact: true }).fill('0');
+    await cadence.getByLabel('Canal sugerido', { exact: true }).selectOption('ligacao');
+    const [createdTemplate] = await Promise.all([
+      page.waitForResponse(response => response.url().endsWith(templateEndpoint) && response.request().method() === 'POST'),
+      cadence.getByRole('button', { name: 'Criar modelo', exact: true }).click(),
+    ]);
+    assert.equal(createdTemplate.status(), 201);
+    templateId = (await createdTemplate.json()).template.id;
+    await cadence.getByText('Modelo de cadência salvo. Os passos continuam sendo tarefas manuais.', { exact: true }).waitFor();
+
+    await cadence.getByRole('button', { name: 'Editar', exact: true }).click();
+    await cadence.getByLabel('Nome do modelo', { exact: true }).fill('Primeiro contato manual editado');
+    const [editedTemplate] = await Promise.all([
+      page.waitForResponse(response => response.url().includes(`/api/crm/cadences/templates/${templateId}`) && response.request().method() === 'PATCH'),
+      cadence.getByRole('button', { name: 'Salvar edição', exact: true }).click(),
+    ]);
+    assert.equal(editedTemplate.status(), 200);
+    await cadence.getByLabel('Modelo de cadência', { exact: true }).selectOption(templateId);
+    const [applied] = await Promise.all([
+      page.waitForResponse(response => response.url().endsWith(cadenceEndpoint) && response.request().method() === 'POST'),
+      cadence.getByRole('button', { name: 'Criar tarefas da cadência', exact: true }).click(),
+    ]);
+    assert.equal(applied.status(), 201);
+    const appliedBody = await applied.json();
+    taskIds = appliedBody.tasks.map(task => task.id);
+    assert.equal(taskIds.length, 1);
+    await cadence.getByText('Cadência aplicada: tarefas criadas para execução manual, sem envio automático.', { exact: true }).waitFor();
+    await cadence.getByText('Ligar para o contato', { exact: false }).first().waitFor();
+
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForTimeout(600);
+    await page.getByRole('article').filter({ hasText: opportunity.body.opportunity.title }).getByRole('button', { name: 'Abrir tarefas' }).click();
+    await page.getByRole('region', { name: 'Cadências manuais de prospecção' }).getByText('Ligar para o contato', { exact: false }).first().waitFor();
+    await assertNoHorizontalScroll(page, 'cadências no CRM');
+    await context.close();
+  } finally { await browser.close(); }
+  assert.deepEqual(failures, [], `cadência no navegador não deve ter erro de console/HTTP 5xx: ${failures.join(', ')}`);
+
+  const ownerTemplates = await api(templateEndpoint, { cookie: owner.cookie });
+  assert.equal(ownerTemplates.status, 200);
+  const savedTemplate = ownerTemplates.body.templates.find(template => template.id === templateId);
+  assert.ok(savedTemplate);
+  assert.equal(savedTemplate.name, 'Primeiro contato manual editado');
+  assert.equal(savedTemplate.steps[0].responsible_id, owner.id);
+  const otherTemplates = await api(templateEndpoint, { cookie: other.cookie });
+  assert.equal(otherTemplates.status, 200);
+  assert.deepEqual(otherTemplates.body.templates, [], 'modelo privado não deve aparecer para outro comercial');
+
+  const appliedList = await api(cadenceEndpoint, { cookie: owner.cookie });
+  assert.equal(appliedList.status, 200, JSON.stringify(appliedList.body));
+  assert.equal(appliedList.body.enrollments.length, 1);
+  assert.equal(appliedList.body.enrollments[0].tasks.length, 1);
+  assert.equal(appliedList.body.enrollments[0].tasks[0].suggested_channel, 'ligacao');
+  assert.equal(appliedList.body.enrollments[0].tasks[0].status, 'aberta');
+  assert.equal((await api(cadenceEndpoint, { method: 'POST', cookie: owner.cookie, body: { template_id: templateId } })).status, 409);
+
+  // The legacy opportunity route no longer exposes stages to another identity.
+  const otherDetail = await api(`/api/crm/opportunities/${opportunityId}`, { cookie: other.cookie });
+  assert.equal(otherDetail.status, 200);
+  assert.deepEqual(otherDetail.body.stages, []);
+  const ownerDetail = await api(`/api/crm/opportunities/${opportunityId}`, { cookie: owner.cookie });
+  assert.equal(ownerDetail.body.stages.length, 1);
+
+  // Opt-out is a real HTTP mutation. The database trigger cancels pending
+  // cadence tasks and marks the enrollment; it never sends a message.
+  const optOut = await api(`/api/crm/opportunities/${opportunityId}/cadence-contact`, {
+    method: 'PATCH', cookie: owner.cookie, body: { opted_out: true },
+  });
+  assert.equal(optOut.status, 200, JSON.stringify(optOut.body));
+  assert.equal(optOut.body.contact.prospecting_opted_out, true);
+  assert.equal(optOut.body.blockedTasks, 1);
+  const blocked = await api(cadenceEndpoint, { cookie: owner.cookie });
+  assert.equal(blocked.body.enrollments[0].status, 'bloqueada_opt_out');
+  assert.equal(blocked.body.enrollments[0].tasks[0].status, 'cancelada');
+  assert.equal(blocked.body.enrollments[0].tasks[0].cadence_blocked_reason, 'contato_opted_out');
+  const afterOptOut = await api(cadenceEndpoint, { method: 'POST', cookie: owner.cookie, body: { template_id: templateId } });
+  assert.equal(afterOptOut.status, 409);
+  assert.equal(afterOptOut.body.error, 'contact_opted_out');
+
+  // A terminal opportunity also closes only pending manual steps.
+  const contactWon = await api('/api/crm/contacts', { method: 'POST', cookie: owner.cookie, body: { company_id: company.body.company.id, display_name: 'Contato ganho L04', email: `ganho-${randomUUID()}@exemplo.invalid` } });
+  assert.equal(contactWon.status, 201);
+  const oppWon = await api('/api/crm/opportunities', { method: 'POST', cookie: owner.cookie, body: { company_id: company.body.company.id, contact_id: contactWon.body.contact.id, title: 'Oportunidade ganha cadência' } });
+  assert.equal(oppWon.status, 201);
+  const wonId = oppWon.body.opportunity.id;
+  const applyWon = await api(`/api/crm/opportunities/${wonId}/cadences`, { method: 'POST', cookie: owner.cookie, body: { template_id: templateId } });
+  assert.equal(applyWon.status, 201);
+  const wonStage = await api(`/api/crm/opportunities/${wonId}`, { method: 'PATCH', cookie: owner.cookie, body: { stage: 'ganho' } });
+  assert.equal(wonStage.status, 200, JSON.stringify(wonStage.body));
+  const wonCadence = await api(`/api/crm/opportunities/${wonId}/cadences`, { cookie: owner.cookie });
+  assert.equal(wonCadence.body.enrollments[0].status, 'encerrada_ganha');
+  assert.equal(wonCadence.body.enrollments[0].tasks[0].cadence_blocked_reason, 'oportunidade_ganha');
+
+  // Contact deactivation is the other terminal boundary; SQL only sets the
+  // synthetic fixture state, while the task was created through HTTP.
+  const contactInactive = await api('/api/crm/contacts', { method: 'POST', cookie: owner.cookie, body: { company_id: company.body.company.id, display_name: 'Contato inativo L04', email: `inativo-${randomUUID()}@exemplo.invalid` } });
+  assert.equal(contactInactive.status, 201);
+  const oppInactive = await api('/api/crm/opportunities', { method: 'POST', cookie: owner.cookie, body: { company_id: company.body.company.id, contact_id: contactInactive.body.contact.id, title: 'Oportunidade contato inativo' } });
+  assert.equal(oppInactive.status, 201);
+  const applyInactive = await api(`/api/crm/opportunities/${oppInactive.body.opportunity.id}/cadences`, { method: 'POST', cookie: owner.cookie, body: { template_id: templateId } });
+  assert.equal(applyInactive.status, 201);
+  await pool.query('UPDATE crm_contacts SET status=\'inactive\' WHERE id=$1', [contactInactive.body.contact.id]);
+  const inactiveCadence = await api(`/api/crm/opportunities/${oppInactive.body.opportunity.id}/cadences`, { cookie: owner.cookie });
+  assert.equal(inactiveCadence.body.enrollments[0].status, 'encerrada_contato_inativo');
+  assert.equal(inactiveCadence.body.enrollments[0].tasks[0].cadence_blocked_reason, 'contato_inativo');
+
+  // Audit failure is fail-closed: no enrollment or task is acknowledged.
+  const auditContact = await api('/api/crm/contacts', { method: 'POST', cookie: owner.cookie, body: { company_id: company.body.company.id, display_name: 'Contato auditoria L04', email: `audit-${randomUUID()}@exemplo.invalid` } });
+  const auditOpp = await api('/api/crm/opportunities', { method: 'POST', cookie: owner.cookie, body: { company_id: company.body.company.id, contact_id: auditContact.body.contact.id, title: 'Oportunidade auditoria cadência' } });
+  await pool.query(`CREATE FUNCTION qa_reject_cadence_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.action = 'crm_cadence_apply' THEN RAISE EXCEPTION 'qa audit failure'; END IF; RETURN NEW; END $$`);
+  await pool.query('CREATE TRIGGER qa_reject_cadence_audit BEFORE INSERT ON auth_access_audit FOR EACH ROW EXECUTE FUNCTION qa_reject_cadence_audit()');
+  try {
+    const rejected = await api(`/api/crm/opportunities/${auditOpp.body.opportunity.id}/cadences`, { method: 'POST', cookie: owner.cookie, body: { template_id: templateId } });
+    assert.equal(rejected.status, 503);
+    const counts = await pool.query('SELECT (SELECT count(*) FROM crm_cadence_enrollments WHERE opportunity_id=$1)::int AS enrollments, (SELECT count(*) FROM crm_tasks WHERE opportunity_id=$1 AND cadence_enrollment_id IS NOT NULL)::int AS tasks', [auditOpp.body.opportunity.id]);
+    assert.deepEqual(counts.rows[0], { enrollments: 0, tasks: 0 });
+  } finally {
+    await pool.query('DROP TRIGGER qa_reject_cadence_audit ON auth_access_audit');
+    await pool.query('DROP FUNCTION qa_reject_cadence_audit()');
+  }
+
+  const auditRows = await pool.query(
+    `SELECT action,actor_id FROM auth_access_audit WHERE actor_id=$1 AND action IN ('crm_cadence_template_create','crm_cadence_template_update','crm_cadence_apply','crm_contact_prospecting_opt_out') ORDER BY created_at,id`,
+    [owner.id],
+  );
+  assert.ok(auditRows.rows.some(row => row.action === 'crm_cadence_template_create'));
+  assert.ok(auditRows.rows.some(row => row.action === 'crm_cadence_template_update'));
+  assert.ok(auditRows.rows.some(row => row.action === 'crm_cadence_apply'));
+  assert.ok(auditRows.rows.some(row => row.action === 'crm_contact_prospecting_opt_out'));
+  assert.ok(auditRows.rows.every(row => row.actor_id === owner.id));
+  assert.equal(taskIds.length, 1);
+});

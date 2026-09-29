@@ -1,6 +1,7 @@
 import { createCrmTaskApi } from "./src/server/crm-task-api.mjs";
 import { createCrmInteractionApi } from "./src/server/crm-interaction-api.mjs";
 import { createCrmVisitApi } from "./src/server/crm-visit-api.mjs";
+import { createCrmCadenceApi } from "./src/server/crm-cadence-api.mjs";
 import { createHmac, createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { createServer } from "node:http";
 import path from "node:path";
@@ -1159,6 +1160,9 @@ const crmInteractionApi = createCrmInteractionApi({
 // CRM-08: agenda de visitas/reuniões. Responsável gerencia; participante
 // convidado apenas enxerga a própria agenda e responde por si.
 const crmVisitApi = createCrmVisitApi({ json, readJson, sameOrigin, getPool, readAdminSession: readSession });
+
+// CRM-09: modelos privados e aplicação manual em tarefas; nenhum envio automático.
+const crmCadenceApi = createCrmCadenceApi({ json, readJson, sameOrigin, getPool, readAdminSession: readSession });
 
 const crmApi = createCrmApi({
   json,
@@ -2447,7 +2451,14 @@ async function routeApi(req, res) {
   const crmCompanyMatch = url.pathname.match(/^\/api\/crm\/companies\/([0-9a-f-]{36})$/i);
   if (crmCompanyMatch) return crmApi.handleCompanyById(req, res, crmCompanyMatch[1]);
   if (url.pathname === "/api/crm/contacts") return crmApi.handleContacts(req, res, url);
+  if (url.pathname === "/api/crm/cadences/templates") return crmCadenceApi.handleTemplates(req, res);
+  const crmCadenceTemplateMatch = url.pathname.match(/^\/api\/crm\/cadences\/templates\/([0-9a-f-]{36})$/i);
+  if (crmCadenceTemplateMatch) return crmCadenceApi.handleTemplate(req, res, crmCadenceTemplateMatch[1]);
   if (url.pathname === "/api/crm/opportunities") return crmApi.handleOpportunities(req, res, url);
+  const crmCadenceOptOutMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/cadence-contact$/i);
+  if (crmCadenceOptOutMatch) return crmCadenceApi.handleOptOut(req, res, crmCadenceOptOutMatch[1]);
+  const crmCadenceOpportunityMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/cadences$/i);
+  if (crmCadenceOpportunityMatch) return crmCadenceApi.handleOpportunity(req, res, crmCadenceOpportunityMatch[1]);
   const crmTaskMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/tasks(?:\/([0-9a-f-]{36}))?$/i);
   if (crmTaskMatch) return crmTaskApi(req, res, crmTaskMatch[1], crmTaskMatch[2] || null);
   if (url.pathname === "/api/crm/visits/agenda") return crmVisitApi.handleAgenda(req, res, url);
@@ -4014,6 +4025,8 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/crm/companies"
   || pathname.startsWith("/api/crm/companies/")
   || pathname === "/api/crm/contacts"
+  || pathname === "/api/crm/cadences/templates"
+  || pathname.startsWith("/api/crm/cadences/templates/")
   || pathname === "/api/crm/opportunities"
   || pathname.startsWith("/api/crm/opportunities/")
   || pathname === "/api/crm/visits/agenda"

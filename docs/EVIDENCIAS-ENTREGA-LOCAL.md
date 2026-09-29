@@ -677,3 +677,86 @@ vínculo com os estados de visita do PUB-04. Integração com calendário extern
 segue fora do escopo local. `stages` da rota legada de detalhe continua sem a
 borda de propriedade. CRM-09/10, lacunas PUB, revalidação de CRM-01..06,
 aceite humano/Windows, SMTP e hospedagem externa continuam pendentes.
+
+## L04 / CRM-09 — cadências manuais de prospecção (Arena, 2026-09-29)
+
+Código desta continuação: branch `arena/01a0eea3-gruposegsystemseguranca`, base
+conferida `5a2e6a728368dc75bfad014caba7bf8c98173118` (= `main` no início),
+próxima migração livre confirmada como 108. A migração `108-crm-manual-cadences.sql`
+é a única migração nova; 001–107 não foram editadas.
+
+### Política registrada antes da rota
+
+- Só uma identidade staff ativa com papel `comercial` cria, edita, arquiva e
+  aplica modelos privados; outro comercial não lê o modelo de alguém e
+  `admin`, `marcelo`, `ti` e `rh` não têm bypass.
+- A aplicação é permitida somente à oportunidade do próprio responsável (ou
+  criador enquanto sem responsável), com contato ativo da mesma empresa.
+  Oportunidade de outra pessoa recebe 404, inclusive para outro comercial.
+- Um modelo aplicado gera tarefas manuais imediatamente. Cada passo conserva
+  título, intervalo de 0–365 dias, canal sugerido e responsável da sessão.
+  E-mail/WhatsApp são metadados de trabalho; não existe envio ou worker.
+- Opt-out bloqueia aplicações futuras e cancela tarefas abertas/em andamento.
+  Oportunidade ganha/perdida e contato desativado encerram a aplicação e
+  cancelam somente pendências; tarefas concluídas permanecem concluídas.
+  Reativar não ressuscita tarefas automaticamente.
+- Automação de mensagem fica para uma decisão posterior de autorização,
+  política de opt-out e provedor. SMTP continua fora do escopo local.
+
+### Implementação
+
+- `src/server/crm-cadence-api.mjs`: modelos, edição otimista, arquivamento,
+  aplicação idempotente, propriedade, opt-out e auditoria transacional.
+- `src/app/admin/crm/CadenceClient.tsx`: criação/edição pela UI, aplicação,
+  opt-out, histórico de aplicações e tarefas; texto explícito de que nenhuma
+  mensagem é enviada.
+- `db/migrations/108-crm-manual-cadences.sql`: modelos, passos, aplicações,
+  metadados de tarefa, `prospecting_opted_out`, triggers de bloqueio por estágio
+  final/inatividade/opt-out e novos eventos de auditoria.
+- `src/server/crm-api.mjs`: `stages` da rota legada de detalhe agora obedece a
+  mesma borda de propriedade da oportunidade.
+
+### Cenários executados
+
+| Cenário | Perfil/ambiente | Esperado | Observado |
+|---|---|---|---|
+| Modelo e tarefas | comercial responsável, Chromium 1440×1000 | criar/editar modelo, aplicar, recarregar e persistir | UI real criou e editou modelo; aplicação criou tarefa; recarga exibiu tarefa e canal sugerido |
+| Negações | anônimo, RH, outro comercial, origem ausente, método/campos inválidos | 401/403/404/405/400, sem ampliação de escopo | aprovados; outro comercial recebeu 404 na oportunidade e lista própria de modelos vazia |
+| Idempotência e concorrência lógica | mesma aplicação repetida; versão antiga do modelo | não duplicar tarefas; conflito explícito | 409 `cadence_already_applied`; 409 `template_version_conflict` coberto na API do modelo |
+| Opt-out | responsável via HTTP e banco de trigger | cancelar pendências, bloquear aplicação seguinte, não enviar | 200 com uma tarefa bloqueada; nova aplicação 409 `contact_opted_out` |
+| Oportunidade ganha | responsável via PATCH HTTP | encerrar e cancelar pendente | `encerrada_ganha`, razão `oportunidade_ganha` |
+| Contato inativo | tarefa criada por HTTP; estado inativo sintético por SQL | encerrar e cancelar pendente | `encerrada_contato_inativo`, razão `contato_inativo` |
+| Rota legada | outro comercial vs responsável | `stages` não vaza; proprietário lê o próprio histórico | lista vazia para outro comercial e estágio visível para o proprietário |
+| Auditoria indisponível | trigger QA rejeita `crm_cadence_apply` | 503 e rollback completo | nenhum enrollment nem task persistido |
+
+SQL foi usado somente para fixture/asserção (contato sintético inativo),
+verificação de autoria/contagem e trigger de falha; a criação/edição/aplicação,
+opt-out e transições foram chamadas por HTTP. Chromium empacotado foi executado
+sem `--disable-web-security` e o cenário usou um navegador para a persona
+comercial.
+
+### Comandos e resultados
+
+| Comando | Resultado |
+|---|---|
+| `npm ci` | 82 pacotes, 0 vulnerabilidades, exit 0 |
+| `node scripts/qa-wave0-static.mjs` | 5/5; migrações 001–108 contínuas e agendadas |
+| `npm run test:migrations:pg` | 108/108 primeira aplicação e replay; 509 tabelas; clone/checksum negativo aprovados |
+| `npm run test:l04-delivery:pg` | 5/5; HTTP real + PostgreSQL descartável + Chromium real; exit 0 |
+
+As regressões finais desta continuação (`npm test`, `npm run typecheck` e
+`npm run build`) são registradas após sua execução abaixo; nenhum resultado de
+SHA histórico é reutilizado como prova desta branch.
+
+### Regressão final no SHA desta continuação
+
+| Comando | Resultado observado |
+|---|---|
+| `npm test` | 186/186, exit 0 |
+| `npm run typecheck` | 0 erros, exit 0 |
+| `npm run build` | sucesso, 70 rotas, exit 0 |
+| `git diff --check` | sem erro |
+
+`next-env.d.ts` e `tsconfig.json` foram conferidos após gates/build e não ficaram
+apontando para `.next/integration-l04`; não há alterações automáticas desses
+arquivos no patch.
