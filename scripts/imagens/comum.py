@@ -441,6 +441,98 @@ def brilho_superior(img, altura_rel=0.5, forca=0.16):
     return img
 
 
+def marco_cantos(img, x0, y0, x1, y1, tam=26, cor=OURO, largura=3, alfa=210):
+    """Cantos em L (registro gráfico/tech) dentro da área indicada."""
+    camada = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(camada)
+    c = cor + (alfa,)
+    for cx, cy, sx, sy in ((x0, y0, 1, 1), (x1, y0, -1, 1), (x0, y1, 1, -1), (x1, y1, -1, -1)):
+        d.line([(cx, cy), (cx + sx * tam, cy)], fill=c, width=largura)
+        d.line([(cx, cy), (cx, cy + sy * tam)], fill=c, width=largura)
+    img.alpha_composite(camada)
+    return img
+
+
+def grade_fina(img, passo=60, cor=BRANCO, alfa=26, largura=1, diagonal=False):
+    """Malha técnica discreta (dá textura de projeto ao fundo sem competir com o texto)."""
+    camada = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(camada)
+    for x in range(passo, img.width, passo):
+        d.line([(x, 0), (x, img.height)], fill=cor + (alfa,), width=largura)
+    for y in range(passo, img.height, passo):
+        d.line([(0, y), (img.width, y)], fill=cor + (alfa,), width=largura)
+    if diagonal:
+        for x in range(0, img.width + img.height, passo * 3):
+            d.line([(x, 0), (x - img.height, img.height)], fill=cor + (max(alfa // 2, 6),), width=largura)
+    img.alpha_composite(camada)
+    return img
+
+
+def selo_circular(diametro, escudo_altura, anel=OURO, interna=MARINHO, fio=OURO_CLARO, folga=7):
+    """Medalhão: disco marinho + anel dourado + escudo da marca ao centro."""
+    t = Tela(diametro, diametro)
+    r = diametro / 2
+    t.disco(r, r, r - 1, interna)
+    t.anel(r, r, r - folga, anel, max(2, diametro // 60))
+    t.anel(r, r, r - folga * 2.4, fio, max(1, diametro // 130))
+    base = t.resultado()
+    esc = escudo_simples(escudo_altura, preenchimento=BRANCO, contorno=OURO, contorno_px=max(2, diametro // 90))
+    base.alpha_composite(esc, (int(r - esc.width / 2), int(r - esc.height / 2)))
+    return base
+
+
+def _glifo_nome(nome, altura, cor):
+    """Glifos pequenos de contato (usados nos rodapés e assinaturas), desenhados em traço."""
+    t = Tela(altura, altura)
+    c = altura
+    m = c * 0.14
+    k = cor
+    if nome == "globo":
+        t.anel(c / 2, c / 2, c / 2 - m / 2, k, c * 0.055)
+        t.traco([(m / 2, c / 2), (c - m / 2, c / 2)], k, c * 0.05)
+        t.d.ellipse([t.s(m * 0.95), t.s(m * 0.28), t.s(c - m * 0.95), t.s(c - m * 0.28)], outline=k + (255,), width=t.s(c * 0.05))
+        t.d.ellipse([t.s(c * 0.30), t.s(m / 2), t.s(c * 0.70), t.s(c - m / 2)], outline=k + (255,), width=t.s(c * 0.05))
+    elif nome == "email":
+        t.caixa(m, c * 0.26, c - m, c * 0.74, c * 0.08, contorno=k, largura=c * 0.055)
+        t.traco([(m + c * 0.05, c * 0.30), (c / 2, c * 0.53), (c - m - c * 0.05, c * 0.30)], k, c * 0.05)
+    elif nome == "whatsapp":
+        # balão de conversa + fone
+        t.caixa(m, m, c - m, c - m * 1.9, c * 0.34, contorno=k, largura=c * 0.055)
+        t.traco([(c * 0.32, c * 0.70), (c * 0.26, c * 0.90), (c * 0.46, c * 0.80)], k, c * 0.055)
+        t.d.arc([t.s(c * 0.34), t.s(c * 0.30), t.s(c * 0.66), t.s(c * 0.62)], 210, 30, fill=k + (255,), width=t.s(c * 0.06))
+        t.traco([(c * 0.40, c * 0.34), (c * 0.40, c * 0.44), (c * 0.50, c * 0.44)], k, c * 0.055)
+    elif nome == "instagram":
+        t.caixa(m, m, c - m, c - m, c * 0.22, contorno=k, largura=c * 0.055)
+        t.anel(c / 2, c / 2, c * 0.19, k, c * 0.05)
+        t.disco(c - m - c * 0.09, m + c * 0.09, c * 0.035, k)
+    elif nome == "linkedin":
+        t.caixa(m, m, c - m, c - m, c * 0.16, contorno=k, largura=c * 0.055)
+        t.traco([(c * 0.34, c * 0.72), (c * 0.34, c * 0.44)], k, c * 0.06)   # i
+        t.disco(c * 0.34, c * 0.33, c * 0.045, k)                             # pingo do i
+        t.traco([(c * 0.54, c * 0.72), (c * 0.54, c * 0.44)], k, c * 0.06)   # haste do n
+        t.traco([(c * 0.54, c * 0.50), (c * 0.64, c * 0.42), (c * 0.68, c * 0.56), (c * 0.68, c * 0.72)], k, c * 0.06)
+    elif nome == "telefone":
+        t.caixa(c * 0.28, c * 0.14, c * 0.72, c * 0.86, c * 0.14, contorno=k, largura=c * 0.055)
+        t.traco([(c * 0.44, c * 0.74), (c * 0.56, c * 0.74)], k, c * 0.045)
+    elif nome == "local":
+        # pino de mapa: círculo no topo + ponta inferior em V
+        t.anel(c / 2, c * 0.42, c * 0.24, k, c * 0.055)
+        t.traco([(c * 0.30, c * 0.58), (c / 2, c * 0.90), (c * 0.70, c * 0.58)], k, c * 0.055)
+        t.traco([(c * 0.30, c * 0.60), (c * 0.70, c * 0.60)], k, c * 0.045)
+    return t.resultado()
+
+
+def fileira_glifos(img, cx, y, nomes, altura, cor, espaco=34, ancora="c"):
+    larguras = [altura] * len(nomes)
+    total = sum(larguras) + espaco * (len(nomes) - 1)
+    x = cx - total / 2 if ancora == "c" else cx
+    for nome, w in zip(nomes, larguras):
+        g = _glifo_nome(nome, altura, cor)
+        img.alpha_composite(g, (int(x), int(y)))
+        x += w + espaco
+    return total
+
+
 def vinheta(img, forca=0.35):
     w, h = img.size
     yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)

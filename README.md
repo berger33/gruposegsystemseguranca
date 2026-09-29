@@ -31,6 +31,25 @@ Sem SMTP configurado, a resposta inclui `inviteUrl` para entrega manual pelo Wha
 
 A segunda camada **real** está ativa: vínculo verificado no servidor entre a identidade de acesso e o cadastro central do cliente (grant com emissor e motivo, revogação idempotente e imediata), mais os dados reais do painel — contratos, documentos e chamados. A regra de ouro: **o portal nunca confia em identificadores vindos do navegador**; cada consulta passa por sessão válida + grant ativo + cadastro ativo, e qualquer desvio responde `403 forbidden` genérico com linha de auditoria `authorization_denied`. Área do cliente em `/cliente/app` (visão geral, contratos, documentos com download auditado, chamados com resposta da equipe); painel operacional em `/admin/clientes` (cadastros → vínculos → contratos → documentos → chamados, com motivo obrigatório nas ações sensíveis). Migração `db/migrations/004-client-space.sql` + validadores compartilhados em `src/lib/client-space-core.mjs`. Detalhes em [portal do cliente](docs/portal-acesso-e-seguranca.md).
 
+## Imagens de marca, e-mail e interface (15 lotes, 150 peças)
+
+Acervo visual do Grupo SEG System pronto para uso em e-mail, sistema e site, com galeria de revisão
+em [`public/ui/preview.html`](public/ui/preview.html):
+
+- **E-mail (50 peças)** em `public/email/` — cabeçalhos, rodapés, faixas/divisores e assinaturas em
+  JPEG 1200 px de largura (exibição a 600 px em 2x), com fundo opaco para compatibilidade.
+- **Botões (20 peças)** em `public/ui/botoes/` — superfícies PNG com transparência (primário,
+  secundário, dourado, vidro, CTA, barra fixa, chip, sucesso, aviso, erro, destrutivo, fantasma,
+  desabilitado e carregando). O rótulo é escrito em HTML/CSS.
+- **Ícones (80 peças + derivados 64 px)** em `public/ui/icones/` — serviço, operação, navegação e ação
+  em traço marinho e nas versões reversas brancas, além das peças de marca (escudo, monograma GS e
+  medalhão) em `public/ui/icones/marca/`.
+- **Logotipo** recortado do arquivo real da marca em `public/brand/logo/` (logo, escudo e texto,
+  versões marinho e reversa) — nenhum elemento de marca é gerado por IA.
+
+Catálogo, convenções e como reproduzir: [docs/imagens-catalogo.md](docs/imagens-catalogo.md).
+Fundos fotográficos são ilustrações conceituais, não registros de instalações ou pessoas da empresa.
+
 ## Download das prévias
 
 - [Layout 01 — prévia estática original (.zip)](downloads/seg-system-previa.zip). Extraia e abra `index.html`.
