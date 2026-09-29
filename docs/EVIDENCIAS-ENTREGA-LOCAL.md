@@ -904,6 +904,97 @@ mais foi afrouxado.
   5/10 min preservado, teto 1000, valor inválido cai no padrão). Só o gate a
   usa; nenhum caminho de requisição pode alterá-la.
 
+## Continuação CRM-08 residual — visão de calendário por semana (branch `arena/01a0ef36-gruposegsystemseguranca`)
+
+Base da sessão: `ed50d22` (HEAD de `main` e da branch, merge dos PRs #22 e
+#23; a fatia de código é o merge `ea7a1ed`). Política registrada antes do
+código em `docs/PROMPT-CONTINUACAO-CRM-AGENDA-CALENDARIO.md`. **Sem migração
+nova**: o recorte reaproveita o endpoint `GET /api/crm/visits/agenda` já
+existente desde CRM-08 (migração 107/110), com os parâmetros `from`/`to` já
+aceitos e já autorizados; não há rota, coluna nem escopo novos. Migrações
+continuam 001–110, 509 tabelas.
+
+### Mudança comprovada
+
+`MyAgenda.tsx` (`/admin/crm`, agenda pessoal) ganhou um alternador "Ver em
+lista" / "Ver por semana". A visão semanal:
+
+- calcula a semana (segunda a domingo, fuso local do navegador) a partir de
+  um deslocamento de semanas navegável por "Semana anterior" / "Semana
+  atual" / "Próxima semana";
+- busca `GET /api/crm/visits/agenda?limit=100&offset=0&from=<segunda
+  00:00>&to=<domingo 23:59:59.999>` — mesma rota, mesma autorização (só
+  visitas em que a identidade é responsável ou participante convidado, sem
+  exposição de agenda alheia) já provada no cenário 4 e 7 de CRM-08;
+- agrupa por dia da semana e mostra apenas o essencial (horário, situação,
+  título, empresa);
+- é **somente leitura**: confirmar/recusar presença, reagendar e cancelar
+  continuam exclusivos da lista — decisão explícita para não duplicar
+  controle de versão otimista (`expected_version`) em uma segunda tela.
+
+Nenhuma rota de API foi criada ou alterada; `src/server/crm-visit-api.mjs`
+não foi tocado nesta fatia.
+
+### Gates executados
+
+| Comando | Esperado | Observado |
+|---|---|---|
+| `npm ci` | instalação reproduzível | 82 pacotes, exit 0 |
+| `node scripts/qa-wave0-static.mjs` | 5/5 | 5/5, migrações 001–110 contínuas e registradas no migrador (sem migração nova) |
+| `npm run test:migrations:pg` | replay + clone + checksum negativo | `CHECKSUMMED=110/110`, `TABLES=509->509` (inalterado), clone rejeita `006` sem rebaseline |
+| `npm run test:l04-delivery:pg` (1ª) | todos os cenários | **8/8**, exit 0 |
+| `npm run test:l04-delivery:pg` (2ª consecutiva) | reprodutível | **8/8**, exit 0 |
+| `npm test` | suíte unitária | 186/186 |
+| `npm run typecheck` | 0 erros | 0 erros |
+| `npm run build` | build com `/admin/crm` | sucesso |
+| `git diff --check` | limpo | limpo (`tsconfig.json`/`next-env.d.ts` restaurados após o dev server do gate reescrevê-los) |
+
+### Cenário 8 do gate L04 — o que é provado
+
+HTTP real, PostgreSQL 17 descartável, Chromium real sem
+`--disable-web-security`. Sem SQL de fixture além da criação padrão de
+empresa/oportunidade/visitas pela API real.
+
+1. Uma identidade `comercial` cria duas visitas futuras: uma "perto" (2 dias
+   à frente) e uma "distante" (20 dias à frente).
+2. Na UI, a lista mostra as duas normalmente (regressão: nada mudou na visão
+   pré-existente).
+3. Ao alternar para "Ver por semana", a busca real ao mesmo endpoint é
+   aguardada antes de qualquer asserção (sem *race* entre o clique e o
+   estado ainda "Carregando a semana…").
+4. A visita "distante" **nunca** aparece na semana atual nem na seguinte —
+   prova de que o filtro de período é real, não decorativo.
+5. A visita "perto" aparece exatamente no dia da semana correto (nome do dia
+   + data calculados independentemente pelo teste e comparados ao rótulo
+   acessível `Dia da agenda <dia da semana> <dd/mm>` renderizado pela UI),
+   seja na semana atual, seja — no pior caso, quando o dia do teste cai perto
+   da virada de semana — na seguinte; ao voltar para "Semana atual" ela some
+   de novo.
+6. Uma semana inteiramente no passado ("Semana anterior" a partir da atual)
+   não mostra nenhuma das duas visitas.
+7. Voltar para "Ver em lista" preserva as duas visitas, sem perda de estado.
+8. Nenhum erro de console, requisição falhada same-origin ou resposta 5xx
+   durante toda a navegação.
+
+### Limites honestos deste recorte
+
+- A visão de calendário é **somente leitura**: não há confirmar, recusar,
+  reagendar, cancelar ou convidar a partir dela. Decisão de escopo explícita,
+  não limitação técnica — ver `docs/PROMPT-CONTINUACAO-CRM-AGENDA-CALENDARIO.md`.
+- Lembretes e notificações da agenda continuam fora (dependem de provedor,
+  autorização e opt-out — nenhum decidido).
+- Sem paginação dentro da semana além do teto já existente (`limit=100`); se
+  a contagem total exceder o exibido, a tela avisa em vez de fingir
+  completude.
+- CRM-07 (kanban/tabela campo a campo, notas internas), lacunas PUB
+  (PUB-02/05/06..10) e revalidação campo a campo de CRM-01..06 continuam
+  pendentes. CRM-10, automação de mensagens, SMTP, calendário externo,
+  hospedagem externa, Windows e aceite humano seguem fora por decisão.
+
+*(Nota de integração: na fusão com a fatia de notas/kanban, este cenário passou a
+ser o nono do gate; a bateria mesclada revalidou 9/9 em duas execuções
+consecutivas.)*
+
 ## Continuação CRM-07 residual — notas internas e campo a campo de CRM-05/06 (branch `arena/01a0eef9-gruposegsystemseguranca`)
 
 ### Política registrada antes da rota
@@ -1042,3 +1133,17 @@ mais foi afrouxado.
 - CRM-02 (contato com função decisor/influenciador/usuário/financeiro com
   preferências/restrições) continua sem tela dedicada; CRM-01..04 aguardam
   revalidação campo a campo.
+
+
+### Integração com o PR #24 (calendário de CRM-08)
+
+Esta fatia foi desenvolvida em paralelo à fatia de calendário de CRM-08
+(PR #24, branch `arena/01a0ef36`). No merge para o `main` atualizado, os
+conflitos do gate e dos docs foram resolvidos mantendo **os dois** cenários —
+o de calendário passou a ser o **nono** — e a bateria completa foi
+re-executada sobre o estado mesclado: `node scripts/qa-wave0-static.mjs` 5/5,
+`npm run test:migrations:pg` 111/111 (replay, clone, checksum negativo, 510
+tabelas), `npm run test:l04-delivery:pg` **9/9, duas vezes consecutivas**,
+`npm test` 186/186, `npm run typecheck` 0 erros, `npm run build` ok,
+`git diff --check` limpo. Nenhuma regra de proteção foi afrouxada na resolução
+(ambos os cenários novos preservados na íntegra).
