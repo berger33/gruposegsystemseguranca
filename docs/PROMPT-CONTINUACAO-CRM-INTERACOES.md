@@ -7,8 +7,8 @@ O roteiro é L00–L10 e contém 222 requisitos. SMTP e hospedagem externa ficam
 L04 permanece PARCIAL: não avance para L05 enquanto as lacunas combinadas não estiverem resolvidas ou houver mudança explícita de escopo.
 
 ## Patch desta continuação
-Trabalho feito diretamente na branch `arena/01a0ee3c-gruposegsystemseguranca` (que já contém o PR #13 mesclado em `ec450b6`), sem PR novo aberto até aqui.
-Código validado: `7c56a6facb0a710a9bf112a998742205afe730c8`.
+PR #14: https://github.com/berger33/gruposegsystemseguranca/pull/14 — aberto a partir da branch `arena/01a0ee3c-gruposegsystemseguranca` (que já continha o PR #13 mesclado em `ec450b6`), CI verde (L04 CRM delivery + QA baseline) e **mesclado em `main`** no commit `927cb8d469a9df98100bda42aa5a4197def3c0d5`. `main` e a branch Arena estão sincronizadas nesse mesmo commit; não há divergência pendente para resolver na próxima sessão.
+Código validado: `7c56a6facb0a710a9bf112a998742205afe730c8` (conteúdo idêntico ao de `main` após o merge).
 
 Implementado:
 - `GET/POST /api/crm/opportunities/:id/interactions` (`src/server/crm-interaction-api.mjs`): histórico de interações por oportunidade, tipo restrito a `ligacao`/`reuniao`/`nota` nesta fatia.
@@ -25,7 +25,7 @@ O recorte NÃO conclui CRM-07. Não inclui: anexos/notas com upload; edição ou
 Resultados: `npm run test:unit` 186/186; `tsc --noEmit` 0 erros; `npm run test:migrations:pg` 105/105 com replay e checksum negativo, 504 tabelas; `npm run build` sucesso (72 rotas); `npm run test:l04-delivery:pg` 3/3, executado 7 vezes nesta sessão com 6/7 verdes (uma falha isolada sem repetição, tratada como ruído do sandbox — ver `EVIDENCIAS-ENTREGA-LOCAL.md` para o detalhe exato e não relaxe a investigação se ela se repetir). Consulte as evidências para os comandos exatos.
 
 ## Próximo passo recomendado
-1. Confira o estado atual da branch Arena e o commit `7c56a6f` antes de continuar; não recomece da base histórica do PR #13.
+1. Confira o estado atual da branch Arena (deve estar em `927cb8d` ou à frente) antes de continuar; não recomece da base histórica do PR #13 nem do #14 — ambos já estão em `main`.
 2. Amplie o histórico de interações OU avance para CRM-08, com uma destas prioridades (escolha uma por vez, não as duas simultaneamente):
    - **Opção A — fechar lacunas de interações:** anexo simples (reaproveitando o armazenamento privado do L02, com hash e autorização, não um upload novo do zero), edição/exclusão com auditoria própria, vínculo com contato, os tipos restantes (`email`/`whatsapp`/`visita`/`outro`), paginação real.
    - **Opção B — CRM-08 (agenda de visitas/reuniões):** responsável, participantes, confirmação, reagendamento e cancelamento sobre a tabela `crm_visits` já existente (migração 014); definir explicitamente se compartilha a mesma regra de propriedade de tarefas/interações ou se precisa de escopo de equipe (participantes múltiplos) — não decida isso silenciosamente, documente a escolha.
