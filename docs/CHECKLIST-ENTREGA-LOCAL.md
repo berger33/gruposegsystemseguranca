@@ -113,262 +113,262 @@ Proteção de abuso e identidade Aceite: Limites de login/convite/formulário/re
 
 ## PUB-01
 catálogo único dos seis serviços validados no projeto; cada item tem descrição, público, perguntas de qualificação e flag de publicação. Cerca elétrica ou novos serviços entram somente após validação comercial.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `src/lib/service-catalog.mjs` — catálogo único dos 6 serviços (descrição, público, perguntas de qualificação, flag de publicação). Consumido por `/servicos`, `/orcamento` e `/contato`.
+- Integração e evidência (teste, resultado, commit): Gate `npm run test:l04-delivery:pg` (Chromium real) navega `/servicos` e usa o mesmo catálogo em `/orcamento`/`/contato` — sessão L04, branch `arena/01a0ed3d-gruposegsystemseguranca`.
+- Pendência / fronteira externa / aceite humano: Nenhum novo serviço (ex.: cerca elétrica) foi adicionado; catálogo permanece fechado aos 6 validados. Sem tela de administração do catálogo em si (é código, não CMS) — aceite humano pendente.
 
 ## PUB-02
 páginas por serviço e segmento, contato claro, FAQ revisada, cases/imagens autorizados; revisão de acessibilidade, navegação e desempenho.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: parcial
+- Tela / API / dados / autorização: `/servicos`, `/servicos/[id]`, `/faq`, `/contato` (páginas públicas existentes, não alteradas nesta sessão salvo remoção do fetch admin indevido em `AiBotWidget.tsx`).
+- Integração e evidência (teste, resultado, commit): Gate L04: Chromium percorre `/servicos` (mobile) e valida ausência de rolagem horizontal e de erros de console/rede same-origin. `PubFaqAssistedClient.tsx` (FAQ assistida/handoff, PUB-05) segue órfão — não conectado nesta sessão.
+- Pendência / fronteira externa / aceite humano: Revisão de acessibilidade/desempenho formal não foi feita. FAQ assistida com IA (PUB-05) permanece componente não conectado a nenhuma página; handoff humano não implementado além do FAQ estático.
 
 ## PUB-03
 orçamento e visita integrados à mesma API; protocolo persistido, consentimento/aviso pertinente, origem/campanha, antispam, deduplicação controlada e responsável de atendimento.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `POST /api/leads` (`server.mjs handleCreateLead`) grava `public_leads` (protocolo, consentimento, origem, campanha, canal, e-mail, dedup_key); validação em `src/lib/public-lead-validation.mjs`.
+- Integração e evidência (teste, resultado, commit): Gate L04: visitante anônimo real (sem sessão) envia `/contato`; dedup/antispam/consentimento testados por HTTP direto com controles negativos (origem/campanha maliciosa, canal inválido, e-mail inválido, replay). Corrigido nesta sessão: `public-lead-validation.mjs` descartava silenciosamente origin/campaign/channel/email do formulário real; `handleCreateLead` confiava em `dedupKey` vindo do navegador — agora a chave é derivada só no servidor (telefone+cidade+serviços+janela de 30min).
+- Pendência / fronteira externa / aceite humano: Responsável de atendimento por lead ainda é atribuído manualmente em `/admin/leads`, sem regra automática de distribuição. Antispam é básico (padrões de marcação/URL); sem CAPTCHA nem rate limit dedicado ao endpoint de leads além do geral.
 
 ## PUB-04
 visita com estados solicitada, em agendamento, confirmada, realizada, cancelada; pessoa responsável confirma, notificação não promete horário sem reserva real.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `PATCH /api/admin/leads/:id` (`handleAdminLeadStatus`) com estados solicitada→em_agendamento→confirmada→realizada→cancelada; UI em `/admin/leads` (papéis `marcelo`,`ti`,`comercial`,`admin`).
+- Integração e evidência (teste, resultado, commit): Gate L04 exercita transições de visita reais via HTTP autenticado com sessão de staff `comercial` (login real, não token).
+- Pendência / fronteira externa / aceite humano: Notificação ao solicitante sobre confirmação de horário usa a caixa local (L02) — nunca promete envio real (SMTP fora de escopo). Sem tela dedicada de agenda/calendário; apenas lista com status.
 
 ## PUB-05
 FAQ assistida e transferência humana; bot não inventa preço, cobertura, licença ou prazo. IA/RAG só depois de base aprovada e controles do capítulo 19.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: `PubFaqAssistedClient.tsx` existe mas não está conectado a nenhuma rota; `/faq` é estático.
+- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão (L04 focou a jornada comercial central). `AiBotWidget.tsx` foi corrigido apenas para não disparar fetch admin indevido nas páginas públicas.
+- Pendência / fronteira externa / aceite humano: FAQ assistida por IA/RAG e transferência humana continuam sem tela conectada. Não avançar guardrails de preço/cobertura/licença/prazo do bot sem essa conexão.
 
 ## PUB-06
 CMS de páginas, FAQ, cases, blog e vagas, com rascunho/revisão/publicação, histórico e reversão.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: `CmsClient.tsx` existe em `src/app/admin/ti/` mas não está importado por nenhuma página.
+- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão.
+- Pendência / fronteira externa / aceite humano: CMS de páginas/FAQ/cases/blog/vagas com rascunho/revisão/publicação/histórico permanece órfão. Fica para a próxima sessão (ver prompt de continuação).
 
 ## PUB-07
 temas com preview, publicação autorizada, configuração persistida e rollback; preferência dia/noite separada da identidade global. Implementar após núcleo.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: `ThemeClient.tsx` existe mas não está conectado; `/admin/tema` é uma página separada e anterior, não revalidada nesta sessão.
+- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão.
+- Pendência / fronteira externa / aceite humano: Preview/publicação/rollback de tema e preferência dia/noite não foram revalidados nem conectados ao componente órfão.
 
 ## PUB-08
 SEO técnico, títulos, sitemap, redirects e verificação de domínio na liberação; preservar noindex em ambientes não produtivos.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: `SeoClient.tsx` existe mas não está conectado a nenhuma página administrativa.
+- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão.
+- Pendência / fronteira externa / aceite humano: SEO técnico, sitemap, redirects e verificação de domínio permanecem sem tela de administração navegável.
 
 ## PUB-09
 montador de pacote/comparador de serviços e planos somente a partir de catálogo e regras aprovadas; nenhuma promessa/preço de demonstração em produção.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: parcial
+- Tela / API / dados / autorização: `/orcamento` foi reescrita nesta sessão: removido o antigo "modo empresarial" com preços inventados; agora é formulário de pedido de orçamento real sobre o catálogo (PUB-01), via `/api/leads`. `PackageClient.tsx` (montador/comparador administrativo) continua órfão.
+- Integração e evidência (teste, resultado, commit): Gate L04 valida `/orcamento` real (sem preço fabricado) enviando lead com `origin=orcamento`.
+- Pendência / fronteira externa / aceite humano: Não existe montador de pacote nem comparador de planos no lado público ou administrativo — apenas o pedido de orçamento simples substituiu a simulação falsa que havia antes. `PackageClient.tsx` não foi conectado.
 
 ## PUB-10
 mensuração de origem e conversão com minimização de dados; testes A/B somente após tráfego, hipótese e tratamento de dados definidos.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: `OriginMetricsClient.tsx` existe mas não está conectado a nenhuma página administrativa.
+- Integração e evidência (teste, resultado, commit): Origem/campanha são capturadas e persistidas desde o L04 (`public_leads.origin/campaign`, ver PUB-03) e aparecem em `/admin/leads`, mas não há painel de métricas de conversão nem testes A/B.
+- Pendência / fronteira externa / aceite humano: Mensuração de conversão por origem/campanha e testes A/B continuam sem tela; dados brutos existem, análise não.
 
 ## CRM-01
 cadastro central de empresas e contatos; nome, identificação fiscal quando necessária, segmento, cidade, unidades, canais e responsáveis. Distinguir prospect/cliente/parceiro sem duplicar entidade.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: parcial (pré-existente, não revalidado a fundo nesta sessão)
+- Tela / API / dados / autorização: `/admin/crm` (página anterior a esta sessão) — `POST/GET /api/crm/companies`, tipo prospect/cliente/parceiro.
+- Integração e evidência (teste, resultado, commit): Não foi alvo de mudança nem de gate dedicado nesta sessão; comportamento herdado. Migração 103 desta sessão apenas ampliou o CHECK de `crm_companies.created_by` para permitir gravação pelo papel `comercial` (antes rejeitada).
+- Pendência / fronteira externa / aceite humano: Sem teste de HTTP+navegador dedicado a CRM-01 nesta sessão; a tela não foi inspecionada campo a campo. Cadastro central existe e funciona (usado indiretamente pelo fluxo de conversão de lead do gate L04), mas o requisito completo (unidades, canais, responsáveis) não foi revalidado.
 
 ## CRM-02
 contato com função no processo de compra (decisor, influenciador, usuário, financeiro), preferências e restrições de abordagem; registrar origem legítima, sem coleta indiscriminada.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Sem tela dedicada de contato com função (decisor/influenciador/usuário/financeiro) encontrada em `/admin/crm`; a API `crm_contacts` pode existir no schema, mas não foi localizada UI própria.
+- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão.
+- Pendência / fronteira externa / aceite humano: Preferências/restrições de abordagem e origem legítima do contato não foram revalidadas nem expostas em tela.
 
 ## CRM-03
 importar CSV com prévia, validação por linha, mapeamento, relatório, deduplicação revisável e prevenção de fórmula maliciosa na exportação.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: parcial (pré-existente, não revalidado a fundo nesta sessão)
+- Tela / API / dados / autorização: `/admin/crm` tem importação de CSV com prévia (`csvContent`, `importPreview`, `importResult`).
+- Integração e evidência (teste, resultado, commit): Não foi alvo de mudança nem de gate dedicado nesta sessão.
+- Pendência / fronteira externa / aceite humano: Deduplicação revisável e prevenção de fórmula maliciosa na exportação não foram reexecutadas como prova nesta sessão.
 
 ## CRM-04
 converter lead do site em contato/oportunidade preservando histórico; tratar duplicidade e contato sem empresa.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `POST /api/crm/leads/:id/convert`; UI em `/admin/leads` (`convertLead()`, novo nesta sessão) e em `/admin/crm` (`convertLead()` pré-existente).
+- Integração e evidência (teste, resultado, commit): Gate L04: conversão de lead real por HTTP autenticado (staff `comercial`) e reconversão idempotente do mesmo lead (não duplica empresa/oportunidade).
+- Pendência / fronteira externa / aceite humano: Tratamento de duplicidade é feito pela chave de empresa informada manualmente no prompt; não há resolução automática de contato sem empresa.
 
 ## CRM-05
 oportunidades com serviço, necessidade, responsável, unidade, previsão, valor estimado, próxima ação/data, origem, prioridade e motivo de perda.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: parcial (pré-existente, não revalidado a fundo nesta sessão)
+- Tela / API / dados / autorização: `/admin/crm` lista oportunidades com estágio, prioridade, valor estimado, próxima ação/data.
+- Integração e evidência (teste, resultado, commit): Usado indiretamente pelo gate L04 (a conversão de lead cria a oportunidade), mas os campos individuais (origem, motivo de perda) não foram todos exercitados nesta sessão.
+- Pendência / fronteira externa / aceite humano: Sem revalidação campo a campo desta sessão.
 
 ## CRM-06
 funil inicial novo → qualificação → vistoria/diagnóstico → proposta em elaboração → enviada → negociação → ganho/perdido. Motivo obrigatório para perda; reabertura auditada. Não tratar “ganho” como dinheiro recebido.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: parcial (pré-existente, não revalidado a fundo nesta sessão)
+- Tela / API / dados / autorização: `/admin/crm` — funil novo→qualificação→vistoria→proposta_elaboração→enviada→negociação→ganho/perdido (rótulos no código-fonte da página).
+- Integração e evidência (teste, resultado, commit): Gate L04 cria e avança oportunidade só até o ponto necessário para orçamento/proposta; não exercitou o funil completo nem motivo de perda/reabertura.
+- Pendência / fronteira externa / aceite humano: Motivo obrigatório de perda e reabertura auditada não foram provados nesta sessão.
 
 ## CRM-07
 kanban e tabela, filtros, busca, tarefas vencidas, histórico de ligações/reuniões, anexos e notas internas autorizadas.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Sem UI; a própria página `/admin/crm` documenta "estrutura pronta em 014 (tasks, interactions, visits)" — ou seja, schema existe, tela não.
+- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão.
+- Pendência / fronteira externa / aceite humano: Kanban, filtros, busca, tarefas vencidas, histórico de ligações/reuniões, anexos e notas internas continuam sem tela.
 
 ## CRM-08
 agenda de visitas e reuniões, responsável, participantes, confirmação, reagendamento e cancelamento. Links/calendário externo somente por integração configurada.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Sem UI de agenda de visitas/reuniões; schema de `visits` existe (ver CRM-07).
+- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão. PUB-04 (estados de visita) tem tela própria em `/admin/leads`, mas não é a agenda de CRM-08.
+- Pendência / fronteira externa / aceite humano: Confirmação, reagendamento e cancelamento de reunião não têm tela dedicada.
 
 ## CRM-09
 cadências de prospecção inicialmente como tarefas; automação de mensagens depende de autorização, opt-out quando aplicável e provedor.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Sem UI de cadências; schema de `tasks` existe (ver CRM-07).
+- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão.
+- Pendência / fronteira externa / aceite humano: Cadências de prospecção como tarefas não têm tela; automação de mensagens nem deveria avançar sem autorização/opt-out/provedor definidos.
 
 ## CRM-10
 carteira com renovação, serviços adicionais, reativação, indicações, oportunidades sem próxima ação e relacionamentos por grupo/unidade.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Sem UI de carteira; schema pode existir mas não foi localizada tela.
+- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão.
+- Pendência / fronteira externa / aceite humano: Renovação, upsell, reativação, indicações e relacionamento por grupo/unidade continuam sem tela.
 
 ## CRM-11
 separar serviços recorrentes/avulsos, instalação, manutenção, venda, locação/comodato quando praticados. Campos: unidade de cobrança, escopo, exclusões, recursos, custo, preço, vigência e aprovação.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/comercial` (`ComercialWorkspace.tsx`, novo nesta sessão) — tabs vistoria/orcamentos/precos/propostas/contratos/catalogo/relatorios/biblioteca. Serviços/equipamentos via `CatalogClient.tsx`/`EquipmentClient.tsx` na tab catálogo.
+- Integração e evidência (teste, resultado, commit): Gate L04 usa catálogo/equipamento reais como base do orçamento técnico e de mão de obra.
+- Pendência / fronteira externa / aceite humano: Locação/comodato como modalidade de cobrança não foi exercitada explicitamente no gate; existe no schema.
 
 ## CRM-12
 equipamentos: fabricante/modelo, especificações, compatibilidades, fornecedor, garantia e ligação com estoque. Não confundir serviço com item físico.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/comercial` (`ComercialWorkspace.tsx`, novo nesta sessão) — tabs vistoria/orcamentos/precos/propostas/contratos/catalogo/relatorios/biblioteca. `EquipmentClient.tsx`.
+- Integração e evidência (teste, resultado, commit): Gate L04 cria/consulta equipamento real vinculado ao orçamento técnico.
+- Pendência / fronteira externa / aceite humano: Ligação com estoque físico não foi exercitada (fora do escopo local declarado).
 
 ## CRM-13
 vistoria com checklist por serviço, quantidades, cobertura/turnos, infraestrutura, fotos autorizadas, limitações e responsável técnico.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/comercial` (`ComercialWorkspace.tsx`, novo nesta sessão) — tabs vistoria/orcamentos/precos/propostas/contratos/catalogo/relatorios/biblioteca. `InspectionClient.tsx` na tab vistoria.
+- Integração e evidência (teste, resultado, commit): Gate L04: cria vistoria real vinculada à visita/oportunidade, por HTTP autenticado, antes de orçar.
+- Pendência / fronteira externa / aceite humano: Fotos autorizadas e checklist completo por serviço não foram exercitados byte a byte; o gate cobre os campos estruturais.
 
 ## CRM-14
 orçamento de mão de obra com composição de cobertura, salários e custos aplicáveis, benefícios, provisões, substituição, supervisão, uniforme/EPI, deslocamento, materiais e indiretos.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/comercial` (`ComercialWorkspace.tsx`, novo nesta sessão) — tabs vistoria/orcamentos/precos/propostas/contratos/catalogo/relatorios/biblioteca. `LaborBudgetClient.tsx` na tab orçamentos.
+- Integração e evidência (teste, resultado, commit): Gate L04 cria orçamento de mão de obra real vinculado à vistoria.
+- Pendência / fronteira externa / aceite humano: Todos os componentes de custo (benefícios, provisões, substituição etc.) existem no schema; o gate não confere cada um isoladamente, só a criação e o fluxo de aprovação de preço.
 
 ## CRM-15
 orçamento técnico com materiais, equipamentos, mão de obra, instalação, deslocamento, infraestrutura, licenças, garantia e manutenção.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/comercial` (`ComercialWorkspace.tsx`, novo nesta sessão) — tabs vistoria/orcamentos/precos/propostas/contratos/catalogo/relatorios/biblioteca. `TechnicalBudgetClient.tsx` na tab orçamentos.
+- Integração e evidência (teste, resultado, commit): Gate L04 cria orçamento técnico real (materiais/equipamento/instalação) vinculado à mesma vistoria.
+- Pendência / fronteira externa / aceite humano: Garantia e manutenção como campos foram criados no schema; não foram todos exercitados individualmente pelo gate.
 
 ## CRM-16
 parâmetros de tributos/custos/jornada versionados com validade, fonte e aprovador; nenhuma alíquota ou regra coletiva inventada. Impedir preço oficial se faltar parâmetro essencial.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/comercial` (`ComercialWorkspace.tsx`, novo nesta sessão) — tabs vistoria/orcamentos/precos/propostas/contratos/catalogo/relatorios/biblioteca. `CostParameterClient.tsx` na tab precos.
+- Integração e evidência (teste, resultado, commit): Gate L04 prova o bloqueio intencional: sem parâmetro essencial, o preço oficial não pode ser aprovado (`essential_params_missing_cannot_approve_official_price`) — comportamento correto da regra de negócio, confirmado por controle negativo real, não simulado.
+- Pendência / fronteira externa / aceite humano: Fonte/aprovador de cada parâmetro não foram auditados um a um; o gate cobre o efeito (bloqueio) e não o cadastro completo de todas as alíquotas.
 
 ## CRM-17
 cenários de preço e margem, separando margem de markup. Para tributos proporcionais à receita e margem sobre receita, uma simulação pode usar preço = custo / (1 - taxa - margem), somente sob premissas explícitas, denominador válido e aprovação contábil. Não impor essa fórmula a todos os regimes.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/comercial` (`ComercialWorkspace.tsx`, novo nesta sessão) — tabs vistoria/orcamentos/precos/propostas/contratos/catalogo/relatorios/biblioteca. `PriceScenarioClient.tsx` na tab precos.
+- Integração e evidência (teste, resultado, commit): Gate L04 cria cenário de preço válido e testa controle negativo de denominador inválido (fórmula preço = custo / (1 - taxa - margem) recusada quando o denominador não é positivo).
+- Pendência / fronteira externa / aceite humano: Aprovação contábil formal do cenário é um campo/flag no fluxo, não uma integração externa real; permanece decisão local, não contábil oficial.
 
 ## CRM-18
 alçadas de desconto e exceções; motivo, solicitante, aprovador e versão. Alteração de itens/custos após aprovação reabre a aprovação.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `src/server/discount-api.mjs` (corrigido nesta sessão) + `DiscountClient.tsx` na tab precos.
+- Integração e evidência (teste, resultado, commit): Achado e corrigido nesta sessão: a verificação de alçada era um bloco vazio (nunca bloqueava de fato) com bypass implícito para qualquer papel/admin. Agora: bloqueio de autoaprovação verificado primeiro (solicitante == aprovador nunca aprova), depois `hasPermission(pool,{permission:'proposals.approve_discount'})` real via `auth_permissions` — sem bypass por papel. Gate L04 prova: negação de autoaprovação, negação por falta de permissão, aprovação real por segunda identidade com a concessão, e reabertura da aprovação após editar item pós-aprovação (mecanismo já existente, agora com trilha de prova ponta a ponta).
+- Pendência / fronteira externa / aceite humano: A concessão de `proposals.approve_discount` ainda é feita nesta entrega via inserção direta em `auth_permissions` para fins de prova; não há tela de administração de concessão de permissões comerciais (a de RH/portal cobre outros domínios).
 
 ## CRM-19
 proposta versionada com itens, quantidades, recorrência, implantação, escopo, exclusões, prazo, reajuste previsto, validade e condições; PDF gerado a partir da mesma versão persistida.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/comercial` (`ComercialWorkspace.tsx`, novo nesta sessão) — tabs vistoria/orcamentos/precos/propostas/contratos/catalogo/relatorios/biblioteca. `ProposalClient.tsx` na tab propostas.
+- Integração e evidência (teste, resultado, commit): Gate L04: cria proposta versionada com itens reais, transições de versão, trava de itens após envio (409), e gera PDF cujos bytes/cabeçalho são verificados de verdade (não é simulação).
+- Pendência / fronteira externa / aceite humano: Reajuste previsto e condições contratuais complexas existem como campos; não foram todos exercitados individualmente.
 
 ## CRM-20
 estados rascunho → revisão → aprovada para envio → enviada → aceita/recusada/expirada/substituída; preservar versões enviadas.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/comercial` (`ComercialWorkspace.tsx`, novo nesta sessão) — tabs vistoria/orcamentos/precos/propostas/contratos/catalogo/relatorios/biblioteca. `ProposalClient.tsx`.
+- Integração e evidência (teste, resultado, commit): Gate L04 percorre rascunho→revisão→aprovada para envio→enviada, incluindo a trava de itens (409) após o envio; versões anteriores preservadas.
+- Pendência / fronteira externa / aceite humano: Estados aceita/recusada/expirada/substituída são exercitados via o fluxo de aceite (CRM-22/23), não isoladamente aqui.
 
 ## CRM-21
 envio rastreado com estados realistas (fila, enviado pelo provedor, falhou; entrega/leitura só quando comprovadas), aceite e assinatura por integração.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/comercial` (`ComercialWorkspace.tsx`, novo nesta sessão) — tabs vistoria/orcamentos/precos/propostas/contratos/catalogo/relatorios/biblioteca. `ProposalDeliveryClient.tsx` na tab propostas.
+- Integração e evidência (teste, resultado, commit): Gate L04 confirma que a entrega é honesta: usa só a caixa de saída local (L02), nunca declara "entregue"/"lido" sem `proof` explícito — sem SMTP nem provedor real, conforme escopo.
+- Pendência / fronteira externa / aceite humano: Assinatura por integração (DocuSign etc.) não existe e não está no escopo local; aceite é só o link seguro (CRM-22).
 
 ## CRM-22
 aceite por link seguro, expirável e vinculado à versão, se adotado; decisão jurídica sobre valor do aceite registrada. Não chamar clique simples de assinatura qualificada.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `src/server/proposal-acceptance-api.mjs` (bug de `require()` em ESM corrigido nesta sessão) + nova página pública `/proposta/aceite/[token]` (`AcceptanceClient.tsx`, novo nesta sessão) — primeira UI para esse fluxo, que antes só existia como API.
+- Integração e evidência (teste, resultado, commit): Gate L04 prova por Chromium real: token forjado 404, versão divergente após nova versão 409, link expirado 410 (backdatando `created_at` e `expires_at` para satisfazer `chk_expires_future`), aceite real preenchendo o formulário, reuso do link já aceito 410. Cópia explícita na tela: "aceite simples, não assinatura qualificada".
+- Pendência / fronteira externa / aceite humano: Decisão jurídica formal sobre o valor do aceite simples não foi registrada (é uma decisão de negócio/jurídica, fora do escopo técnico desta sessão).
 
 ## CRM-23
 proposta aceita cria contrato/implantação de modo idempotente; retries não duplicam cliente, contrato, postos ou faturamento.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/comercial` (`ComercialWorkspace.tsx`, novo nesta sessão) — tabs vistoria/orcamentos/precos/propostas/contratos/catalogo/relatorios/biblioteca. `ContractClient.tsx` na tab contratos.
+- Integração e evidência (teste, resultado, commit): Gate L04 aceita a proposta duas vezes seguidas (reuso do link já usado → 410) e confirma, via consulta direta, que existe exatamente uma linha de contrato — idempotência real provada, não assumida.
+- Pendência / fronteira externa / aceite humano: É um contrato mínimo/stub: sem numeração fiscal, sem integração de faturamento; rotulado como tal.
 
 ## CRM-24
 relatórios de conversão por etapa/origem, ciclo de vendas, tarefas atrasadas, motivos de perda, pipeline por período e cenário. Previsão ponderada é estimativa identificada.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/comercial` (`ComercialWorkspace.tsx`, novo nesta sessão) — tabs vistoria/orcamentos/precos/propostas/contratos/catalogo/relatorios/biblioteca. `ReportClient.tsx` na tab relatorios.
+- Integração e evidência (teste, resultado, commit): Componente conectado nesta sessão; não foi alvo de cenário dedicado no gate L04 além de estar acessível sem 5xx na varredura final de `/admin/comercial`.
+- Pendência / fronteira externa / aceite humano: Relatórios de conversão por etapa/origem e pipeline por cenário não tiveram cada métrica conferida individualmente nesta sessão — só a conectividade e ausência de erro foram provadas.
 
 ## CRM-25
 metas e comissões versionadas; base de cálculo (contratado/faturado/recebido), período, cancelamento e aprovação configuráveis, sem pagamento automático.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/comercial` (`ComercialWorkspace.tsx`, novo nesta sessão) — tabs vistoria/orcamentos/precos/propostas/contratos/catalogo/relatorios/biblioteca. `CommissionClient.tsx` na tab relatorios.
+- Integração e evidência (teste, resultado, commit): Conectado nesta sessão; coberto pela varredura final de `/admin/comercial` sem 5xx/console error. Sem pagamento automático (conforme exigido).
+- Pendência / fronteira externa / aceite humano: Base de cálculo (contratado/faturado/recebido) e aprovação não foram exercitadas cenário a cenário nesta sessão.
 
 ## CRM-26
 biblioteca comercial, apresentações/cases aprovados, campanhas segmentadas e comparação de propostas.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/comercial` (`ComercialWorkspace.tsx`, novo nesta sessão) — tabs vistoria/orcamentos/precos/propostas/contratos/catalogo/relatorios/biblioteca. `CommercialLibraryClient.tsx` na tab biblioteca.
+- Integração e evidência (teste, resultado, commit): Conectado nesta sessão; coberto pela varredura final sem 5xx/console error.
+- Pendência / fronteira externa / aceite humano: Comparação de propostas lado a lado não foi exercitada como cenário próprio.
 
 ## CRM-27
 parcerias e indicações, renovação/upsell e recuperação da carteira, com responsáveis e métricas.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/comercial` (`ComercialWorkspace.tsx`, novo nesta sessão) — tabs vistoria/orcamentos/precos/propostas/contratos/catalogo/relatorios/biblioteca. `PartnershipClient.tsx` na tab biblioteca.
+- Integração e evidência (teste, resultado, commit): Conectado nesta sessão; coberto pela varredura final sem 5xx/console error.
+- Pendência / fronteira externa / aceite humano: Métricas de renovação/upsell/recuperação de carteira não foram exercitadas cenário a cenário nesta sessão.
 
 ## CON-01
 contrato ligado à empresa, unidades, proposta/versão, serviços, responsáveis, vigência, valor e documentos. Admissão de cadastro manual com origem identificada.

@@ -320,3 +320,148 @@ Também ficaram provados:
   explicitamente com `anonymous_not_supported`.
 - Não houve SMTP, hospedagem externa ou execução no Windows. O aceite no
   equipamento-alvo pertence ao L10.
+
+
+## L04 — site, captação e comercial (branch `arena/01a0ed3d-gruposegsystemseguranca`)
+
+Comando principal: `npm run test:l04-delivery:pg`
+(`scripts/qa-l04-delivery-postgres.mjs` → `tests/l04-delivery.integration.test.mjs`).
+
+Resultado: **1 teste integral aprovado, 0 reprovados** (rodado duas vezes
+seguidas nesta sessão, mais uma terceira vez na revalidação final junto com o
+restante da suíte). O runner sobe um PostgreSQL 17 exclusivo, aplica 001–103,
+inicia `server.mjs` real e roda um único `test()` de ~180s de orçamento
+(`timeout: 180_000`) cobrindo HTTP direto e Chromium real.
+
+### Percurso provado pelo gate, na ordem
+
+1. Visitante anônimo (sem cookie/sessão) abre `/servicos` em Chromium mobile,
+   navega até `/contato` e envia o formulário de verdade — `POST /api/leads`
+   real, sem atalho.
+2. Retry do mesmo pedido é deduplicado pela chave computada no servidor;
+   controles negativos por HTTP direto: reenvio com dados forjados de
+   origem/campanha (marcação/URL), canal inválido, e-mail inválido —
+   todos recusados.
+3. Duas identidades de staff `comercial` distintas (`provisionAndLoginStaff`,
+   login real de e-mail/senha) com escopos genuinamente diferentes: só uma
+   recebe `proposals.approve_discount` via `auth_permissions`
+   (`scope_type='global'`, `granted_by_role='system'`).
+4. Staff autenticado vê o lead em `/admin/leads` com origem/campanha visíveis
+   e converte em oportunidade (`POST /api/crm/leads/:id/convert`); reconversão
+   do mesmo lead é idempotente (não duplica empresa/oportunidade).
+5. Transição de estado de visita (solicitada→em_agendamento→confirmada→
+   realizada) por HTTP autenticado.
+6. Vistoria, orçamento de mão de obra e orçamento técnico criados de verdade,
+   vinculados à mesma oportunidade/vistoria.
+7. Cenário de preço criado; controle negativo: denominador inválido na fórmula
+   preço = custo / (1 − taxa − margem) é recusado.
+8. Pedido de desconto: negação por autoaprovação (solicitante = aprovador),
+   negação por falta de `proposals.approve_discount` numa segunda identidade
+   sem a concessão, aprovação real pela identidade com a concessão. Edição de
+   item do orçamento após a aprovação reabre a aprovação (CRM-18).
+9. Proposta versionada criada com itens; transição de estado até "enviada";
+   tentativa de editar item após o envio recusada com 409 (trava real, não
+   apenas de UI).
+10. PDF gerado e **os bytes e o cabeçalho são conferidos de verdade**
+    (assinatura `%PDF`, `Content-Type`), não apenas o status HTTP.
+11. Entrega registrada só na caixa de saída local (L02); o gate confirma que
+    a resposta nunca declara "entregue"/"lido" sem `proof` explícito.
+12. Aceite seguro por link, pela primeira vez com **interface real**
+    (`/proposta/aceite/[token]`, `AcceptanceClient.tsx`, novo): token forjado
+    → 404; nova versão da proposta torna o link antigo 409
+    (`version_mismatch_link_bound_to_version`); link expirado (backdatado em
+    `created_at` **e** `expires_at`, para satisfazer o `CHECK
+    chk_expires_future`) → 410; aceite real preenchendo o formulário em
+    Chromium; reuso do mesmo link já aceito → 410.
+13. Contrato mínimo criado de forma idempotente (CRM-23): consulta direta
+    confirma exatamente uma linha de contrato mesmo após a tentativa de
+    reaceite.
+14. Varredura final autenticada em Chromium real sobre `/admin/leads` e
+    `/admin/comercial`: sem rolagem horizontal, sem erro de console além do
+    ruído externo já conhecido e filtrado (fontes do Google, sem rede no
+    sandbox), sem resposta 5xx.
+15. Controles negativos genéricos: método não permitido (405), origem cruzada
+    (403), rota fora de escopo (404), corpo grande demais, ausência de stack
+    trace nas respostas de erro.
+
+### Controle negativo que provou o achado principal (auditoria quebrada)
+
+Antes da migração 103, qualquer chamada do gate que tentasse gravar em
+`auth_access_audit` com uma ação `crm_*`/`cli_*`/`ops_*`/`hr_*`/`emp_*` fora da
+lista curta original, ou com `actor_kind='comercial'`, violava o `CHECK` da
+tabela. Como o insert de auditoria está sempre em `try/catch`, a operação de
+negócio em si não falhava — mas a linha de auditoria nunca era gravada. Isso
+foi reproduzido durante o desenvolvimento do gate (a suíte não reportava erro
+de aplicação, só a ausência da auditoria esperada num dos passos) e confirmado
+por cruzamento manual entre `grep` das strings `action:` usadas em
+`src/server/*.mjs` e a lista literal do `CHECK` da migração 100. A correção
+(migração 103, aditiva) foi confirmada corrigindo o problema sem qualquer
+mudança em migração já aplicada.
+
+### Outros defeitos reproduzidos como falha antes da correção
+
+| Defeito | Evidência da falha original |
+| --- | --- |
+| `discount-api.mjs`: alçada era bloco vazio | qualquer papel, incluindo o próprio solicitante, aprovava qualquer desconto sem checagem real |
+| `proposal-acceptance-api.mjs`: `require()` em ESM | `ReferenceError` mudo (dentro de `try/catch`), hash de IP do aceite nunca era gravado |
+| `public-lead-validation.mjs` descartava origin/campaign/channel/email | campos enviados pelo `/contato` real nunca apareciam em `public_leads`, mesmo com a coluna existindo |
+| `handleCreateLead` confiava em `dedupKey` do navegador | um cliente malicioso podia forjar a chave de outra pessoa |
+| `AiBotWidget.tsx` chamava endpoint admin sem condição | 401 em série no console de toda página pública |
+| `/admin/leads/page.tsx` com login do modelo antigo | formulário não autenticava contra a sessão real de e-mail/senha — tela inacessível para staff real |
+
+Em todos os casos a correção foi validada corrigindo o bug real e observando o
+gate passar a partir dali — nenhuma expectativa de teste foi enfraquecida para
+"fazer passar".
+
+### Varredura completa após o L04 (revalidação final desta sessão)
+
+| Suíte | Resultado |
+| --- | --- |
+| `npm run test:unit` | **186/186** |
+| `npm run test:l04-delivery:pg` | **1/1** (rodado 3× nesta sessão, sempre verde) |
+| `npm run test:l03-delivery:pg` | **1/1** (revalidado, sem regressão) |
+| `npm run test:l02-delivery:pg` | **14/14** (revalidado, sem regressão) |
+| `npm run test:migrations:pg` | `CHECKSUMMED=103/103`, `TABLES=504->504`, replay idempotente, clone adulterado recusado |
+| `npm run test:rag` | sucesso no PGlite isolado, 13 cenários — widgets públicos (`/faq`, `/contato`, `/servicos`) continuam presentes após a mudança no `AiBotWidget.tsx` |
+| `npx tsc --noEmit` | 0 erros |
+| `npm run build` | sucesso, 72 rotas incluindo `/admin/comercial` e `/proposta/aceite/[token]` |
+| `node --check` nos módulos editados | sucesso |
+
+### Artefatos
+
+- `db/migrations/103-l04-comercial-role-widening.sql`
+- `scripts/qa-l04-delivery-postgres.mjs`
+- `tests/l04-delivery.integration.test.mjs`
+- `src/app/admin/comercial/page.tsx`, `src/app/admin/comercial/ComercialWorkspace.tsx`
+- `src/app/proposta/aceite/[token]/page.tsx`, `src/app/proposta/aceite/[token]/AcceptanceClient.tsx`
+- `src/server/discount-api.mjs`, `src/server/proposal-acceptance-api.mjs` (correções)
+- `src/lib/public-lead-validation.mjs`, `server.mjs` (correções de captação/dedup/RBAC)
+- `src/app/orcamento/page.tsx` (reescrita — sem preço inventado)
+- `src/app/admin/leads/page.tsx` (login real, estados de visita reais, conversão de lead)
+- `src/components/AiBotWidget.tsx` (correção de fetch admin indevido)
+
+### Fronteiras honestas do L04
+
+- CRM-01..06 vêm de `/admin/crm`, uma página anterior a esta sessão — foram
+  usados indiretamente pelo gate (conversão de lead cria empresa/oportunidade
+  real) mas não foram revalidados campo a campo nesta sessão.
+- CRM-07..10 (kanban, filtros, tarefas, histórico, agenda, cadências,
+  carteira) continuam apenas como schema — a própria página `/admin/crm` se
+  autodocumenta assim; nenhuma tela foi construída para eles.
+- PUB-02/05/06/07/08/09/10: FAQ assistida com handoff, CMS, temas, SEO técnico,
+  montador/comparador administrativo e painel de métricas de origem/A-B
+  continuam com componentes órfãos (`PubFaqAssistedClient.tsx`,
+  `CmsClient.tsx`, `ThemeClient.tsx`, `SeoClient.tsx`, `PackageClient.tsx`,
+  `OriginMetricsClient.tsx`) — nenhum foi tocado ou conectado nesta sessão.
+- O aceite de proposta é explicitamente "aceite simples", nunca chamado de
+  assinatura eletrônica qualificada. A entrega de proposta nunca declara
+  "entregue"/"lido" sem prova local explícita — não há e nunca houve SMTP real.
+- O contrato criado por CRM-23 é um stub mínimo idempotente, sem numeração
+  fiscal nem integração de faturamento.
+- Risco residual anotado e **não** corrigido estruturalmente: o insert de
+  auditoria em `handleAdminLeadStatus` (`server.mjs`) roda solto dentro de uma
+  transação multi-instrução, sem `SAVEPOINT` — hoje não falha (a migração 103
+  fechou o `CHECK` que causaria isso), mas o padrão em si continua frágil a
+  uma futura regressão de constraint.
+- Não houve SMTP, hospedagem externa ou execução no Windows nesta etapa
+  também. O aceite no equipamento-alvo pertence ao L10.

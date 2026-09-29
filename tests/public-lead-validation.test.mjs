@@ -25,8 +25,41 @@ test("normalizes a valid quote and keeps only allowed lead fields", () => {
       services: ["Segurança Desarmada"],
       visitPreference: null,
       details: "Preciso de informações.",
+      origin: null,
+      campaign: null,
+      channel: "site",
+      email: null,
     },
   });
+});
+
+test("PUB-03/CRM-05: keeps origin, campaign, channel and e-mail when sent", () => {
+  const result = validateLeadInput({
+    ...validQuote,
+    origin: "contato",
+    campaign: "outono-2026",
+    channel: "whatsapp",
+    email: "Ana.Lima@Exemplo.com",
+  });
+  assert.equal(result.error, undefined);
+  assert.equal(result.value.origin, "contato");
+  assert.equal(result.value.campaign, "outono-2026");
+  assert.equal(result.value.channel, "whatsapp");
+  assert.equal(result.value.email, "ana.lima@exemplo.com");
+});
+
+test("rejects tracking fields that carry markup or unsupported values", async t => {
+  const cases = [
+    ["origin markup", { origin: "<script>alert(1)</script>" }, "invalid_origin"],
+    ["campaign markup", { campaign: "<img src=x>" }, "invalid_campaign"],
+    ["invalid channel", { channel: "carrier-pigeon" }, "invalid_channel"],
+    ["invalid email", { email: "not-an-email" }, "invalid_email"],
+  ];
+  for (const [label, override, expected] of cases) {
+    await t.test(label, () => {
+      assert.deepEqual(validateLeadInput({ ...validQuote, ...override }), { error: expected });
+    });
+  }
 });
 
 test("allows a quote without selected services or optional details", () => {
