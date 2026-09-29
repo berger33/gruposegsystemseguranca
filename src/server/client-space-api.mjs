@@ -89,6 +89,12 @@ export function createClientSpaceApi(ctx) {
       ctx.json(res, 401, { error: "admin_session_required" });
       return null;
     }
+    // The legacy account/grant schema only accepts these two roles as actors.
+    // In particular, a valid RH cookie must never expose client accounts.
+    if (!['marcelo', 'ti'].includes(session.role)) {
+      ctx.json(res, 403, { error: "forbidden" });
+      return null;
+    }
     return session;
   }
 

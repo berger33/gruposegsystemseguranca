@@ -1,4 +1,8 @@
-# Grupo SEG System Segurança Integrada
+# Grupo SEG System
+
+## Homologação funcional **separada** da prévia PGlite
+
+Para explorar papéis sintéticos e um PostgreSQL local descartável, use o pacote separado `downloads/seg-system-homologacao-local.zip` e leia [LEIA-ME-HOMOLOGACAO.md](LEIA-ME-HOMOLOGACAO.md). Abra `/qa/modulos` **apenas** com o novo lançador de homologação; o pacote `seg-system-qa-local.zip` continua sendo uma prévia PGlite sem credenciais. O índice identifica módulos operacionais, protótipos e bloqueios, sem prometer homologação dos 222 requisitos. Nenhum pacote é produção. Segurança Integrada
 
 Sistema em desenvolvimento para o Grupo SEG System. O **plano foi registrado em commit separado antes do início da aplicação** (`5af5ab0`).
 

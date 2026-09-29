@@ -2,7 +2,8 @@ export default function TiAdminPage() {
   return (
     <main style={{ padding: 24, maxWidth: 1000, margin: "0 auto", fontFamily: "system-ui, sans-serif", color: "var(--theme-fg)", background: "var(--theme-bg)", borderRadius: "var(--theme-radius)", boxShadow: "var(--theme-shadow)" }}>
       <h1 style={{ fontFamily: "var(--theme-font)", color: "var(--theme-accent)" }}>Camada 4 — Administrador de sistema / TI</h1>
-      <p>Poderes plenos. Nenhuma configuração avançada é restrita.</p>
+      <p role="note" style={{ padding: 12, borderLeft: "4px solid #b45309", background: "#fff7ed", color: "#431407" }}><strong>Protótipo descritivo:</strong> os cartões abaixo não são funções acessíveis, não concedem poderes de TI e não comprovam autenticação ou permissões. Os componentes administrativos ainda não estão conectados a esta página.</p>
+      <p>Capacidades previstas para a camada TI (dependem de implementação e homologação por papel):</p>
       <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16, marginTop: 16 }}>
         {[
           { label: "RBAC completo", desc: "Criar papéis, ajustar permissões por módulo (ex: RH vê escala mas não folha)." },
