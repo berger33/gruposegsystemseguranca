@@ -28,8 +28,10 @@ async function preflight() {
     if (name !== '.env.example') throw new Error(`qa_env_file_refused_${name}`);
   }
   await access(path.join(root, 'db/migrations/096-ai-rag-feedback-custo-token-rollback.sql'));
-  // A previous preview should not silently change the database or test credentials.
-  console.log('QA_HOM_PREFLIGHT: loopback only, no external DB, SMTP, Ollama or .env files.');
+  // Fail before npm ci (which can take minutes on Windows) when the old preview is still open.
+  // Check again immediately before starting: another program can take the port meanwhile.
+  await assertWebPortFree();
+  console.log('QA_HOM_PREFLIGHT: loopback only, port 3000 free, no external DB, SMTP, Ollama or .env files.');
 }
 
 function freePort() {
@@ -46,7 +48,7 @@ function freePort() {
 function assertWebPortFree() {
   return new Promise((resolve, reject) => {
     const server = createServer();
-    server.once('error', () => reject(new Error('qa_port_3000_busy_stop_the_old_preview')));
+    server.once('error', () => reject(new Error('qa_port_3000_busy_close_the_old_preview_before_install')));
     server.listen(3000, '127.0.0.1', () => server.close(resolve));
   });
 }

@@ -18,8 +18,10 @@
 | `QA-HOM-002` / `SEC-04`, `SEC-05` | Smoke HTTP staff TI/RH/Admin e chave Marcelo + login Cliente A | 5 respostas HTTP 200; consulta privada de Marcelo **não habilitada**; validação de cookie via fetch com cookie capturado (não armazenado). |
 | `QA-HOM-003` / `TENANT-SEG-001` | Smoke HTTP sem sessão/RH vs. TI/Marcelo | Anônimo leads 401; RH leads/contas e PATCH lead 403; Admin nas contas legadas 403; TI leads e Marcelo contas 200. Rerun final exit 0. |
 | `QA-HOM-004` / `CLIENTE-SEG-001` | Cliente A vs. anônimo em `/api/client/accounts` | Cliente A 200 só conta A; anônimo 401; B não listada. Outras rotas ainda pendentes. |
-| `PLT-SMK-001`, `PLT-CI-001` | `node scripts/qa-wave0-static.mjs`; `npm test`; `npm run typecheck`; `npm run build` | Pré-checagem 5/5; unitários **140/140** no rerun final após inclusão de 7 testes de preflight; typecheck exit 0, build exit 0, `/qa/modulos` compilada como dinâmica. |
-| Windows / UAT humano | Executar `.bat` em Windows 22, navegadores e roteiros de todos os papéis | **NÃO EXECUTADO AQUI / PENDENTE**. |
+| `PLT-SMK-001`, `PLT-CI-001` | `node scripts/qa-wave0-static.mjs`; `npm test`; `npm run typecheck`; `npm run build` | Pré-checagem 5/5; unitários **141/141** após teste de porta ocupada; typecheck exit 0, build exit 0, `/qa/modulos` compilada como dinâmica. `--verify` foi repetido em Linux após a correção: 96/96, smoke HTTP e limpeza exit 0. |
+| `QA-HOM-001` / Windows (relato do usuário) | `INICIAR-HOMOLOGACAO.bat` após `npm ci`; porta 3000 ocupada | **BLOQUEADO**, `qa_port_3000_busy_stop_the_old_preview` no ZIP anterior: nenhuma migração executada. Preflight do novo pacote checa a porta antes de `npm ci`; reteste no Windows pendente. |
+| `QA-HOM-001` / instalação Windows | `npm warn install-scripts` para `@embedded-postgres/windows-x64@17.9.0-beta.17` | Aviso **não é** falha de porta. Tarball SHA-512 confere com lockfile; `native/pg-symlinks.json` contém `[]`, logo o script bloqueado não possui symlinks para criar neste pacote. Binário PostgreSQL em Windows **ainda não testado**. |
+| Windows / UAT humano | Executar `.bat` com porta livre e navegar por todos os papéis | **PENDENTE**. |
 
 **Reprodução do ZIP extraído:** `unzip` em pasta `/tmp/seg-hom-archive-*`, `npm ci` e `node scripts/qa-homologacao-local.mjs --verify` concluíram smoke HTTP e `QA_HOM_TEMP_CLEANED: true` com `extracted_exit=0` na execução observada. Pré-checagem antecede `npm ci` nos dois lançadores. Após qualquer nova edição do ZIP, repetir checksum/exclusões e smoke antes de entregá-lo. No Windows, continua pendente.
 

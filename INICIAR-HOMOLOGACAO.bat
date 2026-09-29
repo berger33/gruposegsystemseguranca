@@ -6,7 +6,8 @@ if errorlevel 1 goto :neednode
 where npm >nul 2>&1
 if errorlevel 1 goto :neednode
 echo Grupo SEG System - HOMOLOGACAO LOCAL POSTGRESQL DESCARTAVEL (NAO PRODUCAO)
-echo Pare o pacote PGlite anterior antes de continuar: porta 3000 deve estar livre.
+echo Antes de instalar, verificando se a porta 3000 esta livre.
+echo Se a previa PGlite anterior estiver aberta, pare-a com Ctrl+C na janela antiga.
 node scripts\qa-homologacao-local.mjs --preflight
 if errorlevel 1 goto :failure
 echo Instalando dependencias travadas (internet necessaria na primeira vez)...

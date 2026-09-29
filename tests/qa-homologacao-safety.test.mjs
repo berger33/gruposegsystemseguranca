@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import { createServer } from 'node:net';
 
 const cwd = path.resolve(import.meta.dirname, '..');
 const runner = 'scripts/qa-homologacao-local.mjs';
@@ -14,6 +15,24 @@ test('QA-HOM-001 preflight accepts only clean local input (no server or DB start
   const result = spawnSync(process.execPath, [runner, '--preflight'], { cwd, env, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /QA_HOM_PREFLIGHT/);
+});
+
+test('QA-HOM-001 refuses occupied port 3000 before npm installation', async () => {
+  const server = createServer();
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(3000, '127.0.0.1', resolve);
+  });
+  try {
+    const env = { ...process.env };
+    for (const key of names) delete env[key];
+    const result = spawnSync(process.execPath, [runner, '--preflight'], { cwd, env, encoding: 'utf8' });
+    assert.equal(result.status, 2, result.stdout + result.stderr);
+    assert.match(result.stderr, /qa_port_3000_busy_close_the_old_preview_before_install/);
+    assert.doesNotMatch(result.stdout, /QA_HOM_PREFLIGHT/);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+  }
 });
 
 for (const name of names) test(`QA-HOM-001 rejects inherited ${name} before DB startup`, () => {
