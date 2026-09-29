@@ -25,6 +25,7 @@ import { createIntegrationsApi } from "./src/server/integrations-api.mjs";
 import { createServiceCatalogApi } from "./src/server/service-catalog-api.mjs";
 import { createFaqApi } from "./src/server/faq-api.mjs";
 import { createCrmApi } from "./src/server/crm-api.mjs";
+import { createCrmEngagementApi } from "./src/server/crm-engagement-api.mjs";
 import { createEquipmentApi } from "./src/server/equipment-api.mjs";
 import { createInspectionApi } from "./src/server/inspection-api.mjs";
 import { createLaborBudgetApi } from "./src/server/labor-budget-api.mjs";
@@ -1147,6 +1148,17 @@ const crmApi = createCrmApi({
   getPool,
   readAdminSession: readSession,
   clientIp,
+});
+
+// CRM-07..10 — tarefas, histórico com anexos, agenda, cadências e carteira.
+// Os bytes de anexo usam o mesmo diretório privado já validado no L02.
+const crmEngagementApi = createCrmEngagementApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+  docsDir: (process.env.CLIENT_DOCS_DIR || "").trim() || path.join(process.cwd(), ".data", "documents"),
 });
 
 const equipmentApi = createEquipmentApi({
@@ -2432,6 +2444,21 @@ async function routeApi(req, res) {
   if (crmOppMatch) return crmApi.handleOpportunityById(req, res, crmOppMatch[1]);
   const crmLeadConvertMatch = url.pathname.match(/^\/api\/crm\/leads\/([0-9a-f-]{36})\/convert$/i);
   if (crmLeadConvertMatch) return crmApi.handleLeadConvert(req, res, crmLeadConvertMatch[1]);
+  // CRM-07..10 (engajamento comercial)
+  if (url.pathname === "/api/crm/tasks") return crmEngagementApi.handleTasks(req, res, url);
+  const crmTaskMatch = url.pathname.match(/^\/api\/crm\/tasks\/([0-9a-f-]{36})$/i);
+  if (crmTaskMatch) return crmEngagementApi.handleTaskById(req, res, crmTaskMatch[1]);
+  if (url.pathname === "/api/crm/interactions") return crmEngagementApi.handleInteractions(req, res, url);
+  const crmInteractionAttachMatch = url.pathname.match(/^\/api\/crm\/interactions\/([0-9a-f-]{36})\/attachments$/i);
+  if (crmInteractionAttachMatch) return crmEngagementApi.handleInteractionAttachments(req, res, crmInteractionAttachMatch[1]);
+  const crmAttachmentDownloadMatch = url.pathname.match(/^\/api\/crm\/interaction-attachments\/([0-9a-f-]{36})\/download$/i);
+  if (crmAttachmentDownloadMatch) return crmEngagementApi.handleInteractionAttachmentDownload(req, res, crmAttachmentDownloadMatch[1]);
+  if (url.pathname === "/api/crm/visits") return crmEngagementApi.handleVisits(req, res, url);
+  const crmVisitMatch = url.pathname.match(/^\/api\/crm\/visits\/([0-9a-f-]{36})$/i);
+  if (crmVisitMatch) return crmEngagementApi.handleVisitById(req, res, crmVisitMatch[1]);
+  if (url.pathname === "/api/crm/cadences") return crmEngagementApi.handleCadences(req, res);
+  if (url.pathname === "/api/crm/cadences/enroll") return crmEngagementApi.handleCadenceEnroll(req, res);
+  if (url.pathname === "/api/crm/portfolio") return crmEngagementApi.handlePortfolio(req, res);
   if (url.pathname === "/api/crm/imports") return crmApi.handleImportsList(req, res, url);
   if (url.pathname === "/api/crm/imports/preview") return crmApi.handleImportPreview(req, res);
   const crmImportCommitMatch = url.pathname.match(/^\/api\/crm\/imports\/([0-9a-f-]{36})\/commit$/i);
@@ -3979,6 +4006,16 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/crm/imports"
   || pathname === "/api/crm/imports/preview"
   || pathname.startsWith("/api/crm/imports/")
+  || pathname === "/api/crm/tasks"
+  || pathname.startsWith("/api/crm/tasks/")
+  || pathname === "/api/crm/interactions"
+  || pathname.startsWith("/api/crm/interactions/")
+  || pathname.startsWith("/api/crm/interaction-attachments/")
+  || pathname === "/api/crm/visits"
+  || pathname.startsWith("/api/crm/visits/")
+  || pathname === "/api/crm/cadences"
+  || pathname === "/api/crm/cadences/enroll"
+  || pathname === "/api/crm/portfolio"
   || pathname === "/api/crm/equipment"
   || pathname.startsWith("/api/crm/equipment/")
   || pathname === "/api/crm/inspection-templates"
