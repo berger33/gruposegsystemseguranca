@@ -303,6 +303,7 @@ Também ficaram provados:
 | `npm run test:l03-delivery:pg` | **1/1**, HTTP + navegador + PostgreSQL |
 | `npm run test:l02-delivery:pg` | **14/14** |
 | `npm run test:migrations:pg` | **102/102**, replay idempotente, clone adulterado recusado, 504 tabelas |
+| `npm run test:rag` | sucesso no PGlite isolado; bootstrap QA explícito e sessão staff endurecida |
 | `npm run typecheck` | 0 erros |
 | `npm run build` | sucesso, 69 páginas, incluindo `/funcionario` e `/admin/funcionarios` |
 | `node --check` nos módulos editados | sucesso |

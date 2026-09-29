@@ -195,17 +195,21 @@ async function runMigrationsIfNeeded() {
 
   // BETA mode: usar init simplificado para garantir 1-clique sem Docker
   const betaInitPath = path.join(MIGRATIONS_DIR, '..', 'beta-pglite-init.sql');
+  // v2 acrescenta o mínimo de identidade/sessão de staff exigido pelo login
+  // endurecido. O marcador novo força uma única reaplicação idempotente em
+  // diretórios PGlite beta que já carregaram o init antigo.
+  const betaInitMarker = 'beta-pglite-init-v2.sql';
   if (fs.existsSync(betaInitPath)) {
     try {
-      const { rows } = await db.query('SELECT filename FROM __migrations WHERE filename=$1', ['beta-pglite-init.sql']);
+      const { rows } = await db.query('SELECT filename FROM __migrations WHERE filename=$1', [betaInitMarker]);
       if (rows.length === 0) {
-        pgliteLog('[PGlite] Running beta-pglite-init.sql (schema mínimo RAG + bot modes)');
+        pgliteLog(`[PGlite] Running ${betaInitMarker} (schema mínimo RAG + sessão staff)`);
         const sql = fs.readFileSync(betaInitPath, 'utf8');
         await db.exec(sql);
-        await db.query('INSERT INTO __migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING', ['beta-pglite-init.sql']);
-        pgliteLog('[PGlite] beta-pglite-init.sql applied — RAG cliente/rh/marcelo/publico + bot modes sem_ia/com_ia/whatsapp padrão com_ia beta');
+        await db.query('INSERT INTO __migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING', [betaInitMarker]);
+        pgliteLog(`[PGlite] ${betaInitMarker} applied — RAG cliente/rh/marcelo/publico + bot modes + sessão staff`);
       } else {
-        pgliteLog('[PGlite] beta-pglite-init.sql already applied');
+        pgliteLog(`[PGlite] ${betaInitMarker} already applied`);
       }
       pgliteLog('[PGlite] migrations check complete (beta mode — lite)');
       return;
