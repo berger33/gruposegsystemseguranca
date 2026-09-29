@@ -83,6 +83,9 @@ mismatch negativo), `npm test` **196/196**, `typecheck` 0 erros, `build` OK,
 `git diff --check` limpo, `tsconfig.json`/`next-env.d.ts` restaurados após o
 dev server do gate.
 
+Integração: **PR #27, mergeado em `main @ 0f0fb70`**, com os três checks do CI
+verdes (`static-and-smoke` ×2 e `crm-postgres-browser`).
+
 L04 continua **PARCIAL** e **L05 não foi iniciado**. PUB-08 passa a *parcial*
 (SEO técnico provado; verificação de domínio declaradamente fora). Seguem em
 aberto: PUB-02/05/06/07/09 com componentes órfãos, CRM-01..04 aguardando
