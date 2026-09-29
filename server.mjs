@@ -2,6 +2,7 @@ import { createCrmTaskApi } from "./src/server/crm-task-api.mjs";
 import { createCrmInteractionApi } from "./src/server/crm-interaction-api.mjs";
 import { createCrmVisitApi } from "./src/server/crm-visit-api.mjs";
 import { createCrmCadenceApi } from "./src/server/crm-cadence-api.mjs";
+import { createCrmNoteApi } from "./src/server/crm-note-api.mjs";
 import { createHmac, createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { createServer } from "node:http";
 import path from "node:path";
@@ -1289,6 +1290,9 @@ const crmVisitApi = createCrmVisitApi({ json, readJson, sameOrigin, getPool, rea
 
 // CRM-09: modelos privados e aplicação manual em tarefas; nenhum envio automático.
 const crmCadenceApi = createCrmCadenceApi({ json, readJson, sameOrigin, getPool, readAdminSession: readSession });
+
+// CRM-07: notas internas dedicadas por oportunidade, dentro da borda pessoal.
+const crmNoteApi = createCrmNoteApi({ json, readJson, sameOrigin, getPool, readAdminSession: readSession });
 
 const crmApi = createCrmApi({
   json,
@@ -2614,6 +2618,8 @@ async function routeApi(req, res) {
   if (crmInteractionItemMatch) return crmInteractionApi(req, res, crmInteractionItemMatch[1], crmInteractionItemMatch[2], null, null, url);
   const crmInteractionMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/interactions$/i);
   if (crmInteractionMatch) return crmInteractionApi(req, res, crmInteractionMatch[1], null, null, null, url);
+  const crmNoteMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})\/notes(?:\/([0-9a-f-]{36}))?$/i);
+  if (crmNoteMatch) return crmNoteApi(req, res, crmNoteMatch[1], crmNoteMatch[2] || null, url);
   const crmOppMatch = url.pathname.match(/^\/api\/crm\/opportunities\/([0-9a-f-]{36})$/i);
   if (crmOppMatch) return crmApi.handleOpportunityById(req, res, crmOppMatch[1]);
   const crmLeadConvertMatch = url.pathname.match(/^\/api\/crm\/leads\/([0-9a-f-]{36})\/convert$/i);

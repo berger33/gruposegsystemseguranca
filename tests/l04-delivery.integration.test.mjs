@@ -708,9 +708,11 @@ test('CRM-07: tarefas pessoais por oportunidade, navegador e negação cruzada',
     await context.close();
   } finally { await browser.close(); }
   assert.deepEqual(failures, []);
+  // Ajuste declarado da fatia CRM-07/notas+kanban: o detalhe legado agora é
+  // 404 para identidade fora da propriedade (a oportunidade em si é pessoal);
+  // antes devolvia 200 com listas vazias. Regra mais forte, não mais fraca.
   const otherDetail = await api('/api/crm/opportunities/' + opportunityId, { cookie: other.cookie });
-  assert.equal(otherDetail.status, 200);
-  assert.deepEqual(otherDetail.body.tasks, [], 'legacy detail must not expose personal tasks');
+  assert.equal(otherDetail.status, 404, 'legacy detail must not expose another commercial\'s opportunity');
   const saved = await api(endpoint, { cookie: owner.cookie });
   assert.equal(saved.body.tasks.find(t => t.id === taskId).status, 'concluida');
   assert.equal((await api(endpoint + '/' + taskId, { method: 'PATCH', cookie: other.cookie, body: { expected_status: 'concluida', status: 'aberta' } })).status, 404);
@@ -835,9 +837,10 @@ test('CRM-07: interações completas — tipos, contato, anexo privado, correç�
   } finally { await browser.close(); }
   assert.deepEqual(failures, []);
 
+  // Ajuste declarado da fatia CRM-07/notas+kanban: detalhe legado agora é 404
+  // fora da propriedade (a oportunidade em si é pessoal, não só as listas).
   const otherDetail = await api('/api/crm/opportunities/' + opportunityId, { cookie: other.cookie });
-  assert.equal(otherDetail.status, 200);
-  assert.deepEqual(otherDetail.body.interactions, [], 'legacy detail must not expose interactions outside ownership rule');
+  assert.equal(otherDetail.status, 404, 'legacy detail must not expose interactions outside ownership rule');
   assert.equal((await api(endpoint, { cookie: other.cookie })).status, 404);
   assert.equal((await api(endpoint + '/' + interactionId, { method: 'PATCH', cookie: other.cookie, body: { expected_version: 2, title: 'Forçada' } })).status, 404);
 
@@ -1041,12 +1044,16 @@ test('CRM-08: agenda de visitas/reuniões — responsável, participante, confir
   assert.equal(ownerAgenda.body.visits.find(item => item.id === visitId).viewer_is_responsible, true);
   assert.equal((await api('/api/crm/visits/agenda?from=amanha', { cookie: owner.cookie })).status, 400);
 
-  // A rota legada de detalhe obedece à mesma política de agenda.
+  // Ajuste declarado da fatia CRM-07/notas+kanban: a rota legada de detalhe
+  // agora é 404 para qualquer identidade fora da propriedade — inclusive o
+  // participante convidado, cujo caminho de leitura continua sendo a própria
+  // agenda (/api/crm/visits/agenda), reafirmada abaixo.
   const strangerDetail = await api('/api/crm/opportunities/' + opportunityId, { cookie: stranger.cookie });
-  assert.equal(strangerDetail.status, 200);
-  assert.deepEqual(strangerDetail.body.visits, [], 'detalhe legado não pode vazar a agenda para fora da política');
+  assert.equal(strangerDetail.status, 404, 'detalhe legado não pode vazar a agenda para fora da política');
   const participantDetail = await api('/api/crm/opportunities/' + opportunityId, { cookie: participant.cookie });
-  assert.equal(participantDetail.body.visits.length, 1);
+  assert.equal(participantDetail.status, 404, 'participante não recebe a oportunidade alheia pelo detalhe legado');
+  const participantAgendaDetail = await api('/api/crm/visits/agenda', { cookie: participant.cookie });
+  assert.equal(participantAgendaDetail.body.visits.find(item => item.id === visitId)?.id, visitId, 'participante continua enxergando a própria visita pela própria agenda');
 
   // Participante não reagenda, não cancela, não convida e não remove ninguém.
   let current = (await api(endpoint, { cookie: owner.cookie })).body.visits.find(item => item.id === visitId);
@@ -1238,9 +1245,10 @@ test('CRM-09: modelos privados, tarefas manuais, opt-out e encerramento da cadê
   assert.equal((await api(cadenceEndpoint, { method: 'POST', cookie: owner.cookie, body: { template_id: templateId } })).status, 409);
 
   // The legacy opportunity route no longer exposes stages to another identity.
+  // Ajuste declarado da fatia CRM-07/notas+kanban: 404 em vez de 200 com
+  // stages vazios — a oportunidade em si é pessoal.
   const otherDetail = await api(`/api/crm/opportunities/${opportunityId}`, { cookie: other.cookie });
-  assert.equal(otherDetail.status, 200);
-  assert.deepEqual(otherDetail.body.stages, []);
+  assert.equal(otherDetail.status, 404);
   const ownerDetail = await api(`/api/crm/opportunities/${opportunityId}`, { cookie: owner.cookie });
   assert.equal(ownerDetail.body.stages.length, 1);
 
@@ -1480,8 +1488,10 @@ test('CRM-07: prazo, paginação, busca e delegação explícita com aceite', { 
   assert.equal(ownerStillSees.body.tasks.find(t => t.id === taskA.id).delegation_status, 'aceita');
   const legacyOwner = await api('/api/crm/opportunities/' + opportunityId, { cookie: owner.cookie });
   assert.equal(legacyOwner.body.tasks.some(t => t.id === taskA.id), true, 'accepted delegation must not vanish from the owner');
+  // Ajuste declarado da fatia CRM-07/notas+kanban: 404 em vez de 200 com
+  // tasks vazias — o delegado não ganha acesso à oportunidade em si.
   const legacyDelegate = await api('/api/crm/opportunities/' + opportunityId, { cookie: delegate.cookie });
-  assert.deepEqual(legacyDelegate.body.tasks, [], 'the delegate gains no access to the opportunity itself');
+  assert.equal(legacyDelegate.status, 404, 'the delegate gains no access to the opportunity itself');
   assert.equal((await api(endpoint, { cookie: delegate.cookie })).status, 404);
   assert.equal((await api(endpoint + '/' + taskA.id, { method: 'PATCH', cookie: owner.cookie, body: { expected_status: 'aberta', status: 'concluida' } })).body.error, 'task_delegated');
   assert.equal((await api(delegation(taskA.id), { method: 'DELETE', cookie: owner.cookie })).body.error, 'delegation_already_accepted');
@@ -1523,7 +1533,9 @@ test('CRM-07: prazo, paginação, busca e delegação explícita com aceite', { 
     trackFailures(ownerPage, failures);
     await ownerPage.goto(baseUrl + '/admin/crm', { waitUntil: 'networkidle' });
     await ownerPage.waitForTimeout(800);
-    await ownerPage.getByLabel('Busca por título de oportunidade').fill(opportunity.body.opportunity.title);
+    // Ajuste declarado da fatia CRM-07/notas+kanban: o campo de busca de oportunidades
+    // passou a ser aplicado no servidor e o rótulo mudou para refletir título/necessidade.
+    await ownerPage.getByLabel('Buscar oportunidade (título/necessidade)').fill(opportunity.body.opportunity.title);
     const card = ownerPage.getByRole('article').filter({ hasText: opportunity.body.opportunity.title });
     await card.getByRole('button', { name: 'Abrir tarefas' }).click();
     const section = ownerPage.getByRole('region', { name: 'Minhas tarefas da oportunidade' });
@@ -1769,7 +1781,399 @@ test('CRM-08: conflito de horário do responsável e vínculo PUB-04 do lead pú
   assert.deepEqual(failures, []);
 });
 
-test('CRM-08: visão de calendário por período/semana na agenda pessoal (somente leitura)', { skip: !RUN, timeout: 120_000 }, async () => {
+test('CRM-07/05/06: campo a campo de oportunidades, funil com reabertura auditada e notas internas', { skip: !RUN, timeout: 240_000 }, async () => {
+  const owner = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const other = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const rh = await provisionAndLoginStaff(pool, api, { role: 'rh' });
+
+  // ---------------------------------------------------------------------
+  // 1) Empresa e unidades. A unidade não tem rota de criação (escopo
+  //    CRM-01); a fixture de unidade é SQL declarado, o resto é HTTP.
+  // ---------------------------------------------------------------------
+  const company = await api('/api/crm/companies', { method: 'POST', cookie: owner.cookie, body: { displayName: 'Empresa campo a campo ' + randomUUID().slice(0, 8), city: 'Barueri', type: 'prospect', segment: 'Condomínio' } });
+  assert.equal(company.status, 201, JSON.stringify(company.body));
+  const companyId = company.body.company.id;
+  const otherCompany = await api('/api/crm/companies', { method: 'POST', cookie: owner.cookie, body: { displayName: 'Empresa vizinha ' + randomUUID().slice(0, 8), city: 'Osasco', type: 'prospect' } });
+  const otherCompanyId = otherCompany.body.company.id;
+
+  const unitId = randomUUID();
+  const foreignUnitId = randomUUID();
+  await pool.query(`INSERT INTO crm_company_units (id, company_id, display_name, city, is_main) VALUES ($1,$2,'Unidade Matriz Alphaville','Barueri',true)`, [unitId, companyId]);
+  await pool.query(`INSERT INTO crm_company_units (id, company_id, display_name, city, is_main) VALUES ($1,$2,'Unidade Vizinha','Osasco',true)`, [foreignUnitId, otherCompanyId]);
+
+  // ---------------------------------------------------------------------
+  // 2) CRM-05 campo a campo: criação com TODOS os campos e validação
+  //    negativa de cada um.
+  // ---------------------------------------------------------------------
+  const nextActionDate = '2026-10-20T14:00:00.000Z';
+  const created = await api('/api/crm/opportunities', {
+    method: 'POST', cookie: owner.cookie,
+    body: {
+      company_id: companyId, title: 'CFTV condomínio Alphaville', service_name: 'Câmeras e CFTV',
+      need_description: 'Cliente quer 8 câmeras e gravação por 30 dias.', priority: 'alta',
+      forecast_date: '2026-12-15', estimated_value: 12500.5,
+      next_action: 'Enviar proposta técnica', next_action_date: nextActionDate,
+      origin: 'indicacao', campaign: 'porteiro_parceiro', unit_id: unitId,
+    },
+  });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  const opportunityId = created.body.opportunity.id;
+  const stored = created.body.opportunity;
+  assert.equal(stored.service_name, 'Câmeras e CFTV');
+  assert.equal(stored.need_description, 'Cliente quer 8 câmeras e gravação por 30 dias.');
+  assert.equal(stored.priority, 'alta');
+  assert.equal(String(stored.forecast_date).slice(0, 10), '2026-12-15');
+  assert.equal(Number(stored.estimated_value), 12500.5);
+  assert.equal(stored.next_action, 'Enviar proposta técnica');
+  assert.equal(new Date(stored.next_action_date).toISOString(), nextActionDate);
+  assert.equal(stored.origin, 'indicacao');
+  assert.equal(stored.campaign, 'porteiro_parceiro');
+  assert.equal(stored.unit_id, unitId);
+  assert.equal(stored.responsible_id, owner.id, 'quem cria é o responsável desde o início');
+  assert.equal(stored.responsible_name, 'QA Staff comercial', 'nome do responsável vem da identidade, não do papel');
+  assert.equal(stored.stage, 'novo');
+  const unitLink = await pool.query('SELECT u.display_name FROM crm_opportunities o JOIN crm_company_units u ON u.id=o.unit_id WHERE o.id=$1', [opportunityId]);
+  assert.equal(unitLink.rows[0].display_name, 'Unidade Matriz Alphaville');
+
+  // Controles negativos de campo, um a um.
+  assert.equal((await api('/api/crm/opportunities', { method: 'POST', cookie: owner.cookie, body: { company_id: companyId, title: 'x', priority: 'urgente' } })).body.error, 'invalid_priority');
+  assert.equal((await api('/api/crm/opportunities', { method: 'POST', cookie: owner.cookie, body: { company_id: companyId, title: 'x', unit_id: foreignUnitId } })).body.error, 'unit_not_available', 'unidade de outra empresa é recusada');
+  assert.equal((await api('/api/crm/opportunities', { method: 'POST', cookie: owner.cookie, body: { company_id: companyId, title: 'x', estimated_value: -1 } })).body.error, 'invalid_estimated_value');
+  assert.equal((await api('/api/crm/opportunities', { method: 'POST', cookie: owner.cookie, body: { company_id: companyId, title: 'x', forecast_date: '15/12/2026' } })).body.error, 'invalid_forecast_date');
+  assert.equal((await api('/api/crm/opportunities', { method: 'POST', cookie: owner.cookie, body: { company_id: companyId } })).body.error, 'invalid_title');
+  assert.equal((await api('/api/crm/opportunities', { method: 'POST', cookie: owner.cookie, body: { company_id: companyId, title: 'x', public_lead_id: randomUUID() } })).body.error, 'server_managed_fields', 'vínculo com lead público não vem do corpo');
+  assert.equal((await api('/api/crm/opportunities', { method: 'POST', cookie: owner.cookie, body: { company_id: randomUUID(), title: 'x' } })).body.error, 'company_not_found');
+
+  // Atribuição é imutável: origem/campanha/responsável nunca são editáveis.
+  assert.equal((await api(`/api/crm/opportunities/${opportunityId}`, { method: 'PATCH', cookie: owner.cookie, body: { origin: 'site' } })).body.error, 'field_not_editable');
+  assert.equal((await api(`/api/crm/opportunities/${opportunityId}`, { method: 'PATCH', cookie: owner.cookie, body: { campaign: 'outra' } })).body.error, 'field_not_editable');
+      assert.equal((await api(`/api/crm/opportunities/${opportunityId}`, { method: 'PATCH', cookie: owner.cookie, body: { responsible_id: other.id } })).body.error, 'field_not_editable');
+      assert.equal((await api(`/api/crm/opportunities/${opportunityId}`, { method: 'PATCH', cookie: owner.cookie, body: { public_lead_id: randomUUID() } })).body.error, 'server_managed_fields', 'vínculo com lead público não pode ser reescrito por PATCH');
+
+  // Manutenção de campos por PATCH (incluindo limpar unidade e previsão).
+  const maintained = await api(`/api/crm/opportunities/${opportunityId}`, {
+    method: 'PATCH', cookie: owner.cookie,
+    body: { priority: 'critica', estimated_value: 14000, forecast_date: '2026-12-20', need_description: 'Escopo revisado: 12 câmeras.', service_name: 'CFTV + alarme', unit_id: null, next_action: 'Revisar escopo com técnico', next_action_date: '2026-10-22T10:00:00.000Z' },
+  });
+  assert.equal(maintained.status, 200, JSON.stringify(maintained.body));
+  assert.equal(maintained.body.opportunity.priority, 'critica');
+  assert.equal(Number(maintained.body.opportunity.estimated_value), 14000);
+  assert.equal(String(maintained.body.opportunity.forecast_date).slice(0, 10), '2026-12-20');
+  assert.equal(maintained.body.opportunity.need_description, 'Escopo revisado: 12 câmeras.');
+  assert.equal(maintained.body.opportunity.service_name, 'CFTV + alarme');
+  assert.equal(maintained.body.opportunity.unit_id, null);
+  assert.equal((await api(`/api/crm/opportunities/${opportunityId}`, { method: 'PATCH', cookie: owner.cookie, body: { unit_id: foreignUnitId } })).body.error, 'unit_not_available');
+
+  // ---------------------------------------------------------------------
+  // 3) Busca no servidor com curinga escapado (`100%` é literal) e filtro
+  //    de prioridade no servidor.
+  // ---------------------------------------------------------------------
+  const percentOpp = await api('/api/crm/opportunities', { method: 'POST', cookie: owner.cookie, body: { company_id: companyId, title: 'Promoção 100% adesão', priority: 'baixa' } });
+  assert.equal(percentOpp.status, 201);
+  const thousandOpp = await api('/api/crm/opportunities', { method: 'POST', cookie: owner.cookie, body: { company_id: companyId, title: 'Promoção 1000 adesão', priority: 'baixa' } });
+  assert.equal(thousandOpp.status, 201);
+  const searchPercent = await api('/api/crm/opportunities?search=' + encodeURIComponent('100%'), { cookie: owner.cookie });
+  assert.deepEqual(searchPercent.body.opportunities.map(o => o.title), ['Promoção 100% adesão'], '100% precisa ser busca literal, não curinga');
+  const searchPromo = await api('/api/crm/opportunities?search=' + encodeURIComponent('Promoção'), { cookie: owner.cookie });
+  assert.equal(searchPromo.body.opportunities.length, 2);
+  const searchPriority = await api('/api/crm/opportunities?priority=critica', { cookie: owner.cookie });
+  assert.equal(searchPriority.body.opportunities.length, 1);
+  assert.equal(searchPriority.body.opportunities[0].id, opportunityId);
+
+  // ---------------------------------------------------------------------
+  // 4) Borda pessoal: outro comercial não vê nem altera; RH é barrado por
+  //    papel; sem sessão é 401; origem cruzada é 403.
+  // ---------------------------------------------------------------------
+  const otherOwn = await api('/api/crm/opportunities', { method: 'POST', cookie: other.cookie, body: { company_id: otherCompanyId, title: 'Funil do outro comercial' } });
+  assert.equal(otherOwn.status, 201);
+  const ownerList = await api('/api/crm/opportunities', { cookie: owner.cookie });
+  assert.equal(ownerList.body.opportunities.some(o => o.id === otherOwn.body.opportunity.id), false, 'listagem não pode expor o funil alheio');
+  const otherList = await api('/api/crm/opportunities', { cookie: other.cookie });
+  assert.equal(otherList.body.opportunities.some(o => o.id === opportunityId), false);
+  assert.equal(otherList.body.opportunities.some(o => o.id === otherOwn.body.opportunity.id), true);
+  assert.equal((await api(`/api/crm/opportunities/${opportunityId}`, { cookie: other.cookie })).status, 404);
+  assert.equal((await api(`/api/crm/opportunities/${opportunityId}`, { method: 'PATCH', cookie: other.cookie, body: { priority: 'baixa' } })).status, 404);
+  assert.equal((await api('/api/crm/opportunities', { cookie: rh.cookie })).status, 403);
+  assert.equal((await api(`/api/crm/opportunities/${opportunityId}`, { cookie: rh.cookie })).status, 403);
+  assert.equal((await api('/api/crm/opportunities')).status, 401);
+  assert.equal((await api(`/api/crm/opportunities/${opportunityId}`)).status, 401);
+  assert.equal((await api(`/api/crm/opportunities/${opportunityId}`, { method: 'PATCH', cookie: owner.cookie, sendOrigin: false, body: { priority: 'baixa' } })).status, 403);
+  // O detalhe de empresa também filtra oportunidades pela mesma borda.
+  const companyDetail = await api(`/api/crm/companies/${companyId}`, { cookie: other.cookie });
+  assert.equal(companyDetail.status, 200);
+  assert.equal(companyDetail.body.opportunities.length, 0, 'detalhe de empresa não vaza oportunidades alheias');
+
+  // ---------------------------------------------------------------------
+  // 5) CRM-06: funil completo, motivo de perda obrigatório, reabertura
+  //    auditada e proibição de trocar direto entre estados terminais.
+  // ---------------------------------------------------------------------
+  for (const stage of ['qualificacao', 'vistoria', 'proposta_elaboracao', 'proposta_enviada', 'negociacao']) {
+    const step = await api(`/api/crm/opportunities/${opportunityId}`, { method: 'PATCH', cookie: owner.cookie, body: { stage } });
+    assert.equal(step.status, 200, JSON.stringify(step.body));
+  }
+  assert.equal((await api(`/api/crm/opportunities/${opportunityId}`, { method: 'PATCH', cookie: owner.cookie, body: { stage: 'perdido' } })).body.error, 'loss_reason_required');
+  assert.equal((await api(`/api/crm/opportunities/${opportunityId}`, { method: 'PATCH', cookie: owner.cookie, body: { stage: 'ganho' } })).status, 200);
+  const wonFlags = await pool.query('SELECT is_won, is_lost, loss_reason FROM crm_opportunities WHERE id=$1', [opportunityId]);
+  assert.equal(wonFlags.rows[0].is_won, true);
+  assert.equal(wonFlags.rows[0].is_lost, false);
+  // ganho é estado de funil: nada de contrato/dinheiro nas trilhas desta fatia.
+  assert.equal((await pool.query('SELECT count(*)::int AS total FROM crm_contracts WHERE opportunity_id=$1', [opportunityId])).rows[0].total, 0);
+  // Terminal → terminal direto é contraditório: precisa reabrir antes.
+  assert.equal((await api(`/api/crm/opportunities/${opportunityId}`, { method: 'PATCH', cookie: owner.cookie, body: { stage: 'perdido', loss_reason: 'saltando estados' } })).body.error, 'invalid_terminal_transition');
+  // Reabertura de ganho exige motivo.
+  assert.equal((await api(`/api/crm/opportunities/${opportunityId}`, { method: 'PATCH', cookie: owner.cookie, body: { stage: 'negociacao' } })).body.error, 'reopen_reason_required');
+  const reopenedFromWon = await api(`/api/crm/opportunities/${opportunityId}`, { method: 'PATCH', cookie: owner.cookie, body: { stage: 'negociacao', reason: 'Cliente retornou com contraproposta' } });
+  assert.equal(reopenedFromWon.status, 200, JSON.stringify(reopenedFromWon.body));
+  assert.equal(reopenedFromWon.body.opportunity.is_won, false);
+
+  const lost = await api(`/api/crm/opportunities/${opportunityId}`, { method: 'PATCH', cookie: owner.cookie, body: { stage: 'perdido', loss_reason: 'Preço acima do orçamento do cliente' } });
+  assert.equal(lost.status, 200);
+  assert.equal(lost.body.opportunity.is_lost, true);
+  assert.equal(lost.body.opportunity.loss_reason, 'Preço acima do orçamento do cliente');
+  assert.equal((await api(`/api/crm/opportunities/${opportunityId}`, { method: 'PATCH', cookie: owner.cookie, body: { stage: 'ganho' } })).body.error, 'invalid_terminal_transition');
+  // Reabertura de perdido exige motivo e LIMPA o motivo de perda (o motivo
+  // antigo permanece no histórico de estágio, nunca reescrito).
+  const reopenedFromLost = await api(`/api/crm/opportunities/${opportunityId}`, { method: 'PATCH', cookie: owner.cookie, body: { stage: 'negociacao', reason: 'Cliente liberou verba extraordinária' } });
+  assert.equal(reopenedFromLost.status, 200, JSON.stringify(reopenedFromLost.body));
+  assert.equal(reopenedFromLost.body.opportunity.loss_reason, null, 'reabertura limpa o motivo de perda corrente');
+  assert.equal(reopenedFromLost.body.opportunity.is_lost, false);
+  const stageHistory = await pool.query('SELECT previous_stage,next_stage,reason FROM crm_opportunity_stages WHERE opportunity_id=$1 ORDER BY created_at, id', [opportunityId]);
+  assert.deepEqual(stageHistory.rows.map(r => `${r.previous_stage}->${r.next_stage}`), ['null->novo', 'novo->qualificacao', 'qualificacao->vistoria', 'vistoria->proposta_elaboracao', 'proposta_elaboracao->proposta_enviada', 'proposta_enviada->negociacao', 'negociacao->ganho', 'ganho->negociacao', 'negociacao->perdido', 'perdido->negociacao']);
+  assert.equal(stageHistory.rows.at(-1).reason, 'Cliente liberou verba extraordinária');
+  const funnelAudit = await pool.query("SELECT action FROM auth_access_audit WHERE (target = $1 OR target LIKE $1 || ':%') ORDER BY created_at, id", [opportunityId]);
+  assert.deepEqual(funnelAudit.rows.map(r => r.action), [
+    'crm_opportunity_create', 'crm_opportunity_update',
+    'crm_opportunity_stage_change', 'crm_opportunity_stage_change', 'crm_opportunity_stage_change',
+    'crm_opportunity_stage_change', 'crm_opportunity_stage_change', 'crm_opportunity_stage_change',
+    'crm_opportunity_reopen', 'crm_opportunity_stage_change', 'crm_opportunity_reopen',
+  ]);
+
+  // Falha de auditoria injetada na reabertura reverte a mutação do funil.
+  await pool.query(`CREATE FUNCTION qa_reject_reopen_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.action = 'crm_opportunity_reopen' THEN RAISE EXCEPTION 'qa audit failure'; END IF; RETURN NEW; END $$`);
+  await pool.query('CREATE TRIGGER qa_reject_reopen_audit BEFORE INSERT ON auth_access_audit FOR EACH ROW EXECUTE FUNCTION qa_reject_reopen_audit()');
+  try {
+    await api(`/api/crm/opportunities/${opportunityId}`, { method: 'PATCH', cookie: owner.cookie, body: { stage: 'perdido', loss_reason: 'Deveria reverter' } });
+    const thenReopen = await api(`/api/crm/opportunities/${opportunityId}`, { method: 'PATCH', cookie: owner.cookie, body: { stage: 'qualificacao', reason: 'Deveria reverter também' } });
+    assert.equal(thenReopen.status, 503, JSON.stringify(thenReopen.body));
+    const afterFailedReopen = await pool.query('SELECT stage FROM crm_opportunities WHERE id=$1', [opportunityId]);
+    assert.equal(afterFailedReopen.rows[0].stage, 'perdido', 'reabertura sem trilha de auditoria precisa ser revertida');
+  } finally {
+    await pool.query('DROP TRIGGER qa_reject_reopen_audit ON auth_access_audit');
+    await pool.query('DROP FUNCTION qa_reject_reopen_audit()');
+  }
+
+  // ---------------------------------------------------------------------
+  // 6) CHECKs do banco como controle negativo (defesa em profundidade):
+  //    mentir sobre o funil é recusado pelo banco, não só pela API.
+  // ---------------------------------------------------------------------
+  await assert.rejects(() => pool.query('UPDATE crm_opportunities SET stage=$2 WHERE id=$1', [percentOpp.body.opportunity.id, 'perdido']), /check constraint/i, 'perdido sem motivo é recusado pelo banco');
+  await assert.rejects(() => pool.query('UPDATE crm_opportunities SET is_won=true WHERE id=$1', [thousandOpp.body.opportunity.id]), /check constraint/i, 'bandeira is_won não pode divergir do estágio');
+  await assert.rejects(() => pool.query('INSERT INTO crm_opportunity_notes (id,opportunity_id,author_id,body) VALUES ($1,$2,$3,$4)', [randomUUID(), opportunityId, owner.id, '   ']), /check constraint/i, 'nota de whitespace é recusada pelo banco');
+
+  // ---------------------------------------------------------------------
+  // 7) Notas internas dedicadas: CRUD completo, versão otimista por gatilho,
+  //    exclusão lógica, regra de autor e auditoria transacional.
+  // ---------------------------------------------------------------------
+  const notesEndpoint = `/api/crm/opportunities/${opportunityId}/notes`;
+  const note = await api(notesEndpoint, { method: 'POST', cookie: owner.cookie, body: { body: '  Cliente prefere contato pela manhã.  ' } });
+  assert.equal(note.status, 201, JSON.stringify(note.body));
+  const noteId = note.body.note.id;
+  assert.equal(note.body.note.body, 'Cliente prefere contato pela manhã.', 'nota salva com trim');
+  assert.equal(note.body.note.author_name, 'QA Staff comercial');
+  assert.equal((await pool.query("SELECT actor_id,action FROM auth_access_audit WHERE target=$1", [noteId])).rows[0].action, 'crm_note_create');
+  assert.equal((await api(notesEndpoint, { method: 'POST', cookie: owner.cookie, body: { body: '   ' } })).body.error, 'invalid_note_body');
+  assert.equal((await api(notesEndpoint, { method: 'POST', cookie: owner.cookie, body: { body: 'x'.repeat(4001) } })).body.error, 'invalid_note_body');
+
+  // Paginação real sem sobreposição nem perda.
+  for (let i = 1; i <= 11; i++) {
+    const fill = await api(notesEndpoint, { method: 'POST', cookie: owner.cookie, body: { body: `Nota de rodapé ${String(i).padStart(2, '0')} — contexto interno.` } });
+    assert.equal(fill.status, 201);
+  }
+  const page1 = await api(notesEndpoint + '?limit=5&offset=0', { cookie: owner.cookie });
+  const page2 = await api(notesEndpoint + '?limit=5&offset=5', { cookie: owner.cookie });
+  const page3 = await api(notesEndpoint + '?limit=5&offset=10', { cookie: owner.cookie });
+  assert.equal(page1.body.total, 12);
+  assert.equal(page1.body.notes.length, 5);
+  assert.equal(page3.body.notes.length, 2);
+  const pageIds = [page1, page2, page3].flatMap(page => page.body.notes.map(n => n.id));
+  assert.equal(new Set(pageIds).size, 12, 'paginação sem sobreposição e sem perda');
+  assert.equal((await api(notesEndpoint + '?limit=0', { cookie: owner.cookie })).status, 400);
+  assert.equal((await api(notesEndpoint + '?limit=101', { cookie: owner.cookie })).status, 400);
+  assert.equal((await api(notesEndpoint + '?offset=-1', { cookie: owner.cookie })).status, 400);
+
+  // Borda: outro comercial 404, RH 403, sem sessão 401, origem cruzada 403.
+  assert.equal((await api(notesEndpoint, { cookie: other.cookie })).status, 404);
+  assert.equal((await api(notesEndpoint, { method: 'POST', cookie: other.cookie, body: { body: 'intrusa' } })).status, 404);
+  assert.equal((await api(notesEndpoint, { cookie: rh.cookie })).status, 403);
+  assert.equal((await api(notesEndpoint)).status, 401);
+  assert.equal((await api(notesEndpoint, { method: 'POST', cookie: owner.cookie, sendOrigin: false, body: { body: 'sem origem' } })).status, 403);
+
+  // Edição com versão otimista incrementada por gatilho do banco.
+  assert.equal((await api(`${notesEndpoint}/${noteId}`, { method: 'PATCH', cookie: owner.cookie, body: { body: 'Cliente prefere contato pela tarde.', expected_version: 5 } })).body.error, 'note_version_conflict');
+  const edited = await api(`${notesEndpoint}/${noteId}`, { method: 'PATCH', cookie: owner.cookie, body: { body: 'Cliente prefere contato pela tarde.', expected_version: 1 } });
+  assert.equal(edited.status, 200, JSON.stringify(edited.body));
+  assert.equal(edited.body.note.version, 2, 'versão incrementada pelo gatilho');
+  assert.ok(edited.body.note.edited_at, 'edição fica visível na linha');
+  const triggerBump = await pool.query('UPDATE crm_opportunity_notes SET body=$2 WHERE id=$1 RETURNING version', [noteId, 'Ajuste direto para provar o gatilho do banco']);
+  assert.equal(triggerBump.rows[0].version, 3, 'gatilho do banco incrementa versão em qualquer escrita');
+  assert.equal((await pool.query("SELECT action FROM auth_access_audit WHERE target=$1 ORDER BY created_at, id", [noteId])).rows.map(r => r.action).join(), 'crm_note_create,crm_note_update');
+
+  // Só quem escreveu edita/exclui: nota de outro autor (fixture SQL) não pode
+  // ser reescrita nem pelo responsável pela oportunidade.
+  const foreignNoteId = randomUUID();
+  await pool.query('INSERT INTO crm_opportunity_notes (id,opportunity_id,author_id,body) VALUES ($1,$2,$3,$4)', [foreignNoteId, opportunityId, other.id, 'Nota deixada por outra identidade.']);
+  const ownerSeesForeign = await api(notesEndpoint, { cookie: owner.cookie });
+  assert.equal(ownerSeesForeign.body.notes.some(n => n.id === foreignNoteId), true, 'nota da oportunidade continua visível ao dono');
+  assert.equal((await api(`${notesEndpoint}/${foreignNoteId}`, { method: 'PATCH', cookie: owner.cookie, body: { body: 'reescrita indevida', expected_version: 1 } })).body.error, 'note_author_required');
+  assert.equal((await api(`${notesEndpoint}/${foreignNoteId}`, { method: 'DELETE', cookie: owner.cookie, body: { expected_version: 1 } })).body.error, 'note_author_required');
+
+  // Exclusão lógica: linha preservada, leitura normal não devolve.
+  assert.equal((await api(`${notesEndpoint}/${noteId}`, { method: 'DELETE', cookie: owner.cookie, body: { expected_version: 99 } })).body.error, 'note_version_conflict');
+  const deleted = await api(`${notesEndpoint}/${noteId}`, { method: 'DELETE', cookie: owner.cookie, body: { expected_version: 3 } });
+  assert.equal(deleted.status, 200);
+  const deletedRow = await pool.query('SELECT deleted_at, deleted_by_id, body FROM crm_opportunity_notes WHERE id=$1', [noteId]);
+  assert.ok(deletedRow.rows[0].deleted_at, 'exclusão é lógica e preserva a linha');
+  assert.equal(deletedRow.rows[0].deleted_by_id, owner.id);
+  const afterDelete = await api(notesEndpoint, { cookie: owner.cookie });
+  assert.equal(afterDelete.body.notes.some(n => n.id === noteId), false);
+  assert.equal(afterDelete.body.total, 12, 'nota excluída não conta no total');
+  assert.equal((await api(`${notesEndpoint}/${noteId}`, { method: 'PATCH', cookie: owner.cookie, body: { body: 'ressuscitar', expected_version: 4 } })).status, 404, 'nota excluída não volta');
+
+  // Falha de auditoria injetada reverte criação e edição de nota.
+  const rollbackNote = await api(notesEndpoint, { method: 'POST', cookie: owner.cookie, body: { body: 'Nota viva para provar rollback de edição.' } });
+  assert.equal(rollbackNote.status, 201);
+  const rollbackNoteId = rollbackNote.body.note.id;
+  await pool.query(`CREATE FUNCTION qa_reject_note_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.action IN ('crm_note_create','crm_note_update') THEN RAISE EXCEPTION 'qa audit failure'; END IF; RETURN NEW; END $$`);
+  await pool.query('CREATE TRIGGER qa_reject_note_audit BEFORE INSERT ON auth_access_audit FOR EACH ROW EXECUTE FUNCTION qa_reject_note_audit()');
+  try {
+    const blockedCreate = await api(notesEndpoint, { method: 'POST', cookie: owner.cookie, body: { body: 'Não deve persistir sem trilha.' } });
+    assert.equal(blockedCreate.status, 503);
+    const blockedUpdate = await api(`${notesEndpoint}/${rollbackNoteId}`, { method: 'PATCH', cookie: owner.cookie, body: { body: 'Edição que não pode persistir sem trilha.', expected_version: 1 } });
+    assert.equal(blockedUpdate.status, 503);
+    const counts = await pool.query('SELECT count(*)::int AS total, count(*) FILTER (WHERE deleted_at IS NULL)::int AS alive FROM crm_opportunity_notes WHERE opportunity_id=$1', [opportunityId]);
+    assert.equal(counts.rows[0].total, 14, '13 vivas + 1 excluída logicamente; nenhuma criação sem trilha');
+    assert.equal(counts.rows[0].alive, 13);
+    const rollbackBody = await pool.query('SELECT body FROM crm_opportunity_notes WHERE id=$1', [rollbackNoteId]);
+    assert.equal(rollbackBody.rows[0].body, 'Nota viva para provar rollback de edição.', 'edição sem trilha é revertida');
+  } finally {
+    await pool.query('DROP TRIGGER qa_reject_note_audit ON auth_access_audit');
+    await pool.query('DROP FUNCTION qa_reject_note_audit()');
+  }
+
+  // ---------------------------------------------------------------------
+  // 8) Jornada de UI real: formulário CRM-05 com todos os campos, tabela
+  //    com todas as colunas, funil com motivo obrigatório e notas na tela.
+  // ---------------------------------------------------------------------
+  const browser = await launchBrowser();
+  const failures = [];
+  try {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'pt-BR' });
+    const pair = owner.cookie.split(';')[0], separator = pair.indexOf('=');
+    await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
+    const page = await context.newPage();
+    trackFailures(page, failures);
+    await page.goto(baseUrl + '/admin/crm', { waitUntil: 'networkidle' });
+    await page.waitForTimeout(800);
+
+    const uiTitle = 'Alarme residencial Jardins ' + randomUUID().slice(0, 6);
+    const [unitsResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().includes(`/api/crm/companies/${companyId}`) && response.request().method() === 'GET'),
+      page.getByLabel('Empresa', { exact: true }).selectOption({ label: company.body.company.display_name }),
+    ]);
+    assert.equal(unitsResponse.status(), 200);
+    await page.getByLabel('Título', { exact: true }).fill(uiTitle);
+    await page.getByLabel('Serviço', { exact: true }).fill('Alarme monitorado');
+    await page.getByLabel('Necessidade', { exact: true }).fill('Mansão com 3 pavimentos, quer sensores de abertura.');
+    await page.getByLabel('Unidade', { exact: true }).selectOption({ label: 'Unidade Matriz Alphaville' });
+    await page.getByLabel('Prioridade', { exact: true }).selectOption('alta');
+    await page.getByLabel('Previsão (fechamento)', { exact: true }).fill('2026-11-30');
+    await page.getByLabel('Valor estimado', { exact: true }).fill('8900.50');
+    await page.getByLabel('Próxima ação', { exact: true }).fill('Agendar visita técnica');
+    const pad = value => String(value).padStart(2, '0');
+    const uiNextAction = new Date(Date.now() + 6 * 24 * 3600 * 1000);
+    await page.getByLabel('Data da próxima ação', { exact: true }).fill(`${uiNextAction.getFullYear()}-${pad(uiNextAction.getMonth() + 1)}-${pad(uiNextAction.getDate())}T09:30`);
+    await page.getByLabel('Origem', { exact: true }).fill('indicacao');
+    const [createResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().endsWith('/api/crm/opportunities') && response.request().method() === 'POST'),
+      page.getByRole('button', { name: 'Criar oportunidade', exact: true }).click(),
+    ]);
+    assert.equal(createResponse.status(), 201);
+
+    // Kanban exibe os campos de CRM-05 no cartão.
+    const card = page.getByRole('article').filter({ hasText: uiTitle });
+    await card.waitFor();
+    await card.getByText('Serviço: Alarme monitorado | Prioridade: alta | Valor: 8900.50', { exact: true }).waitFor();
+    await card.getByText('Responsável: QA Staff comercial | Unidade: Unidade Matriz Alphaville | Previsão: 2026-11-30', { exact: true }).waitFor();
+    await card.getByText('Origem: indicacao').waitFor();
+
+    // Tabela com todas as colunas do requisito.
+    await page.getByRole('button', { name: 'Ver em tabela', exact: true }).click();
+    const row = page.getByRole('row').filter({ hasText: uiTitle });
+    await row.waitFor();
+    await row.getByText('Alarme monitorado', { exact: true }).waitFor();
+    await row.getByText('QA Staff comercial', { exact: true }).waitFor();
+    await row.getByText('Unidade Matriz Alphaville', { exact: true }).waitFor();
+    await row.getByText('2026-11-30', { exact: true }).waitFor();
+    await row.getByText('indicacao', { exact: true }).waitFor();
+    await assertNoHorizontalScroll(page, 'tabela de oportunidades');
+
+    // Painel de detalhe: manutenção de campos e funil com motivos exigidos.
+    await row.getByRole('button', { name: 'Abrir tarefas', exact: true }).click();
+    const summary = page.getByRole('region', { name: 'Detalhe da oportunidade' });
+    await summary.getByText(`Oportunidade — ${uiTitle}`, { exact: true }).waitFor();
+    await summary.getByText('Origem (imutável): indicacao').waitFor();
+
+    await summary.getByLabel('Próximo estágio', { exact: true }).selectOption('qualificacao');
+    await summary.getByRole('button', { name: 'Mover estágio', exact: true }).click();
+    await summary.getByText('Estágio atualizado no funil.', { exact: true }).waitFor();
+
+    await summary.getByLabel('Próximo estágio', { exact: true }).selectOption('perdido');
+    await summary.getByLabel('Motivo da perda (obrigatório)', { exact: true }).waitFor();
+    await summary.getByRole('button', { name: 'Mover estágio', exact: true }).click();
+    await summary.getByText('Motivo de perda obrigatório para mover para perdido.', { exact: true }).waitFor();
+    await summary.getByLabel('Motivo da perda (obrigatório)', { exact: true }).fill('Escolheu concorrente com preço menor');
+    await summary.getByRole('button', { name: 'Mover estágio', exact: true }).click();
+    await summary.getByText('perdido — motivo: Escolheu concorrente com preço menor').waitFor();
+
+    await summary.getByLabel('Próximo estágio', { exact: true }).selectOption('negociacao');
+    await summary.getByLabel('Motivo da reabertura (obrigatório, auditado)', { exact: true }).waitFor();
+    await summary.getByRole('button', { name: 'Mover estágio', exact: true }).click();
+    await summary.getByText('Reabertura exige motivo registrado (auditado).', { exact: true }).waitFor();
+    await summary.getByLabel('Motivo da reabertura (obrigatório, auditado)', { exact: true }).fill('Concorrente desistiu, cliente retornou');
+    await summary.getByRole('button', { name: 'Mover estágio', exact: true }).click();
+    await summary.getByText('Oportunidade reaberta com motivo auditado.', { exact: true }).waitFor();
+
+    // Notas internas na interface: criar, editar e excluir.
+    const notesSection = page.getByRole('region', { name: 'Notas internas da oportunidade' });
+    await notesSection.getByLabel('Nova nota (1–4000 caracteres)', { exact: true }).fill('Cliente fecha dezembro se incluir central nova.');
+    await notesSection.getByRole('button', { name: 'Salvar nota', exact: true }).click();
+    await notesSection.getByText('Nota salva.', { exact: true }).waitFor();
+    await notesSection.getByText('Cliente fecha dezembro se incluir central nova.', { exact: true }).waitFor();
+    await notesSection.getByRole('button', { name: 'Editar nota', exact: true }).click();
+    // Sem exact: o React espelha o valor da textarea como texto do rótulo que
+    // a envolve, então o nome acessível de um controle já preenchido carrega
+    // o valor atual — casamento por substring é o correto aqui.
+    await notesSection.getByLabel('Texto da nota').fill('Cliente fecha dezembro se incluir central nova e sem taxa de instalação.');
+    await notesSection.getByRole('button', { name: 'Salvar edição', exact: true }).click();
+    await notesSection.getByText('Nota atualizada.', { exact: true }).waitFor();
+    await notesSection.getByText('Cliente fecha dezembro se incluir central nova e sem taxa de instalação.', { exact: true }).waitFor();
+    await notesSection.getByRole('button', { name: 'Excluir nota', exact: true }).click();
+    await notesSection.getByText('Nota excluída (exclusão lógica, preservada para auditoria).', { exact: true }).waitFor();
+    assert.equal(await notesSection.getByText('Cliente fecha dezembro se incluir central nova e sem taxa de instalação.').count(), 0, 'nota excluída sai da leitura normal');
+
+    // O ganho segue sendo estado de funil, nunca dinheiro recebido.
+    await summary.getByLabel('Próximo estágio', { exact: true }).selectOption('ganho');
+    await summary.getByRole('button', { name: 'Mover estágio', exact: true }).click();
+    await summary.getByText('ganho é estado de funil — não é dinheiro recebido.', { exact: true }).waitFor();
+
+    await context.close();
+  } finally { await browser.close(); }
+  assert.deepEqual(failures, [], `jornada CRM-05/06/07 não deve ter erro de console/HTTP 5xx: ${failures.join(', ')}`);
+});
+
+test('CRM-08: visão de calendário por período/semana na agenda pessoal (somente leitura)', { skip: !RUN, timeout: 180_000 }, async () => {
   const owner = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
   const company = await api('/api/crm/companies', { method: 'POST', cookie: owner.cookie, body: { displayName: 'Empresa calendário ' + randomUUID(), city: 'Osasco', type: 'prospect' } });
   assert.equal(company.status, 201, JSON.stringify(company.body));
@@ -1909,7 +2313,11 @@ test('PUB-10: mensuração de origem e conversão — agregado derivado, minimiz
   assert.equal(won.status, 201, JSON.stringify(won.body));
   const converted = await api('/api/crm/opportunities', { method: 'POST', cookie: comercial.cookie, body: { company_id: company.body.company.id, title: 'Oportunidade aberta PUB10 ' + tag } });
   assert.equal(converted.status, 201, JSON.stringify(converted.body));
-  await pool.query("UPDATE crm_opportunities SET public_lead_id = $2, stage = 'ganho' WHERE id = $1", [won.body.opportunity.id, aWon]);
+  // Ajuste declarado na integração com a fatia de notas/kanban (PR #25): a
+  // migração 111 passou a exigir no banco que is_won/is_lost nunca divirjam do
+  // estágio (CHECK NOT VALID, vale para escrita nova). A fixture de SQL
+  // precisa gravar a bandeira junto com o estágio — a regra não foi afrouxada.
+  await pool.query("UPDATE crm_opportunities SET public_lead_id = $2, stage = 'ganho', is_won = true WHERE id = $1", [won.body.opportunity.id, aWon]);
   await pool.query('UPDATE crm_opportunities SET public_lead_id = $2 WHERE id = $1', [converted.body.opportunity.id, aConfirmed]);
 
   const metricsPath = '/api/admin/leads/metrics';

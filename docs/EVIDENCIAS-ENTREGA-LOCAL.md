@@ -1110,3 +1110,177 @@ real. Registrado aqui como exige o método.
   notas internas), PUB-02/05 e PUB-06..09, e a revalidação campo a campo de
   CRM-01..06. CRM-10, automação de mensagens, SMTP, lembretes da agenda,
   hospedagem externa, Windows e aceite humano seguem fora por decisão.
+
+*(Nota de integração: na fusão com a fatia de notas/kanban, este cenário passou a
+ser o nono do gate; a bateria mesclada revalidou 9/9 em duas execuções
+consecutivas.)*
+
+## Continuação CRM-07 residual — notas internas e campo a campo de CRM-05/06 (branch `arena/01a0eef9-gruposegsystemseguranca`)
+
+### Política registrada antes da rota
+
+`docs/PROMPT-CONTINUACAO-CRM-NOTAS-KANBAN.md`, com as decisões principais:
+
+- Nota interna segue a borda pessoal da oportunidade (responsável atual ou
+  criador enquanto sem responsável); RH 403, outro comercial 404, sem bypass
+  administrativo; nota nunca aparece em superfície pública, do cliente ou de
+  empresa; corpo 1–4000 com trim (API e banco); toda mutação audita na mesma
+  transação; edição com versão otimista por gatilho e `edited_at` visível;
+  exclusão lógica coerente; **só quem escreveu edita ou exclui a própria
+  nota**; paginação real 1–100.
+- A oportunidade em si passou a obedecer à política pessoal (listagem, detalhe
+  legado e PATCH); corte de papel da família comercial; CRM-05 completo em
+  criação e manutenção com unidade validada contra a mesma empresa;
+  **atribuição imutável** (`origin`/`campaign`/responsável nunca editáveis,
+  `public_lead_id` gerenciado pelo servidor); responsável gravado de verdade
+  na conversão de lead.
+- CRM-06: motivo de perda obrigatório também no banco (CHECK `NOT VALID`,
+  vale para escrita nova); reabertura de `perdido`/`ganho` exige motivo,
+  audita `crm_opportunity_reopen` e limpa o `loss_reason` corrente; troca
+  direta entre terminais recusada; `is_won`/`is_lost` não podem divergir do
+  estágio; `ganho` segue sendo estado de funil, nunca dinheiro recebido.
+- Busca de oportunidades no servidor com curinga escapado (`100%` é literal).
+
+### Comandos executados nesta continuação
+
+| Comando | Resultado |
+| --- | --- |
+| `npm ci` | exit 0 (início da sessão, antes de qualquer código) |
+| `node scripts/qa-wave0-static.mjs` | 5/5 (migrações 001–111 contínuas e agendadas) |
+| `npm run test:migrations:pg` | 111/111 na primeira aplicação e no replay; 510→510 tabelas; clone TEMPLATE preservou checksums; adulteração do 006 recusada (controle negativo) |
+| `npm run test:l04-delivery:pg` | **8/8, duas vezes consecutivas**, com PostgreSQL descartável, HTTP real e Chromium real (sem `--disable-web-security`) |
+| `npm test` | 186/186 |
+| `npm run typecheck` | 0 erros |
+| `npm run build` | sucesso, com `/admin/crm` e `/admin/comercial` |
+| `git diff --check` | limpo; `tsconfig.json`/`next-env.d.ts` reescritos pelo dev server do gate (`.next/integration-l04`) conferidos e restaurados com `git checkout` |
+
+### Cenário 8 do gate L04 (novo) — o que prova
+
+1. Quatro identidades: dono (comercial), outro comercial e RH; empresa e
+   unidades criadas por HTTP (unidade é fixture SQL declarada — criação de
+   unidade segue sem rota, escopo CRM-01).
+2. CRM-05 campo a campo: criação com TODOS os campos (serviço, necessidade,
+   prioridade, previsão, valor, próxima ação/data, origem, campanha, unidade)
+   com persistência conferida campo a campo, inclusive responsável =
+   identidade da sessão com nome real de `auth_identities.display_name` e
+   join da unidade conferido no banco.
+3. Controles negativos de campo: prioridade inválida, unidade de outra
+   empresa (`unit_not_available`), valor negativo, previsão `15/12/2026`,
+   título ausente, `public_lead_id` no corpo (`server_managed_fields`),
+   empresa inexistente.
+4. Atribuição imutável: PATCH com `origin`, `campaign` e `responsible_id`
+   devolve 400 `field_not_editable` em todos.
+5. Manutenção por PATCH: prioridade, valor, previsão, necessidade, serviço,
+   limpeza de unidade (`unit_id: null`) e próxima ação/data; unidade de outra
+   empresa recusada também no PATCH.
+6. Busca no servidor com curinga escapado: `search=100%` encontra só
+   “Promoção 100% adesão” (não casa “Promoção 1000 adesão”); busca por
+   “Promoção” encontra as duas; `priority=critica` filtra no servidor.
+7. Borda pessoal: listagem do dono não contém o funil do outro comercial e
+   vice-versa; detalhe e PATCH do outro comercial 404; RH 403 na listagem e no
+   detalhe; sem sessão 401; mutação sem `Origin` 403. Detalhe de empresa
+   (`GET /api/crm/companies/:id`) devolve 0 oportunidades para identidade fora
+   da propriedade.
+8. Funil completo: novo→qualificação→vistoria→proposta_elaboracao→
+   proposta_enviada→negociacao→ganho com histórico de estágios conferido;
+   `is_won`/`is_lost` coerentes; nenhuma linha em `crm_contracts` nasce do
+   estágio (ganho não é dinheiro recebido); perda sem motivo 400; troca direta
+   ganho↔perdido 400 `invalid_terminal_transition` nos dois sentidos;
+   reabertura sem motivo 400 `reopen_reason_required`; reabertura com motivo
+   200 auditando `crm_opportunity_reopen` e limpando `loss_reason` (motivo
+   antigo preservado no histórico de estágio); trilha de auditoria completa na
+   ordem (`create`, `update`, 6× `stage_change`, `reopen`, `stage_change`,
+   `reopen`).
+9. Auditoria transacional do funil: gatilho que rejeita `crm_opportunity_reopen`
+   faz o PATCH devolver 503 e o estágio permanecer `perdido` (mutação revertida).
+10. CHECKs do banco como controle negativo (SQL): `stage='perdido'` sem motivo
+    recusado; `is_won=true` com estágio aberto recusado; nota de whitespace
+    recusada pelo `btrim`.
+11. Notas: criação com trim e autor; corpo vazio/whitespace/>4000 recusado;
+    12 notas com paginação real sem sobreposição nem perda (3 páginas
+    conferidas por id); `limit=0`/`101`/`offset=-1` 400; outro comercial 404
+    (GET e POST), RH 403, sem sessão 401, POST sem `Origin` 403; edição com
+    versão errada 409 e com versão certa 200 (`edited_at` preenchido, versão
+    2); escrita direta no banco confirma o gatilho de versão (v3); nota de
+    outro autor (fixture SQL) é visível ao dono mas não pode ser editada nem
+    excluída por ele (`note_author_required`); exclusão com versão errada 409;
+    exclusão lógica preserva linha com `deleted_at`/`deleted_by_id`, sai da
+    leitura e do total e não pode ser reeditada (404); gatilho que rejeita
+    `crm_note_create`/`crm_note_update` reverte criação (contagem conferida)
+    e edição (corpo conferido intacto).
+12. Jornada de UI real (Chromium, sessão do dono, 1440×1000): formulário
+    “Nova oportunidade (CRM-05)” preenchido com todos os campos (o select de
+    unidades é alimentado pelo detalhe da empresa); cartão do kanban exibe
+    serviço, prioridade, valor, responsável, unidade, previsão e origem;
+    tabela exibe todas as colunas sem rolagem horizontal; painel de detalhe
+    mostra origem como imutável; movimentação qualificação → perdido (motivo
+    exigido na interface, inclusive a negativa do envio vazio) → reabertura
+    para negociacao (motivo exigido) → ganho com o aviso “ganho é estado de
+    funil — não é dinheiro recebido”; notas criadas, editadas e excluídas pela
+    interface. Sem erro de console/HTTP 5xx.
+
+### Ajustes declarados em cenários preexistentes (regra mais forte)
+
+- CRM-07 tarefas, CRM-07 interações, CRM-07 delegação, CRM-09 e CRM-08: as
+  asserções do detalhe legado `GET /api/crm/opportunities/:id` para identidade
+  fora da propriedade mudaram de “200 com lista vazia” para **404** — a
+  oportunidade em si (necessidade, valor, origem, motivo de perda) passou a
+  ser pessoal, não apenas as sublistas.
+- CRM-08 agenda: `participantDetail` no detalhe legado passou a 404 e a visão
+  do participante foi reafirmada pela própria agenda
+  (`/api/crm/visits/agenda`), que continua sendo o caminho dele — nenhuma
+  capacidade foi removida, o atalho pela oportunidade alheia foi fechado.
+- CRM-07 delegação (UI): o rótulo do campo de busca de oportunidades mudou de
+  “Busca por título de oportunidade” para “Buscar oportunidade (título/
+  necessidade)” porque a busca passou a ser aplicada no servidor e agora
+  também cobre a necessidade.
+- Nenhuma regra de proteção foi afrouxada; todas as mudanças acima apertam a
+  borda.
+
+### Limites honestos deste recorte
+
+- A busca de empresas (CRM-01) segue com curinga não escapado; não foi tocada
+  (fora do escopo da fatia, anotado como residual).
+- Rotas de empresa/contato/importação em `crm-api.mjs` ainda usam o auxiliar
+  de auditoria que engole falha (mutação sem trilha não reverte). As rotas de
+  oportunidade e notas desta fatia são transacionais; o restante segue como
+  risco residual declarado, a exemplo do que já constava para
+  `handleAdminLeadStatus` antes da migração 110.
+- Criação/edição de unidade (`crm_company_units`) segue sem rota (escopo
+  CRM-01); o gate usa fixture SQL declarada.
+- Sem drag-and-drop no kanban: a movimentação de funil é pelo painel de
+  detalhe, com os motivos exigidos.
+- CRM-02 (contato com função decisor/influenciador/usuário/financeiro com
+  preferências/restrições) continua sem tela dedicada; CRM-01..04 aguardam
+  revalidação campo a campo.
+
+### Integração com os PRs #24 (calendário CRM-08) e #26 (PUB-10)
+
+Esta fatia foi desenvolvida em paralela à fatia de calendário de CRM-08
+(PR #24, branch `arena/01a0ef36`) e à fatia de métricas de origem/conversão
+PUB-10 (PR #26, branch `arena/01a0ef49`). Nos merges para o `main`
+atualizado, os conflitos do gate e dos docs foram resolvidos mantendo
+**todos** os cenários — no gate mesclado, notas/kanban é o oitavo, calendário
+o nono e PUB-10 o décimo — e a bateria completa foi re-executada sobre o
+estado final: `node scripts/qa-wave0-static.mjs` 5/5, `npm run
+test:migrations:pg` 111/111 (replay, clone, checksum negativo, 510 tabelas),
+`npm run test:l04-delivery:pg` **10/10, duas vezes consecutivas**, `npm test`
+186/186, `npm run typecheck` 0 erros, `npm run build` ok, `git diff --check`
+limpo. Nenhuma regra de proteção foi afrouxada na resolução.
+
+Ajuste declarado pós-integração (CI): a primeira execução do gate no CI
+falhou (etapa do gate, exit 1, em runner visivelmente lentificado durante o
+incidente de storage do GitHub Actions — os logs da execução ficaram
+indisponíveis por EOF no blob). Sem log para diagnosticar e com a bateria
+local verde (9/9 com TZ local e com TZ=UTC naquele ponto), os timeouts de
+runtime dos dois cenários desta fatia foram ampliados apenas como orçamento
+de infraestrutura — cenário de notas/kanban 180s→240s e cenário de calendário
+120s→180s — sem tocar em nenhuma asserção, espera ou regra de proteção.
+
+Ajuste declarado pós-integração (cenário PUB-10): na fusão com o PR #26, a
+fixture SQL do cenário de PUB-10 gravava `stage='ganho'` sem acertar a
+bandeira `is_won`, o que a migração 111 desta fatia passou a recusar no banco
+(CHECK `crm_opportunities_won_flag_check`, `NOT VALID`, vale para escrita
+nova). A fixture passou a gravar `is_won = true` junto com o estágio. A regra
+não foi afrouxada — o cenário é que precisou respeitar a coerência nova; sem
+o ajuste, o gate mesclado fechava em 9/10.

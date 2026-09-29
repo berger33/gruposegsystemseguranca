@@ -5,7 +5,14 @@ const COMPANY_TYPES = new Set(["prospect","client","partner"]);
 const COMPANY_STATUS = new Set(["active","inactive","archived"]);
 const CONTACT_ROLES = new Set(["decisor","influenciador","usuario","financeiro","outro"]);
 const OPP_STAGES = new Set(["novo","qualificacao","vistoria","proposta_elaboracao","proposta_enviada","negociacao","ganho","perdido"]);
+const OPP_OPEN_STAGES = new Set(["novo","qualificacao","vistoria","proposta_elaboracao","proposta_enviada","negociacao"]);
 const OPP_PRIORITY = new Set(["baixa","media","alta","critica"]);
+const COMMERCIAL_FAMILY_ROLES = new Set(["comercial", "admin", "marcelo", "ti"]);
+// Campos de atribuição que nunca são editáveis depois de criada a oportunidade
+// (mudança retroativa corromperia a atribuição de PUB-03/PUB-10 e a
+// responsabilidade não é transferível por PATCH). O vínculo com lead público
+// tem erro próprio (server_managed_fields) e é tratado à parte.
+const OPP_IMMUTABLE_FIELDS = new Set(["origin", "campaign", "responsible_id", "responsible_name", "responsibleId", "responsibleName"]);
 const TASK_STATUS = new Set(["aberta","em_andamento","concluida","cancelada"]);
 const VISIT_STATUS = new Set(["solicitada","em_agendamento","confirmada","realizada","cancelada"]);
 const INTERACTION_TYPES = new Set(["ligacao","reuniao","email","whatsapp","visita","nota","outro"]);
@@ -190,6 +197,38 @@ export function createCrmApi(ctx) {
     return session;
   }
 
+  // CRM-05/06/07: as rotas de oportunidade exigem papel da família comercial,
+  // igual a interações/visitas/cadências. O papel não é concessão: a borda de
+  // propriedade pessoal continua sendo aplicada separadamente.
+  async function requireCommercialFamilySession(req, res) {
+    const session = await requireAdminSession(req, res);
+    if (!session) return null;
+    if (!COMMERCIAL_FAMILY_ROLES.has(session.role)) {
+      ctx.json(res, 403, { error: "commercial_role_required" });
+      return null;
+    }
+    return session;
+  }
+
+  // Auditoria transacional para as mutações de oportunidade desta fatia: a
+  // falha do insert propaga e reverte a transação — nunca é engolida.
+  async function transactionalAudit(client, session, action, target) {
+    await client.query(
+      "INSERT INTO auth_access_audit (actor_kind,actor_id,action,target,result,detail_category) VALUES ($1,$2,$3,$4,'allowed','none')",
+      [session.role, session.identityId, action, target],
+    );
+  }
+
+  // A busca de oportunidades escapa curingas de ILIKE: `100%` é literal.
+  function escapeLikePattern(term) {
+    return `%${term.replace(/[\\%_]/g, (match) => `\\${match}`)}%`;
+  }
+
+  async function displayForIdentity(db, identityId) {
+    const result = await db.query("SELECT display_name FROM auth_identities WHERE id = $1", [identityId]);
+    return result.rows[0]?.display_name || null;
+  }
+
   // --- Companies ---
   async function handleCompanies(req, res, url) {
     const session = await requireAdminSession(req, res);
@@ -288,7 +327,13 @@ export function createCrmApi(ctx) {
         const [units, contacts, opps] = await Promise.all([
           db.query("SELECT * FROM crm_company_units WHERE company_id = $1 ORDER BY is_main DESC, created_at", [id]),
           db.query("SELECT * FROM crm_contacts WHERE company_id = $1 ORDER BY is_primary DESC, created_at DESC", [id]),
-          db.query("SELECT * FROM crm_opportunities WHERE company_id = $1 ORDER BY created_at DESC LIMIT 50", [id]),
+          // Empresa/contato/unidade são registro central compartilhado (CRM-01);
+          // oportunidade é pessoal (política CRM-05..09) e segue a borda do
+          // responsável atual (ou do criador enquanto sem responsável).
+          db.query(
+            "SELECT * FROM crm_opportunities WHERE company_id = $1 AND (responsible_id = $2 OR (responsible_id IS NULL AND created_by_id = $2)) ORDER BY created_at DESC LIMIT 50",
+            [id, session.identityId],
+          ),
         ]);
         return ctx.json(res, 200, { company: comp.rows[0], units: units.rows, contacts: contacts.rows, opportunities: opps.rows });
       } catch (e) {
@@ -418,7 +463,7 @@ export function createCrmApi(ctx) {
 
   // --- Opportunities ---
   async function handleOpportunities(req, res, url) {
-    const session = await requireAdminSession(req, res);
+    const session = await requireCommercialFamilySession(req, res);
     if (!session) return;
     const db = ctx.getPool();
 
@@ -435,20 +480,36 @@ export function createCrmApi(ctx) {
       if (companyId && !isValidUuid(companyId)) return ctx.json(res, 400, { error: "invalid_company_id" });
       if (stage && !OPP_STAGES.has(stage)) return ctx.json(res, 400, { error: "invalid_stage" });
       if (priority && !OPP_PRIORITY.has(priority)) return ctx.json(res, 400, { error: "invalid_priority" });
+      if (responsibleId && !isValidUuid(responsibleId)) return ctx.json(res, 400, { error: "invalid_responsible_id" });
 
       try {
         const conditions = [];
         const values = [];
         let idx = 1;
-        if (companyId) { conditions.push(`company_id = $${idx++}`); values.push(companyId); }
-        if (stage) { conditions.push(`stage = $${idx++}`); values.push(stage); }
-        if (responsibleId) { conditions.push(`responsible_id = $${idx++}`); values.push(responsibleId); }
-        if (priority) { conditions.push(`priority = $${idx++}`); values.push(priority); }
-        if (search) { conditions.push(`(title ILIKE $${idx} OR need_description ILIKE $${idx})`); values.push(`%${search}%`); idx++; }
+        // CRM-05..09: o funil é pessoal. Antes desta fatia a listagem devolvia
+        // as oportunidades de TODOS para qualquer sessão de staff.
+        conditions.push(`(o.responsible_id = $${idx} OR (o.responsible_id IS NULL AND o.created_by_id = $${idx}))`);
+        values.push(session.identityId); idx++;
+        if (companyId) { conditions.push(`o.company_id = $${idx++}`); values.push(companyId); }
+        if (stage) { conditions.push(`o.stage = $${idx++}`); values.push(stage); }
+        if (responsibleId) { conditions.push(`o.responsible_id = $${idx++}`); values.push(responsibleId); }
+        if (priority) { conditions.push(`o.priority = $${idx++}`); values.push(priority); }
+        if (search) {
+          const pattern = escapeLikePattern(search);
+          conditions.push(`(o.title ILIKE $${idx} ESCAPE '\\' OR o.need_description ILIKE $${idx} ESCAPE '\\')`);
+          values.push(pattern); idx++;
+        }
 
-        const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-        const countRes = await db.query(`SELECT COUNT(*)::int as total FROM crm_opportunities ${where}`, values);
-        const listRes = await db.query(`SELECT * FROM crm_opportunities ${where} ORDER BY next_action_date NULLS LAST, created_at DESC LIMIT $${idx++} OFFSET $${idx++}`, [...values, limit, offset]);
+        const where = `WHERE ${conditions.join(" AND ")}`;
+        const countRes = await db.query(`SELECT COUNT(*)::int as total FROM crm_opportunities o ${where}`, values);
+        const listRes = await db.query(
+          `SELECT o.*, u.display_name AS unit_name
+             FROM crm_opportunities o
+             LEFT JOIN crm_company_units u ON u.id = o.unit_id
+             ${where}
+             ORDER BY o.next_action_date NULLS LAST, o.created_at DESC LIMIT $${idx++} OFFSET $${idx++}`,
+          [...values, limit, offset],
+        );
 
         return ctx.json(res, 200, { opportunities: listRes.rows, total: countRes.rows[0]?.total || 0, limit, offset });
       } catch (e) {
@@ -464,6 +525,7 @@ export function createCrmApi(ctx) {
 
       const companyId = body?.company_id || body?.companyId;
       const contactId = body?.contact_id || body?.contactId || null;
+      const unitId = body?.unit_id || body?.unitId || null;
       const title = sanitizeText(body?.title, 200);
       const serviceId = body?.service_id || body?.serviceId || null;
       const serviceName = sanitizeText(body?.service_name || body?.serviceName, 100);
@@ -475,35 +537,69 @@ export function createCrmApi(ctx) {
       const origin = sanitizeText(body?.origin, 100);
       const campaign = sanitizeText(body?.campaign, 100);
       const priority = String(body?.priority || "media").toLowerCase();
-      const publicLeadId = body?.public_lead_id || body?.publicLeadId || null;
 
       if (!companyId || !isValidUuid(companyId)) return ctx.json(res, 400, { error: "invalid_company_id" });
       if (!title) return ctx.json(res, 400, { error: "invalid_title" });
+      // O vínculo com lead público é gerenciado pelo servidor (decisão CRM-08):
+      // só a conversão de lead cria a ponte. O corpo não pode forjar o link.
+      if (body?.public_lead_id || body?.publicLeadId) return ctx.json(res, 400, { error: "server_managed_fields" });
       if (contactId && !isValidUuid(contactId)) return ctx.json(res, 400, { error: "invalid_contact_id" });
-      if (publicLeadId && !isValidUuid(publicLeadId)) return ctx.json(res, 400, { error: "invalid_public_lead_id" });
+      if (unitId && !isValidUuid(unitId)) return ctx.json(res, 400, { error: "invalid_unit_id" });
       if (!OPP_PRIORITY.has(priority)) return ctx.json(res, 400, { error: "invalid_priority" });
       if (estimatedValue !== null && (isNaN(estimatedValue) || estimatedValue < 0)) return ctx.json(res, 400, { error: "invalid_estimated_value" });
       if (nextActionDate && isNaN(nextActionDate.getTime())) return ctx.json(res, 400, { error: "invalid_next_action_date" });
+      if (forecastDate && !/^\d{4}-\d{2}-\d{2}$/.test(forecastDate)) return ctx.json(res, 400, { error: "invalid_forecast_date" });
 
+      let client;
+      let transaction = false;
       try {
+        client = await db.connect();
+        await client.query("BEGIN"); transaction = true;
+
+        const company = await client.query("SELECT id FROM crm_companies WHERE id = $1", [companyId]);
+        if (!company.rows[0]) {
+          await client.query("ROLLBACK"); transaction = false;
+          return ctx.json(res, 404, { error: "company_not_found" });
+        }
+        if (unitId) {
+          // CRM-05: a unidade precisa existir e pertencer à mesma empresa.
+          const unit = await client.query("SELECT id FROM crm_company_units WHERE id = $1 AND company_id = $2", [unitId, companyId]);
+          if (!unit.rows[0]) {
+            await client.query("ROLLBACK"); transaction = false;
+            return ctx.json(res, 400, { error: "unit_not_available" });
+          }
+        }
+        if (serviceId) {
+          const service = await client.query("SELECT id FROM service_catalog WHERE id = $1", [serviceId]);
+          if (!service.rows[0]) {
+            await client.query("ROLLBACK"); transaction = false;
+            return ctx.json(res, 400, { error: "service_not_available" });
+          }
+        }
+        const responsibleName = await displayForIdentity(client, session.identityId);
+
         const id = crypto.randomUUID();
-        const result = await db.query(
-          `INSERT INTO crm_opportunities (id, company_id, contact_id, title, service_id, service_name, need_description, responsible_id, responsible_name, forecast_date, estimated_value, next_action, next_action_date, origin, campaign, priority, public_lead_id, created_by_id, stage)
+        const result = await client.query(
+          `INSERT INTO crm_opportunities (id, company_id, contact_id, unit_id, title, service_id, service_name, need_description, responsible_id, responsible_name, forecast_date, estimated_value, next_action, next_action_date, origin, campaign, priority, created_by_id, stage)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,'novo') RETURNING *`,
-          [id, companyId, contactId, title, serviceId, serviceName, needDescription, session.identityId, session.role, forecastDate, estimatedValue, nextAction, nextActionDate, origin, campaign, priority, publicLeadId, session.identityId]
+          [id, companyId, contactId, unitId, title, serviceId, serviceName, needDescription, session.identityId, responsibleName, forecastDate, estimatedValue, nextAction, nextActionDate, origin, campaign, priority, session.identityId]
         );
 
-        await db.query(
+        await client.query(
           `INSERT INTO crm_opportunity_stages (id, opportunity_id, previous_stage, next_stage, changed_by_id, changed_by_role, reason) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
           [crypto.randomUUID(), id, null, "novo", session.identityId, session.role, "criação"]
         );
 
-        await audit(db, { action: "crm_opportunity_create", target: id, result: "allowed", actorKind: session.role, actorId: session.identityId });
+        await transactionalAudit(client, session, "crm_opportunity_create", id);
 
+        await client.query("COMMIT"); transaction = false;
         return ctx.json(res, 201, { opportunity: result.rows[0] });
       } catch (e) {
+        if (transaction) await client?.query("ROLLBACK").catch(() => {});
         console.error("crm opp create failed", e?.message);
         return ctx.json(res, 503, { error: "create_failed" });
+      } finally {
+        client?.release();
       }
     }
 
@@ -511,21 +607,42 @@ export function createCrmApi(ctx) {
   }
 
   async function handleOpportunityById(req, res, id) {
-    const session = await requireAdminSession(req, res);
+    const session = await requireCommercialFamilySession(req, res);
     if (!session) return;
     const db = ctx.getPool();
 
     if (!isValidUuid(id)) return ctx.json(res, 400, { error: "invalid_opportunity_id" });
 
+    // CRM-05..09: a oportunidade em si é pessoal. Esta rota legada era o último
+    // atalho onde qualquer sessão de staff lia (e no PATCH alterava)
+    // oportunidade de outra pessoa; agora aplica a mesma borda das rotas
+    // dedicadas de tarefas/interações/visitas/cadências/notas.
+    async function ownerFor(client) {
+      const result = await client.query(
+        `SELECT o.*, u.display_name AS unit_name
+           FROM crm_opportunities o
+           LEFT JOIN crm_company_units u ON u.id = o.unit_id
+          WHERE o.id = $1 AND (o.responsible_id = $2 OR (o.responsible_id IS NULL AND o.created_by_id = $2))
+          FOR SHARE OF o`,
+        [id, session.identityId],
+      );
+      return result.rows[0] || null;
+    }
+
     if (req.method === "GET") {
       if (!requireSameOrigin(req, res)) return;
+      let client;
+      let transaction = false;
       try {
-        const opp = await db.query("SELECT * FROM crm_opportunities WHERE id = $1", [id]);
-        if (!opp.rows[0]) return ctx.json(res, 404, { error: "opportunity_not_found" });
-        const [stages, tasks, interactions, visits] = await Promise.all([
-          // CRM-09: the legacy detail route must apply the opportunity ownership
-          // boundary to stages too; an authenticated staff role is not a grant.
-          db.query(
+        client = await db.connect();
+        await client.query("BEGIN"); transaction = true;
+        const opp = await ownerFor(client);
+        if (!opp) {
+          await client.query("ROLLBACK"); transaction = false;
+          return ctx.json(res, 404, { error: "opportunity_not_found" });
+        }
+        const [stages, tasks, interactions, visits, notes] = await Promise.all([
+          client.query(
             `SELECT s.* FROM crm_opportunity_stages s
               WHERE s.opportunity_id = $1
                 AND EXISTS (
@@ -536,15 +653,17 @@ export function createCrmApi(ctx) {
               ORDER BY s.created_at DESC`,
             [id, session.identityId],
           ),
-          db.query("SELECT * FROM crm_tasks WHERE opportunity_id = $1 AND (responsible_id = $2 OR delegated_by_id = $2) AND EXISTS (SELECT 1 FROM crm_opportunities o WHERE o.id=$1 AND (o.responsible_id=$2 OR (o.responsible_id IS NULL AND o.created_by_id=$2))) ORDER BY due_date NULLS LAST, created_at DESC LIMIT 200", [id, ["comercial", "admin", "marcelo", "ti"].includes(session.role) ? session.identityId : null]),
+          client.query("SELECT * FROM crm_tasks WHERE opportunity_id = $1 AND (responsible_id = $2 OR delegated_by_id = $2) AND EXISTS (SELECT 1 FROM crm_opportunities o WHERE o.id=$1 AND (o.responsible_id=$2 OR (o.responsible_id IS NULL AND o.created_by_id=$2))) ORDER BY due_date NULLS LAST, created_at DESC LIMIT 200", [id, ["comercial", "admin", "marcelo", "ti"].includes(session.role) ? session.identityId : null]),
           // CRM-07: the interaction history follows the exact same ownership
           // rule as the dedicated /interactions endpoint below, so this
           // legacy detail route can never leak it to an unauthorized viewer.
-          db.query("SELECT * FROM crm_interactions WHERE opportunity_id = $1 AND deleted_at IS NULL AND EXISTS (SELECT 1 FROM crm_opportunities o WHERE o.id=$1 AND (o.responsible_id=$2 OR (o.responsible_id IS NULL AND o.created_by_id=$2))) ORDER BY occurred_at DESC LIMIT 50", [id, ["comercial", "admin", "marcelo", "ti"].includes(session.role) ? session.identityId : null]),
+          client.query("SELECT * FROM crm_interactions WHERE opportunity_id = $1 AND deleted_at IS NULL AND EXISTS (SELECT 1 FROM crm_opportunities o WHERE o.id=$1 AND (o.responsible_id=$2 OR (o.responsible_id IS NULL AND o.created_by_id=$2))) ORDER BY occurred_at DESC LIMIT 50", [id, ["comercial", "admin", "marcelo", "ti"].includes(session.role) ? session.identityId : null]),
           // CRM-08: a agenda segue exatamente a política da rota dedicada
           // /visits — responsável pela oportunidade ou participante convidado
-          // da própria visita. Esta rota legada não é mais um atalho de leitura.
-          db.query(
+          // da própria visita. Como a rota inteira agora é do responsável, o
+          // participante continua enxergando a própria visita pela própria
+          // agenda (/api/crm/visits/agenda).
+          client.query(
             `SELECT * FROM crm_visits v
               WHERE v.opportunity_id = $1
                 AND (
@@ -554,11 +673,24 @@ export function createCrmApi(ctx) {
               ORDER BY v.scheduled_at DESC LIMIT 200`,
             [id, ["comercial", "admin", "marcelo", "ti"].includes(session.role) ? session.identityId : null],
           ),
+          // CRM-07: notas internas dedicadas — dono da oportunidade apenas.
+          client.query(
+            `SELECT n.id,n.body,n.version,n.created_at,n.updated_at,n.edited_at,a.display_name AS author_name
+               FROM crm_opportunity_notes n
+               JOIN auth_identities a ON a.id = n.author_id
+              WHERE n.opportunity_id = $1 AND n.deleted_at IS NULL
+              ORDER BY n.created_at DESC, n.id DESC LIMIT 50`,
+            [id],
+          ),
         ]);
-        return ctx.json(res, 200, { opportunity: opp.rows[0], stages: stages.rows, tasks: tasks.rows, interactions: interactions.rows, visits: visits.rows });
+        await client.query("COMMIT"); transaction = false;
+        return ctx.json(res, 200, { opportunity: opp, stages: stages.rows, tasks: tasks.rows, interactions: interactions.rows, visits: visits.rows, notes: notes.rows });
       } catch (e) {
+        if (transaction) await client?.query("ROLLBACK").catch(() => {});
         console.error("crm opp get failed", e?.message);
         return ctx.json(res, 503, { error: "crm_unavailable" });
+      } finally {
+        client?.release();
       }
     }
 
@@ -567,66 +699,144 @@ export function createCrmApi(ctx) {
       let body;
       try { body = await ctx.readJson(req, 15 * 1024); } catch { return ctx.json(res, 400, { error: "invalid_request" }); }
 
+      // Atribuição é imutável (política desta fatia) e o vínculo com lead é
+      // gerenciado pelo servidor (política CRM-08).
+      for (const key of Object.keys(body || {})) {
+        if (OPP_IMMUTABLE_FIELDS.has(key)) return ctx.json(res, 400, { error: "field_not_editable" });
+        if (key === "public_lead_id" || key === "publicLeadId") return ctx.json(res, 400, { error: "server_managed_fields" });
+      }
+
       const newStage = body?.stage ? String(body.stage).toLowerCase() : null;
       const lossReason = sanitizeText(body?.loss_reason || body?.lossReason, 500);
-      const nextAction = body?.next_action || body?.nextAction ? sanitizeText(body.next_action || body.nextAction, 200) : undefined;
-      const nextActionDate = body?.next_action_date || body?.nextActionDate ? new Date(body.next_action_date || body.nextActionDate) : undefined;
-      const estimatedValue = body?.estimated_value || body?.estimatedValue !== undefined ? Number(body.estimated_value || body.estimatedValue) : undefined;
+      const reopenReason = sanitizeText(body?.reason, 500);
+      // Chave omitida = sem alteração; null (ou string vazia) = limpar o campo;
+      // valor presente = validar. Nada de adivinhar por falsidade.
+      const hasOwn = (...keys) => keys.some(key => Object.hasOwn(body || {}, key));
+      const pick = (...keys) => keys.map(key => body?.[key]).find(value => value !== undefined);
+      const nextActionRaw = hasOwn("next_action", "nextAction") ? pick("next_action", "nextAction") : undefined;
+      const needDescriptionRaw = hasOwn("need_description", "needDescription") ? pick("need_description", "needDescription") : undefined;
+      const serviceNameRaw = hasOwn("service_name", "serviceName") ? pick("service_name", "serviceName") : undefined;
+      // Tipo errado é recusado, não convertido em limpeza silenciosa.
+      for (const [field, value] of [["next_action", nextActionRaw], ["need_description", needDescriptionRaw], ["service_name", serviceNameRaw]]) {
+        if (value !== undefined && value !== null && typeof value !== "string") return ctx.json(res, 400, { error: `invalid_${field}` });
+      }
+      const nextAction = nextActionRaw === undefined ? undefined : sanitizeText(nextActionRaw, 200);
+      const nextActionDateRaw = hasOwn("next_action_date", "nextActionDate") ? pick("next_action_date", "nextActionDate") : undefined;
+      const nextActionDate = nextActionDateRaw === null || nextActionDateRaw === undefined ? nextActionDateRaw : new Date(nextActionDateRaw);
+      const estimatedValueRaw = hasOwn("estimated_value", "estimatedValue") ? pick("estimated_value", "estimatedValue") : undefined;
+      const estimatedValue = estimatedValueRaw === null || estimatedValueRaw === undefined ? estimatedValueRaw : Number(estimatedValueRaw);
+      const priority = hasOwn("priority") ? String(body.priority).toLowerCase() : undefined;
+      const forecastDateRaw = hasOwn("forecast_date", "forecastDate") ? pick("forecast_date", "forecastDate") : undefined;
+      const forecastDate = forecastDateRaw === null || forecastDateRaw === undefined ? forecastDateRaw : String(forecastDateRaw);
+      const needDescription = needDescriptionRaw === undefined ? undefined : sanitizeText(needDescriptionRaw, 2000);
+      const serviceName = serviceNameRaw === undefined ? undefined : sanitizeText(serviceNameRaw, 100);
+      const unitId = hasOwn("unit_id", "unitId") ? pick("unit_id", "unitId") : undefined;
 
       if (newStage && !OPP_STAGES.has(newStage)) return ctx.json(res, 400, { error: "invalid_stage" });
       if (newStage === "perdido" && !lossReason) return ctx.json(res, 400, { error: "loss_reason_required" });
+      if (priority !== undefined && !OPP_PRIORITY.has(priority)) return ctx.json(res, 400, { error: "invalid_priority" });
       if (nextActionDate && isNaN(nextActionDate.getTime())) return ctx.json(res, 400, { error: "invalid_next_action_date" });
+      if (estimatedValue !== undefined && estimatedValue !== null && (isNaN(estimatedValue) || estimatedValue < 0)) return ctx.json(res, 400, { error: "invalid_estimated_value" });
+      if (forecastDate !== undefined && forecastDate !== null && !/^\d{4}-\d{2}-\d{2}$/.test(forecastDate)) return ctx.json(res, 400, { error: "invalid_forecast_date" });
+      if (unitId !== undefined && unitId !== null && !isValidUuid(unitId)) return ctx.json(res, 400, { error: "invalid_unit_id" });
 
+      let client;
+      let transaction = false;
       try {
-        const current = await db.query("SELECT stage FROM crm_opportunities WHERE id = $1", [id]);
-        if (!current.rows[0]) return ctx.json(res, 404, { error: "opportunity_not_found" });
+        client = await db.connect();
+        await client.query("BEGIN"); transaction = true;
+
+        const current = await client.query(
+          "SELECT id, stage, company_id FROM crm_opportunities WHERE id = $1 AND (responsible_id = $2 OR (responsible_id IS NULL AND created_by_id = $2)) FOR UPDATE",
+          [id, session.identityId],
+        );
+        if (!current.rows[0]) {
+          await client.query("ROLLBACK"); transaction = false;
+          return ctx.json(res, 404, { error: "opportunity_not_found" });
+        }
         const prevStage = current.rows[0].stage;
 
-        const updates = [];
-        const values = [];
-        let idx = 1;
+        // CRM-06: sair de perdido/ganho para estágio aberto é reabertura —
+        // exige motivo explícito e é auditada com ação dedicada.
+        const isReopen = Boolean(newStage) && OPP_OPEN_STAGES.has(newStage) && (prevStage === "perdido" || prevStage === "ganho");
+        if (isReopen && !reopenReason) {
+          await client.query("ROLLBACK"); transaction = false;
+          return ctx.json(res, 400, { error: "reopen_reason_required" });
+        }
+        // Trocar diretamente entre os dois estados terminais é contraditório:
+        // para reabrir, passa por estágio aberto; para perder depois de ganho,
+        // reabre antes. Recusa explícita, fail-closed.
+        if (newStage && prevStage !== newStage
+            && (prevStage === "ganho" || prevStage === "perdido")
+            && (newStage === "ganho" || newStage === "perdido")) {
+          await client.query("ROLLBACK"); transaction = false;
+          return ctx.json(res, 400, { error: "invalid_terminal_transition" });
+        }
 
-        if (newStage) {
-          updates.push(`stage = $${idx++}`);
-          values.push(newStage);
-          updates.push(`stage_changed_at = NOW()`);
-          updates.push(`is_won = $${idx++}`);
-          values.push(newStage === "ganho");
-          updates.push(`is_lost = $${idx++}`);
-          values.push(newStage === "perdido");
-          if (lossReason) {
-            updates.push(`loss_reason = $${idx++}`);
-            values.push(lossReason);
+        if (unitId !== undefined && unitId !== null) {
+          const unit = await client.query("SELECT id FROM crm_company_units WHERE id = $1 AND company_id = $2", [unitId, current.rows[0].company_id]);
+          if (!unit.rows[0]) {
+            await client.query("ROLLBACK"); transaction = false;
+            return ctx.json(res, 400, { error: "unit_not_available" });
           }
         }
 
-        if (nextAction !== undefined) { updates.push(`next_action = $${idx++}`); values.push(nextAction); }
-        if (nextActionDate !== undefined) { updates.push(`next_action_date = $${idx++}`); values.push(nextActionDate); }
-        if (estimatedValue !== undefined) {
-          if (isNaN(estimatedValue) || estimatedValue < 0) return ctx.json(res, 400, { error: "invalid_estimated_value" });
-          updates.push(`estimated_value = $${idx++}`);
-          values.push(estimatedValue);
+        const updates = [];
+        const values = [];
+        function set(column, value) { values.push(value); updates.push(`${column} = $${values.length}`); }
+
+        if (newStage) {
+          set("stage", newStage);
+          updates.push("stage_changed_at = NOW()");
+          set("is_won", newStage === "ganho");
+          set("is_lost", newStage === "perdido");
+          if (newStage === "perdido" && lossReason) set("loss_reason", lossReason);
+          // Reabertura limpa o motivo de perda: o motivo antigo permanece no
+          // histórico de estágio, nunca é reescrito.
+          if (isReopen && prevStage === "perdido") set("loss_reason", null);
         }
 
-        if (updates.length === 0) return ctx.json(res, 400, { error: "no_fields" });
+        if (nextAction !== undefined) set("next_action", nextAction);
+        if (nextActionDate !== undefined) set("next_action_date", nextActionDate);
+        if (estimatedValue !== undefined) set("estimated_value", estimatedValue);
+        if (priority !== undefined) set("priority", priority);
+        if (forecastDate !== undefined) set("forecast_date", forecastDate === null ? null : forecastDate);
+        if (needDescription !== undefined) set("need_description", needDescription);
+        if (serviceName !== undefined) set("service_name", serviceName);
+        if (unitId !== undefined) set("unit_id", unitId);
+
+        if (updates.length === 0) {
+          await client.query("ROLLBACK"); transaction = false;
+          return ctx.json(res, 400, { error: "no_fields" });
+        }
 
         values.push(id);
-        const result = await db.query(`UPDATE crm_opportunities SET ${updates.join(", ")}, updated_at = NOW() WHERE id = $${idx} RETURNING *`, values);
+        const result = await client.query(`UPDATE crm_opportunities SET ${updates.join(", ")}, updated_at = NOW() WHERE id = $${values.length} RETURNING *`, values);
+        const opportunity = result.rows[0];
 
         if (newStage && prevStage !== newStage) {
-          await db.query(
+          await client.query(
             `INSERT INTO crm_opportunity_stages (id, opportunity_id, previous_stage, next_stage, changed_by_id, changed_by_role, reason) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-            [crypto.randomUUID(), id, prevStage, newStage, session.identityId, session.role, lossReason || body?.reason || null]
+            [crypto.randomUUID(), id, prevStage, newStage, session.identityId, session.role, isReopen ? reopenReason : (lossReason || body?.reason || null)]
           );
-          await audit(db, { action: "crm_opportunity_stage_change", target: `${id}:${prevStage}->${newStage}`, result: "allowed", actorKind: session.role, actorId: session.identityId });
+          // Auditoria transacional: sem trilha, a mutação é revertida.
+          if (isReopen) {
+            await transactionalAudit(client, session, "crm_opportunity_reopen", `${id}:${prevStage}->${newStage}`);
+          } else {
+            await transactionalAudit(client, session, "crm_opportunity_stage_change", `${id}:${prevStage}->${newStage}`);
+          }
         } else {
-          await audit(db, { action: "crm_opportunity_update", target: id, result: "allowed", actorKind: session.role, actorId: session.identityId });
+          await transactionalAudit(client, session, "crm_opportunity_update", id);
         }
 
-        return ctx.json(res, 200, { opportunity: result.rows[0] });
+        await client.query("COMMIT"); transaction = false;
+        return ctx.json(res, 200, { opportunity });
       } catch (e) {
+        if (transaction) await client?.query("ROLLBACK").catch(() => {});
         console.error("crm opp update failed", e?.message);
         return ctx.json(res, 503, { error: "update_failed" });
+      } finally {
+        client?.release();
       }
     }
 
@@ -698,10 +908,14 @@ export function createCrmApi(ctx) {
 
       const oppId = crypto.randomUUID();
       const title = `Oportunidade - ${lead.name} - ${lead.services[0] || "Serviços gerais"}`;
+      // CRM-05: quem converte é o responsável desde o início — antes a conversão
+      // deixava responsible_id nulo e só o fallback "criador enquanto sem
+      // responsável" segurava a borda de propriedade.
+      const responsibleName = await displayForIdentity(db, session.identityId);
       await db.query(
-        `INSERT INTO crm_opportunities (id, company_id, contact_id, title, service_name, need_description, origin, campaign, public_lead_id, created_by_id, stage, next_action, next_action_date)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'novo',$11,NOW() + INTERVAL '2 days')`,
-        [oppId, finalCompanyId, contactId, title, lead.services[0] || null, lead.details, lead.origin, lead.campaign, leadId, session.identityId, `Qualificar lead ${leadId.slice(0,8)} - ${lead.city}`]
+        `INSERT INTO crm_opportunities (id, company_id, contact_id, title, service_name, need_description, responsible_id, responsible_name, origin, campaign, public_lead_id, created_by_id, stage, next_action, next_action_date)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'novo',$13,NOW() + INTERVAL '2 days')`,
+        [oppId, finalCompanyId, contactId, title, lead.services[0] || null, lead.details, session.identityId, responsibleName, lead.origin, lead.campaign, leadId, session.identityId, `Qualificar lead ${leadId.slice(0,8)} - ${lead.city}`]
       );
 
       await db.query(
