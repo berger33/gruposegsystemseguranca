@@ -449,304 +449,304 @@ diário de decisões de gestão com acesso restrito, vínculo a contrato/process
 
 ## EMP-01
 perfil próprio e solicitação de atualização cadastral; dados restritos mascarados conforme necessidade e mudança revisada.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/funcionario` (perfil e login próprio); `/api/employee/session`, `/me`, `/profile-updates`; `auth_employee_access`, `hr_employees`; titular derivado do cookie employee.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate L03: login individual, perfil A/B, parâmetro `employee_id` adversarial ignorado, troca de senha com revogação. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; nenhuma integração externa é alegada.
 
 ## EMP-02
 próximo plantão com local, horário, função, contato do supervisor, orientações e itens necessários.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/funcionario` > Início/Jornada/Pedidos; fachada `/api/employee/home`, `/schedule/:id/ack` e `/actions/{time-correction,absence}`; dados 065 + escala/ponto de RH.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate L03 HTTP + Chromium móvel: próximo plantão, escala publicada/ciência, jornada, correção e ausência pela interface; A/B isolados. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; nenhuma integração externa é alegada.
 
 ## EMP-03
 calendário de escala, folgas, alterações e ciência da versão publicada; usuário não modifica unilateralmente a escala.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/funcionario` > Início/Jornada/Pedidos; fachada `/api/employee/home`, `/schedule/:id/ack` e `/actions/{time-correction,absence}`; dados 065 + escala/ponto de RH.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate L03 HTTP + Chromium móvel: próximo plantão, escala publicada/ciência, jornada, correção e ausência pela interface; A/B isolados. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; nenhuma integração externa é alegada.
 
 ## EMP-04
 jornada individual, comprovantes/importação de provedor, divergências e pedido de correção; preservar registro original.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/funcionario` > Início/Jornada/Pedidos; fachada `/api/employee/home`, `/schedule/:id/ack` e `/actions/{time-correction,absence}`; dados 065 + escala/ponto de RH.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate L03 HTTP + Chromium móvel: próximo plantão, escala publicada/ciência, jornada, correção e ausência pela interface; A/B isolados. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; nenhuma integração externa é alegada.
 
 ## EMP-05
 aviso de ausência/atraso com protocolo, motivo limitado, responsável e acompanhamento; aciona fluxo de cobertura.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/funcionario` > Início/Jornada/Pedidos; fachada `/api/employee/home`, `/schedule/:id/ack` e `/actions/{time-correction,absence}`; dados 065 + escala/ponto de RH.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate L03 HTTP + Chromium móvel: próximo plantão, escala publicada/ciência, jornada, correção e ausência pela interface; A/B isolados. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; nenhuma integração externa é alegada.
 
 ## EMP-06
 troca de plantão com solicitação, aceite do outro profissional quando aplicável, validações e aprovação operacional.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/funcionario` > Pedidos/Mais; `/api/employee/actions/{shift-swap,handover,occurrence,procedure-ack}`; tabelas da migração 066, sempre no escopo da sessão.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate L03: troca com aceite do destinatário, passagem com aceite, ocorrência privada e ciência de procedimento; alvos de outra unidade/titular negados. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; nenhuma integração externa é alegada.
 
 ## EMP-07
 passagem de serviço com pendências, chaves, equipamentos, ocorrências e aceite; não expor dados desnecessários de terceiros.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/funcionario` > Pedidos/Mais; `/api/employee/actions/{shift-swap,handover,occurrence,procedure-ack}`; tabelas da migração 066, sempre no escopo da sessão.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate L03: troca com aceite do destinatário, passagem com aceite, ocorrência privada e ciência de procedimento; alvos de outra unidade/titular negados. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; nenhuma integração externa é alegada.
 
 ## EMP-08
 ocorrência com categoria, descrição, horário, local e anexo pertinente; restrição para informações pessoais.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/funcionario` > Pedidos/Mais; `/api/employee/actions/{shift-swap,handover,occurrence,procedure-ack}`; tabelas da migração 066, sempre no escopo da sessão.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate L03: troca com aceite do destinatário, passagem com aceite, ocorrência privada e ciência de procedimento; alvos de outra unidade/titular negados. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; nenhuma integração externa é alegada.
 
 ## EMP-09
 procedimentos do posto versionados, ciência e contatos de apoio.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/funcionario` > Pedidos/Mais; `/api/employee/actions/{shift-swap,handover,occurrence,procedure-ack}`; tabelas da migração 066, sempre no escopo da sessão.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate L03: troca com aceite do destinatário, passagem com aceite, ocorrência privada e ciência de procedimento; alvos de outra unidade/titular negados. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; nenhuma integração externa é alegada.
 
 ## EMP-10
 envio de documentos solicitados, status pendente/em análise/aprovado/rejeitado com motivo e nova versão.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/funcionario` > Documentos/Pedidos/Mais; documentos privados, solicitações e uniforme/EPI em `/api/employee/*`; migração 067 + provider/hash da 102.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate L03: upload/download privado, revisão RH, holerite próprio, solicitação e recibo operacional de EPI; acessos cruzados retornam 404. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; nenhuma integração externa é alegada.
 
 ## EMP-11
 holerites/informes/documentos próprios, acesso privado e histórico de disponibilização; publicação proveniente de fonte autorizada.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/funcionario` > Documentos/Pedidos/Mais; documentos privados, solicitações e uniforme/EPI em `/api/employee/*`; migração 067 + provider/hash da 102.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate L03: upload/download privado, revisão RH, holerite próprio, solicitação e recibo operacional de EPI; acessos cruzados retornam 404. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; nenhuma integração externa é alegada.
 
 ## EMP-12
 férias, afastamentos, benefícios e reembolsos com solicitação, anexos restritos, aprovação e prazo de resposta.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/funcionario` > Documentos/Pedidos/Mais; documentos privados, solicitações e uniforme/EPI em `/api/employee/*`; migração 067 + provider/hash da 102.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate L03: upload/download privado, revisão RH, holerite próprio, solicitação e recibo operacional de EPI; acessos cruzados retornam 404. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; nenhuma integração externa é alegada.
 
 ## EMP-13
 uniformes/EPI/equipamentos com entrega, recibo, solicitação de troca e devolução.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/funcionario` > Documentos/Pedidos/Mais; documentos privados, solicitações e uniforme/EPI em `/api/employee/*`; migração 067 + provider/hash da 102.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate L03: upload/download privado, revisão RH, holerite próprio, solicitação e recibo operacional de EPI; acessos cruzados retornam 404. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; nenhuma integração externa é alegada.
 
 ## EMP-14
 cursos e reciclagens, comprovantes e alertas de vencimento.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/funcionario` > Início/Documentos/Mais; cursos, comunicados, atendimento RH e canal confidencial em `/api/employee/actions/*`; migração 068.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate L03: comprovante de curso no provider privado, comunicação/central, protocolo RH e canal identificado; recursos de A negados a B. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; nenhuma integração externa é alegada.
 
 ## EMP-15
 comunicados direcionados, confirmação de leitura e central de notificações.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/funcionario` > Início/Documentos/Mais; cursos, comunicados, atendimento RH e canal confidencial em `/api/employee/actions/*`; migração 068.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate L03: comprovante de curso no provider privado, comunicação/central, protocolo RH e canal identificado; recursos de A negados a B. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; nenhuma integração externa é alegada.
 
 ## EMP-16
 atendimento RH com protocolo, categoria, mensagens privadas e acompanhamento.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/funcionario` > Início/Documentos/Mais; cursos, comunicados, atendimento RH e canal confidencial em `/api/employee/actions/*`; migração 068.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate L03: comprovante de curso no provider privado, comunicação/central, protocolo RH e canal identificado; recursos de A negados a B. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; nenhuma integração externa é alegada.
 
 ## EMP-17
 canal confidencial separado, com responsáveis e política de acesso; anonimato somente se efetivamente suportado.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/funcionario` > Início/Documentos/Mais; cursos, comunicados, atendimento RH e canal confidencial em `/api/employee/actions/*`; migração 068.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate L03: comprovante de curso no provider privado, comunicação/central, protocolo RH e canal identificado; recursos de A negados a B. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Canal sigiloso e identificado; anonimato não está habilitado e pedido anônimo falha explicitamente. Aceite humano no Windows pendente.
 
 ## EMP-18
 PWA instalável e fila offline limitada para tarefas operacionais aprovadas; idempotência, conflito explícito, horário do dispositivo e recebimento no servidor separados. Não cachear documentos médicos/salariais por padrão.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: PWA `/funcionario`, fila local por empregado só para ciência aprovada e `/api/employee/offline`; service worker exclui API/portal e conteúdo médico/salarial; migração 069/102.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Chromium fica offline, guarda 1 tarefa, volta online e espera 201; HTTP prova retry idempotente, conflito explícito e timestamps separados. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Fila deliberadamente limitada; não armazena documentos médicos/salariais. Teste no Windows permanece para L10.
 
 ## EMP-19
 FAQ interna, acessibilidade por teclado/leitor, linguagem simples e baixo consumo de dados.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/funcionario` > Mais, FAQ interno e preferências de acessibilidade; layout móvel 390×844, navegação sem mouse e linguagem simples; migração 069.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate Chromium percorre todas as abas, encontra FAQ/acessibilidade e recusa rolagem horizontal; build e typecheck aprovados. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; nenhuma integração externa é alegada.
 
 ## HR-01
 cadastro profissional separado de identidade de login; matrícula, vínculo, cargo, empregador/filial, gestor, admissão, status, contatos necessários e histórico.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Admissão & acesso/Processos HR-01,02,05; `hr-api` e migração 057; cadastro laboral separado da identidade e remuneração sob concessão própria.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate Chromium cria cadastro + admissão + acesso e escala; HTTP prova salário mascarado sem `employees.compensation.read`. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; regras legais/contábeis continuam dependentes de validação competente.
 
 ## HR-02
 histórico de cargo, lotação, remuneração autorizada e vínculo com datas de efeito; acesso por campo/categoria.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Admissão & acesso/Processos HR-01,02,05; `hr-api` e migração 057; cadastro laboral separado da identidade e remuneração sob concessão própria.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate Chromium cria cadastro + admissão + acesso e escala; HTTP prova salário mascarado sem `employees.compensation.read`. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; regras legais/contábeis continuam dependentes de validação competente.
 
 ## HR-03
 recrutamento com vaga, requisitos pertinentes, candidatos, triagem, entrevista, decisão e comunicação; retenção e acesso próprios para currículo.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Processos HR-03,04,06; `HrRecruitmentClient`, `hr-recruitment-api` e migração 059, sob `employees.read/write`.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate Chromium abre o grupo conectado e exige carga das APIs sem erro; migração 001–102 e build aprovados. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; regras legais/contábeis continuam dependentes de validação competente.
 
 ## HR-04
 banco de talentos e autorização/base aplicável; descarte configurado, sem acúmulo indefinido.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Processos HR-03,04,06; `HrRecruitmentClient`, `hr-recruitment-api` e migração 059, sob `employees.read/write`.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate Chromium abre o grupo conectado e exige carga das APIs sem erro; migração 001–102 e build aprovados. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Política e descarte são configuráveis; base jurídica e prazos reais exigem decisão do controlador. Aceite Windows pendente.
 
 ## HR-05
 admissão com checklist por função, documentos, validação, exame/treinamento e integração; não exigir dado sem finalidade.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Admissão & acesso/Processos HR-01,02,05; `hr-api` e migração 057; cadastro laboral separado da identidade e remuneração sob concessão própria.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate Chromium cria cadastro + admissão + acesso e escala; HTTP prova salário mascarado sem `employees.compensation.read`. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; regras legais/contábeis continuam dependentes de validação competente.
 
 ## HR-06
 dossiê com tipos, versões, validade, pendências e aprovador. CNV e demais documentos apenas para funções/atividades aplicáveis, após confirmação.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Processos HR-03,04,06; `HrRecruitmentClient`, `hr-recruitment-api` e migração 059, sob `employees.read/write`.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate Chromium abre o grupo conectado e exige carga das APIs sem erro; migração 001–102 e build aprovados. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; regras legais/contábeis continuam dependentes de validação competente.
 
 ## HR-07
 desligamento com checklist, devolução, revogação, documentação e pendências; histórico laboral preservado.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Desligamento/Processos HR-07..09; `hr-termination-api`, políticas/status/férias e migração 060; trigger 102 revoga acesso.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate conclui desligamento pela interface e comprova sessão employee revogada; status/papel/senha também têm controles negativos. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; regras legais/contábeis continuam dependentes de validação competente.
 
 ## HR-08
 mudança de status (afastado/suspenso/desligado) com efeito em permissões e alocação conforme política, sem automatizar sanção trabalhista.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Desligamento/Processos HR-07..09; `hr-termination-api`, políticas/status/férias e migração 060; trigger 102 revoga acesso.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate conclui desligamento pela interface e comprova sessão employee revogada; status/papel/senha também têm controles negativos. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; regras legais/contábeis continuam dependentes de validação competente.
 
 ## HR-09
 férias com períodos aquisitivo/concessivo quando aplicáveis, saldo importado/validado, programação, conflito de cobertura e aprovação.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Desligamento/Processos HR-07..09; `hr-termination-api`, políticas/status/férias e migração 060; trigger 102 revoga acesso.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate conclui desligamento pela interface e comprova sessão employee revogada; status/papel/senha também têm controles negativos. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; regras legais/contábeis continuam dependentes de validação competente.
 
 ## HR-10
 afastamentos com período, retorno, documentação restrita e substituição; supervisor vê indisponibilidade/aptidão operacional necessária, não diagnóstico.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Processos HR-10..12 e portal Jornada; `hr-absence-api`, afastamentos/ponto/banco/regras versionadas; migração 061.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate Chromium solicita correção e ausência; grupo RH carrega APIs reais; fechamento demonstrativo preserva trilha. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; regras legais/contábeis continuam dependentes de validação competente.
 
 ## HR-11
 integração de ponto, justificativas, divergências, workflow de correção e fechamento de competência; trilha de reabertura.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Processos HR-10..12 e portal Jornada; `hr-absence-api`, afastamentos/ponto/banco/regras versionadas; migração 061.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate Chromium solicita correção e ausência; grupo RH carrega APIs reais; fechamento demonstrativo preserva trilha. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; regras legais/contábeis continuam dependentes de validação competente.
 
 ## HR-12
 banco de horas, adicionais e horas extras somente com regras versionadas e validadas para o vínculo/convenção; não fixar 12x36/6x1 como regra universal.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Processos HR-10..12 e portal Jornada; `hr-absence-api`, afastamentos/ponto/banco/regras versionadas; migração 061.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate Chromium solicita correção e ausência; grupo RH carrega APIs reais; fechamento demonstrativo preserva trilha. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; regras legais/contábeis continuam dependentes de validação competente.
 
 ## HR-13
 benefícios com elegibilidade, solicitações, conferência, alterações por período e exportação ao fornecedor.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Processos HR-13..16; `hr-benefits-api`, benefícios/adiantamentos/saúde/exportações da migração 062; saúde usa `employees.health.*`.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate Chromium abre formulários e APIs conectados sem erro; autorização separada de saúde e borda granular foram exercitadas. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Exportação local não comprova entrega ao fornecedor. Integração externa não é alegada; aceite Windows pendente.
 
 ## HR-14
 adiantamentos/reembolsos com alçada e comprovantes, integração com financeiro e prevenção de duplicidade.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Processos HR-13..16; `hr-benefits-api`, benefícios/adiantamentos/saúde/exportações da migração 062; saúde usa `employees.health.*`.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate Chromium abre formulários e APIs conectados sem erro; autorização separada de saúde e borda granular foram exercitadas. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; regras legais/contábeis continuam dependentes de validação competente.
 
 ## HR-15
 saúde ocupacional com agenda, vencimentos e documentos necessários; acesso restrito. Não replicar prontuário médico completo no cadastro comum.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Processos HR-13..16; `hr-benefits-api`, benefícios/adiantamentos/saúde/exportações da migração 062; saúde usa `employees.health.*`.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate Chromium abre formulários e APIs conectados sem erro; autorização separada de saúde e borda granular foram exercitadas. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Acesso de saúde é separado; o sistema não se declara prontuário médico. Validação ocupacional e aceite Windows pendentes.
 
 ## HR-16
 integração/exportação para contabilidade/SST, recibos de processamento, erros e correção. Não declarar envio eSocial sem protocolo válido do responsável/provedor.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Processos HR-13..16; `hr-benefits-api`, benefícios/adiantamentos/saúde/exportações da migração 062; saúde usa `employees.health.*`.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate Chromium abre formulários e APIs conectados sem erro; autorização separada de saúde e borda granular foram exercitadas. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Adaptador/recibo local, sem afirmar envio eSocial/SST oficial. Provedor e protocolo externo dependem de integração futura.
 
 ## HR-17
 treinamento por cargo/atividade, obrigatoriedade aplicável, validade, inscrição, presença e comprovante.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Processos HR-17..20 e Fechamento; `hr-training-api`, treinamento/competências/uniformes/DP da migração 063.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate prova curso/comprovante e uniforme/recibo no escopo próprio, fecha competência pela interface e carrega o grupo RH completo. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; regras legais/contábeis continuam dependentes de validação competente.
 
 ## HR-18
 matriz de competências integrada à alocação, sem decisão automática de contratação/punição.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Processos HR-17..20 e Fechamento; `hr-training-api`, treinamento/competências/uniformes/DP da migração 063.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate prova curso/comprovante e uniforme/recibo no escopo próprio, fecha competência pela interface e carrega o grupo RH completo. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; regras legais/contábeis continuam dependentes de validação competente.
 
 ## HR-19
 uniformes/EPI com entrega, recibo, substituição, validade/controle aplicável e devolução.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Processos HR-17..20 e Fechamento; `hr-training-api`, treinamento/competências/uniformes/DP da migração 063.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate prova curso/comprovante e uniforme/recibo no escopo próprio, fecha competência pela interface e carrega o grupo RH completo. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; regras legais/contábeis continuam dependentes de validação competente.
 
 ## HR-20
 fechamento DP com faltas, férias, variáveis e documentos conferidos; exportação versionada e acesso do contador limitado.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Processos HR-17..20 e Fechamento; `hr-training-api`, treinamento/competências/uniformes/DP da migração 063.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate prova curso/comprovante e uniforme/recibo no escopo próprio, fecha competência pela interface e carrega o grupo RH completo. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Fechamento é demonstrativo e não constitui cálculo trabalhista oficial; validação contábil e aceite Windows pendentes.
 
 ## HR-21
 holerites/informes importados de fonte autorizada, vinculação inequívoca ao colaborador, revisão antes de publicar e correção rastreada.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Fechamento & holerite/Processos HR-21..24; `hr-advanced-api` + documentos privados 102; migração 064.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate publica e baixa holerite pela interface com fonte/concessão explícitas e abre avaliações, atendimento e indicadores sem erro de API. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Fonte autorizada é cadastrada pelo operador local; sem entrega externa nem cálculo oficial. Aceite Windows pendente.
 
 ## HR-22
 avaliações e planos de desenvolvimento com critérios definidos, acesso privado e participação humana; feedback de cliente não vira punição automática.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Fechamento & holerite/Processos HR-21..24; `hr-advanced-api` + documentos privados 102; migração 064.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate publica e baixa holerite pela interface com fonte/concessão explícitas e abre avaliações, atendimento e indicadores sem erro de API. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; regras legais/contábeis continuam dependentes de validação competente.
 
 ## HR-23
 atendimento interno com fila, responsável, categoria, prazo e mensagens; anexos de saúde fora de tickets genéricos.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Fechamento & holerite/Processos HR-21..24; `hr-advanced-api` + documentos privados 102; migração 064.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate publica e baixa holerite pela interface com fonte/concessão explícitas e abre avaliações, atendimento e indicadores sem erro de API. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; regras legais/contábeis continuam dependentes de validação competente.
 
 ## HR-24
 indicadores de quadro, admissão, faltas, rotatividade, férias, documentos e atendimento, com fórmula e período explícitos.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/funcionarios` > Fechamento & holerite/Processos HR-21..24; `hr-advanced-api` + documentos privados 102; migração 064.
+- Integração e evidência (teste, resultado, commit): `npm run test:l03-delivery:pg` 1/1 em HTTP + Chromium + PostgreSQL descartável; Gate publica e baixa holerite pela interface com fonte/concessão explícitas e abre avaliações, atendimento e indicadores sem erro de API. Patchset L03 desta branch.
+- Pendência / fronteira externa / aceite humano: Aceite humano no Windows permanece para L10; regras legais/contábeis continuam dependentes de validação competente.
 
 ## OPS-01
 estrutura cliente → unidade atendida → posto físico → necessidade por turno → alocação; cargo/função em entidade própria.

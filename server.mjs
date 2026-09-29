@@ -10,6 +10,9 @@ import { decryptMfaSecret, verifyMfaCode, hashRecoveryCode, mfaKey } from "./src
 import {
   createStaffSessionStore, evaluateStaffLogin, evaluateLegacyTokenPolicy, isUuid,
 } from "./src/server/staff-session.mjs";
+import { createEmployeeSessionStore } from "./src/server/employee-session.mjs";
+import { createEmployeeApi } from "./src/server/employee-api.mjs";
+import { hasPermission } from "./src/server/rbac.mjs";
 import { createLocalOutbox, LOCAL_OUTBOX_LABEL, resolveDeliveryTarget } from "./src/server/local-outbox.mjs";
 import { createClientAccessApi } from "./src/server/client-access-api.mjs";
 import { createClientSpaceApi } from "./src/server/client-space-api.mjs";
@@ -108,6 +111,7 @@ loadEnvConfig(process.cwd());
 const DEFAULT_VISUAL = "06";
 const VISUAL_IDS = new Set(["01", "02", "03", "04", "05", "06", "07", "08", "09", "10"]);
 const SESSION_COOKIE = "seg_admin_session";
+const EMPLOYEE_SESSION_COOKIE = "seg_employee_session";
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
 const MAX_BODY_BYTES = 8 * 1024;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
@@ -117,6 +121,7 @@ const LOGIN_MAX_ATTEMPTS = Math.max(1, Number(process.env.ADMIN_LOGIN_MAX_ATTEMP
 const LEAD_WINDOW_MS = 10 * 60 * 1000;
 const LEAD_MAX_ATTEMPTS = 5;
 const loginAttempts = new Map();
+const employeeLoginAttempts = new Map();
 const leadAttempts = new Map();
 const leadStatuses = new Set(["new", "contacted", "closed", "solicitada", "em_agendamento", "confirmada", "realizada", "cancelada"]);
 let pool;
@@ -216,6 +221,10 @@ async function readJson(req, maxBytes = MAX_BODY_BYTES) {
 }
 
 function sameOrigin(req) {
+  // Browsers do not consistently send Origin on safe same-origin GET/HEAD
+  // fetches. CSRF validation is required on state-changing methods; reads are
+  // still protected by the HttpOnly/SameSite session and server-side RBAC.
+  if (["GET", "HEAD", "OPTIONS"].includes(req.method || "GET")) return true;
   const origin = req.headers.origin;
   const forwardedHost = process.env.TRUST_PROXY === "true" ? req.headers["x-forwarded-host"] : undefined;
   const expectedHost = String(forwardedHost || req.headers.host || "").split(",")[0].trim().toLowerCase();
@@ -239,11 +248,17 @@ function sessionSecret() {
   return value.length >= 32 ? value : null;
 }
 
+function employeeSessionSecret() {
+  const value = process.env.EMPLOYEE_SESSION_SECRET || "";
+  return value.length >= 32 ? value : null;
+}
+
 function sign(payload, secret) {
   return createHmac("sha256", secret).update(payload).digest("base64url");
 }
 
 const staffSessionStore = createStaffSessionStore({ getPool, randomUUID });
+const employeeSessionStore = createEmployeeSessionStore({ getPool, randomUUID });
 // L02 — caixa de saída local; substitui SMTP nesta entrega.
 const localOutbox = createLocalOutbox({ getPool, randomUUID });
 
@@ -300,13 +315,69 @@ async function readSession(req) {
     return null;
   }
   if (!verdict.valid) return null;
+  let permissions = [];
+  try {
+    const result = await getPool().query(
+      `SELECT permission, scope_type, scope_id
+         FROM auth_permissions
+        WHERE identity_id = $1 AND revoked_at IS NULL`,
+      [verdict.identityId],
+    );
+    permissions = result.rows;
+  } catch (error) {
+    // A lista vazia preserva negação por padrão se o diretório estiver indisponível.
+    console.error("Staff permission lookup failed.", error?.message);
+  }
   return {
     role: verdict.role,
     identityId: verdict.identityId,
     sessionId: verdict.sessionId,
     mfaVerified: Boolean(verdict.mfaVerifiedAt),
     expiresAt: verdict.expiresAt,
+    permissions,
   };
+}
+
+function readEmployeeSessionEnvelope(req) {
+  const secret = employeeSessionSecret();
+  if (!secret) return null;
+  const cookieHeader = String(req.headers.cookie || "");
+  const cookie = cookieHeader.split(";").map(part => part.trim()).find(part => part.startsWith(`${EMPLOYEE_SESSION_COOKIE}=`));
+  if (!cookie) return null;
+  const value = cookie.slice(EMPLOYEE_SESSION_COOKIE.length + 1);
+  const [payload, signature] = value.split(".");
+  if (!payload || !signature || !constantTimeTextMatch(signature, sign(payload, secret))) return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    if (!Number.isFinite(parsed.exp) || parsed.exp <= Date.now() || !isUuid(parsed.sid)) return null;
+    return { sid: parsed.sid, exp: parsed.exp };
+  } catch { return null; }
+}
+
+async function issueEmployeeSession({ identityId, employeeId, epoch, req }) {
+  const secret = employeeSessionSecret();
+  if (!secret) throw new Error("EMPLOYEE_SESSION_SECRET_NOT_CONFIGURED");
+  const created = await employeeSessionStore.create({
+    identityId, employeeId, epoch,
+    ipHash: createHash("sha256").update(clientIp(req)).digest("hex").slice(0, 32),
+    userAgent: req.headers["user-agent"],
+  });
+  const payload = Buffer.from(JSON.stringify({ sid: created.id, exp: created.expiresAt })).toString("base64url");
+  return { value: `${payload}.${sign(payload, secret)}`, expiresAt: created.expiresAt, ttlSeconds: created.ttlSeconds };
+}
+
+async function readEmployeeSession(req) {
+  const envelope = readEmployeeSessionEnvelope(req);
+  if (!envelope) return null;
+  try {
+    const verdict = await employeeSessionStore.validate(envelope.sid);
+    if (!verdict.valid) return null;
+    employeeSessionStore.touch(envelope.sid).catch(() => {});
+    return verdict;
+  } catch (error) {
+    console.error("Employee session validation failed.", error?.message);
+    return null;
+  }
 }
 
 function cookieSecure(req) {
@@ -318,6 +389,10 @@ function cookieSecure(req) {
 
 function sessionCookie(req, value, maxAge) {
   return `${SESSION_COOKIE}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${cookieSecure(req) ? "; Secure" : ""}`;
+}
+
+function employeeCookie(req, value, maxAge) {
+  return `${EMPLOYEE_SESSION_COOKIE}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${cookieSecure(req) ? "; Secure" : ""}`;
 }
 
 function clientIp(req) {
@@ -996,6 +1071,21 @@ const adminRbacApi = createAdminRbacApi({
   sameOrigin,
   getPool,
   readAdminSession: readSession,
+  staffSessionStore,
+});
+const employeeApi = createEmployeeApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readStaffSession: readSession,
+  readEmployeeSession,
+  readEmployeeEnvelope: readEmployeeSessionEnvelope,
+  issueEmployeeSession,
+  employeeSessionStore,
+  employeeCookie,
+  employeeLoginAllowed: req => rateLimitAllows(employeeLoginAttempts, req, LOGIN_WINDOW_MS, LOGIN_MAX_ATTEMPTS),
+  employeeDocsDir: (process.env.EMPLOYEE_DOCS_DIR || "").trim() || path.join(process.cwd(), ".data", "employee-documents"),
 });
 
 const notificationQueue = createNotificationQueue({
@@ -1406,8 +1496,75 @@ const maintenanceDocApi = createMaintenanceDocApi({
   },
 });
 
+function staffSessionHasPermission(session, permission) {
+  return Array.isArray(session?.permissions) && session.permissions.some(row =>
+    row.permission === permission && ["global", "organization"].includes(row.scope_type)
+  );
+}
+
+const COMPENSATION_HR_PATH = /\/(?:payroll-(?:sources|imports|documents)|dp-(?:variables|documents|exports))(?:\/|$)/;
+const HEALTH_HR_PATH = /\/occupational-(?:requirements|agenda|documents)(?:\/|$)/;
+
+function legacyHrPermission(method, pathname, roles = null) {
+  const write = !["GET", "HEAD"].includes(method || "");
+  if (COMPENSATION_HR_PATH.test(pathname || "") || (Array.isArray(roles) && !roles.includes("rh"))) {
+    return write ? "employees.compensation.write" : "employees.compensation.read";
+  }
+  if (HEALTH_HR_PATH.test(pathname || "")) {
+    return write ? "employees.health.write" : "employees.health.read";
+  }
+  return write ? "employees.write" : "employees.read";
+}
+
+// Adaptador temporário para módulos HR legados: a borda HTTP distingue
+// leitura/escrita e também os domínios salarial e de saúde; aqui o antigo teste
+// de papel consulta a mesma permissão granular, sem bypass pelo nome do papel.
+function hrPermissionCompat(session, roles) {
+  return staffSessionHasPermission(
+    session,
+    legacyHrPermission(session?.requestMethod, session?.requestPath, roles),
+  );
+}
+
+async function readHrSession(req) {
+  const session = await readSession(req);
+  const requestPath = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`).pathname;
+  return session ? { ...session, requestMethod: req.method || "GET", requestPath } : null;
+}
+
+async function authorizeLegacyHrRequest(req, res, url) {
+  const session = await readSession(req);
+  if (!session) {
+    json(res, 401, { error: "admin_session_required" });
+    return false;
+  }
+  const permission = legacyHrPermission(req.method, url.pathname);
+  let employeeId = url.searchParams.get("employee_id");
+  const directEmployee = url.pathname.match(/^\/api\/hr\/employees\/([0-9a-f-]{36})$/i);
+  if (directEmployee) employeeId = directEmployee[1];
+  let unitId = null;
+  let contractId = null;
+  if (employeeId && isUuid(employeeId)) {
+    const found = await getPool().query("SELECT unit_id, contract_id FROM hr_employees WHERE id=$1", [employeeId]);
+    unitId = found.rows[0]?.unit_id || null;
+    contractId = found.rows[0]?.contract_id || null;
+  }
+  const allowed = await hasPermission(getPool(), {
+    identityId: session.identityId,
+    permission,
+    unitId,
+    contractId,
+  });
+  if (!allowed) {
+    json(res, 403, { error: "employee_permission_required", permission });
+    return false;
+  }
+  return true;
+}
+
 const hrApi = createHrApi({
   pool: getPool(),
+  employeeSessionStore,
   auditLog: async ({ action, actor, target, meta }) => {
     try {
       await getPool().query(
@@ -1417,11 +1574,8 @@ const hrApi = createHrApi({
     } catch {}
   },
   sameOrigin,
-  requireSession: readSession,
-  requireRole: (sess, roles) => {
-    const r = (sess.role || sess.userRole || '').toLowerCase();
-    return roles.includes(r) || r === 'admin';
-  },
+  requireSession: readHrSession,
+  requireRole: hrPermissionCompat,
 });
 
 const empProfileApi = createEmpProfileApi({
@@ -1435,11 +1589,8 @@ const empProfileApi = createEmpProfileApi({
     } catch {}
   },
   sameOrigin,
-  requireSession: readSession,
-  requireRole: (sess, roles) => {
-    const r = (sess.role || sess.userRole || '').toLowerCase();
-    return roles.includes(r) || r === 'admin';
-  },
+  requireSession: readHrSession,
+  requireRole: hrPermissionCompat,
 });
 
 const hrRecruitmentApi = createHrRecruitmentApi({
@@ -1453,15 +1604,13 @@ const hrRecruitmentApi = createHrRecruitmentApi({
     } catch {}
   },
   sameOrigin,
-  requireSession: readSession,
-  requireRole: (sess, roles) => {
-    const r = (sess.role || sess.userRole || '').toLowerCase();
-    return roles.includes(r) || r === 'admin';
-  },
+  requireSession: readHrSession,
+  requireRole: hrPermissionCompat,
 });
 
 const hrTerminationApi = createHrTerminationApi({
   pool: getPool(),
+  employeeSessionStore,
   auditLog: async ({ action, actor, target, meta }) => {
     try {
       await getPool().query(
@@ -1471,11 +1620,8 @@ const hrTerminationApi = createHrTerminationApi({
     } catch {}
   },
   sameOrigin,
-  requireSession: readSession,
-  requireRole: (sess, roles) => {
-    const r = (sess.role || sess.userRole || '').toLowerCase();
-    return roles.includes(r) || r === 'admin';
-  },
+  requireSession: readHrSession,
+  requireRole: hrPermissionCompat,
 });
 
 const hrAbsenceApi = createHrAbsenceApi({
@@ -1489,11 +1635,8 @@ const hrAbsenceApi = createHrAbsenceApi({
     } catch {}
   },
   sameOrigin,
-  requireSession: readSession,
-  requireRole: (sess, roles) => {
-    const r = (sess.role || sess.userRole || '').toLowerCase();
-    return roles.includes(r) || r === 'admin';
-  },
+  requireSession: readHrSession,
+  requireRole: hrPermissionCompat,
 });
 
 const hrBenefitsApi = createHrBenefitsApi({
@@ -1507,11 +1650,8 @@ const hrBenefitsApi = createHrBenefitsApi({
     } catch {}
   },
   sameOrigin,
-  requireSession: readSession,
-  requireRole: (sess, roles) => {
-    const r = (sess.role || sess.userRole || '').toLowerCase();
-    return roles.includes(r) || r === 'admin';
-  },
+  requireSession: readHrSession,
+  requireRole: hrPermissionCompat,
 });
 
 const hrTrainingApi = createHrTrainingApi({
@@ -1525,11 +1665,8 @@ const hrTrainingApi = createHrTrainingApi({
     } catch {}
   },
   sameOrigin,
-  requireSession: readSession,
-  requireRole: (sess, roles) => {
-    const r = (sess.role || sess.userRole || '').toLowerCase();
-    return roles.includes(r) || r === 'admin';
-  },
+  requireSession: readHrSession,
+  requireRole: hrPermissionCompat,
 });
 
 const hrAdvancedApi = createHrAdvancedApi({
@@ -1543,11 +1680,8 @@ const hrAdvancedApi = createHrAdvancedApi({
     } catch {}
   },
   sameOrigin,
-  requireSession: readSession,
-  requireRole: (sess, roles) => {
-    const r = (sess.role || sess.userRole || '').toLowerCase();
-    return roles.includes(r) || r === 'admin';
-  },
+  requireSession: readHrSession,
+  requireRole: hrPermissionCompat,
 });
 
 const empPortalApi = createEmpPortalApi({
@@ -1561,11 +1695,8 @@ const empPortalApi = createEmpPortalApi({
     } catch {}
   },
   sameOrigin,
-  requireSession: readSession,
-  requireRole: (sess, roles) => {
-    const r = (sess.role || sess.userRole || '').toLowerCase();
-    return roles.includes(r) || r === 'admin';
-  },
+  requireSession: readHrSession,
+  requireRole: hrPermissionCompat,
 });
 
 const empOpsApi = createEmpOpsApi({
@@ -1579,11 +1710,8 @@ const empOpsApi = createEmpOpsApi({
     } catch {}
   },
   sameOrigin,
-  requireSession: readSession,
-  requireRole: (sess, roles) => {
-    const r = (sess.role || sess.userRole || '').toLowerCase();
-    return roles.includes(r) || r === 'admin';
-  },
+  requireSession: readHrSession,
+  requireRole: hrPermissionCompat,
 });
 
 const empSelfApi = createEmpSelfApi({
@@ -1597,11 +1725,8 @@ const empSelfApi = createEmpSelfApi({
     } catch {}
   },
   sameOrigin,
-  requireSession: readSession,
-  requireRole: (sess, roles) => {
-    const r = (sess.role || sess.userRole || '').toLowerCase();
-    return roles.includes(r) || r === 'admin';
-  },
+  requireSession: readHrSession,
+  requireRole: hrPermissionCompat,
 });
 
 const empAdvanced2Api = createEmpAdvanced2Api({
@@ -1615,11 +1740,8 @@ const empAdvanced2Api = createEmpAdvanced2Api({
     } catch {}
   },
   sameOrigin,
-  requireSession: readSession,
-  requireRole: (sess, roles) => {
-    const r = (sess.role || sess.userRole || '').toLowerCase();
-    return roles.includes(r) || r === 'admin';
-  },
+  requireSession: readHrSession,
+  requireRole: hrPermissionCompat,
 });
 
 const empPwaApi = createEmpPwaApi({
@@ -1633,11 +1755,8 @@ const empPwaApi = createEmpPwaApi({
     } catch {}
   },
   sameOrigin,
-  requireSession: readSession,
-  requireRole: (sess, roles) => {
-    const r = (sess.role || sess.userRole || '').toLowerCase();
-    return roles.includes(r) || r === 'admin';
-  },
+  requireSession: readHrSession,
+  requireRole: hrPermissionCompat,
 });
 
 const opsApi = createOpsApi({
@@ -2162,6 +2281,34 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/leads") return handleCreateLead(req, res);
   if (url.pathname === "/api/admin/session") return handleAdminSession(req, res);
   if (url.pathname === "/api/admin/session/mfa") return handleAdminMfaComplete(req, res);
+  // L03 — fronteira própria do funcionário. Estes caminhos nunca reutilizam a
+  // sessão de staff e toda propriedade é derivada do cookie employee.
+  if (url.pathname === "/api/employee/session"
+      || url.pathname === "/api/employee/session/password"
+      || url.pathname === "/api/employee/me"
+      || url.pathname === "/api/employee/home"
+      || url.pathname === "/api/employee/profile-updates"
+      || url.pathname === "/api/employee/documents"
+      || url.pathname === "/api/employee/offline"
+      || url.pathname.startsWith("/api/employee/schedule/")
+      || url.pathname.startsWith("/api/employee/actions/")
+      || url.pathname.startsWith("/api/employee/documents/")
+      || /^\/api\/admin\/hr\/employees\/[0-9a-f-]{36}\/access$/i.test(url.pathname)
+      || url.pathname.startsWith("/api/admin/hr/l03/")) {
+    return await employeeApi.handle(req, res, url);
+  }
+  // Os módulos HR/EMP históricos ainda fazem validações de formato e negócio,
+  // mas a autorização obrigatória acontece uma única vez nesta borda, com
+  // permissão granular e negação por padrão. Escopos unit/contract só passam
+  // quando o recurso funcionário está explicitamente identificado.
+  if (url.pathname.startsWith("/api/hr/")
+      || url.pathname.startsWith("/api/admin/hr/")
+      || url.pathname.startsWith("/api/crm/hr/")
+      || url.pathname.startsWith("/api/employee/")
+      || url.pathname.startsWith("/api/admin/employee/")
+      || url.pathname.startsWith("/api/crm/employee/")) {
+    if (!(await authorizeLegacyHrRequest(req, res, url))) return;
+  }
   if (url.pathname === "/api/admin/leads") return handleAdminLeads(req, res, url);
   const leadMatch = url.pathname.match(/^\/api\/admin\/leads\/([0-9a-f-]{36})$/i);
   if (leadMatch) return handleAdminLeadStatus(req, res, leadMatch[1]);
@@ -3776,6 +3923,8 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/leads"
   || pathname === "/api/admin/session"
   || pathname === "/api/admin/session/mfa"
+  || pathname.startsWith("/api/employee/")
+  || pathname.startsWith("/api/admin/hr/l03/")
   || pathname === "/api/admin/leads"
   || pathname.startsWith("/api/admin/leads/")
   || pathname.startsWith("/api/auth/")

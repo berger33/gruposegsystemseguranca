@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 /**
  * EMP-18/19 — PWA instalável, fila offline limitada, FAQ interna acessível
  * EMP-18: PWA config, offline queue com idempotência, conflito explícito, device_timestamp vs server_received_at separados, não cachear médicos/salariais por padrão
@@ -5,7 +7,6 @@
  */
 
 function sha256Hex(str) {
-  const { createHash } = require('node:crypto');
   return createHash('sha256').update(String(str)).digest('hex');
 }
 
@@ -549,11 +550,17 @@ export function createEmpPwaApi({ pool, auditLog, sameOrigin, requireSession, re
   // Service worker content (dynamic to include do_not_cache_patterns)
   async function handleServiceWorker(req, res) {
     if (req.method !== 'GET') return sendJson(res, 405, { error: 'method_not_allowed' });
-    let doNotCache = ['/api/hr/payroll-documents','/api/hr/own-doc-access-logs','medical','salary','holerite'];
+    const mandatoryPrivatePatterns = [
+      '/api/employee/', '/api/hr/', '/funcionario',
+      'payroll', 'payslip', 'holerite', 'medical', 'salary', 'employee-documents',
+    ];
+    let configuredPatterns = [];
     try {
       const { rows } = await pool.query(`SELECT do_not_cache_patterns FROM emp_pwa_configs WHERE is_active=true ORDER BY version DESC LIMIT 1`);
-      if (rows[0]?.do_not_cache_patterns) doNotCache = rows[0].do_not_cache_patterns;
+      if (Array.isArray(rows[0]?.do_not_cache_patterns)) configuredPatterns = rows[0].do_not_cache_patterns;
     } catch {}
+    // Configuração administrativa pode ampliar, nunca remover a proteção mínima.
+    const doNotCache = [...new Set([...mandatoryPrivatePatterns, ...configuredPatterns])];
     const swContent = `
 // EMP-18 Service Worker - PWA instalável, fila offline limitada, não cachear médicos/salariais por padrão
 const CACHE_NAME = 'seg-system-v1';

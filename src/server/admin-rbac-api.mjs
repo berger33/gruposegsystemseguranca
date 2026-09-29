@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { grantPermission, revokePermission, isValidPermission, isValidScopeType, KNOWN_PERMISSIONS } from "./rbac.mjs";
+import { grantPermission, revokePermission, hasPermission, isValidPermission, isValidScopeType, KNOWN_PERMISSIONS } from "./rbac.mjs";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -22,10 +22,18 @@ export function createAdminRbacApi(ctx) {
       return undefined;
     }
   }
-  async function requireAdminSession(req, res) {
+  async function requireAdminSession(req, res, permission) {
     const session = await ctx.readAdminSession(req);
     if (!session) {
       ctx.json(res, 401, { error: "admin_session_required" });
+      return null;
+    }
+    const allowed = await hasPermission(ctx.getPool(), {
+      identityId: session.identityId,
+      permission,
+    });
+    if (!allowed) {
+      ctx.json(res, 403, { error: "permission_required", permission });
       return null;
     }
     return session;
@@ -36,10 +44,14 @@ export function createAdminRbacApi(ctx) {
     if (!unconfigured && !migrationMissing) console.error(context, error);
     return ctx.json(res, 503, { error: unconfigured ? "database_not_configured" : migrationMissing ? "migration_required" : "rbac_unavailable" });
   }
+  async function invalidateTargetSessions(db, identityId, reason) {
+    await db.query("UPDATE auth_identities SET session_epoch=session_epoch+1, updated_at=NOW() WHERE id=$1", [identityId]);
+    if (ctx.staffSessionStore) await ctx.staffSessionStore.revokeAllForIdentity(identityId, reason);
+  }
 
   async function handleListPermissions(req, res, url) {
     if (!requireMethod(req, res, ["GET"])) return;
-    const session = await requireAdminSession(req, res);
+    const session = await requireAdminSession(req, res, "admin.permissions.grant");
     if (!session) return;
     const identityId = url.searchParams.get("identity");
     const permission = url.searchParams.get("permission");
@@ -75,7 +87,7 @@ export function createAdminRbacApi(ctx) {
   async function handleGrantPermission(req, res) {
     if (!requireMethod(req, res, ["POST"])) return;
     if (!requireSameOrigin(req, res)) return;
-    const session = await requireAdminSession(req, res);
+    const session = await requireAdminSession(req, res, "admin.permissions.grant");
     if (!session) return;
     const body = await readJsonOr400(req, res);
     if (body === undefined) return;
@@ -107,6 +119,8 @@ export function createAdminRbacApi(ctx) {
         grantedByRole: session.role,
         reason,
       });
+      // Alteração de autorização invalida imediatamente qualquer sessão antiga.
+      await invalidateTargetSessions(db, identityId, "permission_changed");
       return ctx.json(res, 201, { permissionId: permId });
     } catch (error) {
       if (error && error.message === "invalid_permission") return ctx.json(res, 400, { error: "invalid_permission" });
@@ -118,7 +132,7 @@ export function createAdminRbacApi(ctx) {
   async function handleRevokePermission(req, res, permissionId) {
     if (!requireMethod(req, res, ["DELETE", "POST"])) return;
     if (!requireSameOrigin(req, res)) return;
-    const session = await requireAdminSession(req, res);
+    const session = await requireAdminSession(req, res, "admin.permissions.revoke");
     if (!session) return;
     if (!UUID_PATTERN.test(permissionId)) return ctx.json(res, 400, { error: "invalid_permission_id" });
     let body = {};
@@ -137,6 +151,7 @@ export function createAdminRbacApi(ctx) {
         revokedBy: session.identityId || null,
         revokeReason: reason,
       });
+      await invalidateTargetSessions(db, result.identityId, "permission_changed");
       return ctx.json(res, 200, { ok: true, outcome: result.outcome });
     } catch (error) {
       if (error && error.message === "permission_not_found") return ctx.json(res, 404, { error: "permission_not_found" });
@@ -145,7 +160,7 @@ export function createAdminRbacApi(ctx) {
   }
 
   async function handleAccessReviews(req, res, url) {
-    const session = await requireAdminSession(req, res);
+    const session = await requireAdminSession(req, res, "admin.access_review");
     if (!session) return;
     if (req.method === "GET") {
       try {

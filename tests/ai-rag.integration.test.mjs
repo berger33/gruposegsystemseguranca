@@ -43,6 +43,9 @@ async function startTestServer() {
       QA_PGLITE_ONLY: 'true', DATABASE_URL: '', DATABASE_MIGRATION_URL: '',
       MAIL_HOST: '', OLLAMA_ENABLED: 'false', PGLITE_DATA_DIR: dataDir,
       SITE_ADMIN_TOKEN_TI: QA_ADMIN_TOKEN, SITE_ADMIN_SESSION_SECRET: QA_SESSION_SECRET,
+      // Bootstrap compartilhado só é permitido de forma explícita neste banco QA
+      // sintético, que não possui nenhuma conta individual provisionada.
+      SITE_ADMIN_LEGACY_TOKENS: 'true',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });

@@ -45,16 +45,52 @@ CREATE TABLE IF NOT EXISTS auth_identities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   kind TEXT NOT NULL CHECK (kind IN ('client','staff')),
   email TEXT NOT NULL,
+  display_name TEXT,
   status TEXT NOT NULL DEFAULT 'active',
+  session_epoch INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(kind, email)
+);
+-- Reexecutar este init também atualiza diretórios PGlite beta já existentes.
+ALTER TABLE auth_identities ADD COLUMN IF NOT EXISTS display_name TEXT;
+ALTER TABLE auth_identities ADD COLUMN IF NOT EXISTS session_epoch INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE auth_identities ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+CREATE TABLE IF NOT EXISTS auth_credentials (
+  identity_id UUID PRIMARY KEY REFERENCES auth_identities(id) ON DELETE CASCADE,
+  password_hash TEXT NOT NULL,
+  password_set_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE TABLE IF NOT EXISTS auth_staff_profiles (
   identity_id UUID PRIMARY KEY REFERENCES auth_identities(id) ON DELETE CASCADE,
-  role TEXT NOT NULL CHECK (role IN ('admin','ti','rh')),
+  role TEXT NOT NULL CHECK (role IN ('admin','ti','rh','marcelo','supervisor','comercial','financeiro')),
   assigned_by TEXT NOT NULL,
+  is_bootstrap BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE auth_staff_profiles ADD COLUMN IF NOT EXISTS is_bootstrap BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE auth_staff_profiles DROP CONSTRAINT IF EXISTS auth_staff_profiles_role_check;
+ALTER TABLE auth_staff_profiles ADD CONSTRAINT auth_staff_profiles_role_check
+  CHECK (role IN ('admin','ti','rh','marcelo','supervisor','comercial','financeiro'));
+
+CREATE TABLE IF NOT EXISTS auth_staff_sessions (
+  id UUID PRIMARY KEY,
+  identity_id UUID NOT NULL REFERENCES auth_identities(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('admin','ti','rh','marcelo','supervisor','comercial','financeiro')),
+  epoch INTEGER NOT NULL DEFAULT 0,
+  mfa_verified_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMPTZ NOT NULL,
+  revoked_at TIMESTAMPTZ,
+  revoked_reason TEXT,
+  last_seen_at TIMESTAMPTZ,
+  ip_hash TEXT,
+  user_agent TEXT
+);
+CREATE INDEX IF NOT EXISTS auth_staff_sessions_identity_idx
+  ON auth_staff_sessions (identity_id, created_at DESC);
 CREATE TABLE IF NOT EXISTS auth_access_audit (
   id BIGSERIAL PRIMARY KEY,
   actor_kind TEXT NOT NULL,

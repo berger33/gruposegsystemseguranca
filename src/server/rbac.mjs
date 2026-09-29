@@ -31,6 +31,10 @@ export const KNOWN_PERMISSIONS = Object.freeze([
   "employees.read",
   "employees.write",
   "employees.health.read",
+  "employees.health.write",
+  "employees.compensation.read",
+  "employees.compensation.write",
+  "employees.self_service",
   "proposals.approve_discount",
   "documents.download",
   "payroll.export",
@@ -44,45 +48,38 @@ export function isValidScopeType(t) {
   return ["global","own","team","unit","account","contract","organization"].includes(t);
 }
 
-export async function hasPermission(db, { identityId, permission, scopeType = null, scopeId = null }) {
-  if (!identityId || !permission) return false;
+export async function hasPermission(db, {
+  identityId,
+  permission,
+  resourceOwnerIdentityId = null,
+  unitId = null,
+  accountId = null,
+  contractId = null,
+  allowOrganization = true,
+}) {
+  if (!identityId || !permission || !UUID_PATTERN.test(identityId)) return false;
   if (!isValidPermission(permission)) return false;
   try {
-    // Staff with role admin/ti tem permissões amplas por enquanto (transição)
-    // Verificar role do staff
-    const roleRes = await db.query(
-      `SELECT role FROM auth_staff_profiles WHERE identity_id = $1`,
-      [identityId]
+    const { rows } = await db.query(
+      `SELECT scope_type, scope_id
+         FROM auth_permissions
+        WHERE identity_id=$1 AND permission=$2 AND revoked_at IS NULL`,
+      [identityId, permission],
     );
-    const role = roleRes.rows[0]?.role;
-    // Admin e TI têm acesso total durante migração (será restrito após RBAC completo)
-    if (role === "admin" || role === "ti" || role === "marcelo") {
-      // Ainda verificar se não está revogado explicitamente? Por enquanto permite tudo
-      // Mas checar se há permissão explícita negando? Não, negação por revogação
-      // Se houver pelo menos uma permissão ativa para este usuário, usamos ela; senão, admin/ti bypass
-      // Para implementar negação por padrão mesmo para admin, devemos exigir permissão explícita após fase F2.
-      // Provisório: admin/ti têm bypass até RBAC completo.
-      return true;
-    }
-
-    // Verificação granular: existe permissão ativa que cobre o escopo?
-    // Lógica: permissão com scope_type global cobre tudo; own cobre próprio; outros exigem scope_id match ou hierarquia
-    const query = `
-      SELECT 1 FROM auth_permissions
-      WHERE identity_id = $1
-        AND permission = $2
-        AND revoked_at IS NULL
-        AND (
-          scope_type = 'global'
-          OR (scope_type = $3 AND (scope_id IS NULL OR scope_id = $4))
-          OR (scope_type = 'own' AND $1 = $1) -- own sempre permite para próprio recurso, validado externamente
-        )
-      LIMIT 1
-    `;
-    const result = await db.query(query, [identityId, permission, scopeType, scopeId]);
-    return Boolean(result.rows[0]);
+    return rows.some(row => {
+      if (row.scope_type === 'global') return true;
+      if (row.scope_type === 'organization') return allowOrganization;
+      if (row.scope_type === 'own') {
+        return Boolean(resourceOwnerIdentityId) && resourceOwnerIdentityId === identityId;
+      }
+      if (row.scope_type === 'unit') return Boolean(unitId) && row.scope_id === unitId;
+      if (row.scope_type === 'account') return Boolean(accountId) && row.scope_id === accountId;
+      if (row.scope_type === 'contract') return Boolean(contractId) && row.scope_id === contractId;
+      return false;
+    });
   } catch {
-    return false; // deny-by-default em falha
+    // Falha de banco/consulta de escopo nunca mantém acesso amplo.
+    return false;
   }
 }
 
@@ -109,17 +106,17 @@ export async function revokePermission(db, { permissionId, revokedBy, revokeReas
   if (!UUID_PATTERN.test(permissionId)) throw new Error("invalid_permission_id");
   if (!revokeReason || revokeReason.length < 1 || revokeReason.length > 500) throw new Error("revoke_reason_required");
   const updated = await db.query(
-    `UPDATE auth_permissions SET revoked_at = NOW(), revoked_by = $2, revoke_reason = $3 WHERE id = $1 AND revoked_at IS NULL RETURNING id`,
+    `UPDATE auth_permissions SET revoked_at = NOW(), revoked_by = $2, revoke_reason = $3 WHERE id = $1 AND revoked_at IS NULL RETURNING id, identity_id`,
     [permissionId, revokedBy, revokeReason]
   );
   if (!updated.rows[0]) {
-    const exists = await db.query(`SELECT revoked_at FROM auth_permissions WHERE id = $1`, [permissionId]);
+    const exists = await db.query(`SELECT revoked_at, identity_id FROM auth_permissions WHERE id = $1`, [permissionId]);
     if (!exists.rows[0]) throw new Error("permission_not_found");
-    return { outcome: "already_revoked" };
+    return { outcome: "already_revoked", identityId: exists.rows[0].identity_id };
   }
   await db.query(
     `INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ('staff',$1,'permission_revoke',$2,'allowed','none')`,
     [revokedBy, permissionId]
   ).catch(()=>{});
-  return { outcome: "revoked" };
+  return { outcome: "revoked", identityId: updated.rows[0].identity_id };
 }
