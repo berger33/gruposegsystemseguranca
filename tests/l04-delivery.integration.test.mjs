@@ -3324,7 +3324,7 @@ test('L04 fechamento: CMS versionado, autorização, histórico, publicação e 
   const [response]=await Promise.all([page.waitForResponse(r=>r.url().endsWith('/api/leads')&&r.request().method()==='POST'),page.getByRole('button',{name:/Enviar pedido/}).click()]);
   assert.equal(response.status(),201);const lead=await response.json();assert.equal((await pool.query('SELECT origin FROM public_leads WHERE id=$1',[lead.leadId])).rows[0].origin,'faq');
   const pair=cookie.split(';')[0],i=pair.indexOf('=');await context.addCookies([{name:pair.slice(0,i),value:pair.slice(i+1),url:baseUrl}]);
-  await page.goto(baseUrl+'/admin/publicacao',{waitUntil:'networkidle'});await page.getByRole('heading',{name:'Publicação do site',exact:true}).waitFor();await page.getByRole('button',{name:'Temas',exact:true}).click();await page.getByLabel('Tema',{exact:true}).selectOption('tech');await page.getByRole('button',{name:'Visualizar tema',exact:true}).click();await page.getByRole('article',{name:'Prévia do tema'}).waitFor();
+  await page.goto(baseUrl+'/admin/publicacao',{waitUntil:'networkidle'});await page.getByRole('heading',{name:content.title+' · v3',exact:true}).waitFor();await page.getByRole('button',{name:'Temas',exact:true}).click();await page.getByLabel('Tema',{exact:true}).selectOption('tech');await page.getByRole('button',{name:'Visualizar tema',exact:true}).click();await page.getByRole('article',{name:'Prévia do tema'}).waitFor();
   await assertNoHorizontalScroll(page,'publicação móvel');await context.close();
  }finally{await browser.close();}
  assert.deepEqual(failures,[]);
@@ -3355,6 +3355,7 @@ test('L04 fechamento: temas persistidos, preview isolado, rollback e preferênci
 test('L04 fechamento: pacotes de catálogo, aprovação, comparação e revogação',{skip:!RUN,timeout:90000},async()=>{
  const admin=await provisionAndLoginStaff(pool,api,{role:'admin'}),cookie=admin.cookie,ids=[];
  assert.equal((await api('/api/packages',{method:'POST',body:{name:'Invasão'}})).status,405);
+ const publicCatalog=await api('/api/catalog?includeUnpublished=true&onlyValidated=false');assert.equal(publicCatalog.status,200);assert.ok(publicCatalog.body.services.every(s=>s.isPublished&&s.isValidated&&s.cost===undefined&&s.price===undefined));
  const catalog=await api('/api/admin/package-rules',{cookie});assert.equal(catalog.status,200);assert.ok(catalog.body.services.length>=2);
  const selected=catalog.body.services.slice(0,2).map(s=>s.id);
  assert.equal((await api('/api/admin/service-packages',{method:'POST',cookie,body:{name:'Preço falso',description:'Pacote de teste sem origem de custo',service_ids:selected,total_price_cents:999}})).status,400);
