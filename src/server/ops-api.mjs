@@ -62,6 +62,16 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
   // indisponibilidade conhecida e explicamos o motivo. `rejeitado`,
   // `cancelado` e `retornado` não bloqueiam.
   const ABSENCE_BLOCKING_STATUS = ['solicitado', 'em_analise', 'aprovado', 'em_afastamento'];
+
+  // REGRA ÚNICA de habilitação (OPS-04 e OPS-02): uma qualificação serve
+  // quando is_valid = true e a validade cobre GREATEST(hoje, data alvo).
+  // O motor evaluateOps04 usa esta definição por alocação/entrada de escala, e
+  // o painel de dimensionamento (OPS-02) usa a MESMA definição em forma
+  // conjuntiva para recomputar a habilitação atual contra as alocações da
+  // faixa. Não existe segunda regra de habilitação neste módulo — mudar aqui
+  // muda os dois lados.
+  const QUALIFICATION_USABLE_SQL = (targetDateSql) =>
+    `(is_valid = true AND (valid_until IS NULL OR valid_until >= GREATEST(CURRENT_DATE, ${targetDateSql})))`;
   // Interpolação de tabela só é aceita a partir desta lista fechada.
   const OPS04_SCOPES = {
     ops_allocations: { table: 'ops_allocations', dateColumn: 'allocation_date' },
@@ -146,7 +156,7 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
     if (roleId) {
       const qual = await runner.query(
         `SELECT id, certification_type, valid_until, is_valid,
-                (is_valid = true AND (valid_until IS NULL OR valid_until >= GREATEST(CURRENT_DATE, $3::date))) AS usable
+                ${QUALIFICATION_USABLE_SQL('$3::date')} AS usable
            FROM ops_employee_qualifications
           WHERE employee_id=$1 AND role_id=$2
           ORDER BY usable DESC, valid_until DESC NULLS FIRST
@@ -852,12 +862,72 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       const where = [];
       const vals = [];
       let i = 1;
-      if (post_id) { if (!validateUuid(post_id)) return send(res, 400, { error: 'invalid_post_id' }); where.push(`post_id=$${i++}`); vals.push(post_id); }
-      if (company_id) { if (!validateUuid(company_id)) return send(res, 400, { error: 'invalid_company_id' }); where.push(`company_id=$${i++}`); vals.push(company_id); }
-      if (status) { where.push(`status=$${i++}`); vals.push(status); }
+      if (post_id) { if (!validateUuid(post_id)) return send(res, 400, { error: 'invalid_post_id' }); where.push(`d.post_id=$${i++}`); vals.push(post_id); }
+      if (company_id) { if (!validateUuid(company_id)) return send(res, 400, { error: 'invalid_company_id' }); where.push(`d.company_id=$${i++}`); vals.push(company_id); }
+      if (status) { where.push(`d.status=$${i++}`); vals.push(status); }
       const ws = where.length ? `WHERE ${where.join(' AND ')}` : '';
       try {
-        const { rows } = await pool.query(`SELECT * FROM ops_dimensioning ${ws} ORDER BY period_start DESC LIMIT 100`, vals);
+        // OPS-02: painel contratado × planejado × realizado por faixa de tempo,
+        // com o cruzamento de profissional habilitado recomputado AO VIVO a
+        // partir das alocações da faixa do registro. A regra de habilitação é
+        // a MESMA do motor OPS-04 (QUALIFICATION_USABLE_SQL) — o painel pega
+        // qualificação vencida ou revogada DEPOIS da alocação, que o motor não
+        // viu no momento da criação. Sem cargo exigido na alocação é contado à
+        // parte: não vira habilitado nem inabilitado (nada é presumido).
+        const { rows } = await pool.query(
+          `SELECT d.*, p.name AS post_name,
+                  cov.allocated_employees, cov.qualified_employees,
+                  cov.unqualified_employees, cov.employees_without_requirement,
+                  cov.allocated_hours
+             FROM ops_dimensioning d
+             LEFT JOIN ops_posts p ON p.id = d.post_id
+             LEFT JOIN LATERAL (
+               WITH window_allocs AS (
+                 SELECT a.employee_id, a.role_id, a.shift_template_id, a.allocation_date
+                   FROM ops_allocations a
+                  WHERE a.post_id = d.post_id
+                    AND a.allocation_date BETWEEN d.period_start AND d.period_end
+                    AND a.status <> 'cancelado'
+               )
+               SELECT
+                 (SELECT count(DISTINCT w.employee_id)::int FROM window_allocs w) AS allocated_employees,
+                 (SELECT count(DISTINCT w.employee_id)::int FROM window_allocs w
+                   WHERE w.role_id IS NOT NULL
+                     AND NOT EXISTS (
+                       SELECT 1 FROM window_allocs bad
+                        WHERE bad.employee_id = w.employee_id
+                          AND bad.role_id IS NOT NULL
+                          AND NOT EXISTS (
+                            SELECT 1 FROM ops_employee_qualifications
+                             WHERE employee_id = bad.employee_id
+                               AND role_id = bad.role_id
+                               AND ${QUALIFICATION_USABLE_SQL('bad.allocation_date')}
+                          )
+                     )) AS qualified_employees,
+                 (SELECT count(DISTINCT w.employee_id)::int FROM window_allocs w
+                   WHERE w.role_id IS NOT NULL
+                     AND EXISTS (
+                       SELECT 1 FROM window_allocs bad
+                        WHERE bad.employee_id = w.employee_id
+                          AND bad.role_id IS NOT NULL
+                          AND NOT EXISTS (
+                            SELECT 1 FROM ops_employee_qualifications
+                             WHERE employee_id = bad.employee_id
+                               AND role_id = bad.role_id
+                               AND ${QUALIFICATION_USABLE_SQL('bad.allocation_date')}
+                          )
+                     )) AS unqualified_employees,
+                 (SELECT count(DISTINCT w.employee_id)::int FROM window_allocs w
+                   WHERE w.role_id IS NULL
+                     AND NOT EXISTS (
+                       SELECT 1 FROM window_allocs req
+                        WHERE req.employee_id = w.employee_id AND req.role_id IS NOT NULL
+                     )) AS employees_without_requirement,
+                 (SELECT COALESCE(SUM(st.duration_hours), 0)::float8
+                    FROM window_allocs w
+                    JOIN ops_shift_templates st ON st.id = w.shift_template_id) AS allocated_hours
+             ) cov ON true
+             ${ws} ORDER BY d.period_start DESC LIMIT 100`, vals);
         return send(res, 200, { dimensionings: rows });
       } catch (e) { console.error('dim GET', e.message); return send(res, 500, { error: 'internal_error' }); }
     }
@@ -974,11 +1044,16 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       const where = [];
       const vals = [];
       let i = 1;
-      if (post_id) { if (!validateUuid(post_id)) return send(res, 400, { error: 'invalid_post_id' }); where.push(`post_id=$${i++}`); vals.push(post_id); }
-      if (status) { where.push(`status=$${i++}`); vals.push(status); }
+      if (post_id) { if (!validateUuid(post_id)) return send(res, 400, { error: 'invalid_post_id' }); where.push(`g.post_id=$${i++}`); vals.push(post_id); }
+      if (status) { where.push(`g.status=$${i++}`); vals.push(status); }
       const ws = where.length ? `WHERE ${where.join(' AND ')}` : '';
       try {
-        const { rows } = await pool.query(`SELECT * FROM ops_coverage_gaps ${ws} ORDER BY gap_date DESC LIMIT 100`, vals);
+        // OPS-02: lacunas lidas com o nome canônico do posto para o painel.
+        const { rows } = await pool.query(
+          `SELECT g.*, p.name AS post_name
+             FROM ops_coverage_gaps g
+             LEFT JOIN ops_posts p ON p.id = g.post_id
+             ${ws} ORDER BY g.gap_date DESC LIMIT 100`, vals);
         return send(res, 200, { gaps: rows });
       } catch (e) { console.error('gaps GET', e.message); return send(res, 500, { error: 'internal_error' }); }
     }

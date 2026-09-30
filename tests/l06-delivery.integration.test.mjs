@@ -328,6 +328,7 @@ test("L06 OPS-01: cargo/função fora da borda de RH, necessidade por turno idem
 
 test("L06 OPS-02: dimensionamento valida valores e escopo canônico", { skip: !RUN, timeout: 180_000 }, async () => {
   const admin = await provisionAndLoginStaff(pool, api, { role: "admin" });
+  const tag = uuid().slice(0, 8);
   const companyId = uuid();
   const unitId = uuid();
   await pool.query("INSERT INTO crm_companies (id,display_name,type,status,created_by) VALUES ($1,'QA OPS-02 Empresa','client','active','admin')", [companyId]);
@@ -415,6 +416,64 @@ test("L06 OPS-02: dimensionamento valida valores e escopo canônico", { skip: !R
     period_start: "2026-10-01", period_end: "2026-10-31",
   } });
   assert.equal(blocked.status, 409, "closed contract rejected");
+
+  // ==============================================================
+  // OPS-02 (fatia de fechamento): cobertura planejada versus realizada e
+  // profissional HABILITADO. O painel recomputa a habilitação ATUAL contra as
+  // alocações da faixa do registro, com a MESMA regra do motor OPS-04 — pega
+  // qualificação revogada ou vencida DEPOIS da alocação, que o motor não viu
+  // no momento da criação.
+  // ==============================================================
+  const roleDim = await ops("/job-roles", { cookie: admin.cookie, method: "POST", body: { name: `Vigilante Dim ${tag}`, role_type: "cargo", description: "Cargo sintético do cruzamento de habilitação" } });
+  assert.equal(roleDim.status, 201, "job role for the cross created");
+  const roleIdDim = roleDim.body.role.id;
+  const shiftDim = await ops("/shift-templates", { cookie: admin.cookie, method: "POST", body: { name: `Comercial 8h ${tag}`, shift_type: "comercial", start_time: "08:00", end_time: "16:00", duration_hours: 8 } });
+  assert.equal(shiftDim.status, 201, "shift template for the window created");
+
+  const empQualified = await insertEmployee("ativo");
+  const empNoRole = await insertEmployee("ativo");
+  assert.equal((await ops("/qualifications", { cookie: admin.cookie, method: "POST", body: { employee_id: empQualified, role_id: roleIdDim, certification_type: `CFTV Dim ${tag}`, valid_until: "2028-12-31", is_valid: true } })).status, 201, "valid qualification registered");
+
+  assert.equal((await ops("/allocations", { cookie: admin.cookie, method: "POST", body: { post_id: postId, employee_id: empQualified, shift_template_id: shiftDim.body.template.id, role_id: roleIdDim, allocation_date: "2026-10-10" } })).status, 201, "qualified allocation inside the window");
+  assert.equal((await ops("/allocations", { cookie: admin.cookie, method: "POST", body: { post_id: postId, employee_id: empNoRole, shift_template_id: shiftDim.body.template.id, allocation_date: "2026-10-11" } })).status, 201, "allocation without role requirement inside the window");
+  // Fora da faixa do registro: não pode entrar na conta do painel.
+  assert.equal((await ops("/allocations", { cookie: admin.cookie, method: "POST", body: { post_id: postId, employee_id: empNoRole, shift_template_id: shiftDim.body.template.id, allocation_date: "2026-11-15" } })).status, 201, "allocation outside the window created");
+
+  const panel = await ops(`/dimensioning?post_id=${postId}`, { cookie: admin.cookie });
+  assert.equal(panel.status, 200, "dimensioning panel read works");
+  const panelRow = (panel.body.dimensionings || []).find(item => item.id === valid.body.dimensioning.id);
+  assert.ok(panelRow, "dimensioning row listed for the post");
+  assert.equal(panelRow.post_name, "QA OPS-02 Posto", "panel carries the canonical post name");
+  assert.equal(panelRow.allocated_employees, 2, "two distinct professionals allocated inside the window (outside one excluded)");
+  assert.equal(panelRow.qualified_employees, 1, "one professional with the required role satisfied by a valid qualification");
+  assert.equal(panelRow.unqualified_employees, 0, "nobody with unmet requirement yet");
+  assert.equal(panelRow.employees_without_requirement, 1, "one professional allocated only without role requirement");
+  assert.equal(Number(panelRow.allocated_hours), 16, "hours summed from the shift templates of the window allocations");
+  assert.equal(Number(panelRow.coverage_percent), 50, "planned versus realized coverage percent read from the record");
+
+  // Habilitação revogada DEPOIS da alocação, pela API real (upsert de
+  // qualificação): o painel expõe a degradação; dado incompleto vira lacuna
+  // visível, não número fictício.
+  assert.equal((await ops("/qualifications", { cookie: admin.cookie, method: "POST", body: { employee_id: empQualified, role_id: roleIdDim, certification_type: `CFTV Dim ${tag}`, valid_until: "2028-12-31", is_valid: false } })).status, 201, "qualification revoked via API after the allocation");
+  const panelRevoked = await ops(`/dimensioning?post_id=${postId}`, { cookie: admin.cookie });
+  const panelRowRevoked = (panelRevoked.body.dimensionings || []).find(item => item.id === valid.body.dimensioning.id);
+  assert.equal(panelRowRevoked.qualified_employees, 0, "revoked qualification drops the qualified count");
+  assert.equal(panelRowRevoked.unqualified_employees, 1, "professional with unmet requirement is exposed by the recomputation");
+
+  // Lacunas de cobertura lidas com o nome canônico do posto.
+  const gapsRead = await ops(`/coverage-gaps?post_id=${postId}`, { cookie: admin.cookie });
+  assert.equal(gapsRead.status, 200, "coverage gaps read works");
+  assert.ok((gapsRead.body.gaps || []).every(gap => gap.post_name === "QA OPS-02 Posto"), "gaps carry the canonical post name");
+
+  // Estado persistido para a verificação em Chromium real, feita na sessão de
+  // navegador já existente da Fatia B.
+  const uiState = await pool.query(
+    `SELECT (SELECT count(*)::int FROM ops_dimensioning WHERE post_id=$1) AS dims,
+            (SELECT count(*)::int FROM ops_coverage_gaps WHERE post_id=$1) AS gaps`,
+    [postId]
+  );
+  assert.ok(uiState.rows[0].dims >= 1, "dimensioning remains persisted for the UI assertion");
+  assert.ok(uiState.rows[0].gaps >= 1, "coverage gaps remain persisted for the UI assertion");
 });
 
 test("L06 OPS-03: versões de escala validam período, status, sequência e histórico", { skip: !RUN, timeout: 180_000 }, async () => {
@@ -1040,6 +1099,18 @@ test("L06 Fatia B: cobertura, passagem de turno, ocorrência, checklists, evidê
     assert.match(content || "", /Portaria OPS-01/, "shift need row carries the post name via the canonical join");
     assert.match(content || "", /sem dia específico/, "need without a day is shown without inventing semantics");
     assert.match(content || "", /QA Funcionário ativo/, "allocations table renders the professional of the chain");
+
+    // Aba Dimensionamento (OPS-02): contratado × planejado × realizado por
+    // faixa de tempo, com habilitação cruzada recomputada e fórmula explícita.
+    await page.click("button:has-text('Dimensionamento (OPS-02)')");
+    await page.waitForSelector("#dimensioning-title", { timeout: 30_000 });
+    content = await page.textContent("body");
+    assert.match(content || "", /QA OPS-02 Posto/, "dimensioning tab renders the post of the chain");
+    assert.match(content || "", /50%/, "coverage percent rendered from the real record");
+    assert.match(content || "", /sem habilitação válida/, "revoked qualification exposed as a visible gap");
+    assert.match(content || "", /horas realizadas ÷ horas exigidas/, "panel footer states the explicit formula and period");
+    assert.match(content || "", /Lacunas de cobertura/, "coverage gaps section rendered");
+    assert.match(content || "", /2026-10-05/, "gap date rendered from the real API");
 
     // Aba Jornada & Habilitação (OPS-04): regra aprovada, habilitação e trilha
     // de bloqueios, vindos da API real e persistidos pelo subteste OPS-04.

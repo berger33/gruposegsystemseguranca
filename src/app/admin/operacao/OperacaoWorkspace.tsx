@@ -49,6 +49,36 @@ type Allocation = {
   allocation_date: string;
   status: string;
 };
+type Dimensioning = {
+  id: string;
+  post_id: string;
+  post_name?: string | null;
+  period_start: string;
+  period_end: string;
+  contracted_headcount: number;
+  planned_headcount: number;
+  realized_headcount: number;
+  coverage_hours_required: string | number;
+  coverage_hours_realized: string | number;
+  coverage_percent: string | number;
+  status: string;
+  allocated_employees?: number;
+  qualified_employees?: number;
+  unqualified_employees?: number;
+  employees_without_requirement?: number;
+  allocated_hours?: string | number;
+};
+type CoverageGap = {
+  id: string;
+  post_id: string;
+  post_name?: string | null;
+  gap_date: string;
+  gap_start: string;
+  gap_end: string;
+  uncovered_minutes: number;
+  reason: string | null;
+  status: string;
+};
 type CoverageRequest = {
   id: string;
   post_id: string;
@@ -115,10 +145,12 @@ type ScheduleValidation = {
 };
 
 export default function OperacaoWorkspace() {
-  const [activeTab, setActiveTab] = useState<"postos" | "jornada" | "cobertura" | "passagem" | "ocorrencias" | "checklists" | "supervisao" | "rondas" | "relatorios" | "metricas" | "limpeza" | "monitoramento">("postos");
+  const [activeTab, setActiveTab] = useState<"postos" | "jornada" | "dimensionamento" | "cobertura" | "passagem" | "ocorrencias" | "checklists" | "supervisao" | "rondas" | "relatorios" | "metricas" | "limpeza" | "monitoramento">("postos");
   const [posts, setPosts] = useState<Post[]>([]);
   const [jobRoles, setJobRoles] = useState<JobRole[]>([]);
   const [shiftNeeds, setShiftNeeds] = useState<PostShiftNeed[]>([]);
+  const [dimensionings, setDimensionings] = useState<Dimensioning[]>([]);
+  const [gaps, setGaps] = useState<CoverageGap[]>([]);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [coverages, setCoverages] = useState<CoverageRequest[]>([]);
   const [handovers, setHandovers] = useState<Handover[]>([]);
@@ -135,6 +167,10 @@ export default function OperacaoWorkspace() {
   // um problema conhecido desta tela e não deve ser agravado.
   const [structureLoading, setStructureLoading] = useState(true);
   const [structureError, setStructureError] = useState("");
+  // OPS-02: o painel de dimensionamento também carrega em grupo próprio,
+  // desacoplado dos demais — mesma razão do grupo de estrutura.
+  const [dimLoading, setDimLoading] = useState(true);
+  const [dimError, setDimError] = useState("");
 
   async function fetchJson(path: string) {
     const response = await fetch(path, { cache: "no-store", headers: { accept: "application/json" } });
@@ -195,6 +231,25 @@ export default function OperacaoWorkspace() {
 
   useEffect(() => { void loadStructure(); }, []);
 
+  async function loadDimensioning() {
+    setDimLoading(true);
+    setDimError("");
+    try {
+      const [dimData, gapData] = await Promise.all([
+        fetchJson("/api/ops/dimensioning"),
+        fetchJson("/api/ops/coverage-gaps"),
+      ]);
+      setDimensionings(dimData.dimensionings || []);
+      setGaps(gapData.gaps || []);
+    } catch (err: any) {
+      setDimError(err.message || "Falha ao carregar o dimensionamento.");
+    } finally {
+      setDimLoading(false);
+    }
+  }
+
+  useEffect(() => { void loadDimensioning(); }, []);
+
   return (
     <main style={{ maxWidth: 1120, margin: "0 auto", padding: "32px 18px", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <nav aria-label="Navegação operacional" style={{ marginBottom: 16 }}>
@@ -236,6 +291,21 @@ export default function OperacaoWorkspace() {
           }}
         >
           Jornada &amp; Habilitação (OPS-04)
+        </button>
+        <button
+          role="tab"
+          aria-selected={activeTab === "dimensionamento"}
+          onClick={() => setActiveTab("dimensionamento")}
+          style={{
+            padding: "8px 16px",
+            border: "none",
+            background: "none",
+            borderBottom: activeTab === "dimensionamento" ? "3px solid #2563eb" : "3px solid transparent",
+            fontWeight: activeTab === "dimensionamento" ? "bold" : "normal",
+            cursor: "pointer",
+          }}
+        >
+          Dimensionamento (OPS-02)
         </button>
         <button
           role="tab"
@@ -593,6 +663,135 @@ export default function OperacaoWorkspace() {
               </table>
             )}
           </section>
+        </>
+      )}
+
+      {!loading && !error && activeTab === "dimensionamento" && (
+        <>
+          <p style={{ padding: 10, background: "#eff6ff", borderRadius: 6, marginBottom: 12 }}>
+            Dimensionamento (OPS-02): contratado × planejado × realizado por faixa de tempo, cobertura por horas e
+            profissional habilitado. A habilitação é recomputada ao vivo contra as alocações da faixa, com a mesma
+            regra do motor OPS-04 — qualificação vencida ou revogada depois da alocação aparece aqui como lacuna,
+            não como número fictício.
+          </p>
+
+          {dimLoading && <p role="status">Carregando dimensionamento…</p>}
+          {!dimLoading && dimError && (
+            <p role="alert" style={{ padding: 12, background: "#fef2f2", borderRadius: 6, color: "#991b1b" }}>
+              {dimError}
+            </p>
+          )}
+
+          {!dimLoading && !dimError && (
+            <>
+              <section aria-labelledby="dimensioning-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 12 }}>
+                <h2 id="dimensioning-title">Contratado × planejado × realizado por faixa de tempo</h2>
+                {dimensionings.length === 0 ? (
+                  <p>Nenhum dimensionamento registrado. Sem registro por faixa de tempo, cobertura não é inferida.</p>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                        <th align="left" style={{ padding: 8 }}>Posto</th>
+                        <th align="left" style={{ padding: 8 }}>Período</th>
+                        <th align="left" style={{ padding: 8 }}>Contratado</th>
+                        <th align="left" style={{ padding: 8 }}>Planejado</th>
+                        <th align="left" style={{ padding: 8 }}>Realizado</th>
+                        <th align="left" style={{ padding: 8 }}>Horas exigidas</th>
+                        <th align="left" style={{ padding: 8 }}>Horas realizadas</th>
+                        <th align="left" style={{ padding: 8 }}>Cobertura</th>
+                        <th align="left" style={{ padding: 8 }}>Alocados na faixa</th>
+                        <th align="left" style={{ padding: 8 }}>Habilitados</th>
+                        <th align="left" style={{ padding: 8 }}>Sem cargo exigido</th>
+                        <th align="left" style={{ padding: 8 }}>Situação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dimensionings.map(dim => (
+                        <tr key={dim.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: 8 }}>{dim.post_name || "—"}</td>
+                          <td style={{ padding: 8 }}>{String(dim.period_start).slice(0, 10)} a {String(dim.period_end).slice(0, 10)}</td>
+                          <td style={{ padding: 8 }}>{dim.contracted_headcount}</td>
+                          <td style={{ padding: 8 }}>{dim.planned_headcount}</td>
+                          <td style={{ padding: 8 }}>{dim.realized_headcount}</td>
+                          <td style={{ padding: 8 }}>{Number(dim.coverage_hours_required)} h</td>
+                          <td style={{ padding: 8 }}>{Number(dim.coverage_hours_realized)} h</td>
+                          <td style={{ padding: 8 }}>
+                            <span style={{
+                              padding: "2px 8px", borderRadius: 4,
+                              background: Number(dim.coverage_percent) >= 100 ? "#dcfce7" : Number(dim.coverage_percent) >= 70 ? "#fef3c7" : "#fee2e2",
+                            }}>
+                              {Number(dim.coverage_percent)}%
+                            </span>
+                          </td>
+                          <td style={{ padding: 8 }}>
+                            {dim.allocated_employees ?? 0}
+                            {Number(dim.allocated_hours || 0) > 0 && ` (${Number(dim.allocated_hours)} h alocadas)`}
+                          </td>
+                          <td style={{ padding: 8 }}>
+                            {dim.qualified_employees ?? 0}
+                            {Number(dim.unqualified_employees || 0) > 0 && (
+                              <span style={{ color: "#991b1b" }}> + {dim.unqualified_employees} sem habilitação válida</span>
+                            )}
+                          </td>
+                          <td style={{ padding: 8 }}>{dim.employees_without_requirement ?? 0}</td>
+                          <td style={{ padding: 8 }}>{dim.status}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+                <footer style={{ marginTop: 12, padding: 10, background: "#f8fafc", borderRadius: 6, color: "#475569", fontSize: 14 }}>
+                  <strong>Período e fórmula.</strong> Período de cada linha: datas de início e fim do próprio registro de
+                  dimensionamento. Cobertura % = horas realizadas ÷ horas exigidas × 100, limitada a 100 (calculada pelo
+                  banco na coluna <code>coverage_percent</code>). Alocados na faixa = profissionais distintos com
+                  alocação não cancelada dentro do período, no posto da linha; as horas alocadas são a soma das horas
+                  dos turnos dessas alocações e não substituem as horas realizadas informadas no registro. Habilitados =
+                  alocados cujo cargo exigido na própria alocação possui qualificação válida em{" "}
+                  <code>ops_employee_qualifications</code> (<code>is_valid</code> e validade ≥ data da alocação) — a
+                  mesma regra aplicada ao alocar (OPS-04). Sem cargo exigido = alocados apenas em alocações sem cargo
+                  informado: não são contados como habilitados nem como inabilitados. Dado ausente aparece como lacuna
+                  com o pré-requisito de cadastro — nunca como número inventado.
+                </footer>
+              </section>
+
+              <section aria-labelledby="coverage-gaps-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+                <h2 id="coverage-gaps-title">Lacunas de cobertura (OPS-02)</h2>
+                {gaps.length === 0 ? (
+                  <p>Nenhuma lacuna de cobertura registrada. Ausência de lacuna registrada não é prova de cobertura — é ausência de registro.</p>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                        <th align="left" style={{ padding: 8 }}>Posto</th>
+                        <th align="left" style={{ padding: 8 }}>Data</th>
+                        <th align="left" style={{ padding: 8 }}>Janela</th>
+                        <th align="left" style={{ padding: 8 }}>Minutos descobertos</th>
+                        <th align="left" style={{ padding: 8 }}>Motivo</th>
+                        <th align="left" style={{ padding: 8 }}>Situação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {gaps.map(gap => (
+                        <tr key={gap.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: 8 }}>{gap.post_name || "—"}</td>
+                          <td style={{ padding: 8 }}>{String(gap.gap_date).slice(0, 10)}</td>
+                          <td style={{ padding: 8 }}>{String(gap.gap_start).slice(0, 16).replace("T", " ")} – {String(gap.gap_end).slice(0, 16).replace("T", " ")}</td>
+                          <td style={{ padding: 8 }}>{gap.uncovered_minutes}</td>
+                          <td style={{ padding: 8 }}>{gap.reason || "—"}</td>
+                          <td style={{ padding: 8 }}>
+                            <span style={{ padding: "2px 8px", borderRadius: 4, background: gap.status === "resolvido" ? "#dcfce7" : "#fef3c7" }}>
+                              {gap.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </section>
+            </>
+          )}
         </>
       )}
 

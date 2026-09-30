@@ -1,10 +1,10 @@
-# Entrega L06 — operação, patrimônio e manutenção (fatias A–G)
+# Entrega L06 — operação, patrimônio e manutenção (fatias A–H)
 
 **Data:** 2026-09-30
 **Base integrada:** `main` @ `400f079a4e1fe504b779acf83909580d9d082b76` (L05 mergeada).
 **Branch de entrega:** `arena/01a0f288-gruposegsystemseguranca`.
 
-> L06 é grande e **não é greenfield**: o schema (migrações 070–073 OPS e 083–084 AST) e as APIs (`ops-api`, `ops-advanced*`, `ast-api`, `emp-ops-api`) já existiam da fase de layout. Esta entrega conduz L06 em **fatias verificáveis**; cada fatia fecha o gate verde. Fatias entregues: **A** (estrutura de operação, alocação e contrato encerrado), **B** (cobertura, passagem de turno, livro de ocorrências e checklists operacionais), **C** (estoque, reserva, ativo/serial, custódia/termo de guarda, requisições e compras internas sintéticas), **D** (inventário físico, ordens de serviço, manutenção, evidências com escopo L02, CFTV e limpeza), **E** (opera­ção avançada OPS-09..16), **F** (OPS-04: jornada, descanso, habilitação e indisponibilidade) e **G** (OPS-01: cargo/função fora da borda de RH, necessidade por turno e cadeia cliente→posto na tela). Residuais do bloco: **OPS-02 e OPS-03**.
+> L06 é grande e **não é greenfield**: o schema (migrações 070–073 OPS e 083–084 AST) e as APIs (`ops-api`, `ops-advanced*`, `ast-api`, `emp-ops-api`) já existiam da fase de layout. Esta entrega conduz L06 em **fatias verificáveis**; cada fatia fecha o gate verde. Fatias entregues: **A** (estrutura de operação, alocação e contrato encerrado), **B** (cobertura, passagem de turno, livro de ocorrências e checklists operacionais), **C** (estoque, reserva, ativo/serial, custódia/termo de guarda, requisições e compras internas sintéticas), **D** (inventário físico, ordens de serviço, manutenção, evidências com escopo L02, CFTV e limpeza), **E** (opera­ção avançada OPS-09..16), **F** (OPS-04: jornada, descanso, habilitação e indisponibilidade), **G** (OPS-01: cargo/função fora da borda de RH, necessidade por turno e cadeia cliente→posto na tela) e **H** (OPS-02: aba de dimensionamento com habilitação cruzada e fórmula explícita). Residual do bloco: **OPS-03**.
 
 ## Resultado técnico local
 
@@ -158,6 +158,43 @@ A verificação em Chromium da aba OPS-04 reutiliza a sessão de navegador já a
 
 A verificação em Chromium reutiliza a sessão de navegador já aberta pelo subteste da Fatia B (aba `Postos e Alocações`, aba padrão), sem processo de navegador adicional.
 
+### Fatia H: OPS-02 — aba de dimensionamento com habilitação cruzada
+
+**Sem migração nova.** `ops_dimensioning`, `ops_coverage_gaps` e `ops_employee_qualifications` já existiam; faltava a tela e o cruzamento de habilitação.
+
+#### Lacunas reais encontradas (antes desta fatia)
+
+1. **Não existia aba de dimensionamento** em `/admin/operacao`: as APIs `/api/ops/dimensioning` e `/api/ops/coverage-gaps` estavam endurecidas, mas sem superfície — o requisito de tela não tinha entrega.
+2. **A habilitação só era avaliada no momento da alocação.** O motor OPS-04 valida qualificação ao criar a alocação/entrada; nada recomputava o estado ATUAL contra as alocações existentes — qualificação vencida ou revogada depois da alocação passava despercebida no painel de cobertura.
+3. **Duas regras de habilitação seriam um risco**: a tentação ao escrever o painel era duplicar o predicado. O predicado foi extraído para `QUALIFICATION_USABLE_SQL` e é o **mesmo** código usado por `evaluateOps04` e pelo painel.
+
+#### Decisões e invariantes
+
+- **Regra única de habilitação**: `is_valid = true` e validade ≥ `GREATEST(hoje, data da alocação)` em `ops_employee_qualifications` — um predicado, dois usos (motor por alocação; painel em forma conjuntiva).
+- **O painel recomputa ao vivo**: por registro de dimensionamento, `LEFT JOIN LATERAL` sobre as alocações não canceladas dentro do período do próprio registro — `allocated_employees`, `qualified_employees`, `unqualified_employees`, `employees_without_requirement`, `allocated_hours`.
+- **Sem cargo exigido não é habilitado nem inabilitado**: alocações sem `role_id` são contadas à parte (`employees_without_requirement`); nada é presumido sobre competência não declarada.
+- **Alocação fora da faixa não entra na conta** — o cruzamento respeita o período do próprio registro.
+- **Fórmula e período explícitos no rodapé**: cobertura % = horas realizadas ÷ horas exigidas × 100 (limitada a 100, calculada pelo banco); horas alocadas = soma dos turnos das alocações da faixa e **não substituem** as horas realizadas informadas — a divergência aparece, não é conciliada.
+- **Grupo de carregamento próprio**, desacoplado dos demais fetches da tela, com estados de carregamento/vazio/erro.
+
+#### Endpoints alterados
+
+- `GET /api/ops/dimensioning` — nome do posto e colunas calculadas de cobertura/habilitação por registro.
+- `GET /api/ops/coverage-gaps` — nome canônico do posto.
+- `/admin/operacao` — aba **Dimensionamento (OPS-02)**: painel contratado × planejado × realizado por faixa de tempo, habilitação cruzada, lacunas e rodapé com fórmula.
+
+#### Casos do gate (subteste `L06 OPS-02`, ampliado)
+
+| # | Caso | Resultado |
+|---|---|---|
+| 1 | Criação válida / percentual derivado / valores inválidos / escopo | já coberto (permanece) |
+| 2 | Dois alocados na faixa (um qualificado, um sem cargo) + um fora da faixa | painel: 2 alocados, 1 habilitado, 1 sem exigência; o de fora excluído |
+| 3 | Horas alocadas da faixa | 16 h somadas dos turnos |
+| 4 | Cobertura planejada versus realizada do registro | 372/744 = 50% |
+| 5 | Qualificação revogada pela API **depois** da alocação | painel recomputa: 0 habilitados, 1 sem habilitação válida |
+| 6 | Lacunas com nome canônico do posto | presente |
+| 7 | Chromium real: posto, 50%, "sem habilitação válida", fórmula no rodapé, data de lacuna | renderizados da API real |
+
 ## Gate remoto L06
 
 - `scripts/qa-l06-delivery-postgres.mjs` — PostgreSQL descartável (recusa banco externo), migra e roda a suíte com HTTP real e Chromium empacotado.
@@ -223,7 +260,7 @@ Baseline registrado antes de qualquer alteração da Fatia F: `qa-wave0-static` 
 
 ## Marco concluído localmente
 
-- OPS-01, OPS-04..16 e AST-01..12 estão `pronto_local`; aceite humano e integrações externas permanecem separados da conclusão técnica.
-- **OPS-02 e OPS-03 continuam incompletos** e mantêm seus estados próprios na matriz: OPS-02 aguarda cobertura planejada versus realizada por profissional habilitado; OPS-03 aguarda aceite humano da escala. Não os declaramos prontos por proximidade temática com OPS-04.
+- OPS-01, OPS-02 e OPS-04..16, além de AST-01..12, estão `pronto_local`; aceite humano e integrações externas permanecem separados da conclusão técnica.
+- **OPS-03 continua incompleto** e mantém seu estado próprio na matriz: aguarda a tela de escalas (calendário por posto/equipe/pessoa e ciência pela interface). Não o declaramos pronto por proximidade temática com OPS-04.
 - Limite honesto de OPS-04: o comprovante de habilitação ainda é `document_url` em texto. Ligá-lo ao provedor privado L02 (`client_documents`) exige coluna nova e, portanto, migração aditiva — não feita nesta fatia por decisão explícita de escopo.
 
