@@ -16,7 +16,7 @@ export function send(res, status, data) {
   res.end(JSON.stringify(data));
 }
 export function endpoint(fn) { return async (req,res,...args) => {
-  try { await fn(req,res,...args); } catch(e) { send(res,e.status || 503,{error:e.status ? e.message : 'operation_unavailable'}); }
+  try { await fn(req,res,...args); } catch(e) { if(!e.status)console.error('L04_ERROR',JSON.stringify({code:e.code,constraint:e.constraint,detail:['42804','42P08','42703','42702','42601'].includes(e.code)?e.message:undefined})); send(res,e.status || 503,{error:e.status ? e.message : 'operation_unavailable'}); }
 }; }
 export async function authorize(req, {sameOrigin, requireSession, requireRole}, roles=['admin','marcelo','ti']) {
   if (req.method !== 'GET' && !sameOrigin(req)) fail(403,'same_origin_required');
