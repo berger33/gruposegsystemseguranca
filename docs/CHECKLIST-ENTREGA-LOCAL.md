@@ -777,10 +777,10 @@ escala em rascunho/publicada/revisada, validade e histórico; calendário por po
 
 ## OPS-04
 validar sobreposição, indisponibilidade, habilitação, documentação e regras de jornada/descanso configuradas e aprovadas.
-- Estado: em_andamento (bloqueio de sobreposição e de funcionário não ativo endurecidos)
-- Tela / API / dados / autorização: `POST /api/ops/allocations` valida posto existente/ativo, contrato operacional, funcionário `ativo`, duplicidade exata e **sobreposição de turno** (bug de parâmetro `$3` corrigido; agora bloqueia de verdade, fail-closed); escrita + auditoria na mesma transação (fail-closed).
-- Integração e evidência (teste, resultado, commit): `npm run test:l06-delivery:pg` verde: nega anônimo (401), papel indevido (403), posto/funcionário inexistente por troca de ID (404), funcionário desligado (409), sobreposição (409 `overlap_detected`), retry idempotente (409 `duplicate_allocation`, sem segunda linha), contrato encerrado (409 `contract_not_operational`, histórico preservado) e auditoria indisponível (503 sem efeito parcial).
-- Pendência / fronteira externa / aceite humano: habilitação/documentação/jornada-descanso plenas dependem de dados de RH/qualificação e entram nas fatias seguintes. Aceite humano pendente.
+- Estado: pronto_local
+- Tela / API / dados / autorização: `POST /api/ops/allocations` exige posto/contrato e profissional ativos; bloqueia sobreposição e indisponibilidade canônica em `hr_absences`; quando há função, exige `ops_employee_qualifications` válida na data e com documento explícito; regra informada deve existir em `ops_work_rules`, estar ativa e aprovada, e seus limites de jornada diária, semanal e descanso mínimo são bloqueantes. API exige sessão, papel `admin|ti|rh`, mesma origem e falha fechada em erro de validação ou auditoria.
+- Integração e evidência (teste, resultado, commit): `npm run test:l06-delivery:pg` verde, 8/8 cenários. O cenário OPS-04 cobre qualificação ausente, documento ausente, regra não aprovada, indisponibilidade aprovada, jornada diária excedida, descanso mínimo não cumprido e caminho positivo; retry, sobreposição e auditoria sem efeito parcial permanecem cobertos pela Fatia A. `npm run typecheck`, `npm run test:migrations:pg` e `npm run test:l04-delivery:pg` também aprovados no baseline da sessão.
+- Pendência / fronteira externa / aceite humano: aprovação material das regras e dos documentos permanece decisão humana de RH/jurídico; o software não aprova automaticamente nem infere habilitação/disponibilidade. Nenhuma migração 124 foi necessária. Aceite humano pendente.
 
 ## OPS-05
 ausência abre pendência de cobertura; candidatos de substituição por disponibilidade/qualificação, decisão humana e comunicação.

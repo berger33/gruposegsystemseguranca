@@ -368,19 +368,91 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
           return send(res, 409, { error: 'overlap_detected', existing: overlap.rows[0].id, detail: 'Funcionário já alocado em turno sobreposto no mesmo dia' });
         }
       } catch (e) { console.error('overlap check', e.message); return send(res, 503, { error: 'validation_unavailable' }); }
-      // Validar habilitação/documentação
+      // OPS-04: quando há função, habilitação e documento válido são dados
+      // obrigatórios — ausência de cadastro nunca é inferida como aprovação.
       if (role_id) {
         try {
-          const qual = await pool.query(`SELECT * FROM ops_employee_qualifications WHERE employee_id=$1 AND role_id=$2 AND is_valid=true AND (valid_until IS NULL OR valid_until >= CURRENT_DATE)`, [employee_id, role_id]);
-          if (!qual.rows[0]) {
-            await pool.query(
-              `INSERT INTO ops_schedule_validations (employee_id, validation_type, is_valid, conflict_details, validated_by)
-               VALUES ($1,'habilitacao',false,$2,$3)`,
-              [employee_id, JSON.stringify({ message: 'Funcionário sem habilitação válida para cargo/função', role_id, employee_id }), sess.role]
+          const role = await pool.query('SELECT id FROM ops_job_roles WHERE id=$1 AND is_active=true', [role_id]);
+          if (!role.rows[0]) return send(res, 409, { error: 'role_not_operational' });
+          const qual = await pool.query(
+            `SELECT id, valid_until, document_url FROM ops_employee_qualifications
+              WHERE employee_id=$1 AND role_id=$2 AND is_valid=true
+                AND valid_until IS NOT NULL AND valid_until >= $3::date
+                AND NULLIF(BTRIM(document_url),'') IS NOT NULL
+              ORDER BY valid_until DESC LIMIT 1`,
+            [employee_id, role_id, allocation_date]
+          );
+          if (!qual.rows[0]) return send(res, 409, {
+            error: 'qualification_or_document_required', role_id,
+            detail: 'Habilitação documentada e válida na data da alocação é obrigatória'
+          });
+        } catch (e) {
+          console.error('qualification/document check', e.message);
+          return send(res, 503, { error: 'validation_unavailable' });
+        }
+      }
+
+      // Indisponibilidade cadastrada no RH bloqueia a alocação. Erro de banco
+      // também bloqueia: não presumimos disponibilidade.
+      try {
+        const absence = await pool.query(
+          `SELECT id FROM hr_absences
+            WHERE employee_id=$1 AND status IN ('solicitado','em_analise','aprovado','em_afastamento')
+              AND $2::date BETWEEN start_date AND COALESCE(end_date,$2::date)
+            LIMIT 1`, [employee_id, allocation_date]
+        );
+        if (absence.rows[0]) return send(res, 409, { error: 'employee_unavailable', absence_id: absence.rows[0].id });
+      } catch (e) {
+        console.error('availability check', e.message);
+        return send(res, 503, { error: 'validation_unavailable' });
+      }
+
+      // Jornada/descanso só pode usar regra explicitamente configurada, ativa e
+      // aprovada. O identificador fica na auditoria; sem regra, a ação é negada.
+      const work_rule_id = b.work_rule_id || b.workRuleId;
+      if (work_rule_id) {
+        if (!validateUuid(work_rule_id)) return send(res, 400, { error: 'invalid_work_rule_id' });
+        try {
+          const ruleResult = await pool.query(
+            `SELECT id,max_daily_hours,min_rest_hours,max_weekly_hours
+               FROM ops_work_rules WHERE id=$1 AND is_active=true AND is_approved=true`, [work_rule_id]
+          );
+          const rule = ruleResult.rows[0];
+          if (!rule) return send(res, 409, { error: 'approved_work_rule_required' });
+          const shiftResult = await pool.query('SELECT start_time,end_time,duration_hours FROM ops_shift_templates WHERE id=$1 AND is_active=true', [shift_template_id]);
+          const shift = shiftResult.rows[0];
+          if (!shift) return send(res, 409, { error: 'shift_not_operational' });
+          if (Number(shift.duration_hours) > Number(rule.max_daily_hours)) return send(res, 409, { error: 'max_daily_hours_exceeded' });
+          const totals = await pool.query(
+            `SELECT COALESCE(SUM(st.duration_hours),0) AS weekly_hours
+               FROM ops_allocations a JOIN ops_shift_templates st ON st.id=a.shift_template_id
+              WHERE a.employee_id=$1 AND a.status <> 'cancelado'
+                AND a.allocation_date BETWEEN ($2::date - 6) AND $2::date`,
+            [employee_id, allocation_date]
+          );
+          if (Number(totals.rows[0].weekly_hours) + Number(shift.duration_hours) > Number(rule.max_weekly_hours))
+            return send(res, 409, { error: 'max_weekly_hours_exceeded' });
+          const previous = await pool.query(
+            `SELECT a.allocation_date, st.end_time,
+                    CASE WHEN st.end_time <= st.start_time THEN 1 ELSE 0 END AS overnight
+               FROM ops_allocations a JOIN ops_shift_templates st ON st.id=a.shift_template_id
+              WHERE a.employee_id=$1 AND a.status <> 'cancelado' AND a.allocation_date < $2::date
+              ORDER BY a.allocation_date DESC, st.end_time DESC LIMIT 1`, [employee_id, allocation_date]
+          );
+          if (previous.rows[0]) {
+            const prev = previous.rows[0];
+            const rest = await pool.query(
+              `SELECT EXTRACT(EPOCH FROM (($1::date + $2::time + ($3::int * interval '1 day')) - ($4::date + $5::time + ($6::int * interval '1 day'))))/3600 AS hours`,
+              [allocation_date, shift.start_time, 0, prev.allocation_date, prev.end_time, prev.overnight]
             );
-            return send(res, 400, { error: 'qualification_required', role_id, detail: 'Funcionário sem habilitação válida para cargo/função' });
+            if (Number(rest.rows[0].hours) < Number(rule.min_rest_hours)) return send(res, 409, { error: 'minimum_rest_not_met' });
           }
-        } catch (e) { console.error('qual check', e.message); }
+        } catch (e) {
+          console.error('work-rule check', e.message);
+          return send(res, 503, { error: 'validation_unavailable' });
+        }
+      } else if (role_id) {
+        return send(res, 409, { error: 'approved_work_rule_required' });
       }
       // Escrita + auditoria na MESMA transação (fail-closed): se a trilha em
       // audit_log não puder ser gravada, a alocação inteira é revertida — não
@@ -395,7 +467,7 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
         );
         await client.query(
           `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
-          ['ops_allocation_create', sess.role, rows[0].id, JSON.stringify({ post_id, employee_id, allocation_date })]
+          ['ops_allocation_create', sess.role, rows[0].id, JSON.stringify({ post_id, employee_id, allocation_date, work_rule_id: work_rule_id || null })]
         );
         await client.query('COMMIT');
         return send(res, 201, { allocation: rows[0] });

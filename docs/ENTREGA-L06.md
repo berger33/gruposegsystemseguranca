@@ -15,6 +15,14 @@
   - `POST /api/ops/allocations` valida posto ativo, contrato operacional, funcionário ativo, duplicidade exata e sobreposição de turno fail-closed.
   - **Auditoria fail-closed**: alocação e auditoria na mesma transação.
 
+### Fechamento OPS-04: habilitação, documentação, indisponibilidade e jornada/descanso
+- `POST /api/ops/allocations` passou a negar por padrão quando a função não possui qualificação documentada e válida na data da alocação.
+- Indisponibilidades operacionais registradas em `hr_absences` bloqueiam a alocação; erro de consulta também bloqueia, sem inferir disponibilidade.
+- Regras de `ops_work_rules` precisam ser explicitamente informadas, ativas e aprovadas; jornada diária/semanal e descanso mínimo são validados antes da escrita.
+- A regra usada integra a trilha de auditoria atômica da alocação. Regra pendente, habilitação/documento ausente, jornada excedida ou descanso insuficiente não deixam alocação parcial.
+- Nenhuma migração `124` foi criada: as estruturas canônicas existentes comportaram a regra sem duplicação de domínio.
+- O gate L06 foi ampliado para 8 subtestes e inclui os caminhos positivos e negativos de OPS-04 por HTTP e PostgreSQL reais.
+
 ### Fatia B: Cobertura, Passagem de Turno, Ocorrências e Checklists (OPS-05..08)
 - **Migração aditiva `120-l06-fatia-b-operacao.sql`**: adiciona colunas auditáveis e chaves estrangeiras (`contract_id`, `unit_id`, `shift_template_id`, `client_document_id`, `is_retification`, `reason`) com índices nas tabelas `ops_coverage_requests`, `ops_substitution_candidates`, `ops_handovers`, `ops_handover_escalations`, `ops_occurrence_book`, `ops_occurrence_history`, `ops_occurrence_evidences`, `ops_checklist_runs` e `ops_checklist_answers`.
 - **`src/server/ops-advanced-api.mjs` reescrito e endurecido:**
@@ -102,7 +110,7 @@
 | `npm run build` | aprovado; inclui `/admin/operacao` e `/admin/patrimonio` |
 | `npm run test:migrations:pg` | aprovado; 123/123 checksums, 517 tabelas, clone descartável, rejeição de mutação sintética |
 | `npm run test:l05-delivery:pg` | aprovado (sem regressão após migrações aditivas L06) |
-| `npm run test:l06-delivery:pg` | aprovado; 5 cenários completos em HTTP real + PostgreSQL descartável + Chromium |
+| `npm run test:l06-delivery:pg` | aprovado; 8/8 subtestes, incluindo OPS-04, em HTTP real + PostgreSQL descartável + Chromium |
 
 ## Diferenciação de estado
 

@@ -187,6 +187,65 @@ test("L06 Fatia A: alocação escopada por contrato, contrato encerrado bloqueia
   assert.equal(trail.rows[0].n, 1, "durable audit trail written in the same transaction");
 });
 
+test("L06 OPS-04: habilitação documentada, indisponibilidade e regras aprovadas de jornada/descanso", { skip: !RUN, timeout: 180_000 }, async () => {
+  const admin = await provisionAndLoginStaff(pool, api, { role: "admin" });
+  const companyId = uuid();
+  await pool.query("INSERT INTO crm_companies (id,display_name,type,status,created_by) VALUES ($1,'QA OPS-04 Empresa','client','active','admin')", [companyId]);
+  const contractId = await insertContract(companyId, "ativo");
+  const postId = uuid();
+  await pool.query("INSERT INTO ops_posts (id,company_id,contract_id,name,post_type,created_by) VALUES ($1,$2,$3,'QA OPS-04 Posto','vigilancia','admin')", [postId, companyId, contractId]);
+  const role = (await pool.query("SELECT id FROM ops_job_roles WHERE name='Vigilante' AND role_type='cargo'")).rows[0].id;
+  const shift12 = (await pool.query("SELECT id FROM ops_shift_templates WHERE name='12x36 Dia 07h-19h'")).rows[0].id;
+  const rule12 = uuid();
+  await pool.query(`INSERT INTO ops_work_rules(id,name,description,max_daily_hours,min_rest_hours,max_consecutive_days,max_weekly_hours,is_approved,approved_by,approved_at,is_active,created_by)
+    VALUES($1,$2,'Regra aprovada exclusivamente para o gate OPS-04',12,11,6,44,true,'admin',NOW(),true,'admin')`, [rule12, `Regra OPS04 ${rule12.slice(0,8)}`]);
+  const unapprovedRule = uuid();
+  await pool.query(`INSERT INTO ops_work_rules(id,name,description,max_daily_hours,min_rest_hours,max_consecutive_days,max_weekly_hours,is_approved,is_active,created_by)
+    VALUES($1,$2,'Regra ainda sem aprovação humana para o gate',12,11,6,44,false,true,'admin')`, [unapprovedRule, `Pendente OPS04 ${unapprovedRule.slice(0,8)}`]);
+
+  const qualified = await insertEmployee("ativo");
+  const base = { post_id: postId, employee_id: qualified, shift_template_id: shift12, role_id: role, allocation_date: "2026-11-01", work_rule_id: rule12 };
+  let response = await ops("/allocations", { cookie: admin.cookie, method: "POST", body: base });
+  assert.equal(response.status, 409, "missing qualification is denied");
+  assert.equal(response.body.error, "qualification_or_document_required");
+
+  await pool.query("INSERT INTO ops_employee_qualifications(employee_id,role_id,certification_type,valid_until,is_valid,created_by) VALUES($1,$2,'CNV', '2030-12-31',true,'admin')", [qualified, role]);
+  response = await ops("/allocations", { cookie: admin.cookie, method: "POST", body: base });
+  assert.equal(response.status, 409, "qualification without document is denied");
+  await pool.query("UPDATE ops_employee_qualifications SET document_url='private://qualification/qa-ops04' WHERE employee_id=$1 AND role_id=$2", [qualified, role]);
+  response = await ops("/allocations", { cookie: admin.cookie, method: "POST", body: { ...base, work_rule_id: unapprovedRule } });
+  assert.equal(response.status, 409, "unapproved work rule is denied");
+  assert.equal(response.body.error, "approved_work_rule_required");
+  response = await ops("/allocations", { cookie: admin.cookie, method: "POST", body: base });
+  assert.equal(response.status, 201, "documented qualification and approved rule allow allocation");
+
+  const unavailable = await insertEmployee("ativo");
+  await pool.query("INSERT INTO ops_employee_qualifications(employee_id,role_id,certification_type,valid_until,is_valid,document_url,created_by) VALUES($1,$2,'CNV','2030-12-31',true,'private://qualification/unavailable','admin')", [unavailable, role]);
+  await pool.query("INSERT INTO hr_absences(employee_id,type,start_date,end_date,status,reason,created_by) VALUES($1,'outro','2026-11-03','2026-11-03','aprovado','Indisponibilidade sintética OPS-04','admin')", [unavailable]);
+  response = await ops("/allocations", { cookie: admin.cookie, method: "POST", body: { ...base, employee_id: unavailable, allocation_date: "2026-11-03" } });
+  assert.equal(response.status, 409, "registered unavailability blocks allocation");
+  assert.equal(response.body.error, "employee_unavailable");
+
+  const strictRule = uuid();
+  await pool.query(`INSERT INTO ops_work_rules(id,name,description,max_daily_hours,min_rest_hours,max_consecutive_days,max_weekly_hours,is_approved,approved_by,approved_at,is_active,created_by)
+    VALUES($1,$2,'Regra diária estrita aprovada para cenário negativo',8,11,6,44,true,'admin',NOW(),true,'admin')`, [strictRule, `Estrita OPS04 ${strictRule.slice(0,8)}`]);
+  const dailyEmployee = await insertEmployee("ativo");
+  await pool.query("INSERT INTO ops_employee_qualifications(employee_id,role_id,certification_type,valid_until,is_valid,document_url,created_by) VALUES($1,$2,'CNV','2030-12-31',true,'private://qualification/daily','admin')", [dailyEmployee, role]);
+  response = await ops("/allocations", { cookie: admin.cookie, method: "POST", body: { ...base, employee_id: dailyEmployee, allocation_date: "2026-11-04", work_rule_id: strictRule } });
+  assert.equal(response.status, 409, "maximum daily hours block oversized shift");
+  assert.equal(response.body.error, "max_daily_hours_exceeded");
+
+  const restEmployee = await insertEmployee("ativo");
+  await pool.query("INSERT INTO ops_employee_qualifications(employee_id,role_id,certification_type,valid_until,is_valid,document_url,created_by) VALUES($1,$2,'CNV','2030-12-31',true,'private://qualification/rest','admin')", [restEmployee, role]);
+  response = await ops("/allocations", { cookie: admin.cookie, method: "POST", body: { ...base, employee_id: restEmployee, allocation_date: "2026-11-05" } });
+  assert.equal(response.status, 201, "first shift for rest calculation created");
+  const earlyShift = uuid();
+  await pool.query("INSERT INTO ops_shift_templates(id,name,shift_type,start_time,end_time,duration_hours,created_by) VALUES($1,$2,'madrugada','01:00','09:00',8,'admin')", [earlyShift, `Madrugada OPS04 ${earlyShift.slice(0,8)}`]);
+  response = await ops("/allocations", { cookie: admin.cookie, method: "POST", body: { ...base, employee_id: restEmployee, shift_template_id: earlyShift, allocation_date: "2026-11-06" } });
+  assert.equal(response.status, 409, "minimum rest blocks the next shift");
+  assert.equal(response.body.error, "minimum_rest_not_met");
+});
+
 test("L06 OPS-02: dimensionamento valida valores e escopo canônico", { skip: !RUN, timeout: 180_000 }, async () => {
   const admin = await provisionAndLoginStaff(pool, api, { role: "admin" });
   const companyId = uuid();
