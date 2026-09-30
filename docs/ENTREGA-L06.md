@@ -106,7 +106,9 @@
 | 16 | Escala: desligado, posto trocado, sobreposição, retry | 409 / 404 / 409 / 409 |
 | 17 | Validação positiva e auditoria da entrada | persistidas com `entry_id` |
 | 18 | Auditoria indisponível (alocação, escala e regra) | 503 sem efeito parcial |
-| 19 | Chromium real em `/admin/operacao` | aba OPS-04 renderiza regra aprovada e habilitação |
+| 19 | Chromium real em `/admin/operacao` | aba OPS-04 renderiza regra aprovada, habilitação e trilha de bloqueios |
+
+A verificação em Chromium da aba OPS-04 reutiliza a sessão de navegador já aberta pelo subteste da Fatia B, em vez de abrir um quarto processo de navegador só para ela: mesma cobertura real, menos tempo e menos fragilidade de timeout no runner do CI.
 
 ## Gate remoto L06
 

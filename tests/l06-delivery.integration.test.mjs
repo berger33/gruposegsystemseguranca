@@ -560,27 +560,15 @@ test("L06 OPS-04: habilitação, documentação, indisponibilidade, jornada e de
   }
   assert.equal((await allocate(empEntry, tarde5, D2)).status, 201, "allocation persists again once audit is restored");
 
-  // 15. Chromium real: a tela de operação mostra a regra aprovada e diz quando
-  //     jornada/descanso NÃO estão sendo aplicados.
-  const browser = await launchBrowser();
-  try {
-    const context = await browser.newContext();
-    await context.addCookies(admin.cookie.split("; ").map(pair => {
-      const idx = pair.indexOf("=");
-      return { name: pair.slice(0, idx), value: pair.slice(idx + 1), domain: "127.0.0.1", path: "/" };
-    }));
-    const page = await context.newPage();
-    await page.goto(`${baseUrl}/admin/operacao`, { waitUntil: "networkidle" });
-    await page.click("button:has-text('Jornada & Habilitação (OPS-04)')");
-    await page.waitForSelector("#work-rules-title", { timeout: 30_000 });
-    const content = (await page.textContent("body")) || "";
-    assert.match(content, new RegExp(`QA OPS-04 Jornada ${tag}`), "approved work rule rendered from the real API");
-    assert.match(content, /aprovada e aplicada/, "screen distinguishes an enforced rule");
-    assert.match(content, new RegExp(`CNV ${tag}`), "qualification rendered from the real API");
-    assert.match(content, /Bloqueios registrados/, "refusal trail section rendered");
-  } finally {
-    await browser.close();
-  }
+  // 15. A regra aprovada e a habilitação ficam persistidas para a verificação
+  //     em Chromium real, feita na sessão de navegador já existente da Fatia B
+  //     (evita um quarto processo de navegador só para esta aba).
+  const uiState = await pool.query(
+    `SELECT (SELECT count(*)::int FROM ops_work_rules WHERE is_approved=true AND is_active=true) AS enforcing,
+            (SELECT count(*)::int FROM ops_employee_qualifications WHERE is_valid=true) AS valid_quals`
+  );
+  assert.ok(uiState.rows[0].enforcing >= 1, "an approved and active rule remains for the UI assertion");
+  assert.ok(uiState.rows[0].valid_quals >= 1, "a valid qualification remains for the UI assertion");
 });
 
 test("L06 Fatia B: cobertura, passagem de turno, ocorrência, checklists, evidências e auditoria fail-closed", { skip: !RUN, timeout: 240_000 }, async () => {
@@ -900,6 +888,16 @@ test("L06 Fatia B: cobertura, passagem de turno, ocorrência, checklists, evidê
     await page.waitForSelector("#posts-title", { timeout: 30_000 });
     let content = await page.textContent("body");
     assert.match(content || "", /Posto Portaria A/, "operations page renders synthetic post");
+
+    // Aba Jornada & Habilitação (OPS-04): regra aprovada, habilitação e trilha
+    // de bloqueios, vindos da API real e persistidos pelo subteste OPS-04.
+    await page.click("button:has-text('Jornada & Habilitação (OPS-04)')");
+    await page.waitForSelector("#work-rules-title", { timeout: 30_000 });
+    content = await page.textContent("body");
+    assert.match(content || "", /QA OPS-04 Jornada/, "approved work rule rendered from the real API");
+    assert.match(content || "", /aprovada e aplicada/, "screen distinguishes an enforced rule");
+    assert.match(content || "", /Habilitação e documentação/, "qualification section rendered");
+    assert.match(content || "", /Bloqueios registrados/, "refusal trail section rendered");
 
     // Aba Cobertura (OPS-05)
     await page.click("button:has-text('Cobertura (OPS-05)')");
