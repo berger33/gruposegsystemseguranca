@@ -1,4 +1,19 @@
 export function createCommercialApi({ json, readJson, sameOrigin, getPool, readAdminSession }) {
+
+  // Management owns rules, approvals and financial records. Sales staff read
+  // only assigned records; operational follow-up is handled by /crm/portfolio.
+  function scopedPool(session){
+    const db=getPool(),relations={"crm_commercial_library":"status='aprovado'","crm_campaigns":"created_by_id=$N","crm_campaign_targets":"campaign_id IN (SELECT id FROM public.crm_campaigns WHERE created_by_id=$N)","crm_proposal_comparisons":"created_by_id=$N"};
+    return {query(sql,values=[]){
+      if(session.role!=='comercial'||!/^\s*SELECT/i.test(sql))return db.query(sql,values);
+      const n=values.length+1;
+      const ctes=Object.entries(relations).map(([table,condition])=>table+' AS (SELECT * FROM public.'+table+' WHERE '+condition.replaceAll('$N','$'+n)+')');
+      // Bind the identity even when only the approved-library CTE is used.
+      ctes.push('viewer AS (SELECT $'+n+'::uuid AS id)');
+      return db.query('WITH '+ctes.join(',')+' '+sql,[...values,session.identityId]);
+    }};
+  }
+
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const isUuid = v => typeof v === 'string' && UUID_RE.test(v);
   const bad = (res, msg) => json(res, 400, { error: msg });
@@ -15,7 +30,9 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
   async function handleLibrary(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res,401,{error:'admin_session_required'});
+    if(!['admin','marcelo','ti','comercial'].includes(session.role))return json(res,403,{error:'role_required'});
+    if(req.method!=='GET'&&session.role==='comercial')return json(res,403,{error:'management_role_required'});
 
     if (req.method === 'GET') {
       const type = url.searchParams.get('type');
@@ -29,7 +46,7 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
       if (category) { conds.push(`category = $${idx++}`); vals.push(category); }
       const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const countRes = await pool.query(`SELECT COUNT(*)::int AS total FROM crm_commercial_library ${where}`, vals);
         const listRes = await pool.query(`SELECT * FROM crm_commercial_library ${where} ORDER BY created_at DESC LIMIT $${idx} OFFSET $${idx+1}`, [...vals, limit, offset]);
         return json(res, 200, { total: countRes.rows[0]?.total || 0, library: listRes.rows, limit, offset });
@@ -48,10 +65,11 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
       const file_url = sanitizeText(body?.file_url, 1000);
 
       if (!title) return bad(res, 'invalid_title');
+      if(file_url && !/^(https:\/\/|\/(?!\/))/.test(file_url))return bad(res,'invalid_file_url');
       if (!['apresentacao','case','documento','video','planilha','imagem','outro'].includes(type)) return bad(res, 'invalid_type');
 
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const id = crypto.randomUUID();
         const ins = await pool.query(
           `INSERT INTO crm_commercial_library (id, title, type, description, category, tags, file_url, status, version, created_by, created_by_id)
@@ -73,11 +91,13 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
     if (!isUuid(id)) return bad(res, 'invalid_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res,401,{error:'admin_session_required'});
+    if(!['admin','marcelo','ti','comercial'].includes(session.role))return json(res,403,{error:'role_required'});
+    if(req.method!=='GET'&&session.role==='comercial')return json(res,403,{error:'management_role_required'});
 
     if (req.method === 'GET') {
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const r = await pool.query('SELECT * FROM crm_commercial_library WHERE id = $1', [id]);
         if (!r.rows[0]) return json(res, 404, { error: 'not_found' });
         return json(res, 200, { item: r.rows[0] });
@@ -98,7 +118,7 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
         const tags = body.tags.slice(0, 20).map(t => String(t).slice(0, 50));
         fields.push(`tags = $${idx++}::jsonb`); vals.push(JSON.stringify(tags));
       }
-      if (body?.file_url !== undefined) { const fu = sanitizeText(body.file_url, 1000); fields.push(`file_url = $${idx++}`); vals.push(fu); }
+      if (body?.file_url !== undefined) { const fu = sanitizeText(body.file_url, 1000); if(fu&&!/^(https:\/\/|\/(?!\/))/.test(fu))return bad(res,'invalid_file_url'); fields.push(`file_url = $${idx++}`); vals.push(fu); }
       if (body?.status !== undefined) {
         const st = String(body.status).trim().toLowerCase();
         if (!['rascunho','em_revisao','aprovado','rejeitado','arquivado'].includes(st)) return bad(res, 'invalid_status');
@@ -118,12 +138,14 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
         }
       }
 
+      if(body?.status==='aprovado'&&Object.keys(body).some(k=>k!=='status'))return bad(res,'approve_in_separate_request');
+      if(body?.status===undefined&&fields.length){fields.push("status = 'rascunho'");fields.push("approved_by = NULL");fields.push("approved_at = NULL");}
       if (fields.length === 0) return bad(res, 'no_fields');
       fields.push(`version = version + 1`);
       fields.push(`updated_at = NOW()`);
 
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const upd = await pool.query(`UPDATE crm_commercial_library SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`, [...vals, id]);
         if (!upd.rows[0]) return json(res, 404, { error: 'not_found' });
         const action = body?.status === 'aprovado' ? 'crm_library_approve' : body?.status === 'rejeitado' ? 'crm_library_reject' : 'crm_library_update';
@@ -141,7 +163,9 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
   async function handleCampaigns(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res,401,{error:'admin_session_required'});
+    if(!['admin','marcelo','ti','comercial'].includes(session.role))return json(res,403,{error:'role_required'});
+    if(req.method!=='GET'&&session.role==='comercial')return json(res,403,{error:'management_role_required'});
 
     if (req.method === 'GET') {
       const status = url.searchParams.get('status');
@@ -153,7 +177,7 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
       if (segment_type) { conds.push(`segment_type = $${idx++}`); vals.push(segment_type); }
       const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const countRes = await pool.query(`SELECT COUNT(*)::int AS total FROM crm_campaigns ${where}`, vals);
         const listRes = await pool.query(`SELECT * FROM crm_campaigns ${where} ORDER BY created_at DESC LIMIT $${idx} OFFSET $${idx+1}`, [...vals, limit, offset]);
         return json(res, 200, { total: countRes.rows[0]?.total || 0, campaigns: listRes.rows, limit, offset });
@@ -173,13 +197,14 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
       const library_ids = Array.isArray(body?.library_ids) ? body.library_ids.filter(isUuid).slice(0, 20) : [];
 
       if (!name) return bad(res, 'invalid_name');
+      if(library_ids.length && (await getPool().query("SELECT id FROM crm_commercial_library WHERE id=ANY($1::uuid[]) AND status='aprovado'",[library_ids])).rows.length!==library_ids.length)return bad(res,'library_must_be_approved');
       if (!['setor','cidade','tipo_empresa','campanha','origem','responsavel','outro'].includes(segment_type)) return bad(res, 'invalid_segment_type');
       if (start_date && isNaN(Date.parse(start_date))) return bad(res, 'invalid_start_date');
       if (end_date && isNaN(Date.parse(end_date))) return bad(res, 'invalid_end_date');
       if (start_date && end_date && new Date(end_date) < new Date(start_date)) return bad(res, 'invalid_date_range');
 
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const id = crypto.randomUUID();
         const ins = await pool.query(
           `INSERT INTO crm_campaigns (id, name, description, segment_type, segment_filter, status, start_date, end_date, library_ids, created_by, created_by_id)
@@ -201,11 +226,13 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
     if (!isUuid(id)) return bad(res, 'invalid_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res,401,{error:'admin_session_required'});
+    if(!['admin','marcelo','ti','comercial'].includes(session.role))return json(res,403,{error:'role_required'});
+    if(req.method!=='GET'&&session.role==='comercial')return json(res,403,{error:'management_role_required'});
 
     if (req.method === 'GET') {
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const r = await pool.query('SELECT * FROM crm_campaigns WHERE id = $1', [id]);
         if (!r.rows[0]) return json(res, 404, { error: 'not_found' });
         const targetsRes = await pool.query('SELECT * FROM crm_campaign_targets WHERE campaign_id = $1 ORDER BY created_at DESC LIMIT 100', [id]);
@@ -227,6 +254,7 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
       if (body?.library_ids !== undefined) {
         if (!Array.isArray(body.library_ids)) return bad(res, 'invalid_library_ids');
         const libs = body.library_ids.filter(isUuid).slice(0, 20);
+        if(libs.length && (await getPool().query("SELECT id FROM crm_commercial_library WHERE id=ANY($1::uuid[]) AND status='aprovado'",[libs])).rows.length!==libs.length)return bad(res,'library_must_be_approved');
         fields.push(`library_ids = $${idx++}::jsonb`); vals.push(JSON.stringify(libs));
       }
       if (body?.status !== undefined) {
@@ -241,7 +269,7 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
       fields.push(`updated_at = NOW()`);
 
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const upd = await pool.query(`UPDATE crm_campaigns SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`, [...vals, id]);
         if (!upd.rows[0]) return json(res, 404, { error: 'not_found' });
         try { await pool.query("INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,'crm_campaign_status',$3,'allowed','none')", [session.role, session.identityId || session.role, id]); } catch {}
@@ -258,11 +286,13 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
     if (!isUuid(campaignId)) return bad(res, 'invalid_campaign_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res,401,{error:'admin_session_required'});
+    if(!['admin','marcelo','ti','comercial'].includes(session.role))return json(res,403,{error:'role_required'});
+    if(req.method!=='GET'&&session.role==='comercial')return json(res,403,{error:'management_role_required'});
 
     if (req.method === 'GET') {
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const r = await pool.query('SELECT * FROM crm_campaign_targets WHERE campaign_id = $1 ORDER BY created_at DESC LIMIT 200', [campaignId]);
         return json(res, 200, { targets: r.rows });
       } catch {
@@ -279,7 +309,7 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
       if (!company_id && !contact_id) return bad(res, 'company_or_contact_required');
 
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const id = crypto.randomUUID();
         const ins = await pool.query(
           `INSERT INTO crm_campaign_targets (id, campaign_id, company_id, contact_id, status) VALUES ($1,$2,$3,$4,'pendente') ON CONFLICT (campaign_id, company_id, contact_id) DO NOTHING RETURNING *`,
@@ -299,12 +329,14 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
   async function handleComparisons(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res,401,{error:'admin_session_required'});
+    if(!['admin','marcelo','ti','comercial'].includes(session.role))return json(res,403,{error:'role_required'});
+    if(req.method!=='GET'&&session.role==='comercial')return json(res,403,{error:'management_role_required'});
 
     if (req.method === 'GET') {
       const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get('limit') || '50', 10) || 50));
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const listRes = await pool.query('SELECT * FROM crm_proposal_comparisons ORDER BY created_at DESC LIMIT $1', [limit]);
         return json(res, 200, { comparisons: listRes.rows });
       } catch {
@@ -322,7 +354,7 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
       if (proposal_ids.length < 2 || proposal_ids.length > 5) return bad(res, 'proposal_ids_must_be_2_to_5');
 
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         // Buscar propostas
         const placeholders = proposal_ids.map((_, i) => `$${i+1}`).join(',');
         const propsRes = await pool.query(`SELECT id, title, status, version, total_cost, total_price, margin_percent, scope_description, validity_days FROM crm_proposals WHERE id IN (${placeholders})`, proposal_ids);
@@ -381,12 +413,14 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
     if (!isUuid(id)) return bad(res, 'invalid_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res,401,{error:'admin_session_required'});
+    if(!['admin','marcelo','ti','comercial'].includes(session.role))return json(res,403,{error:'role_required'});
+    if(req.method!=='GET'&&session.role==='comercial')return json(res,403,{error:'management_role_required'});
 
     if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, { Allow: 'GET' });
 
     try {
-      const pool = getPool();
+      const pool = scopedPool(session);
       const r = await pool.query('SELECT * FROM crm_proposal_comparisons WHERE id = $1', [id]);
       if (!r.rows[0]) return json(res, 404, { error: 'not_found' });
       return json(res, 200, { comparison: r.rows[0] });
