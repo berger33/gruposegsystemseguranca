@@ -3286,3 +3286,116 @@ test('CRM-03: revisão dedicada de deduplicação — decisão explícita, persi
 
   assert.equal((await pool.query('SELECT COUNT(*)::int AS total FROM crm_companies WHERE display_name = $1', [uiExistingName])).rows[0].total, 1);
 });
+
+test('L04 fechamento: CMS versionado, autorização, histórico, publicação e reversão atômica', {skip:!RUN,timeout:180000},async()=>{
+ const admin=await provisionAndLoginStaff(pool,api,{role:'marcelo'});
+ const other=await provisionAndLoginStaff(pool,api,{role:'comercial'});
+ const cookie=admin.cookie,slug='qa-editorial-'+randomUUID();
+ const content={slug,title:'Orientação sobre acesso de visitantes',content_type:'faq',content:'O acesso de visitantes deve ser definido com a equipe responsável conforme os procedimentos aprovados para cada operação.'};
+ assert.equal((await api('/api/public/cms',{method:'POST',body:content})).status,405);
+ assert.equal((await api('/api/admin/cms-contents',{cookie:other.cookie})).status,403);
+ const created=await api('/api/admin/cms-contents',{method:'POST',cookie,body:content});
+ assert.equal(created.status,201,JSON.stringify(created.body));const id=created.body.id;
+ assert.equal((await api('/api/public/cms')).body.items.some(r=>r.slug===slug),false);
+ assert.equal((await api('/api/admin/cms-contents/'+id,{method:'PATCH',cookie,body:{status:'publicado',reason:'Publicação sem revisão prévia'}})).status,409);
+ for(const status of ['em_revisao','aprovado','publicado'])assert.equal((await api('/api/admin/cms-contents/'+id,{method:'PATCH',cookie,body:{status,reason:'Revisão editorial sintética aprovada'}})).status,200);
+ const pub=(await api('/api/public/cms')).body.items.find(r=>r.slug===slug);assert.equal(pub.content,content.content);assert.equal(pub.created_by_identity,undefined);
+ const second=await api('/api/admin/cms-contents',{method:'POST',cookie,body:{...content,content:content.content+' Segunda versão revisada.'}});
+ assert.equal(second.status,201);assert.equal(second.body.version,2);
+ for(const status of ['em_revisao','aprovado','publicado'])assert.equal((await api('/api/admin/cms-contents/'+second.body.id,{method:'PATCH',cookie,body:{status,reason:'Publicação da segunda versão revisada'}})).status,200);
+ assert.equal((await pool.query('SELECT COUNT(*)::int AS n FROM cms_contents WHERE slug=$1 AND is_published',[slug])).rows[0].n,1);
+ const revert=await api('/api/admin/cms-contents/revert',{method:'POST',cookie,body:{id,reason:'Restaurar versão original para revisão'}});
+ assert.equal(revert.status,201);assert.equal(revert.body.status,'rascunho');assert.equal(revert.body.version,3);assert.equal(revert.body.content,content.content);
+ assert.ok((await api('/api/admin/cms-contents/'+id,{cookie})).body.history.length>=8);
+ // Public FAQ cannot enumerate sessions or messages; sensitive input never creates a promise.
+ assert.equal((await api('/api/faq-assisted')).status,405);
+ assert.equal((await api('/api/faq-assisted-messages?session_id='+randomUUID())).status,401);
+ assert.equal((await api('/api/faq-assisted-handoff',{method:'POST',body:{session_id:randomUUID()}})).status,401);
+ const faq=await api('/api/faq-assisted',{method:'POST',body:{question:'Qual o preço e prazo garantido?'}});
+ assert.equal(faq.status,200);assert.equal(faq.body.need_handoff,true);assert.ok(faq.body.handoff_url.startsWith('/contato?origin=faq'));
+ const answer=await api('/api/faq-assisted',{method:'POST',body:{question:'Como funciona acesso visitantes?'}});
+ assert.equal(answer.status,200);assert.equal(answer.body.source,'/conteudos/'+slug);
+ const browser=await launchBrowser(),failures=[];
+ try{
+  const context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage();trackFailures(page,failures);
+  await page.goto(baseUrl+'/conteudos/'+slug,{waitUntil:'networkidle'});await page.getByText(second.body.content,{exact:true}).waitFor();await assertNoHorizontalScroll(page,'conteúdo publicado móvel');
+  await page.goto(baseUrl+'/faq',{waitUntil:'networkidle'});await page.getByLabel('Sua pergunta').fill('Qual o preço garantido?');await page.getByRole('button',{name:'Consultar FAQ'}).click();await page.getByRole('link',{name:'Solicitar atendimento humano'}).click();
+  await page.waitForURL('**/contato?**');await page.getByLabel('Nome').fill('FAQ Sintética');await page.getByLabel('Telefone').fill('(11) 97777-3344');await page.getByLabel('Cidade/bairro').fill('Guarulhos');await page.getByLabel('Câmeras e CFTV',{exact:true}).check();await page.getByLabel(/Concordo com o tratamento/).check();
+  const [response]=await Promise.all([page.waitForResponse(r=>r.url().endsWith('/api/leads')&&r.request().method()==='POST'),page.getByRole('button',{name:/Enviar pedido/}).click()]);
+  assert.equal(response.status(),201);const lead=await response.json();assert.equal((await pool.query('SELECT origin FROM public_leads WHERE id=$1',[lead.leadId])).rows[0].origin,'faq');
+  const pair=cookie.split(';')[0],i=pair.indexOf('=');await context.addCookies([{name:pair.slice(0,i),value:pair.slice(i+1),url:baseUrl}]);
+  await page.goto(baseUrl+'/admin/publicacao',{waitUntil:'networkidle'});await page.getByRole('heading',{name:'Publicação do site',exact:true}).waitFor();await page.getByRole('button',{name:'Temas',exact:true}).click();await page.getByLabel('Tema',{exact:true}).selectOption('tech');await page.getByRole('button',{name:'Visualizar tema',exact:true}).click();await page.getByRole('article',{name:'Prévia do tema'}).waitFor();
+  await assertNoHorizontalScroll(page,'publicação móvel');await context.close();
+ }finally{await browser.close();}
+ assert.deepEqual(failures,[]);
+});
+
+test('L04 fechamento: temas persistidos, preview isolado, rollback e preferência pessoal',{skip:!RUN,timeout:90000},async()=>{
+ const admin=await provisionAndLoginStaff(pool,api,{role:'admin'}),cookie=admin.cookie;
+ const baseline=(await api('/api/public/themes')).body.theme_key;
+ assert.equal((await api('/api/public/themes',{method:'POST',body:{theme_key:'tech'}})).status,405);
+ assert.equal((await api('/api/admin/theme-previews?theme=tech')).status,401);
+ assert.equal((await api('/api/admin/theme-previews?theme=tech',{cookie})).status,200);
+ assert.equal((await api('/api/public/themes')).body.theme_key,baseline);
+ const ids=[];
+ for(const theme_key of ['tech','minimalista']){
+  const r=await api('/api/admin/themes',{method:'POST',cookie,body:{theme_key,reason:'Identidade aprovada para teste sintético'}});assert.equal(r.status,201,JSON.stringify(r.body));ids.push(r.body.id);
+  assert.equal((await api('/api/admin/themes/'+r.body.id,{method:'PATCH',cookie,body:{reason:'Publicar tema revisado e autorizado'}})).status,200);
+ }
+ assert.equal((await api('/api/public/themes')).body.theme_key,'minimalista');
+ assert.equal((await api('/api/admin/themes/rollback',{method:'POST',cookie,body:{id:ids[0],reason:'Restaurar identidade anteriormente publicada'}})).status,200);
+ assert.equal((await api('/api/public/themes')).body.theme_key,'tech');
+ assert.equal((await api('/api/admin/theme-preferences',{method:'POST',cookie,body:{theme_mode:'escuro'}})).status,200);
+ assert.equal((await api('/api/public/themes')).body.theme_key,'tech');
+ assert.equal((await api('/api/admin/theme-preferences',{cookie})).body.theme_mode,'escuro');
+ assert.equal((await pool.query('SELECT COUNT(*)::int AS n FROM pub_themes WHERE is_active')).rows[0].n,1);
+ const browser=await launchBrowser();try{const page=await browser.newPage();await page.goto(baseUrl+'/conteudos',{waitUntil:'networkidle'});assert.equal(await page.locator('html').getAttribute('data-theme'),'tech');await page.reload({waitUntil:'networkidle'});assert.equal(await page.locator('html').getAttribute('data-theme'),'tech');}finally{await browser.close();}
+});
+
+test('L04 fechamento: pacotes de catálogo, aprovação, comparação e revogação',{skip:!RUN,timeout:90000},async()=>{
+ const admin=await provisionAndLoginStaff(pool,api,{role:'admin'}),cookie=admin.cookie,ids=[];
+ assert.equal((await api('/api/packages',{method:'POST',body:{name:'Invasão'}})).status,405);
+ const catalog=await api('/api/admin/package-rules',{cookie});assert.equal(catalog.status,200);assert.ok(catalog.body.services.length>=2);
+ const selected=catalog.body.services.slice(0,2).map(s=>s.id);
+ assert.equal((await api('/api/admin/service-packages',{method:'POST',cookie,body:{name:'Preço falso',description:'Pacote de teste sem origem de custo',service_ids:selected,total_price_cents:999}})).status,400);
+ for(let i=0;i<2;i++){
+  const r=await api('/api/admin/service-packages',{method:'POST',cookie,body:{name:'Pacote sintético '+i,description:'Composição de serviços sujeita à avaliação técnica',service_ids:selected.slice(0,i+1)}});assert.equal(r.status,201,JSON.stringify(r.body));ids.push(r.body.id);
+  assert.equal((await api('/api/admin/service-packages',{method:'PATCH',cookie,body:{id:r.body.id,status:'publicado',reason:'Tentativa sem aprovação de pacote'}})).status,409);
+  for(const status of ['em_revisao','aprovado','publicado'])assert.equal((await api('/api/admin/service-packages',{method:'PATCH',cookie,body:{id:r.body.id,status,reason:'Revisão do pacote de serviços sintético'}})).status,200);
+ }
+ const pub=await api('/api/public/packages');assert.equal(pub.status,200);const p=pub.body.items.find(p=>p.id===ids[0]);assert.equal(p.total_price_cents,null);assert.equal(p.total_cost_cents,undefined);
+ const compare=await api('/api/admin/package-comparisons',{method:'POST',cookie,body:{title:'Comparação sintética',package_ids:ids}});assert.equal(compare.status,201);assert.ok(compare.body.comparison_data.packages.every(p=>p.total_price_cents===null));
+ const browser=await launchBrowser();try{const page=await browser.newPage({viewport:{width:390,height:844}});await page.goto(baseUrl+'/pacotes',{waitUntil:'networkidle'});await page.getByLabel('Comparar Pacote sintético 0').check();await page.getByLabel('Comparar Pacote sintético 1').check();await page.getByRole('region',{name:'Comparação de serviços'}).waitFor();await assertNoHorizontalScroll(page,'comparador móvel');}finally{await browser.close();}
+ const rule=catalog.body.items.find(r=>r.rule_key==='sem_preco_demo_producao');
+ assert.equal((await api('/api/admin/package-rules',{method:'PATCH',cookie,body:{id:rule.id,is_approved:false}})).status,200);
+ assert.ok(!(await api('/api/public/packages')).body.items.some(p=>ids.includes(p.id)));
+ assert.equal((await api('/api/admin/package-rules',{method:'PATCH',cookie,body:{id:rule.id,is_approved:true}})).status,200);
+ assert.ok(!(await api('/api/public/packages')).body.items.some(p=>ids.includes(p.id)),'aprovar regra não republica automaticamente');
+});
+
+test('L04 fechamento: carteira pessoal, renovação, indicação, reativação e relatórios conferidos',{skip:!RUN,timeout:120000},async()=>{
+ const a=await provisionAndLoginStaff(pool,api,{role:'comercial'}),b=await provisionAndLoginStaff(pool,api,{role:'comercial'});
+ const c=await api('/api/crm/companies',{method:'POST',cookie:a.cookie,body:{display_name:'Carteira sintética '+randomUUID(),type:'client'}});
+ assert.equal(c.status,201);const company=c.body.company.id;
+ const created=await api('/api/crm/opportunities',{method:'POST',cookie:a.cookie,body:{company_id:company,title:'Base carteira sintética',estimated_value:1000}});
+ assert.equal(created.status,201,JSON.stringify(created.body));const source=created.body.opportunity.id;
+ assert.equal((await api('/api/crm/portfolio?filter=no_next',{cookie:a.cookie})).body.items.some(x=>x.id===source),true);
+ assert.equal((await api('/api/crm/portfolio',{cookie:b.cookie})).body.items.some(x=>x.id===source),false);
+ const action={source_id:source,request_key:randomUUID(),kind:'renovacao',title:'Renovação sintética',next_action:'Telefonar para responsável',next_action_date:new Date(Date.now()+86400000).toISOString()};
+ assert.equal((await api('/api/crm/portfolio',{method:'POST',cookie:b.cookie,body:action})).status,404);
+ const r=await api('/api/crm/portfolio',{method:'POST',cookie:a.cookie,body:action});assert.equal(r.status,201,JSON.stringify(r.body));
+ const replay=await api('/api/crm/portfolio',{method:'POST',cookie:a.cookie,body:action});assert.equal(replay.status,200);assert.equal(replay.body.opportunity_id,r.body.opportunity_id);
+ for(const kind of ['upsell','cross_sell','indicacao'])assert.equal((await api('/api/crm/portfolio',{method:'POST',cookie:a.cookie,body:{...action,kind,target_company_id:company,request_key:randomUUID()}})).status,201);
+ assert.equal((await api('/api/crm/portfolio',{method:'POST',cookie:a.cookie,body:{...action,kind:'recuperacao',request_key:randomUUID()}})).status,409);
+ const conv=await api('/api/crm/reports/conversion',{cookie:a.cookie});assert.equal(conv.status,200,JSON.stringify(conv.body));assert.equal(conv.body.total,5);
+ assert.equal((await api('/api/crm/reports/conversion',{cookie:b.cookie})).body.total,0);
+ const weighted=await api('/api/crm/reports/weighted-forecast',{cookie:a.cookie});assert.equal(weighted.status,200);assert.equal(weighted.body.totalEstimated,1000);assert.equal(weighted.body.totalWeighted,100);assert.equal(weighted.body.isEstimate,true);
+ const metrics=(await api('/api/crm/portfolio',{cookie:a.cookie})).body.metrics;assert.equal(metrics.reduce((n,x)=>n+x.total,0),4);
+ // Transaction rollback: failure in audit cannot leave an opportunity/action behind.
+ await pool.query("CREATE OR REPLACE FUNCTION qa_l04_portfolio_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action='crm_portfolio_action' THEN RAISE EXCEPTION 'synthetic'; END IF; RETURN NEW; END $$");
+ await pool.query('CREATE TRIGGER qa_l04_portfolio_fail BEFORE INSERT ON auth_access_audit FOR EACH ROW EXECUTE FUNCTION qa_l04_portfolio_fail()');
+ try{assert.equal((await api('/api/crm/portfolio',{method:'POST',cookie:a.cookie,body:{...action,request_key:randomUUID()}})).status,503);}
+ finally{await pool.query('DROP TRIGGER qa_l04_portfolio_fail ON auth_access_audit');await pool.query('DROP FUNCTION qa_l04_portfolio_fail()');}
+ assert.equal((await api('/api/crm/reports/conversion',{cookie:a.cookie})).body.total,5);
+ const browser=await launchBrowser();try{const context=await browser.newContext({viewport:{width:390,height:844}}),pair=a.cookie.split(';')[0],i=pair.indexOf('=');await context.addCookies([{name:pair.slice(0,i),value:pair.slice(i+1),url:baseUrl}]);const page=await context.newPage();await page.goto(baseUrl+'/admin/carteira',{waitUntil:'networkidle'});await page.getByRole('heading',{name:'Base carteira sintética',exact:true}).waitFor();await assertNoHorizontalScroll(page,'carteira móvel');await context.close();}finally{await browser.close();}
+});
