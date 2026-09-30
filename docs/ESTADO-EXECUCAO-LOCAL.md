@@ -1,6 +1,30 @@
 # Estado da execução — entrega local integral
 
-## Continuação atual — CRM-03 (revisão dedicada de deduplicação de CSV, 2026-09-29)
+## Estado atual — fechamento técnico do L04 (2026-09-30)
+
+Fonte: GitHub `berger33/gruposegsystemseguranca`; base main `0cbac7608a69cec15bfc3671ab9196efabf58a2e`.
+Entrega no PR #33, branch `codex/l04-completion`. Nenhum trabalho executado no computador do usuário.
+
+**L04 concluído no escopo técnico local**, conforme relatório [ENTREGA-L04.md](ENTREGA-L04.md), matriz PUB-01..10/CRM-01..27 no checklist e evidências remotas abaixo.
+A integração na main depende do merge do PR #33; verificar o estado atual do PR antes de começar a próxima branch.
+**L05 é o próximo lote e ainda não foi implementado.** Usar [PROMPT-CONTINUACAO-L05-CONTRATOS.md](PROMPT-CONTINUACAO-L05-CONTRATOS.md).
+
+O fechamento inclui CMS com fluxo editorial e histórico, FAQ sem LLM com lead humano real, temas persistidos/rollback, pacotes sem preço fictício, carteira pessoal com ações idempotentes, calendário com editor e lembretes internos, escopo dos relatórios, cenários de preço reais, proteção da gestão de comissões/biblioteca/parcerias, histórico imutável e invalidação de aprovação.
+
+Migração 117 aditiva. Migrações 001–116 preservadas. Manifesto/preflight atualizados. Os IDs de checklist continuam 222 únicos; 37 pertencem ao L04.
+Código validado no commit `1ecac2852e9a0eb2e6af3d2ea73116ad7942006b` por GitHub Actions:
+
+- [QA baseline aprovado](https://github.com/berger33/gruposegsystemseguranca/actions/runs/36662350769): 196 testes unitários, typecheck, build e verificações de regressão.
+- [Gate L04 aprovado](https://github.com/berger33/gruposegsystemseguranca/actions/runs/36662350715): 20 testes integrados, 20 aprovados, zero falhas e zero skips, com HTTP, PostgreSQL e Chromium.
+- Migrações: 117/117 com checksums, reaplicação idempotente e restauração de clone descartável verificadas; alteração de checksum rejeitada intencionalmente no teste negativo.
+
+As alterações posteriores a esse commit nesta entrega são documentais. Consulte os checks do PR #33 para o resultado do HEAD mais recente.
+
+Fronteiras explícitas: SMTP/hospedagem/DNS públicos excluídos, A/B condicionado, IA/RAG completo em L09, contratos completos em L05, operação/estoque em L06, integração financeira em L07 e ensaio Windows/aceite humano em L10. Tema altera superfícies com tokens; não reescreve os dez layouts. Lembretes são internos ao abrir/atualizar a agenda, sem notificação externa em segundo plano.
+
+Os relatos abaixo são históricos. Expressões antigas como “L04 parcial” descrevem o estado da respectiva sessão e não substituem o relatório atual.
+
+## Histórico de continuação — CRM-03 (revisão dedicada de deduplicação de CSV, 2026-09-29)
 
 Base confirmada antes de escrever: `c3d799c186e8b513d130d786b6d14d86275a90f0`
 (PR #31 mergeado), branch `arena/01a0efec-gruposegsystemseguranca`, árvore
