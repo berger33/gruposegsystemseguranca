@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "../styles/themes.css";
+import PublishedTheme from "@/components/PublishedTheme";
 
 // Produção gate: noindex preservado por padrão (beta). Para liberar produção, definir NEXT_PUBLIC_ALLOW_INDEX=true + is_beta_mode false via API
 const allowIndex = process.env.NEXT_PUBLIC_ALLOW_INDEX === 'true' && process.env.NEXT_PUBLIC_ENV === 'production';
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body>
+        <PublishedTheme />
         {children}
         <script
           dangerouslySetInnerHTML={{
