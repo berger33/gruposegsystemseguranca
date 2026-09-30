@@ -9,6 +9,6 @@ export default function FaqAssistedWidget(){
     <h2>Pergunte à nossa base de respostas</h2><p>Respostas revisadas pela equipe. Valores, cobertura e prazos dependem de avaliação humana.</p>
     <form onSubmit={ask}><label>Sua pergunta<textarea value={question} onChange={e=>setQuestion(e.target.value)} minLength={5} maxLength={1000} required style={{display:'block',width:'100%',minHeight:80}}/></label><button disabled={busy}>{busy?'Consultando…':'Consultar FAQ'}</button></form>
     {error&&<p role="alert">{error} <a href="/contato">Falar com a equipe</a></p>}
-    {result&&<div aria-live="polite"><p style={{whiteSpace:'pre-wrap'}}>{result.answer}</p>{result.source&&<a href={result.source}>Ler a resposta publicada</a>}<p><a href={result.handoff_url}>Solicitar atendimento humano</a></p><small>{result.note}</small></div>}
+    {result&&<div aria-live="polite"><p style={{whiteSpace:'pre-wrap'}}>{result.answer}</p>{result.source&&<a href={result.source}>Ler a resposta publicada</a>}<p><a href={result.handoff_url} onClick={()=>{try{sessionStorage.setItem("seg-faq-question",question);}catch{}}}>Solicitar atendimento humano</a></p><small>{result.note}</small></div>}
   </section>;
 }
