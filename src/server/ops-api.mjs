@@ -356,7 +356,11 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
            JOIN ops_shift_templates st ON st.id = a.shift_template_id
            JOIN ops_shift_templates st2 ON st2.id = $3
            WHERE a.employee_id=$1 AND a.allocation_date=$2 AND a.id != COALESCE($4::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
-           AND (st.start_time < st2.end_time AND st.end_time > st2.start_time)`,
+           AND (
+             a.shift_template_id = $3
+             OR (st.start_time < st.end_time AND st2.start_time < st2.end_time AND st.start_time < st2.end_time AND st.end_time > st2.start_time)
+             OR (st.start_time >= st.end_time OR st2.start_time >= st2.end_time)
+           )`,
           [employee_id, allocation_date, shift_template_id, b.id || null]
         );
         if (overlap.rows[0]) {

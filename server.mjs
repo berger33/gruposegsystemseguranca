@@ -3381,7 +3381,7 @@ async function routeApi(req, res) {
     return empPwaApi.handleAccessibilityPreferences(req, res);
   }
   // OPS-01 estrutura cliente → unidade → posto físico → necessidade por turno → alocação; cargo/função entidade própria
-  if (url.pathname === "/api/admin/hr/ops-job-roles" || url.pathname === "/api/crm/hr/ops-job-roles" || url.pathname === "/api/hr/ops-job-roles") {
+  if (url.pathname === "/api/admin/hr/ops-job-roles" || url.pathname === "/api/crm/hr/ops-job-roles" || url.pathname === "/api/hr/ops-job-roles" || url.pathname === "/api/ops/job-roles") {
     return opsApi.handleJobRoles(req, res);
   }
   if (url.pathname === "/api/admin/hr/ops-posts" || url.pathname === "/api/crm/hr/ops-posts" || url.pathname === "/api/hr/ops-posts" || url.pathname === "/api/ops/posts") {
@@ -3390,7 +3390,7 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/ops-shift-templates" || url.pathname === "/api/crm/hr/ops-shift-templates" || url.pathname === "/api/hr/ops-shift-templates" || url.pathname === "/api/ops/shift-templates") {
     return opsApi.handleShiftTemplates(req, res);
   }
-  if (url.pathname === "/api/admin/hr/ops-post-shift-needs" || url.pathname === "/api/crm/hr/ops-post-shift-needs" || url.pathname === "/api/hr/ops-post-shift-needs") {
+  if (url.pathname === "/api/admin/hr/ops-post-shift-needs" || url.pathname === "/api/crm/hr/ops-post-shift-needs" || url.pathname === "/api/hr/ops-post-shift-needs" || url.pathname === "/api/ops/post-shift-needs") {
     return opsApi.handlePostShiftNeeds(req, res);
   }
   if (url.pathname === "/api/admin/hr/ops-allocations" || url.pathname === "/api/crm/hr/ops-allocations" || url.pathname === "/api/hr/ops-allocations" || url.pathname === "/api/ops/allocations") {
@@ -4772,6 +4772,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/admin/hr/ops-job-roles"
   || pathname === "/api/crm/hr/ops-job-roles"
   || pathname === "/api/hr/ops-job-roles"
+  || pathname === "/api/ops/job-roles"
   || pathname === "/api/admin/hr/ops-posts"
   || pathname === "/api/crm/hr/ops-posts"
   || pathname === "/api/hr/ops-posts"
@@ -4783,6 +4784,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/admin/hr/ops-post-shift-needs"
   || pathname === "/api/crm/hr/ops-post-shift-needs"
   || pathname === "/api/hr/ops-post-shift-needs"
+  || pathname === "/api/ops/post-shift-needs"
   || pathname === "/api/admin/hr/ops-allocations"
   || pathname === "/api/crm/hr/ops-allocations"
   || pathname === "/api/hr/ops-allocations"
