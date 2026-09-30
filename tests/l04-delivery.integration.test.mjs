@@ -2676,3 +2676,92 @@ test('PUB-08: SEO técnico — robots/sitemap derivados, noindex fail-closed e r
   } finally { await browser.close(); }
   assert.deepEqual(failures, []);
 });
+
+test('CRM-01..04: revalidação campo a campo de cadastro, contato, CSV e conversão', { skip: !RUN, timeout: 180_000 }, async () => {
+  const staff = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const anon = await api('/api/crm/companies');
+  assert.equal(anon.status, 401);
+  const wrongMethod = await api('/api/crm/companies', { method: 'DELETE', cookie: staff.cookie });
+  assert.equal(wrongMethod.status, 405);
+
+  await pool.query(`CREATE OR REPLACE FUNCTION qa_reject_crm_company_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.action = 'crm_company_create' THEN RAISE EXCEPTION 'qa injected crm audit failure'; END IF; RETURN NEW; END $$`);
+  await pool.query('CREATE TRIGGER qa_reject_crm_company_audit BEFORE INSERT ON auth_access_audit FOR EACH ROW EXECUTE FUNCTION qa_reject_crm_company_audit()');
+  const rollbackName = `CRM-01 rollback ${randomUUID()}`;
+  const failedCreate = await api('/api/crm/companies', { method: 'POST', cookie: staff.cookie, body: { display_name: rollbackName, type: 'prospect' } });
+  assert.equal(failedCreate.status, 503);
+  await pool.query('DROP TRIGGER qa_reject_crm_company_audit ON auth_access_audit');
+  await pool.query('DROP FUNCTION qa_reject_crm_company_audit()');
+  const rolledBack = await pool.query('SELECT count(*)::int AS total FROM crm_companies WHERE display_name = $1', [rollbackName]);
+  assert.equal(rolledBack.rows[0].total, 0, 'falha da auditoria não pode deixar empresa sem trilha');
+
+  const companyResponse = await api('/api/crm/companies', {
+    method: 'POST', cookie: staff.cookie,
+    body: {
+      display_name: `CRM-01 campo a campo ${randomUUID().slice(0, 8)}`,
+      document_ref: `DOC-${randomUUID().slice(0, 8)}`,
+      document_type: 'other', segment: 'condomínio', city: 'Barueri', state: 'sp',
+      type: 'prospect', channels: [{ type: 'email', value: 'crm@example.invalid' }],
+      responsible_name: 'Responsável QA', notes: 'restrição de abordagem registrada',
+      origin: 'indicacao', campaign: 'campanha-qa',
+    },
+  });
+  assert.equal(companyResponse.status, 201);
+  const company = companyResponse.body.company;
+  assert.equal(company.document_type, 'other');
+  assert.equal(company.state, 'SP');
+  assert.deepEqual(company.channels, [{ type: 'email', value: 'crm@example.invalid' }]);
+  assert.equal(company.type, 'prospect');
+
+  const contactResponse = await api('/api/crm/contacts', {
+    method: 'POST', cookie: staff.cookie,
+    body: { company_id: company.id, display_name: 'Contato decisor QA', email: 'decisor@example.invalid', phone: '+5511999999999', role: 'decisor', buying_role: 'decisor', restrictions: 'não ligar antes das 10h', origin: 'consentimento_formulario', is_primary: true },
+  });
+  assert.equal(contactResponse.status, 201);
+  assert.equal(contactResponse.body.contact.role, 'decisor');
+  assert.equal(contactResponse.body.contact.restrictions, 'não ligar antes das 10h');
+  assert.equal((await api('/api/crm/contacts', { method: 'POST', cookie: staff.cookie, body: { display_name: 'sem empresa' } })).status, 400);
+  assert.equal((await api('/api/crm/contacts', { method: 'POST', cookie: staff.cookie, body: { company_id: randomUUID(), display_name: 'empresa ausente' } })).status, 404);
+  assert.equal((await api('/api/crm/contacts', { method: 'POST', cookie: staff.cookie, body: { company_id: company.id, display_name: 'papel inválido', role: 'inventado' } })).status, 400);
+
+  const leadName = 'Lead CRM-04 ' + randomUUID().slice(0, 8);
+  const lead = await api('/api/leads', { method: 'POST', body: { requestKind: 'quote', name: leadName, phone: '119' + String(10000000 + Math.floor(Math.random() * 89999999)), city: 'Barueri', propertyType: 'Condomínio', services: ['Portaria e Controle de Acesso'], consent: true, origin: 'contato', campaign: 'crm-04', channel: 'site' } });
+  assert.equal(lead.status, 201);
+  const converted = await api(`/api/crm/leads/${lead.body.leadId}/convert`, { method: 'POST', cookie: staff.cookie, body: { create_company: true, company_name: 'Empresa do ' + leadName } });
+  assert.equal(converted.status, 201);
+  const reconverted = await api(`/api/crm/leads/${lead.body.leadId}/convert`, { method: 'POST', cookie: staff.cookie, body: { create_company: true, company_name: 'não deve duplicar' } });
+  assert.equal(reconverted.status, 200);
+  assert.equal(reconverted.body.dedup, true);
+
+  const csv = `display_name,document_ref,type\nCRM CSV seguro ${randomUUID().slice(0, 6)},CSV-${randomUUID().slice(0, 6)},client\n=1+1,CSV-FORMULA,prospect`;
+  const preview = await api('/api/crm/imports/preview', { method: 'POST', cookie: staff.cookie, body: { type: 'companies', fileName: 'crm.csv', csvContent: csv } });
+  assert.equal(preview.status, 201);
+  assert.equal(preview.body.report.total, 2);
+  assert.equal(preview.body.report.valid, 2, 'a prévia aceita o valor, mas o exportador precisa neutralizá-lo');
+  const commit = await api(`/api/crm/imports/${preview.body.batchId}/commit`, { method: 'POST', cookie: staff.cookie, body: {} });
+  assert.equal(commit.status, 200);
+  assert.equal(commit.body.created, 2);
+  const exported = await api('/api/crm/companies/export', { cookie: staff.cookie, raw: true });
+  assert.equal(exported.status, 200);
+  assert.match(exported.buffer.toString('utf8'), /CRM CSV seguro/);
+  assert.match(exported.buffer.toString('utf8'), /\n'=1\+1,/);
+
+  const browser = await launchBrowser();
+  const failures = [];
+  try {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'pt-BR' });
+    const page = await context.newPage();
+    trackFailures(page, failures);
+    const pair = staff.cookie.split('; ')[0].split('=');
+    await context.addCookies([{ name: pair[0], value: pair.slice(1).join('='), url: baseUrl }]);
+    const [listResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().includes('/api/crm/companies') && response.request().method() === 'GET'),
+      page.goto(`${baseUrl}/admin/crm`, { waitUntil: 'domcontentloaded' }),
+    ]);
+    assert.equal(listResponse.status(), 200);
+    await page.getByRole('heading', { name: /CRM — Empresas/ }).waitFor();
+    await assertNoHorizontalScroll(page, 'CRM-01..04');
+    await context.close();
+  } finally { await browser.close(); }
+  assert.deepEqual(failures, []);
+});

@@ -183,24 +183,24 @@ mensuração de origem e conversão com minimização de dados; testes A/B somen
 
 ## CRM-01
 cadastro central de empresas e contatos; nome, identificação fiscal quando necessária, segmento, cidade, unidades, canais e responsáveis. Distinguir prospect/cliente/parceiro sem duplicar entidade.
-- Estado: parcial (pré-existente, não revalidado a fundo nesta sessão)
+- Estado: parcial (revalidado nesta sessão; unidades sem rota própria)
 - Tela / API / dados / autorização: `/admin/crm` (página anterior a esta sessão) — `POST/GET /api/crm/companies`, tipo prospect/cliente/parceiro.
-- Integração e evidência (teste, resultado, commit): Não foi alvo de mudança nem de gate dedicado nesta sessão; comportamento herdado. Migração 103 desta sessão apenas ampliou o CHECK de `crm_companies.created_by` para permitir gravação pelo papel `comercial` (antes rejeitada).
-- Pendência / fronteira externa / aceite humano: Sem teste de HTTP+navegador dedicado a CRM-01 nesta sessão; a tela não foi inspecionada campo a campo. Cadastro central existe e funciona (usado indiretamente pelo fluxo de conversão de lead do gate L04), mas o requisito completo (unidades, canais, responsáveis) não foi revalidado.
+- Integração e evidência (teste, resultado, commit): Gate L04 cenário CRM-01..04: HTTP + Chromium revalidou campos; criação agora audita transacionalmente (migração 113). Migração 103 desta sessão apenas ampliou o CHECK de `crm_companies.created_by` para permitir gravação pelo papel `comercial` (antes rejeitada).
+- Pendência / fronteira externa / aceite humano: Gate dedicado CRM-01..04 executado duas vezes; criação e campos foram conferidos por HTTP e a listagem por Chromium. Cadastro central existe e funciona (usado indiretamente pelo fluxo de conversão de lead do gate L04), mas o requisito completo (unidades, canais, responsáveis) não foi revalidado.
 
 ## CRM-02
 contato com função no processo de compra (decisor, influenciador, usuário, financeiro), preferências e restrições de abordagem; registrar origem legítima, sem coleta indiscriminada.
-- Estado: a_revalidar
+- Estado: parcial (API revalidada; sem tela dedicada)
 - Tela / API / dados / autorização: Sem tela dedicada de contato com função (decisor/influenciador/usuário/financeiro) encontrada em `/admin/crm`; a API `crm_contacts` pode existir no schema, mas não foi localizada UI própria.
-- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão.
-- Pendência / fronteira externa / aceite humano: Preferências/restrições de abordagem e origem legítima do contato não foram revalidadas nem expostas em tela.
+- Integração e evidência (teste, resultado, commit): Gate CRM-01..04 conferiu função, restrições, origem, empresa obrigatória e controles negativos por HTTP.
+- Pendência / fronteira externa / aceite humano: não há tela dedicada de contato; a jornada de contato continua API/prévia administrativa.
 
 ## CRM-03
 importar CSV com prévia, validação por linha, mapeamento, relatório, deduplicação revisável e prevenção de fórmula maliciosa na exportação.
-- Estado: parcial (pré-existente, não revalidado a fundo nesta sessão)
+- Estado: parcial (revalidado nesta sessão; deduplicação revisável ainda sem tela dedicada)
 - Tela / API / dados / autorização: `/admin/crm` tem importação de CSV com prévia (`csvContent`, `importPreview`, `importResult`).
-- Integração e evidência (teste, resultado, commit): Não foi alvo de mudança nem de gate dedicado nesta sessão.
-- Pendência / fronteira externa / aceite humano: Deduplicação revisável e prevenção de fórmula maliciosa na exportação não foram reexecutadas como prova nesta sessão.
+- Integração e evidência (teste, resultado, commit): Gate CRM-01..04 conferiu prévia/commit, deduplicação da fixture e bytes da exportação com neutralização de fórmula.
+- Pendência / fronteira externa / aceite humano: deduplicação revisável ainda não tem tela dedicada; a prévia existente é a superfície administrativa.
 
 ## CRM-04
 converter lead do site em contato/oportunidade preservando histórico; tratar duplicidade e contato sem empresa.

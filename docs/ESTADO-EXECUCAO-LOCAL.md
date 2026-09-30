@@ -1,5 +1,34 @@
 # Estado da execução — entrega local integral
 
+## Continuação atual — CRM-01..04 (revalidação campo a campo, 2026-09-29)
+
+Base confirmada no disco: `main @ 5eea847` / HEAD inicial desta sessão, sem
+alterações locais. Política registrada antes da rota em
+`docs/PROMPT-CONTINUACAO-CRM-01-04-REVALIDACAO.md`.
+
+A fatia corrigiu a gravação de empresa e contato para auditoria transacional:
+falha injetada no `auth_access_audit` reverte a empresa e responde 503. Contato
+agora exige empresa existente, função validada e mantém preferências/restrições
+no registro. A migração aditiva **113** reautoriza somente as duas ações
+transacionais desta implementação (`crm_company_create` e `crm_contact_create`), reafirmando a constraint pai e
+o `actor_kind='comercial'`; 001–112 permanecem imutáveis. O manifesto e
+`latestMigration` foram atualizados para 113.
+
+O gate ganhou cenário próprio com HTTP real, PostgreSQL descartável e Chromium
+real sem `--disable-web-security`: 401/405, campos de CRM-01, contato CRM-02,
+prévia/commit CSV, exportação com neutralização de fórmula, conversão CRM-04 e
+reconversão idempotente, rollback transacional de auditoria e jornada UI com
+`page.waitForResponse`. Resultado observado: **12/12**, duas execuções
+consecutivas finais aprovadas; uma execução intermediária teve SIGSEGV do
+Chromium empacotado antes dos testes e não é contada como aprovação.
+
+CRM-01..04 continuam **parciais** no checklist: CRM-03 ainda não tem prova
+completa de deduplicação revisável em interface; CRM-02 não tem tela dedicada
+com função/preferências e permanece sem componente órfão conectado. A fatia
+não ativou PUB-07, não iniciou L05 e não reautorizou as outras 146 ações do
+achado de auditoria.
+
+
 Documento de retomada entre sessões. Atualizado a cada lote concluído.
 Referência: `docs/EXECUCAO-ENTREGA-LOCAL.md` (roteiro L00–L10) e
 `docs/PLANO-MESTRE-IMPLEMENTACAO.md` (222 requisitos).
@@ -279,7 +308,7 @@ PR #13: tarefas pessoais conectadas em /admin/crm, com auditoria atômica e prot
 |---|---|
 | Branch de trabalho | `arena/01a0eef9-gruposegsystemseguranca` (integra com o main atualizado pelos merges dos PRs #24 e #26) |
 | Base desta sessão | `ed50d22` (merge dos PRs #22 e #23) + PR #24 (`fe35b4c`, calendário CRM-08) + PR #26 (`b3c1db6`, PUB-10) |
-| Lote ativo | **L04 — CRM-05/06/07 concluídos (notas internas + campo a campo), CRM-08 com calendário semanal e PUB-10 entregue; L04 ainda parcial**. Lembretes/notificações de CRM-08, revalidação campo a campo de CRM-01..04, PUB-02/05/06..09 e CRM-10 continuam pendentes. |
+| Lote ativo | **L04 — CRM-05/06/07 concluídos (notas internas + campo a campo), CRM-08 com calendário semanal e PUB-10 entregue; L04 ainda parcial**. Lembretes/notificações de CRM-08, revalidação CRM-01..04 executada nesta sessão (CRM-02 sem tela dedicada), PUB-02/05/06..09 e CRM-10 continuam pendentes. |
 | Último gate aprovado | **L04 ampliado: 10/10, duas vezes consecutivas** (núcleo comercial + CRM-07 tarefas + interações + CRM-08 agenda + CRM-09 cadências + CRM-07 prazo/paginação/delegação + CRM-08 conflito/PUB-04 + CRM-07 notas/campo a campo CRM-05/06 + CRM-08 calendário por semana + PUB-10 métricas de origem), PostgreSQL descartável, HTTP real e Chromium sem `--disable-web-security`. |
 | Migrações | 001–111 (510 tabelas; 111 adiciona `crm_opportunity_notes` com CHECKs/gatilho, CHECKs `NOT VALID` de coerência do funil e as ações `crm_note_*`/`crm_opportunity_reopen`) |
 | Data | 2026-09-29 |
@@ -292,7 +321,7 @@ PR #13: tarefas pessoais conectadas em /admin/crm, com auditoria atômica e prot
 | L01 | Identidade, autorização e integridade básica | **parcial ampliado** | SEC-02/04/05/06 + controles dependentes do L03: RBAC sem bypass, escopo, remuneração/saúde e revogação |
 | L02 | Armazenamento, notificações locais, continuidade | **concluído** | 14/14 HTTP em PostgreSQL descartável (revalidado nesta sessão) |
 | L03 | Funcionário e RH | **concluído** | EMP-01..19 e HR-01..24 navegáveis; gate integral aprovado (revalidado nesta sessão) |
-| L04 | Site/captação e comercial | **parcial — CRM-05/06/07, calendário de CRM-08 e PUB-10 concluídos; lacunas explícitas** | Núcleo CRM-11..27 provado; CRM-07 completo (tarefas, interações, anexos, delegação com aceite, kanban/tabela campo a campo e notas internas dedicadas, todos provados por gate); CRM-05/06 prontos (todos os campos, funil com motivo de perda obrigatório no banco e reabertura auditada, borda pessoal nas rotas de oportunidade); CRM-08 tem agenda de responsável/participantes, conflito de horário, vínculo PUB-04 auditado e visão de calendário por semana (somente leitura), faltando lembretes/notificações (dependem de provedor); PUB-10 entregue como painel derivado e somente leitura em `/admin/leads` (PR #26); CRM-09 tem modelos privados e tarefas manuais, sem automação; CRM-01..04 aguardam revalidação campo a campo; CRM-10 e PUB-02/05/06..09 continuam pendentes |
+| L04 | Site/captação e comercial | **parcial — CRM-05/06/07, calendário de CRM-08 e PUB-10 concluídos; lacunas explícitas** | Núcleo CRM-11..27 provado; CRM-07 completo (tarefas, interações, anexos, delegação com aceite, kanban/tabela campo a campo e notas internas dedicadas, todos provados por gate); CRM-05/06 prontos (todos os campos, funil com motivo de perda obrigatório no banco e reabertura auditada, borda pessoal nas rotas de oportunidade); CRM-08 tem agenda de responsável/participantes, conflito de horário, vínculo PUB-04 auditado e visão de calendário por semana (somente leitura), faltando lembretes/notificações (dependem de provedor); PUB-10 entregue como painel derivado e somente leitura em `/admin/leads` (PR #26); CRM-09 tem modelos privados e tarefas manuais, sem automação; CRM-01..04 foram revalidados parcialmente nesta sessão; CRM-02 segue sem tela dedicada; CRM-10 e PUB-02/05/06..09 continuam pendentes |
 | L05 | Contratos e implantação | pendente | — |
 | L06 | Operação, patrimônio e manutenção | pendente | — |
 | L07 | Financeiro e Marcelo | pendente | — |
