@@ -8,7 +8,7 @@ export default function ContatoPage() {
   const [status, setStatus] = useState<{ type: "idle" | "loading" | "success" | "error"; message?: string; protocol?: string }>({ type: "idle" });
 
   const [origin,setOrigin]=useState("contato");
-  useEffect(()=>{const q=new URLSearchParams(window.location.search);if(q.get("origin")==="faq"){setOrigin("faq");setForm(f=>({...f,details:(q.get("question")||"").slice(0,1000)}));}},[]);
+  useEffect(()=>{const q=new URLSearchParams(window.location.search);if(q.get("origin")==="faq"){setOrigin("faq");try{const question=sessionStorage.getItem("seg-faq-question")||"";setForm(f=>({...f,details:question.slice(0,1000)}));sessionStorage.removeItem("seg-faq-question");}catch{}}},[]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
