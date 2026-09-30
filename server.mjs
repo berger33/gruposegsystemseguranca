@@ -1270,6 +1270,7 @@ const integrationsApi = createIntegrationsApi({
 const serviceCatalogApi = createServiceCatalogApi({
   json,
   getPool,
+  readAdminSession: readSession,
 });
 
 const faqApi = createFaqApi({
@@ -4263,6 +4264,8 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/crm/campaigns/")
   || pathname === "/api/crm/proposal-comparisons"
   || pathname.startsWith("/api/crm/proposal-comparisons/")
+  || pathname === "/api/crm/portfolio"
+  || pathname === "/api/crm/commercial-versions"
   || pathname === "/api/crm/partners"
   || pathname.startsWith("/api/crm/partners/")
   || pathname === "/api/crm/referrals"
