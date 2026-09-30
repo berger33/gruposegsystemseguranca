@@ -219,6 +219,22 @@ export function createCrmApi(ctx) {
     );
   }
 
+  async function withTransactionalAudit(session, action, target, work) {
+    const client = await ctx.getPool().connect();
+    try {
+      await client.query("BEGIN");
+      const value = await work(client);
+      await transactionalAudit(client, session, action, target);
+      await client.query("COMMIT");
+      return value;
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   // A busca de oportunidades escapa curingas de ILIKE: `100%` é literal.
   function escapeLikePattern(term) {
     return `%${term.replace(/[\\%_]/g, (match) => `\\${match}`)}%`;
@@ -293,14 +309,13 @@ export function createCrmApi(ctx) {
 
       try {
         const id = crypto.randomUUID();
-        const result = await db.query(
-          `INSERT INTO crm_companies (id, display_name, document_ref, document_type, segment, city, state, type, channels, responsible_name, parent_company_id, notes, origin, campaign, created_by, created_by_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
-          [id, displayName, documentRef, documentType, segment, city, state, type, JSON.stringify(channels), responsibleName, parentCompanyId, notes, origin, campaign, session.role, session.identityId]
+        const result = await withTransactionalAudit(session, "crm_company_create", id, async (client) =>
+          client.query(
+            `INSERT INTO crm_companies (id, display_name, document_ref, document_type, segment, city, state, type, channels, responsible_name, parent_company_id, notes, origin, campaign, created_by, created_by_id)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
+            [id, displayName, documentRef, documentType, segment, city, state, type, JSON.stringify(channels), responsibleName, parentCompanyId, notes, origin, campaign, session.role, session.identityId]
+          )
         );
-
-        await audit(db, { action: "crm_company_create", target: id, result: "allowed", actorKind: session.role, actorId: session.identityId });
-
         return ctx.json(res, 201, { company: result.rows[0] });
       } catch (e) {
         if (String(e.code) === "23505") return ctx.json(res, 409, { error: "document_exists" });
@@ -435,23 +450,25 @@ export function createCrmApi(ctx) {
       const isPrimary = !!body?.is_primary || !!body?.isPrimary;
 
       if (!displayName) return ctx.json(res, 400, { error: "invalid_display_name" });
-      if (companyId && !isValidUuid(companyId)) return ctx.json(res, 400, { error: "invalid_company_id" });
+      if (!companyId || !isValidUuid(companyId)) return ctx.json(res, 400, { error: "company_required" });
       if (role && !CONTACT_ROLES.has(role)) return ctx.json(res, 400, { error: "invalid_role" });
       if (buyingRole && !CONTACT_ROLES.has(buyingRole)) return ctx.json(res, 400, { error: "invalid_buying_role" });
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return ctx.json(res, 400, { error: "invalid_email" });
 
       try {
         const id = crypto.randomUUID();
-        const result = await db.query(
-          `INSERT INTO crm_contacts (id, company_id, display_name, email, phone, role, buying_role, restrictions, origin, is_primary, created_by_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-          [id, companyId, displayName, email, phone, role, buyingRole, restrictions, origin, isPrimary, session.identityId]
-        );
-
-        await audit(db, { action: "crm_contact_create", target: id, result: "allowed", actorKind: session.role, actorId: session.identityId });
-
+        const result = await withTransactionalAudit(session, "crm_contact_create", id, async (client) => {
+          const company = await client.query("SELECT id FROM crm_companies WHERE id = $1", [companyId]);
+          if (!company.rows[0]) { const error = new Error("company_not_found"); error.code = "COMPANY_NOT_FOUND"; throw error; }
+          return client.query(
+            `INSERT INTO crm_contacts (id, company_id, display_name, email, phone, role, buying_role, restrictions, origin, is_primary, created_by_id)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+            [id, companyId, displayName, email, phone, role, buyingRole, restrictions, origin, isPrimary, session.identityId]
+          );
+        });
         return ctx.json(res, 201, { contact: result.rows[0] });
       } catch (e) {
+        if (e?.code === "COMPANY_NOT_FOUND") return ctx.json(res, 404, { error: "company_not_found" });
         if (String(e.code) === "23505") return ctx.json(res, 409, { error: "contact_exists" });
         console.error("crm contact create failed", e?.message);
         return ctx.json(res, 503, { error: "create_failed" });

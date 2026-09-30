@@ -1440,3 +1440,36 @@ a fatia que for corrigir cada domínio com portão próprio.
   `/proposta/aceite/[token]` no sitemap.
 - **L04 continua PARCIAL e L05 não foi iniciado.** Aceite humano pendente;
   nada foi executado em Windows.
+
+---
+
+## Continuação CRM-01..04 — revalidação campo a campo
+
+Política: `docs/PROMPT-CONTINUACAO-CRM-01-04-REVALIDACAO.md`. Base: HEAD
+`5eea847`, sem dirty tree no início. Alterações principais: auditoria de
+criação de empresa/contato com `BEGIN`/`COMMIT`, contato sem empresa recusado,
+checagem de empresa existente e migração aditiva 113. A ação de auditoria não
+é engolida; trigger QA que rejeita `crm_company_create` produziu HTTP 503 e
+zero empresa persistida.
+
+| Prova | Resultado |
+|---|---|
+| `npm ci` | 82 pacotes, 0 vulnerabilidades |
+| `node scripts/qa-wave0-static.mjs` | 5/5, migrações 001–113 |
+| `npm run test:migrations:pg` | 113/113, replay, clone/checksum negativo, 510 tabelas |
+| `npm test` | 196/196 |
+| `npm run typecheck` | 0 erros |
+| `npm run test:l04-delivery:pg` | 12/12, HTTP + PostgreSQL + Chromium; duas execuções finais consecutivas aprovadas |
+
+O cenário CRM-01..04 cobre anônimo 401 e método 405; empresa com identificação,
+tipo, segmento, cidade/UF, canais, responsável, origem/campanha e notas; contato
+com função decisor, restrição e origem; empresa inexistente, contato sem empresa
+e função inválida; lead público convertido e reconvertido sem duplicar; CSV com
+prévia, validação, commit e exportação em bytes reais com prefixo seguro para
+fórmula; e Chromium real esperando a resposta de listagem por
+`page.waitForResponse`, sem rolagem horizontal e sem erro de console/5xx.
+
+Limitações honestas: o fluxo CRM-02 segue sem tela dedicada de contato com
+função/preferências; a revisão de deduplicação CRM-03 foi exercitada pela API e
+pela prévia, mas não ganhou uma tela nova; CRM-04 herda a ausência de resolução
+automática de contato sem empresa. Nenhum componente órfão foi conectado.
