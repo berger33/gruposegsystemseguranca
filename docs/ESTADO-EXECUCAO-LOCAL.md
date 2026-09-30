@@ -1,6 +1,49 @@
 # Estado da execução — entrega local integral
 
-## Continuação atual — CRM-01..04 (revalidação campo a campo, 2026-09-29)
+## Continuação atual — CRM-02 (superfície dedicada de contatos, 2026-09-30)
+
+Base confirmada antes de escrever: `42086989943b5af8b2baec0bb19a700ea6b6cfc1`
+(PR #29 mergeado), branch `arena/01a0efae-gruposegsystemseguranca`, árvore limpa.
+A única fatia escolhida nesta continuação foi a **Opção A — completar CRM-02**;
+a política foi registrada antes da rota em
+`docs/PROMPT-CONTINUACAO-CRM-02-CONTATOS.md`. L04 continua parcial e L05 não
+foi iniciado.
+
+A entrega adiciona a superfície navegável `ContactManager.tsx` em
+`/admin/crm`. Ela seleciona uma empresa, lista somente os contatos dessa
+empresa, cria e edita campos controlados de CRM-02 (função, papel de compra,
+preferências de canais/horário, restrições, origem controlada, principal e
+ativo/inativo). O servidor adiciona `GET/PATCH /api/crm/contacts/:id`, exige a
+família de papel comercial, bloqueia RH, exige empresa para leituras listadas e
+criação, mantém `company_id` imutável na edição e impede contato órfão pela
+superfície. O detalhe da empresa passou a usar a mesma borda para não virar
+bypass de leitura.
+
+Criação e edição executam mutação + `auth_access_audit` na mesma transação;
+falha da trilha retorna 503 e reverte, inclusive na edição. A migração aditiva
+**114** reautoriza somente `crm_contact_update`, falhando se o CHECK pai ou o
+`actor_kind='comercial'` desaparecer. Migrações 001–113 permanecem imutáveis;
+manifesto e `latestMigration` agora apontam para 114.
+
+Gate dedicado em `tests/l04-delivery.integration.test.mjs`: **13/13**, duas
+execuções finais consecutivas aprovadas, com PostgreSQL descartável, servidor
+HTTP real e Chromium real sem `--disable-web-security`; prova 401/403/405,
+validações, escopo por empresa, edição, trilhas e rollback de criação/edição,
+jornada UI com `page.waitForResponse`, sem rolagem horizontal, erro de console
+ou HTTP 5xx inesperado. Fechamento desta continuação: `npm ci` (82 pacotes,
+0 vulnerabilidades), `qa-wave0-static` 5/5, `test:migrations:pg` 114/114 com
+replay/clone/checksum negativo e 510 tabelas, `npm test` 196/196, typecheck
+aprovado, build aprovado e `git diff --check` limpo após restaurar
+`tsconfig.json` e `next-env.d.ts`.
+
+Limites honestos: CRM-01 continua parcial (unidades sem rota própria), CRM-03
+segue sem revisão de deduplicação dedicada, CRM-04 não resolve automaticamente
+contato sem empresa, as outras 146 ações do achado de auditoria continuam fora
+do CHECK, lembretes/notificações externas de CRM-08 seguem fora, PUB-02/05/06/07/09
+continuam pendentes/parciais, CRM-10 permanece fora por decisão e não houve
+aceite humano, Windows, produção ou serviço externo.
+
+## Histórico — CRM-01..04 (revalidação campo a campo, 2026-09-29)
 
 Base confirmada no disco: `main @ 5eea847` / HEAD inicial desta sessão, sem
 alterações locais. Política registrada antes da rota em
@@ -306,12 +349,12 @@ PR #13: tarefas pessoais conectadas em /admin/crm, com auditoria atômica e prot
 
 | Campo | Valor |
 |---|---|
-| Branch de trabalho | `arena/01a0eef9-gruposegsystemseguranca` (integra com o main atualizado pelos merges dos PRs #24 e #26) |
-| Base desta sessão | `ed50d22` (merge dos PRs #22 e #23) + PR #24 (`fe35b4c`, calendário CRM-08) + PR #26 (`b3c1db6`, PUB-10) |
-| Lote ativo | **L04 — CRM-05/06/07 concluídos (notas internas + campo a campo), CRM-08 com calendário semanal e PUB-10 entregue; L04 ainda parcial**. Lembretes/notificações de CRM-08, revalidação CRM-01..04 executada nesta sessão (CRM-02 sem tela dedicada), PUB-02/05/06..09 e CRM-10 continuam pendentes. |
-| Último gate aprovado | **L04 ampliado: 10/10, duas vezes consecutivas** (núcleo comercial + CRM-07 tarefas + interações + CRM-08 agenda + CRM-09 cadências + CRM-07 prazo/paginação/delegação + CRM-08 conflito/PUB-04 + CRM-07 notas/campo a campo CRM-05/06 + CRM-08 calendário por semana + PUB-10 métricas de origem), PostgreSQL descartável, HTTP real e Chromium sem `--disable-web-security`. |
-| Migrações | 001–111 (510 tabelas; 111 adiciona `crm_opportunity_notes` com CHECKs/gatilho, CHECKs `NOT VALID` de coerência do funil e as ações `crm_note_*`/`crm_opportunity_reopen`) |
-| Data | 2026-09-29 |
+| Branch de trabalho | `arena/01a0efae-gruposegsystemseguranca` |
+| Base desta sessão | `42086989943b5af8b2baec0bb19a700ea6b6cfc1` (merge do PR #29) |
+| Lote ativo | **L04 — CRM-02 concluído localmente; L04 ainda parcial**. CRM-01 unidades, CRM-03 deduplicação revisável, CRM-04 resolução automática de contato sem empresa, PUB-02/05/06..09, lembretes/notificações externas e CRM-10 permanecem fora conforme políticas. |
+| Último gate aprovado | **L04 ampliado: 13/13, duas vezes consecutivas**, PostgreSQL descartável, HTTP real e Chromium sem `--disable-web-security`, incluindo o cenário dedicado CRM-02. |
+| Migrações | 001–114 (510 tabelas; 114 reautoriza somente `crm_contact_update`, preservando o CHECK anterior) |
+| Data | 2026-09-30 |
 
 ## Lotes
 

@@ -4,6 +4,9 @@
 const COMPANY_TYPES = new Set(["prospect","client","partner"]);
 const COMPANY_STATUS = new Set(["active","inactive","archived"]);
 const CONTACT_ROLES = new Set(["decisor","influenciador","usuario","financeiro","outro"]);
+const CONTACT_ORIGINS = new Set(["manual", "consentimento_formulario", "indicacao", "evento", "importacao", "lead_publico", "site", "contato", "outro"]);
+const CONTACT_PREFERENCE_CHANNELS = new Set(["email", "phone", "whatsapp", "meeting", "other"]);
+const CONTACT_STATUS = new Set(["active", "inactive"]);
 const OPP_STAGES = new Set(["novo","qualificacao","vistoria","proposta_elaboracao","proposta_enviada","negociacao","ganho","perdido"]);
 const OPP_OPEN_STAGES = new Set(["novo","qualificacao","vistoria","proposta_elaboracao","proposta_enviada","negociacao"]);
 const OPP_PRIORITY = new Set(["baixa","media","alta","critica"]);
@@ -29,6 +32,23 @@ function sanitizeText(s, max) {
   if (t.length === 0) return null;
   if (t.length > max) return null;
   return t;
+}
+
+function normalizeContactPreferences(value) {
+  if (value === undefined || value === null) return {};
+  if (typeof value !== "object" || Array.isArray(value)) return null;
+  const keys = Object.keys(value);
+  if (keys.some(key => !["channels", "best_time"].includes(key))) return null;
+  const channels = value.channels === undefined ? [] : value.channels;
+  if (!Array.isArray(channels) || channels.length > 4) return null;
+  const normalizedChannels = [...new Set(channels.map(channel => String(channel).toLowerCase()))];
+  if (normalizedChannels.some(channel => !CONTACT_PREFERENCE_CHANNELS.has(channel))) return null;
+  let bestTime = null;
+  if (value.best_time !== undefined && value.best_time !== null && value.best_time !== "") {
+    bestTime = sanitizeText(value.best_time, 100);
+    if (!bestTime) return null;
+  }
+  return { channels: normalizedChannels, best_time: bestTime };
 }
 
 // --- CSV helpers for CRM-03 ---
@@ -210,6 +230,18 @@ export function createCrmApi(ctx) {
     return session;
   }
 
+  // CRM-02: contatos pertencem ao cadastro central comercial. A mesma família
+  // de papel usada no funil recebe a leitura/escrita; RH não é bypass.
+  async function requireContactSession(req, res) {
+    const session = await requireAdminSession(req, res);
+    if (!session) return null;
+    if (!COMMERCIAL_FAMILY_ROLES.has(session.role)) {
+      ctx.json(res, 403, { error: "commercial_role_required" });
+      return null;
+    }
+    return session;
+  }
+
   // Auditoria transacional para as mutações de oportunidade desta fatia: a
   // falha do insert propaga e reverte a transação — nunca é engolida.
   async function transactionalAudit(client, session, action, target) {
@@ -328,7 +360,9 @@ export function createCrmApi(ctx) {
   }
 
   async function handleCompanyById(req, res, id) {
-    const session = await requireAdminSession(req, res);
+    // O detalhe inclui contatos; não deixe uma leitura de empresa contornar a
+    // mesma borda de autorização da superfície CRM-02.
+    const session = await requireContactSession(req, res);
     if (!session) return;
     const db = ctx.getPool();
 
@@ -405,7 +439,7 @@ export function createCrmApi(ctx) {
 
   // --- Contacts ---
   async function handleContacts(req, res, url) {
-    const session = await requireAdminSession(req, res);
+    const session = await requireContactSession(req, res);
     if (!session) return;
     const db = ctx.getPool();
 
@@ -416,18 +450,23 @@ export function createCrmApi(ctx) {
       const limit = Math.min(200, Math.max(1, parseInt(url.searchParams.get("limit") || "50", 10) || 50));
       const offset = Math.max(0, parseInt(url.searchParams.get("offset") || "0", 10) || 0);
 
-      if (companyId && !isValidUuid(companyId)) return ctx.json(res, 400, { error: "invalid_company_id" });
+      if (!companyId || !isValidUuid(companyId)) return ctx.json(res, 400, { error: "company_required" });
 
       try {
-        const conditions = [];
-        const values = [];
-        let idx = 1;
-        if (companyId) { conditions.push(`company_id = $${idx++}`); values.push(companyId); }
-        if (search) { conditions.push(`(display_name ILIKE $${idx} OR email ILIKE $${idx})`); values.push(`%${search}%`); idx++; }
-        const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-        const countRes = await db.query(`SELECT COUNT(*)::int as total FROM crm_contacts ${where}`, values);
-        const listRes = await db.query(`SELECT * FROM crm_contacts ${where} ORDER BY created_at DESC LIMIT $${idx++} OFFSET $${idx++}`, [...values, limit, offset]);
-        return ctx.json(res, 200, { contacts: listRes.rows, total: countRes.rows[0]?.total || 0, limit, offset });
+        const company = await db.query("SELECT id FROM crm_companies WHERE id = $1", [companyId]);
+        if (!company.rows[0]) return ctx.json(res, 404, { error: "company_not_found" });
+        const conditions = [`company_id = $1`];
+        const values = [companyId];
+        let idx = 2;
+        if (search) {
+          conditions.push(`(display_name ILIKE $${idx} ESCAPE '\\' OR email ILIKE $${idx} ESCAPE '\\')`);
+          values.push(escapeLikePattern(search));
+          idx++;
+        }
+        const where = `WHERE ${conditions.join(" AND ")}`;
+        const countRes = await db.query(`SELECT COUNT(*)::int AS total FROM crm_contacts ${where}`, values);
+        const listRes = await db.query(`SELECT * FROM crm_contacts ${where} ORDER BY is_primary DESC, created_at DESC LIMIT $${idx++} OFFSET $${idx++}`, [...values, limit, offset]);
+        return ctx.json(res, 200, { contacts: listRes.rows, total: countRes.rows[0]?.total || 0, limit, offset, company_id: companyId });
       } catch (e) {
         console.error("crm contacts list failed", e?.message);
         return ctx.json(res, 503, { error: "crm_unavailable" });
@@ -441,18 +480,27 @@ export function createCrmApi(ctx) {
 
       const companyId = body?.company_id || body?.companyId || null;
       const displayName = sanitizeText(body?.display_name || body?.displayName, 200);
-      const email = sanitizeText(body?.email, 254);
-      const phone = sanitizeText(body?.phone, 30);
-      const role = body?.role ? String(body.role).toLowerCase() : null;
-      const buyingRole = body?.buying_role || body?.buyingRole ? String(body.buying_role || body.buyingRole).toLowerCase() : null;
-      const restrictions = sanitizeText(body?.restrictions, 500);
-      const origin = sanitizeText(body?.origin, 100);
-      const isPrimary = !!body?.is_primary || !!body?.isPrimary;
+      const email = body?.email === null || body?.email === "" ? null : sanitizeText(body?.email, 254);
+      const phone = body?.phone === null || body?.phone === "" ? null : sanitizeText(body?.phone, 30);
+      const role = body?.role === null || body?.role === "" || body?.role === undefined ? null : String(body.role).toLowerCase();
+      const buyingRole = body?.buying_role === null || body?.buyingRole === null || body?.buying_role === "" || body?.buyingRole === "" || (body?.buying_role === undefined && body?.buyingRole === undefined)
+        ? null : String(body.buying_role || body.buyingRole).toLowerCase();
+      const restrictions = body?.restrictions === null || body?.restrictions === "" || body?.restrictions === undefined ? null : sanitizeText(body.restrictions, 500);
+      const origin = body?.origin === null || body?.origin === "" || body?.origin === undefined ? null : sanitizeText(body.origin, 100);
+      const preferences = normalizeContactPreferences(body?.preferences);
+      const requestedStatus = body?.status === undefined || body?.status === null || body?.status === "" ? "active" : String(body.status).toLowerCase();
+      const isPrimary = body?.is_primary === true || body?.isPrimary === true;
 
       if (!displayName) return ctx.json(res, 400, { error: "invalid_display_name" });
       if (!companyId || !isValidUuid(companyId)) return ctx.json(res, 400, { error: "company_required" });
+      if (body?.email !== undefined && body.email !== null && body.email !== "" && !email) return ctx.json(res, 400, { error: "invalid_email" });
+      if (body?.phone !== undefined && body.phone !== null && body.phone !== "" && !phone) return ctx.json(res, 400, { error: "invalid_phone" });
+      if (body?.restrictions !== undefined && body.restrictions !== null && body.restrictions !== "" && !restrictions) return ctx.json(res, 400, { error: "invalid_restrictions" });
+      if (body?.origin !== undefined && body.origin !== null && body.origin !== "" && (!origin || !CONTACT_ORIGINS.has(origin.toLowerCase()))) return ctx.json(res, 400, { error: "invalid_origin" });
       if (role && !CONTACT_ROLES.has(role)) return ctx.json(res, 400, { error: "invalid_role" });
       if (buyingRole && !CONTACT_ROLES.has(buyingRole)) return ctx.json(res, 400, { error: "invalid_buying_role" });
+      if (preferences === null) return ctx.json(res, 400, { error: "invalid_preferences" });
+      if (!CONTACT_STATUS.has(requestedStatus)) return ctx.json(res, 400, { error: "invalid_status" });
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return ctx.json(res, 400, { error: "invalid_email" });
 
       try {
@@ -461,9 +509,9 @@ export function createCrmApi(ctx) {
           const company = await client.query("SELECT id FROM crm_companies WHERE id = $1", [companyId]);
           if (!company.rows[0]) { const error = new Error("company_not_found"); error.code = "COMPANY_NOT_FOUND"; throw error; }
           return client.query(
-            `INSERT INTO crm_contacts (id, company_id, display_name, email, phone, role, buying_role, restrictions, origin, is_primary, created_by_id)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-            [id, companyId, displayName, email, phone, role, buyingRole, restrictions, origin, isPrimary, session.identityId]
+            `INSERT INTO crm_contacts (id, company_id, display_name, email, phone, role, buying_role, preferences, restrictions, origin, is_primary, status, created_by_id)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11,$12,$13) RETURNING *`,
+            [id, companyId, displayName, email, phone, role, buyingRole, JSON.stringify(preferences), restrictions, origin ? origin.toLowerCase() : null, isPrimary, requestedStatus, session.identityId]
           );
         });
         return ctx.json(res, 201, { contact: result.rows[0] });
@@ -476,6 +524,118 @@ export function createCrmApi(ctx) {
     }
 
     return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, POST" });
+  }
+
+  async function handleContactById(req, res, id) {
+    const session = await requireContactSession(req, res);
+    if (!session) return;
+    if (!isValidUuid(id)) return ctx.json(res, 400, { error: "invalid_contact_id" });
+    const db = ctx.getPool();
+
+    if (req.method === "GET") {
+      if (!requireSameOrigin(req, res)) return;
+      try {
+        const result = await db.query(
+          "SELECT c.* FROM crm_contacts c JOIN crm_companies co ON co.id = c.company_id WHERE c.id = $1 AND c.company_id IS NOT NULL",
+          [id],
+        );
+        if (!result.rows[0]) return ctx.json(res, 404, { error: "contact_not_found" });
+        return ctx.json(res, 200, { contact: result.rows[0] });
+      } catch (e) {
+        console.error("crm contact get failed", e?.message);
+        return ctx.json(res, 503, { error: "crm_unavailable" });
+      }
+    }
+
+    if (req.method === "PATCH" || req.method === "PUT") {
+      if (!requireSameOrigin(req, res)) return;
+      let body;
+      try { body = await ctx.readJson(req, 15 * 1024); } catch { return ctx.json(res, 400, { error: "invalid_request" }); }
+      if (body?.company_id !== undefined || body?.companyId !== undefined) return ctx.json(res, 400, { error: "company_immutable" });
+
+      const fields = [];
+      const values = [];
+      let idx = 1;
+      const editable = new Set(["display_name", "displayName", "email", "phone", "role", "buying_role", "buyingRole", "preferences", "restrictions", "origin", "is_primary", "isPrimary", "status"]);
+      const unknown = Object.keys(body || {}).filter(key => !editable.has(key));
+      if (unknown.length) return ctx.json(res, 400, { error: "field_not_editable" });
+      const add = (column, value) => { fields.push(`${column} = $${idx++}`); values.push(value); };
+
+      if (body.display_name !== undefined || body.displayName !== undefined) {
+        const displayName = sanitizeText(body.display_name ?? body.displayName, 200);
+        if (!displayName) return ctx.json(res, 400, { error: "invalid_display_name" });
+        add("display_name", displayName);
+      }
+      if (body.email !== undefined) {
+        const email = body.email === null || body.email === "" ? null : sanitizeText(body.email, 254);
+        if (body.email !== null && body.email !== "" && !email) return ctx.json(res, 400, { error: "invalid_email" });
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return ctx.json(res, 400, { error: "invalid_email" });
+        add("email", email);
+      }
+      if (body.phone !== undefined) {
+        const phone = body.phone === null || body.phone === "" ? null : sanitizeText(body.phone, 30);
+        if (body.phone !== null && body.phone !== "" && !phone) return ctx.json(res, 400, { error: "invalid_phone" });
+        add("phone", phone);
+      }
+      if (body.role !== undefined) {
+        const role = body.role === null || body.role === "" ? null : String(body.role).toLowerCase();
+        if (role && !CONTACT_ROLES.has(role)) return ctx.json(res, 400, { error: "invalid_role" });
+        add("role", role);
+      }
+      if (body.buying_role !== undefined || body.buyingRole !== undefined) {
+        const raw = body.buying_role !== undefined ? body.buying_role : body.buyingRole;
+        const buyingRole = raw === undefined || raw === null || raw === "" ? null : String(raw).toLowerCase();
+        if (buyingRole && !CONTACT_ROLES.has(buyingRole)) return ctx.json(res, 400, { error: "invalid_buying_role" });
+        add("buying_role", buyingRole);
+      }
+      if (body.preferences !== undefined) {
+        const preferences = normalizeContactPreferences(body.preferences);
+        if (preferences === null) return ctx.json(res, 400, { error: "invalid_preferences" });
+        add("preferences", JSON.stringify(preferences));
+        fields[fields.length - 1] = `preferences = $${idx - 1}::jsonb`;
+      }
+      if (body.restrictions !== undefined) {
+        const restrictions = body.restrictions === null || body.restrictions === "" ? null : sanitizeText(body.restrictions, 500);
+        if (body.restrictions !== null && body.restrictions !== "" && !restrictions) return ctx.json(res, 400, { error: "invalid_restrictions" });
+        add("restrictions", restrictions);
+      }
+      if (body.origin !== undefined) {
+        const origin = body.origin === null || body.origin === "" ? null : sanitizeText(body.origin, 100);
+        if (origin && !CONTACT_ORIGINS.has(origin.toLowerCase())) return ctx.json(res, 400, { error: "invalid_origin" });
+        if (body.origin !== null && body.origin !== "" && !origin) return ctx.json(res, 400, { error: "invalid_origin" });
+        add("origin", origin ? origin.toLowerCase() : null);
+      }
+      if (body.is_primary !== undefined || body.isPrimary !== undefined) {
+        const value = body.is_primary ?? body.isPrimary;
+        if (typeof value !== "boolean") return ctx.json(res, 400, { error: "invalid_is_primary" });
+        add("is_primary", value);
+      }
+      if (body.status !== undefined) {
+        const status = String(body.status).toLowerCase();
+        if (!CONTACT_STATUS.has(status)) return ctx.json(res, 400, { error: "invalid_status" });
+        add("status", status);
+      }
+      if (!fields.length) return ctx.json(res, 400, { error: "no_fields" });
+
+      try {
+        const result = await withTransactionalAudit(session, "crm_contact_update", id, async (client) => {
+          const current = await client.query("SELECT id, company_id FROM crm_contacts WHERE id = $1 FOR UPDATE", [id]);
+          if (!current.rows[0] || !current.rows[0].company_id) { const error = new Error("contact_not_found"); error.code = "CONTACT_NOT_FOUND"; throw error; }
+          const company = await client.query("SELECT id FROM crm_companies WHERE id = $1", [current.rows[0].company_id]);
+          if (!company.rows[0]) { const error = new Error("contact_not_found"); error.code = "CONTACT_NOT_FOUND"; throw error; }
+          values.push(id);
+          return client.query(`UPDATE crm_contacts SET ${fields.join(", ")}, updated_at = NOW() WHERE id = $${idx} RETURNING *`, values);
+        });
+        return ctx.json(res, 200, { contact: result.rows[0] });
+      } catch (e) {
+        if (e?.code === "CONTACT_NOT_FOUND") return ctx.json(res, 404, { error: "contact_not_found" });
+        if (String(e.code) === "23505") return ctx.json(res, 409, { error: "contact_exists" });
+        console.error("crm contact update failed", e?.message);
+        return ctx.json(res, 503, { error: "update_failed" });
+      }
+    }
+
+    return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, PATCH, PUT" });
   }
 
   // --- Opportunities ---
@@ -1296,6 +1456,7 @@ export function createCrmApi(ctx) {
     handleCompanies,
     handleCompanyById,
     handleContacts,
+    handleContactById,
     handleOpportunities,
     handleOpportunityById,
     handleLeadConvert,
