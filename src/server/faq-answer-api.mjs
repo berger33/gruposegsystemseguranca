@@ -9,6 +9,6 @@ export function createFaqAnswerApi({pool,sameOrigin}) {
     const terms=question.toLocaleLowerCase('pt-BR').split(/[^\p{L}\p{N}]+/u).filter(x=>x.length>3);
     const rows=(await pool.query("SELECT slug,title,content FROM cms_contents WHERE content_type='faq' AND is_published AND status='publicado' ORDER BY published_at DESC LIMIT 100")).rows;
     const match=!sensitive&&rows.find(r=>terms.filter(t=>(r.title+' '+r.content).toLocaleLowerCase('pt-BR').includes(t)).length>=2);
-    send(res,200,{answer:match?match.content:'Nossa equipe precisa avaliar essa solicitação. Envie seus dados no formulário de contato para receber um protocolo de atendimento.',source:match?'/conteudos/'+match.slug:null,need_handoff:!match,handoff_url:'/contato?origin=faq&question='+encodeURIComponent(question),note:'O atendimento humano é registrado somente após enviar o formulário com consentimento.'});
+    send(res,200,{answer:match?match.content:'Nossa equipe precisa avaliar essa solicitação. Envie seus dados no formulário de contato para receber um protocolo de atendimento.',source:match?'/conteudos/'+match.slug:null,need_handoff:!match,handoff_url:'/contato?origin=faq',note:'O atendimento humano é registrado somente após enviar o formulário com consentimento.'});
   });
 }
