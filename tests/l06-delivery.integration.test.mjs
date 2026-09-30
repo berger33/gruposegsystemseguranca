@@ -1562,6 +1562,6 @@ test("L06 Fatia E: OPS-09..16 — operação avançada, conflitos, idempotência
     await page.goto(`${baseUrl}/admin/operacao`, { waitUntil: "networkidle" });
     for (const label of ["Supervisão", "Rondas & Claviculário", "Relatórios", "Métricas & Escalas", "Limpeza", "Monitoramento Sintético"]) await page.getByRole("tab", { name: label, exact: true }).waitFor();
     await page.getByRole("tab", { name: "Monitoramento Sintético", exact: true }).click();
-    assert.match((await page.textContent("body")) || "", /sem central 24h e sem despacho externo real/i);
+    await page.getByText(/sem central 24h e sem despacho externo real/i).waitFor({ state: "visible" });
   } finally { await browser.close(); }
 });
