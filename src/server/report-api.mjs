@@ -217,11 +217,13 @@ export function createReportApi({ json, sameOrigin, getPool, readAdminSession })
         vals
       );
 
-      // Pipeline por cenário: usar price_scenarios se existir? Para simplificar, agrupar por service_id
+      // Scenarios are alternative quotations of an opportunity, not service
+      // labels or additive revenue. The opportunities CTE enforces ownership.
       const scenarioRes = await pool.query(
-        `SELECT service_name, service_id, COUNT(*)::int AS count, COALESCE(SUM(estimated_value),0)::numeric AS total_value
-         FROM crm_opportunities ${where} GROUP BY service_name, service_id ORDER BY total_value DESC`,
-        vals
+        `SELECT s.id,s.title,s.version,s.approval_status,s.opportunity_id,
+                o.title AS opportunity_title,1::int AS count,s.price_calculated AS total_value
+           FROM crm_price_scenarios s JOIN crm_opportunities o ON o.id=s.opportunity_id
+           ${where} ORDER BY s.created_at DESC LIMIT 200`,vals
       );
 
       const totalRes = await pool.query(`SELECT COUNT(*)::int AS count, COALESCE(SUM(estimated_value),0)::numeric AS total_value FROM crm_opportunities ${where}`, vals);
@@ -234,7 +236,7 @@ export function createReportApi({ json, sameOrigin, getPool, readAdminSession })
         byStage: pipelineRes.rows,
         byPeriod: periodRes.rows,
         byScenario: scenarioRes.rows,
-        note: 'Pipeline por período e cenário (service_name/service_id como cenário). Exclui ganho/perdido. Valor é estimado, não faturado.',
+        note: 'Pipeline por período e cenários de preço reais vinculados. Cenários são alternativas e não devem ser somados como receita. Exclui ganho/perdido; valores são estimativas.',
         isEstimate: true,
       });
     } catch (e) {
