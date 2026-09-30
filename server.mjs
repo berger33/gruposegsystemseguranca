@@ -2639,6 +2639,11 @@ async function routeApi(req, res) {
   if (crmLeadConvertMatch) return crmApi.handleLeadConvert(req, res, crmLeadConvertMatch[1]);
   if (url.pathname === "/api/crm/imports") return crmApi.handleImportsList(req, res, url);
   if (url.pathname === "/api/crm/imports/preview") return crmApi.handleImportPreview(req, res);
+  // CRM-03: superfície dedicada de revisão de deduplicação.
+  const crmImportDuplicatesMatch = url.pathname.match(/^\/api\/crm\/imports\/([0-9a-f-]{36})\/duplicates$/i);
+  if (crmImportDuplicatesMatch) return crmApi.handleImportDuplicates(req, res, crmImportDuplicatesMatch[1]);
+  const crmImportRowMatch = url.pathname.match(/^\/api\/crm\/imports\/([0-9a-f-]{36})\/rows\/(\d{1,7})$/i);
+  if (crmImportRowMatch) return crmApi.handleImportRowDecision(req, res, crmImportRowMatch[1], crmImportRowMatch[2]);
   const crmImportCommitMatch = url.pathname.match(/^\/api\/crm\/imports\/([0-9a-f-]{36})\/commit$/i);
   if (crmImportCommitMatch) return crmApi.handleImportById(req, res, crmImportCommitMatch[1], url);
   const crmImportMatch = url.pathname.match(/^\/api\/crm\/imports\/([0-9a-f-]{36})$/i);

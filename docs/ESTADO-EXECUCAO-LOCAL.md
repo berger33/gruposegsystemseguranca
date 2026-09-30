@@ -1,5 +1,67 @@
 # Estado da execução — entrega local integral
 
+## Continuação atual — CRM-03 (revisão dedicada de deduplicação de CSV, 2026-09-29)
+
+Base confirmada antes de escrever: `c3d799c186e8b513d130d786b6d14d86275a90f0`
+(PR #31 mergeado), branch `arena/01a0efec-gruposegsystemseguranca`, árvore
+limpa. A única fatia escolhida foi **CRM-03 — revisão dedicada de
+deduplicação**; a política foi registrada antes da rota em
+`docs/PROMPT-CONTINUACAO-CRM-03-DEDUPLICACAO.md`. L04 continua parcial e L05
+não foi iniciado.
+
+O que existia antes: a prévia da importação já marcava linhas duplicadas, mas
+a decisão só podia chegar como mapa solto `actions` no corpo do commit — sem
+persistência, sem autor, sem data e sem trilha. Na prática não havia revisão:
+havia default silencioso.
+
+O que a fatia entrega:
+
+- `GET /api/crm/imports/:id/duplicates` — superfície dedicada com as linhas
+  duplicadas, o registro casado e a decisão atual (`pending_review`,
+  `review_complete`).
+- `PATCH /api/crm/imports/:id/rows/:rowNumber` — decisão explícita
+  `create`/`skip` com justificativa opcional, autor e data do servidor;
+  campo desconhecido 400 `field_not_editable`; valor fora da lista 400
+  `invalid_decision`; linha não duplicada 409 `row_not_duplicate` (revisão não
+  promove linha inválida); lote fora de `pending` 409 `batch_not_pending`.
+- `POST /api/crm/imports/:id/commit` passa a ser **fail-closed**: duplicata sem
+  decisão devolve 409 `pending_dedup_review` e o lote **continua `pending`**
+  (nada criado); o corpo `actions` deixou de ser aceito (400
+  `actions_not_accepted`).
+- Fechamento do lote e trilha `crm_import_commit` na **mesma transação**; a
+  decisão grava `crm_import_row_decision` também transacionalmente — falha de
+  auditoria reverte e devolve 503.
+- Leitura/fechamento de lote passam a exigir a família de papel comercial
+  (RH recebe **403**, não 401), como a revisão.
+- Corrigido o curinga cru do pré-cálculo de duplicata por nome: agora
+  `ILIKE ... ESCAPE '\'` com padrão escapado (um CSV com `%` deixou de casar
+  com empresas de terceiros).
+- `ImportDedupReview.tsx` integrado a `/admin/crm`: decide linha a linha e só
+  libera a confirmação quando não resta pendência.
+
+Migração aditiva **116** (`116-crm-03-dedup-review.sql`): colunas
+`decision`, `decision_note`, `decided_by`, `decided_by_id`, `decided_at` em
+`crm_import_rows` (nulas por padrão — o passado não é reescrito), CHECK de
+coerência `NOT VALID`, índice de revisão e reautorização **delimitada** da ação
+`crm_import_row_decision` no CHECK de auditoria (falha se a constraint pai
+sumir; nunca redigita a lista). Migrações 001–115 permanecem imutáveis;
+manifesto e `latestMigration` apontam para 116. As outras 146 ações perdidas
+continuam fora, por decisão.
+
+Gate: novo cenário **15** em `tests/l04-delivery.integration.test.mjs`
+(autorização, entrada, curinga escapado, commit bloqueado por revisão
+pendente, recusa do `actions` legado, rollback por auditoria injetada, decisão
+auditada, commit revisado, imutabilidade pós-commit e jornada UI em Chromium
+real). **Limitação honesta desta sessão:** o sandbox não tem PostgreSQL nem
+Chromium instaláveis, então `test:migrations:pg` e `test:l04-delivery:pg`
+**não foram executados localmente**; foram delegados ao workflow
+`.github/workflows/l04-delivery.yml` no PR desta fatia — sem resultado verde
+do workflow, CRM-03 **não** deve ser marcado como pronto_local.
+Executados localmente e aprovados: `npm ci` (82 pacotes, 0 vulnerabilidades),
+`qa-wave0-static` 5/5 (agora 001–116), `npm test` 196/196, `npm run typecheck`
+e `npm run build`.
+
+
 ## Continuação atual — CRM-01 (superfície dedicada de unidades atendidas, 2026-09-30)
 
 Base confirmada antes de escrever: `186e7dd4c420d577540b6ade8902b678762fac8b`
