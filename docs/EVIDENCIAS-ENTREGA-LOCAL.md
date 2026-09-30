@@ -1551,3 +1551,83 @@ CRM-08 não ganhou lembretes/notificações externas; PUB-02/05/06/07/09 seguem
 pendentes/parciais; CRM-10 permanece fora por decisão. Nenhuma integração
 externa, produção, Windows ou aceite humano foi contratado/executado. L04
 continua parcial e L05 não foi iniciado.
+
+---
+
+## Continuação CRM-01 — superfície dedicada e manutenção de unidades (2026-09-30)
+
+Política: `docs/PROMPT-CONTINUACAO-CRM-01-UNIDADES.md`. Base conferida antes
+do código: merge `186e7dd` (`186e7dd4c420d577540b6ade8902b678762fac8b`),
+branch fixa `arena/01a0efcc-gruposegsystemseguranca`, árvore limpa. A decisão foi
+uma única fatia vertical: **Opção A — completar CRM-01**.
+
+### Mudança comprovada
+
+- `src/app/admin/crm/UnitManager.tsx` foi conectado dentro de `/admin/crm`.
+  A UI escolhe uma empresa, carrega unidades por `GET /api/crm/units?companyId=`,
+  cria e edita sem permitir trocar a empresa. A tela gerencia nome da unidade
+  (obrigatório 1-200), cidade (máx 100), endereço (máx 300) e indicação de
+  unidade principal.
+- `src/server/crm-api.mjs` e `server.mjs` implementaram `GET/POST /api/crm/units`
+  e `GET/PATCH /api/crm/units/:id` com família comercial (`comercial`, `admin`,
+  `marcelo`, `ti`), 401 sem sessão, 403 para RH e origem diferente, 405 para
+  métodos não permitidos (ex.: DELETE). O envio de `company_id` no PATCH é
+  rejeitado com 400 `company_immutable` e chaves desconhecidas recebem 400
+  `field_not_editable`.
+- Regra de negócio de unidade principal sem duplicidade: quando uma unidade é
+  marcada com `is_main = true` (na criação ou na edição), qualquer unidade
+  principal anterior da mesma empresa tem `is_main` atualizado para `false` na
+  mesma transação atômica.
+- Criação e edição usam `BEGIN`, mutação, `auth_access_audit` e `COMMIT`; falha
+  do INSERT da trilha propaga, produz 503 e executa ROLLBACK. A migração aditiva
+  `115-crm-01-unit-audit.sql` preserva o CHECK anterior, falha se a
+  constraint pai não existir ou se `actor_kind='comercial'` não for aceito e
+  adiciona `crm_unit_create` e `crm_unit_update`.
+- No teste de entrega `tests/l04-delivery.integration.test.mjs`, o cenário 8
+  substituiu a fixture SQL direta de `crm_company_units` por chamadas à API
+  real via `POST /api/crm/units`.
+
+### Cenário 14 do gate L04 — o que é provado
+
+O cenário próprio `CRM-01: unidades dedicadas com escopo de empresa, unidade principal única, auditoria transacional e UI` foi executado com PostgreSQL descartável, servidor
+HTTP real e Chromium real sem `--disable-web-security`:
+
+1. Anônimo recebe 401; RH recebe 403; origem externa em POST recebe 403; DELETE
+   recebe 405; listagem sem empresa recebe 400 e empresa inexistente 404.
+2. Criação HTTP persiste nome, cidade, endereço, unidade principal e empresa
+   correta; a lista da empresa vizinha não vaza a unidade; busca por termo
+   filtra no servidor.
+3. Criação de nova unidade principal desmarca atomicamente a unidade principal
+   anterior da mesma empresa.
+4. Edição muda nome, cidade, endereço e promove a unidade a principal,
+   desmarcando a outra unidade. Tentativa de enviar `company_id` responde 400
+   `company_immutable`; RH não pode editar.
+5. Trilha contém `crm_unit_create` e `crm_unit_update` com o ator correto.
+   Trigger QA que rejeita cada ação produz 503: falha na criação deixa zero
+   unidade nova e falha na edição conserva o valor anterior.
+6. Chromium real seleciona a empresa, aguarda as respostas reais da lista,
+   criação e edição com `page.waitForResponse`, lê a cidade atualizada, não
+   cria rolagem horizontal e não registra erro de console nem HTTP 5xx da
+   aplicação.
+
+### Comandos finais e resultados
+
+| Comando | Resultado |
+|---|---|
+| `npm ci` | 82 pacotes, 0 vulnerabilidades |
+| `node scripts/qa-wave0-static.mjs` | 5/5; migrações 001–115 contínuas e manifestadas |
+| `npm run test:migrations:pg` | 115/115; replay, clone, checksum negativo; 510 tabelas |
+| `npm run test:l04-delivery:pg` | 14/14; duas execuções finais consecutivas |
+| `npm test` | 196/196 |
+| `npm run typecheck` | aprovado |
+| `npm run build` | aprovado; `/admin/crm` gerado |
+| `git diff --check` | limpo |
+
+### Limites honestos
+
+CRM-03 ainda não tem uma tela específica de revisão de deduplicação; CRM-04 não
+resolve automaticamente contato sem empresa; as outras 144 ações de auditoria
+continuam fora do CHECK; CRM-08 não ganhou lembretes/notificações externas;
+PUB-02/05/06/07/09 seguem pendentes/parciais; CRM-10 permanece fora por
+decisão. Nenhuma integração externa, produção, Windows ou aceite humano foi
+contratado/executado. L04 continua parcial e L05 não foi iniciado.

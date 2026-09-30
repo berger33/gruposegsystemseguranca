@@ -1,6 +1,51 @@
 # Estado da execução — entrega local integral
 
-## Continuação atual — CRM-02 (superfície dedicada de contatos, 2026-09-30)
+## Continuação atual — CRM-01 (superfície dedicada de unidades atendidas, 2026-09-30)
+
+Base confirmada antes de escrever: `186e7dd4c420d577540b6ade8902b678762fac8b`
+(PR #30 mergeado), branch `arena/01a0efcc-gruposegsystemseguranca`, árvore limpa.
+A única fatia escolhida nesta continuação foi a **Opção A — completar CRM-01**;
+a política foi registrada antes da rota em
+`docs/PROMPT-CONTINUACAO-CRM-01-UNIDADES.md`. L04 continua parcial e L05 não
+foi iniciado.
+
+A entrega adiciona a superfície navegável `UnitManager.tsx` em `/admin/crm`.
+Ela seleciona uma empresa, lista somente as unidades dessa empresa, cria e
+edita campos controlados de CRM-01 (nome da unidade, cidade, endereço e
+indicação de unidade principal). A indicação de unidade principal desmarca
+atomicamente qualquer unidade principal anterior da mesma empresa na mesma
+transação, garantindo ausência de duplicidade. O servidor adiciona
+`GET/POST /api/crm/units` e `GET/PATCH /api/crm/units/:id`, exige a família de
+papel comercial (`comercial`, `admin`, `marcelo`, `ti`), bloqueia RH (403),
+exige empresa para leituras listadas e criação, mantém `company_id` imutável na
+edição (400 `company_immutable`), rejeita campos desconhecidos (400
+`field_not_editable`) e impede unidade órfão pela superfície.
+
+Criação e edição executam mutação + `auth_access_audit` na mesma transação;
+falha da trilha retorna 503 e reverte, inclusive na edição. A migração aditiva
+**115** reautoriza `crm_unit_create` e `crm_unit_update`, falhando se o CHECK
+pai ou o `actor_kind='comercial'` desaparecer. Migrações 001–114 permanecem
+imutáveis; manifesto e `latestMigration` agora apontam para 115.
+
+Gate dedicado em `tests/l04-delivery.integration.test.mjs`: **14/14**, duas
+execuções finais consecutivas aprovadas, com PostgreSQL descartável, servidor
+HTTP real e Chromium real sem `--disable-web-security`; prova 401/403/405,
+validações, escopo por empresa, criação/edição via API substituindo fixture
+SQL, desmarcação atômica de unidade principal, trilhas e rollback de criação e
+edição por falha de auditoria injetada, jornada UI com `page.waitForResponse`,
+sem rolagem horizontal, erro de console ou HTTP 5xx inesperado. Fechamento
+desta continuação: `npm ci` (82 pacotes, 0 vulnerabilidades), `qa-wave0-static`
+5/5, `test:migrations:pg` 115/115 com replay/clone/checksum negativo e 510
+tabelas, `npm test` 196/196, typecheck aprovado, build aprovado e
+`git diff --check` limpo após restaurar `tsconfig.json` e `next-env.d.ts`.
+
+Limites honestos: CRM-03 segue sem revisão de deduplicação dedicada, CRM-04 não
+resolve automaticamente contato sem empresa, as outras 144 ações do achado de
+auditoria continuam fora do CHECK, lembretes/notificações externas de CRM-08
+seguem fora, PUB-02/05/06/07/09 continuam pendentes/parciais, CRM-10 permanece
+fora por decisão e não houve aceite humano, Windows, produção ou serviço externo.
+
+## Histórico — CRM-02 (superfície dedicada de contatos, 2026-09-30)
 
 Base confirmada antes de escrever: `42086989943b5af8b2baec0bb19a700ea6b6cfc1`
 (PR #29 mergeado), branch `arena/01a0efae-gruposegsystemseguranca`, árvore limpa.

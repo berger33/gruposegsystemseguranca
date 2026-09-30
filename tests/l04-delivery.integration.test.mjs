@@ -1787,8 +1787,7 @@ test('CRM-07/05/06: campo a campo de oportunidades, funil com reabertura auditad
   const rh = await provisionAndLoginStaff(pool, api, { role: 'rh' });
 
   // ---------------------------------------------------------------------
-  // 1) Empresa e unidades. A unidade não tem rota de criação (escopo
-  //    CRM-01); a fixture de unidade é SQL declarado, o resto é HTTP.
+  // 1) Empresa e unidades (CRM-01). Criação de unidades via API autorizada.
   // ---------------------------------------------------------------------
   const company = await api('/api/crm/companies', { method: 'POST', cookie: owner.cookie, body: { displayName: 'Empresa campo a campo ' + randomUUID().slice(0, 8), city: 'Barueri', type: 'prospect', segment: 'Condomínio' } });
   assert.equal(company.status, 201, JSON.stringify(company.body));
@@ -1796,10 +1795,13 @@ test('CRM-07/05/06: campo a campo de oportunidades, funil com reabertura auditad
   const otherCompany = await api('/api/crm/companies', { method: 'POST', cookie: owner.cookie, body: { displayName: 'Empresa vizinha ' + randomUUID().slice(0, 8), city: 'Osasco', type: 'prospect' } });
   const otherCompanyId = otherCompany.body.company.id;
 
-  const unitId = randomUUID();
-  const foreignUnitId = randomUUID();
-  await pool.query(`INSERT INTO crm_company_units (id, company_id, display_name, city, is_main) VALUES ($1,$2,'Unidade Matriz Alphaville','Barueri',true)`, [unitId, companyId]);
-  await pool.query(`INSERT INTO crm_company_units (id, company_id, display_name, city, is_main) VALUES ($1,$2,'Unidade Vizinha','Osasco',true)`, [foreignUnitId, otherCompanyId]);
+  const unitRes = await api('/api/crm/units', { method: 'POST', cookie: owner.cookie, body: { company_id: companyId, display_name: 'Unidade Matriz Alphaville', city: 'Barueri', is_main: true } });
+  assert.equal(unitRes.status, 201, JSON.stringify(unitRes.body));
+  const unitId = unitRes.body.unit.id;
+
+  const foreignUnitRes = await api('/api/crm/units', { method: 'POST', cookie: owner.cookie, body: { company_id: otherCompanyId, display_name: 'Unidade Vizinha', city: 'Osasco', is_main: true } });
+  assert.equal(foreignUnitRes.status, 201, JSON.stringify(foreignUnitRes.body));
+  const foreignUnitId = foreignUnitRes.body.unit.id;
 
   // ---------------------------------------------------------------------
   // 2) CRM-05 campo a campo: criação com TODOS os campos e validação
@@ -2910,6 +2912,198 @@ test('CRM-02: contato dedicado com escopo de empresa, edição e auditoria trans
     assert.equal(updateResponse.status(), 200);
     await region.getByText(/Função: financeiro/).waitFor();
     await assertNoHorizontalScroll(page, 'CRM-02 contatos');
+    await context.close();
+  } finally { await browser.close(); }
+  assert.deepEqual(failures, []);
+});
+
+test('CRM-01: unidades dedicadas com escopo de empresa, unidade principal única, auditoria transacional e UI', { skip: !RUN, timeout: 180_000 }, async () => {
+  const owner = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const rh = await provisionAndLoginStaff(pool, api, { role: 'rh' });
+  const company = (await api('/api/crm/companies', {
+    method: 'POST', cookie: owner.cookie,
+    body: { displayName: 'Empresa CRM-01 ' + randomUUID().slice(0, 8), city: 'Barueri', type: 'client' },
+  })).body.company;
+  const otherCompany = (await api('/api/crm/companies', {
+    method: 'POST', cookie: owner.cookie,
+    body: { displayName: 'Empresa Secundária CRM-01 ' + randomUUID().slice(0, 8), city: 'Osasco', type: 'prospect' },
+  })).body.company;
+
+  // 1) Controles de autorização e entrada
+  assert.equal((await api('/api/crm/units')).status, 401);
+  assert.equal((await api(`/api/crm/units?companyId=${company.id}`, { cookie: rh.cookie })).status, 403);
+  assert.equal((await api('/api/crm/units', { method: 'POST', cookie: owner.cookie, origin: 'https://origem-externa.example', body: { company_id: company.id, display_name: 'Unidade Evil' } })).status, 403);
+  assert.equal((await api('/api/crm/units', { cookie: owner.cookie })).status, 400);
+  assert.equal((await api('/api/crm/units?companyId=not-a-uuid', { cookie: owner.cookie })).status, 400);
+  assert.equal((await api(`/api/crm/units?companyId=${randomUUID()}`, { cookie: owner.cookie })).status, 404);
+  assert.equal((await api('/api/crm/units', { method: 'POST' })).status, 401);
+  assert.equal((await api('/api/crm/units', { method: 'POST', cookie: rh.cookie, body: { company_id: company.id, display_name: 'Unidade RH' } })).status, 403);
+  assert.equal((await api('/api/crm/units', { method: 'POST', cookie: owner.cookie, body: { display_name: 'Sem empresa' } })).status, 400);
+  assert.equal((await api('/api/crm/units', { method: 'POST', cookie: owner.cookie, body: { company_id: company.id } })).status, 400);
+  assert.equal((await api('/api/crm/units', { method: 'POST', cookie: owner.cookie, body: { company_id: randomUUID(), display_name: 'Empresa fantasma' } })).status, 404);
+  assert.equal((await api('/api/crm/units', { method: 'POST', cookie: owner.cookie, body: { company_id: company.id, display_name: 'Unidade campo desconhecido', custom_field: 'hack' } })).status, 400);
+
+  // 2) Criação HTTP de unidades e regra de unidade principal sem duplicidade
+  const unit1Res = await api('/api/crm/units', {
+    method: 'POST', cookie: owner.cookie,
+    body: {
+      company_id: company.id,
+      display_name: 'Unidade Sede Alphaville',
+      city: 'Barueri',
+      address: 'Alameda Rio Negro, 100',
+      is_main: true,
+    },
+  });
+  assert.equal(unit1Res.status, 201, JSON.stringify(unit1Res.body));
+  const unit1 = unit1Res.body.unit;
+  assert.equal(unit1.company_id, company.id);
+  assert.equal(unit1.display_name, 'Unidade Sede Alphaville');
+  assert.equal(unit1.city, 'Barueri');
+  assert.equal(unit1.address, 'Alameda Rio Negro, 100');
+  assert.equal(unit1.is_main, true);
+
+  const unit2Res = await api('/api/crm/units', {
+    method: 'POST', cookie: owner.cookie,
+    body: {
+      company_id: company.id,
+      display_name: 'Unidade Filial Tamboré',
+      city: 'Santana de Parnaíba',
+      address: 'Av. Marcos Penteado, 200',
+      is_main: true, // Promove filial para principal -> deve desmarcar a sede
+    },
+  });
+  assert.equal(unit2Res.status, 201, JSON.stringify(unit2Res.body));
+  const unit2 = unit2Res.body.unit;
+  assert.equal(unit2.is_main, true);
+
+  // Unidade 1 agora deve ser is_main: false
+  const unit1After = (await api(`/api/crm/units/${unit1.id}`, { cookie: owner.cookie })).body.unit;
+  assert.equal(unit1After.is_main, false, 'unidade principal anterior deve ser desmarcada');
+
+  // Criação de unidade na outra empresa
+  const otherUnitRes = await api('/api/crm/units', {
+    method: 'POST', cookie: owner.cookie,
+    body: {
+      company_id: otherCompany.id,
+      display_name: 'Unidade Central Osasco',
+      city: 'Osasco',
+      address: 'Rua das Flores, 50',
+      is_main: true,
+    },
+  });
+  assert.equal(otherUnitRes.status, 201);
+  const otherUnit = otherUnitRes.body.unit;
+
+  // 3) Listagem escopada e busca
+  const scopedList = await api(`/api/crm/units?companyId=${company.id}`, { cookie: owner.cookie });
+  assert.equal(scopedList.status, 200);
+  assert.equal(scopedList.body.units.length, 2);
+  assert.equal(scopedList.body.units[0].id, unit2.id, 'unidade principal deve vir em primeiro');
+  assert.equal(scopedList.body.units[1].id, unit1.id);
+  assert.equal(scopedList.body.units.some(u => u.id === otherUnit.id), false, 'unidade de outra empresa não pode vazar');
+
+  const searchList = await api(`/api/crm/units?companyId=${company.id}&search=Tamboré`, { cookie: owner.cookie });
+  assert.equal(searchList.status, 200);
+  assert.equal(searchList.body.units.length, 1);
+  assert.equal(searchList.body.units[0].id, unit2.id);
+
+  // 4) Detalhe, métodos e manutenção por PATCH
+  assert.equal((await api(`/api/crm/units/${unit1.id}`, { cookie: owner.cookie })).status, 200);
+  assert.equal((await api(`/api/crm/units/${unit1.id}`, { method: 'DELETE', cookie: owner.cookie })).status, 405);
+  assert.equal((await api(`/api/crm/units/${unit1.id}`, { method: 'PATCH', cookie: rh.cookie, body: { city: 'Recusado' } })).status, 403);
+  assert.equal((await api(`/api/crm/units/${unit1.id}`, { method: 'PATCH', cookie: owner.cookie, body: { company_id: otherCompany.id } })).body.error, 'company_immutable');
+  assert.equal((await api(`/api/crm/units/${unit1.id}`, { method: 'PATCH', cookie: owner.cookie, body: { hack_col: 'val' } })).body.error, 'field_not_editable');
+
+  const updatedUnit1 = await api(`/api/crm/units/${unit1.id}`, {
+    method: 'PATCH', cookie: owner.cookie,
+    body: {
+      display_name: 'Unidade Sede Alphaville Reformada',
+      city: 'Barueri Centro',
+      address: 'Alameda Rio Negro, 150',
+      is_main: true,
+    },
+  });
+  assert.equal(updatedUnit1.status, 200, JSON.stringify(updatedUnit1.body));
+  assert.equal(updatedUnit1.body.unit.display_name, 'Unidade Sede Alphaville Reformada');
+  assert.equal(updatedUnit1.body.unit.city, 'Barueri Centro');
+  assert.equal(updatedUnit1.body.unit.is_main, true);
+
+  // Unidade 2 agora deve ter sido desmarcada
+  const unit2After = (await api(`/api/crm/units/${unit2.id}`, { cookie: owner.cookie })).body.unit;
+  assert.equal(unit2After.is_main, false);
+
+  // 5) Auditoria transacional e rollback comprovado por injeção
+  const auditRows = await pool.query(
+    "SELECT action, actor_id FROM auth_access_audit WHERE target = $1 AND action IN ('crm_unit_create','crm_unit_update') ORDER BY created_at, id",
+    [unit1.id],
+  );
+  assert.deepEqual(auditRows.rows.map(row => row.action), ['crm_unit_create', 'crm_unit_update']);
+  assert.equal(auditRows.rows.every(row => row.actor_id === owner.id), true);
+
+  await pool.query(`CREATE OR REPLACE FUNCTION qa_reject_crm_unit_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.action = 'crm_unit_create' THEN RAISE EXCEPTION 'qa injected crm unit create audit failure'; END IF; RETURN NEW; END $$`);
+  await pool.query('CREATE TRIGGER qa_reject_crm_unit_audit BEFORE INSERT ON auth_access_audit FOR EACH ROW EXECUTE FUNCTION qa_reject_crm_unit_audit()');
+  const rollbackName = `CRM-01 rollback ${randomUUID()}`;
+  const failedCreate = await api('/api/crm/units', { method: 'POST', cookie: owner.cookie, body: { company_id: company.id, display_name: rollbackName, city: 'Barueri' } });
+  assert.equal(failedCreate.status, 503);
+  await pool.query('DROP TRIGGER qa_reject_crm_unit_audit ON auth_access_audit');
+  await pool.query('DROP FUNCTION qa_reject_crm_unit_audit()');
+  assert.equal((await pool.query('SELECT COUNT(*)::int AS total FROM crm_company_units WHERE display_name = $1', [rollbackName])).rows[0].total, 0);
+
+  await pool.query(`CREATE OR REPLACE FUNCTION qa_reject_crm_unit_update_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.action = 'crm_unit_update' THEN RAISE EXCEPTION 'qa injected crm unit update audit failure'; END IF; RETURN NEW; END $$`);
+  await pool.query('CREATE TRIGGER qa_reject_crm_unit_update_audit BEFORE INSERT ON auth_access_audit FOR EACH ROW EXECUTE FUNCTION qa_reject_crm_unit_update_audit()');
+  const failedUpdate = await api(`/api/crm/units/${unit1.id}`, { method: 'PATCH', cookie: owner.cookie, body: { city: 'Cidade Invalida Rollback' } });
+  assert.equal(failedUpdate.status, 503);
+  await pool.query('DROP TRIGGER qa_reject_crm_unit_update_audit ON auth_access_audit');
+  await pool.query('DROP FUNCTION qa_reject_crm_unit_update_audit()');
+  const preserved = await api(`/api/crm/units/${unit1.id}`, { cookie: owner.cookie });
+  assert.equal(preserved.body.unit.city, 'Barueri Centro', 'falha da auditoria não pode alterar a unidade');
+
+  // 6) Jornada Chromium dentro de /admin/crm
+  const browser = await launchBrowser();
+  const failures = [];
+  try {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'pt-BR' });
+    const page = await context.newPage();
+    trackFailures(page, failures);
+    const pair = owner.cookie.split('; ')[0].split('=');
+    await context.addCookies([{ name: pair[0], value: pair.slice(1).join('='), url: baseUrl }]);
+    const [companiesResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().includes('/api/crm/companies?') && response.request().method() === 'GET'),
+      page.goto(`${baseUrl}/admin/crm`, { waitUntil: 'domcontentloaded' }),
+    ]);
+    assert.equal(companiesResponse.status(), 200);
+    const region = page.getByRole('region', { name: /Unidades.*CRM-01/ });
+    await region.waitFor();
+    const companySelect = region.locator('#crm-01-company');
+    const [unitListResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().includes(`/api/crm/units?companyId=${company.id}`) && response.request().method() === 'GET'),
+      companySelect.selectOption(company.id),
+    ]);
+    assert.equal(unitListResponse.status(), 200);
+    const createForm = region.getByRole('form', { name: 'Nova unidade CRM-01' });
+    await createForm.getByLabel('Nome da unidade', { exact: true }).fill('Unidade UI CRM-01');
+    await createForm.getByLabel('Cidade', { exact: true }).fill('Campinas');
+    await createForm.getByLabel('Endereço', { exact: true }).fill('Av. Brasil, 500');
+    await createForm.getByLabel('Unidade principal', { exact: true }).check();
+    const [createResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().endsWith('/api/crm/units') && response.request().method() === 'POST'),
+      createForm.getByRole('button', { name: 'Criar unidade', exact: true }).click(),
+    ]);
+    assert.equal(createResponse.status(), 201);
+    const uiArticle = region.getByRole('article', { name: 'Unidade Unidade UI CRM-01' });
+    await uiArticle.waitFor();
+    await uiArticle.getByRole('button', { name: 'Editar unidade', exact: true }).click();
+    const editForm = region.getByRole('form', { name: 'Editar unidade Unidade UI CRM-01' });
+    await editForm.getByLabel('Cidade', { exact: true }).fill('Campinas Centro');
+    const [updateResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().includes('/api/crm/units/') && response.request().method() === 'PATCH'),
+      editForm.getByRole('button', { name: 'Salvar unidade', exact: true }).click(),
+    ]);
+    assert.equal(updateResponse.status(), 200);
+    await region.getByText(/Cidade: Campinas Centro/).waitFor();
+    await assertNoHorizontalScroll(page, 'CRM-01 unidades');
     await context.close();
   } finally { await browser.close(); }
   assert.deepEqual(failures, []);
