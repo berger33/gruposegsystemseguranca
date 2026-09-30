@@ -242,6 +242,8 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
           fields.push(`approved_at = NOW()`);
         }
       }
+      if(body?.status==='ativa'&&Object.keys(body).some(k=>k!=='status'))return bad(res,'approve_in_separate_request');
+      if(body?.status===undefined&&fields.length){fields.push("status = 'rascunho'");fields.push("approved_by = NULL");fields.push("approved_at = NULL");}
       if (fields.length === 0) return bad(res, 'no_fields');
       fields.push(`version = version + 1`);
       fields.push(`updated_at = NOW()`);
