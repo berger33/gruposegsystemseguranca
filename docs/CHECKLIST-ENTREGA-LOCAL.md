@@ -190,10 +190,10 @@ cadastro central de empresas e contatos; nome, identificação fiscal quando nec
 
 ## CRM-02
 contato com função no processo de compra (decisor, influenciador, usuário, financeiro), preferências e restrições de abordagem; registrar origem legítima, sem coleta indiscriminada.
-- Estado: parcial (API revalidada; sem tela dedicada)
-- Tela / API / dados / autorização: Sem tela dedicada de contato com função (decisor/influenciador/usuário/financeiro) encontrada em `/admin/crm`; a API `crm_contacts` pode existir no schema, mas não foi localizada UI própria.
-- Integração e evidência (teste, resultado, commit): Gate CRM-01..04 conferiu função, restrições, origem, empresa obrigatória e controles negativos por HTTP.
-- Pendência / fronteira externa / aceite humano: não há tela dedicada de contato; a jornada de contato continua API/prévia administrativa.
+- Estado: **pronto_local** (superfície dedicada entregue nesta continuação; aceite humano pendente)
+- Tela / API / dados / autorização: `/admin/crm` agora inclui `ContactManager.tsx`, com seleção de empresa, criação e edição controladas de contato, função/papel de compra, preferências de canais e horário, restrições, origem controlada, contato principal e ativo/inativo. `GET /api/crm/contacts?companyId=...` exige escopo de empresa; `GET/PATCH /api/crm/contacts/:id` não permite trocar `company_id`. Sessão individual e família `comercial/admin/marcelo/ti`; anônimo 401, RH 403, origem/método inválidos negados. Criação e edição usam auditoria transacional.
+- Integração e evidência (teste, resultado, commit): Gate dedicado `CRM-02: contato dedicado com escopo de empresa, edição e auditoria transacional`, em PostgreSQL descartável + HTTP real + Chromium real sem `--disable-web-security`, **13/13 no total em duas execuções finais consecutivas**. O cenário dedicado prova 401/403/405, empresa obrigatória/inexistente, preferências/origem inválidas, leitura por empresa, campos completos, edição de estado e função, empresa imutável, auditoria e rollback por falha injetada na criação e edição. Migração aditiva 114 reautoriza somente `crm_contact_update`, preservando o CHECK anterior e exigindo `auth_access_audit_action_check` e `actor_kind='comercial'`.
+- Pendência / fronteira externa / aceite humano: nenhum envio externo, SMTP, unidade ou sincronização externa entra nesta fatia. A coluna legada `crm_contacts.company_id` permanece nullable para preservar migrações/histórico, mas toda nova criação e edição da superfície exige empresa válida. Aceite humano/Windows continuam pendentes; L04 segue parcial e L05 não iniciado.
 
 ## CRM-03
 importar CSV com prévia, validação por linha, mapeamento, relatório, deduplicação revisável e prevenção de fórmula maliciosa na exportação.

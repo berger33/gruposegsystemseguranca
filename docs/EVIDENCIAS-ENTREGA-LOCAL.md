@@ -1473,3 +1473,81 @@ Limitações honestas: o fluxo CRM-02 segue sem tela dedicada de contato com
 função/preferências; a revisão de deduplicação CRM-03 foi exercitada pela API e
 pela prévia, mas não ganhou uma tela nova; CRM-04 herda a ausência de resolução
 automática de contato sem empresa. Nenhum componente órfão foi conectado.
+
+---
+
+## Continuação CRM-02 — superfície dedicada de contatos (2026-09-30)
+
+Política: `docs/PROMPT-CONTINUACAO-CRM-02-CONTATOS.md`. Base conferida antes
+do código: merge `4208698` (`42086989943b5af8b2baec0bb19a700ea6b6cfc1`),
+branch fixa `arena/01a0efae-gruposegsystemseguranca`, árvore limpa. A decisão foi
+uma única fatia vertical: **Opção A — completar CRM-02**.
+
+### Mudança comprovada
+
+- `src/app/admin/crm/ContactManager.tsx` foi conectado dentro de `/admin/crm`.
+  A UI escolhe uma empresa, carrega contatos por `GET /api/crm/contacts?companyId=`,
+  cria e edita sem permitir trocar a empresa. A tela mostra função/papel de
+  compra, preferências de canais e melhor horário, restrições, origem controlada,
+  principal e estado ativo/inativo.
+- `src/server/crm-api.mjs` passou a exigir a família comercial
+  (`comercial`, `admin`, `marcelo`, `ti`) na superfície de contatos, a exigir
+  empresa válida para lista/criação e a esconder contato sem empresa. O detalhe
+  `GET/PATCH /api/crm/contacts/:id` valida campos e empresa imutável. O detalhe de
+  empresa recebeu a mesma borda, para não reabrir o acesso a contatos por uma
+  rota legada.
+- Criação e edição usam `BEGIN`, mutação, `auth_access_audit` e `COMMIT`; falha
+  do INSERT da trilha propaga, produz 503 e executa ROLLBACK. A migração aditiva
+  `114-crm-02-contact-update-audit.sql` preserva o CHECK anterior, falha se a
+  constraint pai não existir ou se `actor_kind='comercial'` não for aceito e
+  adiciona somente `crm_contact_update`.
+
+### Cenário 13 do gate L04 — o que é provado
+
+O cenário próprio `CRM-02: contato dedicado com escopo de empresa, edição e
+auditoria transacional` foi executado com PostgreSQL descartável, servidor
+HTTP real e Chromium real sem `--disable-web-security`:
+
+1. Anônimo recebe 401; RH recebe 403; origem externa em POST recebe 403; DELETE
+   recebe 405; listagem sem empresa recebe 400 e empresa inexistente 404.
+2. Preferência com canal inválido e origem não controlada recebem 400. Criação
+   HTTP persiste função, papel de compra, preferências, restrições, origem,
+   principal e empresa correta; a lista da empresa vizinha não vaza o contato.
+3. Edição muda função, preferências, restrições, origem, principal e
+   ativo/inativo; tentativa de enviar `company_id` responde 400
+   `company_immutable`; RH não pode editar. O detalhe individual permanece
+   autorizado somente pela família comercial.
+4. Trilha contém `crm_contact_create` e `crm_contact_update` com o ator correto.
+   Trigger QA que rejeita cada ação produz 503: falha na criação deixa zero
+   contato novo e falha na edição conserva a função anterior.
+5. Chromium real seleciona a empresa, aguarda as respostas reais da lista,
+   criação e edição com `page.waitForResponse`, lê a função atualizada, não
+   cria rolagem horizontal e não registra erro de console nem HTTP 5xx da
+   aplicação.
+
+### Comandos finais e resultados
+
+| Comando | Resultado |
+|---|---|
+| `npm ci` | 82 pacotes, 0 vulnerabilidades |
+| `node scripts/qa-wave0-static.mjs` | 5/5; migrações 001–114 contínuas e manifestadas |
+| `npm run test:migrations:pg` | 114/114; replay, clone, checksum negativo; 510 tabelas |
+| `npm run test:l04-delivery:pg` | 13/13; duas execuções finais consecutivas |
+| `npm test` | 196/196 |
+| `npm run typecheck` | aprovado |
+| `npm run build` | aprovado; `/admin/crm` gerado |
+| `git diff --check` | limpo |
+
+A migração registrou o checksum negativo esperado do clone como parte do
+controle: `006` foi recusada antes da rebaseline automática; isso não é falha
+do gate. Depois do build, `tsconfig.json` e `next-env.d.ts` foram restaurados.
+
+### Limites honestos
+
+CRM-01 ainda não tem rota própria de unidades; CRM-03 ainda não tem uma tela
+específica de revisão de deduplicação; CRM-04 não resolve automaticamente
+contato sem empresa; as outras 146 ações de auditoria continuam fora do CHECK;
+CRM-08 não ganhou lembretes/notificações externas; PUB-02/05/06/07/09 seguem
+pendentes/parciais; CRM-10 permanece fora por decisão. Nenhuma integração
+externa, produção, Windows ou aceite humano foi contratado/executado. L04
+continua parcial e L05 não foi iniciado.

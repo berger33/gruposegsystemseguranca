@@ -1,6 +1,44 @@
 # Prompt da próxima sessão — Grupo SEG System (entrega local, L04)
 
-Atualizado ao fim da fatia **PUB-08 — SEO técnico**
+## Estado de entrada mais recente — CRM-02 concluído localmente (2026-09-30)
+
+Antes de qualquer código, confirme no disco `git status --short --branch`,
+`git rev-parse HEAD`, `git log -1 --oneline` e `git log --oneline --all
+--decorate -12`. A sessão fixa é `arena/01a0efae-gruposegsystemseguranca`; o
+HEAD de entrada desta continuação foi `42086989943b5af8b2baec0bb19a700ea6b6cfc1`
+(PR #29). Leia integralmente o estado, checklist, evidências e todos os prompts
+`docs/PROMPT-CONTINUACAO-*.md`, especialmente
+`docs/PROMPT-CONTINUACAO-CRM-02-CONTATOS.md`.
+
+A fatia única escolhida foi a **Opção A — completar CRM-02**. Existe agora
+`ContactManager.tsx` navegável em `/admin/crm`, API autorizada e escopada por
+empresa para contatos, criação/edição com função, papel de compra,
+preferências, restrições, origem controlada e ativo/inativo, além de auditoria
+transacional com rollback. A migração aditiva mais recente é **114**;
+001–114 são imutáveis e a próxima livre é **115**. O gate final foi **13/13 em
+duas execuções consecutivas**, com PostgreSQL descartável, HTTP real e
+Chromium real sem `--disable-web-security`; static 5/5, migrations 114/114,
+npm test 196/196, typecheck/build aprovados.
+
+L04 continua **PARCIAL** e L05 não foi iniciado. Não reabrir CRM-02 sem nova
+lacuna comprovada. Permanecem honestamente fora: CRM-01 unidades sem rota
+própria, CRM-03 revisão dedicada de deduplicação, CRM-04 resolução automática
+de contato sem empresa, as outras 146 ações de auditoria fora do CHECK,
+lembretes/notificações externas de CRM-08, PUB-02/05/06/07/09 e CRM-10 por
+decisão. Não ativar `SITE_VISUAL_SELECTION_ENABLED=false`, não publicar em
+produção e não contratar serviço externo.
+
+### Escolha futura obrigatória
+
+Na próxima continuação escolha **uma única** fatia vertical restante e registre
+sua política em novo `docs/PROMPT-CONTINUACAO-<fatia>.md` antes das rotas. As
+opções ainda coerentes são CRM-01 unidades, CRM-03 deduplicação revisável,
+um domínio delimitado das ações de auditoria ou uma fatia PUB cuja política
+esteja definida. Antes de uma migração confirme `ls db/migrations | sort |
+tail`, `latestMigration`, o manifesto e `git ls-remote --heads origin`; uma
+nova migração deve ser 115, aditiva, com replay/clone/checksum negativo.
+
+### Histórico anterior — atualizado ao fim da fatia **PUB-08 — SEO técnico**
 (sessão `arena/01a0ef61-gruposegsystemseguranca`, **PR #27, mergeado em
 `main @ 0f0fb70`**), que partiu de `main @ b3c1db6` e incorporou por merge o
 `main @ 8f52137` (PR #25, mergeado durante a sessão).

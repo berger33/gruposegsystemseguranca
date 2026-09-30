@@ -33,13 +33,13 @@ async function waitForServer(url, timeoutMs = 90_000) {
   throw new Error('server_did_not_start');
 }
 
-async function api(pathname, { method = 'GET', body, cookie, raw = false, sendOrigin = true } = {}) {
+async function api(pathname, { method = 'GET', body, cookie, raw = false, sendOrigin = true, origin = baseUrl } = {}) {
   const response = await fetch(`${baseUrl}${pathname}`, {
     method,
     headers: {
       accept: 'application/json',
       ...(body !== undefined ? { 'content-type': 'application/json' } : {}),
-      ...(sendOrigin ? { origin: baseUrl } : {}),
+      ...(sendOrigin ? { origin } : {}),
       ...(cookie ? { cookie } : {}),
     },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
@@ -2761,6 +2761,155 @@ test('CRM-01..04: revalidação campo a campo de cadastro, contato, CSV e conver
     assert.equal(listResponse.status(), 200);
     await page.getByRole('heading', { name: /CRM — Empresas/ }).waitFor();
     await assertNoHorizontalScroll(page, 'CRM-01..04');
+    await context.close();
+  } finally { await browser.close(); }
+  assert.deepEqual(failures, []);
+});
+
+// CRM-02 fica em um cenário separado para que a superfície dedicada não seja
+// considerada provada apenas porque a criação legada passou pelo cenário CRM-01..04.
+test('CRM-02: contato dedicado com escopo de empresa, edição e auditoria transacional', { skip: !RUN, timeout: 180_000 }, async () => {
+  const owner = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const rh = await provisionAndLoginStaff(pool, api, { role: 'rh' });
+  const companyResponse = await api('/api/crm/companies', {
+    method: 'POST', cookie: owner.cookie,
+    body: { display_name: `Empresa CRM-02 ${randomUUID().slice(0, 8)}`, type: 'prospect', city: 'Barueri' },
+  });
+  assert.equal(companyResponse.status, 201, JSON.stringify(companyResponse.body));
+  const company = companyResponse.body.company;
+  const otherCompanyResponse = await api('/api/crm/companies', {
+    method: 'POST', cookie: owner.cookie,
+    body: { display_name: `Outra empresa CRM-02 ${randomUUID().slice(0, 8)}`, type: 'prospect', city: 'Osasco' },
+  });
+  assert.equal(otherCompanyResponse.status, 201);
+  const otherCompany = otherCompanyResponse.body.company;
+
+  assert.equal((await api('/api/crm/contacts')).status, 401);
+  assert.equal((await api(`/api/crm/contacts?companyId=${company.id}`, { cookie: rh.cookie })).status, 403);
+  assert.equal((await api('/api/crm/contacts', { method: 'POST', cookie: owner.cookie, origin: 'https://origem-externa.example', body: { company_id: company.id, display_name: 'origem externa' } })).status, 403);
+  assert.equal((await api('/api/crm/contacts', { cookie: owner.cookie })).status, 400);
+  assert.equal((await api(`/api/crm/contacts?companyId=${randomUUID()}`, { cookie: owner.cookie })).status, 404);
+  assert.equal((await api('/api/crm/contacts', { method: 'DELETE', cookie: owner.cookie })).status, 405);
+  assert.equal((await api('/api/crm/contacts', { method: 'POST', cookie: rh.cookie, body: { company_id: company.id, display_name: 'RH não pode' } })).status, 403);
+  assert.equal((await api('/api/crm/contacts', { method: 'POST', cookie: owner.cookie, body: { display_name: 'sem empresa' } })).body.error, 'company_required');
+  assert.equal((await api('/api/crm/contacts', { method: 'POST', cookie: owner.cookie, body: { company_id: company.id, display_name: 'preferências inválidas', preferences: { channels: ['fax'] } } })).body.error, 'invalid_preferences');
+  assert.equal((await api('/api/crm/contacts', { method: 'POST', cookie: owner.cookie, body: { company_id: company.id, display_name: 'origem inválida', origin: 'qualquer coisa' } })).body.error, 'invalid_origin');
+
+  const created = await api('/api/crm/contacts', {
+    method: 'POST', cookie: owner.cookie,
+    body: {
+      company_id: company.id,
+      display_name: 'Contato CRM-02 completo',
+      email: 'crm02@example.invalid', phone: '+5511999990000',
+      role: 'decisor', buying_role: 'financeiro',
+      preferences: { channels: ['email', 'whatsapp'], best_time: 'dias úteis, 10h–12h' },
+      restrictions: 'não ligar antes das 10h', origin: 'consentimento_formulario', is_primary: true,
+    },
+  });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  const contactId = created.body.contact.id;
+  assert.equal(created.body.contact.company_id, company.id);
+  assert.equal(created.body.contact.role, 'decisor');
+  assert.equal(created.body.contact.buying_role, 'financeiro');
+  assert.deepEqual(created.body.contact.preferences, { channels: ['email', 'whatsapp'], best_time: 'dias úteis, 10h–12h' });
+  assert.equal(created.body.contact.status, 'active');
+
+  const scoped = await api(`/api/crm/contacts?companyId=${company.id}`, { cookie: owner.cookie });
+  assert.equal(scoped.status, 200);
+  assert.equal(scoped.body.contacts.length, 1);
+  assert.equal(scoped.body.contacts[0].id, contactId);
+  assert.equal((await api(`/api/crm/contacts?companyId=${otherCompany.id}`, { cookie: owner.cookie })).body.contacts.some(item => item.id === contactId), false);
+  assert.equal((await api(`/api/crm/contacts/${contactId}`, { cookie: owner.cookie })).status, 200);
+  assert.equal((await api(`/api/crm/contacts/${contactId}`, { method: 'DELETE', cookie: owner.cookie })).status, 405);
+  assert.equal((await api(`/api/crm/contacts/${contactId}`, { method: 'PATCH', cookie: rh.cookie, body: { role: 'outro' } })).status, 403);
+  assert.equal((await api(`/api/crm/contacts/${contactId}`, { method: 'PATCH', cookie: owner.cookie, body: { company_id: otherCompany.id } })).body.error, 'company_immutable');
+
+  const maintained = await api(`/api/crm/contacts/${contactId}`, {
+    method: 'PATCH', cookie: owner.cookie,
+    body: {
+      display_name: 'Contato CRM-02 mantido', role: 'influenciador', buying_role: 'usuario',
+      preferences: { channels: ['phone'], best_time: 'após 14h' }, restrictions: 'somente mensagem escrita',
+      origin: 'indicacao', status: 'inactive', is_primary: false,
+    },
+  });
+  assert.equal(maintained.status, 200, JSON.stringify(maintained.body));
+  assert.equal(maintained.body.contact.display_name, 'Contato CRM-02 mantido');
+  assert.equal(maintained.body.contact.role, 'influenciador');
+  assert.equal(maintained.body.contact.status, 'inactive');
+  assert.deepEqual(maintained.body.contact.preferences, { channels: ['phone'], best_time: 'após 14h' });
+
+  const auditRows = await pool.query(
+    "SELECT action, actor_id FROM auth_access_audit WHERE target = $1 AND action IN ('crm_contact_create','crm_contact_update') ORDER BY created_at, id",
+    [contactId],
+  );
+  assert.deepEqual(auditRows.rows.map(row => row.action), ['crm_contact_create', 'crm_contact_update']);
+  assert.equal(auditRows.rows.every(row => row.actor_id === owner.id), true);
+
+  await pool.query(`CREATE OR REPLACE FUNCTION qa_reject_crm_contact_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.action = 'crm_contact_create' THEN RAISE EXCEPTION 'qa injected crm contact create audit failure'; END IF; RETURN NEW; END $$`);
+  await pool.query('CREATE TRIGGER qa_reject_crm_contact_audit BEFORE INSERT ON auth_access_audit FOR EACH ROW EXECUTE FUNCTION qa_reject_crm_contact_audit()');
+  const rollbackName = `CRM-02 rollback ${randomUUID()}`;
+  const failedCreate = await api('/api/crm/contacts', { method: 'POST', cookie: owner.cookie, body: { company_id: company.id, display_name: rollbackName, role: 'usuario', origin: 'manual' } });
+  assert.equal(failedCreate.status, 503);
+  await pool.query('DROP TRIGGER qa_reject_crm_contact_audit ON auth_access_audit');
+  await pool.query('DROP FUNCTION qa_reject_crm_contact_audit()');
+  assert.equal((await pool.query('SELECT COUNT(*)::int AS total FROM crm_contacts WHERE display_name = $1', [rollbackName])).rows[0].total, 0);
+
+  await pool.query(`CREATE OR REPLACE FUNCTION qa_reject_crm_contact_update_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.action = 'crm_contact_update' THEN RAISE EXCEPTION 'qa injected crm contact update audit failure'; END IF; RETURN NEW; END $$`);
+  await pool.query('CREATE TRIGGER qa_reject_crm_contact_update_audit BEFORE INSERT ON auth_access_audit FOR EACH ROW EXECUTE FUNCTION qa_reject_crm_contact_update_audit()');
+  const failedUpdate = await api(`/api/crm/contacts/${contactId}`, { method: 'PATCH', cookie: owner.cookie, body: { role: 'financeiro' } });
+  assert.equal(failedUpdate.status, 503);
+  await pool.query('DROP TRIGGER qa_reject_crm_contact_update_audit ON auth_access_audit');
+  await pool.query('DROP FUNCTION qa_reject_crm_contact_update_audit()');
+  const preserved = await api(`/api/crm/contacts/${contactId}`, { cookie: owner.cookie });
+  assert.equal(preserved.body.contact.role, 'influenciador', 'falha da auditoria não pode alterar o contato');
+
+  const browser = await launchBrowser();
+  const failures = [];
+  try {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'pt-BR' });
+    const page = await context.newPage();
+    trackFailures(page, failures);
+    const pair = owner.cookie.split('; ')[0].split('=');
+    await context.addCookies([{ name: pair[0], value: pair.slice(1).join('='), url: baseUrl }]);
+    const [companiesResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().includes('/api/crm/companies?') && response.request().method() === 'GET'),
+      page.goto(`${baseUrl}/admin/crm`, { waitUntil: 'domcontentloaded' }),
+    ]);
+    assert.equal(companiesResponse.status(), 200);
+    const region = page.getByRole('region', { name: /Contatos.*CRM-02/ });
+    await region.waitFor();
+    const companySelect = region.locator('#crm-02-company');
+    const [contactListResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().includes(`/api/crm/contacts?companyId=${company.id}`) && response.request().method() === 'GET'),
+      companySelect.selectOption(company.id),
+    ]);
+    assert.equal(contactListResponse.status(), 200);
+    const createForm = region.getByRole('form', { name: 'Novo contato CRM-02' });
+    await createForm.getByLabel('Nome do contato', { exact: true }).fill('Contato UI CRM-02');
+    await createForm.getByRole('textbox', { name: 'E-mail', exact: true }).fill('ui-crm02@example.invalid');
+    await createForm.getByLabel('Função do contato', { exact: true }).selectOption('usuario');
+    await createForm.getByLabel('Origem legítima', { exact: true }).selectOption('manual');
+    await createForm.getByLabel('WhatsApp', { exact: true }).check();
+    await createForm.getByLabel('Restrições de abordagem', { exact: true }).fill('somente à tarde');
+    const [createResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().endsWith('/api/crm/contacts') && response.request().method() === 'POST'),
+      createForm.getByRole('button', { name: 'Criar contato', exact: true }).click(),
+    ]);
+    assert.equal(createResponse.status(), 201);
+    const uiArticle = region.getByRole('article', { name: 'Contato Contato UI CRM-02' });
+    await uiArticle.waitFor();
+    await uiArticle.getByRole('button', { name: 'Editar contato', exact: true }).click();
+    const editForm = region.getByRole('form', { name: 'Editar contato Contato UI CRM-02' });
+    await editForm.getByLabel('Função do contato', { exact: true }).selectOption('financeiro');
+    const [updateResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().includes('/api/crm/contacts/') && response.request().method() === 'PATCH'),
+      editForm.getByRole('button', { name: 'Salvar contato', exact: true }).click(),
+    ]);
+    assert.equal(updateResponse.status(), 200);
+    await region.getByText(/Função: financeiro/).waitFor();
+    await assertNoHorizontalScroll(page, 'CRM-02 contatos');
     await context.close();
   } finally { await browser.close(); }
   assert.deepEqual(failures, []);
