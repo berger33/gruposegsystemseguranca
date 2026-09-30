@@ -3420,6 +3420,10 @@ test('L04 fechamento: carteira pessoal, renovação, indicação, reativação e
  const conv=await api('/api/crm/reports/conversion',{cookie:a.cookie});assert.equal(conv.status,200,JSON.stringify(conv.body));assert.equal(conv.body.total,5);
  assert.equal((await api('/api/crm/reports/conversion',{cookie:b.cookie})).body.total,0);
  const weighted=await api('/api/crm/reports/weighted-forecast',{cookie:a.cookie});assert.equal(weighted.status,200);assert.equal(weighted.body.totalEstimated,1000);assert.equal(weighted.body.totalWeighted,100);assert.equal(weighted.body.isEstimate,true);
+ const scenario=await api('/api/crm/price-scenarios',{method:'POST',cookie:a.cookie,body:{opportunity_id:source,company_id:company,title:'Cenário real do pipeline',base_cost:100,tax_rate:0,margin_percent:20,formula_type:'margem_receita',premises:'Premissas sintéticas conferidas para o cenário de teste',tax_is_proportional_to_revenue:true,margin_is_on_revenue:true}});
+ assert.equal(scenario.status,201,JSON.stringify(scenario.body));
+ const pipeline=await api('/api/crm/reports/pipeline',{cookie:a.cookie});assert.equal(pipeline.status,200,JSON.stringify(pipeline.body));assert.ok(pipeline.body.byScenario.some(s=>s.title==='Cenário real do pipeline'&&Number(s.total_value)===125));
+ assert.equal((await api('/api/crm/reports/pipeline',{cookie:b.cookie})).body.byScenario.length,0);
  const metrics=(await api('/api/crm/portfolio',{cookie:a.cookie})).body.metrics;assert.equal(metrics.reduce((n,x)=>n+x.total,0),4);
  const lost=await api('/api/crm/opportunities/'+source,{method:'PATCH',cookie:a.cookie,body:{stage:'perdido',loss_reason:'Contato adiado pela empresa em teste sintético'}});
  assert.equal(lost.status,200);
