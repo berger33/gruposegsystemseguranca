@@ -96,6 +96,8 @@ import { createAstAdvancedApi } from "./src/server/ast-advanced-api.mjs";
 import { createExtApi } from "./src/server/ext-api.mjs";
 import { createExtAdvancedApi } from "./src/server/ext-advanced-api.mjs";
 import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
+import { createPortfolioApi } from "./src/server/portfolio-api.mjs";
+import { createFaqAnswerApi } from "./src/server/faq-answer-api.mjs";
 import { createCmsApi } from "./src/server/cms-api.mjs";
 import { createThemeApi } from "./src/server/theme-api.mjs";
 import { createSeoApi } from "./src/server/seo-api.mjs";
@@ -2249,6 +2251,9 @@ const extReportingApi = createExtReportingApi({
   },
 });
 
+const l04Context={pool:getPool(),sameOrigin,requireSession:readSession,requireRole:(s,roles)=>roles.includes(s.role)};
+const portfolioApi=createPortfolioApi(l04Context);
+const faqAnswerApi=createFaqAnswerApi(l04Context);
 const cmsApi = createCmsApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -2448,6 +2453,16 @@ async function routeApi(req, res) {
   };
   try {
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+  if (url.pathname === "/api/crm/portfolio") return portfolioApi(req,res);
+  if (["/api/faq-assisted","/api/public/faq-assisted"].includes(url.pathname)) return faqAnswerApi(req,res);
+  // Historical FAQ sessions/messages/handoffs contain personal data. Only
+  // staff administrators may access them; public support uses /api/leads.
+  if (/^\/api\/(?:admin\/)?(?:public\/)?(?:faq-assisted|faq-handoff|human-handoff|pub-faq|pub\/(?:faq|handoff))/.test(url.pathname)) {
+    const s=await readSession(req);
+    if(!s?.identityId) return json(res,401,{error:"session_required"});
+    if(!["admin","marcelo","ti"].includes(s.role)) return json(res,403,{error:"role_required"});
+    if(req.method!=="GET"&&!sameOrigin(req)) return json(res,403,{error:"same_origin_required"});
+  }
   if (url.pathname === "/api/site-visual") return handleSiteVisual(req, res, url);
   if (url.pathname === "/api/leads") return handleCreateLead(req, res);
   if (url.pathname === "/api/admin/session") return handleAdminSession(req, res);
