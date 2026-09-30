@@ -10,6 +10,7 @@ import MyDelegatedTasks from "./MyDelegatedTasks";
 import CadenceClient from "./CadenceClient";
 import ContactManager from "./ContactManager";
 import UnitManager from "./UnitManager";
+import ImportDedupReview from "./ImportDedupReview";
 
 type Company = { id: string; display_name: string; type: string; city: string; segment: string | null; status: string; responsible_name: string | null; };
 type Unit = { id: string; display_name: string };
@@ -229,7 +230,8 @@ export default function CrmPage() {
           <input type="file" accept=".csv,text/csv" onChange={handleFileChange} />
           <input placeholder="Nome arquivo" value={fileName} onChange={e=>setFileName(e.target.value)} style={{ padding: 6, minWidth: 200 }} />
           <button onClick={previewImport} disabled={importLoading} style={{ padding: "6px 12px" }}>{importLoading ? "Processando..." : "Prévia (CRM-03)"}</button>
-          {importPreview && <button onClick={commitImport} disabled={importLoading} style={{ padding: "6px 12px", background: "#16a34a", color: "#fff" }}>Confirmar importação {importPreview.report.valid} válidas</button>}
+          {importPreview && importPreview.report.duplicate === 0 && <button onClick={commitImport} disabled={importLoading} style={{ padding: "6px 12px", background: "#16a34a", color: "#fff" }}>Confirmar importação {importPreview.report.valid} válidas</button>}
+          {importPreview && importPreview.report.duplicate > 0 && <span style={{ fontSize: 12 }}>Confirmação pela revisão de deduplicação abaixo.</span>}
         </div>
         <div style={{ marginTop: 8 }}>
           <label style={{ fontSize: 12 }}>Ou cole CSV (primeira linha cabeçalhos):</label>
@@ -257,6 +259,12 @@ export default function CrmPage() {
             </div>
             {importPreview.previewTruncated && <p style={{ fontSize: 11, opacity: 0.6 }}>Prévia truncada em 100 linhas, total {importPreview.totalRows}</p>}
           </div>
+        )}
+        {importPreview && (
+          <ImportDedupReview
+            batchId={importPreview.batchId}
+            onCommitted={() => { load(); }}
+          />
         )}
         {importResult && (
           <div style={{ marginTop: 8, padding: 8, background: "#dcfce7", borderRadius: 6, fontSize: 12 }}>

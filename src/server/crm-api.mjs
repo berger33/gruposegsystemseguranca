@@ -1357,7 +1357,8 @@ export function createCrmApi(ctx) {
       if (displayNames.length > 0) {
         const uniqNames = [...new Set(displayNames.filter(Boolean))].slice(0, 200);
         for (const name of uniqNames) {
-          const r = await db.query(`SELECT id, display_name, document_ref FROM crm_companies WHERE display_name ILIKE $1 LIMIT 1`, [name]);
+          // CRM-03: curinga escapado — `Empresa 100%` não casa com terceiros.
+          const r = await db.query(`SELECT id, display_name, document_ref FROM crm_companies WHERE display_name ILIKE $1 ESCAPE '\\' LIMIT 1`, [escapeLikePattern(name).slice(1, -1)]);
           if (r.rows[0]) existingByName.set(name.toLowerCase(), r.rows[0]);
         }
       }
@@ -1468,7 +1469,9 @@ export function createCrmApi(ctx) {
   }
 
   async function handleImportById(req, res, id, url) {
-    const session = await requireAdminSession(req, res);
+    // CRM-03: ler o lote e fechá-lo é superfície comercial, igual à revisão de
+    // deduplicação — papel fora da família recebe 403, não 401.
+    const session = await requireContactSession(req, res);
     if (!session) return;
     const db = ctx.getPool();
     if (!isValidUuid(id)) return ctx.json(res, 400, { error: "invalid_import_id" });
@@ -1491,7 +1494,11 @@ export function createCrmApi(ctx) {
       let body;
       try { body = await ctx.readJson(req, 100 * 1024); } catch { return ctx.json(res, 400, { error: "invalid_request" }); }
 
-      const actions = body?.actions && typeof body.actions === "object" ? body.actions : {};
+      // CRM-03: a decisão de deduplicação não entra mais solta no commit —
+      // só pela rota dedicada, que persiste autor/data e audita.
+      if (body && typeof body === "object" && Object.keys(body).length > 0) {
+        return ctx.json(res, 400, { error: "actions_not_accepted" });
+      }
 
       try {
         const batchRes = await db.query("SELECT * FROM crm_import_batches WHERE id = $1 FOR UPDATE", [id]);
@@ -1499,6 +1506,16 @@ export function createCrmApi(ctx) {
         if (!batch) return ctx.json(res, 404, { error: "import_not_found" });
         if (batch.status === "completed") return ctx.json(res, 409, { error: "already_completed" });
         if (batch.status === "processing") return ctx.json(res, 409, { error: "already_processing" });
+
+        // Fail-closed: nenhuma duplicata pode ser resolvida por default
+        // silencioso. Sem revisão completa o lote continua `pending`.
+        const pendingReview = await db.query(
+          "SELECT COUNT(*)::int AS total FROM crm_import_rows WHERE batch_id = $1 AND status = 'duplicate' AND decision IS NULL",
+          [id],
+        );
+        if ((pendingReview.rows[0]?.total || 0) > 0) {
+          return ctx.json(res, 409, { error: "pending_dedup_review", pending: pendingReview.rows[0].total });
+        }
 
         await db.query("UPDATE crm_import_batches SET status = 'processing', updated_at = NOW() WHERE id = $1", [id]);
 
@@ -1508,7 +1525,7 @@ export function createCrmApi(ctx) {
         let failed = 0;
 
         for (const row of rowsRes.rows) {
-          const overrideAction = actions[String(row.row_number)] || actions[row.row_number] || row.action;
+          const overrideAction = row.decision || row.action;
           if (overrideAction === "skip" || row.status === "invalid") {
             await db.query("UPDATE crm_import_rows SET action = 'skip', status = CASE WHEN status = 'valid' THEN 'skipped' ELSE status END WHERE id = $1", [row.id]);
             skipped++;
@@ -1561,12 +1578,24 @@ export function createCrmApi(ctx) {
           }
         }
 
-        await db.query(
-          `UPDATE crm_import_batches SET status = 'completed', created_rows = $2, completed_at = NOW(), report = report || $3::jsonb, updated_at = NOW() WHERE id = $1`,
-          [id, created, JSON.stringify({ created, skipped, failed, committed_at: new Date().toISOString() })]
-        );
-
-        await audit(db, { action: "crm_import_commit", target: id, result: "allowed", actorKind: session.role, actorId: session.identityId });
+        // Fechamento do lote + trilha na MESMA transação: se a auditoria
+        // falhar, o lote não é dado como concluído (cai no catch e vira
+        // 'failed' + 503), em vez de fechar em silêncio.
+        const closeClient = await db.connect();
+        try {
+          await closeClient.query("BEGIN");
+          await closeClient.query(
+            `UPDATE crm_import_batches SET status = 'completed', created_rows = $2, completed_at = NOW(), report = report || $3::jsonb, updated_at = NOW() WHERE id = $1`,
+            [id, created, JSON.stringify({ created, skipped, failed, committed_at: new Date().toISOString() })],
+          );
+          await transactionalAudit(closeClient, session, "crm_import_commit", id);
+          await closeClient.query("COMMIT");
+        } catch (closeError) {
+          await closeClient.query("ROLLBACK").catch(() => {});
+          throw closeError;
+        } finally {
+          closeClient.release();
+        }
 
         const finalBatch = await db.query("SELECT * FROM crm_import_batches WHERE id = $1", [id]);
         return ctx.json(res, 200, { batch: finalBatch.rows[0], created, skipped, failed });
@@ -1578,6 +1607,104 @@ export function createCrmApi(ctx) {
     }
 
     return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, POST" });
+  }
+
+  // --- CRM-03: revisão dedicada de deduplicação ---
+  const IMPORT_DECISIONS = new Set(["create", "skip"]);
+
+  async function handleImportDuplicates(req, res, id) {
+    const session = await requireContactSession(req, res);
+    if (!session) return;
+    if (!requireMethod(req, res, ["GET"])) return;
+    if (!requireSameOrigin(req, res)) return;
+    if (!isValidUuid(id)) return ctx.json(res, 400, { error: "invalid_import_id" });
+    const db = ctx.getPool();
+    try {
+      const batchRes = await db.query("SELECT * FROM crm_import_batches WHERE id = $1", [id]);
+      const batch = batchRes.rows[0];
+      if (!batch) return ctx.json(res, 404, { error: "import_not_found" });
+      const rowsRes = await db.query(
+        `SELECT row_number, mapped_data, dedup_match_id, dedup_match_type, dedup_match_details,
+                decision, decision_note, decided_by, decided_at
+           FROM crm_import_rows
+          WHERE batch_id = $1 AND status = 'duplicate'
+          ORDER BY row_number`,
+        [id],
+      );
+      const pending = rowsRes.rows.filter(row => !row.decision).length;
+      return ctx.json(res, 200, {
+        batch: { id: batch.id, file_name: batch.file_name, status: batch.status, type: batch.type, duplicate_rows: batch.duplicate_rows },
+        duplicates: rowsRes.rows,
+        pending_review: pending,
+        review_complete: pending === 0,
+      });
+    } catch (e) {
+      console.error("crm import duplicates failed", e?.message);
+      return ctx.json(res, 503, { error: "crm_unavailable" });
+    }
+  }
+
+  async function handleImportRowDecision(req, res, id, rowNumberRaw) {
+    const session = await requireContactSession(req, res);
+    if (!session) return;
+    if (!requireMethod(req, res, ["PATCH"])) return;
+    if (!requireSameOrigin(req, res)) return;
+    if (!isValidUuid(id)) return ctx.json(res, 400, { error: "invalid_import_id" });
+    const rowNumber = Number.parseInt(rowNumberRaw, 10);
+    if (!Number.isInteger(rowNumber) || rowNumber < 1) return ctx.json(res, 400, { error: "invalid_row_number" });
+
+    let body;
+    try { body = await ctx.readJson(req, 8 * 1024); } catch { return ctx.json(res, 400, { error: "invalid_request" }); }
+
+    const editable = new Set(["decision", "note", "decision_note", "decisionNote"]);
+    const unknown = Object.keys(body || {}).filter(key => !editable.has(key));
+    if (unknown.length) return ctx.json(res, 400, { error: "field_not_editable" });
+
+    const decision = typeof body?.decision === "string" ? body.decision.toLowerCase() : null;
+    if (!decision || !IMPORT_DECISIONS.has(decision)) return ctx.json(res, 400, { error: "invalid_decision" });
+
+    const rawNote = body?.note ?? body?.decision_note ?? body?.decisionNote;
+    let note = null;
+    if (rawNote !== undefined && rawNote !== null && rawNote !== "") {
+      note = sanitizeText(rawNote, 300);
+      if (!note) return ctx.json(res, 400, { error: "invalid_note" });
+    }
+
+    try {
+      const result = await withTransactionalAudit(session, "crm_import_row_decision", `${id}:${rowNumber}`, async (client) => {
+        const batchRes = await client.query("SELECT id, status FROM crm_import_batches WHERE id = $1 FOR UPDATE", [id]);
+        const batch = batchRes.rows[0];
+        if (!batch) { const error = new Error("import_not_found"); error.code = "IMPORT_NOT_FOUND"; throw error; }
+        if (batch.status !== "pending") { const error = new Error("batch_not_pending"); error.code = "BATCH_NOT_PENDING"; throw error; }
+
+        const rowRes = await client.query(
+          "SELECT id, status FROM crm_import_rows WHERE batch_id = $1 AND row_number = $2 FOR UPDATE",
+          [id, rowNumber],
+        );
+        const row = rowRes.rows[0];
+        if (!row) { const error = new Error("row_not_found"); error.code = "ROW_NOT_FOUND"; throw error; }
+        // Revisão não promove linha inválida nem decide linha que não é
+        // duplicata — isso seria bypass da validação da prévia.
+        if (row.status !== "duplicate") { const error = new Error("row_not_duplicate"); error.code = "ROW_NOT_DUPLICATE"; throw error; }
+
+        return client.query(
+          `UPDATE crm_import_rows
+              SET decision = $2, decision_note = $3, decided_by = $4, decided_by_id = $5, decided_at = NOW(),
+                  action = $2
+            WHERE id = $1
+            RETURNING row_number, status, decision, decision_note, decided_by, decided_at`,
+          [row.id, decision, note, session.role, session.identityId],
+        );
+      });
+      return ctx.json(res, 200, { row: result.rows[0] });
+    } catch (e) {
+      if (e?.code === "IMPORT_NOT_FOUND") return ctx.json(res, 404, { error: "import_not_found" });
+      if (e?.code === "ROW_NOT_FOUND") return ctx.json(res, 404, { error: "row_not_found" });
+      if (e?.code === "BATCH_NOT_PENDING") return ctx.json(res, 409, { error: "batch_not_pending" });
+      if (e?.code === "ROW_NOT_DUPLICATE") return ctx.json(res, 409, { error: "row_not_duplicate" });
+      console.error("crm import row decision failed", e?.message);
+      return ctx.json(res, 503, { error: "decision_failed" });
+    }
   }
 
   async function handleExportCompanies(req, res, url) {
@@ -1636,6 +1763,8 @@ export function createCrmApi(ctx) {
     handleImportsList,
     handleImportPreview,
     handleImportById,
+    handleImportDuplicates,
+    handleImportRowDecision,
     handleExportCompanies,
   };
 }

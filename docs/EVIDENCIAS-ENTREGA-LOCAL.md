@@ -1631,3 +1631,30 @@ continuam fora do CHECK; CRM-08 não ganhou lembretes/notificações externas;
 PUB-02/05/06/07/09 seguem pendentes/parciais; CRM-10 permanece fora por
 decisão. Nenhuma integração externa, produção, Windows ou aceite humano foi
 contratado/executado. L04 continua parcial e L05 não foi iniciado.
+
+---
+
+## CRM-03 — revisão dedicada de deduplicação (2026-09-29)
+
+Base: `c3d799c` (PR #31). Branch `arena/01a0efec-gruposegsystemseguranca`.
+
+| # | Cenário | Comando | Esperado | Observado |
+|---|---|---|---|---|
+| CRM03-1 | Verificações estáticas | `node scripts/qa-wave0-static.mjs` | 5/5, migrações 001–116 | 5/5, 0 migrações ausentes |
+| CRM03-2 | Suíte unitária | `npm test` | tudo passa | 196/196, exit 0 |
+| CRM03-3 | Tipos | `npm run typecheck` | 0 erros | 0 erros, exit 0 |
+| CRM03-4 | Build | `npm run build` | sucesso | sucesso |
+| CRM03-5 | Migrações em PostgreSQL descartável | `npm run test:migrations:pg` | 116/116, replay/clone/checksum | `116/116 checksums preserved`, `tables 510`, `migration_checksum_mismatch: 006 rejected (exit 1)` |
+| CRM03-6 | Gate L04 (HTTP real + PG descartável + Chromium real) | `npm run test:l04-delivery:pg` | 15/15 | 15/15 em duas execuções consecutivas (`L04_DELIVERY_TEST_EXIT: 0`); execuções intermediárias reprovadas apenas por Chromium morto no `launch` (ruído de ambiente) e por seletor de UI corrigido |
+
+Cenário 15 do gate (`CRM-03: revisão dedicada de deduplicação`) cobre:
+401 sem sessão, 403 para RH e para origem externa, 405 em método errado,
+400 `invalid_decision`/`field_not_editable`, 404 de lote e de linha,
+409 `row_not_duplicate`, 409 `pending_dedup_review` com lote preservado em
+`pending` e nenhuma empresa criada, 400 `actions_not_accepted`, rollback 503
+com decisão revertida por gatilho de auditoria injetado, decisão persistida com
+autor/data e trilha `crm_import_row_decision`, commit revisado criando apenas o
+autorizado, 409 `batch_not_pending` depois do fechamento, curinga `%` do CSV
+não casando com empresa de terceiro e jornada de UI em `/admin/crm` sem
+rolagem horizontal, erro de console ou 5xx inesperado.
+

@@ -3108,3 +3108,181 @@ test('CRM-01: unidades dedicadas com escopo de empresa, unidade principal única
   } finally { await browser.close(); }
   assert.deepEqual(failures, []);
 });
+
+// CRM-03: a revisão de deduplicação ganha cenário próprio para que "revisável"
+// não fique provado apenas porque a prévia marca a linha como duplicada.
+test('CRM-03: revisão dedicada de deduplicação — decisão explícita, persistida, auditada e commit fail-closed', { skip: !RUN, timeout: 240_000 }, async () => {
+  const owner = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
+  const rh = await provisionAndLoginStaff(pool, api, { role: 'rh' });
+
+  const marker = randomUUID().slice(0, 8);
+  const existingName = `Empresa CRM-03 Existente ${marker}`;
+  const existingDoc = `DOC-CRM03-${marker}`;
+  const existing = await api('/api/crm/companies', {
+    method: 'POST', cookie: owner.cookie,
+    body: { display_name: existingName, document_ref: existingDoc, city: 'Barueri', type: 'client' },
+  });
+  assert.equal(existing.status, 201, JSON.stringify(existing.body));
+
+  // Também prova o curinga escapado: o CSV traz um nome com `%` que NÃO pode
+  // casar com a empresa existente só por causa do ILIKE.
+  const wildcardName = `Empresa CRM-03 %${marker}`;
+  const novelName = `Empresa CRM-03 Nova ${marker}`;
+  const csv = [
+    'display_name,document_ref,city,type',
+    `${existingName},${existingDoc},Barueri,client`,
+    `${existingName} filial,DOC-CRM03B-${marker},Osasco,prospect`,
+    `${wildcardName},DOC-CRM03C-${marker},Osasco,prospect`,
+    `${novelName},DOC-CRM03D-${marker},Campinas,prospect`,
+  ].join('\n');
+
+  const preview = await api('/api/crm/imports/preview', {
+    method: 'POST', cookie: owner.cookie,
+    body: { type: 'companies', fileName: 'crm-03-dedup.csv', csvContent: csv },
+  });
+  assert.equal(preview.status, 201, JSON.stringify(preview.body));
+  const batchId = preview.body.batchId;
+  assert.equal(preview.body.report.total, 4);
+  assert.equal(preview.body.report.duplicate, 1, 'só a linha idêntica é duplicata; o nome com curinga não casa');
+  assert.equal(preview.body.report.valid, 3);
+
+  // 1) Autorização e entrada da superfície de revisão
+  assert.equal((await api(`/api/crm/imports/${batchId}/duplicates`)).status, 401);
+  assert.equal((await api(`/api/crm/imports/${batchId}/duplicates`, { cookie: rh.cookie })).status, 403);
+  assert.equal((await api(`/api/crm/imports/${randomUUID()}/duplicates`, { cookie: owner.cookie })).status, 404);
+  assert.equal((await api(`/api/crm/imports/${batchId}/rows/1`, { method: 'PATCH', cookie: rh.cookie, body: { decision: 'skip' } })).status, 403);
+  assert.equal((await api(`/api/crm/imports/${batchId}/rows/1`, { method: 'PATCH', cookie: owner.cookie, origin: 'https://origem-externa.example', body: { decision: 'skip' } })).status, 403);
+  assert.equal((await api(`/api/crm/imports/${batchId}/rows/1`, { method: 'DELETE', cookie: owner.cookie })).status, 405);
+  assert.equal((await api(`/api/crm/imports/${batchId}/rows/1`, { method: 'PATCH', cookie: owner.cookie, body: { decision: 'merge' } })).body.error, 'invalid_decision');
+  assert.equal((await api(`/api/crm/imports/${batchId}/rows/1`, { method: 'PATCH', cookie: owner.cookie, body: { decision: 'skip', decided_by: 'outra pessoa' } })).body.error, 'field_not_editable');
+  assert.equal((await api(`/api/crm/imports/${batchId}/rows/9999`, { method: 'PATCH', cookie: owner.cookie, body: { decision: 'skip' } })).status, 404);
+
+  assert.equal((await api(`/api/crm/imports/${batchId}`, { cookie: rh.cookie })).status, 403);
+  assert.equal((await api(`/api/crm/imports/${batchId}/commit`, { method: 'POST', cookie: rh.cookie, body: {} })).status, 403);
+
+  const duplicatesBefore = await api(`/api/crm/imports/${batchId}/duplicates`, { cookie: owner.cookie });
+  assert.equal(duplicatesBefore.status, 200);
+  assert.equal(duplicatesBefore.body.duplicates.length, 1);
+  assert.equal(duplicatesBefore.body.pending_review, 1);
+  assert.equal(duplicatesBefore.body.review_complete, false);
+  const duplicateRowNumber = duplicatesBefore.body.duplicates[0].row_number;
+  assert.equal(duplicatesBefore.body.duplicates[0].decision, null);
+  assert.equal(duplicatesBefore.body.duplicates[0].dedup_match_details.display_name, existingName);
+
+  // 2) Linha que não é duplicata não é decidível (revisão não vira bypass)
+  const validRowNumber = duplicateRowNumber === 1 ? 2 : 1;
+  assert.equal((await api(`/api/crm/imports/${batchId}/rows/${validRowNumber}`, { method: 'PATCH', cookie: owner.cookie, body: { decision: 'create' } })).body.error, 'row_not_duplicate');
+
+  // 3) Commit fail-closed enquanto houver duplicata pendente — nada é criado
+  const blocked = await api(`/api/crm/imports/${batchId}/commit`, { method: 'POST', cookie: owner.cookie, body: {} });
+  assert.equal(blocked.status, 409);
+  assert.equal(blocked.body.error, 'pending_dedup_review');
+  assert.equal((await pool.query('SELECT status FROM crm_import_batches WHERE id = $1', [batchId])).rows[0].status, 'pending');
+  assert.equal((await pool.query('SELECT COUNT(*)::int AS total FROM crm_companies WHERE display_name = $1', [novelName])).rows[0].total, 0);
+
+  // 4) O mapa solto de ações no commit deixou de ser aceito
+  const legacyActions = await api(`/api/crm/imports/${batchId}/commit`, { method: 'POST', cookie: owner.cookie, body: { actions: { [duplicateRowNumber]: 'create' } } });
+  assert.equal(legacyActions.status, 400);
+  assert.equal(legacyActions.body.error, 'actions_not_accepted');
+
+  // 5) Auditoria transacional da decisão: falha injetada reverte a decisão
+  await pool.query(`CREATE OR REPLACE FUNCTION qa_reject_crm_dedup_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.action = 'crm_import_row_decision' THEN RAISE EXCEPTION 'qa injected crm dedup decision audit failure'; END IF; RETURN NEW; END $$`);
+  await pool.query('CREATE TRIGGER qa_reject_crm_dedup_audit BEFORE INSERT ON auth_access_audit FOR EACH ROW EXECUTE FUNCTION qa_reject_crm_dedup_audit()');
+  const failedDecision = await api(`/api/crm/imports/${batchId}/rows/${duplicateRowNumber}`, { method: 'PATCH', cookie: owner.cookie, body: { decision: 'create' } });
+  assert.equal(failedDecision.status, 503);
+  await pool.query('DROP TRIGGER qa_reject_crm_dedup_audit ON auth_access_audit');
+  await pool.query('DROP FUNCTION qa_reject_crm_dedup_audit()');
+  assert.equal((await pool.query('SELECT decision FROM crm_import_rows WHERE batch_id = $1 AND row_number = $2', [batchId, duplicateRowNumber])).rows[0].decision, null);
+
+  // 6) Decisão explícita registrada, com autor, data e trilha
+  const decided = await api(`/api/crm/imports/${batchId}/rows/${duplicateRowNumber}`, {
+    method: 'PATCH', cookie: owner.cookie, body: { decision: 'skip', note: 'mesma empresa já cadastrada' },
+  });
+  assert.equal(decided.status, 200, JSON.stringify(decided.body));
+  assert.equal(decided.body.row.decision, 'skip');
+  assert.equal(decided.body.row.decision_note, 'mesma empresa já cadastrada');
+  assert.ok(decided.body.row.decided_at);
+  const decisionAudit = await pool.query(
+    "SELECT actor_id FROM auth_access_audit WHERE action = 'crm_import_row_decision' AND target = $1",
+    [`${batchId}:${duplicateRowNumber}`],
+  );
+  assert.equal(decisionAudit.rows.length, 1);
+  assert.equal(decisionAudit.rows[0].actor_id, owner.id);
+
+  const duplicatesAfter = await api(`/api/crm/imports/${batchId}/duplicates`, { cookie: owner.cookie });
+  assert.equal(duplicatesAfter.body.pending_review, 0);
+  assert.equal(duplicatesAfter.body.review_complete, true);
+
+  // 7) Commit revisado cria só o que foi autorizado e a duplicata é ignorada
+  const commit = await api(`/api/crm/imports/${batchId}/commit`, { method: 'POST', cookie: owner.cookie, body: {} });
+  assert.equal(commit.status, 200, JSON.stringify(commit.body));
+  assert.equal(commit.body.created, 3);
+  assert.equal(commit.body.skipped, 1);
+  assert.equal(commit.body.failed, 0);
+  assert.equal((await pool.query('SELECT COUNT(*)::int AS total FROM crm_companies WHERE display_name = $1', [existingName])).rows[0].total, 1, 'a duplicata descartada não pode duplicar a empresa');
+  assert.equal((await pool.query('SELECT COUNT(*)::int AS total FROM crm_companies WHERE display_name = $1', [wildcardName])).rows[0].total, 1);
+
+  // 8) Lote fechado não aceita nova decisão e não é recommitado
+  assert.equal((await api(`/api/crm/imports/${batchId}/rows/${duplicateRowNumber}`, { method: 'PATCH', cookie: owner.cookie, body: { decision: 'create' } })).body.error, 'batch_not_pending');
+  assert.equal((await api(`/api/crm/imports/${batchId}/commit`, { method: 'POST', cookie: owner.cookie, body: {} })).status, 409);
+
+  // 9) UI real: revisar e confirmar pela tela, com Chromium real
+  const uiMarker = randomUUID().slice(0, 8);
+  const uiExistingName = `Empresa CRM-03 UI ${uiMarker}`;
+  assert.equal((await api('/api/crm/companies', {
+    method: 'POST', cookie: owner.cookie,
+    body: { display_name: uiExistingName, document_ref: `DOC-UI-${uiMarker}`, city: 'Barueri', type: 'client' },
+  })).status, 201);
+  const uiCsv = [
+    'display_name,document_ref,city,type',
+    `${uiExistingName},DOC-UI-${uiMarker},Barueri,client`,
+    `Empresa CRM-03 UI Nova ${uiMarker},DOC-UIB-${uiMarker},Campinas,prospect`,
+  ].join('\n');
+
+  const browser = await launchBrowser();
+  const failures = [];
+  try {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'pt-BR' });
+    const page = await context.newPage();
+    trackFailures(page, failures);
+    const pair = owner.cookie.split('; ')[0].split('=');
+    await context.addCookies([{ name: pair[0], value: pair.slice(1).join('='), url: baseUrl }]);
+    await Promise.all([
+      page.waitForResponse(response => response.url().includes('/api/crm/companies?') && response.request().method() === 'GET'),
+      page.goto(`${baseUrl}/admin/crm`, { waitUntil: 'domcontentloaded' }),
+    ]);
+    await page.getByPlaceholder(/display_name,document_ref,city,segment,type/).fill(uiCsv);
+    const [previewResponse] = await Promise.all([
+      page.waitForResponse(response => response.url().endsWith('/api/crm/imports/preview') && response.request().method() === 'POST'),
+      page.getByRole('button', { name: /Prévia \(CRM-03\)/ }).click(),
+    ]);
+    assert.equal(previewResponse.status(), 201);
+
+    const region = page.getByRole('region', { name: 'Revisão de deduplicação CRM-03' });
+    await region.waitFor();
+    await region.getByText(/duplicatas pendentes de revisão/).waitFor();
+
+    const commitButton = region.getByRole('button', { name: 'Confirmar importação revisada' });
+    assert.equal(await commitButton.isDisabled(), true, 'confirmação fica bloqueada enquanto houver duplicata pendente');
+
+    const [decisionResponse] = await Promise.all([
+      page.waitForResponse(response => /\/api\/crm\/imports\/[0-9a-f-]+\/rows\/\d+$/i.test(response.url()) && response.request().method() === 'PATCH'),
+      region.getByRole('button', { name: /^Descartar linha \d+$/ }).first().click(),
+    ]);
+    assert.equal(decisionResponse.status(), 200);
+    await region.getByText(/descartar linha —/).waitFor();
+
+    const [commitResponse] = await Promise.all([
+      page.waitForResponse(response => /\/api\/crm\/imports\/[0-9a-f-]+\/commit$/i.test(response.url()) && response.request().method() === 'POST'),
+      commitButton.click(),
+    ]);
+    assert.equal(commitResponse.status(), 200);
+    await region.getByText(/Importação confirmada: 1 criadas/).waitFor();
+    await assertNoHorizontalScroll(page, 'CRM-03 revisão de deduplicação');
+    await context.close();
+  } finally { await browser.close(); }
+  assert.deepEqual(failures, []);
+
+  assert.equal((await pool.query('SELECT COUNT(*)::int AS total FROM crm_companies WHERE display_name = $1', [uiExistingName])).rows[0].total, 1);
+});

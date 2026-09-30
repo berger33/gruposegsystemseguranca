@@ -197,10 +197,10 @@ contato com função no processo de compra (decisor, influenciador, usuário, fi
 
 ## CRM-03
 importar CSV com prévia, validação por linha, mapeamento, relatório, deduplicação revisável e prevenção de fórmula maliciosa na exportação.
-- Estado: parcial (revalidado nesta sessão; deduplicação revisável ainda sem tela dedicada)
-- Tela / API / dados / autorização: `/admin/crm` tem importação de CSV com prévia (`csvContent`, `importPreview`, `importResult`).
-- Integração e evidência (teste, resultado, commit): Gate CRM-01..04 conferiu prévia/commit, deduplicação da fixture e bytes da exportação com neutralização de fórmula.
-- Pendência / fronteira externa / aceite humano: deduplicação revisável ainda não tem tela dedicada; a prévia existente é a superfície administrativa.
+- Estado: pronto_local (gate L04 15/15 em duas execuções consecutivas, PostgreSQL descartável e Chromium real)
+- Tela / API / dados / autorização: `/admin/crm` com `ImportDedupReview.tsx`; `GET /api/crm/imports/:id/duplicates` e `PATCH /api/crm/imports/:id/rows/:n` (família comercial, RH 403); commit fail-closed em `POST /api/crm/imports/:id/commit`; migração 116 (`decision`, `decision_note`, `decided_by`, `decided_by_id`, `decided_at` + ação `crm_import_row_decision`).
+- Integração e evidência (teste, resultado, commit): cenário 15 do gate L04 (decisão explícita persistida e auditada, 409 `pending_dedup_review`, 400 `actions_not_accepted`, rollback 503 por auditoria injetada, curinga ILIKE escapado, jornada UI em Chromium real). Local: static 5/5, migrations 116/116 (510 tabelas, clone/checksum negativo), gate L04 15/15 x2, unit 196/196, typecheck e build aprovados.
+- Pendência / fronteira externa / aceite humano: sem aceite humano do proprietário. Mesclagem/atualização do registro existente, deduplicação de contatos e revisão de lotes antigos pela tela seguem fora, por decisão.
 
 ## CRM-04
 converter lead do site em contato/oportunidade preservando histórico; tratar duplicidade e contato sem empresa.
