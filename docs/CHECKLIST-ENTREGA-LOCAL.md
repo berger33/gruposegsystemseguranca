@@ -812,59 +812,59 @@ checklists por serviço/cliente, versão, frequência, itens obrigatórios e evi
 
 ## OPS-09
 visitas de supervisão, inspeções e planos de ação com prazo, responsável e verificação.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: abas `Supervisão` em `/admin/operacao`; `/api/ops/supervision-visits`, `/supervision-inspections` e `/supervision-action-plans`; posto e contrato ativos, supervisor ativo, score 0–100, apontamentos e verificação nominal. Migração aditiva 123 e auditoria transacional fail-closed.
+- Integração e evidência (teste, resultado, commit): Subtest 5 do gate L06 cobre criação, score inválido e verificação obrigatória; `npm run test:l06-delivery:pg` verde, 5/5.
+- Pendência / fronteira externa / aceite humano: aceite humano da operação permanece pendente.
 
 ## OPS-10
 rondas e pontos de verificação quando aplicáveis; prevenção de repetição/replay, tratamento de localização indisponível e evidência auditável. GPS/QR isolado não prova execução.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: aba `Rondas & Claviculário`; `/api/ops/patrols`, `/patrol-points` e `/patrol-readings`; detecta `duplicate_qr`, `too_fast`, `gps_jump`, exige motivo de localização indisponível e oferece chave idempotente de leitura.
+- Integração e evidência (teste, resultado, commit): Subtest 5 valida localização indisponível, replay e retry idempotente.
+- Pendência / fronteira externa / aceite humano: fluxo obrigatoriamente rotulado sintético; QR/GPS não é prova de presença real.
 
 ## OPS-11
 chaves, rádios, materiais e equipamentos com guarda/transferência/devolução.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: aba `Rondas & Claviculário`; `/api/ops/keys` e `/key-movements`; tipos fechados, responsável/finalidade e índice único de custódia ativa.
+- Integração e evidência (teste, resultado, commit): Subtest 5 confirma retirada, segunda retirada 409 e devolução preservando a cadeia.
+- Pendência / fronteira externa / aceite humano: conferência física e aceite humano pendentes.
 
 ## OPS-12
 relatórios periódicos ao cliente com revisão de conteúdo e privacidade.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: aba `Relatórios`; `/api/ops/client-reports`; transições estritas `rascunho → em_revisao → aprovado → enviado`, escopo contrato/unidade/documento e revisão de privacidade.
+- Integração e evidência (teste, resultado, commit): Subtest 5 bloqueia envio antecipado e valida aprovação formal antes da liberação.
+- Pendência / fronteira externa / aceite humano: envio externo real não é alegado; aceite humano pendente.
 
 ## OPS-13
 métricas de cobertura, tempo descoberto, incidentes, visitas e reincidência; definir fonte e janela.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: aba `Métricas & Escalas`; `/api/ops/metrics-definitions` e `/metrics-snapshots`; fonte, janela, fórmula, valor e completude (`completo`, `parcial`, `incompleto`) explícitos.
+- Integração e evidência (teste, resultado, commit): Subtest 5 rejeita valor ausente/zero implícito e incompletude sem justificativa.
+- Pendência / fronteira externa / aceite humano: qualidade da fonte deve ser validada pelo responsável.
 
 ## OPS-14
 escalas assistidas/automáticas depois das regras validadas; apresentar conflitos, motivos e revisão humana antes de publicar.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: aba `Métricas & Escalas`; `/api/ops/assisted-schedules` e `/assisted-schedule-entries`; detecta sobreposição, interjornada e falta de qualificação, gravando conflitos explicáveis.
+- Integração e evidência (teste, resultado, commit): Subtest 5 produz conflito e confirma bloqueio 409 da publicação.
+- Pendência / fronteira externa / aceite humano: publicação exige conflitos resolvidos, revisão humana e motivo.
 
 ## OPS-15
 supervisão de limpeza com rotinas por ambiente, consumo e não conformidades.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: aba `Limpeza`; APIs de ambientes, rotinas, execuções e não conformidades; executor ativo, inspeção/score e severidade registrados.
+- Integração e evidência (teste, resultado, commit): Subtest 5 cobre banheiro, rotina diária, executor, inspeção de qualidade e NC alta.
+- Pendência / fronteira externa / aceite humano: inspeção física real permanece responsabilidade humana.
 
 ## OPS-16
 eventos de monitoramento via conector, fila, reconhecimento e escalonamento; não construir substituto de central 24h ou armazenar vídeo sem projeto específico.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: aba `Monitoramento Sintético`; `/api/ops/monitoring-connectors` e `/monitoring-events`; restrições SQL `is_synthetic=true`, eventos fechados e fluxo pendente/reconhecido/em tratamento/resolvido.
+- Integração e evidência (teste, resultado, commit): Subtest 5 rejeita evento não sintético e valida reconhecimento, tratamento, encerramento e Chromium real.
+- Pendência / fronteira externa / aceite humano: sem central 24h, vídeo ou promessa de despacho externo real.
 
 ## CLI-01
 identidade, convite, recuperação e sessão reais; entrada única, rotas antigas identificadas/redirecionadas com cuidado.

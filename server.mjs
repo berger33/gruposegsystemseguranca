@@ -1976,13 +1976,12 @@ const opsAdvancedApi = createOpsAdvancedApi({
 
 const opsAdvanced2Api = createOpsAdvanced2Api({
   pool: getPool(),
+  // L06-E: propagate audit failures so the endpoint can roll back atomically.
   auditLog: async ({ action, actor, target, meta }) => {
-    try {
-      await getPool().query(
-        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
-        [action, actor, target, meta ? JSON.stringify(meta) : null]
-      );
-    } catch {}
+    await getPool().query(
+      `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+      [action, actor, target, meta ? JSON.stringify(meta) : null]
+    );
   },
   sameOrigin,
   requireSession: readSession,
@@ -1994,13 +1993,12 @@ const opsAdvanced2Api = createOpsAdvanced2Api({
 
 const opsAdvanced3Api = createOpsAdvanced3Api({
   pool: getPool(),
+  // L06-E: propagate audit failures so the endpoint can roll back atomically.
   auditLog: async ({ action, actor, target, meta }) => {
-    try {
-      await getPool().query(
-        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
-        [action, actor, target, meta ? JSON.stringify(meta) : null]
-      );
-    } catch {}
+    await getPool().query(
+      `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+      [action, actor, target, meta ? JSON.stringify(meta) : null]
+    );
   },
   sameOrigin,
   requireSession: readSession,
@@ -3480,8 +3478,8 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/ops-patrols" || url.pathname === "/api/crm/hr/ops-patrols" || url.pathname === "/api/hr/ops-patrols" || url.pathname === "/api/ops/patrols") {
     return opsAdvanced2Api.handlePatrols(req, res);
   }
-  if (url.pathname === "/api/admin/hr/ops-patrol-points" || url.pathname === "/api/crm/hr/ops-patrol-points" || url.pathname === "/api/hr/ops-patrol-points" || url.pathname === "/api/ops/patrol-points") {
-    return opsAdvanced2Api.handlePatrolPoints(req, res);
+  if (url.pathname === "/api/admin/hr/ops-patrol-points" || url.pathname === "/api/crm/hr/ops-patrol-points" || url.pathname === "/api/hr/ops-patrol-points" || url.pathname === "/api/ops/patrol-points" || url.pathname === "/api/ops/patrol-readings") {
+    return opsAdvanced2Api.handlePatrolReadings(req, res);
   }
   if (url.pathname === "/api/admin/hr/ops-patrol-replay-logs" || url.pathname === "/api/crm/hr/ops-patrol-replay-logs" || url.pathname === "/api/hr/ops-patrol-replay-logs" || url.pathname === "/api/ops/patrol-replay-logs") {
     return opsAdvanced2Api.handlePatrolReplayLogs(req, res);
@@ -3514,11 +3512,11 @@ async function routeApi(req, res) {
     return opsAdvanced3Api.handleMetricsReincidence(req, res);
   }
   // OPS-14 escalas assistidas/automáticas depois regras validadas conflitos motivos revisão humana antes publicar
-  if (url.pathname === "/api/admin/hr/ops-assisted-proposals" || url.pathname === "/api/crm/hr/ops-assisted-proposals" || url.pathname === "/api/hr/ops-assisted-proposals" || url.pathname === "/api/ops/assisted-proposals") {
-    return opsAdvanced3Api.handleAssistedProposals(req, res);
+  if (url.pathname === "/api/admin/hr/ops-assisted-proposals" || url.pathname === "/api/crm/hr/ops-assisted-proposals" || url.pathname === "/api/hr/ops-assisted-proposals" || url.pathname === "/api/ops/assisted-proposals" || url.pathname === "/api/ops/assisted-schedules") {
+    return opsAdvanced3Api.handleAssistedSchedules(req, res);
   }
-  if (url.pathname === "/api/admin/hr/ops-assisted-entries" || url.pathname === "/api/crm/hr/ops-assisted-entries" || url.pathname === "/api/hr/ops-assisted-entries" || url.pathname === "/api/ops/assisted-entries") {
-    return opsAdvanced3Api.handleAssistedEntries(req, res);
+  if (url.pathname === "/api/admin/hr/ops-assisted-entries" || url.pathname === "/api/crm/hr/ops-assisted-entries" || url.pathname === "/api/hr/ops-assisted-entries" || url.pathname === "/api/ops/assisted-entries" || url.pathname === "/api/ops/assisted-schedule-entries") {
+    return opsAdvanced3Api.handleAssistedScheduleEntries(req, res);
   }
   if (url.pathname === "/api/admin/hr/ops-assisted-conflicts" || url.pathname === "/api/crm/hr/ops-assisted-conflicts" || url.pathname === "/api/hr/ops-assisted-conflicts" || url.pathname === "/api/ops/assisted-conflicts") {
     return opsAdvanced3Api.handleAssistedConflicts(req, res);
@@ -4892,6 +4890,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/crm/hr/ops-patrol-points"
   || pathname === "/api/hr/ops-patrol-points"
   || pathname === "/api/ops/patrol-points"
+  || pathname === "/api/ops/patrol-readings"
   || pathname === "/api/admin/hr/ops-patrol-replay-logs"
   || pathname === "/api/crm/hr/ops-patrol-replay-logs"
   || pathname === "/api/hr/ops-patrol-replay-logs"
@@ -4932,10 +4931,12 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/crm/hr/ops-assisted-proposals"
   || pathname === "/api/hr/ops-assisted-proposals"
   || pathname === "/api/ops/assisted-proposals"
+  || pathname === "/api/ops/assisted-schedules"
   || pathname === "/api/admin/hr/ops-assisted-entries"
   || pathname === "/api/crm/hr/ops-assisted-entries"
   || pathname === "/api/hr/ops-assisted-entries"
   || pathname === "/api/ops/assisted-entries"
+  || pathname === "/api/ops/assisted-schedule-entries"
   || pathname === "/api/admin/hr/ops-assisted-conflicts"
   || pathname === "/api/crm/hr/ops-assisted-conflicts"
   || pathname === "/api/hr/ops-assisted-conflicts"

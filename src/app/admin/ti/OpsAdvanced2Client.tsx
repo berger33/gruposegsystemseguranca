@@ -115,9 +115,9 @@ export default function OpsAdvanced2Client() {
   async function createKey() {
     try { await api("/api/hr/ops-keys","POST",{ code:keyForm.code, description:keyForm.description, key_type:keyForm.key_type, location:keyForm.location }); setMsg("Chave/rádio/equip criado"); loadAll(); } catch(e:any){ setMsg("Erro chave: "+e.message); }
   }
-  const [movForm, setMovForm] = useState({ key_id:"", movement_type:"retirada", from_employee_id:"", to_employee_id:"", reason:"", authorized_by:"" });
+  const [movForm, setMovForm] = useState({ key_id:"", movement_type:"retirada", from_employee_id:"", to_employee_id:"", reason:"", purpose:"", authorized_by:"" });
   async function createMovement() {
-    try { await api("/api/hr/ops-key-movements","POST",{ key_id:movForm.key_id, movement_type:movForm.movement_type, from_employee_id:movForm.from_employee_id||null, to_employee_id:movForm.to_employee_id||null, reason:movForm.reason, authorized_by:movForm.authorized_by }); setMsg("Movimentação guarda/transferência/devolução registrada"); const d=await api("/api/hr/ops-key-movements?key_id="+movForm.key_id,"GET"); if(d.movements) setMovements(d.movements); loadAll(); } catch(e:any){ setMsg("Erro mov: "+e.message); }
+    try { await api("/api/hr/ops-key-movements","POST",{ key_id:movForm.key_id, movement_type:movForm.movement_type, from_employee_id:movForm.from_employee_id||null, to_employee_id:movForm.to_employee_id||null, reason:movForm.reason, purpose:movForm.purpose, authorized_by:movForm.authorized_by }); setMsg("Movimentação guarda/transferência/devolução registrada"); const d=await api("/api/hr/ops-key-movements?key_id="+movForm.key_id,"GET"); if(d.movements) setMovements(d.movements); loadAll(); } catch(e:any){ setMsg("Erro mov: "+e.message); }
   }
   async function loadMovements(key_id:string) {
     try { const d=await api("/api/hr/ops-key-movements?key_id="+key_id,"GET"); if(d.movements) setMovements(d.movements); } catch {}
@@ -253,6 +253,7 @@ export default function OpsAdvanced2Client() {
         <input placeholder="from_employee_id" value={movForm.from_employee_id} onChange={e=>setMovForm({...movForm, from_employee_id:e.target.value})} style={{ width:150 }} />
         <input placeholder="to_employee_id" value={movForm.to_employee_id} onChange={e=>setMovForm({...movForm, to_employee_id:e.target.value})} style={{ width:150 }} />
         <input placeholder="motivo 10..1000" value={movForm.reason} onChange={e=>setMovForm({...movForm, reason:e.target.value})} style={{ width:200 }} />
+        <input placeholder="finalidade da custódia" value={movForm.purpose} onChange={e=>setMovForm({...movForm, purpose:e.target.value})} style={{ width:200 }} />
         <input placeholder="autorizado por" value={movForm.authorized_by} onChange={e=>setMovForm({...movForm, authorized_by:e.target.value})} />
         <button onClick={createMovement}>Registrar Movimento</button>
       </div>

@@ -47,10 +47,16 @@
   - **AST-12 Materiais de Limpeza:** controle de consumo previsto vs real por local/posto, cálculo automático da razão de consumo (`consumption_ratio`), variância e acionamento automático de necessidade de reposição (`needs_replacement=true`) quando o consumo exceder o esperado.
 - **Interface `/admin/patrimonio`:** inclusão de abas completas para Ordens de Serviço (OS) e Inventários Físicos com formulários de abertura, conferência e filtros.
 
+### Fatia E: Operação Avançada (OPS-09..16)
+- **Migração aditiva `123-l06-fatia-e-operacao-avancada.sql`:** adiciona escopo canônico de contrato/unidade/documento, idempotência de leituras de ronda, trava de custódia ativa, completude de métricas, inspeção de limpeza e restrições SQL obrigatórias `is_synthetic=true` para rondas e monitoramento.
+- **APIs endurecidas:** `ops-advanced2-api.mjs` e `ops-advanced3-api.mjs` exigem sessão e papel, validam posto/contrato/funcionário ativos e executam mutação com auditoria fail-closed. Incluem supervisão/planos; replay `duplicate_qr`, `too_fast` e `gps_jump`; claviculário 409; relatório com máquina de estados; métricas sem zero implícito; escalas com conflitos; limpeza com executor/inspeção/NC; e monitoramento exclusivamente sintético.
+- **Interface `/admin/operacao`:** seis abas novas — `Supervisão`, `Rondas & Claviculário`, `Relatórios`, `Métricas & Escalas`, `Limpeza` e `Monitoramento Sintético` — com avisos explícitos sobre incompletude, decisão humana e ausência de GPS, central 24h ou despacho real.
+- **Subtest 5:** cobre OPS-09..16 por HTTP/PostgreSQL reais, autorização negativa, idempotência, conflitos, cadeia de custódia, status formais, auditoria indisponível sem escrita parcial e navegação Chromium real.
+
 ## Gate remoto L06
 
 - `scripts/qa-l06-delivery-postgres.mjs` — PostgreSQL descartável (recusa banco externo), migra e roda a suíte com HTTP real e Chromium empacotado.
-- `tests/l06-delivery.integration.test.mjs` — 4 subtestes integrados cobrindo Fatias A, B, C e D.
+- `tests/l06-delivery.integration.test.mjs` — 5 subtestes integrados cobrindo Fatias A, B, C, D e E.
 - `npm run test:l06-delivery:pg` e workflow `.github/workflows/l06-delivery.yml`.
 
 ### Fluxo verificado (sem skip, sem mock de banco/navegador)
@@ -77,27 +83,35 @@
 20. Consumo de produtos de limpeza calcula variância e sinaliza necessidade de reposição.
 21. Transações e trilhas de auditoria são fail-closed (503 sem escrita parcial).
 22. Chromium real carrega `/admin/operacao` e `/admin/patrimonio` autenticado e renderiza abas e dados reais vindos da API.
+23. Supervisão exige posto/contrato e supervisor ativos; score fora de 0–100 e verificação anônima são rejeitados.
+24. Ronda sintética trata localização indisponível, replay de QR e retry idempotente sem alegar presença real.
+25. Claviculário bloqueia segunda retirada ativa com 409 e preserva retirada/devolução.
+26. Relatório só é enviado após revisão e aprovação formais.
+27. Métrica não aceita valor ausente como zero e registra fonte, janela, fórmula e incompletude.
+28. Escala assistida materializa sobreposição/interjornada/qualificação e bloqueia publicação com conflito.
+29. Limpeza registra ambiente, periodicidade, executor, inspeção e não conformidade com severidade.
+30. Monitoramento rejeita evento não sintético e registra reconhecimento, tratamento e encerramento sem despacho real.
 
 ## Evidência executada no Arena remoto
 
 | Comando | Resultado |
 |---|---|
-| `node scripts/qa-wave0-static.mjs` | 5/5; manifesto contínuo 001–122 |
+| `node scripts/qa-wave0-static.mjs` | 5/5; manifesto contínuo 001–123 |
 | `npm run typecheck` | aprovado |
 | `npm test` | aprovado; 196/196 |
 | `npm run build` | aprovado; inclui `/admin/operacao` e `/admin/patrimonio` |
-| `npm run test:migrations:pg` | aprovado; 122/122 checksums, 517 tabelas, clone descartável, rejeição de mutação sintética |
-| `npm run test:l05-delivery:pg` | aprovado (sem regressão após migrações 120-122) |
-| `npm run test:l06-delivery:pg` | aprovado; 4 cenários completos em HTTP real + PostgreSQL descartável + Chromium |
+| `npm run test:migrations:pg` | aprovado; 123/123 checksums, 517 tabelas, clone descartável, rejeição de mutação sintética |
+| `npm run test:l05-delivery:pg` | aprovado (sem regressão após migrações aditivas L06) |
+| `npm run test:l06-delivery:pg` | aprovado; 5 cenários completos em HTTP real + PostgreSQL descartável + Chromium |
 
 ## Diferenciação de estado
 
-- **Conclusão técnica local**: fatias A, B, C e D verificáveis pelo gate L06.
+- **Conclusão técnica local**: fatias A, B, C, D e E verificáveis pelo gate L06.
 - **Aceite humano**: pendente (revisão de entrega).
-- **Integração externa**: fora de escopo por política — compras externas, recebimento fiscal, gateway e canais reais permanecem bloqueados/rotulados.
-- **Simulação**: fluxo sintético de compras rotulado (`is_synthetic_flow=true`).
+- **Integração externa**: fora de escopo por política — compras externas, recebimento fiscal, gateway, GPS/presença, central 24h e despacho real permanecem bloqueados/rotulados.
+- **Simulação**: compras, rondas e monitoramento são explicitamente sintéticos (`is_synthetic_flow=true` / `is_synthetic=true`).
 
-## Próxima fatia
+## Marco concluído localmente
 
-- **E**: OPS-09..16 (supervisão, rondas, chaves/materiais, limpeza, monitoramento sintético rotulado, indicadores com incompletude).
+- OPS-01..16 e AST-01..12 estão `pronto_local`; aceite humano e integrações externas permanecem separados da conclusão técnica.
 

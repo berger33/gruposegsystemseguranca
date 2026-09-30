@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import OpsAdvanced2Client from "../ti/OpsAdvanced2Client";
+import OpsAdvanced3Client from "../ti/OpsAdvanced3Client";
 
 type Post = {
   id: string;
@@ -56,7 +58,7 @@ type ChecklistInstance = {
 };
 
 export default function OperacaoWorkspace() {
-  const [activeTab, setActiveTab] = useState<"postos" | "cobertura" | "passagem" | "ocorrencias" | "checklists">("postos");
+  const [activeTab, setActiveTab] = useState<"postos" | "cobertura" | "passagem" | "ocorrencias" | "checklists" | "supervisao" | "rondas" | "relatorios" | "metricas" | "limpeza" | "monitoramento">("postos");
   const [posts, setPosts] = useState<Post[]>([]);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [coverages, setCoverages] = useState<CoverageRequest[]>([]);
@@ -111,7 +113,7 @@ export default function OperacaoWorkspace() {
         Superfície canônica de operação. Alocar ou cobrir não significa faturamento nem recebimento. Contrato encerrado, cancelado ou suspenso não recebe nova alocação ou rotina; o histórico é preservado.
       </p>
 
-      <div role="tablist" style={{ display: "flex", gap: 8, borderBottom: "2px solid #e2e8f0", marginBottom: 24 }}>
+      <div role="tablist" style={{ display: "flex", flexWrap: "wrap", gap: 8, borderBottom: "2px solid #e2e8f0", marginBottom: 24 }}>
         <button
           role="tab"
           aria-selected={activeTab === "postos"}
@@ -187,6 +189,19 @@ export default function OperacaoWorkspace() {
         >
           Checklists de Posto (OPS-08)
         </button>
+        {([
+          ["supervisao", "Supervisão"],
+          ["rondas", "Rondas & Claviculário"],
+          ["relatorios", "Relatórios"],
+          ["metricas", "Métricas & Escalas"],
+          ["limpeza", "Limpeza"],
+          ["monitoramento", "Monitoramento Sintético"],
+        ] as const).map(([key, label]) => (
+          <button key={key} role="tab" aria-selected={activeTab === key} onClick={() => setActiveTab(key)}
+            style={{ padding: "8px 12px", border: "none", background: "none", borderBottom: activeTab === key ? "3px solid #2563eb" : "3px solid transparent", fontWeight: activeTab === key ? "bold" : "normal", cursor: "pointer" }}>
+            {label}
+          </button>
+        ))}
       </div>
 
       {loading && <p role="status">Carregando operação…</p>}
@@ -389,6 +404,27 @@ export default function OperacaoWorkspace() {
               </tbody>
             </table>
           )}
+        </section>
+      )}
+
+      {!loading && !error && (["supervisao", "rondas", "relatorios"] as const).includes(activeTab as any) && (
+        <section aria-label="Operação avançada OPS-09 a OPS-12">
+          <p style={{ padding: 10, background: "#eff6ff", borderRadius: 6 }}>
+            {activeTab === "supervisao" && "Supervisão de postos, inspeções e planos de ação."}
+            {activeTab === "rondas" && "Rondas e claviculário — leituras são sintéticas e não comprovam GPS ou presença real."}
+            {activeTab === "relatorios" && "Relatórios e livro de serviço: liberação somente após aprovação formal."}
+          </p>
+          <OpsAdvanced2Client />
+        </section>
+      )}
+      {!loading && !error && (["metricas", "limpeza", "monitoramento"] as const).includes(activeTab as any) && (
+        <section aria-label="Operação avançada OPS-13 a OPS-16">
+          <p style={{ padding: 10, background: "#fff7ed", borderRadius: 6 }}>
+            {activeTab === "metricas" && "Métricas com fonte, fórmula, janela e incompletude explícita; escalas exigem revisão humana."}
+            {activeTab === "limpeza" && "Rotinas de limpeza, inspeção de qualidade e não conformidades."}
+            {activeTab === "monitoramento" && "Monitoramento Sintético: simulação sem central 24h e sem despacho externo real."}
+          </p>
+          <OpsAdvanced3Client />
         </section>
       )}
     </main>
