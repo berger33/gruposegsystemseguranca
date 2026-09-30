@@ -18,7 +18,7 @@ Código validado no commit `1ecac2852e9a0eb2e6af3d2ea73116ad7942006b` por GitHub
 - [Gate L04 aprovado](https://github.com/berger33/gruposegsystemseguranca/actions/runs/36662350715): 20 testes integrados, 20 aprovados, zero falhas e zero skips, com HTTP, PostgreSQL e Chromium.
 - Migrações: 117/117 com checksums, reaplicação idempotente e restauração de clone descartável verificadas; alteração de checksum rejeitada intencionalmente no teste negativo.
 
-As alterações posteriores a esse commit nesta entrega são documentais. Consulte os checks do PR #33 para o resultado do HEAD mais recente.
+Após essa validação, foram publicados os documentos e ajustada a sincronização do teste de navegação semanal (aguardar resposta e renderização antes de avançar). Uma rodada intermediária revelou esse timeout; não foi ignorado. Consulte os checks do PR #33 para o resultado do HEAD mais recente.
 
 Fronteiras explícitas: SMTP/hospedagem/DNS públicos excluídos, A/B condicionado, IA/RAG completo em L09, contratos completos em L05, operação/estoque em L06, integração financeira em L07 e ensaio Windows/aceite humano em L10. Tema altera superfícies com tokens; não reescreve os dez layouts. Lembretes são internos ao abrir/atualizar a agenda, sem notificação externa em segundo plano.
 
