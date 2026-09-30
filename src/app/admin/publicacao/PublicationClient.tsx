@@ -31,7 +31,7 @@ export default function PublicationClient({initialTab='conteudo'}:{initialTab?:s
  <label><input type="checkbox" checked={draft.is_authorized} onChange={e=>setDraft({...draft,is_authorized:e.target.checked})}/>Confirmo autorização para publicar este case e seu conteúdo</label><br/><button disabled={busy}>Salvar rascunho</button>
  </form>}
  {tab==='temas'&&<section style={box}><h2>Identidade visual</h2><p>Os temas alteram a paleta e os componentes que usam os tokens do site. A composição dos dez layouts continua disponível em <a href="/admin/visual">Layouts</a>. A prévia abaixo não publica alterações.</p>
- <label>Tema<select value={theme} onChange={e=>{setTheme(e.target.value);setPreview(false);}}>{THEMES.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
+ <label>Tema<select aria-label="Tema" value={theme} onChange={e=>{setTheme(e.target.value);setPreview(false);}}>{THEMES.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
  <button disabled={busy} onClick={()=>run(async()=>{await api('/api/admin/theme-previews?theme='+theme);setPreview(true);})}>Visualizar tema</button>
  {preview&&<article aria-label="Prévia do tema" style={{...box,background:tokens.bg,color:tokens.fg,borderColor:tokens.accent,fontFamily:tokens.font,borderRadius:tokens.radius}}><h3>SEG System</h3><p>Serviços para sua operação. Conteúdo de prévia; não publicado.</p><button style={{borderColor:tokens.accent}}>Solicitar contato</button></article>}
  <button disabled={busy||!preview||reason.length<10} onClick={()=>run(()=>api(endpoint,'POST',{theme_key:theme,reason}))}>Salvar versão do tema</button>
