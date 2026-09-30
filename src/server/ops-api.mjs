@@ -137,13 +137,27 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       if (!['portaria','vigilancia','limpeza','zeladoria','recepcao','monitoramento','manutencao','outro'].includes(post_type)) return send(res, 400, { error: 'invalid_post_type' });
       const location = b.location ? String(b.location).trim().slice(0,500) : null;
       const description = b.description ? String(b.description).trim().slice(0,2000) : null;
+      const contract_id = b.contract_id || b.contractId;
+      if (contract_id && !validateUuid(contract_id)) return send(res, 400, { error: 'invalid_contract_id' });
+      // OPS-01: vínculo explícito posto → contrato canônico L05. O contrato deve
+      // existir e, quando a empresa também é informada, pertencer à mesma empresa
+      // (evita ligar posto ao contrato de outro cliente por ID trocado).
+      let resolvedCompanyId = company_id || null;
+      if (contract_id) {
+        try {
+          const c = await pool.query('SELECT id, company_id FROM crm_contracts WHERE id=$1', [contract_id]);
+          if (!c.rows[0]) return send(res, 404, { error: 'contract_not_found' });
+          if (company_id && c.rows[0].company_id && c.rows[0].company_id !== company_id) return send(res, 409, { error: 'contract_company_mismatch' });
+          if (!resolvedCompanyId && c.rows[0].company_id) resolvedCompanyId = c.rows[0].company_id;
+        } catch (e) { console.error('post contract lookup', e.message); return send(res, 503, { error: 'validation_unavailable' }); }
+      }
       try {
         const { rows } = await pool.query(
-          `INSERT INTO ops_posts (company_id, unit_id, name, location, post_type, description, is_active, created_by)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-          [company_id || null, unit_id || null, name, location, post_type, description, b.is_active !== undefined ? !!b.is_active : true, sess.role]
+          `INSERT INTO ops_posts (company_id, unit_id, contract_id, name, location, post_type, description, is_active, created_by)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+          [resolvedCompanyId, unit_id || null, contract_id || null, name, location, post_type, description, b.is_active !== undefined ? !!b.is_active : true, sess.role]
         );
-        try { await auditLog({ action: 'ops_post_create', actor: sess.role, target: rows[0].id, meta: { name, company_id } }); } catch {}
+        try { await auditLog({ action: 'ops_post_create', actor: sess.role, target: rows[0].id, meta: { name, company_id: resolvedCompanyId, contract_id: contract_id || null } }); } catch {}
         return send(res, 201, { post: rows[0] });
       } catch (e) { console.error('posts POST', e.message); return send(res, 500, { error: 'internal_error' }); }
     }
@@ -292,26 +306,63 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       if (role_id && !validateUuid(role_id)) return send(res, 400, { error: 'invalid_role_id' });
       const allocation_date = b.allocation_date || b.allocationDate;
       if (!allocation_date) return send(res, 400, { error: 'allocation_date_required' });
+      // OPS-01/07: o posto precisa existir e estar ativo. Um post_id inexistente
+      // (troca de ID) é negado com 404, não colide em erro de FK.
+      let postRow;
+      try {
+        const pr = await pool.query(
+          `SELECT p.id, p.is_active, p.contract_id, c.status AS contract_status
+             FROM ops_posts p
+             LEFT JOIN crm_contracts c ON c.id = p.contract_id
+            WHERE p.id=$1`,
+          [post_id]
+        );
+        postRow = pr.rows[0];
+      } catch (e) { console.error('alloc post lookup', e.message); return send(res, 503, { error: 'validation_unavailable' }); }
+      if (!postRow) return send(res, 404, { error: 'post_not_found' });
+      if (postRow.is_active === false) return send(res, 409, { error: 'post_inactive' });
+      // OPS-07/CON-09: contrato encerrado/cancelado/suspenso não recebe nova
+      // alocação; o histórico existente é preservado (não apagamos nada).
+      const NON_OPERATIONAL_CONTRACT = ['encerrado', 'cancelado', 'suspenso'];
+      if (postRow.contract_id && NON_OPERATIONAL_CONTRACT.includes(postRow.contract_status)) {
+        return send(res, 409, { error: 'contract_not_operational', contract_status: postRow.contract_status });
+      }
+      // OPS-04: o funcionário precisa existir e estar ativo (não desligado/afastado).
+      let empRow;
+      try {
+        const er = await pool.query('SELECT id, status FROM hr_employees WHERE id=$1', [employee_id]);
+        empRow = er.rows[0];
+      } catch (e) { console.error('alloc employee lookup', e.message); return send(res, 503, { error: 'validation_unavailable' }); }
+      if (!empRow) return send(res, 404, { error: 'employee_not_found' });
+      if (empRow.status !== 'ativo') return send(res, 409, { error: 'employee_not_operational', status: empRow.status });
+      // Idempotência: uma repetição exata (mesmo posto/funcionário/data/turno) não
+      // é uma sobreposição, é a mesma alocação. Reconhecemos antes para não criar
+      // segunda linha nem confundir com conflito de escala.
+      try {
+        const dup = await pool.query(
+          `SELECT id FROM ops_allocations WHERE post_id=$1 AND employee_id=$2 AND allocation_date=$3 AND shift_template_id=$4`,
+          [post_id, employee_id, allocation_date, shift_template_id]
+        );
+        if (dup.rows[0]) return send(res, 409, { error: 'duplicate_allocation', existing: dup.rows[0].id });
+      } catch (e) { console.error('duplicate check', e.message); return send(res, 503, { error: 'validation_unavailable' }); }
       // Validar sobreposição (OPS-04) - verifica se employee já tem alocação no mesmo dia e turno sobreposto
       try {
+        // OPS-04: sobreposição de turno é uma validação de bloqueio, não um aviso.
+        // Se a checagem não puder ser feita, negamos (fail-closed) em vez de
+        // permitir uma escala potencialmente conflitante. Parâmetros: $1 employee,
+        // $2 data, $3 turno alvo, $4 id em edição (para não colidir consigo mesmo).
         const overlap = await pool.query(
           `SELECT a.id FROM ops_allocations a
            JOIN ops_shift_templates st ON st.id = a.shift_template_id
-           JOIN ops_shift_templates st2 ON st2.id = $4
-           WHERE a.employee_id=$1 AND a.allocation_date=$2 AND a.id != COALESCE($5::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
+           JOIN ops_shift_templates st2 ON st2.id = $3
+           WHERE a.employee_id=$1 AND a.allocation_date=$2 AND a.id != COALESCE($4::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
            AND (st.start_time < st2.end_time AND st.end_time > st2.start_time)`,
-          [employee_id, allocation_date, null, shift_template_id, b.id || null]
+          [employee_id, allocation_date, shift_template_id, b.id || null]
         );
         if (overlap.rows[0]) {
-          // Registra validação falha
-          await pool.query(
-            `INSERT INTO ops_schedule_validations (employee_id, validation_type, is_valid, conflict_details, validated_by)
-             VALUES ($1,'sobreposicao',false,$2,$3)`,
-            [employee_id, JSON.stringify({ message: 'Sobreposição de turno detectada', existing_allocation: overlap.rows[0].id, allocation_date, shift_template_id }), sess.role]
-          );
           return send(res, 409, { error: 'overlap_detected', existing: overlap.rows[0].id, detail: 'Funcionário já alocado em turno sobreposto no mesmo dia' });
         }
-      } catch (e) { /* ignora erro de validação para não bloquear, mas loga */ console.error('overlap check', e.message); }
+      } catch (e) { console.error('overlap check', e.message); return send(res, 503, { error: 'validation_unavailable' }); }
       // Validar habilitação/documentação
       if (role_id) {
         try {
@@ -326,17 +377,30 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
           }
         } catch (e) { console.error('qual check', e.message); }
       }
+      // Escrita + auditoria na MESMA transação (fail-closed): se a trilha em
+      // audit_log não puder ser gravada, a alocação inteira é revertida — não
+      // deixamos efeito parcial sem auditoria (padrão consolidado no L05).
+      const client = await pool.connect();
       try {
-        const { rows } = await pool.query(
+        await client.query('BEGIN');
+        const { rows } = await client.query(
           `INSERT INTO ops_allocations (post_id, employee_id, shift_template_id, role_id, allocation_date, status, notes, created_by)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
           [post_id, employee_id, shift_template_id, role_id || null, allocation_date, b.status || 'planejado', b.notes ? String(b.notes).trim().slice(0,2000) : null, sess.role]
         );
-        try { await auditLog({ action: 'ops_allocation_create', actor: sess.role, target: rows[0].id, meta: { post_id, employee_id, allocation_date } }); } catch {}
+        await client.query(
+          `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+          ['ops_allocation_create', sess.role, rows[0].id, JSON.stringify({ post_id, employee_id, allocation_date })]
+        );
+        await client.query('COMMIT');
         return send(res, 201, { allocation: rows[0] });
       } catch (e) {
+        try { await client.query('ROLLBACK'); } catch {}
         if (e.code === '23505') return send(res, 409, { error: 'duplicate_allocation' });
-        console.error('alloc POST', e.message); return send(res, 500, { error: 'internal_error' });
+        console.error('alloc POST', e.message);
+        return send(res, 503, { error: 'allocation_unavailable' });
+      } finally {
+        client.release();
       }
     }
     if (req.method === 'PATCH') {

@@ -756,31 +756,31 @@ indicadores de quadro, admissão, faltas, rotatividade, férias, documentos e at
 
 ## OPS-01
 estrutura cliente → unidade atendida → posto físico → necessidade por turno → alocação; cargo/função em entidade própria.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: em_andamento (fatia A endurecida; UI e demais superfícies em fatias seguintes)
+- Tela / API / dados / autorização: `/admin/operacao` (postos e alocações, com carregamento/vazio/erro); `POST /api/ops/posts` aceita `contract_id` validando existência do contrato canônico e coerência de empresa; migração aditiva `119` cria `ops_posts.contract_id → crm_contracts`. Autorização por sessão de staff + papel; `/api/ops/*` fora da borda de RH.
+- Integração e evidência (teste, resultado, commit): `npm run test:l06-delivery:pg` verde (HTTP real + PostgreSQL descartável + Chromium) cria posto vinculado a contrato ativo e nega vínculo a contrato de outra empresa (409 `contract_company_mismatch`).
+- Pendência / fronteira externa / aceite humano: cargo/função (`ops-job-roles`) ainda sob a borda de RH; necessidade por turno e demais telas nas próximas fatias. Aceite humano pendente.
 
 ## OPS-02
 dimensionamento contratado versus planejado e realizado, cobertura por faixa de tempo e profissional habilitado.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: schema `ops_dimensioning`/`ops_coverage_gaps` e `ops-api` existentes; endurecimento e evidência na fatia seguinte.
+- Integração e evidência (teste, resultado, commit): a cobrir no gate L06.
+- Pendência / fronteira externa / aceite humano: revalidar cálculo de cobertura e escopo por contrato.
 
 ## OPS-03
 escala em rascunho/publicada/revisada, validade e histórico; calendário por posto/equipe/pessoa e ciência.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: `ops_schedule_versions`/`ops_schedule_history` e `ops-api` existentes; preservação de versão/autor a revalidar na fatia seguinte.
+- Integração e evidência (teste, resultado, commit): a cobrir no gate L06.
+- Pendência / fronteira externa / aceite humano: ciência do funcionário e não duplicação em retry.
 
 ## OPS-04
 validar sobreposição, indisponibilidade, habilitação, documentação e regras de jornada/descanso configuradas e aprovadas.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: em_andamento (bloqueio de sobreposição e de funcionário não ativo endurecidos)
+- Tela / API / dados / autorização: `POST /api/ops/allocations` valida posto existente/ativo, contrato operacional, funcionário `ativo`, duplicidade exata e **sobreposição de turno** (bug de parâmetro `$3` corrigido; agora bloqueia de verdade, fail-closed); escrita + auditoria na mesma transação (fail-closed).
+- Integração e evidência (teste, resultado, commit): `npm run test:l06-delivery:pg` verde: nega anônimo (401), papel indevido (403), posto/funcionário inexistente por troca de ID (404), funcionário desligado (409), sobreposição (409 `overlap_detected`), retry idempotente (409 `duplicate_allocation`, sem segunda linha), contrato encerrado (409 `contract_not_operational`, histórico preservado) e auditoria indisponível (503 sem efeito parcial).
+- Pendência / fronteira externa / aceite humano: habilitação/documentação/jornada-descanso plenas dependem de dados de RH/qualificação e entram nas fatias seguintes. Aceite humano pendente.
 
 ## OPS-05
 ausência abre pendência de cobertura; candidatos de substituição por disponibilidade/qualificação, decisão humana e comunicação.
