@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import OpportunityVisits from "./OpportunityVisits";
 
 // CRM-08 — agenda pessoal: visitas em que a identidade autenticada é
 // responsável ou participante convidado. Nenhuma outra agenda é exposta.
@@ -7,7 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 // Visão de calendário por semana (residual de CRM-08, ver
 // docs/PROMPT-CONTINUACAO-CRM-AGENDA-CALENDARIO.md): reaproveita o MESMO
 // endpoint /api/crm/visits/agenda com from/to, sem rota nova e sem mudança de
-// autorização. É somente leitura — confirmar/recusar continua na lista.
+// autorização. O calendário reutiliza o editor autorizado e os lembretes são internos.
 
 type AgendaVisit = {
   id: string; opportunity_id: string | null; title: string; status: string; scheduled_at: string;
@@ -48,6 +49,10 @@ function mondayOf(weekOffset: number) {
 }
 
 export default function MyAgenda() {
+  const [selectedOpportunity,setSelectedOpportunity]=useState<string|null>(null);
+  const [refresh,setRefresh]=useState(0);
+  const [reminders,setReminders]=useState<AgendaVisit[]>([]);
+  const [reminderTotal,setReminderTotal]=useState(0);
   const [visits, setVisits] = useState<AgendaVisit[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -71,8 +76,12 @@ export default function MyAgenda() {
     try {
       const data = await request("/api/crm/visits/agenda?limit=25&offset=0");
       setVisits(data.visits);
+      const now=new Date(),until=new Date(now.getTime()+24*3600000);
+      const reminderData=await request('/api/crm/visits/agenda?limit=100&offset=0&from='+encodeURIComponent(now.toISOString())+'&to='+encodeURIComponent(until.toISOString()));
+      setReminders(reminderData.visits.filter((v:AgendaVisit)=>!['realizada','cancelada'].includes(v.status)));
+      setReminderTotal(reminderData.pagination?.total||0);
     } catch (cause) {
-      setVisits([]);
+      setVisits([]);setReminders([]);setReminderTotal(0);
       setError(cause instanceof Error ? cause.message : "Falha ao consultar a agenda.");
     } finally { if (!quiet) setLoading(false); }
   }
@@ -109,7 +118,7 @@ export default function MyAgenda() {
       .finally(() => { if (!cancelled) setWeekLoading(false); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewMode, weekOffset]);
+  }, [viewMode, weekOffset,refresh]);
 
   async function respond(visit: AgendaVisit, response: "confirmado" | "recusado") {
     setBusy(true); setError(""); setNotice("");
@@ -118,7 +127,7 @@ export default function MyAgenda() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ expected_version: visit.version, response }),
       });
-      await load(true);
+      await load(true);setRefresh(v=>v+1);
       setNotice(response === "confirmado" ? "Presença confirmada." : "Presença recusada.");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Falha ao responder."); }
     finally { setBusy(false); }
@@ -128,6 +137,13 @@ export default function MyAgenda() {
     <section aria-label="Minha agenda de visitas e reuniões" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 16, overflowWrap: "anywhere" }}>
       <h2>Minha agenda de visitas e reuniões</h2>
       <p>Somente visitas em que você é responsável ou participante convidado, em ordem cronológica.</p>
+      <aside aria-label="Lembretes da agenda" style={{padding:12,border:'1px solid #94a3b8',borderRadius:6,marginBlock:12}}>
+        <h3>Próximas 24 horas</h3><p>Lembretes internos atualizados ao abrir ou atualizar a agenda. Nenhum e-mail ou aviso externo foi enviado.</p>
+        {!reminders.length?<p>Nenhum compromisso ativo nas próximas 24 horas.</p>:<ul>{reminders.map(v=><li key={v.id}>{v.title} — {new Date(v.scheduled_at).toLocaleString('pt-BR')}{v.opportunity_id&&<button onClick={()=>setSelectedOpportunity(v.opportunity_id)}>Ver compromisso</button>}</li>)}</ul>}
+        {reminderTotal>100&&<p>Há mais compromissos: consulte a agenda por período.</p>}
+        <button disabled={busy||loading} onClick={()=>{void load();setRefresh(v=>v+1);}}>Atualizar lembretes</button>
+      </aside>
+      {selectedOpportunity&&<section aria-label="Gerenciar compromisso do calendário"><button onClick={()=>{setSelectedOpportunity(null);void load(true);setRefresh(v=>v+1);}}>Fechar gerenciamento</button><OpportunityVisits opportunityId={selectedOpportunity} onChanged={()=>{void load(true);setRefresh(v=>v+1);}}/></section>}
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
       <div role="group" aria-label="Modo de visualização da agenda" style={{ display: "flex", gap: 8, marginBottom: 12 }}>
@@ -174,7 +190,7 @@ export default function MyAgenda() {
             <button type="button" disabled={weekLoading} onClick={() => setWeekOffset(offset => offset + 1)}>Próxima semana</button>
             <span>Semana de {fullDateLabel(week.monday)} a {fullDateLabel(week.days[6])}</span>
           </div>
-          <p>Esta visão é somente leitura. Para confirmar, recusar, reagendar ou cancelar, use a lista.</p>
+          <p>Use Gerenciar compromisso para confirmar, reagendar ou cancelar com suas permissões.</p>
           {weekError && <p role="alert">{weekError}</p>}
           {weekLoading ? <p role="status">Carregando a semana…</p> : (
             <>
@@ -202,6 +218,7 @@ export default function MyAgenda() {
                               {new Date(visit.scheduled_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                               {" — "}{statusLabels[visit.status] || visit.status}: {visit.title}
                               {visit.company_name ? ` — ${visit.company_name}` : ""}
+                              {visit.opportunity_id&&<button type="button" onClick={()=>setSelectedOpportunity(visit.opportunity_id)}>Gerenciar compromisso</button>}
                             </li>
                           ))}
                         </ul>

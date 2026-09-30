@@ -1,6 +1,5 @@
 import { PUBLIC_SERVICES } from "@/lib/service-catalog.mjs";
 import FaqAssistedWidget from "@/components/FaqAssistedWidget";
-import AiBotWidget from "@/components/AiBotWidget";
 
 export const metadata = {
   title: "FAQ — Grupo SEG System",
@@ -73,7 +72,7 @@ export default function FaqPage() {
       </section>
 
       <FaqAssistedWidget />
-      <AiBotWidget defaultRagKey="publico" showDevConfig={true} />
+      
 
       <section style={{ marginTop: 24 }}>
         <h2 style={{ fontSize: 18 }}>Acessibilidade, navegação e desempenho — PUB-02</h2>

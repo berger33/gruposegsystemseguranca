@@ -1,11 +1,14 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PUBLIC_SERVICES, PROPERTY_TYPES, buildRequestSummary } from "@/lib/service-catalog.mjs";
 import AiBotWidget from "@/components/AiBotWidget";
 
 export default function ContatoPage() {
   const [form, setForm] = useState({ name: "", phone: "", city: "", propertyType: "Condomínio", services: [] as string[], details: "", consent: false, requestKind: "quote" as "quote" | "visit", visitPreference: "" });
   const [status, setStatus] = useState<{ type: "idle" | "loading" | "success" | "error"; message?: string; protocol?: string }>({ type: "idle" });
+
+  const [origin,setOrigin]=useState("contato");
+  useEffect(()=>{const q=new URLSearchParams(window.location.search);if(q.get("origin")==="faq"){setOrigin("faq");try{const question=sessionStorage.getItem("seg-faq-question")||"";setForm(f=>({...f,details:question.slice(0,1000)}));sessionStorage.removeItem("seg-faq-question");}catch{}}},[]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,7 +39,7 @@ export default function ContatoPage() {
           details: form.details,
           message: summary,
           consent: form.consent,
-          origin: "contato",
+          origin,
           campaign: "site",
           channel: "site",
           dedupKey: `${form.phone}-${form.city}-${Date.now()}`.slice(0, 200),

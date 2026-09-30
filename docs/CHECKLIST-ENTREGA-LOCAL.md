@@ -1,4 +1,6 @@
 # Checklist da entrega local — 222 requisitos
+
+Atualização do L04: ver [entrega e evidências](ENTREGA-L04.md). Próximo lote: [L05 — contratos](PROMPT-CONTINUACAO-L05-CONTRATOS.md). Os demais lotes mantêm seus estados próprios.
 Gerado em 2026-09-29 a partir do plano mestre; não é declaração de nova auditoria ou de conclusão.
 Leia EXECUCAO-ENTREGA-LOCAL.md. Todos começam em a_revalidar para confrontar evidências históricas com a versão final. Isso não apaga o trabalho realizado.
 Para cada ID, completar: rota/tela; API/tabela; perfil/escopo; integração; teste e commit; evidência; bloqueio; aceite humano.
@@ -120,10 +122,10 @@ catálogo único dos seis serviços validados no projeto; cada item tem descriç
 
 ## PUB-02
 páginas por serviço e segmento, contato claro, FAQ revisada, cases/imagens autorizados; revisão de acessibilidade, navegação e desempenho.
-- Estado: parcial
-- Tela / API / dados / autorização: `/servicos`, `/servicos/[id]`, `/faq`, `/contato` (páginas públicas existentes, não alteradas nesta sessão salvo remoção do fetch admin indevido em `AiBotWidget.tsx`).
-- Integração e evidência (teste, resultado, commit): Gate L04: Chromium percorre `/servicos` (mobile) e valida ausência de rolagem horizontal e de erros de console/rede same-origin. `PubFaqAssistedClient.tsx` (FAQ assistida/handoff, PUB-05) segue órfão — não conectado nesta sessão.
-- Pendência / fronteira externa / aceite humano: Revisão de acessibilidade/desempenho formal não foi feita. FAQ assistida com IA (PUB-05) permanece componente não conectado a nenhuma página; handoff humano não implementado além do FAQ estático.
+- Estado: pronto_local (escopo técnico L04)
+- Tela / API / dados / autorização: `/servicos`, `/servicos/[id]`, `/segmentos`, `/faq`, `/contato`, `/conteudos` e `/conteudos/[slug]`; cases exigem declaração de autorização; conteúdo simples sem HTML executável.
+- Integração e evidência (teste, resultado, commit): Gate L04 cenários 1, 11, 16 e 18: navegação HTTP/Chromium, viewport móvel, handoff com consentimento/protocolo e bloqueio de case não autorizado. Evidência final, SHA e links em docs/ENTREGA-L04.md.
+- Pendência / fronteira externa / aceite humano: Aceite visual e revisão do conteúdo pelos responsáveis pendentes. Teste funcional móvel não é certificação WCAG nem ensaio de carga.
 
 ## PUB-03
 orçamento e visita integrados à mesma API; protocolo persistido, consentimento/aviso pertinente, origem/campanha, antispam, deduplicação controlada e responsável de atendimento.
@@ -141,45 +143,49 @@ visita com estados solicitada, em agendamento, confirmada, realizada, cancelada;
 
 ## PUB-05
 FAQ assistida e transferência humana; bot não inventa preço, cobertura, licença ou prazo. IA/RAG só depois de base aprovada e controles do capítulo 19.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: `PubFaqAssistedClient.tsx` existe mas não está conectado a nenhuma rota; `/faq` é estático.
-- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão (L04 focou a jornada comercial central). `AiBotWidget.tsx` foi corrigido apenas para não disparar fetch admin indevido nas páginas públicas.
-- Pendência / fronteira externa / aceite humano: FAQ assistida por IA/RAG e transferência humana continuam sem tela conectada. Não avançar guardrails de preço/cobertura/licença/prazo do bot sem essa conexão.
+- Estado: pronto_local (escopo técnico L04)
+- Tela / API / dados / autorização: `FaqAssistedWidget` em `/faq` → `POST /api/faq-assisted`; respostas de FAQ publicada em `cms_contents`. Encaminhamento a `/contato?origin=faq`, pergunta só no navegador, lead real em `/api/leads`. Sessões/mensagens legadas protegidas.
+- Integração e evidência (teste, resultado, commit): Gate L04 cenário 16: pergunta sensível sem preço inventado, resposta publicada com fonte, acesso público às sessões negado e envio real no Chromium com origem `faq`. Evidência final, SHA e links em docs/ENTREGA-L04.md.
+- Pendência / fronteira externa / aceite humano: LLM/RAG pertence a L09. Atendimento humano só é solicitado após persistir o formulário com consentimento; sem SMTP ou promessa de atendimento instantâneo.
 
 ## PUB-06
 CMS de páginas, FAQ, cases, blog e vagas, com rascunho/revisão/publicação, histórico e reversão.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: `CmsClient.tsx` existe em `src/app/admin/ti/` mas não está importado por nenhuma página.
-- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão.
-- Pendência / fronteira externa / aceite humano: CMS de páginas/FAQ/cases/blog/vagas com rascunho/revisão/publicação/histórico permanece órfão. Fica para a próxima sessão (ver prompt de continuação).
+- Estado: pronto_local (escopo técnico L04)
+- Tela / API / dados / autorização: `/admin/publicacao` → CMS com admin/marcelo/ti. `cms_contents`, versões e histórico imutáveis; `/conteudos` e `/conteudos/[slug]` leem somente publicados.
+- Integração e evidência (teste, resultado, commit): Gate L04 cenário 16: rascunho privado, transições, duas versões publicadas sequencialmente com uma ativa, restauração como nova versão, histórico, negação e rollback por auditoria injetada. Evidência final, SHA e links em docs/ENTREGA-L04.md.
+- Pendência / fronteira externa / aceite humano: Textos e autorização de cases precisam de aceite humano antes de uso real. Texto simples; sem novo upload público.
 
 ## PUB-07
 temas com preview, publicação autorizada, configuração persistida e rollback; preferência dia/noite separada da identidade global. Implementar após núcleo.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: `ThemeClient.tsx` existe mas não está conectado; `/admin/tema` é uma página separada e anterior, não revalidada nesta sessão.
-- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão.
-- Pendência / fronteira externa / aceite humano: Preview/publicação/rollback de tema e preferência dia/noite não foram revalidados nem conectados ao componente órfão.
+- Estado: pronto_local (escopo técnico L04)
+- Tela / API / dados / autorização: `/admin/tema` e aba Temas de `/admin/publicacao`; `pub_themes`, versões/histórico/preferências. Prévia isolada; publicação e rollback transacionais, um tema ativo; leitura pública mínima.
+- Integração e evidência (teste, resultado, commit): Gate L04 cenários 16–17: prévia não altera estado global, publicar dois temas, restaurar anterior, recarregar navegador e manter paleta, preferência pessoal não muda tema global. Evidência final, SHA e links em docs/ENTREGA-L04.md.
+- Pendência / fronteira externa / aceite humano: Tokens aplicados às superfícies editoriais; seleção dos dez layouts permanece em `/admin/visual`. Portais internos não são redesenhados. Aceite visual humano pendente.
 
 ## PUB-08
 SEO técnico, títulos, sitemap, redirects e verificação de domínio na liberação; preservar noindex em ambientes não produtivos.
-- Estado: parcial (SEO técnico entregue; verificação de domínio declaradamente fora)
+- Estado: pronto_local (limites externos/condicionais descritos abaixo)
 - Tela / API / dados / autorização: `GET /robots.txt` e `GET /sitemap.xml` públicos, ambos **derivados do código** (`src/lib/seo-technical.mjs` + `src/server/seo-technical-api.mjs`); prévia autenticada `GET /api/admin/seo/sitemap-preview`; cadastro `GET/POST/PATCH /api/admin/seo-redirects`; resolução do desvio no caminho da requisição, antes do Next. Sitemap montado a partir das rotas estáticas reais + `PUBLIC_SERVICES` (`src/lib/service-catalog.mjs`) + `SEGMENT_EXAMPLES` (`src/lib/segment-examples.mjs`, convertido de `.ts` para ter uma fonte só), com XML escapado e somente `<loc>`. `noindex` fail-closed: só libera com `NEXT_PUBLIC_ENV=production` **e** `NEXT_PUBLIC_ALLOW_INDEX=true` — fora disso `Disallow: /` sem linha `Sitemap:`, `X-Robots-Tag: noindex, nofollow` e `/sitemap.xml` 404. Papéis `marcelo`,`ti`,`admin`: sem sessão 401, papel fora da lista **403** (antes era 401), mutação sem mesma origem 403, método errado 405 com `Allow`. Escrita transacional com trilha em `auth_access_audit` (`seo_redirect_create`/`seo_redirect_update`, `actor_kind` = papel) na mesma transação. Migração **112** (aditiva) reautoriza essas duas ações. Tabelas `seo_redirects` (usada), `seo_configs`/`seo_sitemap_entries` (declaradas **não** fonte de verdade).
 - Integração e evidência (teste, resultado, commit): Gate `npm run test:l04-delivery:pg` **11/11 duas vezes consecutivas** — cenário "PUB-08: SEO técnico — robots/sitemap derivados, noindex fail-closed e redirect real". Prova: robots fail-closed e `/sitemap.xml` 404 imune a `?released/force/preview`; prévia 401/403/405/200 sem `/admin`, `/api/`, `/cliente`, `/funcionario`, `/layout-0`, `/qa/`, `/proposta` e sem `<lastmod>/<priority>/<changefreq>`; **cada uma das 17 URLs derivadas buscada por HTTP real exigindo 200 e `<title>` não vazio**; `GET /api/seo` e `/api/seo-configs` anônimos 401 e `comercial` 403 (vazamento de rascunho fechado); 14 recusas nomeadas do cadastro (externo absoluto, `//` relativo a protocolo, barra invertida, espaço, sombra de rota pública real, de `/admin`, de `/api` e do próprio `/sitemap.xml`, destino inexistente, destino em área interna, laço, tipo de status inventado, motivo curto e campo gerido pelo servidor vindo do cliente) — nenhuma grava linha — mais a recusa de **cadeia**, alcançável só por fixture SQL; falha de auditoria injetada por gatilho ⇒ 503 e **zero** linha em `seo_redirects`; criação 201 com exatamente 1 linha de trilha `actor_kind='ti'` e 2ª tentativa `duplicate_old_path`; ação não autorizada ainda recusada pelo banco com `23514`; salto real 301 preservando `?utm`, POST não desviado, `is_active=false` para de desviar e `true` volta, com 1 linha de trilha por alteração; `PATCH` de domínio para `verificado` ⇒ 400 `domain_verification_not_supported` com a linha ainda `pendente`; Chromium real sai de `/promo-portaria` e chega em `/servicos` usando `page.waitForResponse`, sem rolagem horizontal e sem erro de console. Também `npm test` 196/196, `npm run typecheck` 0 erros, `npm run test:migrations:pg` 112/112 checksums e 510 tabelas, `node scripts/qa-wave0-static.mjs` 5/5, `npm run build` OK.
-- Pendência / fronteira externa / aceite humano: **Verificação de domínio fica FORA por fronteira externa** (exige DNS/HTTP no domínio real) — em vez de um botão que mente, o caminho que fabricava o fato foi fechado. **`SeoClient.tsx` foi descartado para esta finalidade e permanece órfão**: permite digitar qualquer URL no sitemap, `robots` livre e "Marcar verificado" com um clique. `seo_sitemap_entries` e `seo_configs` continuam existindo sem tela e sem serem fonte de verdade; a coluna `hits` continua 0 e não é incrementada (contar exigiria escrever no banco a cada requisição pública). `/layout-01..10`, `/qa/modulos` e `/proposta/aceite/[token]` ficam fora do sitemap por decisão. Curinga/regex e redirect por domínio fora. **Achado aberto registrado**: as migrações 099/100/103 redigitaram o CHECK de `auth_access_audit` e apagaram 148 ações da lista da 093; a 112 reautoriza só as duas que esta fatia prova — as outras 146 seguem sem autorização. Indexação **não foi ligada** (nada é publicado em produção). Aceite humano pendente.
+- Pendência / fronteira externa / aceite humano: **Verificação de domínio fica FORA por fronteira externa** (exige DNS/HTTP no domínio real) — em vez de um botão que mente, o caminho que fabricava o fato foi fechado. **`SeoClient.tsx` foi descartado para esta finalidade e permanece órfão**: permite digitar qualquer URL no sitemap, `robots` livre e "Marcar verificado" com um clique. `seo_sitemap_entries` e `seo_configs` continuam existindo sem tela e sem serem fonte de verdade; a coluna `hits` continua 0 e não é incrementada (contar exigiria escrever no banco a cada requisição pública). `/layout-01..10`, `/qa/modulos` e `/proposta/aceite/[token]` ficam fora do sitemap por decisão. Curinga/regex e redirect por domínio fora. **Achado aberto registrado**: as migrações 099/100/103 redigitaram o CHECK de `auth_access_audit` e apagaram 148 ações da lista da 093; a 112 reautoriza só as duas que esta fatia prova — a migração 117 acrescenta somente ações efetivamente usadas nesta entrega; ações dos demais lotes continuam sujeitas à revisão. Indexação **não foi ligada** (nada é publicado em produção). Aceite humano pendente.
+
+- Revalidação final L04: cenários anteriores preservados e executados novamente; consultar SHA e resultados em docs/ENTREGA-L04.md.
 
 ## PUB-09
 montador de pacote/comparador de serviços e planos somente a partir de catálogo e regras aprovadas; nenhuma promessa/preço de demonstração em produção.
-- Estado: parcial
-- Tela / API / dados / autorização: `/orcamento` foi reescrita nesta sessão: removido o antigo "modo empresarial" com preços inventados; agora é formulário de pedido de orçamento real sobre o catálogo (PUB-01), via `/api/leads`. `PackageClient.tsx` (montador/comparador administrativo) continua órfão.
-- Integração e evidência (teste, resultado, commit): Gate L04 valida `/orcamento` real (sem preço fabricado) enviando lead com `origin=orcamento`.
-- Pendência / fronteira externa / aceite humano: Não existe montador de pacote nem comparador de planos no lado público ou administrativo — apenas o pedido de orçamento simples substituiu a simulação falsa que havia antes. `PackageClient.tsx` não foi conectado.
+- Estado: pronto_local (escopo técnico L04)
+- Tela / API / dados / autorização: `/admin/publicacao` aba Pacotes e `/pacotes`; serviços publicados/validados, regras aprovadas, revisão, aprovação, publicação e comparação. APIs públicas somente leitura e sem custo interno.
+- Integração e evidência (teste, resultado, commit): Gate L04 cenário 18: preço vindo do cliente recusado, publicação sem aprovação bloqueada, composição persistida, comparador real em Chromium, preço ausente continua nulo/sob consulta e revogação recolhe publicação. Evidência final, SHA e links em docs/ENTREGA-L04.md.
+- Pendência / fronteira externa / aceite humano: Sem tabela de preço inventada, compatibilidade de equipamento garantida ou contratação automática. Precificação segue vistoria/orçamento/proposta.
 
 ## PUB-10
 mensuração de origem e conversão com minimização de dados; testes A/B somente após tráfego, hipótese e tratamento de dados definidos.
-- Estado: parcial (mensuração entregue; testes A/B declaradamente fora)
+- Estado: pronto_local (limites externos/condicionais descritos abaixo)
 - Tela / API / dados / autorização: `GET /api/admin/leads/metrics?from=&to=` (`handleAdminLeadMetrics` em `server.mjs`) agrega `public_leads` por origem/campanha/canal e cruza com `crm_opportunities.public_lead_id`/`stage`. Painel `src/app/admin/leads/OriginMetricsPanel.tsx` renderizado em `/admin/leads`. Papéis `marcelo`,`ti`,`comercial`,`admin` (os mesmos de `GET /api/admin/leads`); sem sessão 401, papel fora da lista 403, método diferente de GET 405. Somente leitura: não escreve nada e não grava trilha por consulta. Sem migração nova (001–110 inalteradas).
 - Integração e evidência (teste, resultado, commit): Gate `npm run test:l04-delivery:pg` 9/9 duas vezes consecutivas — cenário "PUB-10: mensuração de origem e conversão". Prova: 401 anônimo, 403 papel `rh`, 405 em POST com `Allow: GET`, 400 `invalid_period` (formato inválido, `from > to`, data inexistente 2026-02-31) e 400 `period_too_long` acima de 366 dias; agregados conferidos contra fixture (lead de 40 dias atrás fora da janela de 30 dias, origem em branco virando `(não informado)`, taxa 0% com base existente vs. `null` sem base); minimização provada por asserção de que telefone, e-mail, nome e ids de lead não aparecem no JSON nem no DOM, que as chaves da linha são só rótulos e inteiros, e que `&detail=1&raw=true&include=leads` não destrava nada; Chromium real com sessão `comercial` lê 4 pedidos na janela padrão de 90 dias, encurta para 30 dias esperando a resposta HTTP real e passa a ler 3.
 - Pendência / fronteira externa / aceite humano: **Testes A/B continuam sem rota e sem tela, por decisão registrada** — o requisito os condiciona a tráfego, hipótese e tratamento de dados definidos, e nenhuma das três coisas existe. **`OriginMetricsClient.tsx` foi descartado para esta finalidade e permanece órfão**: é um CRUD onde um humano digitaria `total_leads`/`converted_leads` à mão, o que seria métrica inventada com cara de relatório; as tabelas da migração 092 (`pub10_origin_metrics`, `pub10_conversion_events`, `pub10_ab_tests`) continuam existindo, sem tela e sem serem fonte de verdade de nada. Fora desta fatia: exportação (CSV/PDF), gráficos, comparação entre períodos, atribuição multi-toque, contrato como degrau do funil e qualquer envio a ferramenta externa de analytics. "Ganho no funil" é decisão comercial registrada, nunca dinheiro recebido. Aceite humano pendente.
+
+- Revalidação final L04: cenários anteriores preservados e executados novamente; consultar SHA e resultados em docs/ENTREGA-L04.md.
 
 ## CRM-01
 cadastro central de empresas e contatos; nome, identificação fiscal quando necessária, segmento, cidade, unidades, canais e responsáveis. Distinguir prospect/cliente/parceiro sem duplicar entidade.
@@ -232,10 +238,10 @@ kanban e tabela, filtros, busca, tarefas vencidas, histórico de ligações/reun
 
 ## CRM-08
 agenda de visitas e reuniões, responsável, participantes, confirmação, reagendamento e cancelamento. Links/calendário externo somente por integração configurada.
-- Estado: em_execucao
-- Tela / API / dados / autorização: `/admin/crm` → “Abrir tarefas” exibe `OpportunityVisits.tsx` (agenda da oportunidade) e `MyAgenda.tsx` (agenda pessoal, sempre visível). Desde a migração 110: conflito de horário do responsável (faixa `[início, início+duração)`, duração nula = 60 min, só visitas vivas reservam, encostar não conflita, participante não bloqueia) recusado com `409 visit_schedule_conflict`, sem bypass e serializado por `pg_advisory_xact_lock`; e vínculo PUB-04 — a visita herda `public_lead_id` da oportunidade (campo recusado no corpo) e propaga na mesma transação `confirmada`/`realizada` → `lead_visit_confirm`, `cancelada` sem outra visita viva → `lead_visit_cancel`, reagendamento → `lead_status_change`, com lead `realizada` congelado. API: `GET/POST /api/crm/opportunities/:id/visits` (paginado 1–100), `PATCH /api/crm/opportunities/:id/visits/:visitId` (edição, reagendamento, confirmação, conclusão e cancelamento com motivo, sempre com `expected_version`), `POST|DELETE .../participants[/:identityId]`, `POST .../response` e `GET /api/crm/visits/agenda`. Política explícita: só o responsável pela oportunidade gerencia a visita; participante convidado enxerga apenas as visitas em que foi incluído e responde somente por si; papel administrativo não é bypass; nenhum diretório de staff é exposto (convite por e-mail exato, erro genérico). Reagendar zera todas as confirmações; cancelar exige motivo (também no banco). Migração 107 adiciona versão, motivo/marcas de cancelamento, contador de reagendamento, `crm_visit_participants` e as ações de auditoria correspondentes. Nesta continuação (Arena `arena/01a0ef36`), `MyAgenda.tsx` ganhou uma **visão de calendário por semana**, somente leitura: alternância "Ver em lista"/"Ver por semana", navegação "Semana anterior"/"Semana atual"/"Próxima semana" (segunda a domingo no fuso local do navegador) e agrupamento por dia. Não há rota nova, coluna nova nem migração: reaproveita exatamente o mesmo `GET /api/crm/visits/agenda?from=&to=` já existente e já autorizado por CRM-08, então a mesma política de escopo (responsável/participante, sem bypass, sem exposição de agenda alheia) se aplica automaticamente. Confirmar/recusar presença, reagendar e cancelar continuam exclusivos da lista — decisão registrada em `docs/PROMPT-CONTINUACAO-CRM-AGENDA-CALENDARIO.md` para não duplicar controle de versão otimista em duas superfícies.
-- Integração e evidência (teste, resultado, commit): conflito/PUB-04 — sessão `arena/01a0eeda`: `node scripts/qa-wave0-static.mjs` 5/5; `npm run test:migrations:pg` 110/110 com replay, clone e checksum negativo (509 tabelas); `npm run test:l04-delivery:pg` **7/7, duas vezes consecutivas** — o sétimo cenário é HTTP + Chromium + PostgreSQL descartável e prova: lead público criado sem sessão e convertido, vínculo forjado no corpo recusado (`server_managed_fields`), conflito por faixa idêntica/sobreposta à frente/sobreposta atrás (nenhuma visita gravada), encostar permitido, mesma hora liberada para outro comercial, conflito ao reagendar e ao esticar a duração sem consumir versão, confirmação propagando o lead com as três trilhas, segunda confirmação sem duplicar propagação, cancelamento com outra visita viva sem cancelar o lead, reagendamento derrubando a confirmação, recolocação em `confirmada`, rollback completo por falha de auditoria injetada em `lead_visit_cancel`, cancelamento efetivo → `lead_visit_cancel`, visita realizada → lead realizado e congelado contra visita posterior, trilha correta (`lead_status_change`/`lead_visit_cancel`) na rota manual `PATCH /api/admin/leads/:id`, e na UI real o selo “Lead público vinculado (PUB-04) — situação propagada” e a mensagem dedicada de conflito, sem erro de console/5xx. `npm test` 186/186; `npm run typecheck` 0 erros; `npm run build` com `/admin/crm`. Histórico: código `7ddd659`. `npm ci` 82 pacotes/0 vulnerabilidades; `node scripts/qa-wave0-static.mjs` 5/5; `npm run test:migrations:pg` 107/107 com replay, clone TEMPLATE e checksum negativo (506 tabelas); `npm run test:l04-delivery:pg` 4/4 em HTTP real + Chromium real + PostgreSQL descartável; `npm test` 186/186; `npm run typecheck` 0 erros; `npm run build` 70 rotas. O quarto cenário cobre negação (sem sessão, RH, comercial alheio, origem ausente, método), entradas inválidas, agendamento pela UI com contato e convidado, persistência por recarga, confirmação do convidado pela própria agenda em navegador/sessão separados, tentativa negada de reagendar/cancelar/convidar/remover pelo convidado, conflito de versão, reagendamento que zera confirmações, cancelamento com motivo, estados finais e rollback de auditoria injetada. Ver `docs/EVIDENCIAS-ENTREGA-LOCAL.md`. Visão de calendário por semana — sessão `arena/01a0ef36`: `node scripts/qa-wave0-static.mjs` 5/5 (ainda 110/110, sem migração nova); `npm run test:migrations:pg` 110/110 com replay, clone e checksum negativo (509 tabelas, inalterado); `npm run test:l04-delivery:pg` **8/8, duas vezes consecutivas** — o oitavo cenário é HTTP + Chromium + PostgreSQL descartável e prova: alternância lista↔semana sem quebrar a lista pré-existente, visita próxima aparecendo na semana atual ou na seguinte (conforme o dia real do teste) por agrupamento correto de dia da semana, visita distante (20 dias) nunca aparecendo em nenhuma das duas, semana anterior (totalmente no passado) sem nenhuma das duas, e volta à lista preservando as duas visitas, sem erro de console/rede/5xx. `npm test` 186/186; `npm run typecheck` 0 erros; `npm run build` (sucesso, incluindo `/admin/crm`); `git diff --check` limpo; `tsconfig.json`/`next-env.d.ts` restaurados após o dev server do gate reescrevê-los.
-- Pendência / fronteira externa / aceite humano: CRM-08 ainda NÃO concluído por inteiro. Conflito de horário do responsável, vínculo PUB-04 e visão de calendário por semana (somente leitura) foram entregues e provados por gate; continuam faltando lembretes/notificações da agenda (dependem de provedor, autorização e opt-out — nenhum decidido) e qualquer ação (confirmar/reagendar/cancelar) dentro da própria visão de calendário, que é deliberadamente só leitura nesta fatia. Por decisão registrada, conflito considera apenas o responsável (participante convidado pode recusar e não reserva) e não há parâmetro de força para dobrar horário. Integração com calendário externo continua fora do escopo local. A borda de propriedade de `stages` na rota legada foi resolvida no recorte CRM-09/migração 108. Aceite humano/Windows não executado; sem SMTP/hospedagem externa.
+- Estado: pronto_local (escopo técnico L04)
+- Tela / API / dados / autorização: `MyAgenda` em `/admin/crm`: lista e semana reutilizam `OpportunityVisits` para ações; lembretes internos nas próximas 24h ao abrir/atualizar. API existente mantém responsável/participante, conflito de horário e versão otimista.
+- Integração e evidência (teste, resultado, commit): Gate L04 cenários 4, 7 e 9: participantes, reagendamento, conflitos, vínculo com lead, navegação semanal e confirmação de visita pelo calendário, com lembrete real de visita em duas horas. Evidência final, SHA e links em docs/ENTREGA-L04.md.
+- Pendência / fronteira externa / aceite humano: SMTP, push e calendário externo não configurados. Lembretes desta entrega são internos à agenda; não funcionam como notificação em segundo plano. Aceite humano/Windows é L10.
 
 ## CRM-09
 cadências de prospecção inicialmente como tarefas; automação de mensagens depende de autorização, opt-out quando aplicável e provedor.
@@ -246,10 +252,10 @@ cadências de prospecção inicialmente como tarefas; automação de mensagens d
 
 ## CRM-10
 carteira com renovação, serviços adicionais, reativação, indicações, oportunidades sem próxima ação e relacionamentos por grupo/unidade.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Sem UI de carteira; schema pode existir mas não foi localizada tela.
-- Integração e evidência (teste, resultado, commit): Não atacado nesta sessão.
-- Pendência / fronteira externa / aceite humano: Renovação, upsell, reativação, indicações e relacionamento por grupo/unidade continuam sem tela.
+- Estado: pronto_local (escopo técnico L04)
+- Tela / API / dados / autorização: `/admin/carteira` e `/api/crm/portfolio`: carteira pessoal, grupo/unidade, falta/vencimento de próxima ação e ações de renovação/upsell/cross-sell/recuperação/indicação. Reutiliza oportunidades, renovações e indicações; vínculo/idempotência em `crm_portfolio_actions`.
+- Integração e evidência (teste, resultado, commit): Gate L04 cenário 19: usuário A/B, criação vinculada, retry sem duplicidade, recuperação de perdida, auditoria transacional com rollback e UI móvel. Evidência final, SHA e links em docs/ENTREGA-L04.md.
+- Pendência / fronteira externa / aceite humano: Carteira pessoal conforme política anterior; ganho não representa recebimento. Implantação e efeitos contratuais pertencem a L05.
 
 ## CRM-11
 separar serviços recorrentes/avulsos, instalação, manutenção, venda, locação/comodato quando praticados. Campos: unidade de cobrança, escopo, exclusões, recursos, custo, preço, vigência e aprovação.
@@ -344,31 +350,31 @@ proposta aceita cria contrato/implantação de modo idempotente; retries não du
 
 ## CRM-24
 relatórios de conversão por etapa/origem, ciclo de vendas, tarefas atrasadas, motivos de perda, pipeline por período e cenário. Previsão ponderada é estimativa identificada.
-- Estado: pronto_local
-- Tela / API / dados / autorização: `/admin/comercial` (`ComercialWorkspace.tsx`, novo nesta sessão) — tabs vistoria/orcamentos/precos/propostas/contratos/catalogo/relatorios/biblioteca. `ReportClient.tsx` na tab relatorios.
-- Integração e evidência (teste, resultado, commit): Componente conectado nesta sessão; não foi alvo de cenário dedicado no gate L04 além de estar acessível sem 5xx na varredura final de `/admin/comercial`.
-- Pendência / fronteira externa / aceite humano: Relatórios de conversão por etapa/origem e pipeline por cenário não tiveram cada métrica conferida individualmente nesta sessão — só a conectividade e ausência de erro foram provadas.
+- Estado: pronto_local (escopo técnico L04)
+- Tela / API / dados / autorização: Relatórios em `/admin/comercial`; consultas usam fontes limitadas à identidade antes da agregação. Conversão, ciclo, perdas, atrasos, pipeline e previsão ponderada.
+- Integração e evidência (teste, resultado, commit): Gate L04 cenário 19: total de oportunidades conferido, usuário alheio com zero, estimativa de 1000 ponderada em 100 no estágio novo e marcação explícita de estimativa. Cenário 1 mantém acesso às telas anteriores. Evidência final, SHA e links em docs/ENTREGA-L04.md.
+- Pendência / fronteira externa / aceite humano: Probabilidades são estimativas; cenários de preço são alternativas vinculadas, sem soma como receita. Não equivale a faturado/recebido ou previsão garantida.
 
 ## CRM-25
 metas e comissões versionadas; base de cálculo (contratado/faturado/recebido), período, cancelamento e aprovação configuráveis, sem pagamento automático.
-- Estado: pronto_local
-- Tela / API / dados / autorização: `/admin/comercial` (`ComercialWorkspace.tsx`, novo nesta sessão) — tabs vistoria/orcamentos/precos/propostas/contratos/catalogo/relatorios/biblioteca. `CommissionClient.tsx` na tab relatorios.
-- Integração e evidência (teste, resultado, commit): Conectado nesta sessão; coberto pela varredura final de `/admin/comercial` sem 5xx/console error. Sem pagamento automático (conforme exigido).
-- Pendência / fronteira externa / aceite humano: Base de cálculo (contratado/faturado/recebido) e aprovação não foram exercitadas cenário a cenário nesta sessão.
+- Estado: pronto_local (escopo técnico L04)
+- Tela / API / dados / autorização: `/admin/comercial`: metas/regras/comissões da gestão, leitura comercial limitada, `crm_commercial_versions` imutável e snapshot da regra utilizada. Alterar regra retira aprovação; cálculo anterior preservado.
+- Integração e evidência (teste, resultado, commit): Gate L04 cenário 20: meta versionada, regra recebida de 5%, base informada de 1000 → comissão de 50, aprovação, bloqueio de pagamento antecipado/conflitante, cancelamento com motivo e preservação do cálculo após mudar regra. Evidência final, SHA e links em docs/ENTREGA-L04.md.
+- Pendência / fronteira externa / aceite humano: Sem pagamento automático. Base informada é manual e deve ser conferida pela gestão; integração com recebíveis/faturamento é L07. Registros antigos sem regra comprovada mantêm snapshot nulo.
 
 ## CRM-26
 biblioteca comercial, apresentações/cases aprovados, campanhas segmentadas e comparação de propostas.
-- Estado: pronto_local
-- Tela / API / dados / autorização: `/admin/comercial` (`ComercialWorkspace.tsx`, novo nesta sessão) — tabs vistoria/orcamentos/precos/propostas/contratos/catalogo/relatorios/biblioteca. `CommercialLibraryClient.tsx` na tab biblioteca.
-- Integração e evidência (teste, resultado, commit): Conectado nesta sessão; coberto pela varredura final sem 5xx/console error.
-- Pendência / fronteira externa / aceite humano: Comparação de propostas lado a lado não foi exercitada como cenário próprio.
+- Estado: pronto_local (escopo técnico L04)
+- Tela / API / dados / autorização: Biblioteca/campanhas/comparação em `/admin/comercial`, gestão restrita; edição de material revoga aprovação, campanha exige biblioteca aprovada e é pausada se o material perde aprovação.
+- Integração e evidência (teste, resultado, commit): Gate L04 cenário 20: material rascunho bloqueia campanha, aprovação permite cadastro, edição volta a rascunho e pausa campanha ativa; reativação com material não aprovado é negada. Versões preservadas. Evidência final, SHA e links em docs/ENTREGA-L04.md.
+- Pendência / fronteira externa / aceite humano: Nenhum disparo de campanha externo. URLs de materiais restringidas a HTTPS/caminho interno. Conteúdo e autorização real dos materiais dependem do responsável.
 
 ## CRM-27
 parcerias e indicações, renovação/upsell e recuperação da carteira, com responsáveis e métricas.
-- Estado: pronto_local
-- Tela / API / dados / autorização: `/admin/comercial` (`ComercialWorkspace.tsx`, novo nesta sessão) — tabs vistoria/orcamentos/precos/propostas/contratos/catalogo/relatorios/biblioteca. `PartnershipClient.tsx` na tab biblioteca.
-- Integração e evidência (teste, resultado, commit): Conectado nesta sessão; coberto pela varredura final sem 5xx/console error.
-- Pendência / fronteira externa / aceite humano: Métricas de renovação/upsell/recuperação de carteira não foram exercitadas cenário a cenário nesta sessão.
+- Estado: pronto_local (escopo técnico L04)
+- Tela / API / dados / autorização: Parcerias/indicações/renovações em `/admin/comercial` e ações em `/admin/carteira`; leitura comercial própria e gestão administrativa explícita; filtro de datas das métricas corrigido.
+- Integração e evidência (teste, resultado, commit): Gate L04 cenários 19–20: renovação/upsell/cross-sell/recuperação/indicação com vínculo; métricas da carteira derivadas do funil; renovação de 100 para 125 com uplift 25%; filtro por período/responsável retorna contagem correta. Evidência final, SHA e links em docs/ENTREGA-L04.md.
+- Pendência / fronteira externa / aceite humano: Sem comissão automática de parceiros, contatos externos ou sincronização contratual completa; efeitos de L05/L07 permanecem nesses lotes.
 
 ## CON-01
 contrato ligado à empresa, unidades, proposta/versão, serviços, responsáveis, vigência, valor e documentos. Admissão de cadastro manual com origem identificada.

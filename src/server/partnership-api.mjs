@@ -1,4 +1,19 @@
 export function createPartnershipApi({ json, readJson, sameOrigin, getPool, readAdminSession }) {
+
+  // Management owns rules, approvals and financial records. Sales staff read
+  // only assigned records; operational follow-up is handled by /crm/portfolio.
+  function scopedPool(session){
+    const db=getPool(),relations={"crm_partners":"(responsible_id=$N OR created_by_id=$N)","crm_referrals":"(responsible_id=$N OR created_by_id=$N)","crm_renewals":"(responsible_id=$N OR created_by_id=$N)"};
+    return {query(sql,values=[]){
+      if(session.role!=='comercial'||!/^\s*SELECT/i.test(sql))return db.query(sql,values);
+      const n=values.length+1;
+      const ctes=Object.entries(relations).map(([table,condition])=>table+' AS (SELECT * FROM public.'+table+' WHERE '+condition.replaceAll('$N','$'+n)+')');
+      // Bind the identity even when only the approved-library CTE is used.
+      ctes.push('viewer AS (SELECT $'+n+'::uuid AS id)');
+      return db.query('WITH '+ctes.join(',')+' '+sql,[...values,session.identityId]);
+    }};
+  }
+
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const isUuid = v => typeof v === 'string' && UUID_RE.test(v);
   const bad = (res, msg) => json(res, 400, { error: msg });
@@ -15,7 +30,9 @@ export function createPartnershipApi({ json, readJson, sameOrigin, getPool, read
   async function handlePartners(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res,401,{error:'admin_session_required'});
+    if(!['admin','marcelo','ti','comercial'].includes(session.role))return json(res,403,{error:'role_required'});
+    if(req.method!=='GET'&&session.role==='comercial')return json(res,403,{error:'management_role_required'});
 
     if (req.method === 'GET') {
       const type = url.searchParams.get('type');
@@ -29,7 +46,7 @@ export function createPartnershipApi({ json, readJson, sameOrigin, getPool, read
       if (responsibleId) { if (!isUuid(responsibleId)) return bad(res, 'invalid_responsible_id'); conds.push(`responsible_id = $${idx++}`); vals.push(responsibleId); }
       const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const countRes = await pool.query(`SELECT COUNT(*)::int AS total FROM crm_partners ${where}`, vals);
         const listRes = await pool.query(`SELECT * FROM crm_partners ${where} ORDER BY created_at DESC LIMIT $${idx} OFFSET $${idx+1}`, [...vals, limit, offset]);
         return json(res, 200, { total: countRes.rows[0]?.total || 0, partners: listRes.rows, limit, offset });
@@ -59,7 +76,7 @@ export function createPartnershipApi({ json, readJson, sameOrigin, getPool, read
       if (commission_percent != null && (isNaN(commission_percent) || commission_percent < 0 || commission_percent > 100)) return bad(res, 'invalid_commission_percent');
 
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const id = crypto.randomUUID();
         const ins = await pool.query(
           `INSERT INTO crm_partners (id, display_name, type, document_ref, email, phone, city, state, status, responsible_id, responsible_name, commission_percent, notes, origin, created_by, created_by_id)
@@ -81,11 +98,13 @@ export function createPartnershipApi({ json, readJson, sameOrigin, getPool, read
     if (!isUuid(id)) return bad(res, 'invalid_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res,401,{error:'admin_session_required'});
+    if(!['admin','marcelo','ti','comercial'].includes(session.role))return json(res,403,{error:'role_required'});
+    if(req.method!=='GET'&&session.role==='comercial')return json(res,403,{error:'management_role_required'});
 
     if (req.method === 'GET') {
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const r = await pool.query('SELECT * FROM crm_partners WHERE id = $1', [id]);
         if (!r.rows[0]) return json(res, 404, { error: 'not_found' });
         // metrics
@@ -112,7 +131,7 @@ export function createPartnershipApi({ json, readJson, sameOrigin, getPool, read
       fields.push(`updated_at = NOW()`);
 
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const upd = await pool.query(`UPDATE crm_partners SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`, [...vals, id]);
         if (!upd.rows[0]) return json(res, 404, { error: 'not_found' });
         try { await pool.query("INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,'crm_partner_status',$3,'allowed','none')", [session.role, session.identityId || session.role, id]); } catch {}
@@ -129,7 +148,9 @@ export function createPartnershipApi({ json, readJson, sameOrigin, getPool, read
   async function handleReferrals(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res,401,{error:'admin_session_required'});
+    if(!['admin','marcelo','ti','comercial'].includes(session.role))return json(res,403,{error:'role_required'});
+    if(req.method!=='GET'&&session.role==='comercial')return json(res,403,{error:'management_role_required'});
 
     if (req.method === 'GET') {
       const partnerId = url.searchParams.get('partnerId') || url.searchParams.get('partner_id');
@@ -143,7 +164,7 @@ export function createPartnershipApi({ json, readJson, sameOrigin, getPool, read
       if (responsibleId) { if (!isUuid(responsibleId)) return bad(res, 'invalid_responsible_id'); conds.push(`responsible_id = $${idx++}`); vals.push(responsibleId); }
       const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const countRes = await pool.query(`SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE status='convertida')::int AS converted FROM crm_referrals ${where}`, vals);
         const listRes = await pool.query(`SELECT * FROM crm_referrals ${where} ORDER BY created_at DESC LIMIT $${idx} OFFSET $${idx+1}`, [...vals, limit, offset]);
         return json(res, 200, { total: countRes.rows[0]?.total || 0, converted: countRes.rows[0]?.converted || 0, referrals: listRes.rows, limit, offset });
@@ -179,7 +200,7 @@ export function createPartnershipApi({ json, readJson, sameOrigin, getPool, read
       if (reward_value != null && (isNaN(reward_value) || reward_value < 0)) return bad(res, 'invalid_reward_value');
 
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const id = crypto.randomUUID();
         const ins = await pool.query(
           `INSERT INTO crm_referrals (id, partner_id, referrer_contact_id, referrer_company_id, referred_company_id, referred_contact_id, opportunity_id, title, description, status, reward_type, reward_value, responsible_id, responsible_name, created_by, created_by_id)
@@ -201,11 +222,13 @@ export function createPartnershipApi({ json, readJson, sameOrigin, getPool, read
     if (!isUuid(id)) return bad(res, 'invalid_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res,401,{error:'admin_session_required'});
+    if(!['admin','marcelo','ti','comercial'].includes(session.role))return json(res,403,{error:'role_required'});
+    if(req.method!=='GET'&&session.role==='comercial')return json(res,403,{error:'management_role_required'});
 
     if (req.method === 'GET') {
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const r = await pool.query('SELECT * FROM crm_referrals WHERE id = $1', [id]);
         if (!r.rows[0]) return json(res, 404, { error: 'not_found' });
         return json(res, 200, { referral: r.rows[0] });
@@ -236,7 +259,7 @@ export function createPartnershipApi({ json, readJson, sameOrigin, getPool, read
       fields.push(`updated_at = NOW()`);
 
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const upd = await pool.query(`UPDATE crm_referrals SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`, [...vals, id]);
         if (!upd.rows[0]) return json(res, 404, { error: 'not_found' });
         try { await pool.query("INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,'crm_referral_status',$3,'allowed','none')", [session.role, session.identityId || session.role, id]); } catch {}
@@ -253,7 +276,9 @@ export function createPartnershipApi({ json, readJson, sameOrigin, getPool, read
   async function handleRenewals(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res,401,{error:'admin_session_required'});
+    if(!['admin','marcelo','ti','comercial'].includes(session.role))return json(res,403,{error:'role_required'});
+    if(req.method!=='GET'&&session.role==='comercial')return json(res,403,{error:'management_role_required'});
 
     if (req.method === 'GET') {
       const companyId = url.searchParams.get('companyId') || url.searchParams.get('company_id');
@@ -269,7 +294,7 @@ export function createPartnershipApi({ json, readJson, sameOrigin, getPool, read
       if (responsibleId) { if (!isUuid(responsibleId)) return bad(res, 'invalid_responsible_id'); conds.push(`responsible_id = $${idx++}`); vals.push(responsibleId); }
       const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const countRes = await pool.query(`SELECT COUNT(*)::int AS total, COALESCE(SUM(new_value),0)::numeric AS total_new_value FROM crm_renewals ${where}`, vals);
         const listRes = await pool.query(`SELECT * FROM crm_renewals ${where} ORDER BY renewal_date DESC NULLS LAST, created_at DESC LIMIT $${idx} OFFSET $${idx+1}`, [...vals, limit, offset]);
         return json(res, 200, { total: countRes.rows[0]?.total || 0, total_new_value: countRes.rows[0]?.total_new_value || 0, renewals: listRes.rows, limit, offset });
@@ -310,7 +335,7 @@ export function createPartnershipApi({ json, readJson, sameOrigin, getPool, read
       const uplift = previous_value != null && new_value != null && previous_value > 0 ? Number(((new_value - previous_value) / previous_value * 100).toFixed(2)) : null;
 
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const id = crypto.randomUUID();
         const ins = await pool.query(
           `INSERT INTO crm_renewals (id, company_id, contract_id, previous_contract_id, opportunity_id, type, title, description, previous_value, new_value, uplift_percent, renewal_date, forecast_date, status, responsible_id, responsible_name, metrics, created_by, created_by_id)
@@ -332,11 +357,13 @@ export function createPartnershipApi({ json, readJson, sameOrigin, getPool, read
     if (!isUuid(id)) return bad(res, 'invalid_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res,401,{error:'admin_session_required'});
+    if(!['admin','marcelo','ti','comercial'].includes(session.role))return json(res,403,{error:'role_required'});
+    if(req.method!=='GET'&&session.role==='comercial')return json(res,403,{error:'management_role_required'});
 
     if (req.method === 'GET') {
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const r = await pool.query('SELECT * FROM crm_renewals WHERE id = $1', [id]);
         if (!r.rows[0]) return json(res, 404, { error: 'not_found' });
         return json(res, 200, { renewal: r.rows[0] });
@@ -375,7 +402,7 @@ export function createPartnershipApi({ json, readJson, sameOrigin, getPool, read
       fields.push(`updated_at = NOW()`);
 
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const upd = await pool.query(`UPDATE crm_renewals SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`, [...vals, id]);
         if (!upd.rows[0]) return json(res, 404, { error: 'not_found' });
         try { await pool.query("INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,'crm_renewal_status',$3,'allowed','none')", [session.role, session.identityId || session.role, id]); } catch {}
@@ -391,7 +418,9 @@ export function createPartnershipApi({ json, readJson, sameOrigin, getPool, read
   async function handleMetrics(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res,401,{error:'admin_session_required'});
+    if(!['admin','marcelo','ti','comercial'].includes(session.role))return json(res,403,{error:'role_required'});
+    if(req.method!=='GET'&&session.role==='comercial')return json(res,403,{error:'management_role_required'});
     if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, { Allow: 'GET' });
 
     const responsibleId = url.searchParams.get('responsibleId') || url.searchParams.get('responsible_id');
@@ -399,7 +428,7 @@ export function createPartnershipApi({ json, readJson, sameOrigin, getPool, read
     const periodEnd = url.searchParams.get('periodEnd') || url.searchParams.get('end');
 
     try {
-      const pool = getPool();
+      const pool = scopedPool(session);
       const conds = []; const vals = []; let idx = 1;
       if (responsibleId) { if (!isUuid(responsibleId)) return bad(res, 'invalid_responsible_id'); conds.push(`responsible_id = $${idx++}`); vals.push(responsibleId); }
       if (periodStart) { conds.push(`renewal_date >= $${idx++}::date`); vals.push(periodStart); }
@@ -407,7 +436,7 @@ export function createPartnershipApi({ json, readJson, sameOrigin, getPool, read
       const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
 
       const renewalRes = await pool.query(`SELECT type, status, COUNT(*)::int AS count, COALESCE(SUM(new_value),0)::numeric AS total_value FROM crm_renewals ${where} GROUP BY type, status`, vals);
-      const referralRes = await pool.query(`SELECT status, COUNT(*)::int AS count FROM crm_referrals ${where ? where.replace('renewal_date', 'created_at') : ''} GROUP BY status`, vals.slice(0, responsibleId ? 1 : 0));
+      const referralRes = await pool.query(`SELECT status, COUNT(*)::int AS count FROM crm_referrals ${where ? where.replaceAll('renewal_date', 'created_at') : ''} GROUP BY status`, vals);
       const partnerRes = await pool.query(`SELECT COUNT(*)::int AS total_partners, COUNT(*) FILTER (WHERE status='ativo')::int AS active_partners FROM crm_partners`);
 
       return json(res, 200, {

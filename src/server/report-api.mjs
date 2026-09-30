@@ -1,4 +1,15 @@
 export function createReportApi({ json, sameOrigin, getPool, readAdminSession }) {
+
+  function scopedReportingPool(session) {
+    const db=getPool();
+    return {query(sql,values=[]){
+      if(!/^\s*SELECT/i.test(sql))return db.query(sql,values);
+      const n=values.length+1;
+      const scope='responsible_id=$'+n+' OR (responsible_id IS NULL AND created_by_id=$'+n+')';
+      return db.query('WITH crm_opportunities AS (SELECT * FROM public.crm_opportunities WHERE '+scope+'), crm_tasks AS (SELECT * FROM public.crm_tasks WHERE '+scope+') '+sql,[...values,session.identityId]);
+    }};
+  }
+
   const bad = (res, msg) => json(res, 400, { error: msg });
 
   const STAGE_PROBABILITY = {
@@ -15,7 +26,8 @@ export function createReportApi({ json, sameOrigin, getPool, readAdminSession })
   async function handleConversion(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res, 401, { error: 'admin_session_required' });
+    if (!['comercial','admin','marcelo','ti'].includes(session.role)) return json(res,403,{error:'role_required'});
     if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, { Allow: 'GET' });
 
     const periodStart = url.searchParams.get('periodStart') || url.searchParams.get('start');
@@ -23,10 +35,10 @@ export function createReportApi({ json, sameOrigin, getPool, readAdminSession })
     const origin = url.searchParams.get('origin');
 
     try {
-      const pool = getPool();
+      const pool = scopedReportingPool(session);
       const conds = []; const vals = []; let idx = 1;
       if (periodStart) { conds.push(`created_at >= $${idx++}::date`); vals.push(periodStart); }
-      if (periodEnd) { conds.push(`created_at <= $${idx++}::date`); vals.push(periodEnd); }
+      if (periodEnd) { conds.push(`created_at < ($${idx++}::date + INTERVAL '1 day')`); vals.push(periodEnd); }
       if (origin) { conds.push(`origin = $${idx++}`); vals.push(origin); }
       const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
 
@@ -70,11 +82,12 @@ export function createReportApi({ json, sameOrigin, getPool, readAdminSession })
   async function handleSalesCycle(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res, 401, { error: 'admin_session_required' });
+    if (!['comercial','admin','marcelo','ti'].includes(session.role)) return json(res,403,{error:'role_required'});
     if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, { Allow: 'GET' });
 
     try {
-      const pool = getPool();
+      const pool = scopedReportingPool(session);
       // Ciclo de vendas: média dias entre criação e ganho/perdido, e tempo médio por etapa
       const cycleRes = await pool.query(`
         SELECT
@@ -109,12 +122,13 @@ export function createReportApi({ json, sameOrigin, getPool, readAdminSession })
   async function handleOverdueTasks(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res, 401, { error: 'admin_session_required' });
+    if (!['comercial','admin','marcelo','ti'].includes(session.role)) return json(res,403,{error:'role_required'});
     if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, { Allow: 'GET' });
 
     const limit = Math.min(200, Math.max(1, parseInt(url.searchParams.get('limit') || '100', 10) || 100));
     try {
-      const pool = getPool();
+      const pool = scopedReportingPool(session);
       const overdueRes = await pool.query(
         `SELECT t.*, o.title AS opportunity_title, o.stage AS opportunity_stage, c.display_name AS company_name
          FROM crm_tasks t
@@ -143,11 +157,12 @@ export function createReportApi({ json, sameOrigin, getPool, readAdminSession })
   async function handleLossReasons(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res, 401, { error: 'admin_session_required' });
+    if (!['comercial','admin','marcelo','ti'].includes(session.role)) return json(res,403,{error:'role_required'});
     if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, { Allow: 'GET' });
 
     try {
-      const pool = getPool();
+      const pool = scopedReportingPool(session);
       const lossRes = await pool.query(`
         SELECT loss_reason, COUNT(*)::int AS count, COALESCE(SUM(estimated_value),0)::numeric AS total_value
         FROM crm_opportunities WHERE stage = 'perdido' AND loss_reason IS NOT NULL AND loss_reason <> ''
@@ -172,7 +187,8 @@ export function createReportApi({ json, sameOrigin, getPool, readAdminSession })
   async function handlePipeline(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res, 401, { error: 'admin_session_required' });
+    if (!['comercial','admin','marcelo','ti'].includes(session.role)) return json(res,403,{error:'role_required'});
     if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, { Allow: 'GET' });
 
     const periodStart = url.searchParams.get('periodStart') || url.searchParams.get('start');
@@ -180,7 +196,7 @@ export function createReportApi({ json, sameOrigin, getPool, readAdminSession })
     const groupBy = url.searchParams.get('groupBy') || 'stage'; // stage, period, scenario
 
     try {
-      const pool = getPool();
+      const pool = scopedReportingPool(session);
       const conds = ["stage NOT IN ('ganho','perdido')"];
       const vals = [];
       let idx = 1;
@@ -201,11 +217,13 @@ export function createReportApi({ json, sameOrigin, getPool, readAdminSession })
         vals
       );
 
-      // Pipeline por cenário: usar price_scenarios se existir? Para simplificar, agrupar por service_id
+      // Scenarios are alternative quotations of an opportunity, not service
+      // labels or additive revenue. The opportunities CTE enforces ownership.
       const scenarioRes = await pool.query(
-        `SELECT service_name, service_id, COUNT(*)::int AS count, COALESCE(SUM(estimated_value),0)::numeric AS total_value
-         FROM crm_opportunities ${where} GROUP BY service_name, service_id ORDER BY total_value DESC`,
-        vals
+        `SELECT s.id,s.title,s.version,s.approval_status,s.opportunity_id,
+                o.title AS opportunity_title,1::int AS count,s.price_calculated AS total_value
+           FROM crm_price_scenarios s JOIN crm_opportunities o ON o.id=s.opportunity_id
+           ${where} ORDER BY s.created_at DESC LIMIT 200`,vals
       );
 
       const totalRes = await pool.query(`SELECT COUNT(*)::int AS count, COALESCE(SUM(estimated_value),0)::numeric AS total_value FROM crm_opportunities ${where}`, vals);
@@ -218,7 +236,7 @@ export function createReportApi({ json, sameOrigin, getPool, readAdminSession })
         byStage: pipelineRes.rows,
         byPeriod: periodRes.rows,
         byScenario: scenarioRes.rows,
-        note: 'Pipeline por período e cenário (service_name/service_id como cenário). Exclui ganho/perdido. Valor é estimado, não faturado.',
+        note: 'Pipeline por período e cenários de preço reais vinculados. Cenários são alternativas e não devem ser somados como receita. Exclui ganho/perdido; valores são estimativas.',
         isEstimate: true,
       });
     } catch (e) {
@@ -230,11 +248,12 @@ export function createReportApi({ json, sameOrigin, getPool, readAdminSession })
   async function handleWeightedForecast(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res, 401, { error: 'admin_session_required' });
+    if (!['comercial','admin','marcelo','ti'].includes(session.role)) return json(res,403,{error:'role_required'});
     if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, { Allow: 'GET' });
 
     try {
-      const pool = getPool();
+      const pool = scopedReportingPool(session);
       const opportunitiesRes = await pool.query(`
         SELECT id, title, stage, estimated_value, forecast_date, origin
         FROM crm_opportunities WHERE stage NOT IN ('ganho','perdido') AND estimated_value IS NOT NULL
@@ -296,11 +315,12 @@ export function createReportApi({ json, sameOrigin, getPool, readAdminSession })
   async function handleAllReports(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res, 401, { error: 'admin_session_required' });
+    if (!['comercial','admin','marcelo','ti'].includes(session.role)) return json(res,403,{error:'role_required'});
     if (req.method !== 'GET') return json(res, 405, { error: 'method_not_allowed' }, { Allow: 'GET' });
 
     try {
-      const pool = getPool();
+      const pool = scopedReportingPool(session);
       // Quick summary combining all
       const totalRes = await pool.query(`SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE stage='ganho')::int AS won, COUNT(*) FILTER (WHERE stage='perdido')::int AS lost, COALESCE(SUM(estimated_value),0)::numeric AS total_value FROM crm_opportunities`);
       const overdueRes = await pool.query(`SELECT COUNT(*)::int AS overdue FROM crm_tasks WHERE due_date < NOW() AND status IN ('aberta','em_andamento')`);

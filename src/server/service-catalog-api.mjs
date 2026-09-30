@@ -8,15 +8,18 @@ const VALID_SERVICE_TYPES = new Set(["recorrente","avulso","instalacao","manuten
 const VALID_APPROVAL = new Set(["rascunho","em_revisao","aprovado","arquivado"]);
 
 export function createServiceCatalogApi(ctx) {
-  // ctx: { json, getPool }
+  // Public projection never includes internal costs, approval notes or unpublished rows.
+  const publicService=s=>({id:s.id,name:s.name,short:s.short,description:s.description,audience:s.audience,questions:s.questions,serviceType:s.serviceType,billingUnit:s.billingUnit,scope:s.scope,exclusions:s.exclusions,isPublished:s.isPublished!==false,isValidated:s.isValidated!==false});
+  async function isStaff(req){const s=await ctx.readAdminSession(req);return !!s?.identityId&&['admin','marcelo','ti','comercial'].includes(s.role);}
 
   async function handleList(req, res, url) {
     if (req.method !== "GET") {
       return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
     }
 
-    const includeUnpublished = url.searchParams.get("includeUnpublished") === "true";
-    const onlyValidated = url.searchParams.get("onlyValidated") !== "false"; // default true
+    const staff=await isStaff(req);
+    const includeUnpublished = staff && url.searchParams.get("includeUnpublished") === "true";
+    const onlyValidated = !staff || url.searchParams.get("onlyValidated") !== "false"; // default true
     const serviceType = url.searchParams.get("serviceType") || url.searchParams.get("type");
     const approvalStatus = url.searchParams.get("approvalStatus");
 
@@ -105,6 +108,7 @@ export function createServiceCatalogApi(ctx) {
       }));
     }
 
+    if(!staff)services=services.map(publicService);
     return ctx.json(res, 200, { services, total: services.length, source: services[0]?.fallback ? "fallback" : "database" });
   }
 
@@ -113,6 +117,7 @@ export function createServiceCatalogApi(ctx) {
       return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
     }
 
+    const staff=await isStaff(req);
     let service = null;
 
     try {
@@ -155,7 +160,8 @@ export function createServiceCatalogApi(ctx) {
 
     if (!service) return ctx.json(res, 404, { error: "service_not_found" });
 
-    return ctx.json(res, 200, { service });
+    if(!staff && (service.isPublished===false||service.isValidated===false))return ctx.json(res,404,{error:'service_not_found'});
+    return ctx.json(res, 200, { service:staff?service:publicService(service) });
   }
 
   return { handleList, handleGet };

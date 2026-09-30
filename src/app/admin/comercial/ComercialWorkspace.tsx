@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import CommercialHistory from "./CommercialHistory";
 import CatalogClient from "../ti/CatalogClient";
 import EquipmentClient from "../ti/EquipmentClient";
 import InspectionClient from "../ti/InspectionClient";
@@ -52,7 +53,7 @@ export default function ComercialWorkspace() {
           <p style={{ margin: 0, fontSize: 13, color: "#6b7b90" }}>
             Fluxo do lead qualificado até o aceite. Empresas, contatos e funil ficam em{" "}
             <a href="/admin/crm">Empresas &amp; funil (CRM)</a>; a fila pública em{" "}
-            <a href="/admin/leads">Pedidos recebidos</a>.
+            <a href="/admin/leads">Pedidos recebidos</a>. <a href="/admin/carteira">Carteira e próximos contatos</a> · <a href="/admin/publicacao">Publicação do site</a>.
           </p>
         </div>
       </header>
@@ -124,7 +125,7 @@ export default function ComercialWorkspace() {
         {view === "relatorios" && (
           <>
             <section style={card}><ReportClient /></section>
-            <section style={card}><CommissionClient /></section>
+            <section style={card}><CommissionClient /><CommercialHistory /></section>
           </>
         )}
         {view === "biblioteca" && (

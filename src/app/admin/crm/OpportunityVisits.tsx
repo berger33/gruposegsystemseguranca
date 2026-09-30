@@ -72,7 +72,7 @@ function asIso(value: string) {
   return Number.isFinite(date.getTime()) ? date.toISOString() : null;
 }
 
-export default function OpportunityVisits({ opportunityId }: { opportunityId: string }) {
+export default function OpportunityVisits({ opportunityId,onChanged }: { opportunityId: string; onChanged?:()=>void }) {
   const [visits, setVisits] = useState<Visit[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isResponsible, setIsResponsible] = useState(false);
@@ -113,7 +113,7 @@ export default function OpportunityVisits({ opportunityId }: { opportunityId: st
 
   async function act(work: () => Promise<string>) {
     setBusy(true); setError(""); setNotice("");
-    try { setNotice(await work()); }
+    try { setNotice(await work()); onChanged?.(); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Falha na operação."); }
     finally { setBusy(false); }
   }

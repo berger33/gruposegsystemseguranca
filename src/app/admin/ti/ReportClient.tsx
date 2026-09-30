@@ -112,8 +112,8 @@ export default function ReportClient() {
             <tbody>{(pipeline.byPeriod || []).map((p: any) => <tr key={p.month}><td>{p.month}</td><td>{p.count}</td><td>R$ {p.total_value}</td></tr>)}</tbody>
           </table>
           <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
-            <thead><tr><th>Cenário (serviço)</th><th>Count</th><th>Valor</th></tr></thead>
-            <tbody>{(pipeline.byScenario || []).map((s: any, i: number) => <tr key={i}><td>{s.service_name || s.service_id || "-"}</td><td>{s.count}</td><td>R$ {s.total_value}</td></tr>)}</tbody>
+            <thead><tr><th>Cenário de preço (alternativas, não somar)</th><th>Count</th><th>Valor</th></tr></thead>
+            <tbody>{(pipeline.byScenario || []).map((s: any, i: number) => <tr key={i}><td>{s.title} · v{s.version} · {s.approval_status}</td><td>{s.count}</td><td>R$ {s.total_value}</td></tr>)}</tbody>
           </table>
         </div>
       )}

@@ -16,3 +16,12 @@
 [data-theme="app"] { --theme-bg:#f4f6fa; --theme-fg:#0f172a; --theme-accent:#4f8ef7; --theme-radius:16px; --theme-font:'Inter',sans-serif; --theme-shadow:0 10px 30px rgba(79,142,247,0.12); }
 [data-theme="dashboard"] { --theme-bg:#0f1117; --theme-fg:#f0f0f5; --theme-accent:#f59e0b; --theme-radius:8px; --theme-font:'Inter',sans-serif; --theme-shadow:0 4px 24px rgba(245,158,11,0.18); }
 [data-theme="sazonal"] { --theme-bg:#fdfcf5; --theme-fg:#221e1c; --theme-accent:#e07a4e; --theme-radius:12px; --theme-font:'Inter',sans-serif; --theme-shadow:0 8px 20px rgba(224,122,78,0.14); }
+
+/* Published palette surfaces. Layout selection is independent. */
+.publication-surface { background:var(--theme-bg); color:var(--theme-fg); font-family:var(--theme-font); }
+.publication-surface a { text-decoration:underline; }
+[data-color-mode="escuro"] .publication-surface { background:#111827; color:#f8fafc; }
+[data-color-mode="claro"] .publication-surface { background:#fff; color:#17253b; }
+@media(prefers-color-scheme:dark) { [data-color-mode="sistema"] .publication-surface { background:#111827; color:#f8fafc; } }
+.publication-surface input,.publication-surface button { font:inherit; }
+.publication-surface :focus-visible { outline:3px solid currentColor; outline-offset:3px; }

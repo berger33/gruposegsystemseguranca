@@ -1,4 +1,19 @@
 export function createCommissionApi({ json, readJson, sameOrigin, getPool, readAdminSession }) {
+
+  // Management owns rules, approvals and financial records. Sales staff read
+  // only assigned records; operational follow-up is handled by /crm/portfolio.
+  function scopedPool(session){
+    const db=getPool(),relations={"crm_goals":"(responsible_id=$N OR created_by_id=$N)","crm_commissions":"(responsible_id=$N OR created_by_id=$N)","crm_commission_rules":"status='ativa'"};
+    return {query(sql,values=[]){
+      if(session.role!=='comercial'||!/^\s*SELECT/i.test(sql))return db.query(sql,values);
+      const n=values.length+1;
+      const ctes=Object.entries(relations).map(([table,condition])=>table+' AS (SELECT * FROM public.'+table+' WHERE '+condition.replaceAll('$N','$'+n)+')');
+      // Bind the identity even when only the approved-library CTE is used.
+      ctes.push('viewer AS (SELECT $'+n+'::uuid AS id)');
+      return db.query('WITH '+ctes.join(',')+' '+sql,[...values,session.identityId]);
+    }};
+  }
+
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const isUuid = v => typeof v === 'string' && UUID_RE.test(v);
   const bad = (res, msg) => json(res, 400, { error: msg });
@@ -15,7 +30,9 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
   async function handleGoals(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res,401,{error:'admin_session_required'});
+    if(!['admin','marcelo','ti','comercial'].includes(session.role))return json(res,403,{error:'role_required'});
+    if(req.method!=='GET'&&session.role==='comercial')return json(res,403,{error:'management_role_required'});
 
     if (req.method === 'GET') {
       const responsibleId = url.searchParams.get('responsibleId') || url.searchParams.get('responsible_id');
@@ -28,7 +45,7 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
       if (status) { conds.push(`status = $${idx++}`); vals.push(status); }
       const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const countRes = await pool.query(`SELECT COUNT(*)::int AS total FROM crm_goals ${where}`, vals);
         const listRes = await pool.query(`SELECT * FROM crm_goals ${where} ORDER BY period_start DESC LIMIT $${idx} OFFSET $${idx+1}`, [...vals, limit, offset]);
         return json(res, 200, { total: countRes.rows[0]?.total || 0, goals: listRes.rows, limit, offset });
@@ -57,7 +74,7 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
       if (responsible_id && !isUuid(responsible_id)) return bad(res, 'invalid_responsible_id');
 
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const id = crypto.randomUUID();
         const ins = await pool.query(
           `INSERT INTO crm_goals (id, responsible_id, responsible_name, title, description, period_start, period_end, target_value, target_type, status, version, created_by, created_by_id)
@@ -79,11 +96,13 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
     if (!isUuid(id)) return bad(res, 'invalid_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res,401,{error:'admin_session_required'});
+    if(!['admin','marcelo','ti','comercial'].includes(session.role))return json(res,403,{error:'role_required'});
+    if(req.method!=='GET'&&session.role==='comercial')return json(res,403,{error:'management_role_required'});
 
     if (req.method === 'GET') {
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const r = await pool.query('SELECT * FROM crm_goals WHERE id = $1', [id]);
         if (!r.rows[0]) return json(res, 404, { error: 'not_found' });
         return json(res, 200, { goal: r.rows[0] });
@@ -111,7 +130,7 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
       fields.push(`version = version + 1`);
       fields.push(`updated_at = NOW()`);
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const upd = await pool.query(`UPDATE crm_goals SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`, [...vals, id]);
         if (!upd.rows[0]) return json(res, 404, { error: 'not_found' });
         try { await pool.query("INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,'crm_goal_status',$3,'allowed','none')", [session.role, session.identityId || session.role, id]); } catch {}
@@ -128,7 +147,9 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
   async function handleRules(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res,401,{error:'admin_session_required'});
+    if(!['admin','marcelo','ti','comercial'].includes(session.role))return json(res,403,{error:'role_required'});
+    if(req.method!=='GET'&&session.role==='comercial')return json(res,403,{error:'management_role_required'});
 
     if (req.method === 'GET') {
       const status = url.searchParams.get('status');
@@ -140,7 +161,7 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
       if (baseType) { conds.push(`base_type = $${idx++}`); vals.push(baseType); }
       const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const countRes = await pool.query(`SELECT COUNT(*)::int AS total FROM crm_commission_rules ${where}`, vals);
         const listRes = await pool.query(`SELECT * FROM crm_commission_rules ${where} ORDER BY created_at DESC LIMIT $${idx} OFFSET $${idx+1}`, [...vals, limit, offset]);
         return json(res, 200, { total: countRes.rows[0]?.total || 0, rules: listRes.rows, limit, offset });
@@ -169,7 +190,7 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
       if (!['mantem','estorna_proporcional','estorna_total','recalcula'].includes(cancel_rule)) return bad(res, 'invalid_cancel_rule');
 
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const id = crypto.randomUUID();
         const ins = await pool.query(
           `INSERT INTO crm_commission_rules (id, name, description, base_type, period_type, percent, cancel_rule, requires_approval, approver_role, min_value, max_value, status, version, created_by, created_by_id)
@@ -191,11 +212,13 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
     if (!isUuid(id)) return bad(res, 'invalid_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res,401,{error:'admin_session_required'});
+    if(!['admin','marcelo','ti','comercial'].includes(session.role))return json(res,403,{error:'role_required'});
+    if(req.method!=='GET'&&session.role==='comercial')return json(res,403,{error:'management_role_required'});
 
     if (req.method === 'GET') {
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const r = await pool.query('SELECT * FROM crm_commission_rules WHERE id = $1', [id]);
         if (!r.rows[0]) return json(res, 404, { error: 'not_found' });
         return json(res, 200, { rule: r.rows[0] });
@@ -219,11 +242,13 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
           fields.push(`approved_at = NOW()`);
         }
       }
+      if(body?.status==='ativa'&&Object.keys(body).some(k=>k!=='status'))return bad(res,'approve_in_separate_request');
+      if(body?.status===undefined&&fields.length){fields.push("status = 'rascunho'");fields.push("approved_by = NULL");fields.push("approved_at = NULL");}
       if (fields.length === 0) return bad(res, 'no_fields');
       fields.push(`version = version + 1`);
       fields.push(`updated_at = NOW()`);
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const upd = await pool.query(`UPDATE crm_commission_rules SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`, [...vals, id]);
         if (!upd.rows[0]) return json(res, 404, { error: 'not_found' });
         try { await pool.query("INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,'crm_commission_rule_status',$3,'allowed','none')", [session.role, session.identityId || session.role, id]); } catch {}
@@ -240,7 +265,9 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
   async function handleCommissions(req, res, url) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res,401,{error:'admin_session_required'});
+    if(!['admin','marcelo','ti','comercial'].includes(session.role))return json(res,403,{error:'role_required'});
+    if(req.method!=='GET'&&session.role==='comercial')return json(res,403,{error:'management_role_required'});
 
     if (req.method === 'GET') {
       const ruleId = url.searchParams.get('ruleId') || url.searchParams.get('rule_id');
@@ -256,7 +283,7 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
       if (status) { conds.push(`status = $${idx++}`); vals.push(status); }
       const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const countRes = await pool.query(`SELECT COUNT(*)::int AS total, COALESCE(SUM(calculated_value),0)::numeric AS total_value FROM crm_commissions ${where}`, vals);
         const listRes = await pool.query(`SELECT * FROM crm_commissions ${where} ORDER BY period_start DESC LIMIT $${idx} OFFSET $${idx+1}`, [...vals, limit, offset]);
         return json(res, 200, { total: countRes.rows[0]?.total || 0, total_value: countRes.rows[0]?.total_value || 0, commissions: listRes.rows, limit, offset, note: 'Comissões sem pagamento automático. is_paid false por padrão, pagamento manual registrado.' });
@@ -290,19 +317,21 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
       if (new Date(period_end) < new Date(period_start)) return bad(res, 'invalid_period_range');
 
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const ruleRes = await pool.query('SELECT * FROM crm_commission_rules WHERE id = $1', [rule_id]);
         if (!ruleRes.rows[0]) return json(res, 404, { error: 'rule_not_found' });
         const rule = ruleRes.rows[0];
         if (rule.status !== 'ativa') return json(res, 409, { error: 'rule_not_active' });
 
+        if(rule.min_value!=null&&base_value<Number(rule.min_value))return bad(res,'below_rule_minimum');
+        if(rule.max_value!=null&&base_value>Number(rule.max_value))return bad(res,'above_rule_maximum');
         const calculated_value = Number((base_value * Number(rule.percent) / 100).toFixed(2));
 
         const id = crypto.randomUUID();
         const ins = await pool.query(
-          `INSERT INTO crm_commissions (id, rule_id, goal_id, opportunity_id, contract_id, company_id, responsible_id, responsible_name, base_type, base_value, percent, calculated_value, period_start, period_end, status, version, created_by, created_by_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,1,$16,$17) RETURNING *`,
-          [id, rule_id, goal_id, opportunity_id, contract_id, company_id, responsible_id, responsible_name, rule.base_type, base_value, rule.percent, calculated_value, period_start, period_end, rule.requires_approval ? 'pendente_aprovacao' : 'aprovada', session.role, session.identityId || null]
+          `INSERT INTO crm_commissions (id, rule_id, goal_id, opportunity_id, contract_id, company_id, responsible_id, responsible_name, base_type, base_value, percent, calculated_value, period_start, period_end, status, version, created_by, created_by_id,rule_snapshot)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,1,$16,$17,$18) RETURNING *`,
+          [id, rule_id, goal_id, opportunity_id, contract_id, company_id, responsible_id, responsible_name, rule.base_type, base_value, rule.percent, calculated_value, period_start, period_end, rule.requires_approval ? 'pendente_aprovacao' : 'aprovada', session.role, session.identityId || null,JSON.stringify(rule)]
         );
 
         try { await pool.query("INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,'crm_commission_create',$3,'allowed','none')", [session.role, session.identityId || session.role, id]); } catch {}
@@ -321,11 +350,13 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
     if (!isUuid(id)) return bad(res, 'invalid_id');
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
-    if (!session) return json(res, 401, { error: 'admin_session_required' });
+    if (!session?.identityId) return json(res,401,{error:'admin_session_required'});
+    if(!['admin','marcelo','ti','comercial'].includes(session.role))return json(res,403,{error:'role_required'});
+    if(req.method!=='GET'&&session.role==='comercial')return json(res,403,{error:'management_role_required'});
 
     if (req.method === 'GET') {
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const r = await pool.query('SELECT * FROM crm_commissions WHERE id = $1', [id]);
         if (!r.rows[0]) return json(res, 404, { error: 'not_found' });
         return json(res, 200, { commission: r.rows[0] });
@@ -359,17 +390,20 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
         }
       }
 
+      if(body?.is_paid===true&&body?.status&&body.status!=='aprovada')return bad(res,'payment_status_conflict');
+      if(['cancelada','estornada'].includes(body?.status)&&!sanitizeText(body.cancel_reason,500))return bad(res,'cancel_reason_required');
+      if(body?.is_paid===true&&!sanitizeText(body.paid_note,500))return bad(res,'payment_evidence_note_required');
       if (body?.is_paid !== undefined) {
         // Pagamento manual, não automático: is_paid true requer aprovação prévia
         const isPaid = Boolean(body.is_paid);
         if (isPaid) {
           // Verificar se comissão está aprovada
           try {
-            const pool = getPool();
+            const pool = scopedPool(session);
             const cur = await pool.query('SELECT status FROM crm_commissions WHERE id = $1', [id]);
             if (!cur.rows[0]) return json(res, 404, { error: 'not_found' });
             if (cur.rows[0].status !== 'aprovada') return json(res, 409, { error: 'commission_not_approved_cannot_pay', current_status: cur.rows[0].status });
-          } catch {}
+          } catch {return json(res,503,{error:'approval_check_unavailable'});}
           fields.push(`is_paid = true`);
           fields.push(`paid_at = NOW()`);
           if (body?.paid_note !== undefined) {
@@ -387,7 +421,7 @@ export function createCommissionApi({ json, readJson, sameOrigin, getPool, readA
       fields.push(`updated_at = NOW()`);
 
       try {
-        const pool = getPool();
+        const pool = scopedPool(session);
         const upd = await pool.query(`UPDATE crm_commissions SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`, [...vals, id]);
         if (!upd.rows[0]) return json(res, 404, { error: 'not_found' });
         try { await pool.query("INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,'crm_commission_status',$3,'allowed','none')", [session.role, session.identityId || session.role, id]); } catch {}
