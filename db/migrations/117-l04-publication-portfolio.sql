@@ -57,3 +57,13 @@ BEGIN
  ALTER TABLE auth_access_audit DROP CONSTRAINT auth_access_audit_action_check;
  EXECUTE 'ALTER TABLE auth_access_audit ADD CONSTRAINT auth_access_audit_action_check CHECK (('||previous_check||') OR action IN (''crm_goal_create'',''crm_goal_status'',''crm_commission_rule_create'',''crm_commission_rule_status'',''crm_commission_create'',''crm_commission_status'',''crm_library_create'',''crm_library_approve'',''crm_library_reject'',''crm_library_update'',''crm_campaign_create'',''crm_campaign_status'',''crm_proposal_comparison_create'',''crm_partner_create'',''crm_partner_status'',''crm_referral_create'',''crm_referral_status'',''crm_renewal_create'',''crm_renewal_status'',''crm_report_view''))';
 END $$;
+
+-- A campaign cannot continue presenting a document whose approval was revoked.
+CREATE FUNCTION pause_campaigns_after_library_revision() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF OLD.status='aprovado' AND NEW.status<>'aprovado' THEN
+ UPDATE crm_campaigns SET status='pausada' WHERE status='ativa' AND library_ids ? NEW.id::text;
+ END IF;
+ RETURN NEW;
+END $$;
+CREATE TRIGGER l04_campaign_library_revision AFTER UPDATE ON crm_commercial_library FOR EACH ROW EXECUTE FUNCTION pause_campaigns_after_library_revision();
