@@ -424,13 +424,23 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       const where = [];
       const vals = [];
       let i = 1;
-      if (company_id) { if (!validateUuid(company_id)) return send(res, 400, { error: 'invalid_company_id' }); where.push(`company_id=$${i++}`); vals.push(company_id); }
-      if (unit_id) { if (!validateUuid(unit_id)) return send(res, 400, { error: 'invalid_unit_id' }); where.push(`unit_id=$${i++}`); vals.push(unit_id); }
-      if (post_type) { where.push(`post_type=$${i++}`); vals.push(post_type); }
-      if (is_active !== null && is_active !== '') { where.push(`is_active=$${i++}`); vals.push(is_active === 'true'); }
+      if (company_id) { if (!validateUuid(company_id)) return send(res, 400, { error: 'invalid_company_id' }); where.push(`p.company_id=$${i++}`); vals.push(company_id); }
+      if (unit_id) { if (!validateUuid(unit_id)) return send(res, 400, { error: 'invalid_unit_id' }); where.push(`p.unit_id=$${i++}`); vals.push(unit_id); }
+      if (post_type) { where.push(`p.post_type=$${i++}`); vals.push(post_type); }
+      if (is_active !== null && is_active !== '') { where.push(`p.is_active=$${i++}`); vals.push(is_active === 'true'); }
       const ws = where.length ? `WHERE ${where.join(' AND ')}` : '';
       try {
-        const { rows } = await pool.query(`SELECT * FROM ops_posts ${ws} ORDER BY name LIMIT $${i}`, [...vals, limit]);
+        // OPS-01: a leitura devolve a cadeia completa com os nomes canônicos —
+        // cliente (crm_companies), unidade atendida (crm_company_units) e
+        // contrato (crm_contracts) — sem criar entidade paralela. A tela de
+        // operação depende desses nomes para navegar a cadeia de ponta a ponta.
+        const { rows } = await pool.query(
+          `SELECT p.*, c.display_name AS company_name, u.display_name AS unit_name, ct.title AS contract_title
+             FROM ops_posts p
+             LEFT JOIN crm_companies c ON c.id = p.company_id
+             LEFT JOIN crm_company_units u ON u.id = p.unit_id
+             LEFT JOIN crm_contracts ct ON ct.id = p.contract_id
+             ${ws} ORDER BY p.name LIMIT $${i}`, [...vals, limit]);
         return send(res, 200, { posts: rows });
       } catch (e) { console.error('posts GET', e.message); return send(res, 500, { error: 'internal_error' }); }
     }
@@ -548,10 +558,21 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       const where = [];
       const vals = [];
       let i = 1;
-      if (post_id) { if (!validateUuid(post_id)) return send(res, 400, { error: 'invalid_post_id' }); where.push(`post_id=$${i++}`); vals.push(post_id); }
+      if (post_id) { if (!validateUuid(post_id)) return send(res, 400, { error: 'invalid_post_id' }); where.push(`n.post_id=$${i++}`); vals.push(post_id); }
       const ws = where.length ? `WHERE ${where.join(' AND ')}` : '';
       try {
-        const { rows } = await pool.query(`SELECT * FROM ops_post_shift_needs ${ws} ORDER BY post_id, day_of_week LIMIT 200`, vals);
+        // OPS-01: a necessidade por turno é lida com os nomes canônicos de
+        // posto, turno e cargo/função — a tela de operação apresenta a cadeia
+        // posto → necessidade por turno sem segunda consulta nem entidade paralela.
+        const { rows } = await pool.query(
+          `SELECT n.*, p.name AS post_name, p.is_active AS post_active,
+                  t.name AS shift_template_name, t.start_time AS shift_start, t.end_time AS shift_end,
+                  r.name AS role_name
+             FROM ops_post_shift_needs n
+             JOIN ops_posts p ON p.id = n.post_id
+             LEFT JOIN ops_shift_templates t ON t.id = n.shift_template_id
+             LEFT JOIN ops_job_roles r ON r.id = n.role_id
+             ${ws} ORDER BY p.name, n.day_of_week NULLS LAST, t.name LIMIT 200`, vals);
         return send(res, 200, { needs: rows });
       } catch (e) { console.error('needs GET', e.message); return send(res, 500, { error: 'internal_error' }); }
     }
@@ -567,18 +588,82 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       if (role_id && !validateUuid(role_id)) return send(res, 400, { error: 'invalid_role_id' });
       const day_of_week = b.day_of_week !== undefined ? Number(b.day_of_week) : (b.dayOfWeek !== undefined ? Number(b.dayOfWeek) : null);
       if (day_of_week !== null && (!Number.isInteger(day_of_week) || day_of_week < 0 || day_of_week > 6)) return send(res, 400, { error: 'invalid_day_of_week' });
-      const required_headcount = Number(b.required_headcount || b.requiredHeadcount || 1);
+      // Coalescência nullish: `||` tratava 0 como ausente e gravava
+      // silenciosamente o padrão 1 (headcount zero virava 1 — inválido
+      // aceito). O mesmo padrão já documentado em numberOrDefault.
+      const required_headcount = Number(b.required_headcount ?? b.requiredHeadcount ?? 1);
       if (!Number.isInteger(required_headcount) || required_headcount < 1 || required_headcount > 100) return send(res, 400, { error: 'invalid_headcount' });
+      // OPS-01: a necessidade pertence à cadeia posto → turno → cargo. Troca de
+      // ID devolve 404/409 nomeados, nunca colisão de FK (500). Posto inativo e
+      // contrato encerrado/cancelado/suspenso não recebem nova necessidade, o
+      // mesmo critério de alocação e escala. Fail-closed: erro de banco na
+      // verificação nega a operação.
+      let needPost;
       try {
-        const { rows } = await pool.query(
+        const pr = await pool.query(
+          `SELECT p.id, p.is_active, p.contract_id, c.status AS contract_status
+             FROM ops_posts p
+             LEFT JOIN crm_contracts c ON c.id = p.contract_id
+            WHERE p.id=$1`,
+          [post_id]
+        );
+        needPost = pr.rows[0];
+      } catch (e) { console.error('need post lookup', e.message); return send(res, 503, { error: 'validation_unavailable' }); }
+      if (!needPost) return send(res, 404, { error: 'post_not_found' });
+      if (needPost.is_active === false) return send(res, 409, { error: 'post_inactive' });
+      const NON_OPERATIONAL_CONTRACT = ['encerrado', 'cancelado', 'suspenso'];
+      if (needPost.contract_id && NON_OPERATIONAL_CONTRACT.includes(needPost.contract_status)) {
+        return send(res, 409, { error: 'contract_not_operational', contract_status: needPost.contract_status });
+      }
+      try {
+        const tr = await pool.query('SELECT id, is_active FROM ops_shift_templates WHERE id=$1', [shift_template_id]);
+        if (!tr.rows[0]) return send(res, 404, { error: 'shift_template_not_found' });
+        if (tr.rows[0].is_active === false) return send(res, 409, { error: 'shift_template_inactive' });
+      } catch (e) { console.error('need shift lookup', e.message); return send(res, 503, { error: 'validation_unavailable' }); }
+      if (role_id) {
+        try {
+          const rr = await pool.query('SELECT id FROM ops_job_roles WHERE id=$1', [role_id]);
+          if (!rr.rows[0]) return send(res, 404, { error: 'job_role_not_found' });
+        } catch (e) { console.error('need role lookup', e.message); return send(res, 503, { error: 'validation_unavailable' }); }
+      }
+      // Idempotência NULL-safe: a unicidade do banco é DISTINCT (NULLs não
+      // colidem), então uma repetição exata com dia/cargo ausentes criava uma
+      // segunda linha idêntica. A conferência explícita usa IS NOT DISTINCT
+      // FROM, cobrindo também os casos com valor.
+      try {
+        const dup = await pool.query(
+          `SELECT id FROM ops_post_shift_needs
+            WHERE post_id=$1 AND shift_template_id=$2
+              AND day_of_week IS NOT DISTINCT FROM $3::int
+              AND role_id IS NOT DISTINCT FROM $4::uuid`,
+          [post_id, shift_template_id, day_of_week, role_id || null]
+        );
+        if (dup.rows[0]) return send(res, 409, { error: 'duplicate_need', existing: dup.rows[0].id });
+      } catch (e) { console.error('duplicate need check', e.message); return send(res, 503, { error: 'validation_unavailable' }); }
+      // Escrita + auditoria na MESMA transação (fail-closed): sem trilha a
+      // necessidade não fica gravada pela metade.
+      const needClient = await pool.connect();
+      try {
+        await needClient.query('BEGIN');
+        const { rows } = await needClient.query(
           `INSERT INTO ops_post_shift_needs (post_id, shift_template_id, role_id, day_of_week, required_headcount, is_active, created_by)
            VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
           [post_id, shift_template_id, role_id || null, day_of_week, required_headcount, b.is_active !== undefined ? !!b.is_active : true, sess.role]
         );
+        await needClient.query(
+          `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+          ['ops_post_shift_need_create', sess.role, rows[0].id,
+            JSON.stringify({ post_id, shift_template_id, role_id: role_id || null, day_of_week, required_headcount })]
+        );
+        await needClient.query('COMMIT');
         return send(res, 201, { need: rows[0] });
       } catch (e) {
+        try { await needClient.query('ROLLBACK'); } catch {}
         if (e.code === '23505') return send(res, 409, { error: 'duplicate_need' });
-        console.error('needs POST', e.message); return send(res, 500, { error: 'internal_error' });
+        console.error('needs POST', e.message);
+        return send(res, 503, { error: 'post_shift_need_unavailable' });
+      } finally {
+        needClient.release();
       }
     }
     return send(res, 405, { error: 'method_not_allowed' });
@@ -596,12 +681,20 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       const where = [];
       const vals = [];
       let i = 1;
-      if (post_id) { if (!validateUuid(post_id)) return send(res, 400, { error: 'invalid_post_id' }); where.push(`post_id=$${i++}`); vals.push(post_id); }
-      if (employee_id) { if (!validateUuid(employee_id)) return send(res, 400, { error: 'invalid_employee_id' }); where.push(`employee_id=$${i++}`); vals.push(employee_id); }
-      if (date) { where.push(`allocation_date=$${i++}`); vals.push(date); }
+      if (post_id) { if (!validateUuid(post_id)) return send(res, 400, { error: 'invalid_post_id' }); where.push(`a.post_id=$${i++}`); vals.push(post_id); }
+      if (employee_id) { if (!validateUuid(employee_id)) return send(res, 400, { error: 'invalid_employee_id' }); where.push(`a.employee_id=$${i++}`); vals.push(employee_id); }
+      if (date) { where.push(`a.allocation_date=$${i++}`); vals.push(date); }
       const ws = where.length ? `WHERE ${where.join(' AND ')}` : '';
       try {
-        const { rows } = await pool.query(`SELECT * FROM ops_allocations ${ws} ORDER BY allocation_date DESC, post_id LIMIT 200`, vals);
+        // OPS-01: a alocação é lida com os nomes canônicos de posto e
+        // profissional — fecha a cadeia cliente → unidade → posto →
+        // necessidade por turno → alocação na própria tela.
+        const { rows } = await pool.query(
+          `SELECT a.*, p.name AS post_name, e.display_name AS employee_name
+             FROM ops_allocations a
+             LEFT JOIN ops_posts p ON p.id = a.post_id
+             LEFT JOIN hr_employees e ON e.id = a.employee_id
+             ${ws} ORDER BY a.allocation_date DESC, p.name LIMIT 200`, vals);
         return send(res, 200, { allocations: rows });
       } catch (e) { console.error('alloc GET', e.message); return send(res, 500, { error: 'internal_error' }); }
     }

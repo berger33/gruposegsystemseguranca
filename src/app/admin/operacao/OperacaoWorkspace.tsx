@@ -4,6 +4,11 @@ import { useEffect, useState } from "react";
 import OpsAdvanced2Client from "../ti/OpsAdvanced2Client";
 import OpsAdvanced3Client from "../ti/OpsAdvanced3Client";
 
+// OPS-01: day_of_week segue a convenção 0=domingo .. 6=sábado (getDay).
+// NULL significa que a necessidade não restringe o dia — exibido sem inventar
+// semântica adicional.
+const WEEKDAY_LABELS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+
 type Post = {
   id: string;
   name: string;
@@ -12,11 +17,35 @@ type Post = {
   company_id: string | null;
   unit_id: string | null;
   contract_id: string | null;
+  company_name?: string | null;
+  unit_name?: string | null;
+  contract_title?: string | null;
+};
+type JobRole = {
+  id: string;
+  name: string;
+  role_type: string;
+  description: string | null;
+  is_active: boolean;
+};
+type PostShiftNeed = {
+  id: string;
+  post_id: string;
+  post_name: string;
+  shift_template_id: string;
+  shift_template_name: string | null;
+  role_id: string | null;
+  role_name: string | null;
+  day_of_week: number | null;
+  required_headcount: number;
+  is_active: boolean;
 };
 type Allocation = {
   id: string;
   post_id: string;
+  post_name?: string | null;
   employee_id: string;
+  employee_name?: string | null;
   allocation_date: string;
   status: string;
 };
@@ -88,6 +117,8 @@ type ScheduleValidation = {
 export default function OperacaoWorkspace() {
   const [activeTab, setActiveTab] = useState<"postos" | "jornada" | "cobertura" | "passagem" | "ocorrencias" | "checklists" | "supervisao" | "rondas" | "relatorios" | "metricas" | "limpeza" | "monitoramento">("postos");
   const [posts, setPosts] = useState<Post[]>([]);
+  const [jobRoles, setJobRoles] = useState<JobRole[]>([]);
+  const [shiftNeeds, setShiftNeeds] = useState<PostShiftNeed[]>([]);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [coverages, setCoverages] = useState<CoverageRequest[]>([]);
   const [handovers, setHandovers] = useState<Handover[]>([]);
@@ -98,6 +129,12 @@ export default function OperacaoWorkspace() {
   const [validations, setValidations] = useState<ScheduleValidation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // OPS-01: o grupo de estrutura (cargo/função + necessidade por turno) carrega
+  // em estado PRÓPRIO, desacoplado do Promise.all acima. Assim uma falha em um
+  // grupo não derruba os painéis do outro — o acoplamento dos 9 fetches já é
+  // um problema conhecido desta tela e não deve ser agravado.
+  const [structureLoading, setStructureLoading] = useState(true);
+  const [structureError, setStructureError] = useState("");
 
   async function fetchJson(path: string) {
     const response = await fetch(path, { cache: "no-store", headers: { accept: "application/json" } });
@@ -138,6 +175,25 @@ export default function OperacaoWorkspace() {
   }
 
   useEffect(() => { void load(); }, []);
+
+  async function loadStructure() {
+    setStructureLoading(true);
+    setStructureError("");
+    try {
+      const [roleData, needData] = await Promise.all([
+        fetchJson("/api/ops/job-roles"),
+        fetchJson("/api/ops/post-shift-needs"),
+      ]);
+      setJobRoles(roleData.roles || []);
+      setShiftNeeds(needData.needs || []);
+    } catch (err: any) {
+      setStructureError(err.message || "Falha ao carregar a estrutura operacional.");
+    } finally {
+      setStructureLoading(false);
+    }
+  }
+
+  useEffect(() => { void loadStructure(); }, []);
 
   return (
     <main style={{ maxWidth: 1120, margin: "0 auto", padding: "32px 18px", fontFamily: "system-ui, -apple-system, sans-serif" }}>
@@ -265,6 +321,11 @@ export default function OperacaoWorkspace() {
 
       {!loading && !error && activeTab === "postos" && (
         <>
+          <p style={{ padding: 10, background: "#eff6ff", borderRadius: 6, marginBottom: 12 }}>
+            Cadeia operacional (OPS-01): <strong>cliente → unidade atendida → posto físico → necessidade por turno →
+            alocação</strong>. Posto sem necessidade por turno cadastrada não gera cobrança de escala — a lacuna aparece
+            como lacuna, não como número inventado.
+          </p>
           <section aria-labelledby="posts-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 12 }}>
             <h2 id="posts-title">Postos físicos</h2>
             {posts.length === 0 ? (
@@ -275,7 +336,10 @@ export default function OperacaoWorkspace() {
                   <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
                     <th align="left" style={{ padding: 8 }}>Posto</th>
                     <th align="left" style={{ padding: 8 }}>Tipo</th>
+                    <th align="left" style={{ padding: 8 }}>Cliente</th>
+                    <th align="left" style={{ padding: 8 }}>Unidade atendida</th>
                     <th align="left" style={{ padding: 8 }}>Contrato</th>
+                    <th align="left" style={{ padding: 8 }}>Necessidades</th>
                     <th align="left" style={{ padding: 8 }}>Ativo</th>
                   </tr>
                 </thead>
@@ -284,7 +348,12 @@ export default function OperacaoWorkspace() {
                     <tr key={post.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
                       <td style={{ padding: 8 }}>{post.name}</td>
                       <td style={{ padding: 8 }}>{post.post_type}</td>
-                      <td style={{ padding: 8 }}>{post.contract_id ? "vinculado" : "—"}</td>
+                      <td style={{ padding: 8 }}>{post.company_name || (post.company_id ? "—" : "sem cliente")}</td>
+                      <td style={{ padding: 8 }}>{post.unit_name || (post.unit_id ? "—" : "sem unidade")}</td>
+                      <td style={{ padding: 8 }}>{post.contract_title || (post.contract_id ? "—" : "sem contrato")}</td>
+                      <td style={{ padding: 8 }}>
+                        {shiftNeeds.filter(need => need.post_id === post.id && need.is_active).length}
+                      </td>
                       <td style={{ padding: 8 }}>{post.is_active ? "sim" : "não"}</td>
                     </tr>
                   ))}
@@ -292,6 +361,87 @@ export default function OperacaoWorkspace() {
               </table>
             )}
           </section>
+
+          {structureLoading && <p role="status">Carregando estrutura operacional (cargos e necessidades)…</p>}
+          {!structureLoading && structureError && (
+            <p role="alert" style={{ padding: 12, background: "#fef2f2", borderRadius: 6, color: "#991b1b" }}>
+              {structureError}
+            </p>
+          )}
+
+          {!structureLoading && !structureError && (
+            <>
+              <section aria-labelledby="job-roles-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+                <h2 id="job-roles-title">Cargos e funções (OPS-01)</h2>
+                {jobRoles.length === 0 ? (
+                  <p>Nenhum cargo/função cadastrado. Alocação com cargo exigido depende de entidade própria registrada aqui.</p>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                        <th align="left" style={{ padding: 8 }}>Cargo/função</th>
+                        <th align="left" style={{ padding: 8 }}>Tipo</th>
+                        <th align="left" style={{ padding: 8 }}>Descrição</th>
+                        <th align="left" style={{ padding: 8 }}>Situação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {jobRoles.map(role => (
+                        <tr key={role.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: 8 }}>{role.name}</td>
+                          <td style={{ padding: 8 }}>{role.role_type}</td>
+                          <td style={{ padding: 8 }}>{role.description || "—"}</td>
+                          <td style={{ padding: 8 }}>
+                            <span style={{ padding: "2px 8px", borderRadius: 4, background: role.is_active ? "#dcfce7" : "#f1f5f9" }}>
+                              {role.is_active ? "ativo" : "inativo"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </section>
+
+              <section aria-labelledby="shift-needs-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+                <h2 id="shift-needs-title">Necessidade por turno (OPS-01)</h2>
+                {shiftNeeds.length === 0 ? (
+                  <p>Nenhuma necessidade por turno cadastrada. Sem cadastro, o dimensionamento de posto não é inferido.</p>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                        <th align="left" style={{ padding: 8 }}>Posto</th>
+                        <th align="left" style={{ padding: 8 }}>Turno</th>
+                        <th align="left" style={{ padding: 8 }}>Dia</th>
+                        <th align="left" style={{ padding: 8 }}>Profissionais exigidos</th>
+                        <th align="left" style={{ padding: 8 }}>Cargo exigido</th>
+                        <th align="left" style={{ padding: 8 }}>Situação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {shiftNeeds.map(need => (
+                        <tr key={need.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: 8 }}>{need.post_name}</td>
+                          <td style={{ padding: 8 }}>{need.shift_template_name || "—"}</td>
+                          <td style={{ padding: 8 }}>
+                            {need.day_of_week === null ? "sem dia específico" : WEEKDAY_LABELS[need.day_of_week] || String(need.day_of_week)}
+                          </td>
+                          <td style={{ padding: 8 }}>{need.required_headcount}</td>
+                          <td style={{ padding: 8 }}>{need.role_name || "não exigido"}</td>
+                          <td style={{ padding: 8 }}>
+                            <span style={{ padding: "2px 8px", borderRadius: 4, background: need.is_active ? "#dcfce7" : "#f1f5f9" }}>
+                              {need.is_active ? "ativo" : "inativo"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </section>
+            </>
+          )}
 
           <section aria-labelledby="alloc-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
             <h2 id="alloc-title">Alocações</h2>
@@ -301,6 +451,8 @@ export default function OperacaoWorkspace() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                    <th align="left" style={{ padding: 8 }}>Posto</th>
+                    <th align="left" style={{ padding: 8 }}>Profissional</th>
                     <th align="left" style={{ padding: 8 }}>Data</th>
                     <th align="left" style={{ padding: 8 }}>Status</th>
                   </tr>
@@ -308,6 +460,8 @@ export default function OperacaoWorkspace() {
                 <tbody>
                   {allocations.map(allocation => (
                     <tr key={allocation.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: 8 }}>{allocation.post_name || "—"}</td>
+                      <td style={{ padding: 8 }}>{allocation.employee_name || "—"}</td>
                       <td style={{ padding: 8 }}>{String(allocation.allocation_date).slice(0, 10)}</td>
                       <td style={{ padding: 8 }}>{allocation.status}</td>
                     </tr>

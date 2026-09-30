@@ -1,10 +1,10 @@
-# Entrega L06 — operação, patrimônio e manutenção (fatias A, B, C e D)
+# Entrega L06 — operação, patrimônio e manutenção (fatias A–G)
 
 **Data:** 2026-09-30
 **Base integrada:** `main` @ `400f079a4e1fe504b779acf83909580d9d082b76` (L05 mergeada).
 **Branch de entrega:** `arena/01a0f288-gruposegsystemseguranca`.
 
-> L06 é grande e **não é greenfield**: o schema (migrações 070–073 OPS e 083–084 AST) e as APIs (`ops-api`, `ops-advanced*`, `ast-api`, `emp-ops-api`) já existiam da fase de layout. Esta entrega conduz L06 em **fatias verificáveis**; cada fatia fecha o gate verde. Esta entrega inclui **Fatia A: estrutura de operação, alocação e contrato encerrado**, **Fatia B: cobertura, passagem de turno, livro de ocorrências e checklists operacionais**, **Fatia C: estoque, reserva, ativo/serial, custódia/termo de guarda, requisições e compras internas sintéticas** e **Fatia D: inventário físico com divergências, ordens de serviço e consumo de peças, evidências antes/depois com escopo L02, planos e execuções de manutenção preventiva/corretiva periódica, dossiê técnico CFTV seguro sem senhas em texto puro e controle de materiais de limpeza**.
+> L06 é grande e **não é greenfield**: o schema (migrações 070–073 OPS e 083–084 AST) e as APIs (`ops-api`, `ops-advanced*`, `ast-api`, `emp-ops-api`) já existiam da fase de layout. Esta entrega conduz L06 em **fatias verificáveis**; cada fatia fecha o gate verde. Fatias entregues: **A** (estrutura de operação, alocação e contrato encerrado), **B** (cobertura, passagem de turno, livro de ocorrências e checklists operacionais), **C** (estoque, reserva, ativo/serial, custódia/termo de guarda, requisições e compras internas sintéticas), **D** (inventário físico, ordens de serviço, manutenção, evidências com escopo L02, CFTV e limpeza), **E** (opera­ção avançada OPS-09..16), **F** (OPS-04: jornada, descanso, habilitação e indisponibilidade) e **G** (OPS-01: cargo/função fora da borda de RH, necessidade por turno e cadeia cliente→posto na tela). Residuais do bloco: **OPS-02 e OPS-03**.
 
 ## Resultado técnico local
 
@@ -110,10 +110,58 @@
 
 A verificação em Chromium da aba OPS-04 reutiliza a sessão de navegador já aberta pelo subteste da Fatia B, em vez de abrir um quarto processo de navegador só para ela: mesma cobertura real, menos tempo e menos fragilidade de timeout no runner do CI.
 
+### Fatia G: OPS-01 — borda de cargo/função, necessidade por turno e cadeia na tela
+
+**Sem migração nova.** O schema `070` já continha `ops_post_shift_needs` e `ops_job_roles`; faltava expor, endurecer e renderizar. As migrações `001–123` permanecem intactas.
+
+#### Lacunas reais encontradas (antes desta fatia)
+
+1. **Dois aliases, duas autorizações para o mesmo recurso.** `/api/ops/job-roles` (canônico) autorizava por sessão de staff + papel, mas os aliases históricos `/api/hr/ops-*`, `/api/admin/hr/ops-*` e `/api/crm/hr/ops-*` caíam na borda de RH legada e exigiam `employees.read/write`. Provado por execução: admin e ti recebiam **403** no alias legado e **200** no canônico; só `rh` (com concessão automática de `employees.*`) passava nos dois.
+2. **A própria tela de operação usava os aliases legados.** `OpsAdvanced2Client` e `OpsAdvanced3Client`, embutidos nas abas Supervisão/Rondas/Relatórios/Métricas/Limpeza/Monitoramento de `/admin/operacao`, buscam `/api/hr/ops-*` — para admin/ti todas essas abas renderizavam **vazio** (os 403 eram engolidos pelo `catch`).
+3. **Necessidade por turno sem cobertura de teste e sem validação de cadeia.** `POST /api/ops/post-shift-needs` não conferia existência de posto/turno/cargo (troca de ID virava erro de FK/500), não bloqueava posto inativo nem contrato encerrado, e a unicidade `UNIQUE(post_id, shift_template_id, day_of_week, role_id)` é **DISTINCT** — repetição com dia/cargo ausentes (`NULL`) criava linha duplicada.
+4. **Headcount zero virava um.** `Number(b.required_headcount || … || 1)` tratava `0` como ausente (o mesmo padrão que a Fatia F corrigiu em `min_rest_hours`): valor inválido era gravado como `1` silenciosamente.
+5. **A tela não mostrava a cadeia.** A tabela de postos exibia apenas nome/tipo/contrato; necessidade por turno e cargo/função não existiam em `/admin/operacao`; a tabela de alocações não mostrava posto nem profissional.
+
+#### Decisões e invariantes
+
+- **O handler autoriza; a borda de RH não.** Os aliases `ops-*` sob os prefixos de RH saem da borda legada (`server.mjs`): cada handler de operação exige sessão de staff, papel por método e same-origin, exatamente como o caminho canônico. Paths de RH que não são de operação continuam na borda — um alias `ops-*` desconhecido não é despachado a handler algum e termina em 404.
+- **Leitura devolve a cadeia com nomes canônicos** por join: cliente, unidade e contrato no posto; posto, turno e cargo na necessidade; posto e profissional na alocação. Sem entidade paralela, sem segunda consulta no cliente.
+- **Escrita de necessidade segue o padrão de alocação/escala**: posto ativo, contrato operacional, turno ativo, cargo existente, valores validados, idempotência `IS NOT DISTINCT FROM` e escrita + auditoria na mesma transação (fail-closed: sem trilha, nada fica gravado).
+- **Grupo de carregamento próprio na tela.** Cargos e necessidades carregam em estado separado dos 9 fetches originais, com carregamento/vazio/erro próprios — o acoplamento do `Promise.all` existente é conhecido e não foi agravado.
+- **Lacuna não vira número.** Posto sem necessidade por turno cadastrada aparece com contagem zero e a seção vazia explica o pré-requisito; nada de dimensionamento automático.
+
+#### Endpoints alterados
+
+- `GET /api/ops/posts` — join com `crm_companies`, `crm_company_units` e `crm_contracts` (`company_name`, `unit_name`, `contract_title`).
+- `GET /api/ops/post-shift-needs` — join com posto, turno e cargo (`post_name`, `shift_template_name`, `role_name`).
+- `GET /api/ops/allocations` — join com posto e profissional (`post_name`, `employee_name`).
+- `POST /api/ops/post-shift-needs` — validação de cadeia, idempotência NULL-safe, headcount `0` recusado (400) e auditoria transacional.
+- `server.mjs` — aliases `ops-*` dos prefixos de HR isentos da borda legada de RH.
+
+#### Casos do gate (subteste `L06 OPS-01`)
+
+| # | Caso | Resultado |
+|---|---|---|
+| 1 | Anônimo no alias legado | 401 |
+| 2 | Admin/ti/rh no alias legado (job-roles, posts, schedule-versions) | 200 — antes 403 para admin/ti |
+| 3 | Comercial escrevendo pelo alias legado | 403 `forbidden` (handler, não borda) |
+| 4 | `/api/hr/employees` sem concessão de RH | 403 — a borda segue valendo para HR |
+| 5 | Necessidade: anônimo / comercial | 401 / 403 |
+| 6 | Necessidade: dia 7, headcount 0, headcount 1,5 | 400 |
+| 7 | Posto, turno ou cargo inexistente | 404 nomeado, sem colisão de FK |
+| 8 | Posto inativo / contrato encerrado | 409 `post_inactive` / `contract_not_operational` |
+| 9 | Duplicata com dia/cargo ausentes e com valores | 409 `duplicate_need`, sem segunda linha |
+| 10 | Auditoria indisponível | 503 sem efeito parcial; 201 após restaurar |
+| 11 | Leitura com nomes da cadeia (posto, turno, cargo, profissional) | campos presentes |
+| 12 | Alocação fecha a cadeia no posto operacional | 201 com `post_name`/`employee_name` |
+| 13 | Chromium real: cliente, unidade, cargo, turno, posto e profissional | renderizados da API real |
+
+A verificação em Chromium reutiliza a sessão de navegador já aberta pelo subteste da Fatia B (aba `Postos e Alocações`, aba padrão), sem processo de navegador adicional.
+
 ## Gate remoto L06
 
 - `scripts/qa-l06-delivery-postgres.mjs` — PostgreSQL descartável (recusa banco externo), migra e roda a suíte com HTTP real e Chromium empacotado.
-- `tests/l06-delivery.integration.test.mjs` — 8 subtestes integrados cobrindo Fatias A, B, C, D, E, OPS-02, OPS-03 e OPS-04.
+- `tests/l06-delivery.integration.test.mjs` — 9 subtestes integrados cobrindo Fatias A, B, C, D, E, OPS-01, OPS-02, OPS-03 e OPS-04.
 - `npm run test:l06-delivery:pg` e workflow `.github/workflows/l06-delivery.yml`.
 
 ### Fluxo verificado (sem skip, sem mock de banco/navegador)
@@ -175,7 +223,7 @@ Baseline registrado antes de qualquer alteração da Fatia F: `qa-wave0-static` 
 
 ## Marco concluído localmente
 
-- OPS-04..16 e AST-01..12 estão `pronto_local`; aceite humano e integrações externas permanecem separados da conclusão técnica.
-- **OPS-01, OPS-02 e OPS-03 continuam incompletos** e mantêm seus estados próprios na matriz: OPS-01 aguarda necessidade por turno e a saída de `ops-job-roles` da borda de RH; OPS-02 aguarda cobertura planejada versus realizada por profissional habilitado; OPS-03 aguarda aceite humano da escala. Não os declaramos prontos por proximidade temática com OPS-04.
+- OPS-01, OPS-04..16 e AST-01..12 estão `pronto_local`; aceite humano e integrações externas permanecem separados da conclusão técnica.
+- **OPS-02 e OPS-03 continuam incompletos** e mantêm seus estados próprios na matriz: OPS-02 aguarda cobertura planejada versus realizada por profissional habilitado; OPS-03 aguarda aceite humano da escala. Não os declaramos prontos por proximidade temática com OPS-04.
 - Limite honesto de OPS-04: o comprovante de habilitação ainda é `document_url` em texto. Ligá-lo ao provedor privado L02 (`client_documents`) exige coluna nova e, portanto, migração aditiva — não feita nesta fatia por decisão explícita de escopo.
 

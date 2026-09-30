@@ -187,6 +187,145 @@ test("L06 Fatia A: alocação escopada por contrato, contrato encerrado bloqueia
   assert.equal(trail.rows[0].n, 1, "durable audit trail written in the same transaction");
 });
 
+test("L06 OPS-01: cargo/função fora da borda de RH, necessidade por turno idempotente e cadeia cliente→posto", { skip: !RUN, timeout: 180_000 }, async () => {
+  const admin = await provisionAndLoginStaff(pool, api, { role: "admin" });
+  const commercial = await provisionAndLoginStaff(pool, api, { role: "comercial" });
+  const rh = await provisionAndLoginStaff(pool, api, { role: "rh" });
+  const tag = uuid().slice(0, 8);
+
+  const companyId = uuid();
+  const unitId = uuid();
+  await pool.query("INSERT INTO crm_companies (id,display_name,type,status,created_by) VALUES ($1,'QA OPS-01 Empresa','client','active','admin')", [companyId]);
+  await pool.query("INSERT INTO crm_company_units (id,company_id,display_name,is_main) VALUES ($1,$2,'QA OPS-01 Unidade',true)", [unitId, companyId]);
+  const contractActive = await insertContract(companyId, "ativo");
+  const contractToClose = await insertContract(companyId, "ativo");
+
+  // 1. Borda unificada (pendência registrada do OPS-01): o MESMO recurso
+  //    responde igual no alias histórico e no canônico. Quem decide é o handler
+  //    de operação (sessão de staff + papel + same-origin); a permissão de RH
+  //    employees.read/write não é mais exigida para recurso de operação.
+  //    Antes: admin/ti recebiam 403 no alias legado e 200 no canônico.
+  assert.equal((await api("/api/hr/ops-job-roles")).status, 401, "anonymous denied on the legacy alias");
+  assert.equal((await api("/api/hr/ops-job-roles", { cookie: admin.cookie })).status, 200, "admin reads job roles through the legacy alias (was 403 under the HR border)");
+  assert.equal((await api("/api/admin/hr/ops-posts", { cookie: admin.cookie })).status, 200, "admin reads posts through the legacy alias");
+  assert.equal((await api("/api/crm/hr/ops-schedule-versions", { cookie: admin.cookie })).status, 200, "admin reads schedule versions through the legacy alias");
+  assert.equal((await api("/api/hr/ops-job-roles", { cookie: rh.cookie })).status, 200, "rh keeps access through the legacy alias");
+  const legacyWrite = await api("/api/hr/ops-job-roles", { cookie: commercial.cookie, method: "POST", body: { name: `Negado ${tag}`, role_type: "cargo" } });
+  assert.equal(legacyWrite.status, 403, "commercial cannot write through the legacy alias");
+  assert.equal(legacyWrite.body.error, "forbidden", "the ops handler denies the write, not the HR border");
+  // A borda de RH legada segue valendo para os paths de RH que não são de operação.
+  assert.equal((await api("/api/hr/employees", { cookie: admin.cookie })).status, 403, "real HR path still requires the granular HR permission");
+
+  // 2. Estrutura da cadeia: cargo/função em entidade própria, turno, posto.
+  const role = await ops("/job-roles", { cookie: admin.cookie, method: "POST", body: { name: `Inspetor CFTV ${tag}`, role_type: "cargo", description: "Cargo sintético do gate OPS-01" } });
+  assert.equal(role.status, 201, "job role created");
+  const roleId = role.body.role.id;
+  const shift = await ops("/shift-templates", { cookie: admin.cookie, method: "POST", body: { name: `Noturno 12h ${tag}`, shift_type: "noturno", start_time: "19:00", end_time: "07:00", duration_hours: 12 } });
+  assert.equal(shift.status, 201, "shift template created");
+  const shiftId = shift.body.template.id;
+  const post = await ops("/posts", { cookie: admin.cookie, method: "POST", body: { name: `Portaria OPS-01 ${tag}`, company_id: companyId, unit_id: unitId, contract_id: contractActive, post_type: "portaria" } });
+  assert.equal(post.status, 201, "post created on the active contract");
+  const postId = post.body.post.id;
+  const postClosing = await ops("/posts", { cookie: admin.cookie, method: "POST", body: { name: `Posto a encerrar ${tag}`, company_id: companyId, unit_id: unitId, contract_id: contractToClose, post_type: "portaria" } });
+  assert.equal(postClosing.status, 201, "post on contract to be closed created");
+  await pool.query("UPDATE crm_contracts SET status='encerrado' WHERE id=$1", [contractToClose]);
+
+  // 3. Autorização e validação da necessidade por turno.
+  assert.equal((await ops("/post-shift-needs", { method: "POST", body: { post_id: postId, shift_template_id: shiftId } })).status, 401, "anonymous cannot create need");
+  assert.equal((await ops("/post-shift-needs", { cookie: commercial.cookie, method: "POST", body: { post_id: postId, shift_template_id: shiftId } })).status, 403, "commercial cannot create need");
+  assert.equal((await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postId, shift_template_id: shiftId, day_of_week: 7 } })).status, 400, "day out of range rejected");
+  assert.equal((await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postId, shift_template_id: shiftId, required_headcount: 0 } })).status, 400, "zero headcount rejected");
+  assert.equal((await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postId, shift_template_id: shiftId, required_headcount: 1.5 } })).status, 400, "fractional headcount rejected");
+
+  // 4. Troca de ID devolve 404/409 nomeados, nunca colisão de FK; posto
+  //    inativo e contrato encerrado não recebem nova necessidade.
+  const needUnknownPost = await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: uuid(), shift_template_id: shiftId } });
+  assert.equal(needUnknownPost.status, 404, "unknown post rejected");
+  assert.equal(needUnknownPost.body.error, "post_not_found");
+  const needUnknownShift = await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postId, shift_template_id: uuid() } });
+  assert.equal(needUnknownShift.status, 404, "unknown shift template rejected");
+  assert.equal(needUnknownShift.body.error, "shift_template_not_found");
+  const needUnknownRole = await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postId, shift_template_id: shiftId, role_id: uuid() } });
+  assert.equal(needUnknownRole.status, 404, "unknown job role rejected");
+  assert.equal(needUnknownRole.body.error, "job_role_not_found");
+  const needClosed = await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postClosing.body.post.id, shift_template_id: shiftId } });
+  assert.equal(needClosed.status, 409, "closed contract blocks new need");
+  assert.equal(needClosed.body.error, "contract_not_operational");
+
+  const postInactive = await ops("/posts", { cookie: admin.cookie, method: "POST", body: { name: `Posto inativo ${tag}`, company_id: companyId, unit_id: unitId, contract_id: contractActive, post_type: "portaria" } });
+  assert.equal(postInactive.status, 201, "post to deactivate created");
+  assert.equal((await ops("/posts", { cookie: admin.cookie, method: "PATCH", body: { id: postInactive.body.post.id, is_active: false } })).status, 200, "post deactivated");
+  const needInactive = await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postInactive.body.post.id, shift_template_id: shiftId } });
+  assert.equal(needInactive.status, 409, "inactive post blocks new need");
+  assert.equal(needInactive.body.error, "post_inactive");
+
+  // 5. Necessidade válida persistida; a leitura devolve os nomes canônicos da
+  //    cadeia (posto, turno, cargo) para a tela renderizar sem segunda entidade.
+  const need = await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postId, shift_template_id: shiftId, role_id: roleId, day_of_week: 1, required_headcount: 2 } });
+  assert.equal(need.status, 201, "valid need created");
+  const readNeeds = await ops(`/post-shift-needs?post_id=${postId}`, { cookie: admin.cookie });
+  assert.equal(readNeeds.status, 200, "needs listing works");
+  const joinedNeed = (readNeeds.body.needs || []).find(item => item.id === need.body.need.id);
+  assert.ok(joinedNeed, "created need is listed");
+  assert.equal(joinedNeed.post_name, `Portaria OPS-01 ${tag}`, "need carries the canonical post name");
+  assert.equal(joinedNeed.shift_template_name, `Noturno 12h ${tag}`, "need carries the shift template name");
+  assert.equal(joinedNeed.role_name, `Inspetor CFTV ${tag}`, "need carries the job role name");
+
+  // 6. Idempotência NULL-safe: a unicidade do banco é DISTINCT (NULLs não
+  //    colidem), então repetir dia/cargo ausentes criava linha duplicada.
+  //    A conferência explícita IS NOT DISTINCT FROM fecha o buraco.
+  const dailyNeedBody = { post_id: postId, shift_template_id: shiftId, required_headcount: 1 };
+  assert.equal((await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: dailyNeedBody })).status, 201, "need without day/role created");
+  const dupNull = await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: dailyNeedBody });
+  assert.equal(dupNull.status, 409, "NULL-key duplicate rejected");
+  assert.equal(dupNull.body.error, "duplicate_need");
+  const dupExplicit = await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postId, shift_template_id: shiftId, role_id: roleId, day_of_week: 1, required_headcount: 3 } });
+  assert.equal(dupExplicit.status, 409, "explicit-key duplicate rejected");
+  const needCount = await pool.query("SELECT count(*)::int AS n FROM ops_post_shift_needs WHERE post_id=$1", [postId]);
+  assert.equal(needCount.rows[0].n, 2, "exactly two needs persisted for the post");
+
+  // 7. Fail-closed de auditoria: sem trilha, a necessidade não é gravada.
+  await pool.query("ALTER TABLE audit_log RENAME TO audit_log_ops01_bak");
+  try {
+    const beforeAudit = Number((await pool.query("SELECT count(*)::int AS n FROM ops_post_shift_needs WHERE post_id=$1", [postId])).rows[0].n);
+    const auditFail = await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postId, shift_template_id: shiftId, day_of_week: 3 } });
+    assert.equal(auditFail.status, 503, "need creation fails closed without audit");
+    const afterAudit = Number((await pool.query("SELECT count(*)::int AS n FROM ops_post_shift_needs WHERE post_id=$1", [postId])).rows[0].n);
+    assert.equal(afterAudit, beforeAudit, "no need persisted without audit trail");
+  } finally {
+    await pool.query("ALTER TABLE audit_log_ops01_bak RENAME TO audit_log");
+  }
+  assert.equal((await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postId, shift_template_id: shiftId, day_of_week: 3 } })).status, 201, "need persists again once audit is restored");
+  const needTrail = await pool.query("SELECT count(*)::int AS n FROM audit_log WHERE action='ops_post_shift_need_create'");
+  assert.ok(needTrail.rows[0].n >= 3, "need creations audited in the same transaction");
+
+  // 8. A alocação fecha a cadeia e a leitura devolve posto e profissional.
+  const employeeId = await insertEmployee("ativo");
+  const allocation = await ops("/allocations", { cookie: admin.cookie, method: "POST", body: { post_id: postId, employee_id: employeeId, shift_template_id: shiftId, allocation_date: "2026-10-15" } });
+  assert.equal(allocation.status, 201, "allocation closes the chain on the operational post");
+  const readAllocs = await ops(`/allocations?post_id=${postId}`, { cookie: admin.cookie });
+  const joinedAlloc = (readAllocs.body.allocations || []).find(item => item.id === allocation.body.allocation.id);
+  assert.ok(joinedAlloc, "allocation listed");
+  assert.equal(joinedAlloc.post_name, `Portaria OPS-01 ${tag}`, "allocation carries the post name");
+  assert.ok(String(joinedAlloc.employee_name || "").startsWith("QA Funcionário"), "allocation carries the professional name");
+  const readPosts = await ops("/posts?limit=100", { cookie: admin.cookie });
+  const joinedPost = (readPosts.body.posts || []).find(item => item.id === postId);
+  assert.ok(joinedPost, "post listed");
+  assert.equal(joinedPost.company_name, "QA OPS-01 Empresa", "post carries the client name of the chain");
+  assert.equal(joinedPost.unit_name, "QA OPS-01 Unidade", "post carries the served unit of the chain");
+
+  // 9. Estado persistido para a verificação em Chromium real, feita na sessão
+  //    de navegador já existente da Fatia B (evita um processo de navegador
+  //    adicional só para esta aba).
+  const uiState = await pool.query(
+    `SELECT (SELECT count(*)::int FROM ops_post_shift_needs WHERE post_id=$1) AS needs,
+            (SELECT count(*)::int FROM ops_allocations WHERE post_id=$1) AS allocs`,
+    [postId]
+  );
+  assert.equal(uiState.rows[0].needs, 3, "needs remain persisted for the UI assertion");
+  assert.equal(uiState.rows[0].allocs, 1, "allocation remains persisted for the UI assertion");
+});
+
 test("L06 OPS-02: dimensionamento valida valores e escopo canônico", { skip: !RUN, timeout: 180_000 }, async () => {
   const admin = await provisionAndLoginStaff(pool, api, { role: "admin" });
   const companyId = uuid();
@@ -888,6 +1027,19 @@ test("L06 Fatia B: cobertura, passagem de turno, ocorrência, checklists, evidê
     await page.waitForSelector("#posts-title", { timeout: 30_000 });
     let content = await page.textContent("body");
     assert.match(content || "", /Posto Portaria A/, "operations page renders synthetic post");
+
+    // OPS-01: cadeia cliente → unidade → posto → necessidade por turno →
+    // alocação, criada no subteste OPS-01 e renderizada da API real. O grupo de
+    // estrutura tem carregamento próprio; esperar a seção garante que terminou.
+    await page.waitForSelector("#shift-needs-title", { timeout: 30_000 });
+    content = await page.textContent("body");
+    assert.match(content || "", /QA OPS-01 Empresa/, "posts table renders the client of the chain");
+    assert.match(content || "", /QA OPS-01 Unidade/, "posts table renders the served unit of the chain");
+    assert.match(content || "", /Inspetor CFTV/, "job roles section renders the OPS-01 entity");
+    assert.match(content || "", /Noturno 12h/, "shift need renders the canonical shift template name");
+    assert.match(content || "", /Portaria OPS-01/, "shift need row carries the post name via the canonical join");
+    assert.match(content || "", /sem dia específico/, "need without a day is shown without inventing semantics");
+    assert.match(content || "", /QA Funcionário ativo/, "allocations table renders the professional of the chain");
 
     // Aba Jornada & Habilitação (OPS-04): regra aprovada, habilitação e trilha
     // de bloqueios, vindos da API real e persistidos pelo subteste OPS-04.

@@ -2499,12 +2499,27 @@ async function routeApi(req, res) {
   // mas a autorização obrigatória acontece uma única vez nesta borda, com
   // permissão granular e negação por padrão. Escopos unit/contract só passam
   // quando o recurso funcionário está explicitamente identificado.
-  if (url.pathname.startsWith("/api/hr/")
-      || url.pathname.startsWith("/api/admin/hr/")
-      || url.pathname.startsWith("/api/crm/hr/")
-      || url.pathname.startsWith("/api/employee/")
-      || url.pathname.startsWith("/api/admin/employee/")
-      || url.pathname.startsWith("/api/crm/employee/")) {
+  //
+  // OPS-01: recursos de OPERAÇÃO publicados sob os aliases históricos de RH
+  // (/api/hr/ops-*, /api/admin/hr/ops-*, /api/crm/hr/ops-*) ficam fora desta
+  // borda. Cada handler de operação autoriza a si mesmo — sessão de staff,
+  // papel por método e same-origin — exatamente como nos caminhos canônicos
+  // /api/ops/*, que nunca passaram por aqui. Exigir permissão de RH
+  // (employees.read/write) para cargo/função, posto, escala ou ronda negava
+  // admin/ti nos aliases usados pelos clientes embutidos da tela de operação,
+  // enquanto o caminho canônico do MESMO recurso liberava: dois aliases, duas
+  // autorizações conflitantes para um recurso que não é dado de funcionário.
+  // A isenção vale só para o prefixo `ops-`; os paths de RH legados continuam
+  // na borda. Um alias ops-* desconhecido não é despachado para handler algum
+  // e termina em 404 no fim do roteador.
+  const legacyOpsAlias = /^\/api\/(?:admin\/|crm\/)?hr\/ops-[a-z0-9-]+$/.test(url.pathname);
+  if (!legacyOpsAlias
+      && (url.pathname.startsWith("/api/hr/")
+          || url.pathname.startsWith("/api/admin/hr/")
+          || url.pathname.startsWith("/api/crm/hr/")
+          || url.pathname.startsWith("/api/employee/")
+          || url.pathname.startsWith("/api/admin/employee/")
+          || url.pathname.startsWith("/api/crm/employee/"))) {
     if (!(await authorizeLegacyHrRequest(req, res, url))) return;
   }
   if (url.pathname === "/api/admin/leads") return handleAdminLeads(req, res, url);
