@@ -1644,8 +1644,8 @@ Base: `c3d799c` (PR #31). Branch `arena/01a0efec-gruposegsystemseguranca`.
 | CRM03-2 | Suíte unitária | `npm test` | tudo passa | 196/196, exit 0 |
 | CRM03-3 | Tipos | `npm run typecheck` | 0 erros | 0 erros, exit 0 |
 | CRM03-4 | Build | `npm run build` | sucesso | sucesso |
-| CRM03-5 | Migrações em PostgreSQL descartável | `npm run test:migrations:pg` | 116/116, replay/clone/checksum | **não executado no sandbox (sem PostgreSQL); delegado ao workflow L04 no PR** |
-| CRM03-6 | Gate L04 (HTTP real + PG descartável + Chromium real) | `npm run test:l04-delivery:pg` | 15/15 | **não executado no sandbox (sem Chromium/PG); delegado ao workflow L04 no PR** |
+| CRM03-5 | Migrações em PostgreSQL descartável | `npm run test:migrations:pg` | 116/116, replay/clone/checksum | `116/116 checksums preserved`, `tables 510`, `migration_checksum_mismatch: 006 rejected (exit 1)` |
+| CRM03-6 | Gate L04 (HTTP real + PG descartável + Chromium real) | `npm run test:l04-delivery:pg` | 15/15 | 15/15 em duas execuções consecutivas (`L04_DELIVERY_TEST_EXIT: 0`); execuções intermediárias reprovadas apenas por Chromium morto no `launch` (ruído de ambiente) e por seletor de UI corrigido |
 
 Cenário 15 do gate (`CRM-03: revisão dedicada de deduplicação`) cobre:
 401 sem sessão, 403 para RH e para origem externa, 405 em método errado,

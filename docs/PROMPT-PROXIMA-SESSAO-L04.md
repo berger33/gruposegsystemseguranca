@@ -1,6 +1,62 @@
 # Prompt da próxima sessão — Grupo SEG System (entrega local, L04)
 
-## Estado de entrada mais recente — CRM-01 concluído localmente (2026-09-30)
+## Estado de entrada mais recente — CRM-03 concluído localmente (2026-09-29)
+
+Antes de qualquer código, confirme no disco `git status --short --branch`,
+`git rev-parse HEAD`, `git log -1 --oneline` e `git log --oneline --all
+--decorate -12`. A sessão fixa anterior foi
+`arena/01a0efec-gruposegsystemseguranca`; o HEAD de entrada foi
+`c3d799c186e8b513d130d786b6d14d86275a90f0` (PR #31). Leia integralmente estado,
+checklist, evidências e todos os `docs/PROMPT-CONTINUACAO-*.md`, especialmente
+`docs/PROMPT-CONTINUACAO-CRM-03-DEDUPLICACAO.md`.
+
+A fatia única foi **CRM-03 — revisão dedicada de deduplicação** (PR #32).
+Existe agora `ImportDedupReview.tsx` em `/admin/crm`,
+`GET /api/crm/imports/:id/duplicates`,
+`PATCH /api/crm/imports/:id/rows/:rowNumber` com decisão explícita
+`create`/`skip`, autor/data do servidor e auditoria transacional
+(`crm_import_row_decision`, rollback 503), e
+`POST /api/crm/imports/:id/commit` fail-closed
+(409 `pending_dedup_review`, 400 `actions_not_accepted`, fechamento + trilha na
+mesma transação). Leitura/fechamento de lote passaram a exigir família
+comercial (RH 403). O curinga cru do dedup por nome foi escapado. A migração
+aditiva mais recente é **116**; 001–116 são imutáveis e a próxima livre é
+**117**. Gate: **15/15 em duas execuções consecutivas**, PostgreSQL
+descartável, HTTP real e Chromium real sem `--disable-web-security`; static
+5/5, migrations 116/116 (510 tabelas), npm test 196/196, typecheck e build
+aprovados.
+
+L04 continua **PARCIAL** e L05 não foi iniciado. Não reabrir CRM-01, CRM-02 nem
+CRM-03 sem nova lacuna comprovada. Permanecem honestamente fora: mesclagem do
+registro existente na deduplicação, deduplicação de contatos (`type=contacts`
+não cria no commit), revisão de lotes antigos pela tela, CRM-04 resolução
+automática de contato sem empresa, as **146** ações de auditoria ainda fora do
+CHECK, lembretes/notificações externas de CRM-08, PUB-02/05/06/07/09 e CRM-10
+por decisão. Não ativar `SITE_VISUAL_SELECTION_ENABLED=false`, não publicar em
+produção e não contratar serviço externo.
+
+### Escolha futura obrigatória
+
+Na próxima continuação escolha **uma única** fatia vertical restante e registre
+sua política em novo `docs/PROMPT-CONTINUACAO-<fatia>.md` antes das rotas. As
+opções ainda coerentes são CRM-04 (contato sem empresa / correção de dados), um
+domínio delimitado das ações de auditoria, ou uma fatia PUB com política
+definida. Antes de uma migração confirme `ls db/migrations | sort | tail`,
+`latestMigration`, o manifesto e `git ls-remote --heads origin`; uma nova
+migração deve ser **117**, aditiva, com replay/clone/checksum negativo.
+
+### Cuidados confirmados nesta sessão
+
+- O Chromium do sandbox morre com SIGSEGV no `launch` de forma intermitente:
+  duas execuções do gate reprovaram sem nenhuma asserção falhar. Reexecute
+  antes de investigar código.
+- `getByLabel` não funciona em `<label>` sem `htmlFor` (caso do textarea de CSV
+  em `/admin/crm`): use `getByPlaceholder` ou associe `htmlFor`/`id`.
+- Os logs do GitHub Actions podem ficar indisponíveis (erro `EOF` no download);
+  rodar o gate localmente é o caminho mais rápido de diagnóstico.
+
+## Histórico anterior — CRM-01 concluído localmente (2026-09-30)
+
 
 Antes de qualquer código, confirme no disco `git status --short --branch`,
 `git rev-parse HEAD`, `git log -1 --oneline` e `git log --oneline --all

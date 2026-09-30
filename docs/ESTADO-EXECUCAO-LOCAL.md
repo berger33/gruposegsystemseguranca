@@ -52,14 +52,16 @@ Gate: novo cenário **15** em `tests/l04-delivery.integration.test.mjs`
 (autorização, entrada, curinga escapado, commit bloqueado por revisão
 pendente, recusa do `actions` legado, rollback por auditoria injetada, decisão
 auditada, commit revisado, imutabilidade pós-commit e jornada UI em Chromium
-real). **Limitação honesta desta sessão:** o sandbox não tem PostgreSQL nem
-Chromium instaláveis, então `test:migrations:pg` e `test:l04-delivery:pg`
-**não foram executados localmente**; foram delegados ao workflow
-`.github/workflows/l04-delivery.yml` no PR desta fatia — sem resultado verde
-do workflow, CRM-03 **não** deve ser marcado como pronto_local.
-Executados localmente e aprovados: `npm ci` (82 pacotes, 0 vulnerabilidades),
-`qa-wave0-static` 5/5 (agora 001–116), `npm test` 196/196, `npm run typecheck`
-e `npm run build`.
+real). Resultado: **15/15 em duas execuções consecutivas aprovadas**, com
+PostgreSQL descartável, HTTP real e Chromium real sem `--disable-web-security`.
+Duas execuções intermediárias falharam por ruído conhecido do ambiente
+(Chromium morrendo no `launch`, sem nenhuma asserção reprovada) e uma falhou
+por seletor de UI (`getByLabel` em `<label>` sem `htmlFor`), corrigido para
+`getByPlaceholder` — nenhuma regra foi afrouxada.
+Fechamento: `npm ci` (82 pacotes, 0 vulnerabilidades), `qa-wave0-static` 5/5
+(001–116), `test:migrations:pg` **116/116** com replay/clone/checksum negativo
+e 510 tabelas, `npm test` 196/196, typecheck e build aprovados, `git status`
+limpo após restaurar `tsconfig.json` e `next-env.d.ts`.
 
 
 ## Continuação atual — CRM-01 (superfície dedicada de unidades atendidas, 2026-09-30)

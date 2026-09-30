@@ -3252,7 +3252,7 @@ test('CRM-03: revisão dedicada de deduplicação — decisão explícita, persi
       page.waitForResponse(response => response.url().includes('/api/crm/companies?') && response.request().method() === 'GET'),
       page.goto(`${baseUrl}/admin/crm`, { waitUntil: 'domcontentloaded' }),
     ]);
-    await page.getByLabel(/Ou cole CSV/).fill(uiCsv);
+    await page.getByPlaceholder(/display_name,document_ref,city,segment,type/).fill(uiCsv);
     const [previewResponse] = await Promise.all([
       page.waitForResponse(response => response.url().endsWith('/api/crm/imports/preview') && response.request().method() === 'POST'),
       page.getByRole('button', { name: /Prévia \(CRM-03\)/ }).click(),
