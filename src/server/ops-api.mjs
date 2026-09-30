@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
  * OPS-01: cliente → unidade → posto físico → necessidade por turno → alocação; cargo/função em entidade própria
  * OPS-02: dimensionamento contratado vs planejado vs realizado, cobertura por faixa tempo e profissional habilitado
  * OPS-03: escala rascunho/publicada/revisada, validade e histórico; calendário por posto/equipe/pessoa e ciência
+ * Delivery gates: OPS-02/03 validation remains fail-closed and idempotent.
  * OPS-04: validar sobreposição, indisponibilidade, habilitação, documentação e regras jornada/descanso configuradas e aprovadas
  */
 
