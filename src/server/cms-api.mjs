@@ -60,7 +60,7 @@ export function createCmsApi(ctx) {
         const active=(await c.query("UPDATE cms_contents SET is_published=false,status='arquivado' WHERE slug=$1 AND is_published RETURNING *",[old.slug])).rows;
         for(const a of active)await history(c,s,a,{...a,status:'publicado'},'Substituição por nova versão publicada');
       }
-      const updated=(await c.query("UPDATE cms_contents SET status=$2,is_published=($2='publicado'),published_at=CASE WHEN $2='publicado' THEN NOW() ELSE published_at END,published_by_identity=CASE WHEN $2='publicado' THEN $3 ELSE published_by_identity END,published_by_name=CASE WHEN $2='publicado' THEN $4 ELSE published_by_name END WHERE id=$1 RETURNING *",[id,b.status,s.identityId,s.role])).rows[0];
+      const updated=(await c.query("UPDATE cms_contents SET status=$2::text::cms_content_status,is_published=($2='publicado'),published_at=CASE WHEN $2='publicado' THEN NOW() ELSE published_at END,published_by_identity=CASE WHEN $2='publicado' THEN $3 ELSE published_by_identity END,published_by_name=CASE WHEN $2='publicado' THEN $4 ELSE published_by_name END WHERE id=$1 RETURNING *",[id,b.status,s.identityId,s.role])).rows[0];
       await history(c,s,updated,old,reason);await audit(c,s,b.status==='publicado'?'cms_content_publish':'cms_content_update',id);return updated;
     });send(res,200,r);
   });
