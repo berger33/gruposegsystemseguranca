@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import CommercialHistory from "./CommercialHistory";
 import CatalogClient from "../ti/CatalogClient";
 import EquipmentClient from "../ti/EquipmentClient";
 import InspectionClient from "../ti/InspectionClient";
@@ -124,7 +125,7 @@ export default function ComercialWorkspace() {
         {view === "relatorios" && (
           <>
             <section style={card}><ReportClient /></section>
-            <section style={card}><CommissionClient /></section>
+            <section style={card}><CommissionClient /><CommercialHistory /></section>
           </>
         )}
         {view === "biblioteca" && (
