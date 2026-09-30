@@ -84,7 +84,7 @@ before(async () => {
   });
   server.stdout.on('data', () => {});
   server.stderr.on('data', chunk => {
-    if (process.env.QA_VERBOSE === '1') process.stderr.write(chunk);
+    if (process.env.QA_VERBOSE === '1' || chunk.toString().includes('L04_ERROR')) process.stderr.write(chunk);
   });
   await waitForServer(baseUrl);
   pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 5 });
@@ -3379,7 +3379,7 @@ test('L04 fechamento: carteira pessoal, renovação, indicação, reativação e
  assert.equal(c.status,201);const company=c.body.company.id;
  const created=await api('/api/crm/opportunities',{method:'POST',cookie:a.cookie,body:{company_id:company,title:'Base carteira sintética',estimated_value:1000}});
  assert.equal(created.status,201,JSON.stringify(created.body));const source=created.body.opportunity.id;
- assert.equal((await api('/api/crm/portfolio?filter=no_next',{cookie:a.cookie})).body.items.some(x=>x.id===source),true);
+ const portfolio=await api('/api/crm/portfolio?filter=no_next',{cookie:a.cookie});assert.equal(portfolio.status,200,JSON.stringify(portfolio.body));assert.equal(portfolio.body.items.some(x=>x.id===source),true);
  assert.equal((await api('/api/crm/portfolio',{cookie:b.cookie})).body.items.some(x=>x.id===source),false);
  const action={source_id:source,request_key:randomUUID(),kind:'renovacao',title:'Renovação sintética',next_action:'Telefonar para responsável',next_action_date:new Date(Date.now()+86400000).toISOString()};
  assert.equal((await api('/api/crm/portfolio',{method:'POST',cookie:b.cookie,body:action})).status,404);
@@ -3398,4 +3398,45 @@ test('L04 fechamento: carteira pessoal, renovação, indicação, reativação e
  finally{await pool.query('DROP TRIGGER qa_l04_portfolio_fail ON auth_access_audit');await pool.query('DROP FUNCTION qa_l04_portfolio_fail()');}
  assert.equal((await api('/api/crm/reports/conversion',{cookie:a.cookie})).body.total,5);
  const browser=await launchBrowser();try{const context=await browser.newContext({viewport:{width:390,height:844}}),pair=a.cookie.split(';')[0],i=pair.indexOf('=');await context.addCookies([{name:pair.slice(0,i),value:pair.slice(i+1),url:baseUrl}]);const page=await context.newPage();await page.goto(baseUrl+'/admin/carteira',{waitUntil:'networkidle'});await page.getByRole('heading',{name:'Base carteira sintética',exact:true}).waitFor();await assertNoHorizontalScroll(page,'carteira móvel');await context.close();}finally{await browser.close();}
+});
+
+test('L04 fechamento: metas, comissões versionadas, biblioteca aprovada e métricas de parceiros',{skip:!RUN,timeout:90000},async()=>{
+ const manager=await provisionAndLoginStaff(pool,api,{role:'marcelo'}),sales=await provisionAndLoginStaff(pool,api,{role:'comercial'}),cookie=manager.cookie;
+ const period={period_start:'2026-01-01',period_end:'2026-12-31'};
+ assert.equal((await api('/api/crm/goals',{method:'POST',cookie:sales.cookie,body:{title:'Não permitido'}})).status,403);
+ const goal=await api('/api/crm/goals',{method:'POST',cookie,body:{...period,title:'Meta anual sintética',target_type:'recebido',target_value:10000,responsible_id:sales.id}});
+ assert.equal(goal.status,201,JSON.stringify(goal.body));
+ assert.equal((await api('/api/crm/goals/'+goal.body.goal.id,{method:'PATCH',cookie,body:{status:'ativo'}})).status,200);
+ const hist=await api('/api/crm/commercial-versions?type=crm_goals&id='+goal.body.goal.id,{cookie});assert.equal(hist.status,200);assert.equal(hist.body.items.length,2);
+ const rule=await api('/api/crm/commission-rules',{method:'POST',cookie,body:{name:'Comissão sintética',base_type:'recebido',period_type:'mensal',percent:5,cancel_rule:'estorna_total',requires_approval:true}});
+ assert.equal(rule.status,201,JSON.stringify(rule.body));
+ const ruleId=rule.body.rule.id;
+ assert.equal((await api('/api/crm/commission-rules/'+ruleId,{method:'PATCH',cookie,body:{status:'ativa'}})).status,200);
+ const commission=await api('/api/crm/commissions',{method:'POST',cookie,body:{...period,rule_id:ruleId,base_value:1000,responsible_id:sales.id}});
+ assert.equal(commission.status,201,JSON.stringify(commission.body));
+ const rec=commission.body.commission;assert.equal(Number(rec.calculated_value),50);assert.equal(rec.status,'pendente_aprovacao');assert.equal(rec.is_paid,false);assert.equal(rec.rule_snapshot.cancel_rule,'estorna_total');
+ assert.equal((await api('/api/crm/commissions/'+rec.id,{method:'PATCH',cookie,body:{is_paid:true,paid_note:'Registro sintético de pagamento informado'}})).status,409);
+ assert.equal((await api('/api/crm/commissions/'+rec.id,{method:'PATCH',cookie:sales.cookie,body:{status:'aprovada'}})).status,403);
+ assert.equal((await api('/api/crm/commissions/'+rec.id,{method:'PATCH',cookie,body:{status:'aprovada'}})).status,200);
+ assert.equal((await api('/api/crm/commissions/'+rec.id,{method:'PATCH',cookie,body:{status:'cancelada',is_paid:true,paid_note:'Informação conflitante de pagamento'}})).status,400);
+ assert.equal((await api('/api/crm/commissions/'+rec.id,{method:'PATCH',cookie,body:{status:'cancelada'}})).status,400);
+ assert.equal((await api('/api/crm/commissions/'+rec.id,{method:'PATCH',cookie,body:{status:'cancelada',cancel_reason:'Contrato cancelado em teste sintético'}})).status,200);
+ assert.equal((await api('/api/crm/commission-rules/'+ruleId,{method:'PATCH',cookie,body:{percent:10}})).status,200);
+ const old=(await api('/api/crm/commissions/'+rec.id,{cookie})).body.commission;assert.equal(Number(old.calculated_value),50);assert.equal(Number(old.rule_snapshot.percent),5);assert.equal(old.is_paid,false);
+ const library=await api('/api/crm/commercial-library',{method:'POST',cookie,body:{title:'Apresentação sintética',type:'apresentacao',description:'Material sintético para revisão da gestão'}});
+ assert.equal(library.status,201,JSON.stringify(library.body));const libId=library.body.item.id;
+ assert.equal((await api('/api/crm/campaigns',{method:'POST',cookie,body:{name:'Campanha sintética',library_ids:[libId]}})).status,400);
+ assert.equal((await api('/api/crm/commercial-library/'+libId,{method:'PATCH',cookie,body:{status:'aprovado'}})).status,200);
+ const campaign=await api('/api/crm/campaigns',{method:'POST',cookie,body:{name:'Campanha sintética',segment_type:'cidade',segment_filter:{city:'Guarulhos'},library_ids:[libId]}});
+ assert.equal(campaign.status,201,JSON.stringify(campaign.body));assert.equal(campaign.body.campaign.status,'rascunho');
+ assert.equal((await api('/api/crm/commercial-library/'+libId,{method:'PATCH',cookie,body:{title:'Apresentação sintética corrigida'}})).status,200);
+ assert.equal((await api('/api/crm/commercial-library/'+libId,{cookie})).body.item.status,'rascunho');
+ const company=await api('/api/crm/companies',{method:'POST',cookie,body:{display_name:'Empresa de parceria '+randomUUID()}});
+ assert.equal(company.status,201);
+ const renewal=await api('/api/crm/renewals',{method:'POST',cookie,body:{company_id:company.body.company.id,title:'Renovação sintética datada',type:'upsell',previous_value:100,new_value:125,renewal_date:'2026-09-30',responsible_id:sales.id}});
+ assert.equal(renewal.status,201,JSON.stringify(renewal.body));assert.equal(Number(renewal.body.renewal.uplift_percent),25);
+ const metrics=await api('/api/crm/partnership-metrics?start=2026-01-01&end=2026-12-31&responsibleId='+sales.id,{cookie});
+ assert.equal(metrics.status,200,JSON.stringify(metrics.body));assert.equal(metrics.body.renewalsByTypeStatus.find(x=>x.type==='upsell').count,1);
+ assert.equal((await api('/api/crm/renewals',{cookie:sales.cookie})).body.renewals.some(x=>x.id===renewal.body.renewal.id),true);
+ assert.ok((await pool.query("SELECT COUNT(*)::int AS n FROM auth_access_audit WHERE action='crm_commission_create' AND target=$1",[rec.id])).rows[0].n>=1);
 });
