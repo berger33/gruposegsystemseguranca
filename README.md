@@ -1,5 +1,12 @@
 # Grupo SEG System
 
+## Continuação atual: L05 — contratos e implantação
+
+O fechamento técnico do L04 está no [PR #33](https://github.com/berger33/gruposegsystemseguranca/pull/33).
+Leia o [relatório de entrega L04](docs/ENTREGA-L04.md) e o [prompt completo para o Arena continuar L05](docs/PROMPT-CONTINUACAO-L05-CONTRATOS.md).
+Integre o PR com checks aprovados antes de iniciar L05 sobre a main. Isso não declara o sistema inteiro pronto nem substitui homologação humana.
+
+
 ## Demonstração local persistente — apenas massa fictícia
 
 A versão **fonte atual**, não os ZIPs históricos, possui [início local persistente e guia Windows](docs/demo-local-persistente.md): `INICIAR-DEMO-LOCAL.bat`. Ele cria banco PostgreSQL **exclusivo no perfil do usuário**, sem SMTP/Funnel e sem dados reais; ainda **não é instalador Windows homologado, backup nem sistema completo**. Ensaio Linux isolado: `npm run test:demo-local:pg` ([QA-HOM-008](docs/evidencias/QA-HOM-008-demo-local-persistente.md) e [cópia fria/restore QA-HOM-009](docs/evidencias/QA-HOM-009-copia-fria-demo-sintetico.md)). A cópia do demo contém segredos em claro, não é backup operacional. Não copiar chaves ou dados da prévia anterior.
