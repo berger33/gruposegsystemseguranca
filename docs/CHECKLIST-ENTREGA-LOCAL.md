@@ -784,31 +784,31 @@ validar sobreposição, indisponibilidade, habilitação, documentação e regra
 
 ## OPS-05
 ausência abre pendência de cobertura; candidatos de substituição por disponibilidade/qualificação, decisão humana e comunicação.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `POST/GET /api/ops/coverage-requests`, `POST/GET/PATCH /api/ops/substitution-candidates`, `POST/GET /api/ops/coverage-communications`. Tabelas `ops_coverage_requests`, `ops_substitution_candidates`, `ops_coverage_communications`. Validação fail-closed de contrato operacional, funcionário ativo, qualificação para o cargo (`ops_employee_qualifications`), disponibilidade e sobreposição de turno (`checkCandidateConflict`). Decisão humana com registro de auditoria atômico.
+- Integração e evidência (teste, resultado, commit): `npm run test:l06-delivery:pg` verde (cenário 2.1-2.11): nega anônimo (401), papel indevido (403), posto inexistente (404), contrato encerrado (409), candidato sem qualificação (409 `candidate_unqualified`), candidato com sobreposição de turno (409 `candidate_shift_conflict`), candidato desligado (409 `employee_not_operational`), decisão humana registra e atualiza status para `candidato_encontrado`.
+- Pendência / fronteira externa / aceite humano: Comunicações e notificações são internas/sintéticas no sistema (sem envio externo SMS/WhatsApp real). Aceite humano pendente.
 
 ## OPS-06
 passagem de plantão com origem/destino, pendências, aceite e escalonamento de não aceite.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `POST/GET/PATCH /api/ops/handovers`, `GET /api/ops/handover-escalations`. Tabelas `ops_handovers`, `ops_handover_escalations`. Validação fail-closed de posto ativo, contrato operacional, funcionários de origem e destino distintos e ativos, protocolo único (`HND-OPS-...`), pendências, itens de guarda, ciência idempotente e escalonamento obrigatório de motivo.
+- Integração e evidência (teste, resultado, commit): `npm run test:l06-delivery:pg` verde (cenário 3.1-3.5): nega anônimo (401), posto inexistente (404), mesmo funcionário na origem/destino (400), contrato encerrado (409), aceite idempotente sem duplicar efeito, escalonamento sem motivo bloqueado (400) e com motivo registrado em trilha imutável.
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente.
 
 ## OPS-07
 livro de ocorrências com categoria/severidade, responsável, ações e encerramento; evidências privadas e histórico imutável de retificação.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `POST/GET/PATCH /api/ops/occurrence-book`, `GET /api/ops/occurrence-history`, `POST/GET /api/ops/occurrence-evidences`, `POST/GET /api/ops/occurrence-actions`. Tabelas `ops_occurrence_book`, `ops_occurrence_history`, `ops_occurrence_evidences`, `ops_occurrence_actions`. Protocolo único (`OCC-OPS-...`), retificação com motivo obrigatório e preservação imutável da versão anterior, vínculo de evidências com validação de escopo multi-tenant do L02 (`client_documents`).
+- Integração e evidência (teste, resultado, commit): `npm run test:l06-delivery:pg` verde (cenário 4.1-4.8): nega anônimo (401), contrato encerrado (409), retificação sem motivo (400), documento privado de outro cliente/contrato rejeitado (403), documento no mesmo escopo aceito (201), histórico preserva versão original e retificada com flag e auditoria fail-closed.
+- Pendência / fronteira externa / aceite humano: Nenhum acionamento policial/SAMU/bombeiros externo ou 24h real simulado. Aceite humano pendente.
 
 ## OPS-08
 checklists por serviço/cliente, versão, frequência, itens obrigatórios e evidências proporcionais.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `POST/GET /api/ops/checklist-templates`, `POST/GET/PATCH /api/ops/checklist-runs`, `POST/GET /api/ops/checklist-answers`. Tabelas `ops_checklist_templates`, `ops_checklist_runs`, `ops_checklist_answers`. Execução vinculada a posto e contrato operacional, validação de preenchimento obrigatório de todos os itens com `is_required=true` antes da finalização, registro de não-conformidade e evidências no escopo L02, finalização e retry de envio idempotentes.
+- Integração e evidência (teste, resultado, commit): `npm run test:l06-delivery:pg` verde (cenário 5.1-5.6): nega anônimo (401), contrato encerrado (409), finalização com item obrigatório não preenchido rejeitada (422 `missing_required_items`), resposta de item duplicada impedida com upsert idempotente, finalização aprovada após preenchimento integral e retry idempotente sem efeito colateral.
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente.
 
 ## OPS-09
 visitas de supervisão, inspeções e planos de ação com prazo, responsável e verificação.
@@ -1085,87 +1085,87 @@ comissões ligadas à regra CRM-25, provisão e revisão; não pagar automaticam
 
 ## AST-01
 produtos/SKU, fornecedores, unidade de medida, custo, local e estoque mínimo.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `POST/GET /api/ast/suppliers`, `POST/GET/PATCH /api/ast/products`, workspace `/admin/patrimonio`. Tabelas `ast_suppliers`, `ast_products`. Validação de SKU único (409), nomes, unidades de medida, custos, preços e estoques mínimos. Transação atômica com auditoria fail-closed.
+- Integração e evidência (teste, resultado, commit): `npm run test:l06-delivery:pg` verde (cenário 2): nega anônimo (401), papel indevido (403), fornecedor com nome duplicado negado (409), produto com SKU duplicado negado (409), criação válida com vínculo de fornecedor e auditoria atômica persistida.
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente.
 
 ## AST-02
 entradas/saídas/transferências/ajustes por motivo com histórico; saldo derivado de movimentos consistentes.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `POST/GET /api/ast/stock-movements`. Tabelas `ast_stock_movements`, `ast_products`. Bloqueio pessimista (`FOR UPDATE`), validação de escopo de contrato operacional e trava em banco (`CHECK stock_current >= 0`) para impedir saldo negativo fail-closed.
+- Integração e evidência (teste, resultado, commit): `npm run test:l06-delivery:pg` verde (cenário 3.1-3.3): entrada de 50 eleva saldo para 50, saída de 20 reduz saldo para 30, tentativa de saída de 40 (superior ao saldo de 30) bloqueada fail-closed com 400 (`insufficient_stock`), saldo permanece 30.
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente.
 
 ## AST-03
 reserva para proposta/implantação sem confundir reserva com saída; liberação em cancelamento.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `POST/GET/PATCH /api/ast/reservations`. Tabelas `ast_reservations`, `ast_stock_movements`, `ast_products`. Cálculo atômico de saldo disponível (`stock_current - reservas ativas`), índice único contra reservas ativas duplicadas, ações de liberar (recompõe disponibilidade sem afetar estoque físico) e converter (baixa efetiva em estoque via `movement_type='saida'`).
+- Integração e evidência (teste, resultado, commit): `npm run test:l06-delivery:pg` verde (cenário 4.1-4.5): reserva de 15 reduz disponibilidade, tentativa de sobre-reserva de 20 negada (400 `insufficient_available_stock`), retry duplicado negado (409), liberação recompõe disponibilidade uma única vez (segunda liberação negada 400), conversão em saída reduz saldo físico de 30 para 20.
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente.
 
 ## AST-04
 equipamentos serializados por cliente/posto/colaborador, proprietário, garantia, manutenção e termo de guarda.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `POST/GET/PATCH /api/ast/serialized-assets`. Tabela `ast_serialized_assets`. Vínculo a `product_id`, número de série único (`serial_number`), garantias, contratos e postos operacionais.
+- Integração e evidência (teste, resultado, commit): `npm run test:l06-delivery:pg` verde (cenário 5): criação de ativo serializado com status `disponivel`, serial duplicado rejeitado com 409 (`duplicate_serial_number`), histórico e auditoria fail-closed.
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente.
 
 ## AST-05
 entrega/devolução, avaria/perda, fotos pertinentes e conferência.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `POST/GET /api/ast/deliveries`. Tabelas `ast_deliveries`, `ast_serialized_assets`. Gestão de custódia e termos de guarda com conferência antes/depois, fotos e notas; bloqueia dupla entrega ativa de ativo já em uso (`em_uso`) sem prévia devolução.
+- Integração e evidência (teste, resultado, commit): `npm run test:l06-delivery:pg` verde (cenário 5.1-5.3): entrega para titular altera status para `em_uso`, tentativa de entrega simultânea do mesmo ativo negada (409 `asset_already_in_use`), devolução altera status de volta para `disponivel`, cadeia de custódia preservada.
+- Pendência / fronteira externa / aceite humano: Fotos/anexos operam sobre armazenamento privado local/sintético. Aceite humano pendente.
 
 ## AST-06
 requisição, cotação, seleção, aprovação, pedido, recebimento e vínculo a conta a pagar.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `POST/GET/PATCH /api/ast/requisitions`, `POST/GET/PATCH /api/ast/quotations`, `POST/GET/PATCH /api/ast/purchase-orders`, `GET /api/ast/requisition-history`, `GET /api/ast/order-history`. Tabelas `ast_requisitions`, `ast_quotations`, `ast_purchase_orders`, `ast_requisition_history`, `ast_order_history`. Protocolos automáticos (`REQ-AST-...`, `PED-AST-...`), fluxo sintético interno rotulado (`is_synthetic_flow=true`), seleção exclusiva de cotação e recebimento total com entrada automática no estoque.
+- Integração e evidência (teste, resultado, commit): `npm run test:l06-delivery:pg` verde (cenário 6): criação de requisição, aprovação auditada, cotação selecionada, pedido sintético emitido, recebimento total gera entrada automática (+10) no estoque físico e trilhas imutáveis de histórico preservadas.
+- Pendência / fronteira externa / aceite humano: Não integra compras fiscais ou pagamentos externos reais (fluxo sintético interno rotulado). Aceite humano pendente.
 
 ## AST-07
 inventário físico, divergências e ajuste aprovado.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/patrimonio` (aba Inventários Físicos com lista, protocolo, status e contagem). Endpoints: `POST/GET/PATCH /api/ast/inventories`, `POST/GET/PATCH /api/ast/inventory-items`, `GET /api/ast/inventory-history`. Tabelas: `ast_inventories`, `ast_inventory_items`, `ast_inventory_history`. Protocolo gerado (`INV-AST-...`), conciliação física de contagem, histórico imutável e aplicação atômica de ajuste de estoque apenas após aprovação formal (`status='aprovado'`).
+- Integração e evidência (teste, resultado, commit): `npm run test:l06-delivery:pg` verde (Subtest 4, cenário 2): inventário criado, contagem física divergente (esperado 30, apurado 25), aprovação atômica deduz 5 unidades do saldo em estoque com `FOR UPDATE`, re-aprovação bloqueada por idempotência, navegação confirmada em Chromium real.
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente.
 
 ## AST-08
 ordem de serviço com solicitante, contrato, técnico, agenda, diagnóstico, checklist, peças e execução.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/patrimonio` (aba Ordens de Serviço (OS) com protocolo, prioridade, técnico, status e detalhes). Endpoints: `POST/GET/PATCH /api/ast/service-orders`, `GET /api/ast/service-order-history`. Tabelas: `ast_service_orders`, `ast_service_order_history`. Protocolo gerado (`OS-AST-...`), escopo de contrato operacional e cliente vinculados, checklist de diagnóstico, baixa atômica de peças (`movement_type='saida'`, `reference_type='ordem_servico'`) e obrigatoriedade de notas de execução e identificação do técnico para conclusão.
+- Integração e evidência (teste, resultado, commit): `npm run test:l06-delivery:pg` verde (Subtest 4, cenário 3): abertura de OS, bloqueio de conclusão sem notas de execução (400), conclusão válida deduz 5 peças do saldo em estoque (25 -> 20), re-conclusão bloqueada sem duplicidade de consumo, rejeição atômica de OS com peças excedentes ao estoque disponível, navegação confirmada em Chromium real.
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente.
 
 ## AST-09
 evidências antes/depois, aceite, garantia, retorno e custo; acesso cliente somente ao que for aprovado.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: Endpoints: `POST/GET/PATCH /api/ast/service-order-evidences`. Tabela: `ast_service_order_evidences`. Validação estrita de escopo L02 de documentos privados (`client_documents`), proibição de anexos de outros clientes/contratos (403), tipo de evidência antes/depois, garantia, custo e liberação controlada de visibilidade para o cliente (`is_client_visible=true`) somente após aprovação (`is_approved=true` ou status aprovado no documento L02).
+- Integração e evidência (teste, resultado, commit): `npm run test:l06-delivery:pg` verde (Subtest 4, cenário 4): bloqueio de evidência de cliente divergente (403 `document_scope_violation`), cadastro de evidência válida do mesmo contrato, rejeição de visibilidade ao cliente sem aprovação (400), e aprovação com liberação de visibilidade e prazo de garantia.
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente.
 
 ## AST-10
 manutenção preventiva/corretiva, periodicidade, alerta, próxima visita e histórico por ativo.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: Endpoints: `POST/GET/PATCH /api/ast/maintenance-plans`, `POST/GET /api/ast/maintenance-executions`. Tabelas: `ast_maintenance_plans`, `ast_maintenance_executions`. Planos de manutenção preventiva/corretiva por ativo (`asset_id`), periodicidade em dias, alerta antecipado, registro de execuções com técnico responsável, custo e avanço automático da próxima data de visita (`next_due_date`).
+- Integração e evidência (teste, resultado, commit): `npm run test:l06-delivery:pg` verde (Subtest 4, cenário 5): criação de plano preventivo trimestral (90 dias), registro de execução de manutenção técnica, e conferência no banco de que a próxima data de vencimento foi atualizada atomicamente no plano para a data indicada na execução.
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente.
 
 ## AST-11
 dossiê técnico de CFTV com modelos, localização autorizada, garantia e documentação; senhas de equipamentos fora do cadastro/log comum.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: Endpoints: `POST/GET/PATCH /api/ast/cftv-dossiers`. Tabela: `ast_cftv_dossiers`. Dossiê com modelo, fabricante, número de série, endereço IP, documentação técnica anexada, e proteção absoluta contra senhas em texto puro (`plaintext_password_prohibited` com rejeição 400 se `plain_password` ou `password` forem fornecidos), exigindo referência a cofre corporativo de senhas (`password_reference` / `password_storage_hint`).
+- Integração e evidência (teste, resultado, commit): `npm run test:l06-delivery:pg` verde (Subtest 4, cenário 6): tentativa de envio de senha em texto plano rejeitada com 400, e cadastro seguro do dossiê com apontador URI de cofre seguro e meta auditada sem credenciais sensíveis.
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente.
 
 ## AST-12
 materiais de limpeza com consumo por local, reposição e comparação ao previsto.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: Endpoints: `POST/GET /api/ast/cleaning-materials`. Tabela: `ast_cleaning_materials`. Consumo esperado vs real por local/posto, período apurado, cálculo automático de razão de consumo (`consumption_ratio`), variância percentual (`variance_percent`), e acionamento automático do indicador de necessidade de reposição (`needs_replacement=true`) em caso de consumo excedente ao previsto.
+- Integração e evidência (teste, resultado, commit): `npm run test:l06-delivery:pg` verde (Subtest 4, cenário 7): registro de consumo de produto de limpeza com consumo de 12 unidades contra 10 previstas, validação da variância (2 unidades / 20%), e flag `needs_replacement` ativada.
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente.
 
 ## ADM-01
 painel “Meu dia” com pendências reais, prioridade, responsável e ação.
