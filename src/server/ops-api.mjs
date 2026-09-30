@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 /**
  * OPS-01/02/03/04 — Operação: estrutura, dimensionamento, escala, validação
  * OPS-01: cliente → unidade → posto físico → necessidade por turno → alocação; cargo/função em entidade própria
@@ -24,7 +25,6 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
     try { return JSON.parse(raw); } catch { return null; }
   }
   function ipHash(req) {
-    const { createHash } = require('node:crypto');
     const fwd = req.headers['x-forwarded-for'];
     const ip = fwd ? String(fwd).split(',')[0].trim() : req.socket?.remoteAddress || 'unknown';
     return createHash('sha256').update(ip).digest('hex').slice(0,32);
@@ -456,23 +456,52 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       const period_start = b.period_start || b.periodStart;
       const period_end = b.period_end || b.periodEnd;
       if (!period_start || !period_end) return send(res, 400, { error: 'period_required' });
-      if (new Date(period_end) < new Date(period_start)) return send(res, 400, { error: 'invalid_period', detail: 'period_end >= period_start' });
+      const parsedStart = new Date(period_start);
+      const parsedEnd = new Date(period_end);
+      if (Number.isNaN(parsedStart.getTime()) || Number.isNaN(parsedEnd.getTime()) || parsedEnd < parsedStart) {
+        return send(res, 400, { error: 'invalid_period', detail: 'period_end >= period_start and both dates must be valid' });
+      }
       const company_id = b.company_id || b.companyId;
       const unit_id = b.unit_id || b.unitId;
       const contract_id = b.contract_id || b.contractId;
       if (company_id && !validateUuid(company_id)) return send(res, 400, { error: 'invalid_company_id' });
       if (unit_id && !validateUuid(unit_id)) return send(res, 400, { error: 'invalid_unit_id' });
       if (contract_id && !validateUuid(contract_id)) return send(res, 400, { error: 'invalid_contract_id' });
-      const contracted = Number(b.contracted_headcount || b.contractedHeadcount || 0);
-      const planned = Number(b.planned_headcount || b.plannedHeadcount || 0);
-      const realized = Number(b.realized_headcount || b.realizedHeadcount || 0);
-      const cov_req = Number(b.coverage_hours_required || b.coverageHoursRequired || 0);
-      const cov_real = Number(b.coverage_hours_realized || b.coverageHoursRealized || 0);
+      const contracted = Number(b.contracted_headcount ?? b.contractedHeadcount ?? 0);
+      const planned = Number(b.planned_headcount ?? b.plannedHeadcount ?? 0);
+      const realized = Number(b.realized_headcount ?? b.realizedHeadcount ?? 0);
+      const cov_req = Number(b.coverage_hours_required ?? b.coverageHoursRequired ?? 0);
+      const cov_real = Number(b.coverage_hours_realized ?? b.coverageHoursRealized ?? 0);
+      if (![contracted, planned, realized, cov_req, cov_real].every(Number.isFinite) ||
+          ![contracted, planned, realized].every(Number.isInteger) ||
+          [contracted, planned, realized, cov_req, cov_real].some((value) => value < 0)) {
+        return send(res, 400, { error: 'invalid_dimensioning_values' });
+      }
+      const status = b.status || 'rascunho';
+      if (!['rascunho','aprovado','em_execucao','concluido','arquivado'].includes(status)) {
+        return send(res, 400, { error: 'invalid_status' });
+      }
       try {
+        const scope = await pool.query(
+          `SELECT p.company_id AS post_company_id, p.unit_id AS post_unit_id,
+                  p.contract_id AS post_contract_id, p.is_active AS post_active,
+                  c.company_id AS contract_company_id, c.status AS contract_status
+             FROM ops_posts p
+             LEFT JOIN crm_contracts c ON c.id = COALESCE($2::uuid, p.contract_id)
+            WHERE p.id=$1`, [post_id, contract_id || null]);
+        const post = scope.rows[0];
+        if (!post) return send(res, 404, { error: 'post_not_found' });
+        if (post.post_active === false) return send(res, 409, { error: 'post_not_operational' });
+        if (company_id && post.post_company_id && company_id !== post.post_company_id) return send(res, 409, { error: 'company_scope_mismatch' });
+        if (unit_id && post.post_unit_id && unit_id !== post.post_unit_id) return send(res, 409, { error: 'unit_scope_mismatch' });
+        if (contract_id && !post.contract_company_id) return send(res, 404, { error: 'contract_not_found' });
+        if (contract_id && post.post_contract_id && post.post_contract_id !== contract_id) return send(res, 409, { error: 'post_contract_mismatch' });
+        if (contract_id && post.contract_company_id !== (company_id || post.post_company_id)) return send(res, 409, { error: 'contract_company_mismatch' });
+        if (contract_id && ['encerrado','cancelado','suspenso'].includes(post.contract_status)) return send(res, 409, { error: 'contract_not_operational' });
         const { rows } = await pool.query(
           `INSERT INTO ops_dimensioning (company_id, unit_id, post_id, contract_id, period_start, period_end, contracted_headcount, planned_headcount, realized_headcount, coverage_hours_required, coverage_hours_realized, status, notes, created_by)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
-          [company_id || null, unit_id || null, post_id, contract_id || null, period_start, period_end, contracted, planned, realized, cov_req, cov_real, b.status || 'rascunho', b.notes ? String(b.notes).trim().slice(0,2000) : null, sess.role]
+          [company_id || null, unit_id || null, post_id, contract_id || null, period_start, period_end, contracted, planned, realized, cov_req, cov_real, status, b.notes ? String(b.notes).trim().slice(0,2000) : null, sess.role]
         );
         return send(res, 201, { dimensioning: rows[0] });
       } catch (e) { console.error('dim POST', e.message); return send(res, 500, { error: 'internal_error' }); }
@@ -487,12 +516,26 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       const fields = [];
       const vals = [];
       let idx = 1;
-      if (b.contracted_headcount !== undefined || b.contractedHeadcount !== undefined) { fields.push(`contracted_headcount=$${idx++}`); vals.push(Number(b.contracted_headcount || b.contractedHeadcount)); }
-      if (b.planned_headcount !== undefined || b.plannedHeadcount !== undefined) { fields.push(`planned_headcount=$${idx++}`); vals.push(Number(b.planned_headcount || b.plannedHeadcount)); }
-      if (b.realized_headcount !== undefined || b.realizedHeadcount !== undefined) { fields.push(`realized_headcount=$${idx++}`); vals.push(Number(b.realized_headcount || b.realizedHeadcount)); }
-      if (b.coverage_hours_required !== undefined || b.coverageHoursRequired !== undefined) { fields.push(`coverage_hours_required=$${idx++}`); vals.push(Number(b.coverage_hours_required || b.coverageHoursRequired)); }
-      if (b.coverage_hours_realized !== undefined || b.coverageHoursRealized !== undefined) { fields.push(`coverage_hours_realized=$${idx++}`); vals.push(Number(b.coverage_hours_realized || b.coverageHoursRealized)); }
-      if (b.status !== undefined) { fields.push(`status=$${idx++}`); vals.push(b.status); }
+      const patchValues = {
+        contracted_headcount: b.contracted_headcount ?? b.contractedHeadcount,
+        planned_headcount: b.planned_headcount ?? b.plannedHeadcount,
+        realized_headcount: b.realized_headcount ?? b.realizedHeadcount,
+        coverage_hours_required: b.coverage_hours_required ?? b.coverageHoursRequired,
+        coverage_hours_realized: b.coverage_hours_realized ?? b.coverageHoursRealized,
+      };
+      for (const [column, raw] of Object.entries(patchValues)) {
+        if (raw === undefined) continue;
+        const value = Number(raw);
+        if (!Number.isFinite(value) || value < 0 ||
+            (['contracted_headcount','planned_headcount','realized_headcount'].includes(column) && !Number.isInteger(value))) {
+          return send(res, 400, { error: 'invalid_dimensioning_values' });
+        }
+        fields.push(`${column}=$${idx++}`); vals.push(value);
+      }
+      if (b.status !== undefined) {
+        if (!['rascunho','aprovado','em_execucao','concluido','arquivado'].includes(b.status)) return send(res, 400, { error: 'invalid_status' });
+        fields.push(`status=$${idx++}`); vals.push(b.status);
+      }
       if (b.notes !== undefined) { fields.push(`notes=$${idx++}`); vals.push(String(b.notes).trim().slice(0,2000)); }
       if (!fields.length) return send(res, 400, { error: 'no_fields' });
       vals.push(id);
@@ -536,13 +579,35 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       const gap_end = b.gap_end || b.gapEnd;
       if (!gap_date || !gap_start || !gap_end) return send(res, 400, { error: 'gap_fields_required' });
       if (new Date(gap_end) <= new Date(gap_start)) return send(res, 400, { error: 'invalid_gap_period' });
-      const uncovered = Number(b.uncovered_minutes || b.uncoveredMinutes || 0);
+      const uncovered = Number(b.uncovered_minutes ?? b.uncoveredMinutes ?? 0);
       if (!Number.isInteger(uncovered) || uncovered < 0) return send(res, 400, { error: 'invalid_uncovered_minutes' });
+      const dimensioning_id = b.dimensioning_id || b.dimensioningId || null;
+      if (dimensioning_id && !validateUuid(dimensioning_id)) return send(res, 400, { error: 'invalid_dimensioning_id' });
+      const responsible_id = b.responsible_id || b.responsibleId || null;
+      if (responsible_id && !validateUuid(responsible_id)) return send(res, 400, { error: 'invalid_responsible_id' });
       try {
+        if (responsible_id) {
+          const employee = await pool.query(`SELECT id FROM hr_employees WHERE id=$1 AND status='ativo'`, [responsible_id]);
+          if (!employee.rows[0]) return send(res, 409, { error: 'responsible_employee_not_operational' });
+        }
+        if (dimensioning_id) {
+          const scope = await pool.query(
+            `SELECT d.post_id, d.contract_id, p.is_active AS post_active,
+                    c.status AS contract_status
+               FROM ops_dimensioning d
+               JOIN ops_posts p ON p.id=d.post_id
+               LEFT JOIN crm_contracts c ON c.id=d.contract_id
+              WHERE d.id=$1`, [dimensioning_id]);
+          const dimensioning = scope.rows[0];
+          if (!dimensioning) return send(res, 404, { error: 'dimensioning_not_found' });
+          if (dimensioning.post_id !== post_id) return send(res, 409, { error: 'dimensioning_post_mismatch' });
+          if (dimensioning.post_active === false) return send(res, 409, { error: 'post_not_operational' });
+          if (['encerrado','cancelado','suspenso'].includes(dimensioning.contract_status)) return send(res, 409, { error: 'contract_not_operational' });
+        }
         const { rows } = await pool.query(
           `INSERT INTO ops_coverage_gaps (dimensioning_id, post_id, gap_date, gap_start, gap_end, uncovered_minutes, reason, status, responsible_id, responsible_name, created_by)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-          [b.dimensioning_id || b.dimensioningId || null, post_id, gap_date, gap_start, gap_end, uncovered, b.reason ? String(b.reason).trim().slice(0,1000) : null, b.status || 'aberto', b.responsible_id || b.responsibleId || null, b.responsible_name || b.responsibleName || null, sess.role]
+          [dimensioning_id, post_id, gap_date, gap_start, gap_end, uncovered, b.reason ? String(b.reason).trim().slice(0,1000) : null, b.status || 'aberto', responsible_id, b.responsible_name || b.responsibleName || null, sess.role]
         );
         return send(res, 201, { gap: rows[0] });
       } catch (e) { console.error('gaps POST', e.message); return send(res, 500, { error: 'internal_error' }); }
@@ -596,7 +661,11 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       const valid_from = b.valid_from || b.validFrom;
       const valid_to = b.valid_to || b.validTo;
       if (!valid_from || !valid_to) return send(res, 400, { error: 'valid_period_required' });
-      if (new Date(valid_to) < new Date(valid_from)) return send(res, 400, { error: 'invalid_valid_period' });
+      const parsedFrom = new Date(valid_from);
+      const parsedTo = new Date(valid_to);
+      if (Number.isNaN(parsedFrom.getTime()) || Number.isNaN(parsedTo.getTime()) || parsedTo < parsedFrom) return send(res, 400, { error: 'invalid_valid_period' });
+      const scheduleStatus = b.status || 'rascunho';
+      if (!['rascunho','publicada','revisada','arquivada'].includes(scheduleStatus)) return send(res, 400, { error: 'invalid_status' });
       try {
         // version auto increment
         const vRes = await pool.query(`SELECT COALESCE(MAX(version),0)+1 AS v FROM ops_schedule_versions WHERE company_id IS NOT DISTINCT FROM $1 AND unit_id IS NOT DISTINCT FROM $2`, [company_id || null, unit_id || null]);
@@ -604,7 +673,7 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
         const { rows } = await pool.query(
           `INSERT INTO ops_schedule_versions (company_id, unit_id, version, status, valid_from, valid_to, notes, created_by)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-          [company_id || null, unit_id || null, version, b.status || 'rascunho', valid_from, valid_to, b.notes ? String(b.notes).trim().slice(0,2000) : null, sess.role]
+          [company_id || null, unit_id || null, version, scheduleStatus, valid_from, valid_to, b.notes ? String(b.notes).trim().slice(0,2000) : null, sess.role]
         );
         await pool.query(`INSERT INTO ops_schedule_history (version_id, previous_status, next_status, changed_by, reason) VALUES ($1,NULL,$2,$3,$4)`, [rows[0].id, rows[0].status, sess.role, 'Criação inicial']);
         return send(res, 201, { version: rows[0] });
@@ -619,13 +688,21 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       if (!validateUuid(id)) return send(res, 400, { error: 'invalid_id' });
       const status = b.status;
       if (status && !['rascunho','em_revisao','publicada','revisada','arquivada','cancelada'].includes(status)) return send(res, 400, { error: 'invalid_status' });
+      const patchFrom = b.valid_from || b.validFrom;
+      const patchTo = b.valid_to || b.validTo;
+      if (patchFrom || patchTo) {
+        if (!patchFrom || !patchTo) return send(res, 400, { error: 'valid_period_required' });
+        const parsedFrom = new Date(patchFrom);
+        const parsedTo = new Date(patchTo);
+        if (Number.isNaN(parsedFrom.getTime()) || Number.isNaN(parsedTo.getTime()) || parsedTo < parsedFrom) return send(res, 400, { error: 'invalid_valid_period' });
+      }
       try {
         const cur = await pool.query(`SELECT status FROM ops_schedule_versions WHERE id=$1`, [id]);
         if (!cur.rows[0]) return send(res, 404, { error: 'not_found' });
         const prev = cur.rows[0].status;
         const { rows } = await pool.query(
           `UPDATE ops_schedule_versions SET status=COALESCE($1,status), valid_from=COALESCE($2,valid_from), valid_to=COALESCE($3,valid_to), notes=COALESCE($4,notes), published_at=CASE WHEN $1 IN ('publicada','revisada') THEN NOW() ELSE published_at END, published_by=CASE WHEN $1 IN ('publicada','revisada') THEN $5 ELSE published_by END, updated_at=NOW() WHERE id=$6 RETURNING *`,
-          [status || null, b.valid_from || b.validFrom || null, b.valid_to || b.validTo || null, b.notes ? String(b.notes).trim().slice(0,2000) : null, sess.role, id]
+          [status || null, patchFrom || null, patchTo || null, b.notes ? String(b.notes).trim().slice(0,2000) : null, sess.role, id]
         );
         if (status && prev !== status) {
           await pool.query(`INSERT INTO ops_schedule_history (version_id, previous_status, next_status, changed_by, reason) VALUES ($1,$2,$3,$4,$5)`, [id, prev, status, sess.role, b.reason || null]);
@@ -681,6 +758,15 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
         if (!['rascunho','em_revisao','revisada'].includes(ver.rows[0].status)) return send(res, 400, { error: 'version_not_editable', status: ver.rows[0].status });
         if (new Date(entry_date) < new Date(ver.rows[0].valid_from) || new Date(entry_date) > new Date(ver.rows[0].valid_to)) return send(res, 400, { error: 'entry_date_out_of_validity', valid_from: ver.rows[0].valid_from, valid_to: ver.rows[0].valid_to });
       } catch {}
+      // Retry idempotente: a mesma chave natural deve ser reportada como duplicata,
+      // antes da validação genérica de sobreposição.
+      try {
+        const duplicate = await pool.query(
+          `SELECT id FROM ops_schedule_entries WHERE version_id=$1 AND post_id=$2 AND employee_id=$3 AND entry_date=$4 AND shift_template_id=$5`,
+          [version_id, post_id, employee_id, entry_date, shift_template_id]
+        );
+        if (duplicate.rows[0]) return send(res, 409, { error: 'duplicate_entry', existing: duplicate.rows[0].id });
+      } catch (e) { console.error('duplicate schedule check', e.message); return send(res, 503, { error: 'schedule_validation_unavailable' }); }
       // OPS-04 validações sobreposição, indisponibilidade, habilitação
       try {
         const overlap = await pool.query(

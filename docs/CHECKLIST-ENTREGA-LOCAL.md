@@ -763,17 +763,17 @@ estrutura cliente → unidade atendida → posto físico → necessidade por tur
 
 ## OPS-02
 dimensionamento contratado versus planejado e realizado, cobertura por faixa de tempo e profissional habilitado.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: schema `ops_dimensioning`/`ops_coverage_gaps` e `ops-api` existentes; endurecimento e evidência na fatia seguinte.
-- Integração e evidência (teste, resultado, commit): a cobrir no gate L06.
-- Pendência / fronteira externa / aceite humano: revalidar cálculo de cobertura e escopo por contrato.
+- Estado: em_execucao
+- Tela / API / dados / autorização: schema `ops_dimensioning`/`ops_coverage_gaps` e `ops-api` existentes; criação de dimensionamento agora rejeita valores não finitos, negativos, quantitativos fracionários e status fora do enum; valida posto ativo e coerência de empresa, unidade e contrato, bloqueando contrato inexistente, incompatível ou não operacional.
+- Integração e evidência (teste, resultado, commit): `node --check src/server/ops-api.mjs`, `npm run typecheck` e `npm run test:l06-delivery:pg` executados; o gate L06 verde agora cobre 6 cenários, incluindo criação válida, percentual derivado, valores inválidos, escopo de empresa e contrato encerrado.
+- Pendência / fronteira externa / aceite humano: falta ampliar o cenário para profissional habilitado e cobertura planejada versus realizada. Gaps agora exigem dimensionamento do mesmo posto, com posto ativo e contrato operacional. Nenhuma migração 124 foi necessária nesta fatia.
 
 ## OPS-03
 escala em rascunho/publicada/revisada, validade e histórico; calendário por posto/equipe/pessoa e ciência.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: `ops_schedule_versions`/`ops_schedule_history` e `ops-api` existentes; preservação de versão/autor a revalidar na fatia seguinte.
-- Integração e evidência (teste, resultado, commit): a cobrir no gate L06.
-- Pendência / fronteira externa / aceite humano: ciência do funcionário e não duplicação em retry.
+- Estado: em_execucao
+- Tela / API / dados / autorização: `ops_schedule_versions`/`ops_schedule_history` e `ops-api`; criação valida período e status, incrementa versão dentro do escopo empresa/unidade e registra histórico inicial.
+- Integração e evidência (teste, resultado, commit): `npm run test:l06-delivery:pg` verde, 7/7 cenários, incluindo duas versões no mesmo escopo, sequência, histórico e recusas de data/status inválidos.
+- Pendência / fronteira externa / aceite humano: aceite humano da escala permanece pendente; publicação registra histórico, entradas respeitam a validade, retry de entrada e ciência são rejeitados sem duplicação.
 
 ## OPS-04
 validar sobreposição, indisponibilidade, habilitação, documentação e regras de jornada/descanso configuradas e aprovadas.

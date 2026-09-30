@@ -1,4 +1,4 @@
-// L06 (fatias A e B) — operação: estrutura/alocação, contrato encerrado,
+// L06 (fatias A, B e OPS-02) — operação: estrutura/alocação, contrato encerrado,
 // cobertura, passagem de turno, livro de ocorrências, checklists operacionais,
 // evidências privadas e auditoria fail-closed via HTTP real, PostgreSQL descartável e Chromium.
 import test, { before, after } from "node:test";
@@ -185,6 +185,153 @@ test("L06 Fatia A: alocação escopada por contrato, contrato encerrado bloqueia
   assert.equal(recovered.status, 201, "allocation persists again once audit restored");
   const trail = await pool.query("SELECT count(*)::int AS n FROM audit_log WHERE action='ops_allocation_create' AND target=$1", [recovered.body.allocation.id]);
   assert.equal(trail.rows[0].n, 1, "durable audit trail written in the same transaction");
+});
+
+test("L06 OPS-02: dimensionamento valida valores e escopo canônico", { skip: !RUN, timeout: 180_000 }, async () => {
+  const admin = await provisionAndLoginStaff(pool, api, { role: "admin" });
+  const companyId = uuid();
+  const unitId = uuid();
+  await pool.query("INSERT INTO crm_companies (id,display_name,type,status,created_by) VALUES ($1,'QA OPS-02 Empresa','client','active','admin')", [companyId]);
+  await pool.query("INSERT INTO crm_company_units (id,company_id,display_name,is_main) VALUES ($1,$2,'QA OPS-02 Unidade',true)", [unitId, companyId]);
+  const contractId = await insertContract(companyId, "ativo");
+  const postId = uuid();
+  await pool.query("INSERT INTO ops_posts (id,company_id,unit_id,contract_id,name,post_type,created_by) VALUES ($1,$2,$3,$4,'QA OPS-02 Posto','portaria','admin')", [postId, companyId, unitId, contractId]);
+
+  const valid = await ops("/dimensioning", { cookie: admin.cookie, method: "POST", body: {
+    company_id: companyId, unit_id: unitId, post_id: postId, contract_id: contractId,
+    period_start: "2026-10-01", period_end: "2026-10-31",
+    contracted_headcount: 4, planned_headcount: 4, realized_headcount: 3,
+    coverage_hours_required: 744, coverage_hours_realized: 558,
+  } });
+  assert.equal(valid.status, 201, "valid dimensioning created");
+  assert.equal(Number(valid.body.dimensioning.coverage_percent), 75, "coverage percent is derived by database");
+
+  const invalidPeriod = await ops("/dimensioning", { cookie: admin.cookie, method: "POST", body: {
+    post_id: postId, period_start: "not-a-date", period_end: "2026-10-31",
+  } });
+  assert.equal(invalidPeriod.status, 400, "invalid dates rejected");
+  assert.equal(invalidPeriod.body.error, "invalid_period");
+
+  const responsibleId = await insertEmployee("ativo");
+  const gapWithResponsible = await ops("/coverage-gaps", { cookie: admin.cookie, method: "POST", body: {
+    dimensioning_id: valid.body.dimensioning.id, post_id: postId, gap_date: "2026-10-05",
+    gap_start: "2026-10-05T07:00:00Z", gap_end: "2026-10-05T09:00:00Z", uncovered_minutes: 120,
+    responsible_id: responsibleId,
+  } });
+  assert.equal(gapWithResponsible.status, 201, "active responsible employee accepted");
+  const terminatedResponsible = await insertEmployee("desligado");
+  const invalidResponsible = await ops("/coverage-gaps", { cookie: admin.cookie, method: "POST", body: {
+    dimensioning_id: valid.body.dimensioning.id, post_id: postId, gap_date: "2026-10-06",
+    gap_start: "2026-10-06T07:00:00Z", gap_end: "2026-10-06T09:00:00Z", uncovered_minutes: 120,
+    responsible_id: terminatedResponsible,
+  } });
+  assert.equal(invalidResponsible.status, 409, "inactive responsible employee rejected");
+  assert.equal(invalidResponsible.body.error, "responsible_employee_not_operational");
+
+  const gap = await ops("/coverage-gaps", { cookie: admin.cookie, method: "POST", body: {
+    dimensioning_id: valid.body.dimensioning.id, post_id: postId, gap_date: "2026-10-04",
+    gap_start: "2026-10-04T07:00:00Z", gap_end: "2026-10-04T09:00:00Z", uncovered_minutes: 120,
+  } });
+  assert.equal(gap.status, 201, "coverage gap in matching scope created");
+
+  const otherPost = uuid();
+  await pool.query("INSERT INTO ops_posts (id,company_id,unit_id,contract_id,name,post_type,created_by) VALUES ($1,$2,$3,$4,'QA OPS-02 Outro Posto','portaria','admin')", [otherPost, companyId, unitId, contractId]);
+  const gapMismatch = await ops("/coverage-gaps", { cookie: admin.cookie, method: "POST", body: {
+    dimensioning_id: valid.body.dimensioning.id, post_id: otherPost, gap_date: "2026-10-04",
+    gap_start: "2026-10-04T07:00:00Z", gap_end: "2026-10-04T09:00:00Z", uncovered_minutes: 120,
+  } });
+  assert.equal(gapMismatch.status, 409, "coverage gap cannot cross post scope");
+  assert.equal(gapMismatch.body.error, "dimensioning_post_mismatch");
+
+  const invalidValues = await ops("/dimensioning", { cookie: admin.cookie, method: "POST", body: {
+    post_id: postId, period_start: "2026-10-01", period_end: "2026-10-31", contracted_headcount: -1,
+  } });
+  assert.equal(invalidValues.status, 400, "negative values rejected");
+  assert.equal(invalidValues.body.error, "invalid_dimensioning_values");
+
+  const updated = await ops("/dimensioning", { cookie: admin.cookie, method: "PATCH", body: {
+    id: valid.body.dimensioning.id, realized_headcount: 2, coverage_hours_realized: 372, status: "aprovado",
+  } });
+  assert.equal(updated.status, 200, "dimensioning update accepted");
+  assert.equal(updated.body.dimensioning.realized_headcount, 2);
+
+  const invalidPatch = await ops("/dimensioning", { cookie: admin.cookie, method: "PATCH", body: {
+    id: valid.body.dimensioning.id, realized_headcount: 1.5,
+  } });
+  assert.equal(invalidPatch.status, 400, "fractional headcount update rejected");
+  assert.equal(invalidPatch.body.error, "invalid_dimensioning_values");
+
+  const otherCompany = uuid();
+  await pool.query("INSERT INTO crm_companies (id,display_name,type,status,created_by) VALUES ($1,'QA OPS-02 Outra','client','active','admin')", [otherCompany]);
+  const mismatch = await ops("/dimensioning", { cookie: admin.cookie, method: "POST", body: {
+    company_id: otherCompany, post_id: postId, period_start: "2026-10-01", period_end: "2026-10-31",
+  } });
+  assert.equal(mismatch.status, 409, "company scope mismatch rejected");
+
+  const closed = await insertContract(companyId, "encerrado");
+  const closedPost = uuid();
+  await pool.query("INSERT INTO ops_posts (id,company_id,unit_id,contract_id,name,post_type,created_by) VALUES ($1,$2,$3,$4,'QA OPS-02 Encerrado','portaria','admin')", [closedPost, companyId, unitId, closed]);
+  const blocked = await ops("/dimensioning", { cookie: admin.cookie, method: "POST", body: {
+    company_id: companyId, unit_id: unitId, post_id: closedPost, contract_id: closed,
+    period_start: "2026-10-01", period_end: "2026-10-31",
+  } });
+  assert.equal(blocked.status, 409, "closed contract rejected");
+});
+
+test("L06 OPS-03: versões de escala validam período, status, sequência e histórico", { skip: !RUN, timeout: 180_000 }, async () => {
+  const admin = await provisionAndLoginStaff(pool, api, { role: "admin" });
+  const companyId = uuid();
+  const unitId = uuid();
+  await pool.query("INSERT INTO crm_companies (id,display_name,type,status,created_by) VALUES ($1,'QA OPS-03 Empresa','client','active','admin')", [companyId]);
+  await pool.query("INSERT INTO crm_company_units (id,company_id,display_name,is_main) VALUES ($1,$2,'QA OPS-03 Unidade',true)", [unitId, companyId]);
+
+  const first = await ops("/schedule-versions", { cookie: admin.cookie, method: "POST", body: {
+    company_id: companyId, unit_id: unitId, valid_from: "2026-11-01", valid_to: "2026-11-30",
+  } });
+  assert.equal(first.status, 201, "first schedule version created");
+  assert.equal(first.body.version.version, 1);
+
+  const second = await ops("/schedule-versions", { cookie: admin.cookie, method: "POST", body: {
+    company_id: companyId, unit_id: unitId, valid_from: "2026-12-01", valid_to: "2026-12-31", status: "revisada",
+  } });
+  assert.equal(second.status, 201, "second schedule version created");
+  assert.equal(second.body.version.version, 2, "version increments within scope");
+  const shift = await ops("/shift-templates", { cookie: admin.cookie, method: "POST", body: { name: "QA OPS-03 Diurno", shift_type: "diurno", start_time: "07:00", end_time: "19:00", duration_hours: 12 } });
+  assert.equal(shift.status, 201);
+  const postId = uuid();
+  await pool.query("INSERT INTO ops_posts (id,company_id,unit_id,name,post_type,created_by) VALUES ($1,$2,$3,'QA OPS-03 Posto','portaria','admin')", [postId, companyId, unitId]);
+  const employeeId = await insertEmployee("ativo");
+  const entryBody = { version_id: second.body.version.id, post_id: postId, employee_id: employeeId, shift_template_id: shift.body.template.id, entry_date: "2026-12-15" };
+  const entry = await ops("/schedule-entries", { cookie: admin.cookie, method: "POST", body: entryBody });
+  assert.equal(entry.status, 201, "schedule entry created within validity");
+  const retryEntry = await ops("/schedule-entries", { cookie: admin.cookie, method: "POST", body: entryBody });
+  assert.equal(retryEntry.status, 409, "schedule entry retry rejected");
+  assert.equal(retryEntry.body.error, "duplicate_entry");
+
+  const published = await ops("/schedule-versions", { cookie: admin.cookie, method: "PATCH", body: { id: second.body.version.id, status: "publicada" } });
+  assert.equal(published.status, 200, "schedule publication accepted");
+  const ack = await ops("/schedule-acks", { cookie: admin.cookie, method: "POST", body: { version_id: second.body.version.id, employee_id: employeeId, notes: "Ciente QA" } });
+  assert.equal(ack.status, 201, "employee acknowledgment recorded");
+  const ackRetry = await ops("/schedule-acks", { cookie: admin.cookie, method: "POST", body: { version_id: second.body.version.id, employee_id: employeeId } });
+  assert.equal(ackRetry.status, 409, "acknowledgment retry rejected");
+
+  const publishHistory = await pool.query("SELECT count(*)::int AS n FROM ops_schedule_history WHERE version_id=$1", [second.body.version.id]);
+  assert.equal(publishHistory.rows[0].n, 2, "status transition history is persisted");
+  const invalidPatchPeriod = await ops("/schedule-versions", { cookie: admin.cookie, method: "PATCH", body: { id: second.body.version.id, valid_from: "bad-date", valid_to: "2026-12-31" } });
+  assert.equal(invalidPatchPeriod.status, 400, "invalid update period rejected");
+
+  const history = await pool.query("SELECT count(*)::int AS n FROM ops_schedule_history WHERE version_id=$1", [second.body.version.id]);
+  assert.equal(history.rows[0].n, 2, "creation and publication history are persisted");
+
+  const invalidDate = await ops("/schedule-versions", { cookie: admin.cookie, method: "POST", body: {
+    company_id: companyId, unit_id: unitId, valid_from: "bad-date", valid_to: "2026-12-31",
+  } });
+  assert.equal(invalidDate.status, 400, "invalid schedule dates rejected");
+
+  const invalidStatus = await ops("/schedule-versions", { cookie: admin.cookie, method: "POST", body: {
+    company_id: companyId, unit_id: unitId, valid_from: "2027-01-01", valid_to: "2027-01-31", status: "publicadao",
+  } });
+  assert.equal(invalidStatus.status, 400, "invalid schedule status rejected");
 });
 
 test("L06 Fatia B: cobertura, passagem de turno, ocorrência, checklists, evidências e auditoria fail-closed", { skip: !RUN, timeout: 240_000 }, async () => {
