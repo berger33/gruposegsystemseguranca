@@ -1,3 +1,4 @@
+// Delivery verification rerun: preserve real HTTP and Chromium gates.
 import { createCrmTaskApi } from "./src/server/crm-task-api.mjs";
 import { createCrmInteractionApi } from "./src/server/crm-interaction-api.mjs";
 import { createCrmVisitApi } from "./src/server/crm-visit-api.mjs";
