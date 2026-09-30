@@ -260,6 +260,12 @@ export function createCommercialApi({ json, readJson, sameOrigin, getPool, readA
       if (body?.status !== undefined) {
         const st = String(body.status).trim().toLowerCase();
         if (!['rascunho','ativa','pausada','encerrada','cancelada'].includes(st)) return bad(res, 'invalid_status');
+        if(st==='ativa'){
+          const current=(await getPool().query('SELECT library_ids FROM crm_campaigns WHERE id=$1',[id])).rows[0];
+          if(!current)return json(res,404,{error:'not_found'});
+          const libs=body.library_ids||current.library_ids||[];
+          if(libs.length&&(await getPool().query("SELECT id FROM crm_commercial_library WHERE id=ANY($1::uuid[]) AND status='aprovado'",[libs])).rows.length!==libs.length)return bad(res,'library_must_be_approved');
+        }
         fields.push(`status = $${idx++}`); vals.push(st);
       }
       if (body?.start_date !== undefined) { const sd = body.start_date ? String(body.start_date).trim() : null; if (sd && isNaN(Date.parse(sd))) return bad(res, 'invalid_start_date'); fields.push(`start_date = $${idx++}`); vals.push(sd); }
