@@ -2273,15 +2273,29 @@ test('CRM-08: visão de calendário, gerenciamento e lembretes internos na agend
     await agenda.getByRole('button', { name: 'Ver em lista', exact: true }).click();
     await agenda.getByRole('article', { name: 'Agenda ' + closeTitle }).waitFor();
     await agenda.getByRole('article', { name: 'Agenda ' + farTitle }).waitFor();
-    // The same authorized editor is reachable from the weekly calendar.
-    await agenda.getByRole('button',{name:'Ver por semana',exact:true}).click();
-    await week.getByText('Carregando a semana…').waitFor({state:'detached'});
+    // Wait for the real weekly response AND enabled navigation after React
+    // commits it. A detached spinner alone can succeed before the effect starts.
+    const [reopenedWeek] = await Promise.all([
+      waitForWeekFetch(page),
+      agenda.getByRole('button',{name:'Ver por semana',exact:true}).click(),
+    ]);
+    assert.equal(reopenedWeek.status(),200);
+    const nextWeekButton=week.getByRole('button',{name:'Próxima semana',exact:true});
+    await page.waitForFunction(() => {
+      const section=document.querySelector('[aria-label="Semana da agenda"]');
+      return Array.from(section?.querySelectorAll('button')||[]).some(b=>b.textContent==='Próxima semana'&&!b.disabled);
+    });
     if(await week.getByRole('button',{name:'Semana atual',exact:true}).isEnabled()){
-      const [loaded]=await Promise.all([waitForWeekFetch(page),week.getByRole('button',{name:'Semana atual',exact:true}).click()]);assert.equal(loaded.status(),200);
+      const [loaded]=await Promise.all([waitForWeekFetch(page),week.getByRole('button',{name:'Semana atual',exact:true}).click()]);
+      assert.equal(loaded.status(),200);
+      await page.waitForFunction(() => Array.from(document.querySelector('[aria-label="Semana da agenda"]')?.querySelectorAll('button')||[]).some(b=>b.textContent==='Próxima semana'&&!b.disabled));
     }
-    await week.getByText('Carregando a semana…').waitFor({state:'detached'});
-    if(!(await dayHasVisit(closeAt,closeTitle))){await Promise.all([waitForWeekFetch(page),week.getByRole('button',{name:'Próxima semana',exact:true}).click()]);await week.getByText('Carregando a semana…').waitFor({state:'detached'});}
-    await week.getByRole('article',{name:dayLabel(closeAt)}).getByRole('button',{name:'Gerenciar compromisso',exact:true}).click();
+    if(!(await dayHasVisit(closeAt,closeTitle))){
+      const [loaded]=await Promise.all([waitForWeekFetch(page),nextWeekButton.click()]);
+      assert.equal(loaded.status(),200);
+    }
+    const calendarVisit=week.getByRole('article',{name:dayLabel(closeAt)}).getByRole('listitem').filter({hasText:closeTitle});
+    await calendarVisit.getByRole('button',{name:'Gerenciar compromisso',exact:true}).click();
     const editor=agenda.getByRole('region',{name:'Gerenciar compromisso do calendário'});
     const card=editor.getByRole('article',{name:'Visita '+closeTitle,exact:true});await card.waitFor();
     const [confirmed]=await Promise.all([page.waitForResponse(r=>r.url().endsWith('/visits/'+closeVisit.body.visit.id)&&r.request().method()==='PATCH'),card.getByRole('button',{name:'Confirmar agendamento',exact:true}).click()]);
