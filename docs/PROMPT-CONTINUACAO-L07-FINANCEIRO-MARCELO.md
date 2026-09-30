@@ -130,6 +130,13 @@ Além dos negativos padrão (anônimo 401, papel indevido 403, same-origin), o g
 
 ## Armadilhas conhecidas
 
+- **CI é roleta de runner — não debugue código antes de confirmar a assinatura** (provado na PR #42, 2026-09-30):
+  - *Flake "required-server-files"*: `ENOENT ... .next/integration-l06/dev/required-server-files.json` → `GET /admin/* 500` → os subtestes com Chromium falham por timeout de clique/waitFor. Ocorreu na PR #42 (rodada 1) e DUAS vezes na PR #41 no mesmo dia, em código diferente — re-rodada resolveu todas.
+  - *Runner lento no L04*: 19-20 falhas, todas `locator.waitFor/click: Timeout 30000ms`, duração ~9-10 min contra ~2,5 min normal — o mesmo SHA passou em ambas as situações. Também reproduz localmente quando rodadas ficam encostadas.
+  - *Flake do L06 local*: mesma família (500 intermitente nas páginas `/admin` durante o gate).
+  - Padrão de resposta: fechar e reabrir a PR até uma rodada limpa (foram 3 rodadas na #42). **O token do bot não tem `actions:write`** — `gh run rerun` devolve 403 "Resource not accessible by integration" (é isso que aparece como "workflow file may be broken"); close/reopen é o único gatilho disponível. Rodadas custam ~2,5 min cada.
+  - Ao fechar/reabrir, a run do L06 da rodada pode ser cancelada pela concorrência do grupo `delivery-<PR>`; o check cai para a última run concluída do mesmo SHA — confirme com `gh pr checks <n>` e `gh pr view <n> --json mergeable,mergeStateStatus`.
+  - Workflows L04/L05/L06 têm path filters (não rodam para `docs/**`); o `ci.yml` roda para tudo.
 - `gh run rerun --failed` está quebrado no repo; para revalidar CI, feche e reabra a PR.
 - O CI pode falhar por lentidão do runner (timeout de 15 min); mensagens `::error::` com contagens menores que o total no fim do log indicam runner ruim, não código ruim. Re-rodada resolve; mudança de código, não.
 - Nunca dois gates/build em paralelo, nem localmente nem esperando CI.
