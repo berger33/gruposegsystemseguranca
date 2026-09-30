@@ -3307,6 +3307,15 @@ test('L04 fechamento: CMS versionado, autorização, histórico, publicação e 
  const revert=await api('/api/admin/cms-contents/revert',{method:'POST',cookie,body:{id,reason:'Restaurar versão original para revisão'}});
  assert.equal(revert.status,201);assert.equal(revert.body.status,'rascunho');assert.equal(revert.body.version,3);assert.equal(revert.body.content,content.content);
  assert.ok((await api('/api/admin/cms-contents/'+id,{cookie})).body.history.length>=8);
+ for(const status of ['em_revisao','aprovado'])assert.equal((await api('/api/admin/cms-contents/'+revert.body.id,{method:'PATCH',cookie,body:{status,reason:'Preparar teste de rollback de publicação'}})).status,200);
+ await pool.query("CREATE FUNCTION qa_l04_cms_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action='cms_content_publish' THEN RAISE EXCEPTION 'synthetic'; END IF; RETURN NEW; END $$");
+ await pool.query('CREATE TRIGGER qa_l04_cms_fail BEFORE INSERT ON auth_access_audit FOR EACH ROW EXECUTE FUNCTION qa_l04_cms_fail()');
+ try{assert.equal((await api('/api/admin/cms-contents/'+revert.body.id,{method:'PATCH',cookie,body:{status:'publicado',reason:'Publicação com falha sintética auditável'}})).status,503);}
+ finally{await pool.query('DROP TRIGGER qa_l04_cms_fail ON auth_access_audit');await pool.query('DROP FUNCTION qa_l04_cms_fail()');}
+ assert.equal((await api('/api/public/cms')).body.items.find(r=>r.slug===slug).id,second.body.id);
+ const caseDraft=await api('/api/admin/cms-contents',{method:'POST',cookie,body:{...content,slug:'qa-case-'+randomUUID(),content_type:'case',is_authorized:false}});assert.equal(caseDraft.status,201);
+ for(const status of ['em_revisao','aprovado'])assert.equal((await api('/api/admin/cms-contents/'+caseDraft.body.id,{method:'PATCH',cookie,body:{status,reason:'Revisão sintética do case não autorizado'}})).status,200);
+ assert.equal((await api('/api/admin/cms-contents/'+caseDraft.body.id,{method:'PATCH',cookie,body:{status:'publicado',reason:'Tentativa de publicação sem autorização'}})).status,409);
  // Public FAQ cannot enumerate sessions or messages; sensitive input never creates a promise.
  assert.equal((await api('/api/faq-assisted')).status,405);
  assert.equal((await api('/api/faq-assisted-messages?session_id='+randomUUID())).status,401);
@@ -3423,6 +3432,7 @@ test('L04 fechamento: metas, comissões versionadas, biblioteca aprovada e métr
  assert.equal((await api('/api/crm/commissions/'+rec.id,{method:'PATCH',cookie,body:{status:'cancelada'}})).status,400);
  assert.equal((await api('/api/crm/commissions/'+rec.id,{method:'PATCH',cookie,body:{status:'cancelada',cancel_reason:'Contrato cancelado em teste sintético'}})).status,200);
  assert.equal((await api('/api/crm/commission-rules/'+ruleId,{method:'PATCH',cookie,body:{percent:10}})).status,200);
+ assert.equal((await api('/api/crm/commission-rules/'+ruleId,{cookie})).body.rule.status,'rascunho');
  const old=(await api('/api/crm/commissions/'+rec.id,{cookie})).body.commission;assert.equal(Number(old.calculated_value),50);assert.equal(Number(old.rule_snapshot.percent),5);assert.equal(old.is_paid,false);
  const library=await api('/api/crm/commercial-library',{method:'POST',cookie,body:{title:'Apresentação sintética',type:'apresentacao',description:'Material sintético para revisão da gestão'}});
  assert.equal(library.status,201,JSON.stringify(library.body));const libId=library.body.item.id;
@@ -3430,7 +3440,10 @@ test('L04 fechamento: metas, comissões versionadas, biblioteca aprovada e métr
  assert.equal((await api('/api/crm/commercial-library/'+libId,{method:'PATCH',cookie,body:{status:'aprovado'}})).status,200);
  const campaign=await api('/api/crm/campaigns',{method:'POST',cookie,body:{name:'Campanha sintética',segment_type:'cidade',segment_filter:{city:'Guarulhos'},library_ids:[libId]}});
  assert.equal(campaign.status,201,JSON.stringify(campaign.body));assert.equal(campaign.body.campaign.status,'rascunho');
+ assert.equal((await api('/api/crm/campaigns/'+campaign.body.campaign.id,{method:'PATCH',cookie,body:{status:'ativa'}})).status,200);
  assert.equal((await api('/api/crm/commercial-library/'+libId,{method:'PATCH',cookie,body:{title:'Apresentação sintética corrigida'}})).status,200);
+ assert.equal((await api('/api/crm/campaigns/'+campaign.body.campaign.id,{cookie})).body.campaign.status,'pausada');
+ assert.equal((await api('/api/crm/campaigns/'+campaign.body.campaign.id,{method:'PATCH',cookie,body:{status:'ativa'}})).status,400);
  assert.equal((await api('/api/crm/commercial-library/'+libId,{cookie})).body.item.status,'rascunho');
  const company=await api('/api/crm/companies',{method:'POST',cookie,body:{display_name:'Empresa de parceria '+randomUUID()}});
  assert.equal(company.status,201);
