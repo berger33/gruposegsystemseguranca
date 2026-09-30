@@ -2175,7 +2175,7 @@ test('CRM-07/05/06: campo a campo de oportunidades, funil com reabertura auditad
   assert.deepEqual(failures, [], `jornada CRM-05/06/07 não deve ter erro de console/HTTP 5xx: ${failures.join(', ')}`);
 });
 
-test('CRM-08: visão de calendário por período/semana na agenda pessoal (somente leitura)', { skip: !RUN, timeout: 180_000 }, async () => {
+test('CRM-08: visão de calendário, gerenciamento e lembretes internos na agenda pessoal', { skip: !RUN, timeout: 180_000 }, async () => {
   const owner = await provisionAndLoginStaff(pool, api, { role: 'comercial' });
   const company = await api('/api/crm/companies', { method: 'POST', cookie: owner.cookie, body: { displayName: 'Empresa calendário ' + randomUUID(), city: 'Osasco', type: 'prospect' } });
   assert.equal(company.status, 201, JSON.stringify(company.body));
@@ -2196,6 +2196,9 @@ test('CRM-08: visão de calendário por período/semana na agenda pessoal (somen
   const farVisit = await api(endpoint, { method: 'POST', cookie: owner.cookie, body: { title: farTitle, scheduled_at: farAt.toISOString() } });
   assert.equal(farVisit.status, 201, JSON.stringify(farVisit.body));
 
+  const soonTitle='Lembrete de visita em duas horas';
+  const soon=await api(endpoint,{method:'POST',cookie:owner.cookie,body:{title:soonTitle,scheduled_at:new Date(Date.now()+2*3600000).toISOString()}});
+  assert.equal(soon.status,201);
   const WEEKDAY_NAMES = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
   const pad2 = value => String(value).padStart(2, '0');
   const dayLabel = date => `Dia da agenda ${WEEKDAY_NAMES[date.getDay()]} ${pad2(date.getDate())}/${pad2(date.getMonth() + 1)}`;
@@ -2211,6 +2214,7 @@ test('CRM-08: visão de calendário por período/semana na agenda pessoal (somen
     await page.goto(baseUrl + '/admin/crm', { waitUntil: 'networkidle' });
     const agenda = page.getByRole('region', { name: 'Minha agenda de visitas e reuniões' });
     await agenda.getByRole('article', { name: 'Agenda ' + closeTitle }).waitFor();
+    await agenda.getByRole('complementary',{name:'Lembretes da agenda'}).getByText(new RegExp(soonTitle)).waitFor();
 
     // Alterna para a visão semanal sem perder a lista original (a lista
     // continua montada por trás, só oculta pela condição de renderização).
@@ -2225,7 +2229,7 @@ test('CRM-08: visão de calendário por período/semana na agenda pessoal (somen
     ]);
     assert.equal(firstWeekLoad.status(), 200);
     const week = agenda.getByRole('region', { name: 'Semana da agenda' });
-    await week.getByText('Esta visão é somente leitura. Para confirmar, recusar, reagendar ou cancelar, use a lista.', { exact: true }).waitFor();
+    await week.getByText('Use Gerenciar compromisso para confirmar, reagendar ou cancelar com suas permissões.', { exact: true }).waitFor();
     await week.getByText('Carregando a semana…').waitFor({ state: 'detached' });
 
     async function dayHasVisit(date, title) {
@@ -2269,6 +2273,22 @@ test('CRM-08: visão de calendário por período/semana na agenda pessoal (somen
     await agenda.getByRole('button', { name: 'Ver em lista', exact: true }).click();
     await agenda.getByRole('article', { name: 'Agenda ' + closeTitle }).waitFor();
     await agenda.getByRole('article', { name: 'Agenda ' + farTitle }).waitFor();
+    // The same authorized editor is reachable from the weekly calendar.
+    await agenda.getByRole('button',{name:'Ver por semana',exact:true}).click();
+    await week.getByText('Carregando a semana…').waitFor({state:'detached'});
+    if(await week.getByRole('button',{name:'Semana atual',exact:true}).isEnabled()){
+      const [loaded]=await Promise.all([waitForWeekFetch(page),week.getByRole('button',{name:'Semana atual',exact:true}).click()]);assert.equal(loaded.status(),200);
+    }
+    await week.getByText('Carregando a semana…').waitFor({state:'detached'});
+    if(!(await dayHasVisit(closeAt,closeTitle))){await Promise.all([waitForWeekFetch(page),week.getByRole('button',{name:'Próxima semana',exact:true}).click()]);await week.getByText('Carregando a semana…').waitFor({state:'detached'});}
+    await week.getByRole('article',{name:dayLabel(closeAt)}).getByRole('button',{name:'Gerenciar compromisso',exact:true}).click();
+    const editor=agenda.getByRole('region',{name:'Gerenciar compromisso do calendário'});
+    const card=editor.getByRole('article',{name:'Visita '+closeTitle,exact:true});await card.waitFor();
+    const [confirmed]=await Promise.all([page.waitForResponse(r=>r.url().endsWith('/visits/'+closeVisit.body.visit.id)&&r.request().method()==='PATCH'),card.getByRole('button',{name:'Confirmar agendamento',exact:true}).click()]);
+    assert.equal(confirmed.status(),200);
+    assert.equal((await api(endpoint,{cookie:owner.cookie})).body.visits.find(v=>v.id===closeVisit.body.visit.id).status,'confirmada');
+    await editor.getByRole('button',{name:'Fechar gerenciamento'}).click();
+    await agenda.getByRole('complementary',{name:'Lembretes da agenda'}).getByRole('heading',{name:'Próximas 24 horas'}).waitFor();
     await context.close();
   } finally { await browser.close(); }
   assert.deepEqual(failures, []);
@@ -3401,12 +3421,15 @@ test('L04 fechamento: carteira pessoal, renovação, indicação, reativação e
  assert.equal((await api('/api/crm/reports/conversion',{cookie:b.cookie})).body.total,0);
  const weighted=await api('/api/crm/reports/weighted-forecast',{cookie:a.cookie});assert.equal(weighted.status,200);assert.equal(weighted.body.totalEstimated,1000);assert.equal(weighted.body.totalWeighted,100);assert.equal(weighted.body.isEstimate,true);
  const metrics=(await api('/api/crm/portfolio',{cookie:a.cookie})).body.metrics;assert.equal(metrics.reduce((n,x)=>n+x.total,0),4);
+ const lost=await api('/api/crm/opportunities/'+source,{method:'PATCH',cookie:a.cookie,body:{stage:'perdido',loss_reason:'Contato adiado pela empresa em teste sintético'}});
+ assert.equal(lost.status,200);
+ assert.equal((await api('/api/crm/portfolio',{method:'POST',cookie:a.cookie,body:{...action,kind:'recuperacao',request_key:randomUUID(),title:'Reativação sintética'}})).status,201);
  // Transaction rollback: failure in audit cannot leave an opportunity/action behind.
  await pool.query("CREATE OR REPLACE FUNCTION qa_l04_portfolio_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action='crm_portfolio_action' THEN RAISE EXCEPTION 'synthetic'; END IF; RETURN NEW; END $$");
  await pool.query('CREATE TRIGGER qa_l04_portfolio_fail BEFORE INSERT ON auth_access_audit FOR EACH ROW EXECUTE FUNCTION qa_l04_portfolio_fail()');
  try{assert.equal((await api('/api/crm/portfolio',{method:'POST',cookie:a.cookie,body:{...action,request_key:randomUUID()}})).status,503);}
  finally{await pool.query('DROP TRIGGER qa_l04_portfolio_fail ON auth_access_audit');await pool.query('DROP FUNCTION qa_l04_portfolio_fail()');}
- assert.equal((await api('/api/crm/reports/conversion',{cookie:a.cookie})).body.total,5);
+ assert.equal((await api('/api/crm/reports/conversion',{cookie:a.cookie})).body.total,6);
  const browser=await launchBrowser();try{const context=await browser.newContext({viewport:{width:390,height:844}}),pair=a.cookie.split(';')[0],i=pair.indexOf('=');await context.addCookies([{name:pair.slice(0,i),value:pair.slice(i+1),url:baseUrl}]);const page=await context.newPage();await page.goto(baseUrl+'/admin/carteira',{waitUntil:'networkidle'});await page.getByRole('heading',{name:'Base carteira sintética',exact:true}).waitFor();await assertNoHorizontalScroll(page,'carteira móvel');await context.close();}finally{await browser.close();}
 });
 
