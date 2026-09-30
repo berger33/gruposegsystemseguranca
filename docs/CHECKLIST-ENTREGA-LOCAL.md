@@ -1,7 +1,7 @@
 # Checklist da entrega local — 222 requisitos
 
-Atualização do L04: ver [entrega e evidências](ENTREGA-L04.md). Próximo lote: [L05 — contratos](PROMPT-CONTINUACAO-L05-CONTRATOS.md). Os demais lotes mantêm seus estados próprios.
-Gerado em 2026-09-29 a partir do plano mestre; não é declaração de nova auditoria ou de conclusão.
+Atualização L05: ver [entrega e evidências](ENTREGA-L05.md). Próximo lote: [L06 — operação, patrimônio e manutenção](PROMPT-CONTINUACAO-L06-OPERACAO-PATRIMONIO.md). Os demais lotes mantêm seus estados próprios.
+Atualizado em 2026-09-30 a partir do plano mestre; não é declaração de aceite humano ou conclusão de integrações externas.
 Leia EXECUCAO-ENTREGA-LOCAL.md. Todos começam em a_revalidar para confrontar evidências históricas com a versão final. Isso não apaga o trabalho realizado.
 Para cada ID, completar: rota/tela; API/tabela; perfil/escopo; integração; teste e commit; evidência; bloqueio; aceite humano.
 Estados: a_revalidar, pendente, em_execucao, bloqueado, pronto_local, depende_integracao_externa.
@@ -378,80 +378,80 @@ parcerias e indicações, renovação/upsell e recuperação da carteira, com re
 
 ## CON-01
 contrato ligado à empresa, unidades, proposta/versão, serviços, responsáveis, vigência, valor e documentos. Admissão de cadastro manual com origem identificada.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local (L05)
+- Tela / API / dados / autorização: `/admin/contratos` e detalhe; `contract-l05-api.mjs`; `crm_contracts`, unidades/itens/responsáveis e vínculos L02/portal da 118. Só `admin`/`marcelo` escrevem; comercial só lê a própria carteira.
+- Integração e evidência (teste, resultado, commit): Gate L05: cadastro manual sem proposta fictícia, retry, unidade da empresa, responsável, item e documento privado; HTTP+PG+Chromium aprovado.
+- Pendência / fronteira externa / aceite humano: documento deve já existir no provider privado L02; nenhuma conta/contrato de portal é criado automaticamente; aceite humano pendente.
 
 ## CON-02
 itens recorrentes e avulsos, postos/turnos contratados, SLA, obrigações de cada parte, exclusões e cronograma.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local (L05)
+- Tela / API / dados / autorização: detalhe contratual usa recursos `items`, `posts`, `sla`, `obligations`, `exclusions` e `schedule`, todos com whitelist, escopo de empresa/unidade e leitura persistida.
+- Integração e evidência (teste, resultado, commit): Gate L05 persiste item recorrente, posto e SLA; valida referência de unidade fora da empresa.
+- Pendência / fronteira externa / aceite humano: dimensionamento operacional posterior não é inferido pelo cadastro de posto.
 
 ## CON-03
 estados rascunho, em revisão, aguardando assinatura, ativo, suspenso e encerrado; transições autorizadas e data de efeito. Não confundir assinatura com ativação operacional.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local (L05)
+- Tela / API / dados / autorização: `/status` registra histórico, data de efeito e evento de assinatura separado; ativação somente para gestor autorizado e com pré-requisitos.
+- Integração e evidência (teste, resultado, commit): Gate L05 prova 409 para implantação incompleta, assinatura sem ativação e ativação posterior válida.
+- Pendência / fronteira externa / aceite humano: assinatura externa não é executada nem alegada; a evidência informada é registro interno.
 
 ## CON-04
 aditivos e reajustes com base, vigência, justificativa, aprovação e histórico. Não sobrescrever valores históricos ou gerar cobrança duplicada.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local (L05)
+- Tela / API / dados / autorização: `/amendments` exige chave idempotente, base, justificativa e data; aprovação grava histórico e não reescreve o total histórico.
+- Integração e evidência (teste, resultado, commit): Gate L05 aprova reajuste e confirma `crm_contracts.total_price` original preservado.
+- Pendência / fronteira externa / aceite humano: não há geração de cobrança ou reajuste financeiro automático.
 
 ## CON-05
 alertas configuráveis de vencimento/renovação, tarefas com responsável e negociação vinculada ao CRM.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local (L05)
+- Tela / API / dados / autorização: regras e execução em `/alert-rules`; `crm_contract_alert_runs` impede duplicação e cria tarefa, oportunidade CRM e notificação local `queued` na mesma transação.
+- Integração e evidência (teste, resultado, commit): Gate L05 reprocessa a mesma data e confirma uma única execução com tarefa/oportunidade/outbox.
+- Pendência / fronteira externa / aceite humano: `queued` é caixa de saída local, não envio, entrega ou leitura externa.
 
 ## CON-06
 obrigações documentais por cliente/contrato com categoria, periodicidade, responsável, aprovação e comprovante.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local (L05)
+- Tela / API / dados / autorização: `/document-obligations`; aprovação exige `client_document_id` privado no contrato portal explicitamente vinculado; mapa 118 preserva a prova.
+- Integração e evidência (teste, resultado, commit): Gate L05 cria obrigação e só aprova com comprovante privado em escopo.
+- Pendência / fronteira externa / aceite humano: não há upload de bytes novo nesta tela; reutiliza L02.
 
 ## CON-07
 implantação com checklist: contrato, data de início, postos, dimensionamento, contratação/alocação, exames/treinamentos, equipamentos, instruções, faturamento e convite do cliente.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local (L05)
+- Tela / API / dados / autorização: `/implantation` cria/backfill dez passos explicitamente pendentes; atualização requer base de verificação e checks reais para assinatura, início e postos.
+- Integração e evidência (teste, resultado, commit): Gate L05 conclui passos sintéticos documentados e só então ativa.
+- Pendência / fronteira externa / aceite humano: RH/operação/faturamento de lotes posteriores não são simulados como integração automática.
 
 ## CON-08
 bloqueios claros para implantação incompleta; exceção somente autorizada, motivada e permitida pelas regras aplicáveis. Não permitir contornar exigência legal com simples checkbox.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local (L05)
+- Tela / API / dados / autorização: bloqueios e exceções em `/implantation`; exceção tem motivação, aprovação e validade; bloqueio legal é não-waivable.
+- Integração e evidência (teste, resultado, commit): Gate L05 prova ativação recusada antes do checklist e ativação válida apenas após condições.
+- Pendência / fronteira externa / aceite humano: avaliação jurídica permanece humana; a API apenas impede a exceção legal.
 
 ## CON-09
 encerramento com desmobilização de equipe, devolução, cobranças/pendências, documentos e revogação de escopos; preservar histórico.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local (L05)
+- Tela / API / dados / autorização: `/closure` exige passos concluídos; preserva registros e revoga somente contrato portal associado, mantendo grants de outros contratos ativos.
+- Integração e evidência (teste, resultado, commit): Gate L05 fecha o checklist, verifica contrato CRM/portal encerrado e allowlist do outro contrato preservada.
+- Pendência / fronteira externa / aceite humano: não baixa cobrança nem apaga pendência; comunicação externa não é enviada.
 
 ## CON-10
 dossiê de fiscalização contratual, medição/aceite de serviços e evidências de qualidade.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local (L05)
+- Tela / API / dados / autorização: `/fiscal` persiste dossiê e medição; evidência aceita exclusivamente documento privado L02 no escopo do contrato.
+- Integração e evidência (teste, resultado, commit): Gate L05 cria dossiê e medição por HTTP com papel autorizado.
+- Pendência / fronteira externa / aceite humano: não emite documento fiscal e não aceita URL como evidência.
 
 ## CON-11
 diário de decisões de gestão com acesso restrito, vínculo a contrato/processo e busca; não armazenar segredos ou prontuários em notas livres.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local (L05)
+- Tela / API / dados / autorização: `/management-diary` é restrito a `admin`/`marcelo`, pesquisa no escopo do contrato e rejeita padrões de senha/token/CPF/prontuário.
+- Integração e evidência (teste, resultado, commit): Gate L05 grava decisão e confirma 403 para comercial.
+- Pendência / fronteira externa / aceite humano: filtro de termos é defesa adicional, não substitui política humana de classificação.
 
 ## EMP-01
 perfil próprio e solicitação de atualização cadastral; dados restritos mascarados conforme necessidade e mudança revisada.

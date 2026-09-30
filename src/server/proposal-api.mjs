@@ -338,7 +338,7 @@ export function createProposalApi({ json, readJson, sameOrigin, getPool, readAdm
                   } else {
                     await client.query(
                       `INSERT INTO crm_contracts (id, proposal_id, proposal_version, company_id, opportunity_id, title, status, origin, version, total_cost, total_price, margin_percent, validity_days, validity_until, conditions, notes, idempotency_key, created_by, created_by_id)
-                       VALUES ($1,$2,$3,$4,$5,$6,'ativo','crm_proposal_acceptance',1,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+                       VALUES ($1,$2,$3,$4,$5,$6,'rascunho','crm_proposal_acceptance',1,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
                       [contractId, id, updated.version, updated.company_id, updated.opportunity_id, title, updated.total_cost || 0, updated.total_price || 0, updated.margin_percent, updated.validity_days, updated.validity_until, updated.conditions, `Criado idempotente via PATCH aceita ${id} v${updated.version}. Retries não duplicam.`, idempotencyKey, session.role, session.identityId || null]
                     );
                     for (const pi of proposalItemsRes.rows) {
@@ -353,9 +353,11 @@ export function createProposalApi({ json, readJson, sameOrigin, getPool, readAdm
                       `INSERT INTO crm_contract_implantations (id, contract_id, proposal_id, proposal_version, status, created_by, created_by_id) VALUES ($1,$2,$3,$4,'planejada',$5,$6) ON CONFLICT (contract_id) DO NOTHING`,
                       [implantationId, contractId, id, updated.version, session.role, session.identityId || null]
                     );
+                    // L05: contract creation and the audit record have one fate.
+                    // Acceptance records commercial consent, never operational activation.
+                    await client.query("INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,'l05_contract_create',$3,'allowed','none')", [session.role, session.identityId || null, contractId]);
                     await client.query('COMMIT');
                     contractInfo = { id: contractId, isNew: true, idempotent: true };
-                    try { await pool.query("INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,'crm_contract_create',$3,'allowed','none')", [session.role, session.identityId || session.role, contractId]); } catch {}
                   }
                 } catch (e) {
                   try { await client.query('ROLLBACK'); } catch {}

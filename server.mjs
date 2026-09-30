@@ -50,6 +50,7 @@ import { createContractImplantationApi } from "./src/server/contract-implantatio
 import { createContractClosureApi } from "./src/server/contract-closure-api.mjs";
 import { createContractFiscalApi } from "./src/server/contract-fiscal-api.mjs";
 import { createContractManagementDiaryApi } from "./src/server/contract-management-diary-api.mjs";
+import { createContractL05Api } from "./src/server/contract-l05-api.mjs";
 import { createNotificationPreferencesApi } from "./src/server/notification-preferences-api.mjs";
 import { createObservability } from "./src/server/observability.mjs";
 import { createObservabilityApi } from "./src/server/observability-api.mjs";
@@ -1472,6 +1473,14 @@ const contractManagementDiaryApi = createContractManagementDiaryApi({
   readAdminSession: readSession,
 });
 
+const contractL05Api = createContractL05Api({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
 const notificationPreferencesApi = createNotificationPreferencesApi({
   json,
   readJson,
@@ -2758,6 +2767,12 @@ async function routeApi(req, res) {
   const renewalMatch = url.pathname.match(/^\/api\/crm\/renewals\/([0-9a-f-]{36})$/i);
   if (renewalMatch) return partnershipApi.handleRenewalById(req, res, renewalMatch[1]);
   if (url.pathname === "/api/crm/partnership-metrics") return partnershipApi.handleMetrics(req, res, url);
+  // L05 is the only public server boundary for the commercial contract domain.
+  // Legacy contract handlers remain for historical code references but are not
+  // reachable through HTTP, preventing bypasses of the L05 scope/audit rules.
+  if (url.pathname === "/api/crm/contracts" || url.pathname.startsWith("/api/crm/contracts/")) {
+    return contractL05Api.handle(req, res, url);
+  }
   const contractPostsMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/posts$/i);
   if (contractPostsMatch) return contractDetailsApi.handlePosts(req, res, contractPostsMatch[1]);
   const contractSlaMatch = url.pathname.match(/^\/api\/crm\/contracts\/([0-9a-f-]{36})\/sla$/i);
