@@ -73,7 +73,7 @@ export function createPackageApi(ctx){
       const next={rascunho:['em_revisao'],em_revisao:['aprovado','rejeitado'],aprovado:['publicado','arquivado'],publicado:['arquivado'],rejeitado:['em_revisao'],arquivado:['em_revisao']};
       if(!next[old.status]?.includes(b.status))fail(409,'invalid_transition');
       const {services,rules}=await evaluate(c,old.service_ids);
-      const r=(await c.query("UPDATE pub_service_packages SET status=$2,is_published=($2='publicado'),is_approved=($2 IN ('aprovado','publicado')),service_details=$3,rules_applied=$4,version=version+1,approved_by_identity=$5,approved_at=NOW(),total_price_cents=NULL,total_cost_cents=NULL,margin_percent=NULL WHERE id=$1 RETURNING *",[b.id,b.status,JSON.stringify(services),JSON.stringify(rules),s.identityId])).rows[0];
+      const r=(await c.query("UPDATE pub_service_packages SET status=$2::text::package_status,is_published=($2='publicado'),is_approved=($2 IN ('aprovado','publicado')),service_details=$3,rules_applied=$4,version=version+1,approved_by_identity=$5,approved_at=NOW(),total_price_cents=NULL,total_cost_cents=NULL,margin_percent=NULL WHERE id=$1 RETURNING *",[b.id,b.status,JSON.stringify(services),JSON.stringify(rules),s.identityId])).rows[0];
       await c.query('INSERT INTO pub_package_history(package_id,previous_version,next_version,previous_status,next_status,reason,changed_by_identity,changed_by_name) VALUES($1,$2,$3,$4,$5,$6,$7,$8)',[r.id,old.version,r.version,old.status,r.status,reason,s.identityId,s.role]);
       await audit(c,s,'package_update',r.id);return r;
     });send(res,200,r);
