@@ -126,7 +126,8 @@ const files = [
   '113-crm-01-04-audit-actions.sql',
   '114-crm-02-contact-update-audit.sql',
   '115-crm-01-unit-audit.sql',
-  '116-crm-03-dedup-review.sql'
+  '116-crm-03-dedup-review.sql',
+  '117-l04-publication-portfolio.sql'
 ];
 
 async function main() {
