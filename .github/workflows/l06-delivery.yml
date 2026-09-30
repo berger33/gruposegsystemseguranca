@@ -12,6 +12,9 @@ on:
       - 'db/migrations/**'
       - 'package*.json'
       - '.github/workflows/l06-delivery.yml'
+concurrency:
+  group: delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:
