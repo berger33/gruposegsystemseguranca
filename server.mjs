@@ -2592,6 +2592,9 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/crm/contacts") return crmApi.handleContacts(req, res, url);
   const crmContactMatch = url.pathname.match(/^\/api\/crm\/contacts\/([0-9a-f-]{36})$/i);
   if (crmContactMatch) return crmApi.handleContactById(req, res, crmContactMatch[1]);
+  if (url.pathname === "/api/crm/units") return crmApi.handleUnits(req, res, url);
+  const crmUnitMatch = url.pathname.match(/^\/api\/crm\/units\/([0-9a-f-]{36})$/i);
+  if (crmUnitMatch) return crmApi.handleUnitById(req, res, crmUnitMatch[1]);
   if (url.pathname === "/api/crm/cadences/templates") return crmCadenceApi.handleTemplates(req, res);
   const crmCadenceTemplateMatch = url.pathname.match(/^\/api\/crm\/cadences\/templates\/([0-9a-f-]{36})$/i);
   if (crmCadenceTemplateMatch) return crmCadenceApi.handleTemplate(req, res, crmCadenceTemplateMatch[1]);
@@ -4183,6 +4186,8 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/crm/companies/")
   || pathname === "/api/crm/contacts"
   || pathname.startsWith("/api/crm/contacts/")
+  || pathname === "/api/crm/units"
+  || pathname.startsWith("/api/crm/units/")
   || pathname === "/api/crm/cadences/templates"
   || pathname.startsWith("/api/crm/cadences/templates/")
   || pathname === "/api/crm/opportunities"

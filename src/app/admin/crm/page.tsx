@@ -9,6 +9,7 @@ import MyAgenda from "./MyAgenda";
 import MyDelegatedTasks from "./MyDelegatedTasks";
 import CadenceClient from "./CadenceClient";
 import ContactManager from "./ContactManager";
+import UnitManager from "./UnitManager";
 
 type Company = { id: string; display_name: string; type: string; city: string; segment: string | null; status: string; responsible_name: string | null; };
 type Unit = { id: string; display_name: string };
@@ -397,6 +398,7 @@ export default function CrmPage() {
           <p style={{ fontSize: 11, opacity: 0.6, marginTop: 8 }}>CRM-07 kanban e tabela, filtros, busca, tarefas vencidas, histórico ligações/reuniões, anexos e notas internas autorizadas. Tarefas pessoais (com paginação, busca, edição de prazo e delegação explícita com aceite) e histórico de interações: use Abrir tarefas na oportunidade. Delegações recebidas aparecem em Tarefas delegadas a mim. Anexos, agenda de visitas/reuniões (CRM-08) e notas internas dedicadas já entregues; cadências manuais (CRM-09) criam tarefas a partir de modelos, sem envio automático; carteira (CRM-10) ainda está pendente.</p>
         </div>
       </section>
+      <UnitManager companies={companies} />
       <ContactManager companies={companies} />
       {selectedOpportunity && <OpportunitySummary key={"summary-" + selectedOpportunity} opportunityId={selectedOpportunity} />}
       {selectedOpportunity && <OpportunityNotes key={"notes-" + selectedOpportunity} opportunityId={selectedOpportunity} />}

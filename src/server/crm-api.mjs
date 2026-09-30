@@ -638,6 +638,177 @@ export function createCrmApi(ctx) {
     return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, PATCH, PUT" });
   }
 
+  // --- Units (CRM-01) ---
+  async function handleUnits(req, res, url) {
+    const session = await requireContactSession(req, res);
+    if (!session) return;
+    const db = ctx.getPool();
+
+    if (req.method === "GET") {
+      if (!requireSameOrigin(req, res)) return;
+      const companyId = url.searchParams.get("companyId") || url.searchParams.get("company_id");
+      const search = url.searchParams.get("search");
+      const limit = Math.min(200, Math.max(1, parseInt(url.searchParams.get("limit") || "50", 10) || 50));
+      const offset = Math.max(0, parseInt(url.searchParams.get("offset") || "0", 10) || 0);
+
+      if (!companyId || !isValidUuid(companyId)) return ctx.json(res, 400, { error: "company_required" });
+
+      try {
+        const company = await db.query("SELECT id FROM crm_companies WHERE id = $1", [companyId]);
+        if (!company.rows[0]) return ctx.json(res, 404, { error: "company_not_found" });
+
+        const conditions = [`company_id = $1`];
+        const values = [companyId];
+        let idx = 2;
+        if (search) {
+          conditions.push(`(display_name ILIKE $${idx} ESCAPE '\\' OR city ILIKE $${idx} ESCAPE '\\' OR address ILIKE $${idx} ESCAPE '\\')`);
+          values.push(escapeLikePattern(search));
+          idx++;
+        }
+        const where = `WHERE ${conditions.join(" AND ")}`;
+        const countRes = await db.query(`SELECT COUNT(*)::int AS total FROM crm_company_units ${where}`, values);
+        const listRes = await db.query(`SELECT * FROM crm_company_units ${where} ORDER BY is_main DESC, created_at ASC LIMIT $${idx++} OFFSET $${idx++}`, [...values, limit, offset]);
+        return ctx.json(res, 200, { units: listRes.rows, total: countRes.rows[0]?.total || 0, limit, offset, company_id: companyId });
+      } catch (e) {
+        console.error("crm units list failed", e?.message);
+        return ctx.json(res, 503, { error: "crm_unavailable" });
+      }
+    }
+
+    if (req.method === "POST") {
+      if (!requireSameOrigin(req, res)) return;
+      let body;
+      try { body = await ctx.readJson(req, 15 * 1024); } catch { return ctx.json(res, 400, { error: "invalid_request" }); }
+
+      const companyId = body?.company_id || body?.companyId || null;
+      const displayName = sanitizeText(body?.display_name || body?.displayName, 200);
+      const city = body?.city === null || body?.city === "" || body?.city === undefined ? null : sanitizeText(body.city, 100);
+      const address = body?.address === null || body?.address === "" || body?.address === undefined ? null : sanitizeText(body.address, 300);
+      const isMain = body?.is_main === true || body?.isMain === true;
+
+      if (!displayName) return ctx.json(res, 400, { error: "invalid_display_name" });
+      if (!companyId || !isValidUuid(companyId)) return ctx.json(res, 400, { error: "company_required" });
+      if (body?.city !== undefined && body.city !== null && body.city !== "" && !city) return ctx.json(res, 400, { error: "invalid_city" });
+      if (body?.address !== undefined && body.address !== null && body.address !== "" && !address) return ctx.json(res, 400, { error: "invalid_address" });
+      if (body?.is_main !== undefined && typeof body.is_main !== "boolean") return ctx.json(res, 400, { error: "invalid_is_main" });
+      if (body?.isMain !== undefined && typeof body.isMain !== "boolean") return ctx.json(res, 400, { error: "invalid_is_main" });
+
+      const allowedKeys = new Set(["company_id", "companyId", "display_name", "displayName", "city", "address", "is_main", "isMain"]);
+      const unknown = Object.keys(body || {}).filter(key => !allowedKeys.has(key));
+      if (unknown.length) return ctx.json(res, 400, { error: "field_not_editable" });
+
+      try {
+        const id = crypto.randomUUID();
+        const result = await withTransactionalAudit(session, "crm_unit_create", id, async (client) => {
+          const company = await client.query("SELECT id FROM crm_companies WHERE id = $1 FOR UPDATE", [companyId]);
+          if (!company.rows[0]) { const error = new Error("company_not_found"); error.code = "COMPANY_NOT_FOUND"; throw error; }
+          if (isMain) {
+            await client.query("UPDATE crm_company_units SET is_main = false WHERE company_id = $1 AND is_main = true", [companyId]);
+          }
+          return client.query(
+            `INSERT INTO crm_company_units (id, company_id, display_name, city, address, is_main)
+             VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+            [id, companyId, displayName, city, address, isMain]
+          );
+        });
+        return ctx.json(res, 201, { unit: result.rows[0] });
+      } catch (e) {
+        if (e?.code === "COMPANY_NOT_FOUND") return ctx.json(res, 404, { error: "company_not_found" });
+        console.error("crm unit create failed", e?.message);
+        return ctx.json(res, 503, { error: "create_failed" });
+      }
+    }
+
+    return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, POST" });
+  }
+
+  async function handleUnitById(req, res, id) {
+    const session = await requireContactSession(req, res);
+    if (!session) return;
+    if (!isValidUuid(id)) return ctx.json(res, 400, { error: "invalid_unit_id" });
+    const db = ctx.getPool();
+
+    if (req.method === "GET") {
+      if (!requireSameOrigin(req, res)) return;
+      try {
+        const result = await db.query(
+          "SELECT u.* FROM crm_company_units u JOIN crm_companies co ON co.id = u.company_id WHERE u.id = $1",
+          [id],
+        );
+        if (!result.rows[0]) return ctx.json(res, 404, { error: "unit_not_found" });
+        return ctx.json(res, 200, { unit: result.rows[0] });
+      } catch (e) {
+        console.error("crm unit get failed", e?.message);
+        return ctx.json(res, 503, { error: "crm_unavailable" });
+      }
+    }
+
+    if (req.method === "PATCH" || req.method === "PUT") {
+      if (!requireSameOrigin(req, res)) return;
+      let body;
+      try { body = await ctx.readJson(req, 15 * 1024); } catch { return ctx.json(res, 400, { error: "invalid_request" }); }
+      if (body?.company_id !== undefined || body?.companyId !== undefined) return ctx.json(res, 400, { error: "company_immutable" });
+
+      const fields = [];
+      const values = [];
+      let idx = 1;
+      const editable = new Set(["display_name", "displayName", "city", "address", "is_main", "isMain"]);
+      const unknown = Object.keys(body || {}).filter(key => !editable.has(key));
+      if (unknown.length) return ctx.json(res, 400, { error: "field_not_editable" });
+      const add = (column, value) => { fields.push(`${column} = $${idx++}`); values.push(value); };
+
+      let isMainSpecified = false;
+      let isMainValue = false;
+
+      if (body.display_name !== undefined || body.displayName !== undefined) {
+        const displayName = sanitizeText(body.display_name ?? body.displayName, 200);
+        if (!displayName) return ctx.json(res, 400, { error: "invalid_display_name" });
+        add("display_name", displayName);
+      }
+      if (body.city !== undefined) {
+        const city = body.city === null || body.city === "" ? null : sanitizeText(body.city, 100);
+        if (body.city !== null && body.city !== "" && !city) return ctx.json(res, 400, { error: "invalid_city" });
+        add("city", city);
+      }
+      if (body.address !== undefined) {
+        const address = body.address === null || body.address === "" ? null : sanitizeText(body.address, 300);
+        if (body.address !== null && body.address !== "" && !address) return ctx.json(res, 400, { error: "invalid_address" });
+        add("address", address);
+      }
+      if (body.is_main !== undefined || body.isMain !== undefined) {
+        const value = body.is_main ?? body.isMain;
+        if (typeof value !== "boolean") return ctx.json(res, 400, { error: "invalid_is_main" });
+        add("is_main", value);
+        isMainSpecified = true;
+        isMainValue = value;
+      }
+      if (!fields.length) return ctx.json(res, 400, { error: "no_fields" });
+
+      try {
+        const result = await withTransactionalAudit(session, "crm_unit_update", id, async (client) => {
+          const current = await client.query("SELECT id, company_id FROM crm_company_units WHERE id = $1 FOR UPDATE", [id]);
+          if (!current.rows[0] || !current.rows[0].company_id) { const error = new Error("unit_not_found"); error.code = "UNIT_NOT_FOUND"; throw error; }
+          const company = await client.query("SELECT id FROM crm_companies WHERE id = $1", [current.rows[0].company_id]);
+          if (!company.rows[0]) { const error = new Error("unit_not_found"); error.code = "UNIT_NOT_FOUND"; throw error; }
+
+          if (isMainSpecified && isMainValue) {
+            await client.query("UPDATE crm_company_units SET is_main = false WHERE company_id = $1 AND id <> $2 AND is_main = true", [current.rows[0].company_id, id]);
+          }
+
+          values.push(id);
+          return client.query(`UPDATE crm_company_units SET ${fields.join(", ")} WHERE id = $${idx} RETURNING *`, values);
+        });
+        return ctx.json(res, 200, { unit: result.rows[0] });
+      } catch (e) {
+        if (e?.code === "UNIT_NOT_FOUND") return ctx.json(res, 404, { error: "unit_not_found" });
+        console.error("crm unit update failed", e?.message);
+        return ctx.json(res, 503, { error: "update_failed" });
+      }
+    }
+
+    return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, PATCH, PUT" });
+  }
+
   // --- Opportunities ---
   async function handleOpportunities(req, res, url) {
     const session = await requireCommercialFamilySession(req, res);
@@ -1457,6 +1628,8 @@ export function createCrmApi(ctx) {
     handleCompanyById,
     handleContacts,
     handleContactById,
+    handleUnits,
+    handleUnitById,
     handleOpportunities,
     handleOpportunityById,
     handleLeadConvert,
