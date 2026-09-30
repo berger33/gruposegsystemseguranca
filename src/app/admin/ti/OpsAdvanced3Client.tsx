@@ -59,13 +59,13 @@ export default function OpsAdvanced3Client() {
   }
 
   // OPS-13
-  const [defForm, setDefForm] = useState({ name:"", metric_type:"cobertura", source:"escala", window_type:"mensal", description:"" });
+  const [defForm, setDefForm] = useState({ name:"", metric_type:"cobertura", source:"escala", window_type:"mensal", description:"", calculation_formula:"horas_cobertas / horas_previstas * 100" });
   async function createDef() {
-    try { await api("/api/hr/ops-metrics-definitions","POST",{ name:defForm.name, metric_type:defForm.metric_type, source:defForm.source, window_type:defForm.window_type, description:defForm.description }); setMsg("Definição métrica criada fonte+janela"); loadAll(); } catch(e:any){ setMsg("Erro def: "+e.message); }
+    try { await api("/api/hr/ops-metrics-definitions","POST",{ name:defForm.name, metric_type:defForm.metric_type, source:defForm.source, window_type:defForm.window_type, description:defForm.description, calculation_formula:defForm.calculation_formula }); setMsg("Definição métrica criada fonte+janela"); loadAll(); } catch(e:any){ setMsg("Erro def: "+e.message); }
   }
-  const [snapForm, setSnapForm] = useState({ definition_id:"", metric_type:"cobertura", source:"escala", window_type:"mensal", period_start:"", period_end:"", value:"", unit:"%", post_id:"", company_id:"" });
+  const [snapForm, setSnapForm] = useState({ definition_id:"", metric_type:"cobertura", source:"escala", window_type:"mensal", period_start:"", period_end:"", value:"", unit:"%", post_id:"", company_id:"", completeness_status:"parcial", incompleteness_reason:"Dados parciais informados manualmente" });
   async function createSnap() {
-    try { await api("/api/hr/ops-metrics-snapshots","POST",{ definition_id:snapForm.definition_id||null, metric_type:snapForm.metric_type, source:snapForm.source, window_type:snapForm.window_type, period_start:snapForm.period_start, period_end:snapForm.period_end, value:parseFloat(snapForm.value), unit:snapForm.unit, post_id:snapForm.post_id||null, company_id:snapForm.company_id||null }); setMsg("Snapshot métrica criado"); loadAll(); } catch(e:any){ setMsg("Erro snap: "+e.message); }
+    try { await api("/api/hr/ops-metrics-snapshots","POST",{ definition_id:snapForm.definition_id||null, metric_type:snapForm.metric_type, source:snapForm.source, window_type:snapForm.window_type, period_start:snapForm.period_start, period_end:snapForm.period_end, value:parseFloat(snapForm.value), unit:snapForm.unit, post_id:snapForm.post_id||null, company_id:snapForm.company_id||null, completeness_status:snapForm.completeness_status, incompleteness_reason:snapForm.incompleteness_reason }); setMsg("Snapshot métrica criado"); loadAll(); } catch(e:any){ setMsg("Erro snap: "+e.message); }
   }
   const [reincForm, setReincForm] = useState({ post_id:"", first_date:"", last_date:"", occurrence_count:"2", company_id:"" });
   async function createReinc() {
@@ -73,9 +73,9 @@ export default function OpsAdvanced3Client() {
   }
 
   // OPS-14
-  const [propForm, setPropForm] = useState({ company_id:"", unit_id:"", period_start:"", period_end:"", motives:"" });
+  const [propForm, setPropForm] = useState({ contract_id:"", company_id:"", unit_id:"", period_start:"", period_end:"", motives:"" });
   async function createProposal() {
-    try { await api("/api/hr/ops-assisted-proposals","POST",{ company_id:propForm.company_id||null, unit_id:propForm.unit_id||null, period_start:propForm.period_start, period_end:propForm.period_end, motives:propForm.motives }); setMsg("Proposta escala assistida criada - regras validadas verificadas"); loadAll(); } catch(e:any){ setMsg("Erro proposta: "+e.message); }
+    try { await api("/api/hr/ops-assisted-proposals","POST",{ contract_id:propForm.contract_id, company_id:propForm.company_id||null, unit_id:propForm.unit_id||null, period_start:propForm.period_start, period_end:propForm.period_end, motives:propForm.motives }); setMsg("Proposta escala assistida criada - regras validadas verificadas"); loadAll(); } catch(e:any){ setMsg("Erro proposta: "+e.message); }
   }
   async function reviewProposal(id:string) {
     const reviewed_by = prompt("Revisor humano (obrigatório antes publicar):"); if(!reviewed_by) return;
@@ -83,7 +83,7 @@ export default function OpsAdvanced3Client() {
   }
   async function publishProposal(id:string) {
     const reviewed_by = prompt("Responsável publicação (revisão humana obrigatória, conflitos apresentados):"); if(!reviewed_by) return;
-    try { await api("/api/hr/ops-assisted-proposals","PATCH",{ id, status:"publicado", reviewed_by }); setMsg("Escala assistida publicada"); loadAll(); } catch(e:any){ setMsg("Erro publicar: "+e.message); }
+    try { await api("/api/hr/ops-assisted-proposals","PATCH",{ id, status:"publicado", reviewed_by, motives:"Publicação confirmada após revisão humana dos conflitos" }); setMsg("Escala assistida publicada"); loadAll(); } catch(e:any){ setMsg("Erro publicar: "+e.message); }
   }
   async function loadConflicts(proposal_id:string) {
     try { const d=await api("/api/hr/ops-assisted-conflicts?proposal_id="+proposal_id,"GET"); if(d.conflicts) setConflicts(d.conflicts); const eD=await api("/api/hr/ops-assisted-entries?proposal_id="+proposal_id,"GET"); if(eD.entries) setEntries(eD.entries); } catch {}
@@ -117,19 +117,23 @@ export default function OpsAdvanced3Client() {
   // OPS-16
   const [connForm, setConnForm] = useState({ name:"", connector_type:"manual", status:"ativo" });
   async function createConn() {
-    try { await api("/api/hr/ops-monitoring-connectors","POST",{ name:connForm.name, connector_type:connForm.connector_type, status:connForm.status, config:{ modo:"manual", video:"video_sem_projeto_nao_armazenado - não armazena vídeo" } }); setMsg("Conector monitoramento criado - vídeo não armazenado"); loadAll(); } catch(e:any){ setMsg("Erro conector: "+e.message); }
+    try { await api("/api/hr/ops-monitoring-connectors","POST",{ name:connForm.name, connector_type:connForm.connector_type, status:connForm.status, is_synthetic:true, config_sanitized:{ modo:"sintetico", armazenamento_video:false } }); setMsg("Conector monitoramento criado - vídeo não armazenado"); loadAll(); } catch(e:any){ setMsg("Erro conector: "+e.message); }
   }
-  const [evForm, setEvForm] = useState({ connector_id:"", event_type:"outro", severity:"media", post_id:"", company_id:"", occurred_at:"", notes:"" });
+  const [evForm, setEvForm] = useState({ connector_id:"", event_type:"intrusao", severity:"media", post_id:"", company_id:"", occurred_at:"", notes:"" });
   async function createEvent() {
-    try { await api("/api/hr/ops-monitoring-events","POST",{ connector_id:evForm.connector_id||null, event_type:evForm.event_type, severity:evForm.severity, post_id:evForm.post_id||null, company_id:evForm.company_id||null, occurred_at:evForm.occurred_at||new Date().toISOString(), notes:evForm.notes, payload:{ info:"evento via conector fila reconhecimento escalonamento - não é substituto central 24h", video:"video_sem_projeto_nao_armazenado" } }); setMsg("Evento monitoramento via conector fila criado - não é central 24h"); loadAll(); } catch(e:any){ setMsg("Erro evento: "+e.message); }
+    try { await api("/api/hr/ops-monitoring-events","POST",{ connector_id:evForm.connector_id||null, event_type:evForm.event_type, severity:evForm.severity, post_id:evForm.post_id||null, company_id:evForm.company_id||null, occurred_at:evForm.occurred_at||new Date().toISOString(), notes:evForm.notes, is_synthetic:true, payload:{ info:"evento sintético; não é central 24h nem produz despacho externo" } }); setMsg("Evento monitoramento via conector fila criado - não é central 24h"); loadAll(); } catch(e:any){ setMsg("Erro evento: "+e.message); }
   }
   async function ackEvent(id:string) {
     const acknowledged_by = prompt("Responsável reconhecimento:"); if(!acknowledged_by) return;
     try { await api("/api/hr/ops-monitoring-events","PATCH",{ id, status:"reconhecido", acknowledged_by }); setMsg("Evento reconhecido"); loadAll(); } catch(e:any){ setMsg(e.message); }
   }
-  async function escalateEvent(id:string) {
-    const reason = prompt("Motivo escalonamento 10..1000:"); if(!reason) return;
-    try { await api("/api/hr/ops-monitoring-events","PATCH",{ id, status:"escalonado", reason }); setMsg("Evento escalonado nível+1"); loadAll(); } catch(e:any){ setMsg(e.message); }
+  async function treatEvent(id:string) {
+    const treatment_notes = prompt("Tratamento interno do evento sintético:"); if(!treatment_notes) return;
+    try { await api("/api/hr/ops-monitoring-events","PATCH",{ id, status:"em_tratamento", treatment_notes }); setMsg("Evento sintético em tratamento"); loadAll(); } catch(e:any){ setMsg(e.message); }
+  }
+  async function closeEvent(id:string) {
+    const closed_by = prompt("Responsável pelo encerramento:"); if(!closed_by) return;
+    try { await api("/api/hr/ops-monitoring-events","PATCH",{ id, status:"resolvido", closed_by, treatment_notes:"Tratamento sintético concluído sem despacho externo" }); setMsg("Evento sintético encerrado"); loadAll(); } catch(e:any){ setMsg(e.message); }
   }
 
   return (
@@ -143,8 +147,9 @@ export default function OpsAdvanced3Client() {
         <select value={defForm.metric_type} onChange={e=>setDefForm({...defForm, metric_type:e.target.value})}><option value="cobertura">cobertura</option><option value="tempo_descoberto">tempo_descoberto</option><option value="incidentes">incidentes</option><option value="visitas">visitas</option><option value="reincidencia">reincidência</option><option value="sla">sla</option></select>
         <select value={defForm.source} onChange={e=>setDefForm({...defForm, source:e.target.value})}><option value="escala">escala</option><option value="cobertura">cobertura</option><option value="ocorrencia">ocorrência</option><option value="supervisao">supervisão</option><option value="ronda">ronda</option><option value="checklist">checklist</option><option value="manual">manual</option><option value="sistema">sistema</option></select>
         <select value={defForm.window_type} onChange={e=>setDefForm({...defForm, window_type:e.target.value})}><option value="diario">diário</option><option value="semanal">semanal</option><option value="mensal">mensal</option><option value="trimestral">trimestral</option><option value="anual">anual</option><option value="personalizado">personalizado</option></select>
-        <input placeholder="descrição fórmula" value={defForm.description} onChange={e=>setDefForm({...defForm, description:e.target.value})} style={{ width:200 }} />
-        <button onClick={createDef}>Criar Definição (fonte+janela)</button>
+        <input placeholder="descrição" value={defForm.description} onChange={e=>setDefForm({...defForm, description:e.target.value})} style={{ width:180 }} />
+        <input placeholder="fórmula de cálculo" value={defForm.calculation_formula} onChange={e=>setDefForm({...defForm, calculation_formula:e.target.value})} style={{ width:260 }} />
+        <button onClick={createDef}>Criar Definição (fonte+janela+fórmula)</button>
       </div>
       <ul style={{ fontSize:12, maxHeight:80, overflow:"auto" }}>{defs.map(d=>(<li key={d.id}>{d.name} {d.metric_type} fonte {d.source} janela {d.window_type} {d.is_active?"ativo":""}</li>))}</ul>
 
@@ -158,6 +163,8 @@ export default function OpsAdvanced3Client() {
         <input placeholder="valor" type="number" value={snapForm.value} onChange={e=>setSnapForm({...snapForm, value:e.target.value})} style={{ width:80 }} />
         <input placeholder="unit %" value={snapForm.unit} onChange={e=>setSnapForm({...snapForm, unit:e.target.value})} style={{ width:60 }} />
         <input placeholder="post_id" value={snapForm.post_id} onChange={e=>setSnapForm({...snapForm, post_id:e.target.value})} style={{ width:150 }} />
+        <select value={snapForm.completeness_status} onChange={e=>setSnapForm({...snapForm, completeness_status:e.target.value})}><option value="completo">completo</option><option value="parcial">parcial</option><option value="incompleto">incompleto</option></select>
+        <input placeholder="motivo da incompletude" value={snapForm.incompleteness_reason} onChange={e=>setSnapForm({...snapForm, incompleteness_reason:e.target.value})} style={{ width:240 }} />
         <button onClick={createSnap}>Criar Snapshot (fonte+janela+valor)</button>
       </div>
       <ul style={{ fontSize:12, maxHeight:80, overflow:"auto" }}>{snaps.map(s=>(<li key={s.id}>{s.metric_type} {s.source} {s.window_type} {s.period_start}→{s.period_end} {s.value}{s.unit} {s.status}</li>))}</ul>
@@ -173,6 +180,7 @@ export default function OpsAdvanced3Client() {
 
       <h3>OPS-14 Escalas assistidas/automáticas depois regras validadas conflitos motivos revisão humana antes publicar</h3>
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
+        <input placeholder="contract_id ativo" value={propForm.contract_id} onChange={e=>setPropForm({...propForm, contract_id:e.target.value})} style={{ width:180 }} />
         <input placeholder="company_id" value={propForm.company_id} onChange={e=>setPropForm({...propForm, company_id:e.target.value})} style={{ width:180 }} />
         <input placeholder="unit_id" value={propForm.unit_id} onChange={e=>setPropForm({...propForm, unit_id:e.target.value})} style={{ width:180 }} />
         <input type="date" value={propForm.period_start} onChange={e=>setPropForm({...propForm, period_start:e.target.value})} />
@@ -248,7 +256,7 @@ export default function OpsAdvanced3Client() {
 
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
         <input placeholder="connector_id" value={evForm.connector_id} onChange={e=>setEvForm({...evForm, connector_id:e.target.value})} style={{ width:180 }} />
-        <select value={evForm.event_type} onChange={e=>setEvForm({...evForm, event_type:e.target.value})}><option value="intrusao">intrusão</option><option value="falha_equipamento">falha equip</option><option value="porta_aberta">porta aberta</option><option value="movimento">movimento</option><option value="panico">pânico</option><option value="ronda_nao_realizada">ronda não realizada</option><option value="ocorrencia_critica">ocorrência crítica</option></select>
+        <select value={evForm.event_type} onChange={e=>setEvForm({...evForm, event_type:e.target.value})}><option value="intrusao">intrusão sintética</option><option value="falha_equipamento">falha de equipamento sintética</option><option value="panico_simulado">pânico simulado</option></select>
         <select value={evForm.severity} onChange={e=>setEvForm({...evForm, severity:e.target.value})}><option value="info">info</option><option value="baixa">baixa</option><option value="media">média</option><option value="alta">alta</option><option value="critica">crítica</option></select>
         <input placeholder="post_id" value={evForm.post_id} onChange={e=>setEvForm({...evForm, post_id:e.target.value})} style={{ width:150 }} />
         <input type="datetime-local" value={evForm.occurred_at} onChange={e=>setEvForm({...evForm, occurred_at:e.target.value})} />
@@ -258,7 +266,7 @@ export default function OpsAdvanced3Client() {
       <p style={{ fontSize:11, color:"#666" }}>Não construir substituto de central 24h ou armazenar vídeo sem projeto específico. Conector apenas fila reconhecimento escalonamento.</p>
       <ul style={{ fontSize:12, maxHeight:120, overflow:"auto" }}>
         {events.map(ev=>(
-          <li key={ev.id}>{ev.protocol} {ev.event_type} {ev.severity} {ev.status} {ev.occurred_at.slice(0,16)} esc {ev.escalation_level} {ev.is_escalated?"ESCALONADO":""} <button onClick={()=>ackEvent(ev.id)}>Reconhecer</button> <button onClick={()=>escalateEvent(ev.id)}>Escalonar</button></li>
+          <li key={ev.id}>{ev.protocol} {ev.event_type} {ev.severity} {ev.status} {ev.occurred_at.slice(0,16)} — SINTÉTICO <button onClick={()=>ackEvent(ev.id)}>Reconhecer</button> <button onClick={()=>treatEvent(ev.id)}>Tratar</button> <button onClick={()=>closeEvent(ev.id)}>Encerrar</button></li>
         ))}
       </ul>
     </section>

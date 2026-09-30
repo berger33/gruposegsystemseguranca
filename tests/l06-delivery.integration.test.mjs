@@ -1232,3 +1232,130 @@ test("L06 Fatia D: inventário, ordens de serviço, manutenção, materiais, evi
     await browser.close();
   }
 });
+
+
+test("L06 Fatia E: OPS-09..16 — operação avançada, conflitos, idempotência, sintético e auditoria fail-closed", { skip: !RUN, timeout: 240_000 }, async () => {
+  const admin = await provisionAndLoginStaff(pool, api, { role: "admin" });
+  const commercial = await provisionAndLoginStaff(pool, api, { role: "comercial" });
+  const companyId = uuid(), unitId = uuid();
+  await pool.query("INSERT INTO crm_companies(id,display_name,type,status,created_by) VALUES($1,'Empresa Fatia E','client','active','admin')", [companyId]);
+  await pool.query("INSERT INTO crm_company_units(id,company_id,display_name,is_main) VALUES($1,$2,'Unidade Fatia E',true)", [unitId, companyId]);
+  const contractId = await insertContract(companyId, "ativo");
+  const supervisorId = await insertEmployee("ativo", "Supervisor Operacional");
+  const executorId = await insertEmployee("ativo", "Auxiliar de Limpeza");
+
+  assert.equal((await ops("/supervision-visits")).status, 401, "anonymous advanced operations denied");
+  assert.equal((await ops("/keys", { cookie: commercial.cookie, method: "POST", body: {} })).status, 403, "unauthorized role denied");
+  const postResponse = await ops("/posts", { cookie: admin.cookie, method: "POST", body: { name: "Posto Fatia E", company_id: companyId, unit_id: unitId, contract_id: contractId, post_type: "vigilancia" } });
+  assert.equal(postResponse.status, 201);
+  const postId = postResponse.body.post.id;
+
+  // OPS-09 — posto/contrato/supervisor ativos, score e plano verificado.
+  const visit = await ops("/supervision-visits", { cookie: admin.cookie, method: "POST", body: { post_id: postId, supervisor_employee_id: supervisorId, scheduled_date: "2026-11-02", findings: "Apontamento sintético de inspeção" } });
+  assert.equal(visit.status, 201);
+  const visitId = visit.body.visit.id;
+  assert.equal((await ops("/supervision-visits", { cookie: admin.cookie, method: "PATCH", body: { id: visitId, score: 101 } })).status, 400);
+  const inspection = await ops("/supervision-inspections", { cookie: admin.cookie, method: "POST", body: { visit_id: visitId, title: "Inspeção operacional", score: 82, result: "Não conformidade localizada" } });
+  assert.equal(inspection.status, 201);
+  const plan = await ops("/supervision-action-plans", { cookie: admin.cookie, method: "POST", body: { visit_id: visitId, inspection_id: inspection.body.inspection.id, title: "Corrigir iluminação", description: "Substituir iluminação do acesso lateral", responsible_name: "Supervisor QA", due_date: "2026-11-10" } });
+  assert.equal(plan.status, 201);
+  assert.equal((await ops("/supervision-action-plans", { cookie: admin.cookie, method: "PATCH", body: { id: plan.body.actionPlan.id, status: "verificado" } })).status, 400);
+  assert.equal((await ops("/supervision-action-plans", { cookie: admin.cookie, method: "PATCH", body: { id: plan.body.actionPlan.id, status: "verificado", verified_by: "Gestor QA" } })).status, 200);
+
+  // OPS-10 — leitura sintética, localização indisponível, replay e idempotência.
+  const patrol = await ops("/patrols", { cookie: admin.cookie, method: "POST", body: { post_id: postId, employee_id: supervisorId, patrol_date: "2026-11-02", route_name: "Rota sintética" } });
+  assert.equal(patrol.status, 201);
+  assert.match(patrol.body.synthetic_notice, /simulada/i);
+  const patrolId = patrol.body.patrol.id;
+  assert.equal((await ops("/patrol-readings", { cookie: admin.cookie, method: "POST", body: { patrol_id: patrolId, point_name: "Portão A", location_unavailable: true } })).status, 400);
+  const reading = await ops("/patrol-readings", { cookie: admin.cookie, method: "POST", body: { patrol_id: patrolId, point_name: "Portão A", qr_code: "QR-FATIA-E", reading_key: "reading-1", location_unavailable: true, location_unavailable_reason: "Sensor sintético sem localização" } });
+  assert.equal(reading.status, 201);
+  assert.equal(reading.body.point.status, "localizacao_indisponivel");
+  const retry = await ops("/patrol-readings", { cookie: admin.cookie, method: "POST", body: { patrol_id: patrolId, point_name: "Portão A", reading_key: "reading-1" } });
+  assert.equal(retry.status, 200);
+  assert.equal(retry.body.idempotent, true);
+  const replay = await ops("/patrol-readings", { cookie: admin.cookie, method: "POST", body: { patrol_id: patrolId, point_name: "Portão B", qr_code: "QR-FATIA-E", reading_key: "reading-2" } });
+  assert.equal(replay.status, 201);
+  assert.equal(replay.body.replay_detected, true);
+  assert.equal(replay.body.point.replay_reason, "duplicate_qr");
+
+  // OPS-11 — cadeia de custódia e dupla retirada incompatível.
+  const key = await ops("/keys", { cookie: admin.cookie, method: "POST", body: { code: `KEY-${uuid().slice(0,8)}`, description: "Chave portão lateral", key_type: "chave", post_id: postId } });
+  assert.equal(key.status, 201);
+  const keyId = key.body.key.id;
+  const withdrawalBody = { key_id: keyId, movement_type: "retirada", to_employee_id: supervisorId, reason: "Ronda sintética no perímetro lateral", purpose: "Acesso controlado ao portão" };
+  assert.equal((await ops("/key-movements", { cookie: admin.cookie, method: "POST", body: withdrawalBody })).status, 201);
+  assert.equal((await ops("/key-movements", { cookie: admin.cookie, method: "POST", body: withdrawalBody })).status, 409);
+  assert.equal((await ops("/key-movements", { cookie: admin.cookie, method: "POST", body: { key_id: keyId, movement_type: "devolucao", reason: "Devolução após encerramento da ronda", purpose: "Retorno ao claviculário" } })).status, 201);
+
+  // OPS-12 — fluxo estrito e liberação somente após aprovação.
+  const report = await ops("/client-reports", { cookie: admin.cookie, method: "POST", body: { company_id: companyId, contract_id: contractId, post_id: postId, unit_id: unitId, report_type: "diario", period_start: "2026-11-01", period_end: "2026-11-01", title: "Livro diário operacional", content: "Conteúdo sintético revisável do livro de serviço diário." } });
+  assert.equal(report.status, 201);
+  const reportId = report.body.report.id;
+  assert.equal((await ops("/client-reports", { cookie: admin.cookie, method: "PATCH", body: { id: reportId, status: "enviado" } })).status, 409);
+  assert.equal((await ops("/client-reports", { cookie: admin.cookie, method: "PATCH", body: { id: reportId, status: "em_revisao", reviewed_by: "Revisor QA" } })).status, 200);
+  assert.equal((await ops("/client-reports", { cookie: admin.cookie, method: "PATCH", body: { id: reportId, status: "aprovado", approved_by: "Diretor QA" } })).status, 200);
+  assert.equal((await ops("/client-reports", { cookie: admin.cookie, method: "PATCH", body: { id: reportId, status: "enviado" } })).status, 200);
+
+  // OPS-13 — fonte, janela, fórmula e incompletude explícitas.
+  const definition = await ops("/metrics-definitions", { cookie: admin.cookie, method: "POST", body: { name: `Cobertura Fatia E ${uuid().slice(0,6)}`, metric_type: "cobertura", source: "cobertura", window_type: "diario", calculation_formula: "horas_cobertas / horas_previstas * 100" } });
+  assert.equal(definition.status, 201);
+  const definitionId = definition.body.definition.id;
+  assert.equal((await ops("/metrics-snapshots", { cookie: admin.cookie, method: "POST", body: { definition_id: definitionId, period_start: "2026-11-01", period_end: "2026-11-01", completeness_status: "incompleto" } })).status, 400);
+  const snapshot = await ops("/metrics-snapshots", { cookie: admin.cookie, method: "POST", body: { definition_id: definitionId, period_start: "2026-11-01", period_end: "2026-11-01", value: 75, unit: "%", completeness_status: "parcial", incompleteness_reason: "Uma integração ainda não forneceu dados" } });
+  assert.equal(snapshot.status, 201);
+  assert.equal(snapshot.body.snapshot.completeness_status, "parcial");
+
+  // OPS-14 — sobreposição explícita impede publicação até resolução/revisão.
+  const schedule = await ops("/assisted-schedules", { cookie: admin.cookie, method: "POST", body: { contract_id: contractId, unit_id: unitId, period_start: "2026-11-01", period_end: "2026-11-07" } });
+  assert.equal(schedule.status, 201);
+  const scheduleId = schedule.body.schedule.id;
+  assert.equal((await ops("/assisted-schedule-entries", { cookie: admin.cookie, method: "POST", body: { proposal_id: scheduleId, post_id: postId, employee_id: supervisorId, entry_date: "2026-11-03" } })).status, 201);
+  const conflictEntry = await ops("/assisted-schedule-entries", { cookie: admin.cookie, method: "POST", body: { proposal_id: scheduleId, post_id: postId, employee_id: supervisorId, entry_date: "2026-11-03" } });
+  assert.equal(conflictEntry.status, 201);
+  assert.ok(conflictEntry.body.conflicts.includes("sobreposicao"));
+  assert.equal((await ops("/assisted-schedules", { cookie: admin.cookie, method: "PATCH", body: { id: scheduleId, status: "publicado", reviewed_by: "Gestor QA", motives: "Revisão humana documentada" } })).status, 409);
+
+  // OPS-15 — ambiente, rotina, executor, inspeção e NC severa.
+  const environment = await ops("/cleaning-environments", { cookie: admin.cookie, method: "POST", body: { post_id: postId, name: "Banheiro recepção", environment_type: "banheiro" } });
+  assert.equal(environment.status, 201);
+  const routine = await ops("/cleaning-routines", { cookie: admin.cookie, method: "POST", body: { environment_id: environment.body.environment.id, title: "Higienização diária", frequency: "diaria" } });
+  assert.equal(routine.status, 201);
+  const execution = await ops("/cleaning-executions", { cookie: admin.cookie, method: "POST", body: { routine_id: routine.body.routine.id, employee_id: executorId, score: 88, inspected_by: "Inspetor QA", quality_notes: "Qualidade verificada presencialmente apenas no cenário sintético" } });
+  assert.equal(execution.status, 201);
+  const nc = await ops("/cleaning-nonconformities", { cookie: admin.cookie, method: "POST", body: { execution_id: execution.body.execution.id, type: "qualidade", description: "Reposição de insumo pendente após inspeção", severity: "alta", responsible_name: "Líder QA" } });
+  assert.equal(nc.status, 201);
+
+  // OPS-16 — rótulo sintético obrigatório e transições reconhecido/tratado/encerrado.
+  const connector = await ops("/monitoring-connectors", { cookie: admin.cookie, method: "POST", body: { name: `Conector sintético ${uuid().slice(0,6)}`, connector_type: "manual", is_synthetic: true } });
+  assert.equal(connector.status, 201);
+  assert.match(connector.body.synthetic_notice, /sintético/i);
+  assert.equal((await ops("/monitoring-events", { cookie: admin.cookie, method: "POST", body: { event_type: "intrusao", occurred_at: new Date().toISOString(), is_synthetic: false } })).status, 400);
+  const event = await ops("/monitoring-events", { cookie: admin.cookie, method: "POST", body: { connector_id: connector.body.connector.id, event_type: "panico_simulado", occurred_at: new Date().toISOString(), is_synthetic: true, post_id: postId } });
+  assert.equal(event.status, 201);
+  const eventId = event.body.event.id;
+  assert.equal((await ops("/monitoring-events", { cookie: admin.cookie, method: "PATCH", body: { id: eventId, status: "reconhecido", acknowledged_by: "Operador QA" } })).status, 200);
+  assert.equal((await ops("/monitoring-events", { cookie: admin.cookie, method: "PATCH", body: { id: eventId, status: "em_tratamento", treatment_notes: "Tratamento interno exclusivamente sintético" } })).status, 200);
+  assert.equal((await ops("/monitoring-events", { cookie: admin.cookie, method: "PATCH", body: { id: eventId, status: "resolvido", treatment_notes: "Evento sintético encerrado sem despacho", closed_by: "Operador QA" } })).status, 200);
+
+  // Auditoria indisponível: nenhuma mutação parcial.
+  const code = `AUD-${uuid().slice(0,8)}`;
+  await pool.query("ALTER TABLE audit_log RENAME TO audit_log_l06_e_bak");
+  try {
+    const failed = await ops("/keys", { cookie: admin.cookie, method: "POST", body: { code, description: "Chave sem trilha auditável", key_type: "chave", post_id: postId } });
+    assert.equal(failed.status, 503);
+    assert.equal(Number((await pool.query("SELECT count(*) n FROM ops_keys WHERE code=$1", [code])).rows[0].n), 0);
+  } finally { await pool.query("ALTER TABLE audit_log_l06_e_bak RENAME TO audit_log"); }
+
+  // Chromium real: seis abas da Fatia E e aviso sintético.
+  const browser = await launchBrowser();
+  try {
+    const context = await browser.newContext();
+    await context.addCookies(admin.cookie.split("; ").map(pair => { const i=pair.indexOf("="); return { name:pair.slice(0,i), value:pair.slice(i+1), domain:"127.0.0.1", path:"/" }; }));
+    const page = await context.newPage();
+    await page.goto(`${baseUrl}/admin/operacao`, { waitUntil: "networkidle" });
+    for (const label of ["Supervisão", "Rondas & Claviculário", "Relatórios", "Métricas & Escalas", "Limpeza", "Monitoramento Sintético"]) await page.getByRole("tab", { name: label, exact: true }).waitFor();
+    await page.getByRole("tab", { name: "Monitoramento Sintético", exact: true }).click();
+    assert.match((await page.textContent("body")) || "", /sem central 24h e sem despacho externo real/i);
+  } finally { await browser.close(); }
+});

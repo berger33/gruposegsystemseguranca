@@ -132,13 +132,14 @@ const files = [
   '119-l06-operacao-hardening.sql',
   '120-l06-fatia-b-operacao.sql',
   '121-l06-fatia-c-patrimonio.sql',
-  '122-l06-fatia-d-manutencao.sql'
+  '122-l06-fatia-d-manutencao.sql',
+  '123-l06-fatia-e-operacao-avancada.sql'
 ];
 
 async function main() {
   const actual = (await readdir(dir)).filter(f => /^\d{3}-.*\.sql$/.test(f)).sort();
-  if (files.length !== 122 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
-    throw new Error('migration_manifest_mismatch: compare 001–122 with db/migrations before connecting');
+  if (files.length !== 123 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
+    throw new Error('migration_manifest_mismatch: compare 001–123 with db/migrations before connecting');
   }
   const urlText = process.env.DATABASE_MIGRATION_URL || process.env.DATABASE_URL;
   if (!urlText) throw new Error('DATABASE_MIGRATION_URL or DATABASE_URL is required');
