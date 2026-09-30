@@ -1131,11 +1131,18 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       const where = [];
       const vals = [];
       let i = 1;
-      if (company_id) { if (!validateUuid(company_id)) return send(res, 400, { error: 'invalid_company_id' }); where.push(`company_id=$${i++}`); vals.push(company_id); }
-      if (status) { where.push(`status=$${i++}`); vals.push(status); }
+      if (company_id) { if (!validateUuid(company_id)) return send(res, 400, { error: 'invalid_company_id' }); where.push(`v.company_id=$${i++}`); vals.push(company_id); }
+      if (status) { where.push(`v.status=$${i++}`); vals.push(status); }
       const ws = where.length ? `WHERE ${where.join(' AND ')}` : '';
       try {
-        const { rows } = await pool.query(`SELECT * FROM ops_schedule_versions ${ws} ORDER BY valid_from DESC LIMIT 100`, vals);
+        // OPS-03: versões lidas com os nomes canônicos de empresa e unidade —
+        // a tela de escalas mostra o escopo de cada versão sem segunda consulta.
+        const { rows } = await pool.query(
+          `SELECT v.*, c.display_name AS company_name, u.display_name AS unit_name
+             FROM ops_schedule_versions v
+             LEFT JOIN crm_companies c ON c.id = v.company_id
+             LEFT JOIN crm_company_units u ON u.id = v.unit_id
+             ${ws} ORDER BY v.valid_from DESC LIMIT 100`, vals);
         return send(res, 200, { versions: rows });
       } catch (e) { console.error('schedVer GET', e.message); return send(res, 500, { error: 'internal_error' }); }
     }
@@ -1217,13 +1224,25 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       const where = [];
       const vals = [];
       let i = 1;
-      if (version_id) { if (!validateUuid(version_id)) return send(res, 400, { error: 'invalid_version_id' }); where.push(`version_id=$${i++}`); vals.push(version_id); }
-      if (post_id) { if (!validateUuid(post_id)) return send(res, 400, { error: 'invalid_post_id' }); where.push(`post_id=$${i++}`); vals.push(post_id); }
-      if (employee_id) { if (!validateUuid(employee_id)) return send(res, 400, { error: 'invalid_employee_id' }); where.push(`employee_id=$${i++}`); vals.push(employee_id); }
-      if (entry_date) { where.push(`entry_date=$${i++}`); vals.push(entry_date); }
+      if (version_id) { if (!validateUuid(version_id)) return send(res, 400, { error: 'invalid_version_id' }); where.push(`e.version_id=$${i++}`); vals.push(version_id); }
+      if (post_id) { if (!validateUuid(post_id)) return send(res, 400, { error: 'invalid_post_id' }); where.push(`e.post_id=$${i++}`); vals.push(post_id); }
+      if (employee_id) { if (!validateUuid(employee_id)) return send(res, 400, { error: 'invalid_employee_id' }); where.push(`e.employee_id=$${i++}`); vals.push(employee_id); }
+      if (entry_date) { where.push(`e.entry_date=$${i++}`); vals.push(entry_date); }
       const ws = where.length ? `WHERE ${where.join(' AND ')}` : '';
       try {
-        const { rows } = await pool.query(`SELECT * FROM ops_schedule_entries ${ws} ORDER BY entry_date, post_id LIMIT 200`, vals);
+        // OPS-03: entradas lidas com os nomes canônicos de posto, unidade,
+        // profissional e turno — o calendário da tela (por posto, por equipe e
+        // por pessoa) é montado a partir desta leitura, sem entidade paralela.
+        const { rows } = await pool.query(
+          `SELECT e.*, p.name AS post_name, p.unit_id AS post_unit_id,
+                  u.display_name AS unit_name, emp.display_name AS employee_name,
+                  st.name AS shift_template_name, st.start_time AS shift_start, st.end_time AS shift_end
+             FROM ops_schedule_entries e
+             JOIN ops_posts p ON p.id = e.post_id
+             LEFT JOIN crm_company_units u ON u.id = p.unit_id
+             LEFT JOIN hr_employees emp ON emp.id = e.employee_id
+             LEFT JOIN ops_shift_templates st ON st.id = e.shift_template_id
+             ${ws} ORDER BY e.entry_date, p.name LIMIT 200`, vals);
         return send(res, 200, { entries: rows });
       } catch (e) { console.error('schedEntries GET', e.message); return send(res, 500, { error: 'internal_error' }); }
     }
@@ -1387,16 +1406,25 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       const where = [];
       const vals = [];
       let i = 1;
-      if (version_id) { if (!validateUuid(version_id)) return send(res, 400, { error: 'invalid_version_id' }); where.push(`version_id=$${i++}`); vals.push(version_id); }
-      if (employee_id) { if (!validateUuid(employee_id)) return send(res, 400, { error: 'invalid_employee_id' }); where.push(`employee_id=$${i++}`); vals.push(employee_id); }
+      if (version_id) { if (!validateUuid(version_id)) return send(res, 400, { error: 'invalid_version_id' }); where.push(`a.version_id=$${i++}`); vals.push(version_id); }
+      if (employee_id) { if (!validateUuid(employee_id)) return send(res, 400, { error: 'invalid_employee_id' }); where.push(`a.employee_id=$${i++}`); vals.push(employee_id); }
       const ws = where.length ? `WHERE ${where.join(' AND ')}` : '';
       try {
-        const { rows } = await pool.query(`SELECT * FROM ops_schedule_acknowledgments ${ws} ORDER BY acknowledged_at DESC LIMIT 100`, vals);
+        // OPS-03: ciências lidas com o nome canônico do profissional.
+        const { rows } = await pool.query(
+          `SELECT a.*, emp.display_name AS employee_name
+             FROM ops_schedule_acknowledgments a
+             LEFT JOIN hr_employees emp ON emp.id = a.employee_id
+             ${ws} ORDER BY a.acknowledged_at DESC LIMIT 100`, vals);
         return send(res, 200, { acknowledgments: rows });
       } catch (e) { console.error('acks GET', e.message); return send(res, 500, { error: 'internal_error' }); }
     }
     if (req.method === 'POST') {
       if (!sameOrigin(req)) return send(res, 403, { error: 'same_origin_required' });
+      // Registro de ciência é escrita operacional: exige o mesmo papel das
+      // demais mutações de operação. Antes, qualquer sessão de staff (ex.:
+      // comercial) podia registrar ciência por qualquer profissional.
+      if (!requireRole(sess, ['admin','ti','rh'])) return send(res, 403, { error: 'forbidden' });
       const b = await body(req);
       if (!b) return send(res, 400, { error: 'invalid_json' });
       const version_id = b.version_id || b.versionId;

@@ -3427,7 +3427,7 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/ops-schedule-acks" || url.pathname === "/api/crm/hr/ops-schedule-acks" || url.pathname === "/api/hr/ops-schedule-acks" || url.pathname === "/api/ops/schedule-acks") {
     return opsApi.handleScheduleAcks(req, res);
   }
-  if (url.pathname === "/api/admin/hr/ops-schedule-history" || url.pathname === "/api/crm/hr/ops-schedule-history" || url.pathname === "/api/hr/ops-schedule-history") {
+  if (url.pathname === "/api/admin/hr/ops-schedule-history" || url.pathname === "/api/crm/hr/ops-schedule-history" || url.pathname === "/api/hr/ops-schedule-history" || url.pathname === "/api/ops/schedule-history") {
     return opsApi.handleScheduleHistory(req, res);
   }
   // OPS-04 regras jornada/descanso + qualificações + validações
@@ -4826,6 +4826,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/admin/hr/ops-schedule-history"
   || pathname === "/api/crm/hr/ops-schedule-history"
   || pathname === "/api/hr/ops-schedule-history"
+  || pathname === "/api/ops/schedule-history"
   || pathname === "/api/admin/hr/ops-work-rules"
   || pathname === "/api/crm/hr/ops-work-rules"
   || pathname === "/api/hr/ops-work-rules"

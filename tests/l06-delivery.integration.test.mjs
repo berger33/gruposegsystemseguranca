@@ -478,6 +478,7 @@ test("L06 OPS-02: dimensionamento valida valores e escopo canônico", { skip: !R
 
 test("L06 OPS-03: versões de escala validam período, status, sequência e histórico", { skip: !RUN, timeout: 180_000 }, async () => {
   const admin = await provisionAndLoginStaff(pool, api, { role: "admin" });
+  const commercial = await provisionAndLoginStaff(pool, api, { role: "comercial" });
   const companyId = uuid();
   const unitId = uuid();
   await pool.query("INSERT INTO crm_companies (id,display_name,type,status,created_by) VALUES ($1,'QA OPS-03 Empresa','client','active','admin')", [companyId]);
@@ -506,12 +507,24 @@ test("L06 OPS-03: versões de escala validam período, status, sequência e hist
   assert.equal(retryEntry.status, 409, "schedule entry retry rejected");
   assert.equal(retryEntry.body.error, "duplicate_entry");
 
+  // Segundo profissional com entrada na mesma versão, SEM ciência — usado pela
+  // verificação de UI (jornada de ciência pela interface na Fatia B).
+  const employeeUi = await insertEmployee("ativo");
+  assert.equal((await ops("/schedule-entries", { cookie: admin.cookie, method: "POST", body: { version_id: second.body.version.id, post_id: postId, employee_id: employeeUi, shift_template_id: shift.body.template.id, entry_date: "2026-12-16" } })).status, 201, "second entry created for the UI acknowledgment journey");
+
   const published = await ops("/schedule-versions", { cookie: admin.cookie, method: "PATCH", body: { id: second.body.version.id, status: "publicada" } });
   assert.equal(published.status, 200, "schedule publication accepted");
   const ack = await ops("/schedule-acks", { cookie: admin.cookie, method: "POST", body: { version_id: second.body.version.id, employee_id: employeeId, notes: "Ciente QA" } });
   assert.equal(ack.status, 201, "employee acknowledgment recorded");
   const ackRetry = await ops("/schedule-acks", { cookie: admin.cookie, method: "POST", body: { version_id: second.body.version.id, employee_id: employeeId } });
   assert.equal(ackRetry.status, 409, "acknowledgment retry rejected");
+
+  // OPS-03 (fechamento): autorização da ciência. Registro de ciência é escrita
+  // operacional — anônimo é negado e papel sem direito (comercial) também.
+  // Antes desta fatia, qualquer sessão de staff registrava ciência por
+  // qualquer profissional: o handler não checava papel.
+  assert.equal((await ops("/schedule-acks", { method: "POST", body: { version_id: second.body.version.id, employee_id: employeeUi } })).status, 401, "anonymous cannot acknowledge");
+  assert.equal((await ops("/schedule-acks", { cookie: commercial.cookie, method: "POST", body: { version_id: second.body.version.id, employee_id: employeeUi } })).status, 403, "commercial cannot acknowledge on behalf of a professional");
 
   const publishHistory = await pool.query("SELECT count(*)::int AS n FROM ops_schedule_history WHERE version_id=$1", [second.body.version.id]);
   assert.equal(publishHistory.rows[0].n, 2, "status transition history is persisted");
@@ -530,6 +543,26 @@ test("L06 OPS-03: versões de escala validam período, status, sequência e hist
     company_id: companyId, unit_id: unitId, valid_from: "2027-01-01", valid_to: "2027-01-31", status: "publicadao",
   } });
   assert.equal(invalidStatus.status, 400, "invalid schedule status rejected");
+
+  // Estado persistido para a verificação em Chromium real (Fatia B): a versão
+  // publicada tem duas entradas, uma ciência registrada e um profissional
+  // pendente — a jornada de ciência pela interface começa nele.
+  const uiState = await pool.query(
+    `SELECT (SELECT count(*)::int FROM ops_schedule_entries WHERE version_id=$1) AS entries,
+            (SELECT count(*)::int FROM ops_schedule_acknowledgments WHERE version_id=$1) AS acks`,
+    [second.body.version.id]
+  );
+  assert.equal(uiState.rows[0].entries, 2, "two entries remain persisted for the UI calendar");
+  assert.equal(uiState.rows[0].acks, 1, "exactly one acknowledgment persisted (retry did not duplicate)");
+  const pendingAck = await pool.query(
+    `SELECT e.id, emp.display_name AS name
+       FROM ops_schedule_entries e
+       JOIN hr_employees emp ON emp.id = e.employee_id
+      WHERE e.version_id=$1
+        AND NOT EXISTS (SELECT 1 FROM ops_schedule_acknowledgments ak WHERE ak.version_id=e.version_id AND ak.employee_id=e.employee_id)`,
+    [second.body.version.id]
+  );
+  assert.equal(pendingAck.rows.length, 1, "exactly one professional still pending acknowledgment");
 });
 
 test("L06 OPS-04: habilitação, documentação, indisponibilidade, jornada e descanso sob regra aprovada", { skip: !RUN, timeout: 300_000 }, async () => {
@@ -1111,6 +1144,60 @@ test("L06 Fatia B: cobertura, passagem de turno, ocorrência, checklists, evidê
     assert.match(content || "", /horas realizadas ÷ horas exigidas/, "panel footer states the explicit formula and period");
     assert.match(content || "", /Lacunas de cobertura/, "coverage gaps section rendered");
     assert.match(content || "", /2026-10-05/, "gap date rendered from the real API");
+
+    // Aba Escalas (OPS-03): versões com validade, calendário nas três visões
+    // (posto, equipe, pessoa), histórico e ciência pela interface — jornada
+    // completa com a API real.
+    await page.click("button:has-text('Escalas (OPS-03)')");
+    await page.waitForSelector("#schedule-versions-title", { timeout: 30_000 });
+    content = await page.textContent("body");
+    assert.match(content || "", /QA OPS-03 Empresa/, "schedule versions table renders the company scope");
+
+    // Seleciona a versão publicada do OPS-03 (validade 2026-12-01 a 2026-12-31).
+    await page.locator("tr", { hasText: "2026-12-01" }).locator("button:has-text('Ver calendário')").click();
+    await page.waitForSelector("#schedule-calendar-title", { timeout: 30_000 });
+    // A tabela do calendário só existe depois que as entradas da versão
+    // terminam de carregar — esperar por ela evita assertar estado de carga.
+    await page.waitForSelector("section[aria-labelledby='schedule-calendar-title'] table", { timeout: 30_000 });
+    content = await page.textContent("body");
+    assert.match(content || "", /QA OPS-03 Posto/, "calendar by post renders the post of the chain");
+    assert.match(content || "", /QA Funcionário ativo/, "calendar by post renders the scheduled professionals");
+
+    await page.click("button:has-text('Por equipe')");
+    content = await page.textContent("body");
+    assert.match(content || "", /QA OPS-03 Unidade/, "calendar by team renders the unit (equipe) of the chain");
+
+    await page.click("button:has-text('Por pessoa')");
+    content = await page.textContent("body");
+    assert.match(content || "", /QA OPS-03 Diurno/, "calendar by person renders the canonical shift name");
+    assert.match(content || "", /revisada → publicada/, "version history shows the visible transition");
+
+    // Jornada de ciência pela interface: o profissional pendente (criado no
+    // subteste OPS-03) recebe ciência pela tela; a segunda ciência não duplica.
+    const pendingAckEmployee = await pool.query(
+      `SELECT emp.display_name AS name
+         FROM ops_schedule_entries e
+         JOIN ops_schedule_versions v ON v.id = e.version_id
+         JOIN hr_employees emp ON emp.id = e.employee_id
+        WHERE v.valid_from = '2026-12-01'
+          AND NOT EXISTS (SELECT 1 FROM ops_schedule_acknowledgments ak WHERE ak.version_id = v.id AND ak.employee_id = e.employee_id)`
+    );
+    assert.equal(pendingAckEmployee.rows.length, 1, "exactly one professional pending acknowledgment in the UI journey");
+    const pendingName = pendingAckEmployee.rows[0].name;
+    await page.locator("section[aria-labelledby='schedule-acks-title'] tr", { hasText: pendingName }).locator("button:has-text('Registrar ciência')").click();
+    await page.waitForSelector("[role=status]:has-text('Ciência registrada para')", { timeout: 30_000 });
+    await page.locator("section[aria-labelledby='schedule-acks-title'] tr", { hasText: pendingName }).locator("button:has-text('Registrar ciência')").click();
+    await page.waitForSelector("[role=status]:has-text('não duplica efeito')", { timeout: 30_000 });
+    await page.waitForSelector("text=ciente desde", { timeout: 30_000 });
+    content = await page.textContent("body");
+    assert.match(content || "", /ciente desde/, "acknowledged state is visible after the interface journey");
+    const ackRows = await pool.query(
+      `SELECT count(*)::int AS n FROM ops_schedule_acknowledgments ak
+         JOIN ops_schedule_versions v ON v.id = ak.version_id
+        WHERE v.valid_from = '2026-12-01' AND ak.employee_id IN (
+          SELECT e.employee_id FROM ops_schedule_entries e WHERE e.version_id = v.id)`
+    );
+    assert.equal(ackRows.rows[0].n, 2, "both professionals acknowledged, each exactly once — no duplication from the UI journey");
 
     // Aba Jornada & Habilitação (OPS-04): regra aprovada, habilitação e trilha
     // de bloqueios, vindos da API real e persistidos pelo subteste OPS-04.

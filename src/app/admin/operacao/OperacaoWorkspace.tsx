@@ -9,6 +9,26 @@ import OpsAdvanced3Client from "../ti/OpsAdvanced3Client";
 // semântica adicional.
 const WEEKDAY_LABELS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
 
+// OPS-03: janela de datas da validade da versão, limitada a 31 colunas para o
+// calendário continuar legível. Quando a validade excede a janela, o recorte é
+// declarado — nunca ocultado.
+const CALENDAR_MAX_DAYS = 31;
+function versionDateWindow(version: ScheduleVersion): { dates: string[]; truncated: boolean } {
+  const start = new Date(`${String(version.valid_from).slice(0, 10)}T00:00:00Z`);
+  const end = new Date(`${String(version.valid_to).slice(0, 10)}T00:00:00Z`);
+  const dates: string[] = [];
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return { dates, truncated: false };
+  const totalDays = Math.floor((end.getTime() - start.getTime()) / 86_400_000) + 1;
+  for (let t = start.getTime(); t <= end.getTime() && dates.length < CALENDAR_MAX_DAYS; t += 86_400_000) {
+    dates.push(new Date(t).toISOString().slice(0, 10));
+  }
+  return { dates, truncated: totalDays > CALENDAR_MAX_DAYS };
+}
+function shortDate(date: string): string {
+  const [, month, day] = date.split("-");
+  return `${day}/${month}`;
+}
+
 type Post = {
   id: string;
   name: string;
@@ -79,6 +99,49 @@ type CoverageGap = {
   reason: string | null;
   status: string;
 };
+type ScheduleVersion = {
+  id: string;
+  company_id: string | null;
+  company_name?: string | null;
+  unit_id: string | null;
+  unit_name?: string | null;
+  version: number;
+  status: string;
+  valid_from: string;
+  valid_to: string;
+  published_at: string | null;
+  notes: string | null;
+};
+type ScheduleEntry = {
+  id: string;
+  version_id: string;
+  post_id: string;
+  post_name?: string | null;
+  unit_name?: string | null;
+  employee_id: string;
+  employee_name?: string | null;
+  shift_template_id: string;
+  shift_template_name?: string | null;
+  entry_date: string;
+  status: string;
+};
+type ScheduleAck = {
+  id: string;
+  version_id: string;
+  employee_id: string;
+  employee_name?: string | null;
+  acknowledged_at: string;
+  notes: string | null;
+};
+type ScheduleHistoryItem = {
+  id: string;
+  version_id: string;
+  previous_status: string | null;
+  next_status: string;
+  changed_by: string;
+  reason: string | null;
+  created_at: string;
+};
 type CoverageRequest = {
   id: string;
   post_id: string;
@@ -145,12 +208,19 @@ type ScheduleValidation = {
 };
 
 export default function OperacaoWorkspace() {
-  const [activeTab, setActiveTab] = useState<"postos" | "jornada" | "dimensionamento" | "cobertura" | "passagem" | "ocorrencias" | "checklists" | "supervisao" | "rondas" | "relatorios" | "metricas" | "limpeza" | "monitoramento">("postos");
+  const [activeTab, setActiveTab] = useState<"postos" | "jornada" | "dimensionamento" | "escalas" | "cobertura" | "passagem" | "ocorrencias" | "checklists" | "supervisao" | "rondas" | "relatorios" | "metricas" | "limpeza" | "monitoramento">("postos");
   const [posts, setPosts] = useState<Post[]>([]);
   const [jobRoles, setJobRoles] = useState<JobRole[]>([]);
   const [shiftNeeds, setShiftNeeds] = useState<PostShiftNeed[]>([]);
   const [dimensionings, setDimensionings] = useState<Dimensioning[]>([]);
   const [gaps, setGaps] = useState<CoverageGap[]>([]);
+  const [scheduleVersions, setScheduleVersions] = useState<ScheduleVersion[]>([]);
+  const [selectedVersion, setSelectedVersion] = useState<ScheduleVersion | null>(null);
+  const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([]);
+  const [scheduleAcks, setScheduleAcks] = useState<ScheduleAck[]>([]);
+  const [scheduleHistory, setScheduleHistory] = useState<ScheduleHistoryItem[]>([]);
+  const [calendarView, setCalendarView] = useState<"posto" | "equipe" | "pessoa">("posto");
+  const [ackMessage, setAckMessage] = useState("");
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [coverages, setCoverages] = useState<CoverageRequest[]>([]);
   const [handovers, setHandovers] = useState<Handover[]>([]);
@@ -171,6 +241,11 @@ export default function OperacaoWorkspace() {
   // desacoplado dos demais — mesma razão do grupo de estrutura.
   const [dimLoading, setDimLoading] = useState(true);
   const [dimError, setDimError] = useState("");
+  // OPS-03: versões de escala em grupo próprio; o detalhe da versão selecionada
+  // (entradas, ciências e histórico) carrega sob demanda, também desacoplado.
+  const [schedLoading, setSchedLoading] = useState(true);
+  const [schedError, setSchedError] = useState("");
+  const [detailLoading, setDetailLoading] = useState(false);
 
   async function fetchJson(path: string) {
     const response = await fetch(path, { cache: "no-store", headers: { accept: "application/json" } });
@@ -250,6 +325,71 @@ export default function OperacaoWorkspace() {
 
   useEffect(() => { void loadDimensioning(); }, []);
 
+  async function loadSchedules() {
+    setSchedLoading(true);
+    setSchedError("");
+    try {
+      const data = await fetchJson("/api/ops/schedule-versions");
+      setScheduleVersions(data.versions || []);
+    } catch (err: any) {
+      setSchedError(err.message || "Falha ao carregar as escalas.");
+    } finally {
+      setSchedLoading(false);
+    }
+  }
+
+  useEffect(() => { void loadSchedules(); }, []);
+
+  async function selectVersion(version: ScheduleVersion) {
+    setSelectedVersion(version);
+    setDetailLoading(true);
+    setAckMessage("");
+    setCalendarView("posto");
+    try {
+      const [entryData, ackData, historyData] = await Promise.all([
+        fetchJson(`/api/ops/schedule-entries?version_id=${version.id}`),
+        fetchJson(`/api/ops/schedule-acks?version_id=${version.id}`),
+        fetchJson(`/api/ops/schedule-history?version_id=${version.id}`),
+      ]);
+      setScheduleEntries(entryData.entries || []);
+      setScheduleAcks(ackData.acknowledgments || []);
+      setScheduleHistory(historyData.history || []);
+    } catch (err: any) {
+      // O painel de detalhe não pode fingir calendário: sem leitura completa,
+      // limpa as entradas e mostra o erro.
+      setScheduleEntries([]);
+      setScheduleAcks([]);
+      setScheduleHistory([]);
+      setSchedError(err.message || "Falha ao carregar o detalhe da escala.");
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
+  async function acknowledgeSchedule(employeeId: string, employeeName: string) {
+    if (!selectedVersion) return;
+    setAckMessage("");
+    try {
+      const response = await fetch("/api/ops/schedule-acks", {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "application/json" },
+        body: JSON.stringify({ version_id: selectedVersion.id, employee_id: employeeId }),
+      });
+      const value = await response.json().catch(() => ({}));
+      if (response.status === 201) {
+        setAckMessage(`Ciência registrada para ${employeeName}.`);
+      } else if (value.error === "duplicate_ack") {
+        setAckMessage(`Ciência já registrada para ${employeeName} — segunda ciência não duplica efeito.`);
+      } else {
+        setAckMessage(value.error ? `Ciência não registrada: ${value.error}${value.status ? ` (status da versão: ${value.status})` : ""}.` : "Ciência não registrada.");
+      }
+      const ackData = await fetchJson(`/api/ops/schedule-acks?version_id=${selectedVersion.id}`);
+      setScheduleAcks(ackData.acknowledgments || []);
+    } catch (err: any) {
+      setAckMessage(err.message || "Falha ao registrar a ciência.");
+    }
+  }
+
   return (
     <main style={{ maxWidth: 1120, margin: "0 auto", padding: "32px 18px", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <nav aria-label="Navegação operacional" style={{ marginBottom: 16 }}>
@@ -306,6 +446,21 @@ export default function OperacaoWorkspace() {
           }}
         >
           Dimensionamento (OPS-02)
+        </button>
+        <button
+          role="tab"
+          aria-selected={activeTab === "escalas"}
+          onClick={() => setActiveTab("escalas")}
+          style={{
+            padding: "8px 16px",
+            border: "none",
+            background: "none",
+            borderBottom: activeTab === "escalas" ? "3px solid #2563eb" : "3px solid transparent",
+            fontWeight: activeTab === "escalas" ? "bold" : "normal",
+            cursor: "pointer",
+          }}
+        >
+          Escalas (OPS-03)
         </button>
         <button
           role="tab"
@@ -790,6 +945,264 @@ export default function OperacaoWorkspace() {
                   </table>
                 )}
               </section>
+            </>
+          )}
+        </>
+      )}
+
+      {!loading && !error && activeTab === "escalas" && (
+        <>
+          <p style={{ padding: 10, background: "#eff6ff", borderRadius: 6, marginBottom: 12 }}>
+            Escalas (OPS-03): versões em rascunho → publicada → revisada com validade e histórico; calendário por
+            posto, por equipe e por pessoa; ciência do profissional registrada pela interface, idempotente — a
+            segunda ciência não duplica efeito. Entradas só entram em versão editável e dentro da validade.
+          </p>
+
+          {schedLoading && <p role="status">Carregando versões de escala…</p>}
+          {!schedLoading && schedError && (
+            <p role="alert" style={{ padding: 12, background: "#fef2f2", borderRadius: 6, color: "#991b1b" }}>
+              {schedError}
+            </p>
+          )}
+
+          {!schedLoading && !schedError && (
+            <>
+              <section aria-labelledby="schedule-versions-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 12 }}>
+                <h2 id="schedule-versions-title">Versões de escala</h2>
+                {scheduleVersions.length === 0 ? (
+                  <p>Nenhuma versão de escala registrada. Sem versão, não há calendário — nada é presumido.</p>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                        <th align="left" style={{ padding: 8 }}>Versão</th>
+                        <th align="left" style={{ padding: 8 }}>Empresa</th>
+                        <th align="left" style={{ padding: 8 }}>Unidade (equipe)</th>
+                        <th align="left" style={{ padding: 8 }}>Validade</th>
+                        <th align="left" style={{ padding: 8 }}>Situação</th>
+                        <th align="left" style={{ padding: 8 }}>Publicada em</th>
+                        <th align="left" style={{ padding: 8 }}>Calendário</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {scheduleVersions.map(version => (
+                        <tr key={version.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: 8 }}>v{version.version}</td>
+                          <td style={{ padding: 8 }}>{version.company_name || (version.company_id ? "—" : "sem empresa")}</td>
+                          <td style={{ padding: 8 }}>{version.unit_name || (version.unit_id ? "—" : "sem unidade")}</td>
+                          <td style={{ padding: 8 }}>{String(version.valid_from).slice(0, 10)} a {String(version.valid_to).slice(0, 10)}</td>
+                          <td style={{ padding: 8 }}>
+                            <span style={{
+                              padding: "2px 8px", borderRadius: 4,
+                              background: version.status === "publicada" || version.status === "revisada" ? "#dcfce7" : "#fef3c7",
+                            }}>
+                              {version.status}
+                            </span>
+                          </td>
+                          <td style={{ padding: 8 }}>{version.published_at ? String(version.published_at).slice(0, 16).replace("T", " ") : "—"}</td>
+                          <td style={{ padding: 8 }}>
+                            <button
+                              type="button"
+                              onClick={() => { void selectVersion(version); }}
+                              style={{ padding: "4px 10px", cursor: "pointer", border: "1px solid #94a3b8", borderRadius: 6, background: selectedVersion?.id === version.id ? "#2563eb" : "#fff", color: selectedVersion?.id === version.id ? "#fff" : "#1e293b" }}
+                            >
+                              Ver calendário
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </section>
+
+              {selectedVersion && (
+                <>
+                  <section aria-labelledby="schedule-calendar-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+                    <h2 id="schedule-calendar-title">
+                      Calendário da versão v{selectedVersion.version} — {String(selectedVersion.valid_from).slice(0, 10)} a {String(selectedVersion.valid_to).slice(0, 10)}
+                    </h2>
+                    <div role="group" aria-label="Visão do calendário" style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                      {([["posto", "Por posto"], ["equipe", "Por equipe"], ["pessoa", "Por pessoa"]] as const).map(([key, label]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          aria-pressed={calendarView === key}
+                          onClick={() => setCalendarView(key)}
+                          style={{ padding: "6px 14px", cursor: "pointer", border: "1px solid #94a3b8", borderRadius: 6, background: calendarView === key ? "#2563eb" : "#fff", color: calendarView === key ? "#fff" : "#1e293b" }}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    {detailLoading && <p role="status">Carregando entradas da versão…</p>}
+                    {!detailLoading && (() => {
+                      const { dates, truncated } = versionDateWindow(selectedVersion);
+                      if (dates.length === 0) return <p role="alert">Validade da versão ilegível — calendário não pode ser montado.</p>;
+                      const groups = new Map<string, { label: string; cells: Map<string, string> }>();
+                      for (const entry of scheduleEntries) {
+                        const date = String(entry.entry_date).slice(0, 10);
+                        if (calendarView === "posto") {
+                          const key = entry.post_id;
+                          if (!groups.has(key)) groups.set(key, { label: entry.post_name || "posto sem nome", cells: new Map() });
+                          const cell = groups.get(key)!.cells;
+                          cell.set(date, cell.has(date) ? `${cell.get(date)}, ${entry.employee_name || "profissional sem nome"}` : (entry.employee_name || "profissional sem nome"));
+                        } else if (calendarView === "equipe") {
+                          const key = entry.unit_name || "sem unidade";
+                          if (!groups.has(key)) groups.set(key, { label: key, cells: new Map() });
+                          const cell = groups.get(key)!.cells;
+                          const people = new Set(String(cell.get(date) || "").split("||").filter(Boolean));
+                          people.add(entry.employee_id);
+                          cell.set(date, [...people].join("||"));
+                        } else {
+                          const key = entry.employee_id;
+                          if (!groups.has(key)) groups.set(key, { label: entry.employee_name || "profissional sem nome", cells: new Map() });
+                          const cell = groups.get(key)!.cells;
+                          cell.set(date, cell.has(date) ? `${cell.get(date)}, ${entry.shift_template_name || "turno sem nome"}` : (entry.shift_template_name || "turno sem nome"));
+                        }
+                      }
+                      if (groups.size === 0) {
+                        return <p>Nenhuma entrada nesta versão. Versão sem entrada é versão sem calendário — não inventamos escala.</p>;
+                      }
+                      return (
+                        <>
+                          <div style={{ overflowX: "auto" }}>
+                            <table style={{ borderCollapse: "collapse", minWidth: "100%" }}>
+                              <thead>
+                                <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                                  <th align="left" style={{ padding: 6, position: "sticky", left: 0, background: "#fff", minWidth: 180 }}>
+                                    {calendarView === "posto" ? "Posto" : calendarView === "equipe" ? "Equipe (unidade)" : "Profissional"}
+                                  </th>
+                                  {dates.map(date => (
+                                    <th key={date} align="center" style={{ padding: 6, borderLeft: "1px solid #f1f5f9" }}>{shortDate(date)}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {[...groups.entries()].map(([key, group]) => (
+                                  <tr key={key} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                    <td style={{ padding: 6, position: "sticky", left: 0, background: "#fff", fontWeight: 500 }}>{group.label}</td>
+                                    {dates.map(date => {
+                                      const raw = group.cells.get(date);
+                                      const text = calendarView === "equipe"
+                                        ? (raw ? `${raw.split("||").length}` : "")
+                                        : (raw || "");
+                                      return (
+                                        <td key={date} align="center" style={{ padding: 6, borderLeft: "1px solid #f1f5f9", fontSize: 13, background: text ? "#eff6ff" : "transparent" }}>
+                                          {text || "—"}
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                          {truncated && (
+                            <p role="note" style={{ marginTop: 8, color: "#92400e" }}>
+                              Validade maior que {CALENDAR_MAX_DAYS} dias: exibindo os primeiros {CALENDAR_MAX_DAYS} dias da validade.
+                            </p>
+                          )}
+                          <footer style={{ marginTop: 12, padding: 10, background: "#f8fafc", borderRadius: 6, color: "#475569", fontSize: 14 }}>
+                            <strong>Período e fonte.</strong> Colunas = dias da validade da versão ({String(selectedVersion.valid_from).slice(0, 10)} a{" "}
+                            {String(selectedVersion.valid_to).slice(0, 10)}). Por posto = profissionais escalados no posto naquele dia; por equipe =
+                            quantidade de profissionais distintos escalados na unidade naquele dia; por pessoa = turnos do profissional naquele dia.
+                            Célula vazia (—) é ausência de entrada registrada, não folga confirmada.
+                          </footer>
+                        </>
+                      );
+                    })()}
+                  </section>
+
+                  <section aria-labelledby="schedule-acks-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+                    <h2 id="schedule-acks-title">Ciência da escala (OPS-03)</h2>
+                    {detailLoading && <p role="status">Carregando ciências…</p>}
+                    {!detailLoading && (() => {
+                      const employees = [...new Map(scheduleEntries.map(entry => [entry.employee_id, entry])).values()];
+                      return (
+                        <>
+                          <p style={{ color: "#475569" }}>
+                            Ciência registrada pela interface para a versão selecionada. A segunda ciência do mesmo
+                            profissional na mesma versão é rejeitada sem duplicar efeito — o banco garante e a tela mostra.
+                          </p>
+                          {employees.length === 0 ? (
+                            <p>Nenhum profissional com entrada nesta versão — ciência pressupõe escala publicada com entradas.</p>
+                          ) : (
+                            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                              <thead>
+                                <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                                  <th align="left" style={{ padding: 8 }}>Profissional</th>
+                                  <th align="left" style={{ padding: 8 }}>Situação</th>
+                                  <th align="left" style={{ padding: 8 }}>Ação</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {employees.map(employee => {
+                                  const ack = scheduleAcks.find(item => item.employee_id === employee.employee_id);
+                                  return (
+                                    <tr key={employee.employee_id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                      <td style={{ padding: 8 }}>{employee.employee_name || "—"}</td>
+                                      <td style={{ padding: 8 }}>
+                                        <span style={{ padding: "2px 8px", borderRadius: 4, background: ack ? "#dcfce7" : "#fef3c7" }}>
+                                          {ack ? `ciente desde ${String(ack.acknowledged_at).slice(0, 16).replace("T", " ")}` : "pendente"}
+                                        </span>
+                                      </td>
+                                      <td style={{ padding: 8 }}>
+                                        <button
+                                          type="button"
+                                          onClick={() => { void acknowledgeSchedule(employee.employee_id, employee.employee_name || "profissional"); }}
+                                          style={{ padding: "4px 10px", cursor: "pointer", border: "1px solid #94a3b8", borderRadius: 6, background: "#fff" }}
+                                        >
+                                          Registrar ciência
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          )}
+                          {ackMessage && <p role="status" style={{ marginTop: 10, padding: 8, background: ackMessage.includes("não") ? "#fef2f2" : "#dcfce7", borderRadius: 6 }}>{ackMessage}</p>}
+                        </>
+                      );
+                    })()}
+                  </section>
+
+                  <section aria-labelledby="schedule-history-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+                    <h2 id="schedule-history-title">Histórico da versão</h2>
+                    {detailLoading && <p role="status">Carregando histórico…</p>}
+                    {!detailLoading && scheduleHistory.length === 0 && (
+                      <p>Nenhuma transição registrada para esta versão.</p>
+                    )}
+                    {!detailLoading && scheduleHistory.length > 0 && (
+                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <thead>
+                          <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                            <th align="left" style={{ padding: 8 }}>Quando</th>
+                            <th align="left" style={{ padding: 8 }}>Transição</th>
+                            <th align="left" style={{ padding: 8 }}>Por</th>
+                            <th align="left" style={{ padding: 8 }}>Motivo</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {scheduleHistory.map(item => (
+                            <tr key={item.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                              <td style={{ padding: 8 }}>{String(item.created_at).slice(0, 16).replace("T", " ")}</td>
+                              <td style={{ padding: 8 }}>
+                                <span style={{ padding: "2px 8px", borderRadius: 4, background: "#f1f5f9" }}>
+                                  {item.previous_status ? `${item.previous_status} → ${item.next_status}` : `criada como ${item.next_status}`}
+                                </span>
+                              </td>
+                              <td style={{ padding: 8 }}>{item.changed_by}</td>
+                              <td style={{ padding: 8 }}>{item.reason || "—"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </section>
+                </>
+              )}
             </>
           )}
         </>

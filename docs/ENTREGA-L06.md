@@ -1,10 +1,10 @@
-# Entrega L06 — operação, patrimônio e manutenção (fatias A–H)
+# Entrega L06 — operação, patrimônio e manutenção (fatias A–I)
 
 **Data:** 2026-09-30
 **Base integrada:** `main` @ `400f079a4e1fe504b779acf83909580d9d082b76` (L05 mergeada).
 **Branch de entrega:** `arena/01a0f288-gruposegsystemseguranca`.
 
-> L06 é grande e **não é greenfield**: o schema (migrações 070–073 OPS e 083–084 AST) e as APIs (`ops-api`, `ops-advanced*`, `ast-api`, `emp-ops-api`) já existiam da fase de layout. Esta entrega conduz L06 em **fatias verificáveis**; cada fatia fecha o gate verde. Fatias entregues: **A** (estrutura de operação, alocação e contrato encerrado), **B** (cobertura, passagem de turno, livro de ocorrências e checklists operacionais), **C** (estoque, reserva, ativo/serial, custódia/termo de guarda, requisições e compras internas sintéticas), **D** (inventário físico, ordens de serviço, manutenção, evidências com escopo L02, CFTV e limpeza), **E** (opera­ção avançada OPS-09..16), **F** (OPS-04: jornada, descanso, habilitação e indisponibilidade), **G** (OPS-01: cargo/função fora da borda de RH, necessidade por turno e cadeia cliente→posto na tela) e **H** (OPS-02: aba de dimensionamento com habilitação cruzada e fórmula explícita). Residual do bloco: **OPS-03**.
+> L06 é grande e **não é greenfield**: o schema (migrações 070–073 OPS e 083–084 AST) e as APIs (`ops-api`, `ops-advanced*`, `ast-api`, `emp-ops-api`) já existiam da fase de layout. Esta entrega conduz L06 em **fatias verificáveis**; cada fatia fecha o gate verde. Fatias entregues: **A** (estrutura de operação, alocação e contrato encerrado), **B** (cobertura, passagem de turno, livro de ocorrências e checklists operacionais), **C** (estoque, reserva, ativo/serial, custódia/termo de guarda, requisições e compras internas sintéticas), **D** (inventário físico, ordens de serviço, manutenção, evidências com escopo L02, CFTV e limpeza), **E** (opera­ção avançada OPS-09..16), **F** (OPS-04: jornada, descanso, habilitação e indisponibilidade), **G** (OPS-01: cargo/função fora da borda de RH, necessidade por turno e cadeia cliente→posto na tela) , **H** (OPS-02: aba de dimensionamento com habilitação cruzada e fórmula explícita) e **I** (OPS-03: aba de escalas com calendário por posto/equipe/pessoa e ciência pela interface). Bloco fechado em entrega técnica local.
 
 ## Resultado técnico local
 
@@ -195,6 +195,47 @@ A verificação em Chromium reutiliza a sessão de navegador já aberta pelo sub
 | 6 | Lacunas com nome canônico do posto | presente |
 | 7 | Chromium real: posto, 50%, "sem habilitação válida", fórmula no rodapé, data de lacuna | renderizados da API real |
 
+### Fatia I: OPS-03 — aba de escalas com calendário por posto/equipe/pessoa e ciência pela interface
+
+**Sem migração nova.** `ops_schedule_versions`, `ops_schedule_entries`, `ops_schedule_acknowledgments` e `ops_schedule_history` já existiam; faltava a tela, o calendário nas três visões e a jornada de ciência.
+
+#### Lacunas reais encontradas (antes desta fatia)
+
+1. **Não existia aba de escalas** em `/admin/operacao`: as quatro APIs existiam e estavam endurecidas, mas calendário e ciência pela interface não existiam — o requisito de tela não tinha entrega.
+2. **`/api/ops/schedule-history` não existia**: era o único endpoint de operação sem o caminho canônico — só respondia nos três aliases históricos de RH. A tela precisaria do caminho inexistente; o alias canônico foi adicionado ao roteador, no padrão de todos os demais.
+3. **Ciência sem checagem de papel**: `POST /api/ops/schedule-acks` exigia sessão e same-origin, mas qualquer papel de staff (ex.: comercial) registrava ciência por qualquer profissional. Registro de ciência é escrita operacional: passou a exigir `admin`/`ti`/`rh`, como toda mutação de operação.
+
+#### Decisões e invariantes
+
+- **Calendário nas três visões exigidas**: por posto (profissionais escalados por dia), por equipe (profissionais distintos por unidade por dia) e por pessoa (turnos por dia). Colunas = dias da validade da versão.
+- **Janela de 31 colunas com recorte declarado**: validade maior que 31 dias mostra os primeiros 31 e diz isso — o recorte é explícito, nunca oculto.
+- **Célula vazia é ausência de registro, não folga confirmada** — o rodapé do calendário declara período, fonte e semântica de cada visão.
+- **Ciência pela interface, idempotente**: o botão permanece após a ciência e a segunda tentativa mostra o 409 do banco ("segunda ciência não duplica efeito") — a garantia é da API, a verdade aparece na tela.
+- **Histórico visível**: cada transição com autor, momento e motivo; transição de criação exibida como "criada como X".
+- **Leituras com nomes canônicos** por join (empresa, unidade, posto, profissional, turno) — sem entidade paralela e sem segunda consulta no cliente.
+
+#### Endpoints alterados
+
+- `GET /api/ops/schedule-versions` — nomes de empresa e unidade.
+- `GET /api/ops/schedule-entries` — nomes de posto, unidade, profissional e turno.
+- `GET /api/ops/schedule-acks` — nome do profissional.
+- `POST /api/ops/schedule-acks` — exige papel de operação (`admin`/`ti`/`rh`).
+- `server.mjs` — alias canônico `/api/ops/schedule-history` no roteador.
+- `/admin/operacao` — aba **Escalas (OPS-03)**.
+
+#### Casos do gate (subteste `L06 OPS-03`, ampliado)
+
+| # | Caso | Resultado |
+|---|---|---|
+| 1 | Versões: sequência, período, status, histórico, datas inválidas | já coberto (permanece) |
+| 2 | Entrada em versão + retry; segunda entrada para a jornada de UI | 201 + 409; 201 |
+| 3 | Ciência: anônimo / comercial | 401 / 403 — antes comercial obtinha 201 |
+| 4 | UI: versões com empresa/unidade/validade/situação | renderizadas da API real |
+| 5 | UI: calendário por posto / por equipe / por pessoa | posto+profissionais; unidade; turno canônico |
+| 6 | UI: histórico da versão | "revisada → publicada" visível |
+| 7 | UI: ciência pela interface — primeiro e segundo clique | 201 "Ciência registrada" e 409 "não duplica efeito" |
+| 8 | SQL pós-jornada | exatamente 2 ciências para 2 profissionais — sem duplicação |
+
 ## Gate remoto L06
 
 - `scripts/qa-l06-delivery-postgres.mjs` — PostgreSQL descartável (recusa banco externo), migra e roda a suíte com HTTP real e Chromium empacotado.
@@ -260,7 +301,7 @@ Baseline registrado antes de qualquer alteração da Fatia F: `qa-wave0-static` 
 
 ## Marco concluído localmente
 
-- OPS-01, OPS-02 e OPS-04..16, além de AST-01..12, estão `pronto_local`; aceite humano e integrações externas permanecem separados da conclusão técnica.
-- **OPS-03 continua incompleto** e mantém seu estado próprio na matriz: aguarda a tela de escalas (calendário por posto/equipe/pessoa e ciência pela interface). Não o declaramos pronto por proximidade temática com OPS-04.
+- OPS-01..16 e AST-01..12 estão `pronto_local`; aceite humano e integrações externas permanecem separados da conclusão técnica.
+- **Bloco L06 fechado em entrega técnica local.** As pendências de aceite humano e fronteira externa permanecem registradas item a item na matriz: ciência da escala comprova ciência do profissional, não validação jurídica da escala; limites de jornada aplicam a regra aprovada, não julgam sua legalidade; compras, rondas e monitoramento seguem sintéticos e rotulados; o comprovante de habilitação segue `document_url` em texto (vincular ao provedor L02 exige migração aditiva, deliberadamente adiada).
 - Limite honesto de OPS-04: o comprovante de habilitação ainda é `document_url` em texto. Ligá-lo ao provedor privado L02 (`client_documents`) exige coluna nova e, portanto, migração aditiva — não feita nesta fatia por decisão explícita de escopo.
 
