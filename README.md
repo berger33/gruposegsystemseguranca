@@ -1,10 +1,9 @@
 # Grupo SEG System
 
-## Continuação atual: L05 — contratos e implantação
+## Continuação atual: L06 — operação, patrimônio e manutenção
 
-O fechamento técnico do L04 está no [PR #33](https://github.com/berger33/gruposegsystemseguranca/pull/33).
-Leia o [relatório de entrega L04](docs/ENTREGA-L04.md) e o [prompt completo para o Arena continuar L05](docs/PROMPT-CONTINUACAO-L05-CONTRATOS.md).
-Integre o PR com checks aprovados antes de iniciar L05 sobre a main. Isso não declara o sistema inteiro pronto nem substitui homologação humana.
+O fechamento técnico do L04 está no [PR #33](https://github.com/berger33/gruposegsystemseguranca/pull/33). L05 foi concluído tecnicamente no ambiente remoto e está documentado em [ENTREGA-L05](docs/ENTREGA-L05.md), sujeito aos checks da PR e ao aceite humano.
+Leia o [prompt completo para continuidade L06](docs/PROMPT-CONTINUACAO-L06-OPERACAO-PATRIMONIO.md). Isso não declara o sistema inteiro pronto nem substitui homologação humana.
 
 
 ## Demonstração local persistente — apenas massa fictícia

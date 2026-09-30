@@ -46,7 +46,8 @@
     "test:staff-auth:pg": "node scripts/qa-staff-auth-postgres.mjs",
     "test:l02-delivery:pg": "node scripts/qa-l02-delivery-postgres.mjs",
     "test:l03-delivery:pg": "node scripts/qa-l03-delivery-postgres.mjs",
-    "test:l04-delivery:pg": "node scripts/qa-l04-delivery-postgres.mjs"
+    "test:l04-delivery:pg": "node scripts/qa-l04-delivery-postgres.mjs",
+    "test:l05-delivery:pg": "node scripts/qa-l05-delivery-postgres.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",

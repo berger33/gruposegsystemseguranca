@@ -1,28 +1,24 @@
 # Estado da execução — entrega local integral
 
-## Estado atual — fechamento técnico do L04 (2026-09-30)
+## Estado atual — entrega técnica L05 (2026-09-30)
 
-Fonte: GitHub `berger33/gruposegsystemseguranca`; base main `0cbac7608a69cec15bfc3671ab9196efabf58a2e`.
-Entrega no PR #33, branch `codex/l04-completion`. Nenhum trabalho executado no computador do usuário.
+Fonte oficial: GitHub `berger33/gruposegsystemseguranca`; base integrada `main` / `2e3106fd41aac5510c24064ccbbfa7d3ab046b40` (PR #33). Trabalho executado exclusivamente no ambiente remoto Arena, na branch `arena/01a0f23a-gruposegsystemseguranca`; nenhum comando, instalação ou alteração foi executado no computador do usuário.
 
-**L04 concluído no escopo técnico local**, conforme relatório [ENTREGA-L04.md](ENTREGA-L04.md), matriz PUB-01..10/CRM-01..27 no checklist e evidências remotas abaixo.
-A integração na main depende do merge do PR #33; verificar o estado atual do PR antes de começar a próxima branch.
-**L05 é o próximo lote e ainda não foi implementado.** Usar [PROMPT-CONTINUACAO-L05-CONTRATOS.md](PROMPT-CONTINUACAO-L05-CONTRATOS.md).
+**L05 está concluído no escopo técnico local/remoto**, cobrindo CON-01..CON-11. O relatório e limites estão em [ENTREGA-L05.md](ENTREGA-L05.md); a matriz por requisito está em [CHECKLIST-ENTREGA-LOCAL.md](CHECKLIST-ENTREGA-LOCAL.md). A próxima migração é a aditiva **118**, preservando 001–117, com manifesto e preflight atualizados.
 
-O fechamento inclui CMS com fluxo editorial e histórico, FAQ sem LLM com lead humano real, temas persistidos/rollback, pacotes sem preço fictício, carteira pessoal com ações idempotentes, calendário com editor e lembretes internos, escopo dos relatórios, cenários de preço reais, proteção da gestão de comissões/biblioteca/parcerias, histórico imutável e invalidação de aprovação.
+A área de negócio é `/admin/contratos`; `crm_contracts` é canônico. O portal legado continua usando `client_contracts` e só recebe vínculo explícito e restritivo. Cadastro manual deixa `proposal_id` nulo, com origem, autor e motivo reais; o aceite de proposta inicia contrato em rascunho e não ativa operação.
 
-Migração 117 aditiva. Migrações 001–116 preservadas. Manifesto/preflight atualizados. Os IDs de checklist continuam 222 únicos; 37 pertencem ao L04.
-Código validado no commit `1ecac2852e9a0eb2e6af3d2ea73116ad7942006b` por GitHub Actions:
+Validação executada no ambiente remoto com dados sintéticos e PostgreSQL descartável:
 
-- [QA baseline aprovado](https://github.com/berger33/gruposegsystemseguranca/actions/runs/36662350769): 196 testes unitários, typecheck, build e verificações de regressão.
-- [Gate L04 aprovado](https://github.com/berger33/gruposegsystemseguranca/actions/runs/36662350715): 20 testes integrados, 20 aprovados, zero falhas e zero skips, com HTTP, PostgreSQL e Chromium.
-- Migrações: 117/117 com checksums, reaplicação idempotente e restauração de clone descartável verificadas; alteração de checksum rejeitada intencionalmente no teste negativo.
+- `node scripts/qa-wave0-static.mjs` — 5/5, migrações 001–118;
+- `npm run typecheck` e `npm run build` — aprovados;
+- `npm run test:migrations:pg` — 118/118, reaplicação, clone e checksum negativo aprovados (517 tabelas);
+- `npm run test:l04-delivery:pg` — 20/20 aprovados, preservando L04;
+- `npm run test:l05-delivery:pg` — 1/1 cenário integrado aprovado, HTTP real, PostgreSQL descartável e Chromium.
 
-Após essa validação, foram publicados os documentos e ajustada a sincronização do teste de navegação semanal (aguardar resposta e renderização antes de avançar). Uma rodada intermediária revelou esse timeout; não foi ignorado. Consulte os checks do PR #33 para o resultado do HEAD mais recente.
+O gate L05 prova: autorização anônima/papel, manual sem proposta fictícia, aceite/retry concorrente, composição, documento privado, bloqueio de implantação, ativação válida, aditivo sem reescrever histórico, alerta idempotente com saída local, dossiê, diário restrito, encerramento e preservação de outro contrato do cliente. SMTP real, hospedagem pública, pagamentos, emissão fiscal, assinatura externa e disparos de WhatsApp seguem fora do escopo e não foram alegados.
 
-Fronteiras explícitas: SMTP/hospedagem/DNS públicos excluídos, A/B condicionado, IA/RAG completo em L09, contratos completos em L05, operação/estoque em L06, integração financeira em L07 e ensaio Windows/aceite humano em L10. Tema altera superfícies com tokens; não reescreve os dez layouts. Lembretes são internos ao abrir/atualizar a agenda, sem notificação externa em segundo plano.
-
-Os relatos abaixo são históricos. Expressões antigas como “L04 parcial” descrevem o estado da respectiva sessão e não substituem o relatório atual.
+A conclusão permanece sujeita a aceite humano e aos checks do PR que será aberto nesta branch. O próximo lote é L06 (operação, patrimônio e manutenção); o prompt foi preparado, mas L06 não foi iniciado.
 
 ## Histórico de continuação — CRM-03 (revisão dedicada de deduplicação de CSV, 2026-09-29)
 
