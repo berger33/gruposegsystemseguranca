@@ -56,15 +56,46 @@ type ChecklistInstance = {
   status: string;
   executed_at: string | null;
 };
+type WorkRule = {
+  id: string;
+  name: string;
+  max_daily_hours: string | number;
+  min_rest_hours: string | number;
+  max_weekly_hours: string | number;
+  max_consecutive_days: number;
+  requires_certification: boolean;
+  is_approved: boolean;
+  is_active: boolean;
+  approved_by: string | null;
+};
+type Qualification = {
+  id: string;
+  employee_id: string;
+  role_id: string | null;
+  certification_type: string;
+  valid_until: string | null;
+  is_valid: boolean;
+};
+type ScheduleValidation = {
+  id: string;
+  employee_id: string | null;
+  validation_type: string;
+  is_valid: boolean;
+  validated_at: string;
+  conflict_details: Record<string, unknown> | null;
+};
 
 export default function OperacaoWorkspace() {
-  const [activeTab, setActiveTab] = useState<"postos" | "cobertura" | "passagem" | "ocorrencias" | "checklists" | "supervisao" | "rondas" | "relatorios" | "metricas" | "limpeza" | "monitoramento">("postos");
+  const [activeTab, setActiveTab] = useState<"postos" | "jornada" | "cobertura" | "passagem" | "ocorrencias" | "checklists" | "supervisao" | "rondas" | "relatorios" | "metricas" | "limpeza" | "monitoramento">("postos");
   const [posts, setPosts] = useState<Post[]>([]);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [coverages, setCoverages] = useState<CoverageRequest[]>([]);
   const [handovers, setHandovers] = useState<Handover[]>([]);
   const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
   const [checklists, setChecklists] = useState<ChecklistInstance[]>([]);
+  const [workRules, setWorkRules] = useState<WorkRule[]>([]);
+  const [qualifications, setQualifications] = useState<Qualification[]>([]);
+  const [validations, setValidations] = useState<ScheduleValidation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -79,13 +110,16 @@ export default function OperacaoWorkspace() {
     setLoading(true);
     setError("");
     try {
-      const [postData, allocData, covData, handData, occData, checkData] = await Promise.all([
+      const [postData, allocData, covData, handData, occData, checkData, ruleData, qualData, validationData] = await Promise.all([
         fetchJson("/api/ops/posts?limit=100"),
         fetchJson("/api/ops/allocations"),
         fetchJson("/api/ops/coverage-requests"),
         fetchJson("/api/ops/handovers"),
         fetchJson("/api/ops/occurrence-book"),
         fetchJson("/api/ops/checklist-instances"),
+        fetchJson("/api/ops/work-rules"),
+        fetchJson("/api/ops/qualifications"),
+        fetchJson("/api/ops/validations?is_valid=false"),
       ]);
       setPosts(postData.posts || []);
       setAllocations(allocData.allocations || []);
@@ -93,6 +127,9 @@ export default function OperacaoWorkspace() {
       setHandovers(handData.handovers || []);
       setOccurrences(occData.occurrences || []);
       setChecklists(checkData.instances || []);
+      setWorkRules(ruleData.rules || []);
+      setQualifications(qualData.qualifications || []);
+      setValidations(validationData.validations || []);
     } catch (err: any) {
       setError(err.message || "Falha ao carregar.");
     } finally {
@@ -128,6 +165,21 @@ export default function OperacaoWorkspace() {
           }}
         >
           Postos e Alocações
+        </button>
+        <button
+          role="tab"
+          aria-selected={activeTab === "jornada"}
+          onClick={() => setActiveTab("jornada")}
+          style={{
+            padding: "8px 16px",
+            border: "none",
+            background: "none",
+            borderBottom: activeTab === "jornada" ? "3px solid #2563eb" : "3px solid transparent",
+            fontWeight: activeTab === "jornada" ? "bold" : "normal",
+            cursor: "pointer",
+          }}
+        >
+          Jornada &amp; Habilitação (OPS-04)
         </button>
         <button
           role="tab"
@@ -258,6 +310,129 @@ export default function OperacaoWorkspace() {
                     <tr key={allocation.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
                       <td style={{ padding: 8 }}>{String(allocation.allocation_date).slice(0, 10)}</td>
                       <td style={{ padding: 8 }}>{allocation.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+        </>
+      )}
+
+      {!loading && !error && activeTab === "jornada" && (
+        <>
+          <p style={{ padding: 10, background: "#eff6ff", borderRadius: 6 }}>
+            A alocação e a entrada de escala só são bloqueadas por jornada e descanso quando existe regra{" "}
+            <strong>aprovada e ativa</strong>. Sem regra aprovada, o sistema não presume limite algum e diz isso
+            explicitamente. Habilitação e documentação exigem cadastro em qualificações — competência não é inferida.
+          </p>
+
+          <section aria-labelledby="work-rules-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 12 }}>
+            <h2 id="work-rules-title">Regras de jornada e descanso</h2>
+            {workRules.length === 0 ? (
+              <p>Nenhuma regra de jornada cadastrada. Sem regra aprovada, jornada e descanso não são validados.</p>
+            ) : (
+              <>
+                {workRules.every(rule => !(rule.is_approved && rule.is_active)) && (
+                  <p role="status" style={{ padding: 8, background: "#fef3c7", borderRadius: 6 }}>
+                    Nenhuma regra aprovada e ativa: jornada, descanso, jornada semanal e dias consecutivos não estão sendo aplicados.
+                  </p>
+                )}
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                      <th align="left" style={{ padding: 8 }}>Regra</th>
+                      <th align="left" style={{ padding: 8 }}>Jornada máx./dia</th>
+                      <th align="left" style={{ padding: 8 }}>Descanso mín.</th>
+                      <th align="left" style={{ padding: 8 }}>Jornada máx./semana</th>
+                      <th align="left" style={{ padding: 8 }}>Dias consec.</th>
+                      <th align="left" style={{ padding: 8 }}>Certificação</th>
+                      <th align="left" style={{ padding: 8 }}>Situação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {workRules.map(rule => {
+                      const enforcing = rule.is_approved && rule.is_active;
+                      return (
+                        <tr key={rule.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: 8 }}>{rule.name}</td>
+                          <td style={{ padding: 8 }}>{Number(rule.max_daily_hours)} h</td>
+                          <td style={{ padding: 8 }}>{Number(rule.min_rest_hours)} h</td>
+                          <td style={{ padding: 8 }}>{Number(rule.max_weekly_hours)} h</td>
+                          <td style={{ padding: 8 }}>{rule.max_consecutive_days}</td>
+                          <td style={{ padding: 8 }}>{rule.requires_certification ? "exigida" : "não exigida"}</td>
+                          <td style={{ padding: 8 }}>
+                            <span style={{ padding: "2px 8px", borderRadius: 4, background: enforcing ? "#dcfce7" : "#fef3c7" }}>
+                              {enforcing ? "aprovada e aplicada" : rule.is_approved ? "aprovada, inativa" : "não aprovada"}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </>
+            )}
+          </section>
+
+          <section aria-labelledby="qualifications-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+            <h2 id="qualifications-title">Habilitação e documentação</h2>
+            {qualifications.length === 0 ? (
+              <p>Nenhuma qualificação cadastrada. Alocar com cargo/função exige habilitação registrada e dentro da validade.</p>
+            ) : (
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                    <th align="left" style={{ padding: 8 }}>Certificação</th>
+                    <th align="left" style={{ padding: 8 }}>Cargo/função</th>
+                    <th align="left" style={{ padding: 8 }}>Validade</th>
+                    <th align="left" style={{ padding: 8 }}>Situação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {qualifications.map(qual => {
+                    const expired = !!qual.valid_until && String(qual.valid_until).slice(0, 10) < new Date().toISOString().slice(0, 10);
+                    return (
+                      <tr key={qual.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                        <td style={{ padding: 8 }}>{qual.certification_type}</td>
+                        <td style={{ padding: 8 }}>{qual.role_id ? "vinculado" : "—"}</td>
+                        <td style={{ padding: 8 }}>{qual.valid_until ? String(qual.valid_until).slice(0, 10) : "sem vencimento"}</td>
+                        <td style={{ padding: 8 }}>
+                          <span style={{ padding: "2px 8px", borderRadius: 4, background: !qual.is_valid || expired ? "#fee2e2" : "#dcfce7" }}>
+                            {!qual.is_valid ? "inválida" : expired ? "vencida" : "válida"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </section>
+
+          <section aria-labelledby="validations-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+            <h2 id="validations-title">Bloqueios registrados</h2>
+            {validations.length === 0 ? (
+              <p>Nenhum bloqueio de validação registrado.</p>
+            ) : (
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                    <th align="left" style={{ padding: 8 }}>Quando</th>
+                    <th align="left" style={{ padding: 8 }}>Tipo</th>
+                    <th align="left" style={{ padding: 8 }}>Motivo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {validations.map(item => (
+                    <tr key={item.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: 8 }}>{String(item.validated_at).slice(0, 16).replace("T", " ")}</td>
+                      <td style={{ padding: 8 }}>
+                        <span style={{ padding: "2px 8px", borderRadius: 4, background: "#fee2e2", color: "#991b1b" }}>
+                          {item.validation_type}
+                        </span>
+                      </td>
+                      <td style={{ padding: 8 }}>{String((item.conflict_details as { error?: string } | null)?.error || "—")}</td>
                     </tr>
                   ))}
                 </tbody>

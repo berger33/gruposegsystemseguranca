@@ -334,6 +334,255 @@ test("L06 OPS-03: versões de escala validam período, status, sequência e hist
   assert.equal(invalidStatus.status, 400, "invalid schedule status rejected");
 });
 
+test("L06 OPS-04: habilitação, documentação, indisponibilidade, jornada e descanso sob regra aprovada", { skip: !RUN, timeout: 300_000 }, async () => {
+  const admin = await provisionAndLoginStaff(pool, api, { role: "admin" });
+  const commercial = await provisionAndLoginStaff(pool, api, { role: "comercial" });
+  const tag = uuid().slice(0, 8);
+
+  const companyId = uuid();
+  const unitId = uuid();
+  await pool.query("INSERT INTO crm_companies (id,display_name,type,status,created_by) VALUES ($1,'QA OPS-04 Empresa','client','active','admin')", [companyId]);
+  await pool.query("INSERT INTO crm_company_units (id,company_id,display_name,is_main) VALUES ($1,$2,'QA OPS-04 Unidade',true)", [unitId, companyId]);
+  const contractActive = await insertContract(companyId, "ativo");
+
+  // 1. Autorização: a borda é a API, não o React. Anônimo e papel indevido não
+  //    configuram regra de jornada nem habilitação.
+  assert.equal((await ops("/work-rules", { method: "POST", body: { name: `X ${tag}` } })).status, 401, "anonymous cannot create work rule");
+  assert.equal((await ops("/work-rules", { cookie: commercial.cookie, method: "POST", body: { name: `X ${tag}` } })).status, 403, "commercial cannot create work rule");
+  assert.equal((await ops("/qualifications", { method: "POST", body: { employee_id: uuid(), certification_type: "CNV" } })).status, 401, "anonymous cannot create qualification");
+  assert.equal((await ops("/qualifications", { cookie: commercial.cookie, method: "POST", body: { employee_id: uuid(), certification_type: "CNV" } })).status, 403, "commercial cannot create qualification");
+
+  const post = await ops("/posts", { cookie: admin.cookie, method: "POST", body: { name: `Posto OPS-04 ${tag}`, company_id: companyId, unit_id: unitId, contract_id: contractActive, post_type: "portaria" } });
+  assert.equal(post.status, 201, "OPS-04 post created");
+  const postId = post.body.post.id;
+
+  const mkShift = async (name, type, start, end, hours) => {
+    const created = await ops("/shift-templates", { cookie: admin.cookie, method: "POST", body: { name, shift_type: type, start_time: start, end_time: end, duration_hours: hours } });
+    assert.equal(created.status, 201, `shift ${name} created`);
+    return created.body.template.id;
+  };
+  const manha4 = await mkShift(`M4 ${tag}`, "comercial", "08:00", "12:00", 4);
+  const tarde5 = await mkShift(`T5 ${tag}`, "diurno", "13:00", "18:00", 5);
+  const dia12 = await mkShift(`D12 ${tag}`, "12x36_dia", "07:00", "19:00", 12);
+  const madrugada4 = await mkShift(`MD4 ${tag}`, "madrugada", "05:00", "09:00", 4);
+
+  // 2026-03-02 é segunda-feira: fixa a semana ISO usada na jornada semanal.
+  const D0 = "2027-03-01", D1 = "2027-03-02", D2 = "2027-03-03";
+  const allocate = (employee_id, shift_template_id, allocation_date, extra = {}) =>
+    ops("/allocations", { cookie: admin.cookie, method: "POST", body: { post_id: postId, employee_id, shift_template_id, allocation_date, ...extra } });
+
+  // 2. O limite legal de descanso de uma escala 12x36 é 36h. A API recusava
+  //    qualquer valor acima de 24h, tornando a própria regra semeada
+  //    inconfigurável; o CHECK do banco sempre admitiu até 168h.
+  const rule36 = await ops("/work-rules", { cookie: admin.cookie, method: "POST", body: { name: `QA 12x36 ${tag}`, description: "Regra sintética de descanso 36h para validação", min_rest_hours: 36, max_daily_hours: 12 } });
+  assert.equal(rule36.status, 201, "36h rest rule accepted (DB CHECK allows up to 168h)");
+  assert.equal(Number(rule36.body.rule.min_rest_hours), 36);
+
+  // 3. Zero é um valor configurado, não "ausente": o padrão não pode
+  //    sobrescrever o que o responsável definiu.
+  const ruleCreated = await ops("/work-rules", { cookie: admin.cookie, method: "POST", body: {
+    name: `QA OPS-04 Jornada ${tag}`, description: "Regra sintética de jornada para o gate OPS-04",
+    max_daily_hours: 8, min_rest_hours: 0, max_consecutive_days: 30, max_weekly_hours: 80,
+  } });
+  assert.equal(ruleCreated.status, 201, "work rule created");
+  assert.equal(Number(ruleCreated.body.rule.min_rest_hours), 0, "min_rest_hours=0 is preserved, not replaced by default");
+  assert.equal(ruleCreated.body.rule.is_approved, false, "rule starts unapproved");
+  const ruleId = ruleCreated.body.rule.id;
+  const patchRule = payload => ops("/work-rules", { cookie: admin.cookie, method: "PATCH", body: { id: ruleId, ...payload } });
+
+  // 4. Sem regra APROVADA E ATIVA nada é presumido: a jornada não é inventada.
+  const empNoRule = await insertEmployee("ativo");
+  const free1 = await allocate(empNoRule, manha4, D0);
+  assert.equal(free1.status, 201, "allocation allowed while no approved rule exists");
+  assert.equal(free1.body.validation.work_rule_applied, false, "response states journey rules were not applied");
+  assert.equal((await allocate(empNoRule, tarde5, D0)).status, 201, "9h/day allowed: no approved rule to exceed");
+
+  // 5. Aprovação é ato de governança e vai auditada na mesma transação.
+  const approved = await patchRule({ is_approved: true });
+  assert.equal(approved.status, 200, "rule approved");
+  assert.equal(approved.body.rule.is_approved, true);
+  assert.ok(approved.body.rule.approved_by, "approval records who approved");
+  const ruleTrail = await pool.query("SELECT count(*)::int AS n FROM audit_log WHERE action='ops_work_rule_update' AND target=$1", [ruleId]);
+  assert.equal(ruleTrail.rows[0].n, 1, "rule approval is audited");
+
+  // 6. Jornada diária máxima passa a bloquear, com limite e projeção explícitos.
+  const empDaily = await insertEmployee("ativo");
+  const dailyOk = await allocate(empDaily, manha4, D0);
+  assert.equal(dailyOk.status, 201, "4h within the 8h approved limit");
+  assert.equal(dailyOk.body.validation.work_rule_applied, true, "approved rule is reported as applied");
+  assert.equal(dailyOk.body.validation.max_daily_hours, 8);
+  const dailyBlocked = await allocate(empDaily, tarde5, D0);
+  assert.equal(dailyBlocked.status, 422, "4h + 5h exceeds the 8h daily limit");
+  assert.equal(dailyBlocked.body.error, "max_daily_hours_exceeded");
+  assert.equal(dailyBlocked.body.limit_hours, 8);
+  assert.equal(dailyBlocked.body.projected_hours, 9);
+  assert.equal(await allocationCount(empDaily), 1, "refused journey leaves no partial effect");
+
+  // 7. Descanso mínimo entre jornadas, medido em horas reais entre turnos.
+  assert.equal((await patchRule({ max_daily_hours: 24, min_rest_hours: 11 })).status, 200, "rule switched to rest scenario");
+  const empRest = await insertEmployee("ativo");
+  assert.equal((await allocate(empRest, dia12, D0)).status, 201, "12h shift ending 19:00 allocated");
+  const restBlocked = await allocate(empRest, madrugada4, D1);
+  assert.equal(restBlocked.status, 422, "only 10h between 19:00 and 05:00 next day");
+  assert.equal(restBlocked.body.error, "min_rest_hours_violated");
+  assert.equal(restBlocked.body.required_rest_hours, 11);
+  assert.equal(restBlocked.body.observed_rest_hours, 10);
+  assert.equal(await allocationCount(empRest), 1, "rest violation creates no row");
+  assert.equal((await allocate(empRest, tarde5, D1)).status, 201, "18h of rest satisfies the approved minimum");
+
+  // 8. Jornada semanal na semana ISO que contém a data.
+  assert.equal((await patchRule({ max_weekly_hours: 16 })).status, 200, "weekly limit lowered");
+  const weeklyBlocked = await allocate(empRest, manha4, D2);
+  assert.equal(weeklyBlocked.status, 422, "12h + 5h + 4h exceeds the 16h weekly limit");
+  assert.equal(weeklyBlocked.body.error, "max_weekly_hours_exceeded");
+  assert.equal(weeklyBlocked.body.projected_hours, 21);
+
+  // 9. Dias consecutivos de trabalho.
+  assert.equal((await patchRule({ max_weekly_hours: 80, max_consecutive_days: 2 })).status, 200, "consecutive-day limit lowered");
+  const consecutiveBlocked = await allocate(empRest, manha4, D2);
+  assert.equal(consecutiveBlocked.status, 422, "third consecutive day exceeds the approved limit");
+  assert.equal(consecutiveBlocked.body.error, "max_consecutive_days_exceeded");
+  assert.equal(consecutiveBlocked.body.projected_days, 3);
+  assert.equal(await allocationCount(empRest), 2, "no row created by weekly/consecutive refusals");
+
+  // 10. Habilitação e documentação. A checagem anterior nunca bloqueava: o
+  //     registro de diagnóstico violava chk_version_or_entry, a exceção era
+  //     engolida e a alocação seguia em frente.
+  assert.equal((await patchRule({ max_daily_hours: 24, min_rest_hours: 0, max_weekly_hours: 80, max_consecutive_days: 30 })).status, 200, "rule relaxed for qualification scenario");
+  const role = await ops("/job-roles", { cookie: admin.cookie, method: "POST", body: { name: `Vigilante QA ${tag}`, role_type: "cargo", description: "Cargo sintético do gate OPS-04 para validar habilitação" } });
+  assert.equal(role.status, 201, "job role created");
+  const roleId = role.body.role.id;
+  const empQual = await insertEmployee("ativo");
+
+  const missing = await allocate(empQual, dia12, D0, { role_id: roleId });
+  assert.equal(missing.status, 422, "role without registered qualification is blocked");
+  assert.equal(missing.body.error, "qualification_required");
+  assert.equal(await allocationCount(empQual), 0, "unqualified professional is not allocated");
+
+  const putQual = payload => ops("/qualifications", { cookie: admin.cookie, method: "POST", body: { employee_id: empQual, role_id: roleId, certification_type: `CNV ${tag}`, ...payload } });
+  assert.equal((await putQual({ valid_until: "2026-01-31" })).status, 201, "expired qualification registered");
+  const expired = await allocate(empQual, dia12, D0, { role_id: roleId });
+  assert.equal(expired.status, 422, "expired documentation is blocked");
+  assert.equal(expired.body.error, "qualification_expired");
+
+  assert.equal((await putQual({ valid_until: "2028-12-31", is_valid: false })).status, 201, "qualification marked invalid");
+  const invalid = await allocate(empQual, dia12, D0, { role_id: roleId });
+  assert.equal(invalid.status, 422, "invalid qualification is blocked");
+  assert.equal(invalid.body.error, "qualification_invalid");
+
+  assert.equal((await putQual({ valid_until: "2028-12-31", is_valid: true })).status, 201, "valid qualification registered");
+  const qualified = await allocate(empQual, dia12, D0, { role_id: roleId });
+  assert.equal(qualified.status, 201, "qualified professional is allocated");
+  assert.equal(await allocationCount(empQual), 1, "exactly one allocation after three refusals");
+  assert.equal((await allocate(empQual, dia12, D0, { role_id: roleId })).status, 409, "retry does not duplicate");
+  assert.equal(await allocationCount(empQual), 1, "retry left no second row");
+
+  // 11. Regra aprovada que exige certificação torna o cargo obrigatório —
+  //     o sistema não escolhe uma função pelo profissional.
+  const certRule = await ops("/work-rules", { cookie: admin.cookie, method: "POST", body: {
+    name: `QA OPS-04 Certificação ${tag}`, description: "Regra sintética que exige certificação explícita",
+    max_daily_hours: 24, min_rest_hours: 0, max_consecutive_days: 30, max_weekly_hours: 80,
+    requires_certification: true, is_approved: true,
+  } });
+  assert.equal(certRule.status, 201, "certification-requiring rule created and approved");
+  const empCert = await insertEmployee("ativo");
+  const noRole = await allocate(empCert, manha4, D0);
+  assert.equal(noRole.status, 422, "approved rule requires an explicit role to validate");
+  assert.equal(noRole.body.error, "role_required_by_work_rule");
+  assert.equal((await ops("/work-rules", { cookie: admin.cookie, method: "PATCH", body: { id: certRule.body.rule.id, is_active: false } })).status, 200, "certification rule deactivated");
+  assert.equal((await allocate(empCert, manha4, D0)).status, 201, "inactive rule stops being enforced");
+
+  // 12. Indisponibilidade declarada em RH bloqueia; ausência rejeitada não.
+  const empAway = await insertEmployee("ativo");
+  const absenceId = uuid();
+  await pool.query(
+    `INSERT INTO hr_absences (id, employee_id, type, start_date, end_date, status, reason, created_by)
+     VALUES ($1,$2,'atestado_medico',$3,$4,'aprovado','Afastamento sintético QA','admin')`,
+    [absenceId, empAway, D0, D2],
+  );
+  const unavailable = await allocate(empAway, manha4, D1);
+  assert.equal(unavailable.status, 409, "employee on registered absence is not scheduled");
+  assert.equal(unavailable.body.error, "employee_unavailable");
+  assert.equal(unavailable.body.absence_status, "aprovado");
+  assert.equal(unavailable.body.absence_id, absenceId);
+  assert.equal(await allocationCount(empAway), 0, "unavailable professional gets no allocation");
+
+  const empRejected = await insertEmployee("ativo");
+  await pool.query(
+    `INSERT INTO hr_absences (id, employee_id, type, start_date, end_date, status, reason, created_by)
+     VALUES ($1,$2,'falta_justificada',$3,$4,'rejeitado','Pedido recusado QA','admin')`,
+    [uuid(), empRejected, D0, D2],
+  );
+  assert.equal((await allocate(empRejected, manha4, D1)).status, 201, "rejected absence must not block scheduling");
+
+  // 13. Escala (OPS-03/OPS-04): as mesmas regras valem na entrada de escala.
+  const version = await ops("/schedule-versions", { cookie: admin.cookie, method: "POST", body: { company_id: companyId, unit_id: unitId, valid_from: D0, valid_to: "2027-03-31" } });
+  assert.equal(version.status, 201, "schedule version created");
+  const versionId = version.body.version.id;
+  const entry = (employee_id, shift_template_id, entry_date, extra = {}) =>
+    ops("/schedule-entries", { cookie: admin.cookie, method: "POST", body: { version_id: versionId, post_id: postId, employee_id, shift_template_id, entry_date, ...extra } });
+
+  assert.equal((await entry(await insertEmployee("desligado"), manha4, D0)).status, 409, "terminated employee rejected in schedule");
+  const strangerPost = await ops("/schedule-entries", { cookie: admin.cookie, method: "POST", body: { version_id: versionId, post_id: uuid(), employee_id: empQual, shift_template_id: manha4, entry_date: D0 } });
+  assert.equal(strangerPost.status, 404, "unknown post rejected in schedule (no FK collision)");
+
+  const empEntry = await insertEmployee("ativo");
+  assert.equal((await entry(empEntry, manha4, D0, { role_id: roleId })).status, 422, "schedule entry needs a valid qualification too");
+  const entryOk = await entry(empEntry, manha4, D0);
+  assert.equal(entryOk.status, 201, "schedule entry created");
+  assert.equal((await entry(empEntry, manha4, D0)).status, 409, "schedule entry retry rejected");
+  const overlapEntry = await entry(empEntry, dia12, D0);
+  assert.equal(overlapEntry.status, 409, "overlapping shift on the same day rejected in schedule");
+  assert.equal(overlapEntry.body.error, "overlap_detected");
+  const entryRows = await pool.query("SELECT count(*)::int AS n FROM ops_schedule_entries WHERE employee_id=$1", [empEntry]);
+  assert.equal(entryRows.rows[0].n, 1, "retry and overlap left a single schedule entry");
+  const positive = await pool.query("SELECT count(*)::int AS n FROM ops_schedule_validations WHERE entry_id=$1 AND is_valid=true", [entryOk.body.entry.id]);
+  assert.equal(positive.rows[0].n, 1, "positive validation stored with the entry");
+  const entryTrail = await pool.query("SELECT count(*)::int AS n FROM audit_log WHERE action='ops_schedule_entry_create' AND target=$1", [entryOk.body.entry.id]);
+  assert.equal(entryTrail.rows[0].n, 1, "schedule entry audited in the same transaction");
+  const refusalTrail = await pool.query("SELECT count(*)::int AS n FROM ops_schedule_validations WHERE version_id=$1 AND is_valid=false", [versionId]);
+  assert.ok(refusalTrail.rows[0].n >= 2, "schedule refusals are recorded as invalid validations");
+
+  // 14. Auditoria indisponível: nega sem efeito parcial, nos dois caminhos.
+  await pool.query("ALTER TABLE audit_log RENAME TO audit_log_ops04_bak");
+  try {
+    const beforeAlloc = await allocationCount(empEntry);
+    assert.equal((await allocate(empEntry, tarde5, D2)).status, 503, "allocation fails closed without audit");
+    assert.equal(await allocationCount(empEntry), beforeAlloc, "no allocation persisted without audit trail");
+    const beforeEntries = (await pool.query("SELECT count(*)::int AS n FROM ops_schedule_entries WHERE employee_id=$1", [empEntry])).rows[0].n;
+    assert.equal((await entry(empEntry, tarde5, D2)).status, 503, "schedule entry fails closed without audit");
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM ops_schedule_entries WHERE employee_id=$1", [empEntry])).rows[0].n, beforeEntries, "no schedule entry persisted without audit trail");
+    assert.equal((await patchRule({ max_daily_hours: 10 })).status, 503, "work rule change fails closed without audit");
+    const unchanged = await pool.query("SELECT max_daily_hours FROM ops_work_rules WHERE id=$1", [ruleId]);
+    assert.equal(Number(unchanged.rows[0].max_daily_hours), 24, "rule limit unchanged without audit trail");
+  } finally {
+    await pool.query("ALTER TABLE audit_log_ops04_bak RENAME TO audit_log");
+  }
+  assert.equal((await allocate(empEntry, tarde5, D2)).status, 201, "allocation persists again once audit is restored");
+
+  // 15. Chromium real: a tela de operação mostra a regra aprovada e diz quando
+  //     jornada/descanso NÃO estão sendo aplicados.
+  const browser = await launchBrowser();
+  try {
+    const context = await browser.newContext();
+    await context.addCookies(admin.cookie.split("; ").map(pair => {
+      const idx = pair.indexOf("=");
+      return { name: pair.slice(0, idx), value: pair.slice(idx + 1), domain: "127.0.0.1", path: "/" };
+    }));
+    const page = await context.newPage();
+    await page.goto(`${baseUrl}/admin/operacao`, { waitUntil: "networkidle" });
+    await page.click("button:has-text('Jornada & Habilitação (OPS-04)')");
+    await page.waitForSelector("#work-rules-title", { timeout: 30_000 });
+    const content = (await page.textContent("body")) || "";
+    assert.match(content, new RegExp(`QA OPS-04 Jornada ${tag}`), "approved work rule rendered from the real API");
+    assert.match(content, /aprovada e aplicada/, "screen distinguishes an enforced rule");
+    assert.match(content, new RegExp(`CNV ${tag}`), "qualification rendered from the real API");
+    assert.match(content, /Bloqueios registrados/, "refusal trail section rendered");
+  } finally {
+    await browser.close();
+  }
+});
+
 test("L06 Fatia B: cobertura, passagem de turno, ocorrência, checklists, evidências e auditoria fail-closed", { skip: !RUN, timeout: 240_000 }, async () => {
   const admin = await provisionAndLoginStaff(pool, api, { role: "admin" });
   const commercial = await provisionAndLoginStaff(pool, api, { role: "comercial" });
