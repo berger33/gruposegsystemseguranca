@@ -3773,6 +3773,12 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/fin-gateway-charges" || url.pathname === "/api/crm/hr/fin-gateway-charges" || url.pathname === "/api/hr/fin-gateway-charges" || url.pathname === "/api/fin/gateway-charges") {
     return finManagementApi.handleCharges(req, res);
   }
+  if (url.pathname === "/api/admin/hr/fin-gateway-history" || url.pathname === "/api/crm/hr/fin-gateway-history" || url.pathname === "/api/hr/fin-gateway-history" || url.pathname === "/api/fin/gateway-history") {
+    return finManagementApi.handleGatewayHistory(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-gateway-webhook-sign" || url.pathname === "/api/crm/hr/fin-gateway-webhook-sign" || url.pathname === "/api/hr/fin-gateway-webhook-sign" || url.pathname === "/api/fin/gateway-webhook-sign") {
+    return finManagementApi.handleWebhookSign(req, res);
+  }
   // FIN-13 orçamento gerencial e cenários de expansão com premissas explícitas não prometer resultado
   if (url.pathname === "/api/admin/hr/fin-budgets" || url.pathname === "/api/crm/hr/fin-budgets" || url.pathname === "/api/hr/fin-budgets" || url.pathname === "/api/fin/budgets") {
     return finBudgetApi.handleBudgets(req, res);
@@ -5256,6 +5262,14 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/crm/hr/fin-gateway-charges"
   || pathname === "/api/hr/fin-gateway-charges"
   || pathname === "/api/fin/gateway-charges"
+  || pathname === "/api/admin/hr/fin-gateway-history"
+  || pathname === "/api/crm/hr/fin-gateway-history"
+  || pathname === "/api/hr/fin-gateway-history"
+  || pathname === "/api/fin/gateway-history"
+  || pathname === "/api/admin/hr/fin-gateway-webhook-sign"
+  || pathname === "/api/crm/hr/fin-gateway-webhook-sign"
+  || pathname === "/api/hr/fin-gateway-webhook-sign"
+  || pathname === "/api/fin/gateway-webhook-sign"
   || pathname === "/api/admin/hr/fin-budgets"
   || pathname === "/api/crm/hr/fin-budgets"
   || pathname === "/api/hr/fin-budgets"
