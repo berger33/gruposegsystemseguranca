@@ -138,46 +138,57 @@ export function createFinApi({ pool, auditLog, sameOrigin, requireSession, requi
       const { client_account_id, contract_id, contract_item_id, competence_date, due_date, amount_cents, recurrence_type, recurrence_id, recurrence_rule_id, description, is_recurring } = body;
       if (!client_account_id || !competence_date || !due_date || amount_cents==null) return json(res,400,{ error:"missing_fields" });
       if (new Date(due_date) < new Date(competence_date)) return json(res,400,{ error:"due_before_competence" });
-      // FIN-03 idempotente por contrato/competência/item
       const protocol = generateProtocol("REC-FIN");
+      const client = await pool.connect();
       try {
-        const { rows } = await pool.query(
+        await client.query('BEGIN');
+        const { rows } = await client.query(
           `INSERT INTO fin_accounts_receivable (protocol, client_account_id, contract_id, contract_item_id, competence_date, due_date, amount_cents, recurrence_type, recurrence_id, recurrence_rule_id, description, is_recurring, created_by_identity)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
           [protocol, client_account_id, contract_id||null, contract_item_id||null, competence_date, due_date, amount_cents, recurrence_type||'unica', recurrence_id||null, recurrence_rule_id||null, description||null, is_recurring||false, session.identityId||null]
         );
-        // check rule approved if recurring
         if (is_recurring && recurrence_rule_id) {
-          const rule = await pool.query(`SELECT is_approved FROM fin_recurrence_rules WHERE id=$1`, [recurrence_rule_id]);
+          const rule = await client.query(`SELECT is_approved FROM fin_recurrence_rules WHERE id=$1`, [recurrence_rule_id]);
           if (rule.rows.length>0 && !rule.rows[0].is_approved) {
-            // allow but warn
+            // A criação manual conserva a semântica histórica; a geração canônica exige aprovação.
           }
         }
-        await pool.query(`INSERT INTO fin_payment_history (account_type, receivable_id, previous_status, next_status, previous_paid_cents, next_paid_cents, changed_by_identity, reason) VALUES ('receber',$1,$2,$3,$4,$5,$6,$7)`, [rows[0].id, null, 'pendente', 0, 0, session.identityId||null, 'Criação inicial']);
-        await auditLog({ action:"fin_receivable_create", actor: session.identityId||"unknown", target: rows[0].id, meta:{ protocol, contract_id, competence_date, recurrence_id, amount_cents, is_recurring } });
-        // update recurrence last_generated
+        await client.query(`INSERT INTO fin_payment_history (account_type, receivable_id, previous_status, next_status, previous_paid_cents, next_paid_cents, changed_by_identity, reason) VALUES ('receber',$1,$2,$3,$4,$5,$6,$7)`, [rows[0].id, null, 'pendente', 0, 0, session.identityId||null, 'Criação inicial']);
         if (recurrence_rule_id) {
-          await pool.query(`UPDATE fin_recurrence_rules SET last_generated_competence=$2 WHERE id=$1`, [recurrence_rule_id, competence_date]);
+          await client.query(`UPDATE fin_recurrence_rules SET last_generated_competence=$2 WHERE id=$1`, [recurrence_rule_id, competence_date]);
         }
+        await auditLog({ action:"fin_receivable_create", actor: session.identityId||"unknown", target: rows[0].id, meta:{ protocol, contract_id, competence_date, recurrence_id, amount_cents, is_recurring }, client });
+        await client.query('COMMIT');
         return json(res,201,{ receivable: rows[0], note:"contas a receber vinculada contrato competência vencimento recorrência moeda valor situação idempotente contrato/competência/item" });
       } catch(e) {
+        try { await client.query('ROLLBACK'); } catch {}
+        if (e?.code === '42P01') return json(res,503,{ error:"audit_unavailable" });
         if (String(e.message).includes("duplicate") || String(e.message).includes("unique")) return json(res,409,{ error:"duplicate_competence_item", note:"geração recorrente idempotente por contrato/competência/item" });
         return json(res,500,{ error:"internal", detail:e.message });
-      }
+      } finally { client.release(); }
     }
     if (req.method === "PATCH") {
       let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
       const { id, status, reason } = body;
       if (!id || !status) return json(res,400,{ error:"missing_fields" });
       if (!reason || String(reason).length <10 || String(reason).length>1000) return json(res,400,{ error:"reason_10_1000_required", note:"baixa auditada nunca apagar saldo por edição silenciosa" });
-      const cur = await pool.query(`SELECT * FROM fin_accounts_receivable WHERE id=$1`, [id]);
-      if (cur.rows.length===0) return json(res,404,{ error:"not_found" });
-      const prev = cur.rows[0];
-      await pool.query(`UPDATE fin_accounts_receivable SET status=$2, paid_at=CASE WHEN $2 IN ('pago','recebido') THEN NOW() WHEN $2='cancelado' THEN canceled_at ELSE paid_at END, canceled_at=CASE WHEN $2='cancelado' THEN NOW() ELSE canceled_at END WHERE id=$1`, [id, status]);
-      await pool.query(`INSERT INTO fin_payment_history (account_type, receivable_id, previous_status, next_status, previous_paid_cents, next_paid_cents, changed_by_identity, reason, is_cancelamento) VALUES ('receber',$1,$2,$3,$4,$5,$6,$7,$8)`, [id, prev.status, status, prev.amount_paid_cents, prev.amount_paid_cents, session.identityId||null, reason, status==='cancelado']);
-      await auditLog({ action:"fin_receivable_status", actor: session.identityId||"unknown", target: id, meta:{ previous: prev.status, next: status, reason } });
-      const { rows } = await pool.query(`SELECT * FROM fin_accounts_receivable WHERE id=$1`, [id]);
-      return json(res,200,{ receivable: rows[0] });
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const cur = await client.query(`SELECT * FROM fin_accounts_receivable WHERE id=$1 FOR UPDATE`, [id]);
+        if (cur.rows.length===0) { await client.query('ROLLBACK'); return json(res,404,{ error:"not_found" }); }
+        const prev = cur.rows[0];
+        await client.query(`UPDATE fin_accounts_receivable SET status=$2, paid_at=CASE WHEN $2 IN ('pago','recebido') THEN NOW() WHEN $2='cancelado' THEN canceled_at ELSE paid_at END, canceled_at=CASE WHEN $2='cancelado' THEN NOW() ELSE canceled_at END WHERE id=$1`, [id, status]);
+        await client.query(`INSERT INTO fin_payment_history (account_type, receivable_id, previous_status, next_status, previous_paid_cents, next_paid_cents, changed_by_identity, reason, is_cancelamento) VALUES ('receber',$1,$2,$3,$4,$5,$6,$7,$8)`, [id, prev.status, status, prev.amount_paid_cents, prev.amount_paid_cents, session.identityId||null, reason, status==='cancelado']);
+        await auditLog({ action:"fin_receivable_status", actor: session.identityId||"unknown", target: id, meta:{ previous: prev.status, next: status, reason }, client });
+        const { rows } = await client.query(`SELECT * FROM fin_accounts_receivable WHERE id=$1`, [id]);
+        await client.query('COMMIT');
+        return json(res,200,{ receivable: rows[0] });
+      } catch(e) {
+        try { await client.query('ROLLBACK'); } catch {}
+        if (e?.code === '42P01') return json(res,503,{ error:"audit_unavailable" });
+        return json(res,500,{ error:"internal", detail:e.message });
+      } finally { client.release(); }
     }
     return json(res,405,{ error:"method_not_allowed" });
   }
@@ -201,48 +212,62 @@ export function createFinApi({ pool, auditLog, sameOrigin, requireSession, requi
       if (!competence_date || !due_date || amount_cents==null) return json(res,400,{ error:"missing_fields" });
       if (new Date(due_date) < new Date(competence_date)) return json(res,400,{ error:"due_before_competence" });
       const protocol = generateProtocol("PAG-FIN");
+      const client = await pool.connect();
       try {
-        const { rows } = await pool.query(
+        await client.query('BEGIN');
+        const { rows } = await client.query(
           `INSERT INTO fin_accounts_payable (protocol, supplier_id, client_account_id, contract_id, cost_center_id, category, competence_date, due_date, amount_cents, recurrence_type, recurrence_id, recurrence_rule_id, description, is_recurring, created_by_identity)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
           [protocol, supplier_id||null, client_account_id||null, contract_id||null, cost_center_id||null, category||'outro', competence_date, due_date, amount_cents, recurrence_type||'unica', recurrence_id||null, recurrence_rule_id||null, description||null, is_recurring||false, session.identityId||null]
         );
-        await pool.query(`INSERT INTO fin_payment_history (account_type, payable_id, previous_status, next_status, previous_paid_cents, next_paid_cents, changed_by_identity, reason) VALUES ('pagar',$1,$2,$3,$4,$5,$6,$7)`, [rows[0].id, null, 'pendente', 0, 0, session.identityId||null, 'Criação inicial']);
-        await auditLog({ action:"fin_payable_create", actor: session.identityId||"unknown", target: rows[0].id, meta:{ protocol, supplier_id, category, cost_center_id, amount_cents } });
+        await client.query(`INSERT INTO fin_payment_history (account_type, payable_id, previous_status, next_status, previous_paid_cents, next_paid_cents, changed_by_identity, reason) VALUES ('pagar',$1,$2,$3,$4,$5,$6,$7)`, [rows[0].id, null, 'pendente', 0, 0, session.identityId||null, 'Criação inicial']);
         if (recurrence_rule_id) {
-          await pool.query(`UPDATE fin_recurrence_rules SET last_generated_competence=$2 WHERE id=$1`, [recurrence_rule_id, competence_date]);
+          await client.query(`UPDATE fin_recurrence_rules SET last_generated_competence=$2 WHERE id=$1`, [recurrence_rule_id, competence_date]);
         }
+        await auditLog({ action:"fin_payable_create", actor: session.identityId||"unknown", target: rows[0].id, meta:{ protocol, supplier_id, category, cost_center_id, amount_cents }, client });
+        await client.query('COMMIT');
         return json(res,201,{ payable: rows[0], note:"contas a pagar fornecedores categoria centro custo vencimento aprovação anexos idempotente" });
       } catch(e) {
+        try { await client.query('ROLLBACK'); } catch {}
+        if (e?.code === '42P01') return json(res,503,{ error:"audit_unavailable" });
         if (String(e.message).includes("duplicate") || String(e.message).includes("unique")) return json(res,409,{ error:"duplicate_competence", note:"geração recorrente idempotente" });
         return json(res,500,{ error:"internal", detail:e.message });
-      }
+      } finally { client.release(); }
     }
     if (req.method === "PATCH") {
       let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
       const { id, status, approval_status, reason } = body;
       if (!id) return json(res,400,{ error:"missing_id" });
       if (!reason || String(reason).length <10 || String(reason).length>1000) return json(res,400,{ error:"reason_10_1000_required" });
-      const cur = await pool.query(`SELECT * FROM fin_accounts_payable WHERE id=$1`, [id]);
-      if (cur.rows.length===0) return json(res,404,{ error:"not_found" });
-      const prev = cur.rows[0];
-      if (approval_status) {
-        const allowed = ['pendente','aprovado','rejeitado'];
-        if (!allowed.includes(approval_status)) return json(res,400,{ error:"invalid_approval" });
-        if (approval_status==='aprovado') {
-          await pool.query(`UPDATE fin_accounts_payable SET approval_status='aprovado', approved_by_identity=$2, approved_at=NOW() WHERE id=$1`, [id, session.identityId||null]);
-          await auditLog({ action:"fin_payable_approve", actor: session.identityId||"unknown", target: id, meta:{ approval_status } });
-        } else {
-          await pool.query(`UPDATE fin_accounts_payable SET approval_status=$2 WHERE id=$1`, [id, approval_status]);
+      if (approval_status && !['pendente','aprovado','rejeitado'].includes(approval_status)) return json(res,400,{ error:"invalid_approval" });
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const cur = await client.query(`SELECT * FROM fin_accounts_payable WHERE id=$1 FOR UPDATE`, [id]);
+        if (cur.rows.length===0) { await client.query('ROLLBACK'); return json(res,404,{ error:"not_found" }); }
+        const prev = cur.rows[0];
+        if (approval_status) {
+          if (approval_status==='aprovado') {
+            await client.query(`UPDATE fin_accounts_payable SET approval_status='aprovado', approved_by_identity=$2, approved_at=NOW() WHERE id=$1`, [id, session.identityId||null]);
+          } else {
+            await client.query(`UPDATE fin_accounts_payable SET approval_status=$2 WHERE id=$1`, [id, approval_status]);
+          }
+          await client.query(`INSERT INTO fin_payment_history (account_type, payable_id, previous_status, next_status, previous_paid_cents, next_paid_cents, changed_by_identity, reason) VALUES ('pagar',$1,$2,$3,$4,$5,$6,$7)`, [id, prev.status, prev.status, prev.amount_paid_cents, prev.amount_paid_cents, session.identityId||null, reason]);
+          await auditLog({ action:"fin_payable_approve", actor: session.identityId||"unknown", target: id, meta:{ approval_status, reason }, client });
         }
-      }
-      if (status) {
-        await pool.query(`UPDATE fin_accounts_payable SET status=$2, paid_at=CASE WHEN $2='pago' THEN NOW() ELSE paid_at END, canceled_at=CASE WHEN $2='cancelado' THEN NOW() ELSE canceled_at END WHERE id=$1`, [id, status]);
-        await pool.query(`INSERT INTO fin_payment_history (account_type, payable_id, previous_status, next_status, previous_paid_cents, next_paid_cents, changed_by_identity, reason, is_cancelamento) VALUES ('pagar',$1,$2,$3,$4,$5,$6,$7,$8)`, [id, prev.status, status, prev.amount_paid_cents, prev.amount_paid_cents, session.identityId||null, reason, status==='cancelado']);
-        await auditLog({ action:"fin_payable_status", actor: session.identityId||"unknown", target: id, meta:{ previous: prev.status, next: status, reason } });
-      }
-      const { rows } = await pool.query(`SELECT * FROM fin_accounts_payable WHERE id=$1`, [id]);
-      return json(res,200,{ payable: rows[0] });
+        if (status) {
+          await client.query(`UPDATE fin_accounts_payable SET status=$2, paid_at=CASE WHEN $2='pago' THEN NOW() ELSE paid_at END, canceled_at=CASE WHEN $2='cancelado' THEN NOW() ELSE canceled_at END WHERE id=$1`, [id, status]);
+          await client.query(`INSERT INTO fin_payment_history (account_type, payable_id, previous_status, next_status, previous_paid_cents, next_paid_cents, changed_by_identity, reason, is_cancelamento) VALUES ('pagar',$1,$2,$3,$4,$5,$6,$7,$8)`, [id, prev.status, status, prev.amount_paid_cents, prev.amount_paid_cents, session.identityId||null, reason, status==='cancelado']);
+          await auditLog({ action:"fin_payable_status", actor: session.identityId||"unknown", target: id, meta:{ previous: prev.status, next: status, reason }, client });
+        }
+        const { rows } = await client.query(`SELECT * FROM fin_accounts_payable WHERE id=$1`, [id]);
+        await client.query('COMMIT');
+        return json(res,200,{ payable: rows[0] });
+      } catch(e) {
+        try { await client.query('ROLLBACK'); } catch {}
+        if (e?.code === '42P01') return json(res,503,{ error:"audit_unavailable" });
+        return json(res,500,{ error:"internal", detail:e.message });
+      } finally { client.release(); }
     }
     return json(res,405,{ error:"method_not_allowed" });
   }
