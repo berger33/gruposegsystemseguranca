@@ -11,6 +11,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import pg from "pg";
+import { chromium as playwrightChromium } from "playwright";
+import packagedChromium from "@sparticuz/chromium";
 import { provisionAndLoginStaff } from "./helpers/staff-login.mjs";
 
 const RUN = process.env.RUN_DATABASE_INTEGRATION === "1" && process.env.DATABASE_URL;
@@ -268,4 +270,65 @@ test("L07 Fatia 1: FIN-04 baixa parcial, conclusão e estorno com histórico imu
   assert.equal(ghostPayments.rows[0].n, 0, "no orphan payment row was created");
   const ghostAccount = await pool.query("SELECT count(*)::int AS n FROM fin_accounts_receivable WHERE id=$1", [ghostId]);
   assert.equal(ghostAccount.rows[0].n, 0, "no receivable was invented");
+});
+
+test("L07 Fatia 2: concorrência, sobre-pagamento e estornos permanecem atômicos", { skip: !RUN, timeout: 120_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const makeReceivable = async (label, amount=10000) => {
+    const { accountId, contractId } = await insertClientSpace(label);
+    const result = await fin("/receivables", { method:"POST", cookie:financeiro.cookie, body:{ client_account_id:accountId, contract_id:contractId, competence_date:"2026-10-01", due_date:"2026-10-10", amount_cents:amount, description:`Conta ${label}` } });
+    assert.equal(result.status, 201); return result.body.receivable;
+  };
+  const pay = (id, amount, extra={}) => fin("/payments", { method:"POST", cookie:financeiro.cookie, body:{ account_type:"receber", receivable_id:id, amount_cents:amount, reason:"Movimento financeiro sintético válido", ...extra } });
+
+  const concurrent = await makeReceivable("Concorrencia", 10000);
+  const pair = await Promise.all([pay(concurrent.id, 7000), pay(concurrent.id, 7000)]);
+  assert.deepEqual(pair.map(x=>x.status).sort(), [201,409]);
+  assert.equal(pair.find(x=>x.status===409).body.error, "overpayment");
+  let snapshot = await pool.query(`SELECT r.amount_cents,r.amount_paid_cents,r.status,count(p.id)::int payments,COALESCE(sum(p.amount_cents) FILTER (WHERE NOT p.is_estorno),0)::bigint total FROM fin_accounts_receivable r LEFT JOIN fin_payments p ON p.receivable_id=r.id WHERE r.id=$1 GROUP BY r.id`, [concurrent.id]);
+  assert.equal(Number(snapshot.rows[0].amount_paid_cents), 7000); assert.equal(Number(snapshot.rows[0].total), 7000); assert.equal(snapshot.rows[0].payments, 1);
+  assert.equal((await pool.query(`SELECT count(*)::int n FROM fin_payments p LEFT JOIN fin_accounts_receivable r ON r.id=p.receivable_id WHERE p.account_type='receber' AND r.id IS NULL`)).rows[0].n, 0);
+
+  const before = await pool.query(`SELECT r.amount_paid_cents,r.status,(SELECT count(*) FROM fin_payments WHERE receivable_id=r.id) payments,(SELECT count(*) FROM fin_payment_history WHERE receivable_id=r.id) history,(SELECT count(*) FROM audit_log WHERE target IN (SELECT id::text FROM fin_payments WHERE receivable_id=r.id)) audits FROM fin_accounts_receivable r WHERE id=$1`, [concurrent.id]);
+  const excessive = await pay(concurrent.id, 4000); assert.equal(excessive.status,409); assert.equal(excessive.body.error,"overpayment");
+  const afterExcess = await pool.query(`SELECT r.amount_paid_cents,r.status,(SELECT count(*) FROM fin_payments WHERE receivable_id=r.id) payments,(SELECT count(*) FROM fin_payment_history WHERE receivable_id=r.id) history,(SELECT count(*) FROM audit_log WHERE target IN (SELECT id::text FROM fin_payments WHERE receivable_id=r.id)) audits FROM fin_accounts_receivable r WHERE id=$1`, [concurrent.id]);
+  assert.deepEqual(afterExcess.rows[0], before.rows[0], "overpayment has no business, history or audit effect");
+
+  const originAccount = await makeReceivable("Estornos", 20000); const origin = await pay(originAccount.id, 8000); assert.equal(origin.status,201);
+  const first = await pay(originAccount.id, 8000, { is_estorno:true, previous_payment_id:origin.body.payment.id }); assert.equal(first.status,201);
+  const repeated = await pay(originAccount.id, 8000, { is_estorno:true, previous_payment_id:origin.body.payment.id }); assert.equal(repeated.status,409); assert.deepEqual(repeated.body,{error:"estorno_already_exists"});
+  snapshot = await pool.query(`SELECT amount_paid_cents,status,(SELECT count(*) FROM fin_payments WHERE receivable_id=$1) payments,(SELECT count(*) FROM fin_payment_history WHERE receivable_id=$1) history FROM fin_accounts_receivable WHERE id=$1`,[originAccount.id]);
+  assert.equal(Number(snapshot.rows[0].amount_paid_cents),0); assert.equal(Number(snapshot.rows[0].payments),2); assert.equal(Number(snapshot.rows[0].history),3);
+
+  const limited = await makeReceivable("Limite", 20000); const limitedOrigin=await pay(limited.id,5000);
+  const tooLarge=await pay(limited.id,5001,{is_estorno:true,previous_payment_id:limitedOrigin.body.payment.id}); assert.equal(tooLarge.status,400); assert.equal(tooLarge.body.error,"estorno_amount_exceeds_origin");
+  const other=await makeReceivable("Outra conta",20000); const mismatch=await pay(other.id,5000,{is_estorno:true,previous_payment_id:limitedOrigin.body.payment.id}); assert.equal(mismatch.status,400); assert.equal(mismatch.body.error,"estorno_account_mismatch");
+  const unaffected=await pool.query(`SELECT amount_paid_cents,(SELECT count(*) FROM fin_payments WHERE receivable_id=$1) payments FROM fin_accounts_receivable WHERE id=$1`,[other.id]); assert.equal(Number(unaffected.rows[0].amount_paid_cents),0); assert.equal(Number(unaffected.rows[0].payments),0);
+  const limitedState=await pool.query(`SELECT amount_paid_cents,(SELECT count(*) FROM fin_payments WHERE receivable_id=$1) payments FROM fin_accounts_receivable WHERE id=$1`,[limited.id]); assert.equal(Number(limitedState.rows[0].amount_paid_cents),5000); assert.equal(Number(limitedState.rows[0].payments),1);
+});
+
+test("L07 Fatia 2: auditoria indisponível retorna 503 e reverte a baixa inteira", { skip: !RUN, timeout: 120_000 }, async () => {
+  const financeiro=await provisionAndLoginStaff(pool,api,{role:"financeiro"}); const {accountId,contractId}=await insertClientSpace("Audit fail closed");
+  const created=await fin("/receivables",{method:"POST",cookie:financeiro.cookie,body:{client_account_id:accountId,contract_id:contractId,competence_date:"2026-10-01",due_date:"2026-10-10",amount_cents:9000}}); assert.equal(created.status,201); const id=created.body.receivable.id;
+  const before=await pool.query(`SELECT amount_paid_cents,status,(SELECT count(*) FROM fin_payments WHERE receivable_id=$1) payments,(SELECT count(*) FROM fin_payment_history WHERE receivable_id=$1) history FROM fin_accounts_receivable WHERE id=$1`,[id]);
+  await pool.query(`ALTER TABLE audit_log RENAME TO audit_log_l07_unavailable`);
+  try { const result=await fin("/payments",{method:"POST",cookie:financeiro.cookie,body:{account_type:"receber",receivable_id:id,amount_cents:3000,reason:"Auditoria indisponível deve reverter tudo"}}); assert.equal(result.status,503); assert.equal(result.body.error,"audit_unavailable"); }
+  finally { await pool.query(`ALTER TABLE audit_log_l07_unavailable RENAME TO audit_log`); }
+  const afterState=await pool.query(`SELECT amount_paid_cents,status,(SELECT count(*) FROM fin_payments WHERE receivable_id=$1) payments,(SELECT count(*) FROM fin_payment_history WHERE receivable_id=$1) history FROM fin_accounts_receivable WHERE id=$1`,[id]); assert.deepEqual(afterState.rows[0],before.rows[0]);
+});
+
+test("L07 Fatia 2: Chromium percorre recorrência, duplicidade, baixa parcial e estorno", { skip: !RUN, timeout: 180_000 }, async () => {
+  const financeiro=await provisionAndLoginStaff(pool,api,{role:"financeiro"}); const {accountId,contractId}=await insertClientSpace("Browser");
+  const seed=await fin("/receivables",{method:"POST",cookie:financeiro.cookie,body:{client_account_id:accountId,contract_id:contractId,competence_date:"2026-09-01",due_date:"2026-09-10",amount_cents:10000,description:"Recebível do navegador"}}); assert.equal(seed.status,201);
+  const browser=await playwrightChromium.launch({executablePath:await packagedChromium.executablePath(),headless:true,args:packagedChromium.args});
+  try {
+    const context=await browser.newContext(); const pair=financeiro.cookie.split(';')[0]; const separator=pair.indexOf('='); await context.addCookies([{name:pair.slice(0,separator),value:pair.slice(separator+1),url:baseUrl}]); const page=await context.newPage(); await page.setExtraHTTPHeaders({origin:baseUrl});
+    await page.goto(`${baseUrl}/admin/financeiro`,{waitUntil:"networkidle"}); await page.waitForSelector('[data-testid="financeiro-workspace"]'); await page.waitForSelector('[data-testid="finance-receivables-table"]');
+    await page.getByTestId('finance-tab-recurrence').click(); await page.waitForSelector('[data-testid="finance-recurrence"]'); await page.getByTestId('finance-generation-client-account').fill(accountId);
+    const recurrenceId=`browser-${uuid()}`; await page.getByPlaceholder('ID do contrato').last().fill(contractId); await page.getByPlaceholder('Identificador da regra').fill(recurrenceId); await page.locator('[data-testid="finance-recurrence"] input[type=date]').fill('2026-10-01'); await page.getByPlaceholder('Valor em centavos').last().fill('12000'); await page.getByRole('button',{name:'Criar regra'}).click(); let browserRule; for(let i=0;i<40;i++){ browserRule=await pool.query('SELECT id FROM fin_recurrence_rules WHERE recurrence_id=$1',[recurrenceId]); if(browserRule.rows.length) break; await sleep(100); } assert.equal(browserRule.rows.length,1); await page.waitForSelector(`[data-testid="finance-rule-${browserRule.rows[0].id}"]`);
+    const rule=page.getByTestId(`finance-rule-${browserRule.rows[0].id}`); await rule.getByRole('button',{name:'Aprovar'}).click(); await page.waitForFunction(id=>document.querySelector(`[data-testid="finance-rule-${id}"]`)?.textContent?.includes('aprovada'),browserRule.rows[0].id); await rule.getByRole('button',{name:'Gerar cobrança'}).click(); for(let i=0;i<40;i++){ const generated=await pool.query('SELECT id FROM fin_accounts_receivable WHERE recurrence_rule_id=$1',[browserRule.rows[0].id]); if(generated.rows.length) break; await sleep(100); } await rule.getByRole('button',{name:'Gerar cobrança'}).click(); await page.waitForSelector('[data-testid="finance-error"]'); assert.match(await page.getByTestId('finance-error').textContent(),/already_generated/);
+    assert.equal(Number((await pool.query(`SELECT count(*)::int n FROM fin_accounts_receivable WHERE recurrence_rule_id=$1`,[browserRule.rows[0].id])).rows[0].n),1);
+    await page.getByTestId('finance-tab-receivables').click(); await page.locator('tr',{hasText:seed.body.receivable.protocol}).click(); await page.getByTestId('finance-tab-payments').click(); await page.waitForSelector('[data-testid="finance-payments-table"]'); await page.getByPlaceholder('Baixa em centavos').fill('4000'); await page.getByPlaceholder('Motivo (10 a 1000 caracteres)').fill('Baixa parcial feita pelo navegador real'); await page.getByRole('button',{name:'Dar baixa'}).click(); await page.waitForFunction(()=>document.body.textContent?.includes('status parcial')&&document.body.textContent?.includes('R$ 40,00'));
+    await page.getByPlaceholder('Motivo (10 a 1000 caracteres)').fill('Estorno confirmado pelo navegador real'); await page.getByRole('button',{name:/Estornar pagamento/}).click(); await page.getByRole('button',{name:'Confirmar estorno'}).click(); await page.waitForFunction(()=>document.body.textContent?.includes('status pendente')&&document.body.textContent?.includes('R$ 0,00')); assert.ok(await page.getByTestId('finance-payments-table').isVisible());
+  } finally { await browser.close(); }
 });

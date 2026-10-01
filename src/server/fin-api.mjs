@@ -369,40 +369,36 @@ export function createFinApi({ pool, auditLog, sameOrigin, requireSession, requi
     let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
     const { recurrence_rule_id, competence_date, due_date, client_account_id, contract_id, contract_item_id, amount_cents } = body;
     if (!recurrence_rule_id || !competence_date || !due_date || !client_account_id) return json(res,400,{ error:"missing_fields" });
-    // check rule approved and active
-    const ruleRes = await pool.query(`SELECT * FROM fin_recurrence_rules WHERE id=$1`, [recurrence_rule_id]);
-    if (ruleRes.rows.length===0) return json(res,404,{ error:"rule_not_found" });
-    const rule = ruleRes.rows[0];
-    if (!rule.is_active) return json(res,400,{ error:"rule_inactive" });
-    if (!rule.is_approved) return json(res,400,{ error:"rule_not_approved", note:"regras aprovadas conforme FIN-03" });
-    if (rule.suspension_enabled) return json(res,400,{ error:"rule_suspended", note:`suspensão: ${rule.suspension_reason}` });
-    // idempotente por contrato/competência/item
-    const exists = await pool.query(`SELECT id FROM fin_accounts_receivable WHERE contract_id=$1 AND competence_date=$2 AND COALESCE(contract_item_id,'00000000-0000-0000-0000-000000000000'::uuid)=COALESCE($3,'00000000-0000-0000-0000-000000000000'::uuid) AND COALESCE(recurrence_id,'')=COALESCE($4,'')`, [contract_id||rule.contract_id, competence_date, contract_item_id||rule.contract_item_id, rule.recurrence_id]);
-    if (exists.rows.length>0) return json(res,409,{ error:"already_generated", note:"geração recorrente idempotente por contrato/competência/item" });
-    // pró-rata, reajuste
-    let finalAmount = amount_cents || rule.amount_cents;
-    if (rule.proration_enabled && rule.proration_rule) {
-      // simple proration example: if competence mid-month, half
-      finalAmount = Math.floor(finalAmount * 0.5);
-    }
-    if (rule.reajuste_enabled && rule.reajuste_percent) {
-      finalAmount = Math.floor(finalAmount * (1 + Number(rule.reajuste_percent)/100));
-    }
-    const protocol = generateProtocol("REC-FIN");
+    if (new Date(due_date) < new Date(competence_date)) return json(res,400,{ error:"due_before_competence" });
+    const client = await pool.connect();
     try {
-      const { rows } = await pool.query(
-        `INSERT INTO fin_accounts_receivable (protocol, client_account_id, contract_id, contract_item_id, competence_date, due_date, amount_cents, recurrence_type, recurrence_id, recurrence_rule_id, is_recurring, created_by_identity)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,true,$11) RETURNING *`,
-        [protocol, client_account_id, contract_id||rule.contract_id, contract_item_id||rule.contract_item_id, competence_date, due_date, finalAmount, rule.recurrence_type, rule.recurrence_id, recurrence_rule_id, session.identityId||null]
-      );
-      await pool.query(`UPDATE fin_recurrence_rules SET last_generated_competence=$2 WHERE id=$1`, [recurrence_rule_id, competence_date]);
-      await pool.query(`INSERT INTO fin_payment_history (account_type, receivable_id, previous_status, next_status, previous_paid_cents, next_paid_cents, changed_by_identity, reason) VALUES ('receber',$1,$2,$3,$4,$5,$6,$7)`, [rows[0].id, null, 'pendente', 0, 0, session.identityId||null, `Geração recorrente idempotente ${rule.recurrence_id} pró-rata ${rule.proration_enabled} reajuste ${rule.reajuste_percent||0}%`]);
-      await auditLog({ action:"fin_receivable_create", actor: session.identityId||"unknown", target: rows[0].id, meta:{ protocol, recurrence_rule_id, competence_date, finalAmount, proration: rule.proration_enabled, reajuste: rule.reajuste_percent } });
+      await client.query('BEGIN');
+      const ruleRes = await client.query(`SELECT * FROM fin_recurrence_rules WHERE id=$1 FOR UPDATE`, [recurrence_rule_id]);
+      if (!ruleRes.rows.length) { await client.query('ROLLBACK'); return json(res,404,{ error:"rule_not_found" }); }
+      const rule = ruleRes.rows[0];
+      if (!rule.is_active) { await client.query('ROLLBACK'); return json(res,400,{ error:"rule_inactive" }); }
+      if (!rule.is_approved) { await client.query('ROLLBACK'); return json(res,400,{ error:"rule_not_approved", note:"regras aprovadas conforme FIN-03" }); }
+      if (rule.suspension_enabled) { await client.query('ROLLBACK'); return json(res,400,{ error:"rule_suspended", note:`suspensão: ${rule.suspension_reason}` }); }
+      const effectiveContract = contract_id||rule.contract_id;
+      const effectiveItem = contract_item_id||rule.contract_item_id;
+      const exists = await client.query(`SELECT id FROM fin_accounts_receivable WHERE contract_id=$1 AND competence_date=$2 AND COALESCE(contract_item_id,'00000000-0000-0000-0000-000000000000'::uuid)=COALESCE($3,'00000000-0000-0000-0000-000000000000'::uuid) AND COALESCE(recurrence_id,'')=COALESCE($4,'')`, [effectiveContract, competence_date, effectiveItem, rule.recurrence_id]);
+      if (exists.rows.length) { await client.query('ROLLBACK'); return json(res,409,{ error:"already_generated", note:"geração recorrente idempotente por contrato/competência/item" }); }
+      let finalAmount = amount_cents || rule.amount_cents;
+      if (rule.proration_enabled && rule.proration_rule) finalAmount = Math.floor(finalAmount * 0.5);
+      if (rule.reajuste_enabled && rule.reajuste_percent) finalAmount = Math.floor(finalAmount * (1 + Number(rule.reajuste_percent)/100));
+      const protocol = generateProtocol("REC-FIN");
+      const { rows } = await client.query(`INSERT INTO fin_accounts_receivable (protocol, client_account_id, contract_id, contract_item_id, competence_date, due_date, amount_cents, recurrence_type, recurrence_id, recurrence_rule_id, is_recurring, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,true,$11) RETURNING *`, [protocol, client_account_id, effectiveContract, effectiveItem, competence_date, due_date, finalAmount, rule.recurrence_type, rule.recurrence_id, recurrence_rule_id, session.identityId||null]);
+      await client.query(`UPDATE fin_recurrence_rules SET last_generated_competence=$2 WHERE id=$1`, [recurrence_rule_id, competence_date]);
+      await client.query(`INSERT INTO fin_payment_history (account_type, receivable_id, previous_status, next_status, previous_paid_cents, next_paid_cents, changed_by_identity, reason) VALUES ('receber',$1,$2,$3,$4,$5,$6,$7)`, [rows[0].id, null, 'pendente', 0, 0, session.identityId||null, `Geração recorrente idempotente ${rule.recurrence_id} pró-rata ${rule.proration_enabled} reajuste ${rule.reajuste_percent||0}%`]);
+      await auditLog({ action:"fin_receivable_create", actor: session.identityId||"unknown", target: rows[0].id, meta:{ protocol, recurrence_rule_id, competence_date, finalAmount, proration: rule.proration_enabled, reajuste: rule.reajuste_percent }, client });
+      await client.query('COMMIT');
       return json(res,201,{ receivable: rows[0], note:"geração recorrente idempotente por contrato/competência/item pró-rata reajuste suspensão conforme regras aprovadas" });
     } catch(e) {
-      if (String(e.message).includes("duplicate") || String(e.message).includes("unique")) return json(res,409,{ error:"duplicate_competence_item", note:"idempotente" });
+      try { await client.query('ROLLBACK'); } catch {}
+      if (e?.code === '42P01') return json(res,503,{ error:"audit_unavailable" });
+      if (e?.code === '23505') return json(res,409,{ error:"duplicate_competence_item", note:"idempotente" });
       return json(res,500,{ error:"internal", detail:e.message });
-    }
+    } finally { client.release(); }
   }
 
   return {
