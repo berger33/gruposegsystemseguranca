@@ -5,6 +5,8 @@ on:
     paths:
       - 'src/**'
       - 'server.mjs'
+      - 'next.config.*'
+      - 'tests/helpers/**'
       - 'tests/l07-delivery.integration.test.mjs'
       - 'scripts/qa-l07-delivery-postgres.mjs'
       - 'scripts/migrate-site-visual.mjs'
