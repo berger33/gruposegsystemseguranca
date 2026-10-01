@@ -349,3 +349,172 @@ test("L07 Fatia 2: Chromium percorre recorrência, duplicidade, baixa parcial e 
     await page.getByPlaceholder('Motivo (10 a 1000 caracteres)').fill('Estorno confirmado pelo navegador real'); await page.getByRole('button',{name:/Estornar pagamento/}).click(); await page.getByRole('button',{name:'Confirmar estorno'}).click(); await page.waitForFunction(()=>document.body.textContent?.includes('status pendente')&&document.body.textContent?.includes('R$ 0,00')); assert.ok(await page.getByTestId('finance-payments-table').isVisible());
   } finally { await browser.close(); }
 });
+
+test("L07 FIN-05: extrato sintético, sugestão, confirmação e idempotência", { skip: !RUN, timeout: 120_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const rh = await provisionAndLoginStaff(pool, api, { role: "rh" });
+  const { accountId, contractId } = await insertClientSpace("FIN05 HTTP");
+  const receivable = await fin("/receivables", {
+    method: "POST",
+    cookie: financeiro.cookie,
+    body: {
+      client_account_id: accountId,
+      contract_id: contractId,
+      competence_date: "2026-10-01",
+      due_date: "2026-10-10",
+      amount_cents: 12500,
+      description: "Recebível sintético para conciliação bancária FIN-05",
+    },
+  });
+  assert.equal(receivable.status, 201);
+
+  assert.equal((await fin("/bank-statements")).status, 401, "anonymous statement read denied");
+  assert.equal((await fin("/bank-statements", { cookie: rh.cookie })).status, 403, "rh cannot import bank statement");
+  assert.equal((await fin("/bank-statements", { method: "POST", cookie: financeiro.cookie, origin: "https://externo.example", body: { file_name: "extrato.csv", file_url: "/synthetic/extrato.csv", storage_key: `fin05-origin-${uuid()}` } })).status, 403, "cross-origin statement import denied");
+
+  const storageKey = `fin05-statement-${uuid()}`;
+  const statement = await fin("/bank-statements", {
+    method: "POST",
+    cookie: financeiro.cookie,
+    body: {
+      source: "importacao",
+      file_name: "extrato-fin05-sintetico.csv",
+      file_url: "/synthetic/fin05/extrato-fin05-sintetico.csv",
+      storage_key: storageKey,
+      import_date: "2026-10-15",
+    },
+  });
+  assert.equal(statement.status, 201, "synthetic statement imported");
+  assert.match(statement.body.statement.protocol, /^EXT-FIN-\d{8}-[A-Z0-9]{4}$/);
+  assert.equal(statement.body.synthetic, true);
+  const duplicateStatement = await fin("/bank-statements", { method: "POST", cookie: financeiro.cookie, body: { source: "importacao", file_name: "outro.csv", file_url: "/synthetic/fin05/outro.csv", storage_key: storageKey } });
+  assert.equal(duplicateStatement.status, 409, "same storage key is idempotent");
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_bank_statements WHERE storage_key=$1", [storageKey])).rows[0].n, 1);
+
+  const bankRef = `FIN05-BANK-${uuid()}`;
+  const transaction = await fin("/bank-transactions", {
+    method: "POST",
+    cookie: financeiro.cookie,
+    body: { statement_id: statement.body.statement.id, transaction_date: "2026-10-10", amount_cents: 12500, description: "Recebimento contrato sintético FIN-05", bank_ref: bankRef },
+  });
+  assert.equal(transaction.status, 201, "synthetic bank transaction imported");
+  assert.equal(transaction.body.synthetic, true);
+  const duplicateTransaction = await fin("/bank-transactions", { method: "POST", cookie: financeiro.cookie, body: { statement_id: statement.body.statement.id, transaction_date: "2026-10-10", amount_cents: 12500, description: "Repetição sintética do mesmo lançamento", bank_ref: bankRef } });
+  assert.equal(duplicateTransaction.status, 409, "same bank reference is not imported twice");
+  const statementTotals = await pool.query("SELECT total_transactions, total_amount_cents FROM fin_bank_statements WHERE id=$1", [statement.body.statement.id]);
+  assert.equal(statementTotals.rows[0].total_transactions, 1);
+  assert.equal(Number(statementTotals.rows[0].total_amount_cents), 12500);
+
+  assert.equal((await fin("/conciliations", { method: "POST", cookie: financeiro.cookie, body: { receivable_id: receivable.body.receivable.id, source: "importacao", suggestion_reason: "Sugestão sem transação vinculada" } })).status, 400, "bank transaction is required");
+  assert.equal((await fin("/conciliations", { method: "POST", cookie: financeiro.cookie, body: { receivable_id: receivable.body.receivable.id, payable_id: uuid(), bank_transaction_id: transaction.body.transaction.id, source: "importacao", suggestion_reason: "Duas contas não podem ser conciliadas" } })).status, 400, "exactly one account is required");
+  assert.equal((await fin("/conciliations", { method: "POST", cookie: financeiro.cookie, body: { receivable_id: receivable.body.receivable.id, bank_transaction_id: transaction.body.transaction.id, source: "importacao", suggestion_reason: "curta" } })).status, 400, "suggestion needs a documented reason");
+
+  const suggestion = await fin("/conciliations", {
+    method: "POST",
+    cookie: financeiro.cookie,
+    body: {
+      receivable_id: receivable.body.receivable.id,
+      bank_transaction_id: transaction.body.transaction.id,
+      source: "importacao",
+      suggestion_reason: "Mesmo valor, data de baixa e referência do extrato sintético",
+      amount_matched_cents: 12500,
+    },
+  });
+  assert.equal(suggestion.status, 201, "conciliation suggestion created");
+  assert.equal(suggestion.body.conciliation.status, "sugerida");
+  const duplicateSuggestion = await fin("/conciliations", {
+    method: "POST",
+    cookie: financeiro.cookie,
+    body: { receivable_id: receivable.body.receivable.id, bank_transaction_id: transaction.body.transaction.id, source: "importacao", suggestion_reason: "Sugestão repetida do mesmo lançamento bancário" },
+  });
+  assert.equal(duplicateSuggestion.status, 409, "same bank transaction cannot receive a duplicate suggestion");
+
+  const shortDivergence = await fin("/conciliations", { method: "PATCH", cookie: financeiro.cookie, body: { id: suggestion.body.conciliation.id, status: "divergente", divergence_reason: "curta" } });
+  assert.equal(shortDivergence.status, 400, "divergence needs a documented reason");
+  const confirmed = await fin("/conciliations", { method: "PATCH", cookie: financeiro.cookie, body: { id: suggestion.body.conciliation.id, status: "conciliada" } });
+  assert.equal(confirmed.status, 200, "conciliation confirmed");
+  assert.equal(confirmed.body.conciliation.status, "conciliada");
+  const bankState = await pool.query("SELECT is_conciliated, conciliated_at FROM fin_bank_transactions WHERE id=$1", [transaction.body.transaction.id]);
+  assert.equal(bankState.rows[0].is_conciliated, true);
+  assert.ok(bankState.rows[0].conciliated_at);
+  const repeatedConfirmation = await fin("/conciliations", { method: "PATCH", cookie: financeiro.cookie, body: { id: suggestion.body.conciliation.id, status: "conciliada" } });
+  assert.equal(repeatedConfirmation.status, 409, "a confirmed suggestion cannot be confirmed twice");
+  const audit = await pool.query("SELECT action, count(*)::int AS n FROM audit_log WHERE target=$1 GROUP BY action ORDER BY action", [suggestion.body.conciliation.id]);
+  assert.deepEqual(audit.rows, [{ action: "fin_conciliation_confirm", n: 1 }, { action: "fin_conciliation_create", n: 1 }]);
+
+  // The same fail-closed rule used by FIN-01..04 also covers every FIN-05 write.
+  const failedStorage = `fin05-audit-${uuid()}`;
+  await pool.query("ALTER TABLE audit_log RENAME TO audit_log_fin05_unavailable");
+  try {
+    const failedStatement = await fin("/bank-statements", { method: "POST", cookie: financeiro.cookie, body: { source: "extrato", file_name: "audit-off.csv", file_url: "/synthetic/fin05/audit-off.csv", storage_key: failedStorage } });
+    assert.deepEqual(failedStatement.body, { error: "audit_unavailable" });
+    assert.equal(failedStatement.status, 503);
+    const failedTransaction = await fin("/bank-transactions", { method: "POST", cookie: financeiro.cookie, body: { statement_id: statement.body.statement.id, transaction_date: "2026-10-11", amount_cents: 100, description: "Transação que não pode persistir", bank_ref: `FIN05-AUDIT-${uuid()}` } });
+    assert.deepEqual(failedTransaction.body, { error: "audit_unavailable" });
+    assert.equal(failedTransaction.status, 503);
+  } finally {
+    await pool.query("ALTER TABLE audit_log_fin05_unavailable RENAME TO audit_log");
+  }
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_bank_statements WHERE storage_key=$1", [failedStorage])).rows[0].n, 0, "failed statement leaves no row");
+  const afterFailedTransaction = await pool.query("SELECT total_transactions, total_amount_cents FROM fin_bank_statements WHERE id=$1", [statement.body.statement.id]);
+  assert.equal(afterFailedTransaction.rows[0].total_transactions, 1, "failed transaction leaves statement aggregate unchanged");
+});
+
+test("L07 FIN-05: Chromium importa e confirma conciliação no workspace financeiro", { skip: !RUN, timeout: 180_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const { accountId, contractId } = await insertClientSpace("FIN05 Chromium");
+  const receivable = await fin("/receivables", { method: "POST", cookie: financeiro.cookie, body: { client_account_id: accountId, contract_id: contractId, competence_date: "2026-10-01", due_date: "2026-10-10", amount_cents: 8800, description: "Recebível sintético da jornada FIN-05 no Chromium" } });
+  assert.equal(receivable.status, 201);
+  const browser = await playwrightChromium.launch({ executablePath: await packagedChromium.executablePath(), headless: true, args: packagedChromium.args.filter(arg => arg !== "--disable-web-security") });
+  try {
+    const context = await browser.newContext();
+    const pair = financeiro.cookie.split(";")[0];
+    const separator = pair.indexOf("=");
+    await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
+    const page = await context.newPage();
+    await page.setExtraHTTPHeaders({ origin: baseUrl });
+    await page.goto(`${baseUrl}/admin/financeiro`, { waitUntil: "networkidle" });
+    await page.getByTestId("finance-tab-reconciliation").click();
+    await page.waitForSelector('[data-testid="fin05-reconciliation"]');
+
+    const suffix = uuid().slice(0, 8);
+    const bankRef = `FIN05-UI-${suffix}`;
+    await page.getByTestId("fin05-file-name").fill(`fin05-${suffix}.csv`);
+    await page.getByTestId("fin05-storage-key").fill(`synthetic/fin05/${suffix}`);
+    await page.getByTestId("fin05-import-date").fill("2026-10-16");
+    await page.getByTestId("fin05-import-statement").click();
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid="fin05-transaction-statement"] option').length > 1);
+    await page.getByTestId("fin05-transaction-statement").selectOption({ index: 1 });
+    await page.getByTestId("fin05-transaction-date").fill("2026-10-10");
+    await page.getByTestId("fin05-transaction-amount").fill("8800");
+    await page.getByTestId("fin05-transaction-description").fill("Recebimento sintético confirmado no Chromium");
+    await page.getByTestId("fin05-bank-ref").fill(bankRef);
+    await page.getByTestId("fin05-import-transaction").click();
+    let uiTransaction;
+    for (let i = 0; i < 40; i++) {
+      uiTransaction = await pool.query("SELECT id FROM fin_bank_transactions WHERE bank_ref=$1", [bankRef]);
+      if (uiTransaction.rows.length) break;
+      await sleep(100);
+    }
+    assert.equal(uiTransaction.rows.length, 1);
+    await page.getByTestId("fin05-account").selectOption(receivable.body.receivable.id);
+    await page.getByTestId("fin05-bank-transaction").selectOption(uiTransaction.rows[0].id);
+    await page.getByTestId("fin05-suggestion-reason").fill("Referência, data e valor conferidos no extrato sintético");
+    await page.getByTestId("fin05-suggest").click();
+    let uiConciliation;
+    for (let i = 0; i < 40; i++) {
+      uiConciliation = await pool.query("SELECT id FROM fin_conciliations WHERE bank_transaction_id=$1", [uiTransaction.rows[0].id]);
+      if (uiConciliation.rows.length) break;
+      await sleep(100);
+    }
+    assert.equal(uiConciliation.rows.length, 1);
+    await page.getByRole("button", { name: "Selecionar para confirmar" }).click();
+    await page.getByTestId("fin05-confirm").click();
+    await page.waitForFunction(() => document.querySelector('[data-testid="fin05-notice"]')?.textContent?.includes("conciliada"));
+    const uiState = await pool.query("SELECT c.status, b.is_conciliated FROM fin_conciliations c JOIN fin_bank_transactions b ON b.id=c.bank_transaction_id WHERE c.id=$1", [uiConciliation.rows[0].id]);
+    assert.equal(uiState.rows[0].status, "conciliada");
+    assert.equal(uiState.rows[0].is_conciliated, true);
+  } finally {
+    await browser.close();
+  }
+});

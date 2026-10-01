@@ -1001,10 +1001,10 @@ pagamento/recebimento parcial, estorno, cancelamento, renegociação e baixa aud
 
 ## FIN-05
 conciliação por importação/extrato ou provedor, sugestão e confirmação; evitar duplicar transações.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/financeiro` → aba **Conciliação bancária** (`BankReconciliationWorkspace.tsx`) usa somente `/api/fin/bank-statements`, `/api/fin/bank-transactions` e `/api/fin/conciliations`. Acesso exige sessão de staff, papel `financeiro`/`admin`/`ti` e same-origin. Extrato e transações são explicitamente sintéticos; `storage_key` e `bank_ref` são únicos; a conciliação exige exatamente uma conta e uma transação bancária, registra sugestão, confirmação/divergência e marca a transação como conciliada somente na confirmação. A migração aditiva `124-fin05-conciliation-hardening.sql` acrescenta unicidade parcial da transação bancária por conciliação e CHECK de valor não negativo.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` **8/8** (HTTP real + PostgreSQL descartável + Chromium real, incluindo a jornada FIN-05); duas execuções finais consecutivas verdes. Cobertura: anônimo/RH/origem externa negados, importação, duplicidade de `storage_key`/`bank_ref`/conciliação, referências inválidas, confirmação repetida, auditoria indisponível com `503` e rollback, e UI real. `npm run typecheck` e `npm run build` verdes.
+- Pendência / fronteira externa / aceite humano: não há banco, provedor, gateway, webhook, arquivo ou credencial de produção; não há cobrança automática. Aceite humano/Windows permanece pendente. FIN-06..16 e ADM-01..12 continuam fora desta sessão.
 
 ## FIN-06
 cobrança com responsável, lembretes, histórico e política aprovada; sem mensagens reais ou bloqueio de portal automático na implementação.
