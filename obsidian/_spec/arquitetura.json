@@ -1,0 +1,161 @@
+{
+  "cluster": {
+    "id": "arquitetura",
+    "titulo": "MOC - Arquitetura de Software",
+    "resumo": "Eixo das decisões de forma: até onde vai um deploy, onde ficam as fronteiras e como as partes conversam. É aqui que se escolhe o formato do sistema antes do código existir."
+  },
+  "notas": [
+    {
+      "id": "monolito-modular",
+      "titulo": "Monólito Modular",
+      "tags": ["arquitetura", "modularidade", "fronteiras"],
+      "sintese": "Um único deploy, mas com fronteiras internas rígidas: cada módulo é tratado como se pudesse virar serviço amanhã.",
+      "definicao": [
+        "Monólito modular é um sistema implantado como uma única unidade, dividido internamente em módulos com fronteiras explícitas e contratos próprios.",
+        "A disciplina é a mesma de um distribuído — só que sem a rede no meio: módulo A não acessa o banco do módulo B nem classes internas de B, apenas a interface pública."
+      ],
+      "como_funciona": [
+        "Cada módulo expõe uma fachada (porta de entrada) e esconde seu modelo de dados; a comunicação acontece por chamadas diretas ou eventos em memória, nunca por SQL cruzado.",
+        "A regra que sustenta tudo: se um dia você extrair o módulo, o custo deve ser trocar chamada de função por chamada de rede — não reescrever o modelo."
+      ],
+      "quando_usar": [
+        "Time único ou poucos times, domínio ainda em descoberta e necessidade de velocidade — o caso padrão, não a exceção.",
+        "Quando a complexidade do seu problema é de regra de negócio e não de escala operacional."
+      ],
+      "armadilhas": [
+        "Módulo de fachada: a fronteira existe no desenho, mas o código todo alcança o banco inteiro. Se um `SELECT` com join entre módulos é comum, a modularidade é decorativa.",
+        "Sem verificação automática de fronteira, a degradação é silenciosa — vale uma checagem de dependências no CI."
+      ],
+      "conexoes": [
+        {"alvo": "Microsserviços", "nota": "o destino natural da extração quando um módulo precisa de autonomia de deploy"},
+        {"alvo": "Bounded Context", "nota": "é a fronteira de domínio que desenha onde cortar cada módulo"},
+        {"alvo": "Arquitetura Hexagonal", "nota": "dá a mecânica de portas e adaptadores que mantém o módulo isolado"},
+        {"alvo": "Integração Contínua", "nota": "é onde a checagem de fronteiras precisa rodar para não apodrecer"},
+        {"alvo": "Acoplamento e Coesão", "nota": "a métrica que diz se seus módulos são módulos ou só pastas"}
+      ],
+      "veja_tambem": ["Domain-Driven Design", "Arquitetura em Camadas", "Clean Architecture"]
+    },
+    {
+      "id": "microsservicos",
+      "titulo": "Microsserviços",
+      "tags": ["arquitetura", "distribuido", "escala"],
+      "sintese": "Serviços independentes, cada um com seu deploy e seu banco — você troca simplicidade local por autonomia de times e escala seletiva.",
+      "definicao": [
+        "Microsserviços são um estilo arquitetural em que o sistema é decomposto em serviços pequenos, implantados de forma independente, donos do seu próprio estado e comunicando-se por rede.",
+        "A autonomia é o produto que você compra: dois serviços podem evoluir, escalar e cair sem se arrastar mutuamente."
+      ],
+      "como_funciona": [
+        "Cada serviço tem pipeline próprio, banco próprio e contrato de API versionado; a coordenação de escritas entre serviços passa a usar eventos ou sagas, não transação distribuída.",
+        "O preço aparece em três lugares: latência de rede, depuração distribuída e consistência — o sistema passa a ter estados intermediários legítimos."
+      ],
+      "quando_usar": [
+        "Quando o gargalo é organizacional: times se bloqueando no mesmo deploy, ou partes do sistema com cadência e escala radicalmente diferentes.",
+        "Quando você já conhece as fronteiras do domínio — distribuir fronteiras erradas é multiplicar o custo do erro."
+      ],
+      "armadilhas": [
+        "Microsserviços prematuros: fronteira errada vira chamada de rede dentro de transação, e você paga juros compostos em latência e complexidade.",
+        "Monólito distribuído: serviços que só compilam, testam e implantam juntos — todo o custo, nenhum benefício.",
+        "Compartilhar banco entre serviços desfaz a única vantagem estrutural do estilo."
+      ],
+      "conexoes": [
+        {"alvo": "Monólito Modular", "nota": "o caminho de entrada mais seguro: modularize primeiro, extraia depois"},
+        {"alvo": "Consistência Eventual", "nota": "sem transação distribuída, o estado fica temporariamente divergente por design"},
+        {"alvo": "Padrão Outbox", "nota": "garante que o evento seja publicado se, e somente se, o banco confirmou"},
+        {"alvo": "Observabilidade", "nota": "sem rastreamento distribuído, um request entre 6 serviços é invisível"},
+        {"alvo": "Testes de Contrato", "nota": "substitui o teste fim-a-fim que fica caro demais de manter"},
+        {"alvo": "Context Map", "nota": "o mapa das relações entre times/serviços que evita integrações acidentais"}
+      ],
+      "veja_tambem": ["Arquitetura Orientada a Eventos", "Entrega Contínua e Deploy"]
+    },
+    {
+      "id": "arquitetura-hexagonal",
+      "titulo": "Arquitetura Hexagonal",
+      "tags": ["arquitetura", "portas-e-adaptadores", "testabilidade"],
+      "sintese": "O domínio no centro, o mundo lá fora atrás de adaptadores: banco, HTTP e filas são detalhes plugáveis, não a estrutura do sistema.",
+      "definicao": [
+        "Também chamada de Portas e Adaptadores, coloca a lógica de negócio no centro e define portas (interfaces que o domínio precisa) e adaptadores (implementações concretas que falam com o mundo).",
+        "O domínio declara o que precisa — `RepositorioDeContratos` — e não sabe se por trás existe Postgres, um arquivo ou um stub de teste."
+      ],
+      "como_funciona": [
+        "Dependências apontam para dentro: adaptador conhece a porta, a porta não conhece o adaptador. Trocar Postgres por DynamoDB é escrever um adaptador novo, não reescrever regras.",
+        "Na prática, o teste de unidade do domínio roda sem banco, sem rede e sem framework — o que derruba o tempo de feedback de minutos para milissegundos."
+      ],
+      "quando_usar": [
+        "Sistemas com regras de negócio ricas, que precisam sobreviver a trocas de tecnologia e a uma suíte de testes rápida.",
+        "Sempre que a pergunta *como testo isso sem subir metade do mundo?* aparecer com frequência."
+      ],
+      "armadilhas": [
+        "Hexagonal de fachada: interfaces para tudo, incluindo o que nunca muda. Cada abstração precisa pagar aluguel.",
+        "Confundir a arquitetura com a estrutura de pastas — `adapters/`, `ports/` e `domain/` sem inversão real de dependência não muda nada."
+      ],
+      "conexoes": [
+        {"alvo": "Inversão de Dependência", "nota": "o princípio que a hexagonal aplica em escala de sistema"},
+        {"alvo": "Clean Architecture", "nota": "mesma ideia, com vocabulário de camadas e regra de dependência explícita"},
+        {"alvo": "Arquitetura em Camadas", "nota": "o modelo tradicional que a hexagonal corrige quando camadas vazam"},
+        {"alvo": "Test Doubles", "nota": "a porta é justamente o ponto onde um dublê entra sem gambiarra"},
+        {"alvo": "Pirâmide de Testes", "nota": "com o domínio isolado, a base da pirâmide fica barata e estável"}
+      ],
+      "veja_tambem": ["SOLID", "Monólito Modular", "Entidade, Value Object e Agregado"]
+    },
+    {
+      "id": "arquitetura-em-camadas",
+      "titulo": "Arquitetura em Camadas",
+      "tags": ["arquitetura", "camadas", "basico"],
+      "sintese": "Apresentação, aplicação, domínio e infraestrutura empilhadas: simples de explicar, perigosa de manter quando a pilha vira cebola furada.",
+      "definicao": [
+        "Estilo clássico em que o sistema é organizado em camadas horizontais, cada uma só podendo chamar a camada imediatamente abaixo.",
+        "A promessa é separar preocupações; o risco é o domínio virar um DTO anêmico espremido entre controller e repositório."
+      ],
+      "como_funciona": [
+        "Controller recebe HTTP, serviço de aplicação orquestra, domínio decide, infraestrutura persiste. A regra é de cima para baixo.",
+        "O fracasso típico é o *vazamento*: regras de negócio migram para o serviço de aplicação, e a camada de domínio passa a ser só um monte de getters e setters."
+      ],
+      "quando_usar": [
+        "CRUDs, sistemas de baixa complexidade de regras e times pequenos — a curva de aprendizado é a menor possível.",
+        "Como ponto de partida honesto, desde que você saiba quais sinais indicam a hora de evoluir."
+      ],
+      "armadilhas": [
+        "Camada de domínio anêmica: entidades sem comportamento e serviços com 800 linhas de ifs de negócio.",
+        "Pular camadas por conveniência (controller consultando repositório direto) destrói o contrato implícito da pilha."
+      ],
+      "conexoes": [
+        {"alvo": "Arquitetura Hexagonal", "nota": "a evolução quando a pilha vertical começa a vazar regras"},
+        {"alvo": "Clean Architecture", "nota": "formaliza a mesma pilha com a regra de dependência apontando para o domínio"},
+        {"alvo": "Acoplamento e Coesão", "nota": "vazamento de camada é, na prática, acoplamento indevido"},
+        {"alvo": "Entidade, Value Object e Agregado", "nota": "é o que impede a camada de domínio de virar DTO anêmico"}
+      ],
+      "veja_tambem": ["Monólito Modular", "ORM como Abstração com Vazamento"]
+    },
+    {
+      "id": "arquitetura-orientada-a-eventos",
+      "titulo": "Arquitetura Orientada a Eventos",
+      "tags": ["arquitetura", "eventos", "assincrono"],
+      "sintese": "Componentes reagem a fatos que já aconteceram, em vez de serem comandados em sequência — desacoplamento temporal em troca de ordem e rastreabilidade.",
+      "definicao": [
+        "Estilo em que a comunicação se dá por eventos: um produtor publica um fato (`ContratoAssinado`) e consumidores interessados reagem, sem conhecer quem produziu.",
+        "O desacoplamento é temporal também: o produtor não espera, não sabe quem consome e nem se alguém consome."
+      ],
+      "como_funciona": [
+        "Um broker (fila ou log) transporta eventos; contratos de evento são versionados como APIs, porque são APIs — quebrar o schema quebra consumidores invisíveis.",
+        "O sistema passa a ter fluxos que ninguém lê de cima para baixo: o rastro do comportamento está no log de eventos, não no call stack."
+      ],
+      "quando_usar": [
+        "Quando há trabalho assíncrono natural (notificações, integrações, projeções de leitura) ou necessidade de auditar cada fato do domínio.",
+        "Para integrar contextos distintos sem criar dependência síncrona em cascata."
+      ],
+      "armadilhas": [
+        "Evento usado como comando disfarçado (`ProcessarPagamentoRequested`) — aí o acoplamento volta, só que mais difícil de ver.",
+        "Ordenação e duplicidade: consumidores precisam ser idempotentes, porque *at least once* é a entrega padrão.",
+        "Sem schema registry ou versionamento, uma mudança de campo derruba consumidores silenciosamente."
+      ],
+      "conexoes": [
+        {"alvo": "Microsserviços", "nota": "o meio de comunicação que substitui a transação entre serviços"},
+        {"alvo": "Consistência Eventual", "nota": "reagir a fatos significa aceitar janelas de divergência"},
+        {"alvo": "Padrão Outbox", "nota": "é o que torna a publicação do evento confiável"},
+        {"alvo": "Observabilidade", "nota": "fluxo assíncrono sem correlação de IDs é impossível de depurar"},
+        {"alvo": "Testes de Contrato", "nota": "valida o schema do evento entre produtor e consumidores"}
+      ],
+      "veja_tambem": ["Bounded Context", "Transações e Consistência"]
+    }
+  ]
+}

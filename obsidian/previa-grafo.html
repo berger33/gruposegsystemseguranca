@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Prévia do grafo — Engenharia de Software & Arquitetura</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0f1115; color: #e6e8ee;
+         font: 14px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { position: fixed; inset: 0 0 auto 0; padding: 14px 20px;
+           background: linear-gradient(#0f1115ee, #0f111500); z-index: 2; }
+  h1 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: .2px; }
+  .sub { color: #8b93a7; font-size: 12.5px; margin-top: 3px; }
+  .stats { margin-top: 8px; display: flex; gap: 16px; flex-wrap: wrap;
+           font-size: 12px; color: #9aa3b8; }
+  .stats b { color: #e6e8ee; font-weight: 600; }
+  #lenda { position: fixed; right: 18px; bottom: 16px; font-size: 12px;
+           display: grid; gap: 5px; z-index: 2; }
+  #lenda span { display: flex; align-items: center; gap: 7px; color: #b9c0d0; }
+  #lenda i { width: 10px; height: 10px; border-radius: 50%; display: block; }
+  #info { position: fixed; left: 18px; bottom: 16px; font-size: 12px;
+          color: #8b93a7; z-index: 2; max-width: 46ch; }
+  canvas { display: block; }
+  .node-label { fill: #cfd6e6; font-size: 10px; paint-order: stroke;
+                stroke: #0f1115; stroke-width: 3px; stroke-linejoin: round; }
+  .node-label.hub { font-size: 12px; font-weight: 600; fill: #ffffff; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Engenharia de Software & Arquitetura</h1>
+  <div class="sub">Prévia do grafo — o Obsidian vai renderizar a mesma topologia no Graph View.</div>
+  <div class="stats">
+    <span><b>39</b> nós</span><span><b>125</b> arestas</span>
+    <span>grau médio <b>6.41</b></span><span>densidade <b>0.169</b></span>
+  </div>
+</header>
+<div id="lenda"></div>
+<div id="info">arraste os nós · scroll para zoom · clique para destacar vizinhos</div>
+<canvas id="c"></canvas>
+<script>
+const DADOS = {"nodes": [{"id": "Acoplamento e Coesão", "grupo": "MOC - Design de Código", "tipo": "ficha", "grau": 9}, {"id": "Arquitetura Hexagonal", "grupo": "MOC - Arquitetura de Software", "tipo": "ficha", "grau": 5}, {"id": "Arquitetura Orientada a Eventos", "grupo": "MOC - Arquitetura de Software", "tipo": "ficha", "grau": 5}, {"id": "Arquitetura em Camadas", "grupo": "MOC - Arquitetura de Software", "tipo": "ficha", "grau": 5}, {"id": "Bounded Context", "grupo": "MOC - Domínio e Modelagem", "tipo": "ficha", "grau": 5}, {"id": "Clean Architecture", "grupo": "MOC - Design de Código", "tipo": "ficha", "grau": 5}, {"id": "Cobertura de Código vs Confiança", "grupo": "MOC - Testes e Qualidade", "tipo": "ficha", "grau": 6}, {"id": "Composição sobre Herança", "grupo": "MOC - Design de Código", "tipo": "ficha", "grau": 5}, {"id": "Consistência Eventual", "grupo": "MOC - Dados e Persistência", "tipo": "ficha", "grau": 5}, {"id": "Context Map", "grupo": "MOC - Domínio e Modelagem", "tipo": "ficha", "grau": 5}, {"id": "Domain-Driven Design", "grupo": "MOC - Domínio e Modelagem", "tipo": "ficha", "grau": 5}, {"id": "Entidade, Value Object e Agregado", "grupo": "MOC - Domínio e Modelagem", "tipo": "ficha", "grau": 7}, {"id": "Entrega Contínua e Deploy", "grupo": "MOC - Entrega e Operação", "tipo": "ficha", "grau": 6}, {"id": "Feature Flags", "grupo": "MOC - Entrega e Operação", "tipo": "ficha", "grau": 5}, {"id": "Integração Contínua", "grupo": "MOC - Entrega e Operação", "tipo": "ficha", "grau": 6}, {"id": "Inversão de Dependência", "grupo": "MOC - Design de Código", "tipo": "ficha", "grau": 5}, {"id": "Linguagem Ubíqua", "grupo": "MOC - Domínio e Modelagem", "tipo": "ficha", "grau": 5}, {"id": "MOC - Arquitetura de Software", "grupo": "MOC - Arquitetura de Software", "tipo": "moc", "grau": 11}, {"id": "MOC - Dados e Persistência", "grupo": "MOC - Dados e Persistência", "tipo": "moc", "grau": 12}, {"id": "MOC - Design de Código", "grupo": "MOC - Design de Código", "tipo": "moc", "grau": 11}, {"id": "MOC - Domínio e Modelagem", "grupo": "MOC - Domínio e Modelagem", "tipo": "moc", "grau": 11}, {"id": "MOC - Engenharia de Software", "grupo": "índice", "tipo": "indice", "grau": 6}, {"id": "MOC - Entrega e Operação", "grupo": "MOC - Entrega e Operação", "tipo": "moc", "grau": 12}, {"id": "MOC - Testes e Qualidade", "grupo": "MOC - Testes e Qualidade", "tipo": "moc", "grau": 11}, {"id": "Microsserviços", "grupo": "MOC - Arquitetura de Software", "tipo": "ficha", "grau": 5}, {"id": "Migrações de Banco", "grupo": "MOC - Dados e Persistência", "tipo": "ficha", "grau": 5}, {"id": "Modelagem Relacional", "grupo": "MOC - Dados e Persistência", "tipo": "ficha", "grau": 5}, {"id": "Monólito Modular", "grupo": "MOC - Arquitetura de Software", "tipo": "ficha", "grau": 5}, {"id": "ORM como Abstração com Vazamento", "grupo": "MOC - Dados e Persistência", "tipo": "ficha", "grau": 5}, {"id": "Observabilidade", "grupo": "MOC - Entrega e Operação", "tipo": "ficha", "grau": 8}, {"id": "Padrão Outbox", "grupo": "MOC - Dados e Persistência", "tipo": "ficha", "grau": 5}, {"id": "Pirâmide de Testes", "grupo": "MOC - Testes e Qualidade", "tipo": "ficha", "grau": 6}, {"id": "SOLID", "grupo": "MOC - Design de Código", "tipo": "ficha", "grau": 5}, {"id": "Test Doubles", "grupo": "MOC - Testes e Qualidade", "tipo": "ficha", "grau": 8}, {"id": "Testes de Contrato", "grupo": "MOC - Testes e Qualidade", "tipo": "ficha", "grau": 5}, {"id": "Testes de Integração com Dependências Reais", "grupo": "MOC - Testes e Qualidade", "tipo": "ficha", "grau": 5}, {"id": "Transações e Consistência", "grupo": "MOC - Dados e Persistência", "tipo": "ficha", "grau": 5}, {"id": "Trunk-Based Development", "grupo": "MOC - Entrega e Operação", "tipo": "ficha", "grau": 5}, {"id": "Versionamento Semântico", "grupo": "MOC - Entrega e Operação", "tipo": "ficha", "grau": 5}], "links": [{"source": "Acoplamento e Coesão", "target": "Arquitetura em Camadas", "peso": 2}, {"source": "Acoplamento e Coesão", "target": "Composição sobre Herança", "peso": 2}, {"source": "Acoplamento e Coesão", "target": "Context Map", "peso": 2}, {"source": "Acoplamento e Coesão", "target": "Feature Flags", "peso": 2}, {"source": "Acoplamento e Coesão", "target": "Inversão de Dependência", "peso": 2}, {"source": "Acoplamento e Coesão", "target": "Linguagem Ubíqua", "peso": 2}, {"source": "Acoplamento e Coesão", "target": "MOC - Design de Código", "peso": 3}, {"source": "Acoplamento e Coesão", "target": "Monólito Modular", "peso": 2}, {"source": "Acoplamento e Coesão", "target": "SOLID", "peso": 2}, {"source": "Arquitetura Hexagonal", "target": "Arquitetura em Camadas", "peso": 2}, {"source": "Arquitetura Hexagonal", "target": "MOC - Arquitetura de Software", "peso": 3}, {"source": "Arquitetura Hexagonal", "target": "Monólito Modular", "peso": 2}, {"source": "Arquitetura Hexagonal", "target": "ORM como Abstração com Vazamento", "peso": 2}, {"source": "Arquitetura Hexagonal", "target": "Pirâmide de Testes", "peso": 2}, {"source": "Arquitetura Orientada a Eventos", "target": "Context Map", "peso": 2}, {"source": "Arquitetura Orientada a Eventos", "target": "MOC - Arquitetura de Software", "peso": 3}, {"source": "Arquitetura Orientada a Eventos", "target": "Observabilidade", "peso": 2}, {"source": "Arquitetura Orientada a Eventos", "target": "Padrão Outbox", "peso": 2}, {"source": "Arquitetura Orientada a Eventos", "target": "Testes de Contrato", "peso": 2}, {"source": "Arquitetura em Camadas", "target": "Entidade, Value Object e Agregado", "peso": 2}, {"source": "Arquitetura em Camadas", "target": "MOC - Arquitetura de Software", "peso": 3}, {"source": "Arquitetura em Camadas", "target": "ORM como Abstração com Vazamento", "peso": 2}, {"source": "Bounded Context", "target": "Context Map", "peso": 2}, {"source": "Bounded Context", "target": "Domain-Driven Design", "peso": 2}, {"source": "Bounded Context", "target": "Linguagem Ubíqua", "peso": 2}, {"source": "Bounded Context", "target": "MOC - Domínio e Modelagem", "peso": 3}, {"source": "Bounded Context", "target": "Microsserviços", "peso": 2}, {"source": "Clean Architecture", "target": "Domain-Driven Design", "peso": 2}, {"source": "Clean Architecture", "target": "Inversão de Dependência", "peso": 2}, {"source": "Clean Architecture", "target": "MOC - Design de Código", "peso": 3}, {"source": "Clean Architecture", "target": "SOLID", "peso": 2}, {"source": "Clean Architecture", "target": "Test Doubles", "peso": 2}, {"source": "Cobertura de Código vs Confiança", "target": "MOC - Testes e Qualidade", "peso": 3}, {"source": "Cobertura de Código vs Confiança", "target": "Modelagem Relacional", "peso": 2}, {"source": "Cobertura de Código vs Confiança", "target": "Observabilidade", "peso": 2}, {"source": "Cobertura de Código vs Confiança", "target": "Pirâmide de Testes", "peso": 2}, {"source": "Cobertura de Código vs Confiança", "target": "Test Doubles", "peso": 2}, {"source": "Cobertura de Código vs Confiança", "target": "Testes de Integração com Dependências Reais", "peso": 2}, {"source": "Composição sobre Herança", "target": "Entidade, Value Object e Agregado", "peso": 2}, {"source": "Composição sobre Herança", "target": "MOC - Design de Código", "peso": 3}, {"source": "Composição sobre Herança", "target": "SOLID", "peso": 2}, {"source": "Composição sobre Herança", "target": "Test Doubles", "peso": 2}, {"source": "Consistência Eventual", "target": "Entidade, Value Object e Agregado", "peso": 2}, {"source": "Consistência Eventual", "target": "MOC - Dados e Persistência", "peso": 3}, {"source": "Consistência Eventual", "target": "Observabilidade", "peso": 2}, {"source": "Consistência Eventual", "target": "Padrão Outbox", "peso": 2}, {"source": "Consistência Eventual", "target": "Transações e Consistência", "peso": 2}, {"source": "Context Map", "target": "MOC - Domínio e Modelagem", "peso": 3}, {"source": "Context Map", "target": "Versionamento Semântico", "peso": 2}, {"source": "Domain-Driven Design", "target": "Linguagem Ubíqua", "peso": 2}, {"source": "Domain-Driven Design", "target": "MOC - Domínio e Modelagem", "peso": 3}, {"source": "Domain-Driven Design", "target": "Monólito Modular", "peso": 2}, {"source": "Entidade, Value Object e Agregado", "target": "Linguagem Ubíqua", "peso": 2}, {"source": "Entidade, Value Object e Agregado", "target": "MOC - Domínio e Modelagem", "peso": 3}, {"source": "Entidade, Value Object e Agregado", "target": "Modelagem Relacional", "peso": 2}, {"source": "Entidade, Value Object e Agregado", "target": "Transações e Consistência", "peso": 2}, {"source": "Entrega Contínua e Deploy", "target": "Feature Flags", "peso": 2}, {"source": "Entrega Contínua e Deploy", "target": "Integração Contínua", "peso": 2}, {"source": "Entrega Contínua e Deploy", "target": "MOC - Entrega e Operação", "peso": 3}, {"source": "Entrega Contínua e Deploy", "target": "Migrações de Banco", "peso": 2}, {"source": "Entrega Contínua e Deploy", "target": "Observabilidade", "peso": 2}, {"source": "Entrega Contínua e Deploy", "target": "Trunk-Based Development", "peso": 2}, {"source": "Feature Flags", "target": "MOC - Entrega e Operação", "peso": 3}, {"source": "Feature Flags", "target": "Observabilidade", "peso": 2}, {"source": "Feature Flags", "target": "Trunk-Based Development", "peso": 2}, {"source": "Integração Contínua", "target": "MOC - Entrega e Operação", "peso": 3}, {"source": "Integração Contínua", "target": "Migrações de Banco", "peso": 2}, {"source": "Integração Contínua", "target": "Monólito Modular", "peso": 2}, {"source": "Integração Contínua", "target": "Pirâmide de Testes", "peso": 2}, {"source": "Integração Contínua", "target": "Trunk-Based Development", "peso": 2}, {"source": "Inversão de Dependência", "target": "MOC - Design de Código", "peso": 3}, {"source": "Inversão de Dependência", "target": "SOLID", "peso": 2}, {"source": "Inversão de Dependência", "target": "Test Doubles", "peso": 2}, {"source": "Linguagem Ubíqua", "target": "MOC - Domínio e Modelagem", "peso": 3}, {"source": "MOC - Arquitetura de Software", "target": "MOC - Dados e Persistência", "peso": 3}, {"source": "MOC - Arquitetura de Software", "target": "MOC - Design de Código", "peso": 3}, {"source": "MOC - Arquitetura de Software", "target": "MOC - Domínio e Modelagem", "peso": 3}, {"source": "MOC - Arquitetura de Software", "target": "MOC - Engenharia de Software", "peso": 3}, {"source": "MOC - Arquitetura de Software", "target": "MOC - Entrega e Operação", "peso": 3}, {"source": "MOC - Arquitetura de Software", "target": "MOC - Testes e Qualidade", "peso": 3}, {"source": "MOC - Arquitetura de Software", "target": "Microsserviços", "peso": 3}, {"source": "MOC - Arquitetura de Software", "target": "Monólito Modular", "peso": 3}, {"source": "MOC - Dados e Persistência", "target": "MOC - Design de Código", "peso": 3}, {"source": "MOC - Dados e Persistência", "target": "MOC - Domínio e Modelagem", "peso": 3}, {"source": "MOC - Dados e Persistência", "target": "MOC - Engenharia de Software", "peso": 3}, {"source": "MOC - Dados e Persistência", "target": "MOC - Entrega e Operação", "peso": 3}, {"source": "MOC - Dados e Persistência", "target": "MOC - Testes e Qualidade", "peso": 3}, {"source": "MOC - Dados e Persistência", "target": "Migrações de Banco", "peso": 3}, {"source": "MOC - Dados e Persistência", "target": "Modelagem Relacional", "peso": 3}, {"source": "MOC - Dados e Persistência", "target": "ORM como Abstração com Vazamento", "peso": 3}, {"source": "MOC - Dados e Persistência", "target": "Padrão Outbox", "peso": 3}, {"source": "MOC - Dados e Persistência", "target": "Transações e Consistência", "peso": 3}, {"source": "MOC - Design de Código", "target": "MOC - Domínio e Modelagem", "peso": 3}, {"source": "MOC - Design de Código", "target": "MOC - Engenharia de Software", "peso": 3}, {"source": "MOC - Design de Código", "target": "MOC - Entrega e Operação", "peso": 3}, {"source": "MOC - Design de Código", "target": "MOC - Testes e Qualidade", "peso": 3}, {"source": "MOC - Design de Código", "target": "SOLID", "peso": 3}, {"source": "MOC - Domínio e Modelagem", "target": "MOC - Engenharia de Software", "peso": 3}, {"source": "MOC - Domínio e Modelagem", "target": "MOC - Entrega e Operação", "peso": 3}, {"source": "MOC - Domínio e Modelagem", "target": "MOC - Testes e Qualidade", "peso": 3}, {"source": "MOC - Engenharia de Software", "target": "MOC - Entrega e Operação", "peso": 3}, {"source": "MOC - Engenharia de Software", "target": "MOC - Testes e Qualidade", "peso": 3}, {"source": "MOC - Entrega e Operação", "target": "MOC - Testes e Qualidade", "peso": 3}, {"source": "MOC - Entrega e Operação", "target": "Observabilidade", "peso": 3}, {"source": "MOC - Entrega e Operação", "target": "Trunk-Based Development", "peso": 3}, {"source": "MOC - Entrega e Operação", "target": "Versionamento Semântico", "peso": 3}, {"source": "MOC - Testes e Qualidade", "target": "Pirâmide de Testes", "peso": 3}, {"source": "MOC - Testes e Qualidade", "target": "Test Doubles", "peso": 3}, {"source": "MOC - Testes e Qualidade", "target": "Testes de Contrato", "peso": 3}, {"source": "MOC - Testes e Qualidade", "target": "Testes de Integração com Dependências Reais", "peso": 3}, {"source": "Microsserviços", "target": "Testes de Contrato", "peso": 2}, {"source": "Microsserviços", "target": "Transações e Consistência", "peso": 2}, {"source": "Microsserviços", "target": "Versionamento Semântico", "peso": 2}, {"source": "Migrações de Banco", "target": "Modelagem Relacional", "peso": 2}, {"source": "Migrações de Banco", "target": "Testes de Integração com Dependências Reais", "peso": 2}, {"source": "Modelagem Relacional", "target": "ORM como Abstração com Vazamento", "peso": 2}, {"source": "ORM como Abstração com Vazamento", "target": "Observabilidade", "peso": 2}, {"source": "Observabilidade", "target": "Padrão Outbox", "peso": 2}, {"source": "Padrão Outbox", "target": "Transações e Consistência", "peso": 2}, {"source": "Pirâmide de Testes", "target": "Test Doubles", "peso": 2}, {"source": "Pirâmide de Testes", "target": "Testes de Integração com Dependências Reais", "peso": 2}, {"source": "Test Doubles", "target": "Testes de Contrato", "peso": 2}, {"source": "Test Doubles", "target": "Testes de Integração com Dependências Reais", "peso": 2}, {"source": "Testes de Contrato", "target": "Versionamento Semântico", "peso": 2}, {"source": "Trunk-Based Development", "target": "Versionamento Semântico", "peso": 2}]};
+const CORES = {"índice": "#f4f6fb", "MOC - Arquitetura de Software": "#7dd3fc", "MOC - Domínio e Modelagem": "#c4b5fd", "MOC - Design de Código": "#86efac", "MOC - Dados e Persistência": "#fcd34d", "MOC - Testes e Qualidade": "#fca5a5", "MOC - Entrega e Operação": "#fdba74"};
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, dpr = window.devicePixelRatio || 1;
+let transform = { x: 0, y: 0, k: 1 };
+let drag = null, hover = null, destaque = null;
+
+function resize() {
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize); resize();
+
+// ---- lenda
+const lenda = document.getElementById('lenda');
+Object.entries(CORES).forEach(([nome, cor]) => {
+  const s = document.createElement('span');
+  s.innerHTML = '<i style="background:' + cor + '"></i>' + nome;
+  lenda.appendChild(s);
+});
+
+// ---- grafo
+const nodes = DADOS.nodes.map(n => ({ ...n, x: Math.random() * W, y: Math.random() * H, vx: 0, vy: 0 }));
+const byId = new Map(nodes.map(n => [n.id, n]));
+const links = DADOS.links.map(l => ({ source: byId.get(l.source), target: byId.get(l.target), peso: l.peso }));
+const viz = new Map(nodes.map(n => [n.id, new Set()]));
+links.forEach(l => { viz.get(l.source.id).add(l.target.id); viz.get(l.target.id).add(l.source.id); });
+
+function step(alpha) {
+  const rep = 5200, centro = 0.012;
+  for (let i = 0; i < nodes.length; i++) {
+    const a = nodes[i];
+    for (let j = i + 1; j < nodes.length; j++) {
+      const b = nodes[j];
+      let dx = b.x - a.x, dy = b.y - a.y;
+      let d2 = dx * dx + dy * dy || 0.01;
+      const f = rep / d2;
+      const d = Math.sqrt(d2);
+      const fx = (dx / d) * f, fy = (dy / d) * f;
+      a.vx -= fx; a.vy -= fy; b.vx += fx; b.vy += fy;
+    }
+  }
+  for (const l of links) {
+    const a = l.source, b = l.target;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const d = Math.hypot(dx, dy) || 0.01;
+    const alvo = 70 + (3 - l.peso) * 26;
+    const f = (d - alvo) * 0.02 * l.peso;
+    const fx = (dx / d) * f, fy = (dy / d) * f;
+    a.vx += fx; a.vy += fy; b.vx -= fx; b.vy -= fy;
+  }
+  for (const n of nodes) {
+    n.vx += (W / 2 - n.x) * centro;
+    n.vy += (H / 2 - n.y) * centro;
+    if (n === drag) { n.vx = 0; n.vy = 0; continue; }
+    n.vx *= 0.82; n.vy *= 0.82;
+    n.x += n.vx * alpha; n.y += n.vy * alpha;
+  }
+}
+
+function raio(n) { return n.tipo === 'indice' ? 13 : n.tipo === 'moc' ? 10 : 3.5 + n.grau * 0.55; }
+
+function desenhar() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.save();
+  ctx.translate(transform.x, transform.y); ctx.scale(transform.k, transform.k);
+
+  const foco = destaque || (hover && hover.id);
+  for (const l of links) {
+    const apagado = foco && l.source.id !== foco && l.target.id !== foco;
+    ctx.beginPath();
+    ctx.moveTo(l.source.x, l.source.y); ctx.lineTo(l.target.x, l.target.y);
+    ctx.strokeStyle = apagado ? 'rgba(120,130,150,0.06)'
+      : 'rgba(150,170,210,' + (0.10 + l.peso * 0.07) + ')';
+    ctx.lineWidth = (foco && !apagado && (l.source.id === foco || l.target.id === foco)) ? 1.6 : 0.7;
+    ctx.stroke();
+  }
+  for (const n of nodes) {
+    const apagado = foco && n.id !== foco && !viz.get(foco).has(n.id);
+    const r = raio(n);
+    ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = apagado ? 'rgba(90,98,115,0.25)' : (CORES[n.grupo] || '#8ab4f8');
+    ctx.fill();
+    if (n.tipo !== 'ficha' || r > 7) {
+      ctx.strokeStyle = 'rgba(15,17,21,0.9)'; ctx.lineWidth = 2; ctx.stroke();
+    }
+  }
+  const LabelEm = transform.k > 0.55;
+  if (LabelEm) {
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (const n of nodes) {
+      const mostra = n.tipo !== 'ficha' || transform.k > 1.1 || n.id === foco ||
+                     (destaque && viz.get(destaque).has(n.id));
+      if (!mostra) continue;
+      const apagado = foco && n.id !== foco && !viz.get(foco).has(n.id);
+      ctx.globalAlpha = apagado ? 0.25 : 1;
+      ctx.fillStyle = n.tipo === 'ficha' ? '#cfd6e6' : '#ffffff';
+      ctx.font = (n.tipo === 'ficha' ? '10px ' : '600 12px ') +
+                 '-apple-system, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(n.id, n.x, n.y - raio(n) - 7);
+      ctx.globalAlpha = 1;
+    }
+  }
+  ctx.restore();
+}
+
+let alpha = 1;
+function loop() {
+  step(alpha);
+  if (alpha > 0.05) alpha *= 0.994;
+  desenhar();
+  requestAnimationFrame(loop);
+}
+loop();
+
+// ---- interação
+function paraGrafo(cx, cy) { return { x: (cx - transform.x) / transform.k, y: (cy - transform.y) / transform.k }; }
+function achar(p) {
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const n = nodes[i];
+    if (Math.hypot(n.x - p.x, n.y - p.y) <= raio(n) + 4) return n;
+  }
+  return null;
+}
+canvas.addEventListener('mousedown', e => { drag = achar(paraGrafo(e.clientX, e.clientY)); if (drag) alpha = Math.max(alpha, 0.5); });
+window.addEventListener('mouseup', () => { drag = null; });
+canvas.addEventListener('mousemove', e => {
+  const p = paraGrafo(e.clientX, e.clientY);
+  if (drag) { drag.x = p.x; drag.y = p.y; drag.vx = 0; drag.vy = 0; }
+  hover = achar(p);
+  canvas.style.cursor = hover ? 'pointer' : 'grab';
+  document.getElementById('info').textContent = hover
+    ? hover.id + ' · ' + hover.grupo + ' · grau ' + hover.grau
+    : 'arraste os nós · scroll para zoom · clique para destacar vizinhos';
+});
+canvas.addEventListener('click', e => {
+  const n = achar(paraGrafo(e.clientX, e.clientY));
+  destaque = n && destaque !== n.id ? n.id : null;
+});
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const p = paraGrafo(e.clientX, e.clientY);
+  const k = Math.min(4, Math.max(0.25, transform.k * (e.deltaY < 0 ? 1.12 : 0.89)));
+  transform.k = k;
+  transform.x = e.clientX - p.x * k; transform.y = e.clientY - p.y * k;
+}, { passive: false });
+</script>
+</body>
+</html>

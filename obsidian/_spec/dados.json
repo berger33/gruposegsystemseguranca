@@ -1,0 +1,188 @@
+{
+  "cluster": {
+    "id": "dados",
+    "titulo": "MOC - Dados e Persistência",
+    "resumo": "Eixo do estado: onde a verdade mora, como ela muda com segurança e o que acontece quando a escrita e a leitura precisam de formas diferentes."
+  },
+  "notas": [
+    {
+      "id": "modelagem-relacional",
+      "titulo": "Modelagem Relacional",
+      "tags": ["dados", "modelagem", "sql"],
+      "sintese": "Normalizar até as regras ficarem explícitas, desnormalizar quando a leitura exigir — o modelo é a primeira documentação do domínio.",
+      "definicao": [
+        "Modelagem relacional organiza dados em tabelas, chaves e relacionamentos, com normalização para eliminar redundância e anomalias de escrita.",
+        "Normalização é sobre facilitar a escrita correta; desnormalização é sobre tornar a leitura viável — conhecer os dois lados é o jogo."
+      ],
+      "como_funciona": [
+        "Você identifica entidades, cardinalidades e restrições (PK, FK, UNIQUE, CHECK), e traduz regras de negócio em constraints que o banco impõe.",
+        "Índices e plano de execução entram depois: o modelo lógico é decidido antes da otimização."
+      ],
+      "quando_usar": [
+        "Sempre que houver integridade referencial importante e consultas ad-hoc imprevisíveis — SQL é imbatível aí.",
+        "Como base do modelo transacional, mesmo em arquiteturas que depois projetam leituras em outras estruturas."
+      ],
+      "armadilhas": [
+        "Modelar o banco como espelho das classes: herança e polimorfismo viram tabelas que ninguém consegue consultar.",
+        "Deixar integridade só na aplicação: sem UNIQUE e FK no banco, uma concorrência infeliz cria dados impossíveis."
+      ],
+      "conexoes": [
+        {"alvo": "Transações e Consistência", "nota": "constraints e transações são o que tornam o estado confiável"},
+        {"alvo": "Migrações de Banco", "nota": "modelo muda com o tempo, e a migração é o histórico dessa mudança"},
+        {"alvo": "ORM como Abstração com Vazamento", "nota": "o ORM traduz (e às vezes distorce) esse modelo para objetos"},
+        {"alvo": "Entidade, Value Object e Agregado", "nota": "agregado é uma fronteira lógica que nem sempre é uma tabela"},
+        {"alvo": "Cobertura de Código vs Confiança", "nota": "regras de integridade no banco pedem testes que usam banco real"}
+      ],
+      "veja_tambem": ["Testes de Integração com Dependências Reais", "Domain-Driven Design"]
+    },
+    {
+      "id": "orm-como-abstracao-com-vazamento",
+      "titulo": "ORM como Abstração com Vazamento",
+      "tags": ["dados", "orm", "performance", "tradeoff"],
+      "sintese": "O ORM acelera o começo e cobra depois: toda abstração deixa escapar o SQL que você não viu escrever.",
+      "definicao": [
+        "ORMs mapeiam tabelas para objetos e prometem que você não precisa pensar em SQL — mas consultas N+1, lazy loading e transações implícitas são o SQL voltando pela janela.",
+        "Lei do vazamento de abstrações: toda abstração não trivial vaza, e em persistência o vazamento custa ordens de magnitude de performance."
+      ],
+      "como_funciona": [
+        "Por padrão, o ORM carrega relacionamentos sob demanda: um loop sobre 100 pedidos dispara 100 consultas de itens.",
+        "A defesa é observar o SQL gerado (log, contador de queries no teste) e usar carregamento explícito ou consulta dedicada quando o acesso é em massa."
+      ],
+      "quando_usar": [
+        "Use para CRUD e operações sobre um agregado por vez — é onde o ganho de produtividade é real.",
+        "Saia dele (SQL cru ou query builder) para relatórios, agregações e qualquer leitura que cruze muitas tabelas."
+      ],
+      "armadilhas": [
+        "N+1 em produção: passa em teste com 3 registros, derruba o banco com 30 mil.",
+        "Entidades de domínio com anotações de persistência: o modelo fica refém do framework e a regra perde pureza."
+      ],
+      "conexoes": [
+        {"alvo": "Modelagem Relacional", "nota": "o ORM é a ponte entre o relacional e o objeto — e a ponte é onde se perde performance"},
+        {"alvo": "Arquitetura em Camadas", "nota": "entidade anotada é o vazamento clássico entre camadas"},
+        {"alvo": "Testes de Integração com Dependências Reais", "nota": "só banco real revela N+1 e comportamento de transação do ORM"},
+        {"alvo": "Observabilidade", "nota": "contar e medir queries é a forma de ver o vazamento acontecendo"},
+        {"alvo": "Arquitetura Hexagonal", "nota": "manter o ORM atrás de um repositório impede que ele contamine o domínio"}
+      ],
+      "veja_tambem": ["Migrações de Banco", "Acoplamento e Coesão"]
+    },
+    {
+      "id": "migracoes-de-banco",
+      "titulo": "Migrações de Banco",
+      "tags": ["dados", "migracao", "deploy"],
+      "sintese": "Mudança de schema é deploy com estado: precisa ser versionada, reversível em intenção e compatível com a versão anterior rodando.",
+      "definicao": [
+        "Migração é um script versionado que leva o banco de um estado a outro, aplicado de forma automatizada e repetível.",
+        "Em sistemas sem janela de parada, a migração precisa ser compatível com as duas versões do código que vão conviver durante o rollout."
+      ],
+      "como_funciona": [
+        "O padrão seguro é expandir e contrair: primeiro adiciona coluna nullable, depois o código passa a escrever nas duas, backfill em lote, migra a leitura, remove a antiga só numa release seguinte.",
+        "Cada passo é deployável sozinho, o que transforma uma mudança perigosa em cinco mudanças pequenas."
+      ],
+      "quando_usar": [
+        "Sempre que houver schema versionado — que é sempre, assim que mais de uma pessoa mexe no banco.",
+        "Obrigatoriamente quando Deploy e rollback acontecem sem parada."
+      ],
+      "armadilhas": [
+        "Migração destrutiva num passo só (`DROP COLUMN` junto com deploy): se precisar voltar, o dado já era.",
+        "Backfill numa transação gigante: trava a tabela, estoura o log e derruba o sistema — faça em lotes com pausa."
+      ],
+      "conexoes": [
+        {"alvo": "Entrega Contínua e Deploy", "nota": "migração é parte do pipeline: define se o deploy é reversível"},
+        {"alvo": "Integração Contínua", "nota": "rodar migrações em banco limpo no CI pega script quebrado antes da produção"},
+        {"alvo": "Modelagem Relacional", "nota": "migração é o histórico vivo do modelo"},
+        {"alvo": "Testes de Integração com Dependências Reais", "nota": "testar migração com mock não diz nada sobre o banco real"}
+      ],
+      "veja_tambem": ["Versionamento Semântico", "Transações e Consistência"]
+    },
+    {
+      "id": "transacoes-e-consistencia",
+      "titulo": "Transações e Consistência",
+      "tags": ["dados", "transacao", "acid"],
+      "sintese": "A transação é a menor unidade de verdade: tudo ou nada, e o nível de isolamento define o que você aceita enxergar no meio do caminho.",
+      "definicao": [
+        "Transação agrupa operações em uma unidade atômica (ACID): ou tudo é confirmado ou nada é.",
+        "Isolamento é o mais mal compreendido: read committed, repeatable read e serializable têm custos e anomalias diferentes."
+      ],
+      "como_funciona": [
+        "O banco garante que escritas concorrentes não deixem o estado pela metade; o nível de isolamento escolhido define se você pode ver leituras fantasmas ou não.",
+        "O raio da transação deve coincidir com uma invariante de negócio — em DDD, com um agregado."
+      ],
+      "quando_usar": [
+        "Sempre que duas escritas precisarem ser verdadeiras juntas (débito e crédito, contrato e sua primeira parcela).",
+        "Quando a pergunta *o que acontece se o processo cair no meio?* tiver resposta inaceitável."
+      ],
+      "armadilhas": [
+        "Transação longa aberta durante chamada de rede: lock retido por segundos vira fila de espera e timeout em cascata.",
+        "Achar que transação resolve tudo: invariantes que cruzam serviços exigem outro mecanismo, e aí entra a consistência eventual."
+      ],
+      "conexoes": [
+        {"alvo": "Consistência Eventual", "nota": "quando a invariante não cabe numa transação, você negocia tempo em vez de ordem"},
+        {"alvo": "Padrão Outbox", "nota": "mantém atomicidade entre escrita no banco e publicação de evento"},
+        {"alvo": "Entidade, Value Object e Agregado", "nota": "o agregado é o raio natural de uma transação"},
+        {"alvo": "Modelagem Relacional", "nota": "constraints são a última linha de defesa quando a aplicação erra"},
+        {"alvo": "Microsserviços", "nota": "transação distribuída é a armadilha clássica desse estilo"}
+      ],
+      "veja_tambem": ["Arquitetura Orientada a Eventos", "Testes de Integração com Dependências Reais"]
+    },
+    {
+      "id": "consistencia-eventual",
+      "titulo": "Consistência Eventual",
+      "tags": ["dados", "distribuido", "tradeoff"],
+      "sintese": "Aceitar que o sistema fica divergente por alguns instantes em troca de disponibilidade — desde que convirja, e você saiba quanto tempo leva.",
+      "definicao": [
+        "Garantia de que, na ausência de novas escritas, todas as réplicas/serviços convergem para o mesmo estado — sem prometer quando.",
+        "Não é desculpa para dado errado: é um contrato sobre a janela de divergência que o negócio aceita."
+      ],
+      "como_funciona": [
+        "Escrita é confirmada localmente e propagada de forma assíncrona; leituras podem ver estados defasados por milissegundos ou minutos.",
+        "A engenharia está em medir e limitar essa janela: filas com retry, idempotência no consumidor e monitoração do lag."
+      ],
+      "quando_usar": [
+        "Entre serviços, réplicas de leitura e projeções derivadas — onde transação distribuída custaria disponibilidade.",
+        "Sempre que o negócio aceitar *alguns segundos de atraso* como preço de não derrubar tudo junto."
+      ],
+      "armadilhas": [
+        "Vender eventual como forte: se o usuário escreve, recarrega e não vê, o bug é seu, não dele.",
+        "Consumidor não idempotente: entrega duplicada duplica efeito, e o problema só aparece na reconciliação do mês."
+      ],
+      "conexoes": [
+        {"alvo": "Padrão Outbox", "nota": "é o mecanismo que faz a propagação ser confiável"},
+        {"alvo": "Transações e Consistência", "nota": "o outro lado da moeda: eventualidade começa onde a transação termina"},
+        {"alvo": "Microsserviços", "nota": "sem transação compartilhada, eventual é o padrão de fato"},
+        {"alvo": "Arquitetura Orientada a Eventos", "nota": "eventos são o veículo da convergência"},
+        {"alvo": "Observabilidade", "nota": "lag de fila e taxa de retry são os sinais de saúde da convergência"}
+      ],
+      "veja_tambem": ["Context Map", "Cobertura de Código vs Confiança"]
+    },
+    {
+      "id": "padrao-outbox",
+      "titulo": "Padrão Outbox",
+      "tags": ["dados", "eventos", "confiabilidade", "padrao"],
+      "sintese": "Gravar o evento na mesma transação do banco de dados e publicá-lo depois: elimina o *gravei mas não avisei*.",
+      "definicao": [
+        "Transactional Outbox: em vez de escrever no banco e publicar no broker como duas operações separadas, você grava o evento numa tabela `outbox` dentro da mesma transação.",
+        "Um processo separado lê essa tabela e publica, com retry até o broker confirmar."
+      ],
+      "como_funciona": [
+        "A transação confirma estado + linha na outbox juntos; se o processo cair depois, a linha continua lá para ser publicada.",
+        "Publicação é *at least once*, então o consumidor precisa ser idempotente — as duas peças formam o par."
+      ],
+      "quando_usar": [
+        "Sempre que um efeito colateral (evento, integração) precisar acontecer exatamente quando o estado muda — sem exceção.",
+        "Em microsserviços e qualquer sistema onde escrita local e notificação externa não podem divergir."
+      ],
+      "armadilhas": [
+        "Publicar direto do processo após o commit: a falha entre commit e publish é rara, e por isso mesmo passa despercebida por meses.",
+        "Esquecer de limpar a tabela: outbox sem purga cresce e vira problema de armazenamento e varredura."
+      ],
+      "conexoes": [
+        {"alvo": "Transações e Consistência", "nota": "a outbox só funciona porque a transação local é atômica"},
+        {"alvo": "Consistência Eventual", "nota": "garante a confiabilidade da janela de divergência"},
+        {"alvo": "Arquitetura Orientada a Eventos", "nota": "é o que torna publicação de evento digna de confiança"},
+        {"alvo": "Microsserviços", "nota": "sem outbox, integração entre serviços perde eventos em silêncio"},
+        {"alvo": "Observabilidade", "nota": "tamanho da fila da outbox é métrica de saúde da integração"}
+      ],
+      "veja_tambem": ["Migrações de Banco", "Testes de Contrato"]
+    }
+  ]
+}

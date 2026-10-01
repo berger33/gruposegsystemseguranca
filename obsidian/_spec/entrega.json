@@ -1,0 +1,187 @@
+{
+  "cluster": {
+    "id": "entrega",
+    "titulo": "MOC - Entrega e Operação",
+    "resumo": "Eixo do caminho até produção: como a mudança viaja do commit até o usuário, com rapidez e a capacidade de voltar atrás."
+  },
+  "notas": [
+    {
+      "id": "integracao-continua",
+      "titulo": "Integração Contínua",
+      "tags": ["entrega", "ci", "pipeline"],
+      "sintese": "Integrar todo dia, verificar automático em minutos: o objetivo da CI é encurtar o tempo entre errar e descobrir.",
+      "definicao": [
+        "Prática de integrar mudanças ao tronco várias vezes ao dia, com build e testes automatizados a cada integração.",
+        "CI não é a ferramenta (GitHub Actions, GitLab CI) — é o hábito de manter o tronco sempre em estado liberável."
+      ],
+      "como_funciona": [
+        "Cada push dispara build, testes, lint e checagens de fronteira/segurança; build quebrado é prioridade máxima do time.",
+        "Quanto mais rápido o pipeline, menor o lote de mudanças e mais fácil atribuir a culpa quando algo quebra."
+      ],
+      "quando_usar": [
+        "Sempre, a partir de duas pessoas no repositório — o custo do merge manual cresce quadraticamente com o tamanho do time.",
+        "Antes de falar em CD: sem tronco verde não existe entrega contínua, só deploy frequente de coisas não verificadas."
+      ],
+      "armadilhas": [
+        "Pipeline de 45 minutos: ninguém espera, o acúmulo de commits torna a falha impossível de atribuir.",
+        "Build intermitente tolerado: uma vez que o time aceita *rodar de novo*, o sinal perde valor para sempre."
+      ],
+      "conexoes": [
+        {"alvo": "Entrega Contínua e Deploy", "nota": "CI verifica, CD libera: a segunda depende da primeira"},
+        {"alvo": "Trunk-Based Development", "nota": "branch de vida longa é incompatível com integração de verdade"},
+        {"alvo": "Pirâmide de Testes", "nota": "o tempo da suíte é o tempo do pipeline"},
+        {"alvo": "Monólito Modular", "nota": "checagem de fronteiras entre módulos vive aqui"},
+        {"alvo": "Migrações de Banco", "nota": "aplicar migração em banco limpo no CI pega script quebrado"}
+      ],
+      "veja_tambem": ["Testes de Contrato", "Testes de Integração com Dependências Reais"]
+    },
+    {
+      "id": "entrega-continua-e-deploy",
+      "titulo": "Entrega Contínua e Deploy",
+      "tags": ["entrega", "cd", "deploy", "rollback"],
+      "sintese": "Manter o software sempre liberável — e, se for deploy contínuo, liberado. A métrica que importa é o tempo para voltar atrás.",
+      "definicao": [
+        "Entrega contínua: todo commit aprovado gera um artefato candidato a produção. Deploy contínuo: esse artefato vai para produção automaticamente.",
+        "O pré-requisito não técnico é a esteira de segurança: deploy só é rotina quando reverter também é."
+      ],
+      "como_funciona": [
+        "Artefato imutável é construído uma vez e promovido entre ambientes; rollback é redirecionar tráfego para a versão anterior, não reconstruir.",
+        "Estratégias de liberação (blue/green, canário) reduzem o raio de impacto de um deploy ruim."
+      ],
+      "quando_usar": [
+        "Quando o custo de uma release grande é alto e o medo de deployar travou o time — frequência reduz risco por lote.",
+        "Quando rollback rápido for mais barato que tentar prever todo defeito antes de liberar."
+      ],
+      "armadilhas": [
+        "Deploy automatizado sem plano de reversão: automatizar a ida e não a volta é automatizar o acidente.",
+        "Ambientes divergentes: promover o mesmo artefato é o que garante que *funcionou em homologação* signifique algo."
+      ],
+      "conexoes": [
+        {"alvo": "Integração Contínua", "nota": "CD sem CI é só pressa automatizada"},
+        {"alvo": "Trunk-Based Development", "nota": "liberar sempre exige tronco sempre liberável"},
+        {"alvo": "Feature Flags", "nota": "permitem deployar código incompleto sem expor funcionalidade"},
+        {"alvo": "Migrações de Banco", "nota": "a migração é a parte do deploy que não se reverte com um comando"},
+        {"alvo": "Observabilidade", "nota": "deploy sem métricas de verificação é liberar de olhos fechados"}
+      ],
+      "veja_tambem": ["Versionamento Semântico", "Microsserviços"]
+    },
+    {
+      "id": "trunk-based-development",
+      "titulo": "Trunk-Based Development",
+      "tags": ["entrega", "git", "fluxo"],
+      "sintese": "Um tronco só, branches curtíssimas: o antídoto para o merge que vira evento traumático no fim do sprint.",
+      "definicao": [
+        "Fluxo em que desenvolvedores integram ao tronco principal pelo menos uma vez por dia, com branches que duram horas, não semanas.",
+        "Trabalho inacabado vai para o tronco protegido por Feature Flags em vez de esperar numa branch paralela."
+      ],
+      "como_funciona": [
+        "Branch nasce, recebe poucos commits, passa no CI e é integrada; conflitos são pequenos porque a divergência é pequena.",
+        "Releases saem por tag ou corte do tronco — não por merge de uma branch de release que ninguém testou junto."
+      ],
+      "quando_usar": [
+        "Times que querem entrega contínua de verdade: branch longa é o maior inimigo do *sempre liberável*.",
+        "Projetos com integração frequente entre pessoas — quanto maior o time, pior a branch longa."
+      ],
+      "armadilhas": [
+        "Branch longa disfarçada de trunk: abrir PR e esperar três dias de review é branch longa com nome bonito.",
+        "Sem flags e sem CI rápido, o tronco fica invariavelmente quebrado e o time volta para as branches."
+      ],
+      "conexoes": [
+        {"alvo": "Integração Contínua", "nota": "integrar todo dia só é seguro com verificação automática"},
+        {"alvo": "Feature Flags", "nota": "são o que permite integrar código que ainda não está pronto"},
+        {"alvo": "Entrega Contínua e Deploy", "nota": "tronco verde é a condição para liberar a qualquer momento"},
+        {"alvo": "Versionamento Semântico", "nota": "o tronco conta a história linear que gera o changelog"}
+      ],
+      "veja_tambem": ["Cobertura de Código vs Confiança", "Acoplamento e Coesão"]
+    },
+    {
+      "id": "feature-flags",
+      "titulo": "Feature Flags",
+      "tags": ["entrega", "flags", "liberacao", "experimentacao"],
+      "sintese": "Separar deploy de liberação: o código vai para produção desligado, e você decide quando (e para quem) acender.",
+      "definicao": [
+        "Feature flag é um condicional controlado por configuração que permite ativar comportamento sem novo deploy.",
+        "Tipos principais: liberação (liga para todos), operacional (kill switch) e experimento (liga para uma amostra)."
+      ],
+      "como_funciona": [
+        "O código convive com os dois caminhos temporariamente; a configuração decide qual roda, geralmente por usuário, tenant ou porcentagem.",
+        "Kill switch permite desligar uma funcionalidade problemática em segundos, sem esperar pipeline."
+      ],
+      "quando_usar": [
+        "Para liberar gradualmente e medir impacto antes de expor a todos.",
+        "Para integrar trabalho em andamento ao tronco sem quebrar produção."
+      ],
+      "armadilhas": [
+        "Flag eterna: código com seis flags cruzadas tem 64 estados e nenhum deles foi testado — toda flag precisa de data de expiração.",
+        "Flag em regra de negócio crítica sem teste dos dois lados: o caminho desligado apodrece sem ninguém notar."
+      ],
+      "conexoes": [
+        {"alvo": "Trunk-Based Development", "nota": "sem flags, integrar cedo significa expor código inacabado"},
+        {"alvo": "Entrega Contínua e Deploy", "nota": "transforma deploy em não-evento: liberação é decisão separada"},
+        {"alvo": "Observabilidade", "nota": "ligar uma flag sem métrica é experimento às cegas"},
+        {"alvo": "Acoplamento e Coesão", "nota": "flags acumuladas são dívida de complexidade, não configuração"}
+      ],
+      "veja_tambem": ["Monólito Modular", "Integração Contínua"]
+    },
+    {
+      "id": "observabilidade",
+      "titulo": "Observabilidade",
+      "tags": ["operacao", "metricas", "logs", "tracing"],
+      "sintese": "Conseguir responder perguntas que você não previu: logs, métricas e traços correlacionados são o que torna um sistema distribuído legível.",
+      "definicao": [
+        "Observabilidade é a capacidade de inferir o estado interno do sistema a partir dos sinais que ele emite — logs estruturados, métricas e tracing distribuído.",
+        "Monitoramento diz *está ruim*; observabilidade permite perguntar *por que está ruim para este usuário específico*."
+      ],
+      "como_funciona": [
+        "Um ID de correlação percorre todas as chamadas; métricas agregadas mostram taxa, erro e duração; traços mostram onde o tempo foi gasto.",
+        "Instrumentação é código: sem spans nas fronteiras (fila, HTTP, banco), o traço tem buracos exatamente onde o problema mora."
+      ],
+      "quando_usar": [
+        "A partir do momento em que há mais de um processo envolvido num request.",
+        "Antes do primeiro incidente sério — instrumentar durante o incidente é a pior hora."
+      ],
+      "armadilhas": [
+        "Log sem correlação: dez mil linhas por minuto que não permitem seguir um pedido do começo ao fim.",
+        "Métrica demais: dashboard com 80 gráficos é decoração; defina SLOs e alerte no que o usuário sente."
+      ],
+      "conexoes": [
+        {"alvo": "Microsserviços", "nota": "sem tracing, um request entre serviços é invisível"},
+        {"alvo": "Arquitetura Orientada a Eventos", "nota": "fluxo assíncrono exige correlação explícita, não call stack"},
+        {"alvo": "Consistência Eventual", "nota": "lag de fila e taxa de retry são sinais de saúde da convergência"},
+        {"alvo": "Padrão Outbox", "nota": "tamanho da outbox é métrica de integração confiável"},
+        {"alvo": "Feature Flags", "nota": "liberação gradual só é experimento se houver medição"},
+        {"alvo": "Cobertura de Código vs Confiança", "nota": "produção é onde os bugs que a suíte não pegou aparecem"}
+      ],
+      "veja_tambem": ["ORM como Abstração com Vazamento", "Entrega Contínua e Deploy"]
+    },
+    {
+      "id": "versionamento-semantico",
+      "titulo": "Versionamento Semântico",
+      "tags": ["entrega", "versao", "api", "contrato"],
+      "sintese": "MAJOR.MINOR.PATCH comunica risco: quebrou, acrescentou ou corrigiu — uma promessa sobre o que esperar de uma atualização.",
+      "definicao": [
+        "Convenção em que MAJOR indica mudança incompatível, MINOR funcionalidade nova compatível e PATCH correção compatível.",
+        "O valor não é o número: é transformar a decisão de atualizar em algo que o consumidor pode tomar sozinho."
+      ],
+      "como_funciona": [
+        "A versão é derivada do contrato público (API, eventos, CLI) — mudança interna não emblemática não altera MAJOR.",
+        "Pré-releases e metadados de build permitem sinalizar instabilidade sem poluir a linha principal."
+      ],
+      "quando_usar": [
+        "Sempre que houver consumidor fora do seu time: biblioteca, API pública, pacote, schema de evento.",
+        "Para gerar changelog e notas de release de forma automatizada a partir do histórico do tronco."
+      ],
+      "armadilhas": [
+        "Versionar por sensação: bump de MAJOR a cada release grande destrói o significado do número.",
+        "Mudança silenciosa de comportamento em PATCH: compatibilidade de compilação não é compatibilidade semântica."
+      ],
+      "conexoes": [
+        {"alvo": "Testes de Contrato", "nota": "o teste é quem acusa se a mudança foi mesmo compatível"},
+        {"alvo": "Context Map", "nota": "na relação cliente-fornecedor, versão é o contrato de expectativas"},
+        {"alvo": "Microsserviços", "nota": "serviços com ciclos independentes precisam de compatibilidade negociada"},
+        {"alvo": "Trunk-Based Development", "nota": "histórico linear do tronco alimenta o changelog automaticamente"}
+      ],
+      "veja_tambem": ["Migrações de Banco", "Entrega Contínua e Deploy"]
+    }
+  ]
+}

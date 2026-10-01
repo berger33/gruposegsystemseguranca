@@ -9,3 +9,6 @@ dist/
 .DS_Store
 *.tsbuildinfo
 .data/
+
+# vault obsidian gerado (zip de entrega)
+obsidian-vault-*.zip

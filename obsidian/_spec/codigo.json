@@ -1,0 +1,157 @@
+{
+  "cluster": {
+    "id": "codigo",
+    "titulo": "MOC - Design de Código",
+    "resumo": "Eixo da escala menor: como o código é organizado para que a próxima mudança seja barata. Arquitetura protege o sistema; design de código protege o dia a dia."
+  },
+  "notas": [
+    {
+      "id": "clean-architecture",
+      "titulo": "Clean Architecture",
+      "tags": ["design", "camadas", "dependencias"],
+      "sintese": "Camadas concêntricas com a regra de dependência apontando para dentro: entidades no núcleo, detalhes na borda, e nada no centro sabe que a web existe.",
+      "definicao": [
+        "Modelo proposto por Robert Martin em que o sistema é organizado em anéis — entidades, casos de uso, adaptadores de interface, frameworks — com dependências sempre apontando para o centro.",
+        "A consequência prática: banco, web e UI são plugáveis; o que não é plugável é a regra de negócio."
+      ],
+      "como_funciona": [
+        "Casos de uso orquestram entidades e conversam com o mundo por interfaces definidas no centro (portas); os adaptadores implementam essas interfaces na borda.",
+        "Testar o caso de uso não exige subir servidor: as dependências externas são injetadas como dublês."
+      ],
+      "quando_usar": [
+        "Sistemas de médio a grande porte em que você espera trocar detalhes de infraestrutura sem tocar em regra de negócio.",
+        "Quando o time reclama que *mudar uma coisa quebra três* — sinal de dependência apontando para a direção errada."
+      ],
+      "armadilhas": [
+        "Camadas como religião: projeto pequeno com sete pastas e interfaces para tudo rende burocracia, não manutenibilidade.",
+        "Caso de uso que é só repasse para o repositório: se não há orquestração nem regra, a camada é ruído."
+      ],
+      "conexoes": [
+        {"alvo": "Arquitetura Hexagonal", "nota": "mesma essência, outro vocabulário: portas e adaptadores"},
+        {"alvo": "Inversão de Dependência", "nota": "o princípio que faz as setas apontarem para dentro"},
+        {"alvo": "SOLID", "nota": " conjunto de princípios que a clean architecture aplica em escala"},
+        {"alvo": "Arquitetura em Camadas", "nota": "a versão sem regra de direção que a clean architecture corrige"},
+        {"alvo": "Test Doubles", "nota": "a fronteira de interface é onde o dublê entra naturalmente"}
+      ],
+      "veja_tambem": ["Domain-Driven Design", "Acoplamento e Coesão", "Testes de Integração com Dependências Reais"]
+    },
+    {
+      "id": "solid",
+      "titulo": "SOLID",
+      "tags": ["design", "principios", "manutencao"],
+      "sintese": "Cinco princípios para manter módulos com responsabilidade única, abertos a extensão e dependentes de abstrações — um checklist de pressões, não um decálogo.",
+      "definicao": [
+        "Sigla para Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation e Dependency Inversion.",
+        "São heurísticas sobre onde o código vai doer quando mudar: cada letra aponta um tipo específico de rigidez."
+      ],
+      "como_funciona": [
+        "S e I limitam o tamanho da superfície de mudança; O e L permitem estender sem editar o que já funciona; D inverte a direção da dependência.",
+        "Na prática, você aplica sob pressão: quando um módulo muda por dois motivos diferentes, é hora de separar (S)."
+      ],
+      "quando_usar": [
+        "Como vocabulário comum de revisão de código — é muito mais produtivo dizer *isso viola S* do que discutir gosto.",
+        "Sempre que uma mudança pequena obrigar a editar muitos arquivos: há um princípio sendo violado, descubra qual."
+      ],
+      "armadilhas": [
+        "Aplicar os cinco preventivamente em código trivial: abstração sem segunda implementação é dívida, não investimento.",
+        "Confundir S com *uma função por classe*: responsabilidade é eixo de mudança, não tamanho de arquivo."
+      ],
+      "conexoes": [
+        {"alvo": "Inversão de Dependência", "nota": "a letra com efeito mais profundo sobre arquitetura"},
+        {"alvo": "Acoplamento e Coesão", "nota": "S e I são coesão; D e O são acoplamento sob controle"},
+        {"alvo": "Composição sobre Herança", "nota": "L é o princípio que a herança quebra com mais frequência"},
+        {"alvo": "Clean Architecture", "nota": "aplica SOLID na escala do sistema inteiro"}
+      ],
+      "veja_tambem": ["Arquitetura Hexagonal", "Test Doubles"]
+    },
+    {
+      "id": "inversao-de-dependencia",
+      "titulo": "Inversão de Dependência",
+      "tags": ["design", "dependencias", "abstracao"],
+      "sintese": "Módulo de alto nível não deve depender do de baixo nível: ambos dependem de uma abstração que o alto nível define.",
+      "definicao": [
+        "Princípio que inverte a direção natural das dependências: em vez de Regra → Banco, temos Regra → Interface, e Banco → Interface.",
+        "A abstração pertence a quem a usa, não a quem a implementa — é o que diferencia inversão de mera interface."
+      ],
+      "como_funciona": [
+        "O domínio declara a interface do que precisa; a infraestrutura a implementa; a composição acontece na borda (fábrica ou container de DI).",
+        "Isso transforma escolha de tecnologia em decisão adiável: trocar o adaptador não toca no centro."
+      ],
+      "quando_usar": [
+        "Sempre que um detalhe de infraestrutura ameaçar contaminar regra de negócio.",
+        "Quando você precisa testar uma regra sem rede, disco ou relógio de verdade."
+      ],
+      "armadilhas": [
+        "Interface com uma única implementação criada só para *fazer certo*: se nunca muda, o custo é puro overhead.",
+        "Inversão falsa: interface definida no pacote da implementação, com o domínio importando de lá — a seta continua apontando para fora."
+      ],
+      "conexoes": [
+        {"alvo": "SOLID", "nota": "é a letra D, e a que mais influencia arquitetura"},
+        {"alvo": "Clean Architecture", "nota": "a regra de dependência que mantém o domínio no centro"},
+        {"alvo": "Arquitetura Hexagonal", "nota": "inversão aplicada na fronteira do sistema"},
+        {"alvo": "Test Doubles", "nota": "dublê só entra limpo onde existe uma abstração real"},
+        {"alvo": "Acoplamento e Coesão", "nota": "inverter é reduzir acoplamento em direção a detalhes voláteis"}
+      ],
+      "veja_tambem": ["Entidade, Value Object e Agregado", "Pirâmide de Testes"]
+    },
+    {
+      "id": "acoplamento-e-coesao",
+      "titulo": "Acoplamento e Coesão",
+      "tags": ["design", "medidas", "fronteiras"],
+      "sintese": "As duas medidas que explicam quase todo problema de manutenção: o quanto as partes se conhecem e o quanto o que está junto pertence junto.",
+      "definicao": [
+        "Acoplamento é o grau de dependência entre módulos; coesão é o grau em que o conteúdo de um módulo pertence ao mesmo propósito.",
+        "O objetivo é coesão alta e acoplamento baixo — e, principalmente, acoplamento apenas na direção de coisas mais estáveis."
+      ],
+      "como_funciona": [
+        "Sinais de acoplamento ruim: mudança que se espalha, módulo que não compila sozinho, teste que precisa de três subsistemas de pé.",
+        "Sinais de coesão ruim: classe com métodos que nunca compartilham estado, módulo que muda por motivos não relacionados."
+      ],
+      "quando_usar": [
+        "Em toda revisão de código: é o critério mais objetivo para aceitar ou pedir mudança.",
+        "Como bússola para decidir onde cortar módulos, serviços ou pacotes."
+      ],
+      "armadilhas": [
+        "Reduzir acoplamento criando camadas de indireção sem sentido: às vezes o melhor é aceitar o acoplamento e isolá-lo.",
+        "Medir acoplamento por contagem de imports: o que importa é a volatilidade da dependência, não a quantidade."
+      ],
+      "conexoes": [
+        {"alvo": "SOLID", "nota": "os cinco princípios são receitas de coesão alta e acoplamento baixo"},
+        {"alvo": "Monólito Modular", "nota": "módulo bom é coeso por dentro e acoplado só por contrato"},
+        {"alvo": "Bounded Context", "nota": "a fronteira de contexto é a de menor acoplamento natural do domínio"},
+        {"alvo": "Inversão de Dependência", "nota": "ferramenta para escolher a direção do acoplamento"},
+        {"alvo": "Composição sobre Herança", "nota": "herança é a forma mais forte (e rígida) de acoplamento"}
+      ],
+      "veja_tambem": ["Microsserviços", "Arquitetura em Camadas"]
+    },
+    {
+      "id": "composicao-sobre-heranca",
+      "titulo": "Composição sobre Herança",
+      "tags": ["design", "reuso", "polimorfismo"],
+      "sintese": "Montar comportamento encaixando pedaços em vez de estender classes — a hierarquia é a forma mais rígida de reuso que existe.",
+      "definicao": [
+        "Preferir que um objeto contenha outros objetos (ou receba funções/estratégias) a herdar comportamento de uma superclasse.",
+        "Herança resolve *é um*; composição resolve *tem um comportamento de* — e comportamento muda mais que identidade."
+      ],
+      "como_funciona": [
+        "Você extrai a parte que varia numa estratégia/interface e injeta a implementação: `CalculadoraDeFrete` recebe `PoliticaDeFrete`.",
+        "O polimorfismo continua existindo, mas em tempo de composição em vez de tempo de definição da classe."
+      ],
+      "quando_usar": [
+        "Quando dois objetos compartilham comportamento mas não uma identidade conceitual.",
+        "Sempre que a hierarquia passar de dois níveis ou precisar de exceções — sinal clássico de herança errada."
+      ],
+      "armadilhas": [
+        "Hierarquia profunda com método sobrescrito que chama `super` e depois faz algo diferente: ninguém prevê o comportamento resultante.",
+        "Composição extrema com delegantes de um método para todo lado pode ser mais difícil de ler que herança simples e honesta."
+      ],
+      "conexoes": [
+        {"alvo": "SOLID", "nota": "L (substituição de Liskov) é o que a herança costuma violar"},
+        {"alvo": "Acoplamento e Coesão", "nota": "herança acopla subclasse e superclasse de forma permanente"},
+        {"alvo": "Entidade, Value Object e Agregado", "nota": "value objects são compostos, não herdados"},
+        {"alvo": "Test Doubles", "nota": "composição é o que permite trocar a dependência por um dublê"}
+      ],
+      "veja_tambem": ["Clean Architecture", "Inversão de Dependência"]
+    }
+  ]
+}

@@ -1,0 +1,159 @@
+{
+  "cluster": {
+    "id": "testes",
+    "titulo": "MOC - Testes e Qualidade",
+    "resumo": "Eixo da confiança: o que você testa, onde testa e o quanto pode acreditar no verde. Teste é uma decisão de design tanto quanto de qualidade."
+  },
+  "notas": [
+    {
+      "id": "piramide-de-testes",
+      "titulo": "Pirâmide de Testes",
+      "tags": ["testes", "estrategia", "feedback"],
+      "sintese": "Muitos testes rápidos na base, poucos testes lentos no topo — a forma do seu conjunto de testes determina a velocidade do time.",
+      "definicao": [
+        "Modelo que distribui testes em camadas: unidade (rápidos, muitos), integração (médios) e ponta a ponta (lentos, poucos).",
+        "A ideia não é estética: o custo de diagnóstico cresce com o tamanho do pedaço de sistema sob teste."
+      ],
+      "como_funciona": [
+        "Regras de negócio são testadas isoladas, em milissegundos; só as fronteiras reais (banco, HTTP, fila) ganham testes de integração.",
+        "O topo verifica o caminho crítico do usuário: dois ou três cenários bastam para garantir que o sistema liga e conversa."
+      ],
+      "quando_usar": [
+        "Como referência para decidir onde um novo teste deve morar — se está no topo, precisa de justificativa.",
+        "Quando a suíte passou de alguns minutos e o time começou a evitar rodar tudo."
+      ],
+      "armadilhas": [
+        "Pirâmide invertida (sorvete): muitos testes de UI, suíte de 40 minutos e ninguém confia no resultado.",
+        "Teste de unidade que mocka o próprio objeto testado: verde rápido, confiança zero."
+      ],
+      "conexoes": [
+        {"alvo": "Test Doubles", "nota": "a base da pirâmide depende de dublês confiáveis"},
+        {"alvo": "Testes de Integração com Dependências Reais", "nota": "o meio da pirâmide, onde o mock não serve mais"},
+        {"alvo": "Cobertura de Código vs Confiança", "nota": "cobertura alta só na base não garante o sistema funcionando"},
+        {"alvo": "Arquitetura Hexagonal", "nota": "domínio isolado é o que torna a base da pirâmide possível"},
+        {"alvo": "Integração Contínua", "nota": "o tempo da suíte define o ritmo do pipeline"}
+      ],
+      "veja_tambem": ["Testes de Contrato", "Inversão de Dependência"]
+    },
+    {
+      "id": "test-doubles",
+      "titulo": "Test Doubles",
+      "tags": ["testes", "mocks", "isolamento"],
+      "sintese": "Substitutos de dependências reais: existe uma diferença enorme entre simular uma resposta e simular um contrato quebrado.",
+      "definicao": [
+        "Dublês de teste se dividem em dummy, stub, spy, mock e fake: cada um resolve uma pergunta diferente sobre a dependência substituída.",
+        "Fake é uma implementação real simplificada (banco em memória); stub devolve valores prontos; mock verifica interações."
+      ],
+      "como_funciona": [
+        "Você isola o objeto sob teste injetando dublês nas suas dependências — o que só é limpo quando existe uma abstração real (porta).",
+        "Mocks verificam comportamento (`enviou e-mail uma vez`); stubs só alimentam o teste com dados."
+      ],
+      "quando_usar": [
+        "Para dependências lentas, não determinísticas ou impossíveis de reproduzir: relógio, sorteio, gateway de pagamento.",
+        "Para acelerar a base da pirâmide, onde a dependência não é o objeto do teste."
+      ],
+      "armadilhas": [
+        "Mockar tudo: o teste passa com o contrato real quebrado, porque o mock repete a suposição errada do autor.",
+        "Mock de tipo que você não controla: quando a biblioteca muda, o mock continua verde e a produção quebra."
+      ],
+      "conexoes": [
+        {"alvo": "Pirâmide de Testes", "nota": "dublês são o que viabiliza a base larga e rápida"},
+        {"alvo": "Inversão de Dependência", "nota": "sem abstração, o dublê entra por gambiarra"},
+        {"alvo": "Testes de Integração com Dependências Reais", "nota": "o contraponto necessário: dublê demais esconde bugs reais"},
+        {"alvo": "Testes de Contrato", "nota": "são os dois lados da mesma moeda na integração entre serviços"},
+        {"alvo": "Composição sobre Herança", "nota": "composição permite trocar a dependência pelo dublê"}
+      ],
+      "veja_tambem": ["Arquitetura Hexagonal", "Cobertura de Código vs Confiança"]
+    },
+    {
+      "id": "testes-de-contrato",
+      "titulo": "Testes de Contrato",
+      "tags": ["testes", "integracao", "api"],
+      "sintese": "O consumidor publica suas expectativas e o provedor prova que as cumpre — integração verificada sem subir o mundo inteiro.",
+      "definicao": [
+        "Teste de contrato verifica, de forma isolada, se produtor e consumidor concordam sobre o formato e o comportamento de uma API ou evento.",
+        "Ferramentas como Pact registram as expectativas do consumidor e as reproduzem contra o provedor no CI."
+      ],
+      "como_funciona": [
+        "O consumidor gera um arquivo de contrato a partir dos seus testes; o provedor roda esse contrato contra a sua própria base de código.",
+        "Se o provedor mudar o schema, o contrato quebra no CI dele — antes do deploy, não depois do incidente."
+      ],
+      "quando_usar": [
+        "Integrações entre times/serviços onde o teste fim-a-fim é caro, instável ou lento demais.",
+        "Sempre que houver mais de dois consumidores para a mesma API, ou eventos consumidos por equipes diferentes."
+      ],
+      "armadilhas": [
+        "Contrato superficial que só valida status 200: o problema real é campo renomeado, e isso passa batido.",
+        "Contratos sem governança de versão: exigir mudança sincronizada de cinco times devolve o acoplamento que você queria evitar."
+      ],
+      "conexoes": [
+        {"alvo": "Microsserviços", "nota": "substitui o teste fim-a-fim entre múltiplos serviços"},
+        {"alvo": "Context Map", "nota": "a relação cliente-fornecedor é exatamente o que o contrato formaliza"},
+        {"alvo": "Arquitetura Orientada a Eventos", "nota": "schema de evento é contrato, e consumidor invisível é risco"},
+        {"alvo": "Versionamento Semântico", "nota": "quebrar contrato é major version, e o teste é quem acusa"},
+        {"alvo": "Test Doubles", "nota": "o contrato mantém o dublê honesto em relação ao provedor real"}
+      ],
+      "veja_tambem": ["Integração Contínua", "Padrão Outbox"]
+    },
+    {
+      "id": "cobertura-de-codigo-vs-confianca",
+      "titulo": "Cobertura de Código vs Confiança",
+      "tags": ["testes", "metricas", "qualidade"],
+      "sintese": "Cobertura mede linhas executadas, não certezas adquiridas: 90% de cobertura com zero assertions conta a mesma história que 0%.",
+      "definicao": [
+        "Cobertura de código é a fração de linhas/ramos exercitados pelos testes; confiança é a probabilidade de o verde significar que está funcionando.",
+        "A primeira é automática e barata de medir; a segunda exige olhar o que o teste afirma."
+      ],
+      "como_funciona": [
+        "Cobertura serve para achar o não testado: um relatório mostrando o módulo em 0% é um achado valioso.",
+        "Confiança vem de asserts sobre comportamento nas fronteiras certas, dados realistas e verificação dos efeitos — inclusive no banco."
+      ],
+      "quando_usar": [
+        "Use cobertura como radar de áreas esquecidas, nunca como meta de gestão.",
+        "Avalie confiança fazendo a pergunta oposta: que bug real passaria por esta suíte sem falhar?"
+      ],
+      "armadilhas": [
+        "Meta de cobertura: gera testes sem assert, escritos só para pintar a linha de verde.",
+        "Perseguir 100%: as últimas linhas custam mais que o risco que cobrem, quase sempre getters e tratamento defensivo."
+      ],
+      "conexoes": [
+        {"alvo": "Pirâmide de Testes", "nota": "confiança vem da distribuição certa, não do volume"},
+        {"alvo": "Test Doubles", "nota": "mockar demais infla cobertura e esvazia confiança"},
+        {"alvo": "Testes de Integração com Dependências Reais", "nota": "onde a confiança em regras de banco realmente se constrói"},
+        {"alvo": "Observabilidade", "nota": "produção é o teste final: métricas mostram o que a suíte não pegou"},
+        {"alvo": "Modelagem Relacional", "nota": "constraints e integridade só são verificadas com banco real"}
+      ],
+      "veja_tambem": ["Integração Contínua", "Transações e Consistência"]
+    },
+    {
+      "id": "testes-de-integracao-com-dependencias-reais",
+      "titulo": "Testes de Integração com Dependências Reais",
+      "tags": ["testes", "integracao", "infraestrutura"],
+      "sintese": "Testar contra Postgres de verdade, não contra um banco em memória que só imita Postgres — o dialeto importa.",
+      "definicao": [
+        "Teste de integração exercita o código contra a dependência real (banco, broker, HTTP) em ambiente descartável — containers são a forma usual.",
+        "Serve para validar aquilo que o dublê não consegue mentir bem: SQL, transação, serialização, constraints."
+      ],
+      "como_funciona": [
+        "Cada execução sobe a dependência limpa, aplica migrações, roda o teste e destrói tudo; o isolamento vem do ambiente, não do mock.",
+        "Como sobem devagar, a quantidade precisa ser pequena e o escopo, bem recortado — daí o meio da pirâmide."
+      ],
+      "quando_usar": [
+        "Nas fronteiras: repositórios, migrações, configuração de ORM, serialização de eventos.",
+        "Sempre que o bug que você está caçando só acontece *no banco*, nunca no mock."
+      ],
+      "armadilhas": [
+        "Banco em memória para simular Postgres: comportamento de transação, types e SQL diferem, e o teste mente.",
+        "Suíte de integração sem isolamento entre testes: estado vazando gera falhas intermitentes que corroem a confiança."
+      ],
+      "conexoes": [
+        {"alvo": "Test Doubles", "nota": "o limite do dublê é exatamente onde este teste começa"},
+        {"alvo": "Pirâmide de Testes", "nota": "camada do meio: mais lenta, por isso menor"},
+        {"alvo": "Migrações de Banco", "nota": "aplicar migração em banco limpo é o teste mais honesto do script"},
+        {"alvo": "ORM como Abstração com Vazamento", "nota": "N+1 e SQL gerado só aparecem com banco real"},
+        {"alvo": "Integração Contínua", "nota": "precisa de runner com containers e tempo de suíte controlado"}
+      ],
+      "veja_tambem": ["Transações e Consistência", "Cobertura de Código vs Confiança"]
+    }
+  ]
+}

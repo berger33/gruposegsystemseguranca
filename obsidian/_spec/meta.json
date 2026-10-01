@@ -1,0 +1,13 @@
+{
+  "vault": "Engenharia de Software & Arquitetura",
+  "pasta": "conhecimento-engenharia",
+  "indice": "MOC - Engenharia de Software",
+  "resumo": "Base de conhecimento em engenharia de software e arquitetura: 32 fichas atômicas costuradas por 6 hubs, desenhada para que o Graph View tenha forma legível — núcleo, satélites e pontes entre eixos.",
+  "como_navegar": [
+    "Comece pelo índice `MOC - Engenharia de Software` e escolha um eixo: cada hub lista suas fichas com uma frase-síntese.",
+    "Dentro de uma ficha, a seção **Conexões** explica *por que* aquela nota aponta para a outra — é o raciocínio, não só o link.",
+    "**Veja também** fecha o caminho de volta ao hub e às travessias laterais, evitando becos sem saída no grafo.",
+    "No Graph View, use `tag:#moc` para enxergar a espinha e `tag:#ficha` para as folhas; grupos por `area` colorem os eixos.",
+    "Sempre que criar uma nota nova, conecte-a a pelo menos 3 existentes: grau baixo é o que transforma grafo bonito em novelo."
+  ]
+}
