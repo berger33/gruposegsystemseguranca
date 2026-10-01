@@ -1022,6 +1022,370 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
     try { return send(res,200,{history:(await pool.query(q,params)).rows}); } catch { return send(res,500,{error:'internal'}); }
   };
 
+  // FIN-13 orçamento gerencial e cenários de expansão: premissas explícitas
+  // obrigatórias, estimativa nunca disfarçada de resultado, lacuna visível em
+  // vez de zero, aprovação auditada que não cria compromisso nenhum e revisão
+  // de premissas que derruba a aprovação. A margem projetada é calculada pelo
+  // servidor — o cliente não declara margem.
+  const BUDGET_STATUSES = new Set(['rascunho','em_revisao','aprovado','rejeitado','arquivado']);
+  const BUDGET_TRANSITIONS = new Set(['em_revisao','aprovado','rejeitado','arquivado','rascunho']);
+  const SCENARIO_TYPES = new Set(['conservador','base','otimista','expansao','pessimista']);
+  const BUDGET_ENTITIES = new Set(['budget','scenario']);
+  const BUDGET_ESTIMATE_NOTE = 'Estimativa com premissas explícitas; projeção não é promessa de resultado.';
+  const SCENARIO_ESTIMATE_NOTE = 'Cenário é estimativa identificada por premissas explícitas; não promete resultado.';
+  const FIN13_GUARD_CODES = new Set([
+    'fin_budget_estimate_flag_locked',
+    'fin_budget_initial_status_must_be_rascunho',
+    'fin_budget_initial_fields_invalid',
+    'fin_budget_identity_fields_immutable',
+    'fin_budget_premises_version_increment_required',
+    'fin_budget_edit_requires_rascunho',
+    'fin_budget_status_transition_required',
+    'fin_budget_invalid_status_transition',
+    'fin_budget_approval_requires_approver_and_date',
+    'fin_budget_review_requires_submission_date',
+    'fin_budget_revision_revokes_approval',
+    'fin_budget_revision_requires_premise_change',
+    'fin_budget_approval_fields_only_when_approved',
+    'fin_scenario_estimate_flag_locked',
+    'fin_scenario_complete_requires_projection_base',
+    'fin_scenario_margin_requires_positive_revenue',
+    'fin_scenario_margin_mismatch',
+    'fin_scenario_complete_must_not_carry_incomplete_reason',
+    'fin_scenario_incomplete_must_not_carry_projection',
+    'fin_scenario_incomplete_requires_reason',
+    'fin_scenario_approval_is_explicit_transition',
+    'fin_scenario_initial_fields_invalid',
+    'fin_scenario_identity_fields_immutable',
+    'fin_scenario_premises_version_increment_required',
+    'fin_scenario_premise_change_revokes_approval',
+    'fin_scenario_approved_projection_immutable',
+    'fin_scenario_approval_requires_complete',
+    'fin_scenario_approval_requires_approver_and_date',
+    'fin_scenario_approval_fields_only_when_approved',
+    'fin_budget_history_immutable',
+  ]);
+  const budgetFailure = (res, e) => {
+    if (isAuditUnavailable(e)) return send(res,503,{error:'audit_unavailable'});
+    if (e?.code === '23505') {
+      const key = String(e.constraint||'');
+      return send(res,409,{error:key.includes('idempotency')?'duplicate_idempotency_key':key.includes('scenario')?'duplicate_scenario_type_for_budget':key.includes('protocol')?'duplicate_protocol':'duplicate'});
+    }
+    if (e?.code === '23503') return send(res,400,{error:'invalid_reference'});
+    if (e?.code === '23514') {
+      const message = String(e.message||'');
+      const known = [...FIN13_GUARD_CODES].find(code => message === code);
+      return send(res,400,{error:known||'invalid_budget_transition'});
+    }
+    if (e?.code === '22P02' || e?.code === '22007' || e?.code === '22003') return send(res,400,{error:'invalid'});
+    return send(res,500,{error:'internal'});
+  };
+  const insertBudgetHistory = (client, entity_type, entity_id, previous_status, next_status, actor, reason, metadata) =>
+    client.query(
+      'INSERT INTO fin_budget_history (entity_type,entity_id,previous_status,next_status,changed_by_identity,reason,metadata) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+      [entity_type, entity_id, previous_status, next_status, actor, reason, JSON.stringify(metadata||{})]
+    );
+  // Arredondamento "half away from zero", idêntico ao round(numeric,2) do
+  // PostgreSQL — o trigger reconfere o cálculo e qualquer divergência é 23514.
+  const marginPercent = (revenue, cost) => {
+    const raw = ((revenue - cost) * 10000) / revenue;
+    const rounded = raw >= 0 ? Math.round(raw) : -Math.round(-raw);
+    return rounded / 100;
+  };
+  const scenarioState = row => row.is_approved ? 'aprovado' : row.is_complete ? 'completo' : 'incompleto';
+
+  const handleFinBudgets = async (req, res) => {
+    const sess = await checkAuth(req, res); if (!sess) return;
+    if (req.method === 'GET') {
+      const url = new URL(req.url, `http://${req.headers.host||'localhost'}`), params = [];
+      let q = 'SELECT * FROM fin_budgets WHERE 1=1';
+      const status = url.searchParams.get('status');
+      if (status) { if (!BUDGET_STATUSES.has(status)) return send(res,400,{error:'invalid_status'}); params.push(status); q += ` AND status=$${params.length}`; }
+      q += ' ORDER BY created_at DESC LIMIT 200';
+      try { return send(res,200,{budgets:(await pool.query(q,params)).rows, is_estimate:true, no_result_promise:true}); } catch { return send(res,500,{error:'internal'}); }
+    }
+    if (!['POST','PATCH'].includes(req.method)) return send(res,405,{error:'method_not_allowed'});
+    if (!sameOrigin(req)) return send(res,403,{error:'forbidden_origin'});
+    let body; try { body = await readJson(req); } catch { return send(res,400,{error:'invalid_json'}); }
+    const actor = sess.identityId;
+    if (!uuid(actor)) return send(res,401,{error:'unauthorized'});
+
+    if (req.method === 'POST') {
+      const title = typeof body.title === 'string' ? body.title.trim() : '';
+      const description = typeof body.description === 'string' ? body.description.trim() : '';
+      const premises = typeof body.premises === 'string' ? body.premises.trim() : '';
+      const idempotency_key = typeof body.idempotency_key === 'string' ? body.idempotency_key.trim() : '';
+      if (title.length < 5 || title.length > 200) return send(res,400,{error:'title_5_200'});
+      if (description.length < 10 || description.length > 2000) return send(res,400,{error:'description_10_2000'});
+      if (premises.length < 10 || premises.length > 2000) return send(res,400,{error:'premises_required_10_2000'});
+      if (!isoDate(body.period_start) || !isoDate(body.period_end)) return send(res,400,{error:'invalid_period'});
+      if (body.period_end < body.period_start) return send(res,400,{error:'period_end_gte_start'});
+      if (idempotency_key.length < 8 || idempotency_key.length > 200) return send(res,400,{error:'idempotency_key_8_200'});
+      const total_revenue = cents(body.total_revenue_cents), total_cost = cents(body.total_cost_cents);
+      if ((body.total_revenue_cents != null && total_revenue === null) || (body.total_cost_cents != null && total_cost === null)) return send(res,400,{error:'invalid_amount'});
+      if (body.is_estimate === false) return send(res,400,{error:'estimate_flag_locked_nao_prometer_resultado'});
+      if (body.status != null && body.status !== 'rascunho') return send(res,400,{error:'budget_starts_rascunho'});
+      if (body.approved_by_identity != null || body.approved_at != null) return send(res,400,{error:'approval_is_an_explicit_transition'});
+      const protocol = generateProtocol('ORC-FIN');
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const created = await client.query(
+          `INSERT INTO fin_budgets (protocol,title,description,premises,period_start,period_end,total_revenue_cents,total_cost_cents,status,is_estimate,estimate_note,premises_version,idempotency_key,created_by_identity)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'rascunho',true,$9,1,$10,$11) RETURNING *`,
+          [protocol, title, description, premises, body.period_start, body.period_end, total_revenue, total_cost, BUDGET_ESTIMATE_NOTE, idempotency_key, actor]
+        );
+        const budget = created.rows[0];
+        await insertBudgetHistory(client,'budget',budget.id,null,'rascunho',actor,'Orçamento gerencial criado em rascunho com premissas explícitas e aviso de estimativa',{protocol,premises_version:1});
+        await auditLog({action:'fin_budget_create',actor,target:budget.id,meta:{protocol,period_start:body.period_start,period_end:body.period_end,is_estimate:true},client});
+        await client.query('COMMIT');
+        return send(res,201,{budget,is_estimate:true,no_result_promise:true});
+      } catch(e) { try { await client.query('ROLLBACK'); } catch {} return budgetFailure(res,e); }
+      finally { client.release(); }
+    }
+
+    const id = body.id;
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+    if (!uuid(id)) return send(res,400,{error:'invalid_id'});
+    if (reason.length < 10 || reason.length > 1000) return send(res,400,{error:'reason_10_1000_required'});
+    if (body.is_estimate === false) return send(res,400,{error:'estimate_flag_locked_nao_prometer_resultado'});
+
+    // Transição explícita de status.
+    if (body.status != null) {
+      const status = body.status;
+      if (!BUDGET_TRANSITIONS.has(status)) return send(res,400,{error:'invalid_transition'});
+      if (body.approved_by_identity != null || body.approved_at != null) return send(res,400,{error:'approver_is_the_session_identity'});
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const found = await client.query('SELECT * FROM fin_budgets WHERE id=$1 FOR UPDATE',[id]);
+        if (!found.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'not_found'}); }
+        const previous = found.rows[0];
+        if (previous.status === status) { await client.query('ROLLBACK'); return send(res,409,{error:'budget_already_in_status'}); }
+        if (status === 'rascunho' && previous.status === 'aprovado') { await client.query('ROLLBACK'); return send(res,409,{error:'approved_budget_changes_via_premise_revision'}); }
+        const updated = await client.query(
+          `UPDATE fin_budgets
+              SET status=$1::fin_budget_status,
+                  submitted_at=CASE WHEN $1::text='em_revisao' THEN NOW() WHEN $1::text='rascunho' THEN NULL ELSE submitted_at END,
+                  approved_by_identity=CASE WHEN $1::text='aprovado' THEN $2::uuid ELSE NULL END,
+                  approved_at=CASE WHEN $1::text='aprovado' THEN NOW() ELSE NULL END
+            WHERE id=$3 RETURNING *`,
+          [status, actor, id]
+        );
+        await insertBudgetHistory(client,'budget',id,previous.status,status,actor,reason,{protocol:previous.protocol,premises_version:previous.premises_version});
+        await auditLog({action:'fin_budget_transition',actor,target:id,meta:{previous_status:previous.status,next_status:status,reason},client});
+        await client.query('COMMIT');
+        return send(res,200,{budget:updated.rows[0],is_estimate:true,no_result_promise:true,commitment_created:false});
+      } catch(e) { try { await client.query('ROLLBACK'); } catch {} return budgetFailure(res,e); }
+      finally { client.release(); }
+    }
+
+    // Edição de rascunho ou revisão de premissas de orçamento aprovado.
+    const nextPremises = typeof body.premises === 'string' ? body.premises.trim() : null;
+    const nextTitle = typeof body.title === 'string' ? body.title.trim() : null;
+    const nextDescription = typeof body.description === 'string' ? body.description.trim() : null;
+    const hasRevenue = body.total_revenue_cents !== undefined, hasCost = body.total_cost_cents !== undefined;
+    const nextRevenue = hasRevenue ? cents(body.total_revenue_cents) : null;
+    const nextCost = hasCost ? cents(body.total_cost_cents) : null;
+    if ((hasRevenue && body.total_revenue_cents != null && nextRevenue === null) || (hasCost && body.total_cost_cents != null && nextCost === null)) return send(res,400,{error:'invalid_amount'});
+    if (nextPremises === null && nextTitle === null && nextDescription === null && !hasRevenue && !hasCost) return send(res,400,{error:'nothing_to_update'});
+    if (nextPremises !== null && (nextPremises.length < 10 || nextPremises.length > 2000)) return send(res,400,{error:'premises_required_10_2000'});
+    if (nextTitle !== null && (nextTitle.length < 5 || nextTitle.length > 200)) return send(res,400,{error:'title_5_200'});
+    if (nextDescription !== null && (nextDescription.length < 10 || nextDescription.length > 2000)) return send(res,400,{error:'description_10_2000'});
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const found = await client.query('SELECT * FROM fin_budgets WHERE id=$1 FOR UPDATE',[id]);
+      if (!found.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'not_found'}); }
+      const previous = found.rows[0];
+      if (!['rascunho','aprovado'].includes(previous.status)) { await client.query('ROLLBACK'); return send(res,409,{error:'budget_edit_requires_rascunho'}); }
+      const premisesChanged = nextPremises !== null && nextPremises !== previous.premises;
+      if (previous.status === 'aprovado' && !premisesChanged) { await client.query('ROLLBACK'); return send(res,409,{error:'approved_budget_changes_via_premise_revision'}); }
+      const revokesApproval = previous.status === 'aprovado';
+      const updated = await client.query(
+        `UPDATE fin_budgets
+            SET premises=COALESCE($1,premises), title=COALESCE($2,title), description=COALESCE($3,description),
+                total_revenue_cents=CASE WHEN $4 THEN $5 ELSE total_revenue_cents END,
+                total_cost_cents=CASE WHEN $6 THEN $7 ELSE total_cost_cents END,
+                premises_version=CASE WHEN $8 THEN premises_version+1 ELSE premises_version END,
+                status=CASE WHEN $9 THEN 'rascunho'::fin_budget_status ELSE status END,
+                submitted_at=CASE WHEN $9 THEN NULL ELSE submitted_at END,
+                approved_by_identity=CASE WHEN $9 THEN NULL ELSE approved_by_identity END,
+                approved_at=CASE WHEN $9 THEN NULL ELSE approved_at END
+          WHERE id=$10 RETURNING *`,
+        [nextPremises, nextTitle, nextDescription, hasRevenue, nextRevenue, hasCost, nextCost, premisesChanged, revokesApproval, id]
+      );
+      await insertBudgetHistory(client,'budget',id,previous.status,updated.rows[0].status,actor,reason,{
+        protocol: previous.protocol,
+        premises_version: updated.rows[0].premises_version,
+        premises_changed: premisesChanged,
+        approval_revoked: revokesApproval,
+      });
+      await auditLog({action: revokesApproval ? 'fin_budget_premise_revision' : 'fin_budget_draft_edit',actor,target:id,meta:{premises_changed:premisesChanged,approval_revoked:revokesApproval,reason},client});
+      await client.query('COMMIT');
+      return send(res,200,{budget:updated.rows[0],approval_revoked:revokesApproval,is_estimate:true,no_result_promise:true});
+    } catch(e) { try { await client.query('ROLLBACK'); } catch {} return budgetFailure(res,e); }
+    finally { client.release(); }
+  };
+
+  const handleFinBudgetScenarios = async (req, res) => {
+    const sess = await checkAuth(req, res); if (!sess) return;
+    if (req.method === 'GET') {
+      const url = new URL(req.url, `http://${req.headers.host||'localhost'}`), params = [];
+      let q = 'SELECT * FROM fin_budget_scenarios WHERE 1=1';
+      const budget_id = url.searchParams.get('budget_id');
+      if (budget_id) { if (!uuid(budget_id)) return send(res,400,{error:'invalid_budget_id'}); params.push(budget_id); q += ` AND budget_id=$${params.length}`; }
+      const scenario_type = url.searchParams.get('scenario_type');
+      if (scenario_type) { if (!SCENARIO_TYPES.has(scenario_type)) return send(res,400,{error:'invalid_scenario_type'}); params.push(scenario_type); q += ` AND scenario_type=$${params.length}`; }
+      const complete = url.searchParams.get('is_complete');
+      if (complete) { if (!['true','false'].includes(complete)) return send(res,400,{error:'invalid_is_complete'}); params.push(complete==='true'); q += ` AND is_complete=$${params.length}`; }
+      q += ' ORDER BY created_at DESC LIMIT 200';
+      try { return send(res,200,{scenarios:(await pool.query(q,params)).rows, is_estimate:true, projected_values_are_estimates:true}); } catch { return send(res,500,{error:'internal'}); }
+    }
+    if (!['POST','PATCH'].includes(req.method)) return send(res,405,{error:'method_not_allowed'});
+    if (!sameOrigin(req)) return send(res,403,{error:'forbidden_origin'});
+    let body; try { body = await readJson(req); } catch { return send(res,400,{error:'invalid_json'}); }
+    const actor = sess.identityId;
+    if (!uuid(actor)) return send(res,401,{error:'unauthorized'});
+
+    if (req.method === 'POST') {
+      const budget_id = body.budget_id;
+      const scenario_type = typeof body.scenario_type === 'string' ? body.scenario_type : '';
+      const title = typeof body.title === 'string' ? body.title.trim() : '';
+      const premises = typeof body.premises === 'string' ? body.premises.trim() : '';
+      const premise_source = typeof body.premise_source === 'string' ? body.premise_source.trim() : '';
+      const idempotency_key = typeof body.idempotency_key === 'string' ? body.idempotency_key.trim() : '';
+      if (!uuid(budget_id)) return send(res,400,{error:'invalid_budget_id'});
+      if (!SCENARIO_TYPES.has(scenario_type)) return send(res,400,{error:'scenario_type_required_conservador_base_otimista_expansao_pessimista'});
+      if (title.length < 5 || title.length > 200) return send(res,400,{error:'title_5_200'});
+      if (premises.length < 10 || premises.length > 2000) return send(res,400,{error:'premises_required_10_2000'});
+      if (premise_source.length < 5 || premise_source.length > 200) return send(res,400,{error:'premise_source_required_5_200'});
+      if (!isoDate(body.premise_base_date)) return send(res,400,{error:'premise_base_date_required'});
+      if (idempotency_key.length < 8 || idempotency_key.length > 200) return send(res,400,{error:'idempotency_key_8_200'});
+      if (body.is_estimate === false) return send(res,400,{error:'estimate_flag_locked_nao_prometer_resultado'});
+      if (body.is_approved === true || body.approved_by_identity != null || body.approved_at != null) return send(res,400,{error:'approval_is_an_explicit_transition'});
+      // A margem projetada é do servidor: o cliente não declara margem.
+      if (body.projected_margin_cents != null || body.projected_margin_percent != null) return send(res,400,{error:'projected_margin_is_server_side'});
+      const is_complete = body.is_complete === true;
+      let revenue = null, cost = null, percent = null, incomplete_reason = null;
+      if (is_complete) {
+        revenue = cents(body.projected_revenue_cents); cost = cents(body.projected_cost_cents);
+        if (revenue === null || cost === null || revenue <= 0) return send(res,400,{error:'complete_requires_positive_revenue_and_cost'});
+        if (body.incomplete_reason != null) return send(res,400,{error:'complete_must_not_carry_incomplete_reason'});
+        percent = marginPercent(revenue, cost);
+        if (percent < -100 || percent > 100) return send(res,400,{error:'projected_margin_percent_out_of_range'});
+      } else {
+        if (body.projected_revenue_cents != null || body.projected_cost_cents != null) return send(res,400,{error:'incomplete_scenario_must_not_carry_projection'});
+        incomplete_reason = typeof body.incomplete_reason === 'string' ? body.incomplete_reason.trim() : '';
+        if (incomplete_reason.length < 10 || incomplete_reason.length > 1000) return send(res,400,{error:'incomplete_reason_required_10_1000'});
+      }
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const budget = await client.query('SELECT * FROM fin_budgets WHERE id=$1 FOR UPDATE',[budget_id]);
+        if (!budget.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'budget_not_found'}); }
+        if (budget.rows[0].status === 'arquivado') { await client.query('ROLLBACK'); return send(res,409,{error:'budget_archived'}); }
+        const created = await client.query(
+          `INSERT INTO fin_budget_scenarios (budget_id,scenario_type,title,premises,premise_source,premise_base_date,projected_revenue_cents,projected_cost_cents,projected_margin_percent,is_estimate,estimate_note,is_complete,incomplete_reason,premises_version,idempotency_key,created_by_identity)
+           VALUES ($1,$2::fin_scenario_type,$3,$4,$5,$6,$7,$8,$9,true,$10,$11,$12,1,$13,$14) RETURNING *`,
+          [budget_id, scenario_type, title, premises, premise_source, body.premise_base_date, revenue, cost, percent, SCENARIO_ESTIMATE_NOTE, is_complete, incomplete_reason, idempotency_key, actor]
+        );
+        const scenario = created.rows[0];
+        await insertBudgetHistory(client,'scenario',scenario.id,null,scenarioState(scenario),actor,
+          is_complete ? 'Cenário criado com premissas explícitas e margem projetada calculada pelo servidor' : 'Cenário criado incompleto: base ausente registrada como lacuna visível, sem margem',
+          {budget_id,scenario_type,premises_version:1,is_complete});
+        await auditLog({action:'fin_budget_scenario_create',actor,target:scenario.id,meta:{budget_id,scenario_type,is_complete,is_estimate:true},client});
+        await client.query('COMMIT');
+        return send(res,201,{scenario,is_estimate:true,projected_values_are_estimates:true,no_result_promise:true});
+      } catch(e) { try { await client.query('ROLLBACK'); } catch {} return budgetFailure(res,e); }
+      finally { client.release(); }
+    }
+
+    const id = body.id;
+    const action = typeof body.action === 'string' ? body.action : '';
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+    if (!uuid(id)) return send(res,400,{error:'invalid_id'});
+    if (!['completar','aprovar','revisar_premissas'].includes(action)) return send(res,400,{error:'invalid_action_completar_aprovar_revisar_premissas'});
+    if (reason.length < 10 || reason.length > 1000) return send(res,400,{error:'reason_10_1000_required'});
+    if (body.is_estimate === false) return send(res,400,{error:'estimate_flag_locked_nao_prometer_resultado'});
+    if (body.projected_margin_cents != null || body.projected_margin_percent != null) return send(res,400,{error:'projected_margin_is_server_side'});
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const found = await client.query('SELECT * FROM fin_budget_scenarios WHERE id=$1 FOR UPDATE',[id]);
+      if (!found.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'not_found'}); }
+      const previous = found.rows[0];
+
+      if (action === 'completar') {
+        if (previous.is_approved) { await client.query('ROLLBACK'); return send(res,409,{error:'approved_scenario_is_frozen'}); }
+        const revenue = cents(body.projected_revenue_cents), cost = cents(body.projected_cost_cents);
+        if (revenue === null || cost === null || revenue <= 0) { await client.query('ROLLBACK'); return send(res,400,{error:'complete_requires_positive_revenue_and_cost'}); }
+        const percent = marginPercent(revenue, cost);
+        if (percent < -100 || percent > 100) { await client.query('ROLLBACK'); return send(res,400,{error:'projected_margin_percent_out_of_range'}); }
+        const updated = await client.query(
+          `UPDATE fin_budget_scenarios SET is_complete=true,projected_revenue_cents=$1,projected_cost_cents=$2,projected_margin_percent=$3,incomplete_reason=NULL WHERE id=$4 RETURNING *`,
+          [revenue, cost, percent, id]
+        );
+        await insertBudgetHistory(client,'scenario',id,scenarioState(previous),'completo',actor,reason,{projected_margin_percent:percent,premises_version:previous.premises_version});
+        await auditLog({action:'fin_budget_scenario_complete',actor,target:id,meta:{projected_margin_percent:percent,reason},client});
+        await client.query('COMMIT');
+        return send(res,200,{scenario:updated.rows[0],is_estimate:true,projected_values_are_estimates:true});
+      }
+
+      if (action === 'aprovar') {
+        if (previous.is_approved) { await client.query('ROLLBACK'); return send(res,409,{error:'scenario_already_approved'}); }
+        if (!previous.is_complete) { await client.query('ROLLBACK'); return send(res,409,{error:'incomplete_scenario_cannot_be_approved'}); }
+        const updated = await client.query(
+          `UPDATE fin_budget_scenarios SET is_approved=true,approved_by_identity=$1,approved_at=NOW() WHERE id=$2 RETURNING *`,
+          [actor, id]
+        );
+        await insertBudgetHistory(client,'scenario',id,scenarioState(previous),'aprovado',actor,reason,{premises_version:previous.premises_version,commitment_created:false});
+        await auditLog({action:'fin_budget_scenario_approve',actor,target:id,meta:{reason,commitment_created:false},client});
+        await client.query('COMMIT');
+        // Aprovar cenário não cria recebível, despesa, meta nem orçamento executado.
+        return send(res,200,{scenario:updated.rows[0],commitment_created:false,is_estimate:true,no_result_promise:true});
+      }
+
+      // revisar_premissas: premissa nova derruba a aprovação, sempre.
+      const nextPremises = typeof body.premises === 'string' ? body.premises.trim() : '';
+      const nextSource = typeof body.premise_source === 'string' ? body.premise_source.trim() : null;
+      const nextBaseDate = body.premise_base_date != null ? body.premise_base_date : null;
+      if (nextPremises.length < 10 || nextPremises.length > 2000) { await client.query('ROLLBACK'); return send(res,400,{error:'premises_required_10_2000'}); }
+      if (nextSource !== null && (nextSource.length < 5 || nextSource.length > 200)) { await client.query('ROLLBACK'); return send(res,400,{error:'premise_source_required_5_200'}); }
+      if (nextBaseDate !== null && !isoDate(nextBaseDate)) { await client.query('ROLLBACK'); return send(res,400,{error:'premise_base_date_required'}); }
+      if (nextPremises === previous.premises && (nextSource === null || nextSource === previous.premise_source) && (nextBaseDate === null || nextBaseDate === String(previous.premise_base_date).slice(0,10))) {
+        await client.query('ROLLBACK'); return send(res,400,{error:'premise_revision_requires_change'});
+      }
+      const wasApproved = previous.is_approved === true;
+      const updated = await client.query(
+        `UPDATE fin_budget_scenarios
+            SET premises=$1, premise_source=COALESCE($2,premise_source), premise_base_date=COALESCE($3,premise_base_date),
+                premises_version=premises_version+1,
+                is_approved=false, approved_by_identity=NULL, approved_at=NULL
+          WHERE id=$4 RETURNING *`,
+        [nextPremises, nextSource, nextBaseDate, id]
+      );
+      await insertBudgetHistory(client,'scenario',id,scenarioState(previous),'premissas_revisadas',actor,reason,{premises_version:updated.rows[0].premises_version,approval_revoked:wasApproved});
+      await auditLog({action:'fin_budget_scenario_premise_revision',actor,target:id,meta:{approval_revoked:wasApproved,premises_version:updated.rows[0].premises_version,reason},client});
+      await client.query('COMMIT');
+      return send(res,200,{scenario:updated.rows[0],approval_revoked:wasApproved,is_estimate:true,no_result_promise:true});
+    } catch(e) { try { await client.query('ROLLBACK'); } catch {} return budgetFailure(res,e); }
+    finally { client.release(); }
+  };
+
+  const handleFinBudgetHistory = async (req, res) => {
+    const sess = await checkAuth(req, res); if (!sess) return;
+    if (req.method !== 'GET') return send(res,405,{error:'method_not_allowed'});
+    const url = new URL(req.url, `http://${req.headers.host||'localhost'}`), params = [];
+    let q = 'SELECT * FROM fin_budget_history WHERE 1=1';
+    const entity_type = url.searchParams.get('entity_type');
+    if (entity_type) { if (!BUDGET_ENTITIES.has(entity_type)) return send(res,400,{error:'invalid_entity_type'}); params.push(entity_type); q += ` AND entity_type=$${params.length}`; }
+    const entity_id = url.searchParams.get('entity_id');
+    if (entity_id) { if (!uuid(entity_id)) return send(res,400,{error:'invalid_entity_id'}); params.push(entity_id); q += ` AND entity_id=$${params.length}`; }
+    q += ' ORDER BY created_at DESC LIMIT 200';
+    try { return send(res,200,{history:(await pool.query(q,params)).rows}); } catch { return send(res,500,{error:'internal'}); }
+  };
+
   return {
     handleManagementResults,
     handleResultHistory,
@@ -1037,5 +1401,8 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
     handleCharges,
     handleWebhookSign,
     handleGatewayHistory,
+    handleFinBudgets,
+    handleFinBudgetScenarios,
+    handleFinBudgetHistory,
   };
 }
