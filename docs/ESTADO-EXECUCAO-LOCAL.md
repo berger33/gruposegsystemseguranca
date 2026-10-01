@@ -1,6 +1,24 @@
 # Estado da execução — entrega local integral
 
-## Estado atual — entrega técnica L05 (2026-09-30)
+## Estado atual — L07 em execução; consolidação em 2026-10-01
+
+Main consultada: `fa893d69d2e3205e508a0a3a1e95fd5ff956258f`, PR #64 integrado, migrações 001–133. PR #65 ainda aberto na consulta; seus gates estão verdes na branch, não incorporados à main por este documento.
+
+L04, L05 e L06 possuem entregas técnicas integradas. L07 chegou aos handlers FIN-14..16, mas faltam jornadas financeiras e o painel funcional de Marcelo. L08–L10 ainda precisam do fechamento previsto.
+
+A comparação de #47/#53/#59/#60/#62 encontrou melhorias não equivalentes à main e colisões de migrações. Mantê-los como referência, sem merge em bloco ou descarte de código. FIN-13 exige atenção antes de ampliar telas: edição preserva aprovação anterior e percentual de margem vem do navegador.
+
+- Relatório: [CONSOLIDACAO-L07-PRS-PENDENTES.md](CONSOLIDACAO-L07-PRS-PENDENTES.md).
+- Retomada executável: [PROMPT-RETOMADA-L07-CONSOLIDADO.md](PROMPT-RETOMADA-L07-CONSOLIDADO.md).
+- Próximos três passos: integrar/revalidar #65; corrigir FIN-13 de forma aditiva; concluir jornadas financeiras e ADM-01..12.
+- Evidências #65: baseline 196 unitários, L04 20/20, L05 1/1, L06 9/9, L07 27/27, migrações 133/133; links no relatório.
+- Esta consolidação é documental e estática: não executou branches antigas nem novas correções de negócio. Aceite humano e validação Windows permanecem pendentes.
+
+## Histórico preservado
+
+Os estados e números abaixo pertencem às respectivas sessões. Não substituem a seção atual; particularmente, referências a “próximo L06”, “L04 parcial” ou “L05 não iniciado” são históricas.
+
+## Histórico — entrega técnica L05 (2026-09-30)
 
 Fonte oficial: GitHub `berger33/gruposegsystemseguranca`; base integrada `main` / `2e3106fd41aac5510c24064ccbbfa7d3ab046b40` (PR #33). Trabalho executado exclusivamente no ambiente remoto Arena, na branch `arena/01a0f23a-gruposegsystemseguranca`; nenhum comando, instalação ou alteração foi executado no computador do usuário.
 
