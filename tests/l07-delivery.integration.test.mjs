@@ -518,3 +518,245 @@ test("L07 FIN-05: Chromium importa e confirma conciliação no workspace finance
     await browser.close();
   }
 });
+
+test("L07 FIN-06: política de cobrança aprovada, lembretes com responsável, histórico imutável e auditoria fail-closed", { skip: !RUN, timeout: 120_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const rh = await provisionAndLoginStaff(pool, api, { role: "rh" });
+  const { accountId, contractId } = await insertClientSpace("FIN06 HTTP");
+  const receivable = await fin("/receivables", {
+    method: "POST",
+    cookie: financeiro.cookie,
+    body: {
+      client_account_id: accountId,
+      contract_id: contractId,
+      competence_date: "2026-10-01",
+      due_date: "2026-10-10",
+      amount_cents: 15000,
+      description: "Recebível sintético para cobrança FIN-06",
+    },
+  });
+  assert.equal(receivable.status, 201);
+  const receivableId = receivable.body.receivable.id;
+
+  // 1. Anônimo é negado (fail-closed) em todas as três sub-APIs de FIN-06.
+  assert.equal((await fin("/collection-policies")).status, 401, "anonymous policy read denied");
+  assert.equal((await fin("/collection-reminders")).status, 401, "anonymous reminder read denied");
+  assert.equal((await fin(`/collection-history?receivable_id=${receivableId}`)).status, 401, "anonymous history read denied");
+
+  // 2. Papel fora de financeiro/admin/ti é negado.
+  assert.equal((await fin("/collection-policies", { cookie: rh.cookie })).status, 403, "rh cannot read collection policies");
+  assert.equal((await fin("/collection-policies", { method: "POST", cookie: rh.cookie, body: { name: `Forjada ${uuid()}` } })).status, 403, "rh cannot create collection policy");
+  assert.equal((await fin("/collection-reminders", { method: "POST", cookie: rh.cookie, body: { receivable_id: receivableId } })).status, 403, "rh cannot create reminder");
+
+  // 3. same-origin: mutação com Origin estranho é negada antes de qualquer escrita.
+  assert.equal((await fin("/collection-policies", { method: "POST", cookie: financeiro.cookie, origin: "https://externo.example", body: { name: `Forjada origem ${uuid()}` } })).status, 403, "cross-origin policy create denied");
+
+  // 4. Criação de política válida: nome único, descrição, tipo de lembrete, dias antes, escalonamento.
+  const policyName = `Política QA L07 FIN-06 ${uuid().slice(0, 8)}`;
+  const policy = await fin("/collection-policies", {
+    method: "POST",
+    cookie: financeiro.cookie,
+    body: { name: policyName, description: "Política sintética de cobrança do gate L07 FIN-06", reminder_type: "email", days_before: 5, escalation_level: 1 },
+  });
+  assert.equal(policy.status, 201, "policy created");
+  assert.equal(policy.body.policy.is_approved, false, "policy starts unapproved");
+  assert.equal(policy.body.policy.is_active, true, "policy starts active");
+  assert.equal(policy.body.policy.days_before, 5, "days_before persisted");
+  assert.equal(policy.body.policy.escalation_level, 1, "escalation_level persisted");
+
+  // 5. Duplicidade de nome é rejeitada.
+  const duplicatePolicy = await fin("/collection-policies", { method: "POST", cookie: financeiro.cookie, body: { name: policyName } });
+  assert.equal(duplicatePolicy.status, 409, "duplicate policy name rejected");
+  assert.equal(duplicatePolicy.body.error, "duplicate_name");
+
+  // 6. Tentativa de aprovação sem autorização é rejeitada (separação entre criar e aprovar).
+  const unauthorizedApproval = await fin("/collection-policies", { method: "PATCH", cookie: rh.cookie, body: { id: policy.body.policy.id, is_approved: true } });
+  assert.equal(unauthorizedApproval.status, 403, "rh cannot approve collection policy");
+
+  // 7. Aprovação válida e auditada.
+  const approved = await fin("/collection-policies", { method: "PATCH", cookie: financeiro.cookie, body: { id: policy.body.policy.id, is_approved: true } });
+  assert.equal(approved.status, 200, "policy approved");
+  assert.equal(approved.body.policy.is_approved, true);
+  const approverRow = await pool.query("SELECT approved_by_identity, approved_at FROM fin_collection_policies WHERE id=$1", [policy.body.policy.id]);
+  assert.equal(approverRow.rows[0].approved_by_identity, financeiro.id, "approver identity recorded");
+  assert.ok(approverRow.rows[0].approved_at, "approval timestamp recorded");
+  const approveAudit = await pool.query("SELECT count(*)::int AS n FROM audit_log WHERE action='fin_collection_policy_approve' AND target=$1", [policy.body.policy.id]);
+  assert.equal(approveAudit.rows[0].n, 1, "audit row for policy approval");
+  const doubleApproval = await fin("/collection-policies", { method: "PATCH", cookie: financeiro.cookie, body: { id: policy.body.policy.id, is_approved: true } });
+  assert.equal(doubleApproval.status, 409, "already approved policy cannot be approved twice");
+
+  // 8. Referências inválidas são rejeitadas: UUID malformado é 400, UUID inexistente é 404.
+  assert.equal((await fin("/collection-reminders", { method: "POST", cookie: financeiro.cookie, body: { receivable_id: "not-a-uuid", policy_id: policy.body.policy.id, responsible_name: "Ana Responsável", due_date: "2026-10-05", content: "Lembrete sintético com referência malformada para o gate" } })).status, 400, "malformed receivable_id rejected");
+  const missingReceivable = await fin("/collection-reminders", { method: "POST", cookie: financeiro.cookie, body: { receivable_id: uuid(), policy_id: policy.body.policy.id, responsible_name: "Ana Responsável", due_date: "2026-10-05", content: "Lembrete sintético referenciando recebível inexistente" } });
+  assert.equal(missingReceivable.status, 404, "unknown receivable_id is 404");
+  assert.equal(missingReceivable.body.error, "receivable_not_found");
+  const missingPolicy = await fin("/collection-reminders", { method: "POST", cookie: financeiro.cookie, body: { receivable_id: receivableId, policy_id: uuid(), responsible_name: "Ana Responsável", due_date: "2026-10-05", content: "Lembrete sintético referenciando política inexistente" } });
+  assert.equal(missingPolicy.status, 404, "unknown policy_id is 404");
+  assert.equal(missingPolicy.body.error, "policy_not_found");
+
+  // 9. Política não aprovada não pode gerar lembrete (separação criação/aprovação).
+  const draftPolicy = await fin("/collection-policies", { method: "POST", cookie: financeiro.cookie, body: { name: `Rascunho QA L07 ${uuid().slice(0, 8)}` } });
+  assert.equal(draftPolicy.status, 201);
+  const reminderOnDraft = await fin("/collection-reminders", { method: "POST", cookie: financeiro.cookie, body: { receivable_id: receivableId, policy_id: draftPolicy.body.policy.id, responsible_name: "Ana Responsável", due_date: "2026-10-05", content: "Lembrete sintético sobre política ainda não aprovada" } });
+  assert.equal(reminderOnDraft.status, 400, "reminder on unapproved policy denied");
+  assert.equal(reminderOnDraft.body.error, "policy_not_approved");
+
+  // 10. Conteúdo inválido (curto) é rejeitado.
+  const shortContent = await fin("/collection-reminders", { method: "POST", cookie: financeiro.cookie, body: { receivable_id: receivableId, policy_id: policy.body.policy.id, responsible_name: "Ana Responsável", due_date: "2026-10-05", content: "curto" } });
+  assert.equal(shortContent.status, 400, "short content rejected");
+  assert.equal(shortContent.body.error, "content_20_2000_required");
+
+  // 11. Responsável ausente/curto é rejeitado (campo obrigatório).
+  const missingResponsible = await fin("/collection-reminders", { method: "POST", cookie: financeiro.cookie, body: { receivable_id: receivableId, policy_id: policy.body.policy.id, responsible_name: "A", due_date: "2026-10-05", content: "Lembrete sintético sem responsável válido para o gate L07" } });
+  assert.equal(missingResponsible.status, 400, "too-short responsible name rejected");
+
+  // 12. is_real_message=true é rejeitado explicitamente (nunca normalizado silenciosamente para true).
+  const forgedRealMessage = await fin("/collection-reminders", {
+    method: "POST",
+    cookie: financeiro.cookie,
+    body: { receivable_id: receivableId, policy_id: policy.body.policy.id, responsible_name: "Ana Responsável", due_date: "2026-10-05", content: "Lembrete sintético tentando forjar envio real indevido", is_real_message: true },
+  });
+  assert.equal(forgedRealMessage.status, 400, "is_real_message=true rejected");
+  assert.equal(forgedRealMessage.body.error, "real_message_forbidden");
+
+  // 13. Criação de lembrete válido com responsável, política aprovada e vínculo ao recebível.
+  const reminder = await fin("/collection-reminders", {
+    method: "POST",
+    cookie: financeiro.cookie,
+    body: { receivable_id: receivableId, policy_id: policy.body.policy.id, responsible_name: "Ana Responsável QA", due_date: "2026-10-05", reminder_type: "email", content: "Lembrete sintético de cobrança do gate L07 FIN-06, sem envio real" },
+  });
+  assert.equal(reminder.status, 201, "reminder created");
+  assert.equal(reminder.body.reminder.is_real_message, false, "reminder is never a real message");
+  assert.equal(reminder.body.reminder.status, "pendente", "reminder starts pendente");
+  assert.equal(reminder.body.reminder.client_account_id, accountId, "reminder resolves client account via receivable");
+  assert.equal(reminder.body.reminder.contract_id, contractId, "reminder resolves contract via receivable");
+  const createAudit = await pool.query("SELECT count(*)::int AS n FROM audit_log WHERE action='fin_collection_reminder_create' AND target=$1", [reminder.body.reminder.id]);
+  assert.equal(createAudit.rows[0].n, 1, "audit row for reminder creation");
+
+  // 14. Envio é apenas simulado/local: muda status, marca sent_at, nunca envia mensagem real.
+  const shortReason = await fin("/collection-reminders", { method: "PATCH", cookie: financeiro.cookie, body: { id: reminder.body.reminder.id, status: "lembrete_enviado", reason: "curto" } });
+  assert.equal(shortReason.status, 400, "short send reason rejected");
+  const sent = await fin("/collection-reminders", { method: "PATCH", cookie: financeiro.cookie, body: { id: reminder.body.reminder.id, status: "lembrete_enviado", reason: "Envio simulado confirmado pelo gate L07 FIN-06" } });
+  assert.equal(sent.status, 200, "simulated send accepted");
+  assert.equal(sent.body.reminder.status, "lembrete_enviado");
+  assert.ok(sent.body.reminder.sent_at, "sent_at recorded for simulated send");
+  assert.equal(sent.body.reminder.is_real_message, false, "still never a real message after send");
+  const repeatSend = await fin("/collection-reminders", { method: "PATCH", cookie: financeiro.cookie, body: { id: reminder.body.reminder.id, status: "lembrete_enviado", reason: "Repetição do mesmo envio simulado" } });
+  assert.equal(repeatSend.status, 409, "resending the same status is rejected");
+
+  // 15. Histórico foi persistido, é imutável (trigger de banco) e nunca marca bloqueio automático.
+  const history = await fin(`/collection-history?receivable_id=${receivableId}`, { cookie: financeiro.cookie });
+  assert.equal(history.status, 200);
+  assert.ok(history.body.history.length >= 2, "history has creation and send entries");
+  assert.ok(history.body.history.every(entry => entry.is_blocking_action === false), "no history entry ever blocks the portal");
+  const historyRow = await pool.query("SELECT id FROM fin_collection_history WHERE receivable_id=$1 ORDER BY created_at ASC LIMIT 1", [receivableId]);
+  await assert.rejects(
+    pool.query("UPDATE fin_collection_history SET reason='forjado' WHERE id=$1", [historyRow.rows[0].id]),
+    /immutable/i,
+    "history row cannot be updated"
+  );
+  await assert.rejects(
+    pool.query("DELETE FROM fin_collection_history WHERE id=$1", [historyRow.rows[0].id]),
+    /immutable/i,
+    "history row cannot be deleted"
+  );
+
+  // 16. Nenhum bloqueio automático de portal: nenhuma coluna de bloqueio chega a true em todo o fluxo.
+  const blockingCheck = await pool.query("SELECT count(*)::int AS n FROM fin_collection_history WHERE receivable_id=$1 AND is_blocking_action = true", [receivableId]);
+  assert.equal(blockingCheck.rows[0].n, 0, "zero blocking actions recorded");
+
+  // 17. Auditoria indisponível é fail-closed: 503 e rollback total, sem política/lembrete/histórico parcial.
+  const auditPolicyName = `Auditoria indisponível ${uuid().slice(0, 8)}`;
+  await pool.query("ALTER TABLE audit_log RENAME TO audit_log_fin06_unavailable");
+  try {
+    const failedPolicy = await fin("/collection-policies", { method: "POST", cookie: financeiro.cookie, body: { name: auditPolicyName } });
+    assert.equal(failedPolicy.status, 503);
+    assert.deepEqual(failedPolicy.body, { error: "audit_unavailable" });
+    const failedApproval = await fin("/collection-policies", { method: "PATCH", cookie: financeiro.cookie, body: { id: draftPolicy.body.policy.id, is_approved: true } });
+    assert.equal(failedApproval.status, 503);
+    assert.deepEqual(failedApproval.body, { error: "audit_unavailable" });
+    const failedReminder = await fin("/collection-reminders", {
+      method: "POST",
+      cookie: financeiro.cookie,
+      body: { receivable_id: receivableId, policy_id: policy.body.policy.id, responsible_name: "Ana Responsável QA", due_date: "2026-10-06", content: "Lembrete que não pode persistir sem auditoria disponível" },
+    });
+    assert.equal(failedReminder.status, 503);
+    assert.deepEqual(failedReminder.body, { error: "audit_unavailable" });
+  } finally {
+    await pool.query("ALTER TABLE audit_log_fin06_unavailable RENAME TO audit_log");
+  }
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_collection_policies WHERE name=$1", [auditPolicyName])).rows[0].n, 0, "failed policy leaves no row");
+  const draftStillUnapproved = await pool.query("SELECT is_approved FROM fin_collection_policies WHERE id=$1", [draftPolicy.body.policy.id]);
+  assert.equal(draftStillUnapproved.rows[0].is_approved, false, "failed approval leaves policy unapproved");
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_collection_reminders WHERE due_date='2026-10-06'")).rows[0].n, 0, "failed reminder leaves no row");
+});
+
+test("L07 FIN-06: Chromium cria política, aprova, cria lembrete, envia simulado e mostra histórico sem bloqueio", { skip: !RUN, timeout: 180_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const { accountId, contractId } = await insertClientSpace("FIN06 Chromium");
+  const receivable = await fin("/receivables", { method: "POST", cookie: financeiro.cookie, body: { client_account_id: accountId, contract_id: contractId, competence_date: "2026-10-01", due_date: "2026-10-12", amount_cents: 9900, description: "Recebível sintético da jornada FIN-06 no Chromium" } });
+  assert.equal(receivable.status, 201);
+  const browser = await playwrightChromium.launch({ executablePath: await packagedChromium.executablePath(), headless: true, args: packagedChromium.args.filter(arg => arg !== "--disable-web-security") });
+  try {
+    const context = await browser.newContext();
+    const pair = financeiro.cookie.split(";")[0];
+    const separator = pair.indexOf("=");
+    await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
+    const page = await context.newPage();
+    await page.setExtraHTTPHeaders({ origin: baseUrl });
+    await page.goto(`${baseUrl}/admin/financeiro`, { waitUntil: "networkidle" });
+    await page.getByTestId("finance-tab-collection").click();
+    await page.waitForSelector('[data-testid="fin06-collection"]');
+
+    const suffix = uuid().slice(0, 8);
+    const policyName = `Política Chromium FIN-06 ${suffix}`;
+    await page.getByTestId("fin06-policy-name").fill(policyName);
+    await page.getByTestId("fin06-policy-description").fill("Política sintética criada pelo Chromium para o gate L07 FIN-06");
+    await page.getByTestId("fin06-policy-days-before").fill("4");
+    await page.getByTestId("fin06-policy-escalation").fill("2");
+    await page.getByTestId("fin06-create-policy").click();
+    let uiPolicy;
+    for (let i = 0; i < 40; i++) {
+      uiPolicy = await pool.query("SELECT id FROM fin_collection_policies WHERE name=$1", [policyName]);
+      if (uiPolicy.rows.length) break;
+      await sleep(100);
+    }
+    assert.equal(uiPolicy.rows.length, 1);
+    await page.waitForSelector(`[data-testid="fin06-policy-${uiPolicy.rows[0].id}"]`);
+    await page.getByTestId(`fin06-approve-${uiPolicy.rows[0].id}`).click();
+    await page.waitForFunction(id => document.querySelector(`[data-testid="fin06-policy-${id}"]`)?.textContent?.includes("aprovada"), uiPolicy.rows[0].id);
+
+    await page.getByTestId("fin06-reminder-receivable").selectOption(receivable.body.receivable.id);
+    await page.getByTestId("fin06-reminder-policy").selectOption(uiPolicy.rows[0].id);
+    await page.getByTestId("fin06-reminder-responsible").fill("Responsável Chromium QA");
+    await page.getByTestId("fin06-reminder-due-date").fill("2026-10-08");
+    await page.getByTestId("fin06-reminder-content").fill("Lembrete sintético de cobrança criado pelo Chromium, sem envio real, apenas simulado no portal local.");
+    await page.getByTestId("fin06-create-reminder").click();
+    let uiReminder;
+    for (let i = 0; i < 40; i++) {
+      uiReminder = await pool.query("SELECT id FROM fin_collection_reminders WHERE receivable_id=$1", [receivable.body.receivable.id]);
+      if (uiReminder.rows.length) break;
+      await sleep(100);
+    }
+    assert.equal(uiReminder.rows.length, 1);
+    await page.waitForSelector(`[data-testid="fin06-reminder-${uiReminder.rows[0].id}"]`);
+    assert.match(await page.getByTestId(`fin06-reminder-${uiReminder.rows[0].id}`).textContent(), /simulado\/local/);
+
+    await page.locator('[data-testid^="fin06-reminder-"] button', { hasText: "Selecionar para enviar" }).first().click();
+    await page.getByTestId("fin06-send-reason").fill("Envio simulado confirmado pela jornada Chromium do gate L07");
+    await page.getByTestId("fin06-send").click();
+    await page.waitForFunction(() => document.querySelector('[data-testid="fin06-notice"]')?.textContent?.includes("lembrete_enviado"));
+    const uiReminderState = await pool.query("SELECT status, is_real_message FROM fin_collection_reminders WHERE id=$1", [uiReminder.rows[0].id]);
+    assert.equal(uiReminderState.rows[0].status, "lembrete_enviado");
+    assert.equal(uiReminderState.rows[0].is_real_message, false);
+
+    await page.getByTestId("fin06-history-receivable").fill(receivable.body.receivable.id);
+    await page.getByTestId("fin06-load-history").click();
+    await page.waitForFunction(() => (document.querySelector('[data-testid="fin06-history"]')?.textContent || "").includes("sem bloqueio automático"));
+    const historyText = await page.getByTestId("fin06-history").textContent();
+    assert.match(historyText, /sem bloqueio automático/);
+    assert.doesNotMatch(historyText, /ATENÇÃO: bloqueio/);
+  } finally {
+    await browser.close();
+  }
+});

@@ -126,3 +126,9 @@ A PR nova é a **#46**; o commit de código da sessão é `f4354d9` (`fix: fecha
 ### Continuação atual — FIN-05
 
 A entrega desta sessão está registrada em [`docs/ENTREGA-L07-FIN05.md`](./ENTREGA-L07-FIN05.md): FIN-05 foi fechado localmente com API transacional/fail-closed, migração 124, aba de conciliação no workspace financeiro e dois subtestes adicionais do gate L07. O gate final passou **8/8 em duas execuções consecutivas**. FIN-06..16 e ADM-01..12 permanecem fora do escopo.
+
+### Continuação atual — FIN-06
+
+**Base confirmada:** `origin/main` em `9de7c5ac6dea9b6822e3e4050519ff4048432f77` (merge da PR #48, que entregou FIN-05). Sessão `arena/01a0f795-gruposegsystemseguranca`, nova e distinta da sessão anterior (`arena/01a0f77c-...`).
+
+A entrega desta sessão está registrada em [`docs/ENTREGA-L07-FIN06.md`](./ENTREGA-L07-FIN06.md): FIN-06 (cobrança com responsável, lembretes, histórico e política aprovada) foi auditado, endurecido e fechado localmente. A implementação anterior (migration 078) já tinha tabelas e rotas de rascunho, mas a auditoria não era transacional/fail-closed, não havia validação server-side de UUIDs/papéis consistente com FIN-01..05, a política não tinha campos estruturados de tipo de lembrete/dias antes/escalonamento, e o histórico não tinha uma garantia de banco contra bloqueio automático de portal. Essa implementação antiga foi reescrita (não apenas mantida) com o mesmo padrão transacional usado em FIN-01..05. Migração aditiva `125-fin06-collection-hardening.sql`, aba **Cobrança** no workspace financeiro (`CollectionWorkspace.tsx`) e dois subtestes adicionais do gate L07 (HTTP real + Chromium). O gate final passou **10/10 em duas execuções consecutivas**. FIN-07..16 e ADM-01..12 permanecem fora do escopo.

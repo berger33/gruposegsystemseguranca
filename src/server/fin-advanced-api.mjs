@@ -21,6 +21,16 @@ export function createFinAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   const CONCILIATION_STATUSES = new Set(["pendente", "sugerida", "conciliada", "divergente", "ignorada"]);
   const FINAL_CONCILIATION_STATUSES = new Set(["conciliada", "divergente", "ignorada"]);
 
+  // FIN-06: cobrança com responsável, lembretes, histórico e política aprovada.
+  const REMINDER_TYPES = new Set(["email", "whatsapp", "ligacao", "notificacao_portal", "outro"]);
+  const COLLECTION_STATUSES = new Set(["pendente", "lembrete_enviado", "em_negociacao", "acordado", "cancelado"]);
+  // "pendente" só existe como estado inicial automático; qualquer PATCH precisa mover para um destes.
+  const COLLECTION_FORWARD_STATUSES = new Set(["lembrete_enviado", "em_negociacao", "acordado", "cancelado"]);
+
+  function isUuid(value) {
+    return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+  }
+
   async function readJsonBody(req, res) {
     try {
       const chunks = [];
@@ -323,99 +333,261 @@ export function createFinAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
     }
   }
 
+  // FIN-06 cobrança: política aprovada, lembretes com responsável e
+  // histórico imutável. Toda escrita é transacional e a auditoria é
+  // fail-closed (mesmo padrão de FIN-05): se `audit_log` estiver
+  // indisponível, a transação inteira é revertida e a API responde 503.
   async function handleCollectionPolicies(req, res) {
-    const session = await ensureAuth(req, res, ["admin","ti","financeiro"]);
+    const session = await ensureAuth(req, res, ["admin", "ti", "financeiro"]);
     if (!session) return;
     if (req.method === "GET") {
       const { rows } = await pool.query(`SELECT * FROM fin_collection_policies ORDER BY name ASC LIMIT 100`);
-      return json(res,200,{ policies: rows });
+      return json(res, 200, { policies: rows, note: "política de cobrança sintética; sem mensagens reais ou bloqueio automático" });
     }
+    if (req.method !== "POST" && req.method !== "PATCH") return json(res, 405, { error: "method_not_allowed" });
+
+    const body = await readJsonBody(req, res);
+    if (!body) return;
+
     if (req.method === "POST") {
-      let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
-      const { name, description, rules } = body;
-      if (!name || String(name).length <3 || String(name).length>200) return json(res,400,{ error:"name_3_200" });
+      const name = typeof body.name === "string" ? body.name.trim() : "";
+      const description = typeof body.description === "string" ? body.description.trim() : "";
+      const reminderType = body.reminder_type || "notificacao_portal";
+      const daysBefore = body.days_before == null ? 3 : Number(body.days_before);
+      const escalationLevel = body.escalation_level == null ? 0 : Number(body.escalation_level);
+      if (name.length < 3 || name.length > 200) return json(res, 400, { error: "name_3_200_required" });
+      if (body.description != null && (description.length < 10 || description.length > 1000)) {
+        return json(res, 400, { error: "description_10_1000" });
+      }
+      if (!REMINDER_TYPES.has(reminderType)) return json(res, 400, { error: "invalid_reminder_type" });
+      if (!Number.isInteger(daysBefore) || daysBefore < 0 || daysBefore > 365) return json(res, 400, { error: "invalid_days_before" });
+      if (!Number.isInteger(escalationLevel) || escalationLevel < 0 || escalationLevel > 5) return json(res, 400, { error: "invalid_escalation_level" });
+
+      const client = await pool.connect();
       try {
-        const { rows } = await pool.query(`INSERT INTO fin_collection_policies (name, description, rules) VALUES ($1,$2,$3) RETURNING *`, [name, description||null, rules? JSON.stringify(rules): null]);
-        await auditLog({ action:"fin_collection_policy_create", actor: session.identityId||"unknown", target: rows[0].id, meta:{ name } });
-        return json(res,201,{ policy: rows[0] });
-      } catch(e) {
-        if (String(e.message).includes("duplicate")) return json(res,409,{ error:"duplicate_name" });
-        return json(res,500,{ error:"internal", detail:e.message });
+        await client.query("BEGIN");
+        // Criação nunca aprova sozinha: separação explícita entre criar e aprovar.
+        const { rows } = await client.query(
+          `INSERT INTO fin_collection_policies (name, description, reminder_type, days_before, escalation_level, is_approved, is_active)
+           VALUES ($1,$2,$3,$4,$5,false,true) RETURNING *`,
+          [name, description || null, reminderType, daysBefore, escalationLevel]
+        );
+        await auditLog({
+          action: "fin_collection_policy_create",
+          actor: session.identityId || "unknown",
+          target: rows[0].id,
+          meta: { name, reminder_type: reminderType, days_before: daysBefore, escalation_level: escalationLevel, synthetic: true },
+          client,
+        });
+        await client.query("COMMIT");
+        return json(res, 201, { policy: rows[0] });
+      } catch (error) {
+        try { await client.query("ROLLBACK"); } catch {}
+        if (isAuditUnavailable(error)) return json(res, 503, { error: "audit_unavailable" });
+        if (databaseError(error) === "duplicate") return json(res, 409, { error: "duplicate_name" });
+        if (databaseError(error) === "invalid") return json(res, 400, { error: "invalid_policy" });
+        return json(res, 500, { error: "internal" });
+      } finally {
+        client.release();
       }
     }
-    if (req.method === "PATCH") {
-      let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
-      const { id, is_approved, is_active } = body;
-      if (!id) return json(res,400,{ error:"missing_id" });
-      if (is_approved) {
-        await pool.query(`UPDATE fin_collection_policies SET is_approved=true, approved_by_identity=$2, approved_at=NOW(), is_active=COALESCE($3,is_active) WHERE id=$1`, [id, session.identityId||null, is_active]);
-        await auditLog({ action:"fin_collection_policy_approve", actor: session.identityId||"unknown", target: id, meta:{ is_approved:true } });
-      } else if (is_active!=null) {
-        await pool.query(`UPDATE fin_collection_policies SET is_active=$2 WHERE id=$1`, [id, is_active]);
+
+    // PATCH: aprovação autorizada e auditada, ou alternância de estado ativo/inativo.
+    const id = typeof body.id === "string" ? body.id.trim() : "";
+    if (!id || !isUuid(id)) return json(res, 400, { error: "invalid_policy_id" });
+    const wantsApproval = body.is_approved === true;
+    const wantsActiveChange = body.is_active != null && typeof body.is_active === "boolean";
+    if (!wantsApproval && !wantsActiveChange) return json(res, 400, { error: "no_change_requested" });
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const current = await client.query(`SELECT * FROM fin_collection_policies WHERE id=$1 FOR UPDATE`, [id]);
+      if (!current.rows.length) {
+        await client.query("ROLLBACK");
+        return json(res, 404, { error: "policy_not_found" });
       }
-      const { rows } = await pool.query(`SELECT * FROM fin_collection_policies WHERE id=$1`, [id]);
-      return json(res,200,{ policy: rows[0] });
+      if (wantsApproval && current.rows[0].is_approved) {
+        await client.query("ROLLBACK");
+        return json(res, 409, { error: "already_approved" });
+      }
+      if (wantsApproval) {
+        await client.query(
+          `UPDATE fin_collection_policies SET is_approved=true, approved_by_identity=$2, approved_at=NOW() WHERE id=$1`,
+          [id, session.identityId || null]
+        );
+        await auditLog({ action: "fin_collection_policy_approve", actor: session.identityId || "unknown", target: id, meta: { is_approved: true, synthetic: true }, client });
+      }
+      if (wantsActiveChange) {
+        await client.query(`UPDATE fin_collection_policies SET is_active=$2 WHERE id=$1`, [id, body.is_active]);
+        await auditLog({ action: "fin_collection_policy_set_active", actor: session.identityId || "unknown", target: id, meta: { is_active: body.is_active, synthetic: true }, client });
+      }
+      const { rows } = await client.query(`SELECT * FROM fin_collection_policies WHERE id=$1`, [id]);
+      await client.query("COMMIT");
+      return json(res, 200, { policy: rows[0] });
+    } catch (error) {
+      try { await client.query("ROLLBACK"); } catch {}
+      if (isAuditUnavailable(error)) return json(res, 503, { error: "audit_unavailable" });
+      if (databaseError(error) === "invalid") return json(res, 400, { error: "invalid_policy_update" });
+      return json(res, 500, { error: "internal" });
+    } finally {
+      client.release();
     }
-    return json(res,405,{ error:"method_not_allowed" });
   }
 
   async function handleCollectionReminders(req, res) {
-    const session = await ensureAuth(req, res, ["admin","ti","financeiro","comercial"]);
+    const session = await ensureAuth(req, res, ["admin", "ti", "financeiro"]);
     if (!session) return;
     const url = new URL(req.url, `http://${req.headers.host}`);
     if (req.method === "GET") {
       const receivableId = url.searchParams.get("receivable_id");
-      let q=`SELECT * FROM fin_collection_reminders WHERE 1=1`;
-      const params=[]; let idx=1;
-      if (receivableId) { q+=` AND receivable_id=$${idx++}`; params.push(receivableId); }
-      q+=` ORDER BY due_date DESC LIMIT 100`;
+      if (receivableId && !isUuid(receivableId)) return json(res, 400, { error: "invalid_receivable_id" });
+      let q = `SELECT r.*, a.client_account_id, a.contract_id FROM fin_collection_reminders r
+                JOIN fin_accounts_receivable a ON a.id = r.receivable_id WHERE 1=1`;
+      const params = []; let idx = 1;
+      if (receivableId) { q += ` AND r.receivable_id=$${idx++}`; params.push(receivableId); }
+      q += ` ORDER BY r.due_date DESC LIMIT 100`;
       const { rows } = await pool.query(q, params);
-      return json(res,200,{ reminders: rows, note:"sem mensagens reais ou bloqueio portal automático" });
+      return json(res, 200, { reminders: rows, note: "lembrete sintético; nenhuma mensagem real e nenhum bloqueio automático de portal" });
     }
+    if (req.method !== "POST" && req.method !== "PATCH") return json(res, 405, { error: "method_not_allowed" });
+
+    const body = await readJsonBody(req, res);
+    if (!body) return;
+
     if (req.method === "POST") {
-      let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
-      const { receivable_id, policy_id, responsible_name, due_date, reminder_type, content } = body;
-      if (!receivable_id || !responsible_name || !due_date || !content) return json(res,400,{ error:"missing_fields" });
-      if (String(content).length <20 || String(content).length>2000) return json(res,400,{ error:"content_20_2000" });
-      // check policy approved
-      if (policy_id) {
-        const pol = await pool.query(`SELECT is_approved FROM fin_collection_policies WHERE id=$1`, [policy_id]);
-        if (pol.rows.length>0 && !pol.rows[0].is_approved) return json(res,400,{ error:"policy_not_approved", note:"política aprovada obrigatória" });
+      const receivableId = typeof body.receivable_id === "string" ? body.receivable_id.trim() : "";
+      const policyId = typeof body.policy_id === "string" ? body.policy_id.trim() : "";
+      const responsibleName = typeof body.responsible_name === "string" ? body.responsible_name.trim() : "";
+      const dueDate = body.due_date;
+      const reminderType = body.reminder_type || "notificacao_portal";
+      const content = typeof body.content === "string" ? body.content.trim() : "";
+
+      if (body.is_real_message === true) return json(res, 400, { error: "real_message_forbidden", note: "FIN-06 nunca envia mensagem real" });
+      if (!isUuid(receivableId)) return json(res, 400, { error: "invalid_receivable_id" });
+      if (!isUuid(policyId)) return json(res, 400, { error: "invalid_policy_id", note: "política vinculada é obrigatória" });
+      if (responsibleName.length < 2 || responsibleName.length > 200) return json(res, 400, { error: "responsible_name_2_200_required" });
+      if (!validDate(dueDate)) return json(res, 400, { error: "invalid_due_date" });
+      if (!REMINDER_TYPES.has(reminderType)) return json(res, 400, { error: "invalid_reminder_type" });
+      if (content.length < 20 || content.length > 2000) return json(res, 400, { error: "content_20_2000_required" });
+
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const policy = await client.query(`SELECT id, is_approved, is_active FROM fin_collection_policies WHERE id=$1 FOR UPDATE`, [policyId]);
+        if (!policy.rows.length) {
+          await client.query("ROLLBACK");
+          return json(res, 404, { error: "policy_not_found" });
+        }
+        if (!policy.rows[0].is_approved) {
+          await client.query("ROLLBACK");
+          return json(res, 400, { error: "policy_not_approved", note: "política aprovada é obrigatória" });
+        }
+        if (!policy.rows[0].is_active) {
+          await client.query("ROLLBACK");
+          return json(res, 400, { error: "policy_inactive" });
+        }
+        const receivable = await client.query(`SELECT id, client_account_id, contract_id FROM fin_accounts_receivable WHERE id=$1`, [receivableId]);
+        if (!receivable.rows.length) {
+          await client.query("ROLLBACK");
+          return json(res, 404, { error: "receivable_not_found" });
+        }
+        const { rows } = await client.query(
+          `INSERT INTO fin_collection_reminders (receivable_id, policy_id, responsible_name, due_date, reminder_type, content, is_real_message)
+           VALUES ($1,$2,$3,$4,$5,$6,false) RETURNING *`,
+          [receivableId, policyId, responsibleName, dueDate, reminderType, content]
+        );
+        await client.query(
+          `INSERT INTO fin_collection_history (receivable_id, previous_status, next_status, changed_by_identity, reason, is_blocking_action)
+           VALUES ($1,NULL,'pendente',$2,$3,false)`,
+          [receivableId, session.identityId || null, `Criação de lembrete de cobrança sintético (responsável: ${responsibleName})`]
+        );
+        await auditLog({
+          action: "fin_collection_reminder_create",
+          actor: session.identityId || "unknown",
+          target: rows[0].id,
+          meta: { receivable_id: receivableId, policy_id: policyId, responsible_name: responsibleName, reminder_type: reminderType, is_real_message: false, synthetic: true },
+          client,
+        });
+        await client.query("COMMIT");
+        return json(res, 201, {
+          reminder: { ...rows[0], client_account_id: receivable.rows[0].client_account_id, contract_id: receivable.rows[0].contract_id },
+          note: "lembrete sintético com responsável, política aprovada e histórico; sem mensagem real ou bloqueio automático",
+        });
+      } catch (error) {
+        try { await client.query("ROLLBACK"); } catch {}
+        if (isAuditUnavailable(error)) return json(res, 503, { error: "audit_unavailable" });
+        if (databaseError(error) === "duplicate") return json(res, 409, { error: "duplicate_reminder" });
+        if (databaseError(error) === "invalid") return json(res, 400, { error: "invalid_reminder" });
+        return json(res, 500, { error: "internal" });
+      } finally {
+        client.release();
       }
-      const { rows } = await pool.query(
-        `INSERT INTO fin_collection_reminders (receivable_id, policy_id, responsible_name, due_date, reminder_type, content, is_real_message)
-         VALUES ($1,$2,$3,$4,$5,$6,false) RETURNING *`,
-        [receivable_id, policy_id||null, responsible_name, due_date, reminder_type||'notificacao_portal', content]
+    }
+
+    // PATCH: avança o estado do lembrete (ex.: envio simulado) com motivo auditado.
+    const id = typeof body.id === "string" ? body.id.trim() : "";
+    const status = body.status;
+    const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+    if (body.is_real_message === true) return json(res, 400, { error: "real_message_forbidden" });
+    if (!isUuid(id)) return json(res, 400, { error: "invalid_reminder_id" });
+    if (!COLLECTION_FORWARD_STATUSES.has(status)) return json(res, 400, { error: "invalid_status" });
+    if (reason.length < 10 || reason.length > 1000) return json(res, 400, { error: "reason_10_1000_required" });
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const current = await client.query(`SELECT * FROM fin_collection_reminders WHERE id=$1 FOR UPDATE`, [id]);
+      if (!current.rows.length) {
+        await client.query("ROLLBACK");
+        return json(res, 404, { error: "reminder_not_found" });
+      }
+      const prev = current.rows[0];
+      if (prev.status === status) {
+        await client.query("ROLLBACK");
+        return json(res, 409, { error: "already_in_status" });
+      }
+      await client.query(
+        `UPDATE fin_collection_reminders
+            SET status=$2::fin_collection_status, sent_at=CASE WHEN $2::fin_collection_status='lembrete_enviado' THEN NOW() ELSE sent_at END, updated_at=NOW()
+          WHERE id=$1`,
+        [id, status]
       );
-      await pool.query(`INSERT INTO fin_collection_history (receivable_id, previous_status, next_status, changed_by_identity, reason) VALUES ($1,$2,$3,$4,$5)`, [receivable_id, null, 'pendente', session.identityId||null, 'Criação lembrete cobrança']);
-      await auditLog({ action:"fin_collection_reminder_create", actor: session.identityId||"unknown", target: rows[0].id, meta:{ receivable_id, responsible: responsible_name, reminder_type } });
-      return json(res,201,{ reminder: rows[0], note:"cobrança com responsável lembretes histórico política aprovada sem mensagens reais" });
+      await client.query(
+        `INSERT INTO fin_collection_history (receivable_id, previous_status, next_status, changed_by_identity, reason, is_blocking_action)
+         VALUES ($1,$2,$3,$4,$5,false)`,
+        [prev.receivable_id, prev.status, status, session.identityId || null, reason]
+      );
+      await auditLog({
+        action: status === "lembrete_enviado" ? "fin_collection_reminder_send" : "fin_collection_reminder_update",
+        actor: session.identityId || "unknown",
+        target: id,
+        meta: { previous: prev.status, next: status, reason, is_real_message: false, is_blocking_action: false, synthetic: true },
+        client,
+      });
+      const { rows } = await client.query(`SELECT * FROM fin_collection_reminders WHERE id=$1`, [id]);
+      await client.query("COMMIT");
+      return json(res, 200, { reminder: rows[0], note: "envio apenas simulado/local; sem bloqueio automático de portal" });
+    } catch (error) {
+      try { await client.query("ROLLBACK"); } catch {}
+      if (isAuditUnavailable(error)) return json(res, 503, { error: "audit_unavailable" });
+      if (databaseError(error) === "invalid") return json(res, 400, { error: "invalid_status_update" });
+      return json(res, 500, { error: "internal" });
+    } finally {
+      client.release();
     }
-    if (req.method === "PATCH") {
-      let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
-      const { id, status, reason } = body;
-      if (!id || !status) return json(res,400,{ error:"missing_fields" });
-      if (!reason || String(reason).length <10) return json(res,400,{ error:"reason_10_1000_required" });
-      const cur = await pool.query(`SELECT * FROM fin_collection_reminders WHERE id=$1`, [id]);
-      if (cur.rows.length===0) return json(res,404,{ error:"not_found" });
-      const prev = cur.rows[0];
-      await pool.query(`UPDATE fin_collection_reminders SET status=$2, sent_at=CASE WHEN $2='lembrete_enviado' THEN NOW() ELSE sent_at END WHERE id=$1`, [id, status]);
-      await pool.query(`INSERT INTO fin_collection_history (receivable_id, previous_status, next_status, changed_by_identity, reason) VALUES ($1,$2,$3,$4,$5)`, [prev.receivable_id, prev.status, status, session.identityId||null, reason]);
-      await auditLog({ action:"fin_collection_reminder_send", actor: session.identityId||"unknown", target: id, meta:{ previous: prev.status, next: status, reason, note:"sem mensagens reais sem bloqueio automático" } });
-      const { rows } = await pool.query(`SELECT * FROM fin_collection_reminders WHERE id=$1`, [id]);
-      return json(res,200,{ reminder: rows[0] });
-    }
-    return json(res,405,{ error:"method_not_allowed" });
   }
 
   async function handleCollectionHistory(req, res) {
-    const session = await ensureAuth(req, res, ["admin","ti","financeiro"]);
+    const session = await ensureAuth(req, res, ["admin", "ti", "financeiro"]);
     if (!session) return;
+    if (req.method !== "GET") return json(res, 405, { error: "method_not_allowed" });
     const url = new URL(req.url, `http://${req.headers.host}`);
     const receivableId = url.searchParams.get("receivable_id");
-    if (!receivableId) return json(res,400,{ error:"missing_receivable_id" });
+    if (!receivableId) return json(res, 400, { error: "missing_receivable_id" });
+    if (!isUuid(receivableId)) return json(res, 400, { error: "invalid_receivable_id" });
     const { rows } = await pool.query(`SELECT * FROM fin_collection_history WHERE receivable_id=$1 ORDER BY created_at DESC`, [receivableId]);
-    return json(res,200,{ history: rows });
+    return json(res, 200, { history: rows, note: "histórico imutável; nenhuma ação aqui bloqueia o portal automaticamente" });
   }
 
   async function handleCashflowSnapshots(req, res) {

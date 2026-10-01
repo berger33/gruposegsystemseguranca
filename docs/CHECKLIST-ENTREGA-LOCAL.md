@@ -1008,10 +1008,10 @@ conciliação por importação/extrato ou provedor, sugestão e confirmação; e
 
 ## FIN-06
 cobrança com responsável, lembretes, histórico e política aprovada; sem mensagens reais ou bloqueio de portal automático na implementação.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/financeiro` → aba **Cobrança** (`CollectionWorkspace.tsx`) usa somente `/api/fin/collection-policies`, `/api/fin/collection-reminders` e `/api/fin/collection-history`. Acesso exige sessão de staff, papel `financeiro`/`admin`/`ti` e same-origin. Política de cobrança tem nome único, descrição, tipo de lembrete, dias antes, nível de escalonamento e separação entre criação (rascunho não aprovado) e aprovação auditada. Lembrete exige política aprovada/ativa, recebível existente, responsável (2–200), conteúdo (20–2000) e nunca aceita `is_real_message=true` (rejeitado com `400`). Histórico é imutável por trigger de banco e `is_blocking_action` é sempre `false` por `CHECK`. A migração aditiva `125-fin06-collection-hardening.sql` acrescenta `reminder_type`/`days_before`/`escalation_level` estruturados à política e `is_blocking_action` ao histórico.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` **10/10** (HTTP real + PostgreSQL descartável + Chromium real, incluindo a jornada FIN-06) em duas execuções finais consecutivas. Cobertura: anônimo/papel indevido/origem externa negados, duplicidade de nome, aprovação sem autorização rejeitada, aprovação válida e auditada, referências inválidas, lembrete com responsável, conteúdo inválido rejeitado, `is_real_message=true` rejeitado, envio apenas simulado, histórico imutável sem bloqueio automático, e auditoria indisponível com `503`/rollback. `npm run typecheck`, `node scripts/qa-wave0-static.mjs` (5/5), `npm test` (196/196), `npm run test:migrations:pg` (125/125) e `npm run build` verdes; `npm run test:l06-delivery:pg` 9/9 preservado. Detalhe completo em [`docs/ENTREGA-L07-FIN06.md`](./ENTREGA-L07-FIN06.md).
+- Pendência / fronteira externa / aceite humano: não há e-mail, WhatsApp, SMS, gateway, webhook, arquivo ou credencial de produção; "envio" é sempre uma transição de estado local simulada. Aceite humano/Windows permanece pendente. FIN-07..16 e ADM-01..12 continuam fora desta sessão.
 
 ## FIN-07
 fluxo de caixa previsto/realizado, vencidos, próximos pagamentos e aging de recebíveis.
