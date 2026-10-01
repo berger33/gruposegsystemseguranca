@@ -1658,3 +1658,75 @@ autorizado, 409 `batch_not_pending` depois do fechamento, curinga `%` do CSV
 não casando com empresa de terceiro e jornada de UI em `/admin/crm` sem
 rolagem horizontal, erro de console ou 5xx inesperado.
 
+
+---
+
+## FIN-13 — revalidação e correção aditiva (2026-10-01)
+
+### Escopo e implementação
+
+A fonte oficial antes da correção era `origin/main` em
+`4ea35780bacc80bd228f6a970949a52e6f9504ba`; não havia commits posteriores ao
+baseline consultado. Esta sessão usou exclusivamente a branch remota da Arena
+`arena/01a0f9b5-gruposegsystemseguranca` e não alterou o computador do usuário.
+
+A migration aditiva `134-fin13-budget-revisions-idempotency-margin.sql` não
+reescreve 001–133. Ela mantém linhas antigas sem inventar autoria, adiciona
+metadados de versão/evento/snapshot, índice parcial de idempotência, guardas de
+revisão/auditoria e cálculo de margem/estado no PostgreSQL. A inserção
+concorrente usa `ON CONFLICT DO NOTHING`, sem apontar incorretamente para o
+índice parcial.
+
+A API e a UI agora comprovam:
+
+- orçamento aprovado não aceita edição ordinária; revisão exige conteúdo
+  alterado, motivo e identidade da sessão, cria nova versão em `em_revisao`,
+  preserva snapshot anterior e remove a aprovação;
+- nova aprovação exige motivo, identidade e data; transição direta
+  `rascunho → aprovado` continua 409;
+- retry concorrente com chave e conteúdo equivalentes retorna o mesmo ID sem
+  duplicar; mesma chave com conteúdo diferente retorna 409;
+- margem percentual ignora entrada do cliente e é calculada no banco; receita
+  zero e receita/custo ausentes ficam explícitos, sem percentual inventado;
+- histórico devolve snapshots, evento, versão, autor real, data e motivo e é
+  imutável; autorização, mutação, histórico e auditoria ficam na mesma
+  transação; falha da auditoria retorna 503 com rollback;
+- `/admin/financeiro` oferece seleção por nome/protocolo, moeda BRL, revisão,
+  aprovação e histórico, sem campo de margem editável; falha de leitura fica
+  visível e não se transforma em mensagem de lista vazia;
+- nenhuma aprovação ou cenário cria cobrança, pagamento, obrigação, recebível,
+  despesa ou meta automaticamente.
+
+### Evidência automática observada nesta sessão
+
+| Cenário | Comando | Resultado |
+|---|---|---|
+| Tipos | `npm run typecheck` | aprovado |
+| Guardas estáticas | `node scripts/qa-wave0-static.mjs` | 5/5; 001–134 contínuas e registradas |
+| Unitários/regressões rápidas | `npm test` | 196/196 |
+| Banco vazio, replay e checksum | `npm run test:migrations:pg` | 134/134; replay 0; clone rejeitou checksum adulterado de 006; 522 tabelas; `TABLES=522->522` |
+| Gate L07 completo | `npm run test:l07-delivery:pg` | **28/28**, exit 0; PostgreSQL descartável, HTTP real, Chromium real, sem skips |
+| Jornada L03 preservada | `npm run test:l03-delivery:pg` | 1/1, exit 0 |
+| Regressão L04 | `npm run test:l04-delivery:pg` | 20/20, exit 0 na reexecução; uma execução anterior falhou somente por SIGSEGV do Chromium no launch e foi reexecutada |
+| Regressão L05 | `npm run test:l05-delivery:pg` | 1/1, exit 0 |
+| Regressão L06 | `npm run test:l06-delivery:pg` | 9/9, exit 0 |
+| Build | `npm run build` | aprovado; 78 páginas geradas |
+| Espaços | `git diff --check` | limpo na checagem final antes do commit |
+
+O gate FIN-13 HTTP inclui papel indevido, same-origin, TI somente leitura,
+premissas, transições, motivo de aprovação, revisão/versionamento, conflito de
+idempotência, cenários permitidos, margem calculada, lacuna, receita zero,
+escrita direta protegida, histórico imutável, auditoria fail-closed e ausência
+de efeitos financeiros automáticos. O Chromium cria orçamento e cenário na
+aba real, confere `33.33` e `calculada` no banco, remove a aba e força falha de
+leitura HTTP real ao renomear temporariamente a tabela no PostgreSQL descartável,
+comprovando a mensagem de erro e a ausência da mensagem de lista vazia.
+
+### Estado e limites
+
+FIN-13 está `pronto_local` no checklist técnico porque todos os critérios da
+fatia e as regressões exigidas foram demonstrados. Isso não declara L07 inteiro
+concluído. Aceite humano, validação Windows, produção, SMTP, hospedagem pública,
+gateway/pagamento real e transações externas não foram executados. FIN-14,
+FIN-15, FIN-16, ADM-01..12 e L08 não foram iniciados. A próxima fatia está
+registrada em `docs/PROMPT-CONTINUACAO-L07-FIN14.md`.

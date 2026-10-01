@@ -1,18 +1,18 @@
 # Estado da execução — entrega local integral
 
-## Estado atual — L07 em execução; consolidação em 2026-10-01
+## Estado atual — FIN-13 local concluído, L07 ainda em execução (2026-10-01)
 
-Main consultada: `fa893d69d2e3205e508a0a3a1e95fd5ff956258f`, PR #64 integrado, migrações 001–133. PR #65 ainda aberto na consulta; seus gates estão verdes na branch, não incorporados à main por este documento.
+Fonte oficial conferida: `origin/main` estava em `4ea35780bacc80bd228f6a970949a52e6f9504ba`, sem commits posteriores antes desta continuação. Esta sessão trabalha exclusivamente na branch `arena/01a0f9b5-gruposegsystemseguranca`; PR revisável será aberta sem merge.
 
-L04, L05 e L06 possuem entregas técnicas integradas. L07 chegou aos handlers FIN-14..16, mas faltam jornadas financeiras e o painel funcional de Marcelo. L08–L10 ainda precisam do fechamento previsto.
+FIN-13 foi implementado de forma aditiva na migration 134. O gate L07 integral terminou **28/28** com PostgreSQL descartável, HTTP real e Chromium real; typecheck, estático 5/5, unitários 196/196, migrations 134/134 com replay/checksum, build e regressões L03 1/1, L04 20/20, L05 1/1 e L06 9/9 ficaram verdes nesta sessão. FIN-13 pode ser marcado `pronto_local` no checklist técnico, mas aceite humano e validação Windows continuam separados. L07 como bloco não está concluído.
 
-A comparação de #47/#53/#59/#60/#62 encontrou melhorias não equivalentes à main e colisões de migrações. Mantê-los como referência, sem merge em bloco ou descarte de código. FIN-13 exige atenção antes de ampliar telas: edição preserva aprovação anterior e percentual de margem vem do navegador.
+A correção cobre edição aprovada recusada sem revisão, revisão explícita com motivo/autor, nova versão e snapshots, aprovação removida e exigida novamente, margem calculada pelo banco, idempotência concorrente com conflito de conteúdo, histórico imutável, autorização/auditoria transacional fail-closed, UI de orçamento/cenário/histórico/erro e ausência de efeitos financeiros automáticos.
 
-- Relatório: [CONSOLIDACAO-L07-PRS-PENDENTES.md](CONSOLIDACAO-L07-PRS-PENDENTES.md).
-- Retomada executável: [PROMPT-RETOMADA-L07-CONSOLIDADO.md](PROMPT-RETOMADA-L07-CONSOLIDADO.md).
-- Próximos três passos: integrar/revalidar #65; corrigir FIN-13 de forma aditiva; concluir jornadas financeiras e ADM-01..12.
-- Evidências #65: baseline 196 unitários, L04 20/20, L05 1/1, L06 9/9, L07 27/27, migrações 133/133; links no relatório.
-- Esta consolidação é documental e estática: não executou branches antigas nem novas correções de negócio. Aceite humano e validação Windows permanecem pendentes.
+- Entrega: [ENTREGA-L07-FIN13.md](ENTREGA-L07-FIN13.md).
+- Evidências executadas: [EVIDENCIAS-ENTREGA-LOCAL.md](EVIDENCIAS-ENTREGA-LOCAL.md).
+- Checklist: [CHECKLIST-ENTREGA-LOCAL.md](CHECKLIST-ENTREGA-LOCAL.md).
+- Próxima fatia não iniciada: [PROMPT-CONTINUACAO-L07-FIN14.md](PROMPT-CONTINUACAO-L07-FIN14.md).
+- Limite explícito: FIN-14, FIN-15, FIN-16, ADM-01..12 e L08 permanecem fora desta sessão.
 
 ## Histórico preservado
 
