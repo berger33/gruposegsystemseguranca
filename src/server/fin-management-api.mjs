@@ -14,7 +14,7 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
   const checkAuth = async (req, res) => {
     const sess = await getSession(req);
     if (!sess) { res.writeHead(401, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return null; }
-    if (!requireRole(sess, ['admin','ti','financeiro','finance','rh'])) {
+    if (!requireRole(sess, ['admin','ti','financeiro','finance'])) {
       // allow admin only fallback
       const r = (sess.role||'').toLowerCase();
       if (r!=='admin' && r!=='ti' && r!=='financeiro' && r!=='finance') {
@@ -101,128 +101,119 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
     } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
   };
 
-  // FIN-10 despesas
+  // FIN-10 despesas: solicitação e decisão transacionais, com alçada no
+  // servidor/banco, referências canônicas e evidência somente como metadado sintético.
+  const EXPENSE_TYPES = new Set(['despesa','reembolso','compra','outro']);
+  const EXPENSE_STATUSES = new Set(['pendente','aprovado','rejeitado','cancelado']);
+  const syntheticEvidenceUrl = v => typeof v === 'string' && /^synthetic:\/\/[A-Za-z0-9][A-Za-z0-9._/-]{4,990}$/.test(v);
+  const syntheticStorageKey = v => typeof v === 'string' && /^synthetic\/[A-Za-z0-9][A-Za-z0-9._/-]{3,490}$/.test(v);
+  const positiveCents = v => Number.isSafeInteger(Number(v)) && Number(v) > 0 ? Number(v) : null;
+  const expenseFailure = (res, e) => {
+    if (isAuditUnavailable(e)) return send(res,503,{error:'audit_unavailable'});
+    if (e?.code === '23505') {
+      const key=String(e.constraint||'');
+      return send(res,409,{error:key.includes('idempotency')?'duplicate_idempotency_key':key.includes('evidence_storage')?'duplicate_evidence':'duplicate'});
+    }
+    if (e?.code === '23503') return send(res,400,{error:'invalid_reference'});
+    if (e?.code === '23514') return send(res,400,{error:'invalid_expense_transition'});
+    return send(res,500,{error:'internal'});
+  };
+
   const handleExpenses = async (req, res) => {
     const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
-      const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
-      const status = url.searchParams.get('status');
-      const expense_type = url.searchParams.get('expense_type');
-      const contract_id = url.searchParams.get('contract_id');
-      let q = `SELECT * FROM fin_expenses WHERE 1=1`; const params=[]; let idx=1;
-      if (status) { q+=` AND status=$${idx++}`; params.push(status); }
-      if (expense_type) { q+=` AND expense_type=$${idx++}`; params.push(expense_type); }
-      if (contract_id) { q+=` AND contract_id=$${idx++}`; params.push(contract_id); }
-      q+=` ORDER BY created_at DESC LIMIT 200`;
-      try {
-        const { rows } = await pool.query(q, params);
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ expenses: rows }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
+      const url=new URL(req.url,`http://${req.headers.host||'localhost'}`), params=[];
+      let q='SELECT * FROM fin_expenses WHERE 1=1';
+      const status=url.searchParams.get('status'), type=url.searchParams.get('expense_type'), contract=url.searchParams.get('contract_id');
+      if (status) { if(!EXPENSE_STATUSES.has(status)) return send(res,400,{error:'invalid_status'}); params.push(status); q+=` AND status=$${params.length}`; }
+      if (type) { if(!EXPENSE_TYPES.has(type)) return send(res,400,{error:'invalid_expense_type'}); params.push(type); q+=` AND expense_type=$${params.length}`; }
+      if (contract) { if(!uuid(contract)) return send(res,400,{error:'invalid_contract_id'}); params.push(contract); q+=` AND contract_id=$${params.length}`; }
+      q+=' ORDER BY created_at DESC LIMIT 200';
+      try { return send(res,200,{expenses:(await pool.query(q,params)).rows}); } catch { return send(res,500,{error:'internal'}); }
     }
+    if (!['POST','PATCH'].includes(req.method)) return send(res,405,{error:'method_not_allowed'});
+    if (!sameOrigin(req)) return send(res,403,{error:'forbidden_origin'});
+    let body; try { body=await readJson(req); } catch { return send(res,400,{error:'invalid_json'}); }
+    const actor=sess.identityId;
+    if (!uuid(actor)) return send(res,401,{error:'unauthorized'});
+
     if (req.method === 'POST') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
-      const expense_type = body.expense_type || 'despesa';
-      const category = (body.category||'').trim();
-      const description = (body.description||'').trim();
-      const amount_cents = body.amount_cents;
-      const threshold_cents = body.threshold_cents ?? null;
-      const requester_name = (body.requester_name||'').trim();
-      const requester_identity = body.requester_identity || sess.identityId || null;
-      const approver_name = (body.approver_name||'').trim() || null;
-      const approver_identity = body.approver_identity || null;
-      const evidence_file_name = body.evidence_file_name || null;
-      const evidence_file_url = body.evidence_file_url || null;
-      const evidence_storage_key = body.evidence_storage_key || null;
-      const contract_id = body.contract_id || null;
-      const cost_center_id = body.cost_center_id || null;
-      const supplier_id = body.supplier_id || null;
-
-      if (!category || category.length<3 || category.length>200) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'category_3_200'})); return; }
-      if (!description || description.length<10 || description.length>1000) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'description_10_1000'})); return; }
-      if (!amount_cents || amount_cents<=0) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'amount_positive'})); return; }
-      if (!requester_name || requester_name.length<2 || requester_name.length>200) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'requester_name_2_200'})); return; }
-      if (requester_identity && approver_identity && requester_identity===approver_identity) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'segregation_requester_approver_must_differ'})); return; }
-      if (evidence_file_url && (evidence_file_url.length<5 || evidence_file_url.length>1000)) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'evidence_file_url_5_1000'})); return; }
-      if (evidence_storage_key && (evidence_storage_key.length<5 || evidence_storage_key.length>500)) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'evidence_storage_key_5_500'})); return; }
-
-      const protocol = generateProtocol('DES-FIN');
+      const expense_type=body.expense_type||'despesa';
+      const category=typeof body.category==='string'?body.category.trim():'';
+      const description=typeof body.description==='string'?body.description.trim():'';
+      const requester_name=typeof body.requester_name==='string'?body.requester_name.trim():'';
+      const amount_cents=positiveCents(body.amount_cents), threshold_cents=positiveCents(body.threshold_cents);
+      const evidence_file_name=typeof body.evidence_file_name==='string'?body.evidence_file_name.trim():'';
+      const evidence_file_url=typeof body.evidence_file_url==='string'?body.evidence_file_url.trim():'';
+      const evidence_storage_key=typeof body.evidence_storage_key==='string'?body.evidence_storage_key.trim():'';
+      const idempotency_key=typeof body.idempotency_key==='string'?body.idempotency_key.trim():'';
+      const contract_id=body.contract_id, cost_center_id=body.cost_center_id, supplier_id=body.supplier_id;
+      if(!EXPENSE_TYPES.has(expense_type)) return send(res,400,{error:'invalid_expense_type'});
+      if(category.length<3||category.length>200) return send(res,400,{error:'category_3_200'});
+      if(description.length<10||description.length>1000) return send(res,400,{error:'description_10_1000'});
+      if(!amount_cents) return send(res,400,{error:'amount_positive_integer'});
+      if(!threshold_cents) return send(res,400,{error:'threshold_positive_integer'});
+      if(requester_name.length<2||requester_name.length>200) return send(res,400,{error:'requester_name_2_200'});
+      if(!uuid(contract_id)||!uuid(cost_center_id)||!uuid(supplier_id)) return send(res,400,{error:'canonical_references_required'});
+      if(evidence_file_name.length<1||evidence_file_name.length>500||!syntheticEvidenceUrl(evidence_file_url)||!syntheticStorageKey(evidence_storage_key)) return send(res,400,{error:'synthetic_evidence_metadata_required'});
+      if(idempotency_key.length<8||idempotency_key.length>200) return send(res,400,{error:'idempotency_key_8_200'});
+      const client=await pool.connect();
       try {
-        if (evidence_storage_key) {
-          const dup = await pool.query(`SELECT id FROM fin_expenses WHERE evidence_storage_key=$1`, [evidence_storage_key]);
-          if (dup.rows.length) { res.writeHead(409, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'duplicate_storage_key'})); return; }
-        }
-        const { rows } = await pool.query(
-          `INSERT INTO fin_expenses (protocol, expense_type, category, description, amount_cents, threshold_cents, requester_name, requester_identity, approver_name, approver_identity, evidence_file_name, evidence_file_url, evidence_storage_key, contract_id, cost_center_id, supplier_id, created_by_identity)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *`,
-          [protocol, expense_type, category, description, amount_cents, threshold_cents, requester_name, requester_identity, approver_name, approver_identity, evidence_file_name, evidence_file_url, evidence_storage_key, contract_id, cost_center_id, supplier_id, sess.identityId||null]
-        );
-        await pool.query(
-          `INSERT INTO fin_expense_history (expense_id, previous_status, next_status, previous_amount, next_amount, changed_by_identity, reason, is_segregation_verified)
-           VALUES ($1,NULL,$2,NULL,$3,$4,$5,$6)`,
-          [rows[0].id, 'pendente', amount_cents, sess.identityId||null, 'Criação despesa com segregação solicitar/aprovar', false]
-        );
-        try { await auditLog({ action:'fin_expense_create', actor: sess.identityId, target: rows[0].id, meta:{ protocol, amount_cents, expense_type } }); } catch {}
-        res.writeHead(201, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ expense: rows[0] }));
-      } catch(e){
-        if (e.code==='23505') { res.writeHead(409, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'duplicate', details:e.detail})); return; }
-        res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message}));
+        await client.query('BEGIN');
+        const contract=await client.query("SELECT id FROM crm_contracts WHERE id=$1 AND status NOT IN ('encerrado','cancelado')",[contract_id]);
+        const center=await client.query('SELECT id FROM fin_cost_centers WHERE id=$1 AND is_active=true',[cost_center_id]);
+        const supplier=await client.query('SELECT id FROM fin_suppliers WHERE id=$1 AND is_active=true',[supplier_id]);
+        if(!contract.rows.length||!center.rows.length||!supplier.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'canonical_reference_not_found_or_inactive'}); }
+        const protocol=generateProtocol('DES-FIN');
+        const created=await client.query(`INSERT INTO fin_expenses (protocol,expense_type,category,description,amount_cents,threshold_cents,requester_name,requester_identity,evidence_file_name,evidence_file_url,evidence_storage_key,contract_id,cost_center_id,supplier_id,created_by_identity,idempotency_key) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$8,$15) RETURNING *`,[protocol,expense_type,category,description,amount_cents,threshold_cents,requester_name,actor,evidence_file_name,evidence_file_url,evidence_storage_key,contract_id,cost_center_id,supplier_id,idempotency_key]);
+        const expense=created.rows[0];
+        await client.query(`INSERT INTO fin_expense_history (expense_id,previous_status,next_status,previous_amount,next_amount,changed_by_identity,reason,is_segregation_verified) VALUES ($1,NULL,'pendente',NULL,$2,$3,$4,false)`,[expense.id,amount_cents,actor,'Solicitação financeira criada com evidência sintética e referências canônicas']);
+        await auditLog({action:'fin_expense_create',actor,target:expense.id,meta:{protocol,expense_type,amount_cents,contract_id,idempotency_key},client});
+        await client.query('COMMIT');
+        return send(res,201,{expense,synthetic:true});
+      } catch(e) { try { await client.query('ROLLBACK'); } catch {} return expenseFailure(res,e); }
+      finally { client.release(); }
+    }
+
+    const id=body.id, status=body.status, reason=typeof body.reason==='string'?body.reason.trim():'';
+    if(!uuid(id)) return send(res,400,{error:'invalid_id'});
+    if(!['aprovado','rejeitado','cancelado'].includes(status)) return send(res,400,{error:'invalid_transition'});
+    if(reason.length<10||reason.length>1000) return send(res,400,{error:'reason_10_1000_required'});
+    const client=await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const found=await client.query('SELECT * FROM fin_expenses WHERE id=$1 FOR UPDATE',[id]);
+      if(!found.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'not_found'}); }
+      const previous=found.rows[0];
+      if(previous.status!=='pendente') { await client.query('ROLLBACK'); return send(res,409,{error:'expense_not_pending'}); }
+      if(status==='cancelado' && previous.requester_identity!==actor) { await client.query('ROLLBACK'); return send(res,403,{error:'only_requester_can_cancel'}); }
+      if(status!=='cancelado' && previous.requester_identity===actor) { await client.query('ROLLBACK'); return send(res,403,{error:'requester_cannot_decide'}); }
+      if(status==='aprovado') {
+        const authority=await client.query('SELECT max_amount_cents FROM fin_expense_approval_authorities WHERE identity_id=$1 AND is_active=true',[actor]);
+        if(!authority.rows.length||Number(previous.amount_cents)>Number(authority.rows[0].max_amount_cents)) { await client.query('ROLLBACK'); return send(res,403,{error:'approval_authority_exceeded'}); }
       }
-      return;
-    }
-    if (req.method === 'PATCH') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
-      const id = body.id;
-      const status = body.status;
-      const reason = (body.reason||'').trim();
-      if (!id) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'id_required'})); return; }
-      if (!reason || reason.length<10 || reason.length>1000) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'reason_10_1000_required'})); return; }
-      if (!status) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'status_required'})); return; }
-      try {
-        const existing = await pool.query(`SELECT * FROM fin_expenses WHERE id=$1`, [id]);
-        if (!existing.rows.length) { res.writeHead(404, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
-        const prev = existing.rows[0];
-        // segregation check: approver cannot be same as requester
-        const approver_identity = body.approver_identity || prev.approver_identity;
-        if (prev.requester_identity && approver_identity && prev.requester_identity===approver_identity) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'segregation_requester_approver_must_differ'})); return; }
-        // alçada check: if amount > threshold and status approve, require approver
-        if (status==='aprovado' && prev.threshold_cents && prev.amount_cents > prev.threshold_cents && !approver_identity) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'approver_required_above_threshold'})); return; }
-
-        const { rows } = await pool.query(
-          `UPDATE fin_expenses SET status=$1, approver_name=COALESCE($2,approver_name), approver_identity=COALESCE($3,approver_identity), approved_at=CASE WHEN $1='aprovado' THEN NOW() ELSE approved_at END, approved_by_identity=CASE WHEN $1='aprovado' THEN $4 ELSE approved_by_identity END, rejection_reason=CASE WHEN $1='rejeitado' THEN $5 ELSE rejection_reason END, is_segregated=true, segregation_checked=true, updated_at=NOW() WHERE id=$6 RETURNING *`,
-          [status, body.approver_name||null, approver_identity, sess.identityId||null, status==='rejeitado'?reason:null, id]
-        );
-        await pool.query(
-          `INSERT INTO fin_expense_history (expense_id, previous_status, next_status, previous_amount, next_amount, changed_by_identity, reason, is_segregation_verified)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-          [id, prev.status, status, prev.amount_cents, rows[0].amount_cents, sess.identityId||null, reason, true]
-        );
-        try { await auditLog({ action: status==='aprovado'?'fin_expense_approve':'fin_expense_status', actor: sess.identityId, target: id, meta:{ status, reason } }); } catch {}
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ expense: rows[0] }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
-    }
-    res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'}));
+      const approver=status==='cancelado'?null:actor;
+      const updated=await client.query(`UPDATE fin_expenses SET status=$1::fin_expense_status,approver_name=CASE WHEN $1::text='cancelado' THEN approver_name ELSE $2 END,approver_identity=CASE WHEN $1::text='cancelado' THEN approver_identity ELSE $3 END,approved_at=CASE WHEN $1::text='aprovado' THEN NOW() ELSE NULL END,approved_by_identity=CASE WHEN $1::text='aprovado' THEN $3 ELSE NULL END,rejection_reason=CASE WHEN $1::text='rejeitado' THEN $4 ELSE NULL END,is_segregated=CASE WHEN $1::text='cancelado' THEN is_segregated ELSE true END,segregation_checked=CASE WHEN $1::text='cancelado' THEN segregation_checked ELSE true END WHERE id=$5 RETURNING *`,[status,body.approver_name||'Aprovador autenticado',approver,status==='rejeitado'?reason:null,id]);
+      const expense=updated.rows[0];
+      await client.query(`INSERT INTO fin_expense_history (expense_id,previous_status,next_status,previous_amount,next_amount,changed_by_identity,reason,is_segregation_verified) VALUES ($1,$2,$3,$4,$4,$5,$6,$7)`,[id,previous.status,status,previous.amount_cents,actor,reason,status!=='cancelado']);
+      const action=status==='aprovado'?'fin_expense_approve':status==='rejeitado'?'fin_expense_reject':'fin_expense_cancel';
+      await auditLog({action,actor,target:id,meta:{status,reason},client});
+      await client.query('COMMIT');
+      return send(res,200,{expense});
+    } catch(e) { try { await client.query('ROLLBACK'); } catch {} return expenseFailure(res,e); }
+    finally { client.release(); }
   };
 
   const handleExpenseHistory = async (req, res) => {
-    const sess = await checkAuth(req, res); if (!sess) return;
-    if (req.method !== 'GET') { res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'})); return; }
-    const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
-    const expense_id = url.searchParams.get('expense_id');
-    let q = `SELECT * FROM fin_expense_history WHERE 1=1`; const params=[]; let idx=1;
-    if (expense_id) { q+=` AND expense_id=$${idx++}`; params.push(expense_id); }
-    q+=` ORDER BY created_at DESC LIMIT 200`;
+    const sess=await checkAuth(req,res); if(!sess) return;
+    if(req.method!=='GET') return send(res,405,{error:'method_not_allowed'});
+    const url=new URL(req.url,`http://${req.headers.host||'localhost'}`), expense_id=url.searchParams.get('expense_id');
+    if(expense_id&&!uuid(expense_id)) return send(res,400,{error:'invalid_expense_id'});
     try {
-      const { rows } = await pool.query(q, params);
-      res.writeHead(200, {'Content-Type':'application/json'});
-      res.end(JSON.stringify({ history: rows }));
-    } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
+      const params=expense_id?[expense_id]:[];
+      const q=`SELECT * FROM fin_expense_history${expense_id?' WHERE expense_id=$1':''} ORDER BY created_at DESC LIMIT 200`;
+      return send(res,200,{history:(await pool.query(q,params)).rows});
+    } catch { return send(res,500,{error:'internal'}); }
   };
 
   // FIN-11 fiscal
