@@ -2118,13 +2118,13 @@ const finManagementApi = createFinManagementApi({
 
 const finBudgetApi = createFinBudgetApi({
   pool: getPool(),
-  auditLog: async ({ action, actor, target, meta }) => {
-    try {
-      await getPool().query(
-        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
-        [action, actor, target, meta ? JSON.stringify(meta) : null]
-      );
-    } catch {}
+  // Auditoria fail-closed (padrão FIN-12): escreve no mesmo cliente da
+  // transação quando informado e propaga a falha para revertê-la inteira.
+  auditLog: async ({ action, actor, target, meta, client }) => {
+    await (client || getPool()).query(
+      `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+      [action, actor, target, meta ? JSON.stringify(meta) : null]
+    );
   },
   sameOrigin,
   requireSession: readSession,
@@ -3786,6 +3786,9 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/fin-budget-scenarios" || url.pathname === "/api/crm/hr/fin-budget-scenarios" || url.pathname === "/api/hr/fin-budget-scenarios" || url.pathname === "/api/fin/budget-scenarios") {
     return finBudgetApi.handleBudgetScenarios(req, res);
   }
+  if (url.pathname === "/api/admin/hr/fin-budget-history" || url.pathname === "/api/crm/hr/fin-budget-history" || url.pathname === "/api/hr/fin-budget-history" || url.pathname === "/api/fin/budget-history") {
+    return finBudgetApi.handleBudgetHistory(req, res);
+  }
   // FIN-14 exportação do período com trilha filtros totais conciliáveis e acesso limitado do contador
   if (url.pathname === "/api/admin/hr/fin-exports" || url.pathname === "/api/crm/hr/fin-exports" || url.pathname === "/api/hr/fin-exports" || url.pathname === "/api/fin/exports") {
     return finBudgetApi.handleExports(req, res);
@@ -5278,6 +5281,10 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/crm/hr/fin-budget-scenarios"
   || pathname === "/api/hr/fin-budget-scenarios"
   || pathname === "/api/fin/budget-scenarios"
+  || pathname === "/api/admin/hr/fin-budget-history"
+  || pathname === "/api/crm/hr/fin-budget-history"
+  || pathname === "/api/hr/fin-budget-history"
+  || pathname === "/api/fin/budget-history"
   || pathname === "/api/admin/hr/fin-exports"
   || pathname === "/api/crm/hr/fin-exports"
   || pathname === "/api/hr/fin-exports"

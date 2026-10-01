@@ -9,6 +9,8 @@ type FiscalDoc = { id:string; protocol:string; obligation_id:string|null; provid
 type Gateway = { id:string; name:string; gateway_code:string|null; gateway_type:string; status:string; environment:string; is_selected:boolean; is_sandbox:boolean; charge_enabled?:boolean; };
 type Webhook = { id:string; gateway_id:string; event_type:string; is_valid_signature:boolean; is_replay:boolean; replay_attempts:number; idempotency_key:string; status:string; };
 type Charge = { id:string; protocol:string; gateway_id:string; receivable_id:string|null; amount_cents:number; status:string; idempotency_key:string; is_sandbox:boolean; simulated:boolean; is_conciliated:boolean; };
+type FinBudget = { id:string; protocol:string; title:string; status:string; is_estimate:boolean; premises_version:number; premise_source:string; premise_base_date:string; };
+type FinScenario = { id:string; budget_id:string; scenario_type:string; title:string; status:string; is_estimate:boolean; is_complete:boolean; incomplete_reason:string|null; premises_version:number; projected_revenue_cents:number|null; realized_revenue_cents:number|null; };
 
 export default function FinManagementClient() {
   const [results, setResults] = useState<MgmtResult[]>([]);
@@ -19,6 +21,8 @@ export default function FinManagementClient() {
   const [gateways, setGateways] = useState<Gateway[]>([]);
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [charges, setCharges] = useState<Charge[]>([]);
+  const [finBudgets, setFinBudgets] = useState<FinBudget[]>([]);
+  const [finScenarios, setFinScenarios] = useState<FinScenario[]>([]);
   const [msg, setMsg] = useState<string>("");
 
   // forms FIN-09
@@ -52,9 +56,13 @@ export default function FinManagementClient() {
   // /admin/financeiro (aba Boletos / Pix / Gateway). Esta tela de TI
   // permanece somente como leitura para diagnóstico.
 
+  // FIN-13: a escrita de orçamento/cenário canônica vive em
+  // /admin/financeiro (aba Orçamento / Cenários). Esta tela de TI
+  // permanece somente como leitura para diagnóstico.
+
   const load = async () => {
     try {
-      const [r1, r2, r3, r4, r5, r6, r7, r8] = await Promise.all([
+      const [r1, r2, r3, r4, r5, r6, r7, r8, r9, r10] = await Promise.all([
         fetch("/api/fin/management-results").then(r=>r.json()).catch(()=>({results:[]})),
         fetch("/api/fin/expenses").then(r=>r.json()).catch(()=>({expenses:[]})),
         fetch("/api/fin/fiscal-providers").then(r=>r.json()).catch(()=>({providers:[]})),
@@ -63,6 +71,8 @@ export default function FinManagementClient() {
         fetch("/api/fin/payment-gateways").then(r=>r.json()).catch(()=>({gateways:[]})),
         fetch("/api/fin/gateway-webhooks").then(r=>r.json()).catch(()=>({webhooks:[]})),
         fetch("/api/fin/gateway-charges").then(r=>r.json()).catch(()=>({charges:[]})),
+        fetch("/api/fin/budgets").then(r=>r.json()).catch(()=>({budgets:[]})),
+        fetch("/api/fin/budget-scenarios").then(r=>r.json()).catch(()=>({scenarios:[]})),
       ]);
       setResults(r1.results||[]);
       setExpenses(r2.expenses||[]);
@@ -72,6 +82,8 @@ export default function FinManagementClient() {
       setGateways(r6.gateways||[]);
       setWebhooks(r7.webhooks||[]);
       setCharges(r8.charges||[]);
+      setFinBudgets(r9.budgets||[]);
+      setFinScenarios(r10.scenarios||[]);
     } catch(e:any){ setMsg(e.message); }
   };
   useEffect(()=>{ load(); }, []);
@@ -140,7 +152,7 @@ export default function FinManagementClient() {
 
   return (
     <section style={{ marginTop:24, padding:16, border:"1px solid #ccc", borderRadius:8 }}>
-      <h2>FIN-09/10/11/12 — Resultado gerencial, despesas alçada, fiscal, gateway sandbox</h2>
+      <h2>FIN-09/10/11/12/13 — Resultado gerencial, despesas alçada, fiscal, gateway sandbox, orçamento</h2>
       {msg && <p style={{ background:"#eef", padding:8 }}>{msg}</p>}
 
       <h3>FIN-09 Resultado gerencial por contrato (receita contratada/faturada/recebida custos caixa margem sem dados completos exibida como incompleta)</h3>
@@ -186,6 +198,11 @@ export default function FinManagementClient() {
       <ul>{gateways.slice(0,10).map(g=><li key={g.id}>{g.name} código:{g.gateway_code||"—"} tipo:{g.gateway_type} ambiente:{g.environment} status:{g.status} selecionado:{String(g.is_selected)} cobrança liberada:{String(g.charge_enabled===true)}</li>)}</ul>
       <ul>{webhooks.slice(0,10).map(w=><li key={w.id}>gw:{w.gateway_id.slice(0,8)} evento:{w.event_type} assinatura:{w.is_valid_signature?"válida":"inválida"} replays:{w.replay_attempts} idemp:{w.idempotency_key.slice(0,20)} status:{w.status}</li>)}</ul>
       <ul>{charges.slice(0,10).map(c=><li key={c.id}>{c.protocol} gw:{c.gateway_id.slice(0,8)} amount:{c.amount_cents} status:{c.status} idemp:{c.idempotency_key.slice(0,20)} simulada:{String(c.simulated)} conciliada:{String(c.is_conciliated)}</li>)}</ul>
+
+      <h3>FIN-13 Orçamento gerencial e cenários de expansão (somente leitura)</h3>
+      <p style={{ fontSize:12 }}>Toda projeção nasce com premissas explícitas (texto, origem do número e data-base), é sempre estimativa identificada — projetado e realizado são campos distintos —, dado ausente é lacuna visível com motivo, alterar premissas de item aprovado retira a aprovação e nenhuma aprovação cria compromisso. A criação e as transições ficam em <a href="/admin/financeiro">/admin/financeiro</a>, aba Orçamento / Cenários.</p>
+      <ul>{finBudgets.slice(0,10).map(b=><li key={b.id}>{b.protocol} {b.title} status:{b.status} estimativa:{String(b.is_estimate)} versão_premissas:{b.premises_version} origem:{b.premise_source.slice(0,30)} data-base:{b.premise_base_date}</li>)}</ul>
+      <ul>{finScenarios.slice(0,10).map(s=><li key={s.id}>orc:{s.budget_id.slice(0,8)} {s.scenario_type} {s.title} status:{s.status} completo:{String(s.is_complete)} motivo_incompleto:{s.incomplete_reason?.slice(0,40)||"—"} projetado:{s.projected_revenue_cents??null} realizado:{s.realized_revenue_cents??null} versão_premissas:{s.premises_version}</li>)}</ul>
     </section>
   );
 }

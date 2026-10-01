@@ -1627,3 +1627,268 @@ test("L07 FIN-12: Chromium seleciona, homologa em sandbox, cria cobrança e conc
     assert.equal(conciliatedWebhook.is_valid_signature, true);
   } finally { await browser.close(); }
 });
+
+// FIN-13 — orçamento gerencial e cenários de expansão. O gate prova que toda
+// projeção nasce com premissas explícitas (texto, origem do número e
+// data-base) recusadas pelo banco quando ausentes, que estimativa nunca se
+// disfarça de resultado (projetado e realizado são campos distintos), que dado
+// ausente é lacuna visível com motivo — nunca zero —, que premissas são
+// versionadas e derrubam aprovação quando alteradas, e que aprovar orçamento
+// ou cenário não cria compromisso nenhum.
+const budgetPayload = (suffix, overrides = {}) => ({
+  title: `Orçamento gerencial sintético ${suffix}`,
+  description: `Orçamento sintético do gate FIN-13 ${suffix} com premissas explícitas`,
+  premises: `Premissas do orçamento ${suffix}: carteira vigente, reajuste contratual e histórico de custos documentados`,
+  premise_source: `Relatório gerencial sintético ${suffix}`,
+  premise_base_date: "2026-09-30",
+  period_start: "2026-10-01",
+  period_end: "2026-12-31",
+  total_revenue_cents: 12000000,
+  total_cost_cents: 8000000,
+  idempotency_key: `fin13-bgt-${suffix}`,
+  ...overrides,
+});
+const scenarioPayload = (budgetId, suffix, overrides = {}) => ({
+  budget_id: budgetId,
+  scenario_type: "expansao",
+  title: `Cenário de expansão sintético ${suffix}`,
+  premises: `Premissas do cenário ${suffix}: novo posto, contratação prevista e curva de aprendizado documentadas`,
+  premise_source: `Estudo de expansão sintético ${suffix}`,
+  premise_base_date: "2026-09-30",
+  projected_revenue_cents: 9000000,
+  projected_cost_cents: 6000000,
+  incomplete_reason: "Aguardando fechamento do período para registrar valores realizados do cenário",
+  idempotency_key: `fin13-scn-${suffix}`,
+  ...overrides,
+});
+
+test("L07 FIN-13: premissas explícitas obrigatórias, estimativa separada de realizado, premissa versionada derruba aprovação e aprovação não cria compromisso", { skip: !RUN, timeout: 120_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const rh = await provisionAndLoginStaff(pool, api, { role: "rh" });
+  const tag = uuid().slice(0, 8);
+
+  // Autorização e borda
+  assert.equal((await fin("/budgets")).status, 401);
+  assert.equal((await fin("/budget-scenarios", { cookie: rh.cookie })).status, 403);
+  assert.equal((await fin("/budget-history", { cookie: rh.cookie })).status, 403);
+  assert.equal((await fin("/budgets", { method: "POST", cookie: financeiro.cookie, origin: "https://externo.invalid", body: budgetPayload(`origin-${tag}`) })).status, 403);
+  assert.equal((await fin("/budgets?status=invalido", { cookie: financeiro.cookie })).status, 400);
+  assert.equal((await fin("/budget-history?entity_type=invalido", { cookie: financeiro.cookie })).status, 400);
+
+  // Premissa explícita é obrigatória e estruturada: texto, origem e data-base.
+  assert.equal((await fin("/budgets", { method: "POST", cookie: financeiro.cookie, body: budgetPayload(`noprem-${tag}`, { premises: "curta" }) })).status, 400);
+  assert.equal((await fin("/budgets", { method: "POST", cookie: financeiro.cookie, body: budgetPayload(`nosrc-${tag}`, { premise_source: "abc" }) })).status, 400);
+  assert.equal((await fin("/budgets", { method: "POST", cookie: financeiro.cookie, body: budgetPayload(`nodate-${tag}`, { premise_base_date: "" }) })).status, 400);
+  assert.equal((await fin("/budgets", { method: "POST", cookie: financeiro.cookie, body: budgetPayload(`noperiod-${tag}`, { period_end: "2026-01-01" }) })).status, 400);
+  assert.equal((await fin("/budgets", { method: "POST", cookie: financeiro.cookie, body: budgetPayload(`nokey-${tag}`, { idempotency_key: "curta" }) })).status, 400);
+  assert.equal((await fin("/budgets", { method: "POST", cookie: financeiro.cookie, body: budgetPayload(`status-${tag}`, { status: "aprovado" }) })).status, 400, "orçamento nasce rascunho; status é transição");
+  assert.equal((await fin("/budgets", { method: "POST", cookie: financeiro.cookie, body: budgetPayload(`est-${tag}`, { is_estimate: false }) })).status, 400, "estimativa é permanente");
+
+  const budget = await fin("/budgets", { method: "POST", cookie: financeiro.cookie, body: budgetPayload(`main-${tag}`) });
+  assert.equal(budget.status, 201, JSON.stringify(budget.body));
+  assert.equal(budget.body.budget.status, "rascunho");
+  assert.equal(budget.body.budget.is_estimate, true);
+  assert.equal(budget.body.budget.premises_version, 1);
+  assert.equal(budget.body.budget.approved_at, null);
+  assert.equal(budget.body.is_estimate, true);
+  assert.ok(budget.body.note.includes("nao_prometer_resultado"));
+  assert.equal(Number(budget.body.budget.total_margin_cents), 4000000, "margem planejada é derivada, nunca informada");
+  assert.equal((await fin("/budgets", { method: "POST", cookie: financeiro.cookie, body: budgetPayload(`main-${tag}`, { title: `Outro orçamento ${tag}` }) })).status, 409, "idempotência do orçamento");
+  const budgetId = budget.body.budget.id;
+
+  // Cenário: veredito de completude é do banco, não do cliente.
+  const { budget_id: noBudget, ...withoutBudget } = scenarioPayload(budgetId, `nobudget-${tag}`);
+  assert.equal((await fin("/budget-scenarios", { method: "POST", cookie: financeiro.cookie, body: withoutBudget })).status, 400);
+  assert.equal((await fin("/budget-scenarios", { method: "POST", cookie: financeiro.cookie, body: scenarioPayload("nao-e-uuid", `baduuid-${tag}`) })).status, 400);
+  assert.equal((await fin("/budget-scenarios", { method: "POST", cookie: financeiro.cookie, body: scenarioPayload(uuid(), `ghost-${tag}`) })).status, 400, "orçamento inexistente é referência inválida");
+  assert.equal((await fin("/budget-scenarios", { method: "POST", cookie: financeiro.cookie, body: scenarioPayload(budgetId, `type-${tag}`, { scenario_type: "improvavel" }) })).status, 400);
+  assert.equal((await fin("/budget-scenarios", { method: "POST", cookie: financeiro.cookie, body: scenarioPayload(budgetId, `verdict-${tag}`, { is_complete: true }) })).status, 400, "o cliente não declara a completude");
+  assert.equal((await fin("/budget-scenarios", { method: "POST", cookie: financeiro.cookie, body: scenarioPayload(budgetId, `status-${tag}`, { status: "aprovado" }) })).status, 400);
+  const { incomplete_reason: noReason, ...withoutReason } = scenarioPayload(budgetId, `noreason-${tag}`);
+  assert.equal((await fin("/budget-scenarios", { method: "POST", cookie: financeiro.cookie, body: withoutReason })).status, 400, "cenário sem realizado exige motivo da lacuna");
+
+  // Cenário incompleto: projeção existe, realizado é lacuna visível com motivo.
+  const scenario = await fin("/budget-scenarios", { method: "POST", cookie: financeiro.cookie, body: scenarioPayload(budgetId, `main-${tag}`) });
+  assert.equal(scenario.status, 201, JSON.stringify(scenario.body));
+  assert.equal(scenario.body.scenario.is_complete, false, "completude calculada pelo banco");
+  assert.ok(scenario.body.scenario.incomplete_reason, "lacuna com motivo explícito");
+  assert.equal(scenario.body.scenario.realized_margin_cents, null, "margem realizada não é calculada sem dados");
+  assert.equal(Number(scenario.body.scenario.projected_margin_cents), 3000000, "margem projetada segue existindo, rotulada como projeção");
+  const scenarioKeys = Object.keys(scenario.body.scenario);
+  assert.ok(scenarioKeys.some(key => key.startsWith("projected_")) && scenarioKeys.some(key => key.startsWith("realized_")), "projetado e realizado são campos distintos");
+  assert.equal(scenario.body.scenario.status, "rascunho");
+  assert.equal(scenario.body.scenario.premises_version, 1);
+  const scenarioId = scenario.body.scenario.id;
+  assert.equal((await fin("/budget-scenarios", { method: "POST", cookie: financeiro.cookie, body: scenarioPayload(budgetId, `dup-${tag}`, { idempotency_key: `fin13-scn-main-${tag}` }) })).status, 409, "idempotência do cenário");
+  assert.equal((await fin("/budget-scenarios", { method: "POST", cookie: financeiro.cookie, body: scenarioPayload(budgetId, `dup-type-${tag}`) })).status, 409, "um cenário por tipo por orçamento");
+
+  // Transições: sem atalho para aprovado e sem repetição de estado.
+  assert.equal((await fin("/budgets", { method: "PATCH", cookie: financeiro.cookie, body: { id: budgetId, status: "aprovado", reason: "Aprovar direto do rascunho precisa ser recusado" } })).status, 400);
+  assert.equal((await fin("/budgets", { method: "PATCH", cookie: financeiro.cookie, body: { id: budgetId, status: "rascunho", reason: "Repetir o mesmo estado não é transição" } })).status, 409);
+  assert.equal((await fin("/budgets", { method: "PATCH", cookie: financeiro.cookie, body: { id: budgetId, status: "em_revisao", reason: "Enviar o orçamento para revisão com alçada do financeiro", premises: "Premissas novas junto com transição" } })).status, 400, "transição e revisão são operações separadas");
+
+  // Aprovação com trilha — e sem criar compromisso nenhum.
+  const countCommitments = () => pool.query("SELECT (SELECT count(*) FROM fin_accounts_receivable)::int r,(SELECT count(*) FROM fin_accounts_payable)::int p,(SELECT count(*) FROM fin_expenses)::int e,(SELECT count(*) FROM fin_commission_provisions)::int c,(SELECT count(*) FROM adm_goals_comparison)::int g").then(result => result.rows[0]);
+  const before = await countCommitments();
+  assert.equal((await fin("/budgets", { method: "PATCH", cookie: financeiro.cookie, body: { id: budgetId, status: "em_revisao", reason: "Orçamento enviado para revisão pelo financeiro" } })).status, 200);
+  const budgetApproved = await fin("/budgets", { method: "PATCH", cookie: financeiro.cookie, body: { id: budgetId, status: "aprovado", reason: "Orçamento aprovado como decisão de planejamento" } });
+  assert.equal(budgetApproved.status, 200, JSON.stringify(budgetApproved.body));
+  assert.ok(budgetApproved.body.budget.approved_at);
+  assert.ok(budgetApproved.body.budget.approved_by_identity);
+  assert.equal((await fin("/budget-scenarios", { method: "PATCH", cookie: financeiro.cookie, body: { id: scenarioId, status: "em_revisao", reason: "Cenário enviado para revisão do comitê" } })).status, 200);
+  const scenarioApproved = await fin("/budget-scenarios", { method: "PATCH", cookie: financeiro.cookie, body: { id: scenarioId, status: "aprovado", reason: "Cenário aprovado como referência de planejamento" } });
+  assert.equal(scenarioApproved.status, 200, JSON.stringify(scenarioApproved.body));
+  assert.ok(scenarioApproved.body.scenario.approved_at);
+  const after = await countCommitments();
+  assert.deepEqual(after, before, "aprovar orçamento e cenário não cria recebível, pagável, despesa, provisão nem meta");
+
+  // Realizado é fato: registrar não altera premissas nem aprovação.
+  const realized = await fin("/budget-scenarios", { method: "PATCH", cookie: financeiro.cookie, body: { id: scenarioId, realized_revenue_cents: 8500000, realized_cost_cents: 5900000, reason: "Registro dos valores realizados do período como fato observado" } });
+  assert.equal(realized.status, 200, JSON.stringify(realized.body));
+  assert.equal(realized.body.scenario.is_complete, true);
+  assert.equal(realized.body.scenario.incomplete_reason, null);
+  assert.equal(Number(realized.body.scenario.realized_margin_cents), 2600000);
+  assert.notEqual(realized.body.scenario.realized_revenue_cents, realized.body.scenario.projected_revenue_cents, "realizado difere da projeção e os dois convivem");
+  assert.equal(realized.body.scenario.status, "aprovado", "registrar realizado não derruba aprovação");
+  assert.equal(realized.body.scenario.premises_version, 1, "realizado não versiona premissas");
+  assert.equal((await fin("/budget-scenarios", { method: "PATCH", cookie: financeiro.cookie, body: { id: scenarioId, realized_cost_cents: null, reason: "Retirar o custo realizado exige motivo explícito da lacuna" } })).status, 400, "voltar a incompleto exige motivo");
+  const reopened = await fin("/budget-scenarios", { method: "PATCH", cookie: financeiro.cookie, body: { id: scenarioId, realized_cost_cents: null, incomplete_reason: "Custo realizado retirado para reclassificação do período", reason: "Lacuna reaberta com motivo visível" } });
+  assert.equal(reopened.status, 200);
+  assert.equal(reopened.body.scenario.is_complete, false);
+  assert.ok(reopened.body.scenario.incomplete_reason);
+
+  // Premissa versionada: alterar premissa de aprovado retira a aprovação.
+  const revised = await fin("/budget-scenarios", { method: "PATCH", cookie: financeiro.cookie, body: { id: scenarioId, premises: "Premissas revisadas: expansão em dois postos com reajuste de material acima do esperado", reason: "Premissas mudaram; a aprovação anterior foi tomada sobre outras bases" } });
+  assert.equal(revised.status, 200, JSON.stringify(revised.body));
+  assert.equal(revised.body.scenario.status, "rascunho", "aprovação retirada");
+  assert.equal(revised.body.scenario.premises_version, 2);
+  assert.equal(revised.body.scenario.approved_at, null);
+  assert.equal((await fin("/budget-scenarios", { method: "PATCH", cookie: financeiro.cookie, body: { id: scenarioId, status: "em_revisao", reason: "Cenário revisado volta à revisão" } })).status, 200);
+  const reApproved = await fin("/budget-scenarios", { method: "PATCH", cookie: financeiro.cookie, body: { id: scenarioId, status: "aprovado", reason: "Cenário reaprovado sobre as premissas versão dois" } });
+  assert.equal(reApproved.status, 200);
+  assert.equal(reApproved.body.scenario.premises_version, 2, "reaprovar não versiona de novo");
+  assert.equal((await fin("/budgets", { method: "PATCH", cookie: financeiro.cookie, body: { id: budgetId, reason: "Só o motivo sem campos não é revisão" } })).status, 400);
+
+  // O banco repete as garantias para escrita direta.
+  await assert.rejects(pool.query("INSERT INTO fin_budgets (protocol,title,description,premises,premise_source,premise_base_date,period_start,period_end,status,idempotency_key) VALUES ('ORC-FIN-20261001-XYZ1','Orçamento direto inválido','Descrição sintética direta para o gate','Premissas diretas do gate FIN-13','Fonte sintética direta','2026-09-30','2026-10-01','2026-12-31','aprovado','fin13-direct-budget')"), /fin_budget_initial_status_must_be_rascunho/);
+  await assert.rejects(pool.query("INSERT INTO fin_budgets (protocol,title,description,premises,premise_source,premise_base_date,period_start,period_end,idempotency_key) VALUES ('ORC-FIN-20261001-XYZ2','Orçamento direto sem origem','Descrição sintética direta para o gate','Premissas diretas do gate FIN-13',NULL,'2026-09-30','2026-10-01','2026-12-31','fin13-direct-budget-2')"), /fin_budget_premise_source_required/);
+  await assert.rejects(pool.query("INSERT INTO fin_budget_scenarios (budget_id,scenario_type,title,premises,premise_source,premise_base_date,is_estimate,realized_revenue_cents,realized_cost_cents,idempotency_key) VALUES ($1,'base','Cenário direto com realizado','Premissas diretas do cenário para o gate','Fonte sintética direta','2026-09-30',false,1000,500,'fin13-direct-scenario')", [budgetId]), /fin_scenario_estimate_only/);
+  await assert.rejects(pool.query("INSERT INTO fin_budget_scenarios (budget_id,scenario_type,title,premises,premise_source,premise_base_date,idempotency_key) VALUES ($1,'otimista','Cenário direto sem realizado','Premissas diretas do cenário para o gate','Fonte sintética direta','2026-09-30','fin13-direct-scenario-2')", [budgetId]), /fin_scenario_completeness_consistent/);
+  await assert.rejects(pool.query("UPDATE fin_budget_scenarios SET premises='Premissas adulteradas por escrita direta', premises_version=3 WHERE id=$1", [scenarioId]), /fin_scenario_premise_change_drops_approval/);
+  await assert.rejects(pool.query("UPDATE fin_budget_scenarios SET premises_version=99 WHERE id=$1", [scenarioId]), /fin_scenario_premises_version_immutable_without_change/);
+  await assert.rejects(pool.query("UPDATE fin_budget_scenarios SET scenario_type='base' WHERE id=$1", [scenarioId]), /fin_scenario_identity_fields_immutable/);
+  await assert.rejects(pool.query("UPDATE fin_budgets SET idempotency_key='fin13-troca-chave' WHERE id=$1", [budgetId]), /fin_budget_identity_fields_immutable/);
+
+  // Histórico imutável e visível.
+  const history = await fin(`/budget-history?entity_type=scenario&entity_id=${scenarioId}`, { cookie: financeiro.cookie });
+  assert.equal(history.status, 200);
+  assert.equal(history.body.history.length, 8, "todos os movimentos ficam registrados");
+  const trail = history.body.history.map(row => `${row.previous_status}->${row.next_status}`);
+  assert.ok(trail.includes("null->rascunho"));
+  assert.ok(trail.includes("aprovado->rascunho"), "a queda de aprovação fica registrada");
+  await assert.rejects(pool.query("UPDATE fin_budget_history SET reason='Tentativa de adulteração do histórico' WHERE entity_id=$1", [scenarioId]), /fin_budget_history_immutable/);
+  await assert.rejects(pool.query("DELETE FROM fin_budget_history WHERE entity_id=$1", [scenarioId]), /fin_budget_history_immutable/);
+  const budgetHistory = await fin(`/budget-history?entity_type=budget&entity_id=${budgetId}`, { cookie: financeiro.cookie });
+  assert.equal(budgetHistory.body.history.length, 3, "criação, envio para revisão e aprovação");
+
+  // Auditoria fail-closed com rollback integral e resposta sem detalhe SQL.
+  await pool.query("ALTER TABLE audit_log RENAME TO audit_log_fin13_unavailable");
+  try {
+    const failedBudget = await fin("/budgets", { method: "POST", cookie: financeiro.cookie, body: budgetPayload(`rollback-${tag}`) });
+    assert.equal(failedBudget.status, 503); assert.deepEqual(failedBudget.body, { error: "audit_unavailable" });
+    const failedScenario = await fin("/budget-scenarios", { method: "POST", cookie: financeiro.cookie, body: scenarioPayload(budgetId, `rollback-${tag}`, { scenario_type: "pessimista" }) });
+    assert.equal(failedScenario.status, 503); assert.equal("details" in failedScenario.body, false);
+    const failedTransition = await fin("/budgets", { method: "PATCH", cookie: financeiro.cookie, body: { id: budgetId, status: "arquivado", reason: "Arquivamento precisa falhar fechado sem auditoria" } });
+    assert.equal(failedTransition.status, 503);
+  } finally { await pool.query("ALTER TABLE audit_log_fin13_unavailable RENAME TO audit_log"); }
+  assert.equal((await pool.query("SELECT count(*)::int n FROM fin_budgets WHERE idempotency_key=$1", [`fin13-bgt-rollback-${tag}`])).rows[0].n, 0, "auditoria indisponível não deixa orçamento");
+  assert.equal((await pool.query("SELECT count(*)::int n FROM fin_budget_scenarios WHERE idempotency_key=$1", [`fin13-scn-rollback-${tag}`])).rows[0].n, 0, "auditoria indisponível não deixa cenário");
+  assert.equal((await pool.query("SELECT status FROM fin_budgets WHERE id=$1", [budgetId])).rows[0].status, "aprovado", "transição revertida integralmente");
+  assert.equal((await pool.query("SELECT count(*)::int n FROM fin_budget_history WHERE entity_id=$1", [budgetId])).rows[0].n, 3, "histórico da transição revertida não fica órfão");
+  assert.equal((await pool.query("SELECT count(*)::int n FROM fin_budgets WHERE is_estimate=false")).rows[0].n, 0, "nenhum orçamento se disfarça de resultado");
+  assert.equal((await pool.query("SELECT count(*)::int n FROM fin_budget_scenarios WHERE is_estimate=false")).rows[0].n, 0, "nenhum cenário se disfarça de resultado");
+});
+
+test("L07 FIN-13: Chromium registra orçamento e cenário com premissas, aprova sem compromisso e revisa premissas no workspace financeiro", { skip: !RUN, timeout: 180_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const tag = uuid().slice(0, 8);
+  const commitmentsBefore = (await pool.query("SELECT (SELECT count(*) FROM fin_accounts_receivable)::int r,(SELECT count(*) FROM fin_expenses)::int e,(SELECT count(*) FROM adm_goals_comparison)::int g")).rows[0];
+  const browser = await playwrightChromium.launch({ executablePath: await packagedChromium.executablePath(), headless: true, args: packagedChromium.args.filter(arg => arg !== "--disable-web-security") });
+  try {
+    const context = await browser.newContext();
+    const pair = financeiro.cookie.split(";")[0], separator = pair.indexOf("=");
+    await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
+    const page = await context.newPage();
+    await page.setExtraHTTPHeaders({ origin: baseUrl });
+    await page.goto(`${baseUrl}/admin/financeiro`, { waitUntil: "networkidle" });
+    await page.getByTestId("finance-tab-budget").click();
+    await page.waitForSelector('[data-testid="fin13-budget"]');
+
+    await page.getByTestId("fin13-budget-title").fill(`Orçamento Chromium ${tag}`);
+    await page.getByTestId("fin13-budget-description").fill(`Orçamento sintético pelo navegador para o gate FIN-13 ${tag}`);
+    await page.getByTestId("fin13-budget-premises").fill(`Premissas do navegador ${tag}: carteira vigente, reajuste e custo de pessoal documentados`);
+    await page.getByTestId("fin13-budget-premise-source").fill(`Painel gerencial sintético ${tag}`);
+    await page.getByTestId("fin13-budget-premise-base-date").fill("2026-09-30");
+    await page.getByTestId("fin13-budget-period-start").fill("2026-10-01");
+    await page.getByTestId("fin13-budget-period-end").fill("2026-12-31");
+    await page.getByTestId("fin13-budget-revenue").fill("12000000");
+    await page.getByTestId("fin13-budget-cost").fill("8000000");
+    await page.getByTestId("fin13-budget-idempotency").fill(`fin13-ui-bgt-${tag}`);
+    await page.getByTestId("fin13-budget-create").click();
+    await page.waitForFunction(() => (document.querySelector('[data-testid="fin13-notice"]')?.textContent || "").includes("projeção, nunca resultado"));
+    const budgetRow = (await pool.query("SELECT id,status,is_estimate,premises_version FROM fin_budgets WHERE idempotency_key=$1", [`fin13-ui-bgt-${tag}`])).rows[0];
+    assert.equal(budgetRow.status, "rascunho");
+    assert.equal(budgetRow.is_estimate, true);
+    await page.waitForSelector(`[data-testid="fin13-budget-${budgetRow.id}"]`);
+
+    await page.getByTestId("fin13-reason").fill("Orçamento enviado para revisão pela interface do financeiro");
+    await page.getByTestId(`fin13-budget-revise-${budgetRow.id}`).click();
+    await page.waitForFunction(id => (document.querySelector(`[data-testid="fin13-budget-status-${id}"]`)?.textContent || "") === "em_revisao", budgetRow.id);
+    await page.getByTestId("fin13-reason").fill("Orçamento aprovado pela interface como decisão de planejamento");
+    await page.getByTestId(`fin13-budget-approve-${budgetRow.id}`).click();
+    await page.waitForFunction(id => (document.querySelector(`[data-testid="fin13-budget-status-${id}"]`)?.textContent || "") === "aprovado", budgetRow.id);
+
+    await page.getByTestId("fin13-scenario-budget").selectOption(budgetRow.id);
+    await page.getByTestId("fin13-scenario-type").selectOption("expansao");
+    await page.getByTestId("fin13-scenario-title").fill(`Expansão Chromium ${tag}`);
+    await page.getByTestId("fin13-scenario-premises").fill(`Premissas do cenário ${tag}: um posto novo, contratação e curva de aprendizado documentadas`);
+    await page.getByTestId("fin13-scenario-premise-source").fill(`Estudo de expansão sintético ${tag}`);
+    await page.getByTestId("fin13-scenario-premise-base-date").fill("2026-09-30");
+    await page.getByTestId("fin13-scenario-projected-revenue").fill("9000000");
+    await page.getByTestId("fin13-scenario-projected-cost").fill("6000000");
+    await page.getByTestId("fin13-scenario-incomplete-reason").fill("Período ainda aberto: valores realizados do cenário aguardam fechamento");
+    await page.getByTestId("fin13-scenario-idempotency").fill(`fin13-ui-scn-${tag}`);
+    await page.getByTestId("fin13-scenario-create").click();
+    await page.waitForFunction(() => (document.querySelector('[data-testid="fin13-notice"]')?.textContent || "").includes("estimativa incompleta"));
+    const scenarioRow = (await pool.query("SELECT id,status,is_complete,incomplete_reason,premises_version,realized_margin_cents FROM fin_budget_scenarios WHERE idempotency_key=$1", [`fin13-ui-scn-${tag}`])).rows[0];
+    assert.equal(scenarioRow.is_complete, false);
+    assert.ok(scenarioRow.incomplete_reason);
+    assert.equal(scenarioRow.realized_margin_cents, null, "dado ausente é lacuna, não zero");
+    assert.match(await page.getByTestId(`fin13-scenario-complete-${scenarioRow.id}`).textContent(), /não/, "interface mostra a lacuna com motivo");
+
+    await page.getByTestId("fin13-reason").fill("Cenário enviado para revisão pela interface do financeiro");
+    await page.getByTestId(`fin13-scenario-revise-${scenarioRow.id}`).click();
+    await page.waitForFunction(id => (document.querySelector(`[data-testid="fin13-scenario-status-${id}"]`)?.textContent || "") === "em_revisao", scenarioRow.id);
+    await page.getByTestId("fin13-reason").fill("Cenário aprovado pela interface sem criar compromisso algum");
+    await page.getByTestId(`fin13-scenario-approve-${scenarioRow.id}`).click();
+    await page.waitForFunction(id => (document.querySelector(`[data-testid="fin13-scenario-status-${id}"]`)?.textContent || "") === "aprovado", scenarioRow.id);
+    const approvedScenario = (await pool.query("SELECT status,approved_at,premises_version FROM fin_budget_scenarios WHERE id=$1", [scenarioRow.id])).rows[0];
+    assert.equal(approvedScenario.status, "aprovado");
+    assert.ok(approvedScenario.approved_at);
+    assert.equal(approvedScenario.premises_version, 1);
+
+    // Aprovar pela interface não criou compromisso nenhum.
+    const commitmentsAfter = (await pool.query("SELECT (SELECT count(*) FROM fin_accounts_receivable)::int r,(SELECT count(*) FROM fin_expenses)::int e,(SELECT count(*) FROM adm_goals_comparison)::int g")).rows[0];
+    assert.deepEqual(commitmentsAfter, commitmentsBefore, "aprovação pela interface não cria recebível, despesa nem meta");
+
+    // Revisar premissas pela interface derruba a aprovação e versiona.
+    page.once("dialog", dialog => dialog.accept(`Premissas revisadas pelo navegador ${tag}: expansão em dois postos e reajuste de material`));
+    await page.getByTestId("fin13-reason").fill("Premissas mudaram pela interface; aprovação anterior perde a base");
+    await page.getByTestId(`fin13-scenario-revise-premise-${scenarioRow.id}`).click();
+    await page.waitForFunction(id => (document.querySelector(`[data-testid="fin13-scenario-status-${id}"]`)?.textContent || "") === "rascunho", scenarioRow.id);
+    const revisedScenario = (await pool.query("SELECT status,premises_version,approved_at FROM fin_budget_scenarios WHERE id=$1", [scenarioRow.id])).rows[0];
+    assert.equal(revisedScenario.status, "rascunho", "aprovação retirada pela revisão de premissas");
+    assert.equal(revisedScenario.premises_version, 2);
+    assert.equal(revisedScenario.approved_at, null);
+  } finally { await browser.close(); }
+});
