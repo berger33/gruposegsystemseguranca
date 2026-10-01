@@ -64,3 +64,9 @@
 
 - **Fatia 2 — FIN-01..04 endurecidos + tela**: transação e `FOR UPDATE` nas baixas, estorno repetido rejeitado e limitado ao pagamento de origem, `auditLog` fail-closed, isenção dos aliases `fin-*`/`adm-*` na borda de RH (padrão OPS-01), tela financeira real consumindo `/api/fin/*` canônico e jornada Chromium (casos 9 e 10 do gate).
 - Fatias 3–8 conforme o prompt (`docs/PROMPT-CONTINUACAO-L07-FINANCEIRO-MARCELO.md`).
+
+### Fatia 2 — implementação local de hardening e tela financeira
+
+A implementação local da fatia 2 está no commit `b517fec`: `handlePayments` agora abre uma transação, bloqueia a conta com `FOR UPDATE`, rejeita sobre-pagamento com `409 overpayment`, valida origem/conta e repetição de estorno (`409 estorno_already_exists`), e grava a auditoria pelo mesmo cliente antes do commit. A borda de RH isenta aliases `ops-*`, `fin-*` e `adm-*`; a página `/admin/financeiro` foi criada com as abas Recebíveis, Recorrência e Pagamentos, estados de erro/carregamento/vazio e chamadas exclusivamente canônicas `/api/fin/*`.
+
+Evidência executada após a mudança: `npm run typecheck` passou; `node scripts/qa-wave0-static.mjs` passou 5/5; `npm run test:migrations:pg` passou 123/123 e 517 tabelas (checksum negativo 006 esperado); `npm test` passou 196/196; `npm run test:l07-delivery:pg` passou 3/3; `npm run test:l06-delivery:pg` passou 9/9. A segunda rodada Chromium/fail-closed específica da fatia 2 ainda não foi adicionada; por isso FIN-01..04 permanecem `a_revalidar` na matriz e esta PR não deve ser considerada concluída.

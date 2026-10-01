@@ -974,30 +974,30 @@ reclamação sobre colaborador tratada em canal restrito, com compartilhamento m
 ## FIN-01
 contas a receber vinculadas a contrato, competência, vencimento, recorrência, moeda, valor e situação.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: `src/app/admin/financeiro` consome `/api/fin/receivables`; dados em `fin_accounts_receivable`, com filtro por contrato e autorização `financeiro`/`admin`/`ti`.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` 3/3; `npm run typecheck`; commit `b517fec`.
+- Pendência / fronteira externa / aceite humano: jornada Chromium da fatia 2 ainda precisa ser adicionada ao gate antes do fechamento da PR.
 
 ## FIN-02
 contas a pagar, fornecedores, categoria, centro de custo, vencimento, aprovação e anexos.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: API canônica `fin-payables`, fornecedores e centros; papel `financeiro`/`admin`/`ti`; tela financeira mantém a superfície sem aliases.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` 3/3; `npm test` 196/196; commit `b517fec`.
+- Pendência / fronteira externa / aceite humano: cobertura de tela de pagar/anexos permanece fora da navegação mínima desta fatia; não declarar integração externa.
 
 ## FIN-03
 geração recorrente idempotente por contrato/competência/item; pró-rata, reajuste e suspensão conforme regras aprovadas.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: abas Recorrência, aprovação e geração usam `/api/fin/recurrence-rules` e `/api/fin/generate-recurring`; unicidade e estados vêm do schema 077.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` 3/3; segunda geração 409 no gate existente; commit `b517fec`.
+- Pendência / fronteira externa / aceite humano: geração pela tela precisa receber conta de cliente selecionável na jornada Chromium; o backend continua exigindo UUID válido.
 
 ## FIN-04
 pagamento/recebimento parcial, estorno, cancelamento, renegociação e baixa auditada; nunca apagar saldo por edição silenciosa.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: aba Pagamentos, transação única, `FOR UPDATE`, overpayment 409, estorno limitado e repetido 409; auditoria usa o mesmo cliente transacional e falha fechada.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` 3/3; typecheck e unitários 196/196; commit `b517fec`.
+- Pendência / fronteira externa / aceite humano: testes novos de concorrência, auditoria fora do ar e Chromium ainda devem ser incorporados ao gate antes da conclusão formal.
 
 ## FIN-05
 conciliação por importação/extrato ou provedor, sugestão e confirmação; evitar duplicar transações.
