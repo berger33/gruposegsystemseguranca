@@ -973,31 +973,31 @@ reclamação sobre colaborador tratada em canal restrito, com compartilhamento m
 
 ## FIN-01
 contas a receber vinculadas a contrato, competência, vencimento, recorrência, moeda, valor e situação.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: `src/app/admin/financeiro` consome `/api/fin/receivables`; dados em `fin_accounts_receivable`, com filtro por contrato e autorização `financeiro`/`admin`/`ti`.
-- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` 3/3; `npm run typecheck`; commit `b517fec`.
-- Pendência / fronteira externa / aceite humano: jornada Chromium da fatia 2 ainda precisa ser adicionada ao gate antes do fechamento da PR.
+- Estado: pronto_local
+- Tela / API / dados / autorização: workspace `/admin/financeiro`, `/api/fin/receivables`, PostgreSQL real e papéis financeiros; `rh` negado 403.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` 6/6 em duas rodadas finais; HTTP e Chromium reais; commit da sessão/PR.
+- Pendência / fronteira externa / aceite humano: dados apenas sintéticos; nenhuma integração de produção.
 
 ## FIN-02
 contas a pagar, fornecedores, categoria, centro de custo, vencimento, aprovação e anexos.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: API canônica `fin-payables`, fornecedores e centros; papel `financeiro`/`admin`/`ti`; tela financeira mantém a superfície sem aliases.
-- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` 3/3; `npm test` 196/196; commit `b517fec`.
-- Pendência / fronteira externa / aceite humano: cobertura de tela de pagar/anexos permanece fora da navegação mínima desta fatia; não declarar integração externa.
+- Estado: pronto_local
+- Tela / API / dados / autorização: workspace financeiro e APIs canônicas de pagáveis, fornecedores e centros; PostgreSQL real; `financeiro`/`admin`/`ti`.
+- Integração e evidência (teste, resultado, commit): gate L07 6/6 preserva criação e aprovação auditada de pagável, fornecedor e centro; unitários 196/196; commit da sessão/PR.
+- Pendência / fronteira externa / aceite humano: anexos e pagamentos externos permanecem sintéticos; FIN-05..16 não iniciados.
 
 ## FIN-03
 geração recorrente idempotente por contrato/competência/item; pró-rata, reajuste e suspensão conforme regras aprovadas.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: abas Recorrência, aprovação e geração usam `/api/fin/recurrence-rules` e `/api/fin/generate-recurring`; unicidade e estados vêm do schema 077.
-- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` 3/3; segunda geração 409 no gate existente; commit `b517fec`.
-- Pendência / fronteira externa / aceite humano: geração pela tela precisa receber conta de cliente selecionável na jornada Chromium; o backend continua exigindo UUID válido.
+- Estado: pronto_local
+- Tela / API / dados / autorização: aba Recorrência exige conta real selecionada/informada, APIs canônicas, transação única de geração/histórico/regra/auditoria.
+- Integração e evidência (teste, resultado, commit): Chromium cria/aprova/gera, repete e vê 409; banco confirma uma linha; L07 6/6 em duas rodadas; commit da sessão/PR.
+- Pendência / fronteira externa / aceite humano: não há cobrança externa; conta é sintética e explícita.
 
 ## FIN-04
 pagamento/recebimento parcial, estorno, cancelamento, renegociação e baixa auditada; nunca apagar saldo por edição silenciosa.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: aba Pagamentos, transação única, `FOR UPDATE`, overpayment 409, estorno limitado e repetido 409; auditoria usa o mesmo cliente transacional e falha fechada.
-- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` 3/3; typecheck e unitários 196/196; commit `b517fec`.
-- Pendência / fronteira externa / aceite humano: testes novos de concorrência, auditoria fora do ar e Chromium ainda devem ser incorporados ao gate antes da conclusão formal.
+- Estado: pronto_local
+- Tela / API / dados / autorização: aba Pagamentos, transação, `FOR UPDATE`, overpayment 409, estorno limitado/escopado/repetido 409 e auditoria fail-closed.
+- Integração e evidência (teste, resultado, commit): HTTP concorrente real, auditoria indisponível 503 sem efeito e Chromium com baixa/estorno; L07 6/6 duas vezes; commit da sessão/PR.
+- Pendência / fronteira externa / aceite humano: sem gateway ou banco real; FIN-05..16 não iniciados.
 
 ## FIN-05
 conciliação por importação/extrato ou provedor, sugestão e confirmação; evitar duplicar transações.
