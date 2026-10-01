@@ -975,28 +975,28 @@ reclamação sobre colaborador tratada em canal restrito, com compartilhamento m
 contas a receber vinculadas a contrato, competência, vencimento, recorrência, moeda, valor e situação.
 - Estado: pronto_local
 - Tela / API / dados / autorização: workspace `/admin/financeiro`, `/api/fin/receivables`, PostgreSQL real e papéis financeiros; `rh` negado 403.
-- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` 6/6 em duas rodadas finais; HTTP e Chromium reais; commit da sessão/PR.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` 6/6 em duas rodadas finais, HTTP e Chromium reais; `handleReceivables` transacional e fail-closed comprovado; commit `f4354d9`, PR #46 e workflow L07 [36822878630](https://github.com/berger33/gruposegsystemseguranca/actions/runs/36822878630/job/110242735739) verde.
 - Pendência / fronteira externa / aceite humano: dados apenas sintéticos; nenhuma integração de produção.
 
 ## FIN-02
 contas a pagar, fornecedores, categoria, centro de custo, vencimento, aprovação e anexos.
 - Estado: pronto_local
 - Tela / API / dados / autorização: workspace financeiro e APIs canônicas de pagáveis, fornecedores e centros; PostgreSQL real; `financeiro`/`admin`/`ti`.
-- Integração e evidência (teste, resultado, commit): gate L07 6/6 preserva criação e aprovação auditada de pagável, fornecedor e centro; unitários 196/196; commit da sessão/PR.
+- Integração e evidência (teste, resultado, commit): gate L07 6/6 em duas rodadas preserva criação e aprovação auditada de pagável, fornecedor e centro; `handlePayables` POST/PATCH transacional e criação fail-closed 503 sem pagável/histórico parcial; unitários 196/196; commit `f4354d9`, PR #46 e workflow L07 [36822878630](https://github.com/berger33/gruposegsystemseguranca/actions/runs/36822878630/job/110242735739) verde.
 - Pendência / fronteira externa / aceite humano: anexos e pagamentos externos permanecem sintéticos; FIN-05..16 não iniciados.
 
 ## FIN-03
 geração recorrente idempotente por contrato/competência/item; pró-rata, reajuste e suspensão conforme regras aprovadas.
 - Estado: pronto_local
 - Tela / API / dados / autorização: aba Recorrência exige conta real selecionada/informada, APIs canônicas, transação única de geração/histórico/regra/auditoria.
-- Integração e evidência (teste, resultado, commit): Chromium cria/aprova/gera, repete e vê 409; banco confirma uma linha; L07 6/6 em duas rodadas; commit da sessão/PR.
+- Integração e evidência (teste, resultado, commit): Chromium cria/aprova/gera, repete e vê 409; banco confirma uma linha; geração com auditoria indisponível devolve 503 sem recebível/histórico e sem alterar `last_generated_competence`; L07 6/6 em duas rodadas; commit `f4354d9`, PR #46 e workflow L07 [36822878630](https://github.com/berger33/gruposegsystemseguranca/actions/runs/36822878630/job/110242735739) verde.
 - Pendência / fronteira externa / aceite humano: não há cobrança externa; conta é sintética e explícita.
 
 ## FIN-04
 pagamento/recebimento parcial, estorno, cancelamento, renegociação e baixa auditada; nunca apagar saldo por edição silenciosa.
 - Estado: pronto_local
 - Tela / API / dados / autorização: aba Pagamentos, transação, `FOR UPDATE`, overpayment 409, estorno limitado/escopado/repetido 409 e auditoria fail-closed.
-- Integração e evidência (teste, resultado, commit): HTTP concorrente real, auditoria indisponível 503 sem efeito e Chromium com baixa/estorno; L07 6/6 duas vezes; commit da sessão/PR.
+- Integração e evidência (teste, resultado, commit): HTTP concorrente real, auditoria indisponível 503 sem efeito e Chromium com baixa/estorno; L07 6/6 duas vezes; `handlePayments` e todos os demais handlers FIN-01..04 auditados como transacionais; commit `f4354d9`, PR #46 e workflow L07 [36822878630](https://github.com/berger33/gruposegsystemseguranca/actions/runs/36822878630/job/110242735739) verde.
 - Pendência / fronteira externa / aceite humano: sem gateway ou banco real; FIN-05..16 não iniciados.
 
 ## FIN-05

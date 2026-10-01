@@ -82,3 +82,42 @@ A jornada usa Chromium empacotado real, login real de staff financeiro, cookie d
 Evidência desta sessão: pré-voo completo verde; `npm run typecheck`; estático **5/5**; migrações **123/123 e 517 tabelas** (mismatch negativo da 006 esperado); unitários **196/196**; L07 **6/6**; L06 **9/9**; build exit 0. A regressão final registra duas rodadas L07 consecutivas abaixo. Commit: commit da branch desta sessão (registrado no histórico Git/PR).
 
 Tabela atualizada dos casos 1–10: (1) coberto; (2) coberto para FIN-04, sem antecipar FIN-05; (3) cobertura FIN-02 desta fatia preservada, segregação FIN-10 pendente; (4) pendente ADM; (5) pendente FIN-12; (6) pendente FIN-14/15; (7) pendente FIN-14; (8) pendente FIN-16; (9) coberto por Chromium real; (10) coberto por auditoria indisponível com rollback. FIN-05..16 e ADM-01..12 não foram iniciados.
+
+### Estabilização pós-merge da fatia 2 — 2026-10-01
+
+**Base auditada:** `main` e `origin/main` em `ab98356b571f6f8deae03486d1b904b16fd0a1d3` (merge da PR #45). O checkout raso disponibilizou o merge, mas não o seu pai `c4f8f5a`; o SHA de cabeça da PR #45 foi confirmado pelo GitHub como `c4f8f5aae663cd02a7d6ac64865f436016be26d8`.
+
+#### Check vermelho da PR #45
+
+A execução `36821183125`, job `110237090033`, falhou na etapa **L07 real HTTP, disposable PostgreSQL and Chromium**. Foram tentados `gh run view --log-failed`, o endpoint de logs do job e as anotações do check. Os dois downloads de log retornaram `EOF`; as anotações expõem somente o exit 1, sem stack ou subteste. Portanto, **a causa histórica não pôde ser recuperada e não é atribuída a um motivo especulativo**.
+
+A comparação possível foi feita por evidência disponível: o workflow seleciona Node 22; este checkout executou Node `v22.22.3`, aceito por `@sparticuz/chromium@153.0.0` (`^22.17.0 || >=24.0.0`). O aviso do Actions sobre Node 20/24 diz respeito ao runtime interno das actions de checkout/setup, não ao Node 22 configurado para os comandos. A jornada continua com `@sparticuz/chromium`, `executablePath()` real, Playwright real, login/cookie reais, o cabeçalho `Origin` same-origin, Next e PostgreSQL descartáveis. Como hardening determinístico, o lançamento passou a remover o argumento amplo `--disable-web-security` (padrão já usado pelos gates L05/L06), e o runner remove `.next/integration-l07` antes e depois de cada execução. Não há alegação de que essas mudanças expliquem a falha cujo log não foi recuperável.
+
+#### Transações revisadas e alterações
+
+- `handleReceivables` (POST e PATCH) e `handlePayables` (POST e PATCH) deixaram de dispersar escrita, histórico, atualização de recorrência e auditoria em `pool.query` independentes. Cada mutação agora abre `pool.connect()`, usa o mesmo cliente em `BEGIN`, executa a escrita de negócio, histórico imutável, atualização da regra quando aplicável e `auditLog({ client })`, faz `COMMIT` somente depois da auditoria, faz `ROLLBACK` em qualquer erro e libera o cliente em `finally`.
+- Os dois handlers agora devolvem `503 {"error":"audit_unavailable"}` quando `audit_log` está indisponível. A aprovação de pagável também ganha entrada de histórico imutável na mesma transação da aprovação/auditoria.
+- `handleGenerateRecurring` e `handlePayments` foram revisados: já mantêm respectivamente recebível + `last_generated_competence` + histórico + auditoria, e pagamento/estorno + saldo/status + histórico + auditoria, no mesmo cliente transacional; preservam `FOR UPDATE`, os negativos de sobre-pagamento e de estorno e o rollback fail-closed.
+- Não houve mudança de schema nem migration 124. FIN-05..16 e ADM-01..12 não foram iniciados.
+
+#### Gate, Chromium e regressões executadas
+
+Os seis subtestes foram preservados. O subteste de auditoria indisponível agora cobre por HTTP real e PostgreSQL real: criação de recebível, criação de pagável, geração recorrente e baixa. Ele renomeia `audit_log`, exige 503 para cada mutação e, após a restauração garantida por `finally`, prova ausência de recebível/pagável/histórico inicial, ausência de cobrança/histórico gerados e `last_generated_competence` inalterado. O ruído `relation "audit_log" does not exist` na janela de teste é esperado.
+
+A jornada Chromium permanece com **um browser para o subteste**, conta e regra identificadas pelo próprio subteste, polling de estado final e sem mocks. Ela comprovou renderização do workspace, criação/aprovação/geração da regra, duplicidade 409 visível, exatamente uma linha gerada, seleção do recebível, baixa parcial, saldo/status parcial, estorno com razão válida, estado/histórico posterior e tabela de pagamentos visível.
+
+Resultados reais desta sessão, somente com dados sintéticos e PostgreSQL descartável:
+
+| Comando | Resultado |
+|---|---|
+| `npm run typecheck` | exit 0 |
+| `node scripts/qa-wave0-static.mjs` | 5/5 |
+| `npm run test:migrations:pg` | 123/123; 517 tabelas; cenário negativo de checksum da 006 esperado |
+| `npm test` | 196/196 |
+| `npm run test:l07-delivery:pg` | 6/6 em **duas rodadas consecutivas** após limpeza de `.next/integration-l07` |
+| `npm run test:l06-delivery:pg` | 9/9 |
+| `npm run build` | exit 0 |
+
+A PR nova é a **#46**; o commit de código da sessão é `f4354d9` (`fix: fecha transacoes restantes do L07`). O workflow novo **L07 Finance delivery** passou: [run 36822878630, job 110242735739](https://github.com/berger33/gruposegsystemseguranca/actions/runs/36822878630/job/110242735739), conclusão `success` (39 s). A PR permanece aberta e não foi feito merge.
+
+**Limitações honestas:** não foi possível recuperar a causa específica da falha antiga; a execução verde nova é a evidência disponível. A entrega usa exclusivamente ambiente descartável/sintético, não integra gateway, cobrança, banco ou credenciais de produção. Os módulos FIN-05..16 e ADM-01..12 continuam fora deste trabalho.
