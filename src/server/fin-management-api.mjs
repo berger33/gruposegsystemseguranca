@@ -34,122 +34,54 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
     });
   };
 
-  // FIN-09 resultado gerencial
+  // FIN-09 resultado gerencial: snapshot sintético, transacional e sem detalhe SQL.
+  const RESULT_STATUSES = new Set(['rascunho','em_revisao','aprovado','incompleto','arquivado']);
+  const uuid = v => typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+  const isoDate = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`));
+  const cents = v => v == null ? null : (Number.isSafeInteger(Number(v)) && Number(v) >= 0 ? Number(v) : null);
+  const send = (res, code, body) => { res.writeHead(code, {'Content-Type':'application/json'}); res.end(JSON.stringify(body)); };
+  const dbError = e => e?.code === '23505' ? 'duplicate' : e?.code === '23514' || e?.code === '22P02' || e?.code === '22007' ? 'invalid' : null;
+  const isAuditUnavailable = e => e?.code === '42P01' || /audit_log/i.test(String(e?.message || ''));
+
   const handleManagementResults = async (req, res) => {
     const sess = await checkAuth(req, res); if (!sess) return;
+    if (!sameOrigin(req) && req.method !== 'GET') return send(res, 403, {error:'forbidden_origin'});
     if (req.method === 'GET') {
-      const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
-      const contract_id = url.searchParams.get('contract_id');
-      const competence = url.searchParams.get('competence_date');
-      const status = url.searchParams.get('status');
-      const is_complete = url.searchParams.get('is_complete');
-      let q = `SELECT * FROM fin_management_results WHERE 1=1`;
-      const params=[]; let idx=1;
-      if (contract_id) { q+=` AND contract_id=$${idx++}`; params.push(contract_id); }
-      if (competence) { q+=` AND competence_date=$${idx++}`; params.push(competence); }
-      if (status) { q+=` AND status=$${idx++}`; params.push(status); }
-      if (is_complete!==null && is_complete!=='') { q+=` AND is_complete=$${idx++}`; params.push(is_complete==='true'); }
-      q+=` ORDER BY competence_date DESC LIMIT 200`;
-      try {
-        const { rows } = await pool.query(q, params);
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ results: rows }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
+      const u = new URL(req.url, `http://${req.headers.host||'localhost'}`), params=[]; let q='SELECT * FROM fin_management_results WHERE 1=1';
+      const filters=[['contract_id','contract_id'],['client_account_id','client_account_id'],['competence_date','competence_date'],['status','status']];
+      for (const [key,col] of filters) { const v=u.searchParams.get(key); if (v) { if ((key.endsWith('_id')&&!uuid(v)) || (key==='competence_date'&&!isoDate(v)) || (key==='status'&&!RESULT_STATUSES.has(v))) return send(res,400,{error:`invalid_${key}`}); params.push(v); q+=` AND ${col}=$${params.length}`; } }
+      const complete=u.searchParams.get('is_complete'); if (complete) { if (!['true','false'].includes(complete)) return send(res,400,{error:'invalid_is_complete'}); params.push(complete==='true'); q+=` AND is_complete=$${params.length}`; }
+      q+=' ORDER BY competence_date DESC, created_at DESC LIMIT 200';
+      try { return send(res,200,{results:(await pool.query(q,params)).rows}); } catch { return send(res,500,{error:'internal'}); }
     }
-    if (req.method === 'POST') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body;
-      try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
-      const contract_id = body.contract_id || null;
-      const client_account_id = body.client_account_id || null;
-      const competence_date = body.competence_date;
-      const revenue_contracted = body.revenue_contracted_cents ?? null;
-      const revenue_billed = body.revenue_billed_cents ?? null;
-      const revenue_received = body.revenue_received_cents ?? null;
-      const costs = body.costs_cents ?? null;
-      const cash = body.cash_cents ?? null;
-      const margin_percent = body.margin_percent ?? null;
-      const is_complete = body.is_complete === true;
-      const incomplete_reason = (body.incomplete_reason||'').trim();
-      const status = body.status || (is_complete ? 'aprovado' : 'incompleto');
-      const notes = (body.notes||'').trim() || null;
-
-      if (!competence_date) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'competence_date_required'})); return; }
-      if (is_complete) {
-        if (revenue_received==null || costs==null) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'complete_requires_received_and_costs'})); return; }
-        if (incomplete_reason) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'incomplete_reason_must_be_null_when_complete'})); return; }
-      } else {
-        if (!incomplete_reason || incomplete_reason.length<10 || incomplete_reason.length>1000) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'incomplete_reason_required_10_1000_when_incomplete'})); return; }
-        if (margin_percent!=null) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'margin_percent_must_be_null_when_incomplete'})); return; }
-      }
-      if (margin_percent!=null && (margin_percent < -100 || margin_percent > 100)) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'margin_percent_range'})); return; }
-      if (notes && (notes.length<10 || notes.length>2000)) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'notes_10_2000'})); return; }
-      const protocol = generateProtocol('RES-FIN');
-      try {
-        // check duplicate contract+competence
-        if (contract_id) {
-          const dup = await pool.query(`SELECT id FROM fin_management_results WHERE contract_id=$1 AND competence_date=$2`, [contract_id, competence_date]);
-          if (dup.rows.length) { res.writeHead(409, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'duplicate_competence_contract', existing_id: dup.rows[0].id})); return; }
-        }
-        const { rows } = await pool.query(
-          `INSERT INTO fin_management_results (protocol, contract_id, client_account_id, competence_date, revenue_contracted_cents, revenue_billed_cents, revenue_received_cents, costs_cents, cash_cents, margin_percent, is_complete, incomplete_reason, status, notes, created_by_identity)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
-          [protocol, contract_id, client_account_id, competence_date, revenue_contracted, revenue_billed, revenue_received, costs, cash, margin_percent, is_complete, is_complete?null:incomplete_reason, status, notes, sess.identityId||null]
-        );
-        await pool.query(
-          `INSERT INTO fin_result_history (result_id, contract_id, previous_status, next_status, previous_contracted, next_contracted, previous_billed, next_billed, previous_received, next_received, previous_costs, next_costs, previous_cash, next_cash, previous_complete, next_complete, changed_by_identity, reason, is_incomplete)
-           VALUES ($1,$2,NULL,$3,NULL,$4,NULL,$5,NULL,$6,NULL,$7,NULL,$8,NULL,$9,$10,$11,$12)`,
-          [rows[0].id, contract_id, status, revenue_contracted, revenue_billed, revenue_received, costs, cash, is_complete, sess.identityId||null, is_complete? 'Resultado completo' : incomplete_reason, !is_complete]
-        );
-        try { await auditLog({ action:'fin_management_result_create', actor: sess.identityId, target: rows[0].id, meta:{ protocol, contract_id, competence_date, is_complete } }); } catch {}
-        res.writeHead(201, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ result: rows[0] }));
-      } catch(e){
-        if (e.code==='23505') { res.writeHead(409, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'duplicate', details:e.detail})); return; }
-        res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message}));
-      }
-      return;
-    }
-    if (req.method === 'PATCH') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
-      const id = body.id;
-      const status = body.status;
-      const reason = (body.reason||'').trim();
-      if (!id) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'id_required'})); return; }
-      if (!reason || reason.length<10 || reason.length>1000) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'reason_10_1000_required'})); return; }
-      try {
-        const existing = await pool.query(`SELECT * FROM fin_management_results WHERE id=$1`, [id]);
-        if (!existing.rows.length) { res.writeHead(404, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
-        const prev = existing.rows[0];
-        let newStatus = status || prev.status;
-        let newIsComplete = body.is_complete !== undefined ? body.is_complete : prev.is_complete;
-        let newIncompleteReason = body.incomplete_reason !== undefined ? body.incomplete_reason : prev.incomplete_reason;
-        let newMargin = body.margin_percent !== undefined ? body.margin_percent : prev.margin_percent;
-        // validate complete logic
-        if (newIsComplete) {
-          if (newIncompleteReason) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'incomplete_reason_must_be_null_when_complete'})); return; }
-        } else {
-          if (!newIncompleteReason || newIncompleteReason.length<10) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'incomplete_reason_required_10_1000_when_incomplete'})); return; }
-          if (newMargin!=null) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'margin_null_when_incomplete'})); return; }
-        }
-        const { rows } = await pool.query(
-          `UPDATE fin_management_results SET status=$1, is_complete=$2, incomplete_reason=$3, margin_percent=$4, revenue_contracted_cents=COALESCE($5,revenue_contracted_cents), revenue_billed_cents=COALESCE($6,revenue_billed_cents), revenue_received_cents=COALESCE($7,revenue_received_cents), costs_cents=COALESCE($8,costs_cents), cash_cents=COALESCE($9,cash_cents), notes=COALESCE($10,notes), updated_at=NOW() WHERE id=$11 RETURNING *`,
-          [newStatus, newIsComplete, newIsComplete?null:newIncompleteReason, newMargin, body.revenue_contracted_cents??null, body.revenue_billed_cents??null, body.revenue_received_cents??null, body.costs_cents??null, body.cash_cents??null, body.notes||null, id]
-        );
-        await pool.query(
-          `INSERT INTO fin_result_history (result_id, contract_id, previous_status, next_status, previous_contracted, next_contracted, previous_billed, next_billed, previous_received, next_received, previous_costs, next_costs, previous_cash, next_cash, previous_complete, next_complete, changed_by_identity, reason, is_incomplete)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
-          [id, prev.contract_id, prev.status, newStatus, prev.revenue_contracted_cents, rows[0].revenue_contracted_cents, prev.revenue_billed_cents, rows[0].revenue_billed_cents, prev.revenue_received_cents, rows[0].revenue_received_cents, prev.costs_cents, rows[0].costs_cents, prev.cash_cents, rows[0].cash_cents, prev.is_complete, newIsComplete, sess.identityId||null, reason, !newIsComplete]
-        );
-        try { await auditLog({ action:'fin_management_result_update', actor: sess.identityId, target: id, meta:{ status:newStatus, is_complete:newIsComplete, reason } }); } catch {}
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ result: rows[0] }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
-    }
-    res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'}));
+    if (req.method !== 'POST') return send(res,405,{error:'method_not_allowed'});
+    let body; try { body=await readJson(req); } catch { return send(res,400,{error:'invalid_json'}); }
+    const contract_id=body.contract_id||null, client_account_id=body.client_account_id||null;
+    if ((contract_id&&!uuid(contract_id))||(client_account_id&&!uuid(client_account_id))) return send(res,400,{error:'invalid_reference'});
+    if (!isoDate(body.competence_date)) return send(res,400,{error:'invalid_competence_date'});
+    const values={revenue_contracted_cents:cents(body.revenue_contracted_cents),revenue_billed_cents:cents(body.revenue_billed_cents),revenue_received_cents:cents(body.revenue_received_cents),costs_cents:cents(body.costs_cents),cash_cents:cents(body.cash_cents)};
+    if (Object.entries(values).some(([,v])=>v===null && body[Object.keys(values).find(k=>values[k]===v)]!=null)) return send(res,400,{error:'invalid_amount'});
+    const complete=body.is_complete===true, reason=typeof body.incomplete_reason==='string'?body.incomplete_reason.trim():'';
+    if (!complete && (reason.length<10||reason.length>1000)) return send(res,400,{error:'incomplete_reason_required_10_1000_when_incomplete'});
+    if (complete && (values.revenue_received_cents===null||values.costs_cents===null||reason)) return send(res,400,{error:'complete_requires_received_costs_and_no_incomplete_reason'});
+    const status=body.status || (complete?'aprovado':'incompleto');
+    if (!RESULT_STATUSES.has(status)) return send(res,400,{error:'invalid_status'});
+    const notes=body.notes == null ? null : String(body.notes).trim();
+    if (notes && (notes.length<10||notes.length>2000)) return send(res,400,{error:'notes_10_2000'});
+    const client=await pool.connect();
+    try {
+      await client.query('BEGIN');
+      if (contract_id) { const c=await client.query('SELECT id FROM crm_contracts WHERE id=$1',[contract_id]); if (!c.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'contract_not_found'}); } }
+      if (client_account_id) { const c=await client.query('SELECT id FROM client_accounts WHERE id=$1',[client_account_id]); if (!c.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'client_account_not_found'}); } }
+      const duplicate=await client.query('SELECT id FROM fin_management_results WHERE client_account_id IS NOT DISTINCT FROM $1 AND contract_id IS NOT DISTINCT FROM $2 AND competence_date=$3',[client_account_id,contract_id,body.competence_date]);
+      if (duplicate.rows.length) { await client.query('ROLLBACK'); return send(res,409,{error:'duplicate_competence_account'}); }
+      const protocol=generateProtocol('RES-FIN');
+      const r=await client.query(`INSERT INTO fin_management_results (protocol,contract_id,client_account_id,competence_date,revenue_contracted_cents,revenue_billed_cents,revenue_received_cents,costs_cents,cash_cents,is_complete,incomplete_reason,status,notes,created_by_identity) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,[protocol,contract_id,client_account_id,body.competence_date,values.revenue_contracted_cents,values.revenue_billed_cents,values.revenue_received_cents,values.costs_cents,values.cash_cents,complete,complete?null:reason,status,notes,sess.identityId||null]);
+      await client.query(`INSERT INTO fin_result_history (result_id,contract_id,next_status,next_contracted,next_billed,next_received,next_costs,next_cash,next_complete,changed_by_identity,reason,is_incomplete) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,[r.rows[0].id,contract_id,status,values.revenue_contracted_cents,values.revenue_billed_cents,values.revenue_received_cents,values.costs_cents,values.cash_cents,complete,sess.identityId||null,complete?'Resultado completo':reason,!complete]);
+      await auditLog({action:'fin_management_result_create',actor:sess.identityId||'unknown',target:r.rows[0].id,meta:{protocol,contract_id,competence_date:body.competence_date,is_complete:complete},client});
+      await client.query('COMMIT'); return send(res,201,{result:r.rows[0]});
+    } catch(e) { try { await client.query('ROLLBACK'); } catch {} const kind=dbError(e); return send(res,kind==='duplicate'?409:kind==='invalid'?400:isAuditUnavailable(e)?503:500,{error:kind==='duplicate'?'duplicate':kind==='invalid'?'invalid':isAuditUnavailable(e)?'audit_unavailable':'internal'}); }
+    finally { client.release(); }
   };
 
   const handleResultHistory = async (req, res) => {

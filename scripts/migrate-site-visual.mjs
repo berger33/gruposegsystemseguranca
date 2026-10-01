@@ -137,13 +137,14 @@ const files = [
   '124-fin05-conciliation-hardening.sql',
   '125-fin06-collection-hardening.sql',
   '126-fin07-cashflow-aging-hardening.sql',
-  '127-fin08-cost-allocation-hardening.sql'
+  '127-fin08-cost-allocation-hardening.sql',
+  '128-fin09-management-result-hardening.sql'
 ];
 
 async function main() {
   const actual = (await readdir(dir)).filter(f => /^\d{3}-.*\.sql$/.test(f)).sort();
-  if (files.length !== 127 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
-    throw new Error('migration_manifest_mismatch: compare 001–127 with db/migrations before connecting');
+  if (files.length !== 128 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
+    throw new Error('migration_manifest_mismatch: compare 001–128 with db/migrations before connecting');
   }
   const urlText = process.env.DATABASE_MIGRATION_URL || process.env.DATABASE_URL;
   if (!urlText) throw new Error('DATABASE_MIGRATION_URL or DATABASE_URL is required');
@@ -191,7 +192,7 @@ async function main() {
         throw error;
       }
     }
-    console.log('Migration ledger verified: 001–127 (PostgreSQL only)');
+    console.log('Migration ledger verified: 001–128 (PostgreSQL only)');
   } finally {
     client?.release();
     await pool.end();
