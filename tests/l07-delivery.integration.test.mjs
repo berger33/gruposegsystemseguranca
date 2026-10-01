@@ -1627,3 +1627,172 @@ test("L07 FIN-12: Chromium seleciona, homologa em sandbox, cria cobrança e conc
     assert.equal(conciliatedWebhook.is_valid_signature, true);
   } finally { await browser.close(); }
 });
+
+test("L07 FIN-13: orçamento gerencial exige premissas, transições controladas, cenários permitidos e auditoria fail-closed", { skip: !RUN, timeout: 120_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const ti = await provisionAndLoginStaff(pool, api, { role: "ti" });
+  const rh = await provisionAndLoginStaff(pool, api, { role: "rh" });
+  const tag = uuid().slice(0, 8);
+  const budgetPayload = (suffix, overrides = {}) => ({
+    title: `Orçamento sintético FIN-13 ${tag} ${suffix}`,
+    description: "Orçamento gerencial sintético para validar controles transacionais do gate FIN-13",
+    premises: "Premissas sintéticas documentadas; estimativa sem promessa de resultado financeiro.",
+    period_start: "2026-10-01",
+    period_end: "2026-12-31",
+    total_revenue_cents: 300000,
+    total_cost_cents: 180000,
+    ...overrides,
+  });
+  const scenarioPayload = (budget_id, scenario_type, overrides = {}) => ({
+    budget_id,
+    scenario_type,
+    title: `Cenário ${scenario_type} FIN-13 ${tag}`,
+    premises: `Premissas sintéticas do cenário ${scenario_type}; estimativa sem promessa de resultado.`,
+    projected_revenue_cents: 320000,
+    projected_cost_cents: 190000,
+    projected_margin_percent: 12.5,
+    ...overrides,
+  });
+
+  assert.equal((await fin("/budgets")).status, 401, "anonymous budget read denied");
+  assert.equal((await fin("/budgets", { cookie: rh.cookie })).status, 403, "rh cannot read budgets");
+  const crossOrigin = await fin("/budgets", { method: "POST", cookie: financeiro.cookie, origin: "https://externo.example", body: budgetPayload("cross") });
+  assert.equal(crossOrigin.status, 403, "cross-origin budget mutation denied");
+  assert.deepEqual(crossOrigin.body, { error: "forbidden_origin" });
+
+  const tiRead = await fin("/budgets", { cookie: ti.cookie });
+  assert.equal(tiRead.status, 200, "ti can read budget domain");
+  const tiWrite = await fin("/budgets", { method: "POST", cookie: ti.cookie, body: budgetPayload("ti") });
+  assert.equal(tiWrite.status, 403, "ti cannot mutate budgets");
+  assert.deepEqual(tiWrite.body, { error: "read_only" });
+  const tiScenarioWrite = await fin("/budget-scenarios", { method: "POST", cookie: ti.cookie, body: scenarioPayload(uuid(), "base") });
+  assert.equal(tiScenarioWrite.status, 403, "ti cannot mutate scenarios");
+  assert.deepEqual(tiScenarioWrite.body, { error: "read_only" });
+
+  const missingPremises = await fin("/budgets", { method: "POST", cookie: financeiro.cookie, body: budgetPayload("sem-premissas", { premises: "" }) });
+  assert.equal(missingPremises.status, 400, "premises are mandatory");
+  assert.equal(missingPremises.body.error, "premises_10_2000_required_nao_prometer_resultado");
+  assert.equal("details" in missingPremises.body, false, "no SQL details in validation errors");
+
+  const created = await fin("/budgets", { method: "POST", cookie: financeiro.cookie, body: budgetPayload("principal") });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  assert.match(created.body.budget.protocol, /^ORC-FIN-\d{8}-[A-Z0-9]{4}$/);
+  assert.equal(created.body.budget.status, "rascunho");
+  assert.equal(created.body.budget.is_estimate, true);
+  assert.match(created.body.budget.estimate_note, /não prometer/i);
+  assert.match(created.body.note, /nao_prometer_resultado/);
+  assert.equal(created.body.budget.created_by_identity, financeiro.id);
+  const budgetId = created.body.budget.id;
+
+  const directApprove = await fin("/budgets", { method: "PATCH", cookie: financeiro.cookie, body: { id: budgetId, status: "aprovado" } });
+  assert.equal(directApprove.status, 409, "rascunho cannot jump to approved");
+  assert.deepEqual(directApprove.body, { error: "invalid_status_transition" });
+
+  const review = await fin("/budgets", { method: "PATCH", cookie: financeiro.cookie, body: { id: budgetId, status: "em_revisao" } });
+  assert.equal(review.status, 200, JSON.stringify(review.body));
+  assert.equal(review.body.budget.status, "em_revisao");
+  const approved = await fin("/budgets", { method: "PATCH", cookie: financeiro.cookie, body: { id: budgetId, status: "aprovado" } });
+  assert.equal(approved.status, 200, JSON.stringify(approved.body));
+  assert.equal(approved.body.budget.status, "aprovado");
+  assert.equal(approved.body.budget.approved_by_identity, financeiro.id);
+  assert.ok(approved.body.budget.approved_at, "approval timestamp returned");
+  const approvedRow = await pool.query("SELECT approved_by_identity, approved_at FROM fin_budgets WHERE id=$1", [budgetId]);
+  assert.equal(approvedRow.rows[0].approved_by_identity, financeiro.id, "approver persisted");
+  assert.ok(approvedRow.rows[0].approved_at, "approval date persisted");
+
+  const invalidScenario = await fin("/budget-scenarios", { method: "POST", cookie: financeiro.cookie, body: scenarioPayload(budgetId, "agressivo") });
+  assert.equal(invalidScenario.status, 400, "invalid scenario type rejected before SQL");
+  assert.deepEqual(invalidScenario.body, { error: "invalid_scenario_type" });
+  for (const scenarioType of ["conservador", "base", "otimista", "expansao", "pessimista"]) {
+    const scenario = await fin("/budget-scenarios", { method: "POST", cookie: financeiro.cookie, body: scenarioPayload(budgetId, scenarioType) });
+    assert.equal(scenario.status, 201, JSON.stringify(scenario.body));
+    assert.equal(scenario.body.scenario.scenario_type, scenarioType);
+    assert.equal(scenario.body.scenario.is_estimate, true);
+    assert.match(scenario.body.note, /nao_prometer_resultado/);
+  }
+  const duplicateScenario = await fin("/budget-scenarios", { method: "POST", cookie: financeiro.cookie, body: scenarioPayload(budgetId, "base", { title: `Base duplicado FIN-13 ${tag}` }) });
+  assert.equal(duplicateScenario.status, 409, "duplicate scenario per budget/type rejected");
+  assert.deepEqual(duplicateScenario.body, { error: "duplicate_scenario_type_for_budget" });
+  const scenarioList = await fin(`/budget-scenarios?budget_id=${budgetId}`, { cookie: financeiro.cookie });
+  assert.equal(scenarioList.status, 200);
+  assert.equal(scenarioList.body.scenarios.length, 5, "all allowed scenario types listed");
+
+  const history = await pool.query("SELECT previous_status, next_status FROM fin_budget_history WHERE budget_id=$1 ORDER BY changed_at ASC", [budgetId]);
+  assert.deepEqual(history.rows.map(row => row.next_status), ["rascunho", "em_revisao", "aprovado"], "history captures creation and controlled transitions");
+  await assert.rejects(pool.query("UPDATE fin_budget_history SET reason='Tentativa de adulteração' WHERE budget_id=$1", [budgetId]), /fin_budget_history_immutable/);
+  await assert.rejects(pool.query("DELETE FROM fin_budget_history WHERE budget_id=$1", [budgetId]), /fin_budget_history_immutable/);
+  const auditRows = await pool.query("SELECT action, meta FROM audit_log WHERE target=$1 ORDER BY id", [budgetId]);
+  assert.ok(auditRows.rows.some(row => row.action === "fin_budget_create"), "budget creation audited");
+  assert.ok(auditRows.rows.some(row => row.action === "fin_budget_update" && row.meta?.next_status === "aprovado"), "approval transition audited");
+
+  const rollbackBudget = await fin("/budgets", { method: "POST", cookie: financeiro.cookie, body: budgetPayload("rollback-base") });
+  assert.equal(rollbackBudget.status, 201, JSON.stringify(rollbackBudget.body));
+  const failedBudgetTitle = `Orçamento rollback FIN-13 ${tag}`;
+  await pool.query("ALTER TABLE audit_log RENAME TO audit_log_fin13_unavailable");
+  try {
+    const failedBudget = await fin("/budgets", { method: "POST", cookie: financeiro.cookie, body: budgetPayload("rollback", { title: failedBudgetTitle }) });
+    assert.equal(failedBudget.status, 503, JSON.stringify(failedBudget.body));
+    assert.deepEqual(failedBudget.body, { error: "audit_unavailable" });
+    const failedScenario = await fin("/budget-scenarios", { method: "POST", cookie: financeiro.cookie, body: scenarioPayload(rollbackBudget.body.budget.id, "base", { title: `Cenário rollback FIN-13 ${tag}` }) });
+    assert.equal(failedScenario.status, 503, JSON.stringify(failedScenario.body));
+    assert.equal("details" in failedScenario.body, false, "audit failure response is sanitized");
+  } finally {
+    await pool.query("ALTER TABLE audit_log_fin13_unavailable RENAME TO audit_log");
+  }
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_budgets WHERE title=$1", [failedBudgetTitle])).rows[0].n, 0, "failed audited budget rolled back fully");
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_budget_scenarios WHERE budget_id=$1 AND scenario_type='base'", [rollbackBudget.body.budget.id])).rows[0].n, 0, "failed audited scenario rolled back fully");
+});
+
+test("L07 FIN-13: Chromium abre a nova aba de orçamento financeiro e cadastra estimativa e cenário", { skip: !RUN, timeout: 180_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const tag = uuid().slice(0, 8);
+  const title = `Orçamento Chromium FIN-13 ${tag}`;
+  const scenarioTitle = `Cenário Chromium FIN-13 ${tag}`;
+  const browser = await playwrightChromium.launch({ executablePath: await packagedChromium.executablePath(), headless: true, args: packagedChromium.args.filter(arg => arg !== "--disable-web-security") });
+  try {
+    const context = await browser.newContext();
+    const pair = financeiro.cookie.split(";")[0], separator = pair.indexOf("=");
+    await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
+    const page = await context.newPage();
+    await page.setExtraHTTPHeaders({ origin: baseUrl });
+    await page.goto(`${baseUrl}/admin/financeiro`, { waitUntil: "networkidle" });
+    await page.getByTestId("finance-tab-budgets").click();
+    await page.waitForSelector('[data-testid="finance-budget-workspace"]');
+    assert.match(await page.getByTestId("fin13-disclaimer").textContent(), /não prometemos resultado financeiro/);
+
+    await page.getByTestId("fin13-budget-title").fill(title);
+    await page.getByTestId("fin13-budget-description").fill("Orçamento criado pelo Chromium para validar a nova aba financeira");
+    await page.getByTestId("fin13-budget-premises").fill("Premissas sintéticas da jornada Chromium; estimativa sem promessa de resultado.");
+    await page.getByTestId("fin13-budget-start").fill("2026-10-01");
+    await page.getByTestId("fin13-budget-end").fill("2026-12-31");
+    await page.getByTestId("fin13-budget-revenue").fill("410000");
+    await page.getByTestId("fin13-budget-cost").fill("270000");
+    await page.getByTestId("fin13-budget-create").click();
+    await page.waitForFunction(() => (document.querySelector('[data-testid="fin13-notice"]')?.textContent || "").includes("ORC-FIN"));
+    const budgetRow = (await pool.query("SELECT id, protocol, status, is_estimate FROM fin_budgets WHERE title=$1", [title])).rows[0];
+    assert.ok(budgetRow, "budget created through Chromium");
+    assert.match(budgetRow.protocol, /^ORC-FIN-\d{8}-[A-Z0-9]{4}$/);
+    assert.equal(budgetRow.status, "rascunho");
+    assert.equal(budgetRow.is_estimate, true);
+
+    await page.waitForFunction(id => {
+      const select = document.querySelector('[data-testid="fin13-scenario-budget"]');
+      return Boolean(select) && Array.from(select.options).some(option => option.value === id);
+    }, budgetRow.id);
+    await page.getByTestId("fin13-scenario-budget").selectOption(budgetRow.id);
+    await page.getByTestId("fin13-scenario-type").selectOption("expansao");
+    await page.getByTestId("fin13-scenario-title").fill(scenarioTitle);
+    await page.getByTestId("fin13-scenario-premises").fill("Premissas sintéticas do cenário de expansão; estimativa sem promessa de resultado.");
+    await page.getByTestId("fin13-scenario-revenue").fill("450000");
+    await page.getByTestId("fin13-scenario-cost").fill("300000");
+    await page.getByTestId("fin13-scenario-margin").fill("15");
+    await page.getByTestId("fin13-scenario-create").click();
+    await page.waitForFunction(() => (document.querySelector('[data-testid="fin13-notice"]')?.textContent || "").includes("expansao"));
+    const scenarioRow = (await pool.query("SELECT scenario_type, is_estimate FROM fin_budget_scenarios WHERE budget_id=$1 AND title=$2", [budgetRow.id, scenarioTitle])).rows[0];
+    assert.ok(scenarioRow, "scenario created through Chromium");
+    assert.equal(scenarioRow.scenario_type, "expansao");
+    assert.equal(scenarioRow.is_estimate, true);
+  } finally {
+    await browser.close();
+  }
+});

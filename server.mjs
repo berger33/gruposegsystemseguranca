@@ -2118,13 +2118,11 @@ const finManagementApi = createFinManagementApi({
 
 const finBudgetApi = createFinBudgetApi({
   pool: getPool(),
-  auditLog: async ({ action, actor, target, meta }) => {
-    try {
-      await getPool().query(
-        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
-        [action, actor, target, meta ? JSON.stringify(meta) : null]
-      );
-    } catch {}
+  auditLog: async ({ action, actor, target, meta, client }) => {
+    await (client || getPool()).query(
+      `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+      [action, actor, target, meta ? JSON.stringify(meta) : null]
+    );
   },
   sameOrigin,
   requireSession: readSession,
