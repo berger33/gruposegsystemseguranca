@@ -121,3 +121,43 @@ Resultados reais desta sessão, somente com dados sintéticos e PostgreSQL desca
 A PR nova é a **#46**; o commit de código da sessão é `f4354d9` (`fix: fecha transacoes restantes do L07`). O workflow novo **L07 Finance delivery** passou: [run 36822878630, job 110242735739](https://github.com/berger33/gruposegsystemseguranca/actions/runs/36822878630/job/110242735739), conclusão `success` (39 s). A PR permanece aberta e não foi feito merge.
 
 **Limitações honestas:** não foi possível recuperar a causa específica da falha antiga; a execução verde nova é a evidência disponível. A entrega usa exclusivamente ambiente descartável/sintético, não integra gateway, cobrança, banco ou credenciais de produção. Os módulos FIN-05..16 e ADM-01..12 continuam fora deste trabalho.
+
+### Fatia 3 — FIN-05 conciliação bancária sintética — 2026-10-01
+
+**Base confirmada antes da mudança:** a PR #46 está `MERGED`; `main` e `origin/main` apontam para `588b48f12b85fd07e2ca575e56f9b11ba97a1d67`. O check **L07 Finance delivery / finance-postgres-browser** da PR foi `success` no run `36823318590`, job `110246095200`. A falha anterior da PR #45 não foi reatribuída: os logs que foram recuperáveis terminaram em `EOF`.
+
+#### Escopo entregue — e fronteira preservada
+
+Somente FIN-05 foi iniciado. FIN-01..04 foram preservados com todos os subtestes existentes; FIN-06..16 e ADM-01..12 não receberam implementação nem revalidação nesta fatia. A tela canônica `/admin/financeiro` recebeu a aba **Conciliação**: ela importa um extrato e movimento declarados como sintéticos, seleciona um recebível já existente, registra uma sugestão e exige confirmação explícita. A tela explica que não acessa arquivo, banco ou provedor externo e que a confirmação não cria pagamento/baixa FIN-04.
+
+A API canônica exige sessão `admin`/`ti`/`financeiro` e origem same-origin em todas as leituras/mutações de FIN-05. São cobertos `401` anônimo, `403` para `rh` e `403` de origin antes de escrita. Não foram usados dados, credenciais, serviços ou arquivos de produção.
+
+#### Integridade e transações
+
+- `POST /api/fin/bank-statements` aceita metadados e até 500 movimentos sintéticos e grava extrato, movimentos, totais e auditoria no **mesmo cliente/transação**. `storage_key` repetida, `bank_ref` repetida dentro da importação ou já existente causam `409` e rollback completo.
+- `POST /api/fin/bank-transactions` bloqueia o extrato, atualiza totalizadores e audita no mesmo commit. Assim uma falha de auditoria não deixa movimento ou total parcial.
+- `POST /api/fin/conciliations` bloqueia o movimento e a conta alvo, gera somente sugestão (`sugerida`) com valor limitado ao saldo aberto e ao valor absoluto do movimento, e audita no mesmo commit. `PATCH` só resolve uma sugestão uma vez (`conciliada`, `divergente` ou `ignorada`); confirmação marca o movimento como conciliado, mas não inventa pagamento.
+- A migration aditiva **124** torna a regra explícita no banco: uma conciliação exige exatamente uma conta (recebível ou pagável) e um movimento bancário; os três FKs deixam de permitir `SET NULL`; e `fin05_one_conciliation_per_bank_transaction_idx` impede o mesmo movimento em duas contas, inclusive sob concorrência. Uma base pré-existente com duplicidade falha de forma explícita na aplicação da migration; não há apagamento/correção silenciosa.
+- FIN-05 usa `auditLog({ client })`; se `audit_log` não existe, importação, movimento avulso, sugestão e confirmação devolvem `503 {"error":"audit_unavailable"}` após rollback. Os handlers não expõem mensagem interna do banco.
+
+#### Gate L07 ampliado
+
+O runner agora declara **7 subtestes seriais**, mantém Chromium empacotado, Playwright real, cookie/sessão reais, Next e PostgreSQL `seg_qa_l07` descartável, e limpa `.next/integration-l07` antes/depois.
+
+O subteste FIN-05 prova por HTTP real: importação de um extrato sintético; auditoria de extrato+movimento; rejeição de `storage_key` e `bank_ref` duplicados; duas sugestões concorrentes para o mesmo movimento com uma única vencedora; confirmação única, auditada; e ausência de `fin_payments` criada pela confirmação. O subteste de auditoria indisponível agora cobre as quatro mutações FIN-05 e consulta o banco após a restauração para provar ausência de extrato/movimento/sugestão parcial, preservação dos totalizadores e da sugestão ainda pendente. O ruído de relação `audit_log` ausente nessa janela é esperado.
+
+A jornada Chromium entra na tela financeira, mantém a jornada FIN-01..04, importa o extrato sintético pela aba nova, escolhe o movimento, vê a sugestão e confirma a conciliação; então o PostgreSQL confirma `status='conciliada'` e `is_conciliated=true`.
+
+#### Evidência desta fatia
+
+| Comando | Resultado comprovado |
+|---|---|
+| `npm run typecheck` | exit 0 |
+| `node scripts/qa-wave0-static.mjs` | 5/5, manifesto 001–124 |
+| `npm run test:migrations:pg` | 124/124; 517 tabelas; replay e clone/checksum negativo 006 esperados |
+| `npm test` | exit 0 (196 testes) |
+| `npm run test:l06-delivery:pg` | 9/9 |
+| `npm run build` | exit 0 |
+| `npm run test:l07-delivery:pg` | 7/7 em **duas rodadas consecutivas**, com limpeza de `.next/integration-l07` antes/depois |
+
+**Limitações honestas:** conciliação é local, sintética e declarativa. Não há OFX/CSV real, upload, conexão bancária, webhook de provedor, gateway, cobrança, pagamento ou credencial externa. FIN-06..16 e ADM-01..12 continuam fora do escopo.
