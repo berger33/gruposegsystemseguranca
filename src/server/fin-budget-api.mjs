@@ -21,119 +21,14 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
     let data=''; req.on('data', c=> data+=c); req.on('end', ()=> { try { resolve(data?JSON.parse(data):{}); } catch(e){ reject(e); } });
   });
 
-  const handleBudgets = async (req, res) => {
-    const sess = await checkAuth(req, res); if (!sess) return;
-    if (req.method === 'GET') {
-      const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
-      const status = url.searchParams.get('status');
-      let q = `SELECT * FROM fin_budgets WHERE 1=1`; const params=[]; let idx=1;
-      if (status) { q+=` AND status=$${idx++}`; params.push(status); }
-      q+=` ORDER BY period_start DESC LIMIT 200`;
-      try {
-        const { rows } = await pool.query(q, params);
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ budgets: rows }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
-    }
-    if (req.method === 'POST') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
-      const title = (body.title||'').trim();
-      const description = (body.description||'').trim();
-      const premises = (body.premises||'').trim();
-      const period_start = body.period_start;
-      const period_end = body.period_end;
-      const total_revenue = body.total_revenue_cents ?? null;
-      const total_cost = body.total_cost_cents ?? null;
-      if (!title || title.length<5 || title.length>200) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'title_5_200'})); return; }
-      if (!description || description.length<10 || description.length>2000) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'description_10_2000'})); return; }
-      if (!premises || premises.length<10 || premises.length>2000) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'premises_10_2000_required_nao_prometer_resultado'})); return; }
-      if (!period_start || !period_end) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'period_required'})); return; }
-      if (new Date(period_end) < new Date(period_start)) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'period_end_gte_start'})); return; }
-      const protocol = generateProtocol('ORC-FIN');
-      try {
-        const { rows } = await pool.query(
-          `INSERT INTO fin_budgets (protocol, title, description, premises, period_start, period_end, total_revenue_cents, total_cost_cents, created_by_identity)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-          [protocol, title, description, premises, period_start, period_end, total_revenue, total_cost, sess.identityId||null]
-        );
-        try { await auditLog({ action:'fin_budget_create', actor: sess.identityId, target: rows[0].id, meta:{ protocol, premises } }); } catch {}
-        res.writeHead(201, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ budget: rows[0], note:'orcamento_gerencial_premissas_explicitas_nao_prometer_resultado' }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
-    }
-    if (req.method === 'PATCH') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
-      const id = body.id;
-      if (!id) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'id_required'})); return; }
-      try {
-        let approved_by = null; let approved_at = null;
-        if (body.status === 'aprovado') { approved_by = sess.identityId||null; approved_at = new Date(); }
-        const { rows } = await pool.query(
-          `UPDATE fin_budgets SET status=COALESCE($1,status), title=COALESCE($2,title), description=COALESCE($3,description), premises=COALESCE($4,premises), total_revenue_cents=COALESCE($5,total_revenue_cents), total_cost_cents=COALESCE($6,total_cost_cents), approved_by_identity=COALESCE($7,approved_by_identity), approved_at=COALESCE($8,approved_at), updated_at=NOW() WHERE id=$9 RETURNING *`,
-          [body.status||null, body.title||null, body.description||null, body.premises||null, body.total_revenue_cents??null, body.total_cost_cents??null, approved_by, approved_at, id]
-        );
-        if (!rows.length) { res.writeHead(404, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
-        try { await auditLog({ action:'fin_budget_update', actor: sess.identityId, target: id, meta:{ status: body.status } }); } catch {}
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ budget: rows[0] }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
-    }
-    res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'}));
-  };
-
-  const handleBudgetScenarios = async (req, res) => {
-    const sess = await checkAuth(req, res); if (!sess) return;
-    if (req.method === 'GET') {
-      const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
-      const budget_id = url.searchParams.get('budget_id');
-      let q = `SELECT * FROM fin_budget_scenarios WHERE 1=1`; const params=[]; let idx=1;
-      if (budget_id) { q+=` AND budget_id=$${idx++}`; params.push(budget_id); }
-      q+=` ORDER BY created_at DESC LIMIT 200`;
-      try {
-        const { rows } = await pool.query(q, params);
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ scenarios: rows }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
-    }
-    if (req.method === 'POST') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
-      const budget_id = body.budget_id;
-      const scenario_type = body.scenario_type || 'base';
-      const title = (body.title||'').trim();
-      const premises = (body.premises||'').trim();
-      const projected_revenue = body.projected_revenue_cents ?? null;
-      const projected_cost = body.projected_cost_cents ?? null;
-      const projected_margin_percent = body.projected_margin_percent ?? null;
-      if (!budget_id) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'budget_id_required'})); return; }
-      if (!title || title.length<5 || title.length>200) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'title_5_200'})); return; }
-      if (!premises || premises.length<10 || premises.length>2000) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'premises_10_2000_required_cenario_expansao_premissas_explicitas'})); return; }
-      if (projected_margin_percent!=null && (projected_margin_percent < -100 || projected_margin_percent > 100)) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'margin_percent_range'})); return; }
-      try {
-        const dup = await pool.query(`SELECT id FROM fin_budget_scenarios WHERE budget_id=$1 AND scenario_type=$2`, [budget_id, scenario_type]);
-        if (dup.rows.length) { res.writeHead(409, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'duplicate_scenario_type_for_budget'})); return; }
-        const { rows } = await pool.query(
-          `INSERT INTO fin_budget_scenarios (budget_id, scenario_type, title, premises, projected_revenue_cents, projected_cost_cents, projected_margin_percent, created_by_identity)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-          [budget_id, scenario_type, title, premises, projected_revenue, projected_cost, projected_margin_percent, sess.identityId||null]
-        );
-        try { await auditLog({ action:'fin_budget_scenario_create', actor: sess.identityId, target: rows[0].id, meta:{ budget_id, scenario_type, premises } }); } catch {}
-        res.writeHead(201, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ scenario: rows[0], note:'cenario_estimativa_identificada_nao_prometer_resultado' }));
-      } catch(e){
-        if (e.code==='23505') { res.writeHead(409, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'duplicate', details:e.detail})); return; }
-        res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message}));
-      }
-      return;
-    }
-    res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'}));
-  };
+  // FIN-13: os handlers de orçamento e cenários deixaram de viver aqui. O
+  // rascunho desta borda escrevia fora de transação, com COALESCE em status,
+  // auditoria silenciosa e `details` do PostgreSQL na resposta. A borda
+  // canônica endurecida está em src/server/fin-management-api.mjs
+  // (handleBudgets, handleBudgetScenarios, handleBudgetHistory) e é ela que
+  // responde em /api/fin/budgets, /api/fin/budget-scenarios e
+  // /api/fin/budget-history. FIN-14/15/16 continuam neste arquivo, ainda como
+  // rascunho, até as fatias correspondentes.
 
   const handleExports = async (req, res) => {
     const sess = await checkAuth(req, res); if (!sess) return;
@@ -423,8 +318,6 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
   };
 
   return {
-    handleBudgets,
-    handleBudgetScenarios,
     handleExports,
     handleExportLogs,
     handleClosures,

@@ -1022,6 +1022,262 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
     try { return send(res,200,{history:(await pool.query(q,params)).rows}); } catch { return send(res,500,{error:'internal'}); }
   };
 
+  // FIN-13 orçamento gerencial e cenários de expansão: premissas explícitas e
+  // estruturadas, estimativa declarada (nunca promessa de resultado), travas
+  // de estado no banco, aprovação auditada por identidade diferente do autor,
+  // margem projetada calculada pelo servidor/banco e histórico imutável.
+  const BUDGET_STATUSES = new Set(['rascunho','em_revisao','aprovado','rejeitado','arquivado']);
+  const BUDGET_TRANSITIONS = new Set(['em_revisao','aprovado','rejeitado','arquivado']);
+  const SCENARIO_TYPES = new Set(['conservador','base','otimista','expansao','pessimista']);
+  const BUDGET_ENTITIES = new Set(['budget','scenario']);
+  const BUDGET_ESTIMATE_NOTE = 'Orçamento gerencial é estimativa com premissas explícitas: não prometer resultado.';
+  const SCENARIO_ESTIMATE_NOTE = 'Cenário é estimativa com premissas explícitas: não prometer resultado.';
+  // Espelha fin13_promises_result() do banco: a borda recusa antes, o banco
+  // recusa de novo.
+  const RESULT_PROMISE = /(garantimos|prometemos|\bprometo\b|\bprometido\b|garantia de resultado|resultado garantido|resultados garantidos|lucro garantido|retorno garantido|ganho garantido|rentabilidade garantida|margem garantida|receita garantida|faturamento garantido|sem risco|risco zero|resultado assegurado|assegura o resultado|asseguramos o resultado)/i;
+  const promisesResult = v => typeof v === 'string' && RESULT_PROMISE.test(v);
+  const nonNegativeCents = v => Number.isSafeInteger(Number(v)) && Number(v) >= 0 ? Number(v) : null;
+  // Premissas estruturadas: cada item precisa dizer a premissa e a fonte.
+  const normalizeAssumptions = value => {
+    if (!Array.isArray(value) || value.length < 2 || value.length > 20) return null;
+    const items = [];
+    for (const entry of value) {
+      if (!plainObject(entry)) return null;
+      const premissa = typeof entry.premissa === 'string' ? entry.premissa.trim() : '';
+      const fonte = typeof entry.fonte === 'string' ? entry.fonte.trim() : '';
+      if (premissa.length < 10 || premissa.length > 500) return null;
+      if (fonte.length < 3 || fonte.length > 200) return null;
+      if (promisesResult(premissa) || promisesResult(fonte)) return null;
+      items.push({ premissa, fonte });
+    }
+    return items;
+  };
+  const FIN13_GUARD_CODES = new Set([
+    'fin13_budget_is_estimate_locked',
+    'fin13_budget_estimate_note_required',
+    'fin13_budget_result_promise_refused',
+    'fin13_budget_assumptions_required',
+    'fin13_budget_assumption_item_invalid',
+    'fin13_budget_initial_status_must_be_rascunho',
+    'fin13_budget_author_required',
+    'fin13_budget_initial_fields_invalid',
+    'fin13_budget_content_immutable',
+    'fin13_budget_status_transition_required',
+    'fin13_budget_invalid_status_transition',
+    'fin13_budget_review_requires_submitter',
+    'fin13_budget_review_requires_scenarios',
+    'fin13_budget_approval_requires_approver_and_date',
+    'fin13_budget_approver_must_differ_from_author',
+    'fin13_budget_rejection_requires_reviewer_and_reason',
+    'fin13_budget_archive_requires_reason',
+    'fin13_scenario_immutable',
+    'fin13_scenario_budget_required',
+    'fin13_scenario_budget_must_be_rascunho',
+    'fin13_scenario_is_estimate_locked',
+    'fin13_scenario_estimate_note_required',
+    'fin13_scenario_result_promise_refused',
+    'fin13_scenario_assumptions_required',
+    'fin13_scenario_assumption_item_invalid',
+    'fin13_scenario_amounts_required',
+    'fin13_scenario_margin_out_of_range',
+    'fin13_scenario_locked_after_review',
+  ]);
+  const budgetFailure = (res, e) => {
+    if (isAuditUnavailable(e)) return send(res,503,{error:'audit_unavailable'});
+    if (e?.code === '23505') {
+      const key = String(e.constraint||'');
+      return send(res,409,{error:key.includes('idempotency')?'duplicate_idempotency_key':key.includes('scenario_type')||key.includes('budget_id')?'duplicate_scenario_type_for_budget':key.includes('protocol')?'duplicate_protocol':'duplicate'});
+    }
+    if (e?.code === '23503') return send(res,400,{error:'invalid_reference'});
+    if (e?.code === '23514') {
+      const message = String(e.message||'');
+      const known = [...FIN13_GUARD_CODES].find(code => message === code);
+      return send(res,400,{error:known||'invalid_budget_transition'});
+    }
+    if (e?.code === '22P02' || e?.code === '22007' || e?.code === '22003') return send(res,400,{error:'invalid'});
+    return send(res,500,{error:'internal'});
+  };
+  const insertBudgetHistory = (client, entity_type, entity_id, budget_id, previous_status, next_status, actor, reason, metadata) =>
+    client.query(
+      'INSERT INTO fin_budget_history (entity_type,entity_id,budget_id,previous_status,next_status,changed_by_identity,reason,metadata) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+      [entity_type, entity_id, budget_id, previous_status, next_status, actor, reason, JSON.stringify(metadata||{})]
+    );
+
+  const handleBudgets = async (req, res) => {
+    const sess = await checkAuth(req, res); if (!sess) return;
+    if (req.method === 'GET') {
+      const url = new URL(req.url, `http://${req.headers.host||'localhost'}`), params = [];
+      let q = 'SELECT * FROM fin_budgets WHERE 1=1';
+      const status = url.searchParams.get('status');
+      if (status) { if (!BUDGET_STATUSES.has(status)) return send(res,400,{error:'invalid_status'}); params.push(status); q += ` AND status=$${params.length}`; }
+      const id = url.searchParams.get('id');
+      if (id) { if (!uuid(id)) return send(res,400,{error:'invalid_id'}); params.push(id); q += ` AND id=$${params.length}`; }
+      q += ' ORDER BY created_at DESC LIMIT 200';
+      try { return send(res,200,{budgets:(await pool.query(q,params)).rows,estimate_only:true,promises_result:false}); } catch { return send(res,500,{error:'internal'}); }
+    }
+    if (!['POST','PATCH'].includes(req.method)) return send(res,405,{error:'method_not_allowed'});
+    if (!sameOrigin(req)) return send(res,403,{error:'forbidden_origin'});
+    let body; try { body = await readJson(req); } catch { return send(res,400,{error:'invalid_json'}); }
+    const actor = sess.identityId;
+    if (!uuid(actor)) return send(res,401,{error:'unauthorized'});
+
+    if (req.method === 'POST') {
+      const title = typeof body.title === 'string' ? body.title.trim() : '';
+      const description = typeof body.description === 'string' ? body.description.trim() : '';
+      const premises = typeof body.premises === 'string' ? body.premises.trim() : '';
+      const idempotency_key = typeof body.idempotency_key === 'string' ? body.idempotency_key.trim() : '';
+      const assumptions = normalizeAssumptions(body.assumptions);
+      const revenue = positiveCents(body.total_revenue_cents);
+      const cost = nonNegativeCents(body.total_cost_cents);
+      if (title.length < 5 || title.length > 200) return send(res,400,{error:'title_5_200'});
+      if (description.length < 10 || description.length > 2000) return send(res,400,{error:'description_10_2000'});
+      if (premises.length < 30 || premises.length > 2000) return send(res,400,{error:'premises_30_2000_required'});
+      if (!assumptions) return send(res,400,{error:'assumptions_required_premissa_fonte_min_2'});
+      if (!isoDate(body.period_start) || !isoDate(body.period_end)) return send(res,400,{error:'invalid_period'});
+      if (Date.parse(`${body.period_end}T00:00:00Z`) < Date.parse(`${body.period_start}T00:00:00Z`)) return send(res,400,{error:'period_end_gte_start'});
+      if (!revenue) return send(res,400,{error:'total_revenue_positive_integer'});
+      if (cost === null) return send(res,400,{error:'total_cost_non_negative_integer'});
+      if (idempotency_key.length < 10 || idempotency_key.length > 200) return send(res,400,{error:'idempotency_key_10_200_required'});
+      if (body.is_estimate === false) return send(res,400,{error:'budget_is_always_an_estimate'});
+      if (body.status != null && body.status !== 'rascunho') return send(res,400,{error:'budget_starts_rascunho'});
+      if (body.approved_by_identity != null || body.approved_at != null || body.decision_reason != null) return send(res,400,{error:'approval_is_an_explicit_transition'});
+      if (promisesResult(title) || promisesResult(description) || promisesResult(premises)) return send(res,400,{error:'result_promise_refused'});
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const protocol = generateProtocol('ORC-FIN');
+        const created = await client.query(
+          `INSERT INTO fin_budgets (protocol,title,description,premises,assumptions,period_start,period_end,total_revenue_cents,total_cost_cents,status,is_estimate,estimate_note,idempotency_key,created_by_identity)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'rascunho',true,$10,$11,$12) RETURNING *`,
+          [protocol, title, description, premises, JSON.stringify(assumptions), body.period_start, body.period_end, revenue, cost, BUDGET_ESTIMATE_NOTE, idempotency_key, actor]
+        );
+        const budget = created.rows[0];
+        await insertBudgetHistory(client,'budget',budget.id,budget.id,null,'rascunho',actor,'Orçamento gerencial criado como estimativa com premissas explícitas',{protocol,period_start:body.period_start,period_end:body.period_end,assumptions:assumptions.length});
+        await auditLog({action:'fin_budget_create',actor,target:budget.id,meta:{protocol,period_start:body.period_start,period_end:body.period_end,is_estimate:true,assumptions:assumptions.length},client});
+        await client.query('COMMIT');
+        return send(res,201,{budget,is_estimate:true,promises_result:false,note:BUDGET_ESTIMATE_NOTE});
+      } catch(e) { try { await client.query('ROLLBACK'); } catch {} return budgetFailure(res,e); }
+      finally { client.release(); }
+    }
+
+    const id = body.id, status = body.status;
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+    if (!uuid(id)) return send(res,400,{error:'invalid_id'});
+    if (!BUDGET_TRANSITIONS.has(status)) return send(res,400,{error:'invalid_transition'});
+    if (reason.length < 10 || reason.length > 1000) return send(res,400,{error:'reason_10_1000_required'});
+    if (promisesResult(reason)) return send(res,400,{error:'result_promise_refused'});
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const found = await client.query('SELECT * FROM fin_budgets WHERE id=$1 FOR UPDATE',[id]);
+      if (!found.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'not_found'}); }
+      const previous = found.rows[0];
+      if (previous.status === status) { await client.query('ROLLBACK'); return send(res,409,{error:'budget_already_in_status'}); }
+      const allowed = previous.status === 'rascunho' ? ['em_revisao','arquivado']
+        : previous.status === 'em_revisao' ? ['aprovado','rejeitado']
+        : ['aprovado','rejeitado'].includes(previous.status) ? ['arquivado'] : [];
+      if (!allowed.includes(status)) { await client.query('ROLLBACK'); return send(res,409,{error:'budget_invalid_transition',previous_status:previous.status}); }
+      if (status === 'em_revisao') {
+        const scenarios = await client.query('SELECT scenario_type FROM fin_budget_scenarios WHERE budget_id=$1 FOR SHARE',[id]);
+        const types = scenarios.rows.map(row => row.scenario_type);
+        if (types.length < 2 || !types.includes('base')) { await client.query('ROLLBACK'); return send(res,409,{error:'scenarios_required_base_and_alternative',scenarios:types.length}); }
+      }
+      // Aprovação/rejeição auditada: quem decide não pode ser quem escreveu.
+      if (['aprovado','rejeitado'].includes(status) && previous.created_by_identity === actor) {
+        await client.query('ROLLBACK');
+        return send(res,409,{error:'approver_must_differ_from_author'});
+      }
+      const updated = status === 'em_revisao'
+        ? await client.query(`UPDATE fin_budgets SET status='em_revisao',submitted_at=NOW(),submitted_by_identity=$1 WHERE id=$2 RETURNING *`,[actor,id])
+        : status === 'aprovado'
+          ? await client.query(`UPDATE fin_budgets SET status='aprovado',approved_by_identity=$1,approved_at=NOW(),decision_reason=$2 WHERE id=$3 RETURNING *`,[actor,reason,id])
+          : status === 'rejeitado'
+            ? await client.query(`UPDATE fin_budgets SET status='rejeitado',rejected_by_identity=$1,rejected_at=NOW(),decision_reason=$2 WHERE id=$3 RETURNING *`,[actor,reason,id])
+            : await client.query(`UPDATE fin_budgets SET status='arquivado',archived_by_identity=$1,archived_at=NOW(),decision_reason=COALESCE(decision_reason,$2) WHERE id=$3 RETURNING *`,[actor,reason,id]);
+      await insertBudgetHistory(client,'budget',id,id,previous.status,status,actor,reason,{protocol:previous.protocol,author:previous.created_by_identity});
+      await auditLog({action:`fin_budget_${status}`,actor,target:id,meta:{previous_status:previous.status,next_status:status,reason,protocol:previous.protocol},client});
+      await client.query('COMMIT');
+      return send(res,200,{budget:updated.rows[0],is_estimate:true,promises_result:false});
+    } catch(e) { try { await client.query('ROLLBACK'); } catch {} return budgetFailure(res,e); }
+    finally { client.release(); }
+  };
+
+  const handleBudgetScenarios = async (req, res) => {
+    const sess = await checkAuth(req, res); if (!sess) return;
+    if (req.method === 'GET') {
+      const url = new URL(req.url, `http://${req.headers.host||'localhost'}`), params = [];
+      let q = 'SELECT * FROM fin_budget_scenarios WHERE 1=1';
+      const budget_id = url.searchParams.get('budget_id');
+      if (budget_id) { if (!uuid(budget_id)) return send(res,400,{error:'invalid_budget_id'}); params.push(budget_id); q += ` AND budget_id=$${params.length}`; }
+      const scenario_type = url.searchParams.get('scenario_type');
+      if (scenario_type) { if (!SCENARIO_TYPES.has(scenario_type)) return send(res,400,{error:'invalid_scenario_type'}); params.push(scenario_type); q += ` AND scenario_type=$${params.length}`; }
+      q += ' ORDER BY created_at DESC LIMIT 200';
+      try { return send(res,200,{scenarios:(await pool.query(q,params)).rows,estimate_only:true,promises_result:false}); } catch { return send(res,500,{error:'internal'}); }
+    }
+    if (req.method !== 'POST') return send(res,405,{error:'method_not_allowed'});
+    if (!sameOrigin(req)) return send(res,403,{error:'forbidden_origin'});
+    let body; try { body = await readJson(req); } catch { return send(res,400,{error:'invalid_json'}); }
+    const actor = sess.identityId;
+    if (!uuid(actor)) return send(res,401,{error:'unauthorized'});
+    const budget_id = body.budget_id;
+    const scenario_type = typeof body.scenario_type === 'string' ? body.scenario_type.trim() : '';
+    const title = typeof body.title === 'string' ? body.title.trim() : '';
+    const premises = typeof body.premises === 'string' ? body.premises.trim() : '';
+    const idempotency_key = typeof body.idempotency_key === 'string' ? body.idempotency_key.trim() : '';
+    const assumptions = normalizeAssumptions(body.assumptions);
+    const revenue = positiveCents(body.projected_revenue_cents);
+    const cost = nonNegativeCents(body.projected_cost_cents);
+    const investment = body.expansion_investment_cents == null ? null : positiveCents(body.expansion_investment_cents);
+    if (!uuid(budget_id)) return send(res,400,{error:'invalid_budget_id'});
+    if (!SCENARIO_TYPES.has(scenario_type)) return send(res,400,{error:'scenario_type_required_conservador_base_otimista_expansao_pessimista'});
+    if (title.length < 5 || title.length > 200) return send(res,400,{error:'title_5_200'});
+    if (premises.length < 30 || premises.length > 2000) return send(res,400,{error:'premises_30_2000_required'});
+    if (!assumptions) return send(res,400,{error:'assumptions_required_premissa_fonte_min_2'});
+    if (!revenue) return send(res,400,{error:'projected_revenue_positive_integer'});
+    if (cost === null) return send(res,400,{error:'projected_cost_non_negative_integer'});
+    if (idempotency_key.length < 10 || idempotency_key.length > 200) return send(res,400,{error:'idempotency_key_10_200_required'});
+    if (scenario_type === 'expansao' && !investment) return send(res,400,{error:'expansion_investment_positive_integer_required'});
+    if (scenario_type !== 'expansao' && body.expansion_investment_cents != null) return send(res,400,{error:'expansion_investment_only_for_expansao'});
+    // A margem projetada é calculada pelo servidor/banco; o cliente não declara.
+    if (body.projected_margin_percent != null || body.projected_margin_cents != null) return send(res,400,{error:'projected_margin_is_server_side'});
+    if (body.is_estimate === false) return send(res,400,{error:'scenario_is_always_an_estimate'});
+    if (promisesResult(title) || promisesResult(premises)) return send(res,400,{error:'result_promise_refused'});
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const budgetRow = await client.query('SELECT * FROM fin_budgets WHERE id=$1 FOR UPDATE',[budget_id]);
+      if (!budgetRow.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'budget_not_found'}); }
+      const budget = budgetRow.rows[0];
+      if (budget.status !== 'rascunho') { await client.query('ROLLBACK'); return send(res,409,{error:'budget_not_in_rascunho',budget_status:budget.status}); }
+      const created = await client.query(
+        `INSERT INTO fin_budget_scenarios (budget_id,scenario_type,title,premises,assumptions,projected_revenue_cents,projected_cost_cents,expansion_investment_cents,is_estimate,estimate_note,idempotency_key,created_by_identity)
+         VALUES ($1,$2::fin_scenario_type,$3,$4,$5,$6,$7,$8,true,$9,$10,$11) RETURNING *`,
+        [budget_id, scenario_type, title, premises, JSON.stringify(assumptions), revenue, cost, scenario_type === 'expansao' ? investment : null, SCENARIO_ESTIMATE_NOTE, idempotency_key, actor]
+      );
+      const scenario = created.rows[0];
+      await insertBudgetHistory(client,'scenario',scenario.id,budget_id,null,scenario_type,actor,'Cenário vinculado criado com premissas explícitas e margem projetada calculada',{scenario_type,projected_margin_percent:scenario.projected_margin_percent,protocol:budget.protocol});
+      await auditLog({action:'fin_budget_scenario_create',actor,target:scenario.id,meta:{budget_id,scenario_type,projected_margin_percent:scenario.projected_margin_percent,is_estimate:true},client});
+      await client.query('COMMIT');
+      return send(res,201,{scenario,is_estimate:true,promises_result:false,note:SCENARIO_ESTIMATE_NOTE});
+    } catch(e) { try { await client.query('ROLLBACK'); } catch {} return budgetFailure(res,e); }
+    finally { client.release(); }
+  };
+
+  const handleBudgetHistory = async (req, res) => {
+    const sess = await checkAuth(req, res); if (!sess) return;
+    if (req.method !== 'GET') return send(res,405,{error:'method_not_allowed'});
+    const url = new URL(req.url, `http://${req.headers.host||'localhost'}`), params = [];
+    let q = 'SELECT * FROM fin_budget_history WHERE 1=1';
+    const entity_type = url.searchParams.get('entity_type');
+    if (entity_type) { if (!BUDGET_ENTITIES.has(entity_type)) return send(res,400,{error:'invalid_entity_type'}); params.push(entity_type); q += ` AND entity_type=$${params.length}`; }
+    const entity_id = url.searchParams.get('entity_id');
+    if (entity_id) { if (!uuid(entity_id)) return send(res,400,{error:'invalid_entity_id'}); params.push(entity_id); q += ` AND entity_id=$${params.length}`; }
+    const budget_id = url.searchParams.get('budget_id');
+    if (budget_id) { if (!uuid(budget_id)) return send(res,400,{error:'invalid_budget_id'}); params.push(budget_id); q += ` AND budget_id=$${params.length}`; }
+    q += ' ORDER BY created_at DESC LIMIT 200';
+    try { return send(res,200,{history:(await pool.query(q,params)).rows}); } catch { return send(res,500,{error:'internal'}); }
+  };
+
   return {
     handleManagementResults,
     handleResultHistory,
@@ -1037,5 +1293,8 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
     handleCharges,
     handleWebhookSign,
     handleGatewayHistory,
+    handleBudgets,
+    handleBudgetScenarios,
+    handleBudgetHistory,
   };
 }
