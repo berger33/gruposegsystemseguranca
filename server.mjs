@@ -3748,6 +3748,12 @@ async function routeApi(req, res) {
     return finManagementApi.handleExpenseHistory(req, res);
   }
   // FIN-11 integração contábil/fiscal provedor determinar NFS-e/NF-e ou outra obrigação conforme atividade sem assumir uma nota para tudo
+  if (url.pathname === "/api/admin/hr/fin-fiscal-activity-rules" || url.pathname === "/api/crm/hr/fin-fiscal-activity-rules" || url.pathname === "/api/hr/fin-fiscal-activity-rules" || url.pathname === "/api/fin/fiscal-activity-rules") {
+    return finManagementApi.handleFiscalActivityRules(req, res);
+  }
+  if (url.pathname === "/api/admin/hr/fin-fiscal-history" || url.pathname === "/api/crm/hr/fin-fiscal-history" || url.pathname === "/api/hr/fin-fiscal-history" || url.pathname === "/api/fin/fiscal-history") {
+    return finManagementApi.handleFiscalHistory(req, res);
+  }
   if (url.pathname === "/api/admin/hr/fin-fiscal-providers" || url.pathname === "/api/crm/hr/fin-fiscal-providers" || url.pathname === "/api/hr/fin-fiscal-providers" || url.pathname === "/api/fin/fiscal-providers") {
     return finManagementApi.handleFiscalProviders(req, res);
   }
@@ -5218,6 +5224,14 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/crm/hr/fin-expense-history"
   || pathname === "/api/hr/fin-expense-history"
   || pathname === "/api/fin/expense-history"
+  || pathname === "/api/admin/hr/fin-fiscal-activity-rules"
+  || pathname === "/api/crm/hr/fin-fiscal-activity-rules"
+  || pathname === "/api/hr/fin-fiscal-activity-rules"
+  || pathname === "/api/fin/fiscal-activity-rules"
+  || pathname === "/api/admin/hr/fin-fiscal-history"
+  || pathname === "/api/crm/hr/fin-fiscal-history"
+  || pathname === "/api/hr/fin-fiscal-history"
+  || pathname === "/api/fin/fiscal-history"
   || pathname === "/api/admin/hr/fin-fiscal-providers"
   || pathname === "/api/crm/hr/fin-fiscal-providers"
   || pathname === "/api/hr/fin-fiscal-providers"

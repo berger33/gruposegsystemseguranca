@@ -216,180 +216,398 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
     } catch { return send(res,500,{error:'internal'}); }
   };
 
-  // FIN-11 fiscal
+  // FIN-11 integração contábil/fiscal mediante provedor.
+  //
+  // Provedor e obrigação são entidades separadas. A obrigação NUNCA é
+  // assumida: ela é determinada pela atividade do contrato através de uma
+  // regra canônica e explícita (fin_fiscal_activity_rules), que cobre NFS-e,
+  // NF-e, NFC-e, CT-e e "outra obrigação". Nenhuma emissão fiscal real
+  // acontece: o provedor é sempre sandbox, o documento é sempre simulado e
+  // as respostas do provedor são sintéticas e geradas localmente.
+  const FISCAL_DOC_TYPES = new Set(['nfse','nfe','nfce','cte','outro']);
+  const PROVIDER_STATUSES = new Set(['nao_configurado','configurado','falha']);
+  const OBLIGATION_STATUSES = new Set(['pendente','determinada','cancelada']);
+  const DOCUMENT_STATUSES = new Set(['rascunho','emitido','cancelado','erro']);
+  const FISCAL_ENTITIES = new Set(['provider','obligation','document']);
+  const activityCode = v => typeof v === 'string' && /^[a-z][a-z0-9_]{2,99}$/.test(v);
+  const providerCode = v => typeof v === 'string' && /^[a-z][a-z0-9_-]{2,59}$/.test(v);
+  const syntheticFiscalUrl = v => typeof v === 'string' && /^synthetic:\/\/[A-Za-z0-9][A-Za-z0-9._/-]{4,990}$/.test(v);
+  const syntheticFiscalKey = v => typeof v === 'string' && /^synthetic\/[A-Za-z0-9][A-Za-z0-9._/-]{3,490}$/.test(v);
+  const CREDENTIAL_KEYS = new Set(['token','secret','password','senha','certificate','certificado','private_key']);
+  // Allowlist: somente códigos de domínio conhecidos chegam ao cliente. Nenhuma
+  // mensagem, constraint ou posição vinda do PostgreSQL é repassada.
+  const FISCAL_GUARD_CODES = new Set([
+    'fin_fiscal_activity_rule_immutable',
+    'fin_fiscal_activity_rule_inactive',
+    'fin_fiscal_provider_initial_status_must_be_nao_configurado',
+    'fin_fiscal_provider_initial_fields_invalid',
+    'fin_fiscal_provider_identity_fields_immutable',
+    'fin_fiscal_provider_status_transition_required',
+    'fin_fiscal_provider_invalid_status_transition',
+    'fin_fiscal_provider_error_sanitized_required',
+    'fin_fiscal_provider_error_only_on_failure',
+    'fin_fiscal_provider_configured_requires_timestamp',
+    'fin_fiscal_provider_credentials_refused',
+    'fin_fiscal_obligation_activity_rule_required',
+    'fin_fiscal_obligation_activity_rule_inactive',
+    'fin_fiscal_obligation_initial_status_must_be_pendente',
+    'fin_fiscal_obligation_determination_fields_immutable',
+    'fin_fiscal_obligation_status_transition_required',
+    'fin_fiscal_obligation_invalid_status_transition',
+    'fin_fiscal_obligation_activity_must_match_rule',
+    'fin_fiscal_obligation_type_must_follow_activity_rule',
+    'fin_fiscal_obligation_determination_reference_mismatch',
+    'fin_fiscal_document_obligation_required',
+    'fin_fiscal_document_provider_required',
+    'fin_fiscal_document_initial_status_must_be_rascunho',
+    'fin_fiscal_document_requires_determined_obligation',
+    'fin_fiscal_document_requires_configured_provider',
+    'fin_fiscal_document_request_fields_immutable',
+    'fin_fiscal_document_status_transition_required',
+    'fin_fiscal_document_invalid_status_transition',
+    'fin_fiscal_document_type_must_match_obligation',
+    'fin_fiscal_document_provider_does_not_support_obligation',
+    'fin_fiscal_document_real_emission_refused',
+    'fin_fiscal_document_synthetic_response_required',
+  ]);
+  const fiscalFailure = (res, e) => {
+    if (isAuditUnavailable(e)) return send(res,503,{error:'audit_unavailable'});
+    if (e?.code === '23505') {
+      const key = String(e.constraint||'');
+      return send(res,409,{error:key.includes('idempotency')?'duplicate_idempotency_key':key.includes('contract_activity')?'duplicate_obligation_for_activity':key.includes('provider_code')?'duplicate_provider_code':'duplicate'});
+    }
+    if (e?.code === '23503') return send(res,400,{error:'invalid_reference'});
+    if (e?.code === '23514') {
+      const message = String(e.message||'');
+      const known = [...FISCAL_GUARD_CODES].find(code => message === code);
+      return send(res,400,{error:known||'invalid_fiscal_transition'});
+    }
+    if (e?.code === '22P02' || e?.code === '22007') return send(res,400,{error:'invalid'});
+    return send(res,500,{error:'internal'});
+  };
+  // node-pg não possui parser para array de enum: normalizamos para texto.
+  const parseObligationArray = value => Array.isArray(value)
+    ? value.map(String)
+    : typeof value === 'string' && value.startsWith('{')
+      ? value.slice(1,-1).split(',').map(item => item.replaceAll('"','').trim()).filter(Boolean)
+      : [];
+  const normalizeProvider = row => row ? { ...row, supported_obligations: parseObligationArray(row.supported_obligations) } : row;
+  const insertFiscalHistory = (client, entity_type, entity_id, previous_status, next_status, actor, reason, metadata) =>
+    client.query(
+      'INSERT INTO fin_fiscal_history (entity_type,entity_id,previous_status,next_status,changed_by_identity,reason,metadata) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+      [entity_type, entity_id, previous_status, next_status, actor, reason, JSON.stringify(metadata||{})]
+    );
+
+  const handleFiscalActivityRules = async (req, res) => {
+    const sess = await checkAuth(req, res); if (!sess) return;
+    if (req.method !== 'GET') return send(res,405,{error:'method_not_allowed'});
+    const url = new URL(req.url, `http://${req.headers.host||'localhost'}`), params = [];
+    let q = 'SELECT * FROM fin_fiscal_activity_rules WHERE 1=1';
+    const code = url.searchParams.get('activity_code');
+    if (code) { if (!activityCode(code)) return send(res,400,{error:'invalid_activity_code'}); params.push(code); q += ` AND activity_code=$${params.length}`; }
+    const type = url.searchParams.get('obligation_type');
+    if (type) { if (!FISCAL_DOC_TYPES.has(type)) return send(res,400,{error:'invalid_obligation_type'}); params.push(type); q += ` AND obligation_type=$${params.length}`; }
+    const active = url.searchParams.get('is_active');
+    if (active) { if (!['true','false'].includes(active)) return send(res,400,{error:'invalid_is_active'}); params.push(active==='true'); q += ` AND is_active=$${params.length}`; }
+    q += ' ORDER BY activity_code ASC LIMIT 200';
+    try { return send(res,200,{rules:(await pool.query(q,params)).rows}); } catch { return send(res,500,{error:'internal'}); }
+  };
+
   const handleFiscalProviders = async (req, res) => {
     const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
-      try {
-        const { rows } = await pool.query(`SELECT * FROM fin_fiscal_providers ORDER BY created_at DESC LIMIT 200`);
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ providers: rows }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
+      const url = new URL(req.url, `http://${req.headers.host||'localhost'}`), params = [];
+      let q = 'SELECT * FROM fin_fiscal_providers WHERE 1=1';
+      const status = url.searchParams.get('status');
+      if (status) { if (!PROVIDER_STATUSES.has(status)) return send(res,400,{error:'invalid_status'}); params.push(status); q += ` AND status=$${params.length}`; }
+      q += ' ORDER BY created_at DESC LIMIT 200';
+      try { return send(res,200,{providers:(await pool.query(q,params)).rows.map(normalizeProvider)}); } catch { return send(res,500,{error:'internal'}); }
     }
+    if (!['POST','PATCH'].includes(req.method)) return send(res,405,{error:'method_not_allowed'});
+    if (!sameOrigin(req)) return send(res,403,{error:'forbidden_origin'});
+    let body; try { body = await readJson(req); } catch { return send(res,400,{error:'invalid_json'}); }
+    const actor = sess.identityId;
+    if (!uuid(actor)) return send(res,401,{error:'unauthorized'});
+
     if (req.method === 'POST') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
-      const name = (body.name||'').trim();
-      const provider_type = body.provider_type || 'nfse';
-      if (!name || name.length<3 || name.length>200) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'name_3_200'})); return; }
+      const name = typeof body.name === 'string' ? body.name.trim() : '';
+      const provider_code = typeof body.provider_code === 'string' ? body.provider_code.trim() : '';
+      const idempotency_key = typeof body.idempotency_key === 'string' ? body.idempotency_key.trim() : '';
+      const supported = Array.isArray(body.supported_obligations) ? body.supported_obligations : [];
+      const config = body.config && typeof body.config === 'object' && !Array.isArray(body.config) ? body.config : {};
+      if (name.length < 3 || name.length > 200) return send(res,400,{error:'name_3_200'});
+      if (!providerCode(provider_code)) return send(res,400,{error:'provider_code_required'});
+      if (idempotency_key.length < 8 || idempotency_key.length > 200) return send(res,400,{error:'idempotency_key_8_200'});
+      if (!supported.length || supported.length > 5 || supported.some(item => !FISCAL_DOC_TYPES.has(item)) || new Set(supported).size !== supported.length) {
+        return send(res,400,{error:'supported_obligations_required_nfse_nfe_nfce_cte_outro'});
+      }
+      if (Object.keys(config).some(key => CREDENTIAL_KEYS.has(String(key).toLowerCase()))) return send(res,400,{error:'credentials_refused_sandbox_only'});
+      if (body.environment != null && body.environment !== 'sandbox') return send(res,400,{error:'environment_must_be_sandbox'});
+      if (body.status != null && body.status !== 'nao_configurado') return send(res,400,{error:'provider_starts_nao_configurado'});
+      const client = await pool.connect();
       try {
-        const dup = await pool.query(`SELECT id FROM fin_fiscal_providers WHERE name=$1`, [name]);
-        if (dup.rows.length) { res.writeHead(409, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'duplicate_name'})); return; }
-        const { rows } = await pool.query(
-          `INSERT INTO fin_fiscal_providers (name, provider_type, status, config, created_by_identity) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-          [name, provider_type, body.status||'nao_configurado', body.config||{}, sess.identityId||null]
+        await client.query('BEGIN');
+        const created = await client.query(
+          `INSERT INTO fin_fiscal_providers (name,provider_code,provider_type,status,environment,supported_obligations,config,idempotency_key,created_by_identity)
+           VALUES ($1,$2,$3::fin_fiscal_doc_type,'nao_configurado','sandbox',$4::fin_fiscal_doc_type[],$5,$6,$7) RETURNING *`,
+          [name, provider_code, supported[0], supported, JSON.stringify(config), idempotency_key, actor]
         );
-        try { await auditLog({ action:'fin_fiscal_provider_create', actor: sess.identityId, target: rows[0].id, meta:{ name, provider_type } }); } catch {}
-        res.writeHead(201, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ provider: rows[0] }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
+        const provider = normalizeProvider(created.rows[0]);
+        await insertFiscalHistory(client,'provider',provider.id,null,'nao_configurado',actor,'Provedor fiscal sandbox cadastrado sem credenciais reais',{provider_code,supported_obligations:supported});
+        await auditLog({action:'fin_fiscal_provider_create',actor,target:provider.id,meta:{provider_code,supported_obligations:supported,environment:'sandbox'},client});
+        await client.query('COMMIT');
+        return send(res,201,{provider,synthetic:true});
+      } catch(e) { try { await client.query('ROLLBACK'); } catch {} return fiscalFailure(res,e); }
+      finally { client.release(); }
     }
-    if (req.method === 'PATCH') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
-      const id = body.id;
-      if (!id) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'id_required'})); return; }
-      try {
-        const { rows } = await pool.query(
-          `UPDATE fin_fiscal_providers SET status=COALESCE($1,status), config=COALESCE($2,config), last_processed_at=CASE WHEN $1='configurado' THEN NOW() ELSE last_processed_at END, error_sanitized=$3, updated_at=NOW() WHERE id=$4 RETURNING *`,
-          [body.status||null, body.config||null, body.error_sanitized||null, id]
-        );
-        if (!rows.length) { res.writeHead(404, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
-        try { await auditLog({ action:'fin_fiscal_provider_update', actor: sess.identityId, target: id, meta:{ status: body.status } }); } catch {}
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ provider: rows[0] }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
-    }
-    res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'}));
+
+    const id = body.id, status = body.status;
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+    const error_sanitized = typeof body.error_sanitized === 'string' ? body.error_sanitized.trim() : '';
+    if (!uuid(id)) return send(res,400,{error:'invalid_id'});
+    if (!['configurado','falha','nao_configurado'].includes(status)) return send(res,400,{error:'invalid_transition'});
+    if (reason.length < 10 || reason.length > 1000) return send(res,400,{error:'reason_10_1000_required'});
+    if (status === 'falha' && (error_sanitized.length < 10 || error_sanitized.length > 1000)) return send(res,400,{error:'error_sanitized_10_1000_required'});
+    const config = body.config && typeof body.config === 'object' && !Array.isArray(body.config) ? body.config : null;
+    if (config && Object.keys(config).some(key => CREDENTIAL_KEYS.has(String(key).toLowerCase()))) return send(res,400,{error:'credentials_refused_sandbox_only'});
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const found = await client.query('SELECT * FROM fin_fiscal_providers WHERE id=$1 FOR UPDATE',[id]);
+      if (!found.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'not_found'}); }
+      const previous = found.rows[0];
+      if (previous.status === status) { await client.query('ROLLBACK'); return send(res,409,{error:'provider_already_in_status'}); }
+      const updated = await client.query(
+        `UPDATE fin_fiscal_providers
+            SET status=$1::fin_fiscal_provider_status,
+                config=COALESCE($2::jsonb,config),
+                last_processed_at=CASE WHEN $1::text='configurado' THEN NOW() WHEN $1::text='nao_configurado' THEN NULL ELSE last_processed_at END,
+                error_sanitized=CASE WHEN $1::text='falha' THEN $3 ELSE NULL END
+          WHERE id=$4 RETURNING *`,
+        [status, config ? JSON.stringify(config) : null, status === 'falha' ? error_sanitized : null, id]
+      );
+      await insertFiscalHistory(client,'provider',id,previous.status,status,actor,reason,{provider_code:previous.provider_code});
+      await auditLog({action:'fin_fiscal_provider_transition',actor,target:id,meta:{previous_status:previous.status,next_status:status,reason},client});
+      await client.query('COMMIT');
+      return send(res,200,{provider:normalizeProvider(updated.rows[0])});
+    } catch(e) { try { await client.query('ROLLBACK'); } catch {} return fiscalFailure(res,e); }
+    finally { client.release(); }
   };
 
   const handleFiscalObligations = async (req, res) => {
     const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
-      const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
-      const contract_id = url.searchParams.get('contract_id');
-      const obligation_type = url.searchParams.get('obligation_type');
-      let q = `SELECT * FROM fin_fiscal_obligations WHERE 1=1`; const params=[]; let idx=1;
-      if (contract_id) { q+=` AND contract_id=$${idx++}`; params.push(contract_id); }
-      if (obligation_type) { q+=` AND obligation_type=$${idx++}`; params.push(obligation_type); }
-      q+=` ORDER BY created_at DESC LIMIT 200`;
-      try {
-        const { rows } = await pool.query(q, params);
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ obligations: rows }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
+      const url = new URL(req.url, `http://${req.headers.host||'localhost'}`), params = [];
+      let q = 'SELECT * FROM fin_fiscal_obligations WHERE 1=1';
+      const contract = url.searchParams.get('contract_id');
+      if (contract) { if (!uuid(contract)) return send(res,400,{error:'invalid_contract_id'}); params.push(contract); q += ` AND contract_id=$${params.length}`; }
+      const type = url.searchParams.get('obligation_type');
+      if (type) { if (!FISCAL_DOC_TYPES.has(type)) return send(res,400,{error:'invalid_obligation_type'}); params.push(type); q += ` AND obligation_type=$${params.length}`; }
+      const status = url.searchParams.get('status');
+      if (status) { if (!OBLIGATION_STATUSES.has(status)) return send(res,400,{error:'invalid_status'}); params.push(status); q += ` AND status=$${params.length}`; }
+      const code = url.searchParams.get('activity_type');
+      if (code) { if (!activityCode(code)) return send(res,400,{error:'invalid_activity_type'}); params.push(code); q += ` AND activity_type=$${params.length}`; }
+      q += ' ORDER BY created_at DESC LIMIT 200';
+      try { return send(res,200,{obligations:(await pool.query(q,params)).rows}); } catch { return send(res,500,{error:'internal'}); }
     }
+    if (!['POST','PATCH'].includes(req.method)) return send(res,405,{error:'method_not_allowed'});
+    if (!sameOrigin(req)) return send(res,403,{error:'forbidden_origin'});
+    let body; try { body = await readJson(req); } catch { return send(res,400,{error:'invalid_json'}); }
+    const actor = sess.identityId;
+    if (!uuid(actor)) return send(res,401,{error:'unauthorized'});
+
     if (req.method === 'POST') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
-      const contract_id = body.contract_id || null;
-      const client_account_id = body.client_account_id || null;
-      const obligation_type = body.obligation_type || 'nfse';
-      const activity_type = (body.activity_type||'').trim();
-      const description = (body.description||'').trim();
-      const rule = (body.rule||'').trim();
-      const notes = (body.notes||'').trim() || null;
-      if (!activity_type || activity_type.length<3 || activity_type.length>200) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'activity_type_3_200'})); return; }
-      if (!description || description.length<10 || description.length>1000) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'description_10_1000'})); return; }
-      if (!rule || rule.length<10 || rule.length>1000) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'rule_10_1000_required_determinar_nfse_nfe_outra_obrigacao_conforme_atividade'})); return; }
+      const contract_id = body.contract_id, client_account_id = body.client_account_id;
+      const activity_type = typeof body.activity_type === 'string' ? body.activity_type.trim() : '';
+      const description = typeof body.description === 'string' ? body.description.trim() : '';
+      const idempotency_key = typeof body.idempotency_key === 'string' ? body.idempotency_key.trim() : '';
+      const notes = body.notes == null ? null : String(body.notes).trim();
+      if (!uuid(contract_id) || !uuid(client_account_id)) return send(res,400,{error:'canonical_references_required'});
+      if (!activityCode(activity_type)) return send(res,400,{error:'activity_type_required_canonical_code'});
+      if (description.length < 10 || description.length > 1000) return send(res,400,{error:'description_10_1000'});
+      if (idempotency_key.length < 8 || idempotency_key.length > 200) return send(res,400,{error:'idempotency_key_8_200'});
+      if (notes && (notes.length < 10 || notes.length > 2000)) return send(res,400,{error:'notes_10_2000'});
+      if (body.rule != null) return send(res,400,{error:'rule_is_derived_from_activity_rule'});
+      const client = await pool.connect();
       try {
-        const { rows } = await pool.query(
-          `INSERT INTO fin_fiscal_obligations (contract_id, client_account_id, obligation_type, activity_type, description, rule, notes, created_by_identity)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-          [contract_id, client_account_id, obligation_type, activity_type, description, rule, notes, sess.identityId||null]
-        );
-        try { await auditLog({ action:'fin_fiscal_obligation_create', actor: sess.identityId, target: rows[0].id, meta:{ obligation_type, activity_type, rule } }); } catch {}
-        res.writeHead(201, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ obligation: rows[0] }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
-    }
-    if (req.method === 'PATCH') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
-      const id = body.id;
-      if (!id) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'id_required'})); return; }
-      const is_determined = body.is_determined === true;
-      try {
-        if (is_determined) {
-          if (!body.rule || body.rule.length<10) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'rule_10_1000_required_when_determined'})); return; }
-          const { rows } = await pool.query(
-            `UPDATE fin_fiscal_obligations SET is_determined=true, determined_by_identity=$1, determined_at=NOW(), status='determinada', rule=COALESCE($2,rule), updated_at=NOW() WHERE id=$3 RETURNING *`,
-            [sess.identityId||null, body.rule||null, id]
-          );
-          if (!rows.length) { res.writeHead(404, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
-          try { await auditLog({ action:'fin_fiscal_obligation_determine', actor: sess.identityId, target: id, meta:{ rule: body.rule } }); } catch {}
-          res.writeHead(200, {'Content-Type':'application/json'});
-          res.end(JSON.stringify({ obligation: rows[0] }));
-        } else {
-          const { rows } = await pool.query(
-            `UPDATE fin_fiscal_obligations SET status=COALESCE($1,status), notes=COALESCE($2,notes), updated_at=NOW() WHERE id=$3 RETURNING *`,
-            [body.status||null, body.notes||null, id]
-          );
-          if (!rows.length) { res.writeHead(404, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
-          res.writeHead(200, {'Content-Type':'application/json'});
-          res.end(JSON.stringify({ obligation: rows[0] }));
+        await client.query('BEGIN');
+        const rule = await client.query('SELECT * FROM fin_fiscal_activity_rules WHERE activity_code=$1',[activity_type]);
+        if (!rule.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'activity_rule_not_found'}); }
+        if (!rule.rows[0].is_active) { await client.query('ROLLBACK'); return send(res,409,{error:'activity_rule_inactive'}); }
+        // A obrigação é determinada pela regra; o cliente não escolhe o tipo.
+        if (body.obligation_type != null && body.obligation_type !== rule.rows[0].obligation_type) {
+          await client.query('ROLLBACK');
+          return send(res,409,{error:'obligation_type_determined_by_activity_rule',determined_obligation_type:rule.rows[0].obligation_type,rule_reference:rule.rows[0].rule_reference});
         }
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
+        const contract = await client.query("SELECT id FROM crm_contracts WHERE id=$1 AND status NOT IN ('encerrado','cancelado')",[contract_id]);
+        const account = await client.query('SELECT id FROM client_accounts WHERE id=$1',[client_account_id]);
+        if (!contract.rows.length || !account.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'canonical_reference_not_found_or_inactive'}); }
+        const ruleText = `${rule.rows[0].rule_reference} — ${rule.rows[0].rule_description}`.slice(0,1000);
+        const created = await client.query(
+          `INSERT INTO fin_fiscal_obligations (contract_id,client_account_id,obligation_type,activity_type,activity_rule_id,description,rule,notes,status,is_determined,idempotency_key,created_by_identity)
+           VALUES ($1,$2,$3::fin_fiscal_doc_type,$4,$5,$6,$7,$8,'pendente',false,$9,$10) RETURNING *`,
+          [contract_id, client_account_id, rule.rows[0].obligation_type, activity_type, rule.rows[0].id, description, ruleText, notes, idempotency_key, actor]
+        );
+        const obligation = created.rows[0];
+        await insertFiscalHistory(client,'obligation',obligation.id,null,'pendente',actor,'Obrigação fiscal criada a partir da regra canônica da atividade',{activity_type,obligation_type:obligation.obligation_type,rule_reference:rule.rows[0].rule_reference});
+        await auditLog({action:'fin_fiscal_obligation_create',actor,target:obligation.id,meta:{activity_type,obligation_type:obligation.obligation_type,rule_reference:rule.rows[0].rule_reference,idempotency_key},client});
+        await client.query('COMMIT');
+        return send(res,201,{obligation,activity_rule:rule.rows[0],synthetic:true});
+      } catch(e) { try { await client.query('ROLLBACK'); } catch {} return fiscalFailure(res,e); }
+      finally { client.release(); }
     }
-    res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'}));
+
+    const id = body.id, status = body.status;
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+    if (!uuid(id)) return send(res,400,{error:'invalid_id'});
+    if (!['determinada','cancelada'].includes(status)) return send(res,400,{error:'invalid_transition'});
+    if (reason.length < 10 || reason.length > 1000) return send(res,400,{error:'reason_10_1000_required'});
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const found = await client.query('SELECT * FROM fin_fiscal_obligations WHERE id=$1 FOR UPDATE',[id]);
+      if (!found.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'not_found'}); }
+      const previous = found.rows[0];
+      if (previous.status === 'cancelada') { await client.query('ROLLBACK'); return send(res,409,{error:'obligation_already_cancelled'}); }
+      if (status === 'determinada' && previous.status !== 'pendente') { await client.query('ROLLBACK'); return send(res,409,{error:'obligation_not_pending'}); }
+      const rule = await client.query('SELECT * FROM fin_fiscal_activity_rules WHERE id=$1',[previous.activity_rule_id]);
+      if (!rule.rows.length) { await client.query('ROLLBACK'); return send(res,409,{error:'activity_rule_missing'}); }
+      if (status === 'determinada' && !rule.rows[0].is_active) { await client.query('ROLLBACK'); return send(res,409,{error:'activity_rule_inactive'}); }
+      const updated = status === 'determinada'
+        ? await client.query(
+            `UPDATE fin_fiscal_obligations SET status='determinada',is_determined=true,determined_by_identity=$1,determined_at=NOW(),determination_rule_reference=$2 WHERE id=$3 RETURNING *`,
+            [actor, rule.rows[0].rule_reference, id])
+        : await client.query(
+            `UPDATE fin_fiscal_obligations SET status='cancelada',cancelled_at=NOW(),cancel_reason=$1 WHERE id=$2 RETURNING *`,
+            [reason, id]);
+      await insertFiscalHistory(client,'obligation',id,previous.status,status,actor,reason,{obligation_type:previous.obligation_type,activity_type:previous.activity_type,rule_reference:rule.rows[0].rule_reference});
+      await auditLog({action:status==='determinada'?'fin_fiscal_obligation_determine':'fin_fiscal_obligation_cancel',actor,target:id,meta:{previous_status:previous.status,next_status:status,reason,rule_reference:rule.rows[0].rule_reference},client});
+      await client.query('COMMIT');
+      return send(res,200,{obligation:updated.rows[0]});
+    } catch(e) { try { await client.query('ROLLBACK'); } catch {} return fiscalFailure(res,e); }
+    finally { client.release(); }
   };
 
   const handleFiscalDocuments = async (req, res) => {
     const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
-      const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
-      const obligation_id = url.searchParams.get('obligation_id');
-      const provider_id = url.searchParams.get('provider_id');
-      let q = `SELECT * FROM fin_fiscal_documents WHERE 1=1`; const params=[]; let idx=1;
-      if (obligation_id) { q+=` AND obligation_id=$${idx++}`; params.push(obligation_id); }
-      if (provider_id) { q+=` AND provider_id=$${idx++}`; params.push(provider_id); }
-      q+=` ORDER BY created_at DESC LIMIT 200`;
-      try {
-        const { rows } = await pool.query(q, params);
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ documents: rows }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
+      const url = new URL(req.url, `http://${req.headers.host||'localhost'}`), params = [];
+      let q = 'SELECT * FROM fin_fiscal_documents WHERE 1=1';
+      const obligation = url.searchParams.get('obligation_id');
+      if (obligation) { if (!uuid(obligation)) return send(res,400,{error:'invalid_obligation_id'}); params.push(obligation); q += ` AND obligation_id=$${params.length}`; }
+      const provider = url.searchParams.get('provider_id');
+      if (provider) { if (!uuid(provider)) return send(res,400,{error:'invalid_provider_id'}); params.push(provider); q += ` AND provider_id=$${params.length}`; }
+      const status = url.searchParams.get('status');
+      if (status) { if (!DOCUMENT_STATUSES.has(status)) return send(res,400,{error:'invalid_status'}); params.push(status); q += ` AND status=$${params.length}`; }
+      const type = url.searchParams.get('document_type');
+      if (type) { if (!FISCAL_DOC_TYPES.has(type)) return send(res,400,{error:'invalid_document_type'}); params.push(type); q += ` AND document_type=$${params.length}`; }
+      q += ' ORDER BY created_at DESC LIMIT 200';
+      try { return send(res,200,{documents:(await pool.query(q,params)).rows}); } catch { return send(res,500,{error:'internal'}); }
     }
+    if (!['POST','PATCH'].includes(req.method)) return send(res,405,{error:'method_not_allowed'});
+    if (!sameOrigin(req)) return send(res,403,{error:'forbidden_origin'});
+    let body; try { body = await readJson(req); } catch { return send(res,400,{error:'invalid_json'}); }
+    const actor = sess.identityId;
+    if (!uuid(actor)) return send(res,401,{error:'unauthorized'});
+
     if (req.method === 'POST') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
-      const obligation_id = body.obligation_id || null;
-      const provider_id = body.provider_id || null;
-      const document_type = body.document_type || 'nfse';
-      const amount_cents = body.amount_cents ?? 0;
-      const file_name = body.file_name || null;
-      const file_url = body.file_url || null;
-      const storage_key = body.storage_key || null;
-      if (file_url && (file_url.length<5 || file_url.length>1000)) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'file_url_5_1000'})); return; }
-      if (storage_key && (storage_key.length<5 || storage_key.length>500)) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'storage_key_5_500'})); return; }
-      const protocol = generateProtocol('NF-FIN');
+      const obligation_id = body.obligation_id, provider_id = body.provider_id;
+      const amount_cents = positiveCents(body.amount_cents);
+      const file_name = typeof body.file_name === 'string' ? body.file_name.trim() : '';
+      const file_url = typeof body.file_url === 'string' ? body.file_url.trim() : '';
+      const storage_key = typeof body.storage_key === 'string' ? body.storage_key.trim() : '';
+      const idempotency_key = typeof body.idempotency_key === 'string' ? body.idempotency_key.trim() : '';
+      if (!uuid(obligation_id) || !uuid(provider_id)) return send(res,400,{error:'canonical_references_required'});
+      if (!amount_cents) return send(res,400,{error:'amount_positive_integer'});
+      if (file_name.length < 1 || file_name.length > 500 || !syntheticFiscalUrl(file_url) || !syntheticFiscalKey(storage_key)) return send(res,400,{error:'synthetic_document_metadata_required'});
+      if (idempotency_key.length < 8 || idempotency_key.length > 200) return send(res,400,{error:'idempotency_key_8_200'});
+      if (body.is_sandbox === false || body.simulated === false) return send(res,400,{error:'real_emission_refused_sandbox_only'});
+      if (body.issue_date != null && !isoDate(body.issue_date)) return send(res,400,{error:'invalid_issue_date'});
+      const client = await pool.connect();
       try {
-        if (storage_key) {
-          const dup = await pool.query(`SELECT id FROM fin_fiscal_documents WHERE storage_key=$1`, [storage_key]);
-          if (dup.rows.length) { res.writeHead(409, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'duplicate_storage_key'})); return; }
+        await client.query('BEGIN');
+        const obligation = await client.query('SELECT * FROM fin_fiscal_obligations WHERE id=$1 FOR SHARE',[obligation_id]);
+        if (!obligation.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'obligation_not_found'}); }
+        if (obligation.rows[0].status !== 'determinada') { await client.query('ROLLBACK'); return send(res,409,{error:'obligation_not_determined'}); }
+        const provider = await client.query('SELECT * FROM fin_fiscal_providers WHERE id=$1 FOR SHARE',[provider_id]);
+        if (!provider.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'provider_not_found'}); }
+        if (provider.rows[0].status !== 'configurado' || !provider.rows[0].is_active) { await client.query('ROLLBACK'); return send(res,409,{error:'provider_not_configured'}); }
+        const determined = obligation.rows[0].obligation_type;
+        // O tipo do documento é o da obrigação determinada; nunca um padrão fixo.
+        if (body.document_type != null && body.document_type !== determined) {
+          await client.query('ROLLBACK');
+          return send(res,409,{error:'document_type_determined_by_obligation',determined_obligation_type:determined});
         }
-        const { rows } = await pool.query(
-          `INSERT INTO fin_fiscal_documents (protocol, obligation_id, provider_id, document_type, amount_cents, file_name, file_url, storage_key, is_sandbox, created_by_identity)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true,$9) RETURNING *`,
-          [protocol, obligation_id, provider_id, document_type, amount_cents, file_name, file_url, storage_key, sess.identityId||null]
+        if (!parseObligationArray(provider.rows[0].supported_obligations).includes(determined)) { await client.query('ROLLBACK'); return send(res,409,{error:'provider_does_not_support_obligation',determined_obligation_type:determined}); }
+        const protocol = generateProtocol('NF-FIN');
+        const created = await client.query(
+          `INSERT INTO fin_fiscal_documents (protocol,obligation_id,provider_id,document_type,status,issue_date,amount_cents,file_name,file_url,storage_key,is_sandbox,simulated,idempotency_key,created_by_identity)
+           VALUES ($1,$2,$3,$4::fin_fiscal_doc_type,'rascunho',COALESCE($5::date,CURRENT_DATE),$6,$7,$8,$9,true,true,$10,$11) RETURNING *`,
+          [protocol, obligation_id, provider_id, determined, body.issue_date||null, amount_cents, file_name, file_url, storage_key, idempotency_key, actor]
         );
-        try { await auditLog({ action:'fin_fiscal_document_create', actor: sess.identityId, target: rows[0].id, meta:{ protocol, document_type } }); } catch {}
-        res.writeHead(201, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ document: rows[0] }));
-      } catch(e){
-        if (e.code==='23505') { res.writeHead(409, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'duplicate', details:e.detail})); return; }
-        res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message}));
-      }
-      return;
+        const document = created.rows[0];
+        await insertFiscalHistory(client,'document',document.id,null,'rascunho',actor,'Documento fiscal sintético preparado em sandbox sem emissão real',{protocol,document_type:determined,obligation_id});
+        await auditLog({action:'fin_fiscal_document_create',actor,target:document.id,meta:{protocol,document_type:determined,obligation_id,provider_id,idempotency_key,simulated:true},client});
+        await client.query('COMMIT');
+        return send(res,201,{document,synthetic:true,emitted:false});
+      } catch(e) { try { await client.query('ROLLBACK'); } catch {} return fiscalFailure(res,e); }
+      finally { client.release(); }
     }
-    res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'}));
+
+    const id = body.id, status = body.status;
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+    const error_sanitized = typeof body.error_sanitized === 'string' ? body.error_sanitized.trim() : '';
+    if (!uuid(id)) return send(res,400,{error:'invalid_id'});
+    if (!['emitido','erro','cancelado'].includes(status)) return send(res,400,{error:'invalid_transition'});
+    if (reason.length < 10 || reason.length > 1000) return send(res,400,{error:'reason_10_1000_required'});
+    if (status === 'erro' && (error_sanitized.length < 10 || error_sanitized.length > 1000)) return send(res,400,{error:'error_sanitized_10_1000_required'});
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const found = await client.query('SELECT * FROM fin_fiscal_documents WHERE id=$1 FOR UPDATE',[id]);
+      if (!found.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'not_found'}); }
+      const previous = found.rows[0];
+      if (previous.status === 'cancelado') { await client.query('ROLLBACK'); return send(res,409,{error:'document_already_cancelled'}); }
+      if (previous.status === status) { await client.query('ROLLBACK'); return send(res,409,{error:'document_already_in_status'}); }
+      if (previous.status === 'emitido' && status !== 'cancelado') { await client.query('ROLLBACK'); return send(res,409,{error:'document_already_registered'}); }
+      // Resposta do provedor é gerada localmente: simulada, nunca do fisco.
+      const syntheticResponse = {
+        mode: 'synthetic',
+        simulated: true,
+        emission: 'none',
+        synthetic_reference: `SYN-${previous.protocol}`,
+        registered_at: new Date().toISOString(),
+      };
+      const updated = status === 'emitido'
+        ? await client.query(
+            `UPDATE fin_fiscal_documents SET status='emitido',provider_response=$1,error_sanitized=NULL,cancel_reason=NULL WHERE id=$2 RETURNING *`,
+            [JSON.stringify(syntheticResponse), id])
+        : status === 'erro'
+          ? await client.query(
+              `UPDATE fin_fiscal_documents SET status='erro',error_sanitized=$1,cancel_reason=NULL WHERE id=$2 RETURNING *`,
+              [error_sanitized, id])
+          : await client.query(
+              `UPDATE fin_fiscal_documents SET status='cancelado',cancel_reason=$1,error_sanitized=NULL WHERE id=$2 RETURNING *`,
+              [reason, id]);
+      await insertFiscalHistory(client,'document',id,previous.status,status,actor,reason,{protocol:previous.protocol,document_type:previous.document_type,simulated:true});
+      await auditLog({action:`fin_fiscal_document_${status}`,actor,target:id,meta:{previous_status:previous.status,next_status:status,reason,simulated:true},client});
+      await client.query('COMMIT');
+      return send(res,200,{document:updated.rows[0],synthetic:true,emitted:false});
+    } catch(e) { try { await client.query('ROLLBACK'); } catch {} return fiscalFailure(res,e); }
+    finally { client.release(); }
+  };
+
+  const handleFiscalHistory = async (req, res) => {
+    const sess = await checkAuth(req, res); if (!sess) return;
+    if (req.method !== 'GET') return send(res,405,{error:'method_not_allowed'});
+    const url = new URL(req.url, `http://${req.headers.host||'localhost'}`), params = [];
+    let q = 'SELECT * FROM fin_fiscal_history WHERE 1=1';
+    const entity_type = url.searchParams.get('entity_type');
+    if (entity_type) { if (!FISCAL_ENTITIES.has(entity_type)) return send(res,400,{error:'invalid_entity_type'}); params.push(entity_type); q += ` AND entity_type=$${params.length}`; }
+    const entity_id = url.searchParams.get('entity_id');
+    if (entity_id) { if (!uuid(entity_id)) return send(res,400,{error:'invalid_entity_id'}); params.push(entity_id); q += ` AND entity_id=$${params.length}`; }
+    q += ' ORDER BY created_at DESC LIMIT 200';
+    try { return send(res,200,{history:(await pool.query(q,params)).rows}); } catch { return send(res,500,{error:'internal'}); }
   };
 
   // FIN-12 gateway
@@ -600,9 +818,11 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
     handleResultHistory,
     handleExpenses,
     handleExpenseHistory,
+    handleFiscalActivityRules,
     handleFiscalProviders,
     handleFiscalObligations,
     handleFiscalDocuments,
+    handleFiscalHistory,
     handleGateways,
     handleWebhooks,
     handleCharges,

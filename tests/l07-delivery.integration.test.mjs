@@ -1158,3 +1158,226 @@ test("L07 FIN-10: Chromium solicita e outra identidade aprova no workspace finan
     const final=await pool.query("SELECT status,requester_identity,approver_identity FROM fin_expenses WHERE id=$1",[row.rows[0].id]);assert.equal(final.rows[0].status,"aprovado");assert.equal(final.rows[0].approver_identity,approver.id);assert.notEqual(final.rows[0].requester_identity,final.rows[0].approver_identity);
   } finally {await browser.close();}
 });
+
+// FIN-11 — integração contábil/fiscal mediante provedor. A obrigação é
+// determinada pela atividade através de regra canônica explícita; o gate prova
+// que NFS-e não é assumida para tudo e que nada é emitido de verdade.
+async function insertFiscalSpace(label) {
+  const contractId = uuid(), accountId = uuid();
+  await pool.query("INSERT INTO crm_contracts (id,proposal_version,title,status,origin,idempotency_key,created_by) VALUES ($1,1,$2,'ativo','manual',$3,'admin')",[contractId,`Contrato sintético FIN-11 ${label}`,`fin11-contract-${label}-${contractId}`]);
+  await pool.query("INSERT INTO client_accounts (id,display_name,status,created_by) VALUES ($1,$2,'active','marcelo')",[accountId,`QA L07 FIN-11 Conta ${label} ${accountId.slice(0,6)}`]);
+  return { contractId, accountId };
+}
+const providerPayload = (suffix, overrides = {}) => ({ name:`Provedor sintético ${suffix}`, provider_code:`prov-${suffix}`, supported_obligations:["nfse"], idempotency_key:`fin11-prov-${suffix}`, ...overrides });
+const obligationPayload = (space, suffix, overrides = {}) => ({ contract_id:space.contractId, client_account_id:space.accountId, activity_type:"vigilancia_patrimonial", description:"Obrigação sintética determinada pela atividade do contrato", idempotency_key:`fin11-obl-${suffix}`, ...overrides });
+const documentPayload = (suffix, overrides = {}) => ({ amount_cents:125000, file_name:`documento-${suffix}.json`, file_url:`synthetic://fin11/${suffix}.json`, storage_key:`synthetic/fin11/${suffix}.json`, idempotency_key:`fin11-doc-${suffix}`, ...overrides });
+
+test("L07 FIN-11: provedor e obrigação separados, obrigação determinada pela atividade, nenhuma emissão real e auditoria fail-closed", { skip: !RUN, timeout: 120_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role:"financeiro" });
+  const rh = await provisionAndLoginStaff(pool, api, { role:"rh" });
+  const tag = uuid().slice(0,8);
+  const space = await insertFiscalSpace(`http-${tag}`);
+
+  // Autorização e borda
+  assert.equal((await fin("/fiscal-providers")).status, 401);
+  assert.equal((await fin("/fiscal-obligations", { cookie: rh.cookie })).status, 403);
+  assert.equal((await fin("/fiscal-activity-rules", { cookie: rh.cookie })).status, 403);
+  assert.equal((await fin("/fiscal-providers", { method:"POST", cookie: financeiro.cookie, origin:"https://externo.invalid", body: providerPayload(`origin-${tag}`) })).status, 403);
+
+  // O catálogo de regras cobre obrigações distintas: nenhuma nota única.
+  const rules = await fin("/fiscal-activity-rules", { cookie: financeiro.cookie });
+  assert.equal(rules.status, 200);
+  const byType = new Set(rules.body.rules.map(rule => rule.obligation_type));
+  for (const expected of ["nfse","nfe","nfce","cte","outro"]) assert.ok(byType.has(expected), `catálogo precisa determinar ${expected}`);
+  const vigilancia = rules.body.rules.find(rule => rule.activity_code === "vigilancia_patrimonial");
+  const venda = rules.body.rules.find(rule => rule.activity_code === "venda_equipamento_seguranca");
+  assert.equal(vigilancia.obligation_type, "nfse");
+  assert.equal(venda.obligation_type, "nfe");
+
+  // Provedor: sandbox, sem credenciais, idempotente, estados explícitos.
+  assert.equal((await fin("/fiscal-providers", { method:"POST", cookie: financeiro.cookie, body: providerPayload(`nocode-${tag}`, { provider_code:"X" }) })).status, 400);
+  assert.equal((await fin("/fiscal-providers", { method:"POST", cookie: financeiro.cookie, body: providerPayload(`creds-${tag}`, { config:{ token:"abc" } }) })).status, 400);
+  assert.equal((await fin("/fiscal-providers", { method:"POST", cookie: financeiro.cookie, body: providerPayload(`empty-${tag}`, { supported_obligations:[] }) })).status, 400);
+  const provider = await fin("/fiscal-providers", { method:"POST", cookie: financeiro.cookie, body: providerPayload(`main-${tag}`, { supported_obligations:["nfse","nfe"] }) });
+  assert.equal(provider.status, 201, JSON.stringify(provider.body));
+  assert.equal(provider.body.provider.status, "nao_configurado");
+  assert.equal(provider.body.provider.environment, "sandbox");
+  assert.deepEqual(provider.body.provider.supported_obligations, ["nfse","nfe"]);
+  assert.equal((await fin("/fiscal-providers", { method:"POST", cookie: financeiro.cookie, body: providerPayload(`main-${tag}`, { name:`Outro ${tag}`, provider_code:`outro-${tag}` }) })).status, 409, "idempotência do provedor");
+  assert.equal((await fin("/fiscal-providers", { method:"PATCH", cookie: financeiro.cookie, body:{ id: provider.body.provider.id, status:"configurado", reason:"curto" } })).status, 400);
+  assert.equal((await fin("/fiscal-providers", { method:"PATCH", cookie: financeiro.cookie, body:{ id: provider.body.provider.id, status:"emitido", reason:"Transição inexistente deve ser recusada" } })).status, 400);
+  const configured = await fin("/fiscal-providers", { method:"PATCH", cookie: financeiro.cookie, body:{ id: provider.body.provider.id, status:"configurado", reason:"Provedor sandbox conferido com configuração sintética" } });
+  assert.equal(configured.status, 200, JSON.stringify(configured.body));
+  assert.equal(configured.body.provider.status, "configurado");
+  assert.ok(configured.body.provider.last_processed_at);
+  assert.equal((await fin("/fiscal-providers", { method:"PATCH", cookie: financeiro.cookie, body:{ id: provider.body.provider.id, status:"configurado", reason:"Repetir o mesmo estado não é transição" } })).status, 409);
+
+  // Obrigação: determinada pela regra da atividade; o cliente não escolhe.
+  assert.equal((await fin("/fiscal-obligations", { method:"POST", cookie: financeiro.cookie, body: obligationPayload(space, `rule-${tag}`, { rule:"texto livre proibido" }) })).status, 400);
+  assert.equal((await fin("/fiscal-obligations", { method:"POST", cookie: financeiro.cookie, body: obligationPayload(space, `unknown-${tag}`, { activity_type:"atividade_inexistente" }) })).status, 404);
+  const forced = await fin("/fiscal-obligations", { method:"POST", cookie: financeiro.cookie, body: obligationPayload(space, `forced-${tag}`, { obligation_type:"nfe" }) });
+  assert.equal(forced.status, 409, "não se assume a obrigação: ela vem da regra da atividade");
+  assert.equal(forced.body.error, "obligation_type_determined_by_activity_rule");
+  assert.equal(forced.body.determined_obligation_type, "nfse");
+  assert.equal((await fin("/fiscal-obligations", { method:"POST", cookie: financeiro.cookie, body: obligationPayload({ contractId: uuid(), accountId: space.accountId }, `ref-${tag}`) })).status, 404);
+
+  const servico = await fin("/fiscal-obligations", { method:"POST", cookie: financeiro.cookie, body: obligationPayload(space, `servico-${tag}`) });
+  assert.equal(servico.status, 201, JSON.stringify(servico.body));
+  assert.equal(servico.body.obligation.obligation_type, "nfse");
+  assert.equal(servico.body.obligation.status, "pendente");
+  assert.equal(servico.body.obligation.is_determined, false);
+  assert.match(servico.body.obligation.rule, /LC 116\/2003/);
+  // Mesma empresa, outra atividade, OUTRA obrigação: prova de que não há nota única.
+  const mercadoria = await fin("/fiscal-obligations", { method:"POST", cookie: financeiro.cookie, body: obligationPayload(space, `mercadoria-${tag}`, { activity_type:"venda_equipamento_seguranca" }) });
+  assert.equal(mercadoria.status, 201, JSON.stringify(mercadoria.body));
+  assert.equal(mercadoria.body.obligation.obligation_type, "nfe");
+  const transporte = await fin("/fiscal-obligations", { method:"POST", cookie: financeiro.cookie, body: obligationPayload(space, `transporte-${tag}`, { activity_type:"transporte_valores_interestadual" }) });
+  assert.equal(transporte.body.obligation.obligation_type, "cte");
+  const locacao = await fin("/fiscal-obligations", { method:"POST", cookie: financeiro.cookie, body: obligationPayload(space, `locacao-${tag}`, { activity_type:"locacao_equipamento_seguranca" }) });
+  assert.equal(locacao.body.obligation.obligation_type, "outro");
+  assert.equal((await fin("/fiscal-obligations", { method:"POST", cookie: financeiro.cookie, body: obligationPayload(space, `servico-${tag}`, { description:"Outra descrição sintética para a mesma chave" }) })).status, 409, "idempotência da obrigação");
+  assert.equal((await fin("/fiscal-obligations", { method:"POST", cookie: financeiro.cookie, body: obligationPayload(space, `duplicada-${tag}`) })).status, 409, "mesma atividade no mesmo contrato não duplica");
+
+  // Documento exige obrigação determinada.
+  assert.equal((await fin("/fiscal-documents", { method:"POST", cookie: financeiro.cookie, body: documentPayload(`early-${tag}`, { obligation_id: servico.body.obligation.id, provider_id: provider.body.provider.id }) })).status, 409);
+  const determined = await fin("/fiscal-obligations", { method:"PATCH", cookie: financeiro.cookie, body:{ id: servico.body.obligation.id, status:"determinada", reason:"Atividade conferida contra a regra canônica do catálogo" } });
+  assert.equal(determined.status, 200, JSON.stringify(determined.body));
+  assert.equal(determined.body.obligation.is_determined, true);
+  assert.equal(determined.body.obligation.determination_rule_reference, vigilancia.rule_reference);
+  assert.equal((await fin("/fiscal-obligations", { method:"PATCH", cookie: financeiro.cookie, body:{ id: servico.body.obligation.id, status:"determinada", reason:"Determinar duas vezes não é transição válida" } })).status, 409);
+
+  // Documento: tipo vem da obrigação, provedor precisa suportar, nada externo.
+  assert.equal((await fin("/fiscal-documents", { method:"POST", cookie: financeiro.cookie, body: documentPayload(`external-${tag}`, { obligation_id: servico.body.obligation.id, provider_id: provider.body.provider.id, file_url:"https://nfse.example/real.xml" }) })).status, 400);
+  const forcedType = await fin("/fiscal-documents", { method:"POST", cookie: financeiro.cookie, body: documentPayload(`forcedtype-${tag}`, { obligation_id: servico.body.obligation.id, provider_id: provider.body.provider.id, document_type:"cte" }) });
+  assert.equal(forcedType.status, 409);
+  assert.equal(forcedType.body.error, "document_type_determined_by_obligation");
+
+  const narrowProvider = await fin("/fiscal-providers", { method:"POST", cookie: financeiro.cookie, body: providerPayload(`narrow-${tag}`, { supported_obligations:["cte"] }) });
+  await fin("/fiscal-providers", { method:"PATCH", cookie: financeiro.cookie, body:{ id: narrowProvider.body.provider.id, status:"configurado", reason:"Provedor sandbox restrito a conhecimento de transporte" } });
+  assert.equal((await fin("/fiscal-documents", { method:"POST", cookie: financeiro.cookie, body: documentPayload(`narrow-${tag}`, { obligation_id: servico.body.obligation.id, provider_id: narrowProvider.body.provider.id }) })).status, 409);
+
+  const document = await fin("/fiscal-documents", { method:"POST", cookie: financeiro.cookie, body: documentPayload(`main-${tag}`, { obligation_id: servico.body.obligation.id, provider_id: provider.body.provider.id }) });
+  assert.equal(document.status, 201, JSON.stringify(document.body));
+  assert.equal(document.body.document.document_type, "nfse");
+  assert.equal(document.body.document.status, "rascunho");
+  assert.equal(document.body.document.simulated, true);
+  assert.equal(document.body.document.is_sandbox, true);
+  assert.equal(document.body.emitted, false);
+  assert.match(document.body.document.protocol, /^NF-FIN-\d{8}-[A-Z0-9]{4}$/);
+  assert.equal((await fin("/fiscal-documents", { method:"POST", cookie: financeiro.cookie, body: documentPayload(`main-${tag}`, { obligation_id: servico.body.obligation.id, provider_id: provider.body.provider.id, file_url:`synthetic://fin11/outro-${tag}.json`, storage_key:`synthetic/fin11/outro-${tag}.json` }) })).status, 409, "idempotência do documento");
+
+  const registered = await fin("/fiscal-documents", { method:"PATCH", cookie: financeiro.cookie, body:{ id: document.body.document.id, status:"emitido", reason:"Registro sintético concluído pelo simulador do provedor" } });
+  assert.equal(registered.status, 200, JSON.stringify(registered.body));
+  assert.equal(registered.body.document.status, "emitido");
+  assert.equal(registered.body.emitted, false, "o gate nunca emite documento fiscal real");
+  assert.equal(registered.body.document.provider_response.mode, "synthetic");
+  assert.equal(registered.body.document.provider_response.emission, "none");
+  assert.equal((await fin("/fiscal-documents", { method:"PATCH", cookie: financeiro.cookie, body:{ id: document.body.document.id, status:"erro", reason:"Voltar de registrado para erro não é transição válida", error_sanitized:"Mensagem sanitizada do simulador" } })).status, 409);
+  const cancelled = await fin("/fiscal-documents", { method:"PATCH", cookie: financeiro.cookie, body:{ id: document.body.document.id, status:"cancelado", reason:"Documento sintético cancelado após conferência" } });
+  assert.equal(cancelled.status, 200);
+  assert.equal((await fin("/fiscal-documents", { method:"PATCH", cookie: financeiro.cookie, body:{ id: document.body.document.id, status:"emitido", reason:"Documento cancelado não volta a ser registrado" } })).status, 409);
+
+  // O banco repete as garantias para escrita direta.
+  await assert.rejects(pool.query("UPDATE fin_fiscal_obligations SET obligation_type='cte' WHERE id=$1",[mercadoria.body.obligation.id]), /fin_fiscal_obligation_determination_fields_immutable|fin_fiscal_obligation_type_must_follow_activity_rule/);
+  await assert.rejects(pool.query("UPDATE fin_fiscal_obligations SET status='determinada',is_determined=true,determined_by_identity=$1,determined_at=NOW(),determination_rule_reference='regra inventada' WHERE id=$2",[financeiro.id, mercadoria.body.obligation.id]), /fin_fiscal_obligation_determination_reference_mismatch/);
+  await assert.rejects(pool.query("UPDATE fin_fiscal_providers SET environment='producao' WHERE id=$1",[provider.body.provider.id]), /fin_fiscal_provider_identity_fields_immutable/);
+  await assert.rejects(pool.query("UPDATE fin_fiscal_documents SET simulated=false WHERE id=$1",[document.body.document.id]), /fin_fiscal_document/);
+  await assert.rejects(pool.query("UPDATE fin_fiscal_activity_rules SET obligation_type='nfse' WHERE activity_code='venda_equipamento_seguranca'"), /fin_fiscal_activity_rule_immutable/);
+
+  // Histórico imutável e visível.
+  const history = await fin(`/fiscal-history?entity_type=obligation&entity_id=${servico.body.obligation.id}`, { cookie: financeiro.cookie });
+  assert.equal(history.status, 200);
+  assert.equal(history.body.history.length, 2);
+  await assert.rejects(pool.query("UPDATE fin_fiscal_history SET reason='Tentativa de adulteração do histórico' WHERE entity_id=$1",[servico.body.obligation.id]), /fin_fiscal_history_immutable/);
+  await assert.rejects(pool.query("DELETE FROM fin_fiscal_history WHERE entity_id=$1",[servico.body.obligation.id]), /fin_fiscal_history_immutable/);
+
+  // Auditoria fail-closed com rollback integral e resposta sem detalhe SQL.
+  const rollbackObligation = await fin("/fiscal-obligations", { method:"POST", cookie: financeiro.cookie, body: obligationPayload(space, `rollback-${tag}`, { activity_type:"portaria_e_recepcao" }) });
+  assert.equal(rollbackObligation.status, 201);
+  await pool.query("ALTER TABLE audit_log RENAME TO audit_log_fin11_unavailable");
+  try {
+    const failedProvider = await fin("/fiscal-providers", { method:"POST", cookie: financeiro.cookie, body: providerPayload(`rollback-${tag}`) });
+    assert.equal(failedProvider.status, 503); assert.deepEqual(failedProvider.body, { error:"audit_unavailable" });
+    const failedObligation = await fin("/fiscal-obligations", { method:"POST", cookie: financeiro.cookie, body: obligationPayload(space, `rollback-create-${tag}`, { activity_type:"monitoramento_eletronico" }) });
+    assert.equal(failedObligation.status, 503); assert.equal("details" in failedObligation.body, false);
+    const failedTransition = await fin("/fiscal-obligations", { method:"PATCH", cookie: financeiro.cookie, body:{ id: rollbackObligation.body.obligation.id, status:"determinada", reason:"Determinação deve reverter sem auditoria disponível" } });
+    assert.equal(failedTransition.status, 503); assert.deepEqual(failedTransition.body, { error:"audit_unavailable" });
+  } finally { await pool.query("ALTER TABLE audit_log_fin11_unavailable RENAME TO audit_log"); }
+  assert.equal((await pool.query("SELECT count(*)::int n FROM fin_fiscal_providers WHERE idempotency_key=$1",[`fin11-prov-rollback-${tag}`])).rows[0].n, 0);
+  assert.equal((await pool.query("SELECT count(*)::int n FROM fin_fiscal_obligations WHERE idempotency_key=$1",[`fin11-obl-rollback-create-${tag}`])).rows[0].n, 0);
+  const preserved = await pool.query("SELECT status,is_determined FROM fin_fiscal_obligations WHERE id=$1",[rollbackObligation.body.obligation.id]);
+  assert.equal(preserved.rows[0].status, "pendente");
+  assert.equal(preserved.rows[0].is_determined, false);
+  assert.equal((await pool.query("SELECT count(*)::int n FROM fin_fiscal_history WHERE entity_id=$1",[rollbackObligation.body.obligation.id])).rows[0].n, 1);
+  assert.equal((await pool.query("SELECT count(*)::int n FROM fin_fiscal_documents WHERE status='emitido' AND simulated=false")).rows[0].n, 0, "nenhum documento real foi emitido");
+});
+
+test("L07 FIN-11: Chromium determina a obrigação pela atividade e registra documento sintético no workspace financeiro", { skip: !RUN, timeout: 180_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role:"financeiro" });
+  const tag = uuid().slice(0,8);
+  const space = await insertFiscalSpace(`chromium-${tag}`);
+  const browser = await playwrightChromium.launch({ executablePath: await packagedChromium.executablePath(), headless:true, args: packagedChromium.args.filter(arg => arg !== "--disable-web-security") });
+  try {
+    const context = await browser.newContext();
+    const pair = financeiro.cookie.split(";")[0], separator = pair.indexOf("=");
+    await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator+1), url: baseUrl }]);
+    const page = await context.newPage();
+    await page.setExtraHTTPHeaders({ origin: baseUrl });
+    await page.goto(`${baseUrl}/admin/financeiro`, { waitUntil:"networkidle" });
+    await page.getByTestId("finance-tab-fiscal").click();
+    await page.waitForSelector('[data-testid="fin11-fiscal"]');
+    await page.waitForSelector('[data-testid="fin11-rule-venda_equipamento_seguranca"]');
+    assert.equal((await page.getByTestId("fin11-rule-type-venda_equipamento_seguranca").textContent())?.trim(), "nfe");
+    assert.equal((await page.getByTestId("fin11-rule-type-vigilancia_patrimonial").textContent())?.trim(), "nfse");
+
+    await page.getByTestId("fin11-provider-name").fill(`Provedor Chromium ${tag}`);
+    await page.getByTestId("fin11-provider-code").fill(`chromium-${tag}`);
+    await page.getByTestId("fin11-provider-supports-nfe").check();
+    await page.getByTestId("fin11-provider-idempotency").fill(`fin11-ui-prov-${tag}`);
+    await page.getByTestId("fin11-provider-create").click();
+    await page.waitForFunction(() => (document.querySelector('[data-testid="fin11-notice"]')?.textContent||"").includes("nao_configurado"));
+    const providerRow = (await pool.query("SELECT id FROM fin_fiscal_providers WHERE idempotency_key=$1",[`fin11-ui-prov-${tag}`])).rows[0];
+    await page.getByTestId("fin11-reason").fill("Provedor sandbox conferido na interface pelo papel financeiro");
+    await page.getByTestId(`fin11-provider-configure-${providerRow.id}`).click();
+    await page.waitForFunction(id => (document.querySelector(`[data-testid="fin11-provider-status-${id}"]`)?.textContent||"") === "configurado", providerRow.id);
+
+    await page.getByTestId("fin11-obligation-contract").fill(space.contractId);
+    await page.getByTestId("fin11-obligation-account").fill(space.accountId);
+    await page.getByTestId("fin11-obligation-activity").selectOption("venda_equipamento_seguranca");
+    await page.waitForFunction(() => (document.querySelector('[data-testid="fin11-obligation-determined-type"]')?.textContent||"").includes("nfe"));
+    await page.getByTestId("fin11-obligation-description").fill("Venda sintética de equipamento conferida na interface do financeiro");
+    await page.getByTestId("fin11-obligation-idempotency").fill(`fin11-ui-obl-${tag}`);
+    await page.getByTestId("fin11-obligation-create").click();
+    await page.waitForFunction(() => (document.querySelector('[data-testid="fin11-notice"]')?.textContent||"").includes("nfe"));
+    const obligationRow = (await pool.query("SELECT id,obligation_type,status FROM fin_fiscal_obligations WHERE idempotency_key=$1",[`fin11-ui-obl-${tag}`])).rows[0];
+    assert.equal(obligationRow.obligation_type, "nfe", "a atividade de venda determina NF-e, não NFS-e");
+    assert.equal(obligationRow.status, "pendente");
+
+    await page.getByTestId("fin11-reason").fill("Obrigação conferida contra a regra canônica antes de determinar");
+    await page.getByTestId(`fin11-obligation-determine-${obligationRow.id}`).click();
+    await page.waitForFunction(id => (document.querySelector(`[data-testid="fin11-obligation-status-${id}"]`)?.textContent||"") === "determinada", obligationRow.id);
+
+    await page.getByTestId("fin11-document-obligation").selectOption(obligationRow.id);
+    await page.getByTestId("fin11-document-provider").selectOption(providerRow.id);
+    await page.getByTestId("fin11-document-amount").fill("98000");
+    await page.getByTestId("fin11-document-file-name").fill(`documento-${tag}.json`);
+    await page.getByTestId("fin11-document-file-url").fill(`synthetic://fin11/ui-${tag}.json`);
+    await page.getByTestId("fin11-document-storage-key").fill(`synthetic/fin11/ui-${tag}.json`);
+    await page.getByTestId("fin11-document-idempotency").fill(`fin11-ui-doc-${tag}`);
+    await page.getByTestId("fin11-document-create").click();
+    await page.waitForFunction(() => (document.querySelector('[data-testid="fin11-notice"]')?.textContent||"").includes("Nenhuma emissão fiscal real"));
+    const documentRow = (await pool.query("SELECT id,document_type,status FROM fin_fiscal_documents WHERE idempotency_key=$1",[`fin11-ui-doc-${tag}`])).rows[0];
+    assert.equal(documentRow.document_type, "nfe");
+    assert.equal(documentRow.status, "rascunho");
+
+    await page.getByTestId("fin11-reason").fill("Registro sintético confirmado na interface sem emissão real");
+    await page.getByTestId(`fin11-document-register-${documentRow.id}`).click();
+    await page.waitForFunction(id => (document.querySelector(`[data-testid="fin11-document-status-${id}"]`)?.textContent||"") === "emitido", documentRow.id);
+    const final = (await pool.query("SELECT status,simulated,is_sandbox,provider_response FROM fin_fiscal_documents WHERE id=$1",[documentRow.id])).rows[0];
+    assert.equal(final.status, "emitido");
+    assert.equal(final.simulated, true);
+    assert.equal(final.is_sandbox, true);
+    assert.equal(final.provider_response.mode, "synthetic");
+    assert.equal(final.provider_response.emission, "none");
+  } finally { await browser.close(); }
+});
