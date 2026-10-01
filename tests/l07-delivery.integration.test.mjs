@@ -1068,3 +1068,328 @@ test("L07 FIN-08: Chromium registra importação sintética e custo rateado", { 
     assert.match(await page.getByTestId("fin08-cost-list").textContent()||"", /R\$ 120,00/);
   } finally { await browser.close(); }
 });
+
+// FIN-10 — despesas, reembolsos e compras. A evidência é sempre metadado
+// sintético local: o gate nunca cria, lê ou envia arquivo externo, e nenhuma
+// compra real é executada.
+async function insertExpenseSpace(label) {
+  const crmContractId = uuid();
+  await pool.query(
+    `INSERT INTO crm_contracts (id, proposal_id, proposal_version, company_id, title, status, origin, total_cost, total_price, idempotency_key, created_by)
+     VALUES ($1, NULL, 1, NULL, $2, 'ativo', 'manual', 0, 0, $3, 'admin')`,
+    [crmContractId, `QA L07 FIN10 Contrato ${label}`, uuid()],
+  );
+  const costCenterId = uuid();
+  await pool.query(
+    `INSERT INTO fin_cost_centers (id, name, description) VALUES ($1,$2,$3)`,
+    [costCenterId, `QA L07 FIN10 Centro ${label} ${uuid().slice(0, 8)}`, `Centro de custo sintético do gate L07 FIN-10 ${label}`],
+  );
+  const supplierId = uuid();
+  await pool.query(
+    `INSERT INTO fin_suppliers (id, name, category) VALUES ($1,$2,'outro')`,
+    [supplierId, `QA L07 FIN10 Fornecedor ${label} ${uuid().slice(0, 8)}`],
+  );
+  return { crmContractId, costCenterId, supplierId };
+}
+function expenseEvidence(label) {
+  const suffix = uuid().slice(0, 8);
+  return {
+    evidence_file_name: `evidencia-${label}-${suffix}.pdf`,
+    evidence_file_url: `local://synthetic/fin10/${label}-${suffix}.pdf`,
+    evidence_storage_key: `synthetic/fin10/${label}-${suffix}.pdf`,
+  };
+}
+const EXPENSE_RESPONSE_KEYS = new Set(["error", "existing_id", "existing_protocol", "current_status", "expense", "expenses", "history", "authority", "authorities", "synthetic"]);
+function assertNoSqlLeak(response, context) {
+  const serialized = JSON.stringify(response.body ?? null);
+  assert.doesNotMatch(serialized, /SELECT |INSERT |UPDATE |relation "|pg_|syntax error|constraint "/i, `${context} leaked SQL: ${serialized}`);
+  if (response.body && typeof response.body === "object") {
+    for (const key of Object.keys(response.body)) {
+      assert.ok(EXPENSE_RESPONSE_KEYS.has(key), `${context} exposed unexpected key ${key}: ${serialized}`);
+    }
+  }
+}
+
+test("L07 FIN-10: despesa com alçada, segregação solicitar/aprovar, evidência sintética e auditoria fail-closed", { skip: !RUN, timeout: 180_000 }, async () => {
+  const requester = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const approver = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const weakApprover = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const noAuthority = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const governance = await provisionAndLoginStaff(pool, api, { role: "ti" });
+  const rh = await provisionAndLoginStaff(pool, api, { role: "rh" });
+  const canonical = await insertExpenseSpace("HTTP");
+  const base = {
+    expense_type: "despesa", category: "Materiais de portaria", requester_name: "QA Solicitante FIN-10",
+    cost_center_id: canonical.costCenterId, contract_id: canonical.crmContractId,
+  };
+
+  // Borda: sessão, papel e origem.
+  assert.equal((await fin("/expenses")).status, 401, "anonymous read denied");
+  assert.equal((await fin("/expenses", { cookie: rh.cookie })).status, 403, "rh read denied");
+  assert.equal((await fin("/expense-authorities", { cookie: rh.cookie })).status, 403, "rh authority read denied");
+  assert.equal((await fin("/expenses", { method: "POST", cookie: requester.cookie, origin: "https://externo.example", body: base })).status, 403, "cross-origin write denied");
+  assert.equal((await fin("/expenses?status=nao-existe", { cookie: requester.cookie })).status, 400, "invalid status filter denied");
+  assert.equal((await fin("/expenses?contract_id=nao-uuid", { cookie: requester.cookie })).status, 400, "invalid uuid filter denied");
+  assert.equal((await fin("/expense-history?expense_id=nao-uuid", { cookie: requester.cookie })).status, 400, "invalid history filter denied");
+
+  // Alçada só é concedida por governança (admin/ti), nunca pelo próprio financeiro.
+  assert.equal((await fin("/expense-authorities", { method: "POST", cookie: requester.cookie, body: { identity_id: approver.id, max_amount_cents: 500000 } })).status, 403, "financeiro cannot grant authority");
+  const grantedHigh = await fin("/expense-authorities", { method: "POST", cookie: governance.cookie, body: { identity_id: approver.id, max_amount_cents: 500000, note: "Alçada sintética ampla para o gate L07 FIN-10" } });
+  assert.equal(grantedHigh.status, 201, JSON.stringify(grantedHigh.body));
+  assert.equal(Number(grantedHigh.body.authority.max_amount_cents), 500000);
+  assert.equal((await fin("/expense-authorities", { method: "POST", cookie: governance.cookie, body: { identity_id: approver.id, max_amount_cents: 900000 } })).status, 409, "authority is unique per identity");
+  const grantedLow = await fin("/expense-authorities", { method: "POST", cookie: governance.cookie, body: { identity_id: weakApprover.id, max_amount_cents: 1000, note: "Alçada sintética insuficiente para o gate L07 FIN-10" } });
+  assert.equal(grantedLow.status, 201, JSON.stringify(grantedLow.body));
+
+  // Validações de entrada antes de qualquer escrita.
+  const evidence = expenseEvidence("http");
+  assert.equal((await fin("/expenses", { method: "POST", cookie: requester.cookie, body: { ...base, ...evidence, description: "curto", amount_cents: 25000 } })).status, 400, "short description denied");
+  assert.equal((await fin("/expenses", { method: "POST", cookie: requester.cookie, body: { ...base, ...evidence, description: "Compra sintética de materiais para o posto", amount_cents: 0 } })).status, 400, "non positive amount denied");
+  assert.equal((await fin("/expenses", { method: "POST", cookie: requester.cookie, body: { ...base, ...evidence, cost_center_id: null, description: "Compra sintética de materiais para o posto", amount_cents: 25000 } })).status, 400, "cost center is mandatory");
+  assert.equal((await fin("/expenses", { method: "POST", cookie: requester.cookie, body: { ...base, ...evidence, expense_type: "compra", supplier_id: null, description: "Compra sintética sem fornecedor canônico", amount_cents: 25000 } })).status, 400, "compra requires supplier");
+  assert.equal((await fin("/expenses", { method: "POST", cookie: requester.cookie, body: { ...base, ...evidence, cost_center_id: uuid(), description: "Compra sintética com centro inexistente", amount_cents: 25000 } })).status, 400, "unknown cost center denied");
+  assert.equal((await fin("/expenses", { method: "POST", cookie: requester.cookie, body: { ...base, ...evidence, contract_id: uuid(), description: "Compra sintética com contrato inexistente", amount_cents: 25000 } })).status, 400, "unknown contract denied");
+  assert.equal((await fin("/expenses", { method: "POST", cookie: requester.cookie, body: { ...base, ...evidence, requester_identity: approver.id, description: "Tentativa de forjar o solicitante da despesa", amount_cents: 25000 } })).status, 400, "requester identity cannot be forged");
+  assert.equal((await fin("/expenses", { method: "POST", cookie: requester.cookie, body: { ...base, ...evidence, approver_identity: requester.id, description: "Tentativa de nomear o próprio solicitante como aprovador", amount_cents: 25000 } })).status, 400, "requester cannot nominate itself");
+  assert.equal((await fin("/expenses", { method: "POST", cookie: requester.cookie, body: { ...base, ...evidence, status: "aprovado", description: "Tentativa de nascer aprovada sem passar pela alçada", amount_cents: 25000 } })).status, 400, "expense cannot be created approved");
+  // Evidência externa é recusada: só existe metadado sintético local.
+  const external = await fin("/expenses", { method: "POST", cookie: requester.cookie, body: { ...base, ...evidence, evidence_file_url: "https://externo.example/nota.pdf", description: "Despesa sintética com evidência externa", amount_cents: 25000 } });
+  assert.equal(external.status, 400);
+  assert.equal(external.body.error, "evidence_file_url_must_be_local_synthetic");
+  assert.equal((await fin("/expenses", { method: "POST", cookie: requester.cookie, body: { ...base, ...evidence, evidence_storage_key: "../../etc/passwd", description: "Despesa sintética com travessia de caminho", amount_cents: 25000 } })).status, 400, "path traversal denied");
+  assert.equal((await fin("/expenses", { method: "POST", cookie: requester.cookie, body: { ...base, evidence_file_name: "sem-url.pdf", description: "Despesa sintética com evidência incompleta", amount_cents: 25000 } })).status, 400, "incomplete evidence denied");
+
+  // Criação válida.
+  const created = await fin("/expenses", { method: "POST", cookie: requester.cookie, body: { ...base, ...evidence, expense_type: "compra", supplier_id: canonical.supplierId, description: "Compra sintética de materiais de portaria para o gate L07", amount_cents: 25000, idempotency_key: `fin10-http-${uuid()}` } });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  const expense = created.body.expense;
+  assert.match(expense.protocol, /^DES-FIN-\d{8}-[A-Z0-9]{4}$/);
+  assert.equal(expense.status, "pendente");
+  assert.equal(expense.requester_identity, requester.id);
+  assert.equal(expense.approval_limit_cents, null);
+  assert.equal(expense.cost_center_id, canonical.costCenterId);
+  assert.equal(expense.supplier_id, canonical.supplierId);
+  assert.equal(expense.contract_id, canonical.crmContractId);
+  assert.equal(created.body.synthetic, true);
+
+  // Duplicidade/idempotência.
+  const duplicatePending = await fin("/expenses", { method: "POST", cookie: requester.cookie, body: { ...base, ...expenseEvidence("dup"), expense_type: "compra", supplier_id: canonical.supplierId, description: "Compra sintética de materiais de portaria para o gate L07", amount_cents: 25000 } });
+  assert.equal(duplicatePending.status, 409, JSON.stringify(duplicatePending.body));
+  assert.equal(duplicatePending.body.error, "duplicate_pending_expense");
+  const sharedKey = `fin10-idem-${uuid()}`;
+  assert.equal((await fin("/expenses", { method: "POST", cookie: requester.cookie, body: { ...base, ...expenseEvidence("k1"), description: "Reembolso sintético com chave de idempotência compartilhada", amount_cents: 7000, expense_type: "reembolso", idempotency_key: sharedKey } })).status, 201);
+  const replay = await fin("/expenses", { method: "POST", cookie: requester.cookie, body: { ...base, ...expenseEvidence("k2"), description: "Outro reembolso sintético reaproveitando a mesma chave", amount_cents: 9000, expense_type: "reembolso", idempotency_key: sharedKey } });
+  assert.equal(replay.status, 409);
+  assert.equal(replay.body.error, "duplicate_idempotency_key");
+  assert.ok(replay.body.existing_id, "replay points to the original request");
+  const reusedEvidence = await fin("/expenses", { method: "POST", cookie: requester.cookie, body: { ...base, ...evidence, description: "Despesa sintética reaproveitando a mesma evidência", amount_cents: 11000 } });
+  assert.equal(reusedEvidence.status, 409, "evidence storage key is unique");
+
+  // Transições: ação explícita e motivo obrigatório.
+  assert.equal((await fin("/expenses", { method: "PATCH", cookie: approver.cookie, body: { id: expense.id, action: "promover", reason: "Ação inexistente no fluxo de despesa" } })).status, 400, "unknown action denied");
+  assert.equal((await fin("/expenses", { method: "PATCH", cookie: approver.cookie, body: { id: expense.id, action: "aprovar", reason: "curto" } })).status, 400, "short reason denied");
+  assert.equal((await fin("/expenses", { method: "PATCH", cookie: approver.cookie, body: { id: uuid(), action: "aprovar", reason: "Aprovação sintética de despesa inexistente" } })).status, 404, "unknown expense denied");
+
+  // Segregação: quem solicitou não aprova nem rejeita.
+  const selfApproval = await fin("/expenses", { method: "PATCH", cookie: requester.cookie, body: { id: expense.id, action: "aprovar", reason: "Tentativa de aprovar a própria solicitação sintética" } });
+  assert.equal(selfApproval.status, 403);
+  assert.equal(selfApproval.body.error, "segregation_requester_approver_must_differ");
+  assert.equal((await fin("/expenses", { method: "PATCH", cookie: requester.cookie, body: { id: expense.id, action: "rejeitar", reason: "Tentativa de rejeitar a própria solicitação sintética" } })).status, 403, "requester cannot reject itself");
+  assert.equal((await fin("/expenses", { method: "PATCH", cookie: approver.cookie, body: { id: expense.id, action: "aprovar", reason: "Aprovação sintética com identidade forjada no corpo", approver_identity: weakApprover.id } })).status, 400, "approver identity cannot be forged");
+
+  // Alçada no servidor.
+  const missingAuthority = await fin("/expenses", { method: "PATCH", cookie: noAuthority.cookie, body: { id: expense.id, action: "aprovar", reason: "Aprovação sintética sem alçada cadastrada" } });
+  assert.equal(missingAuthority.status, 403);
+  assert.equal(missingAuthority.body.error, "fin_expense_authority_missing");
+  const insufficient = await fin("/expenses", { method: "PATCH", cookie: weakApprover.cookie, body: { id: expense.id, action: "aprovar", reason: "Aprovação sintética acima da alçada concedida" } });
+  assert.equal(insufficient.status, 403);
+  assert.equal(insufficient.body.error, "fin_expense_authority_insufficient");
+  assert.equal((await pool.query("SELECT status FROM fin_expenses WHERE id=$1", [expense.id])).rows[0].status, "pendente", "refused approvals leave no trace in the state");
+
+  // Aprovação válida.
+  const approved = await fin("/expenses", { method: "PATCH", cookie: approver.cookie, body: { id: expense.id, action: "aprovar", reason: "Aprovação sintética dentro da alçada concedida pela governança", approver_name: "QA Aprovador FIN-10" } });
+  assert.equal(approved.status, 200, JSON.stringify(approved.body));
+  assert.equal(approved.body.expense.status, "aprovado");
+  assert.equal(approved.body.expense.approver_identity, approver.id);
+  assert.equal(approved.body.expense.approved_by_identity, approver.id);
+  assert.equal(Number(approved.body.expense.approval_limit_cents), 500000);
+  assert.ok(approved.body.expense.approved_at, "approval is timestamped");
+
+  // Estado terminal não se move mais.
+  const reapprove = await fin("/expenses", { method: "PATCH", cookie: approver.cookie, body: { id: expense.id, action: "aprovar", reason: "Segunda aprovação sintética da mesma despesa" } });
+  assert.equal(reapprove.status, 409);
+  assert.equal(reapprove.body.error, "fin_expense_transition_invalid");
+  assert.equal((await fin("/expenses", { method: "PATCH", cookie: approver.cookie, body: { id: expense.id, action: "rejeitar", reason: "Rejeição sintética depois de aprovada" } })).status, 409, "approved expense cannot be rejected");
+  assert.equal((await fin("/expenses", { method: "PATCH", cookie: requester.cookie, body: { id: expense.id, action: "cancelar", reason: "Cancelamento sintético depois de aprovada" } })).status, 409, "approved expense cannot be canceled");
+
+  // Rejeição e cancelamento com estados explícitos.
+  const toReject = await fin("/expenses", { method: "POST", cookie: requester.cookie, body: { ...base, ...expenseEvidence("rej"), description: "Despesa sintética que será rejeitada pela alçada", amount_cents: 13000 } });
+  assert.equal(toReject.status, 201, JSON.stringify(toReject.body));
+  const rejected = await fin("/expenses", { method: "PATCH", cookie: approver.cookie, body: { id: toReject.body.expense.id, action: "rejeitar", reason: "Rejeição sintética por falta de justificativa operacional" } });
+  assert.equal(rejected.status, 200, JSON.stringify(rejected.body));
+  assert.equal(rejected.body.expense.status, "rejeitado");
+  assert.equal(rejected.body.expense.rejected_by_identity, approver.id);
+  assert.match(rejected.body.expense.rejection_reason, /Rejeição sintética/);
+
+  const toCancel = await fin("/expenses", { method: "POST", cookie: requester.cookie, body: { ...base, ...expenseEvidence("can"), description: "Despesa sintética que será cancelada pelo solicitante", amount_cents: 15000 } });
+  assert.equal(toCancel.status, 201, JSON.stringify(toCancel.body));
+  assert.equal((await fin("/expenses", { method: "PATCH", cookie: noAuthority.cookie, body: { id: toCancel.body.expense.id, action: "cancelar", reason: "Cancelamento sintético por terceiro sem vínculo" } })).status, 403, "only requester or governance cancels");
+  const canceled = await fin("/expenses", { method: "PATCH", cookie: requester.cookie, body: { id: toCancel.body.expense.id, action: "cancelar", reason: "Cancelamento sintético solicitado por quem abriu o pedido" } });
+  assert.equal(canceled.status, 200, JSON.stringify(canceled.body));
+  assert.equal(canceled.body.expense.status, "cancelado");
+  assert.equal(canceled.body.expense.canceled_by_identity, requester.id);
+
+  // Histórico e filtros.
+  const history = await fin(`/expense-history?expense_id=${expense.id}`, { cookie: requester.cookie });
+  assert.equal(history.status, 200);
+  assert.equal(history.body.history.length, 2, JSON.stringify(history.body));
+  const approvalEntry = history.body.history.find(entry => entry.next_status === "aprovado");
+  assert.equal(approvalEntry.is_authority_verified, true);
+  assert.equal(Number(approvalEntry.authority_limit_cents), 500000);
+  assert.equal(approvalEntry.requester_identity, requester.id);
+  assert.equal(approvalEntry.approver_identity, approver.id);
+  const listed = await fin(`/expenses?status=aprovado&contract_id=${canonical.crmContractId}`, { cookie: requester.cookie });
+  assert.equal(listed.status, 200);
+  assert.ok(listed.body.expenses.some(item => item.id === expense.id), "approved expense is filterable");
+  assert.equal(listed.body.expenses.find(item => item.id === expense.id).supplier_name.startsWith("QA L07 FIN10 Fornecedor"), true, "canonical supplier is resolved");
+
+  // O banco também recusa: alçada, segregação, máquina de estados, imutabilidade.
+  const guarded = await fin("/expenses", { method: "POST", cookie: requester.cookie, body: { ...base, ...expenseEvidence("db"), description: "Despesa sintética usada para validar os gatilhos do banco", amount_cents: 21000 } });
+  assert.equal(guarded.status, 201, JSON.stringify(guarded.body));
+  const guardedId = guarded.body.expense.id;
+  await assert.rejects(
+    pool.query("UPDATE fin_expenses SET status='aprovado', approver_identity=$1, approved_by_identity=$1 WHERE id=$2", [noAuthority.id, guardedId]),
+    /fin_expense_authority_missing/, "database refuses approval without authority");
+  await assert.rejects(
+    pool.query("UPDATE fin_expenses SET status='aprovado', approver_identity=$1, approved_by_identity=$1 WHERE id=$2", [weakApprover.id, guardedId]),
+    /fin_expense_authority_insufficient/, "database refuses approval above authority");
+  await assert.rejects(
+    pool.query("UPDATE fin_expenses SET status='aprovado', approver_identity=$1, approved_by_identity=$1 WHERE id=$2", [requester.id, guardedId]),
+    /fin_expense_segregation_violated/, "database refuses self approval");
+  await assert.rejects(
+    pool.query("UPDATE fin_expenses SET amount_cents=1 WHERE id=$1", [guardedId]),
+    /fin_expense_amount_immutable/, "database refuses amount tampering");
+  await assert.rejects(
+    pool.query("DELETE FROM fin_expenses WHERE id=$1", [guardedId]),
+    /fin_expense_delete_forbidden/, "database refuses deleting the trail");
+  await assert.rejects(
+    pool.query("UPDATE fin_expenses SET status='pendente' WHERE id=$1", [expense.id]),
+    /fin_expense_transition_invalid/, "database refuses reopening a terminal state");
+  await assert.rejects(
+    pool.query("UPDATE fin_expense_history SET reason='trilha adulterada pelo operador' WHERE expense_id=$1", [expense.id]),
+    /immutable/, "expense history is immutable");
+  await assert.rejects(
+    pool.query(
+      `INSERT INTO fin_expenses (protocol, category, description, amount_cents, requester_name, requester_identity, cost_center_id, evidence_file_name, evidence_file_url, evidence_storage_key)
+       VALUES ($1,'Materiais','Despesa sintética com evidência externa real',1000,'QA',$2,$3,'nota.pdf','https://externo.example/nota.pdf','synthetic/fin10/externa.pdf')`,
+      [`DES-FIN-20261001-${uuid().slice(0, 4).toUpperCase()}`, requester.id, canonical.costCenterId]),
+    /fin_expense_evidence_synthetic/, "database refuses external evidence");
+  await assert.rejects(
+    pool.query(
+      `INSERT INTO fin_expenses (protocol, category, description, amount_cents, status, requester_name, requester_identity, cost_center_id)
+       VALUES ($1,'Materiais','Despesa sintética que tenta nascer aprovada',1000,'aprovado','QA',$2,$3)`,
+      [`DES-FIN-20261001-${uuid().slice(0, 4).toUpperCase()}`, requester.id, canonical.costCenterId]),
+    /fin_expense_initial_status_invalid/, "database refuses an expense born approved");
+
+  // Auditoria fail-closed: sem trilha, nada é gravado.
+  const rollbackEvidence = expenseEvidence("rollback");
+  await pool.query("ALTER TABLE audit_log RENAME TO audit_log_fin10_unavailable");
+  try {
+    const failedCreate = await fin("/expenses", { method: "POST", cookie: requester.cookie, body: { ...base, ...rollbackEvidence, description: "Despesa sintética que deve reverter sem auditoria disponível", amount_cents: 17000 } });
+    assert.equal(failedCreate.status, 503);
+    assert.deepEqual(failedCreate.body, { error: "audit_unavailable" });
+    const failedApprove = await fin("/expenses", { method: "PATCH", cookie: approver.cookie, body: { id: guardedId, action: "aprovar", reason: "Aprovação sintética que deve reverter sem auditoria disponível" } });
+    assert.equal(failedApprove.status, 503);
+    assert.deepEqual(failedApprove.body, { error: "audit_unavailable" });
+  } finally {
+    await pool.query("ALTER TABLE audit_log_fin10_unavailable RENAME TO audit_log");
+  }
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_expenses WHERE evidence_storage_key=$1", [rollbackEvidence.evidence_storage_key])).rows[0].n, 0, "creation rolled back with the audit trail");
+  assert.equal((await pool.query("SELECT status FROM fin_expenses WHERE id=$1", [guardedId])).rows[0].status, "pendente", "approval rolled back with the audit trail");
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_expense_history WHERE expense_id=$1", [guardedId])).rows[0].n, 1, "no history survives a rolled back approval");
+
+  const audit = await pool.query("SELECT action FROM audit_log WHERE target=$1 ORDER BY created_at", [expense.id]);
+  assert.deepEqual(audit.rows.map(row => row.action), ["fin_expense_create", "fin_expense_aprovar"]);
+
+  // Nenhuma resposta de erro devolve detalhe de SQL.
+  for (const [context, response] of [
+    ["duplicate", duplicatePending], ["replay", replay], ["self approval", selfApproval],
+    ["missing authority", missingAuthority], ["insufficient authority", insufficient],
+    ["terminal", reapprove], ["external evidence", external], ["reused evidence", reusedEvidence],
+  ]) assertNoSqlLeak(response, context);
+});
+
+test("L07 FIN-10: Chromium solicita, segregação bloqueia o solicitante e a alçada aprova a despesa", { skip: !RUN, timeout: 180_000 }, async () => {
+  const requester = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const approver = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const canonical = await insertExpenseSpace("Chromium");
+  await pool.query(
+    "INSERT INTO fin_expense_authorities (identity_id, max_amount_cents, note) VALUES ($1,$2,$3)",
+    [approver.id, 400000, "Alçada sintética do aprovador no gate Chromium FIN-10"],
+  );
+  const evidence = expenseEvidence("chromium");
+  // O Chromium empacotado roda com --single-process: um segundo contexto
+  // derruba o navegador. A troca de sessão é feita no mesmo contexto.
+  const browser = await playwrightChromium.launch({ executablePath: await packagedChromium.executablePath(), headless: true, args: packagedChromium.args.filter(arg => arg !== "--disable-web-security") });
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.setExtraHTTPHeaders({ origin: baseUrl });
+  const openWorkspace = async (cookie) => {
+    await context.clearCookies();
+    const pair = cookie.split(";")[0]; const separator = pair.indexOf("=");
+    await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
+    await page.goto(`${baseUrl}/admin/financeiro`, { waitUntil: "networkidle" });
+    await page.getByTestId("finance-tab-expenses").click();
+    await page.waitForSelector('[data-testid="fin10-expenses"]');
+    return page;
+  };
+  try {
+    const requesterPage = await openWorkspace(requester.cookie);
+    await requesterPage.getByTestId("fin10-type").selectOption("compra");
+    await requesterPage.getByTestId("fin10-category").fill("Materiais de ronda");
+    await requesterPage.getByTestId("fin10-description").fill("Compra sintética de materiais de ronda registrada pelo navegador");
+    await requesterPage.getByTestId("fin10-amount").fill("32000");
+    await requesterPage.getByTestId("fin10-cost-center").selectOption(canonical.costCenterId);
+    await requesterPage.getByTestId("fin10-supplier").selectOption(canonical.supplierId);
+    await requesterPage.getByTestId("fin10-contract").fill(canonical.crmContractId);
+    await requesterPage.getByTestId("fin10-requester-name").fill("QA Solicitante Chromium");
+    await requesterPage.getByTestId("fin10-evidence-name").fill(evidence.evidence_file_name);
+    await requesterPage.getByTestId("fin10-evidence-url").fill(evidence.evidence_file_url);
+    await requesterPage.getByTestId("fin10-evidence-key").fill(evidence.evidence_storage_key);
+    await requesterPage.getByTestId("fin10-create").click();
+    await requesterPage.waitForFunction(() => Boolean(document.querySelector('[data-testid="fin10-notice"]')) || Boolean(document.querySelector('[data-testid="fin10-error"]')));
+    const createFeedback = await requesterPage.locator('[data-testid="fin10-notice"], [data-testid="fin10-error"]').first().textContent();
+    assert.match(createFeedback || "", /pendente/, `FIN-10 create feedback: ${createFeedback}`);
+
+    const stored = await pool.query("SELECT id, status, amount_cents FROM fin_expenses WHERE evidence_storage_key=$1", [evidence.evidence_storage_key]);
+    assert.equal(stored.rows.length, 1);
+    assert.equal(stored.rows[0].status, "pendente");
+    const expenseId = stored.rows[0].id;
+
+    // O solicitante vê o pedido mas a segregação impede que ele mesmo aprove.
+    await requesterPage.getByTestId(`fin10-select-${expenseId}`).click();
+    await requesterPage.waitForSelector('[data-testid="fin10-detail"]');
+    await requesterPage.getByTestId("fin10-reason").fill("Tentativa sintética de aprovar a própria solicitação no navegador");
+    await requesterPage.getByTestId("fin10-approve").click();
+    await requesterPage.waitForFunction(() => Boolean(document.querySelector('[data-testid="fin10-error"]')));
+    assert.match(await requesterPage.getByTestId("fin10-error").textContent() || "", /segregation_requester_approver_must_differ/);
+    assert.equal((await pool.query("SELECT status FROM fin_expenses WHERE id=$1", [expenseId])).rows[0].status, "pendente");
+
+    // O aprovador com alçada conclui pelo navegador.
+    const approverPage = await openWorkspace(approver.cookie);
+    await approverPage.getByTestId(`fin10-select-${expenseId}`).click();
+    await approverPage.waitForSelector('[data-testid="fin10-detail"]');
+    await approverPage.getByTestId("fin10-reason").fill("Aprovação sintética dentro da alçada registrada para o gate Chromium");
+    await approverPage.getByTestId("fin10-approve").click();
+    await approverPage.waitForFunction(() => (document.querySelector('[data-testid="fin10-notice"]')?.textContent || "").includes("aprovado"));
+    const approvedRow = await pool.query("SELECT status, approver_identity, approved_by_identity, approval_limit_cents FROM fin_expenses WHERE id=$1", [expenseId]);
+    assert.equal(approvedRow.rows[0].status, "aprovado");
+    assert.equal(approvedRow.rows[0].approver_identity, approver.id);
+    assert.equal(approvedRow.rows[0].approved_by_identity, approver.id);
+    assert.equal(Number(approvedRow.rows[0].approval_limit_cents), 400000);
+    await approverPage.waitForFunction(() => (document.querySelector('[data-testid="fin10-history"]')?.textContent || "").includes("aprovado"));
+    assert.match(await approverPage.getByTestId("fin10-history").textContent() || "", /alçada R\$ 4000,00/);
+  } finally {
+    await browser.close();
+  }
+});

@@ -3747,6 +3747,10 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/fin-expense-history" || url.pathname === "/api/crm/hr/fin-expense-history" || url.pathname === "/api/hr/fin-expense-history" || url.pathname === "/api/fin/expense-history") {
     return finManagementApi.handleExpenseHistory(req, res);
   }
+  // FIN-10 alçada canônica de aprovação de despesa (limite por identidade)
+  if (url.pathname === "/api/admin/hr/fin-expense-authorities" || url.pathname === "/api/crm/hr/fin-expense-authorities" || url.pathname === "/api/hr/fin-expense-authorities" || url.pathname === "/api/fin/expense-authorities") {
+    return finManagementApi.handleExpenseAuthorities(req, res);
+  }
   // FIN-11 integração contábil/fiscal provedor determinar NFS-e/NF-e ou outra obrigação conforme atividade sem assumir uma nota para tudo
   if (url.pathname === "/api/admin/hr/fin-fiscal-providers" || url.pathname === "/api/crm/hr/fin-fiscal-providers" || url.pathname === "/api/hr/fin-fiscal-providers" || url.pathname === "/api/fin/fiscal-providers") {
     return finManagementApi.handleFiscalProviders(req, res);
@@ -5218,6 +5222,10 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/crm/hr/fin-expense-history"
   || pathname === "/api/hr/fin-expense-history"
   || pathname === "/api/fin/expense-history"
+  || pathname === "/api/admin/hr/fin-expense-authorities"
+  || pathname === "/api/crm/hr/fin-expense-authorities"
+  || pathname === "/api/hr/fin-expense-authorities"
+  || pathname === "/api/fin/expense-authorities"
   || pathname === "/api/admin/hr/fin-fiscal-providers"
   || pathname === "/api/crm/hr/fin-fiscal-providers"
   || pathname === "/api/hr/fin-fiscal-providers"
