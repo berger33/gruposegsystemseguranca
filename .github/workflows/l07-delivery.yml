@@ -1,0 +1,40 @@
+name: L07 Finance delivery
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'server.mjs'
+      - 'tests/l07-delivery.integration.test.mjs'
+      - 'scripts/qa-l07-delivery-postgres.mjs'
+      - 'scripts/migrate-site-visual.mjs'
+      - 'scripts/qa-wave0-static.mjs'
+      - 'db/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/l07-delivery.yml'
+concurrency:
+  group: delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  finance-postgres-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Migrations, replay and checksum in disposable PostgreSQL
+        run: npm run test:migrations:pg
+      - name: L07 real HTTP, disposable PostgreSQL and Chromium
+        run: npm run test:l07-delivery:pg

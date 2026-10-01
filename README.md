@@ -1,9 +1,10 @@
 # Grupo SEG System
 
-## Continuação atual: L06 — operação, patrimônio e manutenção
+## Continuação atual: L07 — financeiro e Marcelo
 
-O fechamento técnico do L04 está no [PR #33](https://github.com/berger33/gruposegsystemseguranca/pull/33). L05 foi concluído tecnicamente no ambiente remoto e está documentado em [ENTREGA-L05](docs/ENTREGA-L05.md), sujeito aos checks da PR e ao aceite humano.
-Leia o [prompt completo para continuidade L06](docs/PROMPT-CONTINUACAO-L06-OPERACAO-PATRIMONIO.md). Isso não declara o sistema inteiro pronto nem substitui homologação humana.
+O fechamento técnico do L06 (operação, patrimônio e manutenção) foi integrado via [PR #42](https://github.com/berger33/gruposegsystemseguranca/pull/42) e está documentado em [ENTREGA-L06](docs/ENTREGA-L06.md), sujeito aos checks da PR e ao aceite humano.
+Leia o [prompt completo para continuidade L07](docs/PROMPT-CONTINUACAO-L07-FINANCEIRO-MARCELO.md). O L07 está em andamento: a fatia 1 (fundação do gate L07 e casos FIN-01..04 pela API canônica) está registrada em [ENTREGA-L07](docs/ENTREGA-L07.md). Isso não declara o sistema inteiro pronto nem substitui homologação humana.
+
 
 
 ## Demonstração local persistente — apenas massa fictícia
