@@ -24,9 +24,10 @@ try {
   await postgres.initialise(); await postgres.start(); await postgres.createDatabase(database);
   const databaseUrl = `postgresql://seg_qa:${password}@127.0.0.1:${port}/${database}`;
   console.log(`QA_L07_PG_READY: 127.0.0.1:${port}/${database}; temporary isolated cluster; secret omitted.`);
-  console.log("QA_L07_SCOPE: 27 serial subtests (FIN-01..04 regression + FIN-05 + FIN-06 + FIN-07 + FIN-08 + FIN-09 + FIN-10 + FIN-11 + FIN-12 + FIN-13 + FIN-14 + FIN-15 + FIN-16); real HTTP, PostgreSQL and packaged Chromium; synthetic data only.");
+  console.log("QA_L07_SCOPE: 28 serial subtests (FIN-01..04 regression + FIN-05 + FIN-06 + FIN-07 + FIN-08 + FIN-09 + FIN-10 + FIN-11 + FIN-12 + FIN-13 + FIN-14 + FIN-15 + FIN-16); real HTTP, PostgreSQL and packaged Chromium; synthetic data only.");
   if (await run(process.execPath, ["scripts/migrate-site-visual.mjs"], { DATABASE_MIGRATION_URL: databaseUrl, DATABASE_URL: "", QA_MIGRATION_ONLY: "true" }) !== 0) throw new Error("migrations_failed");
-  result = await run(process.execPath, ["--test", "--test-concurrency=1", "tests/l07-delivery.integration.test.mjs"], { RUN_DATABASE_INTEGRATION: "1", DATABASE_URL: databaseUrl, DATABASE_MIGRATION_URL: "", RUN_DATABASE_INTEGRATION_REMOTE: "", QA_PGLITE_ONLY: "", ALLOW_REMOTE_MIGRATIONS: "", OLLAMA_ENABLED: "false", MAIL_HOST: "", NEXT_TELEMETRY_DISABLED: "1", CLIENT_DOCS_DIR: path.join(directory, "private-documents"), AWS_EXECUTION_ENV: "AWS_Lambda_nodejs22.x" });
+  const testArgs = ["--test", "--test-concurrency=1", ...(process.env.QA_TEST_NAME_PATTERN ? [`--test-name-pattern=${process.env.QA_TEST_NAME_PATTERN}`] : []), "tests/l07-delivery.integration.test.mjs"];
+  result = await run(process.execPath, testArgs, { RUN_DATABASE_INTEGRATION: "1", DATABASE_URL: databaseUrl, DATABASE_MIGRATION_URL: "", RUN_DATABASE_INTEGRATION_REMOTE: "", QA_PGLITE_ONLY: "", ALLOW_REMOTE_MIGRATIONS: "", OLLAMA_ENABLED: "false", MAIL_HOST: "", NEXT_TELEMETRY_DISABLED: "1", CLIENT_DOCS_DIR: path.join(directory, "private-documents"), AWS_EXECUTION_ENV: "AWS_Lambda_nodejs22.x" });
   console.log(`L07_DELIVERY_TEST_EXIT: ${result}`);
 } catch (error) { console.error("QA_L07_PG_FAILED", String(error?.message || error).replaceAll(password, "[redacted]").slice(0, 500)); result = 1; }
 finally {

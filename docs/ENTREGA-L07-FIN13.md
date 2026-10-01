@@ -1,31 +1,84 @@
 # Entrega L07 — FIN-13
 
-## Escopo
-Entrega aditiva de orçamento gerencial e cenários de expansão. Orçamentos permanecem explicitamente estimativos: premissas são obrigatórias, `is_estimate=true` é preservado e a interface informa que não há promessa de resultado financeiro.
+## Escopo e estado
 
-## Alterações
-- `db/migrations/132-fin13-budget-hardening.sql`: histórico imutável, transições `rascunho → em_revisao → aprovado/rejeitado → arquivado`, aprovação com identidade/data, `is_estimate=true`, avisos e tipos de cenário válidos.
-- `src/server/fin-budget-api.mjs`: handlers FIN-13 transacionais com `BEGIN`/`COMMIT`, bloqueio `FOR UPDATE` nas mutações de orçamento/cenários, auditoria fail-closed com rollback total e `503 audit_unavailable`, validação allowlist sem detalhes SQL, sessão/same-origin/papéis financeiro/admin e `/admin/ti` somente leitura para orçamento/cenários.
-- `server.mjs`: auditoria FIN-13 passa a aceitar o client transacional e não é silenciosamente ignorada.
-- `BudgetWorkspace.tsx`: nova aba no workspace financeiro com cadastro de orçamento e cenário, premissas explícitas e aviso de estimativa sem promessa de resultado.
-- `tests/l07-delivery.integration.test.mjs`: gate L07 passou de 22 para 24 subtestes, incluindo teste HTTP FIN-13 e teste Chromium da nova aba.
-- Gate L07 atualizado para reportar 24 subtestes; gate estático permanece na faixa de migrações 001–132.
+Esta continuação entrega somente **FIN-13 — orçamento gerencial e cenários**.
+L07 como bloco inteiro continua em execução; FIN-14, FIN-15, FIN-16 e ADM-01..12
+não foram iniciados nesta fatia. O aceite humano e a validação Windows continuam
+separados da validação automática local/remota.
 
-## Validações executadas em 2026-10-01
-Observação: a primeira tentativa de `npm run typecheck` antes da instalação falhou por precondição de ambiente (`tsc: not found`). Após `npm ci`, os gates abaixo foram executados com sucesso:
+Os dados de QA são sintéticos e o gate usa PostgreSQL descartável, HTTP real e
+Chromium real. Nenhuma aprovação cria cobrança, pagamento, recebível, despesa,
+meta ou obrigação automaticamente.
 
-- `npm ci`: OK, 82 pacotes instalados, 0 vulnerabilidades.
-- `npm run typecheck`: OK.
-- `node scripts/qa-wave0-static.mjs`: OK, 5/5 verificações; migrações 001–132 contínuas e registradas.
-- `npm test`: OK, 196/196 testes.
-- `npm run test:migrations:pg`: OK, migrações 001–132 em duas passagens idempotentes e clone/checksum preservado (o stderr de checksum mismatch em `006` é o cenário negativo esperado pelo próprio gate, com exit code 0).
-- `npm run test:l07-delivery:pg`: OK na 1ª execução consecutiva, 24/24 subtestes; Chromium sem SIGSEGV.
-- `npm run test:l07-delivery:pg`: OK na 2ª execução consecutiva, 24/24 subtestes; Chromium sem SIGSEGV.
-- `npm run test:l03-delivery:pg`: OK, 1/1.
-- `npm run test:l04-delivery:pg`: OK, 20/20.
-- `npm run test:l05-delivery:pg`: OK, 1/1.
-- `npm run test:l06-delivery:pg`: OK, 9/9.
-- `npm run build`: OK, build Next.js concluído e 78 páginas estáticas geradas.
+## O que existia e o que mudou
 
-## Limites
-Esta entrega não promete resultado financeiro, não executa pagamento ou cobrança real e não altera migrações históricas ou tipos existentes. Os dados dos testes são sintéticos e isolados em PostgreSQL descartável.
+- A migração aditiva `134-fin13-budget-revisions-idempotency-margin.sql` preserva
+  001–133 e acrescenta a versão do orçamento, chave de idempotência, snapshots e
+  classificação de eventos no histórico, cálculo de margem no banco e guardas
+  de revisão/auditoria. Registros legados não são reescritos para fabricar
+  autoria ou evidência.
+- `src/server/fin-budget-api.mjs` agora normaliza datas `Date` do PostgreSQL,
+  exige motivo para aprovação e revisão, recusa edição ordinária de aprovado,
+  cria revisão com autor/motivo e versão nova, remove a aprovação anterior,
+  mantém a transição controlada e trata retry concorrente pela inserção
+  `ON CONFLICT DO NOTHING` compatível com o índice único parcial.
+- Idempotência compara a chave com o conteúdo e a identidade real: retry
+  equivalente retorna o mesmo orçamento, enquanto a mesma chave com conteúdo
+  diferente retorna 409. O servidor não aceita margem enviada como fonte de
+  verdade.
+- `server.mjs` expõe `GET /api/fin/budget-history` e seus aliases canônicos;
+  a leitura devolve snapshots, identidade, data, versão e motivo. A trilha é
+  imutável no banco. Mutação, histórico e `auditLog({ client })` usam a mesma
+  transação; auditoria indisponível retorna 503 e faz rollback.
+- `BudgetWorkspace.tsx` mantém a aba navegável em `/admin/financeiro`, com
+  seleção por nome/protocolo, revisão explícita, aprovação, histórico, moeda
+  BRL, margem somente de servidor, estados incompleto/receita zero e erros
+  visíveis. Falha de leitura não é renderizada como “Nenhum ... encontrado”.
+- `src/server/pglite-pool.mjs`, manifesto PG, gate L07 e verificação estática
+  registram a nova migration 134. O runner aceita `QA_TEST_NAME_PATTERN` apenas
+  para diagnóstico isolado; o comando padrão executa os 28 subtestes.
+
+## Critérios demonstrados no gate FIN-13
+
+O subteste HTTP prova 401 anônimo, 403 para papel indevido, same-origin,
+TI somente leitura, premissas obrigatórias, transição inválida, motivo de
+aprovação, edição ordinária recusada, revisão com versão 2 e aprovação removida,
+cenários permitidos, margem calculada ignorando percentual do cliente, lacuna
+explícita, receita zero, retry concorrente idempotente, conflito da mesma chave,
+histórico imutável, snapshot/autor/data/motivo, escrita direta protegida pelo
+banco e rollback integral quando a auditoria falha. Também verifica que nenhum
+compromisso financeiro automático aparece.
+
+O subteste Chromium cria a estimativa e o cenário pela aba financeira, valida no
+banco margem `33.33` com status `calculada`, percorre a troca de aba e força uma
+falha HTTP real de leitura ao renomear temporariamente a tabela no PostgreSQL
+descartável: a interface apresenta erro e não a mensagem de lista vazia. A margem não tem campo editável na interface.
+
+## Validações executadas nesta sessão
+
+| Verificação | Resultado observado |
+|---|---|
+| `npm run typecheck` | aprovado |
+| `node scripts/qa-wave0-static.mjs` | 5/5; migrações 001–134 contínuas e registradas |
+| `npm test` | 196/196 |
+| `npm run test:migrations:pg` | 134/134; primeira aplicação/replay, checksum negativo e clone; 522 tabelas; `QA_MIGRATIONS_SECOND_EXIT=0` |
+| `npm run build` | aprovado; 78 páginas geradas |
+| `npm run test:l07-delivery:pg` | **28/28**, PostgreSQL descartável, HTTP real e Chromium real; `L07_DELIVERY_TEST_EXIT: 0` |
+| `npm run test:l03-delivery:pg` | 1/1; `L03_DELIVERY_TEST_EXIT: 0` |
+| `npm run test:l04-delivery:pg` | 20/20; `L04_DELIVERY_TEST_EXIT: 0` na reexecução após flutuação de Chromium |
+| `npm run test:l05-delivery:pg` | 1/1; `L05_DELIVERY_TEST_EXIT: 0` |
+| `npm run test:l06-delivery:pg` | 9/9; `L06_DELIVERY_TEST_EXIT: 0` |
+| `git diff --check` | limpo |
+
+A execução integral final desta sessão terminou em **28/28**, sem skips; os
+logs de `HTTP_5XX ... audit_unavailable` pertencem aos cenários negativos de
+rollback e foram validados como respostas 503 com estado preservado. Houve uma
+execução anterior com SIGSEGV de Chromium em uma suíte de regressão; ela não foi
+contabilizada, e a reexecução de L04 terminou 20/20.
+
+## Limites honestos
+
+Não houve aceite humano, Windows, produção, SMTP, hospedagem pública ou
+transação externa real. FIN-14..16 e L08 não foram iniciados. FIN-13 está `pronto_local` no checklist técnico após o gate integral verde e
+as regressões desta branch; mesmo assim o aceite humano permanecerá pendente.

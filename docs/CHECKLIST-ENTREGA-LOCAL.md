@@ -1056,13 +1056,11 @@ boletos/Pix/gateway somente após seleção e sandbox; validar assinatura de web
 
 ## FIN-13
 
-> Revalidação prioritária: a main fa893d6 permite editar orçamento aprovado mantendo aprovação e aceita percentual de margem informado no cenário. Achados estáticos, reprodução negativa pendente. Portar melhorias úteis de #60/#62 com migração nova, nunca sobrescrever a 132. Ver consolidação L07.
-
-orçamento gerencial e cenários de expansão com premissas explícitas; não prometer resultado.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+Orçamento gerencial e cenários de expansão com premissas explícitas; não prometer resultado.
+- Estado: **pronto_local** (FIN-13 isolado validado; L07 inteiro não concluído)
+- Tela / API / dados / autorização: `/admin/financeiro` com seleção por nome/protocolo, revisão explícita com motivo/autor, aprovação com motivo, histórico de snapshots e moeda BRL. `/api/fin/budgets`, `/api/fin/budget-scenarios` e `/api/fin/budget-history` exigem sessão/papel financeiro, same-origin em mutações e TI somente leitura. Migration aditiva `134-fin13-budget-revisions-idempotency-margin.sql`; margem e estados de dados incompletos são calculados/guardados no PostgreSQL.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` **28/28** com PostgreSQL descartável, HTTP real e Chromium real; FIN-13 cobre concorrência/idempotência, conflito de conteúdo, transições, motivo de aprovação, revisão/versionamento/snapshots, margem servidor, zero/incompleto, erro de leitura e rollback de auditoria. Typecheck, estático 5/5, unitários 196/196, migrations 134/134, build, L03 1/1, L04 20/20, L05 1/1 e L06 9/9 verdes nesta sessão.
+- Pendência / fronteira externa / aceite humano: Aceite humano e validação Windows pendentes; SMTP, hospedagem pública, cobrança/pagamento e transações externas fora do escopo. FIN-14/15/16, ADM-01..12 e L08 não foram iniciados. Registros legados sem autoria completa não foram reescritos.
 
 ## FIN-14
 exportação do período com trilha, filtros, totais conciliáveis e acesso limitado do contador.

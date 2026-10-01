@@ -83,11 +83,6 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
     const n = Number(value);
     return Number.isSafeInteger(n) && n >= 0 ? { ok:true, value:n } : { ok:false, value:null };
   };
-  const parseNullablePercent = (value) => {
-    if (value === undefined || value === null || value === '') return { ok:true, value:null };
-    const n = Number(value);
-    return Number.isFinite(n) && n >= -100 && n <= 100 ? { ok:true, value:n } : { ok:false, value:null };
-  };
   const isAuditUnavailable = (error) => error?.code === '42P01' || /audit_log/i.test(String(error?.message || ''));
   const dbFailure = (res, error, options = {}) => {
     if (isAuditUnavailable(error)) return send(res, 503, {error:'audit_unavailable'});
@@ -99,6 +94,12 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
       if (msg.includes('fin_budget_invalid_transition')) return send(res, 409, {error:'invalid_status_transition'});
       if (msg.includes('fin_budget_approval_requires_auditor')) return send(res, 400, {error:'approval_requires_identity_and_date'});
       if (msg.includes('fin_budget_history_immutable')) return send(res, 409, {error:'history_immutable'});
+      if (msg.includes('fin_budget_approved_requires_revision')) return send(res, 409, {error:'approved_budget_requires_revision'});
+      if (msg.includes('fin_budget_idempotency_key_immutable')) return send(res, 409, {error:'idempotency_key_immutable'});
+      if (msg.includes('fin_budget_revision_requires_approved_source')) return send(res, 409, {error:'revision_requires_approved_budget'});
+      if (msg.includes('fin_budget_version_must_increment')) return send(res, 409, {error:'budget_version_must_increment'});
+      if (msg.includes('fin_budget_audit_actor_required')) return send(res, 400, {error:'audit_actor_required'});
+      if (msg.includes('fin_budget_audit_reason_required')) return send(res, 400, {error:'reason_10_1000_required'});
       if (msg.includes('fin_export_invalid_transition')) return send(res, 409, {error:'invalid_status_transition'});
       if (msg.includes('fin_export_generated_requires_storage_key')) return send(res, 400, {error:'storage_key_required_for_gerado'});
       if (msg.includes('fin_export_log_immutable')) return send(res, 409, {error:'history_immutable'});
@@ -120,6 +121,39 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
     return false;
   };
 
+  const IDEMPOTENCY_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,200}$/;
+  const setBudgetContext = async (client, sess, reason, revision = false) => {
+    if (!isUuid(sess?.identityId)) throw Object.assign(new Error('fin_budget_audit_actor_required'), { code: 'P0001' });
+    await client.query(`SELECT set_config('fin.budget_actor',$1,true), set_config('fin.budget_reason',$2,true), set_config('fin.budget_revision',$3,true)`, [sess.identityId, reason, revision ? 'on' : 'off']);
+  };
+  const budgetContent = (body, previous = null) => ({
+    title: body.title === undefined || body.title === null ? previous?.title : cleanText(body.title),
+    description: body.description === undefined || body.description === null ? previous?.description : cleanText(body.description),
+    premises: body.premises === undefined || body.premises === null ? previous?.premises : cleanText(body.premises),
+    period_start: body.period_start === undefined || body.period_start === null
+      ? (previous?.period_start instanceof Date ? previous.period_start.toISOString().slice(0, 10) : previous?.period_start)
+      : body.period_start,
+    period_end: body.period_end === undefined || body.period_end === null
+      ? (previous?.period_end instanceof Date ? previous.period_end.toISOString().slice(0, 10) : previous?.period_end)
+      : body.period_end,
+    total_revenue_cents: body.total_revenue_cents === undefined ? previous?.total_revenue_cents : parseNullableCents(body.total_revenue_cents).value,
+    total_cost_cents: body.total_cost_cents === undefined ? previous?.total_cost_cents : parseNullableCents(body.total_cost_cents).value,
+  });
+  const budgetDateText = value => value instanceof Date ? value.toISOString().slice(0, 10) : String(value ?? '').slice(0, 10);
+  const budgetContentChanged = (previous, next) => [
+    'title', 'description', 'premises', 'period_start', 'period_end', 'total_revenue_cents', 'total_cost_cents',
+  ].some(key => key === 'period_start' || key === 'period_end'
+    ? budgetDateText(previous?.[key]) !== budgetDateText(next?.[key])
+    : String(previous?.[key] ?? '') !== String(next?.[key] ?? ''));
+  const sameBudgetCreation = (row, content, sess) => {
+    const same = (left, right) => String(left ?? '') === String(right ?? '');
+    const sameDate = (left, right) => budgetDateText(left) === budgetDateText(right);
+    return same(row.created_by_identity, sess.identityId) &&
+      same(row.title, content.title) && same(row.description, content.description) && same(row.premises, content.premises) &&
+      sameDate(row.period_start, content.period_start) && sameDate(row.period_end, content.period_end) &&
+      same(row.total_revenue_cents, content.total_revenue_cents) && same(row.total_cost_cents, content.total_cost_cents);
+  };
+
   const handleBudgets = async (req, res) => {
     const sess = await checkAuth(req, res); if (!sess) return;
     if (guardMutation(req, res, sess)) return;
@@ -129,40 +163,69 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
       if (status && !BUDGET_STATUSES.has(status)) return send(res, 400, {error:'invalid_status'});
       let q = `SELECT * FROM fin_budgets WHERE 1=1`; const params=[]; let idx=1;
       if (status) { q+=` AND status=$${idx++}`; params.push(status); }
-      q+=` ORDER BY period_start DESC LIMIT 200`;
+      q+=` ORDER BY period_start DESC, created_at DESC LIMIT 200`;
       try { const { rows } = await pool.query(q, params); return send(res, 200, { budgets: rows }); }
       catch { return send(res, 500, {error:'internal'}); }
     }
     if (req.method === 'POST') {
       let body; try { body = await readJson(req); } catch { return send(res, 400, {error:'invalid_json'}); }
-      const title = cleanText(body.title);
-      const description = cleanText(body.description);
-      const premises = cleanText(body.premises);
-      const period_start = body.period_start;
-      const period_end = body.period_end;
-      const total_revenue = parseNullableCents(body.total_revenue_cents);
-      const total_cost = parseNullableCents(body.total_cost_cents);
-      if (!textInRange(title, 5, 200)) return send(res, 400, {error:'title_5_200'});
-      if (!textInRange(description, 10, 2000)) return send(res, 400, {error:'description_10_2000'});
-      if (!textInRange(premises, 10, 2000)) return send(res, 400, {error:'premises_10_2000_required_nao_prometer_resultado'});
-      if (!isIsoDate(period_start) || !isIsoDate(period_end)) return send(res, 400, {error:'period_required'});
-      if (new Date(`${period_end}T00:00:00Z`) < new Date(`${period_start}T00:00:00Z`)) return send(res, 400, {error:'period_end_gte_start'});
-      if (!total_revenue.ok || !total_cost.ok) return send(res, 400, {error:'amount_cents_gte_0'});
+      const key = cleanText(body.idempotency_key);
+      const content = budgetContent(body);
+      const revenue = parseNullableCents(body.total_revenue_cents);
+      const cost = parseNullableCents(body.total_cost_cents);
+      if (!IDEMPOTENCY_KEY_RE.test(key)) return send(res, 400, {error:'idempotency_key_required_or_invalid'});
+      if (!textInRange(content.title || '', 5, 200)) return send(res, 400, {error:'title_5_200'});
+      if (!textInRange(content.description || '', 10, 2000)) return send(res, 400, {error:'description_10_2000'});
+      if (!textInRange(content.premises || '', 10, 2000)) return send(res, 400, {error:'premises_10_2000_required_nao_prometer_resultado'});
+      if (!isIsoDate(content.period_start) || !isIsoDate(content.period_end)) return send(res, 400, {error:'period_required'});
+      if (new Date(`${content.period_end}T00:00:00Z`) < new Date(`${content.period_start}T00:00:00Z`)) return send(res, 400, {error:'period_end_gte_start'});
+      if (!revenue.ok || !cost.ok) return send(res, 400, {error:'amount_cents_gte_0'});
       const protocol = generateProtocol('ORC-FIN');
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
-        const { rows } = await client.query(
-          `INSERT INTO fin_budgets (protocol, title, description, premises, period_start, period_end, total_revenue_cents, total_cost_cents, created_by_identity)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-          [protocol, title, description, premises, period_start, period_end, total_revenue.value, total_cost.value, sess.identityId||null]
+        await setBudgetContext(client, sess, 'Criação do orçamento com premissas explícitas; estimativa sem promessa de resultado.');
+        const existing = await client.query(`SELECT * FROM fin_budgets WHERE idempotency_key=$1 FOR UPDATE`, [key]);
+        if (existing.rows.length) {
+          const row = existing.rows[0];
+          if (!sameBudgetCreation(row, content, sess)) {
+            await client.query('ROLLBACK');
+            return send(res, 409, {error:'idempotency_key_conflict'});
+          }
+          await client.query('COMMIT');
+          return send(res, 200, { budget: row, replayed: true, note:'retry_idempotente_sem_novo_orcamento' });
+        }
+        const inserted = await client.query(
+          `INSERT INTO fin_budgets (protocol, idempotency_key, title, description, premises, period_start, period_end, total_revenue_cents, total_cost_cents, created_by_identity)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+           ON CONFLICT DO NOTHING RETURNING *`,
+          [protocol, key, content.title, content.description, content.premises, content.period_start, content.period_end, revenue.value, cost.value, sess.identityId]
         );
-        await auditLog({ action:'fin_budget_create', actor: sess.identityId||'unknown', target: rows[0].id, meta:{ protocol, is_estimate:true, premises_explicit:true }, client });
+        if (!inserted.rows.length) {
+          const replay = await client.query(`SELECT * FROM fin_budgets WHERE idempotency_key=$1 FOR UPDATE`, [key]);
+          if (!replay.rows.length || !sameBudgetCreation(replay.rows[0], content, sess)) {
+            await client.query('ROLLBACK');
+            return send(res, 409, {error:'idempotency_key_conflict'});
+          }
+          await client.query('COMMIT');
+          return send(res, 200, { budget: replay.rows[0], replayed: true, note:'retry_idempotente_sem_novo_orcamento' });
+        }
+        const rows = inserted.rows;
+        await auditLog({ action:'fin_budget_create', actor: sess.identityId, target: rows[0].id, meta:{ protocol, idempotency_key:key, is_estimate:true, premises_explicit:true }, client });
         await client.query('COMMIT');
         return send(res, 201, { budget: rows[0], note:'orcamento_gerencial_premissas_explicitas_nao_prometer_resultado' });
       } catch(e) {
         try { await client.query('ROLLBACK'); } catch {}
-        return dbFailure(res, e, { duplicate:'duplicate_budget', invalid:'invalid_budget' });
+        if (e?.code === '23505') {
+          try {
+            const replay = await pool.query(`SELECT * FROM fin_budgets WHERE idempotency_key=$1`, [key]);
+            if (replay.rows.length) {
+              if (sameBudgetCreation(replay.rows[0], content, sess)) return send(res, 200, { budget: replay.rows[0], replayed: true, note:'retry_idempotente_sem_novo_orcamento' });
+              return send(res, 409, {error:'idempotency_key_conflict'});
+            }
+          } catch {}
+        }
+        return dbFailure(res, e, { duplicate:'idempotency_key_conflict', invalid:'invalid_budget' });
       } finally { client.release(); }
     }
     if (req.method === 'PATCH') {
@@ -175,47 +238,97 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
         const found = await client.query(`SELECT * FROM fin_budgets WHERE id=$1 FOR UPDATE`, [id]);
         if (!found.rows.length) { await client.query('ROLLBACK'); return send(res, 404, {error:'not_found'}); }
         const previous = found.rows[0];
+        const next = budgetContent(body, previous);
+        const revenue = body.total_revenue_cents === undefined ? { ok:true, value:previous.total_revenue_cents } : parseNullableCents(body.total_revenue_cents);
+        const cost = body.total_cost_cents === undefined ? { ok:true, value:previous.total_cost_cents } : parseNullableCents(body.total_cost_cents);
+        if (!textInRange(next.title || '', 5, 200)) { await client.query('ROLLBACK'); return send(res, 400, {error:'title_5_200'}); }
+        if (!textInRange(next.description || '', 10, 2000)) { await client.query('ROLLBACK'); return send(res, 400, {error:'description_10_2000'}); }
+        if (!textInRange(next.premises || '', 10, 2000)) { await client.query('ROLLBACK'); return send(res, 400, {error:'premises_10_2000_required_nao_prometer_resultado'}); }
+        if (!isIsoDate(next.period_start) || !isIsoDate(next.period_end)) { await client.query('ROLLBACK'); return send(res, 400, {error:'period_required'}); }
+        if (new Date(`${next.period_end}T00:00:00Z`) < new Date(`${next.period_start}T00:00:00Z`)) { await client.query('ROLLBACK'); return send(res, 400, {error:'period_end_gte_start'}); }
+        if (!revenue.ok || !cost.ok) { await client.query('ROLLBACK'); return send(res, 400, {error:'amount_cents_gte_0'}); }
+        next.total_revenue_cents = revenue.value;
+        next.total_cost_cents = cost.value;
+        const contentChanged = budgetContentChanged(previous, next);
+        const revision = body.revision === true;
+        const reason = cleanText(body.reason ?? body.revision_reason);
+        if (reason && !textInRange(reason, 10, 1000)) { await client.query('ROLLBACK'); return send(res, 400, {error:'reason_10_1000_required'}); }
+        if (revision) {
+          if (previous.status !== 'aprovado') { await client.query('ROLLBACK'); return send(res, 409, {error:'revision_requires_approved_budget'}); }
+          if (!contentChanged) { await client.query('ROLLBACK'); return send(res, 400, {error:'revision_changes_required'}); }
+          if (!textInRange(reason, 10, 1000)) { await client.query('ROLLBACK'); return send(res, 400, {error:'revision_reason_10_1000_required'}); }
+        } else if (previous.status === 'aprovado' && contentChanged) {
+          await client.query('ROLLBACK');
+          return send(res, 409, {error:'approved_budget_requires_revision'});
+        }
         let nextStatus = previous.status;
         if (body.status !== undefined && body.status !== null) {
           if (!BUDGET_STATUSES.has(body.status)) { await client.query('ROLLBACK'); return send(res, 400, {error:'invalid_status'}); }
           nextStatus = body.status;
-          if (nextStatus !== previous.status && !BUDGET_TRANSITIONS[previous.status]?.has(nextStatus)) {
-            await client.query('ROLLBACK'); return send(res, 409, {error:'invalid_status_transition'});
-          }
         }
-        const title = body.title === undefined || body.title === null ? previous.title : cleanText(body.title);
-        const description = body.description === undefined || body.description === null ? previous.description : cleanText(body.description);
-        const premises = body.premises === undefined || body.premises === null ? previous.premises : cleanText(body.premises);
-        if (!textInRange(title, 5, 200)) { await client.query('ROLLBACK'); return send(res, 400, {error:'title_5_200'}); }
-        if (!textInRange(description, 10, 2000)) { await client.query('ROLLBACK'); return send(res, 400, {error:'description_10_2000'}); }
-        if (!textInRange(premises, 10, 2000)) { await client.query('ROLLBACK'); return send(res, 400, {error:'premises_10_2000_required_nao_prometer_resultado'}); }
-        const totalRevenue = body.total_revenue_cents === undefined ? { ok:true, value:previous.total_revenue_cents } : parseNullableCents(body.total_revenue_cents);
-        const totalCost = body.total_cost_cents === undefined ? { ok:true, value:previous.total_cost_cents } : parseNullableCents(body.total_cost_cents);
-        if (!totalRevenue.ok || !totalCost.ok) { await client.query('ROLLBACK'); return send(res, 400, {error:'amount_cents_gte_0'}); }
+        if (revision) {
+          if (body.status !== undefined && body.status !== 'em_revisao') { await client.query('ROLLBACK'); return send(res, 409, {error:'revision_status_is_em_revisao'}); }
+          nextStatus = 'em_revisao';
+        } else if (nextStatus !== previous.status && !BUDGET_TRANSITIONS[previous.status]?.has(nextStatus)) {
+          await client.query('ROLLBACK'); return send(res, 409, {error:'invalid_status_transition'});
+        }
+        if (nextStatus === 'aprovado' && previous.status !== 'aprovado' && !textInRange(reason, 10, 1000)) {
+          await client.query('ROLLBACK'); return send(res, 400, {error:'approval_reason_10_1000_required'});
+        }
+        const nextVersion = contentChanged ? Number(previous.budget_version || 1) + 1 : Number(previous.budget_version || 1);
+        const actorReason = reason || (nextStatus !== previous.status
+          ? `Transição de orçamento ${previous.status} para ${nextStatus} solicitada pela sessão autenticada.`
+          : 'Edição do orçamento em estado não aprovado solicitada pela sessão autenticada.');
+        await setBudgetContext(client, sess, actorReason, revision);
         let approvedBy = previous.approved_by_identity;
         let approvedAt = previous.approved_at;
         if (nextStatus === 'aprovado' && previous.status !== 'aprovado') {
-          if (!sess.identityId) { await client.query('ROLLBACK'); return send(res, 400, {error:'approval_requires_identity_and_date'}); }
           approvedBy = sess.identityId;
           approvedAt = new Date();
+        } else if (nextStatus === 'em_revisao' || nextStatus === 'rejeitado') {
+          approvedBy = null;
+          approvedAt = null;
         }
         const { rows } = await client.query(
           `UPDATE fin_budgets
-              SET status=$1, title=$2, description=$3, premises=$4,
-                  total_revenue_cents=$5, total_cost_cents=$6,
-                  approved_by_identity=$7, approved_at=$8, updated_at=NOW()
-            WHERE id=$9 RETURNING *`,
-          [nextStatus, title, description, premises, totalRevenue.value, totalCost.value, approvedBy, approvedAt, id]
+              SET status=$1, title=$2, description=$3, premises=$4, period_start=$5, period_end=$6,
+                  total_revenue_cents=$7, total_cost_cents=$8, budget_version=$9,
+                  approved_by_identity=$10, approved_at=$11, updated_at=NOW()
+            WHERE id=$12 RETURNING *`,
+          [nextStatus, next.title, next.description, next.premises, next.period_start, next.period_end,
+            next.total_revenue_cents, next.total_cost_cents, nextVersion, approvedBy, approvedAt, id]
         );
-        await auditLog({ action:'fin_budget_update', actor: sess.identityId||'unknown', target: id, meta:{ protocol: previous.protocol, previous_status: previous.status, next_status: rows[0].status, is_estimate:true }, client });
+        await auditLog({
+          action: revision ? 'fin_budget_revision' : 'fin_budget_update',
+          actor: sess.identityId,
+          target: id,
+          meta:{ protocol: previous.protocol, previous_status: previous.status, next_status: rows[0].status, previous_version: previous.budget_version, next_version: rows[0].budget_version, revision, reason: actorReason, is_estimate:true },
+          client,
+        });
         await client.query('COMMIT');
-        return send(res, 200, { budget: rows[0] });
+        return send(res, 200, { budget: rows[0], revised: revision });
       } catch(e) {
         try { await client.query('ROLLBACK'); } catch {}
-        return dbFailure(res, e, { duplicate:'duplicate_budget', invalid:'invalid_budget' });
+        return dbFailure(res, e, { duplicate:'idempotency_key_conflict', invalid:'invalid_budget' });
       } finally { client.release(); }
     }
     return send(res, 405, {error:'method_not_allowed'});
+  };
+
+  const handleBudgetHistory = async (req, res) => {
+    const sess = await checkAuth(req, res); if (!sess) return;
+    if (req.method !== 'GET') return send(res, 405, {error:'method_not_allowed'});
+    const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
+    const budgetId = url.searchParams.get('budget_id');
+    if (!isUuid(budgetId)) return send(res, 400, {error:'invalid_budget_id'});
+    try {
+      const { rows } = await pool.query(
+        `SELECT h.*, b.protocol, b.title FROM fin_budget_history h
+         JOIN fin_budgets b ON b.id=h.budget_id
+         WHERE h.budget_id=$1 ORDER BY h.changed_at ASC, h.id ASC LIMIT 200`, [budgetId]
+      );
+      return send(res, 200, { history: rows });
+    } catch { return send(res, 500, {error:'internal'}); }
   };
 
   const handleBudgetScenarios = async (req, res) => {
@@ -242,24 +355,25 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
       const premises = cleanText(body.premises);
       const projected_revenue = parseNullableCents(body.projected_revenue_cents);
       const projected_cost = parseNullableCents(body.projected_cost_cents);
-      const projected_margin_percent = parseNullablePercent(body.projected_margin_percent);
+      // A client may send an old margin field, but it is deliberately ignored.
+      // The database trigger derives the value from the two cents columns.
       if (!isUuid(budget_id)) return send(res, 400, {error:'invalid_budget_id'});
       if (!SCENARIO_TYPES.has(scenario_type)) return send(res, 400, {error:'invalid_scenario_type'});
       if (!textInRange(title, 5, 200)) return send(res, 400, {error:'title_5_200'});
       if (!textInRange(premises, 10, 2000)) return send(res, 400, {error:'premises_10_2000_required_cenario_expansao_premissas_explicitas'});
       if (!projected_revenue.ok || !projected_cost.ok) return send(res, 400, {error:'amount_cents_gte_0'});
-      if (!projected_margin_percent.ok) return send(res, 400, {error:'margin_percent_range'});
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
+        await setBudgetContext(client, sess, `Criação do cenário ${scenario_type}; estimativa sem promessa de resultado.`);
         const budget = await client.query(`SELECT id, protocol, status FROM fin_budgets WHERE id=$1 FOR UPDATE`, [budget_id]);
         if (!budget.rows.length) { await client.query('ROLLBACK'); return send(res, 404, {error:'budget_not_found'}); }
         const dup = await client.query(`SELECT id FROM fin_budget_scenarios WHERE budget_id=$1 AND scenario_type=$2 FOR UPDATE`, [budget_id, scenario_type]);
         if (dup.rows.length) { await client.query('ROLLBACK'); return send(res, 409, {error:'duplicate_scenario_type_for_budget'}); }
         const { rows } = await client.query(
           `INSERT INTO fin_budget_scenarios (budget_id, scenario_type, title, premises, projected_revenue_cents, projected_cost_cents, projected_margin_percent, created_by_identity)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-          [budget_id, scenario_type, title, premises, projected_revenue.value, projected_cost.value, projected_margin_percent.value, sess.identityId||null]
+           VALUES ($1,$2,$3,$4,$5,$6,NULL,$7) RETURNING *`,
+          [budget_id, scenario_type, title, premises, projected_revenue.value, projected_cost.value, sess.identityId]
         );
         await auditLog({ action:'fin_budget_scenario_create', actor: sess.identityId||'unknown', target: rows[0].id, meta:{ budget_id, scenario_type, is_estimate:true, premises_explicit:true }, client });
         await client.query('COMMIT');
@@ -670,6 +784,7 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
 
   return {
     handleBudgets,
+    handleBudgetHistory,
     handleBudgetScenarios,
     handleExports,
     handleExportLogs,

@@ -102,6 +102,9 @@ const MIGRATIONS_LIST = [
   '093-cli15-reclamacao-colaborador-canal-restrito-rh-minimo.sql',
   '094-pub02-pub05-paginas-segmento-faq-assistida-handoff.sql',
   '095-ai-rag-cliente-rh-marcelo-ollama-qwen3-bot-modes.sql',
+  // FIN-13 remains available to the non-beta fallback manifest; beta mode
+  // intentionally returns after its compact bootstrap above.
+  '134-fin13-budget-revisions-idempotency-margin.sql',
 ];
 
 function getPGliteInstance() {
