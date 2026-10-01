@@ -913,6 +913,37 @@ test("L07 FIN-07: Chromium registra fluxo de caixa e aging com bucket calculado"
   }
 });
 
+test("L07 FIN-09: resultado gerencial incompleto, referências canônicas e auditoria transacional", { skip: !RUN, timeout: 120_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const canonical = await insertClientSpace("FIN09 HTTP");
+  assert.equal((await fin("/management-results")).status, 401);
+  const invalid = await fin("/management-results", { method:"POST", cookie:financeiro.cookie, body:{ contract_id:"not-a-uuid", competence_date:"2026-10-01", is_complete:false, incomplete_reason:"Dados sintéticos ainda incompletos para revisão" } });
+  assert.equal(invalid.status, 400);
+  const created = await fin("/management-results", { method:"POST", cookie:financeiro.cookie, body:{ client_account_id:canonical.accountId, competence_date:"2026-10-01", revenue_received_cents:80000, costs_cents:50000, is_complete:false, incomplete_reason:"Receita faturada e caixa ainda dependem da conferência sintética" } });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  assert.equal(created.body.result.status, "incompleto");
+  assert.equal(Number(created.body.result.margin_cents), 30000);
+  const duplicate = await fin("/management-results", { method:"POST", cookie:financeiro.cookie, body:{ client_account_id:canonical.accountId, competence_date:"2026-10-01", revenue_received_cents:80000, costs_cents:50000, is_complete:false, incomplete_reason:"Tentativa duplicada de resultado sintético para a mesma competência" } });
+  assert.equal(duplicate.status, 409);
+  const listed = await fin(`/management-results?client_account_id=${canonical.accountId}&is_complete=false`, { cookie:financeiro.cookie });
+  assert.equal(listed.status, 200); assert.equal(listed.body.results.length, 1);
+  const history = await fin(`/result-history?result_id=${created.body.result.id}`, { cookie:financeiro.cookie });
+  assert.equal(history.status, 200); assert.equal(history.body.history.length, 1);
+  await pool.query("ALTER TABLE audit_log RENAME TO audit_log_fin09_unavailable");
+  try {
+    const failed = await fin("/management-results", { method:"POST", cookie:financeiro.cookie, body:{ client_account_id:canonical.accountId, competence_date:"2026-11-01", revenue_received_cents:1000, costs_cents:500, is_complete:false, incomplete_reason:"Registro sintético deve reverter quando a auditoria está indisponível" } });
+    assert.equal(failed.status, 503); assert.deepEqual(failed.body, {error:"audit_unavailable"});
+  } finally { await pool.query("ALTER TABLE audit_log_fin09_unavailable RENAME TO audit_log"); }
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_management_results WHERE client_account_id=$1 AND competence_date='2026-11-01'", [canonical.contractId])).rows[0].n, 0);
+});
+
+test("L07 FIN-09: Chromium registra resultado gerencial incompleto", { skip: !RUN, timeout: 180_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role:"financeiro" });
+  const canonical = await insertClientSpace("FIN09 Chromium");
+  const browser = await playwrightChromium.launch({ executablePath:await packagedChromium.executablePath(), headless:true, args:packagedChromium.args.filter(arg=>arg!=="--disable-web-security") });
+  try { const context=await browser.newContext(); const pair=financeiro.cookie.split(";")[0], separator=pair.indexOf("="); await context.addCookies([{name:pair.slice(0,separator),value:pair.slice(separator+1),url:baseUrl}]); const page=await context.newPage(); await page.setExtraHTTPHeaders({origin:baseUrl}); await page.goto(`${baseUrl}/admin/financeiro`,{waitUntil:"networkidle"}); await page.getByTestId("finance-tab-results").click(); await page.waitForSelector('[data-testid="fin09-results"]'); await page.getByTestId("fin09-account").fill(canonical.accountId); await page.getByTestId("fin09-competence").fill("2026-12-01"); await page.getByTestId("fin09-received").fill("70000"); await page.getByTestId("fin09-costs").fill("45000"); await page.getByTestId("fin09-reason").fill("Faturamento sintético ainda aguarda conferência do período"); await page.getByTestId("fin09-create").click(); await page.waitForFunction(()=>Boolean(document.querySelector('[data-testid="fin09-notice"]'))||Boolean(document.querySelector('[data-testid="fin09-error"]'))); const feedback=await page.locator('[data-testid="fin09-notice"], [data-testid="fin09-error"]').first().textContent(); assert.match(feedback||"",/incompleto/, `FIN09 UI feedback: ${feedback}`); const row=await pool.query("SELECT status,is_complete FROM fin_management_results WHERE client_account_id=$1 AND competence_date='2026-12-01'",[canonical.accountId]); assert.equal(row.rows[0].status,"incompleto"); assert.equal(row.rows[0].is_complete,false); } finally { await browser.close(); }
+});
+
 test("L07 FIN-08: custos por cliente/contrato/posto e importação com rateio documentado", { skip: !RUN, timeout: 120_000 }, async () => {
   const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
   const rh = await provisionAndLoginStaff(pool, api, { role: "rh" });
