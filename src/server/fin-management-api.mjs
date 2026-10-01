@@ -1,3 +1,5 @@
+import { createHmac, timingSafeEqual } from 'node:crypto';
+
 export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSession, requireRole }) {
   const generateProtocol = (prefix) => {
     const d = new Date();
@@ -610,207 +612,394 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
     try { return send(res,200,{history:(await pool.query(q,params)).rows}); } catch { return send(res,500,{error:'internal'}); }
   };
 
-  // FIN-12 gateway
+  // FIN-12: boletos/Pix/gateway somente após seleção e sandbox; a assinatura
+  // de webhook é SEMPRE recomputada no servidor (nunca aceita por afirmação
+  // do cliente); replay é detectado por idempotência; conciliação liga um
+  // webhook validado a uma cobrança específica, nunca um PATCH livre de
+  // status; nenhuma cobrança real é possível neste simulador.
+  const GATEWAY_STATUSES = new Set(['nao_selecionado','selecionado','sandbox','desativado']);
+  const GATEWAY_TYPES = new Set(['boleto','pix','cartao','gateway','outro']);
+  const WEBHOOK_EVENT_TYPES = new Set(['gateway.ping','payment.confirmed','payment.failed','payment.refunded']);
+  const WEBHOOK_STATUSES = new Set(['validado','rejeitado','replay','conciliado']);
+  const CHARGE_STATUSES = new Set(['pendente','pago','falhou','cancelado','estornado']);
+  const GATEWAY_ENTITIES = new Set(['gateway','webhook','charge']);
+  const gatewayCode = v => typeof v === 'string' && /^[a-z][a-z0-9_-]{2,59}$/.test(v);
+  const sandboxSecret = v => typeof v === 'string' && /^sandbox_[A-Za-z0-9]{16,64}$/.test(v);
+  const hexDigest = v => typeof v === 'string' && /^[0-9a-f]{64}$/i.test(v);
+  // Allowlist: somente códigos de domínio conhecidos chegam ao cliente.
+  const GATEWAY_GUARD_CODES = new Set([
+    'fin_gateway_production_refused',
+    'fin_gateway_initial_status_must_be_nao_selecionado',
+    'fin_gateway_initial_fields_invalid',
+    'fin_gateway_identity_fields_immutable',
+    'fin_gateway_status_transition_required',
+    'fin_gateway_invalid_status_transition',
+    'fin_gateway_sandbox_required_when_selected',
+    'fin_gateway_sandbox_requires_timestamp',
+    'fin_gateway_credentials_refused',
+    'fin_gateway_webhook_gateway_required',
+    'fin_gateway_webhook_charge_required_for_event',
+    'fin_gateway_webhook_charge_gateway_mismatch',
+    'fin_gateway_webhook_initial_status_invalid',
+    'fin_gateway_webhook_fields_immutable',
+    'fin_gateway_webhook_status_transition_required',
+    'fin_gateway_webhook_invalid_status_transition',
+    'fin_gateway_webhook_signature_verification_metadata_required',
+    'fin_gateway_charge_gateway_required',
+    'fin_gateway_charge_initial_status_must_be_pendente',
+    'fin_gateway_charge_fields_immutable',
+    'fin_gateway_charge_gateway_not_ready',
+    'fin_gateway_charge_status_transition_required',
+    'fin_gateway_charge_invalid_status_transition',
+    'fin_gateway_charge_cancel_requires_no_outcome',
+    'fin_gateway_charge_confirmation_requires_validated_webhook',
+    'fin_gateway_charge_refund_requires_paid_status',
+  ]);
+  const gatewayFailure = (res, e) => {
+    if (isAuditUnavailable(e)) return send(res,503,{error:'audit_unavailable'});
+    if (e?.code === '23505') {
+      const key = String(e.constraint||'');
+      return send(res,409,{error:key.includes('idempotency')?'duplicate_idempotency_key':key.includes('gateway_code')?'duplicate_gateway_code':key.includes('confirmation_webhook')||key.includes('refund_webhook')?'webhook_already_linked_to_charge':'duplicate'});
+    }
+    if (e?.code === '23503') return send(res,400,{error:'invalid_reference'});
+    if (e?.code === '23514') {
+      const message = String(e.message||'');
+      const known = [...GATEWAY_GUARD_CODES].find(code => message === code);
+      return send(res,400,{error:known||'invalid_gateway_transition'});
+    }
+    if (e?.code === '22P02' || e?.code === '22007') return send(res,400,{error:'invalid'});
+    return send(res,500,{error:'internal'});
+  };
+  const redactGateway = row => row ? { ...row, webhook_secret: undefined, config: row.config } : row;
+  const insertGatewayHistory = (client, entity_type, entity_id, previous_status, next_status, actor, reason, metadata) =>
+    client.query(
+      'INSERT INTO fin_gateway_history (entity_type,entity_id,previous_status,next_status,changed_by_identity,reason,metadata) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+      [entity_type, entity_id, previous_status, next_status, actor, reason, JSON.stringify(metadata||{})]
+    );
+  // Assinatura NUNCA é aceita por afirmação do cliente: a API recalcula o
+  // HMAC-SHA256 do payload canônico com o segredo sandbox do gateway.
+  const canonicalStringify = value => {
+    if (Array.isArray(value)) return `[${value.map(canonicalStringify).join(',')}]`;
+    if (value && typeof value === 'object') {
+      return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonicalStringify(value[key])}`).join(',')}}`;
+    }
+    return JSON.stringify(value);
+  };
+  const verifySandboxSignature = (secret, payload, signature) => {
+    if (!hexDigest(signature)) return false;
+    const expected = createHmac('sha256', secret).update(canonicalStringify(payload||{})).digest('hex');
+    const a = Buffer.from(signature.toLowerCase(),'hex'), b = Buffer.from(expected,'hex');
+    return a.length === b.length && timingSafeEqual(a,b);
+  };
+
   const handleGateways = async (req, res) => {
     const sess = await checkAuth(req, res); if (!sess) return;
+    if (!sameOrigin(req) && req.method !== 'GET') return send(res,403,{error:'forbidden_origin'});
     if (req.method === 'GET') {
-      try {
-        const { rows } = await pool.query(`SELECT * FROM fin_payment_gateways ORDER BY created_at DESC LIMIT 200`);
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ gateways: rows }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
+      const url = new URL(req.url, `http://${req.headers.host||'localhost'}`), params = [];
+      let q = 'SELECT * FROM fin_payment_gateways WHERE 1=1';
+      const status = url.searchParams.get('status');
+      if (status) { if (!GATEWAY_STATUSES.has(status)) return send(res,400,{error:'invalid_status'}); params.push(status); q += ` AND status=$${params.length}`; }
+      q += ' ORDER BY created_at DESC LIMIT 200';
+      try { return send(res,200,{gateways:(await pool.query(q,params)).rows.map(redactGateway)}); } catch { return send(res,500,{error:'internal'}); }
     }
+    if (!['POST','PATCH'].includes(req.method)) return send(res,405,{error:'method_not_allowed'});
+    let body; try { body = await readJson(req); } catch { return send(res,400,{error:'invalid_json'}); }
+    const actor = sess.identityId;
+    if (!uuid(actor)) return send(res,401,{error:'unauthorized'});
+
     if (req.method === 'POST') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
-      const name = (body.name||'').trim();
-      const gateway_type = body.gateway_type || 'pix';
-      if (!name || name.length<3 || name.length>200) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'name_3_200'})); return; }
+      const name = typeof body.name === 'string' ? body.name.trim() : '';
+      const gateway_code = typeof body.gateway_code === 'string' ? body.gateway_code.trim() : '';
+      const gateway_type = typeof body.gateway_type === 'string' ? body.gateway_type : 'pix';
+      const webhook_secret = typeof body.webhook_secret === 'string' ? body.webhook_secret.trim() : '';
+      const idempotency_key = typeof body.idempotency_key === 'string' ? body.idempotency_key.trim() : '';
+      const config = body.config && typeof body.config === 'object' && !Array.isArray(body.config) ? body.config : {};
+      if (name.length < 3 || name.length > 200) return send(res,400,{error:'name_3_200'});
+      if (!gatewayCode(gateway_code)) return send(res,400,{error:'gateway_code_required'});
+      if (!GATEWAY_TYPES.has(gateway_type)) return send(res,400,{error:'invalid_gateway_type'});
+      if (!sandboxSecret(webhook_secret)) return send(res,400,{error:'webhook_secret_sandbox_format_required'});
+      if (idempotency_key.length < 8 || idempotency_key.length > 200) return send(res,400,{error:'idempotency_key_8_200'});
+      if (Object.keys(config).some(key => CREDENTIAL_KEYS.has(String(key).toLowerCase()))) return send(res,400,{error:'credentials_refused_sandbox_only'});
+      if (body.environment != null && body.environment !== 'sandbox') return send(res,400,{error:'environment_must_be_sandbox'});
+      if (body.status != null && body.status !== 'nao_selecionado') return send(res,400,{error:'gateway_starts_nao_selecionado'});
+      if (body.is_selected === true || body.is_real_payment === true) return send(res,400,{error:'real_payment_refused_sandbox_only'});
+      const client = await pool.connect();
       try {
-        const dup = await pool.query(`SELECT id FROM fin_payment_gateways WHERE name=$1`, [name]);
-        if (dup.rows.length) { res.writeHead(409, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'duplicate_name'})); return; }
-        const { rows } = await pool.query(
-          `INSERT INTO fin_payment_gateways (name, gateway_type, status, is_selected, is_sandbox, config, created_by_identity)
-           VALUES ($1,$2,$3,$4,true,$5,$6) RETURNING *`,
-          [name, gateway_type, body.status||'sandbox', body.is_selected===true, body.config||{}, sess.identityId||null]
+        await client.query('BEGIN');
+        const created = await client.query(
+          `INSERT INTO fin_payment_gateways (name,gateway_code,gateway_type,status,is_selected,is_sandbox,environment,webhook_secret,config,idempotency_key,created_by_identity)
+           VALUES ($1,$2,$3::fin_gateway_type,'nao_selecionado',false,true,'sandbox',$4,$5,$6,$7) RETURNING *`,
+          [name, gateway_code, gateway_type, webhook_secret, JSON.stringify(config), idempotency_key, actor]
         );
-        try { await auditLog({ action:'fin_gateway_create', actor: sess.identityId, target: rows[0].id, meta:{ name, gateway_type, is_sandbox:true } }); } catch {}
-        res.writeHead(201, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ gateway: rows[0] }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
+        const gateway = created.rows[0];
+        await insertGatewayHistory(client,'gateway',gateway.id,null,'nao_selecionado',actor,'Gateway sandbox cadastrado sem credenciais reais',{gateway_code,gateway_type});
+        await auditLog({action:'fin_gateway_create',actor,target:gateway.id,meta:{gateway_code,gateway_type,environment:'sandbox'},client});
+        await client.query('COMMIT');
+        // O segredo sandbox só aparece nesta resposta de criação (como um
+        // provedor real mostraria uma vez); GET e demais respostas o ocultam.
+        return send(res,201,{gateway, note:'copie_o_webhook_secret_agora_nao_sera_mostrado_novamente'});
+      } catch(e) { try { await client.query('ROLLBACK'); } catch {} return gatewayFailure(res,e); }
+      finally { client.release(); }
     }
-    if (req.method === 'PATCH') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
-      const id = body.id;
-      if (!id) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'id_required'})); return; }
-      try {
-        // sandbox enforcement: is_selected true requires is_sandbox true
-        if (body.is_selected===true && body.is_sandbox===false) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'sandbox_required_when_selected_sem_cobranca_real'})); return; }
-        const { rows } = await pool.query(
-          `UPDATE fin_payment_gateways SET status=COALESCE($1,status), is_selected=COALESCE($2,is_selected), is_sandbox=COALESCE($3,is_sandbox), config=COALESCE($4,config), error_sanitized=$5, last_test_at=CASE WHEN $1='sandbox' THEN NOW() ELSE last_test_at END, updated_at=NOW() WHERE id=$6 RETURNING *`,
-          [body.status||null, body.is_selected!=null?body.is_selected:null, body.is_sandbox!=null?body.is_sandbox:null, body.config||null, body.error_sanitized||null, id]
-        );
-        if (!rows.length) { res.writeHead(404, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
-        try { await auditLog({ action:'fin_gateway_update', actor: sess.identityId, target: id, meta:{ status: body.status, is_selected: body.is_selected, is_sandbox: rows[0].is_sandbox } }); } catch {}
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ gateway: rows[0] }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
-    }
-    res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'}));
+
+    const id = body.id, status = body.status;
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+    if (!uuid(id)) return send(res,400,{error:'invalid_id'});
+    if (!['selecionado','sandbox','desativado'].includes(status)) return send(res,400,{error:'invalid_transition'});
+    if (reason.length < 10 || reason.length > 1000) return send(res,400,{error:'reason_10_1000_required'});
+    const config = body.config && typeof body.config === 'object' && !Array.isArray(body.config) ? body.config : null;
+    if (config && Object.keys(config).some(key => CREDENTIAL_KEYS.has(String(key).toLowerCase()))) return send(res,400,{error:'credentials_refused_sandbox_only'});
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const found = await client.query('SELECT * FROM fin_payment_gateways WHERE id=$1 FOR UPDATE',[id]);
+      if (!found.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'not_found'}); }
+      const previous = found.rows[0];
+      if (previous.status === status) { await client.query('ROLLBACK'); return send(res,409,{error:'gateway_already_in_status'}); }
+      const isSelected = status !== 'desativado';
+      const updated = await client.query(
+        `UPDATE fin_payment_gateways
+            SET status=$1::fin_gateway_status,
+                is_selected=$2,
+                config=COALESCE($3::jsonb,config),
+                last_test_at=CASE WHEN $1::text='sandbox' THEN NOW() ELSE last_test_at END
+          WHERE id=$4 RETURNING *`,
+        [status, isSelected, config ? JSON.stringify(config) : null, id]
+      );
+      await insertGatewayHistory(client,'gateway',id,previous.status,status,actor,reason,{gateway_code:previous.gateway_code});
+      await auditLog({action:'fin_gateway_transition',actor,target:id,meta:{previous_status:previous.status,next_status:status,reason},client});
+      await client.query('COMMIT');
+      return send(res,200,{gateway:redactGateway(updated.rows[0])});
+    } catch(e) { try { await client.query('ROLLBACK'); } catch {} return gatewayFailure(res,e); }
+    finally { client.release(); }
   };
 
   const handleWebhooks = async (req, res) => {
     const sess = await checkAuth(req, res); if (!sess) return;
+    if (!sameOrigin(req) && req.method !== 'GET') return send(res,403,{error:'forbidden_origin'});
     if (req.method === 'GET') {
-      const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
+      const url = new URL(req.url, `http://${req.headers.host||'localhost'}`), params = [];
+      let q = 'SELECT * FROM fin_gateway_webhooks WHERE 1=1';
       const gateway_id = url.searchParams.get('gateway_id');
+      if (gateway_id) { if (!uuid(gateway_id)) return send(res,400,{error:'invalid_gateway_id'}); params.push(gateway_id); q += ` AND gateway_id=$${params.length}`; }
       const status = url.searchParams.get('status');
-      let q = `SELECT * FROM fin_gateway_webhooks WHERE 1=1`; const params=[]; let idx=1;
-      if (gateway_id) { q+=` AND gateway_id=$${idx++}`; params.push(gateway_id); }
-      if (status) { q+=` AND status=$${idx++}`; params.push(status); }
-      q+=` ORDER BY created_at DESC LIMIT 200`;
-      try {
-        const { rows } = await pool.query(q, params);
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ webhooks: rows }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
+      if (status) { if (!WEBHOOK_STATUSES.has(status)) return send(res,400,{error:'invalid_status'}); params.push(status); q += ` AND status=$${params.length}`; }
+      q += ' ORDER BY created_at DESC LIMIT 200';
+      try { return send(res,200,{webhooks:(await pool.query(q,params)).rows}); } catch { return send(res,500,{error:'internal'}); }
     }
+    if (!['POST','PATCH'].includes(req.method)) return send(res,405,{error:'method_not_allowed'});
+    let body; try { body = await readJson(req); } catch { return send(res,400,{error:'invalid_json'}); }
+    const actor = sess.identityId;
+    if (!uuid(actor)) return send(res,401,{error:'unauthorized'});
+
     if (req.method === 'POST') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
       const gateway_id = body.gateway_id;
-      const event_type = (body.event_type||'').trim();
-      const signature = (body.signature||'').trim();
-      const payload = body.payload || {};
-      const idempotency_key = (body.idempotency_key||'').trim();
-      const is_valid_signature = body.is_valid_signature === true;
-      const is_replay = body.is_replay === true;
-      if (!gateway_id) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'gateway_id_required'})); return; }
-      if (!event_type || event_type.length<3 || event_type.length>200) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'event_type_3_200'})); return; }
-      if (!signature || signature.length<10 || signature.length>1000) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'signature_10_1000_required_validar_assinatura_webhook'})); return; }
-      if (!idempotency_key || idempotency_key.length<10 || idempotency_key.length>200) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'idempotency_key_10_200_required_validar_replay_idempotencia'})); return; }
+      const event_type = typeof body.event_type === 'string' ? body.event_type.trim() : '';
+      const signature = typeof body.signature === 'string' ? body.signature.trim() : '';
+      const payload = body.payload && typeof body.payload === 'object' && !Array.isArray(body.payload) ? body.payload : {};
+      const idempotency_key = typeof body.idempotency_key === 'string' ? body.idempotency_key.trim() : '';
+      const charge_id = body.charge_id || null;
+      if (!uuid(gateway_id)) return send(res,400,{error:'invalid_gateway_id'});
+      if (!WEBHOOK_EVENT_TYPES.has(event_type)) return send(res,400,{error:'invalid_event_type'});
+      if (!signature || signature.length < 10 || signature.length > 1000) return send(res,400,{error:'signature_10_1000_required_validar_assinatura_webhook'});
+      if (idempotency_key.length < 10 || idempotency_key.length > 200) return send(res,400,{error:'idempotency_key_10_200_required_validar_replay_idempotencia'});
+      if (event_type === 'gateway.ping' ? charge_id != null : !uuid(charge_id)) return send(res,400,{error:'charge_id_required_for_event_type'});
+      // Nenhuma afirmação do cliente é aceita: is_valid_signature e is_replay
+      // vêm exclusivamente de código no servidor.
+      if (body.is_valid_signature != null || body.is_replay != null || body.status != null) return send(res,400,{error:'server_computed_fields_cannot_be_set_by_client'});
+      const client = await pool.connect();
       try {
-        const dup = await pool.query(`SELECT id, is_replay FROM fin_gateway_webhooks WHERE idempotency_key=$1`, [idempotency_key]);
-        if (dup.rows.length) {
-          // replay detection
-          await pool.query(`UPDATE fin_gateway_webhooks SET is_replay=true, status='replay', error_sanitized='replay_detected_idempotency_key_duplicate' WHERE id=$1`, [dup.rows[0].id]);
-          res.writeHead(409, {'Content-Type':'application/json'});
-          res.end(JSON.stringify({error:'duplicate_idempotency_key_replay_detected', existing_id: dup.rows[0].id}));
-          return;
+        await client.query('BEGIN');
+        const gateway = await client.query('SELECT * FROM fin_payment_gateways WHERE id=$1 FOR SHARE',[gateway_id]);
+        if (!gateway.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'gateway_not_found'}); }
+        if (charge_id) {
+          const charge = await client.query('SELECT gateway_id FROM fin_gateway_charges WHERE id=$1 FOR SHARE',[charge_id]);
+          if (!charge.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'charge_not_found'}); }
+          if (charge.rows[0].gateway_id !== gateway_id) { await client.query('ROLLBACK'); return send(res,409,{error:'charge_gateway_mismatch'}); }
         }
-        // validate signature: if not valid, reject but store
-        const status = !is_valid_signature ? 'rejeitado' : (is_replay ? 'replay' : 'validado');
-        const { rows } = await pool.query(
-          `INSERT INTO fin_gateway_webhooks (gateway_id, event_type, signature, payload, is_valid_signature, is_replay, idempotency_key, status)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-          [gateway_id, event_type, signature, payload, is_valid_signature, is_replay, idempotency_key, status]
+        const dup = await client.query('SELECT id,status FROM fin_gateway_webhooks WHERE idempotency_key=$1 FOR UPDATE',[idempotency_key]);
+        if (dup.rows.length) {
+          const existing = dup.rows[0];
+          if (existing.status === 'validado' || existing.status === 'rejeitado') {
+            await client.query(`UPDATE fin_gateway_webhooks SET status='replay',error_sanitized='replay_detected_idempotency_key_duplicate' WHERE id=$1`,[existing.id]);
+            await insertGatewayHistory(client,'webhook',existing.id,existing.status,'replay',actor,'Replay detectado por reutilização da chave de idempotência',{idempotency_key});
+            await auditLog({action:'fin_gateway_webhook_replay_detected',actor,target:existing.id,meta:{idempotency_key},client});
+          }
+          await client.query('COMMIT');
+          return send(res,409,{error:'duplicate_idempotency_key_replay_detected', existing_id: existing.id});
+        }
+        const isValid = verifySandboxSignature(gateway.rows[0].webhook_secret, payload, signature);
+        const status = isValid ? 'validado' : 'rejeitado';
+        const created = await client.query(
+          `INSERT INTO fin_gateway_webhooks (gateway_id,event_type,signature,payload,is_valid_signature,is_replay,idempotency_key,status,charge_id,verification_method)
+           VALUES ($1,$2,$3,$4,$5,false,$6,$7,$8,'hmac_sha256_sandbox') RETURNING *`,
+          [gateway_id, event_type, signature, JSON.stringify(payload), isValid, idempotency_key, status, charge_id]
         );
-        try { await auditLog({ action:'fin_webhook_receive', actor: sess.identityId, target: rows[0].id, meta:{ gateway_id, event_type, is_valid_signature, is_replay, idempotency_key, status } }); } catch {}
-        res.writeHead(201, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ webhook: rows[0], note:'validar_assinatura_webhook_replay_idempotencia_conciliacao_sem_cobranca_real' }));
-      } catch(e){
-        if (e.code==='23505') { res.writeHead(409, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'duplicate_idempotency', details:e.detail})); return; }
-        res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message}));
+        const webhook = created.rows[0];
+        await insertGatewayHistory(client,'webhook',webhook.id,null,status,actor,isValid?'Assinatura recomputada no servidor e validada':'Assinatura recomputada no servidor e rejeitada',{event_type,gateway_id,charge_id});
+        await auditLog({action:'fin_gateway_webhook_receive',actor,target:webhook.id,meta:{gateway_id,event_type,is_valid_signature:isValid,idempotency_key,status},client});
+        await client.query('COMMIT');
+        return send(res,201,{webhook, note:'assinatura_recomputada_no_servidor_nunca_aceita_por_afirmacao_do_cliente'});
+      } catch(e) { try { await client.query('ROLLBACK'); } catch {} return gatewayFailure(res,e); }
+      finally { client.release(); }
+    }
+
+    // PATCH: única ação é conciliar um webhook validado com a cobrança que ele referencia.
+    const id = body.id;
+    const action = body.action;
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+    if (!uuid(id)) return send(res,400,{error:'invalid_id'});
+    if (action !== 'conciliate') return send(res,400,{error:'invalid_action_only_conciliate_supported'});
+    if (reason.length < 10 || reason.length > 1000) return send(res,400,{error:'reason_10_1000_required'});
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const found = await client.query('SELECT * FROM fin_gateway_webhooks WHERE id=$1 FOR UPDATE',[id]);
+      if (!found.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'not_found'}); }
+      const webhook = found.rows[0];
+      if (webhook.status !== 'validado') { await client.query('ROLLBACK'); return send(res,409,{error:'webhook_not_validado'}); }
+      if (!webhook.charge_id) { await client.query('ROLLBACK'); return send(res,409,{error:'webhook_has_no_charge'}); }
+      const chargeFound = await client.query('SELECT * FROM fin_gateway_charges WHERE id=$1 FOR UPDATE',[webhook.charge_id]);
+      if (!chargeFound.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'charge_not_found'}); }
+      const charge = chargeFound.rows[0];
+      if (charge.gateway_id !== webhook.gateway_id) { await client.query('ROLLBACK'); return send(res,409,{error:'charge_gateway_mismatch'}); }
+      let nextChargeStatus, updateSql;
+      if (webhook.event_type === 'payment.confirmed') {
+        if (charge.status !== 'pendente') { await client.query('ROLLBACK'); return send(res,409,{error:'charge_not_pendente'}); }
+        nextChargeStatus = 'pago';
+        updateSql = `UPDATE fin_gateway_charges SET status='pago',confirmation_webhook_id=$1,is_conciliated=true,conciliated_at=NOW() WHERE id=$2 RETURNING *`;
+      } else if (webhook.event_type === 'payment.failed') {
+        if (charge.status !== 'pendente') { await client.query('ROLLBACK'); return send(res,409,{error:'charge_not_pendente'}); }
+        nextChargeStatus = 'falhou';
+        updateSql = `UPDATE fin_gateway_charges SET status='falhou',confirmation_webhook_id=$1 WHERE id=$2 RETURNING *`;
+      } else if (webhook.event_type === 'payment.refunded') {
+        if (charge.status !== 'pago') { await client.query('ROLLBACK'); return send(res,409,{error:'charge_not_pago'}); }
+        nextChargeStatus = 'estornado';
+        updateSql = `UPDATE fin_gateway_charges SET status='estornado',refund_webhook_id=$1 WHERE id=$2 RETURNING *`;
+      } else {
+        await client.query('ROLLBACK'); return send(res,409,{error:'event_type_not_conciliable'});
       }
-      return;
-    }
-    if (req.method === 'PATCH') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
-      const id = body.id;
-      const status = body.status;
-      if (!id) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'id_required'})); return; }
-      try {
-        const { rows } = await pool.query(
-          `UPDATE fin_gateway_webhooks SET status=COALESCE($1,status), processed_at=CASE WHEN $1='conciliado' THEN NOW() ELSE processed_at END, conciliated_at=CASE WHEN $1='conciliado' THEN NOW() ELSE conciliated_at END WHERE id=$2 RETURNING *`,
-          [status||null, id]
-        );
-        if (!rows.length) { res.writeHead(404, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
-        try { await auditLog({ action:'fin_webhook_conciliate', actor: sess.identityId, target: id, meta:{ status } }); } catch {}
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ webhook: rows[0] }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
-    }
-    res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'}));
+      // O webhook precisa virar 'conciliado' antes da cobrança: o gatilho da
+      // cobrança exige que o webhook referenciado já esteja conciliado.
+      const webhookUpdated = await client.query(`UPDATE fin_gateway_webhooks SET status='conciliado',processed_at=NOW(),conciliated_at=NOW() WHERE id=$1 RETURNING *`,[id]);
+      const chargeUpdated = await client.query(updateSql,[id, charge.id]);
+      await insertGatewayHistory(client,'webhook',id,'validado','conciliado',actor,reason,{charge_id:charge.id,event_type:webhook.event_type});
+      await insertGatewayHistory(client,'charge',charge.id,charge.status,nextChargeStatus,actor,reason,{webhook_id:id,event_type:webhook.event_type});
+      await auditLog({action:'fin_gateway_webhook_conciliate',actor,target:id,meta:{charge_id:charge.id,event_type:webhook.event_type,next_charge_status:nextChargeStatus,reason},client});
+      await client.query('COMMIT');
+      return send(res,200,{webhook:webhookUpdated.rows[0], charge:chargeUpdated.rows[0]});
+    } catch(e) { try { await client.query('ROLLBACK'); } catch {} return gatewayFailure(res,e); }
+    finally { client.release(); }
   };
 
   const handleCharges = async (req, res) => {
     const sess = await checkAuth(req, res); if (!sess) return;
+    if (!sameOrigin(req) && req.method !== 'GET') return send(res,403,{error:'forbidden_origin'});
     if (req.method === 'GET') {
-      const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
+      const url = new URL(req.url, `http://${req.headers.host||'localhost'}`), params = [];
+      let q = 'SELECT * FROM fin_gateway_charges WHERE 1=1';
       const gateway_id = url.searchParams.get('gateway_id');
+      if (gateway_id) { if (!uuid(gateway_id)) return send(res,400,{error:'invalid_gateway_id'}); params.push(gateway_id); q += ` AND gateway_id=$${params.length}`; }
       const receivable_id = url.searchParams.get('receivable_id');
+      if (receivable_id) { if (!uuid(receivable_id)) return send(res,400,{error:'invalid_receivable_id'}); params.push(receivable_id); q += ` AND receivable_id=$${params.length}`; }
       const status = url.searchParams.get('status');
-      let q = `SELECT * FROM fin_gateway_charges WHERE 1=1`; const params=[]; let idx=1;
-      if (gateway_id) { q+=` AND gateway_id=$${idx++}`; params.push(gateway_id); }
-      if (receivable_id) { q+=` AND receivable_id=$${idx++}`; params.push(receivable_id); }
-      if (status) { q+=` AND status=$${idx++}`; params.push(status); }
-      q+=` ORDER BY created_at DESC LIMIT 200`;
-      try {
-        const { rows } = await pool.query(q, params);
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ charges: rows }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
+      if (status) { if (!CHARGE_STATUSES.has(status)) return send(res,400,{error:'invalid_status'}); params.push(status); q += ` AND status=$${params.length}`; }
+      q += ' ORDER BY created_at DESC LIMIT 200';
+      try { return send(res,200,{charges:(await pool.query(q,params)).rows}); } catch { return send(res,500,{error:'internal'}); }
     }
+    if (!['POST','PATCH'].includes(req.method)) return send(res,405,{error:'method_not_allowed'});
+    let body; try { body = await readJson(req); } catch { return send(res,400,{error:'invalid_json'}); }
+    const actor = sess.identityId;
+    if (!uuid(actor)) return send(res,401,{error:'unauthorized'});
+
     if (req.method === 'POST') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
       const gateway_id = body.gateway_id;
       const receivable_id = body.receivable_id || null;
-      const amount_cents = body.amount_cents;
-      const idempotency_key = (body.idempotency_key||'').trim();
-      if (!gateway_id) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'gateway_id_required'})); return; }
-      if (!amount_cents || amount_cents<=0) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'amount_positive'})); return; }
-      if (!idempotency_key || idempotency_key.length<10 || idempotency_key.length>200) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'idempotency_key_10_200_required'})); return; }
+      const amount_cents = positiveCents(body.amount_cents);
+      const idempotency_key = typeof body.idempotency_key === 'string' ? body.idempotency_key.trim() : '';
+      if (!uuid(gateway_id)) return send(res,400,{error:'invalid_gateway_id'});
+      if (receivable_id != null && !uuid(receivable_id)) return send(res,400,{error:'invalid_receivable_id'});
+      if (!amount_cents) return send(res,400,{error:'amount_positive_integer'});
+      if (idempotency_key.length < 10 || idempotency_key.length > 200) return send(res,400,{error:'idempotency_key_10_200_required'});
+      if (body.is_real_payment === true || body.is_sandbox === false) return send(res,400,{error:'real_payment_refused_sandbox_only'});
+      const client = await pool.connect();
       try {
-        // check gateway is selected and sandbox
-        const gw = await pool.query(`SELECT is_selected, is_sandbox FROM fin_payment_gateways WHERE id=$1`, [gateway_id]);
-        if (!gw.rows.length) { res.writeHead(404, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'gateway_not_found'})); return; }
-        if (!gw.rows[0].is_selected) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'gateway_not_selected_sandbox_required'})); return; }
-        if (!gw.rows[0].is_sandbox) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'gateway_must_be_sandbox_sem_cobranca_real'})); return; }
-        const dup = await pool.query(`SELECT id FROM fin_gateway_charges WHERE idempotency_key=$1`, [idempotency_key]);
-        if (dup.rows.length) { res.writeHead(409, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'duplicate_idempotency_key', existing_id: dup.rows[0].id})); return; }
+        await client.query('BEGIN');
+        const gateway = await client.query('SELECT * FROM fin_payment_gateways WHERE id=$1 FOR SHARE',[gateway_id]);
+        if (!gateway.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'gateway_not_found'}); }
+        if (gateway.rows[0].status !== 'sandbox' || !gateway.rows[0].is_selected) { await client.query('ROLLBACK'); return send(res,409,{error:'gateway_not_selected_sandbox_tested'}); }
+        const dup = await client.query('SELECT id FROM fin_gateway_charges WHERE idempotency_key=$1',[idempotency_key]);
+        if (dup.rows.length) { await client.query('ROLLBACK'); return send(res,409,{error:'duplicate_idempotency_key', existing_id: dup.rows[0].id}); }
         const protocol = generateProtocol('CHG-FIN');
-        const { rows } = await pool.query(
-          `INSERT INTO fin_gateway_charges (protocol, gateway_id, receivable_id, amount_cents, idempotency_key, is_sandbox, created_by_identity)
+        const created = await client.query(
+          `INSERT INTO fin_gateway_charges (protocol,gateway_id,receivable_id,amount_cents,idempotency_key,is_sandbox,created_by_identity)
            VALUES ($1,$2,$3,$4,$5,true,$6) RETURNING *`,
-          [protocol, gateway_id, receivable_id, amount_cents, idempotency_key, sess.identityId||null]
+          [protocol, gateway_id, receivable_id, amount_cents, idempotency_key, actor]
         );
-        try { await auditLog({ action:'fin_gateway_charge_create', actor: sess.identityId, target: rows[0].id, meta:{ protocol, gateway_id, amount_cents, is_sandbox:true, idempotency_key } }); } catch {}
-        res.writeHead(201, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ charge: rows[0], note:'sem_cobranca_real_em_testes_sandbox_only' }));
-      } catch(e){
-        if (e.code==='23505') { res.writeHead(409, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'duplicate', details:e.detail})); return; }
-        res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message}));
-      }
-      return;
+        const charge = created.rows[0];
+        await insertGatewayHistory(client,'charge',charge.id,null,'pendente',actor,'Cobrança sintética criada em gateway selecionado e testado em sandbox',{protocol,gateway_id});
+        await auditLog({action:'fin_gateway_charge_create',actor,target:charge.id,meta:{protocol,gateway_id,amount_cents,idempotency_key,is_sandbox:true},client});
+        await client.query('COMMIT');
+        return send(res,201,{charge, note:'sem_cobranca_real_em_testes_sandbox_only'});
+      } catch(e) { try { await client.query('ROLLBACK'); } catch {} return gatewayFailure(res,e); }
+      finally { client.release(); }
     }
-    if (req.method === 'PATCH') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
-      const id = body.id;
-      const status = body.status;
-      if (!id) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'id_required'})); return; }
-      try {
-        const { rows } = await pool.query(
-          `UPDATE fin_gateway_charges SET status=COALESCE($1,status), is_conciliated=CASE WHEN $1='pago' THEN true ELSE is_conciliated END, conciliated_at=CASE WHEN $1='pago' THEN NOW() ELSE conciliated_at END, error_sanitized=$2, updated_at=NOW() WHERE id=$3 RETURNING *`,
-          [status||null, body.error_sanitized||null, id]
-        );
-        if (!rows.length) { res.writeHead(404, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
-        try { await auditLog({ action:'fin_gateway_charge_update', actor: sess.identityId, target: id, meta:{ status } }); } catch {}
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ charge: rows[0] }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
-      return;
-    }
-    res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'}));
+
+    // PATCH: único caminho manual é cancelar antes de qualquer desfecho de webhook.
+    const id = body.id;
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+    if (!uuid(id)) return send(res,400,{error:'invalid_id'});
+    if (body.status !== 'cancelado') return send(res,400,{error:'only_cancelado_supported_outcomes_come_from_webhooks'});
+    if (reason.length < 10 || reason.length > 1000) return send(res,400,{error:'reason_10_1000_required'});
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const found = await client.query('SELECT * FROM fin_gateway_charges WHERE id=$1 FOR UPDATE',[id]);
+      if (!found.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'not_found'}); }
+      const previous = found.rows[0];
+      if (previous.status !== 'pendente') { await client.query('ROLLBACK'); return send(res,409,{error:'charge_cancel_requires_no_outcome'}); }
+      const updated = await client.query(`UPDATE fin_gateway_charges SET status='cancelado',cancel_reason=$1 WHERE id=$2 RETURNING *`,[reason, id]);
+      await insertGatewayHistory(client,'charge',id,previous.status,'cancelado',actor,reason,{protocol:previous.protocol});
+      await auditLog({action:'fin_gateway_charge_cancel',actor,target:id,meta:{previous_status:previous.status,reason},client});
+      await client.query('COMMIT');
+      return send(res,200,{charge:updated.rows[0]});
+    } catch(e) { try { await client.query('ROLLBACK'); } catch {} return gatewayFailure(res,e); }
+    finally { client.release(); }
+  };
+
+  const handleGatewayHistory = async (req, res) => {
+    const sess = await checkAuth(req, res); if (!sess) return;
+    if (req.method !== 'GET') return send(res,405,{error:'method_not_allowed'});
+    const url = new URL(req.url, `http://${req.headers.host||'localhost'}`), params = [];
+    let q = 'SELECT * FROM fin_gateway_history WHERE 1=1';
+    const entity_type = url.searchParams.get('entity_type');
+    if (entity_type) { if (!GATEWAY_ENTITIES.has(entity_type)) return send(res,400,{error:'invalid_entity_type'}); params.push(entity_type); q += ` AND entity_type=$${params.length}`; }
+    const entity_id = url.searchParams.get('entity_id');
+    if (entity_id) { if (!uuid(entity_id)) return send(res,400,{error:'invalid_entity_id'}); params.push(entity_id); q += ` AND entity_id=$${params.length}`; }
+    q += ' ORDER BY created_at DESC LIMIT 200';
+    try { return send(res,200,{history:(await pool.query(q,params)).rows}); } catch { return send(res,500,{error:'internal'}); }
+  };
+
+  // Simulador de assinatura sandbox: reproduz o que o GATEWAY EXTERNO faria
+  // com o segredo recebido fora de banda ao configurar o webhook. Isto NUNCA
+  // é usado pela verificação (handleWebhooks recalcula de forma independente
+  // e nunca aceita a afirmação de validade do chamador); serve somente para
+  // a interface/teste simularem o lado emissor do webhook sandbox.
+  const handleGatewaySandboxSign = async (req, res) => {
+    const sess = await checkAuth(req, res); if (!sess) return;
+    if (req.method !== 'POST') return send(res,405,{error:'method_not_allowed'});
+    if (!sameOrigin(req)) return send(res,403,{error:'forbidden_origin'});
+    let body; try { body = await readJson(req); } catch { return send(res,400,{error:'invalid_json'}); }
+    const gateway_id = body.gateway_id;
+    const payload = body.payload && typeof body.payload === 'object' && !Array.isArray(body.payload) ? body.payload : {};
+    if (!uuid(gateway_id)) return send(res,400,{error:'invalid_gateway_id'});
+    try {
+      const { rows } = await pool.query('SELECT webhook_secret FROM fin_payment_gateways WHERE id=$1',[gateway_id]);
+      if (!rows.length) return send(res,404,{error:'gateway_not_found'});
+      const signature = createHmac('sha256', rows[0].webhook_secret).update(canonicalStringify(payload)).digest('hex');
+      return send(res,200,{signature, note:'simulador_sandbox_nunca_usado_pela_verificacao_do_webhook'});
+    } catch { return send(res,500,{error:'internal'}); }
   };
 
   return {
@@ -826,5 +1015,7 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
     handleGateways,
     handleWebhooks,
     handleCharges,
+    handleGatewayHistory,
+    handleGatewaySandboxSign,
   };
 }
