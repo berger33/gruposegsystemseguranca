@@ -17,22 +17,6 @@ export default function FinBudgetClient() {
   const [provisions, setProvisions] = useState<Provision[]>([]);
   const [msg, setMsg] = useState("");
 
-  const [bTitle, setBTitle] = useState("");
-  const [bDesc, setBDesc] = useState("");
-  const [bPremises, setBPremises] = useState("");
-  const [bStart, setBStart] = useState("");
-  const [bEnd, setBEnd] = useState("");
-  const [bRev, setBRev] = useState("");
-  const [bCost, setBCost] = useState("");
-
-  const [scBudgetId, setScBudgetId] = useState("");
-  const [scType, setScType] = useState("base");
-  const [scTitle, setScTitle] = useState("");
-  const [scPremises, setScPremises] = useState("");
-  const [scRev, setScRev] = useState("");
-  const [scCost, setScCost] = useState("");
-  const [scMarginPct, setScMarginPct] = useState("");
-
   const [expStart, setExpStart] = useState("");
   const [expEnd, setExpEnd] = useState("");
   const [expFileUrl, setExpFileUrl] = useState("");
@@ -81,31 +65,6 @@ export default function FinBudgetClient() {
     return j;
   };
 
-  const createBudget = async () => {
-    try {
-      setMsg("");
-      if (!bTitle || bTitle.length<5) throw new Error("title 5..200");
-      if (!bDesc || bDesc.length<10) throw new Error("description 10..2000");
-      if (!bPremises || bPremises.length<10) throw new Error("premises 10..2000 obrigatória não prometer resultado");
-      if (!bStart || !bEnd) throw new Error("period_start/end obrigatórios");
-      await post("/api/fin/budgets", { title:bTitle, description:bDesc, premises:bPremises, period_start:bStart, period_end:bEnd, total_revenue_cents:bRev?parseInt(bRev):null, total_cost_cents:bCost?parseInt(bCost):null });
-      setMsg("FIN-13 orçamento gerencial criado protocolo ORC-FIN premissas explícitas não prometer resultado is_estimate=true");
-      load();
-    } catch(e:any){ setMsg("FIN-13 orçamento erro: "+e.message); }
-  };
-
-  const createScenario = async () => {
-    try {
-      setMsg("");
-      if (!scBudgetId) throw new Error("budget_id obrigatório");
-      if (!scTitle || scTitle.length<5) throw new Error("title 5..200");
-      if (!scPremises || scPremises.length<10) throw new Error("premises 10..2000 obrigatória cenários expansão premissas explícitas");
-      await post("/api/fin/budget-scenarios", { budget_id:scBudgetId, scenario_type:scType, title:scTitle, premises:scPremises, projected_revenue_cents:scRev?parseInt(scRev):null, projected_cost_cents:scCost?parseInt(scCost):null, projected_margin_percent:scMarginPct?parseFloat(scMarginPct):null });
-      setMsg("FIN-13 cenário expansão criado UNIQUE(budget,scenario_type) premissas explícitas cenário é estimativa identificada não prometer resultado");
-      load();
-    } catch(e:any){ setMsg("FIN-13 cenário erro: "+e.message); }
-  };
-
   const createExport = async () => {
     try {
       setMsg("");
@@ -152,25 +111,13 @@ export default function FinBudgetClient() {
       <h2>FIN-13/14/15/16 — Orçamento cenários, exportação trilha, fechamento competência, comissões CRM-25</h2>
       {msg && <p style={{ background:"#eef", padding:8 }}>{msg}</p>}
 
-      <h3>FIN-13 Orçamento gerencial e cenários de expansão com premissas explícitas não prometer resultado</h3>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(180px,1fr))", gap:8 }}>
-        <input placeholder="title 5..200" value={bTitle} onChange={e=>setBTitle(e.target.value)} />
-        <input placeholder="description 10..2000" value={bDesc} onChange={e=>setBDesc(e.target.value)} />
-        <input placeholder="premises 10..2000 obrigatória não prometer resultado" value={bPremises} onChange={e=>setBPremises(e.target.value)} />
-        <input type="date" value={bStart} onChange={e=>setBStart(e.target.value)} />
-        <input type="date" value={bEnd} onChange={e=>setBEnd(e.target.value)} />
-        <input placeholder="total_revenue_cents" value={bRev} onChange={e=>setBRev(e.target.value)} />
-        <input placeholder="total_cost_cents" value={bCost} onChange={e=>setBCost(e.target.value)} />
-        <button onClick={createBudget}>Criar orçamento ORC-FIN</button>
-        <input placeholder="scenario budget_id" value={scBudgetId} onChange={e=>setScBudgetId(e.target.value)} />
-        <select value={scType} onChange={e=>setScType(e.target.value)}><option value="conservador">conservador</option><option value="base">base</option><option value="otimista">otimista</option><option value="expansao">expansao</option><option value="pessimista">pessimista</option></select>
-        <input placeholder="scenario title 5..200" value={scTitle} onChange={e=>setScTitle(e.target.value)} />
-        <input placeholder="scenario premises 10..2000" value={scPremises} onChange={e=>setScPremises(e.target.value)} />
-        <input placeholder="projected_revenue_cents" value={scRev} onChange={e=>setScRev(e.target.value)} />
-        <input placeholder="projected_cost_cents" value={scCost} onChange={e=>setScCost(e.target.value)} />
-        <input placeholder="projected_margin_percent -100..100" value={scMarginPct} onChange={e=>setScMarginPct(e.target.value)} />
-        <button onClick={createScenario}>Criar cenário expansão</button>
-      </div>
+      <h3>FIN-13 Orçamento gerencial e cenários de expansão (somente leitura)</h3>
+      <p data-testid="ti-fin13-readonly" style={{ background:"#ffe", padding:8 }}>
+        Esta tela é de diagnóstico e <strong>não escreve</strong> orçamento nem cenário. O caminho canônico de FIN-13 é
+        <strong> /admin/financeiro, aba &quot;Orçamento / Cenários&quot;</strong>: lá o orçamento nasce em rascunho como estimativa com
+        premissas explícitas, percorre rascunho, em revisão e então aprovado ou rejeitado, e a aprovação exige aprovador
+        diferente do autor com data auditada. Nenhum número aqui promete resultado.
+      </p>
       <ul>{budgets.slice(0,10).map(b=><li key={b.id}>{b.protocol} {b.title} período:{b.period_start}→{b.period_end} receita:{b.total_revenue_cents} custo:{b.total_cost_cents} margem:{b.total_margin_cents} status:{b.status} estimate:{String(b.is_estimate)} note:{b.estimate_note.slice(0,40)}</li>)}</ul>
       <ul>{scenarios.slice(0,20).map(s=><li key={s.id}>budget:{s.budget_id.slice(0,8)} tipo:{s.scenario_type} {s.title} receita:{s.projected_revenue_cents} custo:{s.projected_cost_cents} margem:{s.projected_margin_cents} %:{s.projected_margin_percent} estimate:{String(s.is_estimate)} note:{s.estimate_note.slice(0,40)}</li>)}</ul>
 
