@@ -2081,7 +2081,14 @@ const finApi = createFinApi({
 
 const finAdvancedApi = createFinAdvancedApi({
   pool: getPool(),
-  auditLog: async ({ action, actor, target, meta }) => {
+  auditLog: async ({ action, actor, target, meta, client }) => {
+    // FIN-05 opts into the supplied transactional client. The remaining
+    // historical FIN-06..08 handlers retain their pre-existing best-effort
+    // path until they are individually revalidated in their own slices.
+    if (client) return client.query(
+      `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+      [action, actor, target, meta ? JSON.stringify(meta) : null]
+    );
     try {
       await getPool().query(
         `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,

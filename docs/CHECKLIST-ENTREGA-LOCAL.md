@@ -1001,10 +1001,10 @@ pagamento/recebimento parcial, estorno, cancelamento, renegociação e baixa aud
 
 ## FIN-05
 conciliação por importação/extrato ou provedor, sugestão e confirmação; evitar duplicar transações.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: workspace `/admin/financeiro`, aba **Conciliação**, e APIs canônicas `/api/fin/bank-statements`, `/api/fin/bank-transactions` e `/api/fin/conciliations`; sessão de `admin`/`ti`/`financeiro` e same-origin são decididos no servidor. A tela só importa metadados e movimentos sintéticos locais — não busca arquivos, banco ou provedor externo.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` 7/7 em PostgreSQL descartável, HTTP, login/cookie reais, Next e Chromium real. Prova 401/403/origin 403; importação atômica; `bank_ref` e `storage_key` duplicados 409; duas sugestões concorrentes para o mesmo movimento com exatamente uma 201 e uma 409; confirmação única e auditada; `fin05_one_conciliation_per_bank_transaction_idx`; e que a confirmação não cria baixa FIN-04. Com `audit_log` renomeada, importação, movimento avulso, sugestão e confirmação retornam `503 {"error":"audit_unavailable"}` sem extrato, movimento, totals ou estado de conciliação parcial. A jornada Chromium importa extrato, sugere e confirma.
+- Pendência / fronteira externa / aceite humano: conciliação local é sintética e declarativa; confirmação apenas marca o movimento do extrato como conciliado, nunca cria pagamento/baixa silenciosa. Integração bancária, arquivo real e provedor continuam fora do escopo; FIN-06..16 e ADM-01..12 não foram iniciados.
 
 ## FIN-06
 cobrança com responsável, lembretes, histórico e política aprovada; sem mensagens reais ou bloqueio de portal automático na implementação.
