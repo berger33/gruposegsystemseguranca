@@ -1,7 +1,6 @@
 # Checklist da entrega local — 222 requisitos
 
-Atualização L05: ver [entrega e evidências](ENTREGA-L05.md). Próximo lote: [L06 — operação, patrimônio e manutenção](PROMPT-CONTINUACAO-L06-OPERACAO-PATRIMONIO.md). Os demais lotes mantêm seus estados próprios.
-Atualizado em 2026-09-30 a partir do plano mestre; não é declaração de aceite humano ou conclusão de integrações externas.
+Atualização de controle em 2026-10-01: L07 em execução. Ver [consolidação](CONSOLIDACAO-L07-PRS-PENDENTES.md) e [retomada](PROMPT-RETOMADA-L07-CONSOLIDADO.md). L04–L06 já têm entregas técnicas integradas. Estados abaixo conservam evidências por requisito, não uma porcentagem global; não houve promoção em massa nesta revisão.
 Leia EXECUCAO-ENTREGA-LOCAL.md. Todos começam em a_revalidar para confrontar evidências históricas com a versão final. Isso não apaga o trabalho realizado.
 Para cada ID, completar: rota/tela; API/tabela; perfil/escopo; integração; teste e commit; evidência; bloqueio; aceite humano.
 Estados: a_revalidar, pendente, em_execucao, bloqueado, pronto_local, depende_integracao_externa.
@@ -1056,6 +1055,9 @@ boletos/Pix/gateway somente após seleção e sandbox; validar assinatura de web
 - Pendência / fronteira externa / aceite humano: preencher
 
 ## FIN-13
+
+> Revalidação prioritária: a main fa893d6 permite editar orçamento aprovado mantendo aprovação e aceita percentual de margem informado no cenário. Achados estáticos, reprodução negativa pendente. Portar melhorias úteis de #60/#62 com migração nova, nunca sobrescrever a 132. Ver consolidação L07.
+
 orçamento gerencial e cenários de expansão com premissas explícitas; não prometer resultado.
 - Estado: a_revalidar
 - Tela / API / dados / autorização: preencher

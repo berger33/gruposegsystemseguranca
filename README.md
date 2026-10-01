@@ -1,11 +1,12 @@
 # Grupo SEG System
 
-## Continuação atual: L07 — financeiro e Marcelo
+## Continuação atual: L07 — consolidação financeira e Marcelo
 
-O fechamento técnico do L06 (operação, patrimônio e manutenção) foi integrado via [PR #42](https://github.com/berger33/gruposegsystemseguranca/pull/42) e está documentado em [ENTREGA-L06](docs/ENTREGA-L06.md), sujeito aos checks da PR e ao aceite humano.
-Leia o [prompt completo para continuidade L07](docs/PROMPT-CONTINUACAO-L07-FINANCEIRO-MARCELO.md). O L07 está em andamento: a fatia 1 (fundação do gate L07 e casos FIN-01..04 pela API canônica) está registrada em [ENTREGA-L07](docs/ENTREGA-L07.md). Isso não declara o sistema inteiro pronto nem substitui homologação humana.
+Main auditada em 2026-10-01: PR #64, migrações 001–133. L04–L06 possuem entregas técnicas; L07 permanece em execução. Os handlers FIN-14..16 estão integrados, mas faltam suas jornadas completas e o painel funcional ADM-01..12.
 
+O [PR #65](https://github.com/berger33/gruposegsystemseguranca/pull/65) estabiliza os gates L04–L07 e estava aberto na auditoria. Verifique sua integração antes de código novo. Os PRs #47/#53/#59/#60/#62 são alternativas com colisões de migrações e melhorias a portar seletivamente.
 
+Leia a [consolidação e achados FIN-13](docs/CONSOLIDACAO-L07-PRS-PENDENTES.md), o [estado atual](docs/ESTADO-EXECUCAO-LOCAL.md) e o [prompt de retomada focado](docs/PROMPT-RETOMADA-L07-CONSOLIDADO.md). Não usar instruções históricas para repetir L05/L06 ou declarar L07 fechado.
 
 ## Demonstração local persistente — apenas massa fictícia
 
