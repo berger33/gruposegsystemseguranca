@@ -2065,13 +2065,11 @@ const cliFinanceApi = createCliFinanceApi({
 
 const finApi = createFinApi({
   pool: getPool(),
-  auditLog: async ({ action, actor, target, meta }) => {
-    try {
-      await getPool().query(
-        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
-        [action, actor, target, meta ? JSON.stringify(meta) : null]
-      );
-    } catch {}
+  auditLog: async ({ action, actor, target, meta, client }) => {
+    await (client || getPool()).query(
+      `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+      [action, actor, target, meta ? JSON.stringify(meta) : null]
+    );
   },
   sameOrigin,
   requireSession: readSession,
@@ -2512,7 +2510,7 @@ async function routeApi(req, res) {
   // A isenção vale só para o prefixo `ops-`; os paths de RH legados continuam
   // na borda. Um alias ops-* desconhecido não é despachado para handler algum
   // e termina em 404 no fim do roteador.
-  const legacyOpsAlias = /^\/api\/(?:admin\/|crm\/)?hr\/ops-[a-z0-9-]+$/.test(url.pathname);
+  const legacyOpsAlias = /^\/api\/(?:admin\/|crm\/)?hr\/(?:ops|fin|adm)-[a-z0-9-]+$/.test(url.pathname);
   if (!legacyOpsAlias
       && (url.pathname.startsWith("/api/hr/")
           || url.pathname.startsWith("/api/admin/hr/")

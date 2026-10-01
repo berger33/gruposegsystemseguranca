@@ -262,65 +262,57 @@ export function createFinApi({ pool, auditLog, sameOrigin, requireSession, requi
       const { rows } = await pool.query(q, params);
       return json(res,200,{ payments: rows });
     }
-    if (req.method === "POST") {
-      let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
-      const { account_type, receivable_id, payable_id, amount_cents, payment_method, is_partial, is_estorno, is_renegotiation, previous_payment_id, notes, reason } = body;
-      // FIN-04 (fatia 1): entrada validada antes de tocar o banco — valor zero,
-      // negativo ou não numérico é 400 (não 500 no CHECK), tipo de conta fora do
-      // enum é 400 e conta inexistente é 404 sem deixar pagamento órfão. O número
-      // é parseado uma única vez: o mesmo valor segue para o INSERT e para a
-      // aritmética de saldo, sem concatenação acidental de string.
-      const amount = Number(amount_cents);
-      if (!account_type || !["receber","pagar"].includes(account_type) || !Number.isFinite(amount) || amount <= 0 || !reason) return json(res,400,{ error:"missing_fields", note:"account_type receber|pagar, amount_cents numerico positivo e reason 10..1000 obrigatorios na baixa auditada" });
-      if (String(reason).length <10 || String(reason).length>1000) return json(res,400,{ error:"reason_10_1000_required" });
-      if (account_type==='receber' && !receivable_id) return json(res,400,{ error:"missing_receivable_id" });
-      if (account_type==='pagar' && !payable_id) return json(res,400,{ error:"missing_payable_id" });
-      if (is_estorno && !previous_payment_id) return json(res,400,{ error:"estorno_requires_previous" });
-      if (account_type==='receber') {
-        const target = await pool.query(`SELECT id FROM fin_accounts_receivable WHERE id=$1`, [receivable_id]);
-        if (target.rows.length===0) return json(res,404,{ error:"receivable_not_found" });
-      } else {
-        const target = await pool.query(`SELECT id FROM fin_accounts_payable WHERE id=$1`, [payable_id]);
-        if (target.rows.length===0) return json(res,404,{ error:"payable_not_found" });
+    if (req.method !== "POST") return json(res,405,{ error:"method_not_allowed" });
+    let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
+    const { account_type, receivable_id, payable_id, amount_cents, payment_method, is_partial, is_estorno, is_renegotiation, previous_payment_id, notes, reason } = body;
+    const amount = Number(amount_cents);
+    if (!account_type || !["receber","pagar"].includes(account_type) || !Number.isFinite(amount) || amount <= 0 || !reason) return json(res,400,{ error:"missing_fields" });
+    if (String(reason).length <10 || String(reason).length>1000) return json(res,400,{ error:"reason_10_1000_required" });
+    if (account_type==='receber' && !receivable_id) return json(res,400,{ error:"missing_receivable_id" });
+    if (account_type==='pagar' && !payable_id) return json(res,400,{ error:"missing_payable_id" });
+    if (is_estorno && !previous_payment_id) return json(res,400,{ error:"estorno_requires_previous" });
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const table = account_type === 'receber' ? 'fin_accounts_receivable' : 'fin_accounts_payable';
+      const id = account_type === 'receber' ? receivable_id : payable_id;
+      const target = await client.query(`SELECT * FROM ${table} WHERE id=$1 FOR UPDATE`, [id]);
+      if (!target.rows.length) { await client.query('ROLLBACK'); return json(res,404,{ error: account_type==='receber' ? 'receivable_not_found' : 'payable_not_found' }); }
+      const account = target.rows[0];
+      if (is_estorno) {
+        const source = await client.query(`SELECT * FROM fin_payments WHERE id=$1 FOR UPDATE`, [previous_payment_id]);
+        if (!source.rows.length) { await client.query('ROLLBACK'); return json(res,404,{ error:"payment_not_found" }); }
+        const origin = source.rows[0];
+        const sameAccount = origin.account_type === account_type && (account_type === 'receber' ? origin.receivable_id === receivable_id : origin.payable_id === payable_id);
+        if (!sameAccount) { await client.query('ROLLBACK'); return json(res,400,{ error:"estorno_account_mismatch" }); }
+        if (amount > Number(origin.amount_cents)) { await client.query('ROLLBACK'); return json(res,400,{ error:"estorno_amount_exceeds_origin" }); }
+        const repeated = await client.query(`SELECT 1 FROM fin_payments WHERE previous_payment_id=$1 AND is_estorno=true LIMIT 1`, [previous_payment_id]);
+        if (repeated.rows.length) { await client.query('ROLLBACK'); return json(res,409,{ error:"estorno_already_exists" }); }
+      } else if (Number(account.amount_paid_cents) + amount > Number(account.amount_cents)) {
+        await client.query('ROLLBACK');
+        return json(res,409,{ error:"overpayment" });
       }
-      try {
-        const { rows } = await pool.query(
-          `INSERT INTO fin_payments (account_type, receivable_id, payable_id, amount_cents, payment_method, is_partial, is_estorno, is_renegotiation, previous_payment_id, notes, created_by_identity)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-          [account_type, receivable_id||null, payable_id||null, amount, payment_method||'pix', is_partial||false, is_estorno||false, is_renegotiation||false, previous_payment_id||null, notes||null, session.identityId||null]
-        );
-        // update paid amount
-        if (account_type==='receber') {
-          const cur = await pool.query(`SELECT amount_cents, amount_paid_cents, status FROM fin_accounts_receivable WHERE id=$1`, [receivable_id]);
-          if (cur.rows.length>0) {
-            const prevPaid = Number(cur.rows[0].amount_paid_cents);
-            const total = Number(cur.rows[0].amount_cents);
-            let newPaid;
-            if (is_estorno) newPaid = Math.max(0, prevPaid - amount);
-            else newPaid = Math.min(total, prevPaid + amount);
-            const newStatus = newPaid >= total ? 'recebido' : (newPaid>0 ? 'parcial' : 'pendente');
-            await pool.query(`UPDATE fin_accounts_receivable SET amount_paid_cents=$2, status=$3, paid_at=CASE WHEN $4 THEN NOW() ELSE NULL END WHERE id=$1`, [receivable_id, newPaid, newStatus, newStatus==='recebido']);
-            await pool.query(`INSERT INTO fin_payment_history (account_type, receivable_id, previous_status, next_status, previous_paid_cents, next_paid_cents, payment_id, changed_by_identity, reason, is_estorno, is_renegociacao) VALUES ('receber',$1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, [receivable_id, cur.rows[0].status, newStatus, prevPaid, newPaid, rows[0].id, session.identityId||null, reason, is_estorno||false, is_renegotiation||false]);
-          }
-        } else {
-          const cur = await pool.query(`SELECT amount_cents, amount_paid_cents, status FROM fin_accounts_payable WHERE id=$1`, [payable_id]);
-          if (cur.rows.length>0) {
-            const prevPaid = Number(cur.rows[0].amount_paid_cents);
-            const total = Number(cur.rows[0].amount_cents);
-            let newPaid;
-            if (is_estorno) newPaid = Math.max(0, prevPaid - amount);
-            else newPaid = Math.min(total, prevPaid + amount);
-            const newStatus = newPaid >= total ? 'pago' : (newPaid>0 ? 'parcial' : 'pendente');
-            await pool.query(`UPDATE fin_accounts_payable SET amount_paid_cents=$2, status=$3, paid_at=CASE WHEN $4 THEN NOW() ELSE NULL END WHERE id=$1`, [payable_id, newPaid, newStatus, newStatus==='pago']);
-            await pool.query(`INSERT INTO fin_payment_history (account_type, payable_id, previous_status, next_status, previous_paid_cents, next_paid_cents, payment_id, changed_by_identity, reason, is_estorno, is_renegociacao) VALUES ('pagar',$1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, [payable_id, cur.rows[0].status, newStatus, prevPaid, newPaid, rows[0].id, session.identityId||null, reason, is_estorno||false, is_renegotiation||false]);
-          }
-        }
-        const action = is_estorno ? "fin_payment_estorno" : (is_renegotiation ? "fin_payment_renegotiation" : "fin_payment_create");
-        await auditLog({ action, actor: session.identityId||"unknown", target: rows[0].id, meta:{ account_type, receivable_id, payable_id, amount_cents: amount, is_partial, is_estorno, reason } });
-        return json(res,201,{ payment: rows[0], note:"pagamento/recebimento parcial estorno cancelamento renegociação baixa auditada nunca apagar saldo por edição silenciosa" });
-      } catch(e) { return json(res,500,{ error:"internal", detail:e.message }); }
-    }
-    return json(res,405,{ error:"method_not_allowed" });
+      const inserted = await client.query(
+        `INSERT INTO fin_payments (account_type, receivable_id, payable_id, amount_cents, payment_method, is_partial, is_estorno, is_renegotiation, previous_payment_id, notes, created_by_identity)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+        [account_type, receivable_id||null, payable_id||null, amount, payment_method||'pix', is_partial||false, is_estorno||false, is_renegotiation||false, previous_payment_id||null, notes||null, session.identityId||null]
+      );
+      const prevPaid = Number(account.amount_paid_cents);
+      const total = Number(account.amount_cents);
+      const newPaid = is_estorno ? Math.max(0, prevPaid - amount) : prevPaid + amount;
+      const paidStatus = account_type === 'receber' ? 'recebido' : 'pago';
+      const newStatus = newPaid >= total ? paidStatus : (newPaid > 0 ? 'parcial' : 'pendente');
+      await client.query(`UPDATE ${table} SET amount_paid_cents=$2, status=$3, paid_at=CASE WHEN $4 THEN NOW() ELSE NULL END WHERE id=$1`, [id, newPaid, newStatus, newStatus===paidStatus]);
+      await client.query(`INSERT INTO fin_payment_history (account_type, ${account_type==='receber'?'receivable_id':'payable_id'}, previous_status, next_status, previous_paid_cents, next_paid_cents, payment_id, changed_by_identity, reason, is_estorno, is_renegociacao) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, [account_type, id, account.status, newStatus, prevPaid, newPaid, inserted.rows[0].id, session.identityId||null, reason, is_estorno||false, is_renegotiation||false]);
+      const action = is_estorno ? "fin_payment_estorno" : (is_renegotiation ? "fin_payment_renegotiation" : "fin_payment_create");
+      await auditLog({ action, actor: session.identityId||"unknown", target: inserted.rows[0].id, meta:{ account_type, receivable_id, payable_id, amount_cents: amount, is_partial, is_estorno, reason }, client });
+      await client.query('COMMIT');
+      return json(res,201,{ payment: inserted.rows[0], note:"pagamento/recebimento transacional com bloqueio concorrente, estorno validado e auditoria fail-closed" });
+    } catch(e) {
+      try { await client.query('ROLLBACK'); } catch {}
+      if (e && e.code === '42P01') return json(res,503,{ error:"audit_unavailable" });
+      return json(res,500,{ error:"internal", detail:e.message });
+    } finally { client.release(); }
   }
 
   async function handlePaymentHistory(req, res) {
