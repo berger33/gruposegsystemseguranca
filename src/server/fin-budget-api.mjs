@@ -23,6 +23,9 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
 
   const handleBudgets = async (req, res) => {
     const sess = await checkAuth(req, res); if (!sess) return;
+    if (!sameOrigin(req) && req.method !== 'GET') { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
+    const role = (sess.role||'').toLowerCase();
+    if (role === 'ti' && req.method !== 'GET') { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'read_only'})); return; }
     if (req.method === 'GET') {
       const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
       const status = url.searchParams.get('status');
@@ -58,7 +61,7 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
           [protocol, title, description, premises, period_start, period_end, total_revenue, total_cost, sess.identityId||null]
         );
-        try { await auditLog({ action:'fin_budget_create', actor: sess.identityId, target: rows[0].id, meta:{ protocol, premises } }); } catch {}
+        await auditLog({ action:'fin_budget_create', actor: sess.identityId, target: rows[0].id, meta:{ protocol, premises } });
         res.writeHead(201, {'Content-Type':'application/json'});
         res.end(JSON.stringify({ budget: rows[0], note:'orcamento_gerencial_premissas_explicitas_nao_prometer_resultado' }));
       } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
@@ -77,7 +80,7 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
           [body.status||null, body.title||null, body.description||null, body.premises||null, body.total_revenue_cents??null, body.total_cost_cents??null, approved_by, approved_at, id]
         );
         if (!rows.length) { res.writeHead(404, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
-        try { await auditLog({ action:'fin_budget_update', actor: sess.identityId, target: id, meta:{ status: body.status } }); } catch {}
+        await auditLog({ action:'fin_budget_update', actor: sess.identityId, target: id, meta:{ status: body.status } });
         res.writeHead(200, {'Content-Type':'application/json'});
         res.end(JSON.stringify({ budget: rows[0] }));
       } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
@@ -123,7 +126,7 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
           [budget_id, scenario_type, title, premises, projected_revenue, projected_cost, projected_margin_percent, sess.identityId||null]
         );
-        try { await auditLog({ action:'fin_budget_scenario_create', actor: sess.identityId, target: rows[0].id, meta:{ budget_id, scenario_type, premises } }); } catch {}
+        await auditLog({ action:'fin_budget_scenario_create', actor: sess.identityId, target: rows[0].id, meta:{ budget_id, scenario_type, premises } });
         res.writeHead(201, {'Content-Type':'application/json'});
         res.end(JSON.stringify({ scenario: rows[0], note:'cenario_estimativa_identificada_nao_prometer_resultado' }));
       } catch(e){
@@ -179,7 +182,7 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
           `INSERT INTO fin_export_logs (export_id, action, actor_identity, meta) VALUES ($1,$2,$3,$4)`,
           [rows[0].id, 'export_create', sess.identityId||null, JSON.stringify({ period_start, period_end, filters, totals, is_accountant_limited:true })]
         );
-        try { await auditLog({ action:'fin_export_create', actor: sess.identityId, target: rows[0].id, meta:{ protocol, period_start, period_end, is_accountant_limited:true, access_role:'contador' } }); } catch {}
+        await auditLog({ action:'fin_export_create', actor: sess.identityId, target: rows[0].id, meta:{ protocol, period_start, period_end, is_accountant_limited:true, access_role:'contador' } });
         res.writeHead(201, {'Content-Type':'application/json'});
         res.end(JSON.stringify({ export: rows[0], note:'exportacao_periodo_trilha_filtros_totais_conciliaveis_acesso_limitado_contador' }));
       } catch(e){
@@ -200,7 +203,7 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
         );
         if (!rows.length) { res.writeHead(404, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
         await pool.query(`INSERT INTO fin_export_logs (export_id, action, actor_identity, meta) VALUES ($1,$2,$3,$4)`, [id, 'export_update', sess.identityId||null, JSON.stringify({ status: body.status })]);
-        try { await auditLog({ action:'fin_export_update', actor: sess.identityId, target: id, meta:{ status: body.status } }); } catch {}
+        await auditLog({ action:'fin_export_update', actor: sess.identityId, target: id, meta:{ status: body.status } });
         res.writeHead(200, {'Content-Type':'application/json'});
         res.end(JSON.stringify({ export: rows[0] }));
       } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
@@ -260,7 +263,7 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
            VALUES ($1,1,'fechamento_competencia',$2,$3,true,$4)`,
           [rows[0].id, JSON.stringify({ competence_date, status:'fechada', closed_at: new Date() }), JSON.stringify({}), sess.identityId||null]
         );
-        try { await auditLog({ action:'fin_closure_create', actor: sess.identityId, target: rows[0].id, meta:{ competence_date, status:'fechada' } }); } catch {}
+        await auditLog({ action:'fin_closure_create', actor: sess.identityId, target: rows[0].id, meta:{ competence_date, status:'fechada' } });
         res.writeHead(201, {'Content-Type':'application/json'});
         res.end(JSON.stringify({ closure: rows[0], note:'fechamento_competencia_preservar_versoes_relatorio' }));
       } catch(e){
@@ -294,7 +297,7 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
              VALUES ($1,$2,'reabertura_competencia',$3,$4,true,$5)`,
             [id, nextVer, JSON.stringify({ reopened_at: new Date(), reopen_reason, authorized_by: body.authorized_by_identity||sess.identityId }), JSON.stringify({}), sess.identityId||null]
           );
-          try { await auditLog({ action:'fin_closure_reopen', actor: sess.identityId, target: id, meta:{ reopen_reason, authorized_by: body.authorized_by_identity||sess.identityId } }); } catch {}
+          await auditLog({ action:'fin_closure_reopen', actor: sess.identityId, target: id, meta:{ reopen_reason, authorized_by: body.authorized_by_identity||sess.identityId } });
           res.writeHead(200, {'Content-Type':'application/json'});
           res.end(JSON.stringify({ closure: rows[0], note:'reabertura_autorizada_preservar_versoes_relatorio' }));
         } else {
@@ -361,7 +364,7 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
            VALUES ($1,NULL,$2,NULL,$3,$4,$5,false)`,
           [rows[0].id, 'provisionada', amount_cents, sess.identityId||null, 'Provisão comissão ligada à regra CRM-25 provisão e revisão não pagar automaticamente']
         );
-        try { await auditLog({ action:'fin_commission_provision_create', actor: sess.identityId, target: rows[0].id, meta:{ rule_id, commission_id, amount_cents, is_auto_paid:false } }); } catch {}
+        await auditLog({ action:'fin_commission_provision_create', actor: sess.identityId, target: rows[0].id, meta:{ rule_id, commission_id, amount_cents, is_auto_paid:false } });
         res.writeHead(201, {'Content-Type':'application/json'});
         res.end(JSON.stringify({ provision: rows[0], note:'comissoes_ligadas_regra_CRM25_provisao_revisao_nao_pagar_automaticamente' }));
       } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
@@ -398,7 +401,7 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
            VALUES ($1,$2,$3,$4,$5,$6,$7,false)`,
           [id, prev.status, rows[0].status, prev.amount_cents, rows[0].amount_cents, sess.identityId||null, reason]
         );
-        try { await auditLog({ action: status==='paga'?'fin_commission_provision_pay':'fin_commission_provision_review', actor: sess.identityId, target: id, meta:{ status, reason, is_auto_paid:false } }); } catch {}
+        await auditLog({ action: status==='paga'?'fin_commission_provision_pay':'fin_commission_provision_review', actor: sess.identityId, target: id, meta:{ status, reason, is_auto_paid:false } });
         res.writeHead(200, {'Content-Type':'application/json'});
         res.end(JSON.stringify({ provision: rows[0] }));
       } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
