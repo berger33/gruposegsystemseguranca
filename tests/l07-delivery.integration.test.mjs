@@ -1627,3 +1627,125 @@ test("L07 FIN-12: Chromium seleciona, homologa em sandbox, cria cobrança e conc
     assert.equal(conciliatedWebhook.is_valid_signature, true);
   } finally { await browser.close(); }
 });
+
+
+// FIN-13 — orçamento gerencial: premissas explícitas, cenários calculados,
+// transições auditadas e histórico de revisão imutável.
+test("L07 FIN-13: orçamento e cenários exigem premissas, calculam margem e falham fechado na auditoria", { skip: !RUN, timeout: 120_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const rh = await provisionAndLoginStaff(pool, api, { role: "rh" });
+  const tag = uuid().slice(0, 8);
+  const payload = {
+    title: `Orçamento FIN-13 ${tag}`,
+    description: "Orçamento gerencial sintético para expansão controlada.",
+    premises: "Volume, preço médio, quadro de equipe e custos operacionais explicitados para a estimativa.",
+    period_start: "2026-10-01",
+    period_end: "2026-12-31",
+    total_revenue_cents: 300000,
+    total_cost_cents: 210000,
+  };
+
+  assert.equal((await fin("/budgets")).status, 401);
+  assert.equal((await fin("/budgets", { cookie: rh.cookie })).status, 403);
+  assert.equal((await fin("/budgets", { method: "POST", cookie: financeiro.cookie, origin: "https://externo.invalid", body: payload })).status, 403);
+  assert.equal((await fin("/budgets", { method: "POST", cookie: financeiro.cookie, body: { ...payload, premises: "curto" } })).status, 400);
+  assert.equal((await fin("/budgets", { method: "POST", cookie: financeiro.cookie, body: { ...payload, is_estimate: false } })).body.error, "estimate_required_with_explicit_warning");
+
+  const created = await fin("/budgets", { method: "POST", cookie: financeiro.cookie, body: payload });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  const budget = created.body.budget;
+  assert.match(budget.protocol, /^ORC-FIN-\d{8}-[A-Z0-9]{4}$/);
+  assert.equal(budget.status, "rascunho");
+  assert.equal(budget.is_estimate, true);
+  assert.match(budget.estimate_note, /não prometer resultado/);
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_budget_history WHERE budget_id=$1", [budget.id])).rows[0].n, 1);
+
+  // A transição não pode pular a revisão e a estimativa não pode ser promovida.
+  const skipped = await fin("/budgets", { method: "PATCH", cookie: financeiro.cookie, body: { id: budget.id, status: "aprovado", reason: "Tentativa de pular a revisão obrigatória" } });
+  assert.equal(skipped.status, 409);
+  assert.equal((await pool.query("UPDATE fin_budgets SET is_estimate=false WHERE id=$1", [budget.id]).catch(error => error.message)).includes("fin_budget_estimate_required"), true);
+
+  const scenario = await fin("/budget-scenarios", { method: "POST", cookie: financeiro.cookie, body: {
+    budget_id: budget.id, scenario_type: "expansao", title: "Expansão regional controlada",
+    premises: "Duas novas frentes, ocupação gradual, equipe adicional e custos de implantação explícitos.",
+    projected_revenue_cents: 100000, projected_cost_cents: 70000,
+  } });
+  assert.equal(scenario.status, 201, JSON.stringify(scenario.body));
+  assert.equal(Number(scenario.body.scenario.projected_margin_cents), 30000);
+  assert.equal(Number(scenario.body.scenario.projected_margin_percent), 30);
+  assert.equal(Number(scenario.body.scenario.projected_margin_percent_calculated), 30);
+  assert.equal((await fin("/budget-scenarios", { method: "POST", cookie: financeiro.cookie, body: {
+    budget_id: budget.id, scenario_type: "expansao", title: "Expansão duplicada", premises: payload.premises,
+    projected_revenue_cents: 100000, projected_cost_cents: 70000,
+  } })).status, 409);
+
+  const review = await fin("/budgets", { method: "PATCH", cookie: financeiro.cookie, body: { id: budget.id, status: "em_revisao", reason: "Premissas revisadas pelo responsável financeiro" } });
+  assert.equal(review.status, 200, JSON.stringify(review.body));
+  const approved = await fin("/budgets", { method: "PATCH", cookie: financeiro.cookie, body: { id: budget.id, status: "aprovado", reason: "Aprovação auditada das premissas da estimativa" } });
+  assert.equal(approved.status, 200, JSON.stringify(approved.body));
+  assert.equal(approved.body.budget.status, "aprovado");
+  assert.equal(approved.body.budget.approved_by_identity, financeiro.id);
+  assert.ok(approved.body.budget.approved_at);
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_budget_history WHERE budget_id=$1", [budget.id])).rows[0].n, 3);
+
+  const history = await fin(`/budget-history?budget_id=${budget.id}`, { cookie: financeiro.cookie });
+  assert.equal(history.status, 200);
+  assert.equal(history.body.history.length, 3);
+  await assert.rejects(pool.query("UPDATE fin_budget_history SET reason='Tentativa de adulteração do histórico' WHERE budget_id=$1", [budget.id]), /fin_budget_history_immutable/);
+  await assert.rejects(pool.query("DELETE FROM fin_budget_history WHERE budget_id=$1", [budget.id]), /fin_budget_history_immutable/);
+
+  // Auditoria indisponível reverte criação, histórico e qualquer efeito lateral.
+  const rollbackTitle = `Orçamento rollback ${tag}`;
+  await pool.query("ALTER TABLE audit_log RENAME TO audit_log_fin13_unavailable");
+  try {
+    const failed = await fin("/budgets", { method: "POST", cookie: financeiro.cookie, body: { ...payload, title: rollbackTitle } });
+    assert.equal(failed.status, 503);
+    assert.deepEqual(failed.body, { error: "audit_unavailable" });
+    assert.equal("details" in failed.body, false);
+  } finally { await pool.query("ALTER TABLE audit_log_fin13_unavailable RENAME TO audit_log"); }
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_budgets WHERE title=$1", [rollbackTitle])).rows[0].n, 0);
+});
+
+test("L07 FIN-13: Chromium cria orçamento estimado e envia revisão para aprovação", { skip: !RUN, timeout: 180_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const tag = uuid().slice(0, 8);
+  const browser = await playwrightChromium.launch({ executablePath: await packagedChromium.executablePath(), headless: true, args: packagedChromium.args.filter(arg => arg !== "--disable-web-security") });
+  try {
+    const context = await browser.newContext();
+    const pair = financeiro.cookie.split(";")[0]; const separator = pair.indexOf("=");
+    await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
+    const page = await context.newPage(); await page.setExtraHTTPHeaders({ origin: baseUrl });
+    await page.goto(`${baseUrl}/admin/financeiro`, { waitUntil: "networkidle" });
+    await page.getByTestId("finance-tab-budgets").click();
+    await page.waitForSelector('[data-testid="fin13-budget-workspace"]');
+    await page.getByTestId("fin13-budget-title").fill(`Orçamento Chromium ${tag}`);
+    await page.getByTestId("fin13-budget-description").fill("Orçamento gerencial sintético criado pelo gate Chromium.");
+    await page.getByTestId("fin13-budget-premises").fill("Volume, equipe, custos e preço médio são premissas explícitas desta estimativa.");
+    await page.getByTestId("fin13-budget-period-start").fill("2026-10-01");
+    await page.getByTestId("fin13-budget-period-end").fill("2026-12-31");
+    await page.getByTestId("fin13-budget-revenue").fill("200000");
+    await page.getByTestId("fin13-budget-cost").fill("120000");
+    await page.getByTestId("fin13-budget-create").click();
+    await page.waitForFunction(() => (document.querySelector('[data-testid="fin13-notice"]')?.textContent || "").includes("ORC-FIN"));
+    const budget = (await pool.query("SELECT id,status,is_estimate FROM fin_budgets WHERE title=$1", [`Orçamento Chromium ${tag}`])).rows[0];
+    assert.equal(budget.status, "rascunho"); assert.equal(budget.is_estimate, true);
+
+    await page.getByTestId("fin13-scenario-title").fill("Cenário base Chromium");
+    await page.getByTestId("fin13-scenario-premises").fill("Ocupação gradual e custos de equipe explicitados para o cenário base.");
+    await page.getByTestId("fin13-scenario-revenue").fill("100000");
+    await page.getByTestId("fin13-scenario-cost").fill("65000");
+    await page.getByTestId("fin13-scenario-create").click();
+    await page.waitForFunction(() => (document.querySelector('[data-testid="fin13-notice"]')?.textContent || "").includes("margem projetada"));
+    const scenario = (await pool.query("SELECT projected_margin_percent FROM fin_budget_scenarios WHERE budget_id=$1", [budget.id])).rows[0];
+    assert.equal(Number(scenario.projected_margin_percent), 35);
+
+    await page.getByTestId("fin13-budget-reason").fill("Premissas encaminhadas para revisão financeira");
+    await page.getByTestId(`fin13-budget-review-${budget.id}`).click();
+    await page.waitForSelector(`[data-testid="fin13-budget-approve-${budget.id}"]`);
+    await page.getByTestId("fin13-budget-reason").fill("Aprovação auditada do orçamento sintético Chromium");
+    await page.getByTestId(`fin13-budget-approve-${budget.id}`).click();
+    await page.waitForFunction(id => (document.querySelector(`[data-testid="fin13-budget-${id}"]`)?.textContent || "").includes("Aprovado"), budget.id);
+    const approved = (await pool.query("SELECT status,approved_by_identity,approved_at FROM fin_budgets WHERE id=$1", [budget.id])).rows[0];
+    assert.equal(approved.status, "aprovado"); assert.equal(approved.approved_by_identity, financeiro.id); assert.ok(approved.approved_at);
+  } finally { await browser.close(); }
+});
