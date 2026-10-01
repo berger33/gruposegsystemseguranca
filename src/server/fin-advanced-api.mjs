@@ -27,6 +27,12 @@ export function createFinAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   // "pendente" só existe como estado inicial automático; qualquer PATCH precisa mover para um destes.
   const COLLECTION_FORWARD_STATUSES = new Set(["lembrete_enviado", "em_negociacao", "acordado", "cancelado"]);
 
+  // FIN-07: snapshots de fluxo de caixa e aging por competência. Estes
+  // valores são sempre sintéticos e representam uma fotografia autorizada,
+  // nunca uma integração bancária ou cobrança automática.
+  const CASHFLOW_TYPES = new Set(["previsto", "realizado"]);
+  const AGING_BUCKETS = new Set(["a_vencer", "vencido_0_30", "vencido_31_60", "vencido_61_90", "vencido_90_plus"]);
+
   function isUuid(value) {
     return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
   }
@@ -591,78 +597,209 @@ export function createFinAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   }
 
   async function handleCashflowSnapshots(req, res) {
-    const session = await ensureAuth(req, res, ["admin","ti","financeiro"]);
+    const session = await ensureAuth(req, res, ["admin", "ti", "financeiro"]);
     if (!session) return;
+    const url = new URL(req.url, `http://${req.headers.host}`);
+
     if (req.method === "GET") {
-      const { rows } = await pool.query(`SELECT * FROM fin_cashflow_snapshots ORDER BY competence_date DESC LIMIT 100`);
-      return json(res,200,{ snapshots: rows, note:"fluxo caixa previsto/realizado vencidos próximos pagamentos aging" });
-    }
-    if (req.method === "POST") {
-      let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
-      const { competence_date, cashflow_type, total_receivable_cents, total_payable_cents, vencidos_cents, proximos_pagamentos_cents, notes } = body;
-      if (!competence_date) return json(res,400,{ error:"missing_competence_date" });
-      try {
-        const { rows } = await pool.query(
-          `INSERT INTO fin_cashflow_snapshots (competence_date, cashflow_type, total_receivable_cents, total_payable_cents, vencidos_cents, proximos_pagamentos_cents, notes, created_by_identity)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-          [competence_date, cashflow_type||'previsto', total_receivable_cents||0, total_payable_cents||0, vencidos_cents||0, proximos_pagamentos_cents||0, notes||null, session.identityId||null]
-        );
-        await auditLog({ action:"fin_cashflow_snapshot_create", actor: session.identityId||"unknown", target: rows[0].id, meta:{ competence_date, cashflow_type } });
-        return json(res,201,{ snapshot: rows[0] });
-      } catch(e) {
-        if (String(e.message).includes("duplicate") || String(e.message).includes("unique")) return json(res,409,{ error:"duplicate_competence_type", note:"previsto/realizado por competência único" });
-        return json(res,500,{ error:"internal", detail:e.message });
+      const cashflowType = url.searchParams.get("cashflow_type");
+      if (cashflowType && !CASHFLOW_TYPES.has(cashflowType)) {
+        return json(res, 400, { error: "invalid_cashflow_type" });
       }
+      let query = `SELECT * FROM fin_cashflow_snapshots WHERE 1=1`;
+      const params = [];
+      if (cashflowType) {
+        query += ` AND cashflow_type=$1`;
+        params.push(cashflowType);
+      }
+      query += ` ORDER BY competence_date DESC, cashflow_type ASC LIMIT 100`;
+      const { rows } = await pool.query(query, params);
+      return json(res, 200, {
+        snapshots: rows,
+        note: "fluxo de caixa sintético por competência; previsto/realizado, vencidos e próximos pagamentos",
+      });
     }
-    return json(res,405,{ error:"method_not_allowed" });
+    if (req.method !== "POST") return json(res, 405, { error: "method_not_allowed" });
+
+    const body = await readJsonBody(req, res);
+    if (!body) return;
+    const competenceDate = body.competence_date;
+    const cashflowType = body.cashflow_type || "previsto";
+    const totalReceivable = integerCents(body.total_receivable_cents ?? 0, { allowNegative: false });
+    const totalPayable = integerCents(body.total_payable_cents ?? 0, { allowNegative: false });
+    const overdue = integerCents(body.vencidos_cents ?? 0, { allowNegative: false });
+    const upcoming = integerCents(body.proximos_pagamentos_cents ?? 0, { allowNegative: false });
+    const notes = body.notes == null ? null : typeof body.notes === "string" ? body.notes.trim() : null;
+
+    if (!validDate(competenceDate)) return json(res, 400, { error: "invalid_competence_date" });
+    if (!CASHFLOW_TYPES.has(cashflowType)) return json(res, 400, { error: "invalid_cashflow_type" });
+    if ([totalReceivable, totalPayable, overdue, upcoming].some(value => value === null)) {
+      return json(res, 400, { error: "invalid_cashflow_amount" });
+    }
+    if (body.notes != null && (!notes || notes.length < 10 || notes.length > 1000)) {
+      return json(res, 400, { error: "notes_10_1000_required" });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const { rows } = await client.query(
+        `INSERT INTO fin_cashflow_snapshots
+           (competence_date, cashflow_type, total_receivable_cents, total_payable_cents,
+            vencidos_cents, proximos_pagamentos_cents, notes, created_by_identity)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+        [competenceDate, cashflowType, totalReceivable, totalPayable, overdue, upcoming, notes, session.identityId || null]
+      );
+      await auditLog({
+        action: "fin_cashflow_snapshot_create",
+        actor: session.identityId || "unknown",
+        target: rows[0].id,
+        meta: {
+          competence_date: competenceDate,
+          cashflow_type: cashflowType,
+          total_receivable_cents: totalReceivable,
+          total_payable_cents: totalPayable,
+          vencidos_cents: overdue,
+          proximos_pagamentos_cents: upcoming,
+          synthetic: true,
+        },
+        client,
+      });
+      await client.query("COMMIT");
+      return json(res, 201, { snapshot: rows[0], synthetic: true });
+    } catch (error) {
+      try { await client.query("ROLLBACK"); } catch {}
+      if (isAuditUnavailable(error)) return json(res, 503, { error: "audit_unavailable" });
+      if (error?.code === "23505") return json(res, 409, { error: "duplicate_competence_type" });
+      if (["23503", "23514", "22P02", "22007"].includes(error?.code)) return json(res, 400, { error: "invalid_cashflow_snapshot" });
+      return json(res, 500, { error: "internal" });
+    } finally {
+      client.release();
+    }
   }
 
   async function handleAgingReceivables(req, res) {
-    const session = await ensureAuth(req, res, ["admin","ti","financeiro"]);
+    const session = await ensureAuth(req, res, ["admin", "ti", "financeiro"]);
     if (!session) return;
     const url = new URL(req.url, `http://${req.headers.host}`);
+
     if (req.method === "GET") {
       const bucket = url.searchParams.get("bucket");
-      let q=`SELECT ar.*, r.due_date, r.amount_cents as receivable_amount FROM fin_aging_receivables ar JOIN fin_accounts_receivable r ON r.id=ar.receivable_id WHERE 1=1`;
-      const params=[]; let idx=1;
-      if (bucket) { q+=` AND ar.bucket=$${idx++}`; params.push(bucket); }
-      q+=` ORDER BY ar.due_date ASC LIMIT 100`;
-      const { rows } = await pool.query(q, params);
-      return json(res,200,{ aging: rows, note:"aging recebíveis vencidos próximos" });
-    }
-    if (req.method === "POST") {
-      let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
-      const { receivable_id, client_account_id, competence_date, due_date, amount_cents } = body;
-      if (!receivable_id || !client_account_id || !competence_date || !due_date || amount_cents==null) return json(res,400,{ error:"missing_fields" });
-      // Aging é um snapshot da competência, não do relógio atual: alinhar ao campo gerado no SQL.
-      const dateOnly = /^\d{4}-\d{2}-\d{2}$/;
-      const competence = dateOnly.test(competence_date) ? new Date(`${competence_date}T00:00:00Z`) : null;
-      const due = dateOnly.test(due_date) ? new Date(`${due_date}T00:00:00Z`) : null;
-      if (!competence || !due || Number.isNaN(competence.getTime()) || Number.isNaN(due.getTime()) ||
-          competence.toISOString().slice(0, 10) !== competence_date || due.toISOString().slice(0, 10) !== due_date) {
-        return json(res,400,{ error:"invalid_date" });
+      if (bucket && !AGING_BUCKETS.has(bucket)) return json(res, 400, { error: "invalid_aging_bucket" });
+      let query = `
+        SELECT aging.*, receivable.protocol, receivable.status AS receivable_status,
+               receivable.amount_cents AS receivable_amount_cents,
+               receivable.amount_paid_cents AS receivable_paid_cents
+          FROM fin_aging_receivables aging
+          JOIN fin_accounts_receivable receivable ON receivable.id = aging.receivable_id
+         WHERE 1=1`;
+      const params = [];
+      if (bucket) {
+        query += ` AND aging.bucket=$1`;
+        params.push(bucket);
       }
-      const diffDays = Math.round((competence.getTime() - due.getTime())/(1000*60*60*24));
-      let bucket='a_vencer';
-      if (diffDays <=0) bucket='a_vencer';
-      else if (diffDays <=30) bucket='vencido_0_30';
-      else if (diffDays <=60) bucket='vencido_31_60';
-      else if (diffDays <=90) bucket='vencido_61_90';
-      else bucket='vencido_90_plus';
-      try {
-        const { rows } = await pool.query(
-          `INSERT INTO fin_aging_receivables (receivable_id, client_account_id, bucket, amount_cents, competence_date, due_date)
-           VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-          [receivable_id, client_account_id, bucket, amount_cents, competence_date, due_date]
-        );
-        await auditLog({ action:"fin_aging_create", actor: session.identityId||"unknown", target: rows[0].id, meta:{ receivable_id, bucket, days_overdue: diffDays } });
-        return json(res,201,{ aging: rows[0], note:"aging recebíveis vencidos próximos pagamentos" });
-      } catch(e) {
-        if (String(e.message).includes("duplicate") || String(e.message).includes("unique")) return json(res,409,{ error:"already_aged" });
-        return json(res,500,{ error:"internal", detail:e.message });
-      }
+      query += ` ORDER BY aging.competence_date DESC, aging.due_date ASC LIMIT 100`;
+      const { rows } = await pool.query(query, params);
+      return json(res, 200, {
+        aging: rows,
+        note: "aging sintético por competência; vencidos e a vencer calculados contra o recebível canônico",
+      });
     }
-    return json(res,405,{ error:"method_not_allowed" });
+    if (req.method !== "POST") return json(res, 405, { error: "method_not_allowed" });
+
+    const body = await readJsonBody(req, res);
+    if (!body) return;
+    const receivableId = typeof body.receivable_id === "string" ? body.receivable_id.trim() : "";
+    const requestedAccountId = body.client_account_id == null ? null : String(body.client_account_id).trim();
+    const competenceDate = body.competence_date;
+    const dueDate = body.due_date;
+    const amount = integerCents(body.amount_cents, { allowNegative: false });
+    const paid = integerCents(body.amount_paid_cents ?? 0, { allowNegative: false });
+
+    if (!isUuid(receivableId)) return json(res, 400, { error: "invalid_receivable_id" });
+    if (requestedAccountId !== null && !isUuid(requestedAccountId)) return json(res, 400, { error: "invalid_client_account_id" });
+    if (!validDate(competenceDate) || !validDate(dueDate)) return json(res, 400, { error: "invalid_aging_date" });
+    if (amount === null || paid === null) return json(res, 400, { error: "invalid_aging_amount" });
+    if (paid > amount) return json(res, 400, { error: "amount_paid_exceeds_amount" });
+
+    const competence = new Date(`${competenceDate}T00:00:00Z`);
+    const due = new Date(`${dueDate}T00:00:00Z`);
+    const diffDays = Math.max(0, Math.round((competence.getTime() - due.getTime()) / (24 * 60 * 60 * 1000)));
+    const bucket = diffDays === 0
+      ? "a_vencer"
+      : diffDays <= 30
+        ? "vencido_0_30"
+        : diffDays <= 60
+          ? "vencido_31_60"
+          : diffDays <= 90
+            ? "vencido_61_90"
+            : "vencido_90_plus";
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const receivableResult = await client.query(
+        `SELECT id, client_account_id, contract_id, due_date, amount_cents, amount_paid_cents
+           FROM fin_accounts_receivable
+          WHERE id=$1
+          FOR SHARE`,
+        [receivableId]
+      );
+      if (!receivableResult.rows.length) {
+        await client.query("ROLLBACK");
+        return json(res, 404, { error: "receivable_not_found" });
+      }
+      const receivable = receivableResult.rows[0];
+      if (requestedAccountId && requestedAccountId !== receivable.client_account_id) {
+        await client.query("ROLLBACK");
+        return json(res, 400, { error: "client_account_mismatch" });
+      }
+      if (new Date(receivable.due_date).toISOString().slice(0, 10) !== dueDate) {
+        await client.query("ROLLBACK");
+        return json(res, 400, { error: "due_date_mismatch" });
+      }
+      if (amount > Number(receivable.amount_cents)) {
+        await client.query("ROLLBACK");
+        return json(res, 400, { error: "amount_exceeds_receivable" });
+      }
+
+      const { rows } = await client.query(
+        `INSERT INTO fin_aging_receivables
+           (receivable_id, client_account_id, contract_id, bucket, amount_cents,
+            amount_paid_cents, competence_date, due_date)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+        [receivable.id, receivable.client_account_id, receivable.contract_id, bucket, amount, paid, competenceDate, dueDate]
+      );
+      await auditLog({
+        action: "fin_aging_create",
+        actor: session.identityId || "unknown",
+        target: rows[0].id,
+        meta: {
+          receivable_id: receivable.id,
+          competence_date: competenceDate,
+          due_date: dueDate,
+          bucket,
+          days_overdue: diffDays,
+          amount_cents: amount,
+          amount_paid_cents: paid,
+          synthetic: true,
+        },
+        client,
+      });
+      await client.query("COMMIT");
+      return json(res, 201, {
+        aging: rows[0],
+        note: "aging sintético criado; bucket calculado e sincronizado ao recebível, sem vencimento automático",
+      });
+    } catch (error) {
+      try { await client.query("ROLLBACK"); } catch {}
+      if (isAuditUnavailable(error)) return json(res, 503, { error: "audit_unavailable" });
+      if (error?.code === "23505") return json(res, 409, { error: "already_aged_for_competence" });
+      if (["23503", "23514", "22P02", "22007"].includes(error?.code)) return json(res, 400, { error: "invalid_aging_snapshot" });
+      return json(res, 500, { error: "internal" });
+    } finally {
+      client.release();
+    }
   }
 
   async function handleCostImports(req, res) {
