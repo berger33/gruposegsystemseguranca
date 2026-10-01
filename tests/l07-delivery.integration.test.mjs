@@ -760,3 +760,141 @@ test("L07 FIN-06: Chromium cria política, aprova, cria lembrete, envia simulado
     await browser.close();
   }
 });
+
+test("L07 FIN-07: fluxo previsto/realizado, vencidos, próximos pagamentos e aging auditado", { skip: !RUN, timeout: 120_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const rh = await provisionAndLoginStaff(pool, api, { role: "rh" });
+  const { accountId, contractId } = await insertClientSpace("FIN07 HTTP");
+
+  assert.equal((await fin("/cashflow-snapshots")).status, 401, "anonymous cashflow read denied");
+  assert.equal((await fin("/aging-receivables", { cookie: rh.cookie })).status, 403, "rh aging read denied");
+  assert.equal((await fin("/cashflow-snapshots?cashflow_type=invalido", { cookie: financeiro.cookie })).status, 400, "invalid cashflow type denied");
+
+  const forecast = await fin("/cashflow-snapshots", {
+    method: "POST",
+    cookie: financeiro.cookie,
+    body: {
+      competence_date: "2026-10-01",
+      cashflow_type: "previsto",
+      total_receivable_cents: 150000,
+      total_payable_cents: 50000,
+      vencidos_cents: 20000,
+      proximos_pagamentos_cents: 70000,
+      notes: "Snapshot previsto sintético do gate L07 FIN-07",
+    },
+  });
+  assert.equal(forecast.status, 201, "forecast cashflow snapshot created");
+  assert.equal(forecast.body.synthetic, true);
+  assert.equal(Number(forecast.body.snapshot.balance_cents), 100000, "balance is generated from totals");
+  assert.equal(forecast.body.snapshot.cashflow_type, "previsto");
+  const duplicateForecast = await fin("/cashflow-snapshots", {
+    method: "POST", cookie: financeiro.cookie,
+    body: { competence_date: "2026-10-01", cashflow_type: "previsto", notes: "Duplicidade sintética de competência", total_receivable_cents: 1 },
+  });
+  assert.equal(duplicateForecast.status, 409, "same competence and type cannot be duplicated");
+  const actual = await fin("/cashflow-snapshots", {
+    method: "POST", cookie: financeiro.cookie,
+    body: { competence_date: "2026-10-01", cashflow_type: "realizado", total_receivable_cents: 90000, total_payable_cents: 40000, vencidos_cents: 10000, proximos_pagamentos_cents: 30000, notes: "Snapshot realizado sintético do gate L07 FIN-07" },
+  });
+  assert.equal(actual.status, 201, "realized cashflow snapshot created alongside forecast");
+  assert.equal((await fin("/cashflow-snapshots", { method: "POST", cookie: financeiro.cookie, body: { competence_date: "2026-10-02", cashflow_type: "previsto", total_receivable_cents: -1, notes: "Valor inválido não pode persistir" } })).status, 400, "negative cashflow amount rejected");
+  const snapshots = await fin("/cashflow-snapshots?cashflow_type=previsto", { cookie: financeiro.cookie });
+  assert.equal(snapshots.status, 200);
+  assert.ok(snapshots.body.snapshots.some(row => row.id === forecast.body.snapshot.id), "forecast is listed by type");
+  const cashflowAudit = await pool.query("SELECT count(*)::int AS n FROM audit_log WHERE action='fin_cashflow_snapshot_create' AND target=$1", [forecast.body.snapshot.id]);
+  assert.equal(cashflowAudit.rows[0].n, 1, "cashflow creation is audited");
+
+  const aVencer = await fin("/receivables", { method: "POST", cookie: financeiro.cookie, body: { client_account_id: accountId, contract_id: contractId, competence_date: "2026-10-01", due_date: "2026-10-10", amount_cents: 10000, description: "Recebível sintético a vencer do FIN-07" } });
+  assert.equal(aVencer.status, 201);
+  const aged = await fin("/aging-receivables", {
+    method: "POST", cookie: financeiro.cookie,
+    body: { receivable_id: aVencer.body.receivable.id, competence_date: "2026-10-01", due_date: "2026-10-10", amount_cents: 10000, amount_paid_cents: 2500 },
+  });
+  assert.equal(aged.status, 201, `a vencer aging snapshot created: ${JSON.stringify(aged.body)}`);
+  assert.equal(aged.body.aging.bucket, "a_vencer", "future due date is a vencer");
+  assert.equal(Number(aged.body.aging.days_overdue), 0);
+  assert.equal(Number(aged.body.aging.amount_remaining_cents), 7500, "aging remaining amount is generated");
+  assert.equal(aged.body.aging.client_account_id, accountId, "account is derived from canonical receivable");
+
+  const overdueReceivable = await fin("/receivables", { method: "POST", cookie: financeiro.cookie, body: { client_account_id: accountId, contract_id: contractId, competence_date: "2026-08-01", due_date: "2026-08-15", amount_cents: 12000, description: "Recebível sintético vencido do FIN-07" } });
+  assert.equal(overdueReceivable.status, 201);
+  const overdue = await fin("/aging-receivables", {
+    method: "POST", cookie: financeiro.cookie,
+    body: { receivable_id: overdueReceivable.body.receivable.id, competence_date: "2026-10-01", due_date: "2026-08-15", amount_cents: 12000, amount_paid_cents: 2000 },
+  });
+  assert.equal(overdue.status, 201, "overdue aging snapshot created");
+  assert.equal(overdue.body.aging.bucket, "vencido_31_60", "47 overdue days map to 31-60 bucket");
+  assert.equal(Number(overdue.body.aging.days_overdue), 47);
+  assert.equal((await fin("/aging-receivables", { method: "POST", cookie: financeiro.cookie, body: { receivable_id: aVencer.body.receivable.id, competence_date: "2026-10-01", due_date: "2026-10-10", amount_cents: 10000 } })).status, 409, "same receivable and competence cannot be duplicated");
+  assert.equal((await fin("/aging-receivables", { method: "POST", cookie: financeiro.cookie, body: { receivable_id: aVencer.body.receivable.id, competence_date: "2026-11-01", due_date: "2026-10-09", amount_cents: 10000 } })).status, 400, "aging cannot override canonical due date");
+  assert.equal((await fin("/aging-receivables?bucket=nao-existe", { cookie: financeiro.cookie })).status, 400, "invalid aging bucket denied");
+  const agingRows = await fin("/aging-receivables?bucket=vencido_31_60", { cookie: financeiro.cookie });
+  assert.equal(agingRows.status, 200);
+  assert.ok(agingRows.body.aging.some(row => row.id === overdue.body.aging.id), "overdue bucket is filterable");
+  const agingAudit = await pool.query("SELECT count(*)::int AS n FROM audit_log WHERE action='fin_aging_create' AND target=$1", [aged.body.aging.id]);
+  assert.equal(agingAudit.rows[0].n, 1, "aging creation is audited");
+
+  const failedCompetence = "2026-11-01";
+  await pool.query("ALTER TABLE audit_log RENAME TO audit_log_fin07_unavailable");
+  try {
+    const failedCashflow = await fin("/cashflow-snapshots", { method: "POST", cookie: financeiro.cookie, body: { competence_date: "2026-11-02", cashflow_type: "previsto", total_receivable_cents: 1, notes: "Snapshot que deve reverter sem auditoria" } });
+    assert.equal(failedCashflow.status, 503);
+    assert.deepEqual(failedCashflow.body, { error: "audit_unavailable" });
+    const failedAging = await fin("/aging-receivables", { method: "POST", cookie: financeiro.cookie, body: { receivable_id: overdueReceivable.body.receivable.id, competence_date: failedCompetence, due_date: "2026-08-15", amount_cents: 12000 } });
+    assert.equal(failedAging.status, 503);
+    assert.deepEqual(failedAging.body, { error: "audit_unavailable" });
+  } finally {
+    await pool.query("ALTER TABLE audit_log_fin07_unavailable RENAME TO audit_log");
+  }
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_cashflow_snapshots WHERE competence_date='2026-11-02'")).rows[0].n, 0, "failed cashflow leaves no row");
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_aging_receivables WHERE receivable_id=$1 AND competence_date=$2", [overdueReceivable.body.receivable.id, failedCompetence])).rows[0].n, 0, "failed aging leaves no row");
+});
+
+test("L07 FIN-07: Chromium registra fluxo de caixa e aging com bucket calculado", { skip: !RUN, timeout: 180_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const { accountId, contractId } = await insertClientSpace("FIN07 Chromium");
+  const receivable = await fin("/receivables", { method: "POST", cookie: financeiro.cookie, body: { client_account_id: accountId, contract_id: contractId, competence_date: "2026-10-01", due_date: "2026-10-20", amount_cents: 18000, description: "Recebível sintético da jornada FIN-07 no Chromium" } });
+  assert.equal(receivable.status, 201);
+  const browser = await playwrightChromium.launch({ executablePath: await packagedChromium.executablePath(), headless: true, args: packagedChromium.args.filter(arg => arg !== "--disable-web-security") });
+  try {
+    const context = await browser.newContext();
+    const pair = financeiro.cookie.split(";")[0];
+    const separator = pair.indexOf("=");
+    await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
+    const page = await context.newPage();
+    await page.setExtraHTTPHeaders({ origin: baseUrl });
+    await page.goto(`${baseUrl}/admin/financeiro`, { waitUntil: "networkidle" });
+    await page.getByTestId("finance-tab-cashflow").click();
+    await page.waitForSelector('[data-testid="fin07-cashflow"]');
+
+    const suffix = uuid().slice(0, 8);
+    await page.getByTestId("fin07-cashflow-competence").fill("2026-10-02");
+    await page.getByTestId("fin07-total-receivable").fill("18000");
+    await page.getByTestId("fin07-total-payable").fill("6000");
+    await page.getByTestId("fin07-overdue").fill("2500");
+    await page.getByTestId("fin07-upcoming").fill("9000");
+    await page.getByTestId("fin07-cashflow-notes").fill(`Snapshot previsto criado pelo Chromium no gate FIN-07 ${suffix}`);
+    await page.getByTestId("fin07-create-cashflow").click();
+    await page.waitForSelector('[data-testid="fin07-notice"], [data-testid="fin07-error"]');
+    const cashflowFeedback = await page.locator('[data-testid="fin07-notice"], [data-testid="fin07-error"]').first().textContent();
+    assert.match(cashflowFeedback || "", /fluxo de caixa/, `cashflow UI feedback: ${cashflowFeedback}`);
+    const uiSnapshot = await pool.query("SELECT id, balance_cents FROM fin_cashflow_snapshots WHERE competence_date='2026-10-02' AND cashflow_type='previsto' ORDER BY created_at DESC LIMIT 1");
+    assert.equal(uiSnapshot.rows.length, 1);
+    assert.equal(Number(uiSnapshot.rows[0].balance_cents), 12000);
+
+    await page.getByTestId("fin07-aging-receivable").selectOption(receivable.body.receivable.id);
+    await page.getByTestId("fin07-aging-competence").fill("2026-10-02");
+    await page.getByTestId("fin07-aging-amount").fill("18000");
+    await page.getByTestId("fin07-aging-paid").fill("3000");
+    await page.getByTestId("fin07-create-aging").click();
+    await page.waitForFunction(() => Boolean(document.querySelector('[data-testid="fin07-error"]')) || (document.querySelector('[data-testid="fin07-notice"]')?.textContent || "").includes("aging sintético"));
+    const agingFeedback = await page.locator('[data-testid="fin07-error"], [data-testid="fin07-notice"]').first().textContent();
+    assert.match(agingFeedback || "", /aging sintético/, `aging UI feedback: ${agingFeedback}`);
+    const uiAging = await pool.query("SELECT bucket, amount_remaining_cents FROM fin_aging_receivables WHERE receivable_id=$1", [receivable.body.receivable.id]);
+    assert.equal(uiAging.rows.length, 1);
+    assert.equal(uiAging.rows[0].bucket, "a_vencer");
+    assert.equal(Number(uiAging.rows[0].amount_remaining_cents), 15000);
+  } finally {
+    await browser.close();
+  }
+});
