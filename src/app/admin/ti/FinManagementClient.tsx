@@ -45,14 +45,8 @@ export default function FinManagementClient() {
   const [expFileUrl, setExpFileUrl] = useState("");
   const [expStorageKey, setExpStorageKey] = useState("");
 
-  // FIN-11 fiscal provider
-  const [provName, setProvName] = useState("");
-  const [provType, setProvType] = useState("nfse");
-  // obligation
-  const [oblActivity, setOblActivity] = useState("");
-  const [oblDesc, setOblDesc] = useState("");
-  const [oblRule, setOblRule] = useState("");
-  const [oblType, setOblType] = useState("nfse");
+  // FIN-11: a escrita fiscal canônica vive em /admin/financeiro (aba Fiscal).
+  // Esta tela de TI permanece somente como leitura para diagnóstico.
 
   // FIN-12 gateway
   const [gwName, setGwName] = useState("");
@@ -152,28 +146,6 @@ export default function FinManagementClient() {
     } catch(e:any){ setMsg("FIN-10 erro: "+e.message); }
   };
 
-  const createProvider = async () => {
-    try {
-      setMsg("");
-      if (!provName || provName.length<3) throw new Error("name 3..200");
-      await post("/api/fin/fiscal-providers", { name: provName, provider_type: provType, status:"nao_configurado" });
-      setMsg("FIN-11 provedor fiscal criado name UNIQUE determinar NFS-e/NF-e ou outra obrigação conforme atividade sem assumir uma nota para tudo");
-      load();
-    } catch(e:any){ setMsg("FIN-11 provedor erro: "+e.message); }
-  };
-
-  const createObligation = async () => {
-    try {
-      setMsg("");
-      if (!oblActivity || oblActivity.length<3) throw new Error("activity_type 3..200");
-      if (!oblDesc || oblDesc.length<10) throw new Error("description 10..1000");
-      if (!oblRule || oblRule.length<10) throw new Error("rule 10..1000 obrigatória determinar NFS-e/NF-e ou outra obrigação conforme atividade sem assumir uma nota para tudo");
-      await post("/api/fin/fiscal-obligations", { obligation_type: oblType, activity_type: oblActivity, description: oblDesc, rule: oblRule });
-      setMsg("FIN-11 obrigação fiscal criada rule 10..1000 determinar NFS-e/NF-e ou outra obrigação conforme atividade");
-      load();
-    } catch(e:any){ setMsg("FIN-11 obrigação erro: "+e.message); }
-  };
-
   const createGateway = async () => {
     try {
       setMsg("");
@@ -246,17 +218,8 @@ export default function FinManagementClient() {
       <button onClick={createExpense}>Criar despesa DES-FIN alçada evidência segregação</button>
       <ul>{expenses.slice(0,20).map(e=><li key={e.id}>{e.protocol} {e.expense_type} {e.category} {e.amount_cents} status:{e.status} solicitante:{e.requester_name} aprovador:{e.approver_name||"—"} segregado:{String(e.is_segregated)} evidência:{e.evidence_storage_key?.slice(0,20)||"—"}</li>)}</ul>
 
-      <h3>FIN-11 Integração contábil/fiscal provedor determinar NFS-e/NF-e ou outra obrigação conforme atividade sem assumir uma nota para tudo</h3>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(180px,1fr))", gap:8 }}>
-        <input placeholder="provedor name UNIQUE 3..200" value={provName} onChange={e=>setProvName(e.target.value)} />
-        <select value={provType} onChange={e=>setProvType(e.target.value)}><option value="nfse">nfse</option><option value="nfe">nfe</option><option value="nfce">nfce</option><option value="cte">cte</option><option value="outro">outro</option></select>
-        <button onClick={createProvider}>Criar provedor fiscal</button>
-        <input placeholder="activity_type 3..200" value={oblActivity} onChange={e=>setOblActivity(e.target.value)} />
-        <select value={oblType} onChange={e=>setOblType(e.target.value)}><option value="nfse">nfse</option><option value="nfe">nfe</option><option value="nfce">nfce</option><option value="cte">cte</option><option value="outro">outro</option></select>
-        <input placeholder="description 10..1000" value={oblDesc} onChange={e=>setOblDesc(e.target.value)} />
-        <input placeholder="rule 10..1000 determinar NFS-e/NF-e ou outra obrigação conforme atividade" value={oblRule} onChange={e=>setOblRule(e.target.value)} />
-        <button onClick={createObligation}>Criar obrigação fiscal</button>
-      </div>
+      <h3>FIN-11 Integração contábil/fiscal mediante provedor (somente leitura)</h3>
+      <p style={{ fontSize:12 }}>A obrigação é determinada pela atividade através de regra canônica explícita (NFS-e, NF-e, NFC-e, CT-e ou outra obrigação); nenhuma nota única é assumida e nenhuma emissão fiscal real é executada. A criação e as transições ficam em <a href="/admin/financeiro">/admin/financeiro</a>, aba Fiscal / Obrigações.</p>
       <ul>{providers.slice(0,10).map(p=><li key={p.id}>{p.name} tipo:{p.provider_type} status:{p.status} ativo:{String(p.is_active)}</li>)}</ul>
       <ul>{obligations.slice(0,20).map(o=><li key={o.id}>{o.obligation_type} atividade:{o.activity_type} determinada:{String(o.is_determined)} status:{o.status} rule:{o.rule.slice(0,60)}</li>)}</ul>
       <ul>{docs.slice(0,10).map(d=><li key={d.id}>{d.protocol} tipo:{d.document_type} status:{d.status} amount:{d.amount_cents} sandbox:{String(d.is_sandbox)} storage:{d.storage_key?.slice(0,20)||"—"}</li>)}</ul>
