@@ -187,8 +187,148 @@ test("L06 Fatia A: alocação escopada por contrato, contrato encerrado bloqueia
   assert.equal(trail.rows[0].n, 1, "durable audit trail written in the same transaction");
 });
 
+test("L06 OPS-01: cargo/função fora da borda de RH, necessidade por turno idempotente e cadeia cliente→posto", { skip: !RUN, timeout: 180_000 }, async () => {
+  const admin = await provisionAndLoginStaff(pool, api, { role: "admin" });
+  const commercial = await provisionAndLoginStaff(pool, api, { role: "comercial" });
+  const rh = await provisionAndLoginStaff(pool, api, { role: "rh" });
+  const tag = uuid().slice(0, 8);
+
+  const companyId = uuid();
+  const unitId = uuid();
+  await pool.query("INSERT INTO crm_companies (id,display_name,type,status,created_by) VALUES ($1,'QA OPS-01 Empresa','client','active','admin')", [companyId]);
+  await pool.query("INSERT INTO crm_company_units (id,company_id,display_name,is_main) VALUES ($1,$2,'QA OPS-01 Unidade',true)", [unitId, companyId]);
+  const contractActive = await insertContract(companyId, "ativo");
+  const contractToClose = await insertContract(companyId, "ativo");
+
+  // 1. Borda unificada (pendência registrada do OPS-01): o MESMO recurso
+  //    responde igual no alias histórico e no canônico. Quem decide é o handler
+  //    de operação (sessão de staff + papel + same-origin); a permissão de RH
+  //    employees.read/write não é mais exigida para recurso de operação.
+  //    Antes: admin/ti recebiam 403 no alias legado e 200 no canônico.
+  assert.equal((await api("/api/hr/ops-job-roles")).status, 401, "anonymous denied on the legacy alias");
+  assert.equal((await api("/api/hr/ops-job-roles", { cookie: admin.cookie })).status, 200, "admin reads job roles through the legacy alias (was 403 under the HR border)");
+  assert.equal((await api("/api/admin/hr/ops-posts", { cookie: admin.cookie })).status, 200, "admin reads posts through the legacy alias");
+  assert.equal((await api("/api/crm/hr/ops-schedule-versions", { cookie: admin.cookie })).status, 200, "admin reads schedule versions through the legacy alias");
+  assert.equal((await api("/api/hr/ops-job-roles", { cookie: rh.cookie })).status, 200, "rh keeps access through the legacy alias");
+  const legacyWrite = await api("/api/hr/ops-job-roles", { cookie: commercial.cookie, method: "POST", body: { name: `Negado ${tag}`, role_type: "cargo" } });
+  assert.equal(legacyWrite.status, 403, "commercial cannot write through the legacy alias");
+  assert.equal(legacyWrite.body.error, "forbidden", "the ops handler denies the write, not the HR border");
+  // A borda de RH legada segue valendo para os paths de RH que não são de operação.
+  assert.equal((await api("/api/hr/employees", { cookie: admin.cookie })).status, 403, "real HR path still requires the granular HR permission");
+
+  // 2. Estrutura da cadeia: cargo/função em entidade própria, turno, posto.
+  const role = await ops("/job-roles", { cookie: admin.cookie, method: "POST", body: { name: `Inspetor CFTV ${tag}`, role_type: "cargo", description: "Cargo sintético do gate OPS-01" } });
+  assert.equal(role.status, 201, "job role created");
+  const roleId = role.body.role.id;
+  const shift = await ops("/shift-templates", { cookie: admin.cookie, method: "POST", body: { name: `Noturno 12h ${tag}`, shift_type: "noturno", start_time: "19:00", end_time: "07:00", duration_hours: 12 } });
+  assert.equal(shift.status, 201, "shift template created");
+  const shiftId = shift.body.template.id;
+  const post = await ops("/posts", { cookie: admin.cookie, method: "POST", body: { name: `Portaria OPS-01 ${tag}`, company_id: companyId, unit_id: unitId, contract_id: contractActive, post_type: "portaria" } });
+  assert.equal(post.status, 201, "post created on the active contract");
+  const postId = post.body.post.id;
+  const postClosing = await ops("/posts", { cookie: admin.cookie, method: "POST", body: { name: `Posto a encerrar ${tag}`, company_id: companyId, unit_id: unitId, contract_id: contractToClose, post_type: "portaria" } });
+  assert.equal(postClosing.status, 201, "post on contract to be closed created");
+  await pool.query("UPDATE crm_contracts SET status='encerrado' WHERE id=$1", [contractToClose]);
+
+  // 3. Autorização e validação da necessidade por turno.
+  assert.equal((await ops("/post-shift-needs", { method: "POST", body: { post_id: postId, shift_template_id: shiftId } })).status, 401, "anonymous cannot create need");
+  assert.equal((await ops("/post-shift-needs", { cookie: commercial.cookie, method: "POST", body: { post_id: postId, shift_template_id: shiftId } })).status, 403, "commercial cannot create need");
+  assert.equal((await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postId, shift_template_id: shiftId, day_of_week: 7 } })).status, 400, "day out of range rejected");
+  assert.equal((await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postId, shift_template_id: shiftId, required_headcount: 0 } })).status, 400, "zero headcount rejected");
+  assert.equal((await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postId, shift_template_id: shiftId, required_headcount: 1.5 } })).status, 400, "fractional headcount rejected");
+
+  // 4. Troca de ID devolve 404/409 nomeados, nunca colisão de FK; posto
+  //    inativo e contrato encerrado não recebem nova necessidade.
+  const needUnknownPost = await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: uuid(), shift_template_id: shiftId } });
+  assert.equal(needUnknownPost.status, 404, "unknown post rejected");
+  assert.equal(needUnknownPost.body.error, "post_not_found");
+  const needUnknownShift = await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postId, shift_template_id: uuid() } });
+  assert.equal(needUnknownShift.status, 404, "unknown shift template rejected");
+  assert.equal(needUnknownShift.body.error, "shift_template_not_found");
+  const needUnknownRole = await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postId, shift_template_id: shiftId, role_id: uuid() } });
+  assert.equal(needUnknownRole.status, 404, "unknown job role rejected");
+  assert.equal(needUnknownRole.body.error, "job_role_not_found");
+  const needClosed = await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postClosing.body.post.id, shift_template_id: shiftId } });
+  assert.equal(needClosed.status, 409, "closed contract blocks new need");
+  assert.equal(needClosed.body.error, "contract_not_operational");
+
+  const postInactive = await ops("/posts", { cookie: admin.cookie, method: "POST", body: { name: `Posto inativo ${tag}`, company_id: companyId, unit_id: unitId, contract_id: contractActive, post_type: "portaria" } });
+  assert.equal(postInactive.status, 201, "post to deactivate created");
+  assert.equal((await ops("/posts", { cookie: admin.cookie, method: "PATCH", body: { id: postInactive.body.post.id, is_active: false } })).status, 200, "post deactivated");
+  const needInactive = await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postInactive.body.post.id, shift_template_id: shiftId } });
+  assert.equal(needInactive.status, 409, "inactive post blocks new need");
+  assert.equal(needInactive.body.error, "post_inactive");
+
+  // 5. Necessidade válida persistida; a leitura devolve os nomes canônicos da
+  //    cadeia (posto, turno, cargo) para a tela renderizar sem segunda entidade.
+  const need = await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postId, shift_template_id: shiftId, role_id: roleId, day_of_week: 1, required_headcount: 2 } });
+  assert.equal(need.status, 201, "valid need created");
+  const readNeeds = await ops(`/post-shift-needs?post_id=${postId}`, { cookie: admin.cookie });
+  assert.equal(readNeeds.status, 200, "needs listing works");
+  const joinedNeed = (readNeeds.body.needs || []).find(item => item.id === need.body.need.id);
+  assert.ok(joinedNeed, "created need is listed");
+  assert.equal(joinedNeed.post_name, `Portaria OPS-01 ${tag}`, "need carries the canonical post name");
+  assert.equal(joinedNeed.shift_template_name, `Noturno 12h ${tag}`, "need carries the shift template name");
+  assert.equal(joinedNeed.role_name, `Inspetor CFTV ${tag}`, "need carries the job role name");
+
+  // 6. Idempotência NULL-safe: a unicidade do banco é DISTINCT (NULLs não
+  //    colidem), então repetir dia/cargo ausentes criava linha duplicada.
+  //    A conferência explícita IS NOT DISTINCT FROM fecha o buraco.
+  const dailyNeedBody = { post_id: postId, shift_template_id: shiftId, required_headcount: 1 };
+  assert.equal((await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: dailyNeedBody })).status, 201, "need without day/role created");
+  const dupNull = await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: dailyNeedBody });
+  assert.equal(dupNull.status, 409, "NULL-key duplicate rejected");
+  assert.equal(dupNull.body.error, "duplicate_need");
+  const dupExplicit = await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postId, shift_template_id: shiftId, role_id: roleId, day_of_week: 1, required_headcount: 3 } });
+  assert.equal(dupExplicit.status, 409, "explicit-key duplicate rejected");
+  const needCount = await pool.query("SELECT count(*)::int AS n FROM ops_post_shift_needs WHERE post_id=$1", [postId]);
+  assert.equal(needCount.rows[0].n, 2, "exactly two needs persisted for the post");
+
+  // 7. Fail-closed de auditoria: sem trilha, a necessidade não é gravada.
+  await pool.query("ALTER TABLE audit_log RENAME TO audit_log_ops01_bak");
+  try {
+    const beforeAudit = Number((await pool.query("SELECT count(*)::int AS n FROM ops_post_shift_needs WHERE post_id=$1", [postId])).rows[0].n);
+    const auditFail = await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postId, shift_template_id: shiftId, day_of_week: 3 } });
+    assert.equal(auditFail.status, 503, "need creation fails closed without audit");
+    const afterAudit = Number((await pool.query("SELECT count(*)::int AS n FROM ops_post_shift_needs WHERE post_id=$1", [postId])).rows[0].n);
+    assert.equal(afterAudit, beforeAudit, "no need persisted without audit trail");
+  } finally {
+    await pool.query("ALTER TABLE audit_log_ops01_bak RENAME TO audit_log");
+  }
+  assert.equal((await ops("/post-shift-needs", { cookie: admin.cookie, method: "POST", body: { post_id: postId, shift_template_id: shiftId, day_of_week: 3 } })).status, 201, "need persists again once audit is restored");
+  const needTrail = await pool.query("SELECT count(*)::int AS n FROM audit_log WHERE action='ops_post_shift_need_create'");
+  assert.ok(needTrail.rows[0].n >= 3, "need creations audited in the same transaction");
+
+  // 8. A alocação fecha a cadeia e a leitura devolve posto e profissional.
+  const employeeId = await insertEmployee("ativo");
+  const allocation = await ops("/allocations", { cookie: admin.cookie, method: "POST", body: { post_id: postId, employee_id: employeeId, shift_template_id: shiftId, allocation_date: "2026-10-15" } });
+  assert.equal(allocation.status, 201, "allocation closes the chain on the operational post");
+  const readAllocs = await ops(`/allocations?post_id=${postId}`, { cookie: admin.cookie });
+  const joinedAlloc = (readAllocs.body.allocations || []).find(item => item.id === allocation.body.allocation.id);
+  assert.ok(joinedAlloc, "allocation listed");
+  assert.equal(joinedAlloc.post_name, `Portaria OPS-01 ${tag}`, "allocation carries the post name");
+  assert.ok(String(joinedAlloc.employee_name || "").startsWith("QA Funcionário"), "allocation carries the professional name");
+  const readPosts = await ops("/posts?limit=100", { cookie: admin.cookie });
+  const joinedPost = (readPosts.body.posts || []).find(item => item.id === postId);
+  assert.ok(joinedPost, "post listed");
+  assert.equal(joinedPost.company_name, "QA OPS-01 Empresa", "post carries the client name of the chain");
+  assert.equal(joinedPost.unit_name, "QA OPS-01 Unidade", "post carries the served unit of the chain");
+
+  // 9. Estado persistido para a verificação em Chromium real, feita na sessão
+  //    de navegador já existente da Fatia B (evita um processo de navegador
+  //    adicional só para esta aba).
+  const uiState = await pool.query(
+    `SELECT (SELECT count(*)::int FROM ops_post_shift_needs WHERE post_id=$1) AS needs,
+            (SELECT count(*)::int FROM ops_allocations WHERE post_id=$1) AS allocs`,
+    [postId]
+  );
+  assert.equal(uiState.rows[0].needs, 3, "needs remain persisted for the UI assertion");
+  assert.equal(uiState.rows[0].allocs, 1, "allocation remains persisted for the UI assertion");
+});
+
 test("L06 OPS-02: dimensionamento valida valores e escopo canônico", { skip: !RUN, timeout: 180_000 }, async () => {
   const admin = await provisionAndLoginStaff(pool, api, { role: "admin" });
+  const tag = uuid().slice(0, 8);
   const companyId = uuid();
   const unitId = uuid();
   await pool.query("INSERT INTO crm_companies (id,display_name,type,status,created_by) VALUES ($1,'QA OPS-02 Empresa','client','active','admin')", [companyId]);
@@ -276,10 +416,69 @@ test("L06 OPS-02: dimensionamento valida valores e escopo canônico", { skip: !R
     period_start: "2026-10-01", period_end: "2026-10-31",
   } });
   assert.equal(blocked.status, 409, "closed contract rejected");
+
+  // ==============================================================
+  // OPS-02 (fatia de fechamento): cobertura planejada versus realizada e
+  // profissional HABILITADO. O painel recomputa a habilitação ATUAL contra as
+  // alocações da faixa do registro, com a MESMA regra do motor OPS-04 — pega
+  // qualificação revogada ou vencida DEPOIS da alocação, que o motor não viu
+  // no momento da criação.
+  // ==============================================================
+  const roleDim = await ops("/job-roles", { cookie: admin.cookie, method: "POST", body: { name: `Vigilante Dim ${tag}`, role_type: "cargo", description: "Cargo sintético do cruzamento de habilitação" } });
+  assert.equal(roleDim.status, 201, "job role for the cross created");
+  const roleIdDim = roleDim.body.role.id;
+  const shiftDim = await ops("/shift-templates", { cookie: admin.cookie, method: "POST", body: { name: `Comercial 8h ${tag}`, shift_type: "comercial", start_time: "08:00", end_time: "16:00", duration_hours: 8 } });
+  assert.equal(shiftDim.status, 201, "shift template for the window created");
+
+  const empQualified = await insertEmployee("ativo");
+  const empNoRole = await insertEmployee("ativo");
+  assert.equal((await ops("/qualifications", { cookie: admin.cookie, method: "POST", body: { employee_id: empQualified, role_id: roleIdDim, certification_type: `CFTV Dim ${tag}`, valid_until: "2028-12-31", is_valid: true } })).status, 201, "valid qualification registered");
+
+  assert.equal((await ops("/allocations", { cookie: admin.cookie, method: "POST", body: { post_id: postId, employee_id: empQualified, shift_template_id: shiftDim.body.template.id, role_id: roleIdDim, allocation_date: "2026-10-10" } })).status, 201, "qualified allocation inside the window");
+  assert.equal((await ops("/allocations", { cookie: admin.cookie, method: "POST", body: { post_id: postId, employee_id: empNoRole, shift_template_id: shiftDim.body.template.id, allocation_date: "2026-10-11" } })).status, 201, "allocation without role requirement inside the window");
+  // Fora da faixa do registro: não pode entrar na conta do painel.
+  assert.equal((await ops("/allocations", { cookie: admin.cookie, method: "POST", body: { post_id: postId, employee_id: empNoRole, shift_template_id: shiftDim.body.template.id, allocation_date: "2026-11-15" } })).status, 201, "allocation outside the window created");
+
+  const panel = await ops(`/dimensioning?post_id=${postId}`, { cookie: admin.cookie });
+  assert.equal(panel.status, 200, "dimensioning panel read works");
+  const panelRow = (panel.body.dimensionings || []).find(item => item.id === valid.body.dimensioning.id);
+  assert.ok(panelRow, "dimensioning row listed for the post");
+  assert.equal(panelRow.post_name, "QA OPS-02 Posto", "panel carries the canonical post name");
+  assert.equal(panelRow.allocated_employees, 2, "two distinct professionals allocated inside the window (outside one excluded)");
+  assert.equal(panelRow.qualified_employees, 1, "one professional with the required role satisfied by a valid qualification");
+  assert.equal(panelRow.unqualified_employees, 0, "nobody with unmet requirement yet");
+  assert.equal(panelRow.employees_without_requirement, 1, "one professional allocated only without role requirement");
+  assert.equal(Number(panelRow.allocated_hours), 16, "hours summed from the shift templates of the window allocations");
+  assert.equal(Number(panelRow.coverage_percent), 50, "planned versus realized coverage percent read from the record");
+
+  // Habilitação revogada DEPOIS da alocação, pela API real (upsert de
+  // qualificação): o painel expõe a degradação; dado incompleto vira lacuna
+  // visível, não número fictício.
+  assert.equal((await ops("/qualifications", { cookie: admin.cookie, method: "POST", body: { employee_id: empQualified, role_id: roleIdDim, certification_type: `CFTV Dim ${tag}`, valid_until: "2028-12-31", is_valid: false } })).status, 201, "qualification revoked via API after the allocation");
+  const panelRevoked = await ops(`/dimensioning?post_id=${postId}`, { cookie: admin.cookie });
+  const panelRowRevoked = (panelRevoked.body.dimensionings || []).find(item => item.id === valid.body.dimensioning.id);
+  assert.equal(panelRowRevoked.qualified_employees, 0, "revoked qualification drops the qualified count");
+  assert.equal(panelRowRevoked.unqualified_employees, 1, "professional with unmet requirement is exposed by the recomputation");
+
+  // Lacunas de cobertura lidas com o nome canônico do posto.
+  const gapsRead = await ops(`/coverage-gaps?post_id=${postId}`, { cookie: admin.cookie });
+  assert.equal(gapsRead.status, 200, "coverage gaps read works");
+  assert.ok((gapsRead.body.gaps || []).every(gap => gap.post_name === "QA OPS-02 Posto"), "gaps carry the canonical post name");
+
+  // Estado persistido para a verificação em Chromium real, feita na sessão de
+  // navegador já existente da Fatia B.
+  const uiState = await pool.query(
+    `SELECT (SELECT count(*)::int FROM ops_dimensioning WHERE post_id=$1) AS dims,
+            (SELECT count(*)::int FROM ops_coverage_gaps WHERE post_id=$1) AS gaps`,
+    [postId]
+  );
+  assert.ok(uiState.rows[0].dims >= 1, "dimensioning remains persisted for the UI assertion");
+  assert.ok(uiState.rows[0].gaps >= 1, "coverage gaps remain persisted for the UI assertion");
 });
 
 test("L06 OPS-03: versões de escala validam período, status, sequência e histórico", { skip: !RUN, timeout: 180_000 }, async () => {
   const admin = await provisionAndLoginStaff(pool, api, { role: "admin" });
+  const commercial = await provisionAndLoginStaff(pool, api, { role: "comercial" });
   const companyId = uuid();
   const unitId = uuid();
   await pool.query("INSERT INTO crm_companies (id,display_name,type,status,created_by) VALUES ($1,'QA OPS-03 Empresa','client','active','admin')", [companyId]);
@@ -308,12 +507,24 @@ test("L06 OPS-03: versões de escala validam período, status, sequência e hist
   assert.equal(retryEntry.status, 409, "schedule entry retry rejected");
   assert.equal(retryEntry.body.error, "duplicate_entry");
 
+  // Segundo profissional com entrada na mesma versão, SEM ciência — usado pela
+  // verificação de UI (jornada de ciência pela interface na Fatia B).
+  const employeeUi = await insertEmployee("ativo");
+  assert.equal((await ops("/schedule-entries", { cookie: admin.cookie, method: "POST", body: { version_id: second.body.version.id, post_id: postId, employee_id: employeeUi, shift_template_id: shift.body.template.id, entry_date: "2026-12-16" } })).status, 201, "second entry created for the UI acknowledgment journey");
+
   const published = await ops("/schedule-versions", { cookie: admin.cookie, method: "PATCH", body: { id: second.body.version.id, status: "publicada" } });
   assert.equal(published.status, 200, "schedule publication accepted");
   const ack = await ops("/schedule-acks", { cookie: admin.cookie, method: "POST", body: { version_id: second.body.version.id, employee_id: employeeId, notes: "Ciente QA" } });
   assert.equal(ack.status, 201, "employee acknowledgment recorded");
   const ackRetry = await ops("/schedule-acks", { cookie: admin.cookie, method: "POST", body: { version_id: second.body.version.id, employee_id: employeeId } });
   assert.equal(ackRetry.status, 409, "acknowledgment retry rejected");
+
+  // OPS-03 (fechamento): autorização da ciência. Registro de ciência é escrita
+  // operacional — anônimo é negado e papel sem direito (comercial) também.
+  // Antes desta fatia, qualquer sessão de staff registrava ciência por
+  // qualquer profissional: o handler não checava papel.
+  assert.equal((await ops("/schedule-acks", { method: "POST", body: { version_id: second.body.version.id, employee_id: employeeUi } })).status, 401, "anonymous cannot acknowledge");
+  assert.equal((await ops("/schedule-acks", { cookie: commercial.cookie, method: "POST", body: { version_id: second.body.version.id, employee_id: employeeUi } })).status, 403, "commercial cannot acknowledge on behalf of a professional");
 
   const publishHistory = await pool.query("SELECT count(*)::int AS n FROM ops_schedule_history WHERE version_id=$1", [second.body.version.id]);
   assert.equal(publishHistory.rows[0].n, 2, "status transition history is persisted");
@@ -332,6 +543,26 @@ test("L06 OPS-03: versões de escala validam período, status, sequência e hist
     company_id: companyId, unit_id: unitId, valid_from: "2027-01-01", valid_to: "2027-01-31", status: "publicadao",
   } });
   assert.equal(invalidStatus.status, 400, "invalid schedule status rejected");
+
+  // Estado persistido para a verificação em Chromium real (Fatia B): a versão
+  // publicada tem duas entradas, uma ciência registrada e um profissional
+  // pendente — a jornada de ciência pela interface começa nele.
+  const uiState = await pool.query(
+    `SELECT (SELECT count(*)::int FROM ops_schedule_entries WHERE version_id=$1) AS entries,
+            (SELECT count(*)::int FROM ops_schedule_acknowledgments WHERE version_id=$1) AS acks`,
+    [second.body.version.id]
+  );
+  assert.equal(uiState.rows[0].entries, 2, "two entries remain persisted for the UI calendar");
+  assert.equal(uiState.rows[0].acks, 1, "exactly one acknowledgment persisted (retry did not duplicate)");
+  const pendingAck = await pool.query(
+    `SELECT e.id, emp.display_name AS name
+       FROM ops_schedule_entries e
+       JOIN hr_employees emp ON emp.id = e.employee_id
+      WHERE e.version_id=$1
+        AND NOT EXISTS (SELECT 1 FROM ops_schedule_acknowledgments ak WHERE ak.version_id=e.version_id AND ak.employee_id=e.employee_id)`,
+    [second.body.version.id]
+  );
+  assert.equal(pendingAck.rows.length, 1, "exactly one professional still pending acknowledgment");
 });
 
 test("L06 OPS-04: habilitação, documentação, indisponibilidade, jornada e descanso sob regra aprovada", { skip: !RUN, timeout: 300_000 }, async () => {
@@ -888,6 +1119,85 @@ test("L06 Fatia B: cobertura, passagem de turno, ocorrência, checklists, evidê
     await page.waitForSelector("#posts-title", { timeout: 30_000 });
     let content = await page.textContent("body");
     assert.match(content || "", /Posto Portaria A/, "operations page renders synthetic post");
+
+    // OPS-01: cadeia cliente → unidade → posto → necessidade por turno →
+    // alocação, criada no subteste OPS-01 e renderizada da API real. O grupo de
+    // estrutura tem carregamento próprio; esperar a seção garante que terminou.
+    await page.waitForSelector("#shift-needs-title", { timeout: 30_000 });
+    content = await page.textContent("body");
+    assert.match(content || "", /QA OPS-01 Empresa/, "posts table renders the client of the chain");
+    assert.match(content || "", /QA OPS-01 Unidade/, "posts table renders the served unit of the chain");
+    assert.match(content || "", /Inspetor CFTV/, "job roles section renders the OPS-01 entity");
+    assert.match(content || "", /Noturno 12h/, "shift need renders the canonical shift template name");
+    assert.match(content || "", /Portaria OPS-01/, "shift need row carries the post name via the canonical join");
+    assert.match(content || "", /sem dia específico/, "need without a day is shown without inventing semantics");
+    assert.match(content || "", /QA Funcionário ativo/, "allocations table renders the professional of the chain");
+
+    // Aba Dimensionamento (OPS-02): contratado × planejado × realizado por
+    // faixa de tempo, com habilitação cruzada recomputada e fórmula explícita.
+    await page.click("button:has-text('Dimensionamento (OPS-02)')");
+    await page.waitForSelector("#dimensioning-title", { timeout: 30_000 });
+    content = await page.textContent("body");
+    assert.match(content || "", /QA OPS-02 Posto/, "dimensioning tab renders the post of the chain");
+    assert.match(content || "", /50%/, "coverage percent rendered from the real record");
+    assert.match(content || "", /sem habilitação válida/, "revoked qualification exposed as a visible gap");
+    assert.match(content || "", /horas realizadas ÷ horas exigidas/, "panel footer states the explicit formula and period");
+    assert.match(content || "", /Lacunas de cobertura/, "coverage gaps section rendered");
+    assert.match(content || "", /2026-10-05/, "gap date rendered from the real API");
+
+    // Aba Escalas (OPS-03): versões com validade, calendário nas três visões
+    // (posto, equipe, pessoa), histórico e ciência pela interface — jornada
+    // completa com a API real.
+    await page.click("button:has-text('Escalas (OPS-03)')");
+    await page.waitForSelector("#schedule-versions-title", { timeout: 30_000 });
+    content = await page.textContent("body");
+    assert.match(content || "", /QA OPS-03 Empresa/, "schedule versions table renders the company scope");
+
+    // Seleciona a versão publicada do OPS-03 (validade 2026-12-01 a 2026-12-31).
+    await page.locator("tr", { hasText: "2026-12-01" }).locator("button:has-text('Ver calendário')").click();
+    await page.waitForSelector("#schedule-calendar-title", { timeout: 30_000 });
+    // A tabela do calendário só existe depois que as entradas da versão
+    // terminam de carregar — esperar por ela evita assertar estado de carga.
+    await page.waitForSelector("section[aria-labelledby='schedule-calendar-title'] table", { timeout: 30_000 });
+    content = await page.textContent("body");
+    assert.match(content || "", /QA OPS-03 Posto/, "calendar by post renders the post of the chain");
+    assert.match(content || "", /QA Funcionário ativo/, "calendar by post renders the scheduled professionals");
+
+    await page.click("button:has-text('Por equipe')");
+    content = await page.textContent("body");
+    assert.match(content || "", /QA OPS-03 Unidade/, "calendar by team renders the unit (equipe) of the chain");
+
+    await page.click("button:has-text('Por pessoa')");
+    content = await page.textContent("body");
+    assert.match(content || "", /QA OPS-03 Diurno/, "calendar by person renders the canonical shift name");
+    assert.match(content || "", /revisada → publicada/, "version history shows the visible transition");
+
+    // Jornada de ciência pela interface: o profissional pendente (criado no
+    // subteste OPS-03) recebe ciência pela tela; a segunda ciência não duplica.
+    const pendingAckEmployee = await pool.query(
+      `SELECT emp.display_name AS name
+         FROM ops_schedule_entries e
+         JOIN ops_schedule_versions v ON v.id = e.version_id
+         JOIN hr_employees emp ON emp.id = e.employee_id
+        WHERE v.valid_from = '2026-12-01'
+          AND NOT EXISTS (SELECT 1 FROM ops_schedule_acknowledgments ak WHERE ak.version_id = v.id AND ak.employee_id = e.employee_id)`
+    );
+    assert.equal(pendingAckEmployee.rows.length, 1, "exactly one professional pending acknowledgment in the UI journey");
+    const pendingName = pendingAckEmployee.rows[0].name;
+    await page.locator("section[aria-labelledby='schedule-acks-title'] tr", { hasText: pendingName }).locator("button:has-text('Registrar ciência')").click();
+    await page.waitForSelector("[role=status]:has-text('Ciência registrada para')", { timeout: 30_000 });
+    await page.locator("section[aria-labelledby='schedule-acks-title'] tr", { hasText: pendingName }).locator("button:has-text('Registrar ciência')").click();
+    await page.waitForSelector("[role=status]:has-text('não duplica efeito')", { timeout: 30_000 });
+    await page.waitForSelector("text=ciente desde", { timeout: 30_000 });
+    content = await page.textContent("body");
+    assert.match(content || "", /ciente desde/, "acknowledged state is visible after the interface journey");
+    const ackRows = await pool.query(
+      `SELECT count(*)::int AS n FROM ops_schedule_acknowledgments ak
+         JOIN ops_schedule_versions v ON v.id = ak.version_id
+        WHERE v.valid_from = '2026-12-01' AND ak.employee_id IN (
+          SELECT e.employee_id FROM ops_schedule_entries e WHERE e.version_id = v.id)`
+    );
+    assert.equal(ackRows.rows[0].n, 2, "both professionals acknowledged, each exactly once — no duplication from the UI journey");
 
     // Aba Jornada & Habilitação (OPS-04): regra aprovada, habilitação e trilha
     // de bloqueios, vindos da API real e persistidos pelo subteste OPS-04.

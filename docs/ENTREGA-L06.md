@@ -1,10 +1,10 @@
-# Entrega L06 — operação, patrimônio e manutenção (fatias A, B, C e D)
+# Entrega L06 — operação, patrimônio e manutenção (fatias A–I)
 
 **Data:** 2026-09-30
 **Base integrada:** `main` @ `400f079a4e1fe504b779acf83909580d9d082b76` (L05 mergeada).
 **Branch de entrega:** `arena/01a0f288-gruposegsystemseguranca`.
 
-> L06 é grande e **não é greenfield**: o schema (migrações 070–073 OPS e 083–084 AST) e as APIs (`ops-api`, `ops-advanced*`, `ast-api`, `emp-ops-api`) já existiam da fase de layout. Esta entrega conduz L06 em **fatias verificáveis**; cada fatia fecha o gate verde. Esta entrega inclui **Fatia A: estrutura de operação, alocação e contrato encerrado**, **Fatia B: cobertura, passagem de turno, livro de ocorrências e checklists operacionais**, **Fatia C: estoque, reserva, ativo/serial, custódia/termo de guarda, requisições e compras internas sintéticas** e **Fatia D: inventário físico com divergências, ordens de serviço e consumo de peças, evidências antes/depois com escopo L02, planos e execuções de manutenção preventiva/corretiva periódica, dossiê técnico CFTV seguro sem senhas em texto puro e controle de materiais de limpeza**.
+> L06 é grande e **não é greenfield**: o schema (migrações 070–073 OPS e 083–084 AST) e as APIs (`ops-api`, `ops-advanced*`, `ast-api`, `emp-ops-api`) já existiam da fase de layout. Esta entrega conduz L06 em **fatias verificáveis**; cada fatia fecha o gate verde. Fatias entregues: **A** (estrutura de operação, alocação e contrato encerrado), **B** (cobertura, passagem de turno, livro de ocorrências e checklists operacionais), **C** (estoque, reserva, ativo/serial, custódia/termo de guarda, requisições e compras internas sintéticas), **D** (inventário físico, ordens de serviço, manutenção, evidências com escopo L02, CFTV e limpeza), **E** (opera­ção avançada OPS-09..16), **F** (OPS-04: jornada, descanso, habilitação e indisponibilidade), **G** (OPS-01: cargo/função fora da borda de RH, necessidade por turno e cadeia cliente→posto na tela) , **H** (OPS-02: aba de dimensionamento com habilitação cruzada e fórmula explícita) e **I** (OPS-03: aba de escalas com calendário por posto/equipe/pessoa e ciência pela interface). Bloco fechado em entrega técnica local.
 
 ## Resultado técnico local
 
@@ -110,10 +110,136 @@
 
 A verificação em Chromium da aba OPS-04 reutiliza a sessão de navegador já aberta pelo subteste da Fatia B, em vez de abrir um quarto processo de navegador só para ela: mesma cobertura real, menos tempo e menos fragilidade de timeout no runner do CI.
 
+### Fatia G: OPS-01 — borda de cargo/função, necessidade por turno e cadeia na tela
+
+**Sem migração nova.** O schema `070` já continha `ops_post_shift_needs` e `ops_job_roles`; faltava expor, endurecer e renderizar. As migrações `001–123` permanecem intactas.
+
+#### Lacunas reais encontradas (antes desta fatia)
+
+1. **Dois aliases, duas autorizações para o mesmo recurso.** `/api/ops/job-roles` (canônico) autorizava por sessão de staff + papel, mas os aliases históricos `/api/hr/ops-*`, `/api/admin/hr/ops-*` e `/api/crm/hr/ops-*` caíam na borda de RH legada e exigiam `employees.read/write`. Provado por execução: admin e ti recebiam **403** no alias legado e **200** no canônico; só `rh` (com concessão automática de `employees.*`) passava nos dois.
+2. **A própria tela de operação usava os aliases legados.** `OpsAdvanced2Client` e `OpsAdvanced3Client`, embutidos nas abas Supervisão/Rondas/Relatórios/Métricas/Limpeza/Monitoramento de `/admin/operacao`, buscam `/api/hr/ops-*` — para admin/ti todas essas abas renderizavam **vazio** (os 403 eram engolidos pelo `catch`).
+3. **Necessidade por turno sem cobertura de teste e sem validação de cadeia.** `POST /api/ops/post-shift-needs` não conferia existência de posto/turno/cargo (troca de ID virava erro de FK/500), não bloqueava posto inativo nem contrato encerrado, e a unicidade `UNIQUE(post_id, shift_template_id, day_of_week, role_id)` é **DISTINCT** — repetição com dia/cargo ausentes (`NULL`) criava linha duplicada.
+4. **Headcount zero virava um.** `Number(b.required_headcount || … || 1)` tratava `0` como ausente (o mesmo padrão que a Fatia F corrigiu em `min_rest_hours`): valor inválido era gravado como `1` silenciosamente.
+5. **A tela não mostrava a cadeia.** A tabela de postos exibia apenas nome/tipo/contrato; necessidade por turno e cargo/função não existiam em `/admin/operacao`; a tabela de alocações não mostrava posto nem profissional.
+
+#### Decisões e invariantes
+
+- **O handler autoriza; a borda de RH não.** Os aliases `ops-*` sob os prefixos de RH saem da borda legada (`server.mjs`): cada handler de operação exige sessão de staff, papel por método e same-origin, exatamente como o caminho canônico. Paths de RH que não são de operação continuam na borda — um alias `ops-*` desconhecido não é despachado a handler algum e termina em 404.
+- **Leitura devolve a cadeia com nomes canônicos** por join: cliente, unidade e contrato no posto; posto, turno e cargo na necessidade; posto e profissional na alocação. Sem entidade paralela, sem segunda consulta no cliente.
+- **Escrita de necessidade segue o padrão de alocação/escala**: posto ativo, contrato operacional, turno ativo, cargo existente, valores validados, idempotência `IS NOT DISTINCT FROM` e escrita + auditoria na mesma transação (fail-closed: sem trilha, nada fica gravado).
+- **Grupo de carregamento próprio na tela.** Cargos e necessidades carregam em estado separado dos 9 fetches originais, com carregamento/vazio/erro próprios — o acoplamento do `Promise.all` existente é conhecido e não foi agravado.
+- **Lacuna não vira número.** Posto sem necessidade por turno cadastrada aparece com contagem zero e a seção vazia explica o pré-requisito; nada de dimensionamento automático.
+
+#### Endpoints alterados
+
+- `GET /api/ops/posts` — join com `crm_companies`, `crm_company_units` e `crm_contracts` (`company_name`, `unit_name`, `contract_title`).
+- `GET /api/ops/post-shift-needs` — join com posto, turno e cargo (`post_name`, `shift_template_name`, `role_name`).
+- `GET /api/ops/allocations` — join com posto e profissional (`post_name`, `employee_name`).
+- `POST /api/ops/post-shift-needs` — validação de cadeia, idempotência NULL-safe, headcount `0` recusado (400) e auditoria transacional.
+- `server.mjs` — aliases `ops-*` dos prefixos de HR isentos da borda legada de RH.
+
+#### Casos do gate (subteste `L06 OPS-01`)
+
+| # | Caso | Resultado |
+|---|---|---|
+| 1 | Anônimo no alias legado | 401 |
+| 2 | Admin/ti/rh no alias legado (job-roles, posts, schedule-versions) | 200 — antes 403 para admin/ti |
+| 3 | Comercial escrevendo pelo alias legado | 403 `forbidden` (handler, não borda) |
+| 4 | `/api/hr/employees` sem concessão de RH | 403 — a borda segue valendo para HR |
+| 5 | Necessidade: anônimo / comercial | 401 / 403 |
+| 6 | Necessidade: dia 7, headcount 0, headcount 1,5 | 400 |
+| 7 | Posto, turno ou cargo inexistente | 404 nomeado, sem colisão de FK |
+| 8 | Posto inativo / contrato encerrado | 409 `post_inactive` / `contract_not_operational` |
+| 9 | Duplicata com dia/cargo ausentes e com valores | 409 `duplicate_need`, sem segunda linha |
+| 10 | Auditoria indisponível | 503 sem efeito parcial; 201 após restaurar |
+| 11 | Leitura com nomes da cadeia (posto, turno, cargo, profissional) | campos presentes |
+| 12 | Alocação fecha a cadeia no posto operacional | 201 com `post_name`/`employee_name` |
+| 13 | Chromium real: cliente, unidade, cargo, turno, posto e profissional | renderizados da API real |
+
+A verificação em Chromium reutiliza a sessão de navegador já aberta pelo subteste da Fatia B (aba `Postos e Alocações`, aba padrão), sem processo de navegador adicional.
+
+### Fatia H: OPS-02 — aba de dimensionamento com habilitação cruzada
+
+**Sem migração nova.** `ops_dimensioning`, `ops_coverage_gaps` e `ops_employee_qualifications` já existiam; faltava a tela e o cruzamento de habilitação.
+
+#### Lacunas reais encontradas (antes desta fatia)
+
+1. **Não existia aba de dimensionamento** em `/admin/operacao`: as APIs `/api/ops/dimensioning` e `/api/ops/coverage-gaps` estavam endurecidas, mas sem superfície — o requisito de tela não tinha entrega.
+2. **A habilitação só era avaliada no momento da alocação.** O motor OPS-04 valida qualificação ao criar a alocação/entrada; nada recomputava o estado ATUAL contra as alocações existentes — qualificação vencida ou revogada depois da alocação passava despercebida no painel de cobertura.
+3. **Duas regras de habilitação seriam um risco**: a tentação ao escrever o painel era duplicar o predicado. O predicado foi extraído para `QUALIFICATION_USABLE_SQL` e é o **mesmo** código usado por `evaluateOps04` e pelo painel.
+
+#### Decisões e invariantes
+
+- **Regra única de habilitação**: `is_valid = true` e validade ≥ `GREATEST(hoje, data da alocação)` em `ops_employee_qualifications` — um predicado, dois usos (motor por alocação; painel em forma conjuntiva).
+- **O painel recomputa ao vivo**: por registro de dimensionamento, `LEFT JOIN LATERAL` sobre as alocações não canceladas dentro do período do próprio registro — `allocated_employees`, `qualified_employees`, `unqualified_employees`, `employees_without_requirement`, `allocated_hours`.
+- **Sem cargo exigido não é habilitado nem inabilitado**: alocações sem `role_id` são contadas à parte (`employees_without_requirement`); nada é presumido sobre competência não declarada.
+- **Alocação fora da faixa não entra na conta** — o cruzamento respeita o período do próprio registro.
+- **Fórmula e período explícitos no rodapé**: cobertura % = horas realizadas ÷ horas exigidas × 100 (limitada a 100, calculada pelo banco); horas alocadas = soma dos turnos das alocações da faixa e **não substituem** as horas realizadas informadas — a divergência aparece, não é conciliada.
+- **Grupo de carregamento próprio**, desacoplado dos demais fetches da tela, com estados de carregamento/vazio/erro.
+
+#### Endpoints alterados
+
+- `GET /api/ops/dimensioning` — nome do posto e colunas calculadas de cobertura/habilitação por registro.
+- `GET /api/ops/coverage-gaps` — nome canônico do posto.
+- `/admin/operacao` — aba **Dimensionamento (OPS-02)**: painel contratado × planejado × realizado por faixa de tempo, habilitação cruzada, lacunas e rodapé com fórmula.
+
+#### Casos do gate (subteste `L06 OPS-02`, ampliado)
+
+| # | Caso | Resultado |
+|---|---|---|
+| 1 | Criação válida / percentual derivado / valores inválidos / escopo | já coberto (permanece) |
+| 2 | Dois alocados na faixa (um qualificado, um sem cargo) + um fora da faixa | painel: 2 alocados, 1 habilitado, 1 sem exigência; o de fora excluído |
+| 3 | Horas alocadas da faixa | 16 h somadas dos turnos |
+| 4 | Cobertura planejada versus realizada do registro | 372/744 = 50% |
+| 5 | Qualificação revogada pela API **depois** da alocação | painel recomputa: 0 habilitados, 1 sem habilitação válida |
+| 6 | Lacunas com nome canônico do posto | presente |
+| 7 | Chromium real: posto, 50%, "sem habilitação válida", fórmula no rodapé, data de lacuna | renderizados da API real |
+
+### Fatia I: OPS-03 — aba de escalas com calendário por posto/equipe/pessoa e ciência pela interface
+
+**Sem migração nova.** `ops_schedule_versions`, `ops_schedule_entries`, `ops_schedule_acknowledgments` e `ops_schedule_history` já existiam; faltava a tela, o calendário nas três visões e a jornada de ciência.
+
+#### Lacunas reais encontradas (antes desta fatia)
+
+1. **Não existia aba de escalas** em `/admin/operacao`: as quatro APIs existiam e estavam endurecidas, mas calendário e ciência pela interface não existiam — o requisito de tela não tinha entrega.
+2. **`/api/ops/schedule-history` não existia**: era o único endpoint de operação sem o caminho canônico — só respondia nos três aliases históricos de RH. A tela precisaria do caminho inexistente; o alias canônico foi adicionado ao roteador, no padrão de todos os demais.
+3. **Ciência sem checagem de papel**: `POST /api/ops/schedule-acks` exigia sessão e same-origin, mas qualquer papel de staff (ex.: comercial) registrava ciência por qualquer profissional. Registro de ciência é escrita operacional: passou a exigir `admin`/`ti`/`rh`, como toda mutação de operação.
+
+#### Decisões e invariantes
+
+- **Calendário nas três visões exigidas**: por posto (profissionais escalados por dia), por equipe (profissionais distintos por unidade por dia) e por pessoa (turnos por dia). Colunas = dias da validade da versão.
+- **Janela de 31 colunas com recorte declarado**: validade maior que 31 dias mostra os primeiros 31 e diz isso — o recorte é explícito, nunca oculto.
+- **Célula vazia é ausência de registro, não folga confirmada** — o rodapé do calendário declara período, fonte e semântica de cada visão.
+- **Ciência pela interface, idempotente**: o botão permanece após a ciência e a segunda tentativa mostra o 409 do banco ("segunda ciência não duplica efeito") — a garantia é da API, a verdade aparece na tela.
+- **Histórico visível**: cada transição com autor, momento e motivo; transição de criação exibida como "criada como X".
+- **Leituras com nomes canônicos** por join (empresa, unidade, posto, profissional, turno) — sem entidade paralela e sem segunda consulta no cliente.
+
+#### Endpoints alterados
+
+- `GET /api/ops/schedule-versions` — nomes de empresa e unidade.
+- `GET /api/ops/schedule-entries` — nomes de posto, unidade, profissional e turno.
+- `GET /api/ops/schedule-acks` — nome do profissional.
+- `POST /api/ops/schedule-acks` — exige papel de operação (`admin`/`ti`/`rh`).
+- `server.mjs` — alias canônico `/api/ops/schedule-history` no roteador.
+- `/admin/operacao` — aba **Escalas (OPS-03)**.
+
+#### Casos do gate (subteste `L06 OPS-03`, ampliado)
+
+| # | Caso | Resultado |
+|---|---|---|
+| 1 | Versões: sequência, período, status, histórico, datas inválidas | já coberto (permanece) |
+| 2 | Entrada em versão + retry; segunda entrada para a jornada de UI | 201 + 409; 201 |
+| 3 | Ciência: anônimo / comercial | 401 / 403 — antes comercial obtinha 201 |
+| 4 | UI: versões com empresa/unidade/validade/situação | renderizadas da API real |
+| 5 | UI: calendário por posto / por equipe / por pessoa | posto+profissionais; unidade; turno canônico |
+| 6 | UI: histórico da versão | "revisada → publicada" visível |
+| 7 | UI: ciência pela interface — primeiro e segundo clique | 201 "Ciência registrada" e 409 "não duplica efeito" |
+| 8 | SQL pós-jornada | exatamente 2 ciências para 2 profissionais — sem duplicação |
+
 ## Gate remoto L06
 
 - `scripts/qa-l06-delivery-postgres.mjs` — PostgreSQL descartável (recusa banco externo), migra e roda a suíte com HTTP real e Chromium empacotado.
-- `tests/l06-delivery.integration.test.mjs` — 8 subtestes integrados cobrindo Fatias A, B, C, D, E, OPS-02, OPS-03 e OPS-04.
+- `tests/l06-delivery.integration.test.mjs` — 9 subtestes integrados cobrindo Fatias A, B, C, D, E, OPS-01, OPS-02, OPS-03 e OPS-04.
 - `npm run test:l06-delivery:pg` e workflow `.github/workflows/l06-delivery.yml`.
 
 ### Fluxo verificado (sem skip, sem mock de banco/navegador)
@@ -175,7 +301,7 @@ Baseline registrado antes de qualquer alteração da Fatia F: `qa-wave0-static` 
 
 ## Marco concluído localmente
 
-- OPS-04..16 e AST-01..12 estão `pronto_local`; aceite humano e integrações externas permanecem separados da conclusão técnica.
-- **OPS-01, OPS-02 e OPS-03 continuam incompletos** e mantêm seus estados próprios na matriz: OPS-01 aguarda necessidade por turno e a saída de `ops-job-roles` da borda de RH; OPS-02 aguarda cobertura planejada versus realizada por profissional habilitado; OPS-03 aguarda aceite humano da escala. Não os declaramos prontos por proximidade temática com OPS-04.
+- OPS-01..16 e AST-01..12 estão `pronto_local`; aceite humano e integrações externas permanecem separados da conclusão técnica.
+- **Bloco L06 fechado em entrega técnica local.** As pendências de aceite humano e fronteira externa permanecem registradas item a item na matriz: ciência da escala comprova ciência do profissional, não validação jurídica da escala; limites de jornada aplicam a regra aprovada, não julgam sua legalidade; compras, rondas e monitoramento seguem sintéticos e rotulados; o comprovante de habilitação segue `document_url` em texto (vincular ao provedor L02 exige migração aditiva, deliberadamente adiada).
 - Limite honesto de OPS-04: o comprovante de habilitação ainda é `document_url` em texto. Ligá-lo ao provedor privado L02 (`client_documents`) exige coluna nova e, portanto, migração aditiva — não feita nesta fatia por decisão explícita de escopo.
 

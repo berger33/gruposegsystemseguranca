@@ -495,7 +495,7 @@ PR #13: tarefas pessoais conectadas em /admin/crm, com auditoria atômica e prot
 | L03 | Funcionário e RH | **concluído** | EMP-01..19 e HR-01..24 navegáveis; gate integral aprovado (revalidado nesta sessão) |
 | L04 | Site/captação e comercial | **parcial — CRM-05/06/07, calendário de CRM-08 e PUB-10 concluídos; lacunas explícitas** | Núcleo CRM-11..27 provado; CRM-07 completo (tarefas, interações, anexos, delegação com aceite, kanban/tabela campo a campo e notas internas dedicadas, todos provados por gate); CRM-05/06 prontos (todos os campos, funil com motivo de perda obrigatório no banco e reabertura auditada, borda pessoal nas rotas de oportunidade); CRM-08 tem agenda de responsável/participantes, conflito de horário, vínculo PUB-04 auditado e visão de calendário por semana (somente leitura), faltando lembretes/notificações (dependem de provedor); PUB-10 entregue como painel derivado e somente leitura em `/admin/leads` (PR #26); CRM-09 tem modelos privados e tarefas manuais, sem automação; CRM-01..04 foram revalidados parcialmente nesta sessão; CRM-02 segue sem tela dedicada; CRM-10 e PUB-02/05/06..09 continuam pendentes |
 | L05 | Contratos e implantação | pendente | — |
-| L06 | Operação, patrimônio e manutenção | pendente | — |
+| L06 | Operação, patrimônio e manutenção | **concluído (entrega técnica local; aceite humano e fronteiras externas pendentes item a item na matriz)** | Gate L06 9/9 em HTTP + PostgreSQL descartável + Chromium, com OPS-01..16 e AST-01..12 `pronto_local`; bateria final: L04 20/20, L05 1/1, migrações 123/123, unitários 196/196, typecheck, build e estático 5/5 |
 | L07 | Financeiro e Marcelo | pendente | — |
 | L08 | Cliente e expansões | pendente | — |
 | L09 | IA local e RAG | pendente | — |

@@ -62,6 +62,16 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
   // indisponibilidade conhecida e explicamos o motivo. `rejeitado`,
   // `cancelado` e `retornado` não bloqueiam.
   const ABSENCE_BLOCKING_STATUS = ['solicitado', 'em_analise', 'aprovado', 'em_afastamento'];
+
+  // REGRA ÚNICA de habilitação (OPS-04 e OPS-02): uma qualificação serve
+  // quando is_valid = true e a validade cobre GREATEST(hoje, data alvo).
+  // O motor evaluateOps04 usa esta definição por alocação/entrada de escala, e
+  // o painel de dimensionamento (OPS-02) usa a MESMA definição em forma
+  // conjuntiva para recomputar a habilitação atual contra as alocações da
+  // faixa. Não existe segunda regra de habilitação neste módulo — mudar aqui
+  // muda os dois lados.
+  const QUALIFICATION_USABLE_SQL = (targetDateSql) =>
+    `(is_valid = true AND (valid_until IS NULL OR valid_until >= GREATEST(CURRENT_DATE, ${targetDateSql})))`;
   // Interpolação de tabela só é aceita a partir desta lista fechada.
   const OPS04_SCOPES = {
     ops_allocations: { table: 'ops_allocations', dateColumn: 'allocation_date' },
@@ -146,7 +156,7 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
     if (roleId) {
       const qual = await runner.query(
         `SELECT id, certification_type, valid_until, is_valid,
-                (is_valid = true AND (valid_until IS NULL OR valid_until >= GREATEST(CURRENT_DATE, $3::date))) AS usable
+                ${QUALIFICATION_USABLE_SQL('$3::date')} AS usable
            FROM ops_employee_qualifications
           WHERE employee_id=$1 AND role_id=$2
           ORDER BY usable DESC, valid_until DESC NULLS FIRST
@@ -424,13 +434,23 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       const where = [];
       const vals = [];
       let i = 1;
-      if (company_id) { if (!validateUuid(company_id)) return send(res, 400, { error: 'invalid_company_id' }); where.push(`company_id=$${i++}`); vals.push(company_id); }
-      if (unit_id) { if (!validateUuid(unit_id)) return send(res, 400, { error: 'invalid_unit_id' }); where.push(`unit_id=$${i++}`); vals.push(unit_id); }
-      if (post_type) { where.push(`post_type=$${i++}`); vals.push(post_type); }
-      if (is_active !== null && is_active !== '') { where.push(`is_active=$${i++}`); vals.push(is_active === 'true'); }
+      if (company_id) { if (!validateUuid(company_id)) return send(res, 400, { error: 'invalid_company_id' }); where.push(`p.company_id=$${i++}`); vals.push(company_id); }
+      if (unit_id) { if (!validateUuid(unit_id)) return send(res, 400, { error: 'invalid_unit_id' }); where.push(`p.unit_id=$${i++}`); vals.push(unit_id); }
+      if (post_type) { where.push(`p.post_type=$${i++}`); vals.push(post_type); }
+      if (is_active !== null && is_active !== '') { where.push(`p.is_active=$${i++}`); vals.push(is_active === 'true'); }
       const ws = where.length ? `WHERE ${where.join(' AND ')}` : '';
       try {
-        const { rows } = await pool.query(`SELECT * FROM ops_posts ${ws} ORDER BY name LIMIT $${i}`, [...vals, limit]);
+        // OPS-01: a leitura devolve a cadeia completa com os nomes canônicos —
+        // cliente (crm_companies), unidade atendida (crm_company_units) e
+        // contrato (crm_contracts) — sem criar entidade paralela. A tela de
+        // operação depende desses nomes para navegar a cadeia de ponta a ponta.
+        const { rows } = await pool.query(
+          `SELECT p.*, c.display_name AS company_name, u.display_name AS unit_name, ct.title AS contract_title
+             FROM ops_posts p
+             LEFT JOIN crm_companies c ON c.id = p.company_id
+             LEFT JOIN crm_company_units u ON u.id = p.unit_id
+             LEFT JOIN crm_contracts ct ON ct.id = p.contract_id
+             ${ws} ORDER BY p.name LIMIT $${i}`, [...vals, limit]);
         return send(res, 200, { posts: rows });
       } catch (e) { console.error('posts GET', e.message); return send(res, 500, { error: 'internal_error' }); }
     }
@@ -548,10 +568,21 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       const where = [];
       const vals = [];
       let i = 1;
-      if (post_id) { if (!validateUuid(post_id)) return send(res, 400, { error: 'invalid_post_id' }); where.push(`post_id=$${i++}`); vals.push(post_id); }
+      if (post_id) { if (!validateUuid(post_id)) return send(res, 400, { error: 'invalid_post_id' }); where.push(`n.post_id=$${i++}`); vals.push(post_id); }
       const ws = where.length ? `WHERE ${where.join(' AND ')}` : '';
       try {
-        const { rows } = await pool.query(`SELECT * FROM ops_post_shift_needs ${ws} ORDER BY post_id, day_of_week LIMIT 200`, vals);
+        // OPS-01: a necessidade por turno é lida com os nomes canônicos de
+        // posto, turno e cargo/função — a tela de operação apresenta a cadeia
+        // posto → necessidade por turno sem segunda consulta nem entidade paralela.
+        const { rows } = await pool.query(
+          `SELECT n.*, p.name AS post_name, p.is_active AS post_active,
+                  t.name AS shift_template_name, t.start_time AS shift_start, t.end_time AS shift_end,
+                  r.name AS role_name
+             FROM ops_post_shift_needs n
+             JOIN ops_posts p ON p.id = n.post_id
+             LEFT JOIN ops_shift_templates t ON t.id = n.shift_template_id
+             LEFT JOIN ops_job_roles r ON r.id = n.role_id
+             ${ws} ORDER BY p.name, n.day_of_week NULLS LAST, t.name LIMIT 200`, vals);
         return send(res, 200, { needs: rows });
       } catch (e) { console.error('needs GET', e.message); return send(res, 500, { error: 'internal_error' }); }
     }
@@ -567,18 +598,82 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       if (role_id && !validateUuid(role_id)) return send(res, 400, { error: 'invalid_role_id' });
       const day_of_week = b.day_of_week !== undefined ? Number(b.day_of_week) : (b.dayOfWeek !== undefined ? Number(b.dayOfWeek) : null);
       if (day_of_week !== null && (!Number.isInteger(day_of_week) || day_of_week < 0 || day_of_week > 6)) return send(res, 400, { error: 'invalid_day_of_week' });
-      const required_headcount = Number(b.required_headcount || b.requiredHeadcount || 1);
+      // Coalescência nullish: `||` tratava 0 como ausente e gravava
+      // silenciosamente o padrão 1 (headcount zero virava 1 — inválido
+      // aceito). O mesmo padrão já documentado em numberOrDefault.
+      const required_headcount = Number(b.required_headcount ?? b.requiredHeadcount ?? 1);
       if (!Number.isInteger(required_headcount) || required_headcount < 1 || required_headcount > 100) return send(res, 400, { error: 'invalid_headcount' });
+      // OPS-01: a necessidade pertence à cadeia posto → turno → cargo. Troca de
+      // ID devolve 404/409 nomeados, nunca colisão de FK (500). Posto inativo e
+      // contrato encerrado/cancelado/suspenso não recebem nova necessidade, o
+      // mesmo critério de alocação e escala. Fail-closed: erro de banco na
+      // verificação nega a operação.
+      let needPost;
       try {
-        const { rows } = await pool.query(
+        const pr = await pool.query(
+          `SELECT p.id, p.is_active, p.contract_id, c.status AS contract_status
+             FROM ops_posts p
+             LEFT JOIN crm_contracts c ON c.id = p.contract_id
+            WHERE p.id=$1`,
+          [post_id]
+        );
+        needPost = pr.rows[0];
+      } catch (e) { console.error('need post lookup', e.message); return send(res, 503, { error: 'validation_unavailable' }); }
+      if (!needPost) return send(res, 404, { error: 'post_not_found' });
+      if (needPost.is_active === false) return send(res, 409, { error: 'post_inactive' });
+      const NON_OPERATIONAL_CONTRACT = ['encerrado', 'cancelado', 'suspenso'];
+      if (needPost.contract_id && NON_OPERATIONAL_CONTRACT.includes(needPost.contract_status)) {
+        return send(res, 409, { error: 'contract_not_operational', contract_status: needPost.contract_status });
+      }
+      try {
+        const tr = await pool.query('SELECT id, is_active FROM ops_shift_templates WHERE id=$1', [shift_template_id]);
+        if (!tr.rows[0]) return send(res, 404, { error: 'shift_template_not_found' });
+        if (tr.rows[0].is_active === false) return send(res, 409, { error: 'shift_template_inactive' });
+      } catch (e) { console.error('need shift lookup', e.message); return send(res, 503, { error: 'validation_unavailable' }); }
+      if (role_id) {
+        try {
+          const rr = await pool.query('SELECT id FROM ops_job_roles WHERE id=$1', [role_id]);
+          if (!rr.rows[0]) return send(res, 404, { error: 'job_role_not_found' });
+        } catch (e) { console.error('need role lookup', e.message); return send(res, 503, { error: 'validation_unavailable' }); }
+      }
+      // Idempotência NULL-safe: a unicidade do banco é DISTINCT (NULLs não
+      // colidem), então uma repetição exata com dia/cargo ausentes criava uma
+      // segunda linha idêntica. A conferência explícita usa IS NOT DISTINCT
+      // FROM, cobrindo também os casos com valor.
+      try {
+        const dup = await pool.query(
+          `SELECT id FROM ops_post_shift_needs
+            WHERE post_id=$1 AND shift_template_id=$2
+              AND day_of_week IS NOT DISTINCT FROM $3::int
+              AND role_id IS NOT DISTINCT FROM $4::uuid`,
+          [post_id, shift_template_id, day_of_week, role_id || null]
+        );
+        if (dup.rows[0]) return send(res, 409, { error: 'duplicate_need', existing: dup.rows[0].id });
+      } catch (e) { console.error('duplicate need check', e.message); return send(res, 503, { error: 'validation_unavailable' }); }
+      // Escrita + auditoria na MESMA transação (fail-closed): sem trilha a
+      // necessidade não fica gravada pela metade.
+      const needClient = await pool.connect();
+      try {
+        await needClient.query('BEGIN');
+        const { rows } = await needClient.query(
           `INSERT INTO ops_post_shift_needs (post_id, shift_template_id, role_id, day_of_week, required_headcount, is_active, created_by)
            VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
           [post_id, shift_template_id, role_id || null, day_of_week, required_headcount, b.is_active !== undefined ? !!b.is_active : true, sess.role]
         );
+        await needClient.query(
+          `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+          ['ops_post_shift_need_create', sess.role, rows[0].id,
+            JSON.stringify({ post_id, shift_template_id, role_id: role_id || null, day_of_week, required_headcount })]
+        );
+        await needClient.query('COMMIT');
         return send(res, 201, { need: rows[0] });
       } catch (e) {
+        try { await needClient.query('ROLLBACK'); } catch {}
         if (e.code === '23505') return send(res, 409, { error: 'duplicate_need' });
-        console.error('needs POST', e.message); return send(res, 500, { error: 'internal_error' });
+        console.error('needs POST', e.message);
+        return send(res, 503, { error: 'post_shift_need_unavailable' });
+      } finally {
+        needClient.release();
       }
     }
     return send(res, 405, { error: 'method_not_allowed' });
@@ -596,12 +691,20 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       const where = [];
       const vals = [];
       let i = 1;
-      if (post_id) { if (!validateUuid(post_id)) return send(res, 400, { error: 'invalid_post_id' }); where.push(`post_id=$${i++}`); vals.push(post_id); }
-      if (employee_id) { if (!validateUuid(employee_id)) return send(res, 400, { error: 'invalid_employee_id' }); where.push(`employee_id=$${i++}`); vals.push(employee_id); }
-      if (date) { where.push(`allocation_date=$${i++}`); vals.push(date); }
+      if (post_id) { if (!validateUuid(post_id)) return send(res, 400, { error: 'invalid_post_id' }); where.push(`a.post_id=$${i++}`); vals.push(post_id); }
+      if (employee_id) { if (!validateUuid(employee_id)) return send(res, 400, { error: 'invalid_employee_id' }); where.push(`a.employee_id=$${i++}`); vals.push(employee_id); }
+      if (date) { where.push(`a.allocation_date=$${i++}`); vals.push(date); }
       const ws = where.length ? `WHERE ${where.join(' AND ')}` : '';
       try {
-        const { rows } = await pool.query(`SELECT * FROM ops_allocations ${ws} ORDER BY allocation_date DESC, post_id LIMIT 200`, vals);
+        // OPS-01: a alocação é lida com os nomes canônicos de posto e
+        // profissional — fecha a cadeia cliente → unidade → posto →
+        // necessidade por turno → alocação na própria tela.
+        const { rows } = await pool.query(
+          `SELECT a.*, p.name AS post_name, e.display_name AS employee_name
+             FROM ops_allocations a
+             LEFT JOIN ops_posts p ON p.id = a.post_id
+             LEFT JOIN hr_employees e ON e.id = a.employee_id
+             ${ws} ORDER BY a.allocation_date DESC, p.name LIMIT 200`, vals);
         return send(res, 200, { allocations: rows });
       } catch (e) { console.error('alloc GET', e.message); return send(res, 500, { error: 'internal_error' }); }
     }
@@ -759,12 +862,72 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       const where = [];
       const vals = [];
       let i = 1;
-      if (post_id) { if (!validateUuid(post_id)) return send(res, 400, { error: 'invalid_post_id' }); where.push(`post_id=$${i++}`); vals.push(post_id); }
-      if (company_id) { if (!validateUuid(company_id)) return send(res, 400, { error: 'invalid_company_id' }); where.push(`company_id=$${i++}`); vals.push(company_id); }
-      if (status) { where.push(`status=$${i++}`); vals.push(status); }
+      if (post_id) { if (!validateUuid(post_id)) return send(res, 400, { error: 'invalid_post_id' }); where.push(`d.post_id=$${i++}`); vals.push(post_id); }
+      if (company_id) { if (!validateUuid(company_id)) return send(res, 400, { error: 'invalid_company_id' }); where.push(`d.company_id=$${i++}`); vals.push(company_id); }
+      if (status) { where.push(`d.status=$${i++}`); vals.push(status); }
       const ws = where.length ? `WHERE ${where.join(' AND ')}` : '';
       try {
-        const { rows } = await pool.query(`SELECT * FROM ops_dimensioning ${ws} ORDER BY period_start DESC LIMIT 100`, vals);
+        // OPS-02: painel contratado × planejado × realizado por faixa de tempo,
+        // com o cruzamento de profissional habilitado recomputado AO VIVO a
+        // partir das alocações da faixa do registro. A regra de habilitação é
+        // a MESMA do motor OPS-04 (QUALIFICATION_USABLE_SQL) — o painel pega
+        // qualificação vencida ou revogada DEPOIS da alocação, que o motor não
+        // viu no momento da criação. Sem cargo exigido na alocação é contado à
+        // parte: não vira habilitado nem inabilitado (nada é presumido).
+        const { rows } = await pool.query(
+          `SELECT d.*, p.name AS post_name,
+                  cov.allocated_employees, cov.qualified_employees,
+                  cov.unqualified_employees, cov.employees_without_requirement,
+                  cov.allocated_hours
+             FROM ops_dimensioning d
+             LEFT JOIN ops_posts p ON p.id = d.post_id
+             LEFT JOIN LATERAL (
+               WITH window_allocs AS (
+                 SELECT a.employee_id, a.role_id, a.shift_template_id, a.allocation_date
+                   FROM ops_allocations a
+                  WHERE a.post_id = d.post_id
+                    AND a.allocation_date BETWEEN d.period_start AND d.period_end
+                    AND a.status <> 'cancelado'
+               )
+               SELECT
+                 (SELECT count(DISTINCT w.employee_id)::int FROM window_allocs w) AS allocated_employees,
+                 (SELECT count(DISTINCT w.employee_id)::int FROM window_allocs w
+                   WHERE w.role_id IS NOT NULL
+                     AND NOT EXISTS (
+                       SELECT 1 FROM window_allocs bad
+                        WHERE bad.employee_id = w.employee_id
+                          AND bad.role_id IS NOT NULL
+                          AND NOT EXISTS (
+                            SELECT 1 FROM ops_employee_qualifications
+                             WHERE employee_id = bad.employee_id
+                               AND role_id = bad.role_id
+                               AND ${QUALIFICATION_USABLE_SQL('bad.allocation_date')}
+                          )
+                     )) AS qualified_employees,
+                 (SELECT count(DISTINCT w.employee_id)::int FROM window_allocs w
+                   WHERE w.role_id IS NOT NULL
+                     AND EXISTS (
+                       SELECT 1 FROM window_allocs bad
+                        WHERE bad.employee_id = w.employee_id
+                          AND bad.role_id IS NOT NULL
+                          AND NOT EXISTS (
+                            SELECT 1 FROM ops_employee_qualifications
+                             WHERE employee_id = bad.employee_id
+                               AND role_id = bad.role_id
+                               AND ${QUALIFICATION_USABLE_SQL('bad.allocation_date')}
+                          )
+                     )) AS unqualified_employees,
+                 (SELECT count(DISTINCT w.employee_id)::int FROM window_allocs w
+                   WHERE w.role_id IS NULL
+                     AND NOT EXISTS (
+                       SELECT 1 FROM window_allocs req
+                        WHERE req.employee_id = w.employee_id AND req.role_id IS NOT NULL
+                     )) AS employees_without_requirement,
+                 (SELECT COALESCE(SUM(st.duration_hours), 0)::float8
+                    FROM window_allocs w
+                    JOIN ops_shift_templates st ON st.id = w.shift_template_id) AS allocated_hours
+             ) cov ON true
+             ${ws} ORDER BY d.period_start DESC LIMIT 100`, vals);
         return send(res, 200, { dimensionings: rows });
       } catch (e) { console.error('dim GET', e.message); return send(res, 500, { error: 'internal_error' }); }
     }
@@ -881,11 +1044,16 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       const where = [];
       const vals = [];
       let i = 1;
-      if (post_id) { if (!validateUuid(post_id)) return send(res, 400, { error: 'invalid_post_id' }); where.push(`post_id=$${i++}`); vals.push(post_id); }
-      if (status) { where.push(`status=$${i++}`); vals.push(status); }
+      if (post_id) { if (!validateUuid(post_id)) return send(res, 400, { error: 'invalid_post_id' }); where.push(`g.post_id=$${i++}`); vals.push(post_id); }
+      if (status) { where.push(`g.status=$${i++}`); vals.push(status); }
       const ws = where.length ? `WHERE ${where.join(' AND ')}` : '';
       try {
-        const { rows } = await pool.query(`SELECT * FROM ops_coverage_gaps ${ws} ORDER BY gap_date DESC LIMIT 100`, vals);
+        // OPS-02: lacunas lidas com o nome canônico do posto para o painel.
+        const { rows } = await pool.query(
+          `SELECT g.*, p.name AS post_name
+             FROM ops_coverage_gaps g
+             LEFT JOIN ops_posts p ON p.id = g.post_id
+             ${ws} ORDER BY g.gap_date DESC LIMIT 100`, vals);
         return send(res, 200, { gaps: rows });
       } catch (e) { console.error('gaps GET', e.message); return send(res, 500, { error: 'internal_error' }); }
     }
@@ -963,11 +1131,18 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       const where = [];
       const vals = [];
       let i = 1;
-      if (company_id) { if (!validateUuid(company_id)) return send(res, 400, { error: 'invalid_company_id' }); where.push(`company_id=$${i++}`); vals.push(company_id); }
-      if (status) { where.push(`status=$${i++}`); vals.push(status); }
+      if (company_id) { if (!validateUuid(company_id)) return send(res, 400, { error: 'invalid_company_id' }); where.push(`v.company_id=$${i++}`); vals.push(company_id); }
+      if (status) { where.push(`v.status=$${i++}`); vals.push(status); }
       const ws = where.length ? `WHERE ${where.join(' AND ')}` : '';
       try {
-        const { rows } = await pool.query(`SELECT * FROM ops_schedule_versions ${ws} ORDER BY valid_from DESC LIMIT 100`, vals);
+        // OPS-03: versões lidas com os nomes canônicos de empresa e unidade —
+        // a tela de escalas mostra o escopo de cada versão sem segunda consulta.
+        const { rows } = await pool.query(
+          `SELECT v.*, c.display_name AS company_name, u.display_name AS unit_name
+             FROM ops_schedule_versions v
+             LEFT JOIN crm_companies c ON c.id = v.company_id
+             LEFT JOIN crm_company_units u ON u.id = v.unit_id
+             ${ws} ORDER BY v.valid_from DESC LIMIT 100`, vals);
         return send(res, 200, { versions: rows });
       } catch (e) { console.error('schedVer GET', e.message); return send(res, 500, { error: 'internal_error' }); }
     }
@@ -1049,13 +1224,25 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       const where = [];
       const vals = [];
       let i = 1;
-      if (version_id) { if (!validateUuid(version_id)) return send(res, 400, { error: 'invalid_version_id' }); where.push(`version_id=$${i++}`); vals.push(version_id); }
-      if (post_id) { if (!validateUuid(post_id)) return send(res, 400, { error: 'invalid_post_id' }); where.push(`post_id=$${i++}`); vals.push(post_id); }
-      if (employee_id) { if (!validateUuid(employee_id)) return send(res, 400, { error: 'invalid_employee_id' }); where.push(`employee_id=$${i++}`); vals.push(employee_id); }
-      if (entry_date) { where.push(`entry_date=$${i++}`); vals.push(entry_date); }
+      if (version_id) { if (!validateUuid(version_id)) return send(res, 400, { error: 'invalid_version_id' }); where.push(`e.version_id=$${i++}`); vals.push(version_id); }
+      if (post_id) { if (!validateUuid(post_id)) return send(res, 400, { error: 'invalid_post_id' }); where.push(`e.post_id=$${i++}`); vals.push(post_id); }
+      if (employee_id) { if (!validateUuid(employee_id)) return send(res, 400, { error: 'invalid_employee_id' }); where.push(`e.employee_id=$${i++}`); vals.push(employee_id); }
+      if (entry_date) { where.push(`e.entry_date=$${i++}`); vals.push(entry_date); }
       const ws = where.length ? `WHERE ${where.join(' AND ')}` : '';
       try {
-        const { rows } = await pool.query(`SELECT * FROM ops_schedule_entries ${ws} ORDER BY entry_date, post_id LIMIT 200`, vals);
+        // OPS-03: entradas lidas com os nomes canônicos de posto, unidade,
+        // profissional e turno — o calendário da tela (por posto, por equipe e
+        // por pessoa) é montado a partir desta leitura, sem entidade paralela.
+        const { rows } = await pool.query(
+          `SELECT e.*, p.name AS post_name, p.unit_id AS post_unit_id,
+                  u.display_name AS unit_name, emp.display_name AS employee_name,
+                  st.name AS shift_template_name, st.start_time AS shift_start, st.end_time AS shift_end
+             FROM ops_schedule_entries e
+             JOIN ops_posts p ON p.id = e.post_id
+             LEFT JOIN crm_company_units u ON u.id = p.unit_id
+             LEFT JOIN hr_employees emp ON emp.id = e.employee_id
+             LEFT JOIN ops_shift_templates st ON st.id = e.shift_template_id
+             ${ws} ORDER BY e.entry_date, p.name LIMIT 200`, vals);
         return send(res, 200, { entries: rows });
       } catch (e) { console.error('schedEntries GET', e.message); return send(res, 500, { error: 'internal_error' }); }
     }
@@ -1219,16 +1406,25 @@ export function createOpsApi({ pool, auditLog, sameOrigin, requireSession, requi
       const where = [];
       const vals = [];
       let i = 1;
-      if (version_id) { if (!validateUuid(version_id)) return send(res, 400, { error: 'invalid_version_id' }); where.push(`version_id=$${i++}`); vals.push(version_id); }
-      if (employee_id) { if (!validateUuid(employee_id)) return send(res, 400, { error: 'invalid_employee_id' }); where.push(`employee_id=$${i++}`); vals.push(employee_id); }
+      if (version_id) { if (!validateUuid(version_id)) return send(res, 400, { error: 'invalid_version_id' }); where.push(`a.version_id=$${i++}`); vals.push(version_id); }
+      if (employee_id) { if (!validateUuid(employee_id)) return send(res, 400, { error: 'invalid_employee_id' }); where.push(`a.employee_id=$${i++}`); vals.push(employee_id); }
       const ws = where.length ? `WHERE ${where.join(' AND ')}` : '';
       try {
-        const { rows } = await pool.query(`SELECT * FROM ops_schedule_acknowledgments ${ws} ORDER BY acknowledged_at DESC LIMIT 100`, vals);
+        // OPS-03: ciências lidas com o nome canônico do profissional.
+        const { rows } = await pool.query(
+          `SELECT a.*, emp.display_name AS employee_name
+             FROM ops_schedule_acknowledgments a
+             LEFT JOIN hr_employees emp ON emp.id = a.employee_id
+             ${ws} ORDER BY a.acknowledged_at DESC LIMIT 100`, vals);
         return send(res, 200, { acknowledgments: rows });
       } catch (e) { console.error('acks GET', e.message); return send(res, 500, { error: 'internal_error' }); }
     }
     if (req.method === 'POST') {
       if (!sameOrigin(req)) return send(res, 403, { error: 'same_origin_required' });
+      // Registro de ciência é escrita operacional: exige o mesmo papel das
+      // demais mutações de operação. Antes, qualquer sessão de staff (ex.:
+      // comercial) podia registrar ciência por qualquer profissional.
+      if (!requireRole(sess, ['admin','ti','rh'])) return send(res, 403, { error: 'forbidden' });
       const b = await body(req);
       if (!b) return send(res, 400, { error: 'invalid_json' });
       const version_id = b.version_id || b.versionId;

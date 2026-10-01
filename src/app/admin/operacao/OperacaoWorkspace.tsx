@@ -4,6 +4,31 @@ import { useEffect, useState } from "react";
 import OpsAdvanced2Client from "../ti/OpsAdvanced2Client";
 import OpsAdvanced3Client from "../ti/OpsAdvanced3Client";
 
+// OPS-01: day_of_week segue a convenção 0=domingo .. 6=sábado (getDay).
+// NULL significa que a necessidade não restringe o dia — exibido sem inventar
+// semântica adicional.
+const WEEKDAY_LABELS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+
+// OPS-03: janela de datas da validade da versão, limitada a 31 colunas para o
+// calendário continuar legível. Quando a validade excede a janela, o recorte é
+// declarado — nunca ocultado.
+const CALENDAR_MAX_DAYS = 31;
+function versionDateWindow(version: ScheduleVersion): { dates: string[]; truncated: boolean } {
+  const start = new Date(`${String(version.valid_from).slice(0, 10)}T00:00:00Z`);
+  const end = new Date(`${String(version.valid_to).slice(0, 10)}T00:00:00Z`);
+  const dates: string[] = [];
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return { dates, truncated: false };
+  const totalDays = Math.floor((end.getTime() - start.getTime()) / 86_400_000) + 1;
+  for (let t = start.getTime(); t <= end.getTime() && dates.length < CALENDAR_MAX_DAYS; t += 86_400_000) {
+    dates.push(new Date(t).toISOString().slice(0, 10));
+  }
+  return { dates, truncated: totalDays > CALENDAR_MAX_DAYS };
+}
+function shortDate(date: string): string {
+  const [, month, day] = date.split("-");
+  return `${day}/${month}`;
+}
+
 type Post = {
   id: string;
   name: string;
@@ -12,13 +37,110 @@ type Post = {
   company_id: string | null;
   unit_id: string | null;
   contract_id: string | null;
+  company_name?: string | null;
+  unit_name?: string | null;
+  contract_title?: string | null;
+};
+type JobRole = {
+  id: string;
+  name: string;
+  role_type: string;
+  description: string | null;
+  is_active: boolean;
+};
+type PostShiftNeed = {
+  id: string;
+  post_id: string;
+  post_name: string;
+  shift_template_id: string;
+  shift_template_name: string | null;
+  role_id: string | null;
+  role_name: string | null;
+  day_of_week: number | null;
+  required_headcount: number;
+  is_active: boolean;
 };
 type Allocation = {
   id: string;
   post_id: string;
+  post_name?: string | null;
   employee_id: string;
+  employee_name?: string | null;
   allocation_date: string;
   status: string;
+};
+type Dimensioning = {
+  id: string;
+  post_id: string;
+  post_name?: string | null;
+  period_start: string;
+  period_end: string;
+  contracted_headcount: number;
+  planned_headcount: number;
+  realized_headcount: number;
+  coverage_hours_required: string | number;
+  coverage_hours_realized: string | number;
+  coverage_percent: string | number;
+  status: string;
+  allocated_employees?: number;
+  qualified_employees?: number;
+  unqualified_employees?: number;
+  employees_without_requirement?: number;
+  allocated_hours?: string | number;
+};
+type CoverageGap = {
+  id: string;
+  post_id: string;
+  post_name?: string | null;
+  gap_date: string;
+  gap_start: string;
+  gap_end: string;
+  uncovered_minutes: number;
+  reason: string | null;
+  status: string;
+};
+type ScheduleVersion = {
+  id: string;
+  company_id: string | null;
+  company_name?: string | null;
+  unit_id: string | null;
+  unit_name?: string | null;
+  version: number;
+  status: string;
+  valid_from: string;
+  valid_to: string;
+  published_at: string | null;
+  notes: string | null;
+};
+type ScheduleEntry = {
+  id: string;
+  version_id: string;
+  post_id: string;
+  post_name?: string | null;
+  unit_name?: string | null;
+  employee_id: string;
+  employee_name?: string | null;
+  shift_template_id: string;
+  shift_template_name?: string | null;
+  entry_date: string;
+  status: string;
+};
+type ScheduleAck = {
+  id: string;
+  version_id: string;
+  employee_id: string;
+  employee_name?: string | null;
+  acknowledged_at: string;
+  notes: string | null;
+};
+type ScheduleHistoryItem = {
+  id: string;
+  version_id: string;
+  previous_status: string | null;
+  next_status: string;
+  changed_by: string;
+  reason: string | null;
+  created_at: string;
 };
 type CoverageRequest = {
   id: string;
@@ -86,8 +208,19 @@ type ScheduleValidation = {
 };
 
 export default function OperacaoWorkspace() {
-  const [activeTab, setActiveTab] = useState<"postos" | "jornada" | "cobertura" | "passagem" | "ocorrencias" | "checklists" | "supervisao" | "rondas" | "relatorios" | "metricas" | "limpeza" | "monitoramento">("postos");
+  const [activeTab, setActiveTab] = useState<"postos" | "jornada" | "dimensionamento" | "escalas" | "cobertura" | "passagem" | "ocorrencias" | "checklists" | "supervisao" | "rondas" | "relatorios" | "metricas" | "limpeza" | "monitoramento">("postos");
   const [posts, setPosts] = useState<Post[]>([]);
+  const [jobRoles, setJobRoles] = useState<JobRole[]>([]);
+  const [shiftNeeds, setShiftNeeds] = useState<PostShiftNeed[]>([]);
+  const [dimensionings, setDimensionings] = useState<Dimensioning[]>([]);
+  const [gaps, setGaps] = useState<CoverageGap[]>([]);
+  const [scheduleVersions, setScheduleVersions] = useState<ScheduleVersion[]>([]);
+  const [selectedVersion, setSelectedVersion] = useState<ScheduleVersion | null>(null);
+  const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([]);
+  const [scheduleAcks, setScheduleAcks] = useState<ScheduleAck[]>([]);
+  const [scheduleHistory, setScheduleHistory] = useState<ScheduleHistoryItem[]>([]);
+  const [calendarView, setCalendarView] = useState<"posto" | "equipe" | "pessoa">("posto");
+  const [ackMessage, setAckMessage] = useState("");
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [coverages, setCoverages] = useState<CoverageRequest[]>([]);
   const [handovers, setHandovers] = useState<Handover[]>([]);
@@ -98,6 +231,21 @@ export default function OperacaoWorkspace() {
   const [validations, setValidations] = useState<ScheduleValidation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // OPS-01: o grupo de estrutura (cargo/função + necessidade por turno) carrega
+  // em estado PRÓPRIO, desacoplado do Promise.all acima. Assim uma falha em um
+  // grupo não derruba os painéis do outro — o acoplamento dos 9 fetches já é
+  // um problema conhecido desta tela e não deve ser agravado.
+  const [structureLoading, setStructureLoading] = useState(true);
+  const [structureError, setStructureError] = useState("");
+  // OPS-02: o painel de dimensionamento também carrega em grupo próprio,
+  // desacoplado dos demais — mesma razão do grupo de estrutura.
+  const [dimLoading, setDimLoading] = useState(true);
+  const [dimError, setDimError] = useState("");
+  // OPS-03: versões de escala em grupo próprio; o detalhe da versão selecionada
+  // (entradas, ciências e histórico) carrega sob demanda, também desacoplado.
+  const [schedLoading, setSchedLoading] = useState(true);
+  const [schedError, setSchedError] = useState("");
+  const [detailLoading, setDetailLoading] = useState(false);
 
   async function fetchJson(path: string) {
     const response = await fetch(path, { cache: "no-store", headers: { accept: "application/json" } });
@@ -138,6 +286,109 @@ export default function OperacaoWorkspace() {
   }
 
   useEffect(() => { void load(); }, []);
+
+  async function loadStructure() {
+    setStructureLoading(true);
+    setStructureError("");
+    try {
+      const [roleData, needData] = await Promise.all([
+        fetchJson("/api/ops/job-roles"),
+        fetchJson("/api/ops/post-shift-needs"),
+      ]);
+      setJobRoles(roleData.roles || []);
+      setShiftNeeds(needData.needs || []);
+    } catch (err: any) {
+      setStructureError(err.message || "Falha ao carregar a estrutura operacional.");
+    } finally {
+      setStructureLoading(false);
+    }
+  }
+
+  useEffect(() => { void loadStructure(); }, []);
+
+  async function loadDimensioning() {
+    setDimLoading(true);
+    setDimError("");
+    try {
+      const [dimData, gapData] = await Promise.all([
+        fetchJson("/api/ops/dimensioning"),
+        fetchJson("/api/ops/coverage-gaps"),
+      ]);
+      setDimensionings(dimData.dimensionings || []);
+      setGaps(gapData.gaps || []);
+    } catch (err: any) {
+      setDimError(err.message || "Falha ao carregar o dimensionamento.");
+    } finally {
+      setDimLoading(false);
+    }
+  }
+
+  useEffect(() => { void loadDimensioning(); }, []);
+
+  async function loadSchedules() {
+    setSchedLoading(true);
+    setSchedError("");
+    try {
+      const data = await fetchJson("/api/ops/schedule-versions");
+      setScheduleVersions(data.versions || []);
+    } catch (err: any) {
+      setSchedError(err.message || "Falha ao carregar as escalas.");
+    } finally {
+      setSchedLoading(false);
+    }
+  }
+
+  useEffect(() => { void loadSchedules(); }, []);
+
+  async function selectVersion(version: ScheduleVersion) {
+    setSelectedVersion(version);
+    setDetailLoading(true);
+    setAckMessage("");
+    setCalendarView("posto");
+    try {
+      const [entryData, ackData, historyData] = await Promise.all([
+        fetchJson(`/api/ops/schedule-entries?version_id=${version.id}`),
+        fetchJson(`/api/ops/schedule-acks?version_id=${version.id}`),
+        fetchJson(`/api/ops/schedule-history?version_id=${version.id}`),
+      ]);
+      setScheduleEntries(entryData.entries || []);
+      setScheduleAcks(ackData.acknowledgments || []);
+      setScheduleHistory(historyData.history || []);
+    } catch (err: any) {
+      // O painel de detalhe não pode fingir calendário: sem leitura completa,
+      // limpa as entradas e mostra o erro.
+      setScheduleEntries([]);
+      setScheduleAcks([]);
+      setScheduleHistory([]);
+      setSchedError(err.message || "Falha ao carregar o detalhe da escala.");
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
+  async function acknowledgeSchedule(employeeId: string, employeeName: string) {
+    if (!selectedVersion) return;
+    setAckMessage("");
+    try {
+      const response = await fetch("/api/ops/schedule-acks", {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "application/json" },
+        body: JSON.stringify({ version_id: selectedVersion.id, employee_id: employeeId }),
+      });
+      const value = await response.json().catch(() => ({}));
+      if (response.status === 201) {
+        setAckMessage(`Ciência registrada para ${employeeName}.`);
+      } else if (value.error === "duplicate_ack") {
+        setAckMessage(`Ciência já registrada para ${employeeName} — segunda ciência não duplica efeito.`);
+      } else {
+        setAckMessage(value.error ? `Ciência não registrada: ${value.error}${value.status ? ` (status da versão: ${value.status})` : ""}.` : "Ciência não registrada.");
+      }
+      const ackData = await fetchJson(`/api/ops/schedule-acks?version_id=${selectedVersion.id}`);
+      setScheduleAcks(ackData.acknowledgments || []);
+    } catch (err: any) {
+      setAckMessage(err.message || "Falha ao registrar a ciência.");
+    }
+  }
 
   return (
     <main style={{ maxWidth: 1120, margin: "0 auto", padding: "32px 18px", fontFamily: "system-ui, -apple-system, sans-serif" }}>
@@ -180,6 +431,36 @@ export default function OperacaoWorkspace() {
           }}
         >
           Jornada &amp; Habilitação (OPS-04)
+        </button>
+        <button
+          role="tab"
+          aria-selected={activeTab === "dimensionamento"}
+          onClick={() => setActiveTab("dimensionamento")}
+          style={{
+            padding: "8px 16px",
+            border: "none",
+            background: "none",
+            borderBottom: activeTab === "dimensionamento" ? "3px solid #2563eb" : "3px solid transparent",
+            fontWeight: activeTab === "dimensionamento" ? "bold" : "normal",
+            cursor: "pointer",
+          }}
+        >
+          Dimensionamento (OPS-02)
+        </button>
+        <button
+          role="tab"
+          aria-selected={activeTab === "escalas"}
+          onClick={() => setActiveTab("escalas")}
+          style={{
+            padding: "8px 16px",
+            border: "none",
+            background: "none",
+            borderBottom: activeTab === "escalas" ? "3px solid #2563eb" : "3px solid transparent",
+            fontWeight: activeTab === "escalas" ? "bold" : "normal",
+            cursor: "pointer",
+          }}
+        >
+          Escalas (OPS-03)
         </button>
         <button
           role="tab"
@@ -265,6 +546,11 @@ export default function OperacaoWorkspace() {
 
       {!loading && !error && activeTab === "postos" && (
         <>
+          <p style={{ padding: 10, background: "#eff6ff", borderRadius: 6, marginBottom: 12 }}>
+            Cadeia operacional (OPS-01): <strong>cliente → unidade atendida → posto físico → necessidade por turno →
+            alocação</strong>. Posto sem necessidade por turno cadastrada não gera cobrança de escala — a lacuna aparece
+            como lacuna, não como número inventado.
+          </p>
           <section aria-labelledby="posts-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 12 }}>
             <h2 id="posts-title">Postos físicos</h2>
             {posts.length === 0 ? (
@@ -275,7 +561,10 @@ export default function OperacaoWorkspace() {
                   <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
                     <th align="left" style={{ padding: 8 }}>Posto</th>
                     <th align="left" style={{ padding: 8 }}>Tipo</th>
+                    <th align="left" style={{ padding: 8 }}>Cliente</th>
+                    <th align="left" style={{ padding: 8 }}>Unidade atendida</th>
                     <th align="left" style={{ padding: 8 }}>Contrato</th>
+                    <th align="left" style={{ padding: 8 }}>Necessidades</th>
                     <th align="left" style={{ padding: 8 }}>Ativo</th>
                   </tr>
                 </thead>
@@ -284,7 +573,12 @@ export default function OperacaoWorkspace() {
                     <tr key={post.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
                       <td style={{ padding: 8 }}>{post.name}</td>
                       <td style={{ padding: 8 }}>{post.post_type}</td>
-                      <td style={{ padding: 8 }}>{post.contract_id ? "vinculado" : "—"}</td>
+                      <td style={{ padding: 8 }}>{post.company_name || (post.company_id ? "—" : "sem cliente")}</td>
+                      <td style={{ padding: 8 }}>{post.unit_name || (post.unit_id ? "—" : "sem unidade")}</td>
+                      <td style={{ padding: 8 }}>{post.contract_title || (post.contract_id ? "—" : "sem contrato")}</td>
+                      <td style={{ padding: 8 }}>
+                        {shiftNeeds.filter(need => need.post_id === post.id && need.is_active).length}
+                      </td>
                       <td style={{ padding: 8 }}>{post.is_active ? "sim" : "não"}</td>
                     </tr>
                   ))}
@@ -292,6 +586,87 @@ export default function OperacaoWorkspace() {
               </table>
             )}
           </section>
+
+          {structureLoading && <p role="status">Carregando estrutura operacional (cargos e necessidades)…</p>}
+          {!structureLoading && structureError && (
+            <p role="alert" style={{ padding: 12, background: "#fef2f2", borderRadius: 6, color: "#991b1b" }}>
+              {structureError}
+            </p>
+          )}
+
+          {!structureLoading && !structureError && (
+            <>
+              <section aria-labelledby="job-roles-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+                <h2 id="job-roles-title">Cargos e funções (OPS-01)</h2>
+                {jobRoles.length === 0 ? (
+                  <p>Nenhum cargo/função cadastrado. Alocação com cargo exigido depende de entidade própria registrada aqui.</p>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                        <th align="left" style={{ padding: 8 }}>Cargo/função</th>
+                        <th align="left" style={{ padding: 8 }}>Tipo</th>
+                        <th align="left" style={{ padding: 8 }}>Descrição</th>
+                        <th align="left" style={{ padding: 8 }}>Situação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {jobRoles.map(role => (
+                        <tr key={role.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: 8 }}>{role.name}</td>
+                          <td style={{ padding: 8 }}>{role.role_type}</td>
+                          <td style={{ padding: 8 }}>{role.description || "—"}</td>
+                          <td style={{ padding: 8 }}>
+                            <span style={{ padding: "2px 8px", borderRadius: 4, background: role.is_active ? "#dcfce7" : "#f1f5f9" }}>
+                              {role.is_active ? "ativo" : "inativo"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </section>
+
+              <section aria-labelledby="shift-needs-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+                <h2 id="shift-needs-title">Necessidade por turno (OPS-01)</h2>
+                {shiftNeeds.length === 0 ? (
+                  <p>Nenhuma necessidade por turno cadastrada. Sem cadastro, o dimensionamento de posto não é inferido.</p>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                        <th align="left" style={{ padding: 8 }}>Posto</th>
+                        <th align="left" style={{ padding: 8 }}>Turno</th>
+                        <th align="left" style={{ padding: 8 }}>Dia</th>
+                        <th align="left" style={{ padding: 8 }}>Profissionais exigidos</th>
+                        <th align="left" style={{ padding: 8 }}>Cargo exigido</th>
+                        <th align="left" style={{ padding: 8 }}>Situação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {shiftNeeds.map(need => (
+                        <tr key={need.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: 8 }}>{need.post_name}</td>
+                          <td style={{ padding: 8 }}>{need.shift_template_name || "—"}</td>
+                          <td style={{ padding: 8 }}>
+                            {need.day_of_week === null ? "sem dia específico" : WEEKDAY_LABELS[need.day_of_week] || String(need.day_of_week)}
+                          </td>
+                          <td style={{ padding: 8 }}>{need.required_headcount}</td>
+                          <td style={{ padding: 8 }}>{need.role_name || "não exigido"}</td>
+                          <td style={{ padding: 8 }}>
+                            <span style={{ padding: "2px 8px", borderRadius: 4, background: need.is_active ? "#dcfce7" : "#f1f5f9" }}>
+                              {need.is_active ? "ativo" : "inativo"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </section>
+            </>
+          )}
 
           <section aria-labelledby="alloc-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
             <h2 id="alloc-title">Alocações</h2>
@@ -301,6 +676,8 @@ export default function OperacaoWorkspace() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                    <th align="left" style={{ padding: 8 }}>Posto</th>
+                    <th align="left" style={{ padding: 8 }}>Profissional</th>
                     <th align="left" style={{ padding: 8 }}>Data</th>
                     <th align="left" style={{ padding: 8 }}>Status</th>
                   </tr>
@@ -308,6 +685,8 @@ export default function OperacaoWorkspace() {
                 <tbody>
                   {allocations.map(allocation => (
                     <tr key={allocation.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: 8 }}>{allocation.post_name || "—"}</td>
+                      <td style={{ padding: 8 }}>{allocation.employee_name || "—"}</td>
                       <td style={{ padding: 8 }}>{String(allocation.allocation_date).slice(0, 10)}</td>
                       <td style={{ padding: 8 }}>{allocation.status}</td>
                     </tr>
@@ -439,6 +818,393 @@ export default function OperacaoWorkspace() {
               </table>
             )}
           </section>
+        </>
+      )}
+
+      {!loading && !error && activeTab === "dimensionamento" && (
+        <>
+          <p style={{ padding: 10, background: "#eff6ff", borderRadius: 6, marginBottom: 12 }}>
+            Dimensionamento (OPS-02): contratado × planejado × realizado por faixa de tempo, cobertura por horas e
+            profissional habilitado. A habilitação é recomputada ao vivo contra as alocações da faixa, com a mesma
+            regra do motor OPS-04 — qualificação vencida ou revogada depois da alocação aparece aqui como lacuna,
+            não como número fictício.
+          </p>
+
+          {dimLoading && <p role="status">Carregando dimensionamento…</p>}
+          {!dimLoading && dimError && (
+            <p role="alert" style={{ padding: 12, background: "#fef2f2", borderRadius: 6, color: "#991b1b" }}>
+              {dimError}
+            </p>
+          )}
+
+          {!dimLoading && !dimError && (
+            <>
+              <section aria-labelledby="dimensioning-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 12 }}>
+                <h2 id="dimensioning-title">Contratado × planejado × realizado por faixa de tempo</h2>
+                {dimensionings.length === 0 ? (
+                  <p>Nenhum dimensionamento registrado. Sem registro por faixa de tempo, cobertura não é inferida.</p>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                        <th align="left" style={{ padding: 8 }}>Posto</th>
+                        <th align="left" style={{ padding: 8 }}>Período</th>
+                        <th align="left" style={{ padding: 8 }}>Contratado</th>
+                        <th align="left" style={{ padding: 8 }}>Planejado</th>
+                        <th align="left" style={{ padding: 8 }}>Realizado</th>
+                        <th align="left" style={{ padding: 8 }}>Horas exigidas</th>
+                        <th align="left" style={{ padding: 8 }}>Horas realizadas</th>
+                        <th align="left" style={{ padding: 8 }}>Cobertura</th>
+                        <th align="left" style={{ padding: 8 }}>Alocados na faixa</th>
+                        <th align="left" style={{ padding: 8 }}>Habilitados</th>
+                        <th align="left" style={{ padding: 8 }}>Sem cargo exigido</th>
+                        <th align="left" style={{ padding: 8 }}>Situação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dimensionings.map(dim => (
+                        <tr key={dim.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: 8 }}>{dim.post_name || "—"}</td>
+                          <td style={{ padding: 8 }}>{String(dim.period_start).slice(0, 10)} a {String(dim.period_end).slice(0, 10)}</td>
+                          <td style={{ padding: 8 }}>{dim.contracted_headcount}</td>
+                          <td style={{ padding: 8 }}>{dim.planned_headcount}</td>
+                          <td style={{ padding: 8 }}>{dim.realized_headcount}</td>
+                          <td style={{ padding: 8 }}>{Number(dim.coverage_hours_required)} h</td>
+                          <td style={{ padding: 8 }}>{Number(dim.coverage_hours_realized)} h</td>
+                          <td style={{ padding: 8 }}>
+                            <span style={{
+                              padding: "2px 8px", borderRadius: 4,
+                              background: Number(dim.coverage_percent) >= 100 ? "#dcfce7" : Number(dim.coverage_percent) >= 70 ? "#fef3c7" : "#fee2e2",
+                            }}>
+                              {Number(dim.coverage_percent)}%
+                            </span>
+                          </td>
+                          <td style={{ padding: 8 }}>
+                            {dim.allocated_employees ?? 0}
+                            {Number(dim.allocated_hours || 0) > 0 && ` (${Number(dim.allocated_hours)} h alocadas)`}
+                          </td>
+                          <td style={{ padding: 8 }}>
+                            {dim.qualified_employees ?? 0}
+                            {Number(dim.unqualified_employees || 0) > 0 && (
+                              <span style={{ color: "#991b1b" }}> + {dim.unqualified_employees} sem habilitação válida</span>
+                            )}
+                          </td>
+                          <td style={{ padding: 8 }}>{dim.employees_without_requirement ?? 0}</td>
+                          <td style={{ padding: 8 }}>{dim.status}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+                <footer style={{ marginTop: 12, padding: 10, background: "#f8fafc", borderRadius: 6, color: "#475569", fontSize: 14 }}>
+                  <strong>Período e fórmula.</strong> Período de cada linha: datas de início e fim do próprio registro de
+                  dimensionamento. Cobertura % = horas realizadas ÷ horas exigidas × 100, limitada a 100 (calculada pelo
+                  banco na coluna <code>coverage_percent</code>). Alocados na faixa = profissionais distintos com
+                  alocação não cancelada dentro do período, no posto da linha; as horas alocadas são a soma das horas
+                  dos turnos dessas alocações e não substituem as horas realizadas informadas no registro. Habilitados =
+                  alocados cujo cargo exigido na própria alocação possui qualificação válida em{" "}
+                  <code>ops_employee_qualifications</code> (<code>is_valid</code> e validade ≥ data da alocação) — a
+                  mesma regra aplicada ao alocar (OPS-04). Sem cargo exigido = alocados apenas em alocações sem cargo
+                  informado: não são contados como habilitados nem como inabilitados. Dado ausente aparece como lacuna
+                  com o pré-requisito de cadastro — nunca como número inventado.
+                </footer>
+              </section>
+
+              <section aria-labelledby="coverage-gaps-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+                <h2 id="coverage-gaps-title">Lacunas de cobertura (OPS-02)</h2>
+                {gaps.length === 0 ? (
+                  <p>Nenhuma lacuna de cobertura registrada. Ausência de lacuna registrada não é prova de cobertura — é ausência de registro.</p>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                        <th align="left" style={{ padding: 8 }}>Posto</th>
+                        <th align="left" style={{ padding: 8 }}>Data</th>
+                        <th align="left" style={{ padding: 8 }}>Janela</th>
+                        <th align="left" style={{ padding: 8 }}>Minutos descobertos</th>
+                        <th align="left" style={{ padding: 8 }}>Motivo</th>
+                        <th align="left" style={{ padding: 8 }}>Situação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {gaps.map(gap => (
+                        <tr key={gap.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: 8 }}>{gap.post_name || "—"}</td>
+                          <td style={{ padding: 8 }}>{String(gap.gap_date).slice(0, 10)}</td>
+                          <td style={{ padding: 8 }}>{String(gap.gap_start).slice(0, 16).replace("T", " ")} – {String(gap.gap_end).slice(0, 16).replace("T", " ")}</td>
+                          <td style={{ padding: 8 }}>{gap.uncovered_minutes}</td>
+                          <td style={{ padding: 8 }}>{gap.reason || "—"}</td>
+                          <td style={{ padding: 8 }}>
+                            <span style={{ padding: "2px 8px", borderRadius: 4, background: gap.status === "resolvido" ? "#dcfce7" : "#fef3c7" }}>
+                              {gap.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </section>
+            </>
+          )}
+        </>
+      )}
+
+      {!loading && !error && activeTab === "escalas" && (
+        <>
+          <p style={{ padding: 10, background: "#eff6ff", borderRadius: 6, marginBottom: 12 }}>
+            Escalas (OPS-03): versões em rascunho → publicada → revisada com validade e histórico; calendário por
+            posto, por equipe e por pessoa; ciência do profissional registrada pela interface, idempotente — a
+            segunda ciência não duplica efeito. Entradas só entram em versão editável e dentro da validade.
+          </p>
+
+          {schedLoading && <p role="status">Carregando versões de escala…</p>}
+          {!schedLoading && schedError && (
+            <p role="alert" style={{ padding: 12, background: "#fef2f2", borderRadius: 6, color: "#991b1b" }}>
+              {schedError}
+            </p>
+          )}
+
+          {!schedLoading && !schedError && (
+            <>
+              <section aria-labelledby="schedule-versions-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 12 }}>
+                <h2 id="schedule-versions-title">Versões de escala</h2>
+                {scheduleVersions.length === 0 ? (
+                  <p>Nenhuma versão de escala registrada. Sem versão, não há calendário — nada é presumido.</p>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                        <th align="left" style={{ padding: 8 }}>Versão</th>
+                        <th align="left" style={{ padding: 8 }}>Empresa</th>
+                        <th align="left" style={{ padding: 8 }}>Unidade (equipe)</th>
+                        <th align="left" style={{ padding: 8 }}>Validade</th>
+                        <th align="left" style={{ padding: 8 }}>Situação</th>
+                        <th align="left" style={{ padding: 8 }}>Publicada em</th>
+                        <th align="left" style={{ padding: 8 }}>Calendário</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {scheduleVersions.map(version => (
+                        <tr key={version.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: 8 }}>v{version.version}</td>
+                          <td style={{ padding: 8 }}>{version.company_name || (version.company_id ? "—" : "sem empresa")}</td>
+                          <td style={{ padding: 8 }}>{version.unit_name || (version.unit_id ? "—" : "sem unidade")}</td>
+                          <td style={{ padding: 8 }}>{String(version.valid_from).slice(0, 10)} a {String(version.valid_to).slice(0, 10)}</td>
+                          <td style={{ padding: 8 }}>
+                            <span style={{
+                              padding: "2px 8px", borderRadius: 4,
+                              background: version.status === "publicada" || version.status === "revisada" ? "#dcfce7" : "#fef3c7",
+                            }}>
+                              {version.status}
+                            </span>
+                          </td>
+                          <td style={{ padding: 8 }}>{version.published_at ? String(version.published_at).slice(0, 16).replace("T", " ") : "—"}</td>
+                          <td style={{ padding: 8 }}>
+                            <button
+                              type="button"
+                              onClick={() => { void selectVersion(version); }}
+                              style={{ padding: "4px 10px", cursor: "pointer", border: "1px solid #94a3b8", borderRadius: 6, background: selectedVersion?.id === version.id ? "#2563eb" : "#fff", color: selectedVersion?.id === version.id ? "#fff" : "#1e293b" }}
+                            >
+                              Ver calendário
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </section>
+
+              {selectedVersion && (
+                <>
+                  <section aria-labelledby="schedule-calendar-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+                    <h2 id="schedule-calendar-title">
+                      Calendário da versão v{selectedVersion.version} — {String(selectedVersion.valid_from).slice(0, 10)} a {String(selectedVersion.valid_to).slice(0, 10)}
+                    </h2>
+                    <div role="group" aria-label="Visão do calendário" style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                      {([["posto", "Por posto"], ["equipe", "Por equipe"], ["pessoa", "Por pessoa"]] as const).map(([key, label]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          aria-pressed={calendarView === key}
+                          onClick={() => setCalendarView(key)}
+                          style={{ padding: "6px 14px", cursor: "pointer", border: "1px solid #94a3b8", borderRadius: 6, background: calendarView === key ? "#2563eb" : "#fff", color: calendarView === key ? "#fff" : "#1e293b" }}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    {detailLoading && <p role="status">Carregando entradas da versão…</p>}
+                    {!detailLoading && (() => {
+                      const { dates, truncated } = versionDateWindow(selectedVersion);
+                      if (dates.length === 0) return <p role="alert">Validade da versão ilegível — calendário não pode ser montado.</p>;
+                      const groups = new Map<string, { label: string; cells: Map<string, string> }>();
+                      for (const entry of scheduleEntries) {
+                        const date = String(entry.entry_date).slice(0, 10);
+                        if (calendarView === "posto") {
+                          const key = entry.post_id;
+                          if (!groups.has(key)) groups.set(key, { label: entry.post_name || "posto sem nome", cells: new Map() });
+                          const cell = groups.get(key)!.cells;
+                          cell.set(date, cell.has(date) ? `${cell.get(date)}, ${entry.employee_name || "profissional sem nome"}` : (entry.employee_name || "profissional sem nome"));
+                        } else if (calendarView === "equipe") {
+                          const key = entry.unit_name || "sem unidade";
+                          if (!groups.has(key)) groups.set(key, { label: key, cells: new Map() });
+                          const cell = groups.get(key)!.cells;
+                          const people = new Set(String(cell.get(date) || "").split("||").filter(Boolean));
+                          people.add(entry.employee_id);
+                          cell.set(date, [...people].join("||"));
+                        } else {
+                          const key = entry.employee_id;
+                          if (!groups.has(key)) groups.set(key, { label: entry.employee_name || "profissional sem nome", cells: new Map() });
+                          const cell = groups.get(key)!.cells;
+                          cell.set(date, cell.has(date) ? `${cell.get(date)}, ${entry.shift_template_name || "turno sem nome"}` : (entry.shift_template_name || "turno sem nome"));
+                        }
+                      }
+                      if (groups.size === 0) {
+                        return <p>Nenhuma entrada nesta versão. Versão sem entrada é versão sem calendário — não inventamos escala.</p>;
+                      }
+                      return (
+                        <>
+                          <div style={{ overflowX: "auto" }}>
+                            <table style={{ borderCollapse: "collapse", minWidth: "100%" }}>
+                              <thead>
+                                <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                                  <th align="left" style={{ padding: 6, position: "sticky", left: 0, background: "#fff", minWidth: 180 }}>
+                                    {calendarView === "posto" ? "Posto" : calendarView === "equipe" ? "Equipe (unidade)" : "Profissional"}
+                                  </th>
+                                  {dates.map(date => (
+                                    <th key={date} align="center" style={{ padding: 6, borderLeft: "1px solid #f1f5f9" }}>{shortDate(date)}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {[...groups.entries()].map(([key, group]) => (
+                                  <tr key={key} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                    <td style={{ padding: 6, position: "sticky", left: 0, background: "#fff", fontWeight: 500 }}>{group.label}</td>
+                                    {dates.map(date => {
+                                      const raw = group.cells.get(date);
+                                      const text = calendarView === "equipe"
+                                        ? (raw ? `${raw.split("||").length}` : "")
+                                        : (raw || "");
+                                      return (
+                                        <td key={date} align="center" style={{ padding: 6, borderLeft: "1px solid #f1f5f9", fontSize: 13, background: text ? "#eff6ff" : "transparent" }}>
+                                          {text || "—"}
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                          {truncated && (
+                            <p role="note" style={{ marginTop: 8, color: "#92400e" }}>
+                              Validade maior que {CALENDAR_MAX_DAYS} dias: exibindo os primeiros {CALENDAR_MAX_DAYS} dias da validade.
+                            </p>
+                          )}
+                          <footer style={{ marginTop: 12, padding: 10, background: "#f8fafc", borderRadius: 6, color: "#475569", fontSize: 14 }}>
+                            <strong>Período e fonte.</strong> Colunas = dias da validade da versão ({String(selectedVersion.valid_from).slice(0, 10)} a{" "}
+                            {String(selectedVersion.valid_to).slice(0, 10)}). Por posto = profissionais escalados no posto naquele dia; por equipe =
+                            quantidade de profissionais distintos escalados na unidade naquele dia; por pessoa = turnos do profissional naquele dia.
+                            Célula vazia (—) é ausência de entrada registrada, não folga confirmada.
+                          </footer>
+                        </>
+                      );
+                    })()}
+                  </section>
+
+                  <section aria-labelledby="schedule-acks-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+                    <h2 id="schedule-acks-title">Ciência da escala (OPS-03)</h2>
+                    {detailLoading && <p role="status">Carregando ciências…</p>}
+                    {!detailLoading && (() => {
+                      const employees = [...new Map(scheduleEntries.map(entry => [entry.employee_id, entry])).values()];
+                      return (
+                        <>
+                          <p style={{ color: "#475569" }}>
+                            Ciência registrada pela interface para a versão selecionada. A segunda ciência do mesmo
+                            profissional na mesma versão é rejeitada sem duplicar efeito — o banco garante e a tela mostra.
+                          </p>
+                          {employees.length === 0 ? (
+                            <p>Nenhum profissional com entrada nesta versão — ciência pressupõe escala publicada com entradas.</p>
+                          ) : (
+                            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                              <thead>
+                                <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                                  <th align="left" style={{ padding: 8 }}>Profissional</th>
+                                  <th align="left" style={{ padding: 8 }}>Situação</th>
+                                  <th align="left" style={{ padding: 8 }}>Ação</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {employees.map(employee => {
+                                  const ack = scheduleAcks.find(item => item.employee_id === employee.employee_id);
+                                  return (
+                                    <tr key={employee.employee_id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                      <td style={{ padding: 8 }}>{employee.employee_name || "—"}</td>
+                                      <td style={{ padding: 8 }}>
+                                        <span style={{ padding: "2px 8px", borderRadius: 4, background: ack ? "#dcfce7" : "#fef3c7" }}>
+                                          {ack ? `ciente desde ${String(ack.acknowledged_at).slice(0, 16).replace("T", " ")}` : "pendente"}
+                                        </span>
+                                      </td>
+                                      <td style={{ padding: 8 }}>
+                                        <button
+                                          type="button"
+                                          onClick={() => { void acknowledgeSchedule(employee.employee_id, employee.employee_name || "profissional"); }}
+                                          style={{ padding: "4px 10px", cursor: "pointer", border: "1px solid #94a3b8", borderRadius: 6, background: "#fff" }}
+                                        >
+                                          Registrar ciência
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          )}
+                          {ackMessage && <p role="status" style={{ marginTop: 10, padding: 8, background: ackMessage.includes("não") ? "#fef2f2" : "#dcfce7", borderRadius: 6 }}>{ackMessage}</p>}
+                        </>
+                      );
+                    })()}
+                  </section>
+
+                  <section aria-labelledby="schedule-history-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+                    <h2 id="schedule-history-title">Histórico da versão</h2>
+                    {detailLoading && <p role="status">Carregando histórico…</p>}
+                    {!detailLoading && scheduleHistory.length === 0 && (
+                      <p>Nenhuma transição registrada para esta versão.</p>
+                    )}
+                    {!detailLoading && scheduleHistory.length > 0 && (
+                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <thead>
+                          <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                            <th align="left" style={{ padding: 8 }}>Quando</th>
+                            <th align="left" style={{ padding: 8 }}>Transição</th>
+                            <th align="left" style={{ padding: 8 }}>Por</th>
+                            <th align="left" style={{ padding: 8 }}>Motivo</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {scheduleHistory.map(item => (
+                            <tr key={item.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                              <td style={{ padding: 8 }}>{String(item.created_at).slice(0, 16).replace("T", " ")}</td>
+                              <td style={{ padding: 8 }}>
+                                <span style={{ padding: "2px 8px", borderRadius: 4, background: "#f1f5f9" }}>
+                                  {item.previous_status ? `${item.previous_status} → ${item.next_status}` : `criada como ${item.next_status}`}
+                                </span>
+                              </td>
+                              <td style={{ padding: 8 }}>{item.changed_by}</td>
+                              <td style={{ padding: 8 }}>{item.reason || "—"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </section>
+                </>
+              )}
+            </>
+          )}
         </>
       )}
 
