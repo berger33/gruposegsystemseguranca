@@ -13,7 +13,9 @@ on:
       - 'package*.json'
       - '.github/workflows/l07-delivery.yml'
 concurrency:
-  group: delivery-${{ github.event.pull_request.number || github.ref }}
+  # Não disputar a única vaga pendente com L04/L05/L06: todos os workflows
+  # usavam `delivery-<PR>`, fazendo o gate financeiro ser cancelado antes de rodar.
+  group: l07-delivery-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 permissions:
   contents: read

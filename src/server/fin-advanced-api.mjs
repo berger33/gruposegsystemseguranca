@@ -33,6 +33,10 @@ export function createFinAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   const CASHFLOW_TYPES = new Set(["previsto", "realizado"]);
   const AGING_BUCKETS = new Set(["a_vencer", "vencido_0_30", "vencido_31_60", "vencido_61_90", "vencido_90_plus"]);
 
+  // FIN-08: custos e importações são registros sintéticos locais. A API não
+  // lê arquivos externos nem integra folha, estoque ou supervisão.
+  const COST_SOURCES = new Set(["pessoal", "equipamento", "material", "supervisao", "outro"]);
+
   function isUuid(value) {
     return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
   }
@@ -803,68 +807,210 @@ export function createFinAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   }
 
   async function handleCostImports(req, res) {
-    const session = await ensureAuth(req, res, ["admin","ti","financeiro"]);
+    const session = await ensureAuth(req, res, ["admin", "ti", "financeiro"]);
     if (!session) return;
     if (req.method === "GET") {
-      const { rows } = await pool.query(`SELECT * FROM fin_cost_imports ORDER BY competence_date DESC LIMIT 100`);
-      return json(res,200,{ imports: rows });
+      const { rows } = await pool.query(
+        `SELECT cost_import.*,
+                COUNT(cost.id)::int AS allocated_records,
+                COALESCE(SUM(cost.amount_cents), 0)::bigint AS allocated_costs_cents
+           FROM fin_cost_imports cost_import
+           LEFT JOIN fin_costs cost ON cost.import_id=cost_import.id
+          GROUP BY cost_import.id
+          ORDER BY cost_import.competence_date DESC, cost_import.created_at DESC
+          LIMIT 100`
+      );
+      return json(res, 200, { imports: rows, synthetic: true });
     }
-    if (req.method === "POST") {
-      let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
-      const { source, file_name, file_url, storage_key, competence_date, total_costs_cents, total_records } = body;
-      if (!source || !file_name || !file_url || !storage_key || !competence_date) return json(res,400,{ error:"missing_fields" });
-      const protocol = generateProtocol("COST-IMP");
-      try {
-        const { rows } = await pool.query(
-          `INSERT INTO fin_cost_imports (protocol, source, file_name, file_url, storage_key, competence_date, total_costs_cents, total_records, created_by_identity)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-          [protocol, source, file_name, file_url, storage_key, competence_date, total_costs_cents||0, total_records||0, session.identityId||null]
-        );
-        await auditLog({ action:"fin_cost_import_create", actor: session.identityId||"unknown", target: rows[0].id, meta:{ protocol, source, competence_date } });
-        return json(res,201,{ import: rows[0], note:"importação custos pessoal equipamentos materiais supervisão rateio documentado" });
-      } catch(e) {
-        if (String(e.message).includes("duplicate")) return json(res,409,{ error:"duplicate_storage_key" });
-        return json(res,500,{ error:"internal", detail:e.message });
-      }
+    if (req.method !== "POST") return json(res, 405, { error: "method_not_allowed" });
+
+    const body = await readJsonBody(req, res);
+    if (!body) return;
+    const source = body.source;
+    const fileName = typeof body.file_name === "string" ? body.file_name.trim() : "";
+    const fileUrl = typeof body.file_url === "string" ? body.file_url.trim() : "";
+    const storageKey = typeof body.storage_key === "string" ? body.storage_key.trim() : "";
+    const competenceDate = body.competence_date;
+    const totalCosts = integerCents(body.total_costs_cents ?? 0, { allowNegative: false });
+    const totalRecords = integerCents(body.total_records ?? 0, { allowNegative: false });
+    if (!COST_SOURCES.has(source)) return json(res, 400, { error: "invalid_cost_source" });
+    if (!fileName || fileName.length > 500 || fileUrl.length < 5 || fileUrl.length > 1000 || storageKey.length < 5 || storageKey.length > 500) {
+      return json(res, 400, { error: "file_metadata_invalid" });
     }
-    return json(res,405,{ error:"method_not_allowed" });
+    if (!validDate(competenceDate)) return json(res, 400, { error: "invalid_competence_date" });
+    if (totalCosts === null || totalRecords === null) return json(res, 400, { error: "invalid_import_totals" });
+
+    const protocol = generateProtocol("COST-IMP");
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const { rows } = await client.query(
+        `INSERT INTO fin_cost_imports
+          (protocol, source, file_name, file_url, storage_key, competence_date,
+           total_costs_cents, total_records, created_by_identity)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+        [protocol, source, fileName, fileUrl, storageKey, competenceDate, totalCosts, totalRecords, session.identityId || null]
+      );
+      await auditLog({
+        action: "fin_cost_import_create",
+        actor: session.identityId || "unknown",
+        target: rows[0].id,
+        meta: { protocol, source, competence_date: competenceDate, storage_key: storageKey, synthetic: true },
+        client,
+      });
+      await client.query("COMMIT");
+      return json(res, 201, {
+        import: rows[0],
+        synthetic: true,
+        note: "metadados de importação sintética registrados; nenhum arquivo externo foi lido",
+      });
+    } catch (error) {
+      try { await client.query("ROLLBACK"); } catch {}
+      if (isAuditUnavailable(error)) return json(res, 503, { error: "audit_unavailable" });
+      if (error?.code === "23505") return json(res, 409, { error: "duplicate_storage_key" });
+      if (["23503", "23514", "22P02", "22007"].includes(error?.code)) return json(res, 400, { error: "invalid_cost_import" });
+      return json(res, 500, { error: "internal" });
+    } finally {
+      client.release();
+    }
   }
 
   async function handleCosts(req, res) {
-    const session = await ensureAuth(req, res, ["admin","ti","financeiro"]);
+    const session = await ensureAuth(req, res, ["admin", "ti", "financeiro"]);
     if (!session) return;
     const url = new URL(req.url, `http://${req.headers.host}`);
     if (req.method === "GET") {
-      const contractId = url.searchParams.get("contract_id");
-      const accountId = url.searchParams.get("client_account_id");
-      const postId = url.searchParams.get("post_id");
-      let q=`SELECT * FROM fin_costs WHERE 1=1`;
-      const params=[]; let idx=1;
-      if (contractId) { q+=` AND contract_id=$${idx++}`; params.push(contractId); }
-      if (accountId) { q+=` AND client_account_id=$${idx++}`; params.push(accountId); }
-      if (postId) { q+=` AND post_id=$${idx++}`; params.push(postId); }
-      q+=` ORDER BY competence_date DESC LIMIT 100`;
-      const { rows } = await pool.query(q, params);
-      return json(res,200,{ costs: rows, note:"custo por cliente/contrato/posto rateio documentado" });
+      const filters = [
+        ["contract_id", url.searchParams.get("contract_id")],
+        ["client_account_id", url.searchParams.get("client_account_id")],
+        ["post_id", url.searchParams.get("post_id")],
+        ["import_id", url.searchParams.get("import_id")],
+      ];
+      const source = url.searchParams.get("cost_source");
+      const competenceDate = url.searchParams.get("competence_date");
+      if (filters.some(([, value]) => value && !isUuid(value))) return json(res, 400, { error: "invalid_cost_filter" });
+      if (source && !COST_SOURCES.has(source)) return json(res, 400, { error: "invalid_cost_source" });
+      if (competenceDate && !validDate(competenceDate)) return json(res, 400, { error: "invalid_competence_date" });
+      let query = `SELECT cost.*, account.display_name AS client_name, contract.title AS contract_title, post.name AS post_name
+                     FROM fin_costs cost
+                     JOIN client_accounts account ON account.id=cost.client_account_id
+                     LEFT JOIN client_contracts contract ON contract.id=cost.contract_id
+                     LEFT JOIN ops_posts post ON post.id=cost.post_id
+                    WHERE 1=1`;
+      const params = [];
+      for (const [column, value] of filters) {
+        if (value) { params.push(value); query += ` AND cost.${column}=$${params.length}`; }
+      }
+      if (source) { params.push(source); query += ` AND cost.cost_source=$${params.length}`; }
+      if (competenceDate) { params.push(competenceDate); query += ` AND cost.competence_date=$${params.length}`; }
+      query += ` ORDER BY cost.competence_date DESC, cost.created_at DESC LIMIT 100`;
+      const { rows } = await pool.query(query, params);
+      return json(res, 200, { costs: rows, synthetic: true, note: "custos sintéticos com rateio documentado" });
     }
-    if (req.method === "POST") {
-      let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
-      const { import_id, client_account_id, contract_id, post_id, cost_source, competence_date, amount_cents, description, source_employee_id, source_equipment_id, source_material, supervision_id, rateio_rule, rateio_percent } = body;
-      if (!cost_source || !competence_date || amount_cents==null || !description || !rateio_rule || rateio_percent==null) return json(res,400,{ error:"missing_fields" });
-      if (String(description).length <10 || String(description).length>1000) return json(res,400,{ error:"description_10_1000" });
-      if (String(rateio_rule).length <10 || String(rateio_rule).length>1000) return json(res,400,{ error:"rateio_rule_10_1000_required", note:"rateio documentado obrigatório" });
-      if (rateio_percent <0 || rateio_percent>100) return json(res,400,{ error:"rateio_percent_0_100" });
-      try {
-        const { rows } = await pool.query(
-          `INSERT INTO fin_costs (import_id, client_account_id, contract_id, post_id, cost_source, competence_date, amount_cents, description, source_employee_id, source_equipment_id, source_material, supervision_id, rateio_rule, rateio_percent, rateio_documented, created_by_identity)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,true,$15) RETURNING *`,
-          [import_id||null, client_account_id||null, contract_id||null, post_id||null, cost_source, competence_date, amount_cents, description, source_employee_id||null, source_equipment_id||null, source_material||null, supervision_id||null, rateio_rule, rateio_percent, session.identityId||null]
+    if (req.method !== "POST") return json(res, 405, { error: "method_not_allowed" });
+
+    const body = await readJsonBody(req, res);
+    if (!body) return;
+    const importId = body.import_id == null || body.import_id === "" ? null : String(body.import_id).trim();
+    const accountId = typeof body.client_account_id === "string" ? body.client_account_id.trim() : "";
+    const contractId = body.contract_id == null || body.contract_id === "" ? null : String(body.contract_id).trim();
+    const postId = body.post_id == null || body.post_id === "" ? null : String(body.post_id).trim();
+    const costSource = body.cost_source;
+    const competenceDate = body.competence_date;
+    const description = typeof body.description === "string" ? body.description.trim() : "";
+    const rateioRule = typeof body.rateio_rule === "string" ? body.rateio_rule.trim() : "";
+    const rateioPercent = typeof body.rateio_percent === "number" ? body.rateio_percent : Number(body.rateio_percent);
+    const amountInput = integerCents(body.amount_cents, { allowNegative: false });
+    let sourceAmount = integerCents(body.source_amount_cents, { allowNegative: false });
+    const importRecordKey = importId && typeof body.import_record_key === "string" ? body.import_record_key.trim() : null;
+    const employeeId = body.source_employee_id == null || body.source_employee_id === "" ? null : String(body.source_employee_id).trim();
+    const equipmentId = body.source_equipment_id == null || body.source_equipment_id === "" ? null : String(body.source_equipment_id).trim();
+    const supervisionId = body.supervision_id == null || body.supervision_id === "" ? null : String(body.supervision_id).trim();
+    const sourceMaterial = body.source_material == null || body.source_material === "" ? null : String(body.source_material).trim();
+
+    if (!isUuid(accountId)) return json(res, 400, { error: "invalid_client_account_id" });
+    if ([importId, contractId, postId, employeeId, equipmentId, supervisionId].some(value => value !== null && !isUuid(value))) return json(res, 400, { error: "invalid_cost_reference" });
+    if (!COST_SOURCES.has(costSource)) return json(res, 400, { error: "invalid_cost_source" });
+    if (!validDate(competenceDate)) return json(res, 400, { error: "invalid_competence_date" });
+    if (description.length < 10 || description.length > 1000) return json(res, 400, { error: "description_10_1000" });
+    if (rateioRule.length < 10 || rateioRule.length > 1000) return json(res, 400, { error: "rateio_rule_10_1000_required" });
+    if (!Number.isFinite(rateioPercent) || rateioPercent <= 0 || rateioPercent > 100 || Math.round(rateioPercent * 100) !== rateioPercent * 100) {
+      return json(res, 400, { error: "rateio_percent_0_01_100" });
+    }
+    if (importId && (!importRecordKey || importRecordKey.length > 200)) return json(res, 400, { error: "import_record_key_required" });
+    if (!importId && body.import_record_key != null) return json(res, 400, { error: "import_record_key_without_import" });
+    if (sourceMaterial && sourceMaterial.length > 500) return json(res, 400, { error: "source_material_too_long" });
+
+    if (sourceAmount === null) {
+      if (amountInput === null || amountInput <= 0) return json(res, 400, { error: "invalid_cost_amount" });
+      sourceAmount = Math.round(amountInput * 100 / rateioPercent);
+    }
+    if (sourceAmount <= 0) return json(res, 400, { error: "invalid_source_amount" });
+    const allocatedAmount = Math.round(sourceAmount * rateioPercent / 100);
+    if (allocatedAmount <= 0 || (amountInput !== null && amountInput !== allocatedAmount)) return json(res, 400, { error: "allocated_amount_mismatch" });
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const account = await client.query(`SELECT id FROM client_accounts WHERE id=$1 FOR SHARE`, [accountId]);
+      if (!account.rows.length) { await client.query("ROLLBACK"); return json(res, 404, { error: "client_account_not_found" }); }
+      if (contractId) {
+        const contract = await client.query(`SELECT id FROM client_contracts WHERE id=$1 AND client_account_id=$2 FOR SHARE`, [contractId, accountId]);
+        if (!contract.rows.length) { await client.query("ROLLBACK"); return json(res, 400, { error: "contract_account_mismatch" }); }
+      }
+      if (postId) {
+        const post = await client.query(
+          `SELECT post.id FROM ops_posts post
+             JOIN cli_contract_scopes scope ON scope.post_id=post.id
+            WHERE post.id=$1 AND scope.contract_id=$2 AND scope.client_account_id=$3
+            FOR SHARE OF post`,
+          [postId, contractId, accountId]
         );
-        await auditLog({ action:"fin_cost_create", actor: session.identityId||"unknown", target: rows[0].id, meta:{ cost_source, contract_id, post_id, amount_cents, rateio_rule, rateio_percent } });
-        return json(res,201,{ cost: rows[0], note:"custo por cliente/contrato/posto importação pessoal equipamentos materiais supervisão rateio documentado" });
-      } catch(e) { return json(res,500,{ error:"internal", detail:e.message }); }
+        if (!post.rows.length) { await client.query("ROLLBACK"); return json(res, 400, { error: "post_contract_scope_mismatch" }); }
+      }
+      if (employeeId) {
+        const employee = await client.query(`SELECT id FROM hr_employees WHERE id=$1 FOR SHARE`, [employeeId]);
+        if (!employee.rows.length) { await client.query("ROLLBACK"); return json(res, 400, { error: "employee_not_found" }); }
+      }
+      const { rows } = await client.query(
+        `INSERT INTO fin_costs
+          (import_id, import_record_key, client_account_id, contract_id, post_id,
+           cost_source, competence_date, source_amount_cents, amount_cents,
+           description, source_employee_id, source_equipment_id, source_material,
+           supervision_id, rateio_rule, rateio_percent, rateio_documented, created_by_identity)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,true,$17)
+         RETURNING *`,
+        [importId, importRecordKey, accountId, contractId, postId, costSource, competenceDate,
+          sourceAmount, allocatedAmount, description, employeeId, equipmentId, sourceMaterial,
+          supervisionId, rateioRule, rateioPercent, session.identityId || null]
+      );
+      await auditLog({
+        action: "fin_cost_create",
+        actor: session.identityId || "unknown",
+        target: rows[0].id,
+        meta: {
+          import_id: importId, import_record_key: importRecordKey, client_account_id: accountId,
+          contract_id: contractId, post_id: postId, cost_source: costSource,
+          competence_date: competenceDate, source_amount_cents: sourceAmount,
+          amount_cents: allocatedAmount, rateio_rule: rateioRule,
+          rateio_percent: rateioPercent, synthetic: true,
+        },
+        client,
+      });
+      await client.query("COMMIT");
+      return json(res, 201, {
+        cost: rows[0], synthetic: true,
+        note: "custo sintético criado com vínculo canônico e rateio documentado",
+      });
+    } catch (error) {
+      try { await client.query("ROLLBACK"); } catch {}
+      if (isAuditUnavailable(error)) return json(res, 503, { error: "audit_unavailable" });
+      if (error?.code === "23505") return json(res, 409, { error: "duplicate_import_record" });
+      if (["23503", "23514", "22P02", "22007", "P0001"].includes(error?.code)) return json(res, 400, { error: "invalid_cost_allocation" });
+      return json(res, 500, { error: "internal" });
+    } finally {
+      client.release();
     }
-    return json(res,405,{ error:"method_not_allowed" });
   }
 
   return {

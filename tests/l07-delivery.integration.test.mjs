@@ -56,6 +56,20 @@ async function insertClientSpace(label) {
   return { accountId, contractId };
 }
 
+async function insertCostSpace(label) {
+  const { accountId, contractId } = await insertClientSpace(label);
+  const postId = uuid();
+  await pool.query(
+    "INSERT INTO ops_posts (id,name,post_type,created_by) VALUES ($1,$2,'portaria','admin')",
+    [postId, `QA L07 Posto ${label}`]
+  );
+  await pool.query(
+    "INSERT INTO cli_contract_scopes (contract_id,client_account_id,post_id,scope_description) VALUES ($1,$2,$3,$4)",
+    [contractId, accountId, postId, `Escopo sintético do posto para o gate L07 FIN-08 ${label}`]
+  );
+  return { accountId, contractId, postId };
+}
+
 before(async () => {
   if (!RUN) return;
   workDir = await mkdtemp(path.join(tmpdir(), "seg-l07-"));
@@ -897,4 +911,129 @@ test("L07 FIN-07: Chromium registra fluxo de caixa e aging com bucket calculado"
   } finally {
     await browser.close();
   }
+});
+
+test("L07 FIN-08: custos por cliente/contrato/posto e importação com rateio documentado", { skip: !RUN, timeout: 120_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const rh = await provisionAndLoginStaff(pool, api, { role: "rh" });
+  const canonical = await insertCostSpace("FIN08 HTTP");
+  const other = await insertCostSpace("FIN08 OUTRO");
+  const storageKey = `synthetic/fin08/${uuid()}.csv`;
+
+  assert.equal((await fin("/cost-imports")).status, 401, "anonymous import read denied");
+  assert.equal((await fin("/costs", { cookie: rh.cookie })).status, 403, "rh cost read denied");
+  assert.equal((await fin("/cost-imports", { method:"POST", cookie:financeiro.cookie, origin:"https://externo.example", body:{ source:"pessoal" } })).status, 403, "cross-origin import denied");
+  assert.equal((await fin("/costs?contract_id=nao-uuid", { cookie:financeiro.cookie })).status, 400, "invalid filter denied");
+
+  const imported = await fin("/cost-imports", { method:"POST", cookie:financeiro.cookie, body:{
+    source:"pessoal", file_name:"custos-pessoal-sinteticos.csv", file_url:"local://synthetic/fin08/pessoal.csv",
+    storage_key:storageKey, competence_date:"2026-10-01", total_costs_cents:100000, total_records:2,
+  }});
+  assert.equal(imported.status, 201, JSON.stringify(imported.body));
+  assert.equal(imported.body.synthetic, true);
+  assert.match(imported.body.import.protocol, /^COST-IMP-\d{8}-[A-Z0-9]{4}$/);
+  assert.equal((await fin("/cost-imports", { method:"POST", cookie:financeiro.cookie, body:{ source:"pessoal", file_name:"duplicado.csv", file_url:"local://synthetic/duplicado.csv", storage_key:storageKey, competence_date:"2026-10-01" } })).status, 409, "storage key is idempotent");
+  assert.equal((await fin("/cost-imports", { method:"POST", cookie:financeiro.cookie, body:{ source:"invalida", file_name:"x.csv", file_url:"local://x.csv", storage_key:`synthetic/${uuid()}`, competence_date:"2026-10-01" } })).status, 400, "unknown source denied");
+
+  const allocation = await fin("/costs", { method:"POST", cookie:financeiro.cookie, body:{
+    import_id:imported.body.import.id, import_record_key:"linha-pessoal-001",
+    client_account_id:canonical.accountId, contract_id:canonical.contractId, post_id:canonical.postId,
+    cost_source:"pessoal", competence_date:"2026-10-01", source_amount_cents:100000,
+    description:"Custo sintético de pessoal alocado ao posto do contrato FIN-08",
+    rateio_rule:"Cinquenta por cento conforme escala sintética aprovada para o posto",
+    rateio_percent:50,
+  }});
+  assert.equal(allocation.status, 201, JSON.stringify(allocation.body));
+  assert.equal(Number(allocation.body.cost.source_amount_cents), 100000);
+  assert.equal(Number(allocation.body.cost.amount_cents), 50000, "allocated amount is derived from source and percent");
+  assert.equal(allocation.body.cost.client_account_id, canonical.accountId);
+  assert.equal(allocation.body.cost.contract_id, canonical.contractId);
+  assert.equal(allocation.body.cost.post_id, canonical.postId);
+  assert.equal((await fin("/costs", { method:"POST", cookie:financeiro.cookie, body:{ import_id:imported.body.import.id, import_record_key:"linha-pessoal-001", client_account_id:canonical.accountId, contract_id:canonical.contractId, post_id:canonical.postId, cost_source:"pessoal", competence_date:"2026-10-01", source_amount_cents:1000, description:"Registro sintético duplicado da importação de pessoal", rateio_rule:"Rateio integral sintético para validar idempotência", rateio_percent:100 } })).status, 409, "same imported record cannot be duplicated");
+  assert.equal((await fin("/costs", { method:"POST", cookie:financeiro.cookie, body:{ client_account_id:canonical.accountId, contract_id:other.contractId, cost_source:"material", competence_date:"2026-10-01", source_amount_cents:1000, description:"Custo sintético com contrato de outra conta", rateio_rule:"Rateio integral inválido entre contas diferentes", rateio_percent:100 } })).status, 400, "contract from another account denied");
+  assert.equal((await fin("/costs", { method:"POST", cookie:financeiro.cookie, body:{ client_account_id:canonical.accountId, contract_id:canonical.contractId, post_id:other.postId, cost_source:"material", competence_date:"2026-10-01", source_amount_cents:1000, description:"Custo sintético com posto fora do escopo", rateio_rule:"Rateio integral inválido para posto de outro contrato", rateio_percent:100 } })).status, 400, "post outside contract scope denied");
+  assert.equal((await fin("/costs", { method:"POST", cookie:financeiro.cookie, body:{ import_id:imported.body.import.id, import_record_key:"linha-material-002", client_account_id:canonical.accountId, contract_id:canonical.contractId, cost_source:"material", competence_date:"2026-10-01", source_amount_cents:1000, description:"Custo sintético com origem divergente da importação", rateio_rule:"Rateio integral sintético com origem divergente", rateio_percent:100 } })).status, 400, "cost must match import source");
+  assert.equal((await fin("/costs", { method:"POST", cookie:financeiro.cookie, body:{ client_account_id:canonical.accountId, contract_id:canonical.contractId, cost_source:"supervisao", competence_date:"2026-10-01", source_amount_cents:10000, amount_cents:9000, description:"Custo sintético com cálculo de rateio adulterado", rateio_rule:"Metade do custo conforme supervisão compartilhada documentada", rateio_percent:50 } })).status, 400, "forged allocated amount denied");
+
+  const listing = await fin(`/costs?contract_id=${canonical.contractId}&cost_source=pessoal&competence_date=2026-10-01`, { cookie:financeiro.cookie });
+  assert.equal(listing.status, 200);
+  assert.ok(listing.body.costs.some(cost=>cost.id===allocation.body.cost.id), "allocation is filterable");
+  const importListing = await fin("/cost-imports", { cookie:financeiro.cookie });
+  const importSummary = importListing.body.imports.find(item=>item.id===imported.body.import.id);
+  assert.equal(Number(importSummary.allocated_costs_cents), 50000);
+  assert.equal(Number(importSummary.allocated_records), 1);
+  const audit = await pool.query("SELECT action FROM audit_log WHERE target IN ($1,$2) ORDER BY action", [imported.body.import.id, allocation.body.cost.id]);
+  assert.deepEqual(audit.rows.map(row=>row.action), ["fin_cost_create", "fin_cost_import_create"]);
+
+  await assert.rejects(
+    pool.query(`INSERT INTO fin_costs (client_account_id,contract_id,cost_source,competence_date,source_amount_cents,amount_cents,description,rateio_rule,rateio_percent) VALUES ($1,$2,'outro','2026-10-01',10000,9000,'Custo sintético direto adulterado','Regra direta de cinquenta por cento documentada',50)`, [canonical.accountId, canonical.contractId]),
+    /allocated amount does not match documented rateio/,
+    "database rejects direct forged allocation"
+  );
+
+  const failedStorage = `synthetic/fin08/rollback-${uuid()}.csv`;
+  await pool.query("ALTER TABLE audit_log RENAME TO audit_log_fin08_unavailable");
+  try {
+    const failedImport = await fin("/cost-imports", { method:"POST", cookie:financeiro.cookie, body:{ source:"material", file_name:"rollback.csv", file_url:"local://synthetic/rollback.csv", storage_key:failedStorage, competence_date:"2026-11-01", total_costs_cents:1000, total_records:1 } });
+    assert.equal(failedImport.status, 503);
+    assert.deepEqual(failedImport.body, { error:"audit_unavailable" });
+    const failedCost = await fin("/costs", { method:"POST", cookie:financeiro.cookie, body:{ client_account_id:canonical.accountId, contract_id:canonical.contractId, cost_source:"supervisao", competence_date:"2026-11-01", source_amount_cents:7000, description:"Custo sintético que deve reverter sem auditoria", rateio_rule:"Rateio integral para testar rollback da auditoria indisponível", rateio_percent:100 } });
+    assert.equal(failedCost.status, 503);
+    assert.deepEqual(failedCost.body, { error:"audit_unavailable" });
+  } finally {
+    await pool.query("ALTER TABLE audit_log_fin08_unavailable RENAME TO audit_log");
+  }
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_cost_imports WHERE storage_key=$1", [failedStorage])).rows[0].n, 0);
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_costs WHERE contract_id=$1 AND competence_date='2026-11-01'", [canonical.contractId])).rows[0].n, 0);
+});
+
+test("L07 FIN-08: Chromium registra importação sintética e custo rateado", { skip: !RUN, timeout: 180_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role:"financeiro" });
+  const canonical = await insertCostSpace("FIN08 Chromium");
+  const suffix = uuid().slice(0,8);
+  const browser = await playwrightChromium.launch({ executablePath:await packagedChromium.executablePath(), headless:true, args:packagedChromium.args.filter(arg=>arg!=="--disable-web-security") });
+  try {
+    const context = await browser.newContext();
+    const pair=financeiro.cookie.split(";")[0]; const separator=pair.indexOf("=");
+    await context.addCookies([{ name:pair.slice(0,separator), value:pair.slice(separator+1), url:baseUrl }]);
+    const page=await context.newPage(); await page.setExtraHTTPHeaders({ origin:baseUrl });
+    await page.goto(`${baseUrl}/admin/financeiro`, { waitUntil:"networkidle" });
+    await page.getByTestId("finance-tab-costs").click();
+    await page.waitForSelector('[data-testid="fin08-costs"]');
+
+    await page.getByTestId("fin08-import-source").selectOption("material");
+    await page.getByTestId("fin08-import-file-name").fill(`materiais-${suffix}.csv`);
+    await page.getByTestId("fin08-import-file-url").fill(`local://synthetic/fin08/${suffix}.csv`);
+    await page.getByTestId("fin08-import-storage-key").fill(`synthetic/fin08/chromium-${suffix}.csv`);
+    await page.getByTestId("fin08-import-competence").fill("2026-12-01");
+    await page.getByTestId("fin08-import-total").fill("30000");
+    await page.getByTestId("fin08-import-records").fill("1");
+    await page.getByTestId("fin08-create-import").click();
+    await page.waitForFunction(()=>(document.querySelector('[data-testid="fin08-notice"]')?.textContent||"").includes("Importação sintética"));
+    const imported = await pool.query("SELECT id FROM fin_cost_imports WHERE storage_key=$1", [`synthetic/fin08/chromium-${suffix}.csv`]);
+    assert.equal(imported.rows.length,1);
+
+    await page.getByTestId("fin08-cost-import").selectOption(imported.rows[0].id);
+    await page.getByTestId("fin08-cost-record-key").fill("material-chromium-001");
+    await page.getByTestId("fin08-cost-account").fill(canonical.accountId);
+    await page.getByTestId("fin08-cost-contract").fill(canonical.contractId);
+    await page.getByTestId("fin08-cost-post").fill(canonical.postId);
+    await page.getByTestId("fin08-cost-source-amount").fill("30000");
+    await page.getByTestId("fin08-cost-percent").fill("40");
+    await page.getByTestId("fin08-cost-rule").fill("Quarenta por cento conforme consumo sintético documentado do posto");
+    await page.getByTestId("fin08-cost-description").fill("Materiais sintéticos consumidos pelo posto na competência do gate Chromium");
+    await page.getByTestId("fin08-cost-material").fill("Kit sintético de materiais FIN-08");
+    await page.getByTestId("fin08-create-cost").click();
+    await page.waitForFunction(()=>(document.querySelector('[data-testid="fin08-notice"]')?.textContent||"").includes("rateio documentado"));
+    const cost = await pool.query("SELECT amount_cents,source_amount_cents,rateio_percent,client_account_id,contract_id,post_id FROM fin_costs WHERE import_id=$1", [imported.rows[0].id]);
+    assert.equal(cost.rows.length,1);
+    assert.equal(Number(cost.rows[0].source_amount_cents),30000);
+    assert.equal(Number(cost.rows[0].amount_cents),12000);
+    assert.equal(Number(cost.rows[0].rateio_percent),40);
+    assert.equal(cost.rows[0].client_account_id,canonical.accountId);
+    assert.equal(cost.rows[0].contract_id,canonical.contractId);
+    assert.equal(cost.rows[0].post_id,canonical.postId);
+    await page.waitForFunction(()=>(document.querySelector('[data-testid="fin08-cost-list"]')?.textContent||"").includes("R$ 120,00"));
+    assert.match(await page.getByTestId("fin08-cost-list").textContent()||"", /R\$ 120,00/);
+  } finally { await browser.close(); }
 });

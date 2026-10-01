@@ -1022,10 +1022,10 @@ fluxo de caixa previsto/realizado, vencidos, próximos pagamentos e aging de rec
 
 ## FIN-08
 custo por cliente/contrato/posto, importação de custos de pessoal, equipamentos, materiais e supervisão com rateio documentado.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/financeiro` → aba **Custos / Rateio** (`CostAllocationWorkspace.tsx`), usando `/api/fin/cost-imports` e `/api/fin/costs`. Sessão de staff, papel `financeiro`/`admin`/`ti` e same-origin são obrigatórios. A migration aditiva `127-fin08-cost-allocation-hardening.sql` preserva o rascunho 078, adiciona valor de origem/chave idempotente, valida conta–contrato–posto pelo escopo canônico, sincroniza origem/competência da importação e protege no banco o cálculo do valor alocado pelo percentual documentado. Criações são transacionais e auditadas fail-closed.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` **14/14** em duas execuções consecutivas (PostgreSQL descartável, HTTP real, sessão/cookie real, Next local e Chromium real). Cobertura FIN-08: autorização/origem, fontes e filtros inválidos, importação e linha idempotentes, vínculos canônicos, divergência de importação, valor rateado adulterado na API e em SQL direto, listagem/agregados, auditoria indisponível com 503/rollback e jornada visual. Regressões: unitários 196/196, L06 9/9, migrations 001–127, typecheck, build e static 5/5 verdes. Detalhe em [`docs/ENTREGA-L07-FIN08.md`](./ENTREGA-L07-FIN08.md).
+- Pendência / fronteira externa / aceite humano: apenas metadados/valores sintéticos; nenhum arquivo, folha, estoque, ERP ou provedor externo é lido. UUIDs opcionais de equipamento/supervisão ainda não possuem catálogo canônico no rascunho. Restrições novas preservam linhas históricas sem certificá-las retroativamente. Aceite humano/Windows permanece pendente. FIN-09..16 e ADM-01..12 não foram iniciados.
 
 ## FIN-09
 resultado gerencial por contrato, separando receita contratada, faturada, recebida, custos e caixa; margem sem dados completos exibida como incompleta.
