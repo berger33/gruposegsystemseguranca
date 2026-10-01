@@ -5,6 +5,8 @@ on:
     paths:
       - 'src/**'
       - 'server.mjs'
+      - 'next.config.*'
+      - 'tests/helpers/**'
       - 'tests/l04-delivery.integration.test.mjs'
       - 'scripts/qa-l04-delivery-postgres.mjs'
       - 'scripts/migrate-site-visual.mjs'
@@ -13,7 +15,7 @@ on:
       - 'package*.json'
       - '.github/workflows/l04-delivery.yml'
 concurrency:
-  group: delivery-${{ github.event.pull_request.number || github.ref }}
+  group: l04-delivery-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 permissions:
   contents: read

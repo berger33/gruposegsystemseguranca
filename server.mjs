@@ -5674,7 +5674,11 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/ai-rag-chunks"
   || pathname === "/api/ai/rag-chunks";
 
-const app = next({ dev, hostname, port });
+// Keep the custom development server on an explicit bundler. Next 16's
+// automatic selection can look for a missing dev/required-server-files.json
+// before serving pages; API-only readiness does not detect that failure.
+// Production continues to use the bundler chosen by `next build`.
+const app = next({ dev, hostname, port, ...(dev ? { webpack: true } : {}) });
 const handle = app.getRequestHandler();
 await app.prepare();
 
