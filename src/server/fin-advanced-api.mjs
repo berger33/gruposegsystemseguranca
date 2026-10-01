@@ -17,127 +17,310 @@ export function createFinAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   }
   function json(res, code, obj) { res.writeHead(code, { "Content-Type":"application/json" }); res.end(JSON.stringify(obj)); }
 
+  const CONCILIATION_SOURCES = new Set(["importacao", "extrato", "provedor", "manual"]);
+  const CONCILIATION_STATUSES = new Set(["pendente", "sugerida", "conciliada", "divergente", "ignorada"]);
+  const FINAL_CONCILIATION_STATUSES = new Set(["conciliada", "divergente", "ignorada"]);
+
+  async function readJsonBody(req, res) {
+    try {
+      const chunks = [];
+      for await (const chunk of req) chunks.push(chunk);
+      return JSON.parse(Buffer.concat(chunks).toString() || "{}");
+    } catch {
+      json(res, 400, { error: "invalid_json" });
+      return null;
+    }
+  }
+
+  function validDate(value) {
+    if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const date = new Date(`${value}T00:00:00Z`);
+    return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  }
+
+  function integerCents(value, { allowNegative = true } = {}) {
+    if (value === "" || value === null || value === undefined) return null;
+    const number = typeof value === "number" ? value : Number(value);
+    if (!Number.isSafeInteger(number) || (!allowNegative && number < 0)) return null;
+    return number;
+  }
+
+  function isAuditUnavailable(error) {
+    return error?.code === "42P01" || /audit_log/i.test(String(error?.message || ""));
+  }
+
+  function databaseError(error) {
+    if (error?.code === "23505") return "duplicate";
+    if (error?.code === "23514" || error?.code === "22P02" || error?.code === "22007") return "invalid";
+    return null;
+  }
+
   async function handleBankStatements(req, res) {
-    const session = await ensureAuth(req, res, ["admin","ti","financeiro"]);
+    const session = await ensureAuth(req, res, ["admin", "ti", "financeiro"]);
     if (!session) return;
     if (req.method === "GET") {
-      const { rows } = await pool.query(`SELECT * FROM fin_bank_statements ORDER BY import_date DESC LIMIT 100`);
-      return json(res,200,{ statements: rows });
+      const { rows } = await pool.query(`SELECT * FROM fin_bank_statements ORDER BY import_date DESC, created_at DESC LIMIT 100`);
+      return json(res, 200, { statements: rows, synthetic: true });
     }
-    if (req.method === "POST") {
-      let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
-      const { source, file_name, file_url, storage_key, import_date, total_transactions, total_amount_cents } = body;
-      if (!file_name || !file_url || !storage_key) return json(res,400,{ error:"missing_fields" });
-      const protocol = generateProtocol("EXT-FIN");
-      try {
-        const { rows } = await pool.query(
-          `INSERT INTO fin_bank_statements (protocol, source, file_name, file_url, storage_key, import_date, total_transactions, total_amount_cents, created_by_identity)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-          [protocol, source||'extrato', file_name, file_url, storage_key, import_date||new Date().toISOString().slice(0,10), total_transactions||0, total_amount_cents||0, session.identityId||null]
-        );
-        await auditLog({ action:"fin_bank_statement_create", actor: session.identityId||"unknown", target: rows[0].id, meta:{ protocol, source } });
-        return json(res,201,{ statement: rows[0] });
-      } catch(e) {
-        if (String(e.message).includes("duplicate")) return json(res,409,{ error:"duplicate_storage_key" });
-        return json(res,500,{ error:"internal", detail:e.message });
-      }
+    if (req.method !== "POST") return json(res, 405, { error: "method_not_allowed" });
+
+    const body = await readJsonBody(req, res);
+    if (!body) return;
+    const source = body.source || "extrato";
+    const fileName = typeof body.file_name === "string" ? body.file_name.trim() : "";
+    const fileUrl = typeof body.file_url === "string" ? body.file_url.trim() : "";
+    const storageKey = typeof body.storage_key === "string" ? body.storage_key.trim() : "";
+    const importDate = body.import_date || new Date().toISOString().slice(0, 10);
+    const totalTransactions = integerCents(body.total_transactions ?? 0, { allowNegative: false });
+    const totalAmountCents = integerCents(body.total_amount_cents ?? 0);
+    if (!CONCILIATION_SOURCES.has(source)) return json(res, 400, { error: "invalid_source" });
+    if (!fileName || fileName.length > 500 || fileUrl.length < 5 || fileUrl.length > 1000 || storageKey.length < 5 || storageKey.length > 500) {
+      return json(res, 400, { error: "file_metadata_invalid" });
     }
-    return json(res,405,{ error:"method_not_allowed" });
+    if (!validDate(importDate)) return json(res, 400, { error: "invalid_import_date" });
+    if (totalTransactions === null || totalAmountCents === null) return json(res, 400, { error: "invalid_statement_totals" });
+
+    const protocol = generateProtocol("EXT-FIN");
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const { rows } = await client.query(
+        `INSERT INTO fin_bank_statements
+          (protocol, source, file_name, file_url, storage_key, import_date, total_transactions, total_amount_cents, created_by_identity)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+        [protocol, source, fileName, fileUrl, storageKey, importDate, totalTransactions, totalAmountCents, session.identityId || null]
+      );
+      await auditLog({
+        action: "fin_bank_statement_create",
+        actor: session.identityId || "unknown",
+        target: rows[0].id,
+        meta: { protocol, source, storage_key: storageKey, synthetic: true },
+        client,
+      });
+      await client.query("COMMIT");
+      return json(res, 201, { statement: rows[0], synthetic: true });
+    } catch (error) {
+      try { await client.query("ROLLBACK"); } catch {}
+      if (isAuditUnavailable(error)) return json(res, 503, { error: "audit_unavailable" });
+      if (databaseError(error) === "duplicate") return json(res, 409, { error: "duplicate_storage_key" });
+      if (databaseError(error) === "invalid") return json(res, 400, { error: "invalid_statement" });
+      return json(res, 500, { error: "internal" });
+    } finally {
+      client.release();
+    }
   }
 
   async function handleBankTransactions(req, res) {
-    const session = await ensureAuth(req, res, ["admin","ti","financeiro"]);
+    const session = await ensureAuth(req, res, ["admin", "ti", "financeiro"]);
     if (!session) return;
     const url = new URL(req.url, `http://${req.headers.host}`);
     if (req.method === "GET") {
       const statementId = url.searchParams.get("statement_id");
-      let q=`SELECT * FROM fin_bank_transactions WHERE 1=1`;
-      const params=[]; let idx=1;
-      if (statementId) { q+=` AND statement_id=$${idx++}`; params.push(statementId); }
-      q+=` ORDER BY transaction_date DESC LIMIT 100`;
-      const { rows } = await pool.query(q, params);
-      return json(res,200,{ transactions: rows });
+      let query = `SELECT * FROM fin_bank_transactions WHERE 1=1`;
+      const params = [];
+      if (statementId) { query += ` AND statement_id=$1`; params.push(statementId); }
+      query += ` ORDER BY transaction_date DESC, created_at DESC LIMIT 100`;
+      const { rows } = await pool.query(query, params);
+      return json(res, 200, { transactions: rows, synthetic: true });
     }
-    if (req.method === "POST") {
-      let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
-      const { statement_id, transaction_date, amount_cents, description, bank_ref } = body;
-      if (!statement_id || !transaction_date || amount_cents==null || !description || !bank_ref) return json(res,400,{ error:"missing_fields" });
-      if (String(description).length <3 || String(description).length>500) return json(res,400,{ error:"description_3_500" });
-      try {
-        const { rows } = await pool.query(
-          `INSERT INTO fin_bank_transactions (statement_id, transaction_date, amount_cents, description, bank_ref)
-           VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-          [statement_id, transaction_date, amount_cents, description, bank_ref]
-        );
-        await pool.query(`UPDATE fin_bank_statements SET total_transactions = total_transactions +1, total_amount_cents = total_amount_cents + $2 WHERE id=$1`, [statement_id, amount_cents]);
-        await auditLog({ action:"fin_bank_transaction_create", actor: session.identityId||"unknown", target: rows[0].id, meta:{ bank_ref, amount_cents } });
-        return json(res,201,{ transaction: rows[0], note:"evitar duplicar transações bank_ref UNIQUE" });
-      } catch(e) {
-        if (String(e.message).includes("duplicate") || String(e.message).includes("bank_ref")) return json(res,409,{ error:"duplicate_bank_ref", note:"evitar duplicar transações" });
-        return json(res,500,{ error:"internal", detail:e.message });
+    if (req.method !== "POST") return json(res, 405, { error: "method_not_allowed" });
+
+    const body = await readJsonBody(req, res);
+    if (!body) return;
+    const statementId = typeof body.statement_id === "string" ? body.statement_id.trim() : "";
+    const transactionDate = body.transaction_date;
+    const amountCents = integerCents(body.amount_cents);
+    const description = typeof body.description === "string" ? body.description.trim() : "";
+    const bankRef = typeof body.bank_ref === "string" ? body.bank_ref.trim() : "";
+    if (!statementId || !validDate(transactionDate) || amountCents === null || !description || description.length < 3 || description.length > 500 || bankRef.length < 3 || bankRef.length > 200) {
+      return json(res, 400, { error: "transaction_fields_invalid" });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const statement = await client.query(`SELECT id FROM fin_bank_statements WHERE id=$1 FOR UPDATE`, [statementId]);
+      if (!statement.rows.length) {
+        await client.query("ROLLBACK");
+        return json(res, 404, { error: "statement_not_found" });
       }
+      const { rows } = await client.query(
+        `INSERT INTO fin_bank_transactions (statement_id, transaction_date, amount_cents, description, bank_ref)
+         VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+        [statementId, transactionDate, amountCents, description, bankRef]
+      );
+      await client.query(
+        `UPDATE fin_bank_statements
+            SET total_transactions=total_transactions+1, total_amount_cents=total_amount_cents+$2
+          WHERE id=$1`,
+        [statementId, amountCents]
+      );
+      await auditLog({
+        action: "fin_bank_transaction_create",
+        actor: session.identityId || "unknown",
+        target: rows[0].id,
+        meta: { statement_id: statementId, bank_ref: bankRef, amount_cents: amountCents, synthetic: true },
+        client,
+      });
+      await client.query("COMMIT");
+      return json(res, 201, { transaction: rows[0], synthetic: true });
+    } catch (error) {
+      try { await client.query("ROLLBACK"); } catch {}
+      if (isAuditUnavailable(error)) return json(res, 503, { error: "audit_unavailable" });
+      if (databaseError(error) === "duplicate") return json(res, 409, { error: "duplicate_bank_ref" });
+      if (databaseError(error) === "invalid") return json(res, 400, { error: "invalid_transaction" });
+      return json(res, 500, { error: "internal" });
+    } finally {
+      client.release();
     }
-    return json(res,405,{ error:"method_not_allowed" });
   }
 
   async function handleConciliations(req, res) {
-    const session = await ensureAuth(req, res, ["admin","ti","financeiro"]);
+    const session = await ensureAuth(req, res, ["admin", "ti", "financeiro"]);
     if (!session) return;
     const url = new URL(req.url, `http://${req.headers.host}`);
     if (req.method === "GET") {
       const status = url.searchParams.get("status");
-      let q=`SELECT * FROM fin_conciliations WHERE 1=1`;
-      const params=[]; let idx=1;
-      if (status) { q+=` AND status=$${idx++}`; params.push(status); }
-      q+=` ORDER BY created_at DESC LIMIT 100`;
-      const { rows } = await pool.query(q, params);
-      return json(res,200,{ conciliations: rows });
+      if (status && !CONCILIATION_STATUSES.has(status)) return json(res, 400, { error: "invalid_status" });
+      let query = `SELECT * FROM fin_conciliations WHERE 1=1`;
+      const params = [];
+      if (status) { query += ` AND status=$1`; params.push(status); }
+      query += ` ORDER BY created_at DESC LIMIT 100`;
+      const { rows } = await pool.query(query, params);
+      return json(res, 200, { conciliations: rows, synthetic: true });
     }
+    if (req.method !== "POST" && req.method !== "PATCH") return json(res, 405, { error: "method_not_allowed" });
+
+    const body = await readJsonBody(req, res);
+    if (!body) return;
     if (req.method === "POST") {
-      let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
-      const { receivable_id, payable_id, bank_transaction_id, source, suggestion_reason, amount_matched_cents } = body;
-      if (!source) return json(res,400,{ error:"missing_source" });
-      if (!receivable_id && !payable_id) return json(res,400,{ error:"missing_account_ref" });
-      // evitar duplicar transações
-      if (receivable_id && bank_transaction_id) {
-        const dup = await pool.query(`SELECT id FROM fin_conciliations WHERE receivable_id=$1 AND bank_transaction_id=$2`, [receivable_id, bank_transaction_id]);
-        if (dup.rows.length>0) return json(res,409,{ error:"already_conciliated", note:"evitar duplicar transações" });
-      }
-      if (payable_id && bank_transaction_id) {
-        const dup = await pool.query(`SELECT id FROM fin_conciliations WHERE payable_id=$1 AND bank_transaction_id=$2`, [payable_id, bank_transaction_id]);
-        if (dup.rows.length>0) return json(res,409,{ error:"already_conciliated", note:"evitar duplicar transações" });
-      }
+      const receivableId = typeof body.receivable_id === "string" ? body.receivable_id.trim() : "";
+      const payableId = typeof body.payable_id === "string" ? body.payable_id.trim() : "";
+      const bankTransactionId = typeof body.bank_transaction_id === "string" ? body.bank_transaction_id.trim() : "";
+      const source = body.source || "extrato";
+      const suggestionReason = typeof body.suggestion_reason === "string" ? body.suggestion_reason.trim() : "";
+      const amountMatched = body.amount_matched_cents == null ? null : integerCents(body.amount_matched_cents, { allowNegative: false });
+      if (!CONCILIATION_SOURCES.has(source)) return json(res, 400, { error: "invalid_source" });
+      if ((receivableId ? 1 : 0) + (payableId ? 1 : 0) !== 1) return json(res, 400, { error: "exactly_one_account_ref_required" });
+      if (!bankTransactionId) return json(res, 400, { error: "bank_transaction_required" });
+      if (suggestionReason.length < 10 || suggestionReason.length > 1000) return json(res, 400, { error: "suggestion_reason_10_1000_required" });
+      if (body.amount_matched_cents != null && amountMatched === null) return json(res, 400, { error: "invalid_amount_matched" });
+
+      const client = await pool.connect();
       try {
-        const { rows } = await pool.query(
-          `INSERT INTO fin_conciliations (receivable_id, payable_id, bank_transaction_id, source, status, suggested_by_identity, suggested_at, suggestion_reason, amount_matched_cents)
+        await client.query("BEGIN");
+        const bank = await client.query(`SELECT * FROM fin_bank_transactions WHERE id=$1 FOR UPDATE`, [bankTransactionId]);
+        if (!bank.rows.length) {
+          await client.query("ROLLBACK");
+          return json(res, 404, { error: "bank_transaction_not_found" });
+        }
+        if (bank.rows[0].is_conciliated) {
+          await client.query("ROLLBACK");
+          return json(res, 409, { error: "bank_transaction_already_conciliated" });
+        }
+        const accountTable = receivableId ? "fin_accounts_receivable" : "fin_accounts_payable";
+        const accountId = receivableId || payableId;
+        const account = await client.query(`SELECT id FROM ${accountTable} WHERE id=$1`, [accountId]);
+        if (!account.rows.length) {
+          await client.query("ROLLBACK");
+          return json(res, 404, { error: "account_not_found" });
+        }
+        const matched = amountMatched ?? Math.abs(Number(bank.rows[0].amount_cents));
+        const { rows } = await client.query(
+          `INSERT INTO fin_conciliations
+             (receivable_id, payable_id, bank_transaction_id, source, status, suggested_by_identity, suggested_at, suggestion_reason, amount_matched_cents)
            VALUES ($1,$2,$3,$4,'sugerida',$5,NOW(),$6,$7) RETURNING *`,
-          [receivable_id||null, payable_id||null, bank_transaction_id||null, source||'extrato', session.identityId||null, suggestion_reason||'Sugestão automática por valor/data', amount_matched_cents||null]
+          [receivableId || null, payableId || null, bankTransactionId, source, session.identityId || null, suggestionReason, matched]
         );
-        await auditLog({ action:"fin_conciliation_create", actor: session.identityId||"unknown", target: rows[0].id, meta:{ receivable_id, payable_id, bank_transaction_id, source } });
-        return json(res,201,{ conciliation: rows[0], note:"conciliação por importação/extrato ou provedor sugestão evitar duplicar transações" });
-      } catch(e) {
-        if (String(e.message).includes("duplicate") || String(e.message).includes("unique")) return json(res,409,{ error:"duplicate_conciliation", note:"evitar duplicar" });
-        return json(res,500,{ error:"internal", detail:e.message });
+        await auditLog({
+          action: "fin_conciliation_create",
+          actor: session.identityId || "unknown",
+          target: rows[0].id,
+          meta: { receivable_id: receivableId || null, payable_id: payableId || null, bank_transaction_id: bankTransactionId, source, amount_matched_cents: matched, synthetic: true },
+          client,
+        });
+        await client.query("COMMIT");
+        return json(res, 201, { conciliation: rows[0], synthetic: true });
+      } catch (error) {
+        try { await client.query("ROLLBACK"); } catch {}
+        if (isAuditUnavailable(error)) return json(res, 503, { error: "audit_unavailable" });
+        if (databaseError(error) === "duplicate") return json(res, 409, { error: "already_conciliated" });
+        if (databaseError(error) === "invalid") return json(res, 400, { error: "invalid_conciliation" });
+        return json(res, 500, { error: "internal" });
+      } finally {
+        client.release();
       }
     }
-    if (req.method === "PATCH") {
-      let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
-      const { id, status, divergence_reason } = body;
-      if (!id || !status) return json(res,400,{ error:"missing_fields" });
-      const allowed = ['pendente','sugerida','conciliada','divergente','ignorada'];
-      if (!allowed.includes(status)) return json(res,400,{ error:"invalid_status" });
-      if (status==='divergente' && (!divergence_reason || String(divergence_reason).length <10)) return json(res,400,{ error:"divergence_reason_10_1000_required" });
-      const cur = await pool.query(`SELECT * FROM fin_conciliations WHERE id=$1`, [id]);
-      if (cur.rows.length===0) return json(res,404,{ error:"not_found" });
-      await pool.query(`UPDATE fin_conciliations SET status=$2, confirmed_by_identity=$3, confirmed_at=NOW(), divergence_reason=$4 WHERE id=$1`, [id, status, session.identityId||null, divergence_reason||null]);
-      if (status==='conciliada' && cur.rows[0].bank_transaction_id) {
-        await pool.query(`UPDATE fin_bank_transactions SET is_conciliated=true, conciliated_at=NOW() WHERE id=$1`, [cur.rows[0].bank_transaction_id]);
-      }
-      await auditLog({ action:"fin_conciliation_confirm", actor: session.identityId||"unknown", target: id, meta:{ status, divergence_reason } });
-      const { rows } = await pool.query(`SELECT * FROM fin_conciliations WHERE id=$1`, [id]);
-      return json(res,200,{ conciliation: rows[0], note:"confirmação conciliação" });
+
+    const id = typeof body.id === "string" ? body.id.trim() : "";
+    const status = body.status;
+    const divergenceReason = typeof body.divergence_reason === "string" ? body.divergence_reason.trim() : "";
+    if (!id || !CONCILIATION_STATUSES.has(status)) return json(res, 400, { error: "invalid_confirmation" });
+    if (status === "divergente" && (divergenceReason.length < 10 || divergenceReason.length > 1000)) {
+      return json(res, 400, { error: "divergence_reason_10_1000_required" });
     }
-    return json(res,405,{ error:"method_not_allowed" });
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const currentResult = await client.query(`SELECT * FROM fin_conciliations WHERE id=$1 FOR UPDATE`, [id]);
+      if (!currentResult.rows.length) {
+        await client.query("ROLLBACK");
+        return json(res, 404, { error: "not_found" });
+      }
+      const current = currentResult.rows[0];
+      if (FINAL_CONCILIATION_STATUSES.has(current.status)) {
+        await client.query("ROLLBACK");
+        return json(res, 409, { error: current.status === status ? "already_confirmed" : "conciliation_already_final" });
+      }
+      if (!FINAL_CONCILIATION_STATUSES.has(status) && status !== "pendente" && status !== "sugerida") {
+        await client.query("ROLLBACK");
+        return json(res, 400, { error: "invalid_confirmation" });
+      }
+      if (!current.bank_transaction_id) {
+        await client.query("ROLLBACK");
+        return json(res, 409, { error: "bank_transaction_required" });
+      }
+      const bank = await client.query(`SELECT * FROM fin_bank_transactions WHERE id=$1 FOR UPDATE`, [current.bank_transaction_id]);
+      if (!bank.rows.length) {
+        await client.query("ROLLBACK");
+        return json(res, 409, { error: "bank_transaction_not_found" });
+      }
+      if (status === "conciliada" && bank.rows[0].is_conciliated) {
+        await client.query("ROLLBACK");
+        return json(res, 409, { error: "bank_transaction_already_conciliated" });
+      }
+      const confirmed = FINAL_CONCILIATION_STATUSES.has(status);
+      await client.query(
+        `UPDATE fin_conciliations
+            SET status=$2::fin_conciliation_status,
+                confirmed_by_identity=CASE WHEN $3 THEN $4::uuid ELSE NULL END,
+                confirmed_at=CASE WHEN $3 THEN NOW() ELSE NULL END,
+                divergence_reason=CASE WHEN $2::fin_conciliation_status='divergente' THEN $5 ELSE NULL END
+          WHERE id=$1`,
+        [id, status, confirmed, session.identityId || null, divergenceReason || null]
+      );
+      if (status === "conciliada") {
+        await client.query(`UPDATE fin_bank_transactions SET is_conciliated=true, conciliated_at=NOW() WHERE id=$1`, [current.bank_transaction_id]);
+      }
+      await auditLog({
+        action: "fin_conciliation_confirm",
+        actor: session.identityId || "unknown",
+        target: id,
+        meta: { previous_status: current.status, status, bank_transaction_id: current.bank_transaction_id, divergence_reason: divergenceReason || null, synthetic: true },
+        client,
+      });
+      const { rows } = await client.query(`SELECT * FROM fin_conciliations WHERE id=$1`, [id]);
+      await client.query("COMMIT");
+      return json(res, 200, { conciliation: rows[0], synthetic: true });
+    } catch (error) {
+      try { await client.query("ROLLBACK"); } catch {}
+      if (isAuditUnavailable(error)) return json(res, 503, { error: "audit_unavailable" });
+      if (databaseError(error) === "invalid") return json(res, 400, { error: "invalid_confirmation" });
+      return json(res, 500, { error: "internal" });
+    } finally {
+      client.release();
+    }
   }
 
   async function handleCollectionPolicies(req, res) {

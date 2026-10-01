@@ -1,8 +1,9 @@
 # Entrega L07 — financeiro e Marcelo (fatias em andamento)
 
 **Data de início:** 2026-10-01
-**Base integrada:** `main` @ `c42164cd146bd2c68737c0c6228ccc208c4c52a7` (merge da PR #42, fechamento do L06).
-**Branch de sessão:** `arena/01a0f487-gruposegsystemseguranca`.
+**Base histórica da primeira fatia:** `main` @ `c42164cd146bd2c68737c0c6228ccc208c4c52a7` (merge da PR #42, fechamento do L06).
+**Base integrada atual:** `main`/`origin/main` @ `588b48f12b85fd07e2ca575e56f9b11ba97a1d67` (merge da PR #46, workflow L07 verde no job `110246095200`).
+**Branch de sessão atual:** `arena/01a0f77c-gruposegsystemseguranca`.
 
 > L07 é o mesmo terreno do L06: **não é greenfield**. O schema (migrações 077–080 FIN, 081–082 ADM) e as APIs (`fin-api`, `fin-management-api`, `fin-advanced-api`, `fin-budget-api`, `adm-api`, `adm-advanced-api`, `commission-api`, `cost-parameter-api`, `budget-api`, `cli-finance-api`) já existem da fase de layout. Os 28 itens da matriz (`FIN-01..16`, `ADM-01..12`) estão `a_revalidar`: ninguém jamais provou essas jornadas por execução. Esta entrega conduz o L07 em **fatias verificáveis**; cada fatia fecha o gate verde. Merge de PR só com autorização explícita do usuário.
 
@@ -98,7 +99,7 @@ A comparação possível foi feita por evidência disponível: o workflow seleci
 - `handleReceivables` (POST e PATCH) e `handlePayables` (POST e PATCH) deixaram de dispersar escrita, histórico, atualização de recorrência e auditoria em `pool.query` independentes. Cada mutação agora abre `pool.connect()`, usa o mesmo cliente em `BEGIN`, executa a escrita de negócio, histórico imutável, atualização da regra quando aplicável e `auditLog({ client })`, faz `COMMIT` somente depois da auditoria, faz `ROLLBACK` em qualquer erro e libera o cliente em `finally`.
 - Os dois handlers agora devolvem `503 {"error":"audit_unavailable"}` quando `audit_log` está indisponível. A aprovação de pagável também ganha entrada de histórico imutável na mesma transação da aprovação/auditoria.
 - `handleGenerateRecurring` e `handlePayments` foram revisados: já mantêm respectivamente recebível + `last_generated_competence` + histórico + auditoria, e pagamento/estorno + saldo/status + histórico + auditoria, no mesmo cliente transacional; preservam `FOR UPDATE`, os negativos de sobre-pagamento e de estorno e o rollback fail-closed.
-- Não houve mudança de schema nem migration 124. FIN-05..16 e ADM-01..12 não foram iniciados.
+- Naquela sessão não houve mudança de schema nem migration 124; FIN-05..16 e ADM-01..12 ainda não haviam sido iniciados.
 
 #### Gate, Chromium e regressões executadas
 
@@ -120,4 +121,8 @@ Resultados reais desta sessão, somente com dados sintéticos e PostgreSQL desca
 
 A PR nova é a **#46**; o commit de código da sessão é `f4354d9` (`fix: fecha transacoes restantes do L07`). O workflow novo **L07 Finance delivery** passou: [run 36822878630, job 110242735739](https://github.com/berger33/gruposegsystemseguranca/actions/runs/36822878630/job/110242735739), conclusão `success` (39 s). A PR permanece aberta e não foi feito merge.
 
-**Limitações honestas:** não foi possível recuperar a causa específica da falha antiga; a execução verde nova é a evidência disponível. A entrega usa exclusivamente ambiente descartável/sintético, não integra gateway, cobrança, banco ou credenciais de produção. Os módulos FIN-05..16 e ADM-01..12 continuam fora deste trabalho.
+**Limitações honestas:** não foi possível recuperar a causa específica da falha antiga; a execução verde nova é a evidência disponível. A entrega usa exclusivamente ambiente descartável/sintético, não integra gateway, cobrança, banco ou credenciais de produção. Os módulos FIN-05..16 e ADM-01..12 continuam fora daquele trabalho histórico.
+
+### Continuação atual — FIN-05
+
+A entrega desta sessão está registrada em [`docs/ENTREGA-L07-FIN05.md`](./ENTREGA-L07-FIN05.md): FIN-05 foi fechado localmente com API transacional/fail-closed, migração 124, aba de conciliação no workspace financeiro e dois subtestes adicionais do gate L07. O gate final passou **8/8 em duas execuções consecutivas**. FIN-06..16 e ADM-01..12 permanecem fora do escopo.

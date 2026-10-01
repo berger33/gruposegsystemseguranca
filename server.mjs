@@ -2081,13 +2081,16 @@ const finApi = createFinApi({
 
 const finAdvancedApi = createFinAdvancedApi({
   pool: getPool(),
-  auditLog: async ({ action, actor, target, meta }) => {
-    try {
-      await getPool().query(
-        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
-        [action, actor, target, meta ? JSON.stringify(meta) : null]
-      );
-    } catch {}
+  auditLog: async ({ action, actor, target, meta, client }) => {
+    const query = () => (client || getPool()).query(
+      `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+      [action, actor, target, meta ? JSON.stringify(meta) : null]
+    );
+    // FIN-05 passes the transaction client and is fail-closed. Keep the
+    // pre-existing behavior of later, still-unverified handlers outside
+    // this slice until their own transactional slice is started.
+    if (client) return query();
+    try { await query(); } catch {}
   },
   sameOrigin,
   requireSession: readSession,
