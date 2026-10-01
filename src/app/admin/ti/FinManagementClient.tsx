@@ -6,9 +6,9 @@ type Expense = { id:string; protocol:string; expense_type:string; category:strin
 type FiscalProvider = { id:string; name:string; provider_type:string; status:string; is_active:boolean; };
 type FiscalObligation = { id:string; contract_id:string|null; obligation_type:string; activity_type:string; description:string; rule:string; is_determined:boolean; status:string; };
 type FiscalDoc = { id:string; protocol:string; obligation_id:string|null; provider_id:string|null; document_type:string; status:string; amount_cents:number; file_url:string|null; storage_key:string|null; is_sandbox:boolean; };
-type Gateway = { id:string; name:string; gateway_type:string; status:string; is_selected:boolean; is_sandbox:boolean; };
-type Webhook = { id:string; gateway_id:string; event_type:string; signature:string; is_valid_signature:boolean; is_replay:boolean; idempotency_key:string; status:string; };
-type Charge = { id:string; protocol:string; gateway_id:string; receivable_id:string|null; amount_cents:number; status:string; idempotency_key:string; is_sandbox:boolean; is_conciliated:boolean; };
+type Gateway = { id:string; name:string; gateway_code:string|null; gateway_type:string; status:string; environment:string; is_selected:boolean; is_sandbox:boolean; charge_enabled?:boolean; };
+type Webhook = { id:string; gateway_id:string; event_type:string; is_valid_signature:boolean; is_replay:boolean; replay_attempts:number; idempotency_key:string; status:string; };
+type Charge = { id:string; protocol:string; gateway_id:string; receivable_id:string|null; amount_cents:number; status:string; idempotency_key:string; is_sandbox:boolean; simulated:boolean; is_conciliated:boolean; };
 
 export default function FinManagementClient() {
   const [results, setResults] = useState<MgmtResult[]>([]);
@@ -48,17 +48,9 @@ export default function FinManagementClient() {
   // FIN-11: a escrita fiscal canônica vive em /admin/financeiro (aba Fiscal).
   // Esta tela de TI permanece somente como leitura para diagnóstico.
 
-  // FIN-12 gateway
-  const [gwName, setGwName] = useState("");
-  const [gwType, setGwType] = useState("pix");
-  const [whGatewayId, setWhGatewayId] = useState("");
-  const [whEventType, setWhEventType] = useState("");
-  const [whSignature, setWhSignature] = useState("");
-  const [whIdempKey, setWhIdempKey] = useState("");
-  const [whValidSig, setWhValidSig] = useState(true);
-  const [chGatewayId, setChGatewayId] = useState("");
-  const [chAmount, setChAmount] = useState("");
-  const [chIdempKey, setChIdempKey] = useState("");
+  // FIN-12: a escrita de gateway/webhook/cobrança canônica vive em
+  // /admin/financeiro (aba Boletos / Pix / Gateway). Esta tela de TI
+  // permanece somente como leitura para diagnóstico.
 
   const load = async () => {
     try {
@@ -146,41 +138,6 @@ export default function FinManagementClient() {
     } catch(e:any){ setMsg("FIN-10 erro: "+e.message); }
   };
 
-  const createGateway = async () => {
-    try {
-      setMsg("");
-      if (!gwName || gwName.length<3) throw new Error("name 3..200");
-      await post("/api/fin/payment-gateways", { name: gwName, gateway_type: gwType, status:"sandbox", is_selected:true, is_sandbox:true });
-      setMsg("FIN-12 gateway criado name UNIQUE selecionado sandbox only sem cobrança real em testes is_sandbox=true CHECK");
-      load();
-    } catch(e:any){ setMsg("FIN-12 gateway erro: "+e.message); }
-  };
-
-  const createWebhook = async () => {
-    try {
-      setMsg("");
-      if (!whGatewayId) throw new Error("gateway_id obrigatório");
-      if (!whEventType || whEventType.length<3) throw new Error("event_type 3..200");
-      if (!whSignature || whSignature.length<10) throw new Error("signature 10..1000 obrigatória validar assinatura webhook");
-      if (!whIdempKey || whIdempKey.length<10) throw new Error("idempotency_key 10..200 obrigatória validar replay idempotência");
-      await post("/api/fin/gateway-webhooks", { gateway_id: whGatewayId, event_type: whEventType, signature: whSignature, payload:{ test:true }, idempotency_key: whIdempKey, is_valid_signature: whValidSig, is_replay:false });
-      setMsg("FIN-12 webhook criado validar assinatura webhook replay idempotência conciliação sem cobrança real idempotency_key UNIQUE");
-      load();
-    } catch(e:any){ setMsg("FIN-12 webhook erro: "+e.message); }
-  };
-
-  const createCharge = async () => {
-    try {
-      setMsg("");
-      if (!chGatewayId) throw new Error("gateway_id obrigatório selecionado sandbox");
-      if (!chAmount) throw new Error("amount_cents positivo");
-      if (!chIdempKey || chIdempKey.length<10) throw new Error("idempotency_key 10..200");
-      await post("/api/fin/gateway-charges", { gateway_id: chGatewayId, amount_cents: parseInt(chAmount), idempotency_key: chIdempKey });
-      setMsg("FIN-12 charge criado protocolo CHG-FIN is_sandbox=true CHECK sem cobrança real em testes idempotency_key UNIQUE gateway selecionado sandbox");
-      load();
-    } catch(e:any){ setMsg("FIN-12 charge erro: "+e.message); }
-  };
-
   return (
     <section style={{ marginTop:24, padding:16, border:"1px solid #ccc", borderRadius:8 }}>
       <h2>FIN-09/10/11/12 — Resultado gerencial, despesas alçada, fiscal, gateway sandbox</h2>
@@ -224,25 +181,11 @@ export default function FinManagementClient() {
       <ul>{obligations.slice(0,20).map(o=><li key={o.id}>{o.obligation_type} atividade:{o.activity_type} determinada:{String(o.is_determined)} status:{o.status} rule:{o.rule.slice(0,60)}</li>)}</ul>
       <ul>{docs.slice(0,10).map(d=><li key={d.id}>{d.protocol} tipo:{d.document_type} status:{d.status} amount:{d.amount_cents} sandbox:{String(d.is_sandbox)} storage:{d.storage_key?.slice(0,20)||"—"}</li>)}</ul>
 
-      <h3>FIN-12 Boletos/Pix/gateway somente após seleção e sandbox validar assinatura webhook replay idempotência conciliação sem cobrança real em testes</h3>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(180px,1fr))", gap:8 }}>
-        <input placeholder="gateway name UNIQUE 3..200" value={gwName} onChange={e=>setGwName(e.target.value)} />
-        <select value={gwType} onChange={e=>setGwType(e.target.value)}><option value="boleto">boleto</option><option value="pix">pix</option><option value="cartao">cartao</option><option value="gateway">gateway</option><option value="outro">outro</option></select>
-        <button onClick={createGateway}>Criar gateway selecionado sandbox</button>
-        <input placeholder="webhook gateway_id" value={whGatewayId} onChange={e=>setWhGatewayId(e.target.value)} />
-        <input placeholder="event_type 3..200" value={whEventType} onChange={e=>setWhEventType(e.target.value)} />
-        <input placeholder="signature 10..1000 validar assinatura webhook" value={whSignature} onChange={e=>setWhSignature(e.target.value)} />
-        <input placeholder="idempotency_key UNIQUE 10..200 validar replay idempotência" value={whIdempKey} onChange={e=>setWhIdempKey(e.target.value)} />
-        <label><input type="checkbox" checked={whValidSig} onChange={e=>setWhValidSig(e.target.checked)} /> is_valid_signature</label>
-        <button onClick={createWebhook}>Criar webhook validar assinatura replay idempotência</button>
-        <input placeholder="charge gateway_id selecionado sandbox" value={chGatewayId} onChange={e=>setChGatewayId(e.target.value)} />
-        <input placeholder="amount_cents >0" value={chAmount} onChange={e=>setChAmount(e.target.value)} />
-        <input placeholder="idempotency_key UNIQUE 10..200 charge" value={chIdempKey} onChange={e=>setChIdempKey(e.target.value)} />
-        <button onClick={createCharge}>Criar charge CHG-FIN sandbox sem cobrança real</button>
-      </div>
-      <ul>{gateways.slice(0,10).map(g=><li key={g.id}>{g.name} tipo:{g.gateway_type} status:{g.status} selecionado:{String(g.is_selected)} sandbox:{String(g.is_sandbox)} is_sandbox=true CHECK sem cobrança real</li>)}</ul>
-      <ul>{webhooks.slice(0,10).map(w=><li key={w.id}>gw:{w.gateway_id.slice(0,8)} evento:{w.event_type} valid_sig:{String(w.is_valid_signature)} replay:{String(w.is_replay)} idemp:{w.idempotency_key.slice(0,20)} status:{w.status} validar assinatura replay idempotência conciliação</li>)}</ul>
-      <ul>{charges.slice(0,10).map(c=><li key={c.id}>{c.protocol} gw:{c.gateway_id.slice(0,8)} amount:{c.amount_cents} status:{c.status} idemp:{c.idempotency_key.slice(0,20)} sandbox:{String(c.is_sandbox)} CHECK is_sandbox=true sem cobrança real conciliado:{String(c.is_conciliated)}</li>)}</ul>
+      <h3>FIN-12 Boletos/Pix/gateway em sandbox (somente leitura)</h3>
+      <p style={{ fontSize:12 }}>A cobrança só existe depois de seleção explícita e homologação em sandbox; a assinatura do webhook é verificada pelo servidor, o replay é recusado pela chave de idempotência e a quitação só ocorre por conciliação de webhook validado. Nenhuma cobrança real é emitida. A criação e as transições ficam em <a href="/admin/financeiro">/admin/financeiro</a>, aba Boletos / Pix / Gateway.</p>
+      <ul>{gateways.slice(0,10).map(g=><li key={g.id}>{g.name} código:{g.gateway_code||"—"} tipo:{g.gateway_type} ambiente:{g.environment} status:{g.status} selecionado:{String(g.is_selected)} cobrança liberada:{String(g.charge_enabled===true)}</li>)}</ul>
+      <ul>{webhooks.slice(0,10).map(w=><li key={w.id}>gw:{w.gateway_id.slice(0,8)} evento:{w.event_type} assinatura:{w.is_valid_signature?"válida":"inválida"} replays:{w.replay_attempts} idemp:{w.idempotency_key.slice(0,20)} status:{w.status}</li>)}</ul>
+      <ul>{charges.slice(0,10).map(c=><li key={c.id}>{c.protocol} gw:{c.gateway_id.slice(0,8)} amount:{c.amount_cents} status:{c.status} idemp:{c.idempotency_key.slice(0,20)} simulada:{String(c.simulated)} conciliada:{String(c.is_conciliated)}</li>)}</ul>
     </section>
   );
 }
