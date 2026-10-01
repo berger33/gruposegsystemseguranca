@@ -38,10 +38,46 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
     rejeitado: new Set(['arquivado']),
     arquivado: new Set([]),
   };
+  // FIN-14/15/16 — allowlists e transições controladas espelhando as guardas
+  // de banco acrescentadas pela migração 133 (aditiva).
+  const EXPORT_STATUSES = new Set(['pendente','gerando','gerado','falhou','expirado']);
+  const EXPORT_TRANSITIONS = {
+    pendente: new Set(['gerando','falhou']),
+    gerando: new Set(['gerado','falhou']),
+    gerado: new Set(['expirado']),
+    falhou: new Set(['pendente']),
+    expirado: new Set([]),
+  };
+  const CLOSURE_STATUSES = new Set(['aberta','fechada','reaberta','bloqueada']);
+  const CLOSURE_ACTIONS = new Set(['reopen','close']);
+  const CLOSURE_TRANSITIONS = {
+    aberta: new Set(['fechada']),
+    fechada: new Set(['reaberta']),
+    reaberta: new Set(['fechada']),
+    bloqueada: new Set([]),
+  };
+  const PROVISION_STATUSES = new Set(['provisionada','em_revisao','revisada','paga','cancelada']);
+  const PROVISION_TRANSITIONS = {
+    provisionada: new Set(['em_revisao','cancelada']),
+    em_revisao: new Set(['revisada','cancelada']),
+    revisada: new Set(['em_revisao','paga','cancelada']),
+    paga: new Set([]),
+    cancelada: new Set([]),
+  };
   const isUuid = (value) => typeof value === 'string' && UUID_RE.test(value);
+  const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
   const isIsoDate = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
   const cleanText = (value) => typeof value === 'string' ? value.trim() : '';
   const textInRange = (value, min, max) => value.length >= min && value.length <= max;
+  // Campo textual opcional: ausente vira null; presente precisa caber na faixa
+  // do CHECK correspondente, para a resposta HTTP nunca vazar detalhe SQL.
+  const optionalText = (value, min, max) => {
+    if (value === undefined || value === null) return { ok:true, value:null };
+    if (typeof value !== 'string') return { ok:false, value:null };
+    const text = value.trim();
+    if (!text) return { ok:true, value:null };
+    return textInRange(text, min, max) ? { ok:true, value:text } : { ok:false, value:null };
+  };
   const parseNullableCents = (value) => {
     if (value === undefined || value === null || value === '') return { ok:true, value:null };
     const n = Number(value);
@@ -63,6 +99,16 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
       if (msg.includes('fin_budget_invalid_transition')) return send(res, 409, {error:'invalid_status_transition'});
       if (msg.includes('fin_budget_approval_requires_auditor')) return send(res, 400, {error:'approval_requires_identity_and_date'});
       if (msg.includes('fin_budget_history_immutable')) return send(res, 409, {error:'history_immutable'});
+      if (msg.includes('fin_export_invalid_transition')) return send(res, 409, {error:'invalid_status_transition'});
+      if (msg.includes('fin_export_generated_requires_storage_key')) return send(res, 400, {error:'storage_key_required_for_gerado'});
+      if (msg.includes('fin_export_log_immutable')) return send(res, 409, {error:'history_immutable'});
+      if (msg.includes('fin_closure_invalid_transition')) return send(res, 409, {error:'invalid_status_transition'});
+      if (msg.includes('fin_closure_reopen_requires_authorization')) return send(res, 400, {error:'authorized_by_required'});
+      if (msg.includes('fin_report_version_immutable')) return send(res, 409, {error:'history_immutable'});
+      if (msg.includes('fin_commission_auto_pay_forbidden')) return send(res, 400, {error:'auto_paid_forbidden_nao_pagar_automaticamente'});
+      if (msg.includes('fin_commission_invalid_transition')) return send(res, 409, {error:'invalid_status_transition'});
+      if (msg.includes('fin_commission_payment_requires_review')) return send(res, 409, {error:'payment_requires_review'});
+      if (msg.includes('fin_commission_provision_history is immutable')) return send(res, 409, {error:'history_immutable'});
       return send(res, 400, {error: options.invalid || 'invalid'});
     }
     return send(res, 500, {error:'internal'});
@@ -228,289 +274,398 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
 
   const handleExports = async (req, res) => {
     const sess = await checkAuth(req, res); if (!sess) return;
+    if (guardMutation(req, res, sess)) return;
     if (req.method === 'GET') {
       const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
       const status = url.searchParams.get('status');
+      if (status && !EXPORT_STATUSES.has(status)) return send(res, 400, {error:'invalid_status'});
       let q = `SELECT * FROM fin_exports WHERE 1=1`; const params=[]; let idx=1;
       if (status) { q+=` AND status=$${idx++}`; params.push(status); }
       q+=` ORDER BY created_at DESC LIMIT 200`;
-      try {
-        const { rows } = await pool.query(q, params);
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ exports: rows }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal'})); }
-      return;
+      try { const { rows } = await pool.query(q, params); return send(res, 200, { exports: rows }); }
+      catch { return send(res, 500, {error:'internal'}); }
     }
     if (req.method === 'POST') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
+      let body; try { body = await readJson(req); } catch { return send(res, 400, {error:'invalid_json'}); }
       const period_start = body.period_start;
       const period_end = body.period_end;
-      const filters = body.filters || {};
-      const totals = body.totals || {};
-      const file_name = body.file_name || null;
-      const file_url = body.file_url || null;
-      const storage_key = body.storage_key || null;
-      if (!period_start || !period_end) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'period_required'})); return; }
-      if (new Date(period_end) < new Date(period_start)) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'period_end_gte_start'})); return; }
-      if (file_url && (file_url.length<5 || file_url.length>1000)) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'file_url_5_1000'})); return; }
-      if (storage_key && (storage_key.length<5 || storage_key.length>500)) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'storage_key_5_500'})); return; }
+      if (!isIsoDate(period_start) || !isIsoDate(period_end)) return send(res, 400, {error:'period_required'});
+      if (new Date(`${period_end}T00:00:00Z`) < new Date(`${period_start}T00:00:00Z`)) return send(res, 400, {error:'period_end_gte_start'});
+      if (!isPlainObject(body.filters ?? {})) return send(res, 400, {error:'filters_object_required'});
+      if (!isPlainObject(body.totals ?? {})) return send(res, 400, {error:'totals_object_required'});
+      const filters = body.filters ?? {};
+      const totals = body.totals ?? {};
+      const file_name = optionalText(body.file_name, 1, 500);
+      const file_url = optionalText(body.file_url, 5, 1000);
+      const storage_key = optionalText(body.storage_key, 5, 500);
+      if (!file_name.ok) return send(res, 400, {error:'file_name_1_500'});
+      if (!file_url.ok) return send(res, 400, {error:'file_url_5_1000'});
+      if (!storage_key.ok) return send(res, 400, {error:'storage_key_5_500'});
+      const totalRecords = parseNullableCents(body.total_records);
+      const totalAmount = parseNullableCents(body.total_amount_cents);
+      if (!totalRecords.ok || !totalAmount.ok) return send(res, 400, {error:'totals_gte_0'});
+      if (body.is_accountant_limited === false) return send(res, 400, {error:'accountant_limited_required'});
       const protocol = generateProtocol('EXP-FIN');
+      const client = await pool.connect();
       try {
-        if (storage_key) {
-          const dup = await pool.query(`SELECT id FROM fin_exports WHERE storage_key=$1`, [storage_key]);
-          if (dup.rows.length) { res.writeHead(409, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'duplicate_storage_key'})); return; }
+        await client.query('BEGIN');
+        if (storage_key.value) {
+          // Chave de armazenamento é a chave de idempotência da exportação: a
+          // duplicidade é recusada sob bloqueio, não apenas pelo índice único.
+          const dup = await client.query(`SELECT id, protocol FROM fin_exports WHERE storage_key=$1 FOR UPDATE`, [storage_key.value]);
+          if (dup.rows.length) { await client.query('ROLLBACK'); return send(res, 409, {error:'duplicate_storage_key'}); }
         }
-        const { rows } = await pool.query(
+        const { rows } = await client.query(
           `INSERT INTO fin_exports (protocol, period_start, period_end, filters, totals, total_records, total_amount_cents, file_name, file_url, storage_key, is_accountant_limited, access_role, requested_by_identity, status)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,true,'contador',$11,'pendente') RETURNING *`,
-          [protocol, period_start, period_end, filters, totals, body.total_records||0, body.total_amount_cents||0, file_name, file_url, storage_key, sess.identityId||null]
+          [protocol, period_start, period_end, JSON.stringify(filters), JSON.stringify(totals), totalRecords.value ?? 0, totalAmount.value ?? 0, file_name.value, file_url.value, storage_key.value, sess.identityId||null]
         );
-        await pool.query(
+        await client.query(
           `INSERT INTO fin_export_logs (export_id, action, actor_identity, meta) VALUES ($1,$2,$3,$4)`,
           [rows[0].id, 'export_create', sess.identityId||null, JSON.stringify({ period_start, period_end, filters, totals, is_accountant_limited:true })]
         );
-        await auditLog({ action:'fin_export_create', actor: sess.identityId, target: rows[0].id, meta:{ protocol, period_start, period_end, is_accountant_limited:true, access_role:'contador' } });
-        res.writeHead(201, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ export: rows[0], note:'exportacao_periodo_trilha_filtros_totais_conciliaveis_acesso_limitado_contador' }));
-      } catch(e){
-        if (e.code==='23505') { res.writeHead(409, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'duplicate'})); return; }
-        res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal'}));
-      }
-      return;
+        await auditLog({ action:'fin_export_create', actor: sess.identityId||'unknown', target: rows[0].id, meta:{ protocol, period_start, period_end, is_accountant_limited:true, access_role:'contador' }, client });
+        await client.query('COMMIT');
+        return send(res, 201, { export: rows[0], note:'exportacao_periodo_trilha_filtros_totais_conciliaveis_acesso_limitado_contador' });
+      } catch(e) {
+        try { await client.query('ROLLBACK'); } catch {}
+        return dbFailure(res, e, { duplicate:'duplicate_storage_key', invalid:'invalid_export' });
+      } finally { client.release(); }
     }
     if (req.method === 'PATCH') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
+      let body; try { body = await readJson(req); } catch { return send(res, 400, {error:'invalid_json'}); }
       const id = body.id;
-      if (!id) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'id_required'})); return; }
+      if (!isUuid(id)) return send(res, 400, {error:'invalid_id'});
+      if (body.is_accountant_limited === false) return send(res, 400, {error:'accountant_limited_required'});
+      const file_name = optionalText(body.file_name, 1, 500);
+      const file_url = optionalText(body.file_url, 5, 1000);
+      const storage_key = optionalText(body.storage_key, 5, 500);
+      if (!file_name.ok) return send(res, 400, {error:'file_name_1_500'});
+      if (!file_url.ok) return send(res, 400, {error:'file_url_5_1000'});
+      if (!storage_key.ok) return send(res, 400, {error:'storage_key_5_500'});
+      if (body.totals !== undefined && body.totals !== null && !isPlainObject(body.totals)) return send(res, 400, {error:'totals_object_required'});
+      const client = await pool.connect();
       try {
-        const { rows } = await pool.query(
-          `UPDATE fin_exports SET status=COALESCE($1,status), file_name=COALESCE($2,file_name), file_url=COALESCE($3,file_url), storage_key=COALESCE($4,storage_key), totals=COALESCE($5,totals), generated_at=CASE WHEN $1='gerado' THEN NOW() ELSE generated_at END, expires_at=CASE WHEN $1='gerado' THEN NOW()+INTERVAL '30 days' ELSE expires_at END, updated_at=NOW() WHERE id=$6 RETURNING *`,
-          [body.status||null, body.file_name||null, body.file_url||null, body.storage_key||null, body.totals||null, id]
+        await client.query('BEGIN');
+        const found = await client.query(`SELECT * FROM fin_exports WHERE id=$1 FOR UPDATE`, [id]);
+        if (!found.rows.length) { await client.query('ROLLBACK'); return send(res, 404, {error:'not_found'}); }
+        const previous = found.rows[0];
+        let nextStatus = previous.status;
+        if (body.status !== undefined && body.status !== null) {
+          if (!EXPORT_STATUSES.has(body.status)) { await client.query('ROLLBACK'); return send(res, 400, {error:'invalid_status'}); }
+          nextStatus = body.status;
+          if (nextStatus !== previous.status && !EXPORT_TRANSITIONS[previous.status]?.has(nextStatus)) {
+            await client.query('ROLLBACK'); return send(res, 409, {error:'invalid_status_transition'});
+          }
+        }
+        const nextStorageKey = storage_key.value ?? previous.storage_key;
+        if (nextStatus === 'gerado' && !nextStorageKey) {
+          await client.query('ROLLBACK'); return send(res, 400, {error:'storage_key_required_for_gerado'});
+        }
+        if (storage_key.value && storage_key.value !== previous.storage_key) {
+          const dup = await client.query(`SELECT id FROM fin_exports WHERE storage_key=$1 AND id<>$2 FOR UPDATE`, [storage_key.value, id]);
+          if (dup.rows.length) { await client.query('ROLLBACK'); return send(res, 409, {error:'duplicate_storage_key'}); }
+        }
+        const { rows } = await client.query(
+          `UPDATE fin_exports
+              SET status=$1::fin_export_status, file_name=COALESCE($2,file_name), file_url=COALESCE($3,file_url), storage_key=COALESCE($4,storage_key),
+                  totals=COALESCE($5::jsonb,totals),
+                  generated_at=CASE WHEN $1::text='gerado' THEN COALESCE(generated_at, NOW()) ELSE generated_at END,
+                  expires_at=CASE WHEN $1::text='gerado' THEN COALESCE(expires_at, NOW()+INTERVAL '30 days') ELSE expires_at END,
+                  updated_at=NOW()
+            WHERE id=$6 RETURNING *`,
+          [nextStatus, file_name.value, file_url.value, storage_key.value, body.totals === undefined || body.totals === null ? null : JSON.stringify(body.totals), id]
         );
-        if (!rows.length) { res.writeHead(404, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
-        await pool.query(`INSERT INTO fin_export_logs (export_id, action, actor_identity, meta) VALUES ($1,$2,$3,$4)`, [id, 'export_update', sess.identityId||null, JSON.stringify({ status: body.status })]);
-        await auditLog({ action:'fin_export_update', actor: sess.identityId, target: id, meta:{ status: body.status } });
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ export: rows[0] }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal'})); }
-      return;
+        await client.query(
+          `INSERT INTO fin_export_logs (export_id, action, actor_identity, meta) VALUES ($1,$2,$3,$4)`,
+          [id, 'export_update', sess.identityId||null, JSON.stringify({ previous_status: previous.status, next_status: rows[0].status })]
+        );
+        await auditLog({ action:'fin_export_update', actor: sess.identityId||'unknown', target: id, meta:{ protocol: previous.protocol, previous_status: previous.status, next_status: rows[0].status, is_accountant_limited:true }, client });
+        await client.query('COMMIT');
+        return send(res, 200, { export: rows[0] });
+      } catch(e) {
+        try { await client.query('ROLLBACK'); } catch {}
+        return dbFailure(res, e, { duplicate:'duplicate_storage_key', invalid:'invalid_export' });
+      } finally { client.release(); }
     }
-    res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'}));
+    return send(res, 405, {error:'method_not_allowed'});
   };
 
   const handleExportLogs = async (req, res) => {
     const sess = await checkAuth(req, res); if (!sess) return;
-    if (req.method !== 'GET') { res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'})); return; }
+    if (req.method !== 'GET') return send(res, 405, {error:'method_not_allowed'});
     const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
     const export_id = url.searchParams.get('export_id');
+    if (export_id && !isUuid(export_id)) return send(res, 400, {error:'invalid_export_id'});
     let q = `SELECT * FROM fin_export_logs WHERE 1=1`; const params=[]; let idx=1;
     if (export_id) { q+=` AND export_id=$${idx++}`; params.push(export_id); }
     q+=` ORDER BY created_at DESC LIMIT 200`;
-    try {
-      const { rows } = await pool.query(q, params);
-      res.writeHead(200, {'Content-Type':'application/json'});
-      res.end(JSON.stringify({ logs: rows }));
-    } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal'})); }
+    try { const { rows } = await pool.query(q, params); return send(res, 200, { logs: rows }); }
+    catch { return send(res, 500, {error:'internal'}); }
   };
 
   const handleClosures = async (req, res) => {
     const sess = await checkAuth(req, res); if (!sess) return;
+    if (guardMutation(req, res, sess)) return;
     if (req.method === 'GET') {
       const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
       const status = url.searchParams.get('status');
+      if (status && !CLOSURE_STATUSES.has(status)) return send(res, 400, {error:'invalid_status'});
       let q = `SELECT * FROM fin_competence_closures WHERE 1=1`; const params=[]; let idx=1;
       if (status) { q+=` AND status=$${idx++}`; params.push(status); }
       q+=` ORDER BY competence_date DESC LIMIT 200`;
-      try {
-        const { rows } = await pool.query(q, params);
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ closures: rows }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal'})); }
-      return;
+      try { const { rows } = await pool.query(q, params); return send(res, 200, { closures: rows }); }
+      catch { return send(res, 500, {error:'internal'}); }
     }
     if (req.method === 'POST') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
+      let body; try { body = await readJson(req); } catch { return send(res, 400, {error:'invalid_json'}); }
       const competence_date = body.competence_date;
-      const notes = (body.notes||'').trim() || null;
-      if (!competence_date) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'competence_date_required'})); return; }
-      if (notes && (notes.length<10 || notes.length>2000)) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'notes_10_2000'})); return; }
+      if (!isIsoDate(competence_date)) return send(res, 400, {error:'competence_date_required'});
+      const notes = optionalText(body.notes, 10, 2000);
+      if (!notes.ok) return send(res, 400, {error:'notes_10_2000'});
+      const client = await pool.connect();
       try {
-        const dup = await pool.query(`SELECT id FROM fin_competence_closures WHERE competence_date=$1`, [competence_date]);
-        if (dup.rows.length) { res.writeHead(409, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'duplicate_competence', existing_id: dup.rows[0].id})); return; }
-        const { rows } = await pool.query(
+        await client.query('BEGIN');
+        const dup = await client.query(`SELECT id FROM fin_competence_closures WHERE competence_date=$1 FOR UPDATE`, [competence_date]);
+        if (dup.rows.length) { await client.query('ROLLBACK'); return send(res, 409, {error:'duplicate_competence'}); }
+        const { rows } = await client.query(
           `INSERT INTO fin_competence_closures (competence_date, status, closed_by_identity, closed_at, notes)
            VALUES ($1,'fechada',$2,NOW(),$3) RETURNING *`,
-          [competence_date, sess.identityId||null, notes]
+          [competence_date, sess.identityId||null, notes.value]
         );
-        // create initial report version preserving current snapshot
-        await pool.query(
+        await client.query(
           `INSERT INTO fin_report_versions (closure_id, version, report_type, data, totals, is_preserved, created_by_identity)
            VALUES ($1,1,'fechamento_competencia',$2,$3,true,$4)`,
-          [rows[0].id, JSON.stringify({ competence_date, status:'fechada', closed_at: new Date() }), JSON.stringify({}), sess.identityId||null]
+          [rows[0].id, JSON.stringify({ competence_date, status:'fechada', closed_by: sess.identityId||null }), JSON.stringify(isPlainObject(body.totals) ? body.totals : {}), sess.identityId||null]
         );
-        await auditLog({ action:'fin_closure_create', actor: sess.identityId, target: rows[0].id, meta:{ competence_date, status:'fechada' } });
-        res.writeHead(201, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ closure: rows[0], note:'fechamento_competencia_preservar_versoes_relatorio' }));
-      } catch(e){
-        if (e.code==='23505') { res.writeHead(409, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'duplicate'})); return; }
-        res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal'}));
-      }
-      return;
+        await auditLog({ action:'fin_closure_create', actor: sess.identityId||'unknown', target: rows[0].id, meta:{ competence_date, status:'fechada', version:1 }, client });
+        await client.query('COMMIT');
+        return send(res, 201, { closure: rows[0], note:'fechamento_competencia_preservar_versoes_relatorio' });
+      } catch(e) {
+        try { await client.query('ROLLBACK'); } catch {}
+        return dbFailure(res, e, { duplicate:'duplicate_competence', invalid:'invalid_closure' });
+      } finally { client.release(); }
     }
     if (req.method === 'PATCH') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
+      let body; try { body = await readJson(req); } catch { return send(res, 400, {error:'invalid_json'}); }
       const id = body.id;
-      const action = body.action; // reopen
-      if (!id) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'id_required'})); return; }
+      const action = body.action;
+      if (!isUuid(id)) return send(res, 400, {error:'invalid_id'});
+      if (!CLOSURE_ACTIONS.has(action)) return send(res, 400, {error:'invalid_action'});
+      const reason = cleanText(action === 'reopen' ? body.reopen_reason : body.close_reason);
+      if (!textInRange(reason, 10, 1000)) {
+        return send(res, 400, {error: action === 'reopen' ? 'reopen_reason_10_1000_required_reabertura_autorizada' : 'close_reason_10_1000_required'});
+      }
+      const authorizedBy = action === 'reopen' ? (body.authorized_by_identity ?? sess.identityId ?? null) : null;
+      if (action === 'reopen') {
+        if (!authorizedBy) return send(res, 400, {error:'authorized_by_required'});
+        if (!isUuid(authorizedBy)) return send(res, 400, {error:'invalid_authorized_by_identity'});
+      }
+      const client = await pool.connect();
       try {
-        const existing = await pool.query(`SELECT * FROM fin_competence_closures WHERE id=$1`, [id]);
-        if (!existing.rows.length) { res.writeHead(404, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
-        if (action === 'reopen') {
-          const reopen_reason = (body.reopen_reason||'').trim();
-          if (!reopen_reason || reopen_reason.length<10 || reopen_reason.length>1000) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'reopen_reason_10_1000_required_reabertura_autorizada'})); return; }
-          if (!body.authorized_by_identity && !sess.identityId) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'authorized_by_required'})); return; }
-          const { rows } = await pool.query(
-            `UPDATE fin_competence_closures SET status='reaberta', reopened_by_identity=$1, reopened_at=NOW(), reopen_reason=$2, authorized_by_identity=$3, authorized_at=NOW(), updated_at=NOW() WHERE id=$4 RETURNING *`,
-            [sess.identityId||null, reopen_reason, body.authorized_by_identity||sess.identityId||null, id]
-          );
-          // preserve new version
-          const maxVer = await pool.query(`SELECT COALESCE(MAX(version),0)+1 as next FROM fin_report_versions WHERE closure_id=$1`, [id]);
-          const nextVer = maxVer.rows[0].next;
-          await pool.query(
-            `INSERT INTO fin_report_versions (closure_id, version, report_type, data, totals, is_preserved, created_by_identity)
-             VALUES ($1,$2,'reabertura_competencia',$3,$4,true,$5)`,
-            [id, nextVer, JSON.stringify({ reopened_at: new Date(), reopen_reason, authorized_by: body.authorized_by_identity||sess.identityId }), JSON.stringify({}), sess.identityId||null]
-          );
-          await auditLog({ action:'fin_closure_reopen', actor: sess.identityId, target: id, meta:{ reopen_reason, authorized_by: body.authorized_by_identity||sess.identityId } });
-          res.writeHead(200, {'Content-Type':'application/json'});
-          res.end(JSON.stringify({ closure: rows[0], note:'reabertura_autorizada_preservar_versoes_relatorio' }));
-        } else {
-          res.writeHead(400, {'Content-Type':'application/json'});
-          res.end(JSON.stringify({error:'action_required_reopen'}));
+        await client.query('BEGIN');
+        const found = await client.query(`SELECT * FROM fin_competence_closures WHERE id=$1 FOR UPDATE`, [id]);
+        if (!found.rows.length) { await client.query('ROLLBACK'); return send(res, 404, {error:'not_found'}); }
+        const previous = found.rows[0];
+        const nextStatus = action === 'reopen' ? 'reaberta' : 'fechada';
+        if (!CLOSURE_TRANSITIONS[previous.status]?.has(nextStatus)) {
+          await client.query('ROLLBACK'); return send(res, 409, {error:'invalid_status_transition'});
         }
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal'})); }
-      return;
+        const updated = action === 'reopen'
+          ? await client.query(
+              `UPDATE fin_competence_closures
+                  SET status='reaberta', reopened_by_identity=$1, reopened_at=NOW(), reopen_reason=$2,
+                      authorized_by_identity=$3, authorized_at=NOW(), updated_at=NOW()
+                WHERE id=$4 RETURNING *`,
+              [sess.identityId||null, reason, authorizedBy, id]
+            )
+          : await client.query(
+              `UPDATE fin_competence_closures
+                  SET status='fechada', closed_by_identity=$1, closed_at=NOW(), updated_at=NOW()
+                WHERE id=$2 RETURNING *`,
+              [sess.identityId||null, id]
+            );
+        const maxVer = await client.query(`SELECT COALESCE(MAX(version),0)+1 AS next FROM fin_report_versions WHERE closure_id=$1`, [id]);
+        const nextVersion = maxVer.rows[0].next;
+        await client.query(
+          `INSERT INTO fin_report_versions (closure_id, version, report_type, data, totals, is_preserved, created_by_identity)
+           VALUES ($1,$2,$3,$4,$5,true,$6)`,
+          [
+            id,
+            nextVersion,
+            action === 'reopen' ? 'reabertura_competencia' : 'fechamento_competencia',
+            JSON.stringify({ previous_status: previous.status, next_status: nextStatus, reason, authorized_by: authorizedBy }),
+            JSON.stringify(isPlainObject(body.totals) ? body.totals : {}),
+            sess.identityId||null,
+          ]
+        );
+        await auditLog({
+          action: action === 'reopen' ? 'fin_closure_reopen' : 'fin_closure_close',
+          actor: sess.identityId||'unknown',
+          target: id,
+          meta:{ previous_status: previous.status, next_status: nextStatus, reason, authorized_by: authorizedBy, version: nextVersion },
+          client,
+        });
+        await client.query('COMMIT');
+        return send(res, 200, { closure: updated.rows[0], version: nextVersion, note:'reabertura_autorizada_preservar_versoes_relatorio' });
+      } catch(e) {
+        try { await client.query('ROLLBACK'); } catch {}
+        return dbFailure(res, e, { duplicate:'duplicate_competence', invalid:'invalid_closure' });
+      } finally { client.release(); }
     }
-    res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'}));
+    return send(res, 405, {error:'method_not_allowed'});
   };
 
   const handleReportVersions = async (req, res) => {
     const sess = await checkAuth(req, res); if (!sess) return;
-    if (req.method !== 'GET') { res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'})); return; }
+    if (req.method !== 'GET') return send(res, 405, {error:'method_not_allowed'});
     const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
     const closure_id = url.searchParams.get('closure_id');
+    if (closure_id && !isUuid(closure_id)) return send(res, 400, {error:'invalid_closure_id'});
     let q = `SELECT * FROM fin_report_versions WHERE 1=1`; const params=[]; let idx=1;
     if (closure_id) { q+=` AND closure_id=$${idx++}`; params.push(closure_id); }
     q+=` ORDER BY version DESC LIMIT 200`;
-    try {
-      const { rows } = await pool.query(q, params);
-      res.writeHead(200, {'Content-Type':'application/json'});
-      res.end(JSON.stringify({ versions: rows }));
-    } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal'})); }
+    try { const { rows } = await pool.query(q, params); return send(res, 200, { versions: rows }); }
+    catch { return send(res, 500, {error:'internal'}); }
   };
 
   const handleCommissionProvisions = async (req, res) => {
     const sess = await checkAuth(req, res); if (!sess) return;
+    if (guardMutation(req, res, sess)) return;
     if (req.method === 'GET') {
       const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
       const rule_id = url.searchParams.get('rule_id');
       const status = url.searchParams.get('status');
+      if (rule_id && !isUuid(rule_id)) return send(res, 400, {error:'invalid_rule_id'});
+      if (status && !PROVISION_STATUSES.has(status)) return send(res, 400, {error:'invalid_status'});
       let q = `SELECT * FROM fin_commission_provisions WHERE 1=1`; const params=[]; let idx=1;
       if (rule_id) { q+=` AND rule_id=$${idx++}`; params.push(rule_id); }
       if (status) { q+=` AND status=$${idx++}`; params.push(status); }
       q+=` ORDER BY provision_date DESC LIMIT 200`;
-      try {
-        const { rows } = await pool.query(q, params);
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ provisions: rows }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal'})); }
-      return;
+      try { const { rows } = await pool.query(q, params); return send(res, 200, { provisions: rows }); }
+      catch { return send(res, 500, {error:'internal'}); }
     }
     if (req.method === 'POST') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
-      const rule_id = body.rule_id || null;
-      const commission_id = body.commission_id || null;
-      const contract_id = body.contract_id || null;
-      const provision_date = body.provision_date || new Date().toISOString().slice(0,10);
-      const amount_cents = body.amount_cents;
-      const notes = (body.notes||'').trim() || null;
-      if (!amount_cents || amount_cents<0) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'amount_cents_gte_0'})); return; }
-      if (body.is_auto_paid===true) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'auto_paid_forbidden_nao_pagar_automaticamente'})); return; }
+      let body; try { body = await readJson(req); } catch { return send(res, 400, {error:'invalid_json'}); }
+      if (body.is_auto_paid === true) return send(res, 400, {error:'auto_paid_forbidden_nao_pagar_automaticamente'});
+      if (body.status !== undefined && body.status !== null && body.status !== 'provisionada') return send(res, 400, {error:'initial_status_must_be_provisionada'});
+      const optionalIds = { rule_id: body.rule_id ?? null, commission_id: body.commission_id ?? null, contract_id: body.contract_id ?? null };
+      for (const [key, value] of Object.entries(optionalIds)) {
+        if (value !== null && !isUuid(value)) return send(res, 400, {error:`invalid_${key}`});
+      }
+      const provision_date = body.provision_date ?? new Date().toISOString().slice(0,10);
+      if (!isIsoDate(provision_date)) return send(res, 400, {error:'invalid_provision_date'});
+      const amount = parseNullableCents(body.amount_cents);
+      if (!amount.ok || amount.value === null) return send(res, 400, {error:'amount_cents_gte_0'});
+      const notes = optionalText(body.notes, 10, 2000);
+      if (!notes.ok) return send(res, 400, {error:'notes_10_2000'});
+      const client = await pool.connect();
       try {
-        const { rows } = await pool.query(
-          `INSERT INTO fin_commission_provisions (rule_id, commission_id, contract_id, provision_date, amount_cents, provisioned_by_identity, notes, is_auto_paid)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,false) RETURNING *`,
-          [rule_id, commission_id, contract_id, provision_date, amount_cents, sess.identityId||null, notes]
+        await client.query('BEGIN');
+        const { rows } = await client.query(
+          `INSERT INTO fin_commission_provisions (rule_id, commission_id, contract_id, provision_date, amount_cents, provisioned_by_identity, notes, is_auto_paid, status)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,false,'provisionada') RETURNING *`,
+          [optionalIds.rule_id, optionalIds.commission_id, optionalIds.contract_id, provision_date, amount.value, sess.identityId||null, notes.value]
         );
-        await pool.query(
+        await client.query(
           `INSERT INTO fin_commission_provision_history (provision_id, previous_status, next_status, previous_amount, next_amount, changed_by_identity, reason, is_auto_paid_attempt)
-           VALUES ($1,NULL,$2,NULL,$3,$4,$5,false)`,
-          [rows[0].id, 'provisionada', amount_cents, sess.identityId||null, 'Provisão comissão ligada à regra CRM-25 provisão e revisão não pagar automaticamente']
+           VALUES ($1,NULL,'provisionada',NULL,$2,$3,$4,false)`,
+          [rows[0].id, amount.value, sess.identityId||null, 'Provisão de comissão ligada à regra CRM-25; revisão manual obrigatória, sem pagamento automático']
         );
-        await auditLog({ action:'fin_commission_provision_create', actor: sess.identityId, target: rows[0].id, meta:{ rule_id, commission_id, amount_cents, is_auto_paid:false } });
-        res.writeHead(201, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ provision: rows[0], note:'comissoes_ligadas_regra_CRM25_provisao_revisao_nao_pagar_automaticamente' }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal'})); }
-      return;
+        await auditLog({ action:'fin_commission_provision_create', actor: sess.identityId||'unknown', target: rows[0].id, meta:{ rule_id: optionalIds.rule_id, commission_id: optionalIds.commission_id, amount_cents: amount.value, is_auto_paid:false }, client });
+        await client.query('COMMIT');
+        return send(res, 201, { provision: rows[0], note:'comissoes_ligadas_regra_CRM25_provisao_revisao_nao_pagar_automaticamente' });
+      } catch(e) {
+        try { await client.query('ROLLBACK'); } catch {}
+        return dbFailure(res, e, { duplicate:'duplicate_provision', invalid:'invalid_provision' });
+      } finally { client.release(); }
     }
     if (req.method === 'PATCH') {
-      if (!sameOrigin(req)) { res.writeHead(403, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden_origin'})); return; }
-      let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
+      let body; try { body = await readJson(req); } catch { return send(res, 400, {error:'invalid_json'}); }
       const id = body.id;
-      const status = body.status;
-      const reason = (body.reason||'').trim();
-      if (!id) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'id_required'})); return; }
-      if (!reason || reason.length<10 || reason.length>1000) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'reason_10_1000_required'})); return; }
-      if (body.is_auto_paid===true) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'auto_paid_forbidden'})); return; }
+      if (!isUuid(id)) return send(res, 400, {error:'invalid_id'});
+      if (body.is_auto_paid === true) return send(res, 400, {error:'auto_paid_forbidden_nao_pagar_automaticamente'});
+      const reason = cleanText(body.reason);
+      if (!textInRange(reason, 10, 1000)) return send(res, 400, {error:'reason_10_1000_required'});
+      if (body.status === undefined || body.status === null) return send(res, 400, {error:'status_required'});
+      if (!PROVISION_STATUSES.has(body.status)) return send(res, 400, {error:'invalid_status'});
+      const nextStatus = body.status;
+      const revisionReason = optionalText(body.revision_reason, 10, 1000);
+      if (!revisionReason.ok) return send(res, 400, {error:'revision_reason_10_1000_required'});
+      if ((nextStatus === 'em_revisao' || nextStatus === 'revisada') && !revisionReason.value) {
+        return send(res, 400, {error:'revision_reason_10_1000_required'});
+      }
+      if (nextStatus === 'paga' && body.manual_payment_confirmation !== true) {
+        return send(res, 400, {error:'manual_payment_confirmation_required_nao_pagar_automaticamente'});
+      }
+      const amount = body.amount_cents === undefined || body.amount_cents === null ? { ok:true, value:null } : parseNullableCents(body.amount_cents);
+      if (!amount.ok) return send(res, 400, {error:'amount_cents_gte_0'});
+      const notes = optionalText(body.notes, 10, 2000);
+      if (!notes.ok) return send(res, 400, {error:'notes_10_2000'});
+      const client = await pool.connect();
       try {
-        const existing = await pool.query(`SELECT * FROM fin_commission_provisions WHERE id=$1`, [id]);
-        if (!existing.rows.length) { res.writeHead(404, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
-        const prev = existing.rows[0];
-        if (status==='paga') {
-          // prevent auto pay, require manual but still allow paga status after review
-          if (prev.status !== 'revisada' && prev.status !== 'provisionada') {
-            // allow but log
-          }
+        await client.query('BEGIN');
+        const found = await client.query(`SELECT * FROM fin_commission_provisions WHERE id=$1 FOR UPDATE`, [id]);
+        if (!found.rows.length) { await client.query('ROLLBACK'); return send(res, 404, {error:'not_found'}); }
+        const previous = found.rows[0];
+        if (nextStatus !== previous.status && !PROVISION_TRANSITIONS[previous.status]?.has(nextStatus)) {
+          await client.query('ROLLBACK');
+          return send(res, 409, {error: nextStatus === 'paga' ? 'payment_requires_review' : 'invalid_status_transition'});
         }
-        if ((status==='em_revisao' || status==='revisada') && (!body.revision_reason || body.revision_reason.length<10)) {
-          res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'revision_reason_10_1000_required'})); return;
+        if (nextStatus === 'paga' && previous.status !== 'revisada') {
+          await client.query('ROLLBACK'); return send(res, 409, {error:'payment_requires_review'});
         }
-        const { rows } = await pool.query(
-          `UPDATE fin_commission_provisions SET status=COALESCE($1,status), amount_cents=COALESCE($2,amount_cents), revision_reason=COALESCE($3,revision_reason), reviewed_by_identity=CASE WHEN $1 IN ('em_revisao','revisada') THEN $4 ELSE reviewed_by_identity END, reviewed_at=CASE WHEN $1 IN ('em_revisao','revisada') THEN NOW() ELSE reviewed_at END, paid_at=CASE WHEN $1='paga' THEN NOW() ELSE paid_at END, paid_by_identity=CASE WHEN $1='paga' THEN $4 ELSE paid_by_identity END, notes=COALESCE($5,notes), updated_at=NOW() WHERE id=$6 RETURNING *`,
-          [status||null, body.amount_cents??null, body.revision_reason||null, sess.identityId||null, body.notes||null, id]
+        if (previous.status === 'paga' && nextStatus !== 'paga') {
+          await client.query('ROLLBACK'); return send(res, 409, {error:'invalid_status_transition'});
+        }
+        const { rows } = await client.query(
+          `UPDATE fin_commission_provisions
+              SET status=$1::fin_commission_provision_status,
+                  amount_cents=COALESCE($2::bigint,amount_cents),
+                  revision_reason=COALESCE($3::text,revision_reason),
+                  reviewed_by_identity=CASE WHEN $1::text IN ('em_revisao','revisada') THEN $4::uuid ELSE reviewed_by_identity END,
+                  reviewed_at=CASE WHEN $1::text IN ('em_revisao','revisada') THEN NOW() ELSE reviewed_at END,
+                  paid_at=CASE WHEN $1::text='paga' THEN COALESCE(paid_at, NOW()) ELSE paid_at END,
+                  paid_by_identity=CASE WHEN $1::text='paga' THEN $4::uuid ELSE paid_by_identity END,
+                  notes=COALESCE($5::text,notes),
+                  is_auto_paid=false,
+                  updated_at=NOW()
+            WHERE id=$6 RETURNING *`,
+          [nextStatus, amount.value, revisionReason.value, sess.identityId||null, notes.value, id]
         );
-        await pool.query(
+        await client.query(
           `INSERT INTO fin_commission_provision_history (provision_id, previous_status, next_status, previous_amount, next_amount, changed_by_identity, reason, is_auto_paid_attempt)
            VALUES ($1,$2,$3,$4,$5,$6,$7,false)`,
-          [id, prev.status, rows[0].status, prev.amount_cents, rows[0].amount_cents, sess.identityId||null, reason]
+          [id, previous.status, rows[0].status, previous.amount_cents, rows[0].amount_cents, sess.identityId||null, reason]
         );
-        await auditLog({ action: status==='paga'?'fin_commission_provision_pay':'fin_commission_provision_review', actor: sess.identityId, target: id, meta:{ status, reason, is_auto_paid:false } });
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ provision: rows[0] }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal'})); }
-      return;
+        await auditLog({
+          action: nextStatus === 'paga' ? 'fin_commission_provision_pay' : 'fin_commission_provision_review',
+          actor: sess.identityId||'unknown',
+          target: id,
+          meta:{ previous_status: previous.status, next_status: rows[0].status, reason, is_auto_paid:false, manual_payment_confirmation: nextStatus === 'paga' },
+          client,
+        });
+        await client.query('COMMIT');
+        return send(res, 200, { provision: rows[0], note:'registro_manual_de_baixa_sem_pagamento_automatico_nem_gateway_real' });
+      } catch(e) {
+        try { await client.query('ROLLBACK'); } catch {}
+        return dbFailure(res, e, { duplicate:'duplicate_provision', invalid:'invalid_provision' });
+      } finally { client.release(); }
     }
-    res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'}));
+    return send(res, 405, {error:'method_not_allowed'});
   };
 
   const handleCommissionProvisionHistory = async (req, res) => {
     const sess = await checkAuth(req, res); if (!sess) return;
-    if (req.method !== 'GET') { res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'})); return; }
+    if (req.method !== 'GET') return send(res, 405, {error:'method_not_allowed'});
     const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
     const provision_id = url.searchParams.get('provision_id');
+    if (provision_id && !isUuid(provision_id)) return send(res, 400, {error:'invalid_provision_id'});
     let q = `SELECT * FROM fin_commission_provision_history WHERE 1=1`; const params=[]; let idx=1;
     if (provision_id) { q+=` AND provision_id=$${idx++}`; params.push(provision_id); }
     q+=` ORDER BY created_at DESC LIMIT 200`;
-    try {
-      const { rows } = await pool.query(q, params);
-      res.writeHead(200, {'Content-Type':'application/json'});
-      res.end(JSON.stringify({ history: rows }));
-    } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal'})); }
+    try { const { rows } = await pool.query(q, params); return send(res, 200, { history: rows }); }
+    catch { return send(res, 500, {error:'internal'}); }
   };
 
   return {

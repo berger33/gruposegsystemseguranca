@@ -1796,3 +1796,315 @@ test("L07 FIN-13: Chromium abre a nova aba de orçamento financeiro e cadastra e
     await browser.close();
   }
 });
+
+test("L07 FIN-14: exportação do período com trilha imutável, idempotência por chave, acesso limitado do contador e auditoria fail-closed", { skip: !RUN, timeout: 120_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const ti = await provisionAndLoginStaff(pool, api, { role: "ti" });
+  const rh = await provisionAndLoginStaff(pool, api, { role: "rh" });
+  const tag = uuid().slice(0, 8);
+  const exportPayload = (suffix, overrides = {}) => ({
+    period_start: "2026-09-01",
+    period_end: "2026-09-30",
+    filters: { competencia: "2026-09", origem: "sintetico" },
+    totals: { recebiveis_cents: 150000, pagaveis_cents: 90000 },
+    total_records: 12,
+    total_amount_cents: 240000,
+    file_name: `exportacao-fin14-${tag}-${suffix}.json`,
+    storage_key: `synthetic/fin14/${tag}/${suffix}.json`,
+    ...overrides,
+  });
+
+  // 1. Sessão, papel e same-origin seguem a mesma borda do FIN-13.
+  assert.equal((await fin("/exports")).status, 401, "anonymous export read denied");
+  assert.equal((await fin("/export-logs")).status, 401, "anonymous export log read denied");
+  assert.equal((await fin("/exports", { cookie: rh.cookie })).status, 403, "rh cannot read exports");
+  const crossOrigin = await fin("/exports", { method: "POST", cookie: financeiro.cookie, origin: "https://externo.example", body: exportPayload("cross") });
+  assert.equal(crossOrigin.status, 403, "cross-origin export mutation denied");
+  assert.deepEqual(crossOrigin.body, { error: "forbidden_origin" });
+  assert.equal((await fin("/exports", { cookie: ti.cookie })).status, 200, "ti reads the export domain");
+  const tiWrite = await fin("/exports", { method: "POST", cookie: ti.cookie, body: exportPayload("ti") });
+  assert.equal(tiWrite.status, 403, "ti cannot create exports");
+  assert.deepEqual(tiWrite.body, { error: "read_only" });
+
+  // 2. Validação allowlist antes do SQL, sem vazar detalhe de banco.
+  const invalidFilter = await fin("/exports?status=qualquer", { cookie: financeiro.cookie });
+  assert.equal(invalidFilter.status, 400, "export status filter is allowlisted");
+  assert.deepEqual(invalidFilter.body, { error: "invalid_status" });
+  const invalidPeriod = await fin("/exports", { method: "POST", cookie: financeiro.cookie, body: exportPayload("periodo", { period_start: "30/09/2026" }) });
+  assert.equal(invalidPeriod.status, 400, "period must be ISO");
+  assert.deepEqual(invalidPeriod.body, { error: "period_required" });
+  const invertedPeriod = await fin("/exports", { method: "POST", cookie: financeiro.cookie, body: exportPayload("invertido", { period_end: "2026-08-01" }) });
+  assert.equal(invertedPeriod.status, 400, "period end cannot precede start");
+  const unlimited = await fin("/exports", { method: "POST", cookie: financeiro.cookie, body: exportPayload("sem-limite", { is_accountant_limited: false }) });
+  assert.equal(unlimited.status, 400, "accountant limited access cannot be disabled");
+  assert.deepEqual(unlimited.body, { error: "accountant_limited_required" });
+
+  // 3. Exportação criada com trilha e acesso limitado do contador.
+  const created = await fin("/exports", { method: "POST", cookie: financeiro.cookie, body: exportPayload("principal") });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  assert.match(created.body.export.protocol, /^EXP-FIN-\d{8}-[A-Z0-9]{4}$/);
+  assert.equal(created.body.export.status, "pendente");
+  assert.equal(created.body.export.is_accountant_limited, true);
+  assert.equal(created.body.export.access_role, "contador");
+  assert.equal(created.body.export.requested_by_identity, financeiro.id);
+  assert.deepEqual(created.body.export.filters, { competencia: "2026-09", origem: "sintetico" });
+  const exportId = created.body.export.id;
+  const logsAfterCreate = await fin(`/export-logs?export_id=${exportId}`, { cookie: financeiro.cookie });
+  assert.equal(logsAfterCreate.status, 200);
+  assert.equal(logsAfterCreate.body.logs.length, 1, "creation is recorded in the export trail");
+  assert.equal(logsAfterCreate.body.logs[0].action, "export_create");
+
+  // 4. Idempotência/duplicidade pela chave de armazenamento.
+  const duplicate = await fin("/exports", { method: "POST", cookie: financeiro.cookie, body: exportPayload("principal") });
+  assert.equal(duplicate.status, 409, "duplicate storage key rejected");
+  assert.deepEqual(duplicate.body, { error: "duplicate_storage_key" });
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_exports WHERE storage_key=$1", [exportPayload("principal").storage_key])).rows[0].n, 1, "duplicate attempt did not create a second export");
+
+  // 5. Transições controladas de geração.
+  const jump = await fin("/exports", { method: "PATCH", cookie: financeiro.cookie, body: { id: exportId, status: "gerado" } });
+  assert.equal(jump.status, 409, "pendente cannot jump to gerado");
+  assert.deepEqual(jump.body, { error: "invalid_status_transition" });
+  const generating = await fin("/exports", { method: "PATCH", cookie: financeiro.cookie, body: { id: exportId, status: "gerando" } });
+  assert.equal(generating.status, 200, JSON.stringify(generating.body));
+  const generated = await fin("/exports", { method: "PATCH", cookie: financeiro.cookie, body: { id: exportId, status: "gerado" } });
+  assert.equal(generated.status, 200, JSON.stringify(generated.body));
+  assert.ok(generated.body.export.generated_at, "generation timestamp recorded");
+  assert.ok(generated.body.export.expires_at, "accountant access window recorded");
+  assert.equal(generated.body.export.is_accountant_limited, true);
+
+  const withoutKey = await fin("/exports", { method: "POST", cookie: financeiro.cookie, body: exportPayload("sem-chave", { storage_key: undefined }) });
+  assert.equal(withoutKey.status, 201, JSON.stringify(withoutKey.body));
+  assert.equal((await fin("/exports", { method: "PATCH", cookie: financeiro.cookie, body: { id: withoutKey.body.export.id, status: "gerando" } })).status, 200);
+  const missingKey = await fin("/exports", { method: "PATCH", cookie: financeiro.cookie, body: { id: withoutKey.body.export.id, status: "gerado" } });
+  assert.equal(missingKey.status, 400, "generated export requires a storage key");
+  assert.deepEqual(missingKey.body, { error: "storage_key_required_for_gerado" });
+
+  // 6. Trilha imutável e auditoria registrada.
+  const trail = await fin(`/export-logs?export_id=${exportId}`, { cookie: financeiro.cookie });
+  assert.equal(trail.body.logs.length, 3, "every mutation appends to the trail");
+  await assert.rejects(pool.query("UPDATE fin_export_logs SET action='adulterado' WHERE export_id=$1", [exportId]), /fin_export_log_immutable/);
+  await assert.rejects(pool.query("DELETE FROM fin_export_logs WHERE export_id=$1", [exportId]), /fin_export_log_immutable/);
+  const auditRows = await pool.query("SELECT action, meta FROM audit_log WHERE target=$1 ORDER BY id", [exportId]);
+  assert.ok(auditRows.rows.some(row => row.action === "fin_export_create"), "export creation audited");
+  assert.ok(auditRows.rows.some(row => row.action === "fin_export_update" && row.meta?.next_status === "gerado"), "export generation audited");
+
+  // 7. Auditoria indisponível reverte a exportação inteira.
+  const failedKey = `synthetic/fin14/${tag}/audit-down.json`;
+  await pool.query("ALTER TABLE audit_log RENAME TO audit_log_fin14_unavailable");
+  let failedCreate, failedUpdate;
+  try {
+    failedCreate = await fin("/exports", { method: "POST", cookie: financeiro.cookie, body: exportPayload("audit-down", { storage_key: failedKey }) });
+    failedUpdate = await fin("/exports", { method: "PATCH", cookie: financeiro.cookie, body: { id: withoutKey.body.export.id, status: "falhou" } });
+  } finally {
+    await pool.query("ALTER TABLE audit_log_fin14_unavailable RENAME TO audit_log");
+  }
+  assert.equal(failedCreate.status, 503, JSON.stringify(failedCreate.body));
+  assert.deepEqual(failedCreate.body, { error: "audit_unavailable" });
+  assert.equal(failedUpdate.status, 503, JSON.stringify(failedUpdate.body));
+  assert.equal("details" in failedUpdate.body, false, "audit failure response is sanitized");
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_exports WHERE storage_key=$1", [failedKey])).rows[0].n, 0, "export rolled back when audit is unavailable");
+  assert.equal((await pool.query("SELECT status FROM fin_exports WHERE id=$1", [withoutKey.body.export.id])).rows[0].status, "gerando", "export status unchanged when audit is unavailable");
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_export_logs WHERE export_id=$1", [withoutKey.body.export.id])).rows[0].n, 2, "export trail rolled back with the transaction");
+});
+
+test("L07 FIN-15: fechamento de competência, reabertura autorizada, versões preservadas e auditoria fail-closed", { skip: !RUN, timeout: 120_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const ti = await provisionAndLoginStaff(pool, api, { role: "ti" });
+  const rh = await provisionAndLoginStaff(pool, api, { role: "rh" });
+  const competence = `2026-${String(1 + Math.floor(Math.random() * 12)).padStart(2, "0")}-01`;
+  const closurePayload = (date = competence) => ({ competence_date: date, notes: "Fechamento sintético do gate FIN-15 com versões preservadas." });
+
+  assert.equal((await fin("/competence-closures")).status, 401, "anonymous closure read denied");
+  assert.equal((await fin("/report-versions")).status, 401, "anonymous version read denied");
+  assert.equal((await fin("/competence-closures", { cookie: rh.cookie })).status, 403, "rh cannot read closures");
+  const crossOrigin = await fin("/competence-closures", { method: "POST", cookie: financeiro.cookie, origin: "https://externo.example", body: closurePayload() });
+  assert.equal(crossOrigin.status, 403, "cross-origin closure mutation denied");
+  assert.deepEqual(crossOrigin.body, { error: "forbidden_origin" });
+  assert.equal((await fin("/competence-closures", { cookie: ti.cookie })).status, 200, "ti reads the closure domain");
+  const tiWrite = await fin("/competence-closures", { method: "POST", cookie: ti.cookie, body: closurePayload() });
+  assert.equal(tiWrite.status, 403, "ti cannot close a competence");
+  assert.deepEqual(tiWrite.body, { error: "read_only" });
+
+  const invalidDate = await fin("/competence-closures", { method: "POST", cookie: financeiro.cookie, body: closurePayload("01/2026") });
+  assert.equal(invalidDate.status, 400, "competence date must be ISO");
+  assert.deepEqual(invalidDate.body, { error: "competence_date_required" });
+
+  const created = await fin("/competence-closures", { method: "POST", cookie: financeiro.cookie, body: closurePayload() });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  assert.equal(created.body.closure.status, "fechada");
+  assert.equal(created.body.closure.closed_by_identity, financeiro.id);
+  const closureId = created.body.closure.id;
+  const duplicate = await fin("/competence-closures", { method: "POST", cookie: financeiro.cookie, body: closurePayload() });
+  assert.equal(duplicate.status, 409, "the same competence cannot be closed twice");
+  assert.deepEqual(duplicate.body, { error: "duplicate_competence" });
+
+  const invalidAction = await fin("/competence-closures", { method: "PATCH", cookie: financeiro.cookie, body: { id: closureId, action: "apagar" } });
+  assert.equal(invalidAction.status, 400, "closure actions are allowlisted");
+  assert.deepEqual(invalidAction.body, { error: "invalid_action" });
+  const reopenWithoutReason = await fin("/competence-closures", { method: "PATCH", cookie: financeiro.cookie, body: { id: closureId, action: "reopen" } });
+  assert.equal(reopenWithoutReason.status, 400, "reopening requires a justification");
+  assert.equal(reopenWithoutReason.body.error, "reopen_reason_10_1000_required_reabertura_autorizada");
+  assert.equal("details" in reopenWithoutReason.body, false, "no SQL details in validation errors");
+
+  const reopened = await fin("/competence-closures", { method: "PATCH", cookie: financeiro.cookie, body: { id: closureId, action: "reopen", reopen_reason: "Reabertura autorizada sintética para reconferência do gate FIN-15." } });
+  assert.equal(reopened.status, 200, JSON.stringify(reopened.body));
+  assert.equal(reopened.body.closure.status, "reaberta");
+  assert.equal(reopened.body.closure.authorized_by_identity, financeiro.id, "reopening records the authorizing identity");
+  assert.ok(reopened.body.closure.authorized_at, "reopening records the authorization date");
+  assert.equal(reopened.body.version, 2, "reopening preserves a new report version");
+
+  const doubleReopen = await fin("/competence-closures", { method: "PATCH", cookie: financeiro.cookie, body: { id: closureId, action: "reopen", reopen_reason: "Segunda reabertura sintética sem fechamento intermediário." } });
+  assert.equal(doubleReopen.status, 409, "an already reopened competence cannot be reopened again");
+  assert.deepEqual(doubleReopen.body, { error: "invalid_status_transition" });
+
+  const reclosed = await fin("/competence-closures", { method: "PATCH", cookie: financeiro.cookie, body: { id: closureId, action: "close", close_reason: "Novo fechamento sintético após conferência do gate FIN-15." } });
+  assert.equal(reclosed.status, 200, JSON.stringify(reclosed.body));
+  assert.equal(reclosed.body.closure.status, "fechada");
+  assert.equal(reclosed.body.version, 3);
+
+  const versions = await fin(`/report-versions?closure_id=${closureId}`, { cookie: financeiro.cookie });
+  assert.equal(versions.status, 200);
+  assert.deepEqual(versions.body.versions.map(row => row.version), [3, 2, 1], "every closure step keeps its own preserved version");
+  assert.ok(versions.body.versions.every(row => row.is_preserved === true), "versions are preserved");
+  await assert.rejects(pool.query("UPDATE fin_report_versions SET report_type='adulterado' WHERE closure_id=$1", [closureId]), /fin_report_version_immutable/);
+  await assert.rejects(pool.query("DELETE FROM fin_report_versions WHERE closure_id=$1", [closureId]), /fin_report_version_immutable/);
+  const auditRows = await pool.query("SELECT action FROM audit_log WHERE target=$1 ORDER BY id", [closureId]);
+  assert.deepEqual(auditRows.rows.map(row => row.action), ["fin_closure_create", "fin_closure_reopen", "fin_closure_close"], "closure lifecycle fully audited");
+
+  const failedCompetence = "2027-03-01";
+  await pool.query("ALTER TABLE audit_log RENAME TO audit_log_fin15_unavailable");
+  let failedCreate, failedReopen;
+  try {
+    failedCreate = await fin("/competence-closures", { method: "POST", cookie: financeiro.cookie, body: closurePayload(failedCompetence) });
+    failedReopen = await fin("/competence-closures", { method: "PATCH", cookie: financeiro.cookie, body: { id: closureId, action: "reopen", reopen_reason: "Reabertura sintética durante indisponibilidade da auditoria." } });
+  } finally {
+    await pool.query("ALTER TABLE audit_log_fin15_unavailable RENAME TO audit_log");
+  }
+  assert.equal(failedCreate.status, 503, JSON.stringify(failedCreate.body));
+  assert.deepEqual(failedCreate.body, { error: "audit_unavailable" });
+  assert.equal(failedReopen.status, 503, JSON.stringify(failedReopen.body));
+  assert.equal("details" in failedReopen.body, false, "audit failure response is sanitized");
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_competence_closures WHERE competence_date=$1", [failedCompetence])).rows[0].n, 0, "closure rolled back when audit is unavailable");
+  assert.equal((await pool.query("SELECT status FROM fin_competence_closures WHERE id=$1", [closureId])).rows[0].status, "fechada", "reopening rolled back when audit is unavailable");
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_report_versions WHERE closure_id=$1", [closureId])).rows[0].n, 3, "no version created when audit is unavailable");
+});
+
+test("L07 FIN-16: provisão de comissão CRM-25 com revisão obrigatória, sem pagamento automático, histórico imutável e auditoria fail-closed", { skip: !RUN, timeout: 120_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const ti = await provisionAndLoginStaff(pool, api, { role: "ti" });
+  const rh = await provisionAndLoginStaff(pool, api, { role: "rh" });
+  const tag = uuid().slice(0, 8);
+  const ruleId = uuid();
+  await pool.query(
+    "INSERT INTO crm_commission_rules (id,name,description,percent,status,created_by) VALUES ($1,$2,$3,5.00,'ativa','admin')",
+    [ruleId, `Regra sintética CRM-25 ${tag}`, "Regra sintética do gate FIN-16; provisão e revisão sem pagamento automático."]
+  );
+  const provisionPayload = (overrides = {}) => ({
+    rule_id: ruleId,
+    provision_date: "2026-09-30",
+    amount_cents: 125000,
+    notes: "Provisão sintética do gate FIN-16 ligada à regra CRM-25.",
+    ...overrides,
+  });
+
+  assert.equal((await fin("/commission-provisions")).status, 401, "anonymous provision read denied");
+  assert.equal((await fin("/commission-provision-history")).status, 401, "anonymous provision history read denied");
+  assert.equal((await fin("/commission-provisions", { cookie: rh.cookie })).status, 403, "rh cannot read provisions");
+  const crossOrigin = await fin("/commission-provisions", { method: "POST", cookie: financeiro.cookie, origin: "https://externo.example", body: provisionPayload() });
+  assert.equal(crossOrigin.status, 403, "cross-origin provision mutation denied");
+  assert.deepEqual(crossOrigin.body, { error: "forbidden_origin" });
+  assert.equal((await fin("/commission-provisions", { cookie: ti.cookie })).status, 200, "ti reads the provision domain");
+  const tiWrite = await fin("/commission-provisions", { method: "POST", cookie: ti.cookie, body: provisionPayload() });
+  assert.equal(tiWrite.status, 403, "ti cannot create provisions");
+  assert.deepEqual(tiWrite.body, { error: "read_only" });
+
+  const autoPaid = await fin("/commission-provisions", { method: "POST", cookie: financeiro.cookie, body: provisionPayload({ is_auto_paid: true }) });
+  assert.equal(autoPaid.status, 400, "automatic payment is refused at creation");
+  assert.deepEqual(autoPaid.body, { error: "auto_paid_forbidden_nao_pagar_automaticamente" });
+  const negative = await fin("/commission-provisions", { method: "POST", cookie: financeiro.cookie, body: provisionPayload({ amount_cents: -1 }) });
+  assert.equal(negative.status, 400, "negative provisions are refused");
+  assert.deepEqual(negative.body, { error: "amount_cents_gte_0" });
+  const preStatus = await fin("/commission-provisions", { method: "POST", cookie: financeiro.cookie, body: provisionPayload({ status: "paga" }) });
+  assert.equal(preStatus.status, 400, "a provision cannot be born paid");
+  assert.deepEqual(preStatus.body, { error: "initial_status_must_be_provisionada" });
+
+  const created = await fin("/commission-provisions", { method: "POST", cookie: financeiro.cookie, body: provisionPayload() });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  assert.equal(created.body.provision.status, "provisionada");
+  assert.equal(created.body.provision.is_auto_paid, false);
+  assert.equal(created.body.provision.rule_id, ruleId, "provision stays linked to the CRM-25 rule");
+  assert.match(created.body.note, /nao_pagar_automaticamente/);
+  const provisionId = created.body.provision.id;
+
+  const directPay = await fin("/commission-provisions", { method: "PATCH", cookie: financeiro.cookie, body: { id: provisionId, status: "paga", reason: "Tentativa sintética de pagamento sem revisão prévia.", manual_payment_confirmation: true } });
+  assert.equal(directPay.status, 409, "payment requires a previous review");
+  assert.deepEqual(directPay.body, { error: "payment_requires_review" });
+  const noReason = await fin("/commission-provisions", { method: "PATCH", cookie: financeiro.cookie, body: { id: provisionId, status: "em_revisao" } });
+  assert.equal(noReason.status, 400, "every provision change needs a reason");
+  assert.deepEqual(noReason.body, { error: "reason_10_1000_required" });
+  const noRevisionReason = await fin("/commission-provisions", { method: "PATCH", cookie: financeiro.cookie, body: { id: provisionId, status: "em_revisao", reason: "Revisão sintética iniciada pelo gate FIN-16." } });
+  assert.equal(noRevisionReason.status, 400, "review requires its documented reason");
+  assert.deepEqual(noRevisionReason.body, { error: "revision_reason_10_1000_required" });
+  const invalidStatus = await fin("/commission-provisions", { method: "PATCH", cookie: financeiro.cookie, body: { id: provisionId, status: "quitada", reason: "Status fora da allowlist sintético." } });
+  assert.equal(invalidStatus.status, 400, "provision status is allowlisted before SQL");
+  assert.deepEqual(invalidStatus.body, { error: "invalid_status" });
+
+  const review = await fin("/commission-provisions", { method: "PATCH", cookie: financeiro.cookie, body: { id: provisionId, status: "em_revisao", reason: "Revisão sintética iniciada pelo gate FIN-16.", revision_reason: "Conferência sintética da base de cálculo da comissão." } });
+  assert.equal(review.status, 200, JSON.stringify(review.body));
+  assert.equal(review.body.provision.status, "em_revisao");
+  assert.equal(review.body.provision.reviewed_by_identity, financeiro.id);
+  const reviewed = await fin("/commission-provisions", { method: "PATCH", cookie: financeiro.cookie, body: { id: provisionId, status: "revisada", reason: "Revisão sintética concluída pelo gate FIN-16.", revision_reason: "Base conferida; valor mantido na revisão sintética.", amount_cents: 120000 } });
+  assert.equal(reviewed.status, 200, JSON.stringify(reviewed.body));
+  assert.equal(reviewed.body.provision.status, "revisada");
+  assert.equal(Number(reviewed.body.provision.amount_cents), 120000);
+
+  const payWithoutConfirmation = await fin("/commission-provisions", { method: "PATCH", cookie: financeiro.cookie, body: { id: provisionId, status: "paga", reason: "Baixa sintética sem confirmação manual explícita." } });
+  assert.equal(payWithoutConfirmation.status, 400, "payment is never implicit");
+  assert.deepEqual(payWithoutConfirmation.body, { error: "manual_payment_confirmation_required_nao_pagar_automaticamente" });
+  const autoPayPatch = await fin("/commission-provisions", { method: "PATCH", cookie: financeiro.cookie, body: { id: provisionId, status: "paga", reason: "Tentativa sintética de marcar pagamento automático.", manual_payment_confirmation: true, is_auto_paid: true } });
+  assert.equal(autoPayPatch.status, 400, "automatic payment stays forbidden on update");
+  assert.deepEqual(autoPayPatch.body, { error: "auto_paid_forbidden_nao_pagar_automaticamente" });
+
+  const paid = await fin("/commission-provisions", { method: "PATCH", cookie: financeiro.cookie, body: { id: provisionId, status: "paga", reason: "Baixa manual sintética registrada após revisão do gate FIN-16.", manual_payment_confirmation: true } });
+  assert.equal(paid.status, 200, JSON.stringify(paid.body));
+  assert.equal(paid.body.provision.status, "paga");
+  assert.equal(paid.body.provision.is_auto_paid, false, "registering the payment never flags automatic payment");
+  assert.equal(paid.body.provision.paid_by_identity, financeiro.id);
+  assert.match(paid.body.note, /sem_pagamento_automatico/);
+  const afterPaid = await fin("/commission-provisions", { method: "PATCH", cookie: financeiro.cookie, body: { id: provisionId, status: "cancelada", reason: "Tentativa sintética de cancelar após a baixa manual." } });
+  assert.equal(afterPaid.status, 409, "a paid provision is terminal");
+  assert.deepEqual(afterPaid.body, { error: "invalid_status_transition" });
+
+  const history = await fin(`/commission-provision-history?provision_id=${provisionId}`, { cookie: financeiro.cookie });
+  assert.equal(history.status, 200);
+  assert.equal(history.body.history.length, 4, "creation, review, revision and payment are historized");
+  assert.ok(history.body.history.every(row => row.is_auto_paid_attempt === false), "history never registers an automatic payment");
+  await assert.rejects(pool.query("UPDATE fin_commission_provision_history SET reason='Tentativa de adulteração' WHERE provision_id=$1", [provisionId]), /immutable/);
+  await assert.rejects(pool.query("DELETE FROM fin_commission_provision_history WHERE provision_id=$1", [provisionId]), /immutable/);
+  const auditRows = await pool.query("SELECT action FROM audit_log WHERE target=$1 ORDER BY id", [provisionId]);
+  assert.deepEqual(auditRows.rows.map(row => row.action), [
+    "fin_commission_provision_create",
+    "fin_commission_provision_review",
+    "fin_commission_provision_review",
+    "fin_commission_provision_pay",
+  ], "provision lifecycle fully audited");
+
+  const rollbackProvision = await fin("/commission-provisions", { method: "POST", cookie: financeiro.cookie, body: provisionPayload({ amount_cents: 99000 }) });
+  assert.equal(rollbackProvision.status, 201, JSON.stringify(rollbackProvision.body));
+  const rollbackId = rollbackProvision.body.provision.id;
+  await pool.query("ALTER TABLE audit_log RENAME TO audit_log_fin16_unavailable");
+  let failedCreate, failedReview;
+  try {
+    failedCreate = await fin("/commission-provisions", { method: "POST", cookie: financeiro.cookie, body: provisionPayload({ amount_cents: 77000 }) });
+    failedReview = await fin("/commission-provisions", { method: "PATCH", cookie: financeiro.cookie, body: { id: rollbackId, status: "em_revisao", reason: "Revisão sintética durante indisponibilidade da auditoria.", revision_reason: "Conferência sintética durante indisponibilidade da auditoria." } });
+  } finally {
+    await pool.query("ALTER TABLE audit_log_fin16_unavailable RENAME TO audit_log");
+  }
+  assert.equal(failedCreate.status, 503, JSON.stringify(failedCreate.body));
+  assert.deepEqual(failedCreate.body, { error: "audit_unavailable" });
+  assert.equal(failedReview.status, 503, JSON.stringify(failedReview.body));
+  assert.equal("details" in failedReview.body, false, "audit failure response is sanitized");
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_commission_provisions WHERE rule_id=$1 AND amount_cents=77000", [ruleId])).rows[0].n, 0, "provision rolled back when audit is unavailable");
+  assert.equal((await pool.query("SELECT status FROM fin_commission_provisions WHERE id=$1", [rollbackId])).rows[0].status, "provisionada", "review rolled back when audit is unavailable");
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_commission_provision_history WHERE provision_id=$1", [rollbackId])).rows[0].n, 1, "history rolled back with the transaction");
+});
