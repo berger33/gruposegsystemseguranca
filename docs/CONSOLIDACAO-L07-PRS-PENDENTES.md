@@ -55,6 +55,17 @@ Registro exigido antes de qualquer encerramento de PR. **Nenhum dos PRs foi mesc
 | Premissas estruturadas e detector textual de promessa | #59 | **Não adotada nesta fatia** | Mudança de contrato de dados maior que a correção; permanece como referência |
 | Garantias de conciliação (#47) e de despesas/alçadas (#53) | #47, #53 | **Fora do escopo desta fatia** | Pertencem a FIN-05 e FIN-10; continuam na fila de reavaliação registrada abaixo |
 
+## Colisão a resolver: PR #67 e PR #68 atacam a mesma fatia (2026-10-01)
+
+Durante esta fatia foi aberta, em paralelo, a **PR #67** (`arena/01a0f9b5-gruposegsystemseguranca`, 2026-10-01T23:47Z), que também corrige FIN-13 e também cria uma migração **numerada 134**, com outro nome de arquivo (`134-fin13-budget-revisions-idempotency-margin.sql`, contra `134-fin13-budget-revision-margin-idempotency.sql` da PR #68).
+
+Consequência prática: **as duas não podem ser integradas**. Além de resolverem o mesmo problema duas vezes, duplicariam o número 134, o que reprova `node scripts/qa-wave0-static.mjs` e quebra o migrador.
+
+Encaminhamento proposto, a decidir pelo dono (nenhuma das duas foi mesclada ou fechada):
+1. Escolher **uma** das duas PRs como implementação da fatia e fechar a outra registrando o motivo.
+2. Se a escolhida for a #67, a #68 precisa ser renumerada para a próxima migração livre e rebaseada antes de qualquer reaproveitamento (e vice-versa).
+3. Não misturar as duas no mesmo merge.
+
 ## Estado consolidado
 - L03: EMP-01..19 e HR-01..24 registrados como pronto_local; aceite humano e regressão final separados.
 - L04: implementação técnica integrada; regressão 20/20 no PR #65.
