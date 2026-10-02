@@ -1,5 +1,31 @@
 # Evidências — entrega local integral
 
+## Evidências — L07 FIN-14/15/16 (2026-10-02)
+
+| Prova | Perfil/cenário | Resultado observado |
+|---|---|---|
+| Baseline pré-alteração | base `cc4da84`; PostgreSQL/HTTP/Chromium descartáveis | estático 5/5, typecheck 0, unitários 196/196, migrações 136/136 e L07 35/35 duas vezes consecutivas; SIGSEGV anteriores do Chromium registrados como ruído, sem mudar timeout/skip/assertiva |
+| Reprodução da lacuna | financeiro, Chromium real | novo subteste falhou com `aba exports deve existir` (0 !== 1) antes da implementação |
+| FIN-14 | financeiro; anônimo/RH/TI negativos | período/trilha/transições; leitura falha+retry; download JSON limitado; auditoria fail-closed; 6 retries concorrentes = 1 criação + 5 replays |
+| FIN-15 | financeiro; SQL direto | fechamento/reabertura com motivo, versões preservadas, 6 retries = 1 fechamento; recebível em mês fechado recusado por API e `fin_competence_closed` no banco; reabertura libera |
+| FIN-16 | financeiro; regra CRM-25 sintética | provisão/revisão e histórico visíveis; 6 retries = 1 provisão; `is_auto_paid=false`; sem botão/caminho automático; rollback de auditoria preservado |
+| Chromium FIN-14/15/16 | sessão financeira real | percorre as três abas, injeta erro 500 em cada GET, usa Tentar novamente e persiste exportação, fechamento e provisão/revisão |
+
+Todos os dados são sintéticos. Aceite humano e Windows: pendentes.
+
+### Gates finais da árvore entregue
+
+- `npm run typecheck`: exit 0, zero erros.
+- `npm test`: 196/196, zero skips/falhas.
+- `npm run build`: exit 0, 78 páginas.
+- `node scripts/qa-wave0-static.mjs`: 5/5, migrações 001–137.
+- `npm run test:migrations:pg`: 137/137, dois passes, clone e checksum negativo esperado, exit 0.
+- `npm run test:l07-delivery:pg`: 37/37 em **duas execuções consecutivas**, zero skips.
+- regressões no mesmo conteúdo entregue: L03 1/1, L04 20/20, L05 1/1, L06 9/9, todos exit 0.
+- Ruído documentado, não mascarado: antes do baseline consecutivo houve SIGSEGV intermitente do Chromium em casos antigos e, após a mudança final de autoria, um run antigo FIN-10 não encontrou a alçada renderizada a tempo; ambos foram reexecutados sem alterar o teste. Depois do primeiro verde da implementação, duas falhas reais do novo teste (espera de renderização e corrida de storage key) foram corrigidas sem alterar timeout, skip ou remover assertiva.
+
+
+
 Cada linha registra cenário, perfil, comando, resultado observado e commit.
 Evidência de lote antigo não vale para SHA novo: reexecutar após alterações.
 

@@ -1066,24 +1066,24 @@ orçamento gerencial e cenários de expansão com premissas explícitas; não pr
 
 ## FIN-14
 exportação do período com trilha, filtros, totais conciliáveis e acesso limitado do contador.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local (validação automática; aceite humano pendente)
+- Tela / API / dados / autorização: aba “Exportação do período” em `/admin/financeiro`, busca por protocolo/arquivo, R$ pt-BR, erro+retry, geração e download JSON sintético. `/api/fin/exports`, `/api/fin/export-logs` e `/api/fin/export-download`; download somente de registro gerado, não expirado e limitado a `contador`, sem expor chave interna. Migrações 080/133/137; TI leitura-somente; auditoria transacional.
+- Integração e evidência (teste, resultado, commit): gate L07 37 subtestes cobre anônimo/papel indevido/TI, rollback de auditoria, trilha imutável, download limitado, erro UI+retry, Chromium e 6 retries concorrentes (1 criação + 5 replays).
+- Pendência / fronteira externa / aceite humano: arquivo é JSON sintético local; sem envio ao contador/storage externo. Aceite humano e Windows pendentes.
 
 ## FIN-15
 fechamento de competência e reabertura autorizada; preservar versões de relatório.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local (validação automática; aceite humano pendente)
+- Tela / API / dados / autorização: aba “Fechamento / Reabertura”, seleção por competência/estado, motivo obrigatório e versões visíveis. `/api/fin/competence-closures` e `/api/fin/report-versions`; migração 137 bloqueia por trigger INSERT/UPDATE/DELETE de recebíveis/pagáveis em mês fechado inclusive SQL direto, liberando após reabertura autorizada.
+- Integração e evidência (teste, resultado, commit): versões imutáveis 1/2/3, rollback de auditoria, 6 retries concorrentes = um fechamento/uma versão, API e SQL direto recusados com `competence_closed`, jornada Chromium com erro+retry.
+- Pendência / fronteira externa / aceite humano: escopo técnico local cobre lançamentos canônicos a receber/a pagar; política empresarial e aceite humano/Windows pendentes.
 
 ## FIN-16
 comissões ligadas à regra CRM-25, provisão e revisão; não pagar automaticamente.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local (validação automática; aceite humano pendente)
+- Tela / API / dados / autorização: aba “Comissões”, seleção por registro/regra, R$ pt-BR, revisão e histórico auditável; nenhuma ação de pagamento. `/api/fin/commission-provisions` e histórico; banco/API mantêm `is_auto_paid=false` e revisão prévia obrigatória.
+- Integração e evidência (teste, resultado, commit): papel/anônimo/TI, rollback de auditoria, pagamento automático recusado, história imutável, 6 retries concorrentes = uma provisão/um histórico e jornada Chromium com erro+retry/revisão.
+- Pendência / fronteira externa / aceite humano: nenhuma baixa/pagamento/gateway real ou automático. Aceite humano e Windows pendentes.
 
 ## AST-01
 produtos/SKU, fornecedores, unidade de medida, custo, local e estoque mínimo.

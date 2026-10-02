@@ -163,6 +163,7 @@ export function createFinApi({ pool, auditLog, sameOrigin, requireSession, requi
       } catch(e) {
         try { await client.query('ROLLBACK'); } catch {}
         if (e?.code === '42P01') return json(res,503,{ error:"audit_unavailable" });
+        if (String(e?.message || "").includes("fin_competence_closed")) return json(res,409,{ error:"competence_closed" });
         if (String(e.message).includes("duplicate") || String(e.message).includes("unique")) return json(res,409,{ error:"duplicate_competence_item", note:"geração recorrente idempotente por contrato/competência/item" });
         return json(res,500,{ error:"internal", detail:e.message });
       } finally { client.release(); }
@@ -187,6 +188,7 @@ export function createFinApi({ pool, auditLog, sameOrigin, requireSession, requi
       } catch(e) {
         try { await client.query('ROLLBACK'); } catch {}
         if (e?.code === '42P01') return json(res,503,{ error:"audit_unavailable" });
+        if (String(e?.message || "").includes("fin_competence_closed")) return json(res,409,{ error:"competence_closed" });
         return json(res,500,{ error:"internal", detail:e.message });
       } finally { client.release(); }
     }
@@ -230,6 +232,7 @@ export function createFinApi({ pool, auditLog, sameOrigin, requireSession, requi
       } catch(e) {
         try { await client.query('ROLLBACK'); } catch {}
         if (e?.code === '42P01') return json(res,503,{ error:"audit_unavailable" });
+        if (String(e?.message || "").includes("fin_competence_closed")) return json(res,409,{ error:"competence_closed" });
         if (String(e.message).includes("duplicate") || String(e.message).includes("unique")) return json(res,409,{ error:"duplicate_competence", note:"geração recorrente idempotente" });
         return json(res,500,{ error:"internal", detail:e.message });
       } finally { client.release(); }
@@ -266,6 +269,7 @@ export function createFinApi({ pool, auditLog, sameOrigin, requireSession, requi
       } catch(e) {
         try { await client.query('ROLLBACK'); } catch {}
         if (e?.code === '42P01') return json(res,503,{ error:"audit_unavailable" });
+        if (String(e?.message || "").includes("fin_competence_closed")) return json(res,409,{ error:"competence_closed" });
         return json(res,500,{ error:"internal", detail:e.message });
       } finally { client.release(); }
     }
@@ -336,6 +340,7 @@ export function createFinApi({ pool, auditLog, sameOrigin, requireSession, requi
     } catch(e) {
       try { await client.query('ROLLBACK'); } catch {}
       if (e && e.code === '42P01') return json(res,503,{ error:"audit_unavailable" });
+      if (String(e?.message || "").includes("fin_competence_closed")) return json(res,409,{ error:"competence_closed" });
       return json(res,500,{ error:"internal", detail:e.message });
     } finally { client.release(); }
   }
@@ -421,6 +426,7 @@ export function createFinApi({ pool, auditLog, sameOrigin, requireSession, requi
     } catch(e) {
       try { await client.query('ROLLBACK'); } catch {}
       if (e?.code === '42P01') return json(res,503,{ error:"audit_unavailable" });
+        if (String(e?.message || "").includes("fin_competence_closed")) return json(res,409,{ error:"competence_closed" });
       if (e?.code === '23505') return json(res,409,{ error:"duplicate_competence_item", note:"idempotente" });
       return json(res,500,{ error:"internal", detail:e.message });
     } finally { client.release(); }

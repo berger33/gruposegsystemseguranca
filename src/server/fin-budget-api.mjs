@@ -90,6 +90,12 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
     const n = Number(value);
     return Number.isFinite(n) && n >= -100 && n <= 100 ? { ok:true, value:n } : { ok:false, value:null };
   };
+  const parseIdempotencyKey = (value) => {
+    if (value === undefined || value === null || value === '') return { ok:true, value:null };
+    const key = cleanText(value);
+    return { ok: textInRange(key, 8, 200), value:key };
+  };
+  const fingerprint = (value) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
   const isAuditUnavailable = (error) => error?.code === '42P01' || /audit_log/i.test(String(error?.message || ''));
   const dbFailure = (res, error, options = {}) => {
     if (isAuditUnavailable(error)) return send(res, 503, {error:'audit_unavailable'});
@@ -104,6 +110,7 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
       if (msg.includes('fin_export_invalid_transition')) return send(res, 409, {error:'invalid_status_transition'});
       if (msg.includes('fin_export_generated_requires_storage_key')) return send(res, 400, {error:'storage_key_required_for_gerado'});
       if (msg.includes('fin_export_log_immutable')) return send(res, 409, {error:'history_immutable'});
+      if (msg.includes('fin_competence_closed')) return send(res, 409, {error:'competence_closed'});
       if (msg.includes('fin_closure_invalid_transition')) return send(res, 409, {error:'invalid_status_transition'});
       if (msg.includes('fin_closure_reopen_requires_authorization')) return send(res, 400, {error:'authorized_by_required'});
       if (msg.includes('fin_report_version_immutable')) return send(res, 409, {error:'history_immutable'});
@@ -486,20 +493,38 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
       const totalAmount = parseNullableCents(body.total_amount_cents);
       if (!totalRecords.ok || !totalAmount.ok) return send(res, 400, {error:'totals_gte_0'});
       if (body.is_accountant_limited === false) return send(res, 400, {error:'accountant_limited_required'});
+      const idempotency = parseIdempotencyKey(body.idempotency_key);
+      if (!idempotency.ok) return send(res, 400, {error:'idempotency_key_8_200'});
+      const contentFingerprint = idempotency.value ? fingerprint([period_start, period_end, filters, totals, totalRecords.value ?? 0, totalAmount.value ?? 0, file_name.value, file_url.value, storage_key.value]) : null;
       const protocol = generateProtocol('EXP-FIN');
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
+        if (idempotency.value) {
+          const retry = await client.query(`SELECT * FROM fin_exports WHERE idempotency_key=$1 FOR UPDATE`, [idempotency.value]);
+          if (retry.rows.length) {
+            await client.query('ROLLBACK');
+            return retry.rows[0].content_fingerprint === contentFingerprint
+              ? send(res, 200, { export:retry.rows[0], idempotent_replay:true })
+              : send(res, 409, {error:'idempotency_key_reused_with_different_content'});
+          }
+        }
         if (storage_key.value) {
           // Chave de armazenamento é a chave de idempotência da exportação: a
           // duplicidade é recusada sob bloqueio, não apenas pelo índice único.
-          const dup = await client.query(`SELECT id, protocol FROM fin_exports WHERE storage_key=$1 FOR UPDATE`, [storage_key.value]);
-          if (dup.rows.length) { await client.query('ROLLBACK'); return send(res, 409, {error:'duplicate_storage_key'}); }
+          const dup = await client.query(`SELECT * FROM fin_exports WHERE storage_key=$1 FOR UPDATE`, [storage_key.value]);
+          if (dup.rows.length) {
+            await client.query('ROLLBACK');
+            if (idempotency.value && dup.rows[0].idempotency_key === idempotency.value && dup.rows[0].content_fingerprint === contentFingerprint) {
+              return send(res, 200, {export:dup.rows[0], idempotent_replay:true});
+            }
+            return send(res, 409, {error:'duplicate_storage_key'});
+          }
         }
         const { rows } = await client.query(
-          `INSERT INTO fin_exports (protocol, period_start, period_end, filters, totals, total_records, total_amount_cents, file_name, file_url, storage_key, is_accountant_limited, access_role, requested_by_identity, status)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,true,'contador',$11,'pendente') RETURNING *`,
-          [protocol, period_start, period_end, JSON.stringify(filters), JSON.stringify(totals), totalRecords.value ?? 0, totalAmount.value ?? 0, file_name.value, file_url.value, storage_key.value, sess.identityId||null]
+          `INSERT INTO fin_exports (protocol, period_start, period_end, filters, totals, total_records, total_amount_cents, file_name, file_url, storage_key, is_accountant_limited, access_role, requested_by_identity, status, idempotency_key, content_fingerprint)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,true,'contador',$11,'pendente',$12,$13) RETURNING *`,
+          [protocol, period_start, period_end, JSON.stringify(filters), JSON.stringify(totals), totalRecords.value ?? 0, totalAmount.value ?? 0, file_name.value, file_url.value, storage_key.value, sess.identityId||null, idempotency.value, contentFingerprint]
         );
         await client.query(
           `INSERT INTO fin_export_logs (export_id, action, actor_identity, meta) VALUES ($1,$2,$3,$4)`,
@@ -510,6 +535,12 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
         return send(res, 201, { export: rows[0], note:'exportacao_periodo_trilha_filtros_totais_conciliaveis_acesso_limitado_contador' });
       } catch(e) {
         try { await client.query('ROLLBACK'); } catch {}
+        if (e?.code === '23505' && idempotency.value) {
+          const retry = await client.query(`SELECT * FROM fin_exports WHERE idempotency_key=$1`, [idempotency.value]);
+          if (retry.rows.length) return retry.rows[0].content_fingerprint === contentFingerprint
+            ? send(res, 200, { export:retry.rows[0], idempotent_replay:true })
+            : send(res, 409, {error:'idempotency_key_reused_with_different_content'});
+        }
         return dbFailure(res, e, { duplicate:'duplicate_storage_key', invalid:'invalid_export' });
       } finally { client.release(); }
     }
@@ -572,6 +603,32 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
     return send(res, 405, {error:'method_not_allowed'});
   };
 
+  const handleExportDownload = async (req, res) => {
+    const sess = await checkAuth(req, res); if (!sess) return;
+    if (req.method !== 'GET') return send(res, 405, {error:'method_not_allowed'});
+    const url = new URL(req.url, `http://${req.headers.host||'localhost'}`);
+    const id = url.searchParams.get('id');
+    if (!isUuid(id)) return send(res, 400, {error:'invalid_id'});
+    try {
+      const { rows } = await pool.query(
+        `SELECT id,protocol,period_start,period_end,filters,totals,total_records,total_amount_cents,file_name,status,is_accountant_limited,access_role,generated_at,expires_at
+           FROM fin_exports WHERE id=$1`, [id]
+      );
+      if (!rows.length) return send(res, 404, {error:'not_found'});
+      const item = rows[0];
+      if (!item.is_accountant_limited || item.access_role !== 'contador') return send(res, 403, {error:'accountant_scope_required'});
+      if (item.status !== 'gerado') return send(res, 409, {error:'export_not_ready'});
+      if (item.expires_at && new Date(item.expires_at) <= new Date()) return send(res, 410, {error:'export_expired'});
+      const payload = JSON.stringify({ export:item, synthetic:true, note:'download limitado ao período e aos totais autorizados; sem dados reais' }, null, 2);
+      res.writeHead(200, {
+        'Content-Type':'application/json; charset=utf-8',
+        'Content-Disposition':`attachment; filename="${String(item.file_name || `${item.protocol}.json`).replace(/[^a-zA-Z0-9._-]/g, '_')}"`,
+        'Cache-Control':'private, no-store',
+      });
+      return res.end(payload);
+    } catch { return send(res, 500, {error:'internal'}); }
+  };
+
   const handleExportLogs = async (req, res) => {
     const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method !== 'GET') return send(res, 405, {error:'method_not_allowed'});
@@ -604,15 +661,26 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
       if (!isIsoDate(competence_date)) return send(res, 400, {error:'competence_date_required'});
       const notes = optionalText(body.notes, 10, 2000);
       if (!notes.ok) return send(res, 400, {error:'notes_10_2000'});
+      if (body.totals !== undefined && !isPlainObject(body.totals)) return send(res, 400, {error:'totals_object_required'});
+      const idempotency = parseIdempotencyKey(body.idempotency_key);
+      if (!idempotency.ok) return send(res, 400, {error:'idempotency_key_8_200'});
+      const contentFingerprint = idempotency.value ? fingerprint([competence_date, notes.value, body.totals ?? {}]) : null;
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
+        await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`fin-close:${competence_date.slice(0,7)}`]);
+        if (idempotency.value) {
+          const retry = await client.query(`SELECT * FROM fin_competence_closures WHERE idempotency_key=$1 FOR UPDATE`, [idempotency.value]);
+          if (retry.rows.length) { await client.query('ROLLBACK'); return retry.rows[0].content_fingerprint === contentFingerprint
+            ? send(res, 200, {closure:retry.rows[0], idempotent_replay:true})
+            : send(res, 409, {error:'idempotency_key_reused_with_different_content'}); }
+        }
         const dup = await client.query(`SELECT id FROM fin_competence_closures WHERE competence_date=$1 FOR UPDATE`, [competence_date]);
         if (dup.rows.length) { await client.query('ROLLBACK'); return send(res, 409, {error:'duplicate_competence'}); }
         const { rows } = await client.query(
-          `INSERT INTO fin_competence_closures (competence_date, status, closed_by_identity, closed_at, notes)
-           VALUES ($1,'fechada',$2,NOW(),$3) RETURNING *`,
-          [competence_date, sess.identityId||null, notes.value]
+          `INSERT INTO fin_competence_closures (competence_date, status, closed_by_identity, closed_at, notes, idempotency_key, content_fingerprint)
+           VALUES ($1,'fechada',$2,NOW(),$3,$4,$5) RETURNING *`,
+          [competence_date, sess.identityId||null, notes.value, idempotency.value, contentFingerprint]
         );
         await client.query(
           `INSERT INTO fin_report_versions (closure_id, version, report_type, data, totals, is_preserved, created_by_identity)
@@ -624,6 +692,12 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
         return send(res, 201, { closure: rows[0], note:'fechamento_competencia_preservar_versoes_relatorio' });
       } catch(e) {
         try { await client.query('ROLLBACK'); } catch {}
+        if (e?.code === '23505' && idempotency.value) {
+          const retry = await client.query(`SELECT * FROM fin_competence_closures WHERE idempotency_key=$1`, [idempotency.value]);
+          if (retry.rows.length) return retry.rows[0].content_fingerprint === contentFingerprint
+            ? send(res, 200, {closure:retry.rows[0], idempotent_replay:true})
+            : send(res, 409, {error:'idempotency_key_reused_with_different_content'});
+        }
         return dbFailure(res, e, { duplicate:'duplicate_competence', invalid:'invalid_closure' });
       } finally { client.release(); }
     }
@@ -637,10 +711,11 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
       if (!textInRange(reason, 10, 1000)) {
         return send(res, 400, {error: action === 'reopen' ? 'reopen_reason_10_1000_required_reabertura_autorizada' : 'close_reason_10_1000_required'});
       }
-      const authorizedBy = action === 'reopen' ? (body.authorized_by_identity ?? sess.identityId ?? null) : null;
-      if (action === 'reopen') {
-        if (!authorizedBy) return send(res, 400, {error:'authorized_by_required'});
-        if (!isUuid(authorizedBy)) return send(res, 400, {error:'invalid_authorized_by_identity'});
+      // A identidade autorizadora vem exclusivamente da sessão. Nunca aceitar
+      // autoria/autoridade informada pelo navegador para uma reabertura.
+      const authorizedBy = action === 'reopen' ? (sess.identityId ?? null) : null;
+      if (action === 'reopen' && (!authorizedBy || !isUuid(authorizedBy))) {
+        return send(res, 400, {error:'authorized_by_required'});
       }
       const client = await pool.connect();
       try {
@@ -740,13 +815,22 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
       if (!amount.ok || amount.value === null) return send(res, 400, {error:'amount_cents_gte_0'});
       const notes = optionalText(body.notes, 10, 2000);
       if (!notes.ok) return send(res, 400, {error:'notes_10_2000'});
+      const idempotency = parseIdempotencyKey(body.idempotency_key);
+      if (!idempotency.ok) return send(res, 400, {error:'idempotency_key_8_200'});
+      const contentFingerprint = idempotency.value ? fingerprint([optionalIds.rule_id, optionalIds.commission_id, optionalIds.contract_id, provision_date, amount.value, notes.value]) : null;
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
+        if (idempotency.value) {
+          const retry = await client.query(`SELECT * FROM fin_commission_provisions WHERE idempotency_key=$1 FOR UPDATE`, [idempotency.value]);
+          if (retry.rows.length) { await client.query('ROLLBACK'); return retry.rows[0].content_fingerprint === contentFingerprint
+            ? send(res, 200, {provision:retry.rows[0], idempotent_replay:true, note:'nao_pagar_automaticamente'})
+            : send(res, 409, {error:'idempotency_key_reused_with_different_content'}); }
+        }
         const { rows } = await client.query(
-          `INSERT INTO fin_commission_provisions (rule_id, commission_id, contract_id, provision_date, amount_cents, provisioned_by_identity, notes, is_auto_paid, status)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,false,'provisionada') RETURNING *`,
-          [optionalIds.rule_id, optionalIds.commission_id, optionalIds.contract_id, provision_date, amount.value, sess.identityId||null, notes.value]
+          `INSERT INTO fin_commission_provisions (rule_id, commission_id, contract_id, provision_date, amount_cents, provisioned_by_identity, notes, is_auto_paid, status, idempotency_key, content_fingerprint)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,false,'provisionada',$8,$9) RETURNING *`,
+          [optionalIds.rule_id, optionalIds.commission_id, optionalIds.contract_id, provision_date, amount.value, sess.identityId||null, notes.value, idempotency.value, contentFingerprint]
         );
         await client.query(
           `INSERT INTO fin_commission_provision_history (provision_id, previous_status, next_status, previous_amount, next_amount, changed_by_identity, reason, is_auto_paid_attempt)
@@ -758,6 +842,12 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
         return send(res, 201, { provision: rows[0], note:'comissoes_ligadas_regra_CRM25_provisao_revisao_nao_pagar_automaticamente' });
       } catch(e) {
         try { await client.query('ROLLBACK'); } catch {}
+        if (e?.code === '23505' && idempotency.value) {
+          const retry = await client.query(`SELECT * FROM fin_commission_provisions WHERE idempotency_key=$1`, [idempotency.value]);
+          if (retry.rows.length) return retry.rows[0].content_fingerprint === contentFingerprint
+            ? send(res, 200, {provision:retry.rows[0], idempotent_replay:true, note:'nao_pagar_automaticamente'})
+            : send(res, 409, {error:'idempotency_key_reused_with_different_content'});
+        }
         return dbFailure(res, e, { duplicate:'duplicate_provision', invalid:'invalid_provision' });
       } finally { client.release(); }
     }
@@ -854,6 +944,7 @@ export function createFinBudgetApi({ pool, auditLog, sameOrigin, requireSession,
     handleBudgetHistory,
     handleBudgetScenarios,
     handleExports,
+    handleExportDownload,
     handleExportLogs,
     handleClosures,
     handleReportVersions,

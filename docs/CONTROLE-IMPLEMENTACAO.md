@@ -1,4 +1,14 @@
 # Controle de implementação — SEG System
+
+## Controle vigente — L07 FIN-14/15/16 (2026-10-02)
+
+- Base: `cc4da84`; branch: `arena/01a0fc98-gruposegsystemseguranca`.
+- Migração nova: 137, aditiva; 001–136 imutáveis; CHECKs novos `NOT VALID`.
+- Implementado: jornadas UI FIN-14/15/16, idempotência concorrente, download limitado, bloqueio/reabertura de competência e revisão de comissão sem pagamento automático.
+- Preservado sem reabertura: FIN-10, FIN-13, FIN-12→FIN-04, PRs #47/#53, L04–L06.
+- Não iniciado: ADM-01..12 e L08. L07 permanece aberto.
+- Próximo passo autorizado: painel `/admin/marcelo` para ADM-01..12 conforme `PROMPT-PROXIMA-SESSAO-L07-ADM01-12.md`.
+
 Versão inicial: 28/09/2026.
 
 Este arquivo foi criado junto ao plano mestre. Nenhum item foi implementado ou homologado pela criação desta documentação. Referência remota inicial: 49d366cd9335ca33fe9703a397dc0488b6468ef8. O agente deve atualizar o estado com base no commit atual e em evidências, preservando o histórico.
