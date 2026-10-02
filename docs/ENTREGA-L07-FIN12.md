@@ -103,3 +103,9 @@ Subteste Chromium: o papel financeiro cadastra o gateway pela interface (coluna 
 - Os valores `recebido` e `replay` do enum `fin_webhook_status` e `producao` do enum `fin_gateway_status` continuam existindo (os enums são de 079 e não foram alterados), mas as novas constraints impedem que qualquer escrita nova os use; `replay` sobrevive apenas como rótulo no histórico.
 - Linhas criadas pelo rascunho 079 continuam legíveis: as constraints novas são `NOT VALID`, de modo que valem integralmente para toda escrita nova e toda alteração, sem reescrever histórico.
 - A matriz `docs/CHECKLIST-ENTREGA-LOCAL.md` continua com FIN-05..FIN-12 em `a_revalidar`: as entregas por fatia documentaram a evidência em `docs/ENTREGA-L07-FIN*.md`, mas ninguém consolidou a matriz. Consolidar é tarefa do fechamento do bloco L07, não desta fatia.
+
+## Revalidação posterior e integração FIN-12 → FIN-04 (2026-10-02)
+
+A limitação histórica de que a conciliação não baixava o recebível foi superada pela migração aditiva `135-fin09-fin12-revalidation-hardening.sql` e pelo handler canônico. Ao conciliar webhook assinado válido, a mesma transação cria um `fin_payments` FIN-04 ligado à cobrança, atualiza saldo/status do recebível e grava `fin_payment_history`; estornar a cobrança cria pagamento reversor (`is_estorno=true`, `previous_payment_id` da baixa) e, quando integralmente revertido, devolve o recebível a `pendente`. O gate L07 31/31 prova payload assinado divergente recusado, replay concorrente (1 criação + 5 replays), a baixa/histórico, o saldo/status e o reversor; Chromium confirma a baixa no banco.
+
+A fronteira externa permanece inalterada: gateway, assinatura e cobrança são locais/sintéticos; nenhum Pix, boleto, PSP, adquirente, banco ou valor real é movimentado.

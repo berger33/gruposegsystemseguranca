@@ -1752,3 +1752,21 @@ Totais da execução de reprodução: `# tests 31`, `# pass 27`, `# fail 4`,
    contexto do Chromium porque o PWA registra um service worker que, ativo,
    impediria a simulação da falha de leitura. É ajuste do teste, não do produto.
 
+
+## L07 — revalidação FIN-09, FIN-11 e FIN-12 → FIN-04 (2026-10-02)
+
+Fatia executada sobre `main`/`origin/main` `ffdf7fbb49832abe30930c355b3085d190a7861e`, na branch Arena `arena/01a0fa11-gruposegsystemseguranca`. Dados, gateway, assinatura e emissão são sintéticos; nenhum provedor, PSP, banco, certificado ou cobrança externa foi acionado.
+
+| Evidência | Comando/cenário | Resultado observado |
+|---|---|---|
+| Manifesto estático | `node scripts/qa-wave0-static.mjs` | 5/5; migrações 001–135 contínuas, únicas e registradas no migrador. |
+| Tipos, unitários e build | `npm run typecheck`; `npm test`; `npm run build` | 0 erros; 196/196, 0 skips; build otimizado com 78 páginas. |
+| Migrações | `npm run test:migrations:pg` | 135/135 no primeiro e segundo passes; `TABLES=522->522`; clone rejeitou checksum adulterado de 006 e foi restaurado sem rebaseline. |
+| Gate L07 | `npm run test:l07-delivery:pg` | 31/31, 0 falhas/0 skips; HTTP real, PostgreSQL descartável, sessão/cookie real, Next local e Chromium empacotado. |
+| CI da PR | [PR #69](https://github.com/berger33/gruposegsystemseguranca/pull/69) | 5/5 checks verdes: estático/smoke, FIN L07, contratos, CRM e operações. |
+| FIN-09 | API + Chromium | margem incompleta preserva os valores conhecidos e declara a ausência de base; margem calculada é do servidor; 500 de leitura é visível, sem “nenhum resultado”, e retry recupera a lista. |
+| FIN-11 | API + Chromium | obrigação é derivada da regra de atividade e não de tipo escolhido pelo cliente; documento é sandbox sintético; falha de `fiscal-activity-rules` fica visível e retry funciona. |
+| FIN-12 → FIN-04 | API + Chromium | HMAC de payload divergente é recusado; seis envios concorrentes da mesma chave resultam em 1 criação e 5 replays; conciliação cria exatamente uma baixa em `fin_payments`, atualiza recebível/histórico e o estorno cria reversão ligada à baixa, retornando o recebível a `pendente`. |
+| Fail-closed | negativos do gate | origem/papel/anônimo indevidos são recusados; auditoria indisponível devolve 503 e reverte a mutação. |
+
+A migração aditiva `135-fin09-fin12-revalidation-hardening.sql` reforça a margem incompleta FIN-09 e os vínculos de cobrança, baixa e estorno FIN-12/FIN-04. FIN-09, FIN-11 e FIN-12 passam a `pronto_local` apenas para validação automática. Aceite humano, Windows e integrações externas reais continuam pendentes; L07 não foi declarado concluído e L08 não foi iniciado.

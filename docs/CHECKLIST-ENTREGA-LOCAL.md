@@ -1028,10 +1028,10 @@ custo por cliente/contrato/posto, importação de custos de pessoal, equipamento
 
 ## FIN-09
 resultado gerencial por contrato, separando receita contratada, faturada, recebida, custos e caixa; margem sem dados completos exibida como incompleta.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/financeiro` → Resultado gerencial (`ManagementResultsWorkspace.tsx`) usa a rota canônica `/api/fin/management-results`; PostgreSQL calcula/conserva a margem canônica e declara base incompleta em vez de aceitar percentual do navegador ou inventar zero. Sessão, papel financeiro/admin e same-origin são decididos no servidor; TI permanece leitura quando aplicável. A migração 135 impede margem legada quando a margem calculada é nula.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` 31/31 (PostgreSQL descartável, HTTP real e Chromium) cobre margem incompleta, cálculo no servidor, auditoria/rollback e UI de falha de leitura + retry; `npm run test:migrations:pg` 135/135 em dois passes; estático 5/5, typecheck, build e `npm test` 196/196 verdes nesta fatia.
+- Pendência / fronteira externa / aceite humano: resultados são dados sintéticos locais; aceite humano e Windows pendentes. L07 não está encerrado.
 
 ## FIN-10
 despesas/reembolsos e compras com alçada, evidência e segregação entre solicitar/aprovar quando definida.
@@ -1042,17 +1042,17 @@ despesas/reembolsos e compras com alçada, evidência e segregação entre solic
 
 ## FIN-11
 integração contábil/fiscal mediante provedor; determinar NFS-e/NF-e ou outra obrigação conforme atividade, sem assumir uma nota para tudo.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/financeiro` → Fiscal (`FiscalWorkspace.tsx`) usa `/api/fin/fiscal-activity-rules`, provedores, obrigações e documentos canônicos. Regra de atividade determina a obrigação; o provedor sandbox só registra documento sintético. Sessão, papel e origem são validados no servidor; a tela revela falha de leitura e permite retry.
+- Integração e evidência (teste, resultado, commit): gate L07 31/31 inclui HTTP de provedores/obrigações/documentos, negativas de autorização/origem, determinação por atividade, nenhuma emissão real, auditoria fail-closed e Chromium para a jornada fiscal/retry. Migrações 001–135 reaplicadas e verificadas no mesmo ambiente isolado.
+- Pendência / fronteira externa / aceite humano: não há NFS-e/NF-e, certificado, credencial, arquivo, ERP ou transmissão para provedor real. Aceite humano e Windows pendentes.
 
 ## FIN-12
 boletos/Pix/gateway somente após seleção e sandbox; validar assinatura de webhook, replay, idempotência e conciliação; sem cobrança real em testes.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/financeiro` → Boletos / Pix / Gateway (`GatewayWorkspace.tsx`) usa APIs canônicas de gateway, cobrança, webhook/histórico e simulador sandbox. O servidor confere HMAC/payload, autorização e origem; somente gateway selecionado/homologado em sandbox recebe cobrança. A conciliação materializa a baixa FIN-04 na mesma transação (`fin_payments`, recebível e histórico); estorno cria pagamento reversor ligado à baixa original. A migração 135 assegura os vínculos pagamento–charge e baixa/estorno.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` 31/31 prova assinatura divergente recusada, replay concorrente (1 criação + 5 replays), criação de uma baixa FIN-04, saldo/status do recebível, estorno reversor e Chromium confirmando a baixa no banco; auditoria indisponível reverte a operação. `npm run test:migrations:pg` 135/135, estático 5/5, typecheck, build e unitários 196/196 verdes.
+- Pendência / fronteira externa / aceite humano: gateway, assinatura e pagamentos são simuladores locais; não há Pix/boleto, PSP, banco, adquirente, cobrança ou valor real. Aceite humano e Windows pendentes.
 
 ## FIN-13
 

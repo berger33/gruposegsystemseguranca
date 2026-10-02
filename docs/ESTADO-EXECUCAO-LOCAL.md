@@ -1,6 +1,21 @@
 # Estado da execução — entrega local integral
 
-## Estado atual — L07 em execução; fatia aditiva de FIN-13 concluída em 2026-10-01
+## Estado atual — L07 em execução; revalidação FIN-09/FIN-11/FIN-12 e ligação FIN-12 → FIN-04 concluídas em 2026-10-02
+
+**Base e escopo.** Base oficial atual: `main`/`origin/main` em `ffdf7fbb49832abe30930c355b3085d190a7861e` (merge da PR #68). Trabalho nesta branch Arena: `arena/01a0fa11-gruposegsystemseguranca`. Esta é a primeira fatia depois da integração da PR #68: revalida FIN-09, FIN-11 e FIN-12, e fecha o vínculo canônico entre conciliação sintética de gateway (FIN-12) e baixa/estorno de recebível (FIN-04). Não houve uso da cópia local do proprietário, merge, publicação ou chamada externa.
+
+**Mudança aditiva.** A migração `135-fin09-fin12-revalidation-hardening.sql` preserva 001–134 e endurece: (a) FIN-09 não aceita `margin_percent` legado quando a margem calculada canônica é nula/incompleta; (b) o vínculo entre cobrança, webhook, pagamento e recebível; e (c) a integridade da baixa e do estorno reversor de gateway. O manifest e a verificação estática agora exigem 001–135.
+
+**O que foi demonstrado.** FIN-09 mantém receita/custos conhecidos e declara base de margem incompleta, sem exibir zero ou percentual inventado; a UI mostra erro de leitura e oferece retry. FIN-11 separa provedor e obrigação determinada pela regra de atividade, registra somente documento sandbox sintético e também mostra/retry de falha de leitura. FIN-12 aceita cobrança apenas em gateway selecionado e homologado em sandbox, verifica HMAC no servidor, rejeita payload divergente e replay; uma conciliação válida cria a baixa FIN-04 (`fin_payments` + histórico), atualiza o saldo/status do recebível e, no estorno, cria pagamento reversor ligado ao original e devolve o recebível a `pendente` quando integralmente revertido. Tudo ocorre na mesma transação de domínio/auditoria e não cria efeito financeiro externo.
+
+**Validação automática concluída nesta fatia.** `node scripts/qa-wave0-static.mjs` 5/5, `npm run typecheck` sem erros, `npm test` 196/196, `npm run build` (78 páginas) e `npm run test:migrations:pg` 135/135 em dois passes, clone/checksum negativo restaurado (522 tabelas), e `npm run test:l07-delivery:pg` 31/31, com PostgreSQL descartável, HTTP real, sessão/cookie real, Next local e Chromium empacotado. O gate inclui negativos de autorização/origem, auditoria indisponível com rollback, HMAC forjado/payload divergente, replay concorrente (1 criação + 5 replays), persistência da baixa e estorno reversor, além de jornadas Chromium FIN-09/11/12.
+
+**Estado declarado.** FIN-09, FIN-11 e FIN-12 estão `pronto_local` para a validação automática desta fatia; FIN-04 é revalidado somente no vínculo gateway→baixa/estorno, sem reabrir seu contrato. A [PR #69](https://github.com/berger33/gruposegsystemseguranca/pull/69) foi aberta sem merge e seus cinco checks passaram (`static-and-smoke`, financeiro, contratos, CRM e operações). Aceite humano, execução Windows e qualquer integração fiscal/PSP/banco real continuam pendentes e explicitamente fora de escopo. **L07 não está concluído; L08 não foi iniciado.**
+
+- Próximos três passos: FIN-10 e avaliação adaptativa dos resíduos úteis de #47/#53; jornadas UI FIN-14/15/16; painel funcional `/admin/marcelo` para ADM-01..12 com inventário/destino da dívida dos componentes órfãos de `/admin/ti`.
+- Retomada: `npm ci`; `node scripts/qa-wave0-static.mjs`; `npm run typecheck`; `npm test`; `npm run test:migrations:pg`; `npm run test:l07-delivery:pg`.
+
+## Estado anterior — L07 em execução; fatia aditiva de FIN-13 concluída em 2026-10-01
 
 Base confirmada antes de escrever: main `4ea35780bacc80bd228f6a970949a52e6f9504ba` (merge do PR #66), **sem commits posteriores** na consulta. Branch de trabalho: `arena/01a0f9da-gruposegsystemseguranca`, criada a partir dessa main. Ambiente remoto Arena; a cópia desatualizada do computador do proprietário não foi usada nem alterada.
 

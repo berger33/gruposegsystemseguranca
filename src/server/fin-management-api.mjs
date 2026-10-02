@@ -59,6 +59,9 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
     if (req.method !== 'POST') return send(res,405,{error:'method_not_allowed'});
     let body; try { body=await readJson(req); } catch { return send(res,400,{error:'invalid_json'}); }
     const contract_id=body.contract_id||null, client_account_id=body.client_account_id||null;
+    if (body.margin_percent != null || body.computed_margin_percent != null || body.margin_cents != null || body.margin_basis != null) {
+      return send(res,400,{error:'margin_not_accepted_calculated_server_side'});
+    }
     if ((contract_id&&!uuid(contract_id))||(client_account_id&&!uuid(client_account_id))) return send(res,400,{error:'invalid_reference'});
     if (!isoDate(body.competence_date)) return send(res,400,{error:'invalid_competence_date'});
     const values={revenue_contracted_cents:cents(body.revenue_contracted_cents),revenue_billed_cents:cents(body.revenue_billed_cents),revenue_received_cents:cents(body.revenue_received_cents),costs_cents:cents(body.costs_cents),cash_cents:cents(body.cash_cents)};
@@ -445,6 +448,12 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
         const account = await client.query('SELECT id FROM client_accounts WHERE id=$1',[client_account_id]);
         if (!contract.rows.length || !account.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'canonical_reference_not_found_or_inactive'}); }
         const ruleText = `${rule.rows[0].rule_reference} — ${rule.rows[0].rule_description}`.slice(0,1000);
+        const availableProviders = await client.query(
+          `SELECT id FROM fin_fiscal_providers
+            WHERE status='configurado' AND is_active=true
+              AND supported_obligations @> ARRAY[$1::fin_fiscal_doc_type]`,
+          [rule.rows[0].obligation_type]
+        );
         const created = await client.query(
           `INSERT INTO fin_fiscal_obligations (contract_id,client_account_id,obligation_type,activity_type,activity_rule_id,description,rule,notes,status,is_determined,idempotency_key,created_by_identity)
            VALUES ($1,$2,$3::fin_fiscal_doc_type,$4,$5,$6,$7,$8,'pendente',false,$9,$10) RETURNING *`,
@@ -454,7 +463,15 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
         await insertFiscalHistory(client,'obligation',obligation.id,null,'pendente',actor,'Obrigação fiscal criada a partir da regra canônica da atividade',{activity_type,obligation_type:obligation.obligation_type,rule_reference:rule.rows[0].rule_reference});
         await auditLog({action:'fin_fiscal_obligation_create',actor,target:obligation.id,meta:{activity_type,obligation_type:obligation.obligation_type,rule_reference:rule.rows[0].rule_reference,idempotency_key},client});
         await client.query('COMMIT');
-        return send(res,201,{obligation,activity_rule:rule.rows[0],synthetic:true});
+        return send(res,201,{
+          obligation,
+          activity_rule:rule.rows[0],
+          provider_pending: availableProviders.rows.length === 0,
+          provider_pending_reason: availableProviders.rows.length === 0
+            ? 'no_configured_sandbox_provider_for_determined_obligation'
+            : null,
+          synthetic:true,
+        });
       } catch(e) { try { await client.query('ROLLBACK'); } catch {} return fiscalFailure(res,e); }
       finally { client.release(); }
     }
@@ -519,7 +536,10 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
       const file_url = typeof body.file_url === 'string' ? body.file_url.trim() : '';
       const storage_key = typeof body.storage_key === 'string' ? body.storage_key.trim() : '';
       const idempotency_key = typeof body.idempotency_key === 'string' ? body.idempotency_key.trim() : '';
-      if (!uuid(obligation_id) || !uuid(provider_id)) return send(res,400,{error:'canonical_references_required'});
+      if (!uuid(obligation_id)) return send(res,400,{error:'obligation_reference_required'});
+      if (!uuid(provider_id)) {
+        return send(res,409,{error:'provider_not_selected_obligation_pending',note:'A obrigação permanece pendente até haver provedor sandbox configurado; nenhuma emissão foi simulada.'});
+      }
       if (!amount_cents) return send(res,400,{error:'amount_positive_integer'});
       if (file_name.length < 1 || file_name.length > 500 || !syntheticFiscalUrl(file_url) || !syntheticFiscalKey(storage_key)) return send(res,400,{error:'synthetic_document_metadata_required'});
       if (idempotency_key.length < 8 || idempotency_key.length > 200) return send(res,400,{error:'idempotency_key_8_200'});
@@ -670,6 +690,12 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
     'fin_gateway_webhook_charge_gateway_mismatch',
     'fin_gateway_webhook_charge_not_pending',
     'fin_gateway_webhook_charge_already_conciliated',
+    'fin_gateway_webhook_payload_does_not_match_charge',
+    'fin_gateway_payment_charge_required',
+    'fin_gateway_payment_must_match_receivable_and_charge_amount',
+    'fin_gateway_payment_invalid_settlement_state',
+    'fin_gateway_payment_estorno_requires_original_settlement',
+    'fin_gateway_charge_paid_requires_receivable_payment',
   ]);
   const gatewayFailure = (res, e) => {
     if (isAuditUnavailable(e)) return send(res,503,{error:'audit_unavailable'});
@@ -854,6 +880,10 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
         if (!gatewayRow.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'gateway_not_found'}); }
         const gateway = gatewayRow.rows[0];
         if (!['selecionado','sandbox'].includes(gateway.status) || !gateway.is_active) { await client.query('ROLLBACK'); return send(res,409,{error:'gateway_not_selected'}); }
+        // Serializa a mesma chave antes de procurar/inserir. Sem este lock, duas
+        // entregas simultâneas poderiam ambas não encontrar a linha e uma delas
+        // cair só no índice único, sem registrar o replay de forma auditável.
+        await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[idempotency_key]);
         // Replay: a chave de idempotência já foi usada. O recebimento original
         // não é alterado; só o contador de tentativas e o histórico crescem.
         const existing = await client.query('SELECT * FROM fin_gateway_webhooks WHERE idempotency_key=$1 FOR UPDATE',[idempotency_key]);
@@ -903,6 +933,58 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
       const charge = chargeRow.rows[0];
       if (charge.gateway_id !== webhook.gateway_id) { await client.query('ROLLBACK'); return send(res,409,{error:'charge_gateway_mismatch'}); }
       if (charge.status !== 'pendente') { await client.query('ROLLBACK'); return send(res,409,{error:'charge_not_pending'}); }
+
+      // A assinatura prova que o payload chegou íntegro; a baixa só é autorizada
+      // se esse payload também nomear ESTA cobrança e o seu valor exato.
+      const payload = webhook.payload || {};
+      if (webhook.event_type !== 'charge.paid'
+        || payload.protocol !== charge.protocol
+        || !Number.isSafeInteger(Number(payload.amount_cents))
+        || Number(payload.amount_cents) !== Number(charge.amount_cents)
+        || payload.settlement !== 'synthetic') {
+        await client.query('ROLLBACK');
+        return send(res,409,{error:'webhook_payload_does_not_match_charge'});
+      }
+
+      // FIN-04 é a fonte canônica do saldo. O bloqueio da conta impede que uma
+      // baixa manual concorrente ou outro webhook ultrapasse o saldo disponível.
+      const receivableRow = await client.query('SELECT * FROM fin_accounts_receivable WHERE id=$1 FOR UPDATE',[charge.receivable_id]);
+      if (!receivableRow.rows.length) { await client.query('ROLLBACK'); return send(res,409,{error:'charge_receivable_not_found'}); }
+      const receivable = receivableRow.rows[0];
+      const previousPaid = Number(receivable.amount_paid_cents);
+      const totalAmount = Number(receivable.amount_cents);
+      const chargeAmount = Number(charge.amount_cents);
+      const outstanding = totalAmount - previousPaid;
+      if (chargeAmount <= 0 || chargeAmount > outstanding) {
+        await client.query('ROLLBACK');
+        return send(res,409,{error:'charge_amount_exceeds_receivable_balance',outstanding_cents:outstanding});
+      }
+      const gatewayRow = await client.query('SELECT gateway_type FROM fin_payment_gateways WHERE id=$1 FOR SHARE',[charge.gateway_id]);
+      if (!gatewayRow.rows.length) { await client.query('ROLLBACK'); return send(res,409,{error:'charge_gateway_not_found'}); }
+      const method = ['pix','boleto','cartao'].includes(gatewayRow.rows[0].gateway_type) ? gatewayRow.rows[0].gateway_type : 'outro';
+      const nextPaid = previousPaid + chargeAmount;
+      const nextStatus = nextPaid >= totalAmount ? 'recebido' : 'parcial';
+      const paymentReason = `Baixa sintética do webhook conciliado ${charge.protocol}; nenhum provedor real foi acionado.`;
+      const payment = await client.query(
+        `INSERT INTO fin_payments (account_type,receivable_id,amount_cents,payment_method,is_partial,is_estorno,is_renegotiation,notes,created_by_identity,gateway_charge_id)
+         VALUES ('receber',$1,$2,$3::fin_payment_method,$4,false,false,$5,$6,$7) RETURNING *`,
+        [charge.receivable_id,chargeAmount,method,nextStatus === 'parcial',paymentReason,actor,charge.id]
+      );
+      await client.query(
+        `UPDATE fin_accounts_receivable
+            SET amount_paid_cents=$2,
+                status=$3::fin_status,
+                paid_at=CASE WHEN $3::text='recebido' THEN NOW() ELSE NULL END
+          WHERE id=$1`,
+        [charge.receivable_id,nextPaid,nextStatus]
+      );
+      await client.query(
+        `INSERT INTO fin_payment_history (account_type,receivable_id,previous_status,next_status,previous_paid_cents,next_paid_cents,payment_id,changed_by_identity,reason,is_estorno,is_renegociacao)
+         VALUES ('receber',$1,$2::fin_status,$3::fin_status,$4,$5,$6,$7,$8,false,false)`,
+        [charge.receivable_id,receivable.status,nextStatus,previousPaid,nextPaid,payment.rows[0].id,actor,paymentReason]
+      );
+      // Ordem deliberada: webhook conciliado -> baixa FIN-04 -> cobrança paga.
+      // Os triggers da migração 135 recusam a cobrança paga sem essa baixa.
       const conciliated = await client.query(
         `UPDATE fin_gateway_webhooks SET status='conciliado',charge_id=$1,conciliated_at=NOW(),processed_at=NOW() WHERE id=$2 RETURNING *`,
         [charge_id, id]
@@ -911,11 +993,11 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
         `UPDATE fin_gateway_charges SET status='pago',is_conciliated=true,conciliated_at=NOW(),settled_at=NOW(),conciliated_webhook_id=$1 WHERE id=$2 RETURNING *`,
         [id, charge_id]
       );
-      await insertGatewayHistory(client,'webhook',id,webhook.status,'conciliado',actor,reason,{charge_id,protocol:charge.protocol});
-      await insertGatewayHistory(client,'charge',charge_id,charge.status,'pago',actor,reason,{webhook_id:id,protocol:charge.protocol,simulated:true});
-      await auditLog({action:'fin_gateway_conciliate',actor,target:charge_id,meta:{webhook_id:id,protocol:charge.protocol,reason,simulated:true},client});
+      await insertGatewayHistory(client,'webhook',id,webhook.status,'conciliado',actor,reason,{charge_id,protocol:charge.protocol,payment_id:payment.rows[0].id});
+      await insertGatewayHistory(client,'charge',charge_id,charge.status,'pago',actor,reason,{webhook_id:id,protocol:charge.protocol,payment_id:payment.rows[0].id,simulated:true});
+      await auditLog({action:'fin_gateway_conciliate',actor,target:charge_id,meta:{webhook_id:id,payment_id:payment.rows[0].id,protocol:charge.protocol,reason,simulated:true},client});
       await client.query('COMMIT');
-      return send(res,200,{webhook:conciliated.rows[0],charge:settled.rows[0],conciliated:true,real_charge:false});
+      return send(res,200,{webhook:conciliated.rows[0],charge:settled.rows[0],payment:payment.rows[0],conciliated:true,real_charge:false});
     } catch(e) { try { await client.query('ROLLBACK'); } catch {} return gatewayFailure(res,e); }
     finally { client.release(); }
   };
@@ -998,11 +1080,42 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
       if (previous.status === status) { await client.query('ROLLBACK'); return send(res,409,{error:'charge_already_in_status'}); }
       const allowed = previous.status === 'pendente' ? ['falhou','cancelado'] : previous.status === 'falhou' ? ['cancelado'] : previous.status === 'pago' ? ['estornado'] : [];
       if (!allowed.includes(status)) { await client.query('ROLLBACK'); return send(res,409,{error:'charge_invalid_transition',previous_status:previous.status}); }
+      let reversalPayment = null;
+      if (status === 'estornado') {
+        // O estorno de uma cobrança conciliada também reverte a baixa FIN-04;
+        // mudar só o status da cobrança deixaria o recebível falsamente quitado.
+        const receivableRow = await client.query('SELECT * FROM fin_accounts_receivable WHERE id=$1 FOR UPDATE',[previous.receivable_id]);
+        if (!receivableRow.rows.length) { await client.query('ROLLBACK'); return send(res,409,{error:'charge_receivable_not_found'}); }
+        const originalPayment = await client.query('SELECT * FROM fin_payments WHERE gateway_charge_id=$1 AND is_estorno=false FOR UPDATE',[id]);
+        if (!originalPayment.rows.length) { await client.query('ROLLBACK'); return send(res,409,{error:'gateway_settlement_payment_not_found'}); }
+        const alreadyReversed = await client.query('SELECT id FROM fin_payments WHERE gateway_charge_id=$1 AND is_estorno=true',[id]);
+        if (alreadyReversed.rows.length) { await client.query('ROLLBACK'); return send(res,409,{error:'gateway_settlement_already_reversed'}); }
+        const receivable = receivableRow.rows[0];
+        const amount = Number(previous.amount_cents);
+        const previousPaid = Number(receivable.amount_paid_cents);
+        if (previousPaid < amount) { await client.query('ROLLBACK'); return send(res,409,{error:'gateway_settlement_balance_inconsistent'}); }
+        const nextPaid = previousPaid - amount;
+        const nextStatus = nextPaid === 0 ? 'pendente' : 'parcial';
+        reversalPayment = await client.query(
+          `INSERT INTO fin_payments (account_type,receivable_id,amount_cents,payment_method,is_partial,is_estorno,is_renegotiation,previous_payment_id,notes,created_by_identity,gateway_charge_id)
+           VALUES ('receber',$1,$2,$3::fin_payment_method,$4,true,false,$5,$6,$7,$8) RETURNING *`,
+          [previous.receivable_id,amount,originalPayment.rows[0].payment_method,nextStatus === 'parcial',originalPayment.rows[0].id,reason,actor,id]
+        );
+        await client.query(
+          `UPDATE fin_accounts_receivable SET amount_paid_cents=$2,status=$3::fin_status,paid_at=NULL WHERE id=$1`,
+          [previous.receivable_id,nextPaid,nextStatus]
+        );
+        await client.query(
+          `INSERT INTO fin_payment_history (account_type,receivable_id,previous_status,next_status,previous_paid_cents,next_paid_cents,payment_id,changed_by_identity,reason,is_estorno,is_renegociacao)
+           VALUES ('receber',$1,$2::fin_status,$3::fin_status,$4,$5,$6,$7,$8,true,false)`,
+          [previous.receivable_id,receivable.status,nextStatus,previousPaid,nextPaid,reversalPayment.rows[0].id,actor,reason]
+        );
+      }
       const updated = status === 'falhou'
         ? await client.query(`UPDATE fin_gateway_charges SET status='falhou',error_sanitized=$1 WHERE id=$2 RETURNING *`,[error_sanitized,id])
         : await client.query(`UPDATE fin_gateway_charges SET status=$1::fin_charge_status,cancel_reason=$2,error_sanitized=NULL WHERE id=$3 RETURNING *`,[status,reason,id]);
-      await insertGatewayHistory(client,'charge',id,previous.status,status,actor,reason,{protocol:previous.protocol,simulated:true});
-      await auditLog({action:`fin_gateway_charge_${status}`,actor,target:id,meta:{previous_status:previous.status,next_status:status,reason,simulated:true},client});
+      await insertGatewayHistory(client,'charge',id,previous.status,status,actor,reason,{protocol:previous.protocol,simulated:true,reversal_payment_id:reversalPayment?.rows[0]?.id||null});
+      await auditLog({action:`fin_gateway_charge_${status}`,actor,target:id,meta:{previous_status:previous.status,next_status:status,reason,simulated:true,reversal_payment_id:reversalPayment?.rows[0]?.id||null},client});
       await client.query('COMMIT');
       return send(res,200,{charge:updated.rows[0],real_charge:false});
     } catch(e) { try { await client.query('ROLLBACK'); } catch {} return gatewayFailure(res,e); }

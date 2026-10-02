@@ -28,21 +28,28 @@ export default function FiscalWorkspace() {
   const [obligation,setObligation] = useState(emptyObligation);
   const [fiscalDocument,setFiscalDocument] = useState(emptyDocument);
   const [reason,setReason] = useState("");
-  const [busy,setBusy] = useState(false); const [error,setError] = useState(""); const [notice,setNotice] = useState("");
+  const [busy,setBusy] = useState(false); const [loading,setLoading] = useState(false); const [error,setError] = useState(""); const [notice,setNotice] = useState("");
 
   const load = async () => {
-    const [r,p,o,d] = await Promise.all([
-      api("/api/fin/fiscal-activity-rules"),
-      api("/api/fin/fiscal-providers"),
-      api("/api/fin/fiscal-obligations"),
-      api("/api/fin/fiscal-documents"),
-    ]);
-    setRules(r.rules||[]); setProviders(p.providers||[]); setObligations(o.obligations||[]); setDocuments(d.documents||[]);
+    setLoading(true); setError("");
+    try {
+      const [r,p,o,d] = await Promise.all([
+        api("/api/fin/fiscal-activity-rules"),
+        api("/api/fin/fiscal-providers"),
+        api("/api/fin/fiscal-obligations"),
+        api("/api/fin/fiscal-documents"),
+      ]);
+      setRules(r.rules||[]); setProviders(p.providers||[]); setObligations(o.obligations||[]); setDocuments(d.documents||[]);
+    } catch (e) { setError(e instanceof Error?e.message:"Falha ao carregar dados fiscais"); }
+    finally { setLoading(false); }
   };
-  useEffect(()=>{ load().catch(e=>setError(e instanceof Error?e.message:"Falha ao carregar")); },[]);
+  useEffect(()=>{ void load(); },[]);
   const run = async (fn:()=>Promise<void>) => { setBusy(true); setError(""); setNotice(""); try { await fn(); } catch(e) { setError(e instanceof Error?e.message:"Falha inesperada"); } finally { setBusy(false); } };
 
   const selectedRule = rules.find(rule=>rule.activity_code===obligation.activity_type);
+  const providersForObligation = (item:Obligation) => providers.filter(provider => provider.status === "configurado" && provider.is_active && (provider.supported_obligations||[]).includes(item.obligation_type));
+  const pendingProviderObligations = obligations.filter(item => item.status === "determinada" && providersForObligation(item).length === 0);
+  const selectedDocumentObligation = obligations.find(item => item.id === fiscalDocument.obligation_id);
 
   const createProvider = (event:FormEvent) => { event.preventDefault(); run(async()=>{
     await api("/api/fin/fiscal-providers",{method:"POST",body:JSON.stringify(provider)});
@@ -55,7 +62,9 @@ export default function FiscalWorkspace() {
   const createObligation = (event:FormEvent) => { event.preventDefault(); run(async()=>{
     const data = await api("/api/fin/fiscal-obligations",{method:"POST",body:JSON.stringify(obligation)});
     setObligation(emptyObligation);
-    setNotice(`Obrigação determinada pela atividade: ${data.obligation.obligation_type} conforme ${data.activity_rule.rule_reference}.`);
+    setNotice(data.provider_pending
+      ? `Obrigação determinada como ${data.obligation.obligation_type}; pendente de provedor sandbox configurado. Nenhuma emissão foi simulada.`
+      : `Obrigação determinada pela atividade: ${data.obligation.obligation_type} conforme ${data.activity_rule.rule_reference}.`);
     await load();
   }); };
   const transitionObligation = (item:Obligation, status:string) => run(async()=>{
@@ -76,8 +85,9 @@ export default function FiscalWorkspace() {
   return <section data-testid="fin11-fiscal">
     <h2>Integração contábil/fiscal mediante provedor</h2>
     <p>O provedor e a obrigação são entidades separadas. A obrigação não é assumida: ela é determinada pela atividade do contrato através de uma regra explícita, podendo ser NFS-e, NF-e, NFC-e, CT-e ou outra obrigação. Nada aqui emite documento fiscal real — o ambiente é sandbox e as respostas são sintéticas.</p>
-    {error&&<p role="alert" data-testid="fin11-error">{error}</p>}
+    {error&&<div role="alert" data-testid="fin11-error"><p>{error}</p><button type="button" data-testid="fin11-retry" disabled={loading} onClick={()=>void load()}>Tentar novamente</button></div>}
     {notice&&<p role="status" data-testid="fin11-notice">{notice}</p>}
+    {loading&&<p data-testid="fin11-loading">Carregando dados fiscais…</p>}
 
     <h3>Regras canônicas de atividade</h3>
     <table data-testid="fin11-rules-table"><thead><tr><th>Atividade</th><th>Obrigação</th><th>Competência</th><th>Regra</th></tr></thead><tbody>
@@ -123,6 +133,9 @@ export default function FiscalWorkspace() {
           <td>{item.status==="pendente"&&<button disabled={busy||reason.length<10} data-testid={`fin11-obligation-determine-${item.id}`} onClick={()=>transitionObligation(item,"determinada")}>Determinar</button>}
               {item.status!=="cancelada"&&<button disabled={busy||reason.length<10} onClick={()=>transitionObligation(item,"cancelada")}>Cancelar</button>}</td></tr>)}
     </tbody></table>
+    {pendingProviderObligations.length>0&&<aside role="status" data-testid="fin11-provider-pending" style={{margin:"1rem 0",padding:".75rem",borderLeft:"4px solid #b45309"}}>
+      Pendente de provedor sandbox selecionado/configurado para: {pendingProviderObligations.map(item=>`${item.activity_type} (${item.obligation_type})`).join(", ")}. Nenhum documento ou emissão é simulado enquanto essa pendência existir.
+    </aside>}
 
     <h3>Documento fiscal sintético</h3>
     <form onSubmit={createDocument} data-testid="fin11-document-form">
@@ -132,7 +145,7 @@ export default function FiscalWorkspace() {
       </select>
       <select required data-testid="fin11-document-provider" value={fiscalDocument.provider_id} onChange={e=>setFiscalDocument({...fiscalDocument,provider_id:e.target.value})}>
         <option value="">Provedor configurado</option>
-        {providers.filter(item=>item.status==="configurado").map(item=><option key={item.id} value={item.id}>{item.name}</option>)}
+        {(selectedDocumentObligation ? providersForObligation(selectedDocumentObligation) : []).map(item=><option key={item.id} value={item.id}>{item.name}</option>)}
       </select>
       <input required type="number" min="1" data-testid="fin11-document-amount" placeholder="Valor em centavos" value={fiscalDocument.amount_cents} onChange={e=>setFiscalDocument({...fiscalDocument,amount_cents:e.target.value})}/>
       <input required data-testid="fin11-document-file-name" placeholder="Nome do metadado" value={fiscalDocument.file_name} onChange={e=>setFiscalDocument({...fiscalDocument,file_name:e.target.value})}/>

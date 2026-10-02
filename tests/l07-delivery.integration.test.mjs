@@ -923,19 +923,32 @@ test("L07 FIN-07: Chromium registra fluxo de caixa e aging com bucket calculado"
   }
 });
 
-test("L07 FIN-09: resultado gerencial incompleto, referências canônicas e auditoria transacional", { skip: !RUN, timeout: 120_000 }, async () => {
+test("L07 FIN-09: resultado gerencial declara margem incompleta, calcula somente no servidor e audita transacionalmente", { skip: !RUN, timeout: 120_000 }, async () => {
   const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const rh = await provisionAndLoginStaff(pool, api, { role: "rh" });
   const canonical = await insertClientSpace("FIN09 HTTP");
   assert.equal((await fin("/management-results")).status, 401);
+  assert.equal((await fin("/management-results", { cookie:rh.cookie })).status, 403);
   const invalid = await fin("/management-results", { method:"POST", cookie:financeiro.cookie, body:{ contract_id:"not-a-uuid", competence_date:"2026-10-01", is_complete:false, incomplete_reason:"Dados sintéticos ainda incompletos para revisão" } });
   assert.equal(invalid.status, 400);
   const created = await fin("/management-results", { method:"POST", cookie:financeiro.cookie, body:{ client_account_id:canonical.accountId, competence_date:"2026-10-01", revenue_received_cents:80000, costs_cents:50000, is_complete:false, incomplete_reason:"Receita faturada e caixa ainda dependem da conferência sintética" } });
   assert.equal(created.status, 201, JSON.stringify(created.body));
   assert.equal(created.body.result.status, "incompleto");
-  assert.equal(Number(created.body.result.margin_cents), 30000);
+  assert.equal(Number(created.body.result.margin_cents), 30000, "valor conhecido é preservado, sem virar zero");
+  assert.equal(created.body.result.margin_basis, "dados_incompletos");
+  assert.equal(created.body.result.computed_margin_percent, null, "competência incompleta não inventa percentual");
+  const browserMargin = await fin("/management-results", { method:"POST", cookie:financeiro.cookie, body:{ client_account_id:canonical.accountId, competence_date:"2026-09-01", revenue_received_cents:100, costs_cents:50, margin_percent:99, is_complete:false, incomplete_reason:"O navegador não pode informar percentual de margem gerencial" } });
+  assert.equal(browserMargin.status, 400);
+  assert.equal(browserMargin.body.error, "margin_not_accepted_calculated_server_side");
+  const missingCosts = await fin("/management-results", { method:"POST", cookie:financeiro.cookie, body:{ client_account_id:canonical.accountId, competence_date:"2026-08-01", revenue_received_cents:0, is_complete:false, incomplete_reason:"Custos da competência ainda não foram consolidados para cálculo" } });
+  assert.equal(missingCosts.status, 201, JSON.stringify(missingCosts.body));
+  assert.equal(missingCosts.body.result.margin_cents, null);
+  assert.equal(missingCosts.body.result.computed_margin_percent, null);
+  assert.equal(missingCosts.body.result.margin_basis, "dados_incompletos");
+  await assert.rejects(pool.query("UPDATE fin_management_results SET margin_percent=99 WHERE id=$1",[created.body.result.id]), /fin_result_margin_incomplete|fin_result_margin_percent_matches_calculation/);
   const duplicate = await fin("/management-results", { method:"POST", cookie:financeiro.cookie, body:{ client_account_id:canonical.accountId, competence_date:"2026-10-01", revenue_received_cents:80000, costs_cents:50000, is_complete:false, incomplete_reason:"Tentativa duplicada de resultado sintético para a mesma competência" } });
   assert.equal(duplicate.status, 409);
-  const listed = await fin(`/management-results?client_account_id=${canonical.accountId}&is_complete=false`, { cookie:financeiro.cookie });
+  const listed = await fin(`/management-results?client_account_id=${canonical.accountId}&competence_date=2026-10-01&is_complete=false`, { cookie:financeiro.cookie });
   assert.equal(listed.status, 200); assert.equal(listed.body.results.length, 1);
   const history = await fin(`/result-history?result_id=${created.body.result.id}`, { cookie:financeiro.cookie });
   assert.equal(history.status, 200); assert.equal(history.body.history.length, 1);
@@ -947,11 +960,11 @@ test("L07 FIN-09: resultado gerencial incompleto, referências canônicas e audi
   assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_management_results WHERE client_account_id=$1 AND competence_date='2026-11-01'", [canonical.contractId])).rows[0].n, 0);
 });
 
-test("L07 FIN-09: Chromium registra resultado gerencial incompleto", { skip: !RUN, timeout: 180_000 }, async () => {
+test("L07 FIN-09: Chromium declara base incompleta, mostra falha de leitura e permite tentar novamente", { skip: !RUN, timeout: 180_000 }, async () => {
   const financeiro = await provisionAndLoginStaff(pool, api, { role:"financeiro" });
   const canonical = await insertClientSpace("FIN09 Chromium");
   const browser = await playwrightChromium.launch({ executablePath:await packagedChromium.executablePath(), headless:true, args:packagedChromium.args.filter(arg=>arg!=="--disable-web-security") });
-  try { const context=await browser.newContext(); const pair=financeiro.cookie.split(";")[0], separator=pair.indexOf("="); await context.addCookies([{name:pair.slice(0,separator),value:pair.slice(separator+1),url:baseUrl}]); const page=await context.newPage(); await page.setExtraHTTPHeaders({origin:baseUrl}); await page.goto(`${baseUrl}/admin/financeiro`,{waitUntil:"networkidle"}); await page.getByTestId("finance-tab-results").click(); await page.waitForSelector('[data-testid="fin09-results"]'); await page.getByTestId("fin09-account").fill(canonical.accountId); await page.getByTestId("fin09-competence").fill("2026-12-01"); await page.getByTestId("fin09-received").fill("70000"); await page.getByTestId("fin09-costs").fill("45000"); await page.getByTestId("fin09-reason").fill("Faturamento sintético ainda aguarda conferência do período"); await page.getByTestId("fin09-create").click(); await page.waitForFunction(()=>Boolean(document.querySelector('[data-testid="fin09-notice"]'))||Boolean(document.querySelector('[data-testid="fin09-error"]'))); const feedback=await page.locator('[data-testid="fin09-notice"], [data-testid="fin09-error"]').first().textContent(); assert.match(feedback||"",/incompleto/, `FIN09 UI feedback: ${feedback}`); const row=await pool.query("SELECT status,is_complete FROM fin_management_results WHERE client_account_id=$1 AND competence_date='2026-12-01'",[canonical.accountId]); assert.equal(row.rows[0].status,"incompleto"); assert.equal(row.rows[0].is_complete,false); } finally { await browser.close(); }
+  try { const context=await browser.newContext({ serviceWorkers:"block" }); const pair=financeiro.cookie.split(";")[0], separator=pair.indexOf("="); await context.addCookies([{name:pair.slice(0,separator),value:pair.slice(separator+1),url:baseUrl}]); const page=await context.newPage(); await page.setExtraHTTPHeaders({origin:baseUrl}); await page.route("**/api/fin/management-results**", route => route.request().method()==="GET" ? route.fulfill({status:500,contentType:"application/json",body:JSON.stringify({error:"internal"})}) : route.continue()); await page.goto(`${baseUrl}/admin/financeiro`,{waitUntil:"networkidle"}); await page.getByTestId("finance-tab-results").click(); await page.waitForSelector('[data-testid="fin09-results"]'); await page.waitForSelector('[data-testid="fin09-error"]'); assert.match(await page.getByTestId("fin09-error").textContent(),/internal|falha/i); assert.equal(await page.locator('[data-testid="fin09-list"] li').count(),0,"falha de leitura não vira lista vazia"); await page.unroute("**/api/fin/management-results**"); await page.getByTestId("fin09-retry").click(); await page.waitForFunction(()=>!document.querySelector('[data-testid="fin09-error"]')); await page.getByTestId("fin09-account").fill(canonical.accountId); await page.getByTestId("fin09-competence").fill("2026-12-01"); await page.getByTestId("fin09-received").fill("70000"); await page.getByTestId("fin09-costs").fill("45000"); await page.getByTestId("fin09-reason").fill("Faturamento sintético ainda aguarda conferência do período"); await page.getByTestId("fin09-create").click(); await page.waitForFunction(()=>Boolean(document.querySelector('[data-testid="fin09-notice"]'))||Boolean(document.querySelector('[data-testid="fin09-error"]'))); const feedback=await page.locator('[data-testid="fin09-notice"], [data-testid="fin09-error"]').first().textContent(); assert.match(feedback||"",/incompleto/, `FIN09 UI feedback: ${feedback}`); const row=await pool.query("SELECT status,is_complete FROM fin_management_results WHERE client_account_id=$1 AND competence_date='2026-12-01'",[canonical.accountId]); assert.equal(row.rows[0].status,"incompleto"); assert.equal(row.rows[0].is_complete,false); const rendered=await page.getByTestId("fin09-list").textContent(); assert.match(rendered||"",/dados_incompletos|Margem incompleta/); assert.doesNotMatch(rendered||"",/0,00%/); } finally { await browser.close(); }
 });
 
 test("L07 FIN-08: custos por cliente/contrato/posto e importação com rateio documentado", { skip: !RUN, timeout: 120_000 }, async () => {
@@ -1194,6 +1207,20 @@ test("L07 FIN-11: provedor e obrigação separados, obrigação determinada pela
   assert.equal(vigilancia.obligation_type, "nfse");
   assert.equal(venda.obligation_type, "nfe");
 
+  // Sem provedor selecionado/configurado, a obrigação fica explicitamente
+  // pendente: não há simulação de emissão para preencher a lacuna.
+  const noProviderSpace = await insertFiscalSpace(`sem-provedor-${tag}`);
+  const noProvider = await fin("/fiscal-obligations", { method:"POST", cookie:financeiro.cookie, body: obligationPayload(noProviderSpace, `sem-provedor-${tag}`, { activity_type:"portaria_e_recepcao" }) });
+  assert.equal(noProvider.status, 201, JSON.stringify(noProvider.body));
+  assert.equal(noProvider.body.provider_pending, true);
+  assert.equal(noProvider.body.provider_pending_reason, "no_configured_sandbox_provider_for_determined_obligation");
+  const noProviderDetermined = await fin("/fiscal-obligations", { method:"PATCH", cookie:financeiro.cookie, body:{ id:noProvider.body.obligation.id, status:"determinada", reason:"Obrigação declarada antes da escolha de provedor sandbox" } });
+  assert.equal(noProviderDetermined.status, 200);
+  const noProviderDocument = await fin("/fiscal-documents", { method:"POST", cookie:financeiro.cookie, body: documentPayload(`sem-provedor-${tag}`, { obligation_id:noProvider.body.obligation.id }) });
+  assert.equal(noProviderDocument.status, 409);
+  assert.equal(noProviderDocument.body.error, "provider_not_selected_obligation_pending");
+  assert.equal((await pool.query("SELECT count(*)::int n FROM fin_fiscal_documents WHERE obligation_id=$1",[noProvider.body.obligation.id])).rows[0].n, 0);
+
   // Provedor: sandbox, sem credenciais, idempotente, estados explícitos.
   assert.equal((await fin("/fiscal-providers", { method:"POST", cookie: financeiro.cookie, body: providerPayload(`nocode-${tag}`, { provider_code:"X" }) })).status, 400);
   assert.equal((await fin("/fiscal-providers", { method:"POST", cookie: financeiro.cookie, body: providerPayload(`creds-${tag}`, { config:{ token:"abc" } }) })).status, 400);
@@ -1318,14 +1345,20 @@ test("L07 FIN-11: Chromium determina a obrigação pela atividade e registra doc
   const space = await insertFiscalSpace(`chromium-${tag}`);
   const browser = await playwrightChromium.launch({ executablePath: await packagedChromium.executablePath(), headless:true, args: packagedChromium.args.filter(arg => arg !== "--disable-web-security") });
   try {
-    const context = await browser.newContext();
+    const context = await browser.newContext({ serviceWorkers:"block" });
     const pair = financeiro.cookie.split(";")[0], separator = pair.indexOf("=");
     await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator+1), url: baseUrl }]);
     const page = await context.newPage();
     await page.setExtraHTTPHeaders({ origin: baseUrl });
+    await page.route("**/api/fin/fiscal-activity-rules**", route => route.fulfill({status:500,contentType:"application/json",body:JSON.stringify({error:"internal"})}));
     await page.goto(`${baseUrl}/admin/financeiro`, { waitUntil:"networkidle" });
     await page.getByTestId("finance-tab-fiscal").click();
     await page.waitForSelector('[data-testid="fin11-fiscal"]');
+    await page.waitForSelector('[data-testid="fin11-error"]');
+    assert.match(await page.getByTestId("fin11-error").textContent(),/internal|falha/i);
+    await page.unroute("**/api/fin/fiscal-activity-rules**");
+    await page.getByTestId("fin11-retry").click();
+    await page.waitForFunction(()=>!document.querySelector('[data-testid="fin11-error"]'));
     await page.waitForSelector('[data-testid="fin11-rule-venda_equipamento_seguranca"]');
     assert.equal((await page.getByTestId("fin11-rule-type-venda_equipamento_seguranca").textContent())?.trim(), "nfe");
     assert.equal((await page.getByTestId("fin11-rule-type-vigilancia_patrimonial").textContent())?.trim(), "nfse");
@@ -1497,6 +1530,17 @@ test("L07 FIN-12: cobrança só após seleção e sandbox, assinatura de webhook
   // Assinatura válida só vale para o payload exato que foi assinado.
   assert.equal((await fin("/gateway-webhooks", { method:"POST", cookie: financeiro.cookie, body:{ gateway_id: gatewayId, event_type:"charge.paid", idempotency_key:`fin12-wh-tampered-${tag}`, payload:{ ...payload, amount_cents: 1 }, signature: signed.body.signature } })).body.error, "webhook_signature_invalid");
 
+  // Mesmo uma assinatura válida não autoriza aplicar valor/protocolo de outra
+  // cobrança: a vinculação é conferida no servidor e no banco antes da baixa.
+  const mismatchedPayload = { ...payload, amount_cents: 249999 };
+  const mismatchedSigned = await fin("/gateway-webhook-sign", { method:"POST", cookie:financeiro.cookie, body:{ gateway_id:gatewayId,event_type:"charge.paid",idempotency_key:`fin12-wh-mismatch-${tag}`,payload:mismatchedPayload } });
+  const mismatchedWebhook = await fin("/gateway-webhooks", { method:"POST", cookie:financeiro.cookie, body:{ gateway_id:gatewayId,event_type:"charge.paid",idempotency_key:`fin12-wh-mismatch-${tag}`,payload:mismatchedPayload,signature:mismatchedSigned.body.signature } });
+  assert.equal(mismatchedWebhook.status, 201);
+  const mismatchedConciliation = await fin("/gateway-webhooks", { method:"PATCH", cookie:financeiro.cookie, body:{ id:mismatchedWebhook.body.webhook.id,charge_id:charge.body.charge.id,reason:"Valor assinado divergente não pode baixar o recebível" } });
+  assert.equal(mismatchedConciliation.status, 409);
+  assert.equal(mismatchedConciliation.body.error, "webhook_payload_does_not_match_charge");
+  assert.equal((await pool.query("SELECT count(*)::int n FROM fin_payments WHERE gateway_charge_id=$1",[charge.body.charge.id])).rows[0].n, 0);
+
   const webhook = await fin("/gateway-webhooks", { method:"POST", cookie: financeiro.cookie, body:{ gateway_id: gatewayId, event_type:"charge.paid", idempotency_key:`fin12-wh-main-${tag}`, payload, signature: signed.body.signature } });
   assert.equal(webhook.status, 201, JSON.stringify(webhook.body));
   assert.equal(webhook.body.webhook.status, "validado");
@@ -1511,6 +1555,14 @@ test("L07 FIN-12: cobrança só após seleção e sandbox, assinatura de webhook
   assert.equal(replay.body.replay_attempts, 1);
   assert.equal((await fin("/gateway-webhooks", { method:"POST", cookie: financeiro.cookie, body:{ gateway_id: gatewayId, event_type:"charge.paid", idempotency_key:`fin12-wh-main-${tag}`, payload, signature: signed.body.signature } })).body.replay_attempts, 2);
   assert.equal((await pool.query("SELECT count(*)::int n FROM fin_gateway_webhooks WHERE idempotency_key=$1",[`fin12-wh-main-${tag}`])).rows[0].n, 1, "replay não cria recebimento novo");
+  // A chave também é idempotente quando várias entregas chegam ao mesmo tempo.
+  const concurrentKey = `fin12-wh-concurrent-${tag}`;
+  const concurrentSigned = await fin("/gateway-webhook-sign", { method:"POST", cookie:financeiro.cookie, body:{ gateway_id:gatewayId,event_type:"charge.paid",idempotency_key:concurrentKey,payload } });
+  const concurrentReceipts = await Promise.all(Array.from({length:6},()=>fin("/gateway-webhooks",{method:"POST",cookie:financeiro.cookie,body:{gateway_id:gatewayId,event_type:"charge.paid",idempotency_key:concurrentKey,payload,signature:concurrentSigned.body.signature}})));
+  assert.equal(concurrentReceipts.filter(item=>item.status===201).length,1);
+  assert.equal(concurrentReceipts.filter(item=>item.status===409 && item.body.error==="replay_detected").length,5);
+  const concurrentRow = (await pool.query("SELECT replay_attempts FROM fin_gateway_webhooks WHERE idempotency_key=$1",[concurrentKey])).rows[0];
+  assert.equal(Number(concurrentRow.replay_attempts),5);
 
   // Conciliação: webhook rejeitado não concilia e cobrança de outro gateway não casa.
   const rejectedId = (await pool.query("SELECT id FROM fin_gateway_webhooks WHERE idempotency_key=$1",[`fin12-wh-forged-${tag}`])).rows[0].id;
@@ -1527,10 +1579,31 @@ test("L07 FIN-12: cobrança só após seleção e sandbox, assinatura de webhook
   assert.equal(conciliated.body.charge.is_conciliated, true);
   assert.equal(conciliated.body.real_charge, false);
   assert.ok(conciliated.body.charge.settled_at);
+  assert.ok(conciliated.body.payment?.id, "a conciliação cria a baixa FIN-04 na mesma transação");
+  assert.equal(conciliated.body.payment.gateway_charge_id, charge.body.charge.id);
+  const settledReceivable = (await pool.query("SELECT amount_cents,amount_paid_cents,status FROM fin_accounts_receivable WHERE id=$1",[receivable.id])).rows[0];
+  assert.equal(Number(settledReceivable.amount_paid_cents), 250000);
+  assert.equal(settledReceivable.status, "recebido");
+  const settlementPayment = (await pool.query("SELECT id,receivable_id,amount_cents,gateway_charge_id,is_estorno FROM fin_payments WHERE gateway_charge_id=$1",[charge.body.charge.id])).rows;
+  assert.equal(settlementPayment.length, 1);
+  assert.equal(settlementPayment[0].receivable_id, receivable.id);
+  assert.equal(Number(settlementPayment[0].amount_cents), 250000);
+  assert.equal(settlementPayment[0].is_estorno, false);
+  const settlementHistory = (await pool.query("SELECT payment_id,next_paid_cents,next_status FROM fin_payment_history WHERE payment_id=$1",[settlementPayment[0].id])).rows;
+  assert.equal(settlementHistory.length, 1, "o lado FIN-04 também recebe trilha imutável");
+  assert.equal(Number(settlementHistory[0].next_paid_cents), 250000);
   assert.equal((await fin("/gateway-webhooks", { method:"PATCH", cookie: financeiro.cookie, body:{ id: webhook.body.webhook.id, charge_id: charge.body.charge.id, reason:"Conciliar duas vezes precisa ser recusado" } })).body.error, "webhook_already_conciliated");
   const refunded = await fin("/gateway-charges", { method:"PATCH", cookie: financeiro.cookie, body:{ id: charge.body.charge.id, status:"estornado", reason:"Estorno sintético auditado da cobrança conciliada" } });
   assert.equal(refunded.status, 200, JSON.stringify(refunded.body));
   assert.equal(refunded.body.charge.status, "estornado");
+  const refundedReceivable = (await pool.query("SELECT amount_paid_cents,status,paid_at FROM fin_accounts_receivable WHERE id=$1",[receivable.id])).rows[0];
+  assert.equal(Number(refundedReceivable.amount_paid_cents), 0, "estorno do gateway reverte também o saldo canônico");
+  assert.equal(refundedReceivable.status, "pendente");
+  assert.equal(refundedReceivable.paid_at, null);
+  const refundedPayments = (await pool.query("SELECT is_estorno,previous_payment_id FROM fin_payments WHERE gateway_charge_id=$1 ORDER BY created_at",[charge.body.charge.id])).rows;
+  assert.equal(refundedPayments.length, 2);
+  assert.equal(refundedPayments[1].is_estorno, true);
+  assert.equal(refundedPayments[1].previous_payment_id, settlementPayment[0].id);
 
   // O banco repete as garantias para escrita direta.
   await assert.rejects(pool.query("UPDATE fin_payment_gateways SET status='producao' WHERE id=$1",[gatewayId]), /fin_gateway_production_refused_sem_cobranca_real/);
@@ -1548,20 +1621,36 @@ test("L07 FIN-12: cobrança só após seleção e sandbox, assinatura de webhook
   await assert.rejects(pool.query("DELETE FROM fin_gateway_history WHERE entity_id=$1",[charge.body.charge.id]), /fin_gateway_history_immutable/);
 
   // Auditoria fail-closed com rollback integral e resposta sem detalhe SQL.
+  // A conciliação é preparada antes da injeção; assim o 503 prova que também
+  // pagamento, saldo, histórico, webhook e cobrança voltam juntos.
   const rollbackReceivable = await createReceivable(financeiro.cookie, space, 70000, `rollback-${tag}`);
+  const failedChargeReceivable = await createReceivable(financeiro.cookie, space, 70000, `rollback-charge-${tag}`);
+  const rollbackCharge = await fin("/gateway-charges", { method:"POST", cookie: financeiro.cookie, body:{ gateway_id: gatewayId, receivable_id: rollbackReceivable.id, amount_cents: 70000, idempotency_key:`fin12-chg-rollback-ready-${tag}`} });
+  assert.equal(rollbackCharge.status, 201, JSON.stringify(rollbackCharge.body));
+  const rollbackPayload = { protocol: rollbackCharge.body.charge.protocol, amount_cents:70000, settlement:"synthetic" };
+  const rollbackSigned = await fin("/gateway-webhook-sign", { method:"POST", cookie: financeiro.cookie, body:{ gateway_id:gatewayId,event_type:"charge.paid",idempotency_key:`fin12-wh-rollback-ready-${tag}`,payload:rollbackPayload } });
+  const rollbackWebhook = await fin("/gateway-webhooks", { method:"POST", cookie:financeiro.cookie,body:{ gateway_id:gatewayId,event_type:"charge.paid",idempotency_key:`fin12-wh-rollback-ready-${tag}`,payload:rollbackPayload,signature:rollbackSigned.body.signature } });
+  assert.equal(rollbackWebhook.status, 201, JSON.stringify(rollbackWebhook.body));
   await pool.query("ALTER TABLE audit_log RENAME TO audit_log_fin12_unavailable");
   try {
     const failedGateway = await fin("/payment-gateways", { method:"POST", cookie: financeiro.cookie, body: gatewayPayload(`rollback-${tag}`) });
     assert.equal(failedGateway.status, 503); assert.deepEqual(failedGateway.body, { error:"audit_unavailable" });
-    const failedCharge = await fin("/gateway-charges", { method:"POST", cookie: financeiro.cookie, body:{ gateway_id: gatewayId, receivable_id: rollbackReceivable.id, amount_cents: 70000, idempotency_key:`fin12-chg-rollback-${tag}` } });
+    const failedCharge = await fin("/gateway-charges", { method:"POST", cookie: financeiro.cookie, body:{ gateway_id: gatewayId, receivable_id: failedChargeReceivable.id, amount_cents: 70000, idempotency_key:`fin12-chg-rollback-${tag}` } });
     assert.equal(failedCharge.status, 503); assert.equal("details" in failedCharge.body, false);
-    const rollbackSigned = await fin("/gateway-webhook-sign", { method:"POST", cookie: financeiro.cookie, body:{ gateway_id: gatewayId, event_type:"charge.paid", idempotency_key:`fin12-wh-rollback-${tag}`, payload } });
     const failedWebhook = await fin("/gateway-webhooks", { method:"POST", cookie: financeiro.cookie, body:{ gateway_id: gatewayId, event_type:"charge.paid", idempotency_key:`fin12-wh-rollback-${tag}`, payload, signature: rollbackSigned.body.signature } });
     assert.equal(failedWebhook.status, 503); assert.deepEqual(failedWebhook.body, { error:"audit_unavailable" });
+    const failedConciliation = await fin("/gateway-webhooks", { method:"PATCH", cookie:financeiro.cookie,body:{ id:rollbackWebhook.body.webhook.id,status:"conciliado",charge_id:rollbackCharge.body.charge.id,reason:"Falha de auditoria deve reverter a baixa completa" } });
+    assert.equal(failedConciliation.status,503); assert.deepEqual(failedConciliation.body,{error:"audit_unavailable"});
   } finally { await pool.query("ALTER TABLE audit_log_fin12_unavailable RENAME TO audit_log"); }
   assert.equal((await pool.query("SELECT count(*)::int n FROM fin_payment_gateways WHERE idempotency_key=$1",[`fin12-gw-rollback-${tag}`])).rows[0].n, 0);
   assert.equal((await pool.query("SELECT count(*)::int n FROM fin_gateway_charges WHERE idempotency_key=$1",[`fin12-chg-rollback-${tag}`])).rows[0].n, 0);
   assert.equal((await pool.query("SELECT count(*)::int n FROM fin_gateway_webhooks WHERE idempotency_key=$1",[`fin12-wh-rollback-${tag}`])).rows[0].n, 0);
+  const rollbackAfterFailure = (await pool.query("SELECT amount_paid_cents,status FROM fin_accounts_receivable WHERE id=$1",[rollbackReceivable.id])).rows[0];
+  assert.equal(Number(rollbackAfterFailure.amount_paid_cents),0);
+  assert.equal(rollbackAfterFailure.status,"pendente");
+  assert.equal((await pool.query("SELECT count(*)::int n FROM fin_payments WHERE gateway_charge_id=$1",[rollbackCharge.body.charge.id])).rows[0].n,0);
+  assert.equal((await pool.query("SELECT status FROM fin_gateway_charges WHERE id=$1",[rollbackCharge.body.charge.id])).rows[0].status,"pendente");
+  assert.equal((await pool.query("SELECT status FROM fin_gateway_webhooks WHERE id=$1",[rollbackWebhook.body.webhook.id])).rows[0].status,"validado");
   assert.equal((await pool.query("SELECT count(*)::int n FROM fin_gateway_charges WHERE simulated=false")).rows[0].n, 0, "nenhuma cobrança real foi criada");
   assert.equal((await pool.query("SELECT count(*)::int n FROM fin_payment_gateways WHERE status='producao' OR environment<>'sandbox'")).rows[0].n, 0, "nenhum gateway em produção");
 });
@@ -1622,6 +1711,10 @@ test("L07 FIN-12: Chromium seleciona, homologa em sandbox, cria cobrança e conc
     assert.equal(settled.simulated, true);
     assert.ok(settled.conciliated_webhook_id);
     assert.ok(settled.settled_at);
+    const uiReceivable = (await pool.query("SELECT amount_paid_cents,status FROM fin_accounts_receivable WHERE id=$1",[receivable.id])).rows[0];
+    assert.equal(Number(uiReceivable.amount_paid_cents),180000);
+    assert.equal(uiReceivable.status,"recebido");
+    assert.equal((await pool.query("SELECT count(*)::int n FROM fin_payments WHERE gateway_charge_id=$1",[chargeRow.id])).rows[0].n,1);
     const conciliatedWebhook = (await pool.query("SELECT status,is_valid_signature FROM fin_gateway_webhooks WHERE id=$1",[settled.conciliated_webhook_id])).rows[0];
     assert.equal(conciliatedWebhook.status, "conciliado");
     assert.equal(conciliatedWebhook.is_valid_signature, true);
