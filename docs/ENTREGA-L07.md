@@ -1,5 +1,12 @@
 # Entrega L07 — financeiro e Marcelo (fatias em andamento)
 
+## Atualização vigente — jornadas FIN-14, FIN-15 e FIN-16 (2026-10-02)
+
+Base oficial `main` `cc4da84` (PR #71 integrada), branch `arena/01a0fc98-gruposegsystemseguranca`. A fatia adiciona três abas em `/admin/financeiro`, download sintético FIN-14 limitado no servidor, fechamento/reabertura FIN-15 com versões e bloqueio SQL de lançamentos no mês fechado, e provisão/revisão FIN-16 sem qualquer pagamento automático. A migração aditiva 137 preserva 001–136 e adiciona idempotência concorrente nas três jornadas e triggers de competência fechada; constraints novas são `NOT VALID` e linhas legadas ficam sem autoria/chave inventada.
+
+Gates finais: typecheck, unitários 196/196, build, estático 5/5, migrações 137/137, L07 37/37 em duas execuções consecutivas, L03 1/1, L04 20/20, L05 1/1 e L06 9/9. FIN-14/15/16 passam a `pronto_local` somente na validação automática. Aceite humano e Windows permanecem pendentes. **L07 não está concluído**: ADM-01..12 ainda não foi iniciado; L08 permanece fora do escopo. Relatório: [`ENTREGA-L07-FIN14-15-16.md`](./ENTREGA-L07-FIN14-15-16.md). Próxima instrução: [`PROMPT-PROXIMA-SESSAO-L07-ADM01-12.md`](./PROMPT-PROXIMA-SESSAO-L07-ADM01-12.md).
+
+
 **Data de início:** 2026-10-01
 **Base histórica da primeira fatia:** `main` @ `c42164cd146bd2c68737c0c6228ccc208c4c52a7` (merge da PR #42, fechamento do L06).
 **Base integrada atual:** `main`/`origin/main` @ `588b48f12b85fd07e2ca575e56f9b11ba97a1d67` (merge da PR #46, workflow L07 verde no job `110246095200`).

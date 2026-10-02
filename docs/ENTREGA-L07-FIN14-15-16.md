@@ -1,52 +1,37 @@
-# Entrega L07 — FIN-14, FIN-15 e FIN-16
+# Entrega L07 — jornadas UI de FIN-14, FIN-15 e FIN-16
 
-## Escopo
-Fatia de endurecimento dos domínios que ainda compartilhavam `src/server/fin-budget-api.mjs` sem as garantias já aplicadas ao FIN-13:
+**Data:** 2026-10-02
+**Base oficial:** `main` em `cc4da84c2c60827b9daf39d563ea30a676883b8b` (PR #71 integrada; migrações 001–136)
+**Branch:** `arena/01a0fc98-gruposegsystemseguranca`
+**Escopo:** somente FIN-14/15/16. FIN-10, FIN-13 e FIN-12→FIN-04 foram preservados; ADM-01..12 e L08 não foram iniciados.
 
-- FIN-14 — exportação do período (`/api/fin/exports`, `/api/fin/export-logs`).
-- FIN-15 — fechamento de competência e versões de relatório (`/api/fin/competence-closures`, `/api/fin/report-versions`).
-- FIN-16 — provisão/revisão de comissões ligadas à regra CRM-25 (`/api/fin/commission-provisions`, `/api/fin/commission-provision-history`).
+## Baseline e reprodução
 
-A entrega é aditiva: nenhuma migração histórica foi alterada e nenhum tipo existente foi modificado.
+Antes da alteração de negócio: estático 5/5, typecheck sem erros, unitários 196/196, migrações 136/136 (dois passes, clone/checksum negativo) e gate L07 35/35 em duas execuções consecutivas. Três execuções anteriores sofreram SIGSEGV intermitente do Chromium em subtestes antigos; nenhuma assertiva, timeout ou skip foi alterado. Após a sequência verde, um subteste Chromium novo foi escrito e executado contra a base intacta: 35 casos existentes passaram e o novo caso falhou porque a aba `exports` não existia, reproduzindo a lacuna real.
 
-## Lacunas corrigidas
-Antes desta fatia, os handlers FIN-14/15/16 ainda:
+## Implementação
 
-- gravavam sem transação, com auditoria executada depois do commit (falha de auditoria não revertia nada);
-- não tinham `FOR UPDATE` em decisão/transição;
-- não aplicavam a borda `guardMutation`, de modo que o papel `ti` podia **escrever** nesses domínios;
-- aceitavam qualquer valor de `status`/`action` e repassavam datas e textos direto ao SQL;
-- respondiam `500 internal` para toda falha, sem `503 audit_unavailable`;
-- tinham o `PATCH` de exportação e de provisão **quebrados**: o parâmetro `$1` era deduzido ao mesmo tempo como enum e como texto, e o PostgreSQL recusava a consulta com `42P08 inconsistent types deduced for parameter $1`. O caminho só respondia `500 internal`; agora é tipado explicitamente e exercitado pelo gate.
+- Três abas operacionais em `/admin/financeiro`: `ExportWorkspace`, `ClosureWorkspace` e `CommissionWorkspace`. Cada uma possui seleção/busca, erro de leitura visível, **Tentar novamente**, confirmação somente após persistência e motivos para ações sensíveis. Valores são formatados por `Intl.NumberFormat('pt-BR', {currency:'BRL'})`.
+- FIN-14: registro de exportação sintética por período, trilha, transições de geração e download JSON autorizado por `/api/fin/export-download`. O download é decidido no servidor, exige estado `gerado`, janela não expirada e escopo `contador` limitado; não expõe `storage_key` e não lê outros registros.
+- FIN-15: fechamento/reabertura pela sessão autorizada, motivo obrigatório e versões imutáveis visíveis. O fechamento mensal bloqueia `INSERT/UPDATE/DELETE` em recebíveis e pagáveis canônicos inclusive por SQL direto; reabertura libera o período.
+- FIN-16: provisão vinculada à regra CRM-25, início/conclusão de revisão e histórico auditável. A tela não oferece pagamento; `is_auto_paid` continua falso e a API/banco recusam pagamento automático.
+- Retry concorrente: FIN-14, FIN-15 e FIN-16 aceitam chave 8–200 + fingerprint; seis requisições iguais convergem em um registro (1 criação + 5 replays), enquanto conteúdo diferente com a mesma chave é recusado. Linhas legadas permanecem explicitamente sem chave.
+- Autorização permanece no servidor: anônimo/papel indevido negados, TI somente leitura, same-origin nas mutações e domínio+histórico+auditoria na mesma transação com rollback `503 audit_unavailable`.
 
-## Alterações
-- `db/migrations/133-fin14-15-16-export-closure-commission-hardening.sql` (nova, aditiva):
-  - FIN-14: `fin_export_logs` imutável, exportação sempre com acesso limitado do contador, transições `pendente → gerando → gerado → expirado` (`falhou → pendente`), `gerado` exige `storage_key` e `generated_at`.
-  - FIN-15: `fin_report_versions` imutável e sempre preservada; transições `aberta → fechada → reaberta → fechada`; reabertura exige identidade autorizadora, data e motivo.
-  - FIN-16: `is_auto_paid` permanece proibido; transições `provisionada → em_revisao → revisada → paga|cancelada`; `paga` exige revisão prévia, identidade e data de baixa manual.
-- `src/server/fin-budget-api.mjs`: handlers FIN-14/15/16 transacionais com `BEGIN`/`COMMIT`, `FOR UPDATE` nas decisões e nas chaves de duplicidade, auditoria fail-closed com rollback total e `503 { "error": "audit_unavailable" }`, allowlist de status/ações/tipos antes do SQL, respostas sanitizadas sem detalhe SQL, sessão/same-origin/papéis financeiro/admin e papel `ti` somente leitura em todo o domínio.
-- `scripts/migrate-site-visual.mjs` e `scripts/qa-wave0-static.mjs`: faixa de migrações passa a 001–133.
-- `tests/l07-delivery.integration.test.mjs`: três novos testes HTTP (FIN-14, FIN-15, FIN-16) com dados sintéticos. Nenhum teste Chromium foi acrescentado nesta fatia: os três domínios ainda não têm aba própria no workspace, então um teste de navegador adicionaria fragilidade sem cobertura real.
-- `scripts/qa-l07-delivery-postgres.mjs`: gate L07 passa de 24 para 27 subtestes.
+## Schema
 
-## Garantias verificadas pelo gate
-- FIN-14: criação com protocolo `EXP-FIN`, trilha em `fin_export_logs`, duplicidade recusada pela chave de armazenamento (sem criar segunda exportação), transições de geração controladas, `gerado` sem `storage_key` recusado, trilha imutável, acesso limitado do contador não pode ser desligado, papéis não financeiros recusados, `ti` somente leitura e `503` com rollback da exportação e da trilha.
-- FIN-15: fechamento único por competência, reabertura apenas autorizada e justificada, segunda reabertura consecutiva recusada, novo fechamento registrado, versões 1/2/3 preservadas e imutáveis, `503` sem criar fechamento nem versão.
-- FIN-16: provisão nasce `provisionada` e nunca `paga`; pagamento automático recusado na criação e na atualização; baixa exige revisão anterior e confirmação manual explícita; provisão paga é terminal; histórico imutável e sem tentativa de pagamento automático; `503` com rollback da provisão e do histórico.
+Migração aditiva `137-fin14-15-16-ui-idempotency-closure-lock.sql`, preservando 001–136:
 
-## Validações executadas em 2026-10-01
-- `npm ci`: OK, 82 pacotes, 0 vulnerabilidades.
-- `npm run typecheck`: OK.
-- `node scripts/qa-wave0-static.mjs`: OK, 5/5; migrações 001–133 contínuas e registradas.
-- `npm test`: OK, 196/196.
-- `npm run test:migrations:pg`: OK, migrações 001–133, duas passagens idempotentes e clone/checksum preservado (o stderr de checksum mismatch em `006` é o cenário negativo esperado do próprio gate, com exit code 0).
-- `npm run test:l07-delivery:pg`: OK, 27/27, 1ª execução.
-- `npm run test:l07-delivery:pg`: OK, 27/27, 2ª execução consecutiva; Chromium sem SIGSEGV.
-- `npm run test:l03-delivery:pg`: OK, 1/1.
-- `npm run test:l04-delivery:pg`: OK, 20/20.
-- `npm run test:l05-delivery:pg`: OK, 1/1.
-- `npm run test:l06-delivery:pg`: OK, 9/9.
-- `npm run build`: OK.
+- colunas opcionais legadas `idempotency_key`/`content_fingerprint` e índices únicos parciais nas três entidades;
+- CHECKs de pares de idempotência como `NOT VALID`;
+- trigger `fin15_block_closed_competence` nos lançamentos canônicos a receber/a pagar.
 
-## Limites
-Esta entrega não promete resultado financeiro, não implementa pagamento, cobrança real, gateway real ou emissão real — a baixa de comissão é apenas um registro manual auditado. Não altera migrações históricas nem tipos existentes. Todos os dados dos testes são sintéticos, em PostgreSQL descartável e isolado.
+Nenhuma migração anterior foi editada. Não houve emissão, cobrança, banco, PSP, Pix/boleto, pagamento ou envio real.
+
+## Provas
+
+O gate L07 passa a 37 subtestes. Além dos 35 anteriores, cobre Chromium real ponta a ponta nas três abas (incluindo falha de leitura + retry) e retry concorrente + bloqueio SQL direto. Os resultados finais do mesmo SHA estão consolidados em `EVIDENCIAS-ENTREGA-LOCAL.md` e na PR.
+
+## Estado e limites
+
+FIN-14, FIN-15 e FIN-16 são `pronto_local` apenas na validação automática. Aceite de Marcelo/Andreia, ensaio Windows e política operacional do contador continuam pendentes. **L07 não está concluído**: ADM-01..12 é a próxima fatia. L08 não foi iniciado.

@@ -1,5 +1,18 @@
 # Estado da execução — entrega local integral
 
+## Estado atual — L07 em execução; jornadas FIN-14/15/16 implementadas em 2026-10-02
+
+**Base/branch.** Fonte oficial `main` `cc4da84c2c60827b9daf39d563ea30a676883b8b` (PR #71 integrada), branch `arena/01a0fc98-gruposegsystemseguranca`. Escopo restrito a FIN-14/15/16; FIN-10, FIN-13 e FIN-12→FIN-04 foram preservados; #47/#53 não foram reavaliadas; ADM-01..12 e L08 não foram iniciados.
+
+**Entrega.** Abas Exportação, Fechamento/Reabertura e Comissões em `/admin/financeiro`, com leitura falha explícita+retry, seleção/busca, R$ pt-BR, confirmação pós-persistência e motivo. Migração aditiva 137 acrescenta idempotência/fingerprint para retries nas três jornadas e trava no banco lançamentos canônicos em mês fechado; reabertura autorizada libera o período e mantém versões. Download FIN-14 é JSON sintético limitado e decidido no servidor. FIN-16 não possui caminho de pagamento automático.
+
+**Validação final.** Typecheck, unitários 196/196, build, estático 5/5, migrações 137/137, L07 37/37 em duas execuções consecutivas e regressões L03 1/1, L04 20/20, L05 1/1 e L06 9/9 passaram.
+
+**Estado.** FIN-14, FIN-15 e FIN-16: `pronto_local` na validação automática, aceite humano/Windows pendentes. L07 continua em execução. Próxima fatia: ADM-01..12 no painel Marcelo, sem iniciá-la aqui. Prompt: `PROMPT-PROXIMA-SESSAO-L07-ADM01-12.md`.
+
+**Retomada/gates:** `npm ci`; `npm run typecheck`; `npm test`; `npm run build`; `node scripts/qa-wave0-static.mjs`; `npm run test:migrations:pg`; duas vezes `npm run test:l07-delivery:pg`; regressões `test:l03/l04/l05/l06-delivery:pg`.
+
+
 ## Estado atual — L07 em execução; fatia FIN-10 + avaliação adaptativa #47/#53 concluída em 2026-10-02
 
 **Base e escopo.** Base oficial: `main`/`origin/main` em `bd794dc99bfc12a7e8a811783bda1234aeb4fe6b` (merge da PR #69). Trabalho na branch Arena `arena/01a0fa9e-gruposegsystemseguranca`. Sem uso da cópia local do proprietário e sem nenhuma ligação com FIN-14/15/16, ADM-01..12 ou L08 nesta sessão.

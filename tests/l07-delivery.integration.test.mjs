@@ -2566,6 +2566,11 @@ test("L07 FIN-14: exportação do período com trilha imutável, idempotência p
   assert.ok(generated.body.export.generated_at, "generation timestamp recorded");
   assert.ok(generated.body.export.expires_at, "accountant access window recorded");
   assert.equal(generated.body.export.is_accountant_limited, true);
+  const downloaded = await fin(`/export-download?id=${exportId}`, { cookie: financeiro.cookie });
+  assert.equal(downloaded.status, 200, JSON.stringify(downloaded.body));
+  assert.equal(downloaded.body.export.id, exportId, "download returns only the authorized export");
+  assert.equal(downloaded.body.export.is_accountant_limited, true, "download preserves accountant scope");
+  assert.equal("storage_key" in downloaded.body.export, false, "download does not expose internal storage key");
 
   const withoutKey = await fin("/exports", { method: "POST", cookie: financeiro.cookie, body: exportPayload("sem-chave", { storage_key: undefined }) });
   assert.equal(withoutKey.status, 201, JSON.stringify(withoutKey.body));
@@ -2641,7 +2646,7 @@ test("L07 FIN-15: fechamento de competência, reabertura autorizada, versões pr
   assert.equal(reopenWithoutReason.body.error, "reopen_reason_10_1000_required_reabertura_autorizada");
   assert.equal("details" in reopenWithoutReason.body, false, "no SQL details in validation errors");
 
-  const reopened = await fin("/competence-closures", { method: "PATCH", cookie: financeiro.cookie, body: { id: closureId, action: "reopen", reopen_reason: "Reabertura autorizada sintética para reconferência do gate FIN-15." } });
+  const reopened = await fin("/competence-closures", { method: "PATCH", cookie: financeiro.cookie, body: { id: closureId, action: "reopen", reopen_reason: "Reabertura autorizada sintética para reconferência do gate FIN-15.", authorized_by_identity: ti.id } });
   assert.equal(reopened.status, 200, JSON.stringify(reopened.body));
   assert.equal(reopened.body.closure.status, "reaberta");
   assert.equal(reopened.body.closure.authorized_by_identity, financeiro.id, "reopening records the authorizing identity");
@@ -2802,4 +2807,104 @@ test("L07 FIN-16: provisão de comissão CRM-25 com revisão obrigatória, sem p
   assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_commission_provisions WHERE rule_id=$1 AND amount_cents=77000", [ruleId])).rows[0].n, 0, "provision rolled back when audit is unavailable");
   assert.equal((await pool.query("SELECT status FROM fin_commission_provisions WHERE id=$1", [rollbackId])).rows[0].status, "provisionada", "review rolled back when audit is unavailable");
   assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_commission_provision_history WHERE provision_id=$1", [rollbackId])).rows[0].n, 1, "history rolled back with the transaction");
+});
+
+test("L07 FIN-14/15/16 jornadas: Chromium encontra três abas operacionais com erro de leitura e retry", { skip: !RUN, timeout: 120_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const ruleId = uuid();
+  await pool.query("INSERT INTO crm_commission_rules(id,name,description,percent,status,created_by) VALUES($1,$2,$3,5,'ativa','admin')",[ruleId,`Regra UI ${ruleId.slice(0,8)}`,"Regra CRM-25 sintética para a jornada Chromium FIN-16."]);
+  const browser = await playwrightChromium.launch({ executablePath: await packagedChromium.executablePath(), headless: true, args: packagedChromium.args.filter(arg => arg !== "--disable-web-security") });
+  try {
+    const context = await browser.newContext({ serviceWorkers: "block" });
+    const pair = financeiro.cookie.split(";")[0];
+    const separator = pair.indexOf("=");
+    await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
+    const page = await context.newPage();
+    await page.setExtraHTTPHeaders({ origin: baseUrl });
+    await page.goto(`${baseUrl}/admin/financeiro`, { waitUntil: "networkidle" });
+    const reads = { exports:"exports", closures:"competence-closures", commissions:"commission-provisions" };
+    for (const domain of ["exports", "closures", "commissions"]) {
+      const pattern = `**/api/fin/${reads[domain]}**`;
+      await page.route(pattern, route => route.request().method() === "GET" ? route.fulfill({status:500,contentType:"application/json",body:JSON.stringify({error:"internal"})}) : route.continue());
+      const tab = page.getByTestId(`finance-tab-${domain}`);
+      assert.equal(await tab.count(), 1, `aba ${domain} deve existir`);
+      await tab.click();
+      await page.waitForSelector(`[data-testid="fin-${domain}-workspace"]`);
+      await page.waitForSelector(`[data-testid="fin-${domain}-error"]`);
+      assert.match(await page.getByTestId(`fin-${domain}-error`).textContent(), /não foi possível|internal/i);
+      await page.unroute(pattern);
+      await page.getByTestId(`fin-${domain}-retry`).click();
+      await page.waitForFunction(testId => !document.querySelector(`[data-testid="${testId}"]`), `fin-${domain}-error`);
+    }
+
+    await page.getByTestId("finance-tab-exports").click();
+    await page.getByTestId("fin14-start").fill("2031-01-01");
+    await page.getByTestId("fin14-end").fill("2031-01-31");
+    await page.getByTestId("fin14-amount").fill("98765");
+    await page.getByTestId("fin14-create").click();
+    await page.waitForFunction(() => document.querySelector('[data-testid="fin-exports-notice"]')?.textContent?.includes("persistida"));
+    await page.waitForFunction(() => document.querySelector('[data-testid="fin14-list"]')?.textContent?.includes("987,65"));
+    assert.match(await page.getByTestId("fin14-list").textContent(), /987,65/);
+
+    await page.getByTestId("finance-tab-closures").click();
+    await page.getByTestId("fin15-date").fill("2031-02-01");
+    await page.locator('[data-testid="fin-closures-workspace"] input').nth(1).fill("Fechamento sintético pela jornada Chromium com versões preservadas.");
+    await page.getByTestId("fin15-close").click();
+    await page.waitForFunction(() => document.querySelector('[data-testid="fin-closures-notice"]')?.textContent?.includes("fechada"));
+    await page.waitForFunction(() => document.querySelector('[data-testid="fin15-versions"]')?.textContent?.includes("Versão 1"));
+    assert.match(await page.getByTestId("fin15-versions").textContent(), /Versão 1/);
+
+    await page.getByTestId("finance-tab-commissions").click();
+    await page.getByTestId("fin16-rule").fill(ruleId);
+    await page.locator('[data-testid="fin-commissions-workspace"] input[type="date"]').fill("2031-03-01");
+    await page.getByTestId("fin16-amount").fill("54321");
+    await page.locator('[data-testid="fin-commissions-workspace"] input').nth(4).fill("Provisão sintética da jornada Chromium sem pagamento automático.");
+    await page.getByTestId("fin16-create").click();
+    await page.waitForFunction(() => document.querySelector('[data-testid="fin-commissions-notice"]')?.textContent?.includes("persistida"));
+    await page.getByTestId("fin16-reason").fill("Início da revisão sintética pela interface financeira.");
+    await page.getByTestId("fin16-revision-reason").fill("Base da comissão conferida manualmente na jornada Chromium.");
+    await page.getByRole("button",{name:"Iniciar revisão"}).click();
+    await page.waitForFunction(() => document.querySelector('[data-testid="fin-commissions-notice"]')?.textContent?.includes("em_revisao"));
+    assert.doesNotMatch(await page.getByTestId("fin-commissions-workspace").textContent(), /Pagar comissão|Pagamento automático: permitido/i);
+  } finally {
+    await browser.close();
+  }
+});
+
+test("L07 FIN-14/15/16 aditivo: retries concorrentes são idempotentes e competência fechada bloqueia SQL direto", { skip: !RUN, timeout: 120_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const tag = uuid().slice(0, 8);
+
+  const exportBody = { period_start:"2029-01-01", period_end:"2029-01-31", filters:{origem:"gate"}, totals:{valor:32100}, total_records:2, total_amount_cents:32100, file_name:`conc-${tag}.json`, storage_key:`synthetic/fin14/concurrent-${tag}.json`, idempotency_key:`fin14-concurrent-${tag}` };
+  const exportRuns = await Promise.all(Array.from({length:6},()=>fin("/exports",{method:"POST",cookie:financeiro.cookie,body:exportBody})));
+  assert.equal(exportRuns.filter(r=>r.status===201).length,1,"uma exportação criada");
+  assert.equal(exportRuns.filter(r=>r.status===200&&r.body.idempotent_replay).length,5,"cinco replays retornam o mesmo registro");
+  assert.equal(new Set(exportRuns.map(r=>r.body.export?.id)).size,1,"retry de exportação converge");
+
+  const closeBody = { competence_date:"2030-01-01", notes:"Fechamento concorrente sintético e idempotente do gate FIN-15.", totals:{origem:"gate"}, idempotency_key:`fin15-concurrent-${tag}` };
+  const closeRuns = await Promise.all(Array.from({length:6},()=>fin("/competence-closures",{method:"POST",cookie:financeiro.cookie,body:closeBody})));
+  assert.equal(closeRuns.filter(r=>r.status===201).length,1,"um fechamento criado");
+  assert.equal(closeRuns.filter(r=>r.status===200&&r.body.idempotent_replay).length,5,"cinco retries do fechamento");
+  const closureId=closeRuns[0].body.closure.id;
+  assert.equal((await pool.query("SELECT count(*)::int n FROM fin_report_versions WHERE closure_id=$1",[closureId])).rows[0].n,1,"replay não cria versão adicional");
+
+  const space=await insertClientSpace(`FIN15 lock ${tag}`);
+  const protocol=`REC-FIN-20300101-${tag.slice(0,4).toUpperCase()}`;
+  await assert.rejects(pool.query("INSERT INTO fin_accounts_receivable(protocol,client_account_id,competence_date,due_date,amount_cents,description) VALUES ($1,$2,'2030-01-01','2030-01-10',1000,$3)",[protocol,space.accountId,"Lançamento sintético bloqueado pela competência fechada"]),/fin_competence_closed/);
+  const apiBlocked=await fin("/receivables",{method:"POST",cookie:financeiro.cookie,body:{client_account_id:space.accountId,competence_date:"2030-01-01",due_date:"2030-01-10",amount_cents:1000,description:"Lançamento sintético bloqueado na API"}});
+  assert.equal(apiBlocked.status,409); assert.deepEqual(apiBlocked.body,{error:"competence_closed"});
+  const reopened=await fin("/competence-closures",{method:"PATCH",cookie:financeiro.cookie,body:{id:closureId,action:"reopen",reopen_reason:"Reabertura sintética autorizada para provar liberação do período."}});
+  assert.equal(reopened.status,200);
+  const direct=await pool.query("INSERT INTO fin_accounts_receivable(protocol,client_account_id,competence_date,due_date,amount_cents,description) VALUES ($1,$2,'2030-01-01','2030-01-10',1000,$3) RETURNING id",[protocol,space.accountId,"Lançamento sintético permitido após reabertura autorizada"]);
+  await pool.query("DELETE FROM fin_accounts_receivable WHERE id=$1",[direct.rows[0].id]);
+
+  const ruleId=uuid();
+  await pool.query("INSERT INTO crm_commission_rules(id,name,description,percent,status,created_by) VALUES($1,$2,$3,4.5,'ativa','admin')",[ruleId,`Regra concorrente ${tag}`,"Regra CRM-25 sintética para retry concorrente da provisão."]);
+  const provisionBody={rule_id:ruleId,provision_date:"2030-01-31",amount_cents:45600,notes:"Provisão sintética concorrente sem pagamento automático.",idempotency_key:`fin16-concurrent-${tag}`};
+  const provisionRuns=await Promise.all(Array.from({length:6},()=>fin("/commission-provisions",{method:"POST",cookie:financeiro.cookie,body:provisionBody})));
+  assert.equal(provisionRuns.filter(r=>r.status===201).length,1,"uma provisão criada");
+  assert.equal(provisionRuns.filter(r=>r.status===200&&r.body.idempotent_replay).length,5,"cinco retries da provisão");
+  const provisionId=provisionRuns[0].body.provision.id;
+  assert.equal((await pool.query("SELECT count(*)::int n FROM fin_commission_provision_history WHERE provision_id=$1",[provisionId])).rows[0].n,1,"retry não duplica histórico");
+  assert.equal((await pool.query("SELECT is_auto_paid,status FROM fin_commission_provisions WHERE id=$1",[provisionId])).rows[0].is_auto_paid,false,"retry nunca paga automaticamente");
 });
