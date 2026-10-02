@@ -1,5 +1,9 @@
 # Entrega L07 — financeiro e Marcelo (fatias em andamento)
 
+## Atualização de fechamento humano — 2026-10-02
+
+Marcelo e Andreia aceitaram integralmente FIN-01..16 e ADM-01..12 em 02/10/2026, conforme roteiro de `MATRIZ-FECHAMENTO-L07.md`. O aceite cobre as jornadas locais e seus limites sintéticos; não homologa integração externa. O proprietário declarou Windows **não validado**, sem evidência. Logo, o **L07 ainda não está concluído**. A decisão sobre os 80 componentes órfãos é promover por área somente com prova, sem prioridade entre áreas declarada. O L08 não foi iniciado; houve apenas auditoria documental em `AUDITORIA-TERRENO-L08.md`. Evidências e resultados reais estão em `ENTREGA-L07-ACEITE-E-AUDITORIA-L08.md`.
+
 ## Atualização vigente — fechamento de matriz e evidências (2026-10-02)
 
 A **matriz do L07 foi fechada**: FIN-01..16 e ADM-01..12 foram conferidos

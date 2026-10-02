@@ -1,4 +1,9 @@
 # Execução focada — entrega local integral SEG System
+
+## Atualização operacional 2026-10-02 — barreira L07 → L08
+
+O aceite humano dos 28 requisitos L07 foi declarado por Marcelo e Andreia em 02/10/2026, e a decisão dos 80 órfãos é promovê-los por área somente com prova. Porém, nenhuma validação Windows com evidência foi apresentada. Portanto a ordem vigente é: **não declarar L07 concluído e não iniciar implementação/gate/migração do L08**. A auditoria `AUDITORIA-TERRENO-L08.md` serve apenas para preparar a próxima sessão e mantém CLI/EXT nos estados existentes. Após evidência Windows, revalidar o mesmo SHA, fechar L07 e então iniciar CLI-01..05 com isolamento A≠B, auditoria transacional fail-closed, autoria da sessão, idempotência e UI real.
+
 Data: 2026-09-29. Orientação complementar ao PLANO-MESTRE-IMPLEMENTACAO.md.
 Objetivo autorizado: entregar o sistema integrado funcionando no computador do proprietário, sem depender de SMTP nem de hospedagem externa. Este documento orienta implementação; sua existência não comprova conclusão.
 

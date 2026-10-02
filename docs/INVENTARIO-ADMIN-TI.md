@@ -1,5 +1,9 @@
 # Inventário por prova dos componentes órfãos de `/admin/ti`
 
+## Decisão de negócio registrada em 2026-10-02
+
+O proprietário decidiu **promover os 80 componentes por área somente com prova**, aplicando integralmente o critério de saída deste inventário. Nenhuma ordem entre as áreas foi declarada e não será presumida. Até cada promoção individual, os arquivos permanecem protótipos documentados, sem contar como funcionalidade entregue. Esta decisão resolve o destino da dívida, mas não comprova Windows nem fecha por si só o L07.
+
 Levantado em 2026-10-02 no mesmo SHA da entrega ADM-01..12. **Prova aplicada
 a cada arquivo** (reprodutível):
 

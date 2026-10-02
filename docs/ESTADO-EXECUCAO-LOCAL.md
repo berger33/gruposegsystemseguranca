@@ -1,5 +1,15 @@
 # Estado da execução — entrega local integral
 
+## Estado vigente — aceite humano registrado; Windows ainda bloqueia o L07 (2026-10-02)
+
+Base oficial `main` em `ad01d7d` (merge da PR #76); branch `arena/01a0fdbd-gruposegsystemseguranca`. Após apresentação da [`MATRIZ-FECHAMENTO-L07.md`](MATRIZ-FECHAMENTO-L07.md) seção por seção, o proprietário declarou em **02/10/2026** que **Marcelo e Andreia aceitaram integralmente FIN-01..16 e ADM-01..12**. Esse aceite humano não substitui nem se confunde com a implementação e a validação automática já registradas.
+
+O proprietário declarou também que **não houve validação Windows com evidência**. Assim, apesar do aceite dos 28 requisitos, o equipamento-alvo segue sem prova e o **L07 permanece em execução, não concluído**. Para os 80 órfãos de `/admin/ti`, a decisão foi **promover por área somente com prova**, conforme o critério do inventário; nenhuma prioridade entre áreas foi informada. Até a promoção, continuam protótipos e não contam como funcionalidade entregue.
+
+Baseline antes de editar no SHA `ad01d7d`: estático 5/5, typecheck 0, unitários 196/196, migrações 138/138 em dois passes + clone/checksum negativo (524 tabelas). L07: 43/43; depois 42/43 por `SIGSEGV` do Chromium no lançamento do subteste 6; duas repetições imediatamente consecutivas 43/43 + 43/43. Regressão encadeada: L03 1/1; L04 18/20 por dois `SIGSEGV` no lançamento do Chromium e, na repetição integral, 20/20; L05 1/1; L06 9/9. Sem timeout maior, skip ou alteração de assertiva.
+
+Como o L07 não fechou formalmente, o **L08 não foi iniciado**. Nenhum gate/workflow/migração L08 foi criado; apenas o terreno CLI-01..15/EXT-01..17 foi documentado em [`AUDITORIA-TERRENO-L08.md`](AUDITORIA-TERRENO-L08.md), sem promoção de estado. Validação final: estático 5/5, typecheck, unitários 196/196, build, migrações 138/138, L07 **43/43 + 43/43 consecutivos**, L03 1/1, L04 20/20, L05 1/1 e L06 encadeado 9/9. Duas execuções L07 intermediárias tiveram `SIGSEGV` do Chromium no lançamento (subtestes 12 e 32) e foram recuperadas sem alteração de teste/produto. Relatório: [`ENTREGA-L07-ACEITE-E-AUDITORIA-L08.md`](ENTREGA-L07-ACEITE-E-AUDITORIA-L08.md). Próximo passo real: validação Windows relatada com evidência; depois, e somente depois, fechamento formal L07 e início de CLI-01..05.
+
 ## Estado atual — L07: matriz e evidências fechadas; aceite humano pendente (2026-10-02)
 
 Base oficial utilizada: `main` `bbcf311` (merge da PR #74, ADM-01..12). Branch Arena desta sessão: `arena/01a0fd4f-gruposegsystemseguranca`. A matriz de fechamento do L07 foi construída em [`docs/MATRIZ-FECHAMENTO-L07.md`](MATRIZ-FECHAMENTO-L07.md), ligando cada requisito FIN-01..16 e ADM-01..12 a tela/rota, API, tabelas canônicas, subtestes vigentes do gate de 43, resultado da última execução e pendência — conferida linha a linha contra o código e o corpo de cada subteste, sem texto "para parecer completo". O CHECKLIST ganhou o mapeamento por requisito; duas imprecisões documentais foram corrigidas (rótulo real da aba FIN-10 e a evidência vigente defasada em EVIDENCIAS); nenhuma lacuna funcional real foi encontrada (próxima migração segue 139).

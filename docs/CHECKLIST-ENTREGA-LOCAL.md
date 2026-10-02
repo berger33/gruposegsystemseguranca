@@ -1,6 +1,10 @@
 # Checklist da entrega local — 222 requisitos
 
-Atualização de controle em 2026-10-02 (fechamento de matriz do L07): FIN-01..16 e ADM-01..12 conferidos requisito a requisito contra tela/API/tabelas/autorização reais e os **43 subtestes vigentes** do gate `test:l07-delivery:pg`; cada linha de FIN/ADM agora cita seus subtestes e a matriz completa está em [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md). Todos permanecem `pronto_local` na validação automática, **com aceite humano pendente**. Ver também [consolidação](CONSOLIDACAO-L07-PRS-PENDENTES.md) e [retomada](PROMPT-RETOMADA-L07-CONSOLIDADO.md). L04–L06 já têm entregas técnicas integradas. Estados abaixo conservam evidências por requisito, não uma porcentagem global; não houve promoção em massa nesta revisão.
+## Atualização 2026-10-02 — aceite L07 e auditoria L08 sem início
+
+Marcelo e Andreia aceitaram FIN-01..16 e ADM-01..12 integralmente em 02/10/2026. Windows não foi validado e nenhuma evidência foi apresentada; portanto L07 permanece em execução. Decisão dos 80 órfãos: promover por área somente com prova, sem ordem declarada. CLI-01..15 e EXT-01..17 abaixo foram auditados contra código real, mas mantêm seus estados: o L08 não foi iniciado e a existência de API/tabela/componente órfão não foi tratada como entrega. Matriz detalhada em [`AUDITORIA-TERRENO-L08.md`](AUDITORIA-TERRENO-L08.md).
+
+Atualização de controle em 2026-10-02 (fechamento de matriz do L07): FIN-01..16 e ADM-01..12 conferidos requisito a requisito contra tela/API/tabelas/autorização reais e os **43 subtestes vigentes** do gate `test:l07-delivery:pg`; cada linha de FIN/ADM agora cita seus subtestes e a matriz completa está em [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md). Naquela revisão, todos permaneciam `pronto_local` na validação automática e o aceite humano estava pendente; o registro posterior está na atualização acima. Ver também [consolidação](CONSOLIDACAO-L07-PRS-PENDENTES.md) e [retomada](PROMPT-RETOMADA-L07-CONSOLIDADO.md). L04–L06 já têm entregas técnicas integradas. Estados abaixo conservam evidências por requisito, não uma porcentagem global; não houve promoção em massa nesta revisão.
 Leia EXECUCAO-ENTREGA-LOCAL.md. Todos começam em a_revalidar para confrontar evidências históricas com a versão final. Isso não apaga o trabalho realizado.
 Para cada ID, completar: rota/tela; API/tabela; perfil/escopo; integração; teste e commit; evidência; bloqueio; aceite humano.
 Estados: a_revalidar, pendente, em_execucao, bloqueado, pronto_local, depende_integracao_externa.
@@ -868,107 +872,107 @@ eventos de monitoramento via conector, fila, reconhecimento e escalonamento; nã
 ## CLI-01
 identidade, convite, recuperação e sessão reais; entrada única, rotas antigas identificadas/redirecionadas com cuidado.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Rotas reais de entrada/convite/recuperação e `/cliente/app`; `/api/auth/*`; tabelas 003/097–101. Metadados v2 em `/api/cli/entry-points|old-routes` (074), staff-only.
+- Integração e evidência (teste, resultado, commit): Integração PG legada de acesso existe; a camada v2 está somente no `CliClient.tsx` órfão e ainda não tem gate L08.
+- Pendência / fronteira externa / aceite humano: Aceite L08 não iniciado; unificar sem presumir que alias v2 é jornada cliente.
 
 ## CLI-02
 múltiplos contatos do cliente e papéis por conta/unidade/contrato. Delegação pelo cliente apenas se autorizada, sem ampliação fora do próprio escopo.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Contas/grants legados em `/admin/clientes` e `/api/client/accounts`; contatos/escopos/delegação v2 na 074 e `cli-api.mjs`, staff-only.
+- Integração e evidência (teste, resultado, commit): Escopo legado A≠B é provado por `client-space.integration`; delegação v2 do cliente não é.
+- Pendência / fronteira externa / aceite humano: UI v2 órfã e falta prova de autoria/escopo por recurso.
 
 ## CLI-03
 contratos, itens de serviço, vigência, documentos e escopo claro; conteúdo técnico interno não publicado automaticamente.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: `/cliente/app/contratos` usa `/api/client/contracts`/004; itens, escopos e vigência v2 usam 074 e handlers staff-only.
+- Integração e evidência (teste, resultado, commit): Contrato legado por conta tem prova PG; conteúdo v2 está no `CliClient.tsx` órfão.
+- Pendência / fronteira externa / aceite humano: Falta gate cliente para itens/vigência e bloqueio de conteúdo interno.
 
 ## CLI-04
 documentos com categoria/validade/versão, busca e download privado; autorização testada em todos os caminhos.
 - Estado: em_execucao
-- Tela / API / dados / autorização: POST /api/admin/documents grava bytes reais em ctx.docsDir com chave de 24 bytes gerada pelo servidor (48 hex, validada por STORAGE_KEY_PATTERN antes de path.join) e content_sha256; GET /api/admin/documents/:id/download e /api/client/documents/:id/download exigem sessão.
-- Integração e evidência (teste, resultado, commit): tests/l02-delivery.integration.test.mjs 1 a 5, commit 4b95616: bytes conferidos em disco; nome "../../../../etc/passwd" não vira caminho e nada é escrito fora do diretório; download sem sessão 401; adulteração do arquivo em disco devolve 409 document_integrity_failed em vez de servir bytes trocados; documento de outra conta negado pela rota do cliente.
-- Pendência / fronteira externa / aceite humano: Faltam categoria com validade e versionamento de documento (a tabela client_documents ainda não tem versão nem vencimento) e a busca por documento. A migração 101 também corrigiu CHECK (uploaded_by IN ('marcelo','ti')), que rejeitava os papéis admin/rh criados no L01.
+- Tela / API / dados / autorização: `/cliente/app/documentos`; APIs legadas de lista/download e v2 de categoria/versão/log; tabelas 004/074/101.
+- Integração e evidência (teste, resultado, commit): Bytes privados, integridade e A≠B têm prova legada/QA; alias v2 é staff-only e devolve metadado/URL, não streaming cliente.
+- Pendência / fronteira externa / aceite humano: Mantido `em_execucao`; falta jornada v2 integral e gate L08.
 
 ## CLI-05
 chamados com protocolo, categoria, prioridade, responsável, mensagens, anexos, SLA e histórico.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: `/cliente/app/chamados` usa legado; `cli_tickets_v2`/mensagens/anexos/histórico/SLA na 075 e `cli-advanced-api.mjs`.
+- Integração e evidência (teste, resultado, commit): Legado tem prova PG e `cli_tickets_v2` é fonte canônica provada no ADM; isso não prova portal v2, cujo alias exige staff.
+- Pendência / fronteira externa / aceite humano: Componente v2 órfão; falta cliente A≠B, transação e UI.
 
 ## CLI-06
 estados aberto/em atendimento/aguardando cliente/resolvido/encerrado, reabertura e motivo; pausas de SLA explicitamente definidas.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Handlers/tabelas v2 de estados, reabertura, histórico e pausas SLA (075); sem tela cliente.
+- Integração e evidência (teste, resultado, commit): Sem gate L08; múltiplas escritas/auditoria não têm rollback fail-closed provado.
+- Pendência / fronteira externa / aceite humano: Órfão/não provado.
 
 ## CLI-07
 agenda de visita/manutenção, confirmação, reagendamento e histórico.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Aliases `/api/cli|client/visits`, histórico e tabelas 075; sem tela cliente.
+- Integração e evidência (teste, resultado, commit): Alias cliente alcança handler staff-only; sem prova A≠B.
+- Pendência / fronteira externa / aceite humano: Órfão/não provado.
 
 ## CLI-08
 relatórios de execução e medição/aceite de serviço com revisão.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Aliases de relatórios v2/histórico e tabelas 075; sem tela cliente.
+- Integração e evidência (teste, resultado, commit): Handler/componente existem, sem jornada de revisão/aceite/autorização.
+- Pendência / fronteira externa / aceite humano: Órfão/não provado.
 
 ## CLI-09
 cobranças/documentos fiscais/comprovantes somente quando financeiro estiver integrado; dados da própria conta.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Alias de cobranças v2 e `cli_charges_v2` (076); sem tela cliente.
+- Integração e evidência (teste, resultado, commit): Sem vínculo provado com FIN nem escopo da própria conta.
+- Pendência / fronteira externa / aceite humano: Órfão; qualquer PSP/fiscal real continua fora.
 
 ## CLI-10
 solicitação de serviço adicional gera oportunidade no CRM com origem e responsável.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Alias de solicitações de serviço e `cli_service_requests` (076); sem tela cliente.
+- Integração e evidência (teste, resultado, commit): Não há prova de oportunidade CRM, origem/responsável e atomicidade.
+- Pendência / fronteira externa / aceite humano: Órfão/não provado.
 
 ## CLI-11
 satisfação pós-atendimento e periódica, plano de ação e risco de renovação baseado em fatos.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: APIs/tabelas 076 de pesquisas e planos; sem tela cliente.
+- Integração e evidência (teste, resultado, commit): Sem gate de pós-atendimento, plano e risco factual.
+- Pendência / fronteira externa / aceite humano: Órfão/não provado.
 
 ## CLI-12
 renovação e comunicação contratual com registro, sem bloquear indiscriminadamente o portal por inadimplência.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: API/tabela 076 de comunicações de renovação; sem tela cliente.
+- Integração e evidência (teste, resultado, commit): Sem prova de comunicação e de não bloqueio indiscriminado.
+- Pendência / fronteira externa / aceite humano: Órfão/não provado.
 
 ## CLI-13
 modos convite, solicitação com aprovação e autocadastro configuráveis; vínculo verificado no servidor em todos. Autocadastro nunca libera contratos sozinho.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: `/admin/portal/solicitacoes`; modos/solicitações v2 e alias cliente na 076; convite legado na 003.
+- Integração e evidência (teste, resultado, commit): Há guards de aprovação manual legada; modos/vínculo e negação de contrato automático não têm gate L08.
+- Pendência / fronteira externa / aceite humano: Parcial; camada v2 órfã.
 
 ## CLI-14
 segurança da conta com MFA opcional, gestão de sessões e troca de e-mail concluída; fluxos ligados ao backend real.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: `/cliente/app/seguranca` opera MFA; APIs 005/097–099; gestão v2 em 076.
+- Integração e evidência (teste, resultado, commit): MFA/sessão legados têm testes; gestão completa v2 e escopo cliente não têm gate L08.
+- Pendência / fronteira externa / aceite humano: Parcial/legado; aceite pendente.
 
 ## CLI-15
 reclamação sobre colaborador tratada em canal restrito, com compartilhamento mínimo com RH.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: `/api/cli/employee-complaints`; tabelas 093; `EmployeeComplaintClient.tsx` órfão; sem tela cliente.
+- Integração e evidência (teste, resultado, commit): Sem prova de roteamento aos responsáveis, mínimo de RH e isolamento A≠B.
+- Pendência / fronteira externa / aceite humano: Órfão/não provado.
 
 ## FIN-01
 contas a receber vinculadas a contrato, competência, vencimento, recorrência, moeda, valor e situação.
@@ -1410,121 +1414,121 @@ documentação para manutenção por outro programador, configuração, migraç�
 ## EXT-01
 Frota Aceite: Veículo, responsável, abastecimento, manutenção, documentos e custo; se frota própria existir
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Handlers `/api/ext/*` para frota e custos; tabelas `ext_fleet_*`/085; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
+- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
+- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
 
 ## EXT-02
 Terceiros Aceite: Cadastro, contrato, documentos, vencimentos, acesso temporário e avaliação
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Handlers `/api/ext/*` para terceiros/documentos; tabelas `ext_third_part*`/085; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
+- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
+- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
 
 ## EXT-03
 Licitações Aceite: Edital, prazos, documentos, responsáveis, proposta e resultado; se mercado relevante
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Handlers `/api/ext/*` para licitações/documentos; tabelas `ext_bidding_*`/085; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
+- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
+- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
 
 ## EXT-04
 Portal fornecedores Aceite: Cotações/documentos/pedidos com escopo próprio; se volume justificar
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Handlers `/api/ext/*` para cotações de fornecedor; tabelas `ext_supplier_portal_*`/085; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
+- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
+- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
 
 ## EXT-05
 Qualidade Aceite: Não conformidade, causa, ação corretiva, verificação e reincidência
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Handlers `/api/ext/*` para não conformidades/ações; tabelas `ext_quality_*`/085; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
+- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
+- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
 
 ## EXT-06
 Satisfação/carteira Aceite: Pesquisas, CSAT/NPS quando adequado, histórico e tarefa de recuperação
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Handlers `/api/ext/*` para satisfação; tabelas `ext_satisfaction_surveys`/085; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
+- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
+- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
 
 ## EXT-07
 Compliance corporativo Aceite: Licenças/certidões/seguros e obrigações aplicáveis com responsável e validade
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Handlers `/api/ext/*` para compliance; tabelas `ext_compliance_documents`/086; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
+- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
+- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
 
 ## EXT-08
 Base de conhecimento Aceite: Procedimentos versionados, busca, acesso e ciência
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Handlers `/api/ext/*` para conhecimento/histórico/ciência; tabelas `ext_knowledge_*`/086; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
+- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
+- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
 
 ## EXT-09
 Expansão/unidades Aceite: Planejamento de filial/contrato, capacidade e cenários financeiros
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Handlers `/api/ext/*` para expansão/cenários; tabelas `ext_expansion_*`/086; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
+- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
+- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
 
 ## EXT-10
 Continuidade operacional Aceite: Contingência por posto/cliente, contatos, exercícios e recuperação
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Handlers `/api/ext/*` para continuidade/exercícios; tabelas `ext_continuity_*`/086; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
+- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
+- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
 
 ## EXT-11
 Analytics/A-B Aceite: Hipótese, variantes aprovadas, métrica e privacidade
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Handlers `/api/ext/*` para experimentos; tabelas `ext_analytics_experiments`/086; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
+- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
+- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
 
 ## EXT-12
 Editor visual avançado Aceite: Tokens/layouts versionados, preview e publicação
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Handlers `/api/ext/*` para tokens/layouts/histórico; tabelas `ext_visual_*`/086; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
+- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
+- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
 
 ## EXT-13
 Relatório periódico Aceite: Consolidação de métricas e envio autorizado
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Handlers `/api/ext/*` para relatórios/logs; tabelas `ext_periodic_report*`/087; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
+- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
+- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
 
 ## EXT-14
 Inteligência comercial Aceite: Indicações, reativação e recomendações baseadas em histórico
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Handlers `/api/ext/*` para inteligência comercial; tabelas `ext_commercial_intelligence`/087; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
+- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
+- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
 
 ## EXT-15
 Apoio emergencial Aceite: Canal, destinatário, disponibilidade e escalonamento definidos
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Handlers `/api/ext/*` para canais/testes emergenciais; tabelas `ext_emergency_*`/087; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
+- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
+- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
 
 ## EXT-16
 Central/vídeo Aceite: Projeto separado para eventos de monitoramento, vídeo e disponibilidade
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Handlers `/api/ext/*` para projetos/eventos de central; tabelas `ext_central_*`/087; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
+- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
+- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
 
 ## EXT-17
 Biometria/reconhecimento Aceite: Projeto separado, necessidade e avaliação de impacto/base aplicável
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: Handlers `/api/ext/*` para projetos de biometria; tabelas `ext_biometry_projects`/087; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
+- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
+- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
 
 ## AI-01
 FAQ pública com respostas aprovadas e transferência humana; informar limites, não inventar serviços/credenciais.
