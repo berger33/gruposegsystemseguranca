@@ -89,3 +89,27 @@ Encaminhamento proposto, a decidir pelo dono (nenhuma das duas foi mesclada ou f
 6. Fechar matriz/evidências do L07 e produzir handoff L08. Não iniciar L08 nesta consolidação.
 
 Leia [PROMPT-RETOMADA-L07-CONSOLIDADO.md](PROMPT-RETOMADA-L07-CONSOLIDADO.md).
+
+### Aproveitamento efetivo na fatia FIN-10 / avaliação #47 e #53 (esta execução)
+
+#### PR #47 (garantias de conciliação)
+
+| Item avaliado | Destino | Status | Motivo |
+|---|---|---|---|
+| Constraint movimento–conta da conciliação | `db/migrations/136-fin10-fin05-policy-history-locks.sql` (`fin05_conciliation_requires_movement_and_one_account`) | Aproveitada | Ausente na main: a CHECK 078 gerava falso positivo (proíbe recebível sem contrato, impedindo dica da workspace); a #47 compactada estava QUEBRADA. Reescrita na forma canônica: exige vínculo com movimento e, no máximo, uma conta efetiva (pagável opcional, o que já é a semântica de módulo homologada no L05). |
+| FK RESTRICT recebível/movimento → conciliação | `136` (FKs NOT VALID + commit ad-hoc de idempotência) | Adaptada | Garantia útil (#47), aplicada ao re-criar as FKs com estratégia NOT VALID + `VALIDATE CONSTRAINT` com `statement_timeout` para não cair em loop instável; subteste L07 21 prova 23503/P0001 e preservação. |
+| Unicidade da conciliação por movimento | `124` fin_gateway_legal adversarial + mantida na 136 | Preservada | Já na main (124); nenhuma réplica feita. |
+| Rota/tela extra de conciliação da #47 | nenhum | Descartada | Contradiria o contrato módulo-canônico FIN-05 existente na aba `conciliation` de `/admin/financeiro` (subtestes 7–8 do gate). |
+| Fluxo/migração de gateway da #47 | nenhum | Descartada | A migração 135 e o gate L07 (25/26) já entregam FIN-12 gateway→FIN-04 vínculo canônico único. |
+
+#### PR #53 (despesas/alçadas)
+
+| Item avaliado | Destino | Status | Motivo |
+|---|---|---|---|
+| Alçada de aprovação configurável | `fin_expense_approval_authorities` (079) + aplicação no PATCH (`fin-management-api.mjs`) + trava arranjada na 136 | Adaptada | Conceito existia nas serviço/naming do rascunho 079; a #53 trazia aprovação automática quando "abaixo do limite" — rejeitada (ausência de política ≠ aprovação); aqui recusado com política inexistente/inativa (403), exigindo política aprovada e mensagem explícita na tela. |
+| Autoaprovação governada por flag | coluna `allow_self_approval` + trigger `fin10-b5-expense-state-machine` (136) | Adaptada | A CHECK 079 (defeito conhecido) foi trocada por governança auditável: permitida apenas quando a política do aprovador está ativa/aprovada com flag explícita; banco bloqueia caso contrário (subteste 20, SQL direto `fin_expense_segregation`). |
+| Snapshot do limite da aprovação no histórico | colunas `approval_limit_cents` + `authority_limit_cents` (136, NOT NULL DEFAULT 0) | Aproveitada | Prova permanente da alçada aplicada; subteste 20/22 verificam persistência e exibição ("Alçada aplicada"). |
+| Duplicidade natural pendente | índice único parcial `fin_expenses_pending_natural_key` (136, apenas pendente) | Aproveitada | Sob clique duplo/concorrência o retry idêntico devolve 200 (replay), conteúdo diferente devolve 409 `duplicate_pending_request`; não bloqueia recriação pós-rejeição (prova no gate L07, subteste 19) |
+| Registro de autor/decisor real na decisão | PATCH deriva `approver_name` da sessão (`auth_identities.display_name`), sem `COALESCE` | Adaptada | A #53 dependia de parâmetro opcional do cliente ("requested_by" livre); implementado server-side a partir da sessão. |
+| Trava de exclusão de despesa | trigger `fin_expense_no_delete` (136 STRICT) | Aproveitada | Trilhas FIN-10 homologadas tornam-se imutáveis; subteste 20 prova erro `fin_expense_no_delete`. |
+| Tela "#53" separada em /admin/ti | nenhum | Descartada | Contradiria a política anti-rotas-paralelas; tudo entra na aba `expenses` de `/admin/financeiro`. |

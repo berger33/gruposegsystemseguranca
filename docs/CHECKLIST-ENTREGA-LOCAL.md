@@ -1035,10 +1035,10 @@ resultado gerencial por contrato, separando receita contratada, faturada, recebi
 
 ## FIN-10
 despesas/reembolsos e compras com alçada, evidência e segregação entre solicitar/aprovar quando definida.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: `/admin/financeiro` → aba **Despesas / Reembolsos / Compras** (`ExpenseWorkspace.tsx`), usando a rota canônica `/api/fin/expenses` de `src/server/fin-management-api.mjs (handler FIN-10)` . Lista/busca (`?q=` nome, protocolo, referência da evidência), criação com valores em **R$ pt-BR** (`Intl.NumberFormat`), solicitação exige solicitante real derivado da sessão, categoria, valor, evidência sintética e `threshold_cents`; decisão exige motivo e nunca ocorre para política inexistente/inativa ("alçada não configurada/inativa") — quando aplicável a tela declara "decide até R$ X" e registra `approver_name` real da sessão. Falha de leitura mostra `fin10-error` + `fin10-retry`; a lista vazia só aparece com leitura bem-sucedida. Autorização no servidor: anônimo 401, TI somente leitura, mesma origem. Histórico `fin10-history-toggle-<id>`/`fin10-history-<id>` apresenta "Alçada aplicada: R$ N" (snapshot `approval_limit_cents`/`authority_limit_cents` da migração 136).
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` **35/35 em duas execuções consecutivas** (PostgreSQL descartável + Chromium real). Cobertura FIN-10 (subtestes 17–22, HTTP, SQL direto e jornada de navegador): busca textual, 6 POSTs concorrentes idênticos (200 replay ou 409), duplicidade natural pendente bloqueada, sem alçada / alçada inativa / valor excedendo a alçada / autoaprovação — todos recusados, atualização de alçada não reaprova automaticamente, SQL direto com autoaprovação → `fin_expense_segregation`, DELETE direto → `fin_expense_no_delete`, histórico com snapshot 200050, zero efeitos financeiros (payments/baixas/conciliações), auditoria indisponível → 503 `audit_unavailable` com rollback total. Gate da cadeia no mesmo commit: `npm run test:migrations:pg` 136/136 (2 passes), `npm test` 196/196, typecheck, estático 5/5 e build verdes. Avaliação adaptativa registrada em [`docs/CONSOLIDACAO-L07-PRS-PENDENTES.md`](./CONSOLIDACAO-L07-PRS-PENDENTES.md).
+- Pendência / fronteira externa / aceite humano: política padrão é vazia (ausência não aprova); evidências são metadados sintéticos; nenhuma emissão fiscal, Pix/boleto, cobrança ou pagamento real. Aceite humano/Windows pendente. Ambições #47/#53 integradas seletivamente conforme consolidação acima; nenhuma rota paralela/2º test-id em /admin/ti/novo. L07 não está encerrado.
 
 ## FIN-11
 integração contábil/fiscal mediante provedor; determinar NFS-e/NF-e ou outra obrigação conforme atividade, sem assumir uma nota para tudo.

@@ -1146,7 +1146,7 @@ test("L07 FIN-10: despesas, reembolsos e compras têm alçada, segregação, evi
   assert.equal(rollbackDecision.status,201);
   await pool.query("ALTER TABLE audit_log RENAME TO audit_log_fin10_unavailable");
   try {
-    const failedCreate=await fin("/expenses",{method:"POST",cookie:requester.cookie,body:expensePayload(space,"rollback-create")});
+    const failedCreate=await fin("/expenses",{method:"POST",cookie:requester.cookie,body:expensePayload(space,"rollback-create",{description:"Solicitação sintética criada durante a janela de auditoria indisponível"})});
     assert.equal(failedCreate.status,503);assert.deepEqual(failedCreate.body,{error:"audit_unavailable"});assert.equal("details" in failedCreate.body,false);
     const failedDecision=await fin("/expenses",{method:"PATCH",cookie:approver.cookie,body:{id:rollbackDecision.body.expense.id,status:"aprovado",reason:"Decisão deve reverter integralmente sem auditoria disponível"}});
     assert.equal(failedDecision.status,503);assert.deepEqual(failedDecision.body,{error:"audit_unavailable"});
@@ -1165,10 +1165,185 @@ test("L07 FIN-10: Chromium solicita e outra identidade aprova no workspace finan
   const addCookie=async(context,cookie)=>{const pair=cookie.split(";")[0],separator=pair.indexOf("=");await context.addCookies([{name:pair.slice(0,separator),value:pair.slice(separator+1),url:baseUrl}]);};
   try {
     const requestContext=await browser.newContext();await addCookie(requestContext,requester.cookie);const requestPage=await requestContext.newPage();await requestPage.setExtraHTTPHeaders({origin:baseUrl});await requestPage.goto(`${baseUrl}/admin/financeiro`,{waitUntil:"networkidle"});await requestPage.getByTestId("finance-tab-expenses").click();await requestPage.waitForSelector('[data-testid="fin10-expenses"]');
-    await requestPage.getByTestId("fin10-type").selectOption("compra");await requestPage.getByTestId("fin10-category").fill("equipamento sintético");await requestPage.getByTestId("fin10-description").fill("Compra sintética percorrida integralmente pelo Chromium");await requestPage.getByTestId("fin10-amount").fill("75000");await requestPage.getByTestId("fin10-threshold").fill("75000");await requestPage.getByTestId("fin10-requester-name").fill("Solicitante Chromium");await requestPage.getByTestId("fin10-contract").fill(space.contractId);await requestPage.getByTestId("fin10-cost-center").fill(space.costCenterId);await requestPage.getByTestId("fin10-supplier").fill(space.supplierId);await requestPage.getByTestId("fin10-evidence-name").fill(`evidencia-${suffix}.json`);await requestPage.getByTestId("fin10-evidence-url").fill(`synthetic://fin10/chromium-${suffix}.json`);await requestPage.getByTestId("fin10-evidence-key").fill(`synthetic/fin10/chromium-${suffix}.json`);await requestPage.getByTestId("fin10-idempotency").fill(`fin10-chromium-${suffix}`);await requestPage.getByTestId("fin10-create").click();await requestPage.waitForFunction(()=>(document.querySelector('[data-testid="fin10-notice"]')?.textContent||"").includes("pendente"));
+    await requestPage.getByTestId("fin10-type").selectOption("compra");await requestPage.getByTestId("fin10-category").fill("equipamento sintético");await requestPage.getByTestId("fin10-description").fill("Compra sintética percorrida integralmente pelo Chromium");await requestPage.getByTestId("fin10-amount").fill("750,00");await requestPage.getByTestId("fin10-threshold").fill("750,00");await requestPage.getByTestId("fin10-requester-name").fill("Solicitante Chromium");await requestPage.getByTestId("fin10-contract").fill(space.contractId);await requestPage.getByTestId("fin10-cost-center").fill(space.costCenterId);await requestPage.getByTestId("fin10-supplier").fill(space.supplierId);await requestPage.getByTestId("fin10-evidence-name").fill(`evidencia-${suffix}.json`);await requestPage.getByTestId("fin10-evidence-url").fill(`synthetic://fin10/chromium-${suffix}.json`);await requestPage.getByTestId("fin10-evidence-key").fill(`synthetic/fin10/chromium-${suffix}.json`);await requestPage.getByTestId("fin10-idempotency").fill(`fin10-chromium-${suffix}`);await requestPage.getByTestId("fin10-create").click();await requestPage.waitForFunction(()=>(document.querySelector('[data-testid="fin10-notice"]')?.textContent||"").includes("pendente"));
     const row=await pool.query("SELECT id,status,requester_identity FROM fin_expenses WHERE idempotency_key=$1",[`fin10-chromium-${suffix}`]);assert.equal(row.rows[0].status,"pendente");assert.equal(row.rows[0].requester_identity,requester.id);
     await requestContext.clearCookies();await addCookie(requestContext,approver.cookie);await requestPage.goto(`${baseUrl}/admin/financeiro`,{waitUntil:"networkidle"});await requestPage.getByTestId("finance-tab-expenses").click();await requestPage.waitForSelector(`[data-testid="fin10-expense-${row.rows[0].id}"]`);await requestPage.getByTestId("fin10-decision-reason").fill("Compra sintética conferida e aprovada por identidade distinta");await requestPage.getByTestId(`fin10-approve-${row.rows[0].id}`).click();await requestPage.waitForFunction(()=>(document.querySelector('[data-testid="fin10-notice"]')?.textContent||"").includes("alçada"));
     const final=await pool.query("SELECT status,requester_identity,approver_identity FROM fin_expenses WHERE id=$1",[row.rows[0].id]);assert.equal(final.rows[0].status,"aprovado");assert.equal(final.rows[0].approver_identity,approver.id);assert.notEqual(final.rows[0].requester_identity,final.rows[0].approver_identity);
+  } finally {await browser.close();}
+});
+
+test("L07 FIN-10 aditivo: busca por texto, replay idempotente sob concorrência, duplicidade natural pendente e TI somente leitura", { skip: !RUN, timeout: 120_000 }, async () => {
+  const requester=await provisionAndLoginStaff(pool,api,{role:"financeiro"});
+  const ti=await provisionAndLoginStaff(pool,api,{role:"ti"});
+  const space=await insertExpenseSpace("aditivo-busca");
+
+  const tiCreate=await fin("/expenses",{method:"POST",cookie:ti.cookie,body:expensePayload(space,"ti-create")});
+  assert.equal(tiCreate.status,403,"TI não solicita despesa");assert.equal(tiCreate.body.error,"read_only");
+  assert.equal((await fin("/expenses",{cookie:ti.cookie})).status,200,"TI pode ler");
+
+  const alpha=await fin("/expenses",{method:"POST",cookie:requester.cookie,body:expensePayload(space,"alpha",{category:"material de escritório sintético",description:"Compra de material de escritório sintético para o gate aditivo"})});
+  assert.equal(alpha.status,201,JSON.stringify(alpha.body));
+  const bravo=await fin("/expenses",{method:"POST",cookie:requester.cookie,body:expensePayload(space,"bravo",{category:"uniforme operacional sintético",description:"Uniforme operacional sintético para o gate aditivo de busca"})});
+  assert.equal(bravo.status,201,JSON.stringify(bravo.body));
+
+  const byCategory=await fin(`/expenses?q=${encodeURIComponent("uniforme")}`,{cookie:requester.cookie});
+  assert.equal(byCategory.status,200);assert.equal(byCategory.body.expenses.length,1);assert.equal(byCategory.body.expenses[0].id,bravo.body.expense.id);
+  const byProtocol=await fin(`/expenses?q=${encodeURIComponent(alpha.body.expense.protocol)}`,{cookie:requester.cookie});
+  assert.equal(byProtocol.body.expenses.length,1);assert.equal(byProtocol.body.expenses[0].id,alpha.body.expense.id);
+  const byDescription=await fin(`/expenses?q=${encodeURIComponent("escritório sintético para o gate")}`,{cookie:requester.cookie});
+  assert.equal(byDescription.body.expenses.length,1);assert.equal(byDescription.body.expenses[0].id,alpha.body.expense.id);
+  assert.equal((await fin(`/expenses?q=x`,{cookie:requester.cookie})).status,400,"busca curta demais é recusada");
+  const escaped=await fin(`/expenses?q=${encodeURIComponent("uni%")}`,{cookie:requester.cookie});
+  assert.equal(escaped.status,200);assert.equal(escaped.body.expenses.length,0,"curinga da busca não expande resultados");
+
+  const replayPayload=expensePayload(space,"replay");
+  const first=await fin("/expenses",{method:"POST",cookie:requester.cookie,body:replayPayload});
+  assert.equal(first.status,201,JSON.stringify(first.body));assert.equal(first.body.idempotent_replay??false,false);
+  const replay=await fin("/expenses",{method:"POST",cookie:requester.cookie,body:replayPayload});
+  assert.equal(replay.status,200,"retry idêntico devolve 200 replay, não 409");
+  assert.equal(replay.body.idempotent_replay,true);
+  assert.equal(replay.body.expense.id,first.body.expense.id);
+  const conflict=await fin("/expenses",{method:"POST",cookie:requester.cookie,body:expensePayload(space,"replay",{description:"Conteúdo diferente com a mesma chave deve ser recusado"})});
+  assert.equal(conflict.status,409,"mesma chave com conteúdo diferente é recusada");
+  const concurrent=await Promise.all(Array.from({length:6},()=>fin("/expenses",{method:"POST",cookie:requester.cookie,body:replayPayload})));
+  assert.ok(concurrent.every(r=>[200,201].includes(r.status)),JSON.stringify(concurrent.map(r=>[r.status,r.body])));
+  const ids=new Set(concurrent.map(r=>r.body.expense?.id));assert.equal(ids.size,1,"retry concorrente devolve sempre a mesma solicitação");
+  assert.equal((await pool.query(`SELECT count(*)::int n FROM fin_expenses WHERE idempotency_key='fin10-replay'`)).rows[0].n,1,"retry concorrente cria exatamente uma solicitação");
+
+  const naturalOne=await fin("/expenses",{method:"POST",cookie:requester.cookie,body:expensePayload(space,"natural-1",{description:"Duplicidade natural pendente deve ser recusada pelo banco"})});
+  assert.equal(naturalOne.status,201);
+  const naturalTwo=await fin("/expenses",{method:"POST",cookie:requester.cookie,body:expensePayload(space,"natural-2",{description:"Duplicidade natural pendente deve ser recusada pelo banco"})});
+  assert.equal(naturalTwo.status,409,"a mesma solicitação pendente com outra chave é duplicidade natural");
+  assert.equal(naturalTwo.body.error,"duplicate_pending_request");
+});
+
+test("L07 FIN-10 aditivo: aprovação exige alçada ativa, autoaprovação só com política configurada, snapshot no histórico, trava de exclusão e ausência de efeito financeiro", { skip: !RUN, timeout: 120_000 }, async () => {
+  const requester=await provisionAndLoginStaff(pool,api,{role:"financeiro"});
+  const approver=await provisionAndLoginStaff(pool,api,{role:"financeiro"});
+  const inactiveApprover=await provisionAndLoginStaff(pool,api,{role:"financeiro"});
+  const noPolicy=await provisionAndLoginStaff(pool,api,{role:"financeiro"});
+  const space=await insertExpenseSpace("aditivo-politica");
+  await pool.query("INSERT INTO fin_expense_approval_authorities (identity_id,max_amount_cents,granted_by_identity) VALUES ($1,60000,$1)",[approver.id]);
+  await pool.query("INSERT INTO fin_expense_approval_authorities (identity_id,max_amount_cents,granted_by_identity) VALUES ($1,99999,$1)",[inactiveApprover.id]);
+  await pool.query("UPDATE fin_expense_approval_authorities SET is_active=false WHERE identity_id=$1",[inactiveApprover.id]);
+  await pool.query("INSERT INTO fin_expense_approval_authorities (identity_id,max_amount_cents,granted_by_identity) VALUES ($1,90000,$1)",[requester.id]);
+  const sideEffectsBefore=await pool.query("SELECT (SELECT count(*)::int FROM fin_payments) AS payments,(SELECT count(*)::int FROM fin_gateway_charges) AS charges");
+
+  const target=await fin("/expenses",{method:"POST",cookie:requester.cookie,body:expensePayload(space,"policy")});
+  assert.equal(target.status,201,JSON.stringify(target.body));
+  const deniedNoPolicy=await fin("/expenses",{method:"PATCH",cookie:noPolicy.cookie,body:{id:target.body.expense.id,status:"aprovado",reason:"Identidade sem alçada cadastrada não pode aprovar"}});
+  assert.equal(deniedNoPolicy.status,403);assert.equal(deniedNoPolicy.body.error,"approval_authority_exceeded");
+  const deniedInactive=await fin("/expenses",{method:"PATCH",cookie:inactiveApprover.cookie,body:{id:target.body.expense.id,status:"aprovado",reason:"Alçada inativa não sustenta aprovação pendente"}});
+  assert.equal(deniedInactive.status,403);assert.equal(deniedInactive.body.error,"approval_authority_exceeded");
+  assert.equal((await pool.query("SELECT status FROM fin_expenses WHERE id=$1",[target.body.expense.id])).rows[0].status,"pendente","solicitação continua pendente quando a política não autoriza");
+
+  const deniedSelf=await fin("/expenses",{method:"PATCH",cookie:requester.cookie,body:{id:target.body.expense.id,status:"aprovado",reason:"Autoaprovação exige política explícita do dono da política"}});
+  assert.equal(deniedSelf.status,403);assert.equal(deniedSelf.body.error,"requester_cannot_decide");
+  await assert.rejects(pool.query("UPDATE fin_expenses SET status='aprovado',approver_identity=$1,approved_by_identity=$1,approved_at=NOW() WHERE id=$2",[requester.id,target.body.expense.id]),/fin_expense_segregation|23/,"banco também recusa autoaprovação sem política");
+
+  const impostor=await fin("/expenses",{method:"PATCH",cookie:approver.cookie,body:{id:target.body.expense.id,status:"aprovado",reason:"Nome forjado pelo cliente não pode silenciar a autoria",approver_name:"Impostor Silencioso"}});
+  assert.equal(impostor.status,200,JSON.stringify(impostor.body));
+  assert.notEqual(impostor.body.expense.approver_name,"Impostor Silencioso","approver_name nunca vem do cliente");
+  assert.equal(Number(impostor.body.expense.approval_limit_cents),60000,"limite aplicado fica registrado na decisão");
+
+  const hist=await fin(`/expense-history?expense_id=${target.body.expense.id}`,{cookie:requester.cookie});
+  assert.equal(hist.status,200);assert.equal(hist.body.history.length,2);
+  const approvalRow=hist.body.history.find(row=>row.next_status==="aprovado");
+  assert.equal(Number(approvalRow.authority_limit_cents),60000,"histórico registra a alçada aplicada");
+  assert.equal(approvalRow.approver_identity,approver.id);
+  assert.equal(approvalRow.requester_identity,requester.id);
+
+  await pool.query("UPDATE fin_expense_approval_authorities SET allow_self_approval=true WHERE identity_id=$1",[requester.id]);
+  const selfTarget=await fin("/expenses",{method:"POST",cookie:requester.cookie,body:expensePayload(space,"self-allowed")});
+  assert.equal(selfTarget.status,201,JSON.stringify(selfTarget.body));
+  const selfApproved=await fin("/expenses",{method:"PATCH",cookie:requester.cookie,body:{id:selfTarget.body.expense.id,status:"aprovado",reason:"Política explicitamente configurada permite autoaprovação"}});
+  assert.equal(selfApproved.status,200,JSON.stringify(selfApproved.body));
+  assert.equal(selfApproved.body.expense.approver_identity,requester.id);
+  assert.equal(Number(selfApproved.body.expense.approval_limit_cents),90000);
+
+  await assert.rejects(pool.query("DELETE FROM fin_expenses WHERE id=$1",[selfTarget.body.expense.id]),/fin_expense_delete_forbidden/,"apagar despesa destruiria a trilha em cascata");
+  assert.equal((await pool.query("SELECT count(*)::int n FROM fin_expense_history WHERE expense_id=$1",[selfTarget.body.expense.id])).rows[0].n,2,"trilha permanece intacta");
+
+  const sideEffectsAfter=await pool.query("SELECT (SELECT count(*)::int FROM fin_payments) AS payments,(SELECT count(*)::int FROM fin_gateway_charges) AS charges");
+  assert.deepEqual(sideEffectsAfter.rows[0],sideEffectsBefore.rows[0],"decisão FIN-10 não cria baixa, pagamento ou cobrança");
+  assert.equal((await pool.query("SELECT count(*)::int n FROM fin_expenses WHERE idempotency_key='fin10-policy' AND status='pendente'")).rows[0].n,0);
+});
+
+test("L07 FIN-05 aditivo (#47): conciliação exige movimento e uma conta no banco e a trilha resiste à exclusão", { skip: !RUN, timeout: 120_000 }, async () => {
+  const financeiro=await provisionAndLoginStaff(pool,api,{role:"financeiro"});
+  const { accountId, contractId }=await insertClientSpace("FIN05 aditivo");
+  const receivable=await fin("/receivables",{method:"POST",cookie:financeiro.cookie,body:{client_account_id:accountId,contract_id:contractId,competence_date:"2026-10-02",due_date:"2026-10-20",amount_cents:18000,description:"Recebível sintético para travas FIN-05 aditivas"}});
+  assert.equal(receivable.status,201,JSON.stringify(receivable.body));
+  const statement=await fin("/bank-statements",{method:"POST",cookie:financeiro.cookie,body:{source:"importacao",file_name:"extrato-fin05-aditivo.csv",file_url:"/synthetic/fin05/extrato-aditivo.csv",storage_key:`fin05-adit-${uuid()}`,import_date:"2026-10-02"}});
+  assert.equal(statement.status,201,JSON.stringify(statement.body));
+  const transaction=await fin("/bank-transactions",{method:"POST",cookie:financeiro.cookie,body:{statement_id:statement.body.statement.id,transaction_date:"2026-10-02",amount_cents:18000,description:"Recebimento sintético para conciliação aditiva",bank_ref:`FIN05-ADIT-${uuid()}`}});
+  assert.equal(transaction.status,201,JSON.stringify(transaction.body));
+  const conciliation=await fin("/conciliations",{method:"POST",cookie:financeiro.cookie,body:{receivable_id:receivable.body.receivable.id,bank_transaction_id:transaction.body.transaction.id,source:"extrato",suggestion_reason:"Sugestão sintética vinculando movimento e recebível"}});
+  assert.equal(conciliation.status,201,JSON.stringify(conciliation.body));
+
+  let insertError=null; try{await pool.query("INSERT INTO fin_conciliations (receivable_id,source,status,suggested_by_identity,suggestion_reason) VALUES ($1,'extrato','sugerida',$2,'Conciliação sintética sem movimento bancário')",[receivable.body.receivable.id,financeiro.id]);}catch(e){insertError=e;}
+  assert.ok(insertError,"conciliação sem movimento é recusada pelo banco");
+  assert.match(String(insertError.message),/fin05_conciliation_requires_movement_and_one_account/);
+  let txDeleteError=null; try{await pool.query("DELETE FROM fin_bank_transactions WHERE id=$1",[transaction.body.transaction.id]);}catch(e){txDeleteError=e;}
+  assert.ok(txDeleteError,"movimento conciliado não pode ser apagado");
+  assert.equal(txDeleteError.code,"23503",JSON.stringify(txDeleteError));
+  let recDeleteError=null; try{await pool.query("DELETE FROM fin_accounts_receivable WHERE id=$1",[receivable.body.receivable.id]);}catch(e){recDeleteError=e;}
+  assert.ok(recDeleteError,"conta conciliada não pode ser apagada");
+  // FK RESTRICT da conciliação (23503) ou gatilho de imutabilidade do
+  // histórico de pagamento em cascata (P0001) — ambos bloqueiam a exclusão.
+  assert.ok(recDeleteError.code==="23503"||recDeleteError.code==="P0001",JSON.stringify(recDeleteError));
+  assert.equal((await pool.query("SELECT count(*)::int n FROM fin_accounts_receivable WHERE id=$1",[receivable.body.receivable.id])).rows[0].n,1,"conta conciliada preservada");
+  assert.equal((await pool.query("SELECT count(*)::int n FROM fin_conciliations WHERE id=$1",[conciliation.body.conciliation.id])).rows[0].n,1,"conciliação permanece registrada");
+});
+
+test("L07 FIN-10 aditivo: Chromium declara política ausente, mostra falha de leitura com retry, busca, valor em R$ e histórico com alçada aplicada", { skip: !RUN, timeout: 240_000 }, async () => {
+  const requester=await provisionAndLoginStaff(pool,api,{role:"financeiro"});
+  const approver=await provisionAndLoginStaff(pool,api,{role:"financeiro"});
+  const space=await insertExpenseSpace("Chromium-aditivo");const suffix=uuid().slice(0,8);
+  await pool.query("INSERT INTO fin_expense_approval_authorities (identity_id,max_amount_cents,granted_by_identity) VALUES ($1,200050,$1)",[approver.id]);
+  const browser=await playwrightChromium.launch({executablePath:await packagedChromium.executablePath(),headless:true,args:packagedChromium.args.filter(arg=>arg!=="--disable-web-security")});
+  const addCookie=async(context,cookie)=>{const pair=cookie.split(";")[0],separator=pair.indexOf("=");await context.addCookies([{name:pair.slice(0,separator),value:pair.slice(separator+1),url:baseUrl}]);};
+  try {
+    const context=await browser.newContext({serviceWorkers:"block"});await addCookie(context,requester.cookie);const page=await context.newPage();await page.setExtraHTTPHeaders({origin:baseUrl});
+    await page.route("**/api/fin/expenses**",route=>route.request().method()==="GET"?route.fulfill({status:500,contentType:"application/json",body:JSON.stringify({error:"internal"})}):route.continue());
+    await page.goto(`${baseUrl}/admin/financeiro`,{waitUntil:"networkidle"});await page.getByTestId("finance-tab-expenses").click();await page.waitForSelector('[data-testid="fin10-expenses"]');
+    await page.waitForSelector('[data-testid="fin10-error"]');
+    assert.equal(await page.locator('[data-testid="fin10-empty"]').count(),0,"falha de leitura não mostra estado vazio");
+    assert.match(await page.getByTestId("fin10-policy").textContent(),/alçada/i);
+    await page.unroute("**/api/fin/expenses**");await page.getByTestId("fin10-retry").click();
+    await page.waitForFunction(()=>!document.querySelector('[data-testid="fin10-error"]'));
+
+    await page.getByTestId("fin10-type").selectOption("reembolso");await page.getByTestId("fin10-category").fill("quilometragem sintética");await page.getByTestId("fin10-description").fill("Reembolso sintético percorrido integralmente pelo Chromium");await page.getByTestId("fin10-amount").fill("750,50");await page.getByTestId("fin10-threshold").fill("750,50");await page.getByTestId("fin10-requester-name").fill("Condutor Chromium");await page.getByTestId("fin10-contract").fill(space.contractId);await page.getByTestId("fin10-cost-center").fill(space.costCenterId);await page.getByTestId("fin10-supplier").fill(space.supplierId);await page.getByTestId("fin10-evidence-name").fill(`evidencia-${suffix}.json`);await page.getByTestId("fin10-evidence-url").fill(`synthetic://fin10/aditivo-${suffix}.json`);await page.getByTestId("fin10-evidence-key").fill(`synthetic/fin10/aditivo-${suffix}.json`);await page.getByTestId("fin10-idempotency").fill(`fin10-aditivo-chromium-${suffix}`);await page.getByTestId("fin10-create").click();
+    await page.waitForFunction(()=>{const text=document.querySelector('[data-testid="fin10-notice"]')?.textContent||"";return text.includes("pendente")&&!text.includes("alçada");},"confirmação de solicitação não promete aprovação");
+    const created=await pool.query("SELECT id,status,requester_identity,amount_cents FROM fin_expenses WHERE idempotency_key=$1",[`fin10-aditivo-chromium-${suffix}`]);
+    assert.equal(Number(created.rows[0].amount_cents),75050,"R$ 750,50 vira 75050 centavos");
+    assert.equal(created.rows[0].status,"pendente");
+    await page.waitForSelector(`[data-testid="fin10-expense-${created.rows[0].id}"]`);
+    assert.match(await page.getByTestId(`fin10-expense-${created.rows[0].id}`).textContent(),/R\$\s?750,50/,"valor exibido em R$ formatado pt-BR");
+
+    await page.getByTestId("fin10-search").fill("termo inexistente sintético");await page.getByTestId("fin10-search-apply").click();
+    await page.waitForSelector('[data-testid="fin10-empty"]');
+    assert.match((await page.getByTestId("fin10-empty").textContent())||"",/busca aplicada/);
+    assert.equal(await page.locator(`[data-testid="fin10-expense-${created.rows[0].id}"]`).count(),0);
+    await page.getByTestId("fin10-search").fill("quilometragem");await page.getByTestId("fin10-search-apply").click();
+    await page.waitForSelector(`[data-testid="fin10-expense-${created.rows[0].id}"]`);
+
+    await context.clearCookies();await addCookie(context,approver.cookie);
+    await page.goto(`${baseUrl}/admin/financeiro`,{waitUntil:"networkidle"});await page.getByTestId("finance-tab-expenses").click();
+    await page.waitForFunction(()=>(document.querySelector('[data-testid="fin10-policy"]')?.textContent||"").match(/R\$\s?2\.000,50/),"alçada ativa do aprovador é declarada");
+    await page.getByTestId("fin10-decision-reason").fill("Reembolso sintético conferido e aprovado dentro da alçada visível");
+    await page.getByTestId(`fin10-approve-${created.rows[0].id}`).click();
+    await page.waitForFunction(()=>(document.querySelector('[data-testid="fin10-notice"]')?.textContent||"").includes("alçada"));
+    const final=await pool.query("SELECT status,requester_identity,approver_identity,approval_limit_cents FROM fin_expenses WHERE id=$1",[created.rows[0].id]);
+    assert.equal(final.rows[0].status,"aprovado");assert.equal(final.rows[0].approver_identity,approver.id);assert.equal(Number(final.rows[0].approval_limit_cents),200050);
+
+    await page.getByTestId(`fin10-history-toggle-${created.rows[0].id}`).click();
+    await page.waitForSelector(`[data-testid="fin10-history-${created.rows[0].id}"]`);
+    const historyText=await page.getByTestId(`fin10-history-${created.rows[0].id}`).textContent();
+    assert.match(historyText||"",/R\$\s?2\.000,50/,"histórico mostra a alçada aplicada");
+    assert.match(historyText||"",/conferido e aprovado/,"histórico mostra o motivo real");
+    const historyDb=await pool.query("SELECT count(*)::int n FROM fin_expense_history WHERE expense_id=$1 AND authority_limit_cents=200050",[created.rows[0].id]);
+    assert.equal(historyDb.rows[0].n,1,"snapshot de alçada persistido no histórico");
   } finally {await browser.close();}
 });
 

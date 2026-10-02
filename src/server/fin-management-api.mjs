@@ -113,15 +113,34 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
   const syntheticEvidenceUrl = v => typeof v === 'string' && /^synthetic:\/\/[A-Za-z0-9][A-Za-z0-9._/-]{4,990}$/.test(v);
   const syntheticStorageKey = v => typeof v === 'string' && /^synthetic\/[A-Za-z0-9][A-Za-z0-9._/-]{3,490}$/.test(v);
   const positiveCents = v => Number.isSafeInteger(Number(v)) && Number(v) > 0 ? Number(v) : null;
+  const isTiRole = sess => (sess?.role||'').toLowerCase()==='ti';
   const expenseFailure = (res, e) => {
     if (isAuditUnavailable(e)) return send(res,503,{error:'audit_unavailable'});
     if (e?.code === '23505') {
       const key=String(e.constraint||'');
-      return send(res,409,{error:key.includes('idempotency')?'duplicate_idempotency_key':key.includes('evidence_storage')?'duplicate_evidence':'duplicate'});
+      return send(res,409,{error:key.includes('pending_natural')?'duplicate_pending_request':key.includes('idempotency')?'duplicate_idempotency_key':key.includes('evidence_storage')?'duplicate_evidence':'duplicate'});
     }
     if (e?.code === '23503') return send(res,400,{error:'invalid_reference'});
-    if (e?.code === '23514') return send(res,400,{error:'invalid_expense_transition'});
+    if (e?.code === '23514') {
+      const msg=String(e?.message||'');
+      if (msg.includes('fin_expense_approval_authority_exceeded')) return send(res,403,{error:'approval_authority_exceeded'});
+      if (msg.includes('fin_expense_segregation_required')) return send(res,403,{error:'requester_cannot_decide'});
+      return send(res,400,{error:'invalid_expense_transition'});
+    }
     return send(res,500,{error:'internal'});
+  };
+
+  // Sem política de alçada configurada ninguém aprova automaticamente; a
+  // interface declara a pendência e o servidor/banco impõem a decisão.
+  const handleExpenseAuthorities = async (req, res) => {
+    const sess=await checkAuth(req,res); if(!sess) return;
+    if(req.method!=='GET') return send(res,405,{error:'method_not_allowed'});
+    const actor=sess.identityId;
+    if(!uuid(actor)) return send(res,401,{error:'unauthorized'});
+    try {
+      const r=await pool.query('SELECT max_amount_cents,is_active,allow_self_approval,granted_at,updated_at FROM fin_expense_approval_authorities WHERE identity_id=$1',[actor]);
+      return send(res,200,{authority:r.rows[0]||null,synthetic:true,policy_note:'Alçada é política configurável e vazia por padrão: sem linha ativa, pedidos ficam pendentes e a ausência de alçada nunca aprova automaticamente.'});
+    } catch { return send(res,500,{error:'internal'}); }
   };
 
   const handleExpenses = async (req, res) => {
@@ -129,15 +148,25 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
     if (req.method === 'GET') {
       const url=new URL(req.url,`http://${req.headers.host||'localhost'}`), params=[];
       let q='SELECT * FROM fin_expenses WHERE 1=1';
-      const status=url.searchParams.get('status'), type=url.searchParams.get('expense_type'), contract=url.searchParams.get('contract_id');
+      const status=url.searchParams.get('status'), type=url.searchParams.get('expense_type'), contract=url.searchParams.get('contract_id'), search=url.searchParams.get('q');
       if (status) { if(!EXPENSE_STATUSES.has(status)) return send(res,400,{error:'invalid_status'}); params.push(status); q+=` AND status=$${params.length}`; }
       if (type) { if(!EXPENSE_TYPES.has(type)) return send(res,400,{error:'invalid_expense_type'}); params.push(type); q+=` AND expense_type=$${params.length}`; }
       if (contract) { if(!uuid(contract)) return send(res,400,{error:'invalid_contract_id'}); params.push(contract); q+=` AND contract_id=$${params.length}`; }
+      if (search!==null) {
+        const term=typeof search==='string'?search.trim():'';
+        if (term.length<2||term.length>100) return send(res,400,{error:'invalid_search'});
+        const escaped=term.replace(/[\\%_]/g,'\\$&');
+        params.push(`%${escaped}%`);
+        // Busca por nome, protocolo ou referência; o curinga do usuário é literal.
+        q+=` AND (protocol ILIKE $${params.length} ESCAPE '\\' OR requester_name ILIKE $${params.length} ESCAPE '\\' OR category ILIKE $${params.length} ESCAPE '\\' OR description ILIKE $${params.length} ESCAPE '\\')`;
+      }
       q+=' ORDER BY created_at DESC LIMIT 200';
       try { return send(res,200,{expenses:(await pool.query(q,params)).rows}); } catch { return send(res,500,{error:'internal'}); }
     }
     if (!['POST','PATCH'].includes(req.method)) return send(res,405,{error:'method_not_allowed'});
     if (!sameOrigin(req)) return send(res,403,{error:'forbidden_origin'});
+    // TI é somente leitura neste domínio (mesma fronteira aplicada ao orçamento).
+    if (isTiRole(sess)) return send(res,403,{error:'read_only'});
     let body; try { body=await readJson(req); } catch { return send(res,400,{error:'invalid_json'}); }
     const actor=sess.identityId;
     if (!uuid(actor)) return send(res,401,{error:'unauthorized'});
@@ -172,11 +201,37 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
         const protocol=generateProtocol('DES-FIN');
         const created=await client.query(`INSERT INTO fin_expenses (protocol,expense_type,category,description,amount_cents,threshold_cents,requester_name,requester_identity,evidence_file_name,evidence_file_url,evidence_storage_key,contract_id,cost_center_id,supplier_id,created_by_identity,idempotency_key) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$8,$15) RETURNING *`,[protocol,expense_type,category,description,amount_cents,threshold_cents,requester_name,actor,evidence_file_name,evidence_file_url,evidence_storage_key,contract_id,cost_center_id,supplier_id,idempotency_key]);
         const expense=created.rows[0];
-        await client.query(`INSERT INTO fin_expense_history (expense_id,previous_status,next_status,previous_amount,next_amount,changed_by_identity,reason,is_segregation_verified) VALUES ($1,NULL,'pendente',NULL,$2,$3,$4,false)`,[expense.id,amount_cents,actor,'Solicitação financeira criada com evidência sintética e referências canônicas']);
+        await client.query(`INSERT INTO fin_expense_history (expense_id,previous_status,next_status,previous_amount,next_amount,changed_by_identity,reason,is_segregation_verified,requester_identity) VALUES ($1,NULL,'pendente',NULL,$2,$3,$4,false,$5)`,[expense.id,amount_cents,actor,'Solicitação financeira criada com evidência sintética e referências canônicas',actor]);
         await auditLog({action:'fin_expense_create',actor,target:expense.id,meta:{protocol,expense_type,amount_cents,contract_id,idempotency_key},client});
         await client.query('COMMIT');
         return send(res,201,{expense,synthetic:true});
-      } catch(e) { try { await client.query('ROLLBACK'); } catch {} return expenseFailure(res,e); }
+      } catch(e) {
+        try { await client.query('ROLLBACK'); } catch {}
+        // Retry idempotente e concorrente: mesma chave e mesmo conteúdo
+        // devolvem a solicitação já persistida; conteúdo diferente é conflito.
+        // Tanto o índice da chave quanto o natural podem disparar primeiro.
+        if (e?.code==='23505') {
+          const violated=String(e.constraint||'');
+          if (/idempotency|pending_natural|evidence_storage/.test(violated)) {
+            try {
+              // Re-leitura na mesma conexão pós-ROLLBACK: pedir outra conexão
+              // aqui esgota o pool sob retries concorrentes (deadlock).
+              const existing=await client.query('SELECT * FROM fin_expenses WHERE idempotency_key=$1',[idempotency_key]);
+              const row=existing.rows[0];
+              if (row) {
+                const same=row.expense_type===expense_type&&row.category===category&&row.description===description
+                  && Number(row.amount_cents)===amount_cents&&Number(row.threshold_cents)===threshold_cents
+                  && row.requester_name===requester_name&&row.requester_identity===actor
+                  && row.contract_id===contract_id&&row.cost_center_id===cost_center_id&&row.supplier_id===supplier_id
+                  && row.evidence_file_name===evidence_file_name&&row.evidence_file_url===evidence_file_url&&row.evidence_storage_key===evidence_storage_key;
+                if (same) return send(res,200,{expense:row,synthetic:true,idempotent_replay:true});
+              }
+            } catch {}
+            return send(res,409,{error:violated.includes('pending_natural')?'duplicate_pending_request':violated.includes('evidence_storage')?'duplicate_evidence':'duplicate_idempotency_key'});
+          }
+        }
+        return expenseFailure(res,e);
+      }
       finally { client.release(); }
     }
 
@@ -192,17 +247,25 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
       const previous=found.rows[0];
       if(previous.status!=='pendente') { await client.query('ROLLBACK'); return send(res,409,{error:'expense_not_pending'}); }
       if(status==='cancelado' && previous.requester_identity!==actor) { await client.query('ROLLBACK'); return send(res,403,{error:'only_requester_can_cancel'}); }
-      if(status!=='cancelado' && previous.requester_identity===actor) { await client.query('ROLLBACK'); return send(res,403,{error:'requester_cannot_decide'}); }
+      // Alçada da identidade autenticada: política configurável e vazia por
+      // padrão. Sem linha ativa ninguém aprova; a autoaprovação exige a flag
+      // explícita allow_self_approval da política, conferida também em banco.
+      const authorityRow=await client.query('SELECT max_amount_cents,allow_self_approval FROM fin_expense_approval_authorities WHERE identity_id=$1 AND is_active=true FOR UPDATE',[actor]);
+      const authority=authorityRow.rows[0]||null;
+      if(status!=='cancelado' && previous.requester_identity===actor && !(authority && authority.allow_self_approval===true)) { await client.query('ROLLBACK'); return send(res,403,{error:'requester_cannot_decide'}); }
       if(status==='aprovado') {
-        const authority=await client.query('SELECT max_amount_cents FROM fin_expense_approval_authorities WHERE identity_id=$1 AND is_active=true',[actor]);
-        if(!authority.rows.length||Number(previous.amount_cents)>Number(authority.rows[0].max_amount_cents)) { await client.query('ROLLBACK'); return send(res,403,{error:'approval_authority_exceeded'}); }
+        if(!authority||Number(previous.amount_cents)>Number(authority.max_amount_cents)) { await client.query('ROLLBACK'); return send(res,403,{error:'approval_authority_exceeded'}); }
       }
+      // O autor/nome da decisão vem do servidor, nunca de um campo do cliente.
+      const actorIdentity=await client.query('SELECT display_name FROM auth_identities WHERE id=$1',[actor]);
+      const approverName=actorIdentity.rows[0]&&actorIdentity.rows[0].display_name?actorIdentity.rows[0].display_name:'Aprovador autenticado';
       const approver=status==='cancelado'?null:actor;
-      const updated=await client.query(`UPDATE fin_expenses SET status=$1::fin_expense_status,approver_name=CASE WHEN $1::text='cancelado' THEN approver_name ELSE $2 END,approver_identity=CASE WHEN $1::text='cancelado' THEN approver_identity ELSE $3 END,approved_at=CASE WHEN $1::text='aprovado' THEN NOW() ELSE NULL END,approved_by_identity=CASE WHEN $1::text='aprovado' THEN $3 ELSE NULL END,rejection_reason=CASE WHEN $1::text='rejeitado' THEN $4 ELSE NULL END,is_segregated=CASE WHEN $1::text='cancelado' THEN is_segregated ELSE true END,segregation_checked=CASE WHEN $1::text='cancelado' THEN segregation_checked ELSE true END WHERE id=$5 RETURNING *`,[status,body.approver_name||'Aprovador autenticado',approver,status==='rejeitado'?reason:null,id]);
+      const updated=await client.query(`UPDATE fin_expenses SET status=$1::fin_expense_status,approver_name=CASE WHEN $1::text='cancelado' THEN approver_name ELSE $2 END,approver_identity=CASE WHEN $1::text='cancelado' THEN approver_identity ELSE $3 END,approved_at=CASE WHEN $1::text='aprovado' THEN NOW() ELSE NULL END,approved_by_identity=CASE WHEN $1::text='aprovado' THEN $3 ELSE NULL END,rejection_reason=CASE WHEN $1::text='rejeitado' THEN $4 ELSE NULL END,is_segregated=CASE WHEN $1::text='cancelado' THEN is_segregated ELSE true END,segregation_checked=CASE WHEN $1::text='cancelado' THEN segregation_checked ELSE true END WHERE id=$5 RETURNING *`,[status,approverName,approver,status==='rejeitado'?reason:null,id]);
       const expense=updated.rows[0];
-      await client.query(`INSERT INTO fin_expense_history (expense_id,previous_status,next_status,previous_amount,next_amount,changed_by_identity,reason,is_segregation_verified) VALUES ($1,$2,$3,$4,$4,$5,$6,$7)`,[id,previous.status,status,previous.amount_cents,actor,reason,status!=='cancelado']);
+      const appliedLimit=status==='aprovado'?Number(authority.max_amount_cents):null;
+      await client.query(`INSERT INTO fin_expense_history (expense_id,previous_status,next_status,previous_amount,next_amount,changed_by_identity,reason,is_segregation_verified,authority_limit_cents,requester_identity,approver_identity) VALUES ($1,$2,$3,$4,$4,$5,$6,$7,$8,$9,$10)`,[id,previous.status,status,previous.amount_cents,actor,reason,status!=='cancelado',appliedLimit,previous.requester_identity,approver]);
       const action=status==='aprovado'?'fin_expense_approve':status==='rejeitado'?'fin_expense_reject':'fin_expense_cancel';
-      await auditLog({action,actor,target:id,meta:{status,reason},client});
+      await auditLog({action,actor,target:id,meta:{status,reason,authority_limit_cents:appliedLimit},client});
       await client.query('COMMIT');
       return send(res,200,{expense});
     } catch(e) { try { await client.query('ROLLBACK'); } catch {} return expenseFailure(res,e); }
@@ -1140,6 +1203,7 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
     handleResultHistory,
     handleExpenses,
     handleExpenseHistory,
+    handleExpenseAuthorities,
     handleFiscalActivityRules,
     handleFiscalProviders,
     handleFiscalObligations,
