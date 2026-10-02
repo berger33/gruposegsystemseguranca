@@ -871,38 +871,38 @@ eventos de monitoramento via conector, fila, reconhecimento e escalonamento; nã
 
 ## CLI-01
 identidade, convite, recuperação e sessão reais; entrada única, rotas antigas identificadas/redirecionadas com cuidado.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Rotas reais de entrada/convite/recuperação e `/cliente/app`; `/api/auth/*`; tabelas 003/097–101. Metadados v2 em `/api/cli/entry-points|old-routes` (074), staff-only.
-- Integração e evidência (teste, resultado, commit): Integração PG legada de acesso existe; a camada v2 está somente no `CliClient.tsx` órfão e ainda não tem gate L08.
-- Pendência / fronteira externa / aceite humano: Aceite L08 não iniciado; unificar sem presumir que alias v2 é jornada cliente.
+- Estado: pronto_local (fonte legada canônica); v2 segue `a_revalidar`
+- Tela / API / dados / autorização: `/cliente/entrar`, convite, confirmação, recuperação, troca de senha e `/cliente/app`; `/api/auth/*`; tabelas `auth_*` (003, 097–101). Metadados v2 em `/api/cli/entry-points|old-routes` (074) continuam staff-only e não são jornada cliente.
+- Integração e evidência (teste, resultado, commit): `test:l08-delivery:pg` consolida a jornada legada (identidade derivada da sessão, revalidação a cada requisição); subteste 1 de `client-space.integration.test.mjs` ("seeds two client identities and authenticates the admin role"). A camada v2 permanece no `CliClient.tsx` órfão, fora deste gate.
+- Pendência / fronteira externa / aceite humano: aceite humano de negócio e homologação Windows pendentes (não é o mesmo aceite já dado a L07); v2 não promovida.
 
 ## CLI-02
 múltiplos contatos do cliente e papéis por conta/unidade/contrato. Delegação pelo cliente apenas se autorizada, sem ampliação fora do próprio escopo.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Contas/grants legados em `/admin/clientes` e `/api/client/accounts`; contatos/escopos/delegação v2 na 074 e `cli-api.mjs`, staff-only.
-- Integração e evidência (teste, resultado, commit): Escopo legado A≠B é provado por `client-space.integration`; delegação v2 do cliente não é.
-- Pendência / fronteira externa / aceite humano: UI v2 órfã e falta prova de autoria/escopo por recurso.
+- Estado: pronto_local (fonte legada canônica: contas e vínculos verificados); delegação/contatos v2 seguem `a_revalidar`
+- Tela / API / dados / autorização: contas/grants legados em `/admin/clientes` (administração) e `/api/client/accounts` (leitura do cliente); escopo por conta revalidado em cada requisição via `client_access_grants` ativo (003). Contatos/escopos/delegação v2 na 074 e `cli-api.mjs` continuam staff-only.
+- Integração e evidência (teste, resultado, commit): subtestes 2–4 e 9 de `client-space.integration.test.mjs` (criação/suspensão auditada, concessão com motivo obrigatório e duplicidade bloqueada, listagem restrita à sessão, revogação imediata e idempotente) via `test:l08-delivery:pg`. Delegação v2 do cliente continua sem prova.
+- Pendência / fronteira externa / aceite humano: UI v2 órfã; aceite humano e homologação Windows pendentes.
 
 ## CLI-03
 contratos, itens de serviço, vigência, documentos e escopo claro; conteúdo técnico interno não publicado automaticamente.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: `/cliente/app/contratos` usa `/api/client/contracts`/004; itens, escopos e vigência v2 usam 074 e handlers staff-only.
-- Integração e evidência (teste, resultado, commit): Contrato legado por conta tem prova PG; conteúdo v2 está no `CliClient.tsx` órfão.
-- Pendência / fronteira externa / aceite humano: Falta gate cliente para itens/vigência e bloqueio de conteúdo interno.
+- Estado: pronto_local (contrato por conta sobre a fonte legada); itens/vigência v2 seguem `a_revalidar`
+- Tela / API / dados / autorização: `/cliente/app/contratos` usa `/api/client/contracts` (004); escopo por conta e por modo de contrato (`all`/`selected`) verificado no servidor, nunca por ID enviado pelo navegador. Itens, escopos e vigência v2 usam 074 e handlers staff-only.
+- Integração e evidência (teste, resultado, commit): subteste 5 de `client-space.integration.test.mjs` ("contracts follow the verified scope on the server, not browser-supplied ids") via `test:l08-delivery:pg`.
+- Pendência / fronteira externa / aceite humano: falta gate cliente para itens/vigência v2 e bloqueio de conteúdo interno; aceite humano e homologação Windows pendentes.
 
 ## CLI-04
 documentos com categoria/validade/versão, busca e download privado; autorização testada em todos os caminhos.
-- Estado: em_execucao
-- Tela / API / dados / autorização: `/cliente/app/documentos`; APIs legadas de lista/download e v2 de categoria/versão/log; tabelas 004/074/101.
-- Integração e evidência (teste, resultado, commit): Bytes privados, integridade e A≠B têm prova legada/QA; alias v2 é staff-only e devolve metadado/URL, não streaming cliente.
-- Pendência / fronteira externa / aceite humano: Mantido `em_execucao`; falta jornada v2 integral e gate L08.
+- Estado: pronto_local (download privado sobre a fonte legada, com integridade sha256); categoria/versão/log v2 seguem `a_revalidar`
+- Tela / API / dados / autorização: `/cliente/app/documentos`; listagem e download privado em `/api/client/documents` (004, integridade 101); cada download revalida o vínculo no servidor e verifica tamanho/hash antes de entregar bytes. Alias v2 é staff-only e devolve metadado/URL, não streaming cliente.
+- Integração e evidência (teste, resultado, commit): subteste 6 de `client-space.integration.test.mjs` ("documents round-trip exactly and downloads are audited with safe headers") via `test:l08-delivery:pg`; cabeçalhos `Content-Disposition`/`Cache-Control: private, no-store`/`X-Content-Type-Options` e auditoria de download.
+- Pendência / fronteira externa / aceite humano: falta jornada v2 integral; aceite humano e homologação Windows pendentes.
 
 ## CLI-05
 chamados com protocolo, categoria, prioridade, responsável, mensagens, anexos, SLA e histórico.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: `/cliente/app/chamados` usa legado; `cli_tickets_v2`/mensagens/anexos/histórico/SLA na 075 e `cli-advanced-api.mjs`.
-- Integração e evidência (teste, resultado, commit): Legado tem prova PG e `cli_tickets_v2` é fonte canônica provada no ADM; isso não prova portal v2, cujo alias exige staff.
-- Pendência / fronteira externa / aceite humano: Componente v2 órfão; falta cliente A≠B, transação e UI.
+- Estado: pronto_local (abertura/listagem/status sobre a fonte legada, agora com idempotência e auditoria atômica); `cli_tickets_v2` (mensagens/anexos/SLA) segue `a_revalidar`
+- Tela / API / dados / autorização: `/cliente/app/chamados` usa `/api/client/tickets` (004); `cli_tickets_v2`/mensagens/anexos/histórico/SLA na 075 e `cli-advanced-api.mjs` continuam staff-only e não promovidas.
+- Integração e evidência (teste, resultado, commit): subteste 7 ("tickets open only inside the verified scope and carry a status audit trail") e o novo subteste 8 ("ticket creation is idempotent under retry and the audit write is fail-closed") de `client-space.integration.test.mjs`, via `test:l08-delivery:pg` — migração aditiva **139** adiciona `idempotency_key`/`content_fingerprint` a `client_tickets` (único por conta), a abertura passa a correr em uma única transação com a gravação em `auth_access_audit`, retry concorrente com a mesma chave não duplica o chamado (relido sob `FOR UPDATE`/corrida de índice único), conteúdo divergente sob a mesma chave devolve 409, e a indisponibilidade da auditoria devolve 503 revertendo a escrita por completo (nenhum chamado meio-criado).
+- Pendência / fronteira externa / aceite humano: componente v2 (`cli_tickets_v2`) continua órfão para o cliente; aceite humano de negócio e homologação Windows pendentes — **não é o mesmo aceite já dado a L07**.
 
 ## CLI-06
 estados aberto/em atendimento/aguardando cliente/resolvido/encerrado, reabertura e motivo; pausas de SLA explicitamente definidas.
@@ -1617,3 +1617,58 @@ Rotas reais: `/cliente/entrar`, `/cliente/app/conta`, `/cliente/app/contratos`,
 A/B, autorização derivada da sessão, corpo forjado sem ampliação, download
 privado, histórico e erros de acesso. CLI-06..15 e EXT-01..17 não foram
 promovidos.
+
+## L08 — revisão da PR #80 e hardening CLI-05 (02/10/2026, sessão de continuação)
+
+**Estado remoto confirmado antes de qualquer edição** (`gh pr view 80`, `git fetch
+origin --prune`, `git ls-remote`): PR #80 **aberta**, não mergeada, sem merge
+commit; branch `arena/l08-hardening-20261002`, head
+`a95872de2a29d9ea39773a942cd9e3f7e91bfa4d` (=`a95872d`), base `main` no mesmo
+commit desta sessão (`c16673c`). A `main` oficial **não contém** o commit da
+PR #80. Nenhum merge foi feito nesta sessão; a PR #80 segue aguardando revisão
+humana, sem mexer na sua branch.
+
+Esta sessão herdou a restrição de branch do Arena (a sessão é fixa em
+`arena/01a0fed6-gruposegsystemseguranca`, criada a partir do mesmo `c16673c`
+da PR #80) — por isso o trabalho abaixo não está na branch
+`arena/l08-hardening-20261002` nem cria uma `arena/l08-next-*` separada; é uma
+fatia independente, sem sobrepor arquivos com a PR #80 (que só toca
+`tests/l08-delivery.integration.test.mjs`, a jornada Chromium, e documentação).
+
+**Revisão requisito a requisito de CLI-01..05** (não apenas "o gate passa"):
+autorização deriva da sessão em todo caminho revisado; identidade/conta
+forjada no corpo não amplia escopo (coberto por `client-space.integration`);
+escopo cruzado A≠B é negado em contas, contratos, documentos e chamados;
+download privado confere tamanho e hash antes de entregar bytes. **Gap real
+encontrado e corrigido nesta sessão**: a abertura de chamado (CLI-05) não
+tinha proteção de idempotência contra retry de rede, e a gravação em
+`auth_access_audit` era melhor-esforço (falha silenciosa, sem reverter a
+escrita de negócio) — divergindo do padrão fail-closed já usado em ADM-01..12
+(L07). Corrigido com a migração aditiva **139** e a reescrita da abertura de
+chamado em uma única transação: mesma chave de idempotência relida sob
+`FOR UPDATE`/corrida de índice único não duplica o chamado, conteúdo
+divergente sob a mesma chave devolve `409 idempotency_key_conflict`, e a
+auditoria indisponível devolve `503 audit_unavailable` revertendo tudo (sem
+chamado meio-criado). **Gaps equivalentes ainda não corrigidos, registrados
+como dívida explícita**: criação/suspensão de conta, concessão/revogação de
+vínculo, criação/status de contrato e upload de documento no mesmo arquivo
+(`client-space-api.mjs`) continuam gravando `auth_access_audit` fora de
+transação com a escrita de negócio (melhor esforço) — não foram alterados
+nesta sessão para manter o escopo revisável e não prometer blindagem que não
+foi testada; ficam para a próxima fatia de hardening.
+
+**Migração**: 139 (aditiva, `client_tickets.idempotency_key`/`content_fingerprint`,
+índice único parcial por conta, checks `NOT VALID` + `VALIDATE CONSTRAINT`).
+001–138 permanecem imutáveis; próxima livre passa a ser **140**.
+
+**Gate**: `test:l08-delivery:pg` — 11/12 em duas execuções consecutivas e
+idênticas (inclui o novo subteste de idempotência/auditoria fail-closed do
+CLI-05); o 12º subteste é o smoke Chromium já existente nesta branch (versão
+anterior à PR #80, ainda com `page.setContent` sintético — a PR #80 não foi
+incorporada aqui). Ele falha por limitação ambiental deste sandbox (Chromium
+empacotado sem bibliotecas de sistema disponíveis), não por código — ver a
+seção de regressões obrigatórias para detalhe e reprodutibilidade.
+
+CLI-06..15 e EXT-01..17 **não foram promovidos**. Nenhuma declaração de
+aceite humano foi feita ou removida; Windows continua pendente para o
+fechamento integral do sistema.

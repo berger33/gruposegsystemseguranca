@@ -1038,3 +1038,48 @@ Rotas reais: `/cliente/entrar`, `/cliente/app/conta`, `/cliente/app/contratos`,
 A/B, autorização derivada da sessão, corpo forjado sem ampliação, download
 privado, histórico e erros de acesso. CLI-06..15 e EXT-01..17 não foram
 promovidos.
+
+## L08 — revisão da PR #80 e hardening de idempotência/auditoria do CLI-05 (02/10/2026, continuação)
+
+Estado remoto confirmado antes de editar: PR #80 **aberta**, não mergeada,
+head `a95872de2a29d9ea39773a942cd9e3f7e91bfa4d`, branch
+`arena/l08-hardening-20261002`, base `main` no mesmo commit `c16673c` desta
+sessão. A `main` não contém a PR #80; nenhum merge foi feito. O trabalho desta
+sessão ficou na branch fixa do Arena (`arena/01a0fed6-gruposegsystemseguranca`),
+sem tocar na branch da PR #80 e sem sobrepor os arquivos que ela altera.
+
+Revisão requisito a requisito de CLI-01..05 encontrou um gap real: a abertura
+de chamado do cliente (CLI-05) não era idempotente sob retry de rede e a
+gravação em `auth_access_audit` era melhor-esforço (não revertia a escrita de
+negócio em caso de falha), ao contrário do padrão fail-closed já usado em
+ADM-01..12. Corrigido com a migração aditiva **139**
+(`client_tickets.idempotency_key`/`content_fingerprint`, único por conta) e a
+reescrita da criação de chamado em uma única transação: retry concorrente com
+a mesma chave não duplica o chamado, conteúdo divergente sob a mesma chave
+devolve 409, e falha de auditoria devolve 503 revertendo tudo. O mesmo padrão
+melhor-esforço ainda existe em conta/grant/contrato/documento no mesmo
+arquivo — registrado como dívida explícita, não corrigido nesta sessão para
+manter o escopo revisável.
+
+Gate `test:l08-delivery:pg`: 11/12 em duas execuções consecutivas idênticas,
+incluindo o novo subteste de idempotência/auditoria fail-closed do CLI-05. O
+subteste de smoke Chromium (já existente, anterior à PR #80) falhou nas duas
+execuções por limitação ambiental deste sandbox (biblioteca de sistema do
+Chromium empacotado ausente, sem acesso de rede a apt/CDN do Playwright para
+instalar) — não é falha de código, é determinística e idêntica nas duas
+execuções.
+
+Regressões no SHA desta continuação (base `c16673c`): estático 5/5,
+`typecheck` 0 erros, `npm test` 197/197 (unitário novo para a validação pura
+da chave de idempotência), `npm run build` exit 0, `test:migrations:pg`
+139/139 com 524 tabelas e clone/checksum negativo OK. L03/L04/L05/L06/L07
+foram executados nesta sessão e **toda falha observada é a mesma limitação
+ambiental de Chromium** (reprodutível e idêntica em duas execuções do L07:
+29/43 passam — todos os subtestes HTTP/PG puros — e os mesmos 14 subtestes
+dependentes de Chromium falham nas duas vezes). `next-env.d.ts` e
+`tsconfig.json` foram restaurados antes do commit.
+
+CLI-06..15 e EXT-01..17 não foram promovidos. Nenhum aceite humano foi
+assumido ou removido; a homologação Windows continua pendente para o
+fechamento integral do sistema — este gap de hardening não constitui aceite
+novo.

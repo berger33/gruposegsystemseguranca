@@ -136,3 +136,30 @@ canônicas são `auth_*`, `client_accounts`, `client_access_grants`,
 `client_contracts`, `client_documents`, `client_tickets` e suas auditorias,
 provenientes das migrações 003–005 e endurecidas por 097–101. CLI-06..15 e
 EXT-01..17 permanecem não promovidos.
+
+## Atualização da sessão L08 — revisão da PR #80 e hardening CLI-05 (02/10/2026, continuação)
+
+Estado remoto confirmado antes de qualquer edição (`gh pr view 80`,
+`git fetch origin --prune`, `git merge-base --is-ancestor`): a PR #80
+(`arena/l08-hardening-20261002`, head `a95872d`) está **aberta**, sem merge
+commit; a `main` oficial segue em `c16673c` e não a contém. Nenhum merge foi
+feito nesta sessão.
+
+A revisão requisito a requisito (não apenas a passagem do `test:l08-delivery:pg`)
+confirmou que o "Risco transversal CLI" já anotado acima — escrita seguida de
+auditoria sem transação única, sem o padrão fail-closed de 503+rollback —
+também existe na fonte **legada** usada por CLI-01..05
+(`src/server/client-space-api.mjs`), não só nos handlers v2 citados
+originalmente. A abertura de chamado (CLI-05) também não tinha proteção de
+idempotência contra retry de rede. Ambos foram corrigidos nesta sessão com a
+migração aditiva **139** e a reescrita da criação de chamado em uma transação
+única com a auditoria; os mesmos gaps em conta/grant/contrato/documento no
+mesmo arquivo foram identificados e **ficam como dívida explícita**, não
+corrigidos agora para manter o escopo revisável em uma única PR pequena.
+
+CLI-01..05 passam a `pronto_local` sobre a fonte legada canônica (implementação
+local + validação automática Linux/PostgreSQL descartável), com o reforço de
+que isso **não é aceite humano de negócio nem homologação Windows** — ambos
+seguem pendentes, adiados para o fechamento integral do sistema. CLI-06..15 e
+EXT-01..17 continuam não promovidos; os 80 órfãos de `/admin/ti` continuam
+dívida explícita, sujeitos a promoção por área somente com prova.

@@ -46,7 +46,7 @@ function fixture({ fault, unit = UNIT, unitAllowed = true, grantExists = true, u
     getPool: () => db, docsDir: '/tmp',
     readClientSession: async () => session ? { identityId: IDENTITY } : null,
     sameOrigin: () => true,
-    readJson: async () => ({ accountId: ACCOUNT, category: 'Outro assunto', title: 'QA synthetic ticket', details: 'No real client details.' }),
+    readJson: async () => ({ accountId: ACCOUNT, category: 'Outro assunto', title: 'QA synthetic ticket', details: 'No real client details.', idempotencyKey: 'qa-synthetic-fail-closed-fixture' }),
     json: (res, status, body) => { if (res.status) throw new Error('duplicate response'); res.status = status; res.body = body; return body; },
   });
   const res = {};

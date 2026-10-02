@@ -35,3 +35,32 @@ Não há dados reais, SMTP externo, PSP ou serviço externo.
 CLI-06..15 e EXT-01..17 continuam `a_revalidar`/não promovidos. Nenhuma migração
 nova foi necessária; a fonte legada continua única e explícita. Migrações 001–138
 são imutáveis; a próxima livre continua sendo 139.
+
+## Continuação — revisão da PR #80 e hardening CLI-05 (02/10/2026)
+
+Estado remoto confirmado antes de editar: a PR #80
+(`arena/l08-hardening-20261002`, head `a95872d`, troca o smoke Chromium
+sintético por navegação HTTP real) está **aberta**, não mergeada; a `main`
+oficial não a contém. Nenhum merge foi feito; esta continuação não tocou a
+branch da PR #80.
+
+A revisão requisito a requisito encontrou um gap real em CLI-05: a abertura de
+chamado não era idempotente sob retry de rede e a gravação em
+`auth_access_audit` era melhor-esforço, sem reverter a escrita de negócio em
+falha — diferente do padrão fail-closed já usado em ADM-01..12. Migração
+aditiva **139** adiciona `idempotency_key`/`content_fingerprint` a
+`client_tickets` (único por conta); a criação do chamado passa a ocorrer em
+uma única transação com a auditoria: retry concorrente não duplica, conteúdo
+divergente sob a mesma chave devolve 409, e auditoria indisponível devolve 503
+revertendo tudo. Prova: novo subteste em `client-space.integration.test.mjs`,
+rodado via `test:l08-delivery:pg` (11/12 em duas execuções consecutivas
+idênticas; o 12º subteste, smoke Chromium pré-existente, falhou nas duas por
+limitação ambiental deste sandbox, não por código).
+
+Os mesmos gaps de auditoria melhor-esforço em conta/grant/contrato/documento
+(mesmo arquivo `client-space-api.mjs`) foram identificados e **ficam como
+dívida explícita**, não corrigidos nesta continuação. CLI-06..15 e EXT-01..17
+continuam não promovidos. 001–139 permanecem imutáveis; a próxima migração
+livre passa a ser **140**. Aceite humano de Marcelo/Andreia sobre L07
+permanece preservado; isto não é aceite novo nem homologação Windows, que
+segue pendente para o fechamento integral do sistema.

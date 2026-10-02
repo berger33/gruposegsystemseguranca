@@ -16,6 +16,7 @@ import {
   validateReason,
   validateScopeNote,
   validateTicketInput,
+  validateIdempotencyKey,
 } from "../src/lib/client-space-core.mjs";
 
 test("account validation trims, bounds and cleans the central registry entry", () => {
@@ -86,6 +87,16 @@ test("ticket validation matches the approved prototype categories and limits", (
   );
   const ok = validateTicketInput({ category: "Contratos ou documentos", title: "  Dúvida  ", details: "  Detalhe aqui  " });
   assert.deepEqual(ok.value, { category: "Contratos ou documentos", title: "Dúvida", details: "Detalhe aqui" });
+});
+
+test("idempotency key for ticket creation is bounded and rejects control characters", () => {
+  assert.equal(validateIdempotencyKey(undefined).error, "idempotency_key_required");
+  assert.equal(validateIdempotencyKey("").error, "idempotency_key_required");
+  assert.equal(validateIdempotencyKey("short").error, "idempotency_key_required");
+  assert.equal(validateIdempotencyKey("x".repeat(201)).error, "idempotency_key_required");
+  assert.equal(validateIdempotencyKey("chave-com-<script>").error, "idempotency_key_invalid");
+  const ok = validateIdempotencyKey("  retry-0123456789  ");
+  assert.deepEqual(ok, { value: "retry-0123456789" });
 });
 
 test("status guards accept only the closed lists", () => {

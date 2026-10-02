@@ -275,3 +275,66 @@ Rotas reais: `/cliente/entrar`, `/cliente/app/conta`, `/cliente/app/contratos`,
 A/B, autorização derivada da sessão, corpo forjado sem ampliação, download
 privado, histórico e erros de acesso. CLI-06..15 e EXT-01..17 não foram
 promovidos.
+
+## Registro de execução — revisão da PR #80 e hardening CLI-05 (02/10/2026, continuação)
+
+Roteiro efetivamente seguido nesta sessão, na ordem:
+
+1. **Confirmação remota obrigatória antes de qualquer edição**: `gh pr view 80`
+   (aberta, não mergeada, head `a95872d`, base `main` em `c16673c`),
+   `git fetch origin --prune`, `git log origin/main` (ainda em `c16673c`,
+   não contém a PR #80), `git merge-base --is-ancestor a95872d origin/main`
+   (negativo). Nenhum merge foi feito; a branch da PR #80 não foi tocada.
+2. Confirmação de que esta sessão está presa à branch
+   `arena/01a0fed6-gruposegsystemseguranca` (mesma base `c16673c` da PR #80) —
+   não foi criada a branch `arena/l08-next-*` sugerida pelo prompt, por
+   restrição de plataforma; o trabalho seguiu na branch fixa da sessão.
+3. Leitura integral de `AUDITORIA-TERRENO-L08.md`, `ENTREGA-L08.md`,
+   `ENTREGA-L08-RELATORIO-2026-10-02.md`, `CONTROLE-IMPLEMENTACAO.md`,
+   `CHECKLIST-ENTREGA-LOCAL.md`, `ESTADO-EXECUCAO-LOCAL.md`,
+   `EVIDENCIAS-ENTREGA-LOCAL.md` e `EXECUCAO-ENTREGA-LOCAL.md`, e leitura do
+   diff da PR #80 (`git diff c16673c..a95872d`) para entender exatamente o
+   que ela altera (apenas o smoke Chromium e documentação).
+4. **Reconfirmação da baseline no SHA base antes de editar**: `npm ci`,
+   estático 5/5, typecheck, `npm test` 196/196, build exit 0,
+   `test:migrations:pg` 138/138, `test:l08-delivery:pg` 10/11 (duas vezes,
+   idêntico), L03/L04/L05/L06/L07 executados e todas as falhas atribuídas à
+   mesma limitação ambiental de Chromium (biblioteca de sistema ausente,
+   sem rede para instalar via apt ou baixar via Playwright CDN).
+5. **Revisão requisito a requisito de CLI-01..05** (autorização, escrita +
+   histórico + auditoria atômicos, idempotência/concorrência, aliases HTTP,
+   dados sintéticos) sobre o código real de `src/server/client-space-api.mjs`,
+   não apenas sobre a passagem do gate. Encontrado um gap real: a abertura de
+   chamado (CLI-05) não era idempotente sob retry e a auditoria em
+   `auth_access_audit` era melhor-esforço (sem reverter a escrita de negócio
+   em falha), divergindo do padrão fail-closed já usado em ADM-01..12 (L07).
+6. **Hardening aditivo**: migração **139**
+   (`client_tickets.idempotency_key`/`content_fingerprint`, único por conta,
+   checks `NOT VALID` + `VALIDATE CONSTRAINT`); reescrita da criação de
+   chamado em uma única transação com a gravação em `auth_access_audit`
+   (retry concorrente não duplica, conteúdo divergente sob a mesma chave
+   devolve 409, auditoria indisponível devolve 503 e reverte tudo); validador
+   puro `validateIdempotencyKey` em `client-space-core.mjs`; novo subteste de
+   integração cobrindo os seis comportamentos (ver EVIDÊNCIAS §E); ajuste do
+   unitário fail-closed existente para incluir a chave na fixture sintética
+   sem alterar a asserção de 503; atualização do migrador
+   (`scripts/migrate-site-visual.mjs`) e do preflight estático
+   (`scripts/qa-wave0-static.mjs`) para 001–139.
+7. **Validação final no SHA desta continuação**: estático 5/5, typecheck,
+   `npm test` 197/197, build exit 0, `test:migrations:pg` 139/139,
+   `test:l08-delivery:pg` 11/12 em duas execuções consecutivas idênticas
+   (inclui o novo subteste; o subteste de smoke Chromium pré-existente segue
+   com a mesma falha ambiental). `git diff --check` sem erros;
+   `next-env.d.ts`/`tsconfig.json` restaurados antes do commit.
+8. Atualização de CHECKLIST, ESTADO, EVIDÊNCIAS, EXECUÇÃO, CONTROLE,
+   AUDITORIA-TERRENO-L08 e ENTREGA-L08, e relatório da série
+   (`ENTREGA-L08-RELATORIO-2026-10-02-REVISAO-PR80-CLI05.md`); PR aberta para
+   revisão contra `main`, **sem merge**.
+
+Não feito de propósito: a PR #80 não foi mesclada, fechada nem reaproveitada;
+CLI-06..15 e EXT-01..17 não foram promovidos; os gaps equivalentes de
+auditoria melhor-esforço em conta/grant/contrato/documento (mesmo arquivo)
+foram identificados mas **não corrigidos nesta sessão**, para manter o escopo
+revisável — ficam como dívida explícita registrada; nenhum aceite humano foi
+assumido ou removido; Windows não foi homologado e continua pendente para o
+fechamento integral do sistema.

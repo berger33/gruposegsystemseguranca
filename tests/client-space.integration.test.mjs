@@ -69,7 +69,8 @@ async function applyMigrations() {
   try {
     for (const filename of ["001-site-visual.sql", "002-public-leads.sql", "003-client-access.sql", "004-client-space.sql", "005-client-security.sql", "006-admin-identities.sql", "007-opcao-b-funcionarios.sql", "011-audit-and-notifications.sql", "097-client-mfa-session.sql", "098-client-manual-verification.sql", "099-sec-staff-session-hardening.sql",
   "100-l02-local-outbox.sql",
-  "101-l02-document-integrity.sql"]) {
+  "101-l02-document-integrity.sql",
+  "139-cli05-ticket-idempotency-audit-hardening.sql"]) {
       const sql = await readFile(path.join(projectRoot, "db/migrations", filename), "utf8");
       await pool.query(sql);
     }
@@ -604,6 +605,7 @@ test("client space enforces verified scoping end to end", testOptions, async t =
         category: "Contratos ou documentos",
         title: "Dúvida sobre o resumo do contrato",
         details: "No resumo aparece 'teste de integração'. Confirmam? (cenário de teste automatizado)",
+        idempotencyKey: `t1-${randomUUID()}`,
       },
       cookie: cookieA,
     });
@@ -614,7 +616,7 @@ test("client space enforces verified scoping end to end", testOptions, async t =
 
     const cross = await api("/api/client/tickets", {
       method: "POST",
-      body: { accountId: accountA1, category: "Outro assunto", title: "Não é meu", details: "Tentativa fora do escopo" },
+      body: { accountId: accountA1, category: "Outro assunto", title: "Não é meu", details: "Tentativa fora do escopo", idempotencyKey: `t2-${randomUUID()}` },
       cookie: cookieB,
     });
     assert.equal(cross.status, 403);
@@ -628,7 +630,7 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     assert.equal(crossList.status, 403);
     const ownB = await api('/api/client/tickets', {
       method: 'POST',
-      body: { accountId: accountA2, category: 'Outro assunto', title: 'Chamado sintético B', details: 'Somente conta B pode ler.' },
+      body: { accountId: accountA2, category: 'Outro assunto', title: 'Chamado sintético B', details: 'Somente conta B pode ler.', idempotencyKey: `t3-${randomUUID()}` },
       cookie: cookieB,
     });
     assert.equal(ownB.status, 201);
@@ -639,7 +641,7 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     assert.equal(crossAtoB.status, 403);
     const crossWrite = await api('/api/client/tickets', {
       method: 'POST',
-      body: { accountId: accountA2, category: 'Outro assunto', title: 'A não é B', details: 'Pedido não autorizado.' },
+      body: { accountId: accountA2, category: 'Outro assunto', title: 'A não é B', details: 'Pedido não autorizado.', idempotencyKey: `t4-${randomUUID()}` },
       cookie: cookieA,
     });
     assert.equal(crossWrite.status, 403);
@@ -675,6 +677,78 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     assert.equal(invalidStatus.body.error, "ticket_status_invalid");
   });
 
+  // L08 CLI-05 hardening: retry de rede não duplica chamado, conteúdo
+  // divergente sob a mesma chave é um conflito explícito, a mesma chave é
+  // isolada por conta, e a auditoria indisponível devolve 503 revertendo tudo.
+  await t.test("ticket creation is idempotent under retry and the audit write is fail-closed", async () => {
+    const missingKey = await api('/api/client/tickets', {
+      method: 'POST',
+      body: { accountId: accountA1, category: 'Outro assunto', title: 'Sem chave', details: 'Falta idempotencyKey.' },
+      cookie: cookieA,
+    });
+    assert.equal(missingKey.status, 400);
+    assert.equal(missingKey.body.error, 'idempotency_key_required');
+
+    const retryKey = `retry-${randomUUID()}`;
+    const payload = { accountId: accountA1, category: 'Outro assunto', title: 'Chamado com retry', details: 'Mesmo clique enviado duas vezes.', idempotencyKey: retryKey };
+    const [first, second] = await Promise.all([
+      api('/api/client/tickets', { method: 'POST', body: payload, cookie: cookieA }),
+      api('/api/client/tickets', { method: 'POST', body: payload, cookie: cookieA }),
+    ]);
+    const created = [first, second].find(r => r.status === 201);
+    const replayed = [first, second].find(r => r.status === 200);
+    assert.ok(created, `expected one 201: ${JSON.stringify([first, second])}`);
+    assert.ok(replayed, `expected one idempotent 200: ${JSON.stringify([first, second])}`);
+    assert.equal(replayed.body.idempotent_replay, true);
+    assert.equal(replayed.body.ticketId, created.body.ticketId);
+    cleanupIds.push(created.body.ticketId);
+    const retryCount = await pool.query("SELECT count(*)::int AS n FROM client_tickets WHERE idempotency_key = $1", [retryKey]);
+    assert.equal(retryCount.rows[0].n, 1, "concurrent retry must not duplicate the ticket row");
+
+    const thirdSameKey = await api('/api/client/tickets', { method: 'POST', body: payload, cookie: cookieA });
+    assert.equal(thirdSameKey.status, 200);
+    assert.equal(thirdSameKey.body.idempotent_replay, true);
+    assert.equal(thirdSameKey.body.ticketId, created.body.ticketId);
+
+    const conflictingPayload = { ...payload, details: 'Conteúdo diferente sob a mesma chave.' };
+    const conflict = await api('/api/client/tickets', { method: 'POST', body: conflictingPayload, cookie: cookieA });
+    assert.equal(conflict.status, 409);
+    assert.equal(conflict.body.error, 'idempotency_key_conflict');
+
+    // A mesma chave reaproveitada por outra conta não colide: cada conta
+    // isola o espaço de chaves de idempotência.
+    const sameKeyOtherAccount = await api('/api/client/tickets', {
+      method: 'POST',
+      body: { accountId: accountA2, category: 'Outro assunto', title: 'Mesma chave, outra conta', details: 'Não deve colidir.', idempotencyKey: retryKey },
+      cookie: cookieB,
+    });
+    assert.equal(sameKeyOtherAccount.status, 201, JSON.stringify(sameKeyOtherAccount.body));
+    assert.notEqual(sameKeyOtherAccount.body.ticketId, created.body.ticketId);
+    cleanupIds.push(sameKeyOtherAccount.body.ticketId);
+
+    // Auditoria indisponível: a tabela some temporariamente; a escrita de
+    // negócio deve ser recusada com 503 e revertida por completo, sem
+    // chamado meio-criado.
+    await pool.query("ALTER TABLE auth_access_audit RENAME TO auth_access_audit_l08_unavailable");
+    let auditFailure;
+    try {
+      auditFailure = await api('/api/client/tickets', {
+        method: 'POST',
+        body: { accountId: accountA1, category: 'Outro assunto', title: 'Durante falha de auditoria', details: 'Não deve ser criado.', idempotencyKey: `audit-off-${randomUUID()}` },
+        cookie: cookieA,
+      });
+    } finally {
+      await pool.query("ALTER TABLE auth_access_audit_l08_unavailable RENAME TO auth_access_audit");
+    }
+    assert.equal(auditFailure.status, 503);
+    assert.deepEqual(auditFailure.body, { error: "audit_unavailable" });
+    const noPartialTicket = await pool.query(
+      "SELECT count(*)::int AS n FROM client_tickets WHERE client_account_id = $1 AND title = $2",
+      [accountA1, 'Durante falha de auditoria'],
+    );
+    assert.equal(noPartialTicket.rows[0].n, 0, "audit failure must leave no partially created ticket");
+  });
+
   await t.test("revoking the grant cuts access immediately and is idempotent", async () => {
     const revoked = await api(`/api/admin/grants/${grantA1}`, {
       method: "DELETE",
@@ -698,7 +772,7 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     assert.equal(tickets.status, 403);
     const blockedWrite = await api('/api/client/tickets', {
       method: 'POST',
-      body: { accountId: accountA1, category: 'Outro assunto', title: 'Após revogação', details: 'Deve ser negado.' },
+      body: { accountId: accountA1, category: 'Outro assunto', title: 'Após revogação', details: 'Deve ser negado.', idempotencyKey: `t5-${randomUUID()}` },
       cookie: cookieA,
     });
     assert.equal(blockedWrite.status, 403);
