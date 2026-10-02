@@ -2841,11 +2841,20 @@ test("L07 FIN-14/15/16 aditivo: retries concorrentes, download limitado e trava 
   assert.equal(closureRetries.filter(x => x.status === 200 && x.body.idempotent_replay).length, 5);
   const closureId = closureRetries[0].body.closure.id;
   assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_report_versions WHERE closure_id=$1", [closureId])).rows[0].n, 1, "retry preserves one initial version");
-  const { accountId } = await insertClientSpace(`FIN15-${tag}`);
+  const { accountId, contractId: clientContractId } = await insertClientSpace(`FIN15-${tag}`);
+  const payableSpace = await insertExpenseSpace(`FIN15-${tag}`);
   await assert.rejects(pool.query(
     "INSERT INTO fin_accounts_receivable (protocol,client_account_id,competence_date,due_date,amount_cents) VALUES ($1,$2,'2035-02-15','2035-02-20',100)",
     [`REC-FIN-20350215-${tag.slice(0,4).toUpperCase()}`, accountId]
   ), /fin_competence_closed/, "direct SQL cannot create a posting in a closed month");
+  await assert.rejects(pool.query(
+    "INSERT INTO fin_accounts_payable (protocol,supplier_id,competence_date,due_date,amount_cents) VALUES ($1,$2,'2035-02-15','2035-02-20',100)",
+    [`PAG-FIN-20350215-${tag.slice(0,4).toUpperCase()}`, payableSpace.supplierId]
+  ), /fin_competence_closed/, "direct SQL cannot create a payable in a closed month");
+  await assert.rejects(pool.query(
+    "INSERT INTO fin_costs (client_account_id,contract_id,cost_source,competence_date,source_amount_cents,amount_cents,description,rateio_rule,rateio_percent) VALUES ($1,$2,'outro','2035-02-15',200,200,'Custo sintético direto no mês fechado','Rateio integral documentado da competência fechada',100)",
+    [accountId, clientContractId]
+  ), /fin_competence_closed/, "direct SQL cannot create a cost in a closed month");
   const spoofed = uuid();
   const reopened = await fin("/competence-closures", { method:"PATCH", cookie:financeiro.cookie, body:{ id:closureId, action:"reopen", reopen_reason:"Reabertura sintética autorizada pela identidade da sessão.", authorized_by_identity:spoofed } });
   assert.equal(reopened.status, 200, JSON.stringify(reopened.body));
@@ -2854,6 +2863,14 @@ test("L07 FIN-14/15/16 aditivo: retries concorrentes, download limitado e trava 
   await pool.query(
     "INSERT INTO fin_accounts_receivable (protocol,client_account_id,competence_date,due_date,amount_cents) VALUES ($1,$2,'2035-02-15','2035-02-20',100)",
     [`REC-FIN-20350215-${tag.slice(0,4).toUpperCase()}`, accountId]
+  );
+  await pool.query(
+    "INSERT INTO fin_accounts_payable (protocol,supplier_id,competence_date,due_date,amount_cents) VALUES ($1,$2,'2035-02-15','2035-02-20',100)",
+    [`PAG-FIN-20350215-${tag.slice(0,4).toUpperCase()}`, payableSpace.supplierId]
+  );
+  await pool.query(
+    "INSERT INTO fin_costs (client_account_id,contract_id,cost_source,competence_date,source_amount_cents,amount_cents,description,rateio_rule,rateio_percent) VALUES ($1,$2,'outro','2035-02-15',200,200,'Custo sintético direto após reabertura','Rateio integral documentado da competência reaberta',100)",
+    [accountId, clientContractId]
   );
 
   const provisionBody = { provision_date:"2035-03-31", amount_cents:45600, notes:"Provisão concorrente sintética; revisão humana obrigatória.", idempotency_key:`fin16-${tag}-retry` };
@@ -3007,6 +3024,22 @@ async function seedPanelUniverse(year, requesterIdentity) {
     [payableId, `PAG-FIN-${stamp}-${tag}`, space.supplierId, day, at],
   );
 
+  // ADM-04 "margem por contrato": dois resultados gerenciais canônicos do mesmo
+  // contrato — um com margem completa calculada no banco e um com base
+  // incompleta declarada (a ausência de margem nunca vira zero).
+  const marginCompleteId = uuid();
+  await pool.query(
+    `INSERT INTO fin_management_results (id,protocol,contract_id,competence_date,revenue_received_cents,costs_cents,margin_percent,is_complete,status,notes,created_at)
+     VALUES ($1,$2,$3,$4,200000,80000,60.00,true,'aprovado','Resultado gerencial sintético com margem completa para o painel do Marcelo',$5)`,
+    [marginCompleteId, `RES-FIN-${stamp}-${tag}`, contractId, day, at],
+  );
+  const marginIncompleteId = uuid();
+  await pool.query(
+    `INSERT INTO fin_management_results (id,protocol,contract_id,competence_date,revenue_received_cents,costs_cents,is_complete,incomplete_reason,status,created_at)
+     VALUES ($1,$2,$3,$4,120000,NULL,false,'Custos da competência ainda não consolidados para a margem do painel','incompleto',$5)`,
+    [marginIncompleteId, `RES-FIN-${year}0515-${tag}`, contractId, `${year}-05-15`, at],
+  );
+
   const discountId = uuid();
   await pool.query(
     `INSERT INTO crm_discount_requests (id,company_id,requested_discount_percent,original_price,discounted_price,reason,requester_id,requester_name,requester_role,status,created_by,created_at)
@@ -3037,7 +3070,7 @@ async function seedPanelUniverse(year, requesterIdentity) {
   return {
     tag, day, period: { start: `${year}-01-01`, end: `${year}-12-31` },
     accountId, expenseId, ticketId, occurrenceId, leadId, companyId, opportunityId, proposalId,
-    contractId, renewalId, receivableId, payableId, discountId, goalId, diaryRestrictedId, diaryTeamId,
+    contractId, renewalId, receivableId, payableId, marginCompleteId, marginIncompleteId, discountId, goalId, diaryRestrictedId, diaryTeamId,
   };
 }
 
@@ -3051,6 +3084,7 @@ const EXPECTED_COUNTS = {
   "ADM-03.implantacoes_pendentes": 1,
   "ADM-04.recebiveis_vencidos": 1,
   "ADM-04.pagaveis_a_vencer": 1,
+  "ADM-04.margem_por_contrato": 2,
   "ADM-05.renovacoes": 1,
   "ADM-06.aprovacoes_pendentes": 2,
   "ADM-12.oportunidades_expansao": 1,
@@ -3106,6 +3140,19 @@ test("L07 ADM-01..05/12: papéis, origem declarada e drill-down de cada indicado
       assert.equal(record.body.source_table, row.canonical.table);
     }
   }
+
+  // 4b. ADM-04 margem por contrato: percentual canônico no completo; ausência
+  // declarada no incompleto (nunca zero inventado).
+  const marginComplete = await adm(`/record?kind=fin_management_result&id=${seed.marginCompleteId}`, { cookie: marcelo.cookie });
+  assert.equal(marginComplete.status, 200, JSON.stringify(marginComplete.body));
+  assert.equal(marginComplete.body.source_table, "fin_management_results");
+  assert.equal(Number(marginComplete.body.record.margin_percent), 60, "margin percent is the canonical server calculation");
+  assert.equal(Number(marginComplete.body.record.margin_cents), 120000);
+  const marginIncomplete = await adm(`/record?kind=fin_management_result&id=${seed.marginIncompleteId}`, { cookie: marcelo.cookie });
+  assert.equal(marginIncomplete.status, 200);
+  assert.equal(marginIncomplete.body.record.margin_cents, null, "an incomplete margin is never presented as a number");
+  assert.equal(marginIncomplete.body.record.margin_percent, null);
+  assert.equal(marginIncomplete.body.record.is_complete, false);
 
   // 5. Projeção: o registro do lead não devolve dados pessoais do solicitante.
   const lead = await adm(`/record?kind=public_lead&id=${seed.leadId}`, { cookie: marcelo.cookie });
@@ -3173,6 +3220,12 @@ test("L07 ADM-01/03: falha de leitura da fonte não vira zero nem lista vazia e 
   assert.equal(emptyCard.value.record_count, 0);
   assert.equal(emptyCard.value.amount_cents, null, "no records means no invented amount");
   assert.equal(emptyCard.empty_reason, "sem_registro_canonico_no_periodo");
+  // ADM-05: a mesma declaração vale para renovações — ausência não vira zero.
+  const emptyRenewals = empty.body.indicators.find(item => item.code === "ADM-05.renovacoes");
+  assert.equal(emptyRenewals.status, "ok");
+  assert.equal(emptyRenewals.value.record_count, 0);
+  assert.equal(emptyRenewals.value.amount_cents, null, "no renewals means no invented amount");
+  assert.equal(emptyRenewals.empty_reason, "sem_registro_canonico_no_periodo");
 });
 
 test("L07 ADM-06: decisão unificada com alçada, segregação, idempotência concorrente e auditoria fail-closed", { skip: !RUN, timeout: 180_000 }, async () => {

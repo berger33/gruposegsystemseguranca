@@ -1,6 +1,32 @@
 # Entrega L07 — financeiro e Marcelo (fatias em andamento)
 
-## Atualização vigente — jornadas FIN-14/15/16 (2026-10-02)
+## Atualização vigente — fechamento de matriz e evidências (2026-10-02)
+
+A matriz do L07 foi fechada: FIN-01..16 e ADM-01..12 conferidos requisito a
+requisito contra tela/API/tabela/autorização reais e subtestes existentes do
+gate, com mapa completo (requisito → tela/rota → API → tabelas canônicas →
+subtestes → resultado → pendência) em
+[MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md). Três divergências de
+evidência foram corrigidas **acrescentando prova ou implementando** — nunca
+ajustando texto para parecer completo: trava SQL da migração 137 provada nas
+três tabelas (recebíveis, pagáveis, custos) no subteste 36; período vazio
+asserido no próprio cartão `ADM-05.renovacoes` no subteste 39; e a “margem por
+contrato” do requisito ADM-04, ausente do painel (com afirmação incorreta no
+relatório anterior, corrigida com nota), implementada como cartão
+`ADM-04.margem_por_contrato` sobre o resultado canônico de FIN-09, provada no
+subteste 38 — sem migração nova (próxima livre: 139). Gate L07 **43/43 em duas
+execuções consecutivas** no estado final; baseline reconfirmada antes de
+qualquer edição (estático 5/5, typecheck 0, unitários 196/196, migrações
+138/138, L03–L06 verdes; uma execução da baseline 42/43 com falha de subteste
+não identificada, registrada sem maquiagem). Regressões completas verdes no
+mesmo SHA. Relatório: [ENTREGA-L07-MATRIZ.md](ENTREGA-L07-MATRIZ.md).
+**Aceite humano de Marcelo/Andreia pendente para todos os FIN/ADM; o L07 não
+está concluído e o L08 não foi iniciado.** Faltam para concluir o L07: aceite
+humano nas jornadas, destino declarado da dívida dos 80 órfãos de `/admin/ti`,
+investigação/aceite das instabilidades de ambiente e execução em Windows (ver
+matriz §7).
+
+## Atualização anterior — jornadas FIN-14/15/16 (2026-10-02)
 
 As abas **Exportações**, **Fechamento** e **Comissões** foram entregues em `/admin/financeiro`, usando os handlers integrados e a migração aditiva 137 para idempotência concorrente e trava de lançamentos em competência fechada. Download limitado, autoria da reabertura e bloqueio de pagamento automático são decididos no servidor; falhas de leitura têm retry e ações só confirmam após persistência. Gate L07: 37/37 em duas execuções consecutivas; demais gates e regressões L03–L06 verdes no mesmo SHA. FIN-14/15/16 passam a `pronto_local` apenas na validação automática; aceite humano pendente. Relatório: [ENTREGA-L07-FIN14-15-16.md](ENTREGA-L07-FIN14-15-16.md). **L07 não está concluído**: ADM-01..12/painel Marcelo é a próxima fatia, ainda não iniciada; L08 não foi iniciado.
 

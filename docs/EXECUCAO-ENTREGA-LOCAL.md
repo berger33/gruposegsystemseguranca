@@ -215,3 +215,34 @@ Roteiro efetivamente seguido nesta sessão, na ordem:
 
 Não feito de propósito: nenhum aceite humano foi assumido, L07 não foi
 declarado concluído e L08 não foi iniciado.
+
+## Registro de execução — fechamento de matriz do L07 (02/10/2026)
+
+Roteiro efetivamente seguido nesta sessão, na ordem:
+
+1. Leitura dos documentos de estado/checklist/evidências e **reconfirmação da
+   baseline no SHA base `bbcf311` antes de qualquer edição**: estático 5/5,
+   typecheck 0, unitários 196/196, migrações exit 0, L03–L06 verdes e gate L07
+   em cinco execuções — a primeira com 42/43 (falha de subteste não
+   identificada: log descartado por erro de procedimento, registrado) e as
+   seguintes 43/43.
+2. Auditoria requisito a requisito de FIN-01..16 e ADM-01..12 contra tela,
+   API roteada, tabelas canônicas, autorização no servidor e **subtestes
+   existentes** do gate (numeração 1–43 documentada na matriz).
+3. Tratamento das três divergências encontradas: trava SQL da competência
+   (FIN-15) provada nas três tabelas no subteste 36; período vazio de
+   renovações (ADM-05) asserido no próprio cartão no subteste 39; “margem por
+   contrato” (ADM-04) implementada como cartão canônico de FIN-09 com prova no
+   subteste 38 — sem migração nova, sem timeout maior, sem skip, sem
+   assertiva removida ou enfraquecida.
+4. Produção da matriz de fechamento `MATRIZ-FECHAMENTO-L07.md` com dívidas
+   explícitas (80 órfãos de `/admin/ti`, instabilidades de ambiente) e do
+   relatório da série `ENTREGA-L07-MATRIZ.md`.
+5. Execução no mesmo SHA: estático, typecheck, unitários, build, migrações,
+   L07 **duas vezes consecutivas** (43/43 e 43/43) e regressões L03–L06.
+6. Atualização de CHECKLIST, ESTADO, EVIDÊNCIAS, CONTROLE, ENTREGA-L07 e
+   correção registrada em `ENTREGA-L07-ADM01-12.md`; PR aberta para revisão,
+   **sem merge**.
+
+Não feito de propósito: nenhum aceite humano foi assumido, o L07 não foi
+declarado concluído e o L08 não foi iniciado.

@@ -74,6 +74,9 @@ export function createAdmPanelApi({ pool, auditLog, sameOrigin, requireSession }
     fin_expense: { table: 'fin_expenses', columns: ['id', 'protocol', 'expense_type', 'category', 'description', 'amount_cents', 'status', 'requester_name', 'requester_identity', 'approver_name', 'created_at'], path: '/admin/financeiro' },
     fin_receivable: { table: 'fin_accounts_receivable', columns: ['id', 'protocol', 'competence_date', 'due_date', 'amount_cents', 'amount_paid_cents', 'amount_remaining_cents', 'status', 'contract_id', 'created_at'], path: '/admin/financeiro' },
     fin_payable: { table: 'fin_accounts_payable', columns: ['id', 'protocol', 'competence_date', 'due_date', 'amount_cents', 'status', 'supplier_id', 'created_at'], path: '/admin/financeiro' },
+    // ADM-04 "margem por contrato": o registro canônico é o resultado gerencial
+    // de FIN-09 (margem calculada no servidor; base incompleta declarada).
+    fin_management_result: { table: 'fin_management_results', columns: ['id', 'protocol', 'contract_id', 'competence_date', 'revenue_received_cents', 'costs_cents', 'margin_cents', 'margin_percent', 'is_complete', 'incomplete_reason', 'status', 'created_at'], path: '/admin/financeiro' },
     cli_ticket: { table: 'cli_tickets_v2', columns: ['id', 'protocol', 'title', 'status', 'priority', 'sla_due_at', 'responsible_name', 'created_at'], path: '/admin/clientes' },
     ops_occurrence: { table: 'ops_occurrence_book', columns: ['id', 'protocol', 'title', 'category', 'severity', 'status', 'responsible_name', 'occurred_at'], path: '/admin/operacao' },
     public_lead: { table: 'public_leads', columns: ['id', 'request_kind', 'city', 'property_type', 'status', 'created_at'], path: '/admin/leads' },
@@ -201,6 +204,25 @@ export function createAdmPanelApi({ pool, auditLog, sameOrigin, requireSession }
                p.due_date::timestamptz AS reference_at, p.amount_cents::bigint AS amount_cents
           FROM fin_accounts_payable p
          WHERE p.due_date BETWEEN $1 AND $2 AND p.status IN ('pendente','aprovado','vencido')`,
+    },
+    {
+      // ADM-04 "margem por contrato": o painel não calcula margem — ele expõe o
+      // resultado canônico de FIN-09 (fin_management_results), cujo percentual é
+      // derivado no banco (computed_margin_percent) e cuja base incompleta é
+      // declarada com motivo. Rascunhos e arquivados ficam fora da visão
+      // executiva; 'incompleto' entra com sua declaração, nunca com zero.
+      code: 'ADM-04.margem_por_contrato', requirement: 'ADM-04', label: 'Financeiro — contratos com margem por competência', unit: 'count',
+      sources: ['fin_management_results'], period_field: 'competência do resultado gerencial',
+      base: `
+        SELECT 'fin_management_result' AS record_kind, m.id AS record_id, m.protocol AS record_label,
+               CASE WHEN m.is_complete THEN 'margem calculada no servidor (' || m.margin_percent::text || '%)'
+                    ELSE COALESCE(m.incomplete_reason, 'margem incompleta') END AS record_detail,
+               CASE WHEN m.is_complete THEN 'media' ELSE 'baixa' END AS priority,
+               'Financeiro' AS responsible,
+               m.competence_date::timestamptz AS reference_at, m.margin_cents::bigint AS amount_cents
+          FROM fin_management_results m
+         WHERE m.status IN ('incompleto','em_revisao','aprovado')
+           AND m.competence_date::date BETWEEN $1 AND $2`,
     },
     {
       code: 'ADM-05.renovacoes', requirement: 'ADM-05', label: 'Contratos — renovações a tratar', unit: 'count',

@@ -1,6 +1,36 @@
 # Estado da execução — entrega local integral
 
-## Estado atual — jornadas FIN-14/15/16 (2026-10-02)
+## Estado atual — fechamento de matriz do L07 (2026-10-02)
+
+Base oficial utilizada: `main` em `bbcf311` (merge da PR #74); branch Arena
+`arena/01a0fd38-gruposegsystemseguranca`. A matriz de evidências do L07 foi
+fechada requisito a requisito: FIN-01..16 e ADM-01..12 conferidos contra
+tela/API/tabela/autorização reais e subtestes existentes do gate, com mapa
+completo em [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md). Três
+divergências de evidência foram corrigidas **acrescentando prova ou
+implementando**: (1) trava SQL da competência fechada (migração 137) agora
+provada nas três tabelas — recebíveis, pagáveis e custos — no subteste 36;
+(2) período vazio sem registro canônico agora asserido especificamente no
+cartão `ADM-05.renovacoes`; (3) “margem por contrato” do requisito ADM-04, que
+não existia no painel (afirmação incorreta do relatório anterior corrigida
+com nota), implementada como cartão `ADM-04.margem_por_contrato` sobre o
+resultado canônico de FIN-09 (`fin_management_results`), com drill-down até o
+registro real, margem incompleta declarada (nunca zero) e sem migração nova
+(próxima livre: **139**). Gate L07 **43/43 em duas execuções consecutivas** no
+estado final (o gate continua com 43 subtestes; os subtestes 36/38/39 foram
+ampliados). Regressões no mesmo SHA: estático 5/5, typecheck 0, unitários
+196/196, migrações exit 0 (138/138, 524 tabelas), build exit 0, L03 1/1,
+L04 20/20, L05 1/1, L06 9/9. Transparência: a primeira execução da baseline
+(sem edição) deu 42/43 com falha de subteste não identificada (log descartado
+por pipe — erro de procedimento registrado); execuções seguintes 43/43.
+**Aceite humano de Marcelo/Andreia continua pendente para todos os FIN/ADM;
+o L07 não está concluído e o L08 não foi iniciado.** Dívidas abertas: 80
+componentes órfãos de `/admin/ti` (critério de saída no
+INVENTARIO-ADMIN-TI.md) e instabilidades de ambiente (subteste 22, L03
+intermitente, L06 encadeado) listadas na matriz §4.2. Relatório:
+[ENTREGA-L07-MATRIZ.md](ENTREGA-L07-MATRIZ.md).
+
+## Estado anterior — jornadas FIN-14/15/16 (2026-10-02)
 
 Base oficial utilizada: `main` em `cc4da84`; branch Arena desta sessão. As jornadas UI FIN-14/15/16 foram implementadas com a migração aditiva 137 e gate L07 ampliado para 37 subtestes. FIN-14, FIN-15 e FIN-16 estão `pronto_local` na validação automática; aceite humano/Windows pendentes. FIN-10, FIN-13 e FIN-12→FIN-04 foram preservados sem reabertura. **L07 segue em execução; ADM-01..12 e L08 não foram iniciados.** Próximo recorte: [ADM-01..12, painel Marcelo](PROMPT-PROXIMA-SESSAO-L07-ADM01-12.md).
 
