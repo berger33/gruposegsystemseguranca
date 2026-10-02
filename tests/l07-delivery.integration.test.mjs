@@ -2551,9 +2551,10 @@ test("L07 FIN-14: exportação do período com trilha imutável, idempotência p
 
   // 4. Idempotência/duplicidade pela chave de armazenamento.
   const duplicate = await fin("/exports", { method: "POST", cookie: financeiro.cookie, body: exportPayload("principal") });
-  assert.equal(duplicate.status, 409, "duplicate storage key rejected");
-  assert.deepEqual(duplicate.body, { error: "duplicate_storage_key" });
-  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_exports WHERE storage_key=$1", [exportPayload("principal").storage_key])).rows[0].n, 1, "duplicate attempt did not create a second export");
+  assert.equal(duplicate.status, 200, "identical storage-key retry replays the persisted export");
+  assert.equal(duplicate.body.idempotent_replay, true);
+  assert.equal(duplicate.body.export.id, exportId);
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_exports WHERE storage_key=$1", [exportPayload("principal").storage_key])).rows[0].n, 1, "retry did not create a second export");
 
   // 5. Transições controladas de geração.
   const jump = await fin("/exports", { method: "PATCH", cookie: financeiro.cookie, body: { id: exportId, status: "gerado" } });
@@ -2630,8 +2631,9 @@ test("L07 FIN-15: fechamento de competência, reabertura autorizada, versões pr
   assert.equal(created.body.closure.closed_by_identity, financeiro.id);
   const closureId = created.body.closure.id;
   const duplicate = await fin("/competence-closures", { method: "POST", cookie: financeiro.cookie, body: closurePayload() });
-  assert.equal(duplicate.status, 409, "the same competence cannot be closed twice");
-  assert.deepEqual(duplicate.body, { error: "duplicate_competence" });
+  assert.equal(duplicate.status, 200, "identical competence retry replays the persisted closure");
+  assert.equal(duplicate.body.idempotent_replay, true);
+  assert.equal(duplicate.body.closure.id, closureId);
 
   const invalidAction = await fin("/competence-closures", { method: "PATCH", cookie: financeiro.cookie, body: { id: closureId, action: "apagar" } });
   assert.equal(invalidAction.status, 400, "closure actions are allowlisted");
@@ -2802,4 +2804,112 @@ test("L07 FIN-16: provisão de comissão CRM-25 com revisão obrigatória, sem p
   assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_commission_provisions WHERE rule_id=$1 AND amount_cents=77000", [ruleId])).rows[0].n, 0, "provision rolled back when audit is unavailable");
   assert.equal((await pool.query("SELECT status FROM fin_commission_provisions WHERE id=$1", [rollbackId])).rows[0].status, "provisionada", "review rolled back when audit is unavailable");
   assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_commission_provision_history WHERE provision_id=$1", [rollbackId])).rows[0].n, 1, "history rolled back with the transaction");
+});
+
+
+test("L07 FIN-14/15/16 aditivo: retries concorrentes, download limitado e trava SQL da competência", { skip: !RUN, timeout: 180_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const rh = await provisionAndLoginStaff(pool, api, { role: "rh" });
+  const tag = uuid().slice(0, 8);
+
+  const exportPayload = {
+    period_start: "2035-01-01", period_end: "2035-01-31",
+    filters: { origem: "concorrencia_sintetica" }, totals: { total_cents: 32100 },
+    total_records: 3, total_amount_cents: 32100,
+    file_name: `fin14-${tag}.json`, storage_key: `synthetic/fin14/concurrent-${tag}.json`,
+  };
+  const exportRetries = await Promise.all(Array.from({ length: 6 }, () => fin("/exports", { method:"POST", cookie:financeiro.cookie, body:exportPayload })));
+  assert.equal(exportRetries.filter(x => x.status === 201).length, 1, "one export is created");
+  assert.equal(exportRetries.filter(x => x.status === 200 && x.body.idempotent_replay).length, 5, "concurrent retries replay the same export");
+  const exportIds = new Set(exportRetries.map(x => x.body.export.id));
+  assert.equal(exportIds.size, 1);
+  const exportId = exportRetries[0].body.export.id;
+  assert.equal((await fin("/exports", { method:"PATCH", cookie:financeiro.cookie, body:{ id:exportId, status:"gerando" } })).status, 200);
+  assert.equal((await fin("/exports", { method:"PATCH", cookie:financeiro.cookie, body:{ id:exportId, status:"gerado" } })).status, 200);
+  assert.equal((await fin(`/export-download?id=${exportId}`)).status, 401, "anonymous download denied");
+  assert.equal((await fin(`/export-download?id=${exportId}`, { cookie:rh.cookie })).status, 403, "unrelated role download denied");
+  const downloaded = await fin(`/export-download?id=${exportId}`, { cookie:financeiro.cookie });
+  assert.equal(downloaded.status, 200);
+  assert.equal(downloaded.body.protocol, exportRetries[0].body.export.protocol);
+  assert.deepEqual(downloaded.body.totals, { total_cents:32100 }, "download contains only the persisted limited artifact");
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_export_logs WHERE export_id=$1 AND action='export_download'", [exportId])).rows[0].n, 1, "download is tracked");
+
+  const competence = "2035-02-01";
+  const closureBody = { competence_date:competence, notes:"Fechamento concorrente sintético com trava de lançamentos.", totals:{ total_cents:0 } };
+  const closureRetries = await Promise.all(Array.from({ length:6 }, () => fin("/competence-closures", { method:"POST", cookie:financeiro.cookie, body:closureBody })));
+  assert.equal(closureRetries.filter(x => x.status === 201).length, 1);
+  assert.equal(closureRetries.filter(x => x.status === 200 && x.body.idempotent_replay).length, 5);
+  const closureId = closureRetries[0].body.closure.id;
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_report_versions WHERE closure_id=$1", [closureId])).rows[0].n, 1, "retry preserves one initial version");
+  const { accountId } = await insertClientSpace(`FIN15-${tag}`);
+  await assert.rejects(pool.query(
+    "INSERT INTO fin_accounts_receivable (protocol,client_account_id,competence_date,due_date,amount_cents) VALUES ($1,$2,'2035-02-15','2035-02-20',100)",
+    [`REC-FIN-20350215-${tag.slice(0,4).toUpperCase()}`, accountId]
+  ), /fin_competence_closed/, "direct SQL cannot create a posting in a closed month");
+  const spoofed = uuid();
+  const reopened = await fin("/competence-closures", { method:"PATCH", cookie:financeiro.cookie, body:{ id:closureId, action:"reopen", reopen_reason:"Reabertura sintética autorizada pela identidade da sessão.", authorized_by_identity:spoofed } });
+  assert.equal(reopened.status, 200, JSON.stringify(reopened.body));
+  assert.equal(reopened.body.closure.authorized_by_identity, financeiro.id, "server ignores a client-supplied authorizer");
+  assert.notEqual(reopened.body.closure.authorized_by_identity, spoofed);
+  await pool.query(
+    "INSERT INTO fin_accounts_receivable (protocol,client_account_id,competence_date,due_date,amount_cents) VALUES ($1,$2,'2035-02-15','2035-02-20',100)",
+    [`REC-FIN-20350215-${tag.slice(0,4).toUpperCase()}`, accountId]
+  );
+
+  const provisionBody = { provision_date:"2035-03-31", amount_cents:45600, notes:"Provisão concorrente sintética; revisão humana obrigatória.", idempotency_key:`fin16-${tag}-retry` };
+  const provisionRetries = await Promise.all(Array.from({ length:6 }, () => fin("/commission-provisions", { method:"POST", cookie:financeiro.cookie, body:provisionBody })));
+  assert.equal(provisionRetries.filter(x => x.status === 201).length, 1);
+  assert.equal(provisionRetries.filter(x => x.status === 200 && x.body.idempotent_replay).length, 5);
+  assert.equal(new Set(provisionRetries.map(x => x.body.provision.id)).size, 1);
+  assert.ok(provisionRetries.every(x => x.body.provision.is_auto_paid === false), "no retry pays a commission");
+  const conflict = await fin("/commission-provisions", { method:"POST", cookie:financeiro.cookie, body:{ ...provisionBody, amount_cents:99900 } });
+  assert.equal(conflict.status, 409, "same business key with different content is rejected");
+});
+
+test("L07 FIN-14/15/16: Chromium opera as três abas, mostra falhas de leitura e revisão auditável sem pagamento automático", { skip: !RUN, timeout: 240_000 }, async () => {
+  const financeiro = await provisionAndLoginStaff(pool, api, { role:"financeiro" });
+  const browser = await playwrightChromium.launch({ executablePath:await packagedChromium.executablePath(), headless:true, args:packagedChromium.args.filter(arg => arg !== "--disable-web-security") });
+  try {
+    const context = await browser.newContext({ serviceWorkers:"block", acceptDownloads:true });
+    const pair=financeiro.cookie.split(";")[0], separator=pair.indexOf("=");
+    await context.addCookies([{ name:pair.slice(0,separator), value:pair.slice(separator+1), url:baseUrl }]);
+    const page=await context.newPage(); await page.setExtraHTTPHeaders({ origin:baseUrl });
+    await page.goto(`${baseUrl}/admin/financeiro`,{waitUntil:"networkidle"});
+
+    for (const item of [
+      {tab:"exports",path:"**/api/fin/exports**",error:"fin14-read-error",retry:"fin14-retry"},
+      {tab:"closures",path:"**/api/fin/competence-closures**",error:"fin15-read-error",retry:"fin15-retry"},
+      {tab:"commissions",path:"**/api/fin/commission-provisions**",error:"fin16-read-error",retry:"fin16-retry"},
+    ]) {
+      await page.route(item.path, route => route.request().method()==="GET" ? route.fulfill({status:500,contentType:"application/json",body:'{"error":"internal"}'}) : route.continue());
+      await page.getByTestId(`finance-tab-${item.tab}`).click();
+      await page.waitForSelector(`[data-testid="${item.error}"]`);
+      assert.match(await page.getByTestId(item.error).textContent(), /não foi possível/i);
+      await page.unroute(item.path);
+      await page.getByTestId(item.retry).click();
+      await page.waitForFunction(id=>!document.querySelector(`[data-testid="${id}"]`),item.error);
+    }
+
+    const tag=uuid().slice(0,8);
+    await page.getByTestId("finance-tab-exports").click();
+    await page.getByTestId("fin14-start").fill("2036-01-01"); await page.getByTestId("fin14-end").fill("2036-01-31");
+    await page.getByTestId("fin14-records").fill("4"); await page.getByTestId("fin14-amount").fill("123456"); await page.getByTestId("fin14-file").fill(`jornada-${tag}.json`);
+    assert.match(await page.getByTestId("fin14-amount-preview").textContent(),/R\$\s?1\.234,56/);
+    await page.getByTestId("fin14-create").click(); await page.waitForFunction(()=>document.querySelector('[data-testid="fin14-select"]')?.value);
+    await page.getByTestId("fin14-generating").click(); await page.waitForFunction(()=>(document.querySelector('[data-testid="fin14-status"]')?.textContent||"")==="gerando");
+    await page.getByTestId("fin14-generated").click(); await page.waitForFunction(()=>(document.querySelector('[data-testid="fin14-status"]')?.textContent||"")==="gerado");
+    assert.equal(await page.getByTestId("fin14-download").isEnabled(),true);
+
+    await page.getByTestId("finance-tab-closures").click(); await page.getByTestId("fin15-date").fill("2036-02-01"); await page.getByTestId("fin15-notes").fill("Fechamento sintético pela jornada Chromium FIN-15."); await page.getByTestId("fin15-create").click(); await page.waitForFunction(()=>document.querySelector('[data-testid="fin15-select"]')?.value);
+    await page.getByTestId("fin15-reason").fill("Reabertura sintética justificada pela jornada de navegador."); await page.getByTestId("fin15-reopen").click(); await page.waitForFunction(()=>(document.querySelector('[data-testid="fin15-status"]')?.textContent||"")==="reaberta");
+    await page.getByTestId("fin15-versions").click(); await page.waitForFunction(()=>document.querySelectorAll('[data-testid="fin15-version-list"] li').length===2);
+
+    await page.getByTestId("finance-tab-commissions").click(); await page.getByTestId("fin16-date").fill("2036-03-31"); await page.getByTestId("fin16-amount").fill("78900"); await page.getByTestId("fin16-notes").fill("Provisão sintética da jornada Chromium sem pagamento automático."); await page.getByTestId("fin16-key").fill(`fin16-ui-${tag}`); await page.getByTestId("fin16-create").click(); await page.waitForFunction(()=>document.querySelector('[data-testid="fin16-select"]')?.value);
+    assert.match(await page.getByTestId("fin16-no-auto-pay").textContent(),/automático proibido/i);
+    await page.getByTestId("fin16-reason").fill("Início da revisão humana pela jornada de navegador."); await page.getByTestId("fin16-revision-reason").fill("Conferência sintética da base de cálculo da comissão."); await page.getByTestId("fin16-start-review").click(); await page.waitForFunction(()=>(document.querySelector('[data-testid="fin16-status"]')?.textContent||"")==="em_revisao");
+    await page.getByTestId("fin16-reason").fill("Conclusão da revisão humana pela jornada de navegador."); await page.getByTestId("fin16-finish-review").click(); await page.waitForFunction(()=>(document.querySelector('[data-testid="fin16-status"]')?.textContent||"")==="revisada");
+    assert.match(await page.getByTestId("fin16-review-audit").textContent(),/autor/i);
+    const provisionId=await page.getByTestId("fin16-select").inputValue(); const persisted=(await pool.query("SELECT status,is_auto_paid,reviewed_by_identity FROM fin_commission_provisions WHERE id=$1",[provisionId])).rows[0];
+    assert.equal(persisted.status,"revisada"); assert.equal(persisted.is_auto_paid,false); assert.equal(persisted.reviewed_by_identity,financeiro.id);
+  } finally { await browser.close(); }
 });

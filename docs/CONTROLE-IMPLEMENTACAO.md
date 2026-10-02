@@ -1,4 +1,14 @@
 # Controle de implementação — SEG System
+
+## Atualização 2026-10-02 — L07 FIN-14/15/16
+
+- IDs: FIN-14, FIN-15 e FIN-16 promovidos a `pronto_local` pela validação automática; aceite humano pendente.
+- Entrega: três abas financeiras, falha de leitura + retry, seleção sem UUID digitado, R$, ações justificadas, download limitado, versões e revisão auditável.
+- Dados: migração aditiva 137 (fingerprints/chave idempotente, constraints `NOT VALID`, índice parcial e trava de competência no banco). 001–136 imutáveis.
+- Prova: gate L07 37/37 duas vezes; migrações 137/137; regressões L03–L06.
+- Preservado: FIN-10/136, FIN-13/134, FIN-12→FIN-04/135; PRs #47/#53 não reavaliadas/mescladas.
+- Próxima ação: ADM-01..12 no painel Marcelo, conforme `PROMPT-PROXIMA-SESSAO-L07-ADM01-12.md`. Não iniciado. L07 ainda em execução e L08 não iniciado.
+
 Versão inicial: 28/09/2026.
 
 Este arquivo foi criado junto ao plano mestre. Nenhum item foi implementado ou homologado pela criação desta documentação. Referência remota inicial: 49d366cd9335ca33fe9703a397dc0488b6468ef8. O agente deve atualizar o estado com base no commit atual e em evidências, preservando o histórico.
