@@ -84,6 +84,7 @@ Nenhum PR foi mesclado, fechado ou teve branch apagada. O registro de aproveitam
 | `npm run test:migrations:pg` | **134/134**, replay idempotente, clone e checksum negativo (`006` recusado, exit 1 tratado), 522 tabelas |
 | `npm run test:l07-delivery:pg` (antes da correção) | 31 subtestes: 27 aprovados, **4 reprovados** — reprodução dos achados |
 | `npm run test:l07-delivery:pg` (depois) | **31/31**, exit 0, zero skips, em duas execuções aprovadas. Entre elas houve uma execução 30/31 reprovada no subteste 18 (FIN-10, fora desta fatia) por queda do Chromium no `launch` (`signal=SIGSEGV`), sem asserção reprovada — ruído da máquina de 2 vCPU, detalhado em EVIDENCIAS-ENTREGA-LOCAL.md |
+| GitHub Actions na PR #68 (`e729311`) | **5/5 workflows verdes**, incluindo `finance-postgres-browser`, que roda `test:migrations:pg` e `test:l07-delivery:pg` em runner limpo; o gate completo passou sem o ruído de Chromium observado na máquina de 2 vCPU |
 | `npm run test:l03-delivery:pg` | 1/1 |
 | `npm run test:l04-delivery:pg` | 20/20 |
 | `npm run test:l05-delivery:pg` | 1/1 |
