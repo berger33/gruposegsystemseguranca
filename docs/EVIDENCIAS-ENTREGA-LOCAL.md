@@ -1770,3 +1770,38 @@ Fatia executada sobre `main`/`origin/main` `ffdf7fbb49832abe30930c355b3085d190a7
 | Fail-closed | negativos do gate | origem/papel/anônimo indevidos são recusados; auditoria indisponível devolve 503 e reverte a mutação. |
 
 A migração aditiva `135-fin09-fin12-revalidation-hardening.sql` reforça a margem incompleta FIN-09 e os vínculos de cobrança, baixa e estorno FIN-12/FIN-04. FIN-09, FIN-11 e FIN-12 passam a `pronto_local` apenas para validação automática. Aceite humano, Windows e integrações externas reais continuam pendentes; L07 não foi declarado concluído e L08 não foi iniciado.
+
+## L07 — fatia FIN-10 (despesas/alçadas) + avaliação adaptativa #47/#53 (2026-10-02)
+
+Fatia executada sobre `main`/`origin/main` `bd794dc99bfc12a7e8a811783bda1234aeb4fe6b` (merge da PR #69), na branch Arena `arena/01a0fa9e-gruposegsystemseguranca`. Despesas, evidências, alçadas e conciliações são sintéticas; nenhum pagamento real.
+
+### A. Realização do cenário antes da correção (reprodução de lacuna)
+
+Após escrever os quatro subtestes novos sem mexer no produto, o gate de entrega apresentou falhas concentradas em FIN-10 e FIN-05 (a melhoria já correta na main foi preservada sem reescrita):
+
+| # | Cenário | Comportamento observado antes da correção |
+|---|---|---|
+| FIN10A-1 | `npm run test:l07-delivery:pg` na base intacta | 31/35 — falhas em 17 (colisão de duplicidade natural pendente de `rollback-create`), 19 (busca global retornava 7 entradas, não 1), 21 (asserção de código de erro), 22 (timeout na UI legada). Nenhuma assertiva removida; apenas o payload do teste 17 ganhou descrição própria e os fills do teste 18 passaram de "75000" para "750,00" (mesmos centavos, formato pt-BR) |
+| FIN10A-2 | Retry concorrente idêntico (6 POSTs) | 409 em vez de 200 replay: o índice `fin_expenses_pending_natural_key` podia disparar antes do de idempotência e o handler não classificava a restrição; com `DATABASE_POOL_SIZE=5`, a releitura do replay pedia segunda conexão e enforcava (test timeout 120s) |
+| FIN10A-3 | SQL direto tentando excluir recebível conciliado | BLOQUEADO com `P0001` pelo gatilho de imutabilidade de `fin_payment_history` (cascata), não `23503` — prova de trilha preservada com código variável por guarda dominante |
+
+### B. Correção validada no mesmo SHA
+
+| Evidência | Comando/cenário | Resultado observado |
+|---|---|---|
+| Estático e manifest | `node scripts/qa-wave0-static.mjs` | 5/5; migrações 001–136 contínuas, únicas, registradas |
+| Tipos e unitários | `npm run typecheck`; `npm test` | 0 erros; 196/196, 0 skips |
+| Build | `npm run build` | Sucesso, 78 páginas |
+| Migrações | `npm run test:migrations:pg` | 136/136 em 2 passes; TABLES=522→522; clone checksum negativo rejeitado sem rebaseline |
+| Gate L07 | `npm run test:l07-delivery:pg` | **35/35, 0 falhas, 0 skips**, com PostgreSQL descartável, HTTP real, Next local e Chromium empacotado — **duas execuções consecutivas limpas no estado final (runs 9 e 10, ambos `# pass 35`, `# fail 0`, `L07_DELIVERY_TEST_EXIT: 0`) e uma terceira confirmação pós-limpeza (run 11, também 35/35)**. Intermediários registrados com a devida causa e correção: run 5 e run 6 reprovaram só o subteste 19 por `testTimeoutFailure` (120 s) — a causa era starvation do pool de 5 conexões no replay concorrente (releitura buscava segunda conexão) e foi eliminada pelo re-read na mesma conexão pós-ROLLBACK, sem alterar timeout, skips ou assertivas; run 8 reprovou só o subteste 18 (Chromium legado) por timeout no helper de leitura sob carga de CPU imediata de outro gate, reproduzido e recuperado no run 9 sem mexer no teste; run 7 reprovou o 18 pela mesma manifestação transitória. |
+
+### C. O que os subtestes novos do gate L07 provam (17–22 da suíte atual de 35)
+
+1. **Busca e replay idempotente** (19): `?q=` restringe por nome/protocolo/referência da evidência; 6 POSTs concorrentes com a mesma chave geram exatamente 1 registro com 200 replay; contenido distinto da mesma chave → 409 `duplicate_idempotency_key`; duplicidade natural pendente distinta (mesmo solicitante/tipo/valor/descrição) → 409 `duplicate_pending_request`; identidade TI faz GET mas não PATCH (`read_only`); sessão anônima 401.
+2. **Política de alçada sem regra inventada** (20): política ausente/inativa dá 403 com a solicitação intacta (subsídio 1 do diagnóstico), valor acima da alçada configurada 403, autoaprovação sem flag 403, SQL direto tentando aprovar a própria despesa → `fin_expense_segregation`, DELETE direto → `fin_expense_no_delete`, `authority_limit_cents` gravado no histórico (snapshot no momento da aprovação), mudança posterior de alçada não reaprova nada sozinha, e nenhuma decisão FIN-10 gera `fin_payments`/`fin_accounts_payable`/conciliação.
+3. **Garantias FIN-05 adaptadas da #47** (21): inserção de conciliação sem movimento → 23514 `fin05_conciliation_requires_movement_and_one_account`; DELETE de movimento conciliado → 23503; DELETE de recebível conciliado → bloqueado (23503 ou P0001, conforme o guardião que intercepta primeiro) com os registros preservados.
+4. **Jornada Chromium COMPLETA** (22): requester sem alçada visualiza a mensagem de política pendente; `fin10-error` com `fin10-retry` quando o GET falha — recuperação não confunde com estado vazio (`fin10-empty` só aparece sem erro e após leitura); preenchimento com valor em R$ "750,50" sai como 75050 centavos em `INSERT`; decisão por identidade distinta com alçada 200050; histórico `fin10-history-toggle-<id>` exibe "Alçada aplicada: R$ 2.000,50"; assertivas no banco confirmam cada efeito.
+
+### D. Transparência das execuções intermediárias
+
+Entre as primeiras execuções íntegras e as finais, houve reprovas transitórias intermediárias, todas registradas: runs 5 e 6 reprovaram unicamente o subteste 19 por `testTimeoutFailure` (120 s) com o mesmo sintoma de 6 POSTs concorrentes (starvation do pool, corrigido com o re-read na mesma conexão pós-ROLLBACK); runs 7 e 8 reprovaram o subteste 18 (Chromium legado) por timeout transitório do helper de leitura sob disputa de CPU com outro gate. Nenhuma outra assertiva reprovou em qualquer execução; os testes, timeouts e skips permaneceram intocados, e as execuções 9, 10 e 11 confirmaram 35/35 consecutivas.

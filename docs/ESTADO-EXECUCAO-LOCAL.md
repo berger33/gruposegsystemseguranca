@@ -1,6 +1,21 @@
 # Estado da execução — entrega local integral
 
-## Estado atual — L07 em execução; revalidação FIN-09/FIN-11/FIN-12 e ligação FIN-12 → FIN-04 concluídas em 2026-10-02
+## Estado atual — L07 em execução; fatia FIN-10 + avaliação adaptativa #47/#53 concluída em 2026-10-02
+
+**Base e escopo.** Base oficial: `main`/`origin/main` em `bd794dc99bfc12a7e8a811783bda1234aeb4fe6b` (merge da PR #69). Trabalho na branch Arena `arena/01a0fa9e-gruposegsystemseguranca`. Sem uso da cópia local do proprietário e sem nenhuma ligação com FIN-14/15/16, ADM-01..12 ou L08 nesta sessão.
+
+**Mudança aditiva.** A migração `136-fin10-fin05-policy-history-locks.sql` preserva 001–135 e endurece: snapshot do limite de alçada aplicado (`fin_expenses.approval_limit_cents`, `fin_expense_history.authority_limit_cents`, sincronizados pelo state machine), `allow_self_approval` com segregação migrada do CHECK 079 para trigger auditável (a governança supre: só se autoapura quem tem política ativa+aprovada com flag), índice parcial de duplicidade natural pendente `fin_expenses_pending_natural_key`, trava estrita de exclusão `fin_expense_no_delete` e hardening FIN-05/#47 (FKs da conciliação em RESTRICT com NOT VALID + commit ad-hoc e CHECK `fin05_conciliation_requires_movement_and_one_account` na forma canônica). Manifest/migrador/QA estático passaram a exigir 001–136.
+
+**O que foi demonstrado.** FIN-10 está `pronto_local`: lista/busca em nome, protocolo e referência de evidência; criação com valores em R$ (`Intl.NumberFormat('pt-BR')`), solicitante real derivado da sessão, categoria e evidência sintética obrigatórias; aprovado por identidade distinta via alçada ativa e `allow_self_approval=false` (padrão), sem aprovação automática, sem promessa de aprovação, sem inventar política; retry/idempotência sob concorrência devolve o mesmo registro (200) e não gera conflito falso; decisão exige motivo e grava histórico/persistência com snapshot; nenhuma decisão cria pagamento/baixa/cobrança/recebível/pagável. Escrita direta no banco em autoaprovação é bloqueada (`fin_expense_segregation`) e exclusão de despesa é bloqueada (`fin_expense_no_delete`). Falha de leitura mostra erro+retry (não mistura com lista vazia). FIN-05 recebeu as travas faltantes da #47 no formato auditável atual (garantidor movimento–conta e RESTRICT, provados por SQL direto).
+
+**Validação automática nesta fatia.** Estático 5/5, typecheck sem erros, `npm test` 196/196, `npm run build` verde, `npm run test:migrations:pg` 136/136 em dois passes + clone/checksum negativo (522 tabelas), e `npm run test:l07-delivery:pg` **35/35 em duas execuções consecutivas sem skips** (PostgreSQL descartável, Next local, HTTP real, Chromium empacotado; subtestes novos 19–22 + reprovações negativas de autorização/auditoria já homologadas). Abertura de PR pequena revisável ao final, sem merge, aguardando autorização humana.
+
+**Avaliação adaptativa de referências, sem cópia.** PR #47 e #53 foram analisadas como referência histórica; foi adotado apenas o que estava ausente/compatível na main (política de alçada sem política padrão, snapshot de limite, duplicidade natural, autor real derivado da sessão, trava de exclusão, garantia movimento–conta de conciliação). O restante (aprovador automático por faixa, telas paralelas, fluxos/migrações de gateway da #47) foi descartado com motivo. Registro completo em [`docs/CONSOLIDACAO-L07-PRS-PENDENTES.md`](./CONSOLIDACAO-L07-PRS-PENDENTES.md).
+
+- Próximos três passos: jornadas UI FIN-14/15/16; painel funcional `/admin/marcelo` com inventário/destino da dívida dos componentes órfãos de `/admin/ti`; aceite humano/execução Windows pendentes (nenhuma nova funcionalidade iniciada aqui).
+- Retomada: `npm ci`; `node scripts/qa-wave0-static.mjs`; `npm run typecheck`; `npm test`; `npm run test:migrations:pg`; `npm run test:l07-delivery:pg`.
+
+## Estado anterior — L07 em execução; revalidação FIN-09/FIN-11/FIN-12 e ligação FIN-12 → FIN-04 concluídas em 2026-10-02
 
 **Base e escopo.** Base oficial atual: `main`/`origin/main` em `ffdf7fbb49832abe30930c355b3085d190a7861e` (merge da PR #68). Trabalho nesta branch Arena: `arena/01a0fa11-gruposegsystemseguranca`. Esta é a primeira fatia depois da integração da PR #68: revalida FIN-09, FIN-11 e FIN-12, e fecha o vínculo canônico entre conciliação sintética de gateway (FIN-12) e baixa/estorno de recebível (FIN-04). Não houve uso da cópia local do proprietário, merge, publicação ou chamada externa.
 

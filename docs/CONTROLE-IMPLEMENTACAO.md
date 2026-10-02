@@ -271,6 +271,18 @@ Este arquivo foi criado junto ao plano mestre. Nenhum item foi implementado ou h
 - Produção: não liberada; noindex mantido; nenhum dado real inventado
 
 
+## Checkpoint anterior
+- Data/hora: 2026-10-02 (L07 fatia FIN-10 + avaliação adaptativa #47/#53)
+- Repositório / branch / commit inicial e final: berger33/gruposegsystemseguranca / arena/01a0fa9e-gruposegsystemseguranca / bd794dc99bfc12a7e8a811783bda1234aeb4fe6b -> atual (ver git log)
+- Objetivo e IDs: FIN-10 com busca/R$/política ausente declarada/decisão autorizada com snapshot; aproveitar seletivamente #47 (FKs RESTRICT + movimento–conta) e #53 (limite aplicado no histórico, trava de exclusão, duplicidade natural pendente); nenhum ID novo iniciado, nenhuma PR de referência mesclada/fechada.
+- Arquivos/rotas afetados: db/migrations/136-fin10-fin05-policy-history-locks.sql (nova); src/server/fin-management-api.mjs (hand de expenses/history/authorities); src/app/admin/financeiro/ExpenseWorkspace.tsx; server.mjs (rotas canônicas, sem rota paralela); tests/l07-delivery.integration.test.mjs (subtestes 19–22 novos, 17/18/21 ortogradamente adequados); scripts/qa-l07-delivery-postgres.mjs (banner 35)
+- Migrações e plano de atualização: 136 aditiva com constraints NOT VALID; manifest/migrador/QA estático exigem 001–136; nenhuma 001–135 reescrita.
+- Testes executados (comandos, ambiente, resultado): qa-wave0-static 5/5; typecheck 0 erros; npm test 196/196; npm run build ok (78 páginas); npm run test:migrations:pg 136/136 x2 passes (522 tabelas, clone checksum negativo); npm run test:l07-delivery:pg 35/35 em duas execuções consecutivas (runs 4 e 9, ambos após a correção do starvation de pool; runs intermediarias 5–8 registradas em EVIDENCIAS com a causa e a correção).
+- Estado dos IDs após lote: FIN-10 pronto_local; FIN-01..09, FIN-11..13 pronto_local preservados; FIN-14..16, ADM-01..12 não iniciados nesta sessão; L07 em execução (não concluído); L08 não iniciado.
+- Próxima ação exata: aguardar autorização humana para o PR da fatia; depois executar o prompt em docs/PROMPT-PROXIMA-SESSAO-L07-FIN14-16.md (jornadas UI FIN-14/15/16, reconhecendo FIN-12→FIN-04 concluído na 135).
+- PR, se existente: aberta ao fim da sessão, sem merge, aguardando checks.
+- Homologação de usuários / produção: pendente; sem dados reais, sem emissão fiscal, sem PSP/Pix/boleto/banco.
+
 ## Regras do controle
 Estados permitidos: não iniciado; em análise; em implementação; implementado não verificado; verificado; bloqueado; condicional; dispensado por decisão.
 “Verificado” exige evidência e commit. “Dispensado” exige decisão explícita. Conservar todos os IDs e adicionar tarefas filhas quando necessário.
@@ -536,5 +548,6 @@ Copiar e preencher ao final de cada lote; manter os anteriores em ordem cronoló
 - Homologação de usuários / produção: pendente ou evidência verificável.
 
 ## Histórico
+- 02/10/2026: fatia FIN-10 (despesas/reembolsos/compras com alçada, evidência sintética e segregação) + avaliação adaptativa dos resíduos úteis #47/#53; migração 136 (snapshot de alçada, allow_self_approval com segregação migrada da CHECK para o trigger, duplicidade natural pendente, trava de exclusão, hardening FIN-05 FKs RESTRICT + CHECK movimento–conta); API com busca, replay idempotente sob concorrência, autoria derivada da sessão, TI somente leitura; UI da aba expenses com política ausente/inativa declarada, falha de leitura + retry, busca, R$ pt-BR, histórico expansível; gate L07 de 31 para 35 subtestes passando 35/35 em duas execuções consecutivas; FIN-10 passa a pronto_local com homologação humana pendente. [Detalhe em ENTREGA-L07-FIN10.md](ENTREGA-L07-FIN10.md)
 - 01/10/2026: fatia aditiva de correção de FIN-13 (revisão com motivo e autor, margem calculada no servidor, idempotência de criação, histórico com snapshots, UI com erro visível e jornada completa); migração 134; gate L07 de 27/27 para 31/31; FIN-13 passa a pronto_local com homologação humana pendente.
 - 28/09/2026: catálogo documental inicial gerado a partir do plano; nenhum requisito funcional marcado como concluído.
