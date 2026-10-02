@@ -9,6 +9,7 @@ import appStyles from "../ClientApp.module.css";
 
 type Ticket = {
   id: string;
+  protocol: string | null;
   category: string;
   title: string;
   details: string;
@@ -25,6 +26,11 @@ const ticketStatus: Record<Ticket["status"], { text: string; chip: string }> = {
   closed: { text: "Encerrado", chip: appStyles.chipClosed },
 };
 
+function newIdempotencyKey() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return `cli-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
 const openErrors: Record<string, string> = {
   ticket_category_invalid: "Escolha um assunto da lista.",
   ticket_title_required: "Informe um título para o chamado.",
@@ -32,6 +38,9 @@ const openErrors: Record<string, string> = {
   ticket_details_required: "Descreva o que aconteceu para a equipe poder ajudar.",
   ticket_details_too_long: "A descrição deve ter no máximo 500 caracteres.",
   forbidden: "Este cadastro não permite abrir chamados no momento.",
+  idempotency_conflict:
+    "Já existe um chamado registrado para esta tentativa com outro conteúdo. Recarregue a página e envie novamente.",
+  idempotency_key_invalid: "Não foi possível identificar esta tentativa. Recarregue a página e tente de novo.",
 };
 
 export default function ClientTicketsPage() {
@@ -43,6 +52,7 @@ export default function ClientTicketsPage() {
   const [details, setDetails] = useState("");
   const [state, setState] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
+  const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
 
   const loadTickets = useCallback((accountId: string) => {
     setLoadError("");
@@ -68,28 +78,43 @@ export default function ClientTicketsPage() {
     if (!activeAccount) return;
     setState("submitting");
     setMessage("");
+    // Idempotência real: a mesma tentativa reenviada (clique duplo, reconexão,
+    // retry do navegador) reutiliza a chave e devolve o mesmo protocolo.
+    const key = idempotencyKey ?? newIdempotencyKey();
+    setIdempotencyKey(key);
     try {
       const response = await fetch("/api/client/tickets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accountId: activeAccount.id, category, title, details }),
+        body: JSON.stringify({ accountId: activeAccount.id, category, title, details, idempotencyKey: key }),
       });
-      const payload = (await response.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      const payload = (await response.json().catch(() => ({}))) as {
+        ok?: boolean; error?: string; protocol?: string; replayed?: boolean; retryable?: boolean;
+      };
       if (!response.ok || !payload.ok) {
         setState("error");
         setMessage(
-          openErrors[payload.error ?? ""] ?? "Não foi possível abrir o chamado agora. Tente novamente em instantes.",
+          openErrors[payload.error ?? ""] ??
+            (payload.retryable
+              ? "O registro não foi concluído e nada foi gravado. Tente novamente em instantes."
+              : "Não foi possível abrir o chamado agora. Tente novamente em instantes."),
         );
         return;
       }
       setState("success");
-      setMessage("Chamado registrado. A equipe acompanha pelo portal e responde por aqui mesmo.");
+      setMessage(
+        payload.replayed
+          ? `Este chamado já havia sido registrado. Protocolo ${payload.protocol ?? "—"}; nada foi duplicado.`
+          : `Chamado registrado sob o protocolo ${payload.protocol ?? "—"}. A equipe acompanha e responde por aqui mesmo.`,
+      );
       setTitle("");
       setDetails("");
+      setIdempotencyKey(null);
       loadTickets(activeAccount.id);
     } catch {
+      // Mantém a chave: o retry do usuário não pode virar um segundo chamado.
       setState("error");
-      setMessage("Não foi possível conectar agora. Tente novamente em instantes.");
+      setMessage("Não foi possível conectar agora. Tente novamente em instantes; o mesmo pedido não será duplicado.");
     }
   };
 
@@ -216,6 +241,7 @@ export default function ClientTicketsPage() {
                   <div className={appStyles.listItemMain}>
                     <p className={appStyles.listItemTitle}>{ticket.title}</p>
                     <p className={appStyles.listItemMeta}>
+                      {ticket.protocol ? `Protocolo ${ticket.protocol} · ` : ""}
                       {ticket.category} · Aberto em {new Date(ticket.created_at).toLocaleString("pt-BR")}
                     </p>
                   </div>

@@ -46,9 +46,34 @@ export function createClientSpaceApi(ctx) {
   function databaseFailure(res, error, context) {
     const unconfigured = error instanceof Error && error.message === "DATABASE_NOT_CONFIGURED";
     const migrationMissing = error && typeof error === "object" && error.code === "42P01";
-    const generic = { error: unconfigured ? "database_not_configured" : migrationMissing ? "migration_required" : "client_space_unavailable" };
+    // L08: falha de leitura/escrita é declarada como erro recuperável. Nunca é
+    // convertida em zero, lista vazia ou sucesso parcial.
+    const generic = {
+      error: unconfigured ? "database_not_configured" : migrationMissing ? "migration_required" : "client_space_unavailable",
+      retryable: true,
+    };
     if (!unconfigured && !migrationMissing) console.error(context, errorMessage(error));
     return ctx.json(res, 503, generic);
+  }
+
+  // L08 — protocolo estável e legível do chamado. O formato é verificado pela
+  // constraint NOT VALID da migração 139.
+  function newTicketProtocol(now = new Date()) {
+    const day = `${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, "0")}${String(now.getUTCDate()).padStart(2, "0")}`;
+    const alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const bytes = randomBytes(6);
+    let suffix = "";
+    for (const byte of bytes) suffix += alphabet[byte % alphabet.length];
+    return `CLI-${day}-${suffix}`;
+  }
+
+  // Auditoria dentro de transação: aqui o erro NÃO é engolido. Quem chama
+  // precisa reverter a escrita inteira e devolver 503 (fail-closed).
+  async function auditInTransaction(client, { actorKind, actorId = null, action, target = null, result, category = "none" }) {
+    await client.query(
+      "INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,$3,$4,$5,$6)",
+      [actorKind, actorId, action, target, result, category],
+    );
   }
 
   async function audit(db, { actorKind, actorId = null, action, target = null, result, category = "none" }) {
@@ -166,6 +191,19 @@ export function createClientSpaceApi(ctx) {
     return result.rows[0].id;
   }
 
+  // L08 — ausência de dado é declarada, nunca apresentada como zero. Toda
+  // lista do cliente diz de qual fonte canônica veio e por que está vazia.
+  function listPayload(key, rows, source, extra = {}) {
+    return {
+      [key]: rows,
+      source,
+      dataAvailable: true,
+      empty: rows.length === 0,
+      emptyReason: rows.length === 0 ? "sem_registro_canonico_para_a_conta" : null,
+      ...extra,
+    };
+  }
+
   function paginate(url, res) {
     const limit = Math.min(100, Math.max(1, Number.parseInt(url.searchParams.get("limit") || "50", 10) || 50));
     const offset = Math.min(10_000, Math.max(0, Number.parseInt(url.searchParams.get("offset") || "0", 10) || 0));
@@ -187,7 +225,7 @@ export function createClientSpaceApi(ctx) {
          ORDER BY a.display_name`,
         [session.identityId],
       );
-      return ctx.json(res, 200, { accounts: result.rows });
+      return ctx.json(res, 200, listPayload("accounts", result.rows, "client_accounts+client_access_grants"));
     } catch (error) {
       return databaseFailure(res, error, "Could not list the linked client accounts.");
     }
@@ -217,7 +255,14 @@ export function createClientSpaceApi(ctx) {
       }
       if (g.contract_scope_mode === "selected") {
         const allowed = Array.isArray(g.allowed_contract_ids) ? g.allowed_contract_ids : [];
-        if (allowed.length === 0) return ctx.json(res, 200, { contracts: [] }); // deny all when empty allowlist
+        if (allowed.length === 0) {
+          // Allowlist vazia = escopo restrito sem contrato autorizado. Isso é
+          // declarado; não é "zero contratos" nem lista vazia enganosa.
+          return ctx.json(res, 200, {
+            contracts: [], source: "client_contracts", dataAvailable: false, empty: true,
+            emptyReason: "escopo_restrito_sem_contrato_autorizado",
+          });
+        }
         contractFilter = allowed;
       }
     } catch (error) {
@@ -238,7 +283,7 @@ export function createClientSpaceApi(ctx) {
           [accountId],
         );
       }
-      return ctx.json(res, 200, { contracts: result.rows });
+      return ctx.json(res, 200, listPayload("contracts", result.rows, "client_contracts"));
     } catch (error) {
       return databaseFailure(res, error, "Could not list the client contracts.");
     }
@@ -258,9 +303,42 @@ export function createClientSpaceApi(ctx) {
          FROM client_documents WHERE client_account_id = $1 ORDER BY created_at DESC`,
         [accountId],
       );
-      return ctx.json(res, 200, { documents: result.rows });
+      return ctx.json(res, 200, listPayload("documents", result.rows, "client_documents"));
     } catch (error) {
       return databaseFailure(res, error, "Could not list the client documents.");
+    }
+  }
+
+  // L08/CLI-04 — registro de acesso ao documento privado e auditoria na mesma
+  // transação, SEMPRE antes de entregar bytes. Falha aqui devolve 503 e o
+  // download não acontece; não existe entrega sem rastro.
+  async function recordDocumentAccess({ document, actorKind, actorId, outcome }) {
+    const db = ctx.getPool();
+    let client;
+    try {
+      client = await db.connect();
+      await client.query("BEGIN");
+      await client.query(
+        `INSERT INTO client_document_access_log (document_id, client_account_id, actor_kind, actor_id, outcome)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [document.id, document.client_account_id, actorKind, actorId ?? actorKind, outcome],
+      );
+      await auditInTransaction(client, {
+        actorKind,
+        actorId: actorId ?? null,
+        action: "document_download",
+        target: document.id,
+        result: outcome === "allowed" ? "allowed" : "denied",
+        category: outcome === "allowed" ? "none" : outcome,
+      });
+      await client.query("COMMIT");
+      return true;
+    } catch (error) {
+      if (client) await client.query("ROLLBACK").catch(() => {});
+      console.error("Could not record the private document access.", errorMessage(error));
+      return false;
+    } finally {
+      client?.release();
     }
   }
 
@@ -282,15 +360,19 @@ export function createClientSpaceApi(ctx) {
     if (document.content_sha256) {
       if (fileStat.size !== Number(document.size_bytes)) {
         console.error("Document size mismatch on private storage.", { documentId: document.id });
-        await audit(ctx.getPool(), { ...auditContext, action: "document_download", target: document.id, result: "denied" });
+        await recordDocumentAccess({ document, ...auditContext, outcome: "integrity_failed" });
         return ctx.json(res, 409, { error: "document_integrity_failed" });
       }
       const actual = createHash("sha256").update(await readFile(filePath)).digest("hex");
       if (actual !== document.content_sha256) {
         console.error("Document hash mismatch on private storage.", { documentId: document.id });
-        await audit(ctx.getPool(), { ...auditContext, action: "document_download", target: document.id, result: "denied" });
+        await recordDocumentAccess({ document, ...auditContext, outcome: "integrity_failed" });
         return ctx.json(res, 409, { error: "document_integrity_failed" });
       }
+    }
+    // Nenhum byte antes do registro atômico de acesso + auditoria.
+    if (!(await recordDocumentAccess({ document, ...auditContext, outcome: "allowed" }))) {
+      return ctx.json(res, 503, { error: "document_audit_unavailable", retryable: true });
     }
     const safeName = document.original_filename.replace(/["\\]/g, "_") || "documento";
     res.writeHead(200, {
@@ -301,8 +383,6 @@ export function createClientSpaceApi(ctx) {
       "X-Content-Type-Options": "nosniff",
     });
     createReadStream(filePath).pipe(res);
-    const db = ctx.getPool();
-    await audit(db, { ...auditContext, action: "document_download", target: document.id, result: "allowed" });
   }
 
   async function handleClientDocumentDownload(req, res, documentId) {
@@ -333,11 +413,11 @@ export function createClientSpaceApi(ctx) {
       if (!(await requireAccountScope(db, { req, res, session, accountId, action: "ticket_list" }))) return;
       try {
         const result = await db.query(
-          `SELECT id, category, title, details, status, admin_response, created_at, updated_at
+          `SELECT id, protocol, category, title, details, status, admin_response, created_at, updated_at
            FROM client_tickets WHERE client_account_id = $1 ORDER BY created_at DESC`,
           [accountId],
         );
-        return ctx.json(res, 200, { tickets: result.rows });
+        return ctx.json(res, 200, listPayload("tickets", result.rows, "client_tickets"));
       } catch (error) {
         return databaseFailure(res, error, "Could not list the client tickets.");
       }
@@ -352,18 +432,86 @@ export function createClientSpaceApi(ctx) {
       if (validated.error) return ctx.json(res, 400, { error: validated.error });
       const db = ctx.getPool();
       if (!(await requireAccountScope(db, { req, res, session, accountId, action: "ticket_open" }))) return;
-      const ticketId = randomUUID();
-      try {
-        await db.query(
-          `INSERT INTO client_tickets (id, client_account_id, opened_by_identity, category, title, details)
-           VALUES ($1,$2,$3,$4,$5,$6)`,
-          [ticketId, accountId, session.identityId, validated.value.category, validated.value.title, validated.value.details],
-        );
-      } catch (error) {
-        return databaseFailure(res, error, "Could not open the client ticket.");
+
+      // L08/CLI-05 — idempotência explícita. A chave é opcional no contrato
+      // legado, mas a interface real sempre envia uma; com ela, um retry
+      // concorrente devolve o MESMO chamado e o MESMO protocolo.
+      const rawKey = typeof body?.idempotencyKey === "string" ? body.idempotencyKey.trim() : "";
+      if (rawKey && !/^[A-Za-z0-9_-]{8,80}$/.test(rawKey)) {
+        return ctx.json(res, 400, { error: "idempotency_key_invalid" });
       }
-      await audit(db, { actorKind: "client", actorId: session.identityId, action: "ticket_open", target: ticketId, result: "allowed" });
-      return ctx.json(res, 201, { ticketId, status: "open" });
+      const idempotencyKey = rawKey || null;
+      // A autoria entra na impressão digital: a mesma chave reutilizada por
+      // outra identidade ou conta é conflito, não replay.
+      const fingerprint = createHash("sha256")
+        .update(JSON.stringify([accountId, session.identityId, validated.value.category, validated.value.title, validated.value.details]))
+        .digest("hex");
+
+      const ticketId = randomUUID();
+      const protocol = newTicketProtocol();
+      let client;
+      try {
+        client = await db.connect();
+        await client.query("BEGIN");
+        // Escrita + protocolo + auditoria em uma única transação.
+        const inserted = await client.query(
+          `INSERT INTO client_tickets (id, client_account_id, opened_by_identity, category, title, details, protocol, idempotency_key, request_fingerprint)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+           ON CONFLICT (client_account_id, idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING
+           RETURNING id, protocol, status`,
+          [ticketId, accountId, session.identityId, validated.value.category, validated.value.title, validated.value.details, protocol, idempotencyKey, fingerprint],
+        );
+        if (inserted.rows[0]) {
+          await auditInTransaction(client, {
+            actorKind: "client",
+            actorId: session.identityId,
+            action: "ticket_open",
+            target: inserted.rows[0].id,
+            result: "allowed",
+          });
+          await client.query("COMMIT");
+          return ctx.json(res, 201, { ok: true, ticketId: inserted.rows[0].id, protocol: inserted.rows[0].protocol, status: inserted.rows[0].status, replayed: false });
+        }
+        // Conflito de chave: só é replay se o conteúdo for o mesmo.
+        const existing = await client.query(
+          `SELECT id, protocol, status, request_fingerprint, opened_by_identity
+           FROM client_tickets WHERE client_account_id = $1 AND idempotency_key = $2`,
+          [accountId, idempotencyKey],
+        );
+        const row = existing.rows[0];
+        if (!row) {
+          await client.query("ROLLBACK");
+          console.error("Ticket idempotency conflict without a visible row.", { accountId });
+          return ctx.json(res, 503, { error: "client_space_unavailable", retryable: true });
+        }
+        if (row.request_fingerprint !== fingerprint) {
+          await auditInTransaction(client, {
+            actorKind: "client",
+            actorId: session.identityId,
+            action: "ticket_open",
+            target: row.id,
+            result: "denied",
+            category: "idempotency_conflict",
+          });
+          await client.query("COMMIT");
+          return ctx.json(res, 409, { error: "idempotency_conflict", protocol: row.protocol });
+        }
+        await auditInTransaction(client, {
+          actorKind: "client",
+          actorId: session.identityId,
+          action: "ticket_open_replay",
+          target: row.id,
+          result: "allowed",
+        });
+        await client.query("COMMIT");
+        return ctx.json(res, 200, { ok: true, ticketId: row.id, protocol: row.protocol, status: row.status, replayed: true });
+      } catch (error) {
+        if (client) await client.query("ROLLBACK").catch(() => {});
+        // Inclui a falha de auditoria: a escrita inteira foi revertida.
+        return databaseFailure(res, error, "Could not open the client ticket.");
+      } finally {
+        client?.release();
+      }
     }
     return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, POST" });
   }
@@ -591,7 +739,7 @@ export function createClientSpaceApi(ctx) {
            ${where} ORDER BY c.created_at DESC LIMIT 200`,
           values,
         );
-        return ctx.json(res, 200, { contracts: result.rows });
+        return ctx.json(res, 200, listPayload("contracts", result.rows, "client_contracts"));
       } catch (error) {
         return databaseFailure(res, error, "Could not list the client contracts.");
       }
@@ -667,7 +815,7 @@ export function createClientSpaceApi(ctx) {
            ${where} ORDER BY d.created_at DESC LIMIT 200`,
           values,
         );
-        return ctx.json(res, 200, { documents: result.rows });
+        return ctx.json(res, 200, listPayload("documents", result.rows, "client_documents"));
       } catch (error) {
         return databaseFailure(res, error, "Could not list the client documents.");
       }
@@ -755,7 +903,7 @@ export function createClientSpaceApi(ctx) {
       }
       const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
       const result = await ctx.getPool().query(
-        `SELECT t.id, t.client_account_id, a.display_name AS account_name, i.email AS opened_by_email,
+        `SELECT t.id, t.protocol, t.client_account_id, a.display_name AS account_name, i.email AS opened_by_email,
                 t.category, t.title, t.details, t.status, t.admin_response, t.created_at, t.updated_at
          FROM client_tickets t
          JOIN client_accounts a ON a.id = t.client_account_id
@@ -801,8 +949,10 @@ export function createClientSpaceApi(ctx) {
           [ticketId, previousStatus, body.status, session.role],
         );
       }
+      // L08: a auditoria entra na MESMA transação do histórico de status.
+      // Se ela falhar, a atualização inteira é revertida e a resposta é 503.
+      await auditInTransaction(client, { actorKind: session.role, action: "ticket_status", target: ticketId, result: "allowed" });
       await client.query("COMMIT");
-      await audit(db, { actorKind: session.role, action: "ticket_status", target: ticketId, result: "allowed" });
       return ctx.json(res, 200, { ticketId, previousStatus, status: body.status });
     } catch (error) {
       if (client) await client.query("ROLLBACK").catch(() => {});
