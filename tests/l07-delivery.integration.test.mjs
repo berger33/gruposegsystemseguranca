@@ -482,6 +482,47 @@ test("L07 FIN-05: extrato sintético, sugestão, confirmação e idempotência",
   assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_bank_statements WHERE storage_key=$1", [failedStorage])).rows[0].n, 0, "failed statement leaves no row");
   const afterFailedTransaction = await pool.query("SELECT total_transactions, total_amount_cents FROM fin_bank_statements WHERE id=$1", [statement.body.statement.id]);
   assert.equal(afterFailedTransaction.rows[0].total_transactions, 1, "failed transaction leaves statement aggregate unchanged");
+
+  // Resíduos úteis da PR #47 adaptados ao modelo canônico (fatia aditiva): a
+  // sugestão não casa mais que o saldo aberto e o valor do movimento, o banco
+  // exige exatamente uma conta e um movimento, e a exclusão da conta/movimento
+  // conciliado é travada em vez de perder o vínculo silenciosamente.
+  const partialReceivable = await fin("/receivables", { method: "POST", cookie: financeiro.cookie, body: { client_account_id: accountId, contract_id: contractId, competence_date: "2026-10-01", due_date: "2026-10-20", amount_cents: 5000, description: "Recebível parcial para limitar a conciliação sintética" } });
+  assert.equal(partialReceivable.status, 201, JSON.stringify(partialReceivable.body));
+  const partialRef = `FIN05-PART-${uuid()}`;
+  const partialTransaction = await fin("/bank-transactions", { method: "POST", cookie: financeiro.cookie, body: { statement_id: statement.body.statement.id, transaction_date: "2026-10-12", amount_cents: 12500, description: "Recebimento maior que o saldo aberto do recebível", bank_ref: partialRef } });
+  assert.equal(partialTransaction.status, 201, JSON.stringify(partialTransaction.body));
+  const oversizedMatch = await fin("/conciliations", { method: "POST", cookie: financeiro.cookie, body: { receivable_id: partialReceivable.body.receivable.id, bank_transaction_id: partialTransaction.body.transaction.id, source: "importacao", suggestion_reason: "Tentativa de casar mais que o saldo aberto do recebível", amount_matched_cents: 6000 } });
+  assert.equal(oversizedMatch.status, 400, "valor casado não pode superar o saldo aberto");
+  assert.equal(oversizedMatch.body.error, "invalid_amount_matched");
+  const clampedMatch = await fin("/conciliations", { method: "POST", cookie: financeiro.cookie, body: { receivable_id: partialReceivable.body.receivable.id, bank_transaction_id: partialTransaction.body.transaction.id, source: "importacao", suggestion_reason: "Sugestão limitada ao saldo aberto e ao valor do movimento" } });
+  assert.equal(clampedMatch.status, 201, JSON.stringify(clampedMatch.body));
+  assert.equal(Number(clampedMatch.body.conciliation.amount_matched_cents), 5000, "sugestão sem valor explícito casa o mínimo entre saldo aberto e movimento");
+  // Resolve a sugestão desta fatia para não deixar pendência que interfira na
+  // jornada Chromium subsequente (a base é compartilhada entre os subtestes).
+  const resolvedClamp = await fin("/conciliations", { method: "PATCH", cookie: financeiro.cookie, body: { id: clampedMatch.body.conciliation.id, status: "ignorada" } });
+  assert.equal(resolvedClamp.status, 200, JSON.stringify(resolvedClamp.body));
+
+  // A trava de exclusão da conta conciliada é provada num recebível sem
+  // histórico de pagamento (o histórico imutável também protege a conta, mas o
+  // alvo aqui é o FK RESTRICT do vínculo de conciliação em si).
+  const bareReceivableId = uuid();
+  await pool.query(
+    "INSERT INTO fin_accounts_receivable (id,protocol,client_account_id,contract_id,competence_date,due_date,amount_cents,description) VALUES ($1,$2,$3,$4,'2026-10-01','2026-10-20',4000,'Recebível sintético direto para provar a trava de exclusão da conciliação')",
+    [bareReceivableId, `REC-FIN-${new Date().toISOString().slice(0,10).replace(/-/g,"")}-${uuid().slice(0,4).toUpperCase()}`, accountId, contractId]
+  );
+  const lockRef = `FIN05-LOCK-${uuid()}`;
+  const lockTransaction = await fin("/bank-transactions", { method: "POST", cookie: financeiro.cookie, body: { statement_id: statement.body.statement.id, transaction_date: "2026-10-13", amount_cents: 4000, description: "Movimento para travar a exclusão da conta conciliada", bank_ref: lockRef } });
+  assert.equal(lockTransaction.status, 201, JSON.stringify(lockTransaction.body));
+  const lockedConciliation = await fin("/conciliations", { method: "POST", cookie: financeiro.cookie, body: { receivable_id: bareReceivableId, bank_transaction_id: lockTransaction.body.transaction.id, source: "importacao", suggestion_reason: "Vínculo sintético para provar a trava de exclusão" } });
+  assert.equal(lockedConciliation.status, 201, JSON.stringify(lockedConciliation.body));
+  await assert.rejects(pool.query("DELETE FROM fin_accounts_receivable WHERE id=$1", [bareReceivableId]), /fin_conciliations_receivable_id_fkey/, "conta conciliada não pode ser excluída com perda silenciosa do vínculo");
+  await assert.rejects(pool.query("DELETE FROM fin_bank_transactions WHERE id=$1", [transaction.body.transaction.id]), /fin_conciliations_bank_transaction_id_fkey/, "movimento conciliado não pode ser excluído");
+  await assert.rejects(
+    pool.query("INSERT INTO fin_conciliations (source,status) VALUES ('extrato','pendente')"),
+    /fin05_conciliation_requires_account_and_transaction/,
+    "escrita direta sem conta e movimento é recusada pelo banco"
+  );
 });
 
 test("L07 FIN-05: Chromium importa e confirma conciliação no workspace financeiro", { skip: !RUN, timeout: 180_000 }, async () => {
@@ -532,7 +573,7 @@ test("L07 FIN-05: Chromium importa e confirma conciliação no workspace finance
       await sleep(100);
     }
     assert.equal(uiConciliation.rows.length, 1);
-    await page.getByRole("button", { name: "Selecionar para confirmar" }).click();
+    await page.locator(`[data-testid="fin05-conciliation-${uiConciliation.rows[0].id}"]`).getByRole("button", { name: "Selecionar para confirmar" }).click();
     await page.getByTestId("fin05-confirm").click();
     await page.waitForFunction(() => document.querySelector('[data-testid="fin05-notice"]')?.textContent?.includes("conciliada"));
     const uiState = await pool.query("SELECT c.status, b.is_conciliated FROM fin_conciliations c JOIN fin_bank_transactions b ON b.id=c.bank_transaction_id WHERE c.id=$1", [uiConciliation.rows[0].id]);
@@ -1092,6 +1133,73 @@ test("L07 FIN-08: Chromium registra importação sintética e custo rateado", { 
   } finally { await browser.close(); }
 });
 
+// FIN-10 — jornada canônica no navegador real: solicitar em reais, ver a
+// política de alçada (ausente e depois configurada), buscar por protocolo e
+// decidir com motivo por identidade distinta. Roda antes dos subtestes HTTP de
+// FIN-10 para exercitar o catálogo de alçadas ainda vazio.
+test("L07 FIN-10: Chromium solicita em R$, vê política e retry, e outra identidade aprova dentro da alçada", { skip: !RUN, timeout: 240_000 }, async () => {
+  const requester=await provisionAndLoginStaff(pool,api,{role:"financeiro"});
+  const approver=await provisionAndLoginStaff(pool,api,{role:"financeiro"});
+  const space=await insertExpenseSpace("Chromium");const suffix=uuid().slice(0,8);
+  const browser=await playwrightChromium.launch({executablePath:await packagedChromium.executablePath(),headless:true,args:packagedChromium.args.filter(arg=>arg!=="--disable-web-security")});
+  const addCookie=async(context,cookie)=>{const pair=cookie.split(";")[0],separator=pair.indexOf("=");await context.addCookies([{name:pair.slice(0,separator),value:pair.slice(separator+1),url:baseUrl}]);};
+  const visible=page=>page.evaluate(()=>String(document.body.textContent||"").replace(/\u00a0/g," "));
+  try {
+    const requestContext=await browser.newContext({ serviceWorkers:"block" });await addCookie(requestContext,requester.cookie);const requestPage=await requestContext.newPage();await requestPage.setExtraHTTPHeaders({origin:baseUrl});
+    // Falha de leitura é visível com retry e nunca vira "nenhum resultado".
+    await requestPage.route("**/api/fin/expenses**",route=>route.request().method()==="GET"?route.fulfill({status:500,contentType:"application/json",body:JSON.stringify({error:"internal"})}):route.continue());
+    await requestPage.goto(`${baseUrl}/admin/financeiro`,{waitUntil:"networkidle"});await requestPage.getByTestId("finance-tab-expenses").click();await requestPage.waitForSelector('[data-testid="fin10-expenses"]');
+    await requestPage.waitForSelector('[data-testid="fin10-error"]');
+    assert.equal(await requestPage.locator('[data-testid="fin10-empty"]').count(),0,"falha de leitura não vira lista vazia");
+    await requestPage.unroute("**/api/fin/expenses**");
+    await requestPage.getByTestId("fin10-retry").click();
+    await requestPage.waitForSelector('[data-testid="fin10-list"]');
+    // Política de alçada ausente é declarada antes da configuração de teste.
+    await requestPage.waitForSelector('[data-testid="fin10-policy-missing"]');
+    assert.match(await requestPage.getByTestId("fin10-policy-missing").textContent()||"",/alçada/i);
+    // Solicitação em reais com Intl.NumberFormat pt-BR.
+    await requestPage.getByTestId("fin10-type").selectOption("compra");await requestPage.getByTestId("fin10-category").fill("equipamento sintético");await requestPage.getByTestId("fin10-description").fill("Compra sintética percorrida integralmente pelo Chromium em reais");await requestPage.getByTestId("fin10-amount").fill("750,00");await requestPage.getByTestId("fin10-threshold").fill("750,00");
+    await requestPage.getByTestId("fin10-cost-center").selectOption({label:`Centro sintético Chromium ${space.costCenterId.slice(0,6)}`});
+    await requestPage.getByTestId("fin10-supplier").selectOption({label:`Fornecedor sintético Chromium ${space.supplierId.slice(0,6)}`});
+    await requestPage.getByTestId("fin10-contract").fill(space.contractId);
+    await requestPage.getByTestId("fin10-evidence-name").fill(`evidencia-${suffix}.json`);await requestPage.getByTestId("fin10-evidence-url").fill(`synthetic://fin10/chromium-${suffix}.json`);await requestPage.getByTestId("fin10-evidence-key").fill(`synthetic/fin10/chromium-${suffix}.json`);await requestPage.getByTestId("fin10-idempotency").fill(`fin10-chromium-${suffix}`);
+    await requestPage.getByTestId("fin10-create").click();
+    await requestPage.waitForFunction(()=>(document.querySelector('[data-testid="fin10-notice"]')?.textContent||"").includes("DES-FIN"));
+    const row=await pool.query("SELECT id,protocol,status,requester_identity,amount_cents,requester_name FROM fin_expenses WHERE idempotency_key=$1",[`fin10-chromium-${suffix}`]);
+    assert.equal(row.rows.length,1);assert.equal(row.rows[0].status,"pendente");assert.equal(row.rows[0].requester_identity,requester.id);
+    assert.equal(Number(row.rows[0].amount_cents),75000,"R$ 750,00 vira 75000 centavos");
+    assert.equal(row.rows[0].requester_name,"QA Staff financeiro","solicitante é a identidade autenticada");
+    const protocol=row.rows[0].protocol;
+    await requestPage.waitForFunction(value=>(document.querySelector('[data-testid="fin10-list"]')?.textContent||"").replace(/\u00a0/g," ").includes(value),"R$ 750,00");
+    // Busca pelo protocolo seleciona a solicitação recém-criada.
+    await requestPage.getByTestId("fin10-search").fill(protocol);await requestPage.getByTestId("fin10-search-submit").click();
+    await requestPage.waitForFunction(()=>document.querySelectorAll('[data-testid="fin10-list"] tbody tr').length===1);
+    await requestPage.getByTestId(`fin10-select-${row.rows[0].id}`).click();
+    await requestPage.waitForSelector('[data-testid="fin10-detail"]');
+    assert.match(await requestPage.getByTestId("fin10-detail-summary").textContent()||"",/pendente/i);
+    assert.match(await visible(requestPage),/aguardando decisão|pendente/i);
+    // A política de teste é configurada por SQL (decisão do dono) e a outra
+    // identidade decide com motivo; a confirmação só aparece após persistir.
+    await pool.query("INSERT INTO fin_expense_approval_authorities (identity_id,max_amount_cents,granted_by_identity) VALUES ($1,200000,$1)",[approver.id]);
+    await requestContext.clearCookies();await addCookie(requestContext,approver.cookie);
+    await requestPage.goto(`${baseUrl}/admin/financeiro`,{waitUntil:"networkidle"});await requestPage.getByTestId("finance-tab-expenses").click();
+    await requestPage.waitForSelector('[data-testid="fin10-policy-list"]');
+    assert.match(await requestPage.getByTestId("fin10-policy-list").textContent()||"",/2\.000,00/);
+    await requestPage.getByTestId("fin10-search").fill(protocol);await requestPage.getByTestId("fin10-search-submit").click();
+    await requestPage.waitForSelector(`[data-testid="fin10-expense-${row.rows[0].id}"]`);
+    await requestPage.getByTestId(`fin10-select-${row.rows[0].id}`).click();
+    await requestPage.getByTestId("fin10-decision-reason").fill("Compra sintética conferida e aprovada por identidade distinta com alçada");
+    await requestPage.getByTestId(`fin10-approve-${row.rows[0].id}`).click();
+    await requestPage.waitForFunction(()=>(document.querySelector('[data-testid="fin10-notice"]')?.textContent||"").includes("aprovada"));
+    const final=await pool.query("SELECT status,requester_identity,approver_identity,applied_authority_limit_cents FROM fin_expenses WHERE id=$1",[row.rows[0].id]);
+    assert.equal(final.rows[0].status,"aprovado");assert.equal(final.rows[0].approver_identity,approver.id);
+    assert.equal(Number(final.rows[0].applied_authority_limit_cents),200000,"alçada aplicada persistiu na decisão");
+    assert.notEqual(final.rows[0].requester_identity,final.rows[0].approver_identity);
+    await requestPage.waitForFunction(()=>(document.querySelector('[data-testid="fin10-history"]')?.textContent||"").includes("Aprovado"),"histórico da decisão visível após persistência");
+    assert.match(await requestPage.getByTestId("fin10-history").textContent()||"",/2\.000,00/);
+  } finally {await browser.close();}
+});
+
 test("L07 FIN-10: despesas, reembolsos e compras têm alçada, segregação, evidência sintética e auditoria fail-closed", { skip: !RUN, timeout: 120_000 }, async () => {
   const requester=await provisionAndLoginStaff(pool,api,{role:"financeiro"});
   const approver=await provisionAndLoginStaff(pool,api,{role:"financeiro"});
@@ -1156,21 +1264,122 @@ test("L07 FIN-10: despesas, reembolsos e compras têm alçada, segregação, evi
   assert.equal((await pool.query("SELECT count(*)::int n FROM fin_expense_history WHERE expense_id=$1",[rollbackDecision.body.expense.id])).rows[0].n,1);
 });
 
-test("L07 FIN-10: Chromium solicita e outra identidade aprova no workspace financeiro", { skip: !RUN, timeout: 180_000 }, async () => {
+// FIN-10 — lacunas reproduzidas antes da correção (fatia aditiva): idempotência
+// de criação com retry igual/conflitante e concorrência, busca por protocolo e
+// nome, alçada aplicada registrada na despesa e no histórico com snapshot,
+// trava de exclusão, TI somente leitura, autoria derivada da sessão e ausência
+// de efeito financeiro automático. Resíduos úteis da PR #53, adaptados ao
+// contrato canônico da main (sem importar tabelas, rotas ou formato de
+// evidência da PR de referência).
+test("L07 FIN-10 aditivo: idempotência de criação, busca, alçada aplicada com snapshot, exclusão travada, TI somente leitura e nenhum efeito financeiro automático", { skip: !RUN, timeout: 180_000 }, async () => {
   const requester=await provisionAndLoginStaff(pool,api,{role:"financeiro"});
+  const stranger=await provisionAndLoginStaff(pool,api,{role:"financeiro"});
   const approver=await provisionAndLoginStaff(pool,api,{role:"financeiro"});
-  const space=await insertExpenseSpace("Chromium");const suffix=uuid().slice(0,8);
-  await pool.query("INSERT INTO fin_expense_approval_authorities (identity_id,max_amount_cents,granted_by_identity) VALUES ($1,200000,$1)",[approver.id]);
-  const browser=await playwrightChromium.launch({executablePath:await packagedChromium.executablePath(),headless:true,args:packagedChromium.args.filter(arg=>arg!=="--disable-web-security")});
-  const addCookie=async(context,cookie)=>{const pair=cookie.split(";")[0],separator=pair.indexOf("=");await context.addCookies([{name:pair.slice(0,separator),value:pair.slice(separator+1),url:baseUrl}]);};
-  try {
-    const requestContext=await browser.newContext();await addCookie(requestContext,requester.cookie);const requestPage=await requestContext.newPage();await requestPage.setExtraHTTPHeaders({origin:baseUrl});await requestPage.goto(`${baseUrl}/admin/financeiro`,{waitUntil:"networkidle"});await requestPage.getByTestId("finance-tab-expenses").click();await requestPage.waitForSelector('[data-testid="fin10-expenses"]');
-    await requestPage.getByTestId("fin10-type").selectOption("compra");await requestPage.getByTestId("fin10-category").fill("equipamento sintético");await requestPage.getByTestId("fin10-description").fill("Compra sintética percorrida integralmente pelo Chromium");await requestPage.getByTestId("fin10-amount").fill("75000");await requestPage.getByTestId("fin10-threshold").fill("75000");await requestPage.getByTestId("fin10-requester-name").fill("Solicitante Chromium");await requestPage.getByTestId("fin10-contract").fill(space.contractId);await requestPage.getByTestId("fin10-cost-center").fill(space.costCenterId);await requestPage.getByTestId("fin10-supplier").fill(space.supplierId);await requestPage.getByTestId("fin10-evidence-name").fill(`evidencia-${suffix}.json`);await requestPage.getByTestId("fin10-evidence-url").fill(`synthetic://fin10/chromium-${suffix}.json`);await requestPage.getByTestId("fin10-evidence-key").fill(`synthetic/fin10/chromium-${suffix}.json`);await requestPage.getByTestId("fin10-idempotency").fill(`fin10-chromium-${suffix}`);await requestPage.getByTestId("fin10-create").click();await requestPage.waitForFunction(()=>(document.querySelector('[data-testid="fin10-notice"]')?.textContent||"").includes("pendente"));
-    const row=await pool.query("SELECT id,status,requester_identity FROM fin_expenses WHERE idempotency_key=$1",[`fin10-chromium-${suffix}`]);assert.equal(row.rows[0].status,"pendente");assert.equal(row.rows[0].requester_identity,requester.id);
-    await requestContext.clearCookies();await addCookie(requestContext,approver.cookie);await requestPage.goto(`${baseUrl}/admin/financeiro`,{waitUntil:"networkidle"});await requestPage.getByTestId("finance-tab-expenses").click();await requestPage.waitForSelector(`[data-testid="fin10-expense-${row.rows[0].id}"]`);await requestPage.getByTestId("fin10-decision-reason").fill("Compra sintética conferida e aprovada por identidade distinta");await requestPage.getByTestId(`fin10-approve-${row.rows[0].id}`).click();await requestPage.waitForFunction(()=>(document.querySelector('[data-testid="fin10-notice"]')?.textContent||"").includes("alçada"));
-    const final=await pool.query("SELECT status,requester_identity,approver_identity FROM fin_expenses WHERE id=$1",[row.rows[0].id]);assert.equal(final.rows[0].status,"aprovado");assert.equal(final.rows[0].approver_identity,approver.id);assert.notEqual(final.rows[0].requester_identity,final.rows[0].approver_identity);
-  } finally {await browser.close();}
+  const ti=await provisionAndLoginStaff(pool,api,{role:"ti"});
+  const rh=await provisionAndLoginStaff(pool,api,{role:"rh"});
+  const space=await insertExpenseSpace("ADD");
+  await pool.query("INSERT INTO fin_expense_approval_authorities (identity_id,max_amount_cents,granted_by_identity) VALUES ($1,100000,$1)",[approver.id]);
+
+  // TI é somente leitura no domínio FIN-10, como já ocorre em FIN-13..16.
+  assert.equal((await fin("/expenses",{cookie:ti.cookie})).status,200,"ti lê o domínio de despesas");
+  const tiCreate=await fin("/expenses",{method:"POST",cookie:ti.cookie,body:expensePayload(space,"ti-create")});
+  assert.equal(tiCreate.status,403,JSON.stringify(tiCreate.body));assert.equal(tiCreate.body.error,"read_only");
+  const tiDecision=await fin("/expenses",{method:"PATCH",cookie:ti.cookie,body:{id:uuid(),status:"aprovado",reason:"TI não decide solicitação financeira sintética"}});
+  assert.equal(tiDecision.status,403);assert.equal(tiDecision.body.error,"read_only");
+
+  // Catálogo de alçadas é legível para declarar a política; configurar segue pendente.
+  assert.equal((await fin("/expense-authorities")).status,401,"catálogo de alçadas exige sessão");
+  assert.equal((await fin("/expense-authorities",{cookie:rh.cookie})).status,403,"rh não lê o catálogo de alçadas");
+  const catalog=await fin("/expense-authorities",{cookie:ti.cookie});
+  assert.equal(catalog.status,200,JSON.stringify(catalog.body));
+  const approverEntry=(catalog.body.authorities||[]).find(item=>item.identity_id===approver.id);
+  assert.ok(approverEntry,"catálogo expõe a alçada configurada para o aprovador deste subteste");
+  assert.equal(Number(approverEntry.max_amount_cents),100000);
+  assert.equal(approverEntry.display_name,"QA Staff financeiro");
+
+  // Autoria vem da sessão, não do corpo: nome forjado é ignorado e a resposta
+  // traz os nomes canônicos das referências.
+  const forged=await fin("/expenses",{method:"POST",cookie:requester.cookie,body:expensePayload(space,"forged",{requester_name:"Diretor Forjado"})});
+  assert.equal(forged.status,201,JSON.stringify(forged.body));
+  assert.equal(forged.body.expense.requester_identity,requester.id);
+  assert.equal(forged.body.expense.requester_name,"QA Staff financeiro","nome do solicitante deriva da identidade autenticada");
+
+  // Ausência de política nunca vira aprovação automática: negativa explícita.
+  const noAuthority=await fin("/expenses",{method:"PATCH",cookie:stranger.cookie,body:{id:forged.body.expense.id,status:"aprovado",reason:"Aprovação sem alçada configurada deve ser negada com pendência explícita"}});
+  assert.equal(noAuthority.status,403,JSON.stringify(noAuthority.body));
+  assert.equal(noAuthority.body.error,"approval_authority_missing");
+
+  // Idempotência explícita por chave de negócio: retry igual devolve a mesma
+  // solicitação; mesma chave com conteúdo diferente conflita.
+  const first=await fin("/expenses",{method:"POST",cookie:requester.cookie,body:expensePayload(space,"idem")});
+  assert.equal(first.status,201,JSON.stringify(first.body));
+  const retry=await fin("/expenses",{method:"POST",cookie:requester.cookie,body:expensePayload(space,"idem")});
+  assert.equal(retry.status,200,JSON.stringify(retry.body));
+  assert.equal(retry.body.idempotent_replay,true,"retry identificado como repetição");
+  assert.equal(retry.body.expense.id,first.body.expense.id,"retry devolve a mesma solicitação");
+  const conflict=await fin("/expenses",{method:"POST",cookie:requester.cookie,body:expensePayload(space,"idem",{amount_cents:60000,threshold_cents:60000})});
+  assert.equal(conflict.status,409);assert.equal(conflict.body.error,"idempotency_key_conflict");
+  assert.equal((await pool.query("SELECT count(*)::int n FROM fin_expenses WHERE idempotency_key='fin10-idem'")).rows[0].n,1);
+
+  // Retry concorrente: seis tentativas simultâneas geram exatamente uma solicitação.
+  const concurrentBody=expensePayload(space,"idem-conc");
+  const responses=await Promise.all(Array.from({length:6},()=>fin("/expenses",{method:"POST",cookie:requester.cookie,body:concurrentBody})));
+  const statuses=responses.map(item=>item.status).sort();
+  assert.ok(statuses.every(status=>status===200||status===201),`retry concorrente sem erro: ${JSON.stringify(statuses)}`);
+  assert.equal(statuses.filter(status=>status===201).length,1,"apenas uma criação efetiva sob concorrência");
+  const concurrentRows=await pool.query("SELECT id FROM fin_expenses WHERE idempotency_key=$1",["fin10-idem-conc"]);
+  assert.equal(concurrentRows.rows.length,1,"chave concorrente gera exatamente uma solicitação");
+  assert.ok(responses.every(item=>item.body.expense.id===concurrentRows.rows[0].id),"todas as respostas apontam a mesma solicitação");
+
+  // Busca por protocolo e por nome do solicitante; curingas são literais.
+  const byProtocol=await fin(`/expenses?search=${encodeURIComponent(first.body.expense.protocol)}`,{cookie:requester.cookie});
+  assert.equal(byProtocol.status,200);
+  assert.equal(byProtocol.body.expenses.length,1,"busca por protocolo encontra exatamente a solicitação");
+  assert.equal(byProtocol.body.expenses[0].protocol,first.body.expense.protocol);
+  assert.equal(byProtocol.body.expenses[0].cost_center_name,`Centro sintético ADD ${space.costCenterId.slice(0,6)}`,"a listagem devolve os nomes canônicos das referências");
+  assert.equal(byProtocol.body.expenses[0].supplier_name,`Fornecedor sintético ADD ${space.supplierId.slice(0,6)}`);
+  const byName=await fin(`/expenses?search=${encodeURIComponent("QA Staff financeiro")}`,{cookie:requester.cookie});
+  assert.equal(byName.status,200);
+  assert.ok(byName.body.expenses.length>=1,"busca por nome do solicitante encontra a solicitação");
+  const wildcard=await fin(`/expenses?search=${encodeURIComponent("100%_despesa")}`,{cookie:requester.cookie});
+  assert.equal(wildcard.status,200);
+  assert.equal(wildcard.body.expenses.length,0,"curinga não casa tudo; a busca é literal");
+
+  // A decisão registra a alçada efetivamente aplicada na despesa e no histórico
+  // imutável, com snapshot anterior/posterior (resíduo da PR #53).
+  const beforeEffects=await pool.query("SELECT (SELECT count(*) FROM fin_payments) payments,(SELECT count(*) FROM fin_accounts_payable) payables,(SELECT count(*) FROM fin_gateway_charges) charges,(SELECT count(*) FROM fin_accounts_receivable) receivables");
+  const approved=await fin("/expenses",{method:"PATCH",cookie:approver.cookie,body:{id:first.body.expense.id,status:"aprovado",reason:"Compra sintética aprovada dentro da alçada configurada pelo teste"}});
+  assert.equal(approved.status,200,JSON.stringify(approved.body));
+  assert.equal(approved.body.expense.approver_name,"QA Staff financeiro","nome do aprovador deriva da sessão autenticada");
+  const stamped=await pool.query("SELECT status,applied_authority_limit_cents FROM fin_expenses WHERE id=$1",[first.body.expense.id]);
+  assert.equal(stamped.rows[0].status,"aprovado");
+  assert.equal(Number(stamped.rows[0].applied_authority_limit_cents),100000,"limite aplicado fica registrado na despesa");
+  const decisionHistory=await pool.query("SELECT authority_limit_cents,is_authority_verified,snapshot_before,snapshot_after FROM fin_expense_history WHERE expense_id=$1 AND next_status='aprovado'",[first.body.expense.id]);
+  assert.equal(decisionHistory.rows.length,1);
+  assert.equal(Number(decisionHistory.rows[0].authority_limit_cents),100000,"histórico registra o limite aplicado");
+  assert.equal(decisionHistory.rows[0].is_authority_verified,true);
+  assert.equal(decisionHistory.rows[0].snapshot_before.status,"pendente","snapshot anterior preservado");
+  assert.equal(decisionHistory.rows[0].snapshot_after.status,"aprovado","snapshot posterior registrado");
+
+  // Nenhuma decisão FIN-10 gera pagamento, pagável, charge ou recebível.
+  const afterEffects=await pool.query("SELECT (SELECT count(*) FROM fin_payments) payments,(SELECT count(*) FROM fin_accounts_payable) payables,(SELECT count(*) FROM fin_gateway_charges) charges,(SELECT count(*) FROM fin_accounts_receivable) receivables");
+  assert.deepEqual(afterEffects.rows[0],beforeEffects.rows[0],"decidir não cria efeito financeiro não solicitado");
+
+  // Decisões concorrentes sobre a mesma solicitação: apenas uma prevalece.
+  const race=await fin("/expenses",{method:"POST",cookie:requester.cookie,body:expensePayload(space,"race")});
+  assert.equal(race.status,201,JSON.stringify(race.body));
+  const decisions=await Promise.all(Array.from({length:6},()=>fin("/expenses",{method:"PATCH",cookie:approver.cookie,body:{id:race.body.expense.id,status:"aprovado",reason:"Apenas uma decisão concorrente pode prevalecer"}})));
+  const decisionStatuses=decisions.map(item=>item.status).sort();
+  assert.equal(decisionStatuses.filter(status=>status===200).length,1,`uma única decisão vence: ${JSON.stringify(decisionStatuses)}`);
+  assert.equal(decisionStatuses.filter(status=>status===409).length,5);
+  const raceRow=await pool.query("SELECT status FROM fin_expenses WHERE id=$1",[race.body.expense.id]);
+  assert.equal(raceRow.rows[0].status,"aprovado");
+  assert.equal((await pool.query("SELECT count(*)::int n FROM fin_expense_history WHERE expense_id=$1",[race.body.expense.id])).rows[0].n,2,"sem dupla decisão no histórico");
+
+  // Trava de exclusão: apagar a solicitação apagaria a trilha por CASCADE.
+  await assert.rejects(pool.query("DELETE FROM fin_expenses WHERE id=$1",[race.body.expense.id]),/fin10_expense_delete_forbidden/,"exclusão de despesa é recusada pelo banco");
 });
+
 
 // FIN-11 — integração contábil/fiscal mediante provedor. A obrigação é
 // determinada pela atividade através de regra canônica explícita; o gate prova

@@ -55,6 +55,40 @@ Registro exigido antes de qualquer encerramento de PR. **Nenhum dos PRs foi mesc
 | Premissas estruturadas e detector textual de promessa | #59 | **Não adotada nesta fatia** | Mudança de contrato de dados maior que a correção; permanece como referência |
 | Garantias de conciliação (#47) e de despesas/alçadas (#53) | #47, #53 | **Fora do escopo desta fatia** | Pertencem a FIN-05 e FIN-10; continuam na fila de reavaliação registrada abaixo |
 
+## Aproveitamento efetivo na fatia FIN-10 + resíduos FIN-05 (2026-10-02)
+
+Registro exigido antes de qualquer encerramento de PR. **Nenhum dos PRs foi mesclado, fechado ou teve branch apagada nesta sessão**; #47 e #53 continuam abertos como referência. A correção foi feita na base atual (`bd794dc`, main pós-PR #69) com a migração nova **136**, preservando 001–135, sem copiar migrações numeradas nem handlers completos das PRs, e mantendo o contrato canônico da main (entidade `fin_expense_approval_authorities`, formato de evidência `synthetic://`, rotas `/api/fin/*`).
+
+### Resíduos da PR #53 (FIN-10 — despesas e alçadas)
+
+| Melhoria examinada | Origem | Destino nesta fatia | Decisão |
+|---|---|---|---|
+| Limite de alçada efetivamente aplicado registrado por decisão | #53 (limite no histórico da despesa) | `fin_expenses.applied_authority_limit_cents` (CHECK: aprovado ⇒ não-nulo ≥ valor) + `fin_expense_history.authority_limit_cents`/`is_authority_verified` + snapshot antes/depois | **Aproveitada e adaptada** — a main não gravava qual alçada foi aplicada; o formato divergiu do #53 (coluna dedicada + snapshot JSONB em vez de campo solto) para caber no histórico imutável canônico |
+| Trava de exclusão de despesa com histórico | #53 (trigger de DELETE) | `fin10_expense_delete_forbidden` (BEFORE DELETE) | **Aproveitada** — a main permitia `DELETE` por SQL direto; prova de recusa incluída no subteste 19 |
+| Catálogo de alçadas legível pela interface | #53 (`fin_expense_authorities` com CRUD) | `GET /api/fin/expense-authorities` **somente leitura** (não-GET 405; RH 403; anônimo 401; TI 200) | **Aproveitada pela metade, deliberadamente** — a tela precisa declarar "Nenhuma alçada ativa configurada"; conceder/editar alçada é decisão de negócio do proprietário e não vira mutação exposta por inferência. Configuração segue por backoffice/SQL explícito |
+| Duplicidade natural de solicitação (`requester+descrição+valor`) | #53 (constraint de duplicidade) | Não importada; no lugar, **idempotência explícita por chave de negócio** (replay 200 / conteúdo diferente 409 / concorrência 23505 reconsultada) | **Adaptada** — o padrão da main (FIN-13) é idempotência por chave declarada, que resiste a retry e concorrência sem bloquear re-solicitações legítimas idênticas em datas diferentes |
+| Autoria/nome do solicitante e aprovador | #53 | Derivado da sessão (`auth_identities.display_name`); campo homônimo do corpo é ignorado | **Aproveitada como regra** — o #53 permitia nome no corpo; aqui a autoria é sempre real, sem `COALESCE` de autoria inferida |
+| Dropdowns de referências canônicas e painel de detalhe/histórico na UI | #53 | `ExpenseWorkspace.tsx` reescrita: selects de contrato/centro/fornecedor, tabela com busca, detalhe com histórico e responsável | **Aproveitada e adaptada** — mantendo `Intl.NumberFormat` pt-BR, erro de leitura + retry e confirmação pós-persistência, padrões da main |
+| Tabela `fin_expense_authorities` paralela e formato `local://synthetic` | #53 | Não importadas | **Descartadas** — duplicaria a entidade `fin_expense_approval_authorities` da main (migração 129) e trocaria o formato de evidência canônico `synthetic://`, quebrando compatibilidade |
+| Aprovador obrigatoriamente diferente do solicitante como política | #53 (e #59 em FIN-13) | A máquina de estados já impede o solicitante de decidir a própria despesa (403 `requester_cannot_decide`, seg persistida); a exigência de **aprovador distinto por política empresarial** (quem pode aprovar quem) não foi criada | **Não adotada como política nova** — é decisão do proprietário; registrada como pendência de negócio |
+
+### Resíduos da PR #47 (FIN-05 — conciliação)
+
+| Melhoria examinada | Origem | Destino nesta fatia | Decisão |
+|---|---|---|---|
+| FKs `ON DELETE RESTRICT` de conciliação para contas | #47 | `fin_conciliations` → receivable/payable `ON DELETE RESTRICT` | **Aproveitada** — provado por `DELETE` de recebível "bare" (sem histórico de pagamento) recusado |
+| CHECK de movimento bancário e exatamente uma conta | #47 | `fin05_conciliation_requires_account_and_transaction` (NOT VALID) | **Aproveitada** — `INSERT` direto sem transação bancária ou com duas contas é recusado pelo banco |
+| Conferência do valor casado contra saldo aberto e movimento | #47 (implícito nas constraints) | Handler: valor explícito > `min(saldo aberto, |movimento|)` ⇒ 400 `invalid_amount_matched`; sem valor ⇒ casa o mínimo; saldo/movimento ≤ 0 ⇒ 409 `account_or_transaction_not_open`; conta com `FOR UPDATE` | **Aproveitada e adaptada** — a main aceitava casar 6000 sobre saldo de 5000 (reproduzido: 201 antes, 400 depois) |
+| Importação de extrato com linhas numa transação só | #47 | Não importada nesta fatia | **Adiada, não descartada** — a API canônica de extratos da main já é transacional por extrato; a importação **em lote atômico** (múltiplos extratos/linhas com falha parcial) merece fatia própria com provas de concorrência dedicadas |
+| Migração 124 própria do #47 | #47 | Não importada | **Descartada** — a main já tem 124 aplicada com outro conteúdo; as garantias entraram na aditiva 136 |
+
+### Encaixe na matriz de aproveitamento
+
+- **aproveitadas/adaptadas**: limite de alçada aplicado com snapshot, trava de exclusão, autoria por sessão, idempotência de criação, selects/painel de detalhe, FK RESTRICT + CHECK de conciliação, clamp do valor casado.
+- **adiadas**: importação de extrato em lote atômico (#47); origem/data-base por cenário e premissas estruturadas (#62, fatia anterior).
+- **descartadas**: tabelas/formatos paralelos do #53 (`fin_expense_authorities`, `local://synthetic`), migração 124 do #47, `revision_no` e `COALESCE` de autoria do #60 (fatia anterior).
+- **pendências de negócio (proprietário)**: política real de alçadas (limites, quem aprova quem, aprovador distinto — #53/#59); encerramento ou não das PRs de referência.
+
 ## Colisão a resolver: PR #67 e PR #68 atacam a mesma fatia (2026-10-01)
 
 Durante esta fatia foi aberta, em paralelo, a **PR #67** (`arena/01a0f9b5-gruposegsystemseguranca`, 2026-10-01T23:47Z), que também corrige FIN-13 e também cria uma migração **numerada 134**, com outro nome de arquivo (`134-fin13-budget-revisions-idempotency-margin.sql`, contra `134-fin13-budget-revision-margin-idempotency.sql` da PR #68).
@@ -71,9 +105,10 @@ Encaminhamento proposto, a decidir pelo dono (nenhuma das duas foi mesclada ou f
 - L04: implementação técnica integrada; regressão 20/20 no PR #65.
 - L05: contratos CON-01..11 integrados; regressão 1/1 no PR #65.
 - L06: OPS-01..16 e AST-01..12 registrados como pronto_local; regressão 9/9 no PR #65.
-- L07: em execução. FIN-09, FIN-11 e FIN-12 foram revalidados nesta fatia e estão `pronto_local` na matriz; FIN-04 foi revalidado somente no vínculo de baixa/estorno do gateway. Isso não encerra L07 nem promove FIN-10, FIN-14..16 ou ADM em massa.
-- FIN-14..16: backend e testes HTTP integrados, sem abas próprias no workspace financeiro, conforme relatório de entrega.
+- L07: em execução. FIN-09, FIN-11 e FIN-12 revalidados (fatia 135) e **FIN-10 concluído** (fatia 136) — todos `pronto_local` na validação automática; FIN-05 revalidado nos resíduos #47; FIN-04 revalidado no vínculo gateway. Isso não encerra L07 nem promove FIN-14..16 ou ADM em massa.
+- FIN-14..16: backend e testes HTTP integrados, sem abas próprias no workspace financeiro, conforme relatório de entrega — é o próximo recorte.
 - FIN-12: a conciliação sintética agora materializa a baixa FIN-04 e o estorno reversor na mesma transação; o que permanece fora de escopo é qualquer PSP, boleto, Pix, banco ou cobrança real.
+- FIN-10: alçada aplicada, autoria por sessão, idempotência de criação, busca, TI somente leitura e trava de exclusão entregues na migração 136; **o catálogo de alçadas segue vazio/inativo por padrão** — política real (limites, quem aprova quem) é decisão pendente do proprietário.
 - ADM-01..12: a_revalidar; /admin/marcelo ainda é protótipo descritivo.
 - L08: fechamento do portal cliente e expansões ainda pendente.
 - L09: IA/RAG local real e medições no hardware-alvo ainda pendentes; fallback não comprova modelo real.
@@ -81,11 +116,9 @@ Encaminhamento proposto, a decidir pelo dono (nenhuma das duas foi mesclada ou f
 - SMTP e hospedagem pública continuam fora do escopo. Nada nesta revisão homologa integrações externas.
 
 ## Próximos passos, em ordem
-1. Integrar/revalidar PR #65 antes de código novo; confirmar main e checks atuais.
-2. Corrigir FIN-13 por fatia aditiva: reproduzir aprovação preservada indevidamente e margem inconsistente; definir revisão explícita e fonte dos números; preservar histórico e testar UI/API/DB.
-3. Reavaliar o que aproveitar de #47/#53 e fechar referências antigas somente após registrar a substituição testada.
-4. Concluir FIN-10 e a avaliação adaptativa dos resíduos de #47/#53; depois completar jornadas FIN-14..16. A ligação sintética FIN-12 → FIN-04 já foi entregue/testada na migração 135.
-5. Entregar ADM-01..12, com indicadores que abrem registros reais e navegação de negócio.
-6. Fechar matriz/evidências do L07 e produzir handoff L08. Não iniciar L08 nesta consolidação.
+1. Jornadas UI de FIN-14/15/16 (abas próprias no workspace financeiro; backend e testes HTTP já existem) — prompt em [PROMPT-PROXIMA-SESSAO-L07-FIN14-16.md](PROMPT-PROXIMA-SESSAO-L07-FIN14-16.md).
+2. Decisão do proprietário sobre política real de alçadas FIN-10 (limites, quem aprova quem, aprovador distinto) e sobre o encerramento das PRs de referência #47/#53 — o registro de substituição testada exigido antes de qualquer fechamento está nas seções "Aproveitamento efetivo" acima.
+3. Entregar ADM-01..12, com indicadores que abrem registros reais e navegação de negócio.
+4. Fechar matriz/evidências do L07 e produzir handoff L08. Não iniciar L08 nesta consolidação.
 
 Leia [PROMPT-RETOMADA-L07-CONSOLIDADO.md](PROMPT-RETOMADA-L07-CONSOLIDADO.md).

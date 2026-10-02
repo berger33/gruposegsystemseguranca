@@ -240,12 +240,25 @@ export function createFinAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
         }
         const accountTable = receivableId ? "fin_accounts_receivable" : "fin_accounts_payable";
         const accountId = receivableId || payableId;
-        const account = await client.query(`SELECT id FROM ${accountTable} WHERE id=$1`, [accountId]);
+        const account = await client.query(`SELECT id, amount_remaining_cents FROM ${accountTable} WHERE id=$1 FOR UPDATE`, [accountId]);
         if (!account.rows.length) {
           await client.query("ROLLBACK");
           return json(res, 404, { error: "account_not_found" });
         }
-        const matched = amountMatched ?? Math.abs(Number(bank.rows[0].amount_cents));
+        // A sugestão nunca casa mais do que o saldo aberto da conta nem mais do
+        // que o valor absoluto do movimento (resíduo da PR #47 adaptado); sem
+        // valor explícito, casa o mínimo entre os dois.
+        const available = Number(account.rows[0].amount_remaining_cents);
+        const movementAmount = Math.abs(Number(bank.rows[0].amount_cents));
+        if (!Number.isFinite(available) || available <= 0 || movementAmount <= 0) {
+          await client.query("ROLLBACK");
+          return json(res, 409, { error: "account_or_transaction_not_open" });
+        }
+        const matched = amountMatched ?? Math.min(available, movementAmount);
+        if (!Number.isSafeInteger(matched) || matched < 1 || matched > available || matched > movementAmount) {
+          await client.query("ROLLBACK");
+          return json(res, 400, { error: "invalid_amount_matched" });
+        }
         const { rows } = await client.query(
           `INSERT INTO fin_conciliations
              (receivable_id, payable_id, bank_transaction_id, source, status, suggested_by_identity, suggested_at, suggestion_reason, amount_matched_cents)
