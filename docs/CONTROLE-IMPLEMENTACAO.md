@@ -598,3 +598,40 @@ Rotas reais: `/cliente/entrar`, `/cliente/app/conta`, `/cliente/app/contratos`,
 A/B, autorização derivada da sessão, corpo forjado sem ampliação, download
 privado, histórico e erros de acesso. CLI-06..15 e EXT-01..17 não foram
 promovidos.
+
+## L08 — revisão da PR #80 e hardening CLI-04/CLI-05 (02/10/2026)
+
+Base `main` `c16673c3c2a8f749ec476edb7a91dc62d2c1dfc9`; sessão
+`arena/01a0fea1-gruposegsystemseguranca`. PR #80: **OPEN**, sem merge, head
+`a95872de2a29d9ea39773a942cd9e3f7e91bfa4d`; validada em worktree (L08 11/11 em
+duas execuções consecutivas, jornada Chromium real incluída); sem merge
+automático.
+
+Hardening aditivo desta sessão sobre a primeira fatia: migração **139**
+(`client_tickets`: `idempotency_key` 8–200 opcional, `content_fingerprint`,
+CHECKs NOT VALID + VALIDATE, índice único parcial por conta+autor+chave);
+próxima migração livre: **140**. `POST /api/client/tickets` passa a gravar
+chamado + auditoria na mesma transação (falha de auditoria → 503 + rollback),
+com replay idempotente (200), conflito de fingerprint (409) e corrida UNIQUE
+(23505 → relê o vencedor); log de download privado gravado ANTES de qualquer
+byte (falha → 503, zero bytes); auditoria da transição de status do chamado
+(admin) movida para dentro da transação; UI de chamados envia
+`idempotency_key` por tentativa e mostra o resultado real (antes exibia
+sucesso como erro por esperar `payload.ok` inexistente). Testes: suíte
+196→**205** (novo `client-ticket-write-hardening` com injeção de falha) e gate
+L08 11→**12** (subteste novo de concorrência real contra PostgreSQL
+descartável), 12/12 em duas execuções consecutivas. Regressões no mesmo
+conteúdo: estático 5/5 (001–139), typecheck 0, build 0, migrações 139/139 (524
+tabelas, clone/checksum negativo), L07 43/43 duas vezes consecutivas (uma
+execução anterior 42/43, transitória, registrada), L03 1/1, L04 20/20, L05 1/1,
+L06 9/9 em série. Falha intermediária registrada e corrigida: fixture de
+integração sem a 139 na lista de migrações do próprio teste.
+
+Estados: CLI-01..05 continuam primeira fatia consolidada em validação
+automática; **isto não é aceite humano nem homologação Windows**. Não
+promovidos: CLI-06..15, EXT-01..17, órfãos `/admin/ti` (80), fornecedor
+restrito, integrações externas. Pendências: PR #80 aguarda decisão humana;
+escritas administrativas do espaço do cliente com auditoria sequencial
+fail-open (próxima fatia); gate L08 ainda sem `client-access.integration`;
+placeholder/SHA truncado nos documentos da série da PR #80. Aceite humano de
+Marcelo e Andreia (L07) preservado; Windows pendente até o fechamento integral.

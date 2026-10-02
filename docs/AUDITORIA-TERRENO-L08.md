@@ -136,3 +136,86 @@ canônicas são `auth_*`, `client_accounts`, `client_access_grants`,
 `client_contracts`, `client_documents`, `client_tickets` e suas auditorias,
 provenientes das migrações 003–005 e endurecidas por 097–101. CLI-06..15 e
 EXT-01..17 permanecem não promovidos.
+
+## L08 — revisão da PR #80 e hardening CLI-04/CLI-05 (02/10/2026)
+
+Base confirmada: `main` oficial `c16673c3c2a8f749ec476edb7a91dc62d2c1dfc9`
+(merge da PR #78). Sessão Arena `arena/01a0fea1-gruposegsystemseguranca`
+(branch fixa da sessão; equivale ao `arena/l08-next-*` sugerido no prompt,
+porque a plataforma vincula o trabalho a esta branch criada sobre a main atual).
+
+**Revisão remota da PR #80** (`gh pr view 80` + fetch): estado **OPEN**, não
+draft, sem merge commit; head `arena/l08-hardening-20261002` apontando
+`a95872de2a29d9ea39773a942cd9e3f7e91bfa4d` (filho direto de `c16673c`); a main
+não contém a PR (`git merge-base --is-ancestor` negativo). Validação
+independente nesta sessão: worktree destacado em `a95872d`,
+`npm run test:l08-delivery:pg` **11/11 em duas execuções consecutivas**,
+incluindo a jornada Chromium real (servidor real em loopback → HTTP →
+`/cliente/entrar` → heading e campos reais). Achados não bloqueantes
+registrados na PR: placeholder "(a segunda execução deverá ser registrada…)" em
+7 de 8 documentos; SHA base truncado em 39 caracteres; gate consolidado não
+importa `client-access.integration` (a jornada profunda de CLI-01 roda em
+`npm run test:integration`, fora do runner L08). **Nenhum merge foi feito** —
+a decisão permanece humana.
+
+**Revisão requisito por requisito (achados na primeira fatia):** o espaço do
+cliente legado gravava o chamado e só depois tentava a auditoria, fora de
+transação e com falha engolida (`console.error`), sem chave de idempotência; o
+log de download era gravado depois de os bytes já terem saído; a auditoria da
+transição de status do chamado (admin) era gravada após o COMMIT; e a UI de
+chamados validava um campo `ok` inexistente na resposta, exibindo sucesso como
+erro e incentivando reenvio — caminho real para duplicidade. Isso falhava os
+critérios mínimos 5–7 (atomicidade, auditoria fail-closed com 503,
+idempotência sob retry concorrente).
+
+**Hardening desta sessão (aditivo; 001–138 imutáveis):**
+
+- Migração **139** `139-cli05-client-ticket-idempotency.sql`: colunas
+  `idempotency_key` (8–200, opcional) e `content_fingerprint` em
+  `client_tickets`, CHECKs como NOT VALID + VALIDATE (padrão da 134) e índice
+  único parcial por `(client_account_id, opened_by_identity, idempotency_key)`.
+  Próxima migração livre: **140**.
+- `POST /api/client/tickets`: chamado + auditoria na MESMA transação (falha de
+  auditoria → ROLLBACK → 503), replay idempotente (200, mesmo `ticketId`),
+  conflito de fingerprint (409 `idempotency_key_conflict`) e corrida tratada
+  via UNIQUE (23505 → relê a linha vencedora). Sem chave, o contrato anterior
+  permanece (cada POST abre um chamado novo).
+- Download privado: log registrado ANTES de qualquer byte; falha de auditoria →
+  503 e zero bytes servidos. Transição de status do chamado (admin): auditoria
+  dentro da mesma transação da escrita.
+- UI `/cliente/app/chamados`: envia `idempotency_key` por tentativa, mantém a
+  chave em erro de rede (retry não duplica), renova após sucesso e mostra o
+  resultado real (replay e 409 com mensagens honestas).
+- Testes: novo unitário `tests/client-ticket-write-hardening.test.mjs`
+  (9 subtestes com injeção de falha; suíte 196→**205**) e novo subteste de
+  integração em `client-space.integration` (8→9; gate L08 11→**12**) provando,
+  com PostgreSQL real, duas requisições simultâneas → mesmo protocolo, 1 linha,
+  1 auditoria; replay; 409; escopo B negado com a mesma chave; contrato sem
+  chave preservado. O fixture de integração passou a aplicar a 139.
+- **Falha intermediária registrada (implementação, não ambiente):** a primeira
+  execução do gate L08 com o hardening reprovou 3 subtestes porque a lista de
+  migrações do próprio fixture não aplicava a 139; corrigida a lista, o gate
+  passou sem alterar assertivas, timeouts ou skips.
+
+**Resultados reais:** baseline `c16673c` antes de editar — estático 5/5,
+typecheck 0, unitários 196/196, build 0, migrações 138/138 (524 tabelas,
+clone/checksum negativo), L07 43/43 duas vezes, L03 1/1, L04 20/20, L05 1/1,
+L06 9/9, L08 11/11 (formulação pré-hardening, pois a PR #80 não estava na
+base). Código final desta branch: estático 5/5 (001–139), typecheck 0,
+unitários **205/205**, build 0, migrações **139/139** (dois passes, 524
+tabelas, clone/checksum negativo), L07 **43/43 em duas execuções consecutivas**
+(uma execução anterior da mesma bateria registrou 42/43 com log detalhado não
+preservado; as duas seguintes, sem mudança de código, 43/43 — instabilidade
+transitória registrada, sem skip/timeout/assertiva), L03 1/1, L04 20/20,
+L05 1/1, L06 9/9 em cadeia serial, L08 **12/12 em duas execuções consecutivas**.
+
+**Classificação:** implementação local + validação automática Linux/PostgreSQL
+descartável. Não é aceite humano e não é homologação Windows; o aceite humano
+de Marcelo e Andreia no L07 permanece preservado. **Não promovidos:**
+CLI-06..15, EXT-01..17, órfãos `/admin/ti`, fornecedor restrito e integrações
+externas. Pendências reais: PR #80 aberta aguardando decisão humana; escritas
+administrativas do espaço do cliente (contas, grants, contratos, upload de
+documento) mantêm auditoria sequencial fail-open — próxima fatia candidata;
+gate L08 ainda não incorpora `client-access.integration`; placeholder e SHA
+truncado nos documentos da série da PR #80. Windows continua pendente até o
+fechamento integral do sistema.

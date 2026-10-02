@@ -2041,3 +2041,103 @@ Rotas reais: `/cliente/entrar`, `/cliente/app/conta`, `/cliente/app/contratos`,
 A/B, autorização derivada da sessão, corpo forjado sem ampliação, download
 privado, histórico e erros de acesso. CLI-06..15 e EXT-01..17 não foram
 promovidos.
+
+## L08 — revisão da PR #80 e hardening CLI-04/CLI-05 (02/10/2026)
+
+Base: `main` `c16673c3c2a8f749ec476edb7a91dc62d2c1dfc9` (merge da PR #78).
+Sessão `arena/01a0fea1-gruposegsystemseguranca`.
+
+### A. Estado remoto confirmado da PR #80
+
+`gh pr view 80 --json ...` + `git fetch`/`merge-base` explícitos:
+
+| Verificação | Resultado |
+|---|---|
+| Estado da PR #80 | **OPEN**, não draft, `mergedAt`/`mergeCommit` nulos |
+| HEAD da PR | `arena/l08-hardening-20261002` @ `a95872de2a29d9ea39773a942cd9e3f7e91bfa4d` (filho direto de `c16673c`) |
+| Main contém a PR? | Não (`git merge-base --is-ancestor` negativo sobre a referência remota atualizada) |
+| Diff da PR | 9 arquivos (8 documentos + `tests/l08-delivery.integration.test.mjs`), 116 inserções / 9 remoções; sem migração |
+| Validação independente | worktree em `a95872d`: `npm run test:l08-delivery:pg` **11/11 em duas execuções consecutivas** (jornada Chromium real: servidor sobe em loopback, `/cliente/entrar` via HTTP, heading + campos verificados) |
+| Ação humana | Nenhum merge; comentário de revisão registrado na PR |
+
+Achados não bloqueantes registrados no comentário: placeholder "(a segunda
+execução deverá ser registrada…)" mantido em 7 de 8 documentos da PR; SHA base
+truncado em 39 caracteres; gate L08 consolidado não importa
+`client-access.integration` (a jornada profunda de CLI-01 roda em
+`npm run test:integration`, fora do runner L08).
+
+### B. Baseline reconfirmada antes de qualquer edição (`c16673c`)
+
+| Comando | Resultado |
+|---|---|
+| `node scripts/qa-wave0-static.mjs` | 5/5 (001–138) |
+| `npm run typecheck` | exit 0 |
+| `npm test` | 196/196 |
+| `npm run build` | exit 0 |
+| `npm run test:migrations:pg` | exit 0; 138/138 ×2 passes; 524→524 tabelas; clone/checksum negativo rejeitado |
+| `npm run test:l07-delivery:pg` | 43/43 em duas execuções consecutivas |
+| `npm run test:l03/l04/l05/l06-delivery:pg` | 1/1, 20/20, 1/1, 9/9 em cadeia serial |
+| `npm run test:l08-delivery:pg` | 11/11 (formulação da main — a PR #80 não estava na base; validada separadamente no item A) |
+
+Neste ambiente (Node 22.22.3, emb., 2 vCPU) **não** se reproduziram as falhas
+ambientais do Node/dependências relatadas no prompt da sessão anterior
+(`EADDRINUSE`, CLI-10 timeout, sandbox do Chromium travado por falta de ETXTBSY); as instabilidades históricas L03-403 e L07-22 também não
+reapareceram na baseline.
+
+### C. Hardening aplicado e evidências no mesmo conteúdo
+
+Mudanças (todas aditivas; 001–138 imutáveis):
+
+1. Migração **139** `139-cli05-client-ticket-idempotency.sql` — colunas
+   `idempotency_key` (VARCHAR(200), CHECK 8–200, NOT VALID + VALIDATE),
+   `content_fingerprint` (CHECK hex-64, NOT VALID + VALIDATE) e índice único
+   parcial `client_tickets_idempotency_uidx` por conta+autor+chave. Próxima
+   migração livre: **140**.
+2. `src/server/client-space-api.mjs` — `POST /api/client/tickets` grava chamado
+   + auditoria na MESMA transação; falha de auditoria devolve 503 e faz
+   ROLLBACK; replay idempotente 200 (mesmo `ticketId`), conflito 409
+   `idempotency_key_conflict`, corrida UNIQUE (23505) relendo a linha
+   vencedora; log de download registrado ANTES de qualquer byte (falha → 503,
+   zero bytes); auditoria da transição de status admin dentro da transação.
+3. UI `/cliente/app/chamados` — envia `idempotency_key` por tentativa
+   (renovada após sucesso), mostra tanto `ok` quanto `ticketId` como sucesso,
+   e trata replay/409 com mensagens honestas.
+4. Testes — novo `tests/client-ticket-write-hardening.test.mjs` (9 subtestes
+   com injeção de falha; suíte 196→205) e subteste novo em
+   `client-space.integration` (8→9; gate L08 11→12): duas requisições
+   simultâneas com a mesma chave → mesmo `ticketId`, contagem exata de 1 linha
+   em `client_tickets` e 1 em `auth_access_audit`; replay sequencial 200;
+   conteúdo diverso 409 sem segunda linha; identidade B com a mesma chave 403;
+   chave curta 400; dois POSTs sem chave seguem criando dois chamados.
+
+**Falha intermediária desta sessão (implementação, não ambiente):** a primeira
+execução do gate L08 com o hardening reprovou 3 subtestes porque a lista de
+migrações do próprio fixture de integração não aplicava a 139. Corrigida a
+lista (única alteração), o gate passou — sem mudar assertivas, timeouts ou
+skips. Registrado aqui explicitamente.
+
+| Comando | Resultado (código final desta branch) |
+|---|---|
+| `node scripts/qa-wave0-static.mjs` | 5/5 (001–139 contínuas/registradas) |
+| `npm run typecheck` | exit 0 |
+| `npm test` | **205/205** |
+| `npm run build` | exit 0 |
+| `npm run test:migrations:pg` | exit 0; **139/139** ×2 passes; 524→524 tabelas; clone/checksum negativo rejeitado |
+| `npm run test:l07-delivery:pg` | 43/43 em **duas execuções consecutivas**; uma execução anterior na mesma bateria registrou 42/43 com log detalhado não preservado (as duas seguintes, sem mudança de código, 43/43) — instabilidade transitória registrada, sem skip/timeout/assertiva |
+| `npm run test:l03-delivery:pg` | 1/1 |
+| `npm run test:l04-delivery:pg` | 20/20 |
+| `npm run test:l05-delivery:pg` | 1/1 |
+| `npm run test:l06-delivery:pg` | 9/9 (cadeia serial após L03–L05) |
+| `npm run test:l08-delivery:pg` | **12/12 em duas execuções consecutivas** (inclui o subteste de concorrência real + jornada Chromium) |
+
+### D. Classificação e pendências
+
+Implementação local + validação automática Linux/PostgreSQL descartável. Não é
+aceite humano (Marcelo/Andreia não verificaram esta fatia) e não é homologação
+Windows — adiada até o fechamento integral do sistema. O aceite humano
+anterior do L07 permanece preservado. CLI-06..15, EXT-01..17, órfãos
+`/admin/ti`, fornecedor restrito e integrações externas não promovidos.
+Pendências reais: PR #80 aberta aguardando decisão humana; escritas
+administrativas do espaço do cliente com auditoria sequencial fail-open
+(próxima fatia); gate L08 ainda sem `client-access.integration`; placeholder
+e SHA truncado nos documentos da série da PR #80.

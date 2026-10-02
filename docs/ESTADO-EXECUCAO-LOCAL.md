@@ -1038,3 +1038,42 @@ Rotas reais: `/cliente/entrar`, `/cliente/app/conta`, `/cliente/app/contratos`,
 A/B, autorização derivada da sessão, corpo forjado sem ampliação, download
 privado, histórico e erros de acesso. CLI-06..15 e EXT-01..17 não foram
 promovidos.
+
+## L08 — revisão da PR #80 e hardening CLI-04/CLI-05 (02/10/2026)
+
+Base `main` `c16673c3c2a8f749ec476edb7a91dc62d2c1dfc9`; sessão
+`arena/01a0fea1-gruposegsystemseguranca`. PR #80: **OPEN**, sem merge, head
+`a95872de2a29d9ea39773a942cd9e3f7e91bfa4d`; validada nesta sessão em worktree
+destacado com L08 11/11 em duas execuções consecutivas; nenhum merge
+automático.
+
+A revisão requisito por requisito encontrou escritas do espaço do cliente fora
+de transação, auditoria fail-open, log de download após os bytes, auditoria de
+status admin após o COMMIT e a UI de chamados exibindo sucesso como erro por
+esperar `payload.ok` inexistente. O hardening aditivo: migração **139**
+(idempotência e fingerprint em `client_tickets`; próxima livre: **140**),
+`POST /api/client/tickets` transacional e idempotente (503+rollback, replay
+200, conflito 409, corrida UNIQUE tratada), log de download ANTES de qualquer
+byte, auditoria de status dentro da transação, UI enviando `idempotency_key`
+por tentativa e mostrando o resultado real. Suíte de testes 196→**205**; gate
+L08 11→**12** com subteste de concorrência real (duas requisições simultâneas
+→ mesmo protocolo, 1 linha, 1 auditoria).
+
+Resultados reais: baseline `c16673c` completa (estático 5/5; typecheck 0; unit
+196/196; build 0; migrações 138/138 com 524 tabelas e clone/checksum negativo;
+L07 43/43 ×2; L03 1/1; L04 20/20; L05 1/1; L06 9/9; L08 11/11). Código final:
+estático 5/5 (001–139); typecheck 0; unit 205/205; build 0; migrações 139/139
+(524 tabelas, clone/checksum negativo); L07 43/43 em duas execuções
+consecutivas (uma anterior 42/43, instabilidade transitória registrada); L03
+1/1; L04 20/20; L05 1/1; L06 9/9 em cadeia; L08 12/12 em duas execuções
+consecutivas. Falha intermediária desta sessão: fixture de integração sem a
+migração 139 — corrigida sem mascarar o gate.
+
+Estado: CLI-01..05 seguem primeira fatia consolidada em validação automática
+Linux/PostgreSQL descartável, **sem aceite humano novo e sem homologação
+Windows**. O aceite humano de Marcelo e Andreia (L07) permanece preservado.
+CLI-06..15, EXT-01..17, órfãos `/admin/ti`, fornecedor restrito e integrações
+externas não promovidos. Próxima fatia candidata: hardening das escritas
+administrativas do espaço do cliente (contas, grants, contratos, upload) e
+consolidação de `client-access.integration` (CLI-01 profundo) no gate L08.
+Windows pendente até o fechamento integral do sistema.
