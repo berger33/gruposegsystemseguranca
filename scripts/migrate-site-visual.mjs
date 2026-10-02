@@ -147,13 +147,14 @@ const files = [
   '134-fin13-budget-revision-margin-idempotency.sql',
   '135-fin09-fin12-revalidation-hardening.sql',
   '136-fin10-fin05-policy-history-locks.sql',
-  '137-fin14-15-16-ui-idempotency-closure-lock.sql'
+  '137-fin14-15-16-ui-idempotency-closure-lock.sql',
+  '138-adm01-12-painel-marcelo-decisoes-escopo.sql'
 ];
 
 async function main() {
   const actual = (await readdir(dir)).filter(f => /^\d{3}-.*\.sql$/.test(f)).sort();
-  if (files.length !== 137 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
-    throw new Error('migration_manifest_mismatch: compare 001–137 with db/migrations before connecting');
+  if (files.length !== 138 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
+    throw new Error('migration_manifest_mismatch: compare 001–138 with db/migrations before connecting');
   }
   const urlText = process.env.DATABASE_MIGRATION_URL || process.env.DATABASE_URL;
   if (!urlText) throw new Error('DATABASE_MIGRATION_URL or DATABASE_URL is required');
@@ -201,7 +202,7 @@ async function main() {
         throw error;
       }
     }
-    console.log('Migration ledger verified: 001–137 (PostgreSQL only)');
+    console.log('Migration ledger verified: 001–138 (PostgreSQL only)');
   } finally {
     client?.release();
     await pool.end();

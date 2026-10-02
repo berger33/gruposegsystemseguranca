@@ -970,3 +970,32 @@ asserções, desativação sintética de contato e trigger de falha de auditoria
 e checksum negativo. Regressão no SHA desta continuação: `npm test` 186/186,
 `npm run typecheck` 0 erros, `npm run build` 70 rotas e `git diff --check`
 sem erros; `next-env.d.ts`/`tsconfig.json` ficaram limpos.
+
+
+## ADM-01..12 — painel funcional do Marcelo (02/10/2026)
+
+`/admin/marcelo` era protótipo descritivo e passou a painel real: indicadores
+calculados de registros canônicos com fonte/período/data-base, cada cartão
+abrindo lista filtrada e registro autorizado, decisão unificada com alçada e
+segregação, espaço de trabalho por identidade, relatórios limitados/auditados,
+configurações versionadas, meta separada do realizado, diário CON-11 por
+permissão e análises de expansão. Autorização decidida no servidor (anônimo
+401, papel indevido 403, TI somente leitura); escrita sensível grava origem,
+histórico, decisão e auditoria na mesma transação, e falha de auditoria devolve
+503 revertendo tudo. Ausência de dado é declarada (`sem_registro_canonico_no_periodo`)
+e falha de leitura é declarada (`indisponivel` com retry) — nenhuma vira zero.
+
+Migração aditiva 138. API `src/server/adm-panel-api.mjs`. UI
+`src/app/admin/marcelo/MarceloPanel.tsx`. Gate `test:l07-delivery:pg` de 37 para
+**43 subtestes**, com duas execuções consecutivas limpas no SHA entregue;
+regressões no mesmo SHA: L03 1/1, L04 20/20, L05 1/1, L06 9/9, `npm test`
+196/196, `typecheck` 0, `build` exit 0, estático 5/5. Instabilidades
+transitórias observadas e registradas sem mascaramento (subteste 22 legado do
+FIN-10 em uma execução; L03 na baseline do commit base), sem alterar timeout,
+skip ou assertiva.
+
+Componentes órfãos de `/admin/ti`: inventariados por prova em
+`docs/INVENTARIO-ADMIN-TI.md` — 0 promovidos, 2 adaptados, 80 dívida explícita.
+
+ADM-01..12 ficam `pronto_local` com **aceite humano pendente** (Marcelo/Andreia
+não validaram). L07 não está concluído; L08 não foi iniciado.

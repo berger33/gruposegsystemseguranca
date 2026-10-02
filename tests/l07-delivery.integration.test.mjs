@@ -2913,3 +2913,571 @@ test("L07 FIN-14/15/16: Chromium opera as três abas, mostra falhas de leitura e
     assert.equal(persisted.status,"revisada"); assert.equal(persisted.is_auto_paid,false); assert.equal(persisted.reviewed_by_identity,financeiro.id);
   } finally { await browser.close(); }
 });
+
+// =====================================================================
+// ADM-01..12 — painel funcional do Marcelo.
+//
+// Os indicadores são calculados dos registros canônicos existentes; o gate
+// semeia um universo sintético por ano exclusivo para que cada cartão tenha
+// um número determinístico e um registro real por trás.
+// =====================================================================
+const adm = (path, options) => api(`/api/adm/panel${path}`, options);
+
+async function seedPanelUniverse(year, requesterIdentity) {
+  const tag = uuid().slice(0, 4).toUpperCase();
+  const day = `${year}-06-15`;
+  const stamp = `${year}0615`;
+  const at = `${year}-06-15T10:00:00Z`;
+  const { accountId } = await insertClientSpace(`ADM-${year}-${tag}`);
+  const space = await insertExpenseSpace(`adm-${year}-${tag}`);
+
+  const expenseId = uuid();
+  await pool.query(
+    `INSERT INTO fin_expenses (id,protocol,expense_type,category,description,amount_cents,threshold_cents,requester_name,requester_identity,created_by_identity,evidence_file_name,evidence_file_url,evidence_storage_key,contract_id,cost_center_id,supplier_id,idempotency_key,created_at)
+     VALUES ($1,$2,'compra','material sintético','Compra sintética para o painel do Marcelo validar aprovação unificada',40000,40000,'Solicitante sintético',$3,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+    [expenseId, `DES-FIN-${stamp}-${tag}`, requesterIdentity, `evidencia-${tag}.json`, `synthetic://adm/${tag}.json`, `synthetic/adm/${tag}.json`, space.contractId, space.costCenterId, space.supplierId, `adm-panel-${tag}-${expenseId.slice(0, 8)}`, at],
+  );
+
+  const ticketId = uuid();
+  await pool.query(
+    `INSERT INTO cli_tickets_v2 (id,protocol,client_account_id,title,description,status,priority,sla_due_at,responsible_name,created_at)
+     VALUES ($1,$2,$3,'Chamado sintético do painel','Chamado sintético aberto para provar SLA estourado no painel do Marcelo','aberto','alta',$4,'Operação sintética',$5)`,
+    [ticketId, `CLI-${stamp}-${tag}`, accountId, at, at],
+  );
+
+  const occurrenceId = uuid();
+  await pool.query(
+    `INSERT INTO ops_occurrence_book (id,protocol,category,severity,title,description,status,responsible_name,occurred_at,created_by,created_at)
+     VALUES ($1,$2,'operacional','critica','Ocorrência sintética crítica','Ocorrência sintética crítica aberta para o painel do Marcelo','aberto','Supervisão sintética',$3,'admin',$3)`,
+    [occurrenceId, `OCO-${stamp}-${tag}`, at],
+  );
+
+  const leadId = uuid();
+  await pool.query(
+    `INSERT INTO public_leads (id,request_kind,name,phone,city,property_type,services,details,status,consented_at,created_at)
+     VALUES ($1,'quote','Lead sintético','11999999999','Guarulhos','Empresa ou comércio','{}','Pedido sintético do gate ADM','new',$2,$2)`,
+    [leadId, at],
+  );
+
+  const companyId = uuid();
+  await pool.query("INSERT INTO crm_companies (id,display_name,type,status,created_by,created_at) VALUES ($1,$2,'prospect','active','admin',$3)", [companyId, `Empresa sintética ADM ${tag}`, at]);
+  const opportunityId = uuid();
+  await pool.query(
+    `INSERT INTO crm_opportunities (id,company_id,title,responsible_name,estimated_value,priority,created_at)
+     VALUES ($1,$2,$3,'Comercial sintético',12000.00,'alta',$4)`,
+    [opportunityId, companyId, `Oportunidade sintética ADM ${tag}`, at],
+  );
+
+  const proposalId = uuid();
+  await pool.query(
+    `INSERT INTO crm_proposals (id,company_id,title,status,version,total_cost,total_price,created_by,created_at)
+     VALUES ($1,$2,$3,'enviada',1,3000.00,5000.00,'admin',$4)`,
+    [proposalId, companyId, `Proposta sintética ADM ${tag}`, at],
+  );
+
+  const contractId = uuid();
+  await pool.query(
+    `INSERT INTO crm_contracts (id,proposal_id,proposal_version,company_id,title,status,origin,idempotency_key,created_by,created_at)
+     VALUES ($1,$2,1,$3,$4,'ativo','manual',$5,'admin',$6)`,
+    [contractId, proposalId, companyId, `Contrato sintético ADM ${tag}`, `adm-contract-${tag}-${contractId.slice(0, 8)}`, at],
+  );
+  await pool.query(
+    `INSERT INTO crm_contract_implantations (contract_id,proposal_id,proposal_version,status,created_by,created_at)
+     VALUES ($1,$2,1,'em_andamento','admin',$3)`,
+    [contractId, proposalId, at],
+  );
+
+  const renewalId = uuid();
+  await pool.query(
+    `INSERT INTO crm_renewals (id,company_id,contract_id,title,status,renewal_date,new_value,responsible_name,created_by,created_at)
+     VALUES ($1,$2,$3,$4,'planejada',$5,24000.00,'Comercial sintético','admin',$6)`,
+    [renewalId, companyId, contractId, `Renovação sintética ADM ${tag}`, day, at],
+  );
+
+  const receivableId = uuid();
+  await pool.query(
+    `INSERT INTO fin_accounts_receivable (id,protocol,client_account_id,competence_date,due_date,amount_cents,status,description,created_at)
+     VALUES ($1,$2,$3,$4,$4,150000,'pendente','Recebível sintético vencido do painel do Marcelo',$5)`,
+    [receivableId, `REC-FIN-${stamp}-${tag}`, accountId, day, at],
+  );
+  const payableId = uuid();
+  await pool.query(
+    `INSERT INTO fin_accounts_payable (id,protocol,supplier_id,competence_date,due_date,amount_cents,status,description,created_at)
+     VALUES ($1,$2,$3,$4,$4,90000,'pendente','Pagável sintético a vencer do painel do Marcelo',$5)`,
+    [payableId, `PAG-FIN-${stamp}-${tag}`, space.supplierId, day, at],
+  );
+
+  const discountId = uuid();
+  await pool.query(
+    `INSERT INTO crm_discount_requests (id,company_id,requested_discount_percent,original_price,discounted_price,reason,requester_id,requester_name,requester_role,status,created_by,created_at)
+     VALUES ($1,$2,10.000,1000.00,900.00,'Desconto sintético solicitado para o gate do painel do Marcelo',$3,'Solicitante sintético','comercial','solicitado','admin',$4)`,
+    [discountId, companyId, requesterIdentity, at],
+  );
+
+  const goalId = uuid();
+  await pool.query(
+    `INSERT INTO crm_goals (id,title,period_start,period_end,target_value,status,created_by,created_at)
+     VALUES ($1,$2,$3,$4,100000.00,'ativo','admin',$5)`,
+    [goalId, `Meta sintética ADM ${tag}`, `${year}-01-01`, `${year}-12-31`, at],
+  );
+
+  const diaryRestrictedId = uuid();
+  const diaryTeamId = uuid();
+  await pool.query(
+    `INSERT INTO crm_management_diary (id,contract_id,company_id,title,decision,category,visibility,decision_date,created_by,created_at)
+     VALUES ($1,$2,$3,$4,'Decisão sintética restrita registrada para o diário CON-11 do painel.','decisao','restrito',$5,'admin',$6)`,
+    [diaryRestrictedId, contractId, companyId, `Decisão restrita ADM ${tag}`, day, at],
+  );
+  await pool.query(
+    `INSERT INTO crm_management_diary (id,contract_id,company_id,title,decision,category,visibility,decision_date,created_by,created_at)
+     VALUES ($1,$2,$3,$4,'Decisão sintética de equipe registrada para o diário CON-11 do painel.','decisao','equipe_gestao',$5,'admin',$6)`,
+    [diaryTeamId, contractId, companyId, `Decisão de equipe ADM ${tag}`, day, at],
+  );
+
+  return {
+    tag, day, period: { start: `${year}-01-01`, end: `${year}-12-31` },
+    accountId, expenseId, ticketId, occurrenceId, leadId, companyId, opportunityId, proposalId,
+    contractId, renewalId, receivableId, payableId, discountId, goalId, diaryRestrictedId, diaryTeamId,
+  };
+}
+
+const EXPECTED_COUNTS = {
+  "ADM-01.pendencias": 3,
+  "ADM-02.leads_novos": 1,
+  "ADM-02.oportunidades_paradas": 1,
+  "ADM-02.propostas": 1,
+  "ADM-03.ocorrencias_criticas": 1,
+  "ADM-03.sla_estourado": 1,
+  "ADM-03.implantacoes_pendentes": 1,
+  "ADM-04.recebiveis_vencidos": 1,
+  "ADM-04.pagaveis_a_vencer": 1,
+  "ADM-05.renovacoes": 1,
+  "ADM-06.aprovacoes_pendentes": 2,
+  "ADM-12.oportunidades_expansao": 1,
+};
+
+test("L07 ADM-01..05/12: papéis, origem declarada e drill-down de cada indicador até o registro canônico", { skip: !RUN, timeout: 180_000 }, async () => {
+  const marcelo = await provisionAndLoginStaff(pool, api, { role: "marcelo" });
+  const ti = await provisionAndLoginStaff(pool, api, { role: "ti" });
+  const rh = await provisionAndLoginStaff(pool, api, { role: "rh" });
+  const financeiro = await provisionAndLoginStaff(pool, api, { role: "financeiro" });
+  const requester = await provisionAndLoginStaff(pool, api, { role: "comercial" });
+  const seed = await seedPanelUniverse(2019, requester.id);
+  const range = `period_start=${seed.period.start}&period_end=${seed.period.end}`;
+
+  // 1. Anônimo e papéis indevidos são negados antes de qualquer leitura.
+  assert.equal((await adm("/indicators")).status, 401, "anonymous indicators denied");
+  assert.equal((await adm("/drilldown?indicator=ADM-01.pendencias")).status, 401, "anonymous drilldown denied");
+  assert.equal((await adm("/record?kind=fin_expense&id=" + seed.expenseId)).status, 401, "anonymous record denied");
+  assert.equal((await adm("/indicators", { cookie: rh.cookie })).status, 403, "rh cannot read the panel");
+  assert.equal((await adm("/indicators", { cookie: financeiro.cookie })).status, 403, "financeiro is not a panel role");
+
+  // 2. TI lê, mas não decide; Marcelo lê e decide. O escopo vem do servidor.
+  const tiRead = await adm(`/indicators?${range}`, { cookie: ti.cookie });
+  assert.equal(tiRead.status, 200, "ti reads the panel");
+  assert.equal(tiRead.body.scope.can_decide, false, "ti scope is read-only on the server");
+  const read = await adm(`/indicators?${range}`, { cookie: marcelo.cookie });
+  assert.equal(read.status, 200, JSON.stringify(read.body));
+  assert.equal(read.body.scope.can_decide, true, "marcelo decides");
+  assert.equal(read.body.unavailable_count, 0, "every canonical source is readable");
+  assert.ok(read.body.as_of, "indicator response declares the base date");
+
+  // 3. Cada cartão declara período, fonte e data-base, e bate com o universo semeado.
+  assert.equal(read.body.indicators.length, Object.keys(EXPECTED_COUNTS).length, "every ADM indicator is published");
+  for (const indicator of read.body.indicators) {
+    assert.equal(indicator.status, "ok", `${indicator.code} available`);
+    assert.ok(indicator.source.tables.length > 0, `${indicator.code} declares the canonical source`);
+    assert.ok(indicator.source.period_field, `${indicator.code} declares the period field`);
+    assert.equal(indicator.period.start, seed.period.start, `${indicator.code} declares the period`);
+    assert.ok(indicator.as_of, `${indicator.code} declares the base date`);
+    assert.equal(indicator.value.record_count, EXPECTED_COUNTS[indicator.code], `${indicator.code} counts canonical records`);
+  }
+
+  // 4. Todo indicador abre a lista filtrada e cada linha abre o registro real.
+  for (const code of Object.keys(EXPECTED_COUNTS)) {
+    const drilldown = await adm(`/drilldown?indicator=${encodeURIComponent(code)}&${range}`, { cookie: marcelo.cookie });
+    assert.equal(drilldown.status, 200, `${code} drilldown`);
+    assert.equal(drilldown.body.record_count, EXPECTED_COUNTS[code], `${code} drilldown matches the card`);
+    for (const row of drilldown.body.records) {
+      assert.ok(row.canonical.table, `${code} row declares the canonical table`);
+      const record = await adm(row.canonical.api.replace("/api/adm/panel", ""), { cookie: marcelo.cookie });
+      assert.equal(record.status, 200, `${code} record ${row.record_id}`);
+      assert.equal(record.body.record.id, row.record_id, "drilldown opens the very same canonical record");
+      assert.equal(record.body.source_table, row.canonical.table);
+    }
+  }
+
+  // 5. Projeção: o registro do lead não devolve dados pessoais do solicitante.
+  const lead = await adm(`/record?kind=public_lead&id=${seed.leadId}`, { cookie: marcelo.cookie });
+  assert.equal(lead.status, 200);
+  assert.equal("name" in lead.body.record, false, "lead projection hides the personal name");
+  assert.equal("phone" in lead.body.record, false, "lead projection hides the phone");
+
+  // 6. Entradas inválidas são recusadas sem vazar detalhe de SQL.
+  assert.equal((await adm("/drilldown?indicator=ADM-99.inexistente", { cookie: marcelo.cookie })).status, 400);
+  assert.equal((await adm("/record?kind=tabela_arbitraria&id=" + seed.expenseId, { cookie: marcelo.cookie })).status, 400);
+  assert.equal((await adm("/record?kind=fin_expense&id=nao-e-uuid", { cookie: marcelo.cookie })).status, 400);
+  const missing = await adm(`/record?kind=fin_expense&id=${uuid()}`, { cookie: marcelo.cookie });
+  assert.equal(missing.status, 404);
+  assert.equal("details" in missing.body, false, "no SQL details leak");
+  assert.equal((await adm(`/indicators?period_start=15%2F06%2F2019`, { cookie: marcelo.cookie })).status, 400);
+  assert.equal((await adm(`/indicators?period_start=2019-12-31&period_end=2019-01-01`, { cookie: marcelo.cookie })).status, 400);
+});
+
+test("L07 ADM-01/03: falha de leitura da fonte não vira zero nem lista vazia e o retry recupera", { skip: !RUN, timeout: 180_000 }, async () => {
+  const marcelo = await provisionAndLoginStaff(pool, api, { role: "marcelo" });
+  const requester = await provisionAndLoginStaff(pool, api, { role: "comercial" });
+  const seed = await seedPanelUniverse(2018, requester.id);
+  const range = `period_start=${seed.period.start}&period_end=${seed.period.end}`;
+
+  const before = await adm(`/indicators?${range}`, { cookie: marcelo.cookie });
+  assert.equal(before.body.indicators.find(item => item.code === "ADM-03.ocorrencias_criticas").value.record_count, 1);
+
+  let degraded, degradedDrilldown, drilldownOther;
+  await pool.query("ALTER TABLE ops_occurrence_book RENAME TO ops_occurrence_book_adm_unavailable");
+  try {
+    degraded = await adm(`/indicators?${range}`, { cookie: marcelo.cookie });
+    degradedDrilldown = await adm(`/drilldown?indicator=ADM-03.ocorrencias_criticas&${range}`, { cookie: marcelo.cookie });
+    drilldownOther = await adm(`/drilldown?indicator=ADM-04.recebiveis_vencidos&${range}`, { cookie: marcelo.cookie });
+  } finally {
+    await pool.query("ALTER TABLE ops_occurrence_book_adm_unavailable RENAME TO ops_occurrence_book");
+  }
+
+  assert.equal(degraded.status, 200, "the panel still answers");
+  const broken = degraded.body.indicators.filter(item => item.source.tables.includes("ops_occurrence_book"));
+  assert.equal(broken.length, 2, "two cards depend on the unreadable source");
+  for (const indicator of broken) {
+    assert.equal(indicator.status, "indisponivel", `${indicator.code} declares the failure`);
+    assert.equal(indicator.value, null, `${indicator.code} shows no invented number`);
+    assert.equal(indicator.unavailable_reason, "falha_de_leitura_da_fonte_canonica");
+  }
+  assert.equal(degraded.body.unavailable_count, 2);
+  const intact = degraded.body.indicators.find(item => item.code === "ADM-04.recebiveis_vencidos");
+  assert.equal(intact.status, "ok", "an unrelated card keeps working");
+  assert.equal(degradedDrilldown.status, 503, "a failed read is not an empty list");
+  assert.deepEqual(degradedDrilldown.body, { error: "drilldown_source_unavailable" });
+  assert.equal(drilldownOther.status, 200, "unrelated drilldown still works");
+
+  // Retry após a fonte voltar: o número canônico retorna sem intervenção manual.
+  const after = await adm(`/indicators?${range}`, { cookie: marcelo.cookie });
+  assert.equal(after.body.unavailable_count, 0);
+  assert.equal(after.body.indicators.find(item => item.code === "ADM-03.ocorrencias_criticas").value.record_count, 1);
+  const retried = await adm(`/drilldown?indicator=ADM-03.ocorrencias_criticas&${range}`, { cookie: marcelo.cookie });
+  assert.equal(retried.status, 200);
+  assert.equal(retried.body.records[0].record_id, seed.occurrenceId);
+
+  // Período sem registro é vazio declarado (leitura concluída), não falha.
+  const empty = await adm("/indicators?period_start=1990-01-01&period_end=1990-12-31", { cookie: marcelo.cookie });
+  const emptyCard = empty.body.indicators.find(item => item.code === "ADM-01.pendencias");
+  assert.equal(emptyCard.status, "ok");
+  assert.equal(emptyCard.value.record_count, 0);
+  assert.equal(emptyCard.value.amount_cents, null, "no records means no invented amount");
+  assert.equal(emptyCard.empty_reason, "sem_registro_canonico_no_periodo");
+});
+
+test("L07 ADM-06: decisão unificada com alçada, segregação, idempotência concorrente e auditoria fail-closed", { skip: !RUN, timeout: 180_000 }, async () => {
+  const marcelo = await provisionAndLoginStaff(pool, api, { role: "marcelo" });
+  const admin = await provisionAndLoginStaff(pool, api, { role: "admin" });
+  const ti = await provisionAndLoginStaff(pool, api, { role: "ti" });
+  const requester = await provisionAndLoginStaff(pool, api, { role: "comercial" });
+  const seed = await seedPanelUniverse(2017, requester.id);
+  const range = `period_start=${seed.period.start}&period_end=${seed.period.end}`;
+  const decide = (cookie, body, extra = {}) => adm("/decisions", { method: "POST", cookie, body, ...extra });
+
+  const payload = { source_kind: "fin_expense", source_id: seed.expenseId, decision: "aprovada", reason: "Aprovação sintética da despesa pelo painel unificado do Marcelo.", idempotency_key: `adm06-${seed.tag}-aprova` };
+
+  // 1. Autorização: anônimo, papel indevido, TI somente leitura e origem estranha.
+  assert.equal((await decide(undefined, payload)).status, 401);
+  assert.equal((await decide(ti.cookie, payload)).status, 403, "ti cannot decide");
+  assert.deepEqual((await decide(ti.cookie, payload)).body, { error: "read_only" });
+  const crossOrigin = await decide(marcelo.cookie, payload, { origin: "https://externo.example" });
+  assert.equal(crossOrigin.status, 403);
+  assert.deepEqual(crossOrigin.body, { error: "forbidden_origin" });
+
+  // 2. Sem alçada ativa ninguém aprova: ausência de política nunca aprova.
+  const withoutAuthority = await decide(marcelo.cookie, payload);
+  assert.equal(withoutAuthority.status, 403, JSON.stringify(withoutAuthority.body));
+  assert.deepEqual(withoutAuthority.body, { error: "approval_authority_exceeded" });
+  assert.equal((await pool.query("SELECT status FROM fin_expenses WHERE id=$1", [seed.expenseId])).rows[0].status, "pendente");
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM adm_panel_decisions WHERE source_id=$1", [seed.expenseId])).rows[0].n, 0);
+
+  await pool.query(
+    "INSERT INTO fin_expense_approval_authorities (identity_id,max_amount_cents,granted_by_identity) VALUES ($1,100000,$2) ON CONFLICT (identity_id) DO UPDATE SET max_amount_cents=100000,is_active=true",
+    [marcelo.id, admin.id],
+  );
+  // O solicitante não decide a própria pendência.
+  await pool.query(
+    "INSERT INTO fin_expense_approval_authorities (identity_id,max_amount_cents,granted_by_identity) VALUES ($1,100000,$2) ON CONFLICT (identity_id) DO UPDATE SET max_amount_cents=100000,is_active=true",
+    [admin.id, admin.id],
+  );
+  await pool.query("UPDATE fin_expenses SET requester_identity=$1 WHERE id=$1 AND false", [admin.id]);
+
+  // 3. Validações de conteúdo.
+  assert.equal((await decide(marcelo.cookie, { ...payload, reason: "curto" })).status, 400);
+  assert.equal((await decide(marcelo.cookie, { ...payload, idempotency_key: "curta" })).status, 400);
+  assert.equal((await decide(marcelo.cookie, { ...payload, source_kind: "tabela_arbitraria" })).status, 400);
+  assert.equal((await decide(marcelo.cookie, { ...payload, source_id: uuid() })).status, 404);
+
+  // 4. Retry idempotente sob concorrência: uma decisão, cinco replays.
+  const concurrent = await Promise.all(Array.from({ length: 6 }, () => decide(marcelo.cookie, payload)));
+  assert.equal(concurrent.filter(item => item.status === 201).length, 1, `exactly one decision is created: ${JSON.stringify(concurrent.map(item => [item.status, item.body]))}`);
+  assert.equal(concurrent.filter(item => item.status === 200 && item.body.idempotent_replay).length, 5, "the other attempts replay");
+  assert.equal(new Set(concurrent.map(item => item.body.decision.id)).size, 1);
+  const decisionRow = concurrent.find(item => item.status === 201).body.decision;
+  assert.equal(decisionRow.decided_by_identity, marcelo.id, "authorship comes from the session");
+  assert.equal(Number(decisionRow.authority_limit_cents), 100000, "the applied authority limit is snapshotted");
+
+  // 5. O registro canônico mudou junto, com histórico e trilha.
+  const expense = (await pool.query("SELECT status,approver_identity,approval_limit_cents FROM fin_expenses WHERE id=$1", [seed.expenseId])).rows[0];
+  assert.equal(expense.status, "aprovado");
+  assert.equal(expense.approver_identity, marcelo.id);
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM fin_expense_history WHERE expense_id=$1", [seed.expenseId])).rows[0].n, 1);
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM adm_panel_decision_history WHERE source_id=$1", [seed.expenseId])).rows[0].n, 1);
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM audit_log WHERE target=$1 AND action='adm_panel_decision_approve'", [seed.expenseId])).rows[0].n, 1);
+  await assert.rejects(pool.query("UPDATE adm_panel_decision_history SET reason='adulterado' WHERE source_id=$1", [seed.expenseId]), /adm_panel_decision_history_immutable/);
+  await assert.rejects(pool.query("DELETE FROM adm_panel_decisions WHERE source_id=$1", [seed.expenseId]), /adm_panel_decision_immutable/);
+
+  // 6. Mesma chave com conteúdo diferente é recusada; a origem já decidida também.
+  assert.equal((await decide(marcelo.cookie, { ...payload, reason: "Outro motivo sintético completamente diferente do primeiro." })).status, 409);
+  assert.equal((await decide(marcelo.cookie, { ...payload, idempotency_key: `adm06-${seed.tag}-outra` })).status, 409);
+
+  // 7. Desconto: alçada acima do permitido é recusada e o registro não muda.
+  const discountPayload = { source_kind: "crm_discount_request", source_id: seed.discountId, decision: "aprovada", reason: "Aprovação sintética do desconto comercial pelo painel unificado.", idempotency_key: `adm06-${seed.tag}-desconto` };
+  await pool.query("UPDATE fin_expense_approval_authorities SET max_amount_cents=100 WHERE identity_id=$1", [marcelo.id]);
+  const overLimit = await decide(marcelo.cookie, discountPayload);
+  assert.equal(overLimit.status, 403);
+  assert.deepEqual(overLimit.body, { error: "approval_authority_exceeded" });
+  assert.equal((await pool.query("SELECT status FROM crm_discount_requests WHERE id=$1", [seed.discountId])).rows[0].status, "solicitado");
+  await pool.query("UPDATE fin_expense_approval_authorities SET max_amount_cents=100000 WHERE identity_id=$1", [marcelo.id]);
+
+  // 8. Auditoria indisponível: 503 e rollback completo (nada decidido).
+  await pool.query("ALTER TABLE audit_log RENAME TO audit_log_adm06_unavailable");
+  let failed;
+  try { failed = await decide(marcelo.cookie, discountPayload); }
+  finally { await pool.query("ALTER TABLE audit_log_adm06_unavailable RENAME TO audit_log"); }
+  assert.equal(failed.status, 503, JSON.stringify(failed.body));
+  assert.deepEqual(failed.body, { error: "audit_unavailable" });
+  assert.equal((await pool.query("SELECT status FROM crm_discount_requests WHERE id=$1", [seed.discountId])).rows[0].status, "solicitado", "canonical record rolled back");
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM adm_panel_decisions WHERE source_id=$1", [seed.discountId])).rows[0].n, 0, "no decision row survives");
+
+  // 9. Com auditoria de volta, a decisão do desconto conclui e some da pendência.
+  const approvedDiscount = await decide(marcelo.cookie, discountPayload);
+  assert.equal(approvedDiscount.status, 201, JSON.stringify(approvedDiscount.body));
+  assert.equal((await pool.query("SELECT status,approver_id FROM crm_discount_requests WHERE id=$1", [seed.discountId])).rows[0].approver_id, marcelo.id);
+  const pending = await adm(`/drilldown?indicator=ADM-06.aprovacoes_pendentes&${range}`, { cookie: marcelo.cookie });
+  assert.equal(pending.body.record_count, 0, "decided items leave the pending card");
+});
+
+test("L07 ADM-07/08/09: escopo por identidade, relatório limitado/auditado e configuração versionada", { skip: !RUN, timeout: 180_000 }, async () => {
+  const marcelo = await provisionAndLoginStaff(pool, api, { role: "marcelo" });
+  const outro = await provisionAndLoginStaff(pool, api, { role: "admin" });
+  const ti = await provisionAndLoginStaff(pool, api, { role: "ti" });
+  const rh = await provisionAndLoginStaff(pool, api, { role: "rh" });
+  const requester = await provisionAndLoginStaff(pool, api, { role: "comercial" });
+  const seed = await seedPanelUniverse(2016, requester.id);
+
+  // ADM-07: o escopo é da sessão; identidade enviada pelo cliente é ignorada.
+  const favorite = await adm("/workspace", { method: "POST", cookie: marcelo.cookie, body: { kind: "favorite", query: "recebíveis vencidos", module: "painel-marcelo", user_identity: outro.id } });
+  assert.equal(favorite.status, 201, JSON.stringify(favorite.body));
+  assert.equal(favorite.body.item.user_identity, marcelo.id, "the owner comes from the session");
+  assert.equal((await adm("/workspace", { method: "POST", cookie: ti.cookie, body: { kind: "favorite", query: "x y", module: "painel" } })).status, 403);
+  assert.equal((await adm("/workspace", { cookie: rh.cookie })).status, 403);
+  assert.equal((await adm("/workspace", { method: "POST", cookie: marcelo.cookie, body: { kind: "shortcut", shortcut_name: "Externo", context: "tentativa", url: "https://externo.example/x" } })).status, 400, "shortcut must stay internal");
+  const mine = await adm("/workspace", { cookie: marcelo.cookie });
+  const theirs = await adm("/workspace", { cookie: outro.cookie });
+  assert.equal(mine.body.favorites.some(item => item.id === favorite.body.item.id), true);
+  assert.equal(theirs.body.favorites.some(item => item.id === favorite.body.item.id), false, "another identity never sees it");
+
+  // ADM-08: o total do relatório vem do mesmo cálculo canônico do cartão.
+  const indicatorCode = "ADM-04.recebiveis_vencidos";
+  const card = (await adm(`/indicators?period_start=${seed.period.start}&period_end=${seed.period.end}`, { cookie: marcelo.cookie })).body.indicators.find(item => item.code === indicatorCode);
+  const reportBody = { indicator_code: indicatorCode, title: `Relatório sintético ADM-08 ${seed.tag}`, period_start: seed.period.start, period_end: seed.period.end, idempotency_key: `adm08-${seed.tag}`, recipient_identity: ti.id };
+  assert.equal((await adm("/reports", { method: "POST", cookie: ti.cookie, body: reportBody })).status, 403, "ti cannot generate");
+  assert.equal((await adm("/reports", { method: "POST", cookie: marcelo.cookie, body: { ...reportBody, recipient_identity: requester.id } })).status, 403, "recipient must hold a panel role");
+  const reportRetries = await Promise.all(Array.from({ length: 4 }, () => adm("/reports", { method: "POST", cookie: marcelo.cookie, body: reportBody })));
+  assert.equal(reportRetries.filter(item => item.status === 201).length, 1, "one report is generated");
+  assert.equal(reportRetries.filter(item => item.status === 200 && item.body.idempotent_replay).length, 3, "concurrent retries replay");
+  const report = reportRetries.find(item => item.status === 201).body.report;
+  assert.equal(report.totals.record_count, card.value.record_count, "report total equals the canonical card");
+  assert.equal(Number(report.totals.amount_cents), Number(card.value.amount_cents));
+  assert.equal(report.is_limited, true);
+  assert.equal((await adm("/reports", { method: "POST", cookie: marcelo.cookie, body: { ...reportBody, title: "Outro título sintético do relatório" } })).status, 409, "same key with other content is rejected");
+
+  assert.equal((await adm(`/report-download?id=${report.id}`)).status, 401);
+  assert.equal((await adm(`/report-download?id=${report.id}`, { cookie: outro.cookie })).status, 403, "neither author nor recipient");
+  const download = await adm(`/report-download?id=${report.id}`, { cookie: ti.cookie });
+  assert.equal(download.status, 200, "the authorized recipient reads it");
+  assert.deepEqual(Object.keys(download.body.totals).sort(), ["amount_cents", "indicator_code", "period_end", "period_start", "record_count"]);
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM adm_report_logs WHERE report_id=$1 AND action='report_download'", [report.id])).rows[0].n, 1, "download is tracked");
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM audit_log WHERE target=$1 AND action='adm_panel_report_download'", [report.id])).rows[0].n, 1);
+
+  // ADM-09: nova versão preserva a anterior; auditoria indisponível reverte tudo.
+  const configKey = `painel.sla.${seed.tag}`;
+  const first = await adm("/business-configs", { method: "POST", cookie: marcelo.cookie, body: { config_key: configKey, category: "painel", config_value: { sla_horas: 24 }, reason: "Primeira versão sintética da configuração de SLA do painel." } });
+  assert.equal(first.status, 201, JSON.stringify(first.body));
+  assert.equal(first.body.config.version, 1);
+  const second = await adm("/business-configs", { method: "POST", cookie: marcelo.cookie, body: { config_key: configKey, category: "painel", config_value: { sla_horas: 12 }, reason: "Segunda versão sintética reduzindo o SLA do painel." } });
+  assert.equal(second.body.config.version, 2);
+  assert.equal(second.body.config.supersedes_id, first.body.config.id);
+  const versions = (await pool.query("SELECT version,is_active FROM adm_business_configs WHERE config_key=$1 ORDER BY version", [configKey])).rows;
+  assert.deepEqual(versions.map(row => row.version), [1, 2]);
+  assert.deepEqual(versions.map(row => row.is_active), [false, true], "the previous version is preserved and inactive");
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM adm_business_config_history WHERE config_key=$1", [configKey])).rows[0].n, 2);
+  assert.equal((await adm("/business-configs", { method: "POST", cookie: marcelo.cookie, body: { config_key: configKey, category: "painel", config_value: { sla_horas: 8 }, reason: "curto" } })).status, 400);
+
+  await pool.query("ALTER TABLE audit_log RENAME TO audit_log_adm09_unavailable");
+  let failedConfig, failedFavorite, failedReport;
+  try {
+    failedConfig = await adm("/business-configs", { method: "POST", cookie: marcelo.cookie, body: { config_key: configKey, category: "painel", config_value: { sla_horas: 6 }, reason: "Versão sintética durante indisponibilidade da auditoria." } });
+    failedFavorite = await adm("/workspace", { method: "POST", cookie: marcelo.cookie, body: { kind: "favorite", query: "durante falha de auditoria", module: "painel-marcelo" } });
+    failedReport = await adm("/reports", { method: "POST", cookie: marcelo.cookie, body: { ...reportBody, idempotency_key: `adm08-${seed.tag}-falha` } });
+  } finally { await pool.query("ALTER TABLE audit_log_adm09_unavailable RENAME TO audit_log"); }
+  assert.equal(failedConfig.status, 503);
+  assert.equal(failedFavorite.status, 503);
+  assert.equal(failedReport.status, 503);
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM adm_business_configs WHERE config_key=$1", [configKey])).rows[0].n, 2, "no third version survived");
+  assert.equal((await pool.query("SELECT is_active FROM adm_business_configs WHERE config_key=$1 AND version=2", [configKey])).rows[0].is_active, true, "version 2 stays active after rollback");
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM adm_search_favorites WHERE query='durante falha de auditoria'")).rows[0].n, 0);
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM adm_reports WHERE idempotency_key=$1", [`adm08-${seed.tag}-falha`])).rows[0].n, 0);
+});
+
+test("L07 ADM-10/11/12: meta x realizado com fonte, diário CON-11 por permissão e análises dos módulos reais", { skip: !RUN, timeout: 180_000 }, async () => {
+  const marcelo = await provisionAndLoginStaff(pool, api, { role: "marcelo" });
+  const ti = await provisionAndLoginStaff(pool, api, { role: "ti" });
+  const rh = await provisionAndLoginStaff(pool, api, { role: "rh" });
+  const requester = await provisionAndLoginStaff(pool, api, { role: "comercial" });
+  const seed = await seedPanelUniverse(2015, requester.id);
+  const range = `period_start=${seed.period.start}&period_end=${seed.period.end}`;
+
+  // ADM-10: estimativa e realizado nunca são o mesmo número nem se somam.
+  assert.equal((await adm(`/goals?${range}`)).status, 401);
+  assert.equal((await adm(`/goals?${range}`, { cookie: rh.cookie })).status, 403);
+  const goals = await adm(`/goals?${range}`, { cookie: marcelo.cookie });
+  assert.equal(goals.status, 200, JSON.stringify(goals.body));
+  const goal = goals.body.goals.find(item => item.goal_id === seed.goalId);
+  assert.ok(goal, "the canonical goal is published");
+  assert.equal(goal.target.is_estimate, true);
+  assert.equal(goal.target.source, "crm_goals.target_value");
+  assert.equal(goal.realized_status, "ok");
+  assert.equal(goal.realized.source, "crm_contracts.total_price");
+  assert.equal(goal.realized.record_count, 1, "realized counts canonical contracts");
+  assert.notEqual(goal.realized.value, goal.target.value, "estimate and result are distinct numbers");
+
+  // ADM-11: TI não vê decisões restritas; Marcelo vê, e todo acesso é registrado.
+  const tiDiary = await adm("/decision-diary", { cookie: ti.cookie });
+  assert.equal(tiDiary.status, 200);
+  assert.equal(tiDiary.body.restricted_visible, false);
+  assert.equal(tiDiary.body.entries.some(entry => entry.id === seed.diaryRestrictedId), false, "restricted decision is hidden from ti");
+  assert.equal(tiDiary.body.entries.some(entry => entry.id === seed.diaryTeamId), true);
+  assert.equal((await adm("/decision-diary", { cookie: rh.cookie })).status, 403);
+  const diary = await adm(`/decision-diary?contract_id=${seed.contractId}`, { cookie: marcelo.cookie });
+  assert.equal(diary.body.restricted_visible, true);
+  assert.equal(diary.body.entries.some(entry => entry.id === seed.diaryRestrictedId), true);
+  assert.equal(
+    (await pool.query("SELECT count(*)::int AS n FROM adm_management_diary_access WHERE diary_id=$1 AND accessor_identity=$2", [seed.diaryRestrictedId, marcelo.id])).rows[0].n >= 1,
+    true,
+    "the access is registered with the reader identity",
+  );
+
+  const accessBefore = (await pool.query("SELECT count(*)::int AS n FROM adm_management_diary_access")).rows[0].n;
+  await pool.query("ALTER TABLE audit_log RENAME TO audit_log_adm11_unavailable");
+  let failedDiary;
+  try { failedDiary = await adm(`/decision-diary?contract_id=${seed.contractId}`, { cookie: marcelo.cookie }); }
+  finally { await pool.query("ALTER TABLE audit_log_adm11_unavailable RENAME TO audit_log"); }
+  assert.equal(failedDiary.status, 503, "sensitive read is fail-closed when the audit is unavailable");
+  assert.deepEqual(failedDiary.body, { error: "audit_unavailable" });
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM adm_management_diary_access")).rows[0].n, accessBefore, "no access row survives the rollback");
+
+  // ADM-12: cada bloco declara fonte e tipo; falha de leitura é declarada.
+  const expansion = await adm(`/expansion?${range}`, { cookie: marcelo.cookie });
+  assert.equal(expansion.status, 200);
+  const opportunities = expansion.body.blocks.find(block => block.key === "oportunidades_abertas");
+  const contracts = expansion.body.blocks.find(block => block.key === "contratos_ativos");
+  assert.equal(opportunities.kind, "estimativa");
+  assert.equal(contracts.kind, "realizado");
+  assert.equal(opportunities.value.record_count, 1);
+  assert.equal(contracts.value.record_count, 1);
+  assert.ok(opportunities.source.tables.includes("crm_opportunities"));
+
+  let degradedExpansion;
+  await pool.query("ALTER TABLE crm_opportunities RENAME TO crm_opportunities_adm_unavailable");
+  try { degradedExpansion = await adm(`/expansion?${range}`, { cookie: marcelo.cookie }); }
+  finally { await pool.query("ALTER TABLE crm_opportunities_adm_unavailable RENAME TO crm_opportunities"); }
+  const degradedBlock = degradedExpansion.body.blocks.find(block => block.key === "oportunidades_abertas");
+  assert.equal(degradedBlock.status, "indisponivel");
+  assert.equal(degradedBlock.value, null, "an unreadable module never becomes zero");
+});
+
+test("L07 ADM-01..12: Chromium percorre o painel do Marcelo, do cartão ao registro e à decisão", { skip: !RUN, timeout: 300_000 }, async () => {
+  const marcelo = await provisionAndLoginStaff(pool, api, { role: "marcelo" });
+  const admin = await provisionAndLoginStaff(pool, api, { role: "admin" });
+  const requester = await provisionAndLoginStaff(pool, api, { role: "comercial" });
+  const seed = await seedPanelUniverse(2014, requester.id);
+  await pool.query(
+    "INSERT INTO fin_expense_approval_authorities (identity_id,max_amount_cents,granted_by_identity) VALUES ($1,100000,$2) ON CONFLICT (identity_id) DO UPDATE SET max_amount_cents=100000,is_active=true",
+    [marcelo.id, admin.id],
+  );
+  const browser = await playwrightChromium.launch({ executablePath: await packagedChromium.executablePath(), headless: true, args: packagedChromium.args.filter(arg => arg !== "--disable-web-security") });
+  try {
+    const context = await browser.newContext({ serviceWorkers: "block" });
+    const pair = marcelo.cookie.split(";")[0], separator = pair.indexOf("=");
+    await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
+    const page = await context.newPage();
+    await page.setExtraHTTPHeaders({ origin: baseUrl });
+
+    // 1. Falha de leitura visível com "Tentar novamente", sem número inventado.
+    await page.route("**/api/adm/panel/indicators**", route => route.fulfill({ status: 500, contentType: "application/json", body: '{"error":"internal"}' }));
+    await page.goto(`${baseUrl}/admin/marcelo`, { waitUntil: "networkidle" });
+    await page.waitForSelector('[data-testid="adm-read-error"]');
+    assert.match(await page.getByTestId("adm-read-error").textContent(), /não foi possível/i);
+    assert.equal(await page.locator('[data-testid="adm-indicators"] article').count(), 0, "no card is rendered from a failed read");
+    await page.unroute("**/api/adm/panel/indicators**");
+    await page.getByTestId("adm-retry").click();
+    await page.waitForSelector('[data-testid="adm-as-of"]');
+
+    // 2. Período da jornada e cartões com origem e data-base visíveis.
+    await page.getByTestId("adm-period-start").fill(seed.period.start);
+    await page.getByTestId("adm-period-end").fill(seed.period.end);
+    await page.getByTestId("adm-period-apply").click();
+    // Espera o cartão declarar o período pedido: sem isso a asserção poderia
+    // ler o período anterior e comparar número de outra janela.
+    await page.waitForFunction(
+      expected => (document.querySelector('[data-testid="adm-card-period-adm-04-recebiveis-vencidos"]')?.textContent || "").includes(expected),
+      `Período: ${seed.period.start} a ${seed.period.end}`,
+    );
+    assert.match(await page.getByTestId("adm-card-count-adm-04-recebiveis-vencidos").textContent(), /^\s*1\b/);
+    assert.match(await page.getByTestId("adm-card-source-adm-04-recebiveis-vencidos").textContent(), /fin_accounts_receivable/);
+    assert.match(await page.getByTestId("adm-card-amount-adm-04-recebiveis-vencidos").textContent(), /R\$\s?1\.500,00/);
+
+    // 3. Cartão abre lista filtrada e o registro canônico real.
+    await page.getByTestId("adm-card-drill-adm-04-recebiveis-vencidos").click();
+    await page.waitForSelector(`[data-testid="adm-drill-row-${seed.receivableId}"]`);
+    await page.getByTestId(`adm-open-record-${seed.receivableId}`).click();
+    await page.waitForSelector('[data-testid="adm-record"]');
+    assert.match(await page.getByTestId("adm-record-table").textContent(), /fin_accounts_receivable/);
+    assert.equal((await page.getByTestId("adm-record-id").textContent()).includes(seed.receivableId), true);
+
+    // 4. Aba de aprovações decide a despesa canônica com motivo e chave.
+    await page.getByTestId("adm-tab-aprovacoes").click();
+    await page.waitForSelector(`[data-testid="adm-approval-${seed.expenseId}"]`);
+    await page.getByTestId(`adm-approval-select-${seed.expenseId}`).click();
+    await page.getByTestId("adm-decision-reason").fill("Aprovação sintética registrada pela jornada de navegador do painel.");
+    await page.getByTestId("adm-decision-key").fill(`adm06-ui-${seed.tag}`);
+    await page.getByTestId("adm-decision-approve").click();
+    await page.waitForSelector(`[data-testid="adm-decision-${seed.expenseId}"]`);
+    const persisted = (await pool.query("SELECT status,approver_identity FROM fin_expenses WHERE id=$1", [seed.expenseId])).rows[0];
+    assert.equal(persisted.status, "aprovado", "the browser journey changed the canonical record");
+    assert.equal(persisted.approver_identity, marcelo.id, "authorship comes from the session, not from the form");
+
+    // 5. Metas, diário e expansão continuam separando estimativa de resultado.
+    await page.getByTestId("adm-tab-metas").click();
+    await page.waitForSelector(`[data-testid="adm-goal-${seed.goalId}"]`);
+    assert.match(await page.getByTestId(`adm-goal-target-${seed.goalId}`).textContent(), /estimativa/i);
+    assert.match(await page.getByTestId(`adm-goal-realized-${seed.goalId}`).textContent(), /crm_contracts\.total_price/);
+    await page.getByTestId("adm-tab-diario").click();
+    await page.waitForSelector(`[data-testid="adm-diary-${seed.diaryRestrictedId}"]`);
+    await page.getByTestId("adm-tab-expansao").click();
+    await page.waitForSelector('[data-testid="adm-expansion-contratos_ativos"]');
+    assert.match(await page.getByTestId("adm-expansion-contratos_ativos").textContent(), /realizado/);
+  } finally { await browser.close(); }
+});

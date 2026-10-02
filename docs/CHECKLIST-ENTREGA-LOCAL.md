@@ -1171,87 +1171,87 @@ materiais de limpeza com consumo por local, reposição e comparação ao previs
 
 ## ADM-01
 painel “Meu dia” com pendências reais, prioridade, responsável e ação.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: Tela `/admin/marcelo` (aba Indicadores, `MarceloPanel.tsx`) com cartão `ADM-01.pendencias`. API `GET /api/adm/panel/indicators` e `GET /api/adm/panel/drilldown?indicator=ADM-01.pendencias` (`src/server/adm-panel-api.mjs`). Fontes canônicas: `fin_expenses` (pendente), `cli_tickets_v2` (aberto) e `ops_occurrence_book` (aberto), cada linha com prioridade, responsável e ação. Autorização decidida no servidor: anônimo 401; papéis fora de `admin|marcelo|ti` 403; TI estritamente leitura (`scope.can_decide=false`).
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA), subteste “ADM-01..05/12: papéis, origem declarada e drill-down de cada indicador até o registro canônico”: 3 pendências canônicas no período semeado, cada linha abrindo `GET /api/adm/panel/record` com o mesmo `record_id`; subteste “falha de leitura … e o retry recupera”: fonte indisponível vira `status:'indisponivel'` com `value:null` (nunca zero) e drill-down 503; jornada Chromium “do cartão ao registro e à decisão”.
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-02
 visão comercial com leads novos, oportunidades paradas, propostas e próximas ações.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: Cartões `ADM-02.leads_novos`, `ADM-02.oportunidades_paradas` e `ADM-02.propostas` na aba Indicadores. Fontes: `public_leads`, `crm_opportunities` (sem próxima ação/contrato) e `crm_proposals`. Cada cartão publica `source.tables`, `source.period_field`, `period` e `as_of`; o drill-down do lead projeta allowlist **sem PII** (sem nome/telefone).
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA), mesmo subteste de indicadores: contagem 1/1/1 contra os registros semeados, origem declarada por cartão e asserção explícita de que `name`/`phone` não saem na projeção do lead.
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-03
 visão operacional com cobertura, ocorrências críticas, SLA e implantação.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: Cartões `ADM-03.ocorrencias_criticas`, `ADM-03.sla_estourado` e `ADM-03.implantacoes_pendentes`. Fontes: `ops_occurrence_book` (severidade crítica), `cli_tickets_v2` (SLA vencido) e `crm_contract_implantations`. Indisponibilidade de fonte é declarada por cartão e contada em `unavailable_count`.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA): subteste de falha de leitura renomeia `ops_occurrence_book`, prova dois cartões `indisponivel` com `value:null`, drill-down 503 (`drilldown_source_unavailable`), cartão não relacionado intacto e recuperação pelo retry sem intervenção manual.
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-04
 visão financeira com fonte/competência, saldo, vencimentos e margem por contrato.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: Cartões `ADM-04.recebiveis_vencidos` e `ADM-04.pagaveis_a_vencer`, em centavos, com competência/vencimento como campo de período declarado. Fontes: `fin_accounts_receivable` e `fin_accounts_payable`. Valor formatado em `pt-BR`/BRL na tela e `amount_cents` na API.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA): contagem e soma conferidas contra os registros canônicos; jornada Chromium confere `R$ 1.500,00`, a fonte `fin_accounts_receivable` e a data-base no cartão, abre a lista filtrada e o registro real.
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-05
 contratos próximos de renovar, reclamações reincidentes e risco de perda justificado.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: Cartão `ADM-05.renovacoes` (fonte `crm_renewals`, com empresa, data de renovação e responsável) e drill-down para o registro canônico `crm_renewal`. Risco só aparece quando há registro canônico que o justifique — nenhum rótulo de risco é inferido sem origem.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA): o cartão conta a renovação semeada e cada linha abre o registro `crm_renewals`; período sem registro devolve `record_count:0` com `empty_reason:'sem_registro_canonico_no_periodo'` e `amount_cents:null` (ausência não vira zero inventado).
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-06
 aprovação unificada de descontos, compras, despesas e exceções permitidas; alçadas por valor/escopo.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: Aba Aprovações e `POST /api/adm/panel/decisions`, unificando despesas (`fin_expenses`) e descontos (`crm_discount_requests`). Alçada por valor vem de `fin_expense_approval_authorities` (sem linha ativa ninguém aprova); segregação solicitante≠decisor; autoria sempre da sessão. A mesma transação grava origem + `fin_expense_history` + `adm_panel_decisions` + `adm_panel_decision_history` + `audit_log`; falha de auditoria devolve 503 e reverte tudo. Idempotência por `idempotency_key` com `pg_advisory_xact_lock`.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA), subteste “ADM-06: decisão unificada com alçada, segregação, idempotência concorrente e auditoria fail-closed”: anônimo 401, TI 403 `read_only`, origem estranha 403, sem alçada 403 `approval_authority_exceeded` sem alterar o registro, 6 chamadas concorrentes → exatamente 1 criação e 5 replays com o mesmo id, limite aplicado gravado, histórico imutável (UPDATE/DELETE recusados), chave repetida com outro conteúdo 409, segunda decisão sobre a mesma origem 409, valor acima da alçada 403 e `audit_log` indisponível → 503 com rollback comprovado em banco; jornada Chromium aprova a despesa pela tela e o banco mostra `approver_identity` da sessão.
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-07
 busca autorizada, favoritos, filtros salvos e atalhos com contexto.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: Aba Espaço de trabalho e `GET/POST /api/adm/panel/workspace`: favoritos, filtros salvos e atalhos sempre no escopo da identidade da sessão (`user_identity` enviado pelo cliente é ignorado); atalho só aceita URL interna `/admin/...`. Migração 138 adiciona CHECK `NOT VALID` de dono em `adm_search_favorites`, `adm_saved_filters` e `adm_shortcuts`.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA), subteste “ADM-07/08/09”: favorito criado por Marcelo nasce com `user_identity` da sessão mesmo recebendo outra identidade no corpo, não aparece para outra identidade, TI recebe 403 na escrita, RH 403 na leitura, atalho externo 400 e, com `audit_log` indisponível, a gravação devolve 503 sem deixar linha.
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-08
 relatórios exportáveis e agendados para destinatários autorizados; registrar geração/envio e limitar dados.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: Aba Relatórios: `POST /api/adm/panel/reports` e `GET /api/adm/panel/report-download`. O total do relatório é **recalculado** pela mesma SQL canônica do cartão; dados limitados (`is_limited=true`, apenas `record_count`, `amount_cents`, `period_start`, `period_end`, `indicator_code`); destinatário precisa ser identidade ativa com papel autorizado; geração e download gravam `adm_report_logs` + `audit_log` na mesma transação; protocolo `REL-ADM-YYYYMMDD-XXXX`; download com `no-store`.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA): total do relatório igual ao do cartão, destinatário sem papel 403 `recipient_not_authorized`, TI 403 na geração, 4 chamadas concorrentes → 1 criação + 3 replays, mesma chave com outro título 409, download anônimo 401, de terceiro 403, do destinatário 200 com exatamente os 5 campos limitados, log de download e trilha conferidos em banco, e 503 com rollback quando a auditoria falha.
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-09
 configurações de negócio versionadas: catálogo, preços, alçadas, conteúdo, SLA e preferências.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: Aba Configurações: `POST /api/adm/panel/business-configs` versiona com advisory lock por `config_key`, desativa a versão anterior, grava `supersedes_id`, exige motivo de 10–1000 caracteres e registra `adm_business_config_history` + auditoria na mesma transação. Migração 138 cria o índice parcial que garante uma única versão ativa por chave.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA): versões 1→2 com a anterior preservada e inativa, `supersedes_id` correto, duas linhas de histórico, motivo curto 400 e, com auditoria indisponível, 503 sem terceira versão e com a versão 2 ainda ativa.
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-10
 metas e cenários com comparação prevista/realizada, sem confundir estimativa com resultado.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: Aba Metas: `GET /api/adm/panel/goals` separa `target` (estimativa, `crm_goals.target_value`, `is_estimate:true`) de `realized` (resultado, `crm_contracts.total_price`, com `record_count` e `as_of`), com `comparison_note` explicando que não são o mesmo número e `realized_status:'indisponivel'` quando a fonte do realizado falha.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA), subteste “ADM-10/11/12”: anônimo 401, RH 403, meta canônica publicada com fonte de cada lado, realizado contado de contratos reais e asserção de que estimativa e resultado são números distintos; a tela mostra “estimativa” e a fonte do realizado na aba Metas (jornada Chromium).
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-11
 trilha e diário de decisões CON-11 acessíveis conforme permissão.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: Aba Diário: `GET /api/adm/panel/decision-diary` sobre `crm_management_diary` (CON-11). TI não recebe entradas `restrito`/`diretoria` (`restricted_visible:false`, `hidden_visibilities`); cada entrada lida grava `adm_management_diary_access` com a identidade do leitor + auditoria na mesma transação, fail-closed.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA): TI não vê a decisão restrita e vê a de equipe, RH 403, Marcelo vê a restrita com acesso registrado, e com `audit_log` indisponível a leitura sensível devolve 503 sem deixar nenhuma linha de acesso (contagem antes = depois).
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-12
 análises de expansão, qualidade e oportunidades adicionais alimentadas pelos módulos reais.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local
+- Tela / API / dados / autorização: Aba Expansão: `GET /api/adm/panel/expansion` com blocos `oportunidades_abertas` (estimativa), `contratos_ativos` e `qualidade_ocorrencias` (realizado), cada um com fonte, `as_of` e indisponibilidade declarada, mais a lista de `adm_expansion_analyses` com `analyses_empty_reason` quando não há análise registrada. O cartão `ADM-12.oportunidades_expansao` abre o drill-down até a oportunidade real.
+- Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA): blocos com tipo e fonte conferidos, contagens batendo com os módulos reais e, ao tornar `crm_opportunities` ilegível, o bloco vira `indisponivel` com `value:null` em vez de zero; a aba Expansão exibe “realizado” na jornada Chromium.
+- Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## PLT-01
 diretório de usuários, papéis, escopos, convites, suspensão/revogação e revisão periódica de acesso.
