@@ -19,6 +19,7 @@ export default function GatewayWorkspace() {
   const [webhooks,setWebhooks] = useState<Webhook[]>([]);
   const [charges,setCharges] = useState<Charge[]>([]);
   const [busy,setBusy] = useState(false);
+  const [loading,setLoading] = useState(false);
   const [error,setError] = useState("");
   const [notice,setNotice] = useState("");
   const [reason,setReason] = useState("");
@@ -28,10 +29,14 @@ export default function GatewayWorkspace() {
   const run = async (fn:()=>Promise<void>) => { setBusy(true); setError(""); setNotice(""); try { await fn(); } catch(e) { setError(e instanceof Error?e.message:"Falha inesperada"); } finally { setBusy(false); } };
   // load() não usa run(): recarregar a lista não pode apagar o aviso da ação.
   const load = async () => {
-    const [g,w,c] = await Promise.all([api("/api/fin/payment-gateways"), api("/api/fin/gateway-webhooks"), api("/api/fin/gateway-charges")]);
-    setGateways(g.gateways||[]); setWebhooks(w.webhooks||[]); setCharges(c.charges||[]);
+    setLoading(true); setError("");
+    try {
+      const [g,w,c] = await Promise.all([api("/api/fin/payment-gateways"), api("/api/fin/gateway-webhooks"), api("/api/fin/gateway-charges")]);
+      setGateways(g.gateways||[]); setWebhooks(w.webhooks||[]); setCharges(c.charges||[]);
+    } catch (e) { setError(e instanceof Error?e.message:"Falha ao carregar gateway"); }
+    finally { setLoading(false); }
   };
-  useEffect(()=>{ load().catch(e=>setError(e instanceof Error?e.message:"Falha ao carregar")); }, []);
+  useEffect(()=>{ void load(); }, []);
 
   const createGateway = async (event:FormEvent) => { event.preventDefault(); await run(async()=>{
     const data = await api("/api/fin/payment-gateways",{method:"POST",body:JSON.stringify(gateway)});
@@ -64,7 +69,7 @@ export default function GatewayWorkspace() {
     try {
       const received = await api("/api/fin/gateway-webhooks",{method:"POST",body:JSON.stringify({ gateway_id:item.gateway_id, event_type:"charge.paid", idempotency_key, payload, signature })});
       await api("/api/fin/gateway-webhooks",{method:"PATCH",body:JSON.stringify({ id:received.webhook.id, status:"conciliado", charge_id:item.id, reason })});
-      setNotice("Webhook assinado, validado e conciliado; a cobrança foi quitada apenas no simulador.");
+      setNotice("Webhook assinado, validado e conciliado; a baixa do recebível canônico foi registrada apenas no simulador.");
     } catch(e) {
       const message = e instanceof Error ? e.message : "falha";
       if (message === "webhook_signature_invalid") setNotice("Assinatura inválida recusada pelo servidor; nada foi conciliado.");
@@ -82,8 +87,9 @@ export default function GatewayWorkspace() {
   return <section data-testid="fin12-gateway">
     <h2>Boletos, Pix e gateway em sandbox</h2>
     <p>Cobrança só existe depois de seleção explícita e homologação em sandbox. A assinatura do webhook é verificada pelo servidor (HMAC-SHA256 sobre mensagem canônica), o replay é recusado pela chave de idempotência e a quitação só acontece por conciliação de webhook validado. Nada aqui gera cobrança real: o provedor é um simulador local.</p>
-    {error&&<p role="alert" data-testid="fin12-error">{error}</p>}
+    {error&&<div role="alert" data-testid="fin12-error"><p>{error}</p><button type="button" data-testid="fin12-retry" disabled={loading} onClick={()=>void load()}>Tentar novamente</button></div>}
     {notice&&<p role="status" data-testid="fin12-notice">{notice}</p>}
+    {loading&&<p data-testid="fin12-loading">Carregando gateway…</p>}
 
     <h3>Gateway de pagamento (sandbox)</h3>
     <form onSubmit={createGateway} data-testid="fin12-gateway-form">

@@ -71,9 +71,9 @@ Encaminhamento proposto, a decidir pelo dono (nenhuma das duas foi mesclada ou f
 - L04: implementação técnica integrada; regressão 20/20 no PR #65.
 - L05: contratos CON-01..11 integrados; regressão 1/1 no PR #65.
 - L06: OPS-01..16 e AST-01..12 registrados como pronto_local; regressão 9/9 no PR #65.
-- L07: em execução. FIN-01..16 possuem trabalho integrado, mas isso não equivale ao fechamento das jornadas. FIN-09..16 continuam a_revalidar na matriz até conciliar cada critério; não promover em massa.
+- L07: em execução. FIN-09, FIN-11 e FIN-12 foram revalidados nesta fatia e estão `pronto_local` na matriz; FIN-04 foi revalidado somente no vínculo de baixa/estorno do gateway. Isso não encerra L07 nem promove FIN-10, FIN-14..16 ou ADM em massa.
 - FIN-14..16: backend e testes HTTP integrados, sem abas próprias no workspace financeiro, conforme relatório de entrega.
-- FIN-12: gateway sintético não dá baixa automaticamente no recebível FIN-04; falta definir e testar a ligação.
+- FIN-12: a conciliação sintética agora materializa a baixa FIN-04 e o estorno reversor na mesma transação; o que permanece fora de escopo é qualquer PSP, boleto, Pix, banco ou cobrança real.
 - ADM-01..12: a_revalidar; /admin/marcelo ainda é protótipo descritivo.
 - L08: fechamento do portal cliente e expansões ainda pendente.
 - L09: IA/RAG local real e medições no hardware-alvo ainda pendentes; fallback não comprova modelo real.
@@ -84,7 +84,7 @@ Encaminhamento proposto, a decidir pelo dono (nenhuma das duas foi mesclada ou f
 1. Integrar/revalidar PR #65 antes de código novo; confirmar main e checks atuais.
 2. Corrigir FIN-13 por fatia aditiva: reproduzir aprovação preservada indevidamente e margem inconsistente; definir revisão explícita e fonte dos números; preservar histórico e testar UI/API/DB.
 3. Reavaliar o que aproveitar de #47/#53 e fechar referências antigas somente após registrar a substituição testada.
-4. Completar jornadas FIN-14..16, revisar telas de contas a pagar e fluxo compra→obrigação, conectar a baixa sintética de FIN-12 a FIN-04 com autorização/idempotência.
+4. Concluir FIN-10 e a avaliação adaptativa dos resíduos de #47/#53; depois completar jornadas FIN-14..16. A ligação sintética FIN-12 → FIN-04 já foi entregue/testada na migração 135.
 5. Entregar ADM-01..12, com indicadores que abrem registros reais e navegação de negócio.
 6. Fechar matriz/evidências do L07 e produzir handoff L08. Não iniciar L08 nesta consolidação.
 

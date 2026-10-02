@@ -92,3 +92,7 @@ Subteste Chromium: o papel financeiro vê o catálogo (`venda_equipamento_segura
 - O catálogo de atividades é um ponto de partida sintético com referência legal citada para rastreabilidade; a vigência real por município/estado e a parametrização tributária (alíquota, retenção, CFOP, código de serviço) não fazem parte desta fatia.
 - Linhas criadas pelo rascunho 079 continuam legíveis: as constraints novas são `NOT VALID`, de modo que valem integralmente para toda escrita nova e toda alteração, sem reescrever histórico.
 - FIN-12 (boletos/Pix/gateway) permanece no rascunho 079, sem hardening e fora do gate.
+
+## Revalidação posterior (2026-10-02)
+
+A fatia L07 atual reexecutou o gate completo com a migração 135 e terminou 31/31. Além da prova original, o Chromium intercepta `GET /api/fin/fiscal-activity-rules` com 500, confirma que a UI expõe a falha de leitura e, após remover a interceptação, usa **Tentar novamente** para recuperar a lista antes de completar a jornada fiscal. Isso não altera a fronteira: documento, provedor e emissão continuam estritamente sintéticos; não há certificado, NFS-e/NF-e real, ERP ou transmissão externa.
