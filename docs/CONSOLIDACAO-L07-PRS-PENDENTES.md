@@ -35,6 +35,26 @@ Inspeção de `src/server/fin-budget-api.mjs`, `db/migrations/132-fin13-budget-h
 
 São achados de código, ainda sem teste negativo novo executado nesta revisão. O gate verde do PR #65 comprova os cenários existentes; não elimina lacunas que ele não exercita.
 
+## Aproveitamento efetivo na fatia aditiva de FIN-13 (2026-10-01)
+
+Registro exigido antes de qualquer encerramento de PR. **Nenhum dos PRs foi mesclado, fechado ou teve branch apagada nesta sessão**; eles continuam abertos como referência. A correção foi feita na base atual, com a migração nova **134**, preservando 001–133 e sem reescrever a 132.
+
+| Melhoria examinada | Origem | Destino nesta fatia | Por quê |
+|---|---|---|---|
+| Chave de idempotência em `fin_budgets` com índice único parcial e faixa 8–200 | #62 (`fin_budget_idempotency_required`) | **Aproveitada**, reimplementada na 134 | Resolve o achado 3. Diferença: a chave acompanha `content_fingerprint`, para distinguir retry igual (200, `idempotent_replay`) de reuso com conteúdo diferente (409), caso que o #62 não separava |
+| Versão de premissas incrementada na revisão | #62 (`premises_version`) | **Aproveitada** como `fin_budgets.version` | Mesmo efeito de preservar a versão anterior; o nome foi generalizado porque a revisão também pode alterar números, não só premissas |
+| Revisão revoga a aprovação | #62 (`fin_budget_revision_revokes_approval`) | **Aproveitada**, com transição `aprovado → em_revisao` guardada no banco | Resolve o achado 1. Diferença: o #62 devolvia o orçamento a `rascunho`; aqui ele vai a `em_revisao`, mantendo a máquina de estados já aplicada em produção local |
+| Lacuna visível em vez de zero quando falta base | #62 | **Aproveitada** como `margin_basis` gerado (`dados_incompletos`, `receita_zero_sem_percentual`) | Atende “não inventar percentual nem apagar valores conhecidos” sem criar vocabulário novo de estado |
+| Origem do número e data-base por cenário | #62 | **Adiada, não descartada** | São campos de cadastro adicionais; exigem decisão de negócio sobre quais origens são válidas. Fora do escopo desta correção, registrado como pendência |
+| Coluna de margem calculada conferida contra a declarada | #60 (`projected_margin_percent_calculated` + CHECK de igualdade) | **Aproveitada e endurecida** | Resolve o achado 2. Em vez de duas colunas que precisam concordar, `computed_margin_percent` é **GENERATED ALWAYS** (não é gravável por ninguém) e a constraint confere a coluna legada contra receita e custo |
+| Histórico com `event_type` e margem anterior/posterior | #60 | **Aproveitada e ampliada** | Virou `event_type` + `version_before/after` + `snapshot_before/after` completos, o que o achado 4 exigia para reconstruir a revisão inteira |
+| `revision_no` sequencial próprio do histórico | #60 | **Descartada** | Redundante com `fin_budgets.version`; duas numerações independentes divergem quando uma escrita falha |
+| Autor do histórico por `COALESCE(actor, approved_by_identity, created_by_identity)` | #60 | **Descartada explicitamente** | É atribuição de autoria por suposição — exatamente o defeito do achado 4. Aqui o autor chega por GUC transacional; sem ele, o registro diz “não informado pela origem” em vez de apontar alguém |
+| Mover o orçamento para `fin-management-api.mjs` e criar `FinBudgetClient.tsx` em `/admin/ti` | #60 e #62 | **Descartada** | A rota canônica continua `fin-budget-api.mjs` com a aba de `/admin/financeiro`, conforme a retomada; TI permanece somente leitura |
+| Aprovador obrigatoriamente diferente do autor; mínimo de dois cenários | #59 | **Não adotada** | É política empresarial ainda não decidida pelo proprietário; não vira requisito por inferência |
+| Premissas estruturadas e detector textual de promessa | #59 | **Não adotada nesta fatia** | Mudança de contrato de dados maior que a correção; permanece como referência |
+| Garantias de conciliação (#47) e de despesas/alçadas (#53) | #47, #53 | **Fora do escopo desta fatia** | Pertencem a FIN-05 e FIN-10; continuam na fila de reavaliação registrada abaixo |
+
 ## Estado consolidado
 - L03: EMP-01..19 e HR-01..24 registrados como pronto_local; aceite humano e regressão final separados.
 - L04: implementação técnica integrada; regressão 20/20 no PR #65.

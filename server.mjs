@@ -3784,6 +3784,10 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/fin-budget-scenarios" || url.pathname === "/api/crm/hr/fin-budget-scenarios" || url.pathname === "/api/hr/fin-budget-scenarios" || url.pathname === "/api/fin/budget-scenarios") {
     return finBudgetApi.handleBudgetScenarios(req, res);
   }
+  // FIN-13 histórico imutável do orçamento: criação, edição, revisão e decisão
+  if (url.pathname === "/api/admin/hr/fin-budget-history" || url.pathname === "/api/crm/hr/fin-budget-history" || url.pathname === "/api/hr/fin-budget-history" || url.pathname === "/api/fin/budget-history") {
+    return finBudgetApi.handleBudgetHistory(req, res);
+  }
   // FIN-14 exportação do período com trilha filtros totais conciliáveis e acesso limitado do contador
   if (url.pathname === "/api/admin/hr/fin-exports" || url.pathname === "/api/crm/hr/fin-exports" || url.pathname === "/api/hr/fin-exports" || url.pathname === "/api/fin/exports") {
     return finBudgetApi.handleExports(req, res);
@@ -5276,6 +5280,10 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/crm/hr/fin-budget-scenarios"
   || pathname === "/api/hr/fin-budget-scenarios"
   || pathname === "/api/fin/budget-scenarios"
+  || pathname === "/api/admin/hr/fin-budget-history"
+  || pathname === "/api/crm/hr/fin-budget-history"
+  || pathname === "/api/hr/fin-budget-history"
+  || pathname === "/api/fin/budget-history"
   || pathname === "/api/admin/hr/fin-exports"
   || pathname === "/api/crm/hr/fin-exports"
   || pathname === "/api/hr/fin-exports"

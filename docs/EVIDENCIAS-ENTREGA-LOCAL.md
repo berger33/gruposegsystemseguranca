@@ -1658,3 +1658,96 @@ autorizado, 409 `batch_not_pending` depois do fechamento, curinga `%` do CSV
 não casando com empresa de terceiro e jornada de UI em `/admin/crm` sem
 rolagem horizontal, erro de console ou 5xx inesperado.
 
+---
+
+## FIN-13 — fatia aditiva: revisão, margem conferida, idempotência e histórico (2026-10-01)
+
+Todos os comandos abaixo rodaram no ambiente remoto Arena, sobre a base `4ea3578`, com PostgreSQL descartável, HTTP real e Chromium real. Os arquivos `.log` brutos não entram no Git (ignorados por `.gitignore`); os contadores e as mensagens de falha foram transcritos aqui literalmente, inclusive os resultados desfavoráveis.
+
+Base: `4ea3578` (merge do PR #66), sem commits posteriores na consulta.
+Branch: `arena/01a0f9da-gruposegsystemseguranca`. Ambiente remoto Arena, Linux
+x86_64, Node v22.22.3, npm 10.9.8, PostgreSQL 17.9 descartável por execução,
+Chromium empacotado real. Dados exclusivamente sintéticos. **Nada aqui
+comprova execução em Windows nem aceite humano.**
+
+### A. Baseline reconfirmado na base atual, antes de alterar negócio
+
+| # | Cenário | Comando | Esperado | Observado |
+|---|---|---|---|---|
+| FIN13A-1 | Verificações estáticas | `node scripts/qa-wave0-static.mjs` | 5/5, 001–133 | 5/5, 0 migrações ausentes |
+| FIN13A-2 | Tipos | `npm run typecheck` | 0 erros | 0 erros, exit 0 |
+| FIN13A-3 | Suíte unitária | `npm test` | tudo passa | 196/196, 0 skips |
+| FIN13A-4 | Gate L07 na base intacta | `npm run test:l07-delivery:pg` | 27/27 | **27/27**, `# fail 0`, `EXIT=0` |
+
+### B. Reprodução das lacunas, com a correção ainda ausente
+
+Os quatro subtestes novos foram executados contra o código **sem correção**.
+
+| # | Achado | Cenário executado | Resultado observado (defeito confirmado) |
+|---|---|---|---|
+| FIN13B-1 | 1 e 4 | aprovar, depois editar premissas/receita e ler histórico | subteste 25 reprovou: `expected 1, actual NaN` — não existia `version`; edição de aprovado não era recusada; histórico sem snapshot/versão |
+| FIN13B-2 | 2 | margem de orçamento e cenário conferida com receita e custo | subteste 26 reprovou: `expected 20, actual NaN` — não havia percentual calculado no servidor; o cenário aceitava o número do navegador |
+| FIN13B-3 | 3 | criação sem chave de idempotência | subteste 27 reprovou: `expected 400, actual 201` — criação sem chave era aceita e o reenvio duplicava |
+| FIN13B-4 | 5 e 6 | GET de orçamentos respondendo 500 no navegador | subteste 28 reprovou: `fin13-budgets-error` inexistente — a falha de leitura virava lista vazia; não havia jornada de revisão/aprovação/histórico |
+
+Totais da execução de reprodução: `# tests 31`, `# pass 27`, `# fail 4`,
+`# skipped 0`, `EXIT=1`. Nenhum dos seis achados estava previamente corrigido.
+
+### C. Correção validada
+
+| # | Cenário | Comando | Esperado | Observado |
+|---|---|---|---|---|
+| FIN13C-1 | Verificações estáticas com a migração nova | `node scripts/qa-wave0-static.mjs` | 5/5, 001–134 | 5/5, 0 ausentes, 0 duplicadas |
+| FIN13C-2 | Tipos | `npm run typecheck` | 0 erros | 0 erros |
+| FIN13C-3 | Suíte unitária | `npm test` | 196/196 | 196/196, 0 skips |
+| FIN13C-4 | Build | `npm run build` | sucesso | `✓ Compiled successfully`, exit 0 |
+| FIN13C-5 | Migrações com replay, clone e checksum | `npm run test:migrations:pg` | 134/134 idempotentes | `CHECKSUMMED=134/134`, `TABLES=522->522`, `SECOND_EXIT=0`, clone `migration_checksum_mismatch: 006 rejected (exit 1)` sem rebaseline |
+| FIN13C-6 | Gate L07 após a correção | `npm run test:l07-delivery:pg` | 31/31 | **31/31**, `# fail 0`, `# skipped 0`, `EXIT=0`, em duas execuções aprovadas. **Transparência:** entre elas houve uma execução com 30/31, reprovada no subteste 18 (FIN-10, não tocado por esta fatia) por `browserType.launch ... process did exit: signal=SIGSEGV` — o Chromium morreu no `launch`, sem nenhuma asserção reprovada. É o mesmo ruído de ambiente já registrado em sessões anteriores deste repositório |
+| FIN13C-7 | Regressão L03 | `npm run test:l03-delivery:pg` | 1/1 | 1/1 |
+| FIN13C-8 | Regressão L04 | `npm run test:l04-delivery:pg` | 20/20 | 20/20 |
+| FIN13C-9 | Regressão L05 | `npm run test:l05-delivery:pg` | 1/1 | 1/1 |
+| FIN13C-10 | Regressão L06 | `npm run test:l06-delivery:pg` | 9/9 | **9/9 nas duas execuções isoladas**. **Transparência:** nas duas execuções encadeadas logo após outros gates pesados na mesma máquina de 2 vCPU / 4 GB, o subteste 7 reprovou com `product SKU rendered in table`; o HTML capturado mostra a página `/admin/patrimonio` ainda em “Carregando dados…”, ou seja, compilação/carregamento do dev server sob disputa de CPU, não regressão de dados. A fatia não altera `ops_*`, `ast_*` nem a tela de patrimônio, e a migração 134 só toca `fin_budgets`, `fin_budget_scenarios` e `fin_budget_history`. Nenhuma asserção foi alterada, nenhum timeout foi aumentado e nenhum teste foi ignorado para obter o verde |
+
+### D. O que os subtestes novos do gate L07 provam
+
+1. **Aprovação congelada e revisão versionada** (subteste 25): transição sem
+   motivo recusada (400); edição de premissas e de receita em orçamento
+   aprovado recusada (409 `approved_budget_locked_requires_revision`) com
+   conteúdo intacto no banco; `UPDATE` direto por SQL recusado pelo gatilho
+   (`fin_budget_approved_content_locked`); revisão sem motivo recusada; RH 403,
+   TI 403 `read_only`, anônimo 401, com o orçamento imóvel após cada negativa;
+   revisão válida levando a `em_revisao`, versão 1 → 2, `approved_by_identity` e
+   `approved_at` nulos e autor real gravado; nova aprovação exigida e aplicada
+   mantendo a versão 2; histórico com cinco eventos classificados
+   (`criacao, decisao, decisao, revisao, decisao`), snapshot anterior com o
+   custo e as premissas antigos, snapshot posterior com os novos, autor real na
+   criação (não o aprovador) e imutabilidade confirmada por `UPDATE`/`DELETE`
+   recusados; contagens de `fin_accounts_receivable`, `fin_accounts_payable`,
+   `fin_payments` e `fin_gateway_charges` **inalteradas** ao redor da aprovação;
+   falha de auditoria injetada devolvendo 503 com status, versão, números e
+   aprovação preservados e sem linha de histórico órfã.
+2. **Margem conferida** (subteste 26): percentual enviado pelo navegador
+   recusado (400) e cenário não gravado; margem calculada 25,00 % a partir de
+   200000/150000 com `margin_source=servidor_calculado`; receita zero sem
+   percentual (`receita_zero_sem_percentual`) preservando o custo conhecido e a
+   margem em reais; custo ausente mantendo a receita conhecida
+   (`dados_incompletos`); `UPDATE` e `INSERT` diretos com percentual arbitrário
+   recusados por `fin_scenario_margin_percent_matches_base`.
+3. **Idempotência** (subteste 27): criação sem chave recusada (400); retry igual
+   devolvendo 200 com `idempotent_replay` e o mesmo identificador; mesma chave
+   com conteúdo diferente recusada (409 `idempotency_key_conflict`) sem
+   sobrescrever o original; **6 requisições concorrentes** com a mesma chave
+   produzindo exatamente um orçamento, uma única resposta 201 e um único evento
+   `criacao` no histórico.
+4. **Jornada de navegador** (subteste 28): GET de orçamentos respondendo 500
+   exibe erro e **não** exibe “nenhum orçamento”; nova tentativa recupera a
+   lista; seleção por protocolo; receita exibida como `R$ 8.000,00` e margem
+   como `25,00 %`; revisão pela interface levando a `em_revisao`, versão 2,
+   aprovação retirada e custo novo persistido; nova aprovação pela interface;
+   histórico mostrando o evento `revisao`, o motivo digitado e `versão 1 → 2`;
+   ausência do campo editável de margem, com pré-visualização calculada; cenário
+   criado com percentual calculado pelo servidor.
+   Observação metodológica: esse subteste usa `serviceWorkers: "block"` no
+   contexto do Chromium porque o PWA registra um service worker que, ativo,
+   impediria a simulação da falha de leitura. É ajuste do teste, não do produto.
+

@@ -2,11 +2,13 @@
 
 ## Continuação atual: L07 — consolidação financeira e Marcelo
 
-Main auditada em 2026-10-01: PR #64, migrações 001–133. L04–L06 possuem entregas técnicas; L07 permanece em execução. Os handlers FIN-14..16 estão integrados, mas faltam suas jornadas completas e o painel funcional ADM-01..12.
+Base de trabalho atual: main `4ea3578` (PRs #65 e #66 integrados), migrações **001–134**. L04–L06 possuem entregas técnicas; **L07 permanece em execução**.
 
-O [PR #65](https://github.com/berger33/gruposegsystemseguranca/pull/65) estabiliza os gates L04–L07 e estava aberto na auditoria. Verifique sua integração antes de código novo. Os PRs #47/#53/#59/#60/#62 são alternativas com colisões de migrações e melhorias a portar seletivamente.
+Em 2026-10-01 a fatia **FIN-13 — orçamento gerencial e cenários** foi corrigida de forma aditiva: orçamento aprovado não aceita edição comum, a revisão exige motivo e autor, preserva a versão anterior, retira a aprovação e exige nova aprovação; a margem é calculada no servidor a partir de receita e custo, com receita zero e dados incompletos tratados explicitamente; a criação é idempotente, inclusive sob concorrência; o histórico é imutável com snapshots; e a interface passou a ter seleção por nome/protocolo, moeda em R$, erro de leitura visível e jornada de revisão/aprovação/histórico. Aprovar orçamento continua **não** gerando cobrança, pagamento ou obrigação. Gate L07: **31/31**; migrações 134/134; regressões L03 1/1, L04 20/20, L05 1/1, L06 9/9. **FIN-13 está `pronto_local` na validação automática, com aceite humano pendente; o L07 inteiro não está concluído e o L08 não foi iniciado.**
 
-Leia a [consolidação e achados FIN-13](docs/CONSOLIDACAO-L07-PRS-PENDENTES.md), o [estado atual](docs/ESTADO-EXECUCAO-LOCAL.md) e o [prompt de retomada focado](docs/PROMPT-RETOMADA-L07-CONSOLIDADO.md). Não usar instruções históricas para repetir L05/L06 ou declarar L07 fechado.
+Os PRs #47/#53/#59/#60/#62 continuam **abertos** como referência; o que foi aproveitado e o que foi descartado está registrado na consolidação.
+
+Leia o [relatório da entrega FIN-13](docs/ENTREGA-L07-FIN13.md), a [consolidação e achados](docs/CONSOLIDACAO-L07-PRS-PENDENTES.md), o [estado atual](docs/ESTADO-EXECUCAO-LOCAL.md) e o [prompt da próxima fatia](docs/PROMPT-PROXIMA-SESSAO-L07-FIN14-16.md). Não usar instruções históricas para repetir L05/L06 ou declarar L07 fechado.
 
 ## Demonstração local persistente — apenas massa fictícia
 
