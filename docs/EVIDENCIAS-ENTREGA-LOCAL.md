@@ -1,27 +1,54 @@
 # Evidências — entrega local integral
 
-## Evidência vigente — FIN-14/15/16 (2026-10-02)
+## Evidência vigente — fechamento de matriz/evidências do L07 (2026-10-02)
 
-| Prova | Resultado final |
+Base `main` `bbcf311` + correção de sincronização do subteste 9 do gate L06
+(teste apenas; ver seção "Fechamento da matriz do L07" no fim deste arquivo).
+Branch `arena/01a0fd4f-gruposegsystemseguranca`. Próxima migração livre: 139.
+
+Baseline no SHA base, antes de qualquer edição:
+
+| Prova | Resultado |
 |---|---|
+| `node scripts/qa-wave0-static.mjs` | 5/5; 001–138 |
 | `npm run typecheck` | 0 erros |
 | `npm test` | 196/196 |
-| `npm run build` | aprovado |
-| `node scripts/qa-wave0-static.mjs` | 5/5; 001–137 |
-| `npm run test:migrations:pg` | 137/137; dois passes + clone; checksum negativo esperado |
-| `npm run test:l07-delivery:pg` #1 | 37/37, sem skips |
-| `npm run test:l07-delivery:pg` #2 consecutiva | 37/37, sem skips |
-| L03 / L04 / L05 / L06 | 1/1 · 20/20 · 1/1 · 9/9 |
+| `npm run build` | exit 0 |
+| `npm run test:migrations:pg` | 138/138; dois passes + clone; checksum negativo esperado |
+| `npm run test:l07-delivery:pg` #1 / #2 consecutiva | 43/43 · 43/43, sem skips |
+| `npm run test:l03-delivery:pg` | 1/1 (o 403 intermitente conhecido não reapareceu) |
+| `npm run test:l04-delivery:pg` | 20/20 |
+| `npm run test:l05-delivery:pg` | 1/1 |
+| `npm run test:l06-delivery:pg` (encadeado) | **8/9** — subteste 9 em `Carregando operação…`; isolado depois, 9/9 (dependência de carga, não regressão) |
 
-O baseline antes da alteração foi reconfirmado após `npm ci`: estático 5/5 (001–136), typecheck, unitários 196/196, migrações 136/136 e L07 35/35 em duas execuções. Uma execução intermediária posterior teve ruído no subteste Chromium FIN-10 (histórico ainda em “Carregando…”); a repetição sem mudança passou e não houve timeout/skip/remoção de assertiva. Na primeira rodada final da regressão L04, o Chromium sofreu `SIGSEGV` no `launch` do subteste CRM-01 (19/20); a reexecução integral, sem mudança de código, passou 20/20. Evidência funcional detalhada: [ENTREGA-L07-FIN14-15-16.md](ENTREGA-L07-FIN14-15-16.md). Dados exclusivamente sintéticos em PostgreSQL descartável.
+Resultado final no SHA entregue (mesma sequência, com a correção do teste L06):
+
+| Prova | Resultado |
+|---|---|
+| `node scripts/qa-wave0-static.mjs` | 5/5; 001–138 |
+| `npm run typecheck` | 0 erros |
+| `npm test` | 196/196 |
+| `npm run build` | exit 0 |
+| `npm run test:migrations:pg` | 138/138; dois passes + clone; checksum negativo esperado |
+| `npm run test:l07-delivery:pg` #1 / #2 consecutiva | **43/43 · 43/43**, sem skips |
+| `npm run test:l03-delivery:pg` | 1/1 |
+| `npm run test:l04-delivery:pg` | 20/20 |
+| `npm run test:l05-delivery:pg` | 1/1 |
+| `npm run test:l06-delivery:pg` (encadeado, condição que antes reprovava) | **9/9** |
+
+Matriz por requisito (FIN-01..16 e ADM-01..12 → tela/API/tabelas/subtestes/
+pendência): [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md). Relatório da
+sessão: [ENTREGA-L07-MATRIZ-FECHAMENTO.md](ENTREGA-L07-MATRIZ-FECHAMENTO.md).
+Dados exclusivamente sintéticos em PostgreSQL descartável; o equipamento-alvo é
+Windows e nada aqui comprova execução em Windows. L07 **não** está concluído;
+aceite humano pendente.
 
 
 Cada linha registra cenário, perfil, comando, resultado observado e commit.
 Evidência de lote antigo não vale para SHA novo: reexecutar após alterações.
 
-Ambiente desta sessão: Linux x86_64, Node v22.22.3, npm 10.9.8, PostgreSQL 17.9
-(`embedded-postgres`, cluster temporário por execução). **O equipamento-alvo é
-Windows**; nada aqui comprova execução em Windows.
+Ambiente desta sessão: Linux x86_64 (2 vCPU, 3,8 GiB), Node v22.22.3, npm 10.9.8,
+PostgreSQL 17.9 (`embedded-postgres`, cluster temporário por execução).
 
 ---
 
@@ -1908,3 +1935,76 @@ Oito execuções finais do gate L07 no SHA entregue, todas registradas:
 Nenhum timeout foi aumentado, nenhum `skip` foi introduzido e nenhuma assertiva
 foi removida ou enfraquecida em qualquer momento. Nenhum subteste ADM reprovou
 por comportamento do produto.
+
+## Fechamento da matriz do L07 — FIN-01..16 + ADM-01..12 (02/10/2026)
+
+Base: `main` `bbcf311`. Sessão `arena/01a0fd4f-gruposegsystemseguranca`.
+Escopo: conferência requisito a requisito de tela/API/tabelas/autorização e
+subtestes vigentes; matriz completa em
+[MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
+
+### A. Baseline reconfirmada antes de qualquer edição (SHA base)
+
+| Comando | Resultado |
+|---|---|
+| `node scripts/qa-wave0-static.mjs` | 5/5 (001–138) |
+| `npm run typecheck` | exit 0 |
+| `npm test` | 196/196 |
+| `npm run build` | exit 0 |
+| `npm run test:migrations:pg` | exit 0; 138/138; 524 tabelas; clone/checksum negativo OK |
+| `npm run test:l07-delivery:pg` | 43/43 em duas execuções consecutivas |
+| `npm run test:l03-delivery:pg` | 1/1 — o 403 `/api/employee/offline` intermitente conhecido **não** reapareceu |
+| `npm run test:l04-delivery:pg` | 20/20 |
+| `npm run test:l05-delivery:pg` | 1/1 |
+| `npm run test:l06-delivery:pg` (encadeado após os demais) | **8/9** — subteste 9 com a tela em `Carregando operação…`; nova execução isolada, sem mudança de código, 9/9 |
+
+### B. Instabilidade L06-9: causa raiz e correção do teste
+
+As instabilidades nomeadas no ponto de partida (L03 403 e L07 subteste 22
+`Carregando histórico…`) **não reapareceram** em nenhuma execução desta sessão.
+O L06 subteste 9 reapareceu encadeado. Investigação: `OperacaoWorkspace.tsx`
+renderiza as abas no SSR, mas o conteúdo só aparece com `!loading && !error`
+(após o bootstrap pós-hidratação); sob carga em 2 vCPU, `networkidle` +
+presença das abas não garantem bootstrap concluído e o subteste 9 — único dos
+nove sem espera de conteúdo (os subtestes 1–8 usam `waitForSelector` com
+timeout 30 s) — clicava/lia cedo demais. Correção **do teste**, no padrão do
+próprio arquivo: esperar `#posts-title` antes do clique e
+`section[aria-label="Operação avançada OPS-13 a OPS-16"]` depois. **Nenhum
+timeout aumentado, nenhum skip, assertiva final idêntica.** Nenhuma alteração
+de produto, migração ou API.
+
+### C. Resultados no SHA entregue (mesma sequência da baseline)
+
+| Comando | Resultado |
+|---|---|
+| `node scripts/qa-wave0-static.mjs` | 5/5 |
+| `npm run typecheck` | exit 0 |
+| `npm test` | 196/196 |
+| `npm run build` | exit 0 |
+| `npm run test:migrations:pg` | exit 0; 138/138; 524 tabelas; clone/checksum negativo OK |
+| `npm run test:l07-delivery:pg` | **43/43**, duas execuções consecutivas, sem skips |
+| `npm run test:l03-delivery:pg` | 1/1 |
+| `npm run test:l04-delivery:pg` | 20/20 |
+| `npm run test:l05-delivery:pg` | 1/1 |
+| `npm run test:l06-delivery:pg` (encadeado, condição que antes reprovava) | **9/9** |
+
+### D. O que a conferência da matriz constatou
+
+1. Todos os 28 requisitos têm tela/rota, API canônica, tabelas canônicas e
+   **pelo menos um subteste vigente** provando a jornada (mapeamento subteste a
+   subteste na matriz §3).
+2. Correções documentais: rótulo real da aba FIN-10 ("Despesas / Compras", com
+   tipos despesa/reembolso/compra) no CHECKLIST; esta seção vigente estava
+   defasada no estado FIN-14/15/16 e passou a refletir o estado ADM (43).
+3. Precisão adicionada: FIN-02 declara que TI tem leitura na borda do servidor
+   mas a asserção dedicada de TI-leitura do domínio FIN está nos subtestes 19
+   (FIN-10) e 33 (FIN-14) — não no subteste 1.
+4. Nenhuma lacuna funcional real encontrada; nenhuma migração criada (próxima
+   livre: 139); nenhum subteste acrescentado ao gate L07 (43 mantidos).
+5. Dívidas abertas registradas: 80 órfãos de `/admin/ti`
+   ([INVENTARIO-ADMIN-TI.md](INVENTARIO-ADMIN-TI.md)) e instabilidades
+   residuais a monitorar (L03 403, L07-22 — ambas ausentes nesta sessão;
+   L06-9 com causa raiz corrigida e validada sob carga).
+
+Aceite humano de Marcelo/Andreia **pendente**; Windows não validado; L07 não
+está concluído e L08 não foi iniciado.

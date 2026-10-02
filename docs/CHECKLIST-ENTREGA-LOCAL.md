@@ -1,6 +1,6 @@
 # Checklist da entrega local — 222 requisitos
 
-Atualização de controle em 2026-10-01: L07 em execução. Ver [consolidação](CONSOLIDACAO-L07-PRS-PENDENTES.md) e [retomada](PROMPT-RETOMADA-L07-CONSOLIDADO.md). L04–L06 já têm entregas técnicas integradas. Estados abaixo conservam evidências por requisito, não uma porcentagem global; não houve promoção em massa nesta revisão.
+Atualização de controle em 2026-10-02 (fechamento de matriz do L07): FIN-01..16 e ADM-01..12 conferidos requisito a requisito contra tela/API/tabelas/autorização reais e os **43 subtestes vigentes** do gate `test:l07-delivery:pg`; cada linha de FIN/ADM agora cita seus subtestes e a matriz completa está em [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md). Todos permanecem `pronto_local` na validação automática, **com aceite humano pendente**. Ver também [consolidação](CONSOLIDACAO-L07-PRS-PENDENTES.md) e [retomada](PROMPT-RETOMADA-L07-CONSOLIDADO.md). L04–L06 já têm entregas técnicas integradas. Estados abaixo conservam evidências por requisito, não uma porcentagem global; não houve promoção em massa nesta revisão.
 Leia EXECUCAO-ENTREGA-LOCAL.md. Todos começam em a_revalidar para confrontar evidências históricas com a versão final. Isso não apaga o trabalho realizado.
 Para cada ID, completar: rota/tela; API/tabela; perfil/escopo; integração; teste e commit; evidência; bloqueio; aceite humano.
 Estados: a_revalidar, pendente, em_execucao, bloqueado, pronto_local, depende_integracao_externa.
@@ -975,6 +975,7 @@ contas a receber vinculadas a contrato, competência, vencimento, recorrência, 
 - Estado: pronto_local
 - Tela / API / dados / autorização: workspace `/admin/financeiro`, `/api/fin/receivables`, PostgreSQL real e papéis financeiros; `rh` negado 403.
 - Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` 6/6 em duas rodadas finais, HTTP e Chromium reais; `handleReceivables` transacional e fail-closed comprovado; commit `f4354d9`, PR #46 e workflow L07 [36822878630](https://github.com/berger33/gruposegsystemseguranca/actions/runs/36822878630/job/110242735739) verde.
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 1, 6 (jornada Chromium) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: dados apenas sintéticos; nenhuma integração de produção.
 
 ## FIN-02
@@ -982,6 +983,7 @@ contas a pagar, fornecedores, categoria, centro de custo, vencimento, aprovaçã
 - Estado: pronto_local
 - Tela / API / dados / autorização: workspace financeiro e APIs canônicas de pagáveis, fornecedores e centros; PostgreSQL real; `financeiro`/`admin`/`ti`.
 - Integração e evidência (teste, resultado, commit): gate L07 6/6 em duas rodadas preserva criação e aprovação auditada de pagável, fornecedor e centro; `handlePayables` POST/PATCH transacional e criação fail-closed 503 sem pagável/histórico parcial; unitários 196/196; commit `f4354d9`, PR #46 e workflow L07 [36822878630](https://github.com/berger33/gruposegsystemseguranca/actions/runs/36822878630/job/110242735739) verde.
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 1 — nota: TI tem leitura na borda do servidor, mas a asserção dedicada de TI-leitura do domínio FIN está nos subtestes 19 (FIN-10) e 33 (FIN-14) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: anexos e pagamentos externos permanecem sintéticos; FIN-05..16 não iniciados.
 
 ## FIN-03
@@ -989,6 +991,7 @@ geração recorrente idempotente por contrato/competência/item; pró-rata, reaj
 - Estado: pronto_local
 - Tela / API / dados / autorização: aba Recorrência exige conta real selecionada/informada, APIs canônicas, transação única de geração/histórico/regra/auditoria.
 - Integração e evidência (teste, resultado, commit): Chromium cria/aprova/gera, repete e vê 409; banco confirma uma linha; geração com auditoria indisponível devolve 503 sem recebível/histórico e sem alterar `last_generated_competence`; L07 6/6 em duas rodadas; commit `f4354d9`, PR #46 e workflow L07 [36822878630](https://github.com/berger33/gruposegsystemseguranca/actions/runs/36822878630/job/110242735739) verde.
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 2, 6 (jornada Chromium) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: não há cobrança externa; conta é sintética e explícita.
 
 ## FIN-04
@@ -996,6 +999,7 @@ pagamento/recebimento parcial, estorno, cancelamento, renegociação e baixa aud
 - Estado: pronto_local
 - Tela / API / dados / autorização: aba Pagamentos, transação, `FOR UPDATE`, overpayment 409, estorno limitado/escopado/repetido 409 e auditoria fail-closed.
 - Integração e evidência (teste, resultado, commit): HTTP concorrente real, auditoria indisponível 503 sem efeito e Chromium com baixa/estorno; L07 6/6 duas vezes; `handlePayments` e todos os demais handlers FIN-01..04 auditados como transacionais; commit `f4354d9`, PR #46 e workflow L07 [36822878630](https://github.com/berger33/gruposegsystemseguranca/actions/runs/36822878630/job/110242735739) verde.
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 3, 4, 5, 6 (jornada Chromium) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: sem gateway ou banco real; FIN-05..16 não iniciados.
 
 ## FIN-05
@@ -1003,6 +1007,7 @@ conciliação por importação/extrato ou provedor, sugestão e confirmação; e
 - Estado: pronto_local
 - Tela / API / dados / autorização: `/admin/financeiro` → aba **Conciliação bancária** (`BankReconciliationWorkspace.tsx`) usa somente `/api/fin/bank-statements`, `/api/fin/bank-transactions` e `/api/fin/conciliations`. Acesso exige sessão de staff, papel `financeiro`/`admin`/`ti` e same-origin. Extrato e transações são explicitamente sintéticos; `storage_key` e `bank_ref` são únicos; a conciliação exige exatamente uma conta e uma transação bancária, registra sugestão, confirmação/divergência e marca a transação como conciliada somente na confirmação. A migração aditiva `124-fin05-conciliation-hardening.sql` acrescenta unicidade parcial da transação bancária por conciliação e CHECK de valor não negativo.
 - Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` **8/8** (HTTP real + PostgreSQL descartável + Chromium real, incluindo a jornada FIN-05); duas execuções finais consecutivas verdes. Cobertura: anônimo/RH/origem externa negados, importação, duplicidade de `storage_key`/`bank_ref`/conciliação, referências inválidas, confirmação repetida, auditoria indisponível com `503` e rollback, e UI real. `npm run typecheck` e `npm run build` verdes.
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 7, 8 (jornada Chromium), 21 — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: não há banco, provedor, gateway, webhook, arquivo ou credencial de produção; não há cobrança automática. Aceite humano/Windows permanece pendente. FIN-06..16 e ADM-01..12 continuam fora desta sessão.
 
 ## FIN-06
@@ -1010,6 +1015,7 @@ cobrança com responsável, lembretes, histórico e política aprovada; sem mens
 - Estado: pronto_local
 - Tela / API / dados / autorização: `/admin/financeiro` → aba **Cobrança** (`CollectionWorkspace.tsx`) usa somente `/api/fin/collection-policies`, `/api/fin/collection-reminders` e `/api/fin/collection-history`. Acesso exige sessão de staff, papel `financeiro`/`admin`/`ti` e same-origin. Política de cobrança tem nome único, descrição, tipo de lembrete, dias antes, nível de escalonamento e separação entre criação (rascunho não aprovado) e aprovação auditada. Lembrete exige política aprovada/ativa, recebível existente, responsável (2–200), conteúdo (20–2000) e nunca aceita `is_real_message=true` (rejeitado com `400`). Histórico é imutável por trigger de banco e `is_blocking_action` é sempre `false` por `CHECK`. A migração aditiva `125-fin06-collection-hardening.sql` acrescenta `reminder_type`/`days_before`/`escalation_level` estruturados à política e `is_blocking_action` ao histórico.
 - Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` **10/10** (HTTP real + PostgreSQL descartável + Chromium real, incluindo a jornada FIN-06) em duas execuções finais consecutivas. Cobertura: anônimo/papel indevido/origem externa negados, duplicidade de nome, aprovação sem autorização rejeitada, aprovação válida e auditada, referências inválidas, lembrete com responsável, conteúdo inválido rejeitado, `is_real_message=true` rejeitado, envio apenas simulado, histórico imutável sem bloqueio automático, e auditoria indisponível com `503`/rollback. `npm run typecheck`, `node scripts/qa-wave0-static.mjs` (5/5), `npm test` (196/196), `npm run test:migrations:pg` (125/125) e `npm run build` verdes; `npm run test:l06-delivery:pg` 9/9 preservado. Detalhe completo em [`docs/ENTREGA-L07-FIN06.md`](./ENTREGA-L07-FIN06.md).
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 9, 10 (jornada Chromium) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: não há e-mail, WhatsApp, SMS, gateway, webhook, arquivo ou credencial de produção; "envio" é sempre uma transição de estado local simulada. Aceite humano/Windows permanece pendente. FIN-07..16 e ADM-01..12 continuam fora do escopo FIN-06; FIN-07 é documentado na seção seguinte.
 
 ## FIN-07
@@ -1017,6 +1023,7 @@ fluxo de caixa previsto/realizado, vencidos, próximos pagamentos e aging de rec
 - Estado: pronto_local
 - Tela / API / dados / autorização: `/admin/financeiro` → aba **Fluxo de caixa / Aging** (`CashflowWorkspace.tsx`), usando `/api/fin/cashflow-snapshots` e `/api/fin/aging-receivables`. Acesso exige sessão de staff, papel `financeiro`/`admin`/`ti` e same-origin. A migration aditiva `126-fin07-cashflow-aging-hardening.sql` preserva o rascunho 078, permite aging por `(receivable_id, competence_date)`, deriva valor restante no banco e valida o vínculo/bucket canônicos. Criações são sintéticas, transacionais e auditadas fail-closed.
 - Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` **12/12** em duas execuções consecutivas (HTTP real + PostgreSQL descartável + sessão/cookie real + Next local + Chromium real). `npm test` 196/196, `npm run typecheck`, `node scripts/qa-wave0-static.mjs` 5/5 com migrations 001–126, `npm run test:l06-delivery:pg` 9/9 e `npm run build` verdes. Detalhe em [`docs/ENTREGA-L07-FIN07.md`](./ENTREGA-L07-FIN07.md).
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 11, 12 (jornada Chromium) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: fluxo e aging não integram banco/gateway real, não baixam recebíveis, não enviam cobrança e usam somente dados sintéticos. `npm run test:migrations:pg` termina exit 0 após dois passes de 126/126, rejeita o clone com checksum adulterado como esperado e restaura o clone; aceite humano/Windows permanece pendente. FIN-08..16 e ADM-01..12 continuam fora desta sessão.
 
 ## FIN-08
@@ -1024,6 +1031,7 @@ custo por cliente/contrato/posto, importação de custos de pessoal, equipamento
 - Estado: pronto_local
 - Tela / API / dados / autorização: `/admin/financeiro` → aba **Custos / Rateio** (`CostAllocationWorkspace.tsx`), usando `/api/fin/cost-imports` e `/api/fin/costs`. Sessão de staff, papel `financeiro`/`admin`/`ti` e same-origin são obrigatórios. A migration aditiva `127-fin08-cost-allocation-hardening.sql` preserva o rascunho 078, adiciona valor de origem/chave idempotente, valida conta–contrato–posto pelo escopo canônico, sincroniza origem/competência da importação e protege no banco o cálculo do valor alocado pelo percentual documentado. Criações são transacionais e auditadas fail-closed.
 - Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` **14/14** em duas execuções consecutivas (PostgreSQL descartável, HTTP real, sessão/cookie real, Next local e Chromium real). Cobertura FIN-08: autorização/origem, fontes e filtros inválidos, importação e linha idempotentes, vínculos canônicos, divergência de importação, valor rateado adulterado na API e em SQL direto, listagem/agregados, auditoria indisponível com 503/rollback e jornada visual. Regressões: unitários 196/196, L06 9/9, migrations 001–127, typecheck, build e static 5/5 verdes. Detalhe em [`docs/ENTREGA-L07-FIN08.md`](./ENTREGA-L07-FIN08.md).
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 15, 16 (jornada Chromium) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: apenas metadados/valores sintéticos; nenhum arquivo, folha, estoque, ERP ou provedor externo é lido. UUIDs opcionais de equipamento/supervisão ainda não possuem catálogo canônico no rascunho. Restrições novas preservam linhas históricas sem certificá-las retroativamente. Aceite humano/Windows permanece pendente. FIN-09..16 e ADM-01..12 não foram iniciados.
 
 ## FIN-09
@@ -1031,13 +1039,15 @@ resultado gerencial por contrato, separando receita contratada, faturada, recebi
 - Estado: pronto_local
 - Tela / API / dados / autorização: `/admin/financeiro` → Resultado gerencial (`ManagementResultsWorkspace.tsx`) usa a rota canônica `/api/fin/management-results`; PostgreSQL calcula/conserva a margem canônica e declara base incompleta em vez de aceitar percentual do navegador ou inventar zero. Sessão, papel financeiro/admin e same-origin são decididos no servidor; TI permanece leitura quando aplicável. A migração 135 impede margem legada quando a margem calculada é nula.
 - Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` 31/31 (PostgreSQL descartável, HTTP real e Chromium) cobre margem incompleta, cálculo no servidor, auditoria/rollback e UI de falha de leitura + retry; `npm run test:migrations:pg` 135/135 em dois passes; estático 5/5, typecheck, build e `npm test` 196/196 verdes nesta fatia.
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 13, 14 (jornada Chromium) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: resultados são dados sintéticos locais; aceite humano e Windows pendentes. L07 não está encerrado.
 
 ## FIN-10
 despesas/reembolsos e compras com alçada, evidência e segregação entre solicitar/aprovar quando definida.
 - Estado: pronto_local
-- Tela / API / dados / autorização: `/admin/financeiro` → aba **Despesas / Reembolsos / Compras** (`ExpenseWorkspace.tsx`), usando a rota canônica `/api/fin/expenses` de `src/server/fin-management-api.mjs (handler FIN-10)` . Lista/busca (`?q=` nome, protocolo, referência da evidência), criação com valores em **R$ pt-BR** (`Intl.NumberFormat`), solicitação exige solicitante real derivado da sessão, categoria, valor, evidência sintética e `threshold_cents`; decisão exige motivo e nunca ocorre para política inexistente/inativa ("alçada não configurada/inativa") — quando aplicável a tela declara "decide até R$ X" e registra `approver_name` real da sessão. Falha de leitura mostra `fin10-error` + `fin10-retry`; a lista vazia só aparece com leitura bem-sucedida. Autorização no servidor: anônimo 401, TI somente leitura, mesma origem. Histórico `fin10-history-toggle-<id>`/`fin10-history-<id>` apresenta "Alçada aplicada: R$ N" (snapshot `approval_limit_cents`/`authority_limit_cents` da migração 136).
+- Tela / API / dados / autorização: `/admin/financeiro` → aba **Despesas / Compras** (`ExpenseWorkspace.tsx`; tipos despesa/reembolso/compra), usando a rota canônica `/api/fin/expenses` de `src/server/fin-management-api.mjs (handler FIN-10)` . Lista/busca (`?q=` nome, protocolo, referência da evidência), criação com valores em **R$ pt-BR** (`Intl.NumberFormat`), solicitação exige solicitante real derivado da sessão, categoria, valor, evidência sintética e `threshold_cents`; decisão exige motivo e nunca ocorre para política inexistente/inativa ("alçada não configurada/inativa") — quando aplicável a tela declara "decide até R$ X" e registra `approver_name` real da sessão. Falha de leitura mostra `fin10-error` + `fin10-retry`; a lista vazia só aparece com leitura bem-sucedida. Autorização no servidor: anônimo 401, TI somente leitura, mesma origem. Histórico `fin10-history-toggle-<id>`/`fin10-history-<id>` apresenta "Alçada aplicada: R$ N" (snapshot `approval_limit_cents`/`authority_limit_cents` da migração 136).
 - Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` **35/35 em duas execuções consecutivas** (PostgreSQL descartável + Chromium real). Cobertura FIN-10 (subtestes 17–22, HTTP, SQL direto e jornada de navegador): busca textual, 6 POSTs concorrentes idênticos (200 replay ou 409), duplicidade natural pendente bloqueada, sem alçada / alçada inativa / valor excedendo a alçada / autoaprovação — todos recusados, atualização de alçada não reaprova automaticamente, SQL direto com autoaprovação → `fin_expense_segregation`, DELETE direto → `fin_expense_no_delete`, histórico com snapshot 200050, zero efeitos financeiros (payments/baixas/conciliações), auditoria indisponível → 503 `audit_unavailable` com rollback total. Gate da cadeia no mesmo commit: `npm run test:migrations:pg` 136/136 (2 passes), `npm test` 196/196, typecheck, estático 5/5 e build verdes. Avaliação adaptativa registrada em [`docs/CONSOLIDACAO-L07-PRS-PENDENTES.md`](./CONSOLIDACAO-L07-PRS-PENDENTES.md).
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 17, 18, 19, 20, 22 (jornadas Chromium) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: política padrão é vazia (ausência não aprova); evidências são metadados sintéticos; nenhuma emissão fiscal, Pix/boleto, cobrança ou pagamento real. Aceite humano/Windows pendente. Ambições #47/#53 integradas seletivamente conforme consolidação acima; nenhuma rota paralela/2º test-id em /admin/ti/novo. L07 não está encerrado.
 
 ## FIN-11
@@ -1045,6 +1055,7 @@ integração contábil/fiscal mediante provedor; determinar NFS-e/NF-e ou outra 
 - Estado: pronto_local
 - Tela / API / dados / autorização: `/admin/financeiro` → Fiscal (`FiscalWorkspace.tsx`) usa `/api/fin/fiscal-activity-rules`, provedores, obrigações e documentos canônicos. Regra de atividade determina a obrigação; o provedor sandbox só registra documento sintético. Sessão, papel e origem são validados no servidor; a tela revela falha de leitura e permite retry.
 - Integração e evidência (teste, resultado, commit): gate L07 31/31 inclui HTTP de provedores/obrigações/documentos, negativas de autorização/origem, determinação por atividade, nenhuma emissão real, auditoria fail-closed e Chromium para a jornada fiscal/retry. Migrações 001–135 reaplicadas e verificadas no mesmo ambiente isolado.
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 23, 24 (jornada Chromium) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: não há NFS-e/NF-e, certificado, credencial, arquivo, ERP ou transmissão para provedor real. Aceite humano e Windows pendentes.
 
 ## FIN-12
@@ -1052,6 +1063,7 @@ boletos/Pix/gateway somente após seleção e sandbox; validar assinatura de web
 - Estado: pronto_local
 - Tela / API / dados / autorização: `/admin/financeiro` → Boletos / Pix / Gateway (`GatewayWorkspace.tsx`) usa APIs canônicas de gateway, cobrança, webhook/histórico e simulador sandbox. O servidor confere HMAC/payload, autorização e origem; somente gateway selecionado/homologado em sandbox recebe cobrança. A conciliação materializa a baixa FIN-04 na mesma transação (`fin_payments`, recebível e histórico); estorno cria pagamento reversor ligado à baixa original. A migração 135 assegura os vínculos pagamento–charge e baixa/estorno.
 - Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` 31/31 prova assinatura divergente recusada, replay concorrente (1 criação + 5 replays), criação de uma baixa FIN-04, saldo/status do recebível, estorno reversor e Chromium confirmando a baixa no banco; auditoria indisponível reverte a operação. `npm run test:migrations:pg` 135/135, estático 5/5, typecheck, build e unitários 196/196 verdes.
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 25, 26 (jornada Chromium) — a baixa/estorno FIN-04 resultante é asserida no mesmo subteste — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: gateway, assinatura e pagamentos são simuladores locais; não há Pix/boleto, PSP, banco, adquirente, cobrança ou valor real. Aceite humano e Windows pendentes.
 
 ## FIN-13
@@ -1062,6 +1074,7 @@ orçamento gerencial e cenários de expansão com premissas explícitas; não pr
 - Estado: pronto_local (validação automática completa; aceite humano pendente)
 - Tela / API / dados / autorização: Aba “Orçamento / Cenários” em `/admin/financeiro` (`BudgetWorkspace.tsx`) com seleção por nome/protocolo, moeda em R$, erro de leitura visível e ações de revisão/aprovação/histórico. APIs `GET/POST/PATCH /api/fin/budgets`, `GET/POST /api/fin/budget-scenarios` e `GET /api/fin/budget-history` (mais aliases `/api/{admin,crm}/hr/fin-budget*`), em `src/server/fin-budget-api.mjs`. Tabelas `fin_budgets`, `fin_budget_scenarios` e `fin_budget_history` (migrações 080, 132 e a aditiva 134). Sessão obrigatória, papéis financeiro/admin, `/admin/ti` somente leitura, same-origin nas mutações; escrita + histórico + auditoria na mesma transação, com rollback e `503 audit_unavailable`.
 - Integração e evidência (teste, resultado, commit): Gate `npm run test:l07-delivery:pg` **31/31** em duas execuções aprovadas (era 27/27 antes da fatia; uma execução intermediária deu 30/31 por queda do Chromium no `launch` no subteste 18 de FIN-10, fora desta fatia — ver EVIDENCIAS-ENTREGA-LOCAL.md), com PostgreSQL descartável, HTTP real e Chromium real. Cobre: edição de orçamento aprovado recusada (409 `approved_budget_locked_requires_revision`) com trava equivalente no banco; revisão com motivo e autor que incrementa versão, retira a aprovação e exige nova aprovação; histórico imutável com snapshot anterior/posterior, versões, autor real, data e motivo; margem calculada no servidor/banco com receita zero e dados incompletos tratados sem inventar percentual nem apagar valores conhecidos; idempotência de criação com retry sequencial (200 replay), conflito de conteúdo (409) e **retry concorrente de 6 requisições gerando um único orçamento**; erro de leitura exibido na interface em vez de lista vazia; papel indevido, anônimo e TI negados; rollback quando a auditoria falha; aprovação sem gerar recebível, pagável, pagamento ou cobrança. Regressões preservadas: `npm test` 196/196, `test:migrations:pg` 134/134 com replay/clone/checksum, L03 1/1, L04 20/20, L05 1/1, L06 9/9, typecheck e build aprovados. Detalhes em [ENTREGA-L07-FIN13.md](ENTREGA-L07-FIN13.md) e [EVIDENCIAS-ENTREGA-LOCAL.md](EVIDENCIAS-ENTREGA-LOCAL.md).
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 27, 28, 29, 30, 31, 32 (jornadas Chromium) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: **Aceite humano pendente** (nenhuma aprovação de Marcelo/Andreia registrada) e validação em Windows pendente — a sessão rodou em Linux. Adiados por decisão de negócio: origem do número e data-base por cenário (#62), premissas estruturadas e aprovador distinto do autor/mínimo de dois cenários (#59). Orçamento permanece estimativo: não gera cobrança, pagamento ou obrigação.
 
 ## FIN-14
@@ -1069,6 +1082,7 @@ exportação do período com trilha, filtros, totais conciliáveis e acesso limi
 - Estado: pronto_local (validação automática completa; aceite humano pendente)
 - Tela / API / dados / autorização: Aba “Exportações” em `/admin/financeiro`, seleção por nome/protocolo, R$, erro de leitura + retry, geração e download sintético limitado. `GET/POST/PATCH /api/fin/exports`, `GET /api/fin/export-logs` e `GET /api/fin/export-download`; sessão e papel financeiro/admin, TI somente leitura, papel indevido/anônimo negados. Download exige estado gerado, escopo contador e validade, devolve somente o artefato persistido e audita o acesso.
 - Integração e evidência (teste, resultado, commit): migrações 080/133/137; replay idêntico e concorrente por `storage_key` retorna o mesmo registro, conteúdo divergente é recusado; trilha imutável e auditoria fail-closed. Gate L07 37/37 duas vezes, incluindo Chromium.
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 33, 36, 37 (jornada Chromium) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: artefato apenas sintético, sem envio ao contador/storage externo. Aceite humano e Windows pendentes.
 
 ## FIN-15
@@ -1076,6 +1090,7 @@ fechamento de competência e reabertura autorizada; preservar versões de relat�
 - Estado: pronto_local (validação automática completa; aceite humano pendente)
 - Tela / API / dados / autorização: Aba “Fechamento” em `/admin/financeiro`, seleção da competência, motivo para reabertura/novo fechamento e histórico de versões. Autorizador vem exclusivamente da sessão. Trigger da migração 137 bloqueia SQL direto em recebíveis, pagáveis e custos do mês fechado/bloqueado; reabertura explícita libera o mês.
 - Integração e evidência (teste, resultado, commit): retry/concorrência por competência preserva uma única versão inicial; todas as versões são imutáveis; escrita + versão + auditoria são atômicas. Gate L07 37/37 duas vezes com prova HTTP, SQL e Chromium.
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 34, 36, 37 (jornada Chromium) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: aceite humano e Windows pendentes; fechamento não substitui validação contábil externa.
 
 ## FIN-16
@@ -1083,6 +1098,7 @@ comissões ligadas à regra CRM-25, provisão e revisão; não pagar automaticam
 - Estado: pronto_local (validação automática completa; aceite humano pendente)
 - Tela / API / dados / autorização: Aba “Comissões” em `/admin/financeiro`, seleção por regra/data/situação, R$, revisão humana e histórico auditável. A tela declara e preserva `is_auto_paid=false`; baixa é somente registro manual após revisão, sem banco/PSP/Pix/boleto.
 - Integração e evidência (teste, resultado, commit): `idempotency_key` + fingerprint na migração 137, seis retries concorrentes com um único registro, conflito de conteúdo recusado, tentativa automática recusada em API e banco, auditoria fail-closed. Gate L07 37/37 duas vezes com Chromium.
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 35, 36, 37 (jornada Chromium) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: não há pagamento real; aceite humano e Windows pendentes.
 
 ## AST-01
@@ -1174,6 +1190,7 @@ painel “Meu dia” com pendências reais, prioridade, responsável e ação.
 - Estado: pronto_local
 - Tela / API / dados / autorização: Tela `/admin/marcelo` (aba Indicadores, `MarceloPanel.tsx`) com cartão `ADM-01.pendencias`. API `GET /api/adm/panel/indicators` e `GET /api/adm/panel/drilldown?indicator=ADM-01.pendencias` (`src/server/adm-panel-api.mjs`). Fontes canônicas: `fin_expenses` (pendente), `cli_tickets_v2` (aberto) e `ops_occurrence_book` (aberto), cada linha com prioridade, responsável e ação. Autorização decidida no servidor: anônimo 401; papéis fora de `admin|marcelo|ti` 403; TI estritamente leitura (`scope.can_decide=false`).
 - Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA), subteste “ADM-01..05/12: papéis, origem declarada e drill-down de cada indicador até o registro canônico”: 3 pendências canônicas no período semeado, cada linha abrindo `GET /api/adm/panel/record` com o mesmo `record_id`; subteste “falha de leitura … e o retry recupera”: fonte indisponível vira `status:'indisponivel'` com `value:null` (nunca zero) e drill-down 503; jornada Chromium “do cartão ao registro e à decisão”.
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 38, 39, 43 (jornada Chromium) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-02
@@ -1181,6 +1198,7 @@ visão comercial com leads novos, oportunidades paradas, propostas e próximas a
 - Estado: pronto_local
 - Tela / API / dados / autorização: Cartões `ADM-02.leads_novos`, `ADM-02.oportunidades_paradas` e `ADM-02.propostas` na aba Indicadores. Fontes: `public_leads`, `crm_opportunities` (sem próxima ação/contrato) e `crm_proposals`. Cada cartão publica `source.tables`, `source.period_field`, `period` e `as_of`; o drill-down do lead projeta allowlist **sem PII** (sem nome/telefone).
 - Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA), mesmo subteste de indicadores: contagem 1/1/1 contra os registros semeados, origem declarada por cartão e asserção explícita de que `name`/`phone` não saem na projeção do lead.
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 38, 43 (jornada Chromium) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-03
@@ -1188,6 +1206,7 @@ visão operacional com cobertura, ocorrências críticas, SLA e implantação.
 - Estado: pronto_local
 - Tela / API / dados / autorização: Cartões `ADM-03.ocorrencias_criticas`, `ADM-03.sla_estourado` e `ADM-03.implantacoes_pendentes`. Fontes: `ops_occurrence_book` (severidade crítica), `cli_tickets_v2` (SLA vencido) e `crm_contract_implantations`. Indisponibilidade de fonte é declarada por cartão e contada em `unavailable_count`.
 - Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA): subteste de falha de leitura renomeia `ops_occurrence_book`, prova dois cartões `indisponivel` com `value:null`, drill-down 503 (`drilldown_source_unavailable`), cartão não relacionado intacto e recuperação pelo retry sem intervenção manual.
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 38, 39, 43 (jornada Chromium) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-04
@@ -1195,6 +1214,7 @@ visão financeira com fonte/competência, saldo, vencimentos e margem por contra
 - Estado: pronto_local
 - Tela / API / dados / autorização: Cartões `ADM-04.recebiveis_vencidos` e `ADM-04.pagaveis_a_vencer`, em centavos, com competência/vencimento como campo de período declarado. Fontes: `fin_accounts_receivable` e `fin_accounts_payable`. Valor formatado em `pt-BR`/BRL na tela e `amount_cents` na API.
 - Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA): contagem e soma conferidas contra os registros canônicos; jornada Chromium confere `R$ 1.500,00`, a fonte `fin_accounts_receivable` e a data-base no cartão, abre a lista filtrada e o registro real.
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 38, 43 (jornada Chromium) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-05
@@ -1202,6 +1222,7 @@ contratos próximos de renovar, reclamações reincidentes e risco de perda just
 - Estado: pronto_local
 - Tela / API / dados / autorização: Cartão `ADM-05.renovacoes` (fonte `crm_renewals`, com empresa, data de renovação e responsável) e drill-down para o registro canônico `crm_renewal`. Risco só aparece quando há registro canônico que o justifique — nenhum rótulo de risco é inferido sem origem.
 - Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA): o cartão conta a renovação semeada e cada linha abre o registro `crm_renewals`; período sem registro devolve `record_count:0` com `empty_reason:'sem_registro_canonico_no_periodo'` e `amount_cents:null` (ausência não vira zero inventado).
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 38, 43 (jornada Chromium) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-06
@@ -1209,6 +1230,7 @@ aprovação unificada de descontos, compras, despesas e exceções permitidas; a
 - Estado: pronto_local
 - Tela / API / dados / autorização: Aba Aprovações e `POST /api/adm/panel/decisions`, unificando despesas (`fin_expenses`) e descontos (`crm_discount_requests`). Alçada por valor vem de `fin_expense_approval_authorities` (sem linha ativa ninguém aprova); segregação solicitante≠decisor; autoria sempre da sessão. A mesma transação grava origem + `fin_expense_history` + `adm_panel_decisions` + `adm_panel_decision_history` + `audit_log`; falha de auditoria devolve 503 e reverte tudo. Idempotência por `idempotency_key` com `pg_advisory_xact_lock`.
 - Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA), subteste “ADM-06: decisão unificada com alçada, segregação, idempotência concorrente e auditoria fail-closed”: anônimo 401, TI 403 `read_only`, origem estranha 403, sem alçada 403 `approval_authority_exceeded` sem alterar o registro, 6 chamadas concorrentes → exatamente 1 criação e 5 replays com o mesmo id, limite aplicado gravado, histórico imutável (UPDATE/DELETE recusados), chave repetida com outro conteúdo 409, segunda decisão sobre a mesma origem 409, valor acima da alçada 403 e `audit_log` indisponível → 503 com rollback comprovado em banco; jornada Chromium aprova a despesa pela tela e o banco mostra `approver_identity` da sessão.
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 40, 43 (jornada Chromium) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-07
@@ -1216,6 +1238,7 @@ busca autorizada, favoritos, filtros salvos e atalhos com contexto.
 - Estado: pronto_local
 - Tela / API / dados / autorização: Aba Espaço de trabalho e `GET/POST /api/adm/panel/workspace`: favoritos, filtros salvos e atalhos sempre no escopo da identidade da sessão (`user_identity` enviado pelo cliente é ignorado); atalho só aceita URL interna `/admin/...`. Migração 138 adiciona CHECK `NOT VALID` de dono em `adm_search_favorites`, `adm_saved_filters` e `adm_shortcuts`.
 - Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA), subteste “ADM-07/08/09”: favorito criado por Marcelo nasce com `user_identity` da sessão mesmo recebendo outra identidade no corpo, não aparece para outra identidade, TI recebe 403 na escrita, RH 403 na leitura, atalho externo 400 e, com `audit_log` indisponível, a gravação devolve 503 sem deixar linha.
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 41 — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-08
@@ -1223,6 +1246,7 @@ relatórios exportáveis e agendados para destinatários autorizados; registrar 
 - Estado: pronto_local
 - Tela / API / dados / autorização: Aba Relatórios: `POST /api/adm/panel/reports` e `GET /api/adm/panel/report-download`. O total do relatório é **recalculado** pela mesma SQL canônica do cartão; dados limitados (`is_limited=true`, apenas `record_count`, `amount_cents`, `period_start`, `period_end`, `indicator_code`); destinatário precisa ser identidade ativa com papel autorizado; geração e download gravam `adm_report_logs` + `audit_log` na mesma transação; protocolo `REL-ADM-YYYYMMDD-XXXX`; download com `no-store`.
 - Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA): total do relatório igual ao do cartão, destinatário sem papel 403 `recipient_not_authorized`, TI 403 na geração, 4 chamadas concorrentes → 1 criação + 3 replays, mesma chave com outro título 409, download anônimo 401, de terceiro 403, do destinatário 200 com exatamente os 5 campos limitados, log de download e trilha conferidos em banco, e 503 com rollback quando a auditoria falha.
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 41 — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-09
@@ -1230,6 +1254,7 @@ configurações de negócio versionadas: catálogo, preços, alçadas, conteúdo
 - Estado: pronto_local
 - Tela / API / dados / autorização: Aba Configurações: `POST /api/adm/panel/business-configs` versiona com advisory lock por `config_key`, desativa a versão anterior, grava `supersedes_id`, exige motivo de 10–1000 caracteres e registra `adm_business_config_history` + auditoria na mesma transação. Migração 138 cria o índice parcial que garante uma única versão ativa por chave.
 - Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA): versões 1→2 com a anterior preservada e inativa, `supersedes_id` correto, duas linhas de histórico, motivo curto 400 e, com auditoria indisponível, 503 sem terceira versão e com a versão 2 ainda ativa.
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 41 — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-10
@@ -1237,6 +1262,7 @@ metas e cenários com comparação prevista/realizada, sem confundir estimativa 
 - Estado: pronto_local
 - Tela / API / dados / autorização: Aba Metas: `GET /api/adm/panel/goals` separa `target` (estimativa, `crm_goals.target_value`, `is_estimate:true`) de `realized` (resultado, `crm_contracts.total_price`, com `record_count` e `as_of`), com `comparison_note` explicando que não são o mesmo número e `realized_status:'indisponivel'` quando a fonte do realizado falha.
 - Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA), subteste “ADM-10/11/12”: anônimo 401, RH 403, meta canônica publicada com fonte de cada lado, realizado contado de contratos reais e asserção de que estimativa e resultado são números distintos; a tela mostra “estimativa” e a fonte do realizado na aba Metas (jornada Chromium).
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 42, 43 (jornada Chromium) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-11
@@ -1244,6 +1270,7 @@ trilha e diário de decisões CON-11 acessíveis conforme permissão.
 - Estado: pronto_local
 - Tela / API / dados / autorização: Aba Diário: `GET /api/adm/panel/decision-diary` sobre `crm_management_diary` (CON-11). TI não recebe entradas `restrito`/`diretoria` (`restricted_visible:false`, `hidden_visibilities`); cada entrada lida grava `adm_management_diary_access` com a identidade do leitor + auditoria na mesma transação, fail-closed.
 - Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA): TI não vê a decisão restrita e vê a de equipe, RH 403, Marcelo vê a restrita com acesso registrado, e com `audit_log` indisponível a leitura sensível devolve 503 sem deixar nenhuma linha de acesso (contagem antes = depois).
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 42 — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## ADM-12
@@ -1251,6 +1278,7 @@ análises de expansão, qualidade e oportunidades adicionais alimentadas pelos m
 - Estado: pronto_local
 - Tela / API / dados / autorização: Aba Expansão: `GET /api/adm/panel/expansion` com blocos `oportunidades_abertas` (estimativa), `contratos_ativos` e `qualidade_ocorrencias` (realizado), cada um com fonte, `as_of` e indisponibilidade declarada, mais a lista de `adm_expansion_analyses` com `analyses_empty_reason` quando não há análise registrada. O cartão `ADM-12.oportunidades_expansao` abre o drill-down até a oportunidade real.
 - Integração e evidência (teste, resultado, commit): `npm run test:l07-delivery:pg` verde (43 subtestes, duas execuções consecutivas no mesmo SHA): blocos com tipo e fonte conferidos, contagens batendo com os módulos reais e, ao tornar `crm_opportunities` ilegível, o bloco vira `indisponivel` com `value:null` em vez de zero; a aba Expansão exibe “realizado” na jornada Chromium.
+- Subtestes vigentes do gate L07 (43, mesma numeração da matriz de fechamento): 38, 42, 43 (jornada Chromium) — ver [MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md).
 - Pendência / fronteira externa / aceite humano: Aceite humano pendente (Marcelo/Andreia não validaram esta entrega). Sem fronteira externa: nenhum PSP, banco, SMTP, emissão ou dado de cliente real é tocado. Dívida explícita: os 80 componentes órfãos de `/admin/ti` não promovidos (ver `docs/INVENTARIO-ADMIN-TI.md`).
 
 ## PLT-01

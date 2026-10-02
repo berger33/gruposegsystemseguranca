@@ -215,3 +215,40 @@ Roteiro efetivamente seguido nesta sessão, na ordem:
 
 Não feito de propósito: nenhum aceite humano foi assumido, L07 não foi
 declarado concluído e L08 não foi iniciado.
+
+## Registro de execução — fechamento de matriz/evidências do L07 (02/10/2026)
+
+Roteiro efetivamente seguido nesta sessão, na ordem:
+
+1. Reconfirmação da **baseline no SHA base antes de qualquer edição**:
+   estático 5/5, typecheck 0, unitários 196/196, build exit 0, migrações
+   138/138 (2 passes + clone/checksum negativo), gate L07 **43/43 duas vezes
+   consecutivas** e regressões L03 1/1, L04 20/20, L05 1/1, L06 8/9 encadeado
+   (subteste 9 em `Carregando operação…` — instabilidade de carga conhecida;
+   isolado depois passou 9/9). As instabilidades nomeadas no ponto de partida
+   (L03 403 e L07-22) não reapareceram.
+2. **Percorrência requisito a requisito** de FIN-01..16 e ADM-01..12 no
+   CHECKLIST, conferindo tela/API/tabelas/autorização no código real e o corpo
+   de cada subteste citado do gate de 43.
+3. **Tratamento da instabilidade L06-9** com causa raiz investigada (teste
+   interagia antes do bootstrap do workspace; único subteste sem espera de
+   conteúdo) e correção **do teste** no padrão dos subtestes 1–8 do mesmo
+   arquivo — sem timeout maior, sem skip, assertiva final idêntica. Validada
+   isolada (9/9) e encadeada após L03–L05 (9/9).
+4. Produção da **matriz de fechamento** `docs/MATRIZ-FECHAMENTO-L07.md`
+   (requisito → tela/rota → API → tabelas → subtestes → resultado → pendência,
+   com dívidas explícitas) e do relatório `docs/ENTREGA-L07-MATRIZ-FECHAMENTO.md`.
+5. Correções documentais honestas: rótulo real da aba FIN-10; evidência
+   vigente defasada; nota de precisão sobre TI-leitura em FIN-02. Nenhuma
+   lacuna funcional real foi encontrada — nenhuma migração nova (próxima
+   livre: 139), nenhum subteste acrescentado, nenhum produto alterado.
+6. **Validação final no mesmo SHA entregue**: estático 5/5, typecheck,
+   unitários 196/196, build, migrações 138/138, L07 **43/43 em duas execuções
+   consecutivas**, L03 1/1, L04 20/20, L05 1/1, L06 **9/9 encadeado**.
+   Ruído `next-env.d.ts`/`tsconfig.json` revertido antes do commit.
+7. Atualização de CHECKLIST, ESTADO, EVIDÊNCIAS, EXECUÇÃO, CONTROLE,
+   ENTREGA-L07, matriz e relatório; PR aberta para revisão, **sem merge**.
+
+Não feito de propósito: nenhum aceite humano assumido ou presumido, L07 não
+declarado concluído, L08 não iniciado, dívida dos 80 órfãos de `/admin/ti`
+mantida como dívida explícita (critério de saída já definido).

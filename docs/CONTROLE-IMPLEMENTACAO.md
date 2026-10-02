@@ -1,5 +1,14 @@
 # Controle de implementação — SEG System
 
+## Atualização 2026-10-02 — L07: fechamento de matriz e evidências
+
+- IDs: FIN-01..16 e ADM-01..12 conferidos requisito a requisito contra código e subtestes vigentes; todos permanecem `pronto_local` **somente na validação automática**, com aceite humano pendente.
+- Entrega desta sessão: matriz de fechamento `docs/MATRIZ-FECHAMENTO-L07.md` (requisito → tela/rota → API → tabelas canônicas → subtestes do gate → resultado → pendência), mapeamento por requisito no CHECKLIST e relatório `docs/ENTREGA-L07-MATRIZ-FECHAMENTO.md`.
+- Correção de código: apenas sincronização do subteste 9 do gate L06 (raça de teste sob carga em 2 vCPU, causa raiz investigada; sem timeout maior, sem skip, assertiva idêntica) — validada isolada e encadeada. Sem migração nova (próxima livre: **139**), sem alteração de produto.
+- Prova: baseline no SHA base (L07 43/43 ×2; L06 8/9 encadeado → 9/9 isolado) e validação final no SHA entregue: estático 5/5, typecheck, 196/196, build, migrações 138/138, L07 **43/43 ×2 consecutivas**, L03 1/1, L04 20/20, L05 1/1, **L06 9/9 encadeado**.
+- Dívidas abertas: 80 componentes órfãos de `/admin/ti` (critério de saída em `INVENTARIO-ADMIN-TI.md`) e instabilidades residuais a monitorar (L03 403 e L07-22 não reapareceram nesta sessão).
+- Próxima ação: aceite humano das 28 jornadas (roteiro na matriz) e decisão sobre a dívida dos órfãos; só então declarar o L07 concluído e iniciar o L08. **L07 ainda em execução; L08 não iniciado.**
+
 ## Atualização 2026-10-02 — L07 FIN-14/15/16
 
 - IDs: FIN-14, FIN-15 e FIN-16 promovidos a `pronto_local` pela validação automática; aceite humano pendente.
