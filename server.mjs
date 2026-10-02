@@ -3797,6 +3797,9 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/fin-exports" || url.pathname === "/api/crm/hr/fin-exports" || url.pathname === "/api/hr/fin-exports" || url.pathname === "/api/fin/exports") {
     return finBudgetApi.handleExports(req, res);
   }
+  if (url.pathname === "/api/fin/export-download") {
+    return finBudgetApi.handleExportDownload(req, res);
+  }
   if (url.pathname === "/api/admin/hr/fin-export-logs" || url.pathname === "/api/crm/hr/fin-export-logs" || url.pathname === "/api/hr/fin-export-logs" || url.pathname === "/api/fin/export-logs") {
     return finBudgetApi.handleExportLogs(req, res);
   }
@@ -5294,6 +5297,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/crm/hr/fin-exports"
   || pathname === "/api/hr/fin-exports"
   || pathname === "/api/fin/exports"
+  || pathname === "/api/fin/export-download"
   || pathname === "/api/admin/hr/fin-export-logs"
   || pathname === "/api/crm/hr/fin-export-logs"
   || pathname === "/api/hr/fin-export-logs"

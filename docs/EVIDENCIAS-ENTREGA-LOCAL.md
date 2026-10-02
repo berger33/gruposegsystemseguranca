@@ -1,5 +1,21 @@
 # Evidências — entrega local integral
 
+## Evidência vigente — FIN-14/15/16 (2026-10-02)
+
+| Prova | Resultado final |
+|---|---|
+| `npm run typecheck` | 0 erros |
+| `npm test` | 196/196 |
+| `npm run build` | aprovado |
+| `node scripts/qa-wave0-static.mjs` | 5/5; 001–137 |
+| `npm run test:migrations:pg` | 137/137; dois passes + clone; checksum negativo esperado |
+| `npm run test:l07-delivery:pg` #1 | 37/37, sem skips |
+| `npm run test:l07-delivery:pg` #2 consecutiva | 37/37, sem skips |
+| L03 / L04 / L05 / L06 | 1/1 · 20/20 · 1/1 · 9/9 |
+
+O baseline antes da alteração foi reconfirmado após `npm ci`: estático 5/5 (001–136), typecheck, unitários 196/196, migrações 136/136 e L07 35/35 em duas execuções. Uma execução intermediária posterior teve ruído no subteste Chromium FIN-10 (histórico ainda em “Carregando…”); a repetição sem mudança passou e não houve timeout/skip/remoção de assertiva. Na primeira rodada final da regressão L04, o Chromium sofreu `SIGSEGV` no `launch` do subteste CRM-01 (19/20); a reexecução integral, sem mudança de código, passou 20/20. Evidência funcional detalhada: [ENTREGA-L07-FIN14-15-16.md](ENTREGA-L07-FIN14-15-16.md). Dados exclusivamente sintéticos em PostgreSQL descartável.
+
+
 Cada linha registra cenário, perfil, comando, resultado observado e commit.
 Evidência de lote antigo não vale para SHA novo: reexecutar após alterações.
 

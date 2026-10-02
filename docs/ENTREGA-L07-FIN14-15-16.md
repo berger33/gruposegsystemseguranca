@@ -1,52 +1,52 @@
-# Entrega L07 — FIN-14, FIN-15 e FIN-16
+# Entrega L07 — jornadas UI de FIN-14, FIN-15 e FIN-16
 
-## Escopo
-Fatia de endurecimento dos domínios que ainda compartilhavam `src/server/fin-budget-api.mjs` sem as garantias já aplicadas ao FIN-13:
+Data: 2026-10-02. Estado: `pronto_local` para FIN-14/15/16 na validação automática; aceite humano pendente. **L07 permanece em execução.**
 
-- FIN-14 — exportação do período (`/api/fin/exports`, `/api/fin/export-logs`).
-- FIN-15 — fechamento de competência e versões de relatório (`/api/fin/competence-closures`, `/api/fin/report-versions`).
-- FIN-16 — provisão/revisão de comissões ligadas à regra CRM-25 (`/api/fin/commission-provisions`, `/api/fin/commission-provision-history`).
+## Escopo entregue
 
-A entrega é aditiva: nenhuma migração histórica foi alterada e nenhum tipo existente foi modificado.
+Três abas próprias foram acrescentadas a `/admin/financeiro`, sem reabrir FIN-10, FIN-13 ou a ligação FIN-12 → FIN-04:
 
-## Lacunas corrigidas
-Antes desta fatia, os handlers FIN-14/15/16 ainda:
+- **Exportações (FIN-14):** criação por período, filtros/totais sintéticos, seleção por nome/protocolo, valores em R$, transições de geração, trilha e download de artefato JSON limitado e auditado.
+- **Fechamento (FIN-15):** fechamento/reabertura com motivo, autorizador derivado da sessão, seleção de competência e consulta de todas as versões preservadas.
+- **Comissões (FIN-16):** provisão ligada opcionalmente à regra CRM-25, revisão humana visível/auditável, valores em R$ e baixa apenas manual; a interface não oferece pagamento automático nem integração externa.
 
-- gravavam sem transação, com auditoria executada depois do commit (falha de auditoria não revertia nada);
-- não tinham `FOR UPDATE` em decisão/transição;
-- não aplicavam a borda `guardMutation`, de modo que o papel `ti` podia **escrever** nesses domínios;
-- aceitavam qualquer valor de `status`/`action` e repassavam datas e textos direto ao SQL;
-- respondiam `500 internal` para toda falha, sem `503 audit_unavailable`;
-- tinham o `PATCH` de exportação e de provisão **quebrados**: o parâmetro `$1` era deduzido ao mesmo tempo como enum e como texto, e o PostgreSQL recusava a consulta com `42P08 inconsistent types deduced for parameter $1`. O caminho só respondia `500 internal`; agora é tipado explicitamente e exercitado pelo gate.
+As três abas distinguem falha de leitura de lista vazia, exibem “Tentar novamente” e confirmam ações somente após resposta persistida pelo servidor.
 
-## Alterações
-- `db/migrations/133-fin14-15-16-export-closure-commission-hardening.sql` (nova, aditiva):
-  - FIN-14: `fin_export_logs` imutável, exportação sempre com acesso limitado do contador, transições `pendente → gerando → gerado → expirado` (`falhou → pendente`), `gerado` exige `storage_key` e `generated_at`.
-  - FIN-15: `fin_report_versions` imutável e sempre preservada; transições `aberta → fechada → reaberta → fechada`; reabertura exige identidade autorizadora, data e motivo.
-  - FIN-16: `is_auto_paid` permanece proibido; transições `provisionada → em_revisao → revisada → paga|cancelada`; `paga` exige revisão prévia, identidade e data de baixa manual.
-- `src/server/fin-budget-api.mjs`: handlers FIN-14/15/16 transacionais com `BEGIN`/`COMMIT`, `FOR UPDATE` nas decisões e nas chaves de duplicidade, auditoria fail-closed com rollback total e `503 { "error": "audit_unavailable" }`, allowlist de status/ações/tipos antes do SQL, respostas sanitizadas sem detalhe SQL, sessão/same-origin/papéis financeiro/admin e papel `ti` somente leitura em todo o domínio.
-- `scripts/migrate-site-visual.mjs` e `scripts/qa-wave0-static.mjs`: faixa de migrações passa a 001–133.
-- `tests/l07-delivery.integration.test.mjs`: três novos testes HTTP (FIN-14, FIN-15, FIN-16) com dados sintéticos. Nenhum teste Chromium foi acrescentado nesta fatia: os três domínios ainda não têm aba própria no workspace, então um teste de navegador adicionaria fragilidade sem cobertura real.
-- `scripts/qa-l07-delivery-postgres.mjs`: gate L07 passa de 24 para 27 subtestes.
+## Lacunas reproduzidas antes da correção
 
-## Garantias verificadas pelo gate
-- FIN-14: criação com protocolo `EXP-FIN`, trilha em `fin_export_logs`, duplicidade recusada pela chave de armazenamento (sem criar segunda exportação), transições de geração controladas, `gerado` sem `storage_key` recusado, trilha imutável, acesso limitado do contador não pode ser desligado, papéis não financeiros recusados, `ti` somente leitura e `503` com rollback da exportação e da trilha.
-- FIN-15: fechamento único por competência, reabertura apenas autorizada e justificada, segunda reabertura consecutiva recusada, novo fechamento registrado, versões 1/2/3 preservadas e imutáveis, `503` sem criar fechamento nem versão.
-- FIN-16: provisão nasce `provisionada` e nunca `paga`; pagamento automático recusado na criação e na atualização; baixa exige revisão anterior e confirmação manual explícita; provisão paga é terminal; histórico imutável e sem tentativa de pagamento automático; `503` com rollback da provisão e do histórico.
+Na base `cc4da84`, os subtestes HTTP 33–35 estavam verdes, mas não existiam abas FIN-14/15/16. O acesso “limitado do contador” era apenas metadado: não havia download controlado. Fechar uma competência também não bloqueava `INSERT` SQL direto em lançamentos do mês. A exportação recusava todo retry por chave, fechamento duplicado sempre retornava conflito e provisão não possuía chave de idempotência.
 
-## Validações executadas em 2026-10-01
-- `npm ci`: OK, 82 pacotes, 0 vulnerabilidades.
-- `npm run typecheck`: OK.
-- `node scripts/qa-wave0-static.mjs`: OK, 5/5; migrações 001–133 contínuas e registradas.
-- `npm test`: OK, 196/196.
-- `npm run test:migrations:pg`: OK, migrações 001–133, duas passagens idempotentes e clone/checksum preservado (o stderr de checksum mismatch em `006` é o cenário negativo esperado do próprio gate, com exit code 0).
-- `npm run test:l07-delivery:pg`: OK, 27/27, 1ª execução.
-- `npm run test:l07-delivery:pg`: OK, 27/27, 2ª execução consecutiva; Chromium sem SIGSEGV.
-- `npm run test:l03-delivery:pg`: OK, 1/1.
-- `npm run test:l04-delivery:pg`: OK, 20/20.
-- `npm run test:l05-delivery:pg`: OK, 1/1.
-- `npm run test:l06-delivery:pg`: OK, 9/9.
-- `npm run build`: OK.
+## Implementação e garantias
 
-## Limites
-Esta entrega não promete resultado financeiro, não implementa pagamento, cobrança real, gateway real ou emissão real — a baixa de comissão é apenas um registro manual auditado. Não altera migrações históricas nem tipos existentes. Todos os dados dos testes são sintéticos, em PostgreSQL descartável e isolado.
+- Componentes `ExportWorkspace.tsx`, `ClosureWorkspace.tsx` e `CommissionWorkspace.tsx`, integrados ao workspace financeiro.
+- `GET /api/fin/export-download?id=...`: exige sessão/papel financeiro, exportação gerada, escopo `contador`, acesso não expirado; devolve apenas o artefato sintético persistido, com `no-store`, registra trilha e auditoria na mesma transação.
+- Retry idempotente e concorrente:
+  - FIN-14 usa `storage_key` + fingerprint canônico;
+  - FIN-15 usa competência + fingerprint;
+  - FIN-16 usa `idempotency_key` + fingerprint;
+  - replay idêntico retorna o mesmo registro; reutilização com conteúdo diferente é recusada.
+- Reabertura ignora qualquer autor enviado pelo cliente: `authorized_by_identity` vem da sessão autenticada.
+- Migração aditiva **137**, sem alterar 001–136:
+  - fingerprints e chave opcional para linhas novas, preservando linhas históricas;
+  - constraints novas `NOT VALID`;
+  - índice único parcial de idempotência FIN-16;
+  - trigger de banco que impede `INSERT`, `UPDATE` e `DELETE` em recebíveis, pagáveis e custos cuja competência esteja fechada/bloqueada; reabertura explícita libera o mês.
+- Nenhum pagamento, Pix, boleto, PSP, emissão fiscal, envio contábil ou dado real foi criado.
+
+## Prova automatizada
+
+O gate L07 foi ampliado de 35 para **37 subtestes**, sem skip, timeout alterado ou assertiva removida. Além das provas 33–35 já existentes, cobre seis retries concorrentes por domínio, conflito de chave, download anônimo/papel indevido, trilha do download, bloqueio SQL direto, autoria de reabertura decidida no servidor e uma jornada Chromium das três abas com falha de leitura + retry.
+
+Validação final no mesmo SHA da branch:
+
+- `npm run typecheck`: 0 erros.
+- `npm test`: 196/196.
+- `npm run build`: aprovado.
+- `node scripts/qa-wave0-static.mjs`: 5/5, migrações 001–137.
+- `npm run test:migrations:pg`: 137/137, dois passes, clone e checksum negativo esperado.
+- `npm run test:l07-delivery:pg`: 37/37 em duas execuções consecutivas.
+- regressões: L03 1/1, L04 20/20, L05 1/1 e L06 9/9.
+
+## Limites e aceite
+
+A validação automática não equivale a aceite de Marcelo ou Andreia. Windows e aceite humano permanecem pendentes. Os artefatos e dados do gate são sintéticos e descartáveis. FIN-14/15/16 passam a `pronto_local`, mas **L07 não está concluído**: ADM-01..12/painel Marcelo é a próxima fatia e não foi iniciada aqui. L08 também não foi iniciado.

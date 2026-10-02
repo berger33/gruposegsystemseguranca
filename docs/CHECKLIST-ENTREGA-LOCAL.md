@@ -1066,24 +1066,24 @@ orçamento gerencial e cenários de expansão com premissas explícitas; não pr
 
 ## FIN-14
 exportação do período com trilha, filtros, totais conciliáveis e acesso limitado do contador.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local (validação automática completa; aceite humano pendente)
+- Tela / API / dados / autorização: Aba “Exportações” em `/admin/financeiro`, seleção por nome/protocolo, R$, erro de leitura + retry, geração e download sintético limitado. `GET/POST/PATCH /api/fin/exports`, `GET /api/fin/export-logs` e `GET /api/fin/export-download`; sessão e papel financeiro/admin, TI somente leitura, papel indevido/anônimo negados. Download exige estado gerado, escopo contador e validade, devolve somente o artefato persistido e audita o acesso.
+- Integração e evidência (teste, resultado, commit): migrações 080/133/137; replay idêntico e concorrente por `storage_key` retorna o mesmo registro, conteúdo divergente é recusado; trilha imutável e auditoria fail-closed. Gate L07 37/37 duas vezes, incluindo Chromium.
+- Pendência / fronteira externa / aceite humano: artefato apenas sintético, sem envio ao contador/storage externo. Aceite humano e Windows pendentes.
 
 ## FIN-15
 fechamento de competência e reabertura autorizada; preservar versões de relatório.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local (validação automática completa; aceite humano pendente)
+- Tela / API / dados / autorização: Aba “Fechamento” em `/admin/financeiro`, seleção da competência, motivo para reabertura/novo fechamento e histórico de versões. Autorizador vem exclusivamente da sessão. Trigger da migração 137 bloqueia SQL direto em recebíveis, pagáveis e custos do mês fechado/bloqueado; reabertura explícita libera o mês.
+- Integração e evidência (teste, resultado, commit): retry/concorrência por competência preserva uma única versão inicial; todas as versões são imutáveis; escrita + versão + auditoria são atômicas. Gate L07 37/37 duas vezes com prova HTTP, SQL e Chromium.
+- Pendência / fronteira externa / aceite humano: aceite humano e Windows pendentes; fechamento não substitui validação contábil externa.
 
 ## FIN-16
 comissões ligadas à regra CRM-25, provisão e revisão; não pagar automaticamente.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Estado: pronto_local (validação automática completa; aceite humano pendente)
+- Tela / API / dados / autorização: Aba “Comissões” em `/admin/financeiro`, seleção por regra/data/situação, R$, revisão humana e histórico auditável. A tela declara e preserva `is_auto_paid=false`; baixa é somente registro manual após revisão, sem banco/PSP/Pix/boleto.
+- Integração e evidência (teste, resultado, commit): `idempotency_key` + fingerprint na migração 137, seis retries concorrentes com um único registro, conflito de conteúdo recusado, tentativa automática recusada em API e banco, auditoria fail-closed. Gate L07 37/37 duas vezes com Chromium.
+- Pendência / fronteira externa / aceite humano: não há pagamento real; aceite humano e Windows pendentes.
 
 ## AST-01
 produtos/SKU, fornecedores, unidade de medida, custo, local e estoque mínimo.

@@ -1,5 +1,10 @@
 # Entrega L07 — financeiro e Marcelo (fatias em andamento)
 
+## Atualização vigente — jornadas FIN-14/15/16 (2026-10-02)
+
+As abas **Exportações**, **Fechamento** e **Comissões** foram entregues em `/admin/financeiro`, usando os handlers integrados e a migração aditiva 137 para idempotência concorrente e trava de lançamentos em competência fechada. Download limitado, autoria da reabertura e bloqueio de pagamento automático são decididos no servidor; falhas de leitura têm retry e ações só confirmam após persistência. Gate L07: 37/37 em duas execuções consecutivas; demais gates e regressões L03–L06 verdes no mesmo SHA. FIN-14/15/16 passam a `pronto_local` apenas na validação automática; aceite humano pendente. Relatório: [ENTREGA-L07-FIN14-15-16.md](ENTREGA-L07-FIN14-15-16.md). **L07 não está concluído**: ADM-01..12/painel Marcelo é a próxima fatia, ainda não iniciada; L08 não foi iniciado.
+
+
 **Data de início:** 2026-10-01
 **Base histórica da primeira fatia:** `main` @ `c42164cd146bd2c68737c0c6228ccc208c4c52a7` (merge da PR #42, fechamento do L06).
 **Base integrada atual:** `main`/`origin/main` @ `588b48f12b85fd07e2ca575e56f9b11ba97a1d67` (merge da PR #46, workflow L07 verde no job `110246095200`).

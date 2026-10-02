@@ -1,5 +1,10 @@
 # Estado da execução — entrega local integral
 
+## Estado atual — jornadas FIN-14/15/16 (2026-10-02)
+
+Base oficial utilizada: `main` em `cc4da84`; branch Arena desta sessão. As jornadas UI FIN-14/15/16 foram implementadas com a migração aditiva 137 e gate L07 ampliado para 37 subtestes. FIN-14, FIN-15 e FIN-16 estão `pronto_local` na validação automática; aceite humano/Windows pendentes. FIN-10, FIN-13 e FIN-12→FIN-04 foram preservados sem reabertura. **L07 segue em execução; ADM-01..12 e L08 não foram iniciados.** Próximo recorte: [ADM-01..12, painel Marcelo](PROMPT-PROXIMA-SESSAO-L07-ADM01-12.md).
+
+
 ## Estado atual — L07 em execução; fatia FIN-10 + avaliação adaptativa #47/#53 concluída em 2026-10-02
 
 **Base e escopo.** Base oficial: `main`/`origin/main` em `bd794dc99bfc12a7e8a811783bda1234aeb4fe6b` (merge da PR #69). Trabalho na branch Arena `arena/01a0fa9e-gruposegsystemseguranca`. Sem uso da cópia local do proprietário e sem nenhuma ligação com FIN-14/15/16, ADM-01..12 ou L08 nesta sessão.
