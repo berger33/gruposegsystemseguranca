@@ -581,3 +581,20 @@ Copiar e preencher ao final de cada lote; manter os anteriores em ordem cronoló
 - 02/10/2026: fatia FIN-10 (despesas/reembolsos/compras com alçada, evidência sintética e segregação) + avaliação adaptativa dos resíduos úteis #47/#53; migração 136 (snapshot de alçada, allow_self_approval com segregação migrada da CHECK para o trigger, duplicidade natural pendente, trava de exclusão, hardening FIN-05 FKs RESTRICT + CHECK movimento–conta); API com busca, replay idempotente sob concorrência, autoria derivada da sessão, TI somente leitura; UI da aba expenses com política ausente/inativa declarada, falha de leitura + retry, busca, R$ pt-BR, histórico expansível; gate L07 de 31 para 35 subtestes passando 35/35 em duas execuções consecutivas; FIN-10 passa a pronto_local com homologação humana pendente. [Detalhe em ENTREGA-L07-FIN10.md](ENTREGA-L07-FIN10.md)
 - 01/10/2026: fatia aditiva de correção de FIN-13 (revisão com motivo e autor, margem calculada no servidor, idempotência de criação, histórico com snapshots, UI com erro visível e jornada completa); migração 134; gate L07 de 27/27 para 31/31; FIN-13 passa a pronto_local com homologação humana pendente.
 - 28/09/2026: catálogo documental inicial gerado a partir do plano; nenhum requisito funcional marcado como concluído.
+## L08 — decisão de sequência e primeira fatia (02/10/2026)
+
+A PR #77 está mergeada na main oficial (`06be226`). L07 foi encerrado no escopo
+local e aceito humanamente por Marcelo e Andreia. Windows não foi homologado:
+permanece pendente e adiado para o fechamento integral do sistema. A transição
+para L08 foi autorizada pelo proprietário. A decisão dos 80 componentes órfãos
+permanece: promoção por área somente com prova; até lá são protótipos.
+
+CLI-01..05 foram consolidados sobre a fonte canônica legada das migrações 003–005
+(`auth_*`, `client_accounts`, `client_access_grants`, `client_contracts`,
+`client_documents`, `client_tickets` e auditorias), sem duplicar a fonte v2.
+Rotas reais: `/cliente/entrar`, `/cliente/app/conta`, `/cliente/app/contratos`,
+`/cliente/app/documentos`, `/cliente/app/chamados`; APIs correspondentes em
+`/api/auth/*` e `/api/client/*`. O gate `test:l08-delivery:pg` prova isolamento
+A/B, autorização derivada da sessão, corpo forjado sem ampliação, download
+privado, histórico e erros de acesso. CLI-06..15 e EXT-01..17 não foram
+promovidos.

@@ -1599,3 +1599,21 @@ automações determinísticas de vencimentos, distribuição de tarefas e cobran
 - Tela / API / dados / autorização: preencher
 - Integração e evidência (teste, resultado, commit): preencher
 - Pendência / fronteira externa / aceite humano: preencher
+
+## L08 — decisão de sequência e primeira fatia (02/10/2026)
+
+A PR #77 está mergeada na main oficial (`06be226`). L07 foi encerrado no escopo
+local e aceito humanamente por Marcelo e Andreia. Windows não foi homologado:
+permanece pendente e adiado para o fechamento integral do sistema. A transição
+para L08 foi autorizada pelo proprietário. A decisão dos 80 componentes órfãos
+permanece: promoção por área somente com prova; até lá são protótipos.
+
+CLI-01..05 foram consolidados sobre a fonte canônica legada das migrações 003–005
+(`auth_*`, `client_accounts`, `client_access_grants`, `client_contracts`,
+`client_documents`, `client_tickets` e auditorias), sem duplicar a fonte v2.
+Rotas reais: `/cliente/entrar`, `/cliente/app/conta`, `/cliente/app/contratos`,
+`/cliente/app/documentos`, `/cliente/app/chamados`; APIs correspondentes em
+`/api/auth/*` e `/api/client/*`. O gate `test:l08-delivery:pg` prova isolamento
+A/B, autorização derivada da sessão, corpo forjado sem ampliação, download
+privado, histórico e erros de acesso. CLI-06..15 e EXT-01..17 não foram
+promovidos.
