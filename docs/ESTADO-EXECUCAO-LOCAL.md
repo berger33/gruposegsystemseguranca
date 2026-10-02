@@ -1,6 +1,17 @@
 # Estado da execução — entrega local integral
 
-## Estado atual — jornadas FIN-14/15/16 (2026-10-02)
+## Estado atual — L07: matriz e evidências fechadas; aceite humano pendente (2026-10-02)
+
+Base oficial utilizada: `main` `bbcf311` (merge da PR #74, ADM-01..12). Branch Arena desta sessão: `arena/01a0fd4f-gruposegsystemseguranca`. A matriz de fechamento do L07 foi construída em [`docs/MATRIZ-FECHAMENTO-L07.md`](MATRIZ-FECHAMENTO-L07.md), ligando cada requisito FIN-01..16 e ADM-01..12 a tela/rota, API, tabelas canônicas, subtestes vigentes do gate de 43, resultado da última execução e pendência — conferida linha a linha contra o código e o corpo de cada subteste, sem texto "para parecer completo". O CHECKLIST ganhou o mapeamento por requisito; duas imprecisões documentais foram corrigidas (rótulo real da aba FIN-10 e a evidência vigente defasada em EVIDENCIAS); nenhuma lacuna funcional real foi encontrada (próxima migração segue 139).
+
+Baseline reconfirmada antes de qualquer edição no SHA `bbcf311`: estático 5/5, typecheck 0, unitários 196/196, build exit 0, migrações 138/138 (2 passes + clone/checksum negativo), L07 **43/43 duas vezes consecutivas**, L03 1/1, L04 20/20, L05 1/1 e L06 encadeado **8/9** — o subteste 9 reprovou com `Carregando operação…`, a instabilidade de carga conhecida (as nomeadas do ponto de partida, L03 403 e L07-22, não reapareceram). Causa raiz investigada: o subteste 9 era o único do gate L06 que não esperava seletor de conteúdo (os subtestes 1–8 esperam, com timeout 30 s) e clicava/lia antes de o bootstrap do `OperacaoWorkspace` concluir sob carga. Correção **do teste**, no padrão do próprio arquivo: esperar `#posts-title` antes do clique e a seção alvo depois — **sem aumentar timeout, sem skip, assertiva final idêntica**. Validação no SHA entregue: estático 5/5, typecheck, 196/196, build, migrações 138/138, **L07 43/43 em duas execuções consecutivas**, L03 1/1, L04 20/20, L05 1/1 e **L06 9/9 encadeado** na mesma sequência que antes reprovava. Relatório: [ENTREGA-L07-MATRIZ-FECHAMENTO.md](ENTREGA-L07-MATRIZ-FECHAMENTO.md).
+
+**Estado declarado:** FIN-01..16 e ADM-01..12 permanecem `pronto_local` apenas na validação automática; **aceite humano de Marcelo/Andreia pendente** (não inventado) e Windows não validado. Dívidas explícitas abertas: os **80 componentes órfãos de `/admin/ti`** (critério de saída em [INVENTARIO-ADMIN-TI.md](INVENTARIO-ADMIN-TI.md)) e o monitoramento das instabilidades residuais. **L07 não está concluído; L08 não foi iniciado.** Para declarar o L07 concluído: aceite humano, decisão sobre a dívida dos órfãos e instabilidades fechadas — depois disso, iniciar o L08 pela migração 139.
+
+- Próximos três passos: aceite humano das 28 jornadas (roteiro na matriz); decisão sobre os 80 órfãos de `/admin/ti`; retomar execução com `npm ci`, estático, typecheck, `npm test`, migrações e L07 dupla antes de qualquer edição nova.
+- PR desta sessão aberta para revisão, **sem merge**.
+
+## Estado anterior — jornadas FIN-14/15/16 (2026-10-02)
 
 Base oficial utilizada: `main` em `cc4da84`; branch Arena desta sessão. As jornadas UI FIN-14/15/16 foram implementadas com a migração aditiva 137 e gate L07 ampliado para 37 subtestes. FIN-14, FIN-15 e FIN-16 estão `pronto_local` na validação automática; aceite humano/Windows pendentes. FIN-10, FIN-13 e FIN-12→FIN-04 foram preservados sem reabertura. **L07 segue em execução; ADM-01..12 e L08 não foram iniciados.** Próximo recorte: [ADM-01..12, painel Marcelo](PROMPT-PROXIMA-SESSAO-L07-ADM01-12.md).
 

@@ -2059,7 +2059,15 @@ test("L06 Fatia E: OPS-09..16 — operação avançada, conflitos, idempotência
     const page = await context.newPage();
     await page.goto(`${baseUrl}/admin/operacao`, { waitUntil: "networkidle" });
     for (const label of ["Supervisão", "Rondas & Claviculário", "Relatórios", "Métricas & Escalas", "Limpeza", "Monitoramento Sintético"]) await page.getByRole("tab", { name: label, exact: true }).waitFor();
+    // As abas existem desde o SSR, mas o conteúdo só renderiza depois do
+    // bootstrap (!loading && !error). Sob carga em 2 vCPU, o networkidle e a
+    // presença das abas não garantem hidratação concluída e o clique era
+    // perdido (corpo parava em "Carregando operação…"). Espera-se, como nos
+    // subtestes 1–8, um seletor de conteúdo real antes e depois de interagir;
+    // a assertiva final permanece idêntica (sincronização, não timeout).
+    await page.waitForSelector("#posts-title", { timeout: 30_000 });
     await page.getByRole("tab", { name: "Monitoramento Sintético", exact: true }).click();
+    await page.waitForSelector('section[aria-label="Operação avançada OPS-13 a OPS-16"]', { timeout: 30_000 });
     assert.match((await page.textContent("body")) || "", /sem central 24h e sem despacho externo real/i);
   } finally { await browser.close(); }
 });
