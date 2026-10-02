@@ -167,6 +167,18 @@ dívida. Nenhum arquivo foi apagado.
   registradas), o painel diz que não há registro — não preenche com número.
 - A margem por contrato de ADM-04 é apresentada a partir de recebíveis e
   pagáveis canônicos; não há rateio contábil inventado.
+
+> **Correção registrada em 2026-10-02 (fechamento da matriz do L07):** o item
+> acima, na redação original, era **impreciso** — nesta entrega o painel **não
+> exibia margem por contrato em cartão ou registro algum**; a visão financeira
+> tinha apenas os cartões de recebíveis vencidos e pagáveis a vencer (o saldo
+> de cada recebível aparece na projeção do registro canônico). O item “margem
+> por contrato” do requisito ADM-04 foi implementado de fato na sessão de
+> fechamento, como o cartão `ADM-04.margem_por_contrato` sobre
+> `fin_management_results` (FIN-09), com drill-down até o registro real e base
+> incompleta declarada. Detalhe e prova em
+> [`docs/MATRIZ-FECHAMENTO-L07.md`](./MATRIZ-FECHAMENTO-L07.md) e em
+> [`docs/ENTREGA-L07-MATRIZ.md`](./ENTREGA-L07-MATRIZ.md).
 - FIN-01..16 permanecem `pronto_local` com aceite humano pendente, intocados
   por esta entrega (FIN-13/134, FIN-12→FIN-04/135, FIN-10/136 e FIN-14/15/16/137
   preservados).

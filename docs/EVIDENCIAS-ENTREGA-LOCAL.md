@@ -1,6 +1,38 @@
 # Evidências — entrega local integral
 
-## Evidência vigente — FIN-14/15/16 (2026-10-02)
+## Evidência vigente — fechamento de matriz do L07 (2026-10-02)
+
+Baseline no SHA base `bbcf311` **antes de qualquer edição**: estático 5/5,
+typecheck 0, unitários 196/196, migrações exit 0 (138/138, 524 tabelas),
+build exit 0, L03 1/1, L04 20/20, L05 1/1, L06 9/9 e gate L07 43/43 nas
+execuções 2–5 — a execução 1 da baseline deu **42/43 com 1 falha de subteste
+não identificada** (log consumido por pipe para `tail` e descartado antes da
+inspeção; erro de procedimento registrado em
+[ENTREGA-L07-MATRIZ.md](ENTREGA-L07-MATRIZ.md) §5; hipótese não confirmada:
+subteste 22 em máquina de 2 núcleos; nenhuma alteração de timeout/skip/
+assertiva foi feita).
+
+Estado final da sessão (matriz fechada; subtestes 36/38/39 ampliados; cartão
+`ADM-04.margem_por_contrato` adicionado; nenhuma migração nova):
+
+| Prova | Resultado final |
+|---|---|
+| `npm run typecheck` | 0 erros |
+| `npm test` | 196/196 |
+| `npm run build` | aprovado |
+| `node scripts/qa-wave0-static.mjs` | 5/5; 001–138 |
+| `npm run test:migrations:pg` | 138/138; dois passes + clone; checksum negativo esperado |
+| `npm run test:l07-delivery:pg` #6 | 43/43, sem skips |
+| `npm run test:l07-delivery:pg` #7 consecutiva | 43/43, sem skips |
+| L03 / L04 / L05 / L06 | 1/1 · 20/20 · 1/1 · 9/9 |
+
+Evidência funcional detalhada e matriz requisito a requisito:
+[MATRIZ-FECHAMENTO-L07.md](MATRIZ-FECHAMENTO-L07.md) e
+[ENTREGA-L07-MATRIZ.md](ENTREGA-L07-MATRIZ.md). Dados exclusivamente
+sintéticos em PostgreSQL descartável. Aceite humano pendente para todos os
+FIN/ADM; L07 não declarado concluído.
+
+## Evidência anterior — FIN-14/15/16 (2026-10-02)
 
 | Prova | Resultado final |
 |---|---|
