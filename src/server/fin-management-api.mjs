@@ -128,16 +128,32 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
     const sess = await checkAuth(req, res); if (!sess) return;
     if (req.method === 'GET') {
       const url=new URL(req.url,`http://${req.headers.host||'localhost'}`), params=[];
-      let q='SELECT * FROM fin_expenses WHERE 1=1';
-      const status=url.searchParams.get('status'), type=url.searchParams.get('expense_type'), contract=url.searchParams.get('contract_id');
-      if (status) { if(!EXPENSE_STATUSES.has(status)) return send(res,400,{error:'invalid_status'}); params.push(status); q+=` AND status=$${params.length}`; }
-      if (type) { if(!EXPENSE_TYPES.has(type)) return send(res,400,{error:'invalid_expense_type'}); params.push(type); q+=` AND expense_type=$${params.length}`; }
-      if (contract) { if(!uuid(contract)) return send(res,400,{error:'invalid_contract_id'}); params.push(contract); q+=` AND contract_id=$${params.length}`; }
-      q+=' ORDER BY created_at DESC LIMIT 200';
+      let q=`SELECT e.*, center.name AS cost_center_name, supplier.name AS supplier_name, contract.title AS contract_title
+               FROM fin_expenses e
+               LEFT JOIN fin_cost_centers center ON center.id=e.cost_center_id
+               LEFT JOIN fin_suppliers supplier ON supplier.id=e.supplier_id
+               LEFT JOIN crm_contracts contract ON contract.id=e.contract_id
+              WHERE 1=1`;
+      const status=url.searchParams.get('status'), type=url.searchParams.get('expense_type'), contract=url.searchParams.get('contract_id'), search=url.searchParams.get('search');
+      if (status) { if(!EXPENSE_STATUSES.has(status)) return send(res,400,{error:'invalid_status'}); params.push(status); q+=` AND e.status=$${params.length}`; }
+      if (type) { if(!EXPENSE_TYPES.has(type)) return send(res,400,{error:'invalid_expense_type'}); params.push(type); q+=` AND e.expense_type=$${params.length}`; }
+      if (contract) { if(!uuid(contract)) return send(res,400,{error:'invalid_contract_id'}); params.push(contract); q+=` AND e.contract_id=$${params.length}`; }
+      if (search != null) {
+        const term=search.trim();
+        if(term.length<2||term.length>200) return send(res,400,{error:'invalid_search'});
+        // Curingas são literais: o padrão é escapado antes do ILIKE.
+        const escaped=term.replace(/[\\%_]/g,m=>`\\${m}`);
+        params.push(`%${escaped}%`);
+        const idx=params.length;
+        q+=` AND (e.protocol ILIKE $${idx} ESCAPE '\\' OR e.requester_name ILIKE $${idx} ESCAPE '\\' OR e.description ILIKE $${idx} ESCAPE '\\')`;
+      }
+      q+=' ORDER BY e.created_at DESC LIMIT 200';
       try { return send(res,200,{expenses:(await pool.query(q,params)).rows}); } catch { return send(res,500,{error:'internal'}); }
     }
     if (!['POST','PATCH'].includes(req.method)) return send(res,405,{error:'method_not_allowed'});
     if (!sameOrigin(req)) return send(res,403,{error:'forbidden_origin'});
+    // TI é somente leitura no domínio FIN-10, como já ocorre em FIN-13..16.
+    if (String(sess.role||sess.userRole||'').toLowerCase()==='ti') return send(res,403,{error:'read_only'});
     let body; try { body=await readJson(req); } catch { return send(res,400,{error:'invalid_json'}); }
     const actor=sess.identityId;
     if (!uuid(actor)) return send(res,401,{error:'unauthorized'});
@@ -146,7 +162,6 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
       const expense_type=body.expense_type||'despesa';
       const category=typeof body.category==='string'?body.category.trim():'';
       const description=typeof body.description==='string'?body.description.trim():'';
-      const requester_name=typeof body.requester_name==='string'?body.requester_name.trim():'';
       const amount_cents=positiveCents(body.amount_cents), threshold_cents=positiveCents(body.threshold_cents);
       const evidence_file_name=typeof body.evidence_file_name==='string'?body.evidence_file_name.trim():'';
       const evidence_file_url=typeof body.evidence_file_url==='string'?body.evidence_file_url.trim():'';
@@ -158,10 +173,24 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
       if(description.length<10||description.length>1000) return send(res,400,{error:'description_10_1000'});
       if(!amount_cents) return send(res,400,{error:'amount_positive_integer'});
       if(!threshold_cents) return send(res,400,{error:'threshold_positive_integer'});
-      if(requester_name.length<2||requester_name.length>200) return send(res,400,{error:'requester_name_2_200'});
       if(!uuid(contract_id)||!uuid(cost_center_id)||!uuid(supplier_id)) return send(res,400,{error:'canonical_references_required'});
       if(evidence_file_name.length<1||evidence_file_name.length>500||!syntheticEvidenceUrl(evidence_file_url)||!syntheticStorageKey(evidence_storage_key)) return send(res,400,{error:'synthetic_evidence_metadata_required'});
       if(idempotency_key.length<8||idempotency_key.length>200) return send(res,400,{error:'idempotency_key_8_200'});
+      // O nome do solicitante deriva da identidade autenticada (auth_identities);
+      // um nome digitado no corpo nunca substitui a autoria real da sessão.
+      const sameExpenseContent = row => row
+        && row.expense_type===expense_type
+        && row.category===category
+        && row.description===description
+        && Number(row.amount_cents)===amount_cents
+        && Number(row.threshold_cents)===threshold_cents
+        && row.requester_identity===actor
+        && row.evidence_file_name===evidence_file_name
+        && row.evidence_file_url===evidence_file_url
+        && row.evidence_storage_key===evidence_storage_key
+        && row.contract_id===contract_id
+        && row.cost_center_id===cost_center_id
+        && row.supplier_id===supplier_id;
       const client=await pool.connect();
       try {
         await client.query('BEGIN');
@@ -169,14 +198,39 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
         const center=await client.query('SELECT id FROM fin_cost_centers WHERE id=$1 AND is_active=true',[cost_center_id]);
         const supplier=await client.query('SELECT id FROM fin_suppliers WHERE id=$1 AND is_active=true',[supplier_id]);
         if(!contract.rows.length||!center.rows.length||!supplier.rows.length) { await client.query('ROLLBACK'); return send(res,404,{error:'canonical_reference_not_found_or_inactive'}); }
+        // Idempotência explícita por chave de negócio: retry igual devolve a
+        // mesma solicitação; mesma chave com conteúdo diferente conflita.
+        const existing=await client.query('SELECT * FROM fin_expenses WHERE idempotency_key=$1',[idempotency_key]);
+        if(existing.rows.length) {
+          const row=existing.rows[0];
+          const replay=sameExpenseContent(row);
+          await client.query('ROLLBACK');
+          if(!replay) return send(res,409,{error:'idempotency_key_conflict'});
+          return send(res,200,{expense:row,idempotent_replay:true,synthetic:true});
+        }
+        const identity=await client.query('SELECT display_name FROM auth_identities WHERE id=$1',[actor]);
+        const displayName=typeof identity.rows[0]?.display_name==='string'?identity.rows[0].display_name.trim():'';
+        const requester_name=displayName.length>=2&&displayName.length<=200?displayName:`Identidade ${actor.slice(0,8)}`;
         const protocol=generateProtocol('DES-FIN');
         const created=await client.query(`INSERT INTO fin_expenses (protocol,expense_type,category,description,amount_cents,threshold_cents,requester_name,requester_identity,evidence_file_name,evidence_file_url,evidence_storage_key,contract_id,cost_center_id,supplier_id,created_by_identity,idempotency_key) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$8,$15) RETURNING *`,[protocol,expense_type,category,description,amount_cents,threshold_cents,requester_name,actor,evidence_file_name,evidence_file_url,evidence_storage_key,contract_id,cost_center_id,supplier_id,idempotency_key]);
         const expense=created.rows[0];
-        await client.query(`INSERT INTO fin_expense_history (expense_id,previous_status,next_status,previous_amount,next_amount,changed_by_identity,reason,is_segregation_verified) VALUES ($1,NULL,'pendente',NULL,$2,$3,$4,false)`,[expense.id,amount_cents,actor,'Solicitação financeira criada com evidência sintética e referências canônicas']);
+        await client.query(`INSERT INTO fin_expense_history (expense_id,previous_status,next_status,previous_amount,next_amount,changed_by_identity,reason,is_segregation_verified,snapshot_after) VALUES ($1,NULL,'pendente',NULL,$2,$3,$4,false,$5)`,[expense.id,amount_cents,actor,'Solicitação financeira criada com evidência sintética e referências canônicas',JSON.stringify(expense)]);
         await auditLog({action:'fin_expense_create',actor,target:expense.id,meta:{protocol,expense_type,amount_cents,contract_id,idempotency_key},client});
         await client.query('COMMIT');
         return send(res,201,{expense,synthetic:true});
-      } catch(e) { try { await client.query('ROLLBACK'); } catch {} return expenseFailure(res,e); }
+      } catch(e) {
+        try { await client.query('ROLLBACK'); } catch {}
+        // Retry concorrente: a chave única decide; o perdedor reconsulta e
+        // devolve replay quando o conteúdo é o mesmo.
+        if(e?.code==='23505'&&String(e.constraint||'').includes('idempotency')) {
+          try {
+            const row=(await pool.query('SELECT * FROM fin_expenses WHERE idempotency_key=$1',[idempotency_key])).rows[0];
+            if(sameExpenseContent(row)) return send(res,200,{expense:row,idempotent_replay:true,synthetic:true});
+          } catch {}
+          return send(res,409,{error:'idempotency_key_conflict'});
+        }
+        return expenseFailure(res,e);
+      }
       finally { client.release(); }
     }
 
@@ -193,16 +247,28 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
       if(previous.status!=='pendente') { await client.query('ROLLBACK'); return send(res,409,{error:'expense_not_pending'}); }
       if(status==='cancelado' && previous.requester_identity!==actor) { await client.query('ROLLBACK'); return send(res,403,{error:'only_requester_can_cancel'}); }
       if(status!=='cancelado' && previous.requester_identity===actor) { await client.query('ROLLBACK'); return send(res,403,{error:'requester_cannot_decide'}); }
+      // Ausência de política configurada nunca vira aprovação automática: as
+      // duas negativas são distintas para que a interface declare a pendência.
+      let authority_limit=null;
       if(status==='aprovado') {
         const authority=await client.query('SELECT max_amount_cents FROM fin_expense_approval_authorities WHERE identity_id=$1 AND is_active=true',[actor]);
-        if(!authority.rows.length||Number(previous.amount_cents)>Number(authority.rows[0].max_amount_cents)) { await client.query('ROLLBACK'); return send(res,403,{error:'approval_authority_exceeded'}); }
+        if(!authority.rows.length) { await client.query('ROLLBACK'); return send(res,403,{error:'approval_authority_missing'}); }
+        authority_limit=Number(authority.rows[0].max_amount_cents);
+        if(Number(previous.amount_cents)>authority_limit) { await client.query('ROLLBACK'); return send(res,403,{error:'approval_authority_exceeded'}); }
       }
+      // O nome do decididor deriva da identidade autenticada; o corpo não
+      // escolhe quem aparece como autor da decisão.
+      const identity=await client.query('SELECT display_name FROM auth_identities WHERE id=$1',[actor]);
+      const displayName=typeof identity.rows[0]?.display_name==='string'?identity.rows[0].display_name.trim():'';
+      const approver_name=displayName.length>=2&&displayName.length<=200?displayName:'Aprovador autenticado';
       const approver=status==='cancelado'?null:actor;
-      const updated=await client.query(`UPDATE fin_expenses SET status=$1::fin_expense_status,approver_name=CASE WHEN $1::text='cancelado' THEN approver_name ELSE $2 END,approver_identity=CASE WHEN $1::text='cancelado' THEN approver_identity ELSE $3 END,approved_at=CASE WHEN $1::text='aprovado' THEN NOW() ELSE NULL END,approved_by_identity=CASE WHEN $1::text='aprovado' THEN $3 ELSE NULL END,rejection_reason=CASE WHEN $1::text='rejeitado' THEN $4 ELSE NULL END,is_segregated=CASE WHEN $1::text='cancelado' THEN is_segregated ELSE true END,segregation_checked=CASE WHEN $1::text='cancelado' THEN segregation_checked ELSE true END WHERE id=$5 RETURNING *`,[status,body.approver_name||'Aprovador autenticado',approver,status==='rejeitado'?reason:null,id]);
+      const updated=await client.query(`UPDATE fin_expenses SET status=$1::fin_expense_status,approver_name=CASE WHEN $1::text='cancelado' THEN approver_name ELSE $2 END,approver_identity=CASE WHEN $1::text='cancelado' THEN approver_identity ELSE $3 END,approved_at=CASE WHEN $1::text='aprovado' THEN NOW() ELSE NULL END,approved_by_identity=CASE WHEN $1::text='aprovado' THEN $3 ELSE NULL END,rejection_reason=CASE WHEN $1::text='rejeitado' THEN $4 ELSE NULL END,is_segregated=CASE WHEN $1::text='cancelado' THEN is_segregated ELSE true END,segregation_checked=CASE WHEN $1::text='cancelado' THEN segregation_checked ELSE true END WHERE id=$5 RETURNING *`,[status,approver_name,approver,status==='rejeitado'?reason:null,id]);
       const expense=updated.rows[0];
-      await client.query(`INSERT INTO fin_expense_history (expense_id,previous_status,next_status,previous_amount,next_amount,changed_by_identity,reason,is_segregation_verified) VALUES ($1,$2,$3,$4,$4,$5,$6,$7)`,[id,previous.status,status,previous.amount_cents,actor,reason,status!=='cancelado']);
+      // Histórico imutável com snapshot anterior/posterior e o limite de alçada
+      // efetivamente aplicado (o gatilho da 136 grava o mesmo valor na despesa).
+      await client.query(`INSERT INTO fin_expense_history (expense_id,previous_status,next_status,previous_amount,next_amount,changed_by_identity,reason,is_segregation_verified,authority_limit_cents,is_authority_verified,snapshot_before,snapshot_after) VALUES ($1,$2,$3,$4,$4,$5,$6,$7,$8,$9,$10,$11)`,[id,previous.status,status,previous.amount_cents,actor,reason,status!=='cancelado',status==='aprovado'?authority_limit:null,status==='aprovado',JSON.stringify(previous),JSON.stringify(expense)]);
       const action=status==='aprovado'?'fin_expense_approve':status==='rejeitado'?'fin_expense_reject':'fin_expense_cancel';
-      await auditLog({action,actor,target:id,meta:{status,reason},client});
+      await auditLog({action,actor,target:id,meta:{protocol:previous.protocol,status,reason,authority_limit_cents:status==='aprovado'?authority_limit:null,synthetic:true},client});
       await client.query('COMMIT');
       return send(res,200,{expense});
     } catch(e) { try { await client.query('ROLLBACK'); } catch {} return expenseFailure(res,e); }
@@ -218,6 +284,19 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
       const params=expense_id?[expense_id]:[];
       const q=`SELECT * FROM fin_expense_history${expense_id?' WHERE expense_id=$1':''} ORDER BY created_at DESC LIMIT 200`;
       return send(res,200,{history:(await pool.query(q,params)).rows});
+    } catch { return send(res,500,{error:'internal'}); }
+  };
+
+  // Catálogo de alçadas, somente leitura: a interface precisa declarar quando a
+  // política está ausente/inativa. Conceder alçada (quem, quanto, com qual
+  // aprovação) é decisão de negócio pendente do proprietário e não é exposta
+  // como mutação nesta fatia — a configuração segue por backoffice explícito.
+  const handleExpenseAuthorities = async (req, res) => {
+    const sess=await checkAuth(req,res); if(!sess) return;
+    if(req.method!=='GET') return send(res,405,{error:'method_not_allowed'});
+    try {
+      const { rows }=await pool.query(`SELECT a.identity_id, i.display_name, a.max_amount_cents, a.is_active, a.granted_by_identity, a.granted_at, a.updated_at FROM fin_expense_approval_authorities a LEFT JOIN auth_identities i ON i.id=a.identity_id ORDER BY a.granted_at DESC LIMIT 200`);
+      return send(res,200,{authorities:rows});
     } catch { return send(res,500,{error:'internal'}); }
   };
 
@@ -1140,6 +1219,7 @@ export function createFinManagementApi({ pool, auditLog, sameOrigin, requireSess
     handleResultHistory,
     handleExpenses,
     handleExpenseHistory,
+    handleExpenseAuthorities,
     handleFiscalActivityRules,
     handleFiscalProviders,
     handleFiscalObligations,

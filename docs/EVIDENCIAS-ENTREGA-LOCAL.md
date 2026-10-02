@@ -1770,3 +1770,166 @@ Fatia executada sobre `main`/`origin/main` `ffdf7fbb49832abe30930c355b3085d190a7
 | Fail-closed | negativos do gate | origem/papel/anônimo indevidos são recusados; auditoria indisponível devolve 503 e reverte a mutação. |
 
 A migração aditiva `135-fin09-fin12-revalidation-hardening.sql` reforça a margem incompleta FIN-09 e os vínculos de cobrança, baixa e estorno FIN-12/FIN-04. FIN-09, FIN-11 e FIN-12 passam a `pronto_local` apenas para validação automática. Aceite humano, Windows e integrações externas reais continuam pendentes; L07 não foi declarado concluído e L08 não foi iniciado.
+
+## FIN-10 — fatia aditiva: alçada aplicada, idempotência, busca e resíduos FIN-05 da PR #47 (2026-10-02)
+
+Todos os comandos abaixo rodaram no ambiente remoto Arena, sobre a base `bd794dc99bfc12a7e8a811783bda1234aeb4fe6b` (main pós-merge do PR #69), com PostgreSQL descartável, HTTP real e Chromium real. Os arquivos `.log` brutos não entram no Git (ignorados por `.gitignore`); os contadores e as mensagens de falha foram transcritos aqui literalmente, inclusive os resultados desfavoráveis e as reprovas intermediárias de autoria do próprio teste.
+
+Branch: `arena/01a0fa71-gruposegsystemseguranca`. Ambiente remoto Arena, Linux
+x86_64, Node v22.22.3, npm 10.9.8, PostgreSQL 17.9 descartável por execução,
+Chromium empacotado real. Dados exclusivamente sintéticos. **Nada aqui comprova
+execução em Windows nem aceite humano.**
+
+### A. Baseline reconfirmado na base atual, antes de alterar negócio
+
+| # | Cenário | Comando | Esperado | Observado |
+|---|---|---|---|---|
+| FIN10A-1 | Verificações estáticas | `node scripts/qa-wave0-static.mjs` | 5/5, 001–135 | 5/5, 0 migrações ausentes |
+| FIN10A-2 | Tipos | `npm run typecheck` | 0 erros | 0 erros, exit 0 |
+| FIN10A-3 | Build | `npm run build` | sucesso | sucesso (78 páginas) |
+| FIN10A-4 | Suíte unitária | `npm test` | tudo passa | 196/196, 0 skips |
+| FIN10A-5 | Migrações com replay e clone | `npm run test:migrations:pg` | 135/135 | `CHECKSUMMED=135/135`, `TABLES=522->522`, `SECOND_EXIT=0`, clone `006 rejected (exit 1)` sem rebaseline |
+| FIN10A-6 | Gate L07 na base intacta | `npm run test:l07-delivery:pg` | 31/31 | **31/31**, `# fail 0`, exit 0 |
+
+### B. Reprodução das lacunas, com a correção ainda ausente
+
+O gate foi ampliado de 31 para **32 subtestes** (extensão do subteste 7 de
+FIN-05, subteste Chromium de FIN-10 reescrito e subteste 19 aditivo novo) e
+executado contra o código **sem correção**.
+
+| # | Achado | Cenário executado | Resultado observado (defeito confirmado) |
+|---|---|---|---|
+| FIN10B-1 | FIN-05 (#47): valor casado sem conferência | conciliação explícita de 6000 sobre saldo aberto de 5000 | subteste 7 reprovou: `valor casado não pode superar o saldo aberto — 201 !== 400`; a API aceitava casar mais do que o saldo aberto e mais que o movimento |
+| FIN10B-2 | FIN-05: sugestão sem clamp | conciliação sem valor explícito com movimento maior que o saldo | subteste 7 reprovou: sugestão criada com valor maior que o saldo aberto (clamp inexistente) |
+| FIN10B-3 | FIN-10: TI não era somente leitura | POST de despesa com papel `ti` | subteste 18 reprovou: `201 !== 403`; o corpo devolvido mostra `requester_name:"Solicitante sintético"` aceito do corpo — autoria vinda do cliente, não da sessão |
+| FIN10B-4 | FIN-10: sem alçada aplicada, sem idempotência de criação, sem busca, sem trava de exclusão, sem painel de política | jornada Chromium e HTTP aditiva completa | subteste 19 reprovou: `page.waitForSelector: Timeout 30000ms exceeded — waiting for locator('[data-testid="fin10-error"]')`: não existia erro de leitura visível (falha virava estado vazio), painel de alçadas, R$ formatado, decisão com alçada aplicada ou histórico com limite; o subteste 18 não passou da primeira negativa (TI) para exercitar idempotência/busca/alçada/DELETE — cada uma dessas lacunas foi confirmada por leitura de código antes da correção (POST sem `idempotency_key` no handler, `GET` sem `search`, sem `applied_authority_limit_cents`, sem trigger de exclusão) |
+
+Totais da execução de reprodução: `# tests 32`, `# pass 28`, `# fail 4`,
+`# skipped 0`. Totais da segunda execução intermediária (após a correção do
+produto, ainda com ajustes de teste pendentes): `# pass 29`, `# fail 3` — os
+subtestes 7/18/19 continuaram reprovando por defeitos **do próprio teste**
+(estado residual entre subtestes, catálogo global de alçadas e service worker
+interceptando o `page.route`), não do produto: nenhuma linha de código de
+produto mudou entre essa execução e o verde final. A terceira execução deu
+`# pass 30`, `# fail 2` (aguardo de renderização do histórico e asserção de
+campo de join na resposta de POST — também do teste). A correção desses pontos
+do teste está descrita na seção "Erros de autoria de teste corrigidos" abaixo.
+
+### C. Correção validada
+
+| # | Cenário | Comando | Esperado | Observado |
+|---|---|---|---|---|
+| FIN10C-1 | Verificações estáticas com a migração nova | `node scripts/qa-wave0-static.mjs` | 5/5, 001–136 | 5/5, 0 ausentes, 0 duplicadas |
+| FIN10C-2 | Tipos | `npm run typecheck` | 0 erros | 0 erros |
+| FIN10C-3 | Suíte unitária | `npm test` | 196/196 | 196/196, 0 skips |
+| FIN10C-4 | Build | `npm run build` | sucesso | sucesso, exit 0 |
+| FIN10C-5 | Migrações com replay, clone e checksum | `npm run test:migrations:pg` | 136/136 idempotentes | `CHECKSUMMED=136/136`, `TABLES=522->522`, `SECOND_EXIT=0`, clone `migration_checksum_mismatch: 006 rejected (exit 1)` sem rebaseline, restore `136/136` preservado |
+| FIN10C-6 | Gate L07 após a correção | `npm run test:l07-delivery:pg` | 32/32 | **32/32, `# fail 0`, `# skipped 0`, `L07_DELIVERY_TEST_EXIT: 0`, em duas execuções consecutivas aprovadas** (runs finais de 81–80 s). Nenhuma asserção foi removida, nenhum teste marcado skip e nenhum timeout aumentado para obter o verde |
+| FIN10C-7 | Regressão L03 | `npm run test:l03-delivery:pg` | 1/1 | não reexecutada nesta fatia (fatia anterior manteve 1/1; nenhum arquivo L03/EMP/HR foi tocado) |
+| FIN10C-8 | Regressão L04 | `npm run test:l04-delivery:pg` | 20/20 | **20/20 em duas execuções aprovadas**. **Transparência:** a primeira execução desta bateria deu 19/20 (um subteste reprovou uma única vez; o log desta primeira passagem não foi retido — reexecução imediata e nova execução de confirmação ambas 20/20, sem alteração de código entre elas). A fatia não altera telas nem tabelas do L04; o padrão é o mesmo ruído de ambiente intermitente já registrado nas sessões anteriores (Chromium/dev server sob disputa de CPU na máquina de 2 vCPU) |
+| FIN10C-9 | Regressão L05 | `npm run test:l05-delivery:pg` | 1/1 | 1/1 |
+| FIN10C-10 | Regressão L06 | `npm run test:l06-delivery:pg` | 9/9 | 9/9 |
+
+### D. O que os subtestes novos/estendidos do gate L07 provam
+
+1. **FIN-10 jornada canônica no navegador** (subteste 17, Chromium real):
+   login real de duas identidades financeiras distintas; GET de despesas
+   respondendo 500 exibe `fin10-error` com botão **Tentar novamente** e não
+   exibe lista vazia; retry recupera; com catálogo de alçadas vazio a tela
+   declara "Nenhuma alçada ativa configurada" (`fin10-policy-missing`) —
+   ausência de política nunca vira aprovação automática; solicitação digitada
+   em reais (`750,00`) é convertida para 75000 centavos e enviada; referências
+   canônicas escolhidas por **selects** (centro de custo/fornecedor), não
+   UUID digitado; evidência sintética obrigatória; busca por protocolo
+   encontra a linha; o solicitante **não** vê botão de decisão da própria
+   solicitação (segregação na interface); uma segunda identidade, com alçada
+   de R$ 2.000,00 concedida por SQL de backoffice, aprova com motivo; a
+   confirmação aparece somente após a persistência; o banco registra
+   `status=aprovado`, `approver_identity` distinto do solicitante e
+   `applied_authority_limit_cents=200000`; o histórico da despesa exibe o
+   limite aplicado (`2.000,00`).
+2. **FIN-10 HTTP canônico** (subteste 18, pré-existente desta main, agora com
+   a alçada aplicada persistida): solicitar/aprovar/recusar/cancelar com
+   motivo; solicitante não decide a própria despesa; aprovador sem alçada
+   recusado; RH 403; anônimo 401; auditoria indisponível devolve 503 e
+   reverte; nenhuma decisão cria pagamento, baixa, cobrança, recebível ou
+   pagável (contagens conferidas no banco); histórico imutável.
+3. **FIN-10 aditivo** (subteste 19, novo): TI é somente leitura em POST e
+   PATCH (403 `read_only`) e o catálogo de alçadas é somente leitura (não-GET
+   405, RH 403, anônimo 401, TI 200); `requester_name` do corpo é ignorado e o
+   nome deriva da identidade da sessão (`QA Staff financeiro`); idempotência
+   de criação: retry igual devolve 200 `idempotent_replay` com o mesmo id,
+   mesma chave com conteúdo diferente devolve 409 `idempotency_key_conflict`
+   sem sobrescrever, e **6 POSTs concorrentes** com a mesma chave produzem
+   exatamente 1 criação + 5 replays; busca por protocolo (1 resultado),
+   por nome do solicitante e termo com curinga literal (`100%_despesa`,
+   zero resultados — `%` e `_` não são interpretados); aprovação dentro da
+   alçada grava `applied_authority_limit_cents` na despesa e no histórico com
+   `snapshot_before`/`snapshot_after` e `is_authority_verified`; aprovação sem
+   alçada configurada devolve 403 **`approval_authority_missing`**, distinto
+   de **`approval_authority_exceeded`** quando a alçada existe e é menor que o
+   valor; `DELETE` direto por SQL é recusado pelo trigger
+   `fin10_expense_delete_forbidden`; nenhuma decisão gera efeito financeiro
+   (contagens de `fin_payments`/`fin_accounts_*`/`fin_gateway_charges`
+   inalteradas); corrida de decisões concorrentes sobre a mesma despesa
+   pendente resulta em exatamente 1 aprovação (200) e 5 conflitos (409
+   `expense_not_pending`).
+4. **FIN-05 resíduos da PR #47** (subteste 7, estendido): conciliação com
+   valor explícito maior que o saldo aberto **ou** que o movimento é recusada
+   com 400 `invalid_amount_matched` (antes: 201 aceitando sobre-conciliação);
+   conciliação sem valor explícito casa `min(saldo aberto, |movimento|)`
+   (antes: casava o movimento inteiro, ultrapassando o saldo); saldo ou
+   movimento não positivos devolvem 409 `account_or_transaction_not_open`;
+   a conta é bloqueada com `FOR UPDATE`; `DELETE` de recebível com conciliação
+   é recusado por FK `ON DELETE RESTRICT` (provado com recebível sem histórico
+   de pagamento, para isolar o RESTRICT do gatilho de imutabilidade de
+   pagamentos); `INSERT` direto de conciliação sem transação bancária é
+   recusado por CHECK `fin05_conciliation_requires_account_and_transaction`.
+
+### Erros de autoria de teste corrigidos (sem mudança de produto)
+
+Registro honesto das reprovas intermediárias entre a execução de reprodução e
+o verde final — todas falhas **do teste**, corrigidas no teste:
+
+- **Estado residual entre subtestes:** o subteste 7 estendido deixava uma
+  conciliação `sugerida` que tornava ambíguo o clique "Selecionar para
+  confirmar" do subteste 8 (`sugerida !== conciliada`). Corrigido resolvendo
+  a pendência criada (PATCH `ignorada`) e escopando o clique por
+  `[data-testid="fin05-conciliation-{id}"]`.
+- **Catálogo global de alçadas:** `assert.equal(authorities.length, 1)` falhou
+  porque a base é compartilhada entre subtestes (3 entradas). Corrigido
+  localizando a entrada por `identity_id`.
+- **Service worker interceptando fetch:** `page.route()` não intercepta
+  respostas atendidas pelo service worker do PWA; o subteste Chromium esperou
+  30 s por `fin10-error` em vão. Corrigido com
+  `browser.newContext({ serviceWorkers: "block" })`, padrão já usado pelos
+  subtestes FIN-09/11/13.
+- **Ordem de execução:** o painel "Nenhuma alçada ativa configurada" só é
+  observável com catálogo vazio; o subteste Chromium de FIN-10 passou a rodar
+  **antes** dos subtestes HTTP que inserem alçadas.
+- **Prova do FK RESTRICT:** `DELETE` de recebível criado pela API dispara o
+  gatilho `fin_payment_history is immutable` antes do RESTRICT; a prova usa
+  recebível "bare" inserido por SQL sem histórico de pagamento.
+- **Asserções de teste corridas/colocadas no lugar errado:** espera explícita
+  do evento de decisão no histórico (`waitForFunction ... includes("Aprovado")`)
+  em vez de leitura imediata, e asserções de `cost_center_name`/`supplier_name`
+  movidas da resposta do POST (que devolve somente colunas da despesa) para a
+  resposta do GET de busca (que devolve os joins).
+
+### Regras inegociáveis demonstradas
+
+- Política de alçada **não é inventada**: catálogo vazio/inativo ⇒ 403
+  `approval_authority_missing` com mensagem de pendência na tela; nunca
+  aprovação automática.
+- Autoria sempre real: `requester_name`/`approver_name` derivam da identidade
+  da sessão; campo homônimo do corpo é ignorado; sem `COALESCE` de autoria
+  inferida.
+- Histórico imutável com snapshot anterior/posterior, autor, data, motivo e
+  limite de alçada efetivamente aplicado.
+- Solicitar/aprovar/recusar/cancelar/reembolsar não gera pagamento, baixa,
+  cobrança, recebível nem pagável — asserido por contagem no banco.
+- Mutação + histórico + auditoria na mesma transação, com falha injetada de
+  auditoria provando `503 audit_unavailable` + rollback (subteste 18,
+  pré-existente).
+- Anexos/evidências somente como metadados sintéticos validados
+  (`synthetic://` + storage key sintético).
