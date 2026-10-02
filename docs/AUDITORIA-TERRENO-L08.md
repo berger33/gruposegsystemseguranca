@@ -121,3 +121,18 @@ misturar o legado com v2 por presunção. O novo gate deve provar, no mínimo:
 7. fontes simuladas são rotuladas e ausência de dado não vira zero.
 
 Até haver evidência Windows do L07, isto permanece **recomendação não iniciada**.
+
+## Atualização da sessão L08 — 2026-10-02
+
+A PR #77 foi confirmada como mergeada na `main` (`06be226`). A transição para
+L08 foi autorizada pelo proprietário: L07 está encerrado no escopo local e aceito
+por Marcelo e Andreia; a homologação Windows continua pendente e foi adiada para
+o fechamento integral do sistema. Os 80 órfãos de `/admin/ti` continuam sujeitos
+à promoção por área somente com prova.
+
+A primeira fatia implementada/consolidada nesta sessão é CLI-01..05 sobre as
+rotas legadas já reais. Não foram criadas fontes v2 concorrentes: as tabelas
+canônicas são `auth_*`, `client_accounts`, `client_access_grants`,
+`client_contracts`, `client_documents`, `client_tickets` e suas auditorias,
+provenientes das migrações 003–005 e endurecidas por 097–101. CLI-06..15 e
+EXT-01..17 permanecem não promovidos.
