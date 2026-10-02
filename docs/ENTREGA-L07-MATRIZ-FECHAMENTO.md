@@ -121,6 +121,14 @@ revertido antes do commit. Dados exclusivamente sintéticos; PostgreSQL
 descartável por execução; nenhum PSP, banco, SMTP, emissão, pagamento ou dado
 de cliente real.
 
+**Checks do CI na PR desta sessão:** os workflows que disparam para os arquivos
+alterados passaram — `static-and-smoke` e `operations-postgres-browser` (gate
+L06 no runner, que valida a correção do subteste 9 fora da máquina local). Os
+workflows L04/L05/L07 são acionados por mudanças em `src/**`, `server.mjs` ou
+nos próprios arquivos de teste correspondentes, que não foram alterados nesta
+PR; para esses, a evidência vigente é a execução local dupla acima, no mesmo
+SHA da PR.
+
 ## 5. Estado declarado
 
 - FIN-01..16 e ADM-01..12 permanecem `pronto_local` **somente na validação
