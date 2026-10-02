@@ -1,5 +1,20 @@
 # Evidências — entrega local integral
 
+## Evidência vigente — aceite L07 e bloqueio Windows (2026-10-02)
+
+Base `main` `ad01d7d`; branch `arena/01a0fdbd-gruposegsystemseguranca`; dados sintéticos e PostgreSQL descartável.
+
+- **Implementação:** FIN-01..16 e ADM-01..12 permanecem `pronto_local`; nenhuma mudança de produto nesta sessão.
+- **Validação automática pré-edição:** estático 5/5; typecheck 0; unitários 196/196; migrações 138/138 em dois passes, clone/checksum negativo e 524 tabelas; L07 43/43, depois 42/43 por `SIGSEGV` no lançamento do Chromium, seguido por **43/43 + 43/43 consecutivos**; L03 1/1; L04 18/20 por dois `SIGSEGV` no lançamento e repetição integral 20/20; L05 1/1; L06 9/9. Nenhum timeout/skip/assertiva foi alterado.
+- **Aceite humano:** o proprietário declarou em 02/10/2026 que **Marcelo e Andreia aceitaram FIN-01..16 e ADM-01..12 integralmente**, com o escopo e as fronteiras sintéticas da matriz.
+- **Windows:** o proprietário declarou **não validado**; nenhuma evidência foi apresentada. Portanto, o L07 não está concluído.
+- **Órfãos:** decisão declarada de promover os 80 componentes por área somente quando passarem pelo critério de prova; sem ordem de áreas informada.
+- **L08:** não iniciado. A auditoria [`AUDITORIA-TERRENO-L08.md`](AUDITORIA-TERRENO-L08.md) é documental e não prova requisito.
+
+- **Validação final:** estático 5/5; typecheck; unitários 196/196; build; migrações 138/138; L07 **43/43 + 43/43 consecutivos**; L03 1/1; L04 20/20; L05 1/1; L06 encadeado 9/9. Duas tentativas L07 anteriores caíram no launch do Chromium (subtestes 12/32) e foram repetidas integralmente sem mudar testes.
+
+Relatório da sessão: [`ENTREGA-L07-ACEITE-E-AUDITORIA-L08.md`](ENTREGA-L07-ACEITE-E-AUDITORIA-L08.md).
+
 ## Evidência vigente — fechamento de matriz/evidências do L07 (2026-10-02)
 
 Base `main` `bbcf311` + correção de sincronização do subteste 9 do gate L06

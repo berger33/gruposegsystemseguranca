@@ -1,5 +1,15 @@
 # Controle de implementação — SEG System
 
+## Atualização 2026-10-02 — aceite L07 registrado, fechamento bloqueado por Windows
+
+- Aceite humano declarado: Marcelo e Andreia aceitaram integralmente FIN-01..16 e ADM-01..12 em 02/10/2026. Os IDs continuam `pronto_local`; aceite não altera a distinção entre código, teste e homologação.
+- Windows: nenhuma validação/evidência relatada. **L07 continua em execução e não concluído.**
+- Órfãos `/admin/ti`: decisão de promover os 80 por área somente com prova conforme `INVENTARIO-ADMIN-TI.md`; sem priorização de áreas declarada, todos continuam protótipos até cumprir o critério.
+- Baseline real: estático 5/5; typecheck; unitários 196/196; migrações 138/138; L07 obteve duas execuções consecutivas 43/43 após uma queda `SIGSEGV` de Chromium; L03 1/1; L04 repetido 20/20 após duas quedas de launch; L05 1/1; L06 encadeado 9/9.
+- L08: **não iniciado**; sem migração 139, gate ou workflow. Auditoria apenas documental em `AUDITORIA-TERRENO-L08.md`; CLI-01..15 e EXT-01..17 não foram promovidos.
+- Validação final documental: estático 5/5; typecheck; unitários 196/196; build; migrações 138/138; L07 43/43 ×2 consecutivas; L03 1/1; L04 20/20; L05 1/1; L06 9/9 encadeado. Quedas intermediárias de launch do Chromium foram registradas e recuperadas sem alteração de teste.
+- Próxima ação: receber evidência Windows; fechar formalmente o L07; então iniciar o gate L08 pela fatia recomendada CLI-01..05.
+
 ## Atualização 2026-10-02 — L07: fechamento de matriz e evidências
 
 - IDs: FIN-01..16 e ADM-01..12 conferidos requisito a requisito contra código e subtestes vigentes; todos permanecem `pronto_local` **somente na validação automática**, com aceite humano pendente.
