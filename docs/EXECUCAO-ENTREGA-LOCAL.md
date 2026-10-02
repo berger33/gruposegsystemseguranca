@@ -275,3 +275,51 @@ Rotas reais: `/cliente/entrar`, `/cliente/app/conta`, `/cliente/app/contratos`,
 A/B, autorização derivada da sessão, corpo forjado sem ampliação, download
 privado, histórico e erros de acesso. CLI-06..15 e EXT-01..17 não foram
 promovidos.
+
+## L08 — hardening da primeira fatia CLI-01..05 (02/10/2026, sessão de continuação)
+
+Base confirmada: PR **#78 mergeada** na `main` oficial, merge commit
+**`c16673c3c2a8f749ec476edb7a91dc62d2c1dfc9`** (HEAD de `origin/main`). A fatia
+CLI-01..05 **não foi declarada aceita por o gate passar**: ela foi revisada e
+endurecida contra os critérios do L08.
+
+O que mudou de fato:
+
+- **Atomicidade**: abertura de chamado e mudança de status gravam escrita +
+  histórico + auditoria na mesma transação; falha de auditoria devolve **503** e
+  reverte tudo. A auditoria tolerante a falha saiu dos fluxos sensíveis.
+- **Idempotência/concorrência**: `client_tickets` ganhou chave de idempotência,
+  fingerprint e **protocolo único**; cinco retries concorrentes resultam em um
+  chamado e um protocolo; mesma chave com conteúdo diferente devolve **409**.
+- **Documento privado**: `client_document_access_log` + auditoria na mesma
+  transação, **antes de qualquer byte**; falha no registro devolve 503 e nada é
+  entregue.
+- **Autorização**: autoria sempre da sessão; identidade/conta forjada no corpo
+  não amplia escopo; A≠B negado em leitura, escrita e download; os aliases v2
+  sob `/api/client/*` continuam staff-only e **negam** sessão de cliente.
+- **Ausência x zero**: falha de leitura é 503 `retryable`; listas declaram
+  `dataAvailable`, `empty` e `emptyReason`; escopo restrito sem contrato
+  autorizado é declarado, não vira “zero contratos”.
+- **Interface**: a tela de chamados deixou de mostrar erro sobre um chamado
+  criado com sucesso e passou a exibir o protocolo; envia chave de idempotência.
+- **Gate**: o smoke estático virou **jornada Chromium real autenticada**
+  (entrada → conta → contrato → documento privado → chamado) e o runner aplica
+  **001–139** com o migrador oficial em PostgreSQL descartável.
+
+Migração **aditiva 139**; **001–138 imutáveis**; próxima livre: **140**.
+Fonte canônica única mantida (`auth_*`, `client_accounts`,
+`client_access_grants`, `client_contracts`, `client_documents`,
+`client_tickets`, `client_document_access_log` e auditorias).
+
+Resultados reais no SHA entregue: estático 5/5; typecheck OK; unitários 196/196;
+build exit 0; migrações **139/139** em dois passes, 525 tabelas, clone/checksum
+negativo rejeitado; L07 **43/43 duas vezes**; L03 1/1; L04 20/20; L05 1/1;
+L06 9/9; **L08 24/24 duas vezes consecutivas**. `next-env.d.ts` e `tsconfig.json`
+restaurados antes do commit.
+
+Classificação honesta: **implementação local + validação automática Linux/PostgreSQL
+descartável**. **Não** há aceite humano de negócio para CLI-01..05. CLI-06..15,
+EXT-01..17, fornecedor restrito, CLI-15 e os 80 órfãos de `/admin/ti` continuam
+não promovidos. **Homologação Windows continua pendente**, adiada para o
+fechamento integral do sistema. Detalhe completo, requisito por requisito, em
+[ENTREGA-L08-HARDENING-RELATORIO-2026-10-02.md](ENTREGA-L08-HARDENING-RELATORIO-2026-10-02.md).

@@ -33,9 +33,16 @@ try {
   await postgres.initialise(); await postgres.start(); await postgres.createDatabase(database);
   const databaseUrl = `postgresql://seg_qa:${password}@127.0.0.1:${port}/${database}`;
   console.log(`QA_L08_PG_READY: 127.0.0.1:${port}/${database}; temporary isolated cluster; secret omitted.`);
-  console.log("QA_L08_SCOPE: CLI-01..05 legacy portal canonical source; client A/B isolation, forged body scope, private downloads, ticket idempotency/audit and Chromium entry smoke; CLI-06..15 and EXT-01..17 not promoted.");
+  console.log("QA_L08_SCOPE: CLI-01..05 legacy portal canonical source; client A/B isolation, forged body scope, cross-scope aliases, atomic write+audit with 503 rollback, concurrent ticket idempotency/protocol, private document access log and a real authenticated Chromium journey; CLI-06..15 and EXT-01..17 not promoted.");
+  // Migrações oficiais 001–139 no cluster descartável: o gate prova a fatia
+  // sobre o esquema canônico completo, não sobre um recorte conveniente.
+  const migrated = await run(process.execPath, ["scripts/migrate-site-visual.mjs"], {
+    DATABASE_URL: databaseUrl, DATABASE_MIGRATION_URL: databaseUrl, QA_MIGRATION_ONLY: "true", ALLOW_REMOTE_MIGRATIONS: "",
+  });
+  console.log(`QA_L08_MIGRATIONS_EXIT: ${migrated}`);
+  if (migrated !== 0) throw new Error("qa_l08_migrations_failed");
   result = await run(process.execPath, ["--test", "--test-concurrency=1", "tests/l08-delivery.integration.test.mjs"], {
-    RUN_DATABASE_INTEGRATION: "1", DATABASE_URL: databaseUrl, DATABASE_MIGRATION_URL: "", RUN_DATABASE_INTEGRATION_REMOTE: "", QA_PGLITE_ONLY: "", ALLOW_REMOTE_MIGRATIONS: "", OLLAMA_ENABLED: "false", MAIL_HOST: "", NEXT_TELEMETRY_DISABLED: "1", CLIENT_DOCS_DIR: path.join(directory, "private-documents"), AWS_EXECUTION_ENV: "AWS_Lambda_nodejs22.x",
+    RUN_DATABASE_INTEGRATION: "1", DATABASE_URL: databaseUrl, DATABASE_MIGRATION_URL: "", RUN_DATABASE_INTEGRATION_REMOTE: "", QA_PGLITE_ONLY: "", ALLOW_REMOTE_MIGRATIONS: "", OLLAMA_ENABLED: "false", MAIL_HOST: "", NEXT_TELEMETRY_DISABLED: "1", CLIENT_DOCS_DIR: path.join(directory, "private-documents"), AWS_EXECUTION_ENV: "AWS_Lambda_nodejs22.x", QA_L08_DUMP_SERVER_LOGS: process.env.QA_L08_DUMP_SERVER_LOGS || "",
   });
   console.log(`L08_DELIVERY_TEST_EXIT: ${result}`);
 } catch (error) { console.error("QA_L08_PG_FAILED", String(error?.message || error).replaceAll(password, "[redacted]").slice(0, 500)); result = 1; }

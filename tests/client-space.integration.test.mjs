@@ -67,6 +67,14 @@ async function freePort() {
 async function applyMigrations() {
   const pool = new Pool({ connectionString: databaseUrl, max: 1 });
   try {
+    // Quando o runner já aplicou o conjunto oficial (001–139) com o migrador,
+    // reaplicar o recorte antigo quebraria tabelas evoluídas por migrações
+    // posteriores. O esquema canônico completo tem precedência.
+    const ledger = await pool.query("SELECT to_regclass('public.__migrations') IS NOT NULL AS ready");
+    if (ledger.rows[0].ready) {
+      const applied = await pool.query('SELECT count(*)::int AS total FROM __migrations');
+      if (applied.rows[0].total >= 139) return;
+    }
     for (const filename of ["001-site-visual.sql", "002-public-leads.sql", "003-client-access.sql", "004-client-space.sql", "005-client-security.sql", "006-admin-identities.sql", "007-opcao-b-funcionarios.sql", "011-audit-and-notifications.sql", "097-client-mfa-session.sql", "098-client-manual-verification.sql", "099-sec-staff-session-hardening.sql",
   "100-l02-local-outbox.sql",
   "101-l02-document-integrity.sql"]) {
@@ -436,7 +444,12 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     assert.deepEqual(selected.body.contracts.map(item => item.id), [contractId]);
     await pool.query(`UPDATE client_access_grants SET allowed_contract_ids='{}' WHERE id=$1`, [grantA1]);
     const empty = await api(`/api/client/contracts?account=${accountA1}`, { cookie: cookieA });
-    assert.deepEqual(empty.body, { contracts: [] });
+    // L08: allowlist vazia continua negando tudo, mas agora o motivo é
+    // declarado — não é apresentado como "zero contratos".
+    assert.deepEqual(empty.body, {
+      contracts: [], source: "client_contracts", dataAvailable: false, empty: true,
+      emptyReason: "escopo_restrito_sem_contrato_autorizado",
+    });
     await pool.query(`UPDATE client_access_grants SET contract_scope_mode='all' WHERE id=$1`, [grantA1]);
 
     // Negação por padrão: B pediu um cadastro que não é dele. Resposta genérica e auditada.

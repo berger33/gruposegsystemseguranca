@@ -63,6 +63,9 @@ for (const [fault, label] of [['grant', 'initial grant query'], ['unit_grant', '
     await t.api.handleClientContracts(t.req, t.res, t.url);
     assert.equal(t.res.status, 503, 'DB failure must fail closed, not list contracts');
     assert.equal(t.res.body.error, 'client_space_unavailable');
+    // L08: a falha é declarada como erro recuperável, com retry possível.
+    assert.equal(t.res.body.retryable, true);
+    assert.equal(t.res.body.contracts, undefined);
     assert.equal(t.protectedReads().length, 0);
   });
 }
@@ -95,7 +98,11 @@ test('TENANT-SEG-002 selected empty allowlist reads no contracts', async () => {
   const t = fixture({ unit: null, scope: 'selected', allowed: [] });
   await t.api.handleClientContracts(t.req, t.res, t.url);
   assert.equal(t.res.status, 200);
-  assert.deepEqual(t.res.body, { contracts: [] });
+  // L08: escopo restrito sem contrato autorizado é declarado, não é "zero".
+  assert.deepEqual(t.res.body, {
+    contracts: [], source: 'client_contracts', dataAvailable: false, empty: true,
+    emptyReason: 'escopo_restrito_sem_contrato_autorizado',
+  });
   assert.equal(t.protectedReads().length, 0);
 });
 

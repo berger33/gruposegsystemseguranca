@@ -35,3 +35,49 @@ Não há dados reais, SMTP externo, PSP ou serviço externo.
 CLI-06..15 e EXT-01..17 continuam `a_revalidar`/não promovidos. Nenhuma migração
 nova foi necessária; a fonte legada continua única e explícita. Migrações 001–138
 são imutáveis; a próxima livre continua sendo 139.
+
+## Hardening da primeira fatia — sessão de continuação (02/10/2026)
+
+Base confirmada nesta sessão: PR **#78 mergeada**, merge commit
+**`c16673c3c2a8f749ec476edb7a91dc62d2c1dfc9`**, igual ao HEAD de `origin/main`.
+“Consolidado” na tabela acima **não** virou aceite: a fatia foi revisada e
+endurecida porque o gate passava sem provar os critérios do L08.
+
+Correções desta sessão (detalhe em
+[ENTREGA-L08-HARDENING-RELATORIO-2026-10-02.md](ENTREGA-L08-HARDENING-RELATORIO-2026-10-02.md)):
+
+- auditoria dos fluxos sensíveis deixou de ser tolerante a falha: abertura de
+  chamado e mudança de status gravam escrita + histórico + auditoria na **mesma
+  transação**; falha devolve **503** e reverte tudo (sem sucesso parcial);
+- abertura de chamado passou a ter **chave de idempotência, fingerprint e
+  protocolo único**: cinco retries concorrentes produzem um chamado e um
+  protocolo; a mesma chave com conteúdo diferente devolve **409**;
+- download de documento privado grava `client_document_access_log` + auditoria
+  na mesma transação **antes do primeiro byte**; falha no registro devolve 503
+  sem entregar bytes;
+- falha de leitura devolve 503 `retryable`; ausência de dado e escopo restrito
+  são declarados (`dataAvailable`, `empty`, `emptyReason`) — nunca “zero”;
+- a tela de chamados deixou de exibir erro em cima de um chamado criado com
+  sucesso e passou a mostrar o protocolo;
+- o smoke estático do Chromium foi substituído por **jornada real autenticada**:
+  entrada, conta, contrato, documento privado baixado pela sessão do navegador e
+  chamado aberto pela interface.
+
+Migração **aditiva 139** (`139-cli04-05-idempotencia-protocolo-download-log.sql`)
+com índices únicos parciais e CHECKs novas em `NOT VALID`. Migrações **001–138
+continuam imutáveis**; a próxima livre passa a ser **140**. Fonte canônica única
+mantida (`auth_*`, `client_accounts`, `client_access_grants`, `client_contracts`,
+`client_documents`, `client_tickets`, `client_document_access_log` e auditorias).
+
+Gate `test:l08-delivery:pg`: PostgreSQL descartável com **001–139** aplicadas
+pelo migrador oficial, HTTP real, Chromium empacotado, **24/24 em duas execuções
+consecutivas**. Regressões no mesmo SHA: estático 5/5, typecheck OK, unitários
+196/196, build exit 0, migrações 139/139 em dois passes (525 tabelas), L07 43/43
+duas vezes, L03 1/1, L04 20/20, L05 1/1, L06 9/9.
+
+CLI-06..15, EXT-01..17, fornecedor restrito, CLI-15 e os 80 órfãos de
+`/admin/ti` **não foram promovidos**. Os aliases v2 sob `/api/client/*`
+continuam staff-only e o gate prova que negam sessão de cliente.
+
+Aceite humano da fatia: **pendente**. Homologação **Windows: pendente**, adiada
+para o fechamento integral do sistema.
