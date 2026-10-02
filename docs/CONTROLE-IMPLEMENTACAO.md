@@ -147,7 +147,7 @@ Este arquivo foi criado junto ao plano mestre. Nenhum item foi implementado ou h
 - Decisões necessárias: valores de alçada/segregação FIN-10 continuam configuráveis/vazios até decisão do dono; avaliação seletiva de #47/#53 é a próxima atividade, sem merge em bloco.
 - Bloqueios e trabalho independente possível: nenhum bloqueio técnico desta fatia; próximo recorte é FIN-10, depois jornadas FIN-14/15/16 e painel ADM-01..12.
 - Estado dos IDs após lote: FIN-09, FIN-11 e FIN-12 `pronto_local` (validação automática concluída; aceite humano pendente); FIN-04 revalidado no vínculo gateway; FIN-10 e ADM-01..12 ainda não promovidos.
-- PR, se existente: nenhuma PR criada nem mesclada neste checkpoint; o trabalho permanece na branch Arena atual. PRs de referência continuam sem decisão automática.
+- PR: [#69](https://github.com/berger33/gruposegsystemseguranca/pull/69), aberta da branch Arena atual, sem merge automático. Cinco checks remotos passaram: `static-and-smoke`, `finance-postgres-browser`, `contracts-postgres-browser`, `crm-postgres-browser` e `operations-postgres-browser`. PRs de referência continuam sem decisão automática.
 - Homologação de usuários / produção: pendente; nenhum dado real inventado ou efeito financeiro externo produzido.
 
 ## Checkpoint anterior

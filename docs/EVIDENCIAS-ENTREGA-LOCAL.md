@@ -1763,6 +1763,7 @@ Fatia executada sobre `main`/`origin/main` `ffdf7fbb49832abe30930c355b3085d190a7
 | Tipos, unitários e build | `npm run typecheck`; `npm test`; `npm run build` | 0 erros; 196/196, 0 skips; build otimizado com 78 páginas. |
 | Migrações | `npm run test:migrations:pg` | 135/135 no primeiro e segundo passes; `TABLES=522->522`; clone rejeitou checksum adulterado de 006 e foi restaurado sem rebaseline. |
 | Gate L07 | `npm run test:l07-delivery:pg` | 31/31, 0 falhas/0 skips; HTTP real, PostgreSQL descartável, sessão/cookie real, Next local e Chromium empacotado. |
+| CI da PR | [PR #69](https://github.com/berger33/gruposegsystemseguranca/pull/69) | 5/5 checks verdes: estático/smoke, FIN L07, contratos, CRM e operações. |
 | FIN-09 | API + Chromium | margem incompleta preserva os valores conhecidos e declara a ausência de base; margem calculada é do servidor; 500 de leitura é visível, sem “nenhum resultado”, e retry recupera a lista. |
 | FIN-11 | API + Chromium | obrigação é derivada da regra de atividade e não de tipo escolhido pelo cliente; documento é sandbox sintético; falha de `fiscal-activity-rules` fica visível e retry funciona. |
 | FIN-12 → FIN-04 | API + Chromium | HMAC de payload divergente é recusado; seis envios concorrentes da mesma chave resultam em 1 criação e 5 replays; conciliação cria exatamente uma baixa em `fin_payments`, atualiza recebível/histórico e o estorno cria reversão ligada à baixa, retornando o recebível a `pendente`. |

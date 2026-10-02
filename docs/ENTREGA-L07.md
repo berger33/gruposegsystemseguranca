@@ -13,7 +13,7 @@ A referência atual para esta fatia é `main`/`origin/main` `ffdf7fbb49832abe309
 
 O gate local `npm run test:l07-delivery:pg` terminou **31/31**: HTTP real, PostgreSQL descartável, sessão/cookie, Next e Chromium reais. Ele prova que FIN-09 não mascara leitura falha como lista vazia e declara margem incompleta; FIN-11 determina obrigação pela atividade, não emite nota real e permite retry de falha de leitura; FIN-12 recusa HMAC/payload divergente e replay concorrente (1 criação + 5 replays), cria a baixa FIN-04/histórico, atualiza o recebível e cria o reversor no estorno. `node scripts/qa-wave0-static.mjs` 5/5, `npm run typecheck`, `npm test` 196/196, `npm run build` (78 páginas) e `npm run test:migrations:pg` 135/135 em dois passes (clone/checksum negativo, 522 tabelas) também passaram.
 
-FIN-09, FIN-11 e FIN-12 passam a `pronto_local` para validação automática. Nenhuma emissão, cobrança, Pix/boleto, PSP, banco, certificado ou mensagem real foi produzida. Aceite humano e Windows continuam pendentes; L07 ainda não está concluído e L08 não foi iniciado. Próximo recorte: FIN-10 e a avaliação seletiva de #47/#53.
+FIN-09, FIN-11 e FIN-12 passam a `pronto_local` para validação automática. A [PR #69](https://github.com/berger33/gruposegsystemseguranca/pull/69) está aberta sem merge e recebeu 5/5 checks verdes (estático/smoke, FIN L07, contratos, CRM e operações). Nenhuma emissão, cobrança, Pix/boleto, PSP, banco, certificado ou mensagem real foi produzida. Aceite humano e Windows continuam pendentes; L07 ainda não está concluído e L08 não foi iniciado. Próximo recorte: FIN-10 e a avaliação seletiva de #47/#53.
 
 ## Resultado técnico local
 
