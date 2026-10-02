@@ -93,6 +93,9 @@ import { createFinManagementApi } from "./src/server/fin-management-api.mjs";
 import { createFinBudgetApi } from "./src/server/fin-budget-api.mjs";
 import { createAdmApi } from "./src/server/adm-api.mjs";
 import { createAdmAdvancedApi } from "./src/server/adm-advanced-api.mjs";
+// ADM-01..12: painel funcional do Marcelo. Rotas canônicas /api/adm/panel/*,
+// fora dos aliases históricos de RH, com auditoria fail-closed.
+import { createAdmPanelApi } from "./src/server/adm-panel-api.mjs";
 import { createAstApi } from "./src/server/ast-api.mjs";
 import { createAstAdvancedApi } from "./src/server/ast-advanced-api.mjs";
 import { createExtApi } from "./src/server/ext-api.mjs";
@@ -2168,6 +2171,20 @@ const admAdvancedApi = createAdmAdvancedApi({
   },
 });
 
+// ADM-01..12 — painel do Marcelo. A auditoria NÃO engole erro: a falha sobe,
+// a transação do handler reverte e a resposta é 503 (fail-closed).
+const admPanelApi = createAdmPanelApi({
+  pool: getPool(),
+  auditLog: async ({ action, actor, target, meta, client }) => {
+    await (client || getPool()).query(
+      `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+      [action, actor, target, meta ? JSON.stringify(meta) : null]
+    );
+  },
+  sameOrigin,
+  requireSession: readSession,
+});
+
 const astApi = createAstApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -3877,6 +3894,22 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/adm-expansion-analyses" || url.pathname === "/api/crm/hr/adm-expansion-analyses" || url.pathname === "/api/hr/adm-expansion-analyses" || url.pathname === "/api/adm/expansion-analyses") {
     return admAdvancedApi.handleExpansionAnalyses(req, res);
   }
+  // ADM-01..12 — painel funcional do Marcelo em rotas canônicas próprias,
+  // fora dos aliases históricos de RH. Indicadores calculados de registro
+  // canônico, detalhamento, registro real, decisão unificada, escopo por
+  // identidade, relatório limitado, configuração versionada, meta x realizado,
+  // diário CON-11 por permissão e análises alimentadas pelos módulos reais.
+  if (url.pathname === "/api/adm/panel/indicators") return admPanelApi.handleIndicators(req, res);
+  if (url.pathname === "/api/adm/panel/drilldown") return admPanelApi.handleDrilldown(req, res);
+  if (url.pathname === "/api/adm/panel/record") return admPanelApi.handleRecord(req, res);
+  if (url.pathname === "/api/adm/panel/decisions") return admPanelApi.handleDecisions(req, res);
+  if (url.pathname === "/api/adm/panel/workspace") return admPanelApi.handleWorkspace(req, res);
+  if (url.pathname === "/api/adm/panel/reports") return admPanelApi.handleReports(req, res);
+  if (url.pathname === "/api/adm/panel/report-download") return admPanelApi.handleReportDownload(req, res);
+  if (url.pathname === "/api/adm/panel/business-configs") return admPanelApi.handleBusinessConfigs(req, res);
+  if (url.pathname === "/api/adm/panel/goals") return admPanelApi.handleGoals(req, res);
+  if (url.pathname === "/api/adm/panel/decision-diary") return admPanelApi.handleDecisionDiary(req, res);
+  if (url.pathname === "/api/adm/panel/expansion") return admPanelApi.handleExpansion(req, res);
   // AST-01 produtos/SKU fornecedores unidade medida custo local estoque mínimo
   if (url.pathname === "/api/admin/hr/ast-suppliers" || url.pathname === "/api/crm/hr/ast-suppliers" || url.pathname === "/api/hr/ast-suppliers" || url.pathname === "/api/ast/suppliers") {
     return astApi.handleSuppliers(req, res);
@@ -5318,6 +5351,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/crm/hr/fin-commission-provision-history"
   || pathname === "/api/hr/fin-commission-provision-history"
   || pathname === "/api/fin/commission-provision-history"
+  || pathname.startsWith("/api/adm/panel/")
   || pathname === "/api/admin/hr/adm-my-day"
   || pathname === "/api/crm/hr/adm-my-day"
   || pathname === "/api/hr/adm-my-day"

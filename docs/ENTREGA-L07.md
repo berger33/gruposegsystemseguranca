@@ -153,3 +153,28 @@ A entrega desta sessão está registrada em [`docs/ENTREGA-L07-FIN05.md`](./ENTR
 **Base confirmada:** `origin/main` em `9de7c5ac6dea9b6822e3e4050519ff4048432f77` (merge da PR #48, que entregou FIN-05). Sessão `arena/01a0f795-gruposegsystemseguranca`, nova e distinta da sessão anterior (`arena/01a0f77c-...`).
 
 A entrega desta sessão está registrada em [`docs/ENTREGA-L07-FIN06.md`](./ENTREGA-L07-FIN06.md): FIN-06 (cobrança com responsável, lembretes, histórico e política aprovada) foi auditado, endurecido e fechado localmente. A implementação anterior (migration 078) já tinha tabelas e rotas de rascunho, mas a auditoria não era transacional/fail-closed, não havia validação server-side de UUIDs/papéis consistente com FIN-01..05, a política não tinha campos estruturados de tipo de lembrete/dias antes/escalonamento, e o histórico não tinha uma garantia de banco contra bloqueio automático de portal. Essa implementação antiga foi reescrita (não apenas mantida) com o mesmo padrão transacional usado em FIN-01..05. Migração aditiva `125-fin06-collection-hardening.sql`, aba **Cobrança** no workspace financeiro (`CollectionWorkspace.tsx`) e dois subtestes adicionais do gate L07 (HTTP real + Chromium). O gate final passou **10/10 em duas execuções consecutivas**. FIN-07..16 e ADM-01..12 permanecem fora do escopo.
+
+### Continuação atual — ADM-01..12 (painel funcional do Marcelo)
+
+**Base confirmada:** `main` em `ad8668b09f757da60e1486e52e57a9df4f39aae6`
+(merge da PR #73), reconfirmada por baseline verde em worktree do próprio
+commit base antes de qualquer edição (gate L07 37/37 em duas execuções
+consecutivas, estático 5/5, typecheck 0, unitários 196/196, migrações exit 0).
+Sessão `arena/01a0fd08-gruposegsystemseguranca`.
+
+A entrega está registrada em [`docs/ENTREGA-L07-ADM01-12.md`](./ENTREGA-L07-ADM01-12.md):
+`/admin/marcelo` deixou de ser protótipo descritivo e passou a painel funcional
+com doze indicadores calculados de registros canônicos (fonte, período e
+data-base visíveis), drill-down de cada cartão até o registro real preservando
+autorização, decisão unificada ADM-06 com alçada/segregação/idempotência e
+auditoria fail-closed (503 com rollback), espaço de trabalho por identidade,
+relatórios limitados e auditados, configurações versionadas, meta separada do
+realizado, diário CON-11 por permissão e análises de expansão. Migração aditiva
+`138-adm01-12-painel-marcelo-decisoes-escopo.sql`, API
+`src/server/adm-panel-api.mjs` (11 rotas `/api/adm/panel/*`) e UI
+`src/app/admin/marcelo/MarceloPanel.tsx`. O gate L07 foi de 37 para **43
+subtestes**. Os componentes órfãos de `/admin/ti` foram inventariados por prova
+em [`docs/INVENTARIO-ADMIN-TI.md`](./INVENTARIO-ADMIN-TI.md): 0 promovidos,
+2 adaptados, 80 como dívida explícita. ADM-01..12 passam a `pronto_local` com
+**aceite humano pendente**; L07 **não** está declarado concluído e L08 não foi
+iniciado.

@@ -1821,3 +1821,90 @@ Após escrever os quatro subtestes novos sem mexer no produto, o gate de entrega
 ### D. Transparência das execuções intermediárias
 
 Entre as primeiras execuções íntegras e as finais, houve reprovas transitórias intermediárias, todas registradas: runs 5 e 6 reprovaram unicamente o subteste 19 por `testTimeoutFailure` (120 s) com o mesmo sintoma de 6 POSTs concorrentes (starvation do pool, corrigido com o re-read na mesma conexão pós-ROLLBACK); runs 7 e 8 reprovaram o subteste 18 (Chromium legado) por timeout transitório do helper de leitura sob disputa de CPU com outro gate. Nenhuma outra assertiva reprovou em qualquer execução; os testes, timeouts e skips permaneceram intocados, e as execuções 9, 10 e 11 confirmaram 35/35 consecutivas.
+
+
+## ADM-01..12 — painel funcional do Marcelo (02/10/2026)
+
+Base: `main` `ad8668b`. Sessão `arena/01a0fd08-gruposegsystemseguranca`.
+
+### A. Baseline reconfirmada antes de editar (worktree do commit base)
+
+| Comando | Resultado |
+|---|---|
+| `node scripts/qa-wave0-static.mjs` | 5/5 |
+| `npm run typecheck` | exit 0 |
+| `npm test` | 196/196 |
+| `npm run test:migrations:pg` | exit 0; 137/137; 522 tabelas |
+| `npm run test:l07-delivery:pg` | 37/37 em duas execuções consecutivas |
+| `npm run test:l03-delivery:pg` | **reprovou uma vez** (`403 /api/employee/offline`) **no commit base, sem nenhuma alteração desta sessão** — instabilidade pré-existente, registrada e não mascarada |
+| `npm run test:l04/l05/l06-delivery:pg` | 20/20, 1/1, 9/9 |
+
+### B. Resultados no SHA entregue
+
+| Comando | Resultado |
+|---|---|
+| `node scripts/qa-wave0-static.mjs` | 5/5 |
+| `npm run typecheck` | exit 0 |
+| `npm test` | 196/196 |
+| `npm run build` | exit 0 |
+| `npm run test:l07-delivery:pg` | **43/43**, duas execuções consecutivas limpas |
+| `npm run test:l03-delivery:pg` | 1/1 |
+| `npm run test:l04-delivery:pg` | 20/20 |
+| `npm run test:l05-delivery:pg` | 1/1 |
+| `npm run test:l06-delivery:pg` | 9/9 |
+
+### C. O que os seis subtestes novos provam
+
+1. **Papéis, origem e drill-down de cada indicador** — anônimo 401 em
+   indicadores/drill-down/registro; RH e financeiro 403; TI lê com
+   `can_decide:false`; os doze cartões declaram `source.tables`,
+   `source.period_field`, `period` e `as_of` e batem com o universo canônico;
+   **toda linha de todo indicador** abre o registro real pelo contrato
+   publicado; projeção do lead sem PII; 400/404 para entrada inválida sem
+   vazar SQL.
+2. **Falha de leitura e retry** — fonte ilegível vira `indisponivel` com
+   `value:null` em dois cartões e 503 no drill-down (nunca lista vazia); cartão
+   não relacionado intacto; retry recupera; período sem registro é vazio
+   declarado com `empty_reason`, não zero inventado.
+3. **ADM-06 decisão unificada** — sem alçada 403 com registro intacto; 6
+   chamadas concorrentes → 1 criação + 5 replays do mesmo id; snapshot do
+   limite; histórico imutável por gatilho (UPDATE/DELETE recusados em SQL
+   direto); chave repetida com outro conteúdo 409; segunda decisão sobre a
+   mesma origem 409; valor acima da alçada 403; **auditoria indisponível → 503
+   com rollback verificado em banco**; após a decisão o item sai do cartão.
+4. **ADM-07/08/09** — dono vindo da sessão (identidade do cliente ignorada) e
+   invisível para terceiros; atalho externo 400; total do relatório igual ao do
+   cartão; destinatário sem papel 403; download anônimo 401 / terceiro 403 /
+   destinatário 200 com exatamente cinco campos limitados; geração e download
+   registrados; versões 1→2 com a anterior preservada; três mutações sob
+   auditoria indisponível → 503 sem resíduo.
+5. **ADM-10/11/12** — estimativa e realizado com fontes distintas e números
+   distintos; TI sem decisão restrita, RH barrado, acesso de Marcelo
+   registrado com sua identidade e revertido quando a auditoria falha; blocos
+   de expansão com tipo/fonte e indisponibilidade declarada.
+6. **Jornada Chromium de Marcelo** — erro de leitura visível sem cartão
+   inventado, retry, período aplicado, valor em `R$` com fonte e data-base,
+   cartão → lista filtrada → registro canônico, aprovação real pela tela com
+   `approver_identity` da sessão confirmada em banco, e abas de metas, diário e
+   expansão.
+
+### D. Transparência das execuções
+
+Oito execuções finais do gate L07 no SHA entregue, todas registradas:
+
+- **1** 43/43.
+- **2** reprovou **só** o subteste 22, a jornada Chromium **legada** do FIN-10
+  (`Carregando histórico…`), mesma manifestação transitória já documentada nas
+  execuções 7/8 do histórico L07 em máquina de dois núcleos.
+- **3, 5 e 6** reprovaram **só** o subteste 43 novo, por espera frágil **do
+  próprio teste**: ao preencher a data inicial, o painel já dispara uma leitura
+  com o período ainda meio alterado, e o teste podia medir essa resposta
+  intermediária. Corrigido esperando o cartão declarar o **período completo**
+  pedido (início **e** fim) antes de medir — correção do teste, nunca do
+  produto.
+- **4, 7 e 8** 43/43, com as execuções **7 e 8 consecutivas e limpas** no estado
+  final entregue (`# pass 43`, `# fail 0`, `# skipped 0`).
+
+Nenhum timeout foi aumentado, nenhum `skip` foi introduzido e nenhuma assertiva
+foi removida ou enfraquecida em qualquer momento. Nenhum subteste ADM reprovou
+por comportamento do produto.

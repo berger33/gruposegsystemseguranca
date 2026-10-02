@@ -190,3 +190,28 @@ Relato ao proprietário: "Lote / jornada entregue / testes e commit / pendência
 Não aceitar: tela descritiva como dashboard; componente não montado como módulo entregue; HTTP 200 sem persistência; status de backup sem arquivo; embedding concluído sem vetor; fila sem worker/controle real; teste de fallback como Ollama; dados sintéticos como métricas reais; email local como envio SMTP; cadastro de configuração como integração operacional; build como homologação integral; gate aprovado em SHA antigo como prova do SHA entregue.
 
 Primeira ação do agente: executar L00 e iniciar imediatamente a primeira correção de L01 elegível, preservando a base mais recente. A meta é um sistema utilizável localmente, com provas e limitações honestas.
+
+## Registro de execução — ADM-01..12 (02/10/2026)
+
+Roteiro efetivamente seguido nesta sessão, na ordem:
+
+1. Leitura dos documentos de estado/checklist/evidências e **reconfirmação da
+   baseline no commit base** (worktree separado, sem nenhuma edição aplicada):
+   gate L07 37/37 duas vezes, estático 5/5, typecheck 0, unitários 196/196,
+   migrações exit 0, L04/L05/L06 verdes e L03 com uma reprova pré-existente.
+2. Reprodução da lacuna por prova: `/admin/marcelo` era protótipo descritivo e
+   os 82 componentes de `/admin/ti` não eram importados por nenhuma rota.
+3. Implementação conjunta de dados (migração aditiva 138), back-end
+   (`src/server/adm-panel-api.mjs`, rotas `/api/adm/panel/*` em `server.mjs`) e
+   interface (`MarceloPanel.tsx`).
+4. Verificação dos três cenários exigidos por requisito — positivo, falha de
+   leitura/auditoria e acesso indevido — em seis subtestes novos do gate L07
+   (HTTP, PostgreSQL e Chromium reais), elevando o gate de 37 para 43.
+5. Execução no mesmo SHA: estático, typecheck, unitários, build, L07 duas vezes
+   consecutivas limpas e regressões L03–L06.
+6. Atualização de CHECKLIST, ESTADO, EVIDÊNCIAS, CONTROLE, ENTREGA-L07,
+   relatório da série `ENTREGA-L07-ADM01-12.md` e inventário
+   `INVENTARIO-ADMIN-TI.md`; PR aberta para revisão, **sem merge**.
+
+Não feito de propósito: nenhum aceite humano foi assumido, L07 não foi
+declarado concluído e L08 não foi iniciado.
