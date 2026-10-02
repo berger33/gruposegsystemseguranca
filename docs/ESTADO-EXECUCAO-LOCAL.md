@@ -1,6 +1,35 @@
 # Estado da execução — entrega local integral
 
-## Estado atual — L07 em execução; consolidação em 2026-10-01
+## Estado atual — L07 em execução; fatia aditiva de FIN-13 concluída em 2026-10-01
+
+Base confirmada antes de escrever: main `4ea35780bacc80bd228f6a970949a52e6f9504ba` (merge do PR #66), **sem commits posteriores** na consulta. Branch de trabalho: `arena/01a0f9da-gruposegsystemseguranca`, criada a partir dessa main. Ambiente remoto Arena; a cópia desatualizada do computador do proprietário não foi usada nem alterada.
+
+**Baseline reconfirmado na base atual, antes de qualquer alteração** (resultado histórico do PR #65 não comprova commit novo): estático 5/5 (001–133), typecheck sem erros, `npm test` 196/196 e gate `test:l07-delivery:pg` **27/27, zero skips**.
+
+**Lacunas reproduzidas antes de corrigir.** Os seis achados de FIN-13 foram confirmados no código e convertidos em testes reais; executados contra a base sem correção, o gate ficou em **27 aprovados e 4 reprovados** de 31 subtestes. Nenhum achado estava previamente resolvido.
+
+**Fatia entregue — FIN-13, orçamento gerencial e cenários:**
+- orçamento aprovado tem conteúdo congelado: edição ordinária devolve 409 e o banco recusa a alteração mesmo por SQL direto;
+- revisão explícita exige motivo e autor, incrementa a versão, preserva a versão anterior em snapshot, retira a aprovação e exige nova aprovação;
+- margem percentual é calculada a partir de receita e custo no servidor e conferida por constraint; receita zero e base incompleta ficam sem percentual, com motivo (`margin_basis`), preservando os valores já conhecidos;
+- criação é idempotente por chave do cliente: retry igual devolve o mesmo orçamento, retry concorrente de 6 requisições cria exatamente um registro e a mesma chave com conteúdo diferente é recusada com 409;
+- histórico imutável com snapshot anterior/posterior, versões, autor real, data e motivo — sem atribuir autoria por suposição;
+- interface com seleção por nome/protocolo, moeda em R$, erro de leitura visível (não mais lista vazia) e jornada de revisão/aprovação/histórico;
+- autorização no servidor (anônimo 401, papel indevido 403, TI somente leitura) e auditoria na mesma transação, com rollback e 503 quando a auditoria falha;
+- aprovar orçamento **não** gera recebível, pagável, pagamento ou cobrança — asserido por teste.
+
+Migração nova **134** (`134-fin13-budget-revision-margin-idempotency.sql`), aditiva: 001–133 preservadas, a 132 não foi reescrita, constraints novas entram `NOT VALID` e as linhas antigas são tratadas explicitamente (orçamentos herdados em `version=1` sem chave; cenários herdados marcados `margin_source='legado_informado'` conservando o número; histórico legado sem snapshot, declarado como tal).
+
+Validação desta fatia: estático 5/5 (001–134), typecheck, build, `npm test` 196/196, `test:migrations:pg` **134/134** com replay/clone/checksum negativo, `test:l07-delivery:pg` **31/31 em duas execuções aprovadas** (uma execução intermediária deu 30/31 por queda do Chromium no `launch` no subteste 18 de FIN-10, fora desta fatia) e regressões L03 1/1, L04 20/20, L05 1/1, L06 9/9 (L06 verde nas duas execuções isoladas; reprova de forma intermitente quando encadeada após outros gates na mesma máquina de 2 vCPU, por carregamento lento da tela de patrimônio). Relatório em [ENTREGA-L07-FIN13.md](ENTREGA-L07-FIN13.md); evidências em [EVIDENCIAS-ENTREGA-LOCAL.md](EVIDENCIAS-ENTREGA-LOCAL.md).
+
+**FIN-13 recebe `pronto_local` na validação automática; o aceite humano continua pendente** e a validação em Windows não foi feita (sessão em Linux). **L07 NÃO está concluído** e L08 não foi iniciado.
+
+PRs #47/#53/#59/#60/#62 continuam **abertos**; o que foi aproveitado e o que foi descartado de #60/#62 está registrado na [consolidação](CONSOLIDACAO-L07-PRS-PENDENTES.md), seção “Aproveitamento efetivo nesta fatia”.
+
+- Próximos três passos: jornadas FIN-14..16 com integração financeira e ligação FIN-12 → FIN-04; resíduos úteis de FIN-05/FIN-10 vindos de #47/#53; painel ADM-01..12. Prompt pronto em [PROMPT-PROXIMA-SESSAO-L07-FIN14-16.md](PROMPT-PROXIMA-SESSAO-L07-FIN14-16.md).
+- Comandos de retomada: `npm ci`; `node scripts/qa-wave0-static.mjs`; `npm run typecheck`; `npm test`; `npm run build`; `npm run test:migrations:pg`; `npm run test:l07-delivery:pg`; regressões `test:l0{3,4,5,6}-delivery:pg`.
+
+## Estado anterior — L07 em execução; consolidação em 2026-10-01
 
 Main consultada: `fa893d69d2e3205e508a0a3a1e95fd5ff956258f`, PR #64 integrado, migrações 001–133. PR #65 ainda aberto na consulta; seus gates estão verdes na branch, não incorporados à main por este documento.
 
