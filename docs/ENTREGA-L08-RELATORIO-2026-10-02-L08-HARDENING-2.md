@@ -100,9 +100,14 @@ Instabilidades e falhas registradas (sem mascaramento):
   reproduziram neste ambiente (Node 22.22.3); as instabilidades históricas
   L03-403 e L07-22 tampouco reapareceram na baseline.
 
-Commit: REGISTRADO_NO_FECHAMENTO
+Commit da entrega: `4602d4b` (`L08: revisão da PR #80 + hardening CLI-04/CLI-05
+(idempotência e atomicidade)`), sobre `c16673c3c2a8f749ec476edb7a91dc62d2c1dfc9`.
+Este preenchimento (Commit/PR) foi registrado em um micro-commit documental
+posterior, sem alterar nenhum arquivo de código, teste ou migração — as provas
+listadas acima seguem válidas para o conteúdo funcional entregue.
 
-PR: REGISTRADA_NO_FECHAMENTO
+PR: [#81 — L08: hardening CLI-04/CLI-05](https://github.com/berger33/gruposegsystemseguranca/pull/81)
+(base `main`, head `arena/01a0fea1-gruposegsystemseguranca`, **sem auto-merge**).
 
 Pendências reais:
 
