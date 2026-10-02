@@ -2041,3 +2041,94 @@ Rotas reais: `/cliente/entrar`, `/cliente/app/conta`, `/cliente/app/contratos`,
 A/B, autorização derivada da sessão, corpo forjado sem ampliação, download
 privado, histórico e erros de acesso. CLI-06..15 e EXT-01..17 não foram
 promovidos.
+
+## L08 — revisão da PR #80 e hardening CLI-05 (02/10/2026, continuação)
+
+### A. Estado remoto confirmado antes de editar
+
+| Verificação | Resultado |
+|---|---|
+| `gh pr view 80 --json state,mergedAt,mergeCommit,headRefOid,baseRefName` | `state=OPEN`, `mergedAt=null`, `mergeCommit=null`, `headRefOid=a95872de2a29d9ea39773a942cd9e3f7e91bfa4d`, `baseRefName=main` |
+| `git merge-base --is-ancestor a95872d origin/main` | não é ancestral — a `main` não contém a PR #80 |
+| `git log origin/main --oneline -1` | `c16673c` (mesma base desta sessão) |
+| `git log origin/arena/l08-hardening-20261002 --oneline -2` | `a95872d` → `c16673c` |
+
+Nenhum merge foi feito. Esta sessão trabalhou na branch fixa do Arena
+(`arena/01a0fed6-gruposegsystemseguranca`), sem tocar na branch da PR #80.
+
+### B. Resultados no SHA base desta continuação (`c16673c`, antes da edição)
+
+| Comando | Resultado |
+|---|---|
+| `node scripts/qa-wave0-static.mjs` | 5/5 |
+| `npm run typecheck` | exit 0 |
+| `npm test` | 196/196 |
+| `npm run build` | exit 0 (66+ rotas) |
+| `npm run test:migrations:pg` | exit 0; 138/138; 524 tabelas; clone/checksum negativo OK |
+| `npm run test:l08-delivery:pg` (duas execuções) | **10/11 nas duas** — mesmo subteste de smoke Chromium falha nas duas, idêntico |
+| `npm run test:l03-delivery:pg` | 0/1 — subteste único depende de Chromium do início ao fim |
+| `npm run test:l04-delivery:pg` | 1/20 — 19 subtestes dependem de Chromium |
+| `npm run test:l05-delivery:pg` | 0/1 |
+| `npm run test:l06-delivery:pg` | 5/9 |
+| `npm run test:l07-delivery:pg` (duas execuções) | **29/43 nas duas, mesmos 14 subtestes falhando nas duas** |
+
+### C. Causa raiz da falha de Chromium (ambiental, não de código)
+
+Todas as falhas acima com "não ok"/"not ok" relatam a mesma causa, confirmada
+no log: `/tmp/chromium: error while loading shared libraries: libnspr4.so:
+cannot open shared object file: No such file or directory`. O Chromium
+empacotado (`@sparticuz/chromium`, voltado a ambientes tipo AWS Lambda) não
+encontra bibliotecas de sistema (NSPR/NSS/GTK) neste sandbox Arena. Tentativas
+de correção dentro desta sessão:
+- `npx playwright install chromium` → falha de rede (`ECONNRESET` para
+  `cdn.playwright.dev`);
+- `npx playwright install-deps chromium` / `sudo apt-get update` → falha de
+  rede para `deb.debian.org` (conexão recusada/sem alcance).
+
+Não há acesso de rede neste sandbox para instalar as bibliotecas de sistema
+nem para baixar o Chromium completo do Playwright. Isto é uma limitação do
+ambiente desta sessão específica, análoga à instabilidade de Node 20 já
+registrada para os testes de backup em sessões anteriores — **não foi
+mascarada, nenhum teste foi pulado, nenhum timeout foi alterado e nenhuma
+assertiva foi enfraquecida**. Todos os subtestes HTTP/PostgreSQL puros (sem
+Chromium) passaram normalmente nas mesmas execuções.
+
+### D. Resultados após o hardening do CLI-05 (migração 139)
+
+| Comando | Resultado |
+|---|---|
+| `node scripts/qa-wave0-static.mjs` | 5/5 (001–139) |
+| `npm run typecheck` | exit 0 |
+| `npm test` | **197/197** (novo unitário da validação pura da chave de idempotência; um unitário de fail-closed foi ajustado para incluir a chave na fixture, sem alterar a asserção de 503) |
+| `npm run build` | exit 0 |
+| `npm run test:migrations:pg` | exit 0; **139/139**; 524 tabelas; clone/checksum negativo OK |
+| `npm run test:l08-delivery:pg` (duas execuções consecutivas) | **11/12 nas duas, idênticas** — inclui o novo subteste "ticket creation is idempotent under retry and the audit write is fail-closed"; o subteste de smoke Chromium (pré-existente, `page.setContent` sintético) segue falhando pela mesma limitação ambiental da seção C |
+| `git diff --check` | sem erros de espaço em branco |
+
+`next-env.d.ts` e `tsconfig.json` foram restaurados (`git checkout --`) antes
+do commit; o ruído gerado pelas execuções de `build`/`test:l0N-delivery:pg`
+(diretórios `.next/integration-*` incluídos automaticamente pelo Next.js) foi
+revertido.
+
+### E. O que o novo subteste de CLI-05 prova
+
+1. corpo sem `idempotencyKey` é recusado com 400 antes de tocar o banco;
+2. duas requisições concorrentes com a mesma conta, mesma chave e mesmo
+   conteúdo abrem **um único** chamado — uma recebe 201, a outra 200
+   `idempotent_replay: true` com o mesmo `ticketId`; a contagem no banco
+   confirma uma única linha;
+3. uma terceira repetição da mesma chave/conteúdo continua idempotente;
+4. mesma chave com conteúdo diferente devolve 409 `idempotency_key_conflict`
+   sem alterar o chamado original;
+5. a mesma chave usada por outra conta cliente não colide (isolamento por
+   conta);
+6. com `auth_access_audit` indisponível (tabela renomeada no teste), a
+   criação do chamado devolve 503 `audit_unavailable` e **nenhuma linha**
+   fica meio-criada em `client_tickets` — a tabela é restaurada ao final do
+   teste independentemente do resultado (`finally`).
+
+Nenhum dado real, SMTP, PSP ou serviço externo foi usado. CLI-06..15 e
+EXT-01..17 continuam não promovidos. Aceite humano de Marcelo/Andreia sobre
+L07 permanece preservado; Windows continua pendente para o fechamento
+integral do sistema — este hardening de CLI-05 não constitui aceite humano
+novo nem homologação Windows.

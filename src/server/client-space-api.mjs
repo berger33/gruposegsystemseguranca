@@ -27,6 +27,7 @@ import {
   validateReason,
   validateScopeNote,
   validateTicketInput,
+  validateIdempotencyKey,
 } from "../lib/client-space-core.mjs";
 import { PUBLIC_SERVICES } from "../lib/service-catalog.mjs";
 
@@ -40,6 +41,20 @@ function errorMessage(error) {
 
 function isValidServiceName(value) {
   return PUBLIC_SERVICES.some(service => service.name === value);
+}
+
+// L08 CLI-05 hardening — mesmo conteúdo sob a mesma chave de idempotência
+// deve devolver o chamado já aberto; conteúdo diferente sob a mesma chave é
+// um conflito explícito (nunca silenciosamente sobrescrito ou duplicado).
+function ticketFingerprint({ accountId, category, title, details }) {
+  return createHash("sha256").update(JSON.stringify([accountId, category, title, details])).digest("hex");
+}
+
+// A auditoria de CLI-01..05 vive em auth_access_audit. Quando essa tabela
+// está indisponível (renomeada/ausente), a escrita de negócio correspondente
+// precisa ser recusada com 503 e revertida por completo — nunca silenciada.
+function isAuditUnavailable(error) {
+  return error?.code === "42P01" || /auth_access_audit/i.test(String(error?.message || ""));
 }
 
 export function createClientSpaceApi(ctx) {
@@ -350,19 +365,63 @@ export function createClientSpaceApi(ctx) {
       if (!UUID_PATTERN.test(accountId)) return ctx.json(res, 400, { error: "invalid_account_id" });
       const validated = validateTicketInput(body);
       if (validated.error) return ctx.json(res, 400, { error: validated.error });
+      const idempotency = validateIdempotencyKey(body?.idempotencyKey);
+      if (idempotency.error) return ctx.json(res, 400, { error: idempotency.error });
       const db = ctx.getPool();
       if (!(await requireAccountScope(db, { req, res, session, accountId, action: "ticket_open" }))) return;
+      const idempotencyKey = idempotency.value;
+      const fingerprint = ticketFingerprint({ accountId, ...validated.value });
       const ticketId = randomUUID();
+      let client;
       try {
-        await db.query(
-          `INSERT INTO client_tickets (id, client_account_id, opened_by_identity, category, title, details)
-           VALUES ($1,$2,$3,$4,$5,$6)`,
-          [ticketId, accountId, session.identityId, validated.value.category, validated.value.title, validated.value.details],
+        client = await db.connect();
+        await client.query("BEGIN");
+        // Retry concorrente: a mesma conta + mesma chave serializa aqui, então
+        // duas submissões simultâneas do mesmo clique não abrem dois chamados.
+        const existing = await client.query(
+          "SELECT id, status, content_fingerprint FROM client_tickets WHERE client_account_id = $1 AND idempotency_key = $2 FOR UPDATE",
+          [accountId, idempotencyKey],
         );
+        if (existing.rows[0]) {
+          await client.query("COMMIT");
+          if (existing.rows[0].content_fingerprint !== fingerprint) {
+            return ctx.json(res, 409, { error: "idempotency_key_conflict" });
+          }
+          return ctx.json(res, 200, { ticketId: existing.rows[0].id, status: existing.rows[0].status, idempotent_replay: true });
+        }
+        // Escrita de negócio + auditoria na mesma transação: se a auditoria
+        // falhar, o chamado não fica meio-criado — tudo é revertido abaixo.
+        await client.query(
+          `INSERT INTO client_tickets (id, client_account_id, opened_by_identity, category, title, details, idempotency_key, content_fingerprint)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+          [ticketId, accountId, session.identityId, validated.value.category, validated.value.title, validated.value.details, idempotencyKey, fingerprint],
+        );
+        await client.query(
+          "INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,$3,$4,$5,$6)",
+          ["client", session.identityId, "ticket_open", ticketId, "allowed", "none"],
+        );
+        await client.query("COMMIT");
       } catch (error) {
+        if (client) await client.query("ROLLBACK").catch(() => {});
+        if (error?.code === "23505") {
+          // Corrida perdida: outra requisição com a mesma chave venceu;
+          // relemos o resultado vencedor em vez de duplicar o chamado.
+          try {
+            const raced = await db.query(
+              "SELECT id, status, content_fingerprint FROM client_tickets WHERE client_account_id = $1 AND idempotency_key = $2",
+              [accountId, idempotencyKey],
+            );
+            if (raced.rows[0]) {
+              if (raced.rows[0].content_fingerprint !== fingerprint) return ctx.json(res, 409, { error: "idempotency_key_conflict" });
+              return ctx.json(res, 200, { ticketId: raced.rows[0].id, status: raced.rows[0].status, idempotent_replay: true });
+            }
+          } catch { /* cai no tratamento padrão abaixo */ }
+        }
+        if (isAuditUnavailable(error)) return ctx.json(res, 503, { error: "audit_unavailable" });
         return databaseFailure(res, error, "Could not open the client ticket.");
+      } finally {
+        client?.release();
       }
-      await audit(db, { actorKind: "client", actorId: session.identityId, action: "ticket_open", target: ticketId, result: "allowed" });
       return ctx.json(res, 201, { ticketId, status: "open" });
     }
     return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, POST" });

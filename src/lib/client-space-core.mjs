@@ -30,6 +30,8 @@ export const TEXT_LIMITS = Object.freeze({
   ticketTitle: 120,
   ticketDetails: 500,
   ticketResponse: 500,
+  idempotencyKeyMin: 8,
+  idempotencyKeyMax: 200,
 });
 
 export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
@@ -160,6 +162,19 @@ export function validateTicketInput({ category, title, details } = {}) {
   if (!body) return { error: "ticket_details_required" };
   if (body.length > TEXT_LIMITS.ticketDetails) return { error: "ticket_details_too_long" };
   return { value: { category: cat, title: name, details: body } };
+}
+
+// L08 CLI-05 hardening: a chave de idempotência é fornecida pelo cliente (um
+// UUID gerado no navegador, por exemplo) para que um retry de rede no mesmo
+// pedido não duplique o chamado. O conteúdo ainda é conferido por fingerprint
+// no servidor — a chave sozinha não basta para aceitar qualquer corpo.
+export function validateIdempotencyKey(candidate) {
+  const key = trimToString(candidate);
+  if (key.length < TEXT_LIMITS.idempotencyKeyMin || key.length > TEXT_LIMITS.idempotencyKeyMax) {
+    return { error: "idempotency_key_required" };
+  }
+  if (hasControlOrAngles(key)) return { error: "idempotency_key_invalid" };
+  return { value: key };
 }
 
 export function isAccountStatus(candidate) {

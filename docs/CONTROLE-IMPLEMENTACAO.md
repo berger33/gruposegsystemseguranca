@@ -598,3 +598,39 @@ Rotas reais: `/cliente/entrar`, `/cliente/app/conta`, `/cliente/app/contratos`,
 A/B, autorização derivada da sessão, corpo forjado sem ampliação, download
 privado, histórico e erros de acesso. CLI-06..15 e EXT-01..17 não foram
 promovidos.
+
+## L08 — revisão da PR #80 e hardening de idempotência/auditoria do CLI-05 (02/10/2026, continuação)
+
+Estado remoto confirmado antes de editar: PR #80 (`arena/l08-hardening-20261002`,
+head `a95872d`) está **aberta**, não mergeada, sem merge commit; a `main`
+oficial segue em `c16673c` e não contém a PR #80. Nenhum merge foi feito; a
+sessão trabalhou na branch fixa do Arena sem tocar na branch da PR #80.
+
+Revisão requisito a requisito de CLI-01..05 (não apenas a passagem do gate)
+encontrou um gap real: a abertura de chamado (CLI-05) não era idempotente sob
+retry de rede e a gravação em `auth_access_audit` era melhor-esforço, sem
+reverter a escrita de negócio em caso de falha — divergindo do padrão
+fail-closed já usado em ADM-01..12 (L07, migração 138). Corrigido com a
+migração aditiva **139** (`client_tickets.idempotency_key`/
+`content_fingerprint`, único por conta) e a criação de chamado reescrita em
+uma transação única: retry concorrente não duplica, conteúdo divergente sob a
+mesma chave devolve 409, auditoria indisponível devolve 503 e reverte tudo.
+Gaps equivalentes em conta/grant/contrato/documento (mesmo arquivo) foram
+identificados e registrados como dívida explícita, **não corrigidos** nesta
+sessão para manter o escopo revisável.
+
+Gate `test:l08-delivery:pg`: 11/12 em duas execuções consecutivas idênticas
+(novo subteste de idempotência/auditoria incluso); o subteste de smoke
+Chromium pré-existente falhou nas duas por limitação ambiental deste sandbox
+(biblioteca de sistema do Chromium empacotado ausente, sem rede para instalar
+via apt ou baixar via Playwright CDN) — não é falha de código, é determinística.
+Regressões: estático 5/5, typecheck 0, `npm test` 197/197, build exit 0,
+`test:migrations:pg` 139/139 com 524 tabelas e clone/checksum negativo OK.
+L03/L04/L05/L06/L07 executados; toda falha observada é a mesma limitação
+ambiental de Chromium (os subtestes HTTP/PG puros passaram; L07 reproduziu
+29/43 idênticos em duas execuções).
+
+001–139 permanecem imutáveis; próxima migração livre: **140**. CLI-06..15 e
+EXT-01..17 continuam não promovidos. Aceite humano de Marcelo/Andreia sobre
+L07 permanece preservado; Windows continua pendente para o fechamento
+integral do sistema.
