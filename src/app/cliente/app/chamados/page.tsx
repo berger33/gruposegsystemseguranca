@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Headphones, Send } from "lucide-react";
 import { TICKET_CATEGORIES } from "@/lib/client-space-core.mjs";
 import { useClientSpace } from "../ClientSpaceProvider";
@@ -32,6 +32,8 @@ const openErrors: Record<string, string> = {
   ticket_details_required: "Descreva o que aconteceu para a equipe poder ajudar.",
   ticket_details_too_long: "A descrição deve ter no máximo 500 caracteres.",
   forbidden: "Este cadastro não permite abrir chamados no momento.",
+  idempotency_key_conflict:
+    "Detectamos um envio diferente com a mesma referência. Recarregue a página antes de tentar de novo, para não duplicar o chamado.",
 };
 
 export default function ClientTicketsPage() {
@@ -43,6 +45,15 @@ export default function ClientTicketsPage() {
   const [details, setDetails] = useState("");
   const [state, setState] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
+  // Referência de idempotência por tentativa de envio (CLI-05): em erro de
+  // rede o usuário pode reenviar com a MESMA chave e o servidor responde com o
+  // chamado já aberto, sem duplicar. A chave só é renovada após sucesso ou
+  // mudança de cadastro ativo.
+  const idempotencyKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    idempotencyKeyRef.current = null;
+  }, [activeAccount?.id]);
 
   const loadTickets = useCallback((accountId: string) => {
     setLoadError("");
@@ -66,16 +77,31 @@ export default function ClientTicketsPage() {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!activeAccount) return;
+    if (!idempotencyKeyRef.current && typeof crypto !== "undefined" && "randomUUID" in crypto) {
+      idempotencyKeyRef.current = crypto.randomUUID();
+    }
     setState("submitting");
     setMessage("");
     try {
       const response = await fetch("/api/client/tickets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accountId: activeAccount.id, category, title, details }),
+        body: JSON.stringify({
+          accountId: activeAccount.id,
+          category,
+          title,
+          details,
+          ...(idempotencyKeyRef.current ? { idempotency_key: idempotencyKeyRef.current } : {}),
+        }),
       });
-      const payload = (await response.json().catch(() => ({}))) as { ok?: boolean; error?: string };
-      if (!response.ok || !payload.ok) {
+      const payload = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+        ticketId?: string;
+        idempotent_replay?: boolean;
+      };
+      const succeeded = response.ok && (payload.ok === true || Boolean(payload.ticketId));
+      if (!succeeded) {
         setState("error");
         setMessage(
           openErrors[payload.error ?? ""] ?? "Não foi possível abrir o chamado agora. Tente novamente em instantes.",
@@ -83,7 +109,12 @@ export default function ClientTicketsPage() {
         return;
       }
       setState("success");
-      setMessage("Chamado registrado. A equipe acompanha pelo portal e responde por aqui mesmo.");
+      setMessage(
+        payload.idempotent_replay
+          ? "Este chamado já estava registrado — nenhuma duplicidade foi criada."
+          : "Chamado registrado. A equipe acompanha pelo portal e responde por aqui mesmo.",
+      );
+      idempotencyKeyRef.current = null;
       setTitle("");
       setDetails("");
       loadTickets(activeAccount.id);

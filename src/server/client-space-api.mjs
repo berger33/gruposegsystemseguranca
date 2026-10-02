@@ -62,6 +62,17 @@ export function createClientSpaceApi(ctx) {
     }
   }
 
+  // Variante estrita para escritas de negócio endurecidas (L08/CLI-05): a falha
+  // de auditoria NÃO pode ser engolida. Dentro de uma transação, lançar o erro
+  // força ROLLBACK e 503 — nunca existe sucesso parcial nem escrita de negócio
+  // sem a respectiva linha de auditoria durável.
+  async function auditStrict(db, { actorKind, actorId = null, action, target = null, result, category = "none" }) {
+    await db.query(
+      "INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,$3,$4,$5,$6)",
+      [actorKind, actorId, action, target, result, category],
+    );
+  }
+
   function requireMethod(req, res, allowed) {
     if (allowed.includes(req.method)) return true;
     ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: allowed.join(", ") });
@@ -292,6 +303,14 @@ export function createClientSpaceApi(ctx) {
         return ctx.json(res, 409, { error: "document_integrity_failed" });
       }
     }
+    // L08/CLI-04: o log de download permitido é registrado ANTES de qualquer
+    // byte sair e é fail-closed — se a auditoria falhar, a resposta é 503 e
+    // nenhum byte do documento privado é entregue sem registro durável.
+    try {
+      await auditStrict(ctx.getPool(), { ...auditContext, action: "document_download", target: document.id, result: "allowed" });
+    } catch (error) {
+      return databaseFailure(res, error, "Could not record the private document download audit.");
+    }
     const safeName = document.original_filename.replace(/["\\]/g, "_") || "documento";
     res.writeHead(200, {
       "Content-Type": document.content_type,
@@ -301,8 +320,6 @@ export function createClientSpaceApi(ctx) {
       "X-Content-Type-Options": "nosniff",
     });
     createReadStream(filePath).pipe(res);
-    const db = ctx.getPool();
-    await audit(db, { ...auditContext, action: "document_download", target: document.id, result: "allowed" });
   }
 
   async function handleClientDocumentDownload(req, res, documentId) {
@@ -350,20 +367,80 @@ export function createClientSpaceApi(ctx) {
       if (!UUID_PATTERN.test(accountId)) return ctx.json(res, 400, { error: "invalid_account_id" });
       const validated = validateTicketInput(body);
       if (validated.error) return ctx.json(res, 400, { error: validated.error });
+      // Idempotência opcional (L08/CLI-05, migração 139): quando o cliente da API
+      // envia a chave, um retry do mesmo autor na mesma conta com o MESMO
+      // conteúdo devolve o chamado já aberto em vez de duplicar protocolo;
+      // conteúdo diferente com a mesma chave é conflito explícito (409) —
+      // nunca reescrita silenciosa. Sem chave, o contrato anterior permanece:
+      // cada POST abre um chamado novo.
+      const idempotencyKey = typeof body?.idempotency_key === "string" ? body.idempotency_key.trim() : "";
+      if (idempotencyKey && (idempotencyKey.length < 8 || idempotencyKey.length > 200)) {
+        return ctx.json(res, 400, { error: "idempotency_key_8_200" });
+      }
+      const fingerprint = createHash("sha256")
+        .update(JSON.stringify({
+          accountId,
+          category: validated.value.category,
+          title: validated.value.title,
+          details: validated.value.details,
+        }))
+        .digest("hex");
       const db = ctx.getPool();
       if (!(await requireAccountScope(db, { req, res, session, accountId, action: "ticket_open" }))) return;
-      const ticketId = randomUUID();
+      const replay = row => {
+        if (row.content_fingerprint !== fingerprint) {
+          return ctx.json(res, 409, { error: "idempotency_key_conflict" });
+        }
+        return ctx.json(res, 200, {
+          ok: true, ticketId: row.id, status: row.status,
+          idempotent_replay: true, note: "chamado_ja_registrado_para_a_chave_de_idempotencia",
+        });
+      };
+      let client;
       try {
-        await db.query(
-          `INSERT INTO client_tickets (id, client_account_id, opened_by_identity, category, title, details)
-           VALUES ($1,$2,$3,$4,$5,$6)`,
-          [ticketId, accountId, session.identityId, validated.value.category, validated.value.title, validated.value.details],
+        // Escrita de negócio e auditoria na MESMA transação: se a auditoria
+        // falhar, o ROLLBACK derruba o chamado junto e a resposta é 503 com
+        // possibilidade de retry — nunca sucesso parcial.
+        client = await db.connect();
+        await client.query("BEGIN");
+        if (idempotencyKey) {
+          const existing = await client.query(
+            `SELECT id, status, content_fingerprint FROM client_tickets
+             WHERE client_account_id = $1 AND opened_by_identity = $2 AND idempotency_key = $3`,
+            [accountId, session.identityId, idempotencyKey],
+          );
+          if (existing.rows[0]) {
+            await client.query("ROLLBACK");
+            return replay(existing.rows[0]);
+          }
+        }
+        const ticketId = randomUUID();
+        await client.query(
+          `INSERT INTO client_tickets (id, client_account_id, opened_by_identity, category, title, details, idempotency_key, content_fingerprint)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+          [ticketId, accountId, session.identityId, validated.value.category, validated.value.title, validated.value.details, idempotencyKey || null, idempotencyKey ? fingerprint : null],
         );
+        await auditStrict(client, { actorKind: "client", actorId: session.identityId, action: "ticket_open", target: ticketId, result: "allowed" });
+        await client.query("COMMIT");
+        return ctx.json(res, 201, { ok: true, ticketId, status: "open" });
       } catch (error) {
-        return databaseFailure(res, error, "Could not open the client ticket.");
+        if (client) await client.query("ROLLBACK").catch(() => {});
+        // Corrida de retries simultâneos: quem perdeu a disputa do índice único
+        // relê a linha vencedora e devolve o MESMO chamado — sem duplicar.
+        if (idempotencyKey && error?.code === "23505" && String(error.constraint || error.detail || "").includes("idempotency")) {
+          try {
+            const raced = await db.query(
+              `SELECT id, status, content_fingerprint FROM client_tickets
+               WHERE client_account_id = $1 AND opened_by_identity = $2 AND idempotency_key = $3`,
+              [accountId, session.identityId, idempotencyKey],
+            );
+            if (raced.rows[0]) return replay(raced.rows[0]);
+          } catch { /* cai no tratamento padrão abaixo */ }
+        }
+        return databaseFailure(res, error, "Could not open the client ticket with audit in one transaction.");
+      } finally {
+        client?.release();
       }
-      await audit(db, { actorKind: "client", actorId: session.identityId, action: "ticket_open", target: ticketId, result: "allowed" });
-      return ctx.json(res, 201, { ticketId, status: "open" });
     }
     return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, POST" });
   }
@@ -801,8 +878,10 @@ export function createClientSpaceApi(ctx) {
           [ticketId, previousStatus, body.status, session.role],
         );
       }
+      // L08/CLI-05: a auditoria da resposta/transição entra na MESMA transação
+      // da escrita de negócio — falha de auditoria reverte tudo e devolve 503.
+      await auditStrict(client, { actorKind: session.role, action: "ticket_status", target: ticketId, result: "allowed" });
       await client.query("COMMIT");
-      await audit(db, { actorKind: session.role, action: "ticket_status", target: ticketId, result: "allowed" });
       return ctx.json(res, 200, { ticketId, previousStatus, status: body.status });
     } catch (error) {
       if (client) await client.query("ROLLBACK").catch(() => {});

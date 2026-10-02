@@ -69,7 +69,8 @@ async function applyMigrations() {
   try {
     for (const filename of ["001-site-visual.sql", "002-public-leads.sql", "003-client-access.sql", "004-client-space.sql", "005-client-security.sql", "006-admin-identities.sql", "007-opcao-b-funcionarios.sql", "011-audit-and-notifications.sql", "097-client-mfa-session.sql", "098-client-manual-verification.sql", "099-sec-staff-session-hardening.sql",
   "100-l02-local-outbox.sql",
-  "101-l02-document-integrity.sql"]) {
+  "101-l02-document-integrity.sql",
+  "139-cli05-client-ticket-idempotency.sql"]) {
       const sql = await readFile(path.join(projectRoot, "db/migrations", filename), "utf8");
       await pool.query(sql);
     }
@@ -673,6 +674,85 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     });
     assert.equal(invalidStatus.status, 400);
     assert.equal(invalidStatus.body.error, "ticket_status_invalid");
+  });
+
+  await t.test("ticket writes stay atomic, audited and idempotent under concurrent retries (CLI-05 hardening)", async () => {
+    const idemKey = `l08-cli05-${randomUUID()}`;
+    const openBody = {
+      accountId: accountA1,
+      category: "Outro assunto",
+      title: "Chamado idempotente sintético",
+      details: "Retry concorrente não pode duplicar protocolo. (teste de integração)",
+      idempotency_key: idemKey,
+    };
+    // Duas requisições SIMULTÂNEAS com a mesma chave e o mesmo conteúdo: uma
+    // vence a corrida do índice único e a outra relê a linha vencedora. O
+    // protocolo é um só e a auditoria de abertura é registrada uma única vez.
+    const [first, second] = await Promise.all([
+      api("/api/client/tickets", { method: "POST", body: openBody, cookie: cookieA }),
+      api("/api/client/tickets", { method: "POST", body: openBody, cookie: cookieA }),
+    ]);
+    assert.ok([200, 201].includes(first.status), JSON.stringify(first.body));
+    assert.ok([200, 201].includes(second.status), JSON.stringify(second.body));
+    assert.ok(first.body.ticketId);
+    assert.equal(first.body.ticketId, second.body.ticketId);
+    const idemTicketId = first.body.ticketId;
+    cleanupIds.push(idemTicketId);
+    const stored = await pool.query(
+      "SELECT COUNT(*)::int AS count FROM client_tickets WHERE idempotency_key = $1",
+      [idemKey],
+    );
+    assert.equal(stored.rows[0].count, 1);
+    const audits = await pool.query(
+      "SELECT COUNT(*)::int AS count FROM auth_access_audit WHERE action = 'ticket_open' AND target = $1",
+      [idemTicketId],
+    );
+    assert.equal(audits.rows[0].count, 1);
+
+    // Replay sequencial: mesmo conteúdo com a mesma chave devolve o já aberto.
+    const replay = await api("/api/client/tickets", { method: "POST", body: openBody, cookie: cookieA });
+    assert.equal(replay.status, 200);
+    assert.equal(replay.body.idempotent_replay, true);
+    assert.equal(replay.body.ticketId, idemTicketId);
+
+    // Fingerprint: mesma chave com conteúdo DIFERENTE é conflito explícito e
+    // não cria segunda linha nem reescreve a primeira.
+    const conflict = await api("/api/client/tickets", {
+      method: "POST",
+      body: { ...openBody, title: "Conteúdo diferente com a mesma chave" },
+      cookie: cookieA,
+    });
+    assert.equal(conflict.status, 409);
+    assert.equal(conflict.body.error, "idempotency_key_conflict");
+    const afterConflict = await pool.query(
+      "SELECT COUNT(*)::int AS count FROM client_tickets WHERE idempotency_key = $1",
+      [idemKey],
+    );
+    assert.equal(afterConflict.rows[0].count, 1);
+
+    // Escopo antes da idempotência: a identidade B usando a MESMA chave na
+    // conta A é negada sem aprender nada sobre a chave existente.
+    const crossKey = await api("/api/client/tickets", { method: "POST", body: openBody, cookie: cookieB });
+    assert.equal(crossKey.status, 403);
+    assert.deepEqual(crossKey.body, { error: "forbidden" });
+
+    // Chave malformada é recusada com erro explícito, antes de qualquer escrita.
+    const badKey = await api("/api/client/tickets", {
+      method: "POST",
+      body: { ...openBody, idempotency_key: "curta" },
+      cookie: cookieA,
+    });
+    assert.equal(badKey.status, 400);
+    assert.equal(badKey.body.error, "idempotency_key_8_200");
+
+    // Contrato sem chave permanece: dois POSTs seguem abrindo dois chamados.
+    const noKey = { accountId: accountA1, category: "Outro assunto", title: "Chamado sem chave", details: "Contrato anterior preservado no hardening." };
+    const noKeyA = await api("/api/client/tickets", { method: "POST", body: noKey, cookie: cookieA });
+    const noKeyB = await api("/api/client/tickets", { method: "POST", body: noKey, cookie: cookieA });
+    assert.equal(noKeyA.status, 201);
+    assert.equal(noKeyB.status, 201);
+    assert.notEqual(noKeyA.body.ticketId, noKeyB.body.ticketId);
+    cleanupIds.push(noKeyA.body.ticketId, noKeyB.body.ticketId);
   });
 
   await t.test("revoking the grant cuts access immediately and is idempotent", async () => {

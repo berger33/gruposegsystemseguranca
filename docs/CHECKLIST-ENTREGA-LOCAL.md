@@ -1617,3 +1617,32 @@ Rotas reais: `/cliente/entrar`, `/cliente/app/conta`, `/cliente/app/contratos`,
 A/B, autorização derivada da sessão, corpo forjado sem ampliação, download
 privado, histórico e erros de acesso. CLI-06..15 e EXT-01..17 não foram
 promovidos.
+
+## L08 — revisão da PR #80 e hardening CLI-04/CLI-05 (02/10/2026)
+
+Base `main` `c16673c3c2a8f749ec476edb7a91dc62d2c1dfc9`; sessão
+`arena/01a0fea1-gruposegsystemseguranca`. PR #80 revisada: **OPEN**, head
+`a95872de2a29d9ea39773a942cd9e3f7e91bfa4d`, sem merge; validada em worktree
+(L08 11/11 duas execuções consecutivas). Sem merge automático.
+
+Itens desta série (requisito → tela/rota → API → tabelas → autorização →
+atomicidade → idempotência → subteste → resultado real → pendência →
+classificação):
+
+| Requisito | Tela/rota | API | Tabelas canônicas | Autorização | Atomicidade | Idempotência | Subteste | Resultado real | Pendência | Classificação |
+|---|---|---|---|---|---|---|---|---|---|---|
+| CLI-05 | `/cliente/app/chamados` | `POST /api/client/tickets` | `client_tickets`, `auth_access_audit` | sessão cliente + `requireAccountScope` por requisição; corpo não amplia escopo (B 403 com a mesma chave) | INSERT chamado + INSERT auditoria na MESMA transação; falha de auditoria → ROLLBACK → 503 | `idempotency_key` opcional 8–200 + `content_fingerprint` (migração 139); replay 200 mesmo `ticketId`; conteúdo diverso 409; corrida 23505 → relê vencedor | `client-ticket-write-hardening` (9 unitários) + subteste 8 de `client-space.integration` (2 requisições simultâneas → 1 linha/1 auditoria) | 205/205 unitários; L08 12/12 em duas execuções consecutivas | mensagens/anexos do cliente seguem v2 não promovidos | implementação local + validação automática; aceite humano pendente |
+| CLI-04 | `/cliente/app/documentos` | `GET /api/client/documents/:id/download` | `client_documents`, `auth_access_audit` | sessão cliente + escopo revalidado em cada download; bytes nunca saem de outra conta | log de download permitido gravado ANTES de qualquer byte; falha → 503, zero bytes | download não grava recurso de negócio; auditoria é o registro sensível | `client-ticket-write-hardening` (log-antes-dos-bytes, fail-closed) | 205/205; bytes idênticos no round-trip do subteste 6 de `client-space.integration` | — | implementação local + validação automática; aceite humano pendente |
+| CLI-05 (admin) | `/admin/clientes` | `PATCH /api/admin/tickets/:id` | `client_tickets`, `client_ticket_status_audit`, `auth_access_audit` | sessão staff marcelo/ti; sameOrigin | UPDATE status + INSERT histórico + INSERT auditoria na MESMA transação | transição repetida de mesmo status não duplica histórico (regra pré-existente mantida) | `client-ticket-write-hardening` (rollback atômico) + subteste 7 de `client-space.integration` | 205/205; L08 12/12 | — | implementação local + validação automática; aceite humano pendente |
+
+Regressões no mesmo conteúdo: estático 5/5 (001–139), typecheck 0, unitários
+205/205, build 0, migrações 139/139 (dois passes, 524 tabelas, clone/checksum
+negativo), L07 43/43 em duas execuções consecutivas (uma anterior 42/43,
+instabilidade transitória registrada sem mascaramento), L03 1/1, L04 20/20,
+L05 1/1, L06 9/9 em cadeia, L08 12/12 duas vezes. Falha intermediária desta
+sessão (fixture de integração sem a migração 139) corrigida sem alterar
+assertivas/timeouts/skips.
+
+Não promovidos: CLI-06..15, EXT-01..17, órfãos `/admin/ti`, fornecedor
+restrito, integrações externas. Escopo de aceite Marcelo/Andreia (L07)
+intocado. Windows pendente até o fechamento integral do sistema.
