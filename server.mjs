@@ -113,6 +113,7 @@ import { createSeoTechnicalApi } from "./src/server/seo-technical-api.mjs";
 import { createPackageApi } from "./src/server/package-api.mjs";
 import { createOriginMetricsApi } from "./src/server/origin-metrics-api.mjs";
 import { createEmployeeComplaintApi } from "./src/server/employee-complaint-api.mjs";
+import { createClientEmployeeComplaintApi } from "./src/server/client-employee-complaint-api.mjs";
 import { createPubFaqAssistedApi } from "./src/server/pub-faq-assisted-api.mjs";
 import { createAiRagApi } from "./src/server/ai-rag-api.mjs";
 import { createReportApi } from "./src/server/report-api.mjs";
@@ -2376,6 +2377,15 @@ const originMetricsApi = createOriginMetricsApi({
   },
 });
 
+// CLI-15: jornada do cliente em canal restrito, autorizada exclusivamente pela
+// sessão de cliente canônica. Sem auditLog legado: a auditoria canônica
+// (auth_access_audit) é escrita pelas próprias queries, na mesma transação.
+const clientEmployeeComplaintApi = createClientEmployeeComplaintApi({
+  pool: getPool(),
+  sameOrigin,
+  requireClientSession: clientAccessApi.readClientSession,
+});
+
 const employeeComplaintApi = createEmployeeComplaintApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -4173,6 +4183,12 @@ async function routeApi(req, res) {
     return originMetricsApi.handleAbTests(req, res);
   }
   // CLI-15 reclamação colaborador canal restrito RH mínimo
+  // CLI-15: canal restrito do cliente, somente sessão de cliente canônica.
+  if (url.pathname === "/api/client/employee-complaints") {
+    return clientEmployeeComplaintApi.handleComplaints(req, res);
+  }
+  const clientEmpComplaintMatch = url.pathname.match(/^\/api\/client\/employee-complaints\/([0-9a-f-]{36})$/i);
+  if (clientEmpComplaintMatch) return clientEmployeeComplaintApi.handleComplaintById(req, res, clientEmpComplaintMatch[1]);
   if (url.pathname === "/api/admin/employee-complaints" || url.pathname === "/api/employee-complaints" || url.pathname === "/api/cli/employee-complaints") {
     return employeeComplaintApi.handleComplaints(req, res);
   }
@@ -5691,6 +5707,8 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/admin/employee-complaints"
   || pathname === "/api/employee-complaints"
   || pathname === "/api/cli/employee-complaints"
+  || pathname === "/api/client/employee-complaints"
+  || pathname.startsWith("/api/client/employee-complaints/")
   || pathname.startsWith("/api/admin/employee-complaints/")
   || pathname.startsWith("/api/employee-complaints/")
   || pathname === "/api/admin/employee-complaint-messages"

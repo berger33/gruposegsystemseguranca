@@ -969,10 +969,10 @@ segurança da conta com MFA opcional, gestão de sessões e troca de e-mail conc
 
 ## CLI-15
 reclamação sobre colaborador tratada em canal restrito, com compartilhamento mínimo com RH.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: `/api/cli/employee-complaints`; tabelas 093; `EmployeeComplaintClient.tsx` órfão; sem tela cliente.
-- Integração e evidência (teste, resultado, commit): Sem prova de roteamento aos responsáveis, mínimo de RH e isolamento A≠B.
-- Pendência / fronteira externa / aceite humano: Órfão/não provado.
+- Estado: pronto_local (validação automática rápida; bateria pesada e aceite humano pendentes)
+- Tela / API / dados / autorização: `/cliente/app/reclamacoes-colaborador`; `/api/client/employee-complaints` (+ detalhe por UUID) sob sessão de cliente canônica e same-origin; tabelas da 093 com migração aditiva 146 (origem `portal_cliente`, idempotência por identidade, ações de auditoria); autoria/conta/UUIDs/protocolo derivados no servidor; RH recebe só protocolo, categoria, severidade e situação, justificados campo a campo em `cli_employee_complaint_hr_shares`; rota administrativa legada restrita a admin/ti/rh com projeção mínima para RH e sem atalho para cliente.
+- Integração e evidência (teste, resultado, commit): `tests/cli15-employee-complaint.test.mjs` 15/15 (registrado em `test:unit`); estático 5/5 (001–146); typecheck OK; `npm test` 245/245; build 85 páginas com a rota cliente listada; `npm run test:l08-delivery:pg` 51/51 aplica 001–146 (gate legado CLI-01..05; não cobre a jornada CLI-15). Isolamento A≠B com 403 genérico auditado, corpo forjado ignorado, 400 sem Idempotency-Key, replay idêntico sem duplicar, 409 em reuso divergente, 503 + rollback em falha da auditoria e minimização de RH provados no teste dedicado. Relatório: [ENTREGA-L08-RELATORIO-2026-10-03-CLI15-RECLAMACAO.md](ENTREGA-L08-RELATORIO-2026-10-03-CLI15-RECLAMACAO.md).
+- Pendência / fronteira externa / aceite humano: bateria pesada específica de CLI-15 (HTTP/DB em PostgreSQL descartável dedicado), cascata L03..L08, aplicação da migração 146 em destino, aceite humano e Windows pendentes; sem aceite humano novo.
 
 ## FIN-01
 contas a receber vinculadas a contrato, competência, vencimento, recorrência, moeda, valor e situação.

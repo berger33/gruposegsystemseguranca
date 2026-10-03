@@ -155,7 +155,8 @@ const files = [
   '142-l08-cli11-satisfaction-portal.sql',
   '143-l08-cli12-renewal-communications-portal.sql',
   '144-l08-cli13-portal-access-modes.sql',
-  '145-cli14-account-security.sql'
+  '145-cli14-account-security.sql',
+  '146-l08-cli15-employee-complaint-portal.sql'
 ];
 
 async function main() {

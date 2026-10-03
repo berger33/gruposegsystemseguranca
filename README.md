@@ -1,14 +1,14 @@
 # Grupo SEG System
 
-## Continuação atual: L08 — CLI-14 entregue localmente, CLI-15 é o próximo
+## Continuação atual: L08 — CLI-15 entregue localmente
 
-Base confirmada: `main` `508daad55cf239113337b6ed7b33a04d356a66cc` (PR #93 MERGED), divergência inicial 0/0. Migrações **001–145**; próxima livre: 146.
+Base confirmada: `main` `1d41160366266ab57a07b82f2b1a3e346e8bd528` (PR #94 MERGED), divergência inicial 0/0. Migrações **001–146**; próxima livre: 147.
 
-CLI-14 liga `/cliente/app/seguranca` ao backend canônico real: MFA TOTP opcional em `auth_mfa`, sessões em `auth_sessions` e troca de e-mail em `auth_email_change`, com auditoria transacional, reautenticação, tokens hash e URL manual local. As tabelas v2 não são fonte de autenticação. Migração 145 é aditiva.
+CLI-15 liga `/cliente/app/reclamacoes-colaborador` ao backend canônico real: reclamação sobre colaborador aberta por sessão de cliente em `/api/client/employee-complaints`, em canal restrito, com autoria/IDs derivados no servidor, idempotência por identidade, isolamento A≠B com 403 genérico auditado e compartilhamento mínimo e justificado com RH (somente protocolo, categoria, severidade e situação, campo a campo em `cli_employee_complaint_hr_shares`). Abertura, histórico, envelope de RH e `auth_access_audit` ocorrem na mesma transação; falha da auditoria devolve 503 com rollback. A rota administrativa legada deixou de listar o canal restrito para papéis não autorizados e o RH passou a receber apenas a projeção mínima. Migração 146 é aditiva.
 
-Validação desta fatia: `npm ci`, estático 5/5 (001–145), typecheck e teste dedicado CLI-14 4/4; bateria integral 230/230 e build 84 páginas. Gates pesados L03..L08, aplicação em destino, aceite humano e Windows permanecem pendentes.
+Validação desta fatia: `npm ci`, estático 5/5 (001–146), typecheck e teste dedicado CLI-15 15/15; bateria integral 245/245 e build 85 páginas com a rota cliente listada; gate L08 legado 51/51 em PostgreSQL descartável (aplica 001–146, mas não prova a jornada CLI-15). Bateria pesada específica, aplicação em destino, aceite humano e Windows permanecem pendentes.
 
-Leia o [relatório CLI-14](docs/ENTREGA-L08-RELATORIO-2026-10-03-CLI14-SEGURANCA.md), a [entrega L08](docs/ENTREGA-L08.md) e o [estado atual](docs/ESTADO-EXECUCAO-LOCAL.md).
+Leia o [relatório CLI-15](docs/ENTREGA-L08-RELATORIO-2026-10-03-CLI15-RECLAMACAO.md), a [entrega L08](docs/ENTREGA-L08.md) e o [estado atual](docs/ESTADO-EXECUCAO-LOCAL.md).
 
 ## Demonstração local persistente — apenas massa fictícia
 

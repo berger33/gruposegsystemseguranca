@@ -2130,3 +2130,23 @@ assertivas: `npm run test:l07-delivery:pg` passou **43/43** com migrações
 ## Evidência da fatia CLI-14 — 03/10/2026
 
 Base `main` `508daad55cf239113337b6ed7b33a04d356a66cc`, PR #93 MERGED, divergência inicial 0/0; branch `arena/01a1008a-gruposegsystemseguranca`. Implementação usa somente `auth_mfa`, `auth_sessions`, `auth_email_change`, identidades canônicas e auditoria transacional; migração 145 aditiva. `npm ci`, estático 5/5 (001–145), typecheck, CLI-14 4/4 e rotas 9/9 foram executados. A bateria pesada, integral/build, gates em cascata, aplicação em destino, aceite humano e Windows permanecem pendentes. Sem aceite humano novo.
+
+## Evidência da fatia CLI-15 — 03/10/2026
+
+Base `main` `1d41160366266ab57a07b82f2b1a3e346e8bd528`, PR #94 MERGED, divergência inicial 0/0; branch `arena/01a101d4-gruposegsystemseguranca`. Jornada cliente do canal restrito liga `/cliente/app/reclamacoes-colaborador` a `/api/client/employee-complaints` sob sessão de cliente canônica, sobre as tabelas da 093; migração 146 aditiva (origem `portal_cliente`, idempotência por identidade, ações `employee_complaint_list/view/open`).
+
+Provas executadas nesta sessão, em dados sintéticos e sem SMTP real:
+
+| Prova | Resultado |
+|---|---|
+| `npm ci` | OK |
+| `node scripts/qa-wave0-static.mjs` | 5/5; 001–146 |
+| `npm run typecheck` | 0 erros |
+| `node --test tests/cli15-employee-complaint.test.mjs` | 15/15 |
+| `npm test` (teste novo registrado em `test:unit`) | 245/245 |
+| `npm run build` | exit 0; 85 páginas; `/cliente/app/reclamacoes-colaborador` listada |
+| `npm run test:l08-delivery:pg` | 51/51 em PostgreSQL descartável; aplica 001–146; cobre CLI-01..05, **não** a jornada CLI-15 |
+
+O teste dedicado prova no contrato implementado: sessão cliente obrigatória (401 sem ela), same-origin na mutação, isolamento A≠B com 403 genérico e `authorization_denied` auditado (lista e detalhe), escopo da listagem por identidade+conta+origem portal, projeção sem campos internos, corpo forjado ignorado (ID/protocolo/autoria derivados no servidor, `is_restricted`/`minimal_share` forçados), abertura+histórico+envelope mínimo de RH+auditoria entre `BEGIN` e `COMMIT`, 400 sem `Idempotency-Key`, replay idêntico sem duplicar, 409 em reuso divergente, 503 com `ROLLBACK` em falha da auditoria, e na rota legada: 401 sem sessão staff, 403 `forbidden_restricted_channel` para papéis não autorizados, RH restrito ao envelope mínimo de reclamações compartilhadas e 404 no detalhe não compartilhado.
+
+Fronteiras: isto é validação automática local (unitária + estática + build + gate legado); não é a bateria pesada HTTP/DB dedicada de CLI-15, não é aceite humano e não é homologação Windows. O aceite anterior de Marcelo e Andreia permanece restrito ao L07.

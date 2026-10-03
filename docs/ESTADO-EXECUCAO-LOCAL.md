@@ -1,6 +1,14 @@
 # Estado da execução — entrega local integral
 
-## Estado vigente — L08/CLI-14 entregue com validação rápida (2026-10-03)
+## Estado vigente — L08/CLI-15 entregue com validação rápida (2026-10-03)
+
+Base oficial `main` `1d41160366266ab57a07b82f2b1a3e346e8bd528` (PR #94 MERGED), divergência inicial 0/0. Branch `arena/01a101d4-gruposegsystemseguranca`. CLI-15 promove a reclamação sobre colaborador em canal restrito: jornada cliente real em `/cliente/app/reclamacoes-colaborador` e `/api/client/employee-complaints` sob sessão de cliente canônica, sobre as tabelas da 093 (`cli_employee_complaints`, histórico imutável e `cli_employee_complaint_hr_shares`). Migração aditiva 146; 001–145 imutáveis; próxima livre 147.
+
+Autoria, identidade, conta, UUIDs e protocolo são derivados/validados no servidor; o corpo do navegador nunca vincula. Cliente A não lista, consulta nem infere reclamações de B: fora do escopo responde 403 genérico idêntico ao inexistente, com `authorization_denied` auditado. O RH recebe somente o envelope mínimo justificado (protocolo, categoria, severidade, situação), registrado campo a campo na mesma transação; descrição, conta e identidade do cliente não são repassadas. Abertura + histórico + envelope RH + `auth_access_audit` são transacionais; falha da auditoria devolve 503 com rollback; retry idêntico não duplica e chave reutilizada com conteúdo divergente devolve 409. A rota administrativa legada não é atalho: cookie de cliente não produz sessão staff, papéis staff não autorizados recebem 403 `forbidden_restricted_channel` e o RH só vê a projeção mínima de reclamações compartilhadas.
+
+Validação rápida: `npm ci`, estático 5/5 (001–146), typecheck, teste dedicado CLI-15 15/15, `npm test` integral 245/245 e build 85 páginas com `/cliente/app/reclamacoes-colaborador` listada. `npm run test:l08-delivery:pg` 51/51 em PostgreSQL descartável aplica 001–146 e preserva CLI-01..05; esse gate não cobre a jornada CLI-15 e não é apresentado como prova dela. Bateria pesada específica de CLI-15, cascata L03..L08, aplicação em destino, aceite humano e Windows continuam pendentes. Aceite anterior de Marcelo e Andreia permanece somente no L07; não houve aceite novo. Relatório: [CLI-15](ENTREGA-L08-RELATORIO-2026-10-03-CLI15-RECLAMACAO.md).
+
+## Estado anterior — L08/CLI-14 entregue com validação rápida (2026-10-03)
 
 Base oficial `main` `508daad55cf239113337b6ed7b33a04d356a66cc` (PR #93 MERGED), divergência inicial 0/0. Branch `arena/01a1008a-gruposegsystemseguranca`. CLI-14 promove segurança da conta no backend canônico: `auth_mfa`, `auth_sessions`, `auth_email_change`, `auth_identities` e `auth_access_audit`; tabelas v2 não são fonte de autenticação. Migração aditiva 145; 001–144 imutáveis; próxima livre 146.
 

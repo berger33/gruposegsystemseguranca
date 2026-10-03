@@ -4,33 +4,45 @@ export function createEmployeeComplaintApi({ pool, auditLog, sameOrigin, require
   const generateProtocol = (prefix) => { const d=new Date(); const y=d.getFullYear().toString(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); const rand=Math.random().toString(36).substring(2,6).toUpperCase(); return `${prefix}-${y}${m}${day}-${rand}`; };
   const hashValue = (v) => { try{ const crypto=require('node:crypto'); return crypto.createHash('sha256').update(String(v)).digest('hex'); } catch{ return null; } };
 
+  // CLI-15: projeção mínima para o RH — somente o envelope justificado e
+  // compartilhado; nunca descrição, conta, identidade do cliente ou referência
+  // do colaborador.
+  const hrMinimalProjection = (r) => ({ id:r.id, protocol:r.protocol, category:r.category, severity:r.severity, status:r.status, is_restricted:r.is_restricted, minimal_share:r.minimal_share, is_shared_with_hr:r.is_shared_with_hr, shared_with_hr_at:r.shared_with_hr_at, created_at:r.created_at });
+
   const handleComplaints = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
     const sess=await requireSession(req);
     if(!sess) return json(res,401,{error:'unauthorized'});
     const isAdmin = requireRole(sess,['admin','ti']);
-    const isRH = requireRole(sess,['rh']);
+    const isRH = !isAdmin && requireRole(sess,['rh']);
+    // Canal restrito: nenhum outro papel de staff lista ou abre reclamações
+    // sobre colaborador por aqui. A rota administrativa não é atalho para a
+    // jornada do cliente (que usa /api/client/employee-complaints com sessão
+    // de cliente canônica; cookies de cliente nem produzem sessão staff).
+    if(!isAdmin && !isRH) return json(res,403,{error:'forbidden_restricted_channel'});
     const url=new URL(req.url,'http://localhost');
     if(req.method==='GET'){
       const status=url.searchParams.get('status');
       const client_account_id=url.searchParams.get('client_account_id');
+      if(isRH){
+        // RH vê somente reclamações efetivamente compartilhadas e apenas o
+        // envelope mínimo justificado.
+        const params=[]; let q=`SELECT * FROM cli_employee_complaints WHERE is_restricted=true AND is_shared_with_hr=true`;
+        if(status){ params.push(status); q+=` AND status=$${params.length}`; }
+        q+=` ORDER BY created_at DESC LIMIT 200`;
+        const { rows } = await pool.query(q, params);
+        return json(res,200,{items:rows.map(hrMinimalProjection), note:'compartilhamento mínimo com RH: somente protocolo, categoria, severidade e situação'});
+      }
       let q=`SELECT * FROM cli_employee_complaints WHERE is_restricted=true`;
       const params=[];
-      if(!isAdmin && !isRH){
-        // cliente só vê próprias reclamações? precisa filtrar por client_account_id? Simplifica: se não admin/rh, exigir client_account_id param e validar? Para agora, cliente só vê se for seu contato? Vamos exigir que cliente informe account e validar via sessão? Como não temos vínculo cliente account na sessão genérica, permitimos filtrar por account_id mas com is_restricted true e sem expor employee_id completo se não compartilhado.
-        // Para manter canal restrito, admin/ti/rh veem tudo, cliente vê apenas suas.
-        if(client_account_id){ params.push(client_account_id); q+=` AND client_account_id=$${params.length}`; }
-      } else {
-        if(client_account_id){ params.push(client_account_id); q+=` AND client_account_id=$${params.length}`; }
-        if(status){ params.push(status); q+=` AND status=$${params.length}`; }
-      }
+      if(client_account_id){ params.push(client_account_id); q+=` AND client_account_id=$${params.length}`; }
+      if(status){ params.push(status); q+=` AND status=$${params.length}`; }
       q+=` ORDER BY created_at DESC LIMIT 200`;
       const { rows } = await pool.query(q, params);
-      // Minimização: se não admin/rh, remover employee_id e mostrar apenas reference_hash e category sem detalhes RH
-      const minimized = (!isAdmin && !isRH) ? rows.map(r=>({ id:r.id, protocol:r.protocol, client_account_id:r.client_account_id, contract_id:r.contract_id, category:r.category, severity:r.severity, title:r.title, status:r.status, is_anonymous:r.is_anonymous, is_restricted:r.is_restricted, is_shared_with_hr:r.is_shared_with_hr, responsible_name:r.responsible_name, due_date:r.due_date, created_at:r.created_at })) : rows;
-      return json(res,200,{items:minimized, note:'reclamação sobre colaborador tratada em canal restrito, compartilhamento mínimo com RH'});
+      return json(res,200,{items:rows, note:'reclamação sobre colaborador tratada em canal restrito, compartilhamento mínimo com RH'});
     }
     if(req.method==='POST'){
+      if(!isAdmin) return json(res,403,{error:'forbidden_restricted_channel'});
       const b=await readJson(req);
       const client_account_id=b.client_account_id||null;
       const contract_id=b.contract_id||null;
@@ -86,7 +98,8 @@ export function createEmployeeComplaintApi({ pool, auditLog, sameOrigin, require
     const sess=await requireSession(req);
     if(!sess) return json(res,401,{error:'unauthorized'});
     const isAdmin=requireRole(sess,['admin','ti']);
-    const isRH=requireRole(sess,['rh']);
+    const isRH=!isAdmin && requireRole(sess,['rh']);
+    if(!isAdmin && !isRH) return json(res,403,{error:'forbidden_restricted_channel'});
     const url=new URL(req.url,'http://localhost');
     const parts=url.pathname.split('/');
     const id=parts[parts.length-1];
@@ -94,21 +107,22 @@ export function createEmployeeComplaintApi({ pool, auditLog, sameOrigin, require
     if(req.method==='GET'){
       const { rows } = await pool.query(`SELECT * FROM cli_employee_complaints WHERE id=$1`, [id]);
       if(!rows.length) return json(res,404,{error:'not_found'});
+      if(isRH){
+        // RH só consulta o que foi compartilhado: envelope mínimo, mensagens e
+        // evidências explicitamente marcadas para RH e o registro dos campos
+        // compartilhados com justificativa. Sem descrição nem conta do cliente.
+        if(!rows[0].is_shared_with_hr) return json(res,404,{error:'not_found'});
+        const { rows: hrMessages } = await pool.query(`SELECT * FROM cli_employee_complaint_messages WHERE complaint_id=$1 AND is_hr_visible=true ORDER BY created_at ASC`, [id]);
+        const { rows: hrEvidences } = await pool.query(`SELECT * FROM cli_employee_complaint_evidences WHERE complaint_id=$1 AND is_hr_visible=true ORDER BY created_at ASC`, [id]);
+        const { rows: hrHistory } = await pool.query(`SELECT previous_status, next_status, is_hr_share, created_at FROM cli_employee_complaint_history WHERE complaint_id=$1 ORDER BY created_at DESC`, [id]);
+        const { rows: hrShares } = await pool.query(`SELECT shared_field, shared_value, justification, shared_at FROM cli_employee_complaint_hr_shares WHERE complaint_id=$1 ORDER BY shared_at DESC`, [id]);
+        return json(res,200,{ complaint: hrMinimalProjection(rows[0]), messages: hrMessages, evidences: hrEvidences, history: hrHistory, hr_shares: hrShares });
+      }
       const { rows: messages } = await pool.query(`SELECT * FROM cli_employee_complaint_messages WHERE complaint_id=$1 ORDER BY created_at ASC`, [id]);
       const { rows: evidences } = await pool.query(`SELECT * FROM cli_employee_complaint_evidences WHERE complaint_id=$1 ORDER BY created_at ASC`, [id]);
       const { rows: history } = await pool.query(`SELECT * FROM cli_employee_complaint_history WHERE complaint_id=$1 ORDER BY created_at DESC`, [id]);
       const { rows: hrShares } = await pool.query(`SELECT * FROM cli_employee_complaint_hr_shares WHERE complaint_id=$1 ORDER BY shared_at DESC`, [id]);
-      // Minimização para cliente: mensagens só cliente e gestao, não rh interno, evidências sem hr_visible se não compartilhado
-      let filteredMessages=messages;
-      let filteredEvidences=evidences;
-      let filteredHrShares=hrShares;
-      if(!isAdmin && !isRH){
-        filteredMessages=messages.filter(m=>m.sender_type==='cliente'||m.sender_type==='gestao');
-        filteredEvidences=evidences.filter(e=>!e.is_hr_visible);
-        filteredHrShares=[];
-      }
-      const complaint = (!isAdmin && !isRH) ? { id: rows[0].id, protocol: rows[0].protocol, client_account_id: rows[0].client_account_id, category: rows[0].category, severity: rows[0].severity, title: rows[0].title, description: rows[0].description, status: rows[0].status, is_restricted: rows[0].is_restricted, minimal_share: rows[0].minimal_share, responsible_name: rows[0].responsible_name, created_at: rows[0].created_at } : rows[0];
-      return json(res,200,{ complaint, messages: filteredMessages, evidences: filteredEvidences, history, hr_shares: filteredHrShares });
+      return json(res,200,{ complaint: rows[0], messages, evidences, history, hr_shares: hrShares });
     }
     return json(res,405,{error:'method_not_allowed'});
   };
@@ -117,10 +131,17 @@ export function createEmployeeComplaintApi({ pool, auditLog, sameOrigin, require
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
     const sess=await requireSession(req);
     if(!sess) return json(res,401,{error:'unauthorized'});
+    const isAdmin=requireRole(sess,['admin','ti']);
+    const isRH=!isAdmin && requireRole(sess,['rh']);
+    if(!isAdmin && !isRH) return json(res,403,{error:'forbidden_restricted_channel'});
     const url=new URL(req.url,'http://localhost');
     const complaint_id=url.searchParams.get('complaint_id') || (await readJson(req)).complaint_id;
     if(req.method==='GET'){
       if(!complaint_id) return json(res,400,{error:'missing_complaint_id'});
+      if(isRH){
+        const { rows } = await pool.query(`SELECT * FROM cli_employee_complaint_messages WHERE complaint_id=$1 AND is_hr_visible=true ORDER BY created_at ASC`, [complaint_id]);
+        return json(res,200,{items:rows, note:'RH vê somente mensagens explicitamente compartilhadas'});
+      }
       const { rows } = await pool.query(`SELECT * FROM cli_employee_complaint_messages WHERE complaint_id=$1 ORDER BY created_at ASC`, [complaint_id]);
       return json(res,200,{items:rows});
     }
@@ -150,10 +171,17 @@ export function createEmployeeComplaintApi({ pool, auditLog, sameOrigin, require
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
     const sess=await requireSession(req);
     if(!sess) return json(res,401,{error:'unauthorized'});
+    const isAdmin=requireRole(sess,['admin','ti']);
+    const isRH=!isAdmin && requireRole(sess,['rh']);
+    if(!isAdmin && !isRH) return json(res,403,{error:'forbidden_restricted_channel'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
       const complaint_id=url.searchParams.get('complaint_id');
       if(!complaint_id) return json(res,400,{error:'missing_complaint_id'});
+      if(isRH){
+        const { rows } = await pool.query(`SELECT * FROM cli_employee_complaint_evidences WHERE complaint_id=$1 AND is_hr_visible=true ORDER BY created_at ASC`, [complaint_id]);
+        return json(res,200,{items:rows, note:'RH vê somente evidências explicitamente compartilhadas'});
+      }
       const { rows } = await pool.query(`SELECT * FROM cli_employee_complaint_evidences WHERE complaint_id=$1 ORDER BY created_at ASC`, [complaint_id]);
       return json(res,200,{items:rows});
     }
