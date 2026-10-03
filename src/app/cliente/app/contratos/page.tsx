@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { BriefcaseBusiness } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { BriefcaseBusiness, RotateCw } from "lucide-react";
 import { useClientSpace } from "../ClientSpaceProvider";
 import styles from "../../RealAccess.module.css";
 import appStyles from "../ClientApp.module.css";
@@ -35,30 +35,29 @@ function formatDateRange(contract: Contract) {
 }
 
 export default function ClientContractsPage() {
-  const { activeAccount, loading } = useClientSpace();
+  const { activeAccount, loading, notice, reload } = useClientSpace();
   const [contracts, setContracts] = useState<Contract[] | null>(null);
   const [error, setError] = useState("");
+
+  const loadContracts = useCallback(async (accountId: string) => {
+    setError("");
+    try {
+      const response = await fetch(`/api/client/contracts?account=${encodeURIComponent(accountId)}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("unexpected");
+      const data = (await response.json()) as { contracts: Contract[] };
+      setContracts(data.contracts);
+    } catch {
+      setError("Não foi possível carregar seus contratos agora.");
+    }
+  }, []);
 
   useEffect(() => {
     if (!activeAccount || activeAccount.status !== "active") {
       setContracts(null);
       return;
     }
-    setError("");
-    let cancelled = false;
-    fetch(`/api/client/contracts?account=${encodeURIComponent(activeAccount.id)}`, { cache: "no-store" })
-      .then(async response => {
-        if (!response.ok) throw new Error("unexpected");
-        const data = (await response.json()) as { contracts: Contract[] };
-        if (!cancelled) setContracts(data.contracts);
-      })
-      .catch(() => {
-        if (!cancelled) setError("Não foi possível carregar seus contratos agora.");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeAccount]);
+    loadContracts(activeAccount.id);
+  }, [activeAccount, loadContracts]);
 
   if (loading) {
     return (
@@ -70,6 +69,22 @@ export default function ClientContractsPage() {
   }
 
   if (!activeAccount) {
+    if (notice) {
+      return (
+        <section className={appStyles.sectionCard} aria-labelledby="contracts-title">
+          <h2 id="contracts-title" className={appStyles.sectionTitle}>
+            Contratos
+          </h2>
+          <p className={`${styles.message} ${styles.messageError}`} role="alert">
+            <span>{notice}</span>
+            <button className={appStyles.retryButton} type="button" onClick={() => reload()}>
+              <RotateCw size={13} aria-hidden="true" />
+              Tentar novamente
+            </button>
+          </p>
+        </section>
+      );
+    }
     return (
       <div className={appStyles.emptyState}>
         Sua identidade ainda não foi vinculada a um cadastro de cliente. Assim que a equipe concluir a
@@ -99,7 +114,15 @@ export default function ClientContractsPage() {
         </div>
       ) : error ? (
         <p className={`${styles.message} ${styles.messageError}`} role="alert">
-          {error}
+          <span>{error}</span>
+          <button
+            className={appStyles.retryButton}
+            type="button"
+            onClick={() => activeAccount && loadContracts(activeAccount.id)}
+          >
+            <RotateCw size={13} aria-hidden="true" />
+            Tentar novamente
+          </button>
         </p>
       ) : !contracts ? (
         <div className={appStyles.loadingWrapWide}>

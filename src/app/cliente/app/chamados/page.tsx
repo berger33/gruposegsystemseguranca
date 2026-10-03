@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { Headphones, Send } from "lucide-react";
+import { Headphones, RotateCw, Send } from "lucide-react";
 import { TICKET_CATEGORIES } from "@/lib/client-space-core.mjs";
 import { useClientSpace } from "../ClientSpaceProvider";
 import styles from "../../RealAccess.module.css";
@@ -36,7 +36,7 @@ const openErrors: Record<string, string> = {
 };
 
 export default function ClientTicketsPage() {
-  const { activeAccount, loading } = useClientSpace();
+  const { activeAccount, loading, notice, reload } = useClientSpace();
   const [tickets, setTickets] = useState<Ticket[] | null>(null);
   const [loadError, setLoadError] = useState("");
   const [category, setCategory] = useState<string>(TICKET_CATEGORIES[0] as string);
@@ -115,6 +115,22 @@ export default function ClientTicketsPage() {
   }
 
   if (!activeAccount) {
+    if (notice) {
+      return (
+        <section className={appStyles.sectionCard} aria-labelledby="tickets-title">
+          <h2 id="tickets-title" className={appStyles.sectionTitle}>
+            Chamados
+          </h2>
+          <p className={`${styles.message} ${styles.messageError}`} role="alert">
+            <span>{notice}</span>
+            <button className={appStyles.retryButton} type="button" onClick={() => reload()}>
+              <RotateCw size={13} aria-hidden="true" />
+              Tentar novamente
+            </button>
+          </p>
+        </section>
+      );
+    }
     return (
       <div className={appStyles.emptyState}>
         Sua identidade ainda não foi vinculada a um cadastro de cliente. Assim que o vínculo for liberado,
@@ -208,7 +224,15 @@ export default function ClientTicketsPage() {
         </p>
         {!activeAccount || activeAccount.status !== "active" ? null : loadError ? (
           <p className={`${styles.message} ${styles.messageError}`} role="alert">
-            {loadError}
+            <span>{loadError}</span>
+            <button
+              className={appStyles.retryButton}
+              type="button"
+              onClick={() => activeAccount && loadTickets(activeAccount.id)}
+            >
+              <RotateCw size={13} aria-hidden="true" />
+              Tentar novamente
+            </button>
           </p>
         ) : !tickets ? (
           <div className={appStyles.loadingWrapWide}>

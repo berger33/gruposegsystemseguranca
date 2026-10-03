@@ -980,6 +980,106 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     assert.deepEqual(conflict.body, { error: "idempotency_conflict" });
   });
 
+  await t.test("staff and client sessions stay separated on the promoted routes over real HTTP", async () => {
+    const rhStaff = await provisionAndLoginStaff(pool, api, { role: "rh" });
+
+    // Sessão staff em rotas de cliente deve ser recusada com 401 client_session_required
+    const staffClientReads = [
+      "/api/client/accounts",
+      `/api/client/contracts?account=${accountA1}`,
+      `/api/client/documents?account=${accountA1}`,
+      `/api/client/documents/${documentId}/download`,
+      `/api/client/tickets?account=${accountA1}`,
+    ];
+    for (const path of staffClientReads) {
+      const response = await api(path, { cookie: adminCookie });
+      assert.equal(response.status, 401, `${path} deve recusar sessão staff`);
+      assert.deepEqual(response.body, { error: "client_session_required" });
+    }
+    const staffMe = await api("/api/auth/me", { cookie: adminCookie });
+    assert.equal(staffMe.status, 401);
+    assert.deepEqual(staffMe.body, { error: "client_session_required" });
+
+    const staffMfa = await api("/api/client/security/mfa/setup", {
+      method: "POST",
+      body: { password: clientPassword },
+      cookie: adminCookie,
+    });
+    assert.equal(staffMfa.status, 401);
+    assert.deepEqual(staffMfa.body, { error: "client_session_required" });
+
+    const staffClientWrite = await api("/api/client/tickets", {
+      method: "POST",
+      body: { accountId: accountA1, category: "Outro assunto", title: "Tentativa staff", details: "Deve ser negado." },
+      cookie: adminCookie,
+    });
+    assert.equal(staffClientWrite.status, 401);
+    assert.deepEqual(staffClientWrite.body, { error: "client_session_required" });
+
+    // Sessão cliente em rotas administrativas deve ser recusada com 401 admin_session_required
+    const clientAdminReads = [
+      "/api/admin/client-accounts",
+      "/api/admin/identities?q=teste",
+      "/api/admin/grants",
+      "/api/admin/contracts",
+      "/api/admin/documents",
+      `/api/admin/documents/${documentId}/download`,
+      "/api/admin/tickets",
+    ];
+    for (const path of clientAdminReads) {
+      const response = await api(path, { cookie: cookieA });
+      assert.equal(response.status, 401, `${path} deve recusar sessão de cliente`);
+      assert.deepEqual(response.body, { error: "admin_session_required" });
+    }
+
+    const beforeTickets = (
+      await pool.query("SELECT count(*)::int AS c FROM client_tickets WHERE client_account_id = $1", [accountA1])
+    ).rows[0].c;
+    const beforeDocs = (
+      await pool.query("SELECT count(*)::int AS c FROM client_documents WHERE client_account_id = $1", [accountA1])
+    ).rows[0].c;
+
+    const clientAdminWrites = [
+      api("/api/admin/client-accounts", { method: "POST", body: { displayName: "Invasão" }, cookie: cookieA }),
+      api("/api/admin/contracts", {
+        method: "POST",
+        body: { accountId: accountA1, title: "Contrato indevido", service: "Supervisão e Ronda", status: "active" },
+        cookie: cookieA,
+      }),
+      api("/api/admin/documents", {
+        method: "POST",
+        body: { accountId: accountA1, title: "Doc indevido", category: "Relatórios", filename: "x.txt", contentBase64: "YQ==" },
+        cookie: cookieA,
+      }),
+      api(`/api/admin/tickets/${ticketId}`, { method: "PATCH", body: { status: "resolved" }, cookie: cookieA }),
+      api("/api/admin/invites", { method: "POST", body: { email: "invasao@teste.com", role: "ti" }, cookie: cookieA }),
+      api(`/api/admin/client-accounts/${accountA2}`, { method: "PATCH", body: { status: "suspended" }, cookie: cookieA }),
+    ];
+    for (const writePromise of clientAdminWrites) {
+      const response = await writePromise;
+      assert.equal(response.status, 401);
+      assert.deepEqual(response.body, { error: "admin_session_required" });
+    }
+
+    const afterTickets = (
+      await pool.query("SELECT count(*)::int AS c FROM client_tickets WHERE client_account_id = $1", [accountA1])
+    ).rows[0].c;
+    const afterDocs = (
+      await pool.query("SELECT count(*)::int AS c FROM client_documents WHERE client_account_id = $1", [accountA1])
+    ).rows[0].c;
+    assert.equal(afterTickets, beforeTickets, "tentativa de escrita negada não pode criar chamado");
+    assert.equal(afterDocs, beforeDocs, "tentativa de escrita negada não pode criar documento");
+
+    // Sessão staff com papel insuficiente (ex: RH) em rotas administrativas de clientes deve ser 403
+    const rhAdminAccounts = await api("/api/admin/client-accounts", { cookie: rhStaff.cookie });
+    assert.equal(rhAdminAccounts.status, 403);
+    assert.deepEqual(rhAdminAccounts.body, { error: "forbidden" });
+
+    const rhAdminGrants = await api("/api/admin/grants", { cookie: rhStaff.cookie });
+    assert.equal(rhAdminGrants.status, 403);
+    assert.deepEqual(rhAdminGrants.body, { error: "forbidden" });
+  });
+
   await t.test("revoking the grant cuts access immediately and is idempotent", async () => {
     const revoked = await api(`/api/admin/grants/${grantA1}`, {
       method: "DELETE",

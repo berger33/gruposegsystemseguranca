@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Download, FileText } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Download, FileText, RotateCw } from "lucide-react";
 import { useClientSpace } from "../ClientSpaceProvider";
 import styles from "../../RealAccess.module.css";
 import appStyles from "../ClientApp.module.css";
@@ -23,30 +23,29 @@ function formatSize(bytes: number) {
 }
 
 export default function ClientDocumentsPage() {
-  const { activeAccount, loading } = useClientSpace();
+  const { activeAccount, loading, notice, reload } = useClientSpace();
   const [documents, setDocuments] = useState<ClientDocument[] | null>(null);
   const [error, setError] = useState("");
+
+  const loadDocuments = useCallback(async (accountId: string) => {
+    setError("");
+    try {
+      const response = await fetch(`/api/client/documents?account=${encodeURIComponent(accountId)}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("unexpected");
+      const data = (await response.json()) as { documents: ClientDocument[] };
+      setDocuments(data.documents);
+    } catch {
+      setError("Não foi possível carregar seus documentos agora.");
+    }
+  }, []);
 
   useEffect(() => {
     if (!activeAccount || activeAccount.status !== "active") {
       setDocuments(null);
       return;
     }
-    setError("");
-    let cancelled = false;
-    fetch(`/api/client/documents?account=${encodeURIComponent(activeAccount.id)}`, { cache: "no-store" })
-      .then(async response => {
-        if (!response.ok) throw new Error("unexpected");
-        const data = (await response.json()) as { documents: ClientDocument[] };
-        if (!cancelled) setDocuments(data.documents);
-      })
-      .catch(() => {
-        if (!cancelled) setError("Não foi possível carregar seus documentos agora.");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeAccount]);
+    loadDocuments(activeAccount.id);
+  }, [activeAccount, loadDocuments]);
 
   if (loading) {
     return (
@@ -58,6 +57,22 @@ export default function ClientDocumentsPage() {
   }
 
   if (!activeAccount) {
+    if (notice) {
+      return (
+        <section className={appStyles.sectionCard} aria-labelledby="documents-title">
+          <h2 id="documents-title" className={appStyles.sectionTitle}>
+            Documentos
+          </h2>
+          <p className={`${styles.message} ${styles.messageError}`} role="alert">
+            <span>{notice}</span>
+            <button className={appStyles.retryButton} type="button" onClick={() => reload()}>
+              <RotateCw size={13} aria-hidden="true" />
+              Tentar novamente
+            </button>
+          </p>
+        </section>
+      );
+    }
     return (
       <div className={appStyles.emptyState}>
         Sua identidade ainda não foi vinculada a um cadastro de cliente. Assim que a equipe concluir a
@@ -86,7 +101,15 @@ export default function ClientDocumentsPage() {
         </div>
       ) : error ? (
         <p className={`${styles.message} ${styles.messageError}`} role="alert">
-          {error}
+          <span>{error}</span>
+          <button
+            className={appStyles.retryButton}
+            type="button"
+            onClick={() => activeAccount && loadDocuments(activeAccount.id)}
+          >
+            <RotateCw size={13} aria-hidden="true" />
+            Tentar novamente
+          </button>
         </p>
       ) : !documents ? (
         <div className={appStyles.loadingWrapWide}>

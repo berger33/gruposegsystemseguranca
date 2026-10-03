@@ -117,3 +117,24 @@ Windows.
 A matriz obrigatória foi repetida após esta atualização documental e terminou
 integralmente verde, inclusive L06 9/9; o SIGSEGV anterior não recorreu. L07
 passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
+
+## Resiliência de Interface e Separação de Sessões pós-PR #85 — 03/10/2026
+
+Esta fatia parte da `main` oficial em `8eae38ae7ce84b9a824a63d469d36e03a3b0a5c0`
+(pós-merge da PR #85). Implementou a resiliência de interface e prova de
+separação de sessões:
+
+- `ClientSpaceProvider`: `reload()` limpa notices prévios e reseta loading;
+- Telas de leitura (`/cliente/app`, `/contratos`, `/documentos`, `/chamados`, `/seguranca`):
+  adicionados botões de retry explícito (`Tentar novamente`) em alertas de erro
+  e tratamento distinto de falha do provedor de contas;
+- `tests/client-space.integration.test.mjs`: adicionado subteste exercitando a
+  rejeição cruzada de cookies (sessão staff rejeitada com 401 em rotas de cliente;
+  sessão cliente rejeitada com 401 em rotas administrativas; mutações negadas
+  comprovadamente sem alteração de dados; papel não autorizado rejeitado com 403).
+
+A base continua com 139 migrações imutáveis (001–139) e a próxima livre é 140.
+CLI-06..15, EXT-01..17 e componentes órfãos permanecem não promovidos.
+O aceite humano local de Marcelo e Andreia sobre L07 permanece preservado;
+a homologação final Windows continua pendente e adiada até o fechamento
+integral do sistema.
