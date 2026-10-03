@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BriefcaseBusiness, CalendarClock, ClipboardCheck, FileText, Headphones, LayoutDashboard, LogOut, ShieldCheck } from "lucide-react";
+import { BriefcaseBusiness, CalendarClock, ClipboardCheck, FileText, Headphones, LayoutDashboard, LogOut, ShieldCheck, Receipt } from "lucide-react";
 import { useClientSpace } from "./ClientSpaceProvider";
 import styles from "./ClientApp.module.css";
 
@@ -13,6 +13,7 @@ const destinations = [
   { href: "/cliente/app/chamados", label: "Chamados", icon: Headphones },
   { href: "/cliente/app/agenda", label: "Agenda", icon: CalendarClock },
   { href: "/cliente/app/relatorios", label: "Relatórios", icon: ClipboardCheck },
+  { href: "/cliente/app/cobrancas", label: "Cobranças", icon: Receipt },
   { href: "/cliente/app/seguranca", label: "Segurança", icon: ShieldCheck },
 ];
 
