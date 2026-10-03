@@ -608,3 +608,78 @@ promovidos.
 - **Regressões:** estático 5/5, typecheck OK, build exit 0. A execução unitária inicial no ambiente desta sessão teve falhas ambientais pré-existentes relacionadas à versão Node 20/dependências do conjunto de backup/homologação; não foram mascaradas nem alteradas. Windows não foi executado e continua pendente.
 - **Classificação:** implementação local + validação automática Linux/PostgreSQL descartável. Aceite humano anterior de Marcelo e Andreia permanece preservado; isto não constitui aceite novo nem homologação Windows.
 - **Não promovidos:** CLI-06..15, EXT-01..17, órfãos `/admin/ti`, fornecedor restrito e integrações externas. Próximo passo: revisão humana da PR; merge somente após revisão, sem merge automático.
+
+## Série L08 aliases — 03/10/2026
+
+- **Lote/base:** L08, hardening da primeira fatia CLI-01..05. Base confirmada:
+  `main` oficial em `31834ec0983ead61ec316df90f8af958594b3c58` (merge da PR #83).
+  Branch de trabalho: `arena/01a0ff2c-gruposegsystemseguranca`.
+- **Correção documental obrigatória:** as seções anteriores desta série afirmam
+  "nenhuma migração criada; 001–138 permanecem imutáveis; próxima livre: 139".
+  Isso deixou de valer na PR #83, que criou a migração aditiva
+  `139-l08-client-space-atomic-idempotency.sql`. O estado correto na base acima
+  é: **139 migrações, sequência contínua 001–139, sem lacuna e sem duplicidade,
+  001–139 imutáveis e próxima livre 140**. Reconfirmado nesta sessão por
+  inspeção de `db/migrations` e por `npm run test:migrations:pg`
+  (139/139 em dois passes).
+- **Lacuna real encontrada:** o critério 7 do gate L08 ("aliases relevantes
+  negam acesso inadequado") não era demonstrado pelo próprio gate. O gate
+  importa apenas `client-access.integration` e `client-space.integration`;
+  a prova de negação dos aliases v2 vivia em `tests/cli-v2.integration.test.mjs`,
+  executada por outro runner (`test:cli-v2:pg`). Além disso, quatro aliases
+  roteados sob `/api/client/` não tinham prova de negação em nenhum teste do
+  repositório: `/api/client/visits`, `/api/client/service-requests`,
+  `/api/client/portal-access-requests` e `/api/client/email-change-requests`.
+- **Mudança:** subteste novo em `tests/client-space.integration.test.mjs`,
+  portanto dentro do gate L08 — "non-promoted v2 aliases under /api/client never
+  answer to a valid portal session". Ele exerce HTTP real, com a sessão do
+  cliente A **ainda plenamente vinculada** (antes da revogação), contra os nove
+  aliases v2 não promovidos, em GET e POST, mais o caminho anônimo. Verifica
+  negação (401/403/405), ausência de vazamento de `accountId`, `documentId`,
+  `ticketId` e `storage_key`, ausência de `Content-Disposition`, ausência de
+  bytes privados no alias `/api/client/document-download` com cookie de A e de B,
+  e ausência de escrita originada das tentativas. O inventário de aliases é
+  derivado de `server.mjs`: um alias novo sob `/api/client/` reprova o gate até
+  ser classificado como promovido ou provado como negado.
+- **Fonte/tabelas:** inalteradas. CLI-01..05 seguem em `auth_*`,
+  `client_accounts`, `client_access_grants`, `client_contracts`,
+  `client_documents`, `client_tickets` e tabelas de histórico/auditoria.
+  **Nenhuma migração nova nesta sessão**; 001–139 permanecem imutáveis.
+- **Nenhum requisito novo promovido.** A mudança é de prova, não de
+  funcionalidade: ela fecha o critério 7 dentro do gate L08 e documenta que o
+  alias v2 continua **não promovido**. CLI-06..15, EXT-01..17, órfãos
+  `/admin/ti`, fornecedor restrito, CLI-15 e integrações externas seguem fora.
+- **Controle negativo executado:** o subteste foi deliberadamente quebrado duas
+  vezes para provar que não é vacuoso. (1) Exigindo status 999 nas negações, o
+  gate reprovou (exit 1, 49/51) e registrou o status real `401`. (2) Inserindo
+  um alias fictício `/api/client/fake-new-alias` em `server.mjs`, a guarda de
+  inventário reprovou (exit 1, 49/51) apontando o alias novo. Ambos os estados
+  foram revertidos; `server.mjs` está idêntico ao da base.
+- **Resultados reais nesta base (Node 22.22.3, Linux, PostgreSQL descartável):**
+  estático 5/5; typecheck exit 0; unitários 196/196; build exit 0; migrações
+  139/139 em dois passes com checksum negativo deliberado e limpeza confirmada;
+  L07 43/43 e 43/43 consecutivos; cadeia serial L03 1/1, L04 20/20, L05 1/1,
+  L06 9/9; L08 50/50 antes da mudança e 51/51 em duas execuções consecutivas
+  depois dela.
+- **Divergências/instabilidades observadas e registradas:** (a) a PR #83
+  registrou L04 como 19/20 em duas execuções; nesta sessão L04 passou 20/20 em
+  duas execuções. O resultado 19/20 da PR #83 permanece registrado como ocorreu
+  e não é revogado retroativamente. (b) `test:l03-delivery:pg` **reprovou duas
+  vezes** nesta sessão, com duas assinaturas distintas (`403
+  /api/employee/offline` e timeout de 30s do Chromium aguardando o heading
+  `Novo cadastro profissional`), e passou nas outras quatro execuções; na base
+  limpa `31834ec`, sem as mudanças desta sessão, passou 3/3. Como o diff não
+  toca nenhum arquivo de produção e L03 não importa o arquivo de teste
+  alterado, a reprovação está classificada como instabilidade de execução e
+  **fica registrada como pendência aberta**, não como aprovação. Não houve
+  skip, mudança de timeout nem enfraquecimento de assertiva.
+- **Classificação:** implementação local + validação automática Linux com
+  PostgreSQL descartável. Não é aceite humano novo e não é homologação Windows.
+  O aceite humano de Marcelo e Andreia no escopo local do L07 permanece
+  preservado e inalterado.
+- **Pendências reais:** a API legada canônica de CLI-05 continua sem protocolo,
+  mensagem e anexo — esses objetos seguem apenas na superfície v2 não promovida
+  e não são declarados comprovados. PostgreSQL e filesystem continuam sem
+  transação distribuída: está provada a limpeza dos erros controlados, não a
+  eliminação da janela de órfão em queda abrupta do processo. A homologação
+  final Windows continua pendente e adiada até o fechamento integral do sistema.
