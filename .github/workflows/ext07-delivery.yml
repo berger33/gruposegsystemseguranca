@@ -29,6 +29,3 @@ jobs:
       - run: node --test tests/ext07-compliance.test.mjs tests/ext07-compliance.integration.test.mjs
       - run: npm run build
       - run: npm run test:ext07-compliance:pg
-        env:
-          DATABASE_MIGRATION_URL: postgres://postgres:postgres@localhost:5432/seg_ext07
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/seg_ext07
