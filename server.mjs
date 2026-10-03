@@ -100,6 +100,7 @@ import { createAstApi } from "./src/server/ast-api.mjs";
 import { createAstAdvancedApi } from "./src/server/ast-advanced-api.mjs";
 import { createExtApi } from "./src/server/ext-api.mjs";
 import { createExtFleetApi } from "./src/server/ext-fleet-api.mjs";
+import { createExtThirdPartyApi } from "./src/server/ext-third-party-api.mjs";
 import { createExtAdvancedApi } from "./src/server/ext-advanced-api.mjs";
 import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
 import { createCommercialHistoryApi } from "./src/server/commercial-history-api.mjs";
@@ -2252,6 +2253,16 @@ const extFleetApi = createExtFleetApi({
   requireSession: readSession,
 });
 
+// EXT-02 terceiros canônicos: mesma disciplina da frota — a auditoria NÃO usa
+// o auditLog tolerante a falha do restante do servidor; o módulo grava
+// audit_log dentro da própria transação e devolve 503 com rollback quando a
+// auditoria está indisponível.
+const extThirdPartyApi = createExtThirdPartyApi({
+  pool: getPool(),
+  sameOrigin,
+  requireSession: readSession,
+});
+
 const extAdvancedApi = createExtAdvancedApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -4055,12 +4066,39 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/ext-fleet-documents" || url.pathname === "/api/crm/hr/ext-fleet-documents" || url.pathname === "/api/hr/ext-fleet-documents" || url.pathname === "/api/ext/fleet-documents") {
     return extFleetApi.handleLegacyDocuments(req, res);
   }
-  // EXT-02 terceiros acessam só OS/contrato autorizado perdem acesso ao término
+  // EXT-02 terceiros canônicos (migração 148): cadastro, contrato validado,
+  // documentos com vencimento, janela de acesso temporário presa a OS/contrato
+  // autorizado e avaliação com autor/data/justificativa. Transação única,
+  // idempotência por identidade e derivação determinística da vigência.
+  if (url.pathname === "/api/ext/third-party/parties") {
+    return extThirdPartyApi.handleParties(req, res);
+  }
+  const thirdPartyMatch = url.pathname.match(/^\/api\/ext\/third-party\/parties\/([0-9a-f-]{36})$/i);
+  if (thirdPartyMatch) return extThirdPartyApi.handlePartyById(req, res, thirdPartyMatch[1]);
+  const thirdPartyContractMatch = url.pathname.match(/^\/api\/ext\/third-party\/parties\/([0-9a-f-]{36})\/contract$/i);
+  if (thirdPartyContractMatch) return extThirdPartyApi.handlePartyContract(req, res, thirdPartyContractMatch[1]);
+  const thirdPartyGrantsMatch = url.pathname.match(/^\/api\/ext\/third-party\/parties\/([0-9a-f-]{36})\/access-grants$/i);
+  if (thirdPartyGrantsMatch) return extThirdPartyApi.handlePartyAccessGrants(req, res, thirdPartyGrantsMatch[1]);
+  const thirdPartyAuthorizationMatch = url.pathname.match(/^\/api\/ext\/third-party\/parties\/([0-9a-f-]{36})\/authorization$/i);
+  if (thirdPartyAuthorizationMatch) return extThirdPartyApi.handlePartyAuthorization(req, res, thirdPartyAuthorizationMatch[1]);
+  const thirdPartyDocumentsMatch = url.pathname.match(/^\/api\/ext\/third-party\/parties\/([0-9a-f-]{36})\/documents$/i);
+  if (thirdPartyDocumentsMatch) return extThirdPartyApi.handlePartyDocuments(req, res, thirdPartyDocumentsMatch[1]);
+  const thirdPartyDocumentRulesMatch = url.pathname.match(/^\/api\/ext\/third-party\/parties\/([0-9a-f-]{36})\/document-rules$/i);
+  if (thirdPartyDocumentRulesMatch) return extThirdPartyApi.handlePartyDocumentRules(req, res, thirdPartyDocumentRulesMatch[1]);
+  const thirdPartyEvaluationsMatch = url.pathname.match(/^\/api\/ext\/third-party\/parties\/([0-9a-f-]{36})\/evaluations$/i);
+  if (thirdPartyEvaluationsMatch) return extThirdPartyApi.handlePartyEvaluations(req, res, thirdPartyEvaluationsMatch[1]);
+  const thirdPartyGrantRevokeMatch = url.pathname.match(/^\/api\/ext\/third-party\/access-grants\/([0-9a-f-]{36})\/revoke$/i);
+  if (thirdPartyGrantRevokeMatch) return extThirdPartyApi.handleAccessGrantRevoke(req, res, thirdPartyGrantRevokeMatch[1]);
+  const thirdPartyDocumentDeactivateMatch = url.pathname.match(/^\/api\/ext\/third-party\/documents\/([0-9a-f-]{36})\/deactivate$/i);
+  if (thirdPartyDocumentDeactivateMatch) return extThirdPartyApi.handleDocumentDeactivate(req, res, thirdPartyDocumentDeactivateMatch[1]);
+  // Rotas legadas de terceiros: leitura pela mesma autorização, com fonte e
+  // derivação declaradas; mutação aposentada (410) — a rota antiga não é
+  // atalho sem transação, idempotência nem validação canônica de contrato.
   if (url.pathname === "/api/admin/hr/ext-third-parties" || url.pathname === "/api/crm/hr/ext-third-parties" || url.pathname === "/api/hr/ext-third-parties" || url.pathname === "/api/ext/third-parties") {
-    return extApi.handleThirdParties(req, res);
+    return extThirdPartyApi.handleLegacyThirdParties(req, res);
   }
   if (url.pathname === "/api/admin/hr/ext-third-party-documents" || url.pathname === "/api/crm/hr/ext-third-party-documents" || url.pathname === "/api/hr/ext-third-party-documents" || url.pathname === "/api/ext/third-party-documents") {
-    return extApi.handleThirdPartyDocuments(req, res);
+    return extThirdPartyApi.handleLegacyThirdPartyDocuments(req, res);
   }
   // EXT-03 licitações checklist alerta por edital dossiê versionado
   if (url.pathname === "/api/admin/hr/ext-bidding-notices" || url.pathname === "/api/crm/hr/ext-bidding-notices" || url.pathname === "/api/hr/ext-bidding-notices" || url.pathname === "/api/ext/bidding-notices") {
@@ -5587,6 +5625,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/crm/hr/ext-third-parties"
   || pathname === "/api/hr/ext-third-parties"
   || pathname === "/api/ext/third-parties"
+  || pathname.startsWith("/api/ext/third-party/")
   || pathname === "/api/admin/hr/ext-third-party-documents"
   || pathname === "/api/crm/hr/ext-third-party-documents"
   || pathname === "/api/hr/ext-third-party-documents"
