@@ -146,3 +146,29 @@ EXT-01..17 permanecem não promovidos.
 - **Regressões:** estático 5/5, typecheck OK, build exit 0. A execução unitária inicial no ambiente desta sessão teve falhas ambientais pré-existentes relacionadas à versão Node 20/dependências do conjunto de backup/homologação; não foram mascaradas nem alteradas. Windows não foi executado e continua pendente.
 - **Classificação:** implementação local + validação automática Linux/PostgreSQL descartável. Aceite humano anterior de Marcelo e Andreia permanece preservado; isto não constitui aceite novo nem homologação Windows.
 - **Não promovidos:** CLI-06..15, EXT-01..17, órfãos `/admin/ti`, fornecedor restrito e integrações externas. Próximo passo: revisão humana da PR; merge somente após revisão, sem merge automático.
+
+## Reconciliação pós-PR #83 — 03/10/2026
+
+A `main` oficial em `31834ec` já contém a PR #83 (`4a5a4a9`), posterior à PR
+#80. Esse lote implementou o hardening transacional de CLI-01..05 descrito em
+`ENTREGA-L08-RELATORIO-2026-10-02-ATOMICIDADE-CLI01-05.md`: auditoria
+fail-closed, atomicidade, download privado antes dos bytes, idempotência
+concorrente de chamados/documentos e jornada completa de acesso no gate L08.
+A migração aditiva `139-l08-client-space-atomic-idempotency.sql` é a última da
+sequência contínua 001–139; 001–138 permanecem imutáveis e a próxima livre é
+140.
+
+Revalidação desta base no Linux/Node 22: estático 5/5, typecheck, unitários,
+build, migrações 139/139, L03, L04, L05, duas execuções L07 (43/43) e duas
+execuções L08 (50/50) passaram. L06 terminou 8/9: o subteste 8 sofreu SIGSEGV no
+lançamento do Chromium (`Target page, context or browser has been closed`); a
+falha foi preservada, sem skip, relaxamento de assertiva ou aumento de timeout.
+Nenhum requisito adicional foi promovido por esta reconciliação. CLI-06..15,
+EXT-01..17, APIs v2 não promovidas, órfãos de `/admin/ti`, fornecedor restrito e
+integrações externas continuam fora do escopo. O aceite humano anterior de
+Marcelo e Andreia permanece; não houve novo aceite humano nem homologação
+Windows.
+
+A matriz obrigatória foi repetida após esta atualização documental e terminou
+integralmente verde, inclusive L06 9/9; o SIGSEGV anterior não recorreu. L07
+passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
