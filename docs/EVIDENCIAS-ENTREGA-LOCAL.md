@@ -2112,3 +2112,11 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 - **Prova dedicada:** `tests/cli13-portal-access-modes.test.mjs` 11/11 cobre separação de jornadas, modo inativo, vínculo servidor, recusa auditada, idempotência, API/CHECK contra auto-release, autoria, decisão motivada, convite sem grant/contrato e rollback em falha de auditoria.
 - **Regressão:** estático 5/5 (001–144), typecheck, `npm test` 226/226 e build 84.
 - **Limite:** nenhuma execução pesada ou aplicação da migração 144 em destino; sem aceite humano ou homologação Windows.
+
+### Reteste de check da PR #93
+
+O check L08 inicialmente falhou porque seu schema parcial não inclui a tabela de
+modos da 076. A consulta do modo convite foi tornada compatível via
+`to_regclass`, sem deixar de aplicar o modo quando o catálogo existe. Reteste
+local `npm run test:l08-delivery:pg`: **51/51**. Classificação: regressão do
+fluxo canônico CLI-01..05 corrigida; não é gate pesado específico de CLI-13.

@@ -126,3 +126,14 @@ O aceite humano anterior de Marcelo e Andreia para L07 permanece apenas como
 registro histórico; não houve aceite novo. Próximo alvo: **CLI-14** (MFA
 opcional, gestão de sessões e troca de e-mail concluída no backend real),
 depois CLI-15.
+
+## Correção durante a revisão da PR
+
+O check `client-portal-postgres-browser` revelou incompatibilidade com o schema
+parcial do gate legado L08, que não aplica a migração 076: a consulta direta à
+configuração do modo convite retornava 503. A emissão canônica passou a consultar
+`to_regclass` antes do catálogo; quando o catálogo existe, o modo é obrigatório,
+e quando o gate legado deliberadamente não o instala, o fluxo 003 preservado
+continua compatível. O gate foi repetido localmente e passou **51/51**. Esse
+gate cobre CLI-01..05 e compatibilidade do convite; não substitui a pendência de
+uma jornada pesada específica para CLI-13.

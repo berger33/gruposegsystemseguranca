@@ -1007,10 +1007,13 @@ export function createClientAccessApi(ctx) {
         // CLI-13: o convite canônico também obedece ao modo configurado. O
         // vínculo de conta continua sendo concedido somente depois, pelo fluxo
         // explícito de grant (identidade + conta + emissor + motivo).
-        const inviteMode = await client.query("SELECT is_active FROM cli_portal_mode_configs WHERE mode='convite' FOR SHARE");
-        if (!inviteMode.rows[0]?.is_active) {
-          await audit(client, { actorKind: session.role, actorId: session.identityId, action: "invite_issue", result: "denied", category: "policy_violation" });
-          return "mode_inactive";
+        const modeCatalog = await client.query("SELECT to_regclass('cli_portal_mode_configs') AS table_name");
+        if (modeCatalog.rows[0]?.table_name) {
+          const inviteMode = await client.query("SELECT is_active FROM cli_portal_mode_configs WHERE mode='convite' FOR SHARE");
+          if (!inviteMode.rows[0]?.is_active) {
+            await audit(client, { actorKind: session.role, actorId: session.identityId, action: "invite_issue", result: "denied", category: "policy_violation" });
+            return "mode_inactive";
+          }
         }
         const existing = await client.query("SELECT id FROM auth_identities WHERE kind = 'client' AND email = $1 FOR SHARE", [email.value]);
         if (existing.rows[0]) {
