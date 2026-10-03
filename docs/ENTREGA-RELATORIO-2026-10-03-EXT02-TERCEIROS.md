@@ -55,7 +55,7 @@ A migração 085 criou `ext_third_parties`, `ext_third_party_documents` e `ext_t
 - `npm test`: **315/315** (baseline anterior 265/265; +50 desta fatia).
 - `npm run build`: exit 0, **87 páginas** (baseline 86), rota `/admin/terceiros` listada.
 - `npm run test:migrations:pg`: **148/148** em PostgreSQL descartável, dois passes (replay integral "Already applied"), checksum negativo deliberado rejeitado (`006` recusado, sem rebaseline automático) e clone TEMPLATE preservado (539 tabelas).
-- **`npm run test:ext02-third-parties:pg`: 21/21 — gate dedicado desta jornada, por HTTP real contra PostgreSQL real descartável** (detalhe abaixo).
+- **`npm run test:ext02-third-parties:pg`: 22/22 — gate dedicado desta jornada, por HTTP real contra PostgreSQL real descartável** (detalhe abaixo).
 - `npm run test:l08-delivery:pg`: **51/51** — aplica 001–148 e preserva CLI-01..05; **este gate não cobre a jornada EXT-02 e não é apresentado como prova dela**.
 - `npm run test:demo-local:pg` (QA-HOM-008/009): passou; **também não cobre a jornada EXT-02**.
 
@@ -82,6 +82,8 @@ Sem skip, sem assert enfraquecido, sem timeout aumentado, sem dado real e sem SM
 - histórico de eventos apenas-acréscimo (trigger);
 - dossiê e listagem declarando fonte, data-base, escopo de leitura, ausência (`third_parties_registered: false`) e a fronteira externa pendente; filtros validados no servidor (`invalid_status`, `invalid_contract_id`);
 - rota legada: leitura segue autorizada e **preserva a chave `items`**, mutação 410 com ponteiro canônico, e nada é gravado por ela.
+
+O gate **audita o próprio resumo TAP** antes de devolver verde: reprova se houver qualquer caso pulado, qualquer `todo`, ou menos de 21 casos aprovados — e a suíte carrega um caso que **reprova** quando o banco real não está presente (`QA_EXT02_REQUIRE_DB`). Um CI verde sem banco real, que não provaria jornada nenhuma, é impossível por construção; a guarda foi verificada nos dois sentidos (sem banco sob o gate ⇒ `not ok`; execução avulsa fora do gate ⇒ pula sem mascarar).
 
 Esse gate entrou na CI como `.github/workflows/ext02-delivery.yml` (migrações 001–148 + jornada EXT-02), seguindo o padrão dos workflows de entrega já existentes.
 

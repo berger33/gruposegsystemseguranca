@@ -41,6 +41,39 @@ function run(cmd, args, env) {
   });
 }
 
+/** Igual a run(), mas devolve também a saída, para auditar o resumo TAP. */
+function runCapturing(cmd, args, env) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, args, { cwd: root, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
+    let output = '';
+    child.stdout.on('data', chunk => { output += chunk; process.stdout.write(chunk); });
+    child.stderr.on('data', chunk => { output += chunk; process.stderr.write(chunk); });
+    child.once('error', reject);
+    child.once('exit', code => resolve({ code: code ?? 1, output }));
+  });
+}
+
+// O gate só é verde se a suíte REALMENTE rodou contra o banco: nada de passar
+// por skip, e nada de passar com menos casos do que a jornada exige.
+const MINIMUM_CASES = 21;
+function auditTapSummary(output) {
+  const number = label => {
+    const found = output.match(new RegExp(`^# ${label} (\\d+)$`, 'm'));
+    return found ? Number(found[1]) : null;
+  };
+  const pass = number('pass');
+  const fail = number('fail');
+  const skipped = number('skipped');
+  const todo = number('todo');
+  const problems = [];
+  if (pass === null || fail === null) problems.push('resumo TAP ausente: a suíte não chegou a rodar');
+  if (fail) problems.push(`${fail} caso(s) reprovado(s)`);
+  if (skipped) problems.push(`${skipped} caso(s) pulado(s) — skip não é prova`);
+  if (todo) problems.push(`${todo} caso(s) marcado(s) como todo`);
+  if (pass !== null && pass < MINIMUM_CASES) problems.push(`apenas ${pass} caso(s) aprovado(s); a jornada exige ao menos ${MINIMUM_CASES}`);
+  return { pass, fail, skipped, todo, problems };
+}
+
 const database = 'seg_qa_ext02';
 const port = await freeLoopbackPort();
 const directory = await mkdtemp(path.join(tmpdir(), 'seg-qa-ext02-pg-'));
@@ -66,8 +99,9 @@ try {
   });
   if (migrated !== 0) throw new Error(`migrations_failed_exit_${migrated}`);
 
-  result = await run(process.execPath, ['--test', '--test-concurrency=1', 'tests/ext02-third-parties.integration.test.mjs'], {
+  const executed = await runCapturing(process.execPath, ['--test', '--test-concurrency=1', 'tests/ext02-third-parties.integration.test.mjs'], {
     RUN_DATABASE_INTEGRATION: '1',
+    QA_EXT02_REQUIRE_DB: '1',
     RUN_DATABASE_INTEGRATION_REMOTE: '',
     DATABASE_URL: url,
     DATABASE_MIGRATION_URL: '',
@@ -77,6 +111,13 @@ try {
     MAIL_HOST: '',
     NEXT_TELEMETRY_DISABLED: '1',
   });
+  result = executed.code;
+  const summary = auditTapSummary(executed.output);
+  console.log(`EXT02_TAP_SUMMARY: pass=${summary.pass} fail=${summary.fail} skipped=${summary.skipped} todo=${summary.todo} minimo_exigido=${MINIMUM_CASES}`);
+  if (summary.problems.length) {
+    console.error(`EXT02_GATE_REJECTED: ${summary.problems.join('; ')}`);
+    result = result || 1;
+  }
   console.log(`EXT02_THIRD_PARTIES_TEST_EXIT: ${result}`);
 } catch (error) {
   console.error('QA_PG_FAILED', String(error?.message || error).replaceAll(password, '[redacted]').slice(0, 500));

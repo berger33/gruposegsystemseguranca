@@ -72,7 +72,7 @@ atualizados juntos com a migração), typecheck OK, teste dedicado
 `npm test` 315/315, build 87 páginas com `/admin/terceiros` listada,
 `npm run test:migrations:pg` 148/148 (dois passes, replay, checksum negativo
 rejeitado, clone com 539 tabelas) e — diferente da fatia anterior — um **gate
-dedicado de jornada**: `npm run test:ext02-third-parties:pg` **21/21**, por HTTP
+dedicado de jornada**: `npm run test:ext02-third-parties:pg` **22/22**, por HTTP
 real contra PostgreSQL real descartável, com o servidor de verdade e sessão
 staff canônica, provando no banco a autoria derivada, o 409 de idempotência, o
 **503 com rollback sob auditoria derrubada**, o escopo autorizado, a perda de

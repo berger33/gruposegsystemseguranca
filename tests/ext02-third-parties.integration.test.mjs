@@ -24,7 +24,15 @@ import pg from 'pg';
 import { hashPassword } from '../src/lib/client-auth-core.mjs';
 
 const RUN = process.env.RUN_DATABASE_INTEGRATION === '1' && process.env.DATABASE_URL;
+// Quando executada PELO gate, esta suíte não pode passar por skip silencioso:
+// um CI verde sem banco real não prova jornada nenhuma.
+const REQUIRE_DB = process.env.QA_EXT02_REQUIRE_DB === '1';
 const root = path.resolve(import.meta.dirname, '..');
+
+test('EXT-02 gate: banco real presente — skip silencioso é proibido', () => {
+  if (!REQUIRE_DB) return;
+  assert.ok(RUN, 'o gate exige RUN_DATABASE_INTEGRATION=1 e DATABASE_URL reais; sem eles a suíte reprova em vez de pular');
+});
 
 let server, baseUrl, pool;
 let ti, rh, cookieTi, cookieRh;
