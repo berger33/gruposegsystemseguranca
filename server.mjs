@@ -5770,6 +5770,7 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/ext/supplier/")
   || pathname.startsWith("/api/ext/quality/")
   || pathname.startsWith("/api/ext/satisfaction/")
+  || pathname.startsWith("/api/ext/compliance/")
   || pathname === "/api/admin/hr/ext-bidding-documents"
   || pathname === "/api/crm/hr/ext-bidding-documents"
   || pathname === "/api/hr/ext-bidding-documents"
@@ -5989,7 +5990,25 @@ await app.prepare();
 const server = createServer(async (req, res) => {
   const pathname = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`).pathname;
   if (API_PATH_MATCH(pathname)) {
-    await routeApi(req, res);
+    // Os ramos de routeApi retornam a promise dos handlers das factories
+    // (return extXApi.handleY(...)) — um try/catch dentro de routeApi não vê
+    // rejeições assíncronas com `return promise`. Sem este guarda-chuva, um
+    // erro de handler deixava a requisição pendurada sem resposta (ex.: coluna
+    // inexistente vira unhandledRejection e o cliente espera até timeout).
+    // Contrato: ausência/erro interno => 500 genérico, nunca silêncio.
+    try {
+      await routeApi(req, res);
+    } catch (err) {
+      if (!res.headersSent) {
+        res.statusCode = 500;
+        res.setHeader("content-type", "application/json; charset=utf-8");
+        res.setHeader("cache-control", "no-store");
+        res.end(JSON.stringify({ error: "internal_error" }));
+      } else if (!res.writableEnded) {
+        res.end();
+      }
+      console.error("[api] erro não tratado em handler:", err?.code || err?.message);
+    }
     return;
   }
   // PUB-08: antes de entregar ao Next, um único salto de redirect cadastrado.

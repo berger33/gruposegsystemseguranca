@@ -9,8 +9,11 @@ export function createExtAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
     const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
-      const { rows } = await pool.query(`SELECT * FROM ext_compliance_documents ORDER BY expiry_date ASC LIMIT 200`);
-      return json(res,200,{items:rows, note:'vencimento gera tarefa e documento privado'});
+      // Leitura legada autorizada com projeção minimizada (EXT-07 hardening):
+      // sem storage_key, file_url, file_name, número documental completo ou
+      // referência declarada privada. Alias `items` preservado.
+      const { rows } = await pool.query(`SELECT id, protocol, title, compliance_type, status, issuer, issue_date::text AS issue_date, expiry_date::text AS expiry_date, origin, is_private, obligation_id, version_no, created_at, updated_at FROM ext_compliance_documents ORDER BY expiry_date ASC LIMIT 200`);
+      return json(res,200,{items:rows, note:'vencimento gera tarefa e documento privado', projection:'minimized_no_storage_no_document_number'});
     }
     if(req.method==='POST'){
       const b=await readJson(req);
@@ -212,7 +215,7 @@ export function createExtAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
     const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
-      const { rows } = await pool.query(`SELECT cp.*, ca.name as client_name FROM ext_continuity_plans cp LEFT JOIN client_accounts ca ON ca.id=cp.client_account_id ORDER BY cp.next_test_due ASC LIMIT 200`);
+      const { rows } = await pool.query(`SELECT cp.*, ca.display_name as client_name FROM ext_continuity_plans cp LEFT JOIN client_accounts ca ON ca.id=cp.client_account_id ORDER BY cp.next_test_due ASC LIMIT 200`);
       return json(res,200,{items:rows, note:'simulado documentado com responsaveis'});
     }
     if(req.method==='POST'){
