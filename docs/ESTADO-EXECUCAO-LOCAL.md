@@ -1236,3 +1236,7 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 - **Validação:** estático 5/5 OK, typecheck OK (`tsc --noEmit`), unitários 196/196 OK, build 78 páginas OK (`next build` Turbopack).
 - **Classificação:** implementação local + validação estática/unitária/build. Aceite humano local de Marcelo e Andreia sobre L07 preservado; homologação Windows continua pendente e adiada até o fechamento integral.
 - **Não promovidos:** CLI-06..15, EXT-01..17, órfãos `/admin/ti`, fornecedor restrito e integrações externas. Próximo passo: PR contra main para revisão humana; sem merge automático.
+
+## EXT-06 — satisfação/carteira (2026-10-03)
+
+Implementada na migração 152 sobre a fonte CLI-11, sem seed e sem copiar `ext_satisfaction_surveys`. Rotas reais: staff `/admin/satisfacao` + `/api/ext/satisfaction/*`; cliente `/cliente/app/satisfacao` + `/api/client/satisfaction-surveys`. Resposta imutável, regra de acompanhamento por pesquisa, responsável CRM fail-closed, evento/auditoria/idempotência na mesma transação e projeção cliente mínima. Validação dedicada: `test:ext06-satisfaction:pg` (PostgreSQL 17 descartável).

@@ -763,3 +763,15 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 - **Migração:** 146 aditiva sobre a 093 (origem `portal_cliente`, idempotência por identidade com reuso divergente 409, ações de auditoria), constraints `NOT VALID`; 001–145 imutáveis; próxima 147.
 - **Validação rápida:** estático 5/5 (001–146), typecheck, CLI-15 15/15, integral 245/245, build 85 páginas com a rota listada; `test:l08-delivery:pg` 51/51 aplica 001–146 (gate legado CLI-01..05, não prova a jornada CLI-15).
 - **Classificação:** pronto local por automação rápida. Bateria pesada dedicada, cascata L03..L08, aplicação em destino, aceite humano e Windows pendentes. Sem aceite humano novo; aceite Marcelo/Andreia preservado somente para L07.
+
+## EXT-06 — controle da fatia
+
+| Item | Estado | Evidência |
+|---|---|---|
+| Fonte canônica compartilhada CLI-11 | Implementado | migração 152 + `ext-satisfaction-api.mjs` |
+| Jornada staff | Implementado | `/admin/satisfacao`, `/api/ext/satisfaction/*` |
+| Jornada cliente privada | Implementado | `/cliente/app/satisfacao`, allowlist HTTP |
+| Resposta/histórico/acompanhamento | Implementado | tabelas de respostas/eventos + plano CLI-11 |
+| Transação/auditoria/idempotência | Implementado | gate PG/HTTP EXT-06 |
+| Legado | Somente leitura | `items`; writers 410 pós-guardas |
+| Aceite humano/destino/Windows | Pendente | fora desta implementação |

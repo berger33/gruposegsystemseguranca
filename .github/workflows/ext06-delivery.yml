@@ -1,0 +1,43 @@
+name: EXT-06 satisfaction delivery
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/server/ext-satisfaction-api.mjs'
+      - 'src/server/ext-api.mjs'
+      - 'src/app/admin/satisfacao/**'
+      - 'src/app/cliente/app/satisfacao/**'
+      - 'server.mjs'
+      - 'tests/ext06-satisfaction*.test.mjs'
+      - 'scripts/qa-ext06-satisfaction-postgres.mjs'
+      - 'scripts/migrate-site-visual.mjs'
+      - 'scripts/qa-wave0-static.mjs'
+      - 'db/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/ext06-delivery.yml'
+concurrency:
+  group: ext06-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  satisfaction-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Ledger de migrações 001-152 em PostgreSQL descartável
+        run: npm run test:migrations:pg
+      - name: Jornada EXT-06 (satisfação/carteira) por HTTP real contra PostgreSQL real
+        run: npm run test:ext06-satisfaction:pg

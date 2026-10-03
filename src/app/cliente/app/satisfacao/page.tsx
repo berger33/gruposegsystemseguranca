@@ -6,29 +6,20 @@ import { useClientSpace } from "../ClientSpaceProvider";
 import styles from "../../RealAccess.module.css";
 import appStyles from "../ClientApp.module.css";
 
-type Facts = {
-  score: number;
-  open_tickets: number;
-  overdue_charges: number;
-  previous_low_scores: number;
-  sources: string[];
-  as_of: string;
-};
-
 type Survey = {
   id: string;
   protocol: string;
-  contract_id: string | null;
   survey_type: string;
   status: string;
-  score: number | null;
-  feedback: string | null;
-  renewal_risk: string | null;
-  renewal_risk_reason: string | null;
-  facts_json: Facts | null;
-  action_plan_pending_reason: string | null;
+  purpose: string;
+  methodology: "generica" | "nps" | "csat";
+  methodology_source: string;
+  scale_min: number;
+  scale_max: number;
+  reference_start: string | null;
+  reference_end: string | null;
   created_at: string;
-  responded_at: string | null;
+  response: {score:number;feedback:string;responded_at:string} | null;
 };
 
 const statusLabel: Record<string, string> = {
@@ -42,12 +33,6 @@ const typeLabel: Record<string, string> = {
   pos_atendimento: "Pós-atendimento",
   periodica: "Periódica",
   outro: "Outro",
-};
-
-const riskLabel: Record<string, string> = {
-  baixo: "Risco de renovação baixo",
-  medio: "Risco de renovação médio",
-  alto: "Risco de renovação alto",
 };
 
 function newIdempotencyKey() {
@@ -153,8 +138,9 @@ export default function ClientSatisfactionPage() {
               {pending.map(item => <option key={item.id} value={item.id}>{item.protocol} · {typeLabel[item.survey_type] || item.survey_type}</option>)}
             </select>
           </label>
-          <label>Nota de 0 a 10
-            <input className={appStyles.inputLike} type="number" required min={0} max={10} step={1} value={score} onChange={event => setScore(event.target.value)} />
+          <p className={appStyles.sectionHint}>{pending.find(item=>item.id===selectedId)?.purpose || "Selecione uma pesquisa para ver finalidade e escala."}</p>
+          <label>Nota na escala declarada ({pending.find(item=>item.id===selectedId)?.scale_min ?? "–"} a {pending.find(item=>item.id===selectedId)?.scale_max ?? "–"})
+            <input className={appStyles.inputLike} type="number" required min={pending.find(item=>item.id===selectedId)?.scale_min} max={pending.find(item=>item.id===selectedId)?.scale_max} step={1} value={score} onChange={event => setScore(event.target.value)} />
           </label>
           <label>Comentário
             <textarea className={appStyles.textarea} required minLength={10} maxLength={2000} value={feedback} onChange={event => setFeedback(event.target.value)} placeholder="Descreva o que motivou a nota. O comentário fica registrado junto da pesquisa." />
@@ -176,21 +162,13 @@ export default function ClientSatisfactionPage() {
       : <ul className={appStyles.list}>{items.map(item => <li className={appStyles.listItem} key={item.id}>
           <div className={appStyles.listItemMain}>
             <p className={appStyles.listItemTitle}>{typeLabel[item.survey_type] || item.survey_type} · {item.protocol}</p>
-            <p className={appStyles.listItemMeta}>Enviada em {new Date(item.created_at).toLocaleString("pt-BR")}{item.responded_at ? ` · respondida em ${new Date(item.responded_at).toLocaleString("pt-BR")}` : ""}</p>
+            <p className={appStyles.listItemMeta}>Enviada em {new Date(item.created_at).toLocaleString("pt-BR")}{item.response ? ` · respondida em ${new Date(item.response.responded_at).toLocaleString("pt-BR")}` : ""}</p>
+            <p className={appStyles.listItemDetail}>{item.purpose} · escala {item.scale_min}–{item.scale_max} · metodologia {item.methodology} ({item.methodology_source})</p>
           </div>
           <span className={`${appStyles.chip} ${appStyles.chipOpen}`}>{statusLabel[item.status] || item.status}</span>
-          {item.score === null ? <p className={appStyles.listItemDetail}>Ainda sem nota registrada.</p>
-            : <p className={appStyles.listItemDetail}>Nota {item.score}/10. {item.feedback}</p>}
-          {item.renewal_risk && item.facts_json ? (
-            <div className={appStyles.responseBox}>
-              <strong>{riskLabel[item.renewal_risk] || item.renewal_risk}</strong>
-              Base factual em {new Date(item.facts_json.as_of).toLocaleString("pt-BR")}: chamados abertos {item.facts_json.open_tickets}, cobranças vencidas {item.facts_json.overdue_charges}, respostas anteriores com nota até 6: {item.facts_json.previous_low_scores}.
-            </div>
-          ) : item.score !== null ? (
-            <div className={appStyles.responseBox}><strong>Risco de renovação</strong>Não classificado: os registros existentes não sustentam uma classificação.</div>
-          ) : null}
-          {item.action_plan_pending_reason ? <div className={appStyles.responseBox}><strong>Plano de ação</strong>{item.action_plan_pending_reason}</div> : null}
-          {item.status === "em_acao" ? <div className={appStyles.responseBox}><strong>Plano de ação</strong>Um plano de ação foi aberto com o responsável comercial da sua conta.</div> : null}
+          {!item.response ? <p className={appStyles.listItemDetail}>Ainda sem nota registrada.</p>
+            : <p className={appStyles.listItemDetail}>Sua nota: {item.response.score}. {item.response.feedback}</p>}
+          {item.response ? <div className={appStyles.responseBox}><strong>Resposta recebida</strong>Quando a regra declarada exigir, haverá acompanhamento interno. Dados de funcionários, fatos internos, risco, tarefa e auditoria não são exibidos aqui.</div> : null}
         </li>)}</ul>}
     </section>
   </>;
