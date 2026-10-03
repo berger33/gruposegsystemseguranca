@@ -101,6 +101,7 @@ import { createAstAdvancedApi } from "./src/server/ast-advanced-api.mjs";
 import { createExtApi } from "./src/server/ext-api.mjs";
 import { createExtFleetApi } from "./src/server/ext-fleet-api.mjs";
 import { createExtThirdPartyApi } from "./src/server/ext-third-party-api.mjs";
+import { createExtBiddingApi } from "./src/server/ext-bidding-api.mjs";
 import { createExtAdvancedApi } from "./src/server/ext-advanced-api.mjs";
 import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
 import { createCommercialHistoryApi } from "./src/server/commercial-history-api.mjs";
@@ -2263,6 +2264,16 @@ const extThirdPartyApi = createExtThirdPartyApi({
   requireSession: readSession,
 });
 
+// EXT-03 licitações canônicas: mesma disciplina de frota e terceiros — a
+// auditoria NÃO usa o auditLog tolerante a falha do restante do servidor; o
+// módulo grava audit_log dentro da própria transação e devolve 503 com
+// rollback quando a auditoria está indisponível.
+const extBiddingApi = createExtBiddingApi({
+  pool: getPool(),
+  sameOrigin,
+  requireSession: readSession,
+});
+
 const extAdvancedApi = createExtAdvancedApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -4100,12 +4111,46 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/ext-third-party-documents" || url.pathname === "/api/crm/hr/ext-third-party-documents" || url.pathname === "/api/hr/ext-third-party-documents" || url.pathname === "/api/ext/third-party-documents") {
     return extThirdPartyApi.handleLegacyThirdPartyDocuments(req, res);
   }
-  // EXT-03 licitações checklist alerta por edital dossiê versionado
+  // EXT-03 licitações canônicas (migração 149): edital com situação terminal
+  // final, prazos com fonte declarada e substituição explícita, proposta
+  // versionada presa ao prazo de entrega registrado, resultado só com edital
+  // encerrado e imutável, checklist derivado do dossiê e alerta só com regra
+  // explícita. Transação única, idempotência por identidade.
+  if (url.pathname === "/api/ext/bidding/notices") {
+    return extBiddingApi.handleNotices(req, res);
+  }
+  const biddingMatch = url.pathname.match(/^\/api\/ext\/bidding\/notices\/([0-9a-f-]{36})$/i);
+  if (biddingMatch) return extBiddingApi.handleNoticeById(req, res, biddingMatch[1]);
+  const biddingResponsibleMatch = url.pathname.match(/^\/api\/ext\/bidding\/notices\/([0-9a-f-]{36})\/responsible$/i);
+  if (biddingResponsibleMatch) return extBiddingApi.handleNoticeResponsible(req, res, biddingResponsibleMatch[1]);
+  const biddingDeadlinesMatch = url.pathname.match(/^\/api\/ext\/bidding\/notices\/([0-9a-f-]{36})\/deadlines$/i);
+  if (biddingDeadlinesMatch) return extBiddingApi.handleNoticeDeadlines(req, res, biddingDeadlinesMatch[1]);
+  const biddingDeadlineSupersedeMatch = url.pathname.match(/^\/api\/ext\/bidding\/deadlines\/([0-9a-f-]{36})\/supersede$/i);
+  if (biddingDeadlineSupersedeMatch) return extBiddingApi.handleDeadlineSupersede(req, res, biddingDeadlineSupersedeMatch[1]);
+  const biddingProposalsMatch = url.pathname.match(/^\/api\/ext\/bidding\/notices\/([0-9a-f-]{36})\/proposals$/i);
+  if (biddingProposalsMatch) return extBiddingApi.handleNoticeProposals(req, res, biddingProposalsMatch[1]);
+  const biddingProposalWithdrawMatch = url.pathname.match(/^\/api\/ext\/bidding\/proposals\/([0-9a-f-]{36})\/withdraw$/i);
+  if (biddingProposalWithdrawMatch) return extBiddingApi.handleProposalWithdraw(req, res, biddingProposalWithdrawMatch[1]);
+  const biddingResultMatch = url.pathname.match(/^\/api\/ext\/bidding\/notices\/([0-9a-f-]{36})\/result$/i);
+  if (biddingResultMatch) return extBiddingApi.handleNoticeResult(req, res, biddingResultMatch[1]);
+  const biddingDocumentsMatch = url.pathname.match(/^\/api\/ext\/bidding\/notices\/([0-9a-f-]{36})\/documents$/i);
+  if (biddingDocumentsMatch) return extBiddingApi.handleNoticeDocuments(req, res, biddingDocumentsMatch[1]);
+  const biddingDocumentDeactivateMatch = url.pathname.match(/^\/api\/ext\/bidding\/documents\/([0-9a-f-]{36})\/deactivate$/i);
+  if (biddingDocumentDeactivateMatch) return extBiddingApi.handleDocumentDeactivate(req, res, biddingDocumentDeactivateMatch[1]);
+  const biddingChecklistMatch = url.pathname.match(/^\/api\/ext\/bidding\/notices\/([0-9a-f-]{36})\/checklist$/i);
+  if (biddingChecklistMatch) return extBiddingApi.handleNoticeChecklist(req, res, biddingChecklistMatch[1]);
+  const biddingChecklistDeactivateMatch = url.pathname.match(/^\/api\/ext\/bidding\/checklist\/([0-9a-f-]{36})\/deactivate$/i);
+  if (biddingChecklistDeactivateMatch) return extBiddingApi.handleChecklistDeactivate(req, res, biddingChecklistDeactivateMatch[1]);
+  const biddingAlertRulesMatch = url.pathname.match(/^\/api\/ext\/bidding\/notices\/([0-9a-f-]{36})\/alert-rules$/i);
+  if (biddingAlertRulesMatch) return extBiddingApi.handleNoticeAlertRules(req, res, biddingAlertRulesMatch[1]);
+  // Rotas legadas de licitações: leitura pela mesma autorização, com fonte e
+  // derivação declaradas; mutação aposentada (410) — a rota antiga não é
+  // atalho sem transação, idempotência nem máquina de estados.
   if (url.pathname === "/api/admin/hr/ext-bidding-notices" || url.pathname === "/api/crm/hr/ext-bidding-notices" || url.pathname === "/api/hr/ext-bidding-notices" || url.pathname === "/api/ext/bidding-notices") {
-    return extApi.handleBiddingNotices(req, res);
+    return extBiddingApi.handleLegacyBiddingNotices(req, res);
   }
   if (url.pathname === "/api/admin/hr/ext-bidding-documents" || url.pathname === "/api/crm/hr/ext-bidding-documents" || url.pathname === "/api/hr/ext-bidding-documents" || url.pathname === "/api/ext/bidding-documents") {
-    return extApi.handleBiddingDocuments(req, res);
+    return extBiddingApi.handleLegacyBiddingDocuments(req, res);
   }
   // EXT-04 portal fornecedores fornecedor não vê concorrente nem dados de RH
   if (url.pathname === "/api/admin/hr/ext-supplier-portal-quotations" || url.pathname === "/api/crm/hr/ext-supplier-portal-quotations" || url.pathname === "/api/hr/ext-supplier-portal-quotations" || url.pathname === "/api/ext/supplier-portal-quotations") {
@@ -5634,6 +5679,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/crm/hr/ext-bidding-notices"
   || pathname === "/api/hr/ext-bidding-notices"
   || pathname === "/api/ext/bidding-notices"
+  || pathname.startsWith("/api/ext/bidding/")
   || pathname === "/api/admin/hr/ext-bidding-documents"
   || pathname === "/api/crm/hr/ext-bidding-documents"
   || pathname === "/api/hr/ext-bidding-documents"

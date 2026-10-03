@@ -1,25 +1,25 @@
-name: EXT-02 third parties delivery
+name: EXT-03 biddings delivery
 on:
   pull_request:
     branches: [main]
     paths:
-      - 'src/server/ext-third-party-api.mjs'
-      - 'src/app/admin/terceiros/**'
+      - 'src/server/ext-bidding-api.mjs'
+      - 'src/app/admin/licitacoes/**'
       - 'server.mjs'
-      - 'tests/ext02-third-parties.test.mjs'
-      - 'tests/ext02-third-parties.integration.test.mjs'
-      - 'scripts/qa-ext02-third-parties-postgres.mjs'
+      - 'tests/ext03-biddings.test.mjs'
+      - 'tests/ext03-biddings.integration.test.mjs'
+      - 'scripts/qa-ext03-biddings-postgres.mjs'
       - 'scripts/migrate-site-visual.mjs'
       - 'db/migrations/**'
       - 'package*.json'
-      - '.github/workflows/ext02-delivery.yml'
+      - '.github/workflows/ext03-delivery.yml'
 concurrency:
-  group: ext02-delivery-${{ github.event.pull_request.number || github.ref }}
+  group: ext03-delivery-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 permissions:
   contents: read
 jobs:
-  third-parties-postgres:
+  biddings-postgres:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
@@ -37,5 +37,5 @@ jobs:
       - run: npm ci
       - name: Ledger de migrações 001-149 em PostgreSQL descartável
         run: npm run test:migrations:pg
-      - name: Jornada EXT-02 (terceiros) por HTTP real contra PostgreSQL real
-        run: npm run test:ext02-third-parties:pg
+      - name: Jornada EXT-03 (licitações) por HTTP real contra PostgreSQL real
+        run: npm run test:ext03-biddings:pg
