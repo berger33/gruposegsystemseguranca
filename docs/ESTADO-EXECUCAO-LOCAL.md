@@ -1,6 +1,31 @@
 # Estado da execução — entrega local integral
 
-## Estado vigente — aceite humano registrado; Windows ainda bloqueia o L07 (2026-10-02)
+## Estado vigente — L08/CLI-11 entregue com validação rápida (2026-10-03)
+
+Base oficial: `main` em `1024b3b` (merge da PR #90). Branch desta sessão:
+`arena/01a10049-gruposegsystemseguranca`. Continuidade retomada exatamente onde
+CLI-10 parou: a fatia promove **somente CLI-11** (satisfação pós-atendimento e
+periódica, plano de ação e risco de renovação baseado em fatos), com tela real
+`/cliente/app/satisfacao`, rota `/api/client/satisfaction-surveys` sob sessão de
+cliente e migração aditiva **142** (001–141 imutáveis; próxima livre: 143).
+
+Por decisão explícita do proprietário, **os testes pesados ficam para depois da
+entrega do sistema**: nesta sessão não foram executados gates L03..L08 em
+cascata, Chromium massivo nem PostgreSQL descartável em loop. Validação
+executada: `npm ci` OK, estático **5/5 (001–142)**, typecheck OK, `npm test`
+**205/205**, build OK com **83 páginas** e `tests/cli11-satisfaction-portal.test.mjs`
+**6/6**.
+
+Estado declarado: CLI-11 passa a `pronto_local` **apenas na validação automática
+rápida**; gate PostgreSQL/HTTP/Chromium, aceite humano e homologação Windows
+continuam pendentes. CLI-12..15, EXT-01..17 e os 80 órfãos de `/admin/ti`
+continuam não promovidos. Próximo passo real: CLI-12 (comunicação de renovação
+no portal, sem bloqueio indiscriminado por inadimplência) e, após a entrega, a
+bateria pesada completa. Relatório:
+[`ENTREGA-L08-RELATORIO-2026-10-03-CLI11-SATISFACAO.md`](ENTREGA-L08-RELATORIO-2026-10-03-CLI11-SATISFACAO.md).
+
+
+## Estado anterior — aceite humano registrado; Windows ainda bloqueia o L07 (2026-10-02)
 
 Base oficial `main` em `ad01d7d` (merge da PR #76); branch `arena/01a0fdbd-gruposegsystemseguranca`. Após apresentação da [`MATRIZ-FECHAMENTO-L07.md`](MATRIZ-FECHAMENTO-L07.md) seção por seção, o proprietário declarou em **02/10/2026** que **Marcelo e Andreia aceitaram integralmente FIN-01..16 e ADM-01..12**. Esse aceite humano não substitui nem se confunde com a implementação e a validação automática já registradas.
 

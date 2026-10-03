@@ -941,10 +941,10 @@ solicitação de serviço adicional gera oportunidade no CRM com origem e respon
 
 ## CLI-11
 satisfação pós-atendimento e periódica, plano de ação e risco de renovação baseado em fatos.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: APIs/tabelas 076 de pesquisas e planos; sem tela cliente.
-- Integração e evidência (teste, resultado, commit): Sem gate de pós-atendimento, plano e risco factual.
-- Pendência / fronteira externa / aceite humano: Órfão/não provado.
+- Estado: pronto_local (validação automática rápida; gate pesado e aceite humano pendentes)
+- Tela / API / dados / autorização: Tela `/cliente/app/satisfacao` e rota `/api/client/satisfaction-surveys` sob sessão de cliente (`cli-finance-api.mjs`). Fontes canônicas: `cli_satisfaction_surveys`, `cli_satisfaction_action_plans`, `client_tickets`, `cli_charges_v2` e `crm_companies`; migração aditiva 142. Anônimo 401, conta sem grant 403 auditado, pesquisa de outra identidade 403, segunda resposta 409, autoria derivada da sessão.
+- Integração e evidência (teste, resultado, commit): `tests/cli11-satisfaction-portal.test.mjs` 6/6; estático 5/5 (001–142); typecheck OK; `npm test` 205/205; build 83 páginas. Risco calculado só de contagens canônicas gravadas em `facts_json`; plano de ação só com responsável real do CRM; resposta, fatos, plano e auditoria na mesma transação com rollback/503. Relatório: [ENTREGA-L08-RELATORIO-2026-10-03-CLI11-SATISFACAO.md](ENTREGA-L08-RELATORIO-2026-10-03-CLI11-SATISFACAO.md).
+- Pendência / fronteira externa / aceite humano: gate `test:l08-delivery:pg` com HTTP/PostgreSQL/Chromium reais adiado junto da bateria pesada; migração 142 ainda não aplicada em ambiente de destino; pesquisas históricas sem destinatário não aparecem no portal; aceite humano e Windows pendentes.
 
 ## CLI-12
 renovação e comunicação contratual com registro, sem bloquear indiscriminadamente o portal por inadimplência.

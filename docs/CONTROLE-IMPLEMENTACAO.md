@@ -675,3 +675,14 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 - **Validação rápida:** `npm ci` OK; `node scripts/qa-wave0-static.mjs` 5/5 OK; `npm run typecheck` OK; `npm test` 196/196 OK; `npm run build` OK com 80 páginas. `next-env.d.ts` restaurado após build. Pós-PR, a falha dos gates `test:tenant:pg`/`test:l08-delivery:pg` foi corrigida preservando compatibilidade dos chamados com o schema legado L08 até migração 140; ambos passaram localmente (`test:tenant:pg` 22/22; `test:l08-delivery:pg` 51/51).
 - **Classificação:** implementação local + validação estática/unitária/build. Sem matriz pesada L03..L08 em cascata nesta fase por diretriz do proprietário.
 - **Não promovidos neste lote:** CLI-09..15, EXT-01..17, fornecedor restrito, integrações externas e homologação final Windows.
+
+## Promoção canônica CLI-11 — 03/10/2026
+
+- **Lote/base:** L08 pós-merge da PR #90, baseado na `main` oficial em `1024b3b555baff6d26cdda1643ca8103e51754ee`. Branch de trabalho: `arena/01a10049-gruposegsystemseguranca`.
+- **Mudança:** CLI-11 promovido sobre o espaço real do cliente: pesquisa de satisfação pós-atendimento/periódica endereçada à identidade autenticada, resposta idempotente com autoria derivada da sessão, risco de renovação classificado somente a partir de contagens canônicas e plano de ação aberto apenas com responsável comercial real do CRM.
+- **Migração:** `142-l08-cli11-satisfaction-portal.sql` aditiva; 001–141 permanecem imutáveis; próxima livre **143**. Migrador PG e `qa-wave0-static` atualizados para 001–142.
+- **API:** `/api/client/satisfaction-surveys` (GET/POST) sob sessão de cliente; rotas administrativas legadas de pesquisas e planos preservadas sem alteração de contrato.
+- **UI:** nova página `/cliente/app/satisfacao` com estados de carregamento, vazio, erro, retry e sucesso; navegação do portal atualizada; risco não sustentado por fatos é exibido como “não classificado”.
+- **Validação rápida:** `npm ci` OK; `node scripts/qa-wave0-static.mjs` 5/5 OK (001–142); `npm run typecheck` OK; `npm test` 205/205 OK; `npm run build` OK com 83 páginas; `tests/cli11-satisfaction-portal.test.mjs` 6/6.
+- **Classificação:** implementação local + validação estática/unitária/build. Testes pesados (gates L03..L08 em cascata, Chromium, PostgreSQL descartável) adiados por decisão do proprietário para depois da entrega do sistema.
+- **Não promovidos neste lote:** CLI-12..15, EXT-01..17, órfãos `/admin/ti`, fornecedor restrito, integrações externas e homologação final Windows.

@@ -2086,3 +2086,12 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 - **Validação:** estático 5/5 OK, typecheck OK (`tsc --noEmit`), unitários 196/196 OK, build 78 páginas OK (`next build` Turbopack).
 - **Classificação:** implementação local + validação estática/unitária/build. Aceite humano local de Marcelo e Andreia sobre L07 preservado; homologação Windows continua pendente e adiada até o fechamento integral.
 - **Não promovidos:** CLI-06..15, EXT-01..17, órfãos `/admin/ti`, fornecedor restrito e integrações externas. Próximo passo: PR contra main para revisão humana; sem merge automático.
+
+## CLI-11 satisfação no portal do cliente — 03/10/2026
+
+- **Lote/base:** L08 pós-merge da PR #90, baseado na `main` oficial em `1024b3b555baff6d26cdda1643ca8103e51754ee`. Branch de trabalho: `arena/01a10049-gruposegsystemseguranca`.
+- **Mudança:** jornada cliente `/cliente/app/satisfacao` e rota `/api/client/satisfaction-surveys`; resposta, fatos, plano de ação e auditoria canônica na mesma transação, com rollback e 503 em falha; nenhuma escrita em contratos, cobranças ou obrigações.
+- **Fonte/tabelas:** `cli_satisfaction_surveys`, `cli_satisfaction_action_plans`, `client_tickets`, `cli_charges_v2`, `crm_companies`, `client_access_grants` e `auth_access_audit`. Migração aditiva 142; 001–141 imutáveis; próxima livre 143.
+- **Validação:** `tests/cli11-satisfaction-portal.test.mjs` 6/6; estático 5/5 (001–142); typecheck OK; `npm test` 205/205; `npm run build` OK com 83 páginas.
+- **Limites:** gate `test:l08-delivery:pg` com HTTP/PostgreSQL/Chromium reais para CLI-11 não foi executado nesta sessão — bateria pesada adiada para depois da entrega; migração 142 não aplicada em ambiente operacional; pesquisas históricas sem destinatário permanecem fora do portal.
+- **Classificação:** implementação local + validação automática rápida. Sem novo aceite humano; homologação final Windows continua pendente e adiada até o fechamento integral.

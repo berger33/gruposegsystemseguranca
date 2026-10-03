@@ -1,14 +1,16 @@
 # Grupo SEG System
 
-## Continuação atual: L07 — consolidação financeira e Marcelo
+## Continuação atual: L08 — portal do cliente (CLI-11 entregue, CLI-12 é o próximo)
 
-Base de trabalho desta fatia: main `cc4da84`, migrações **001–137**. L04–L06 possuem entregas técnicas; **L07 permanece em execução** (FIN-09, FIN-10, FIN-11, FIN-12 e FIN-13 `pronto_local` na validação automática com aceite humano pendente; FIN-14/15/16 estão `pronto_local` com jornadas UI e aceite humano pendente; ADM-01..12 seguem `a_revalidar`).
+Base de trabalho desta fatia: `main` `1024b3b` (merge da PR #90), migrações **001–142** (próxima livre: 143).
 
-Em 2026-10-02 a fatia **FIN-10 — despesas, reembolsos e compras com alçada, evidência e segregação** foi entregue de forma aditiva, com a avaliação seletiva dos resíduos úteis das PRs abertas #47 (conciliação) e #53 (despesas/alçadas) — nenhuma mesclada, copiada ou fechada. Migração aditiva **136**: snapshot do limite da alçada aplicada na decisão e no histórico, `allow_self_approval` com segregação migrada do CHECK rígido para o gatilho governado pela política ativa, índice único parcial de duplicidade natural pendente, trava de exclusão de despesa e hardening FIN-05 (FKs de conciliação `RESTRICT` + exigência de movimento bancário e apenas uma conta). A política padrão continua **vazia** — ausência de alçada nunca aprova automaticamente; solicitante não decide a própria pendência salvo política explícita; autor real da decisão é derivado da sessão no servidor; a UI da aba em `/admin/financeiro` declara a política ausente/inativa, tem falha de leitura + Tentar novamente, busca, valores em R$ (`Intl.NumberFormat('pt-BR')`) e histórico expansível. Gate L07: **35/35 em duas execuções consecutivas sem skips**; migrações 136/136 em dois passes + clone/checksum negativo; unitários 196/196; typecheck, build e estático 5/5 verdes. **L07 não está concluído e L08 não foi iniciado.**
+Em 2026-10-03 foi entregue **CLI-11 — satisfação pós-atendimento e periódica, plano de ação e risco de renovação baseado em fatos**, de forma aditiva, na jornada autenticada do portal: tela real `/cliente/app/satisfacao`, rota `/api/client/satisfaction-surveys` sob sessão de cliente, resposta idempotente por identidade com autoria derivada da sessão, risco classificado **somente** a partir de contagens em registros canônicos (`client_tickets`, `cli_charges_v2` e respostas anteriores) gravadas em `facts_json` com fonte e data-base, e plano de ação aberto apenas quando existe responsável comercial real no CRM — sem responsável, a pendência é declarada em vez de inventar um nome. Resposta, fatos, plano e auditoria ocorrem na mesma transação, com rollback e 503 em falha; nada é escrito em contratos, cobranças ou obrigações. Migração aditiva **142**.
 
-Os PRs #47/#53/#59/#60/#62 continuam **abertos** como referência; o que foi aproveitado e o que foi descartado de cada um está registrado na consolidação.
+Validação desta fatia (rápida, por decisão do proprietário de que **os testes pesados ficam para depois da entrega do sistema**): estático 5/5 (001–142), typecheck OK, unitários **205/205**, build OK com 83 páginas e `tests/cli11-satisfaction-portal.test.mjs` 6/6. Gates L03..L08 em cascata, Chromium e PostgreSQL descartável **não** foram executados nesta sessão.
 
-Leia o [relatório da entrega FIN-10](docs/ENTREGA-L07-FIN10.md), a [consolidação e achados](docs/CONSOLIDACAO-L07-PRS-PENDENTES.md), o [estado atual](docs/ESTADO-EXECUCAO-LOCAL.md) e o [prompt da próxima fatia (ADM-01..12, painel Marcelo)](docs/PROMPT-PROXIMA-SESSAO-L07-ADM01-12.md). Não usar instruções históricas para repetir L04/L05/L06, reabrir FIN-13/FIN-10 ou a ligação FIN-12 → FIN-04 (concluída na migração 135), nem declarar L07 fechado.
+CLI-12..15, EXT-01..17 e os 80 órfãos de `/admin/ti` continuam não promovidos. L07 teve aceite humano de Marcelo e Andreia; a **homologação final Windows permanece pendente e adiada até o fechamento integral do sistema**.
+
+Leia o [relatório da entrega CLI-11](docs/ENTREGA-L08-RELATORIO-2026-10-03-CLI11-SATISFACAO.md), a [entrega L08 consolidada](docs/ENTREGA-L08.md), o [estado atual](docs/ESTADO-EXECUCAO-LOCAL.md) e o [checklist por requisito](docs/CHECKLIST-ENTREGA-LOCAL.md). Não repetir L04–L07 nem reabrir FIN/ADM já fechados.
 
 ## Demonstração local persistente — apenas massa fictícia
 
