@@ -2120,3 +2120,9 @@ modos da 076. A consulta do modo convite foi tornada compatível via
 `to_regclass`, sem deixar de aplicar o modo quando o catálogo existe. Reteste
 local `npm run test:l08-delivery:pg`: **51/51**. Classificação: regressão do
 fluxo canônico CLI-01..05 corrigida; não é gate pesado específico de CLI-13.
+
+O check remoto L07 da segunda rodada apresentou falha no passo Chromium/HTTP;
+como o log remoto não pôde ser recuperado pelo GitHub (endpoint devolveu EOF),
+o mesmo comando foi repetido integralmente, sem alterar timeout, skip ou
+assertivas: `npm run test:l07-delivery:pg` passou **43/43** com migrações
+001–144. Um novo ciclo de checks foi disparado para confirmação remota.
