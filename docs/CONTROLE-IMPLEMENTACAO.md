@@ -1,5 +1,14 @@
 # Controle de implementação — SEG System
 
+## Atualização 2026-10-03 — L08 CLI-09 leitura privada de cobranças
+
+- Base confirmada em `origin/main`/`HEAD`: `e7b18cd52a68286d08b79ee4a642443cc5426b7a`, contendo o merge da PR #88.
+- Entrega desta sessão: CLI-09 em fatia vertical de leitura no portal: `/api/client/charges-v2` com sessão cliente, grants ativos, conta própria e integração financeira ativa; tela `/cliente/app/cobrancas` com retry e documentos publicados.
+- Nenhuma migração nova; 001–140 permanecem imutáveis e a próxima livre é 141.
+- CLI-10..15 permanecem pendentes de promoção ao portal; criação/gestão administrativa existente não foi tratada como jornada cliente.
+- Homologação Windows não foi executada e permanece adiada ao fechamento integral.
+
+
 ## Atualização 2026-10-02 — aceite L07 registrado, fechamento bloqueado por Windows
 
 - Aceite humano declarado: Marcelo e Andreia aceitaram integralmente FIN-01..16 e ADM-01..12 em 02/10/2026. Os IDs continuam `pronto_local`; aceite não altera a distinção entre código, teste e homologação.

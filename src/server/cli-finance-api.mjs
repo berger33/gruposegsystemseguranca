@@ -25,6 +25,17 @@ export function createCliFinanceApi({ pool, auditLog, sameOrigin, requireSession
 
   // CLI-09 cobranças somente quando financeiro integrado dados própria conta
   async function handleChargesV2(req, res) {
+    // A leitura do portal usa a sessão de cliente, nunca a sessão administrativa.
+    // Mantém o endpoint de escrita e consulta global protegido pelo guard legado.
+    if (req.method === "GET" && req.url.startsWith("/api/client/")) {
+      const session = await requireSession(req);
+      if (!session || String(session.role || session.userRole || "").toLowerCase() !== "cliente") return json(res, 401, { error: "client_session_required" });
+      if (!sameOrigin(req)) return json(res, 403, { error: "origin_forbidden" });
+      const grants = await pool.query(`SELECT client_account_id FROM client_access_grants WHERE identity_id=$1 AND revoked_at IS NULL`, [session.identityId]);
+      const allowed = grants.rows.map(row => row.client_account_id);
+      const result = await pool.query(`SELECT id, protocol, client_account_id, contract_id, charge_type, status, amount_cents, due_date, is_fiscal, fiscal_document_url, fiscal_document_storage_key, comprovante_url, comprovante_storage_key FROM cli_charges_v2 WHERE finance_integration_active=true AND client_account_id = ANY($1::uuid[]) ORDER BY due_date DESC LIMIT 100`, [allowed]);
+      return json(res, 200, { charges: result.rows, note: "somente cobranças integradas da própria conta" });
+    }
     const session = await ensureAuth(req, res, ["admin","ti","financeiro","comercial"]);
     if (!session) return;
     const url = new URL(req.url, `http://${req.headers.host}`);
