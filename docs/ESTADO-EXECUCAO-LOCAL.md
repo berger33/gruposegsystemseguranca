@@ -1240,3 +1240,6 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 ## EXT-06 — satisfação/carteira (2026-10-03)
 
 Implementada na migração 152 sobre a fonte CLI-11, sem seed e sem copiar `ext_satisfaction_surveys`. Rotas reais: staff `/admin/satisfacao` + `/api/ext/satisfaction/*`; cliente `/cliente/app/satisfacao` + `/api/client/satisfaction-surveys`. Resposta imutável, regra de acompanhamento por pesquisa, responsável CRM fail-closed, evento/auditoria/idempotência na mesma transação e projeção cliente mínima. Validação dedicada: `test:ext06-satisfaction:pg` (PostgreSQL 17 descartável).
+
+## EXT-07 (2026-10-03)
+A base da sessão é o merge da PR #101 (`efc74bacb7a23314db1d267d91438519dc342a8c`), sem divergência inicial. A implementação aditiva 153 preserva linhas 086 como `registro_legado`; a comprovação documental é referência privada declarada, sem bytes/arquivo verificado. Gate dedicado EXT-07 foi criado; validação PostgreSQL completa e aplicação em destino permanecem pendentes quando o ambiente não fornece o cluster descartável.

@@ -162,13 +162,14 @@ const files = [
   '149-ext03-biddings-canonical-journey.sql',
   '150-ext04-supplier-journey.sql',
   '151-ext05-quality-journey.sql',
-  '152-ext06-satisfaction-journey.sql'
+  '152-ext06-satisfaction-journey.sql',
+  '153-ext07-compliance-journey.sql'
 ];
 
 async function main() {
   const actual = (await readdir(dir)).filter(f => /^\d{3}-.*\.sql$/.test(f)).sort();
-  if (files.length !== 152 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
-    throw new Error('migration_manifest_mismatch: compare 001–152 with db/migrations before connecting');
+  if (files.length !== 153 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
+    throw new Error('migration_manifest_mismatch: compare 001–153 with db/migrations before connecting');
   }
   const urlText = process.env.DATABASE_MIGRATION_URL || process.env.DATABASE_URL;
   if (!urlText) throw new Error('DATABASE_MIGRATION_URL or DATABASE_URL is required');
@@ -216,7 +217,7 @@ async function main() {
         throw error;
       }
     }
-    console.log('Migration ledger verified: 001–152 (PostgreSQL only)');
+    console.log('Migration ledger verified: 001–153 (PostgreSQL only)');
   } finally {
     client?.release();
     await pool.end();

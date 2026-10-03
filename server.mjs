@@ -106,6 +106,7 @@ import { createExtSupplierApi } from "./src/server/ext-supplier-api.mjs";
 import { createExtQualityApi } from "./src/server/ext-quality-api.mjs";
 import { createExtSatisfactionApi } from "./src/server/ext-satisfaction-api.mjs";
 import { createExtAdvancedApi } from "./src/server/ext-advanced-api.mjs";
+import { createExtComplianceApi } from "./src/server/ext-compliance-api.mjs";
 import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
 import { createCommercialHistoryApi } from "./src/server/commercial-history-api.mjs";
 import { createPortfolioApi } from "./src/server/portfolio-api.mjs";
@@ -2283,6 +2284,8 @@ const extSatisfactionApi = createExtSatisfactionApi({
   requireClientSession: clientAccessApi.readClientSession,
 });
 
+const extComplianceApi = createExtComplianceApi({ pool: getPool(), sameOrigin, requireSession: readSession });
+
 const extAdvancedApi = createExtAdvancedApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -4244,8 +4247,15 @@ async function routeApi(req, res) {
   if (["/api/admin/hr/ext-satisfaction-surveys","/api/crm/hr/ext-satisfaction-surveys","/api/hr/ext-satisfaction-surveys","/api/ext/satisfaction-surveys"].includes(url.pathname)) {
     return extSatisfactionApi.handleLegacy(req,res);
   }
-  // EXT-07 compliance vencimento gera tarefa documento privado
-  if (url.pathname === "/api/admin/hr/ext-compliance-documents" || url.pathname === "/api/crm/hr/ext-compliance-documents" || url.pathname === "/api/hr/ext-compliance-documents" || url.pathname === "/api/ext/compliance-documents") {
+  // EXT-07 canônica: obrigações, referências privadas e tarefas de vencimento.
+  if (url.pathname.startsWith("/api/ext/compliance/")) return extComplianceApi.handle(req, res);
+  // Legado: leitura autorizada preserva items; escrita é aposentada após os guardas.
+  if (["/api/admin/hr/ext-compliance-documents","/api/crm/hr/ext-compliance-documents","/api/hr/ext-compliance-documents","/api/ext/compliance-documents"].includes(url.pathname)) {
+    const legacySession = await readSession(req);
+    if (!legacySession) return json(res,401,{error:"unauthorized"});
+    const legacyRole=String(legacySession.role||legacySession.userRole||"").toLowerCase();
+    if (!["admin","ti"].includes(legacyRole)) return json(res,403,{error:"forbidden"});
+    if (req.method !== "GET") { if (!sameOrigin(req)) return json(res,403,{error:"forbidden"}); return json(res,410,{error:"legacy_writer_retired",canonical:"/api/ext/compliance/*"}); }
     return extAdvancedApi.handleComplianceDocuments(req, res);
   }
   // EXT-08 base conhecimento procedimentos versionados busca acesso ciência usuário encontra apenas conteúdo de seu escopo

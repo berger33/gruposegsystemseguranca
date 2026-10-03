@@ -775,3 +775,6 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 | Transação/auditoria/idempotência | Implementado | gate PG/HTTP EXT-06 |
 | Legado | Somente leitura | `items`; writers 410 pós-guardas |
 | Aceite humano/destino/Windows | Pendente | fora desta implementação |
+
+## EXT-07 — Compliance (migração 153)
+A fonte canônica é `ext_compliance_documents`, endurecida aditivamente; registros 086 permanecem `registro_legado`. A obrigação aplicável vive em `ext_compliance_obligations` e a tarefa não reutiliza CRM/RH: `ext_compliance_tasks` impõe vínculo, regra, fatos, responsável e unicidade. Eventos e idempotência são transacionais com `audit_log`; falha de auditoria retorna 503 e faz rollback. Referência é privada e declarada, não arquivo verificado.

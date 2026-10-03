@@ -1,0 +1,23 @@
+name: EXT-07 compliance delivery
+ton:
+  pull_request:
+    paths: ['db/migrations/153-ext07-compliance-journey.sql','src/server/ext-compliance-api.mjs','src/app/admin/compliance/**','tests/ext07-*','scripts/qa-ext07-compliance-postgres.mjs']
+jobs:
+  ext07:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env: { POSTGRES_PASSWORD: postgres, POSTGRES_DB: seg_ext07 }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d seg_ext07" --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: node --test tests/ext07-compliance.test.mjs
+      - run: npm run test:ext07-compliance:pg
+        env: { EXT07_DATABASE_URL: postgres://postgres:postgres@localhost:5432/seg_ext07 }
