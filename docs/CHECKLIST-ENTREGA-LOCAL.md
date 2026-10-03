@@ -1,5 +1,9 @@
 # Checklist da entrega local — 222 requisitos
 
+## Atualização 2026-10-03 — EXT-01 frota entregue localmente (lote EXT iniciado)
+
+Primeira fatia do lote EXT sobre a base `3353b2f` (PR #95 MERGED): EXT-01 passou a `pronto_local` por validação automática rápida (jornada real `/admin/frota` + `/api/ext/fleet/*`, migração aditiva 147, teste dedicado 20/20, suíte 265/265, migrações 147/147). CLI-01..15 preservadas sem reabertura; EXT-02..17 e os órfãos de `/admin/ti` permanecem nos estados abaixo. Ver [`ENTREGA-EXT.md`](ENTREGA-EXT.md) e [`ENTREGA-RELATORIO-2026-10-03-EXT01-FROTA.md`](ENTREGA-RELATORIO-2026-10-03-EXT01-FROTA.md). Aceite humano e Windows seguem pendentes.
+
 ## Atualização 2026-10-02 — aceite L07 e auditoria L08 sem início
 
 Marcelo e Andreia aceitaram FIN-01..16 e ADM-01..12 integralmente em 02/10/2026. Windows não foi validado e nenhuma evidência foi apresentada; portanto L07 permanece em execução. Decisão dos 80 órfãos: promover por área somente com prova, sem ordem declarada. CLI-01..15 e EXT-01..17 abaixo foram auditados contra código real, mas mantêm seus estados: o L08 não foi iniciado e a existência de API/tabela/componente órfão não foi tratada como entrega. Matriz detalhada em [`AUDITORIA-TERRENO-L08.md`](AUDITORIA-TERRENO-L08.md).
@@ -1413,10 +1417,10 @@ documentação para manutenção por outro programador, configuração, migraç�
 
 ## EXT-01
 Frota Aceite: Veículo, responsável, abastecimento, manutenção, documentos e custo; se frota própria existir
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Handlers `/api/ext/*` para frota e custos; tabelas `ext_fleet_*`/085; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
-- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
-- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
+- Estado: pronto_local (validação automática rápida; bateria pesada específica, aceite humano e Windows pendentes)
+- Tela / API / dados / autorização: Tela real `/admin/frota` (FrotaWorkspace) e API canônica `/api/ext/fleet/*` (`src/server/ext-fleet-api.mjs`); tabelas `ext_fleet_*` da 085 + `ext_fleet_responsible_history`/`ext_fleet_maintenance_rules`/`ext_fleet_vehicle_events` da 147; papéis admin/marcelo/ti (anônimo 401, papel não autorizado 403); autoria da sessão, vínculo da URL, corpo forjado ignorado; same-origin + `Idempotency-Key` em toda mutação; transação única negócio+evento+`audit_log` com 503/rollback; histórico/custo somente canônico com fonte e data-base; alerta somente por regra explícita registrada; "se frota própria existir" declarado quando vazio; rotas legadas `/api/ext/fleet-*` com mutação 410.
+- Integração e evidência (teste, resultado, commit): `tests/ext01-fleet.test.mjs` 20/20 (em `test:unit`); `npm test` 265/265; estático 5/5 (001–147); build 86 páginas com `/admin/frota`; `test:migrations:pg` 147/147 ×2 com checksum negativo rejeitado; `test:l08-delivery:pg` 51/51 (aplica 001–147; não cobre a jornada EXT-01). Relatório `ENTREGA-RELATORIO-2026-10-03-EXT01-FROTA.md`.
+- Pendência / fronteira externa / aceite humano: Upload real de arquivo de documento fica fora desta fatia (metadados sintéticos declarados na tela). Bateria pesada HTTP/DB dedicada, aplicação em destino, aceite humano e homologação Windows pendentes. O órfão EXT de `/admin/ti` segue não promovido.
 
 ## EXT-02
 Terceiros Aceite: Cadastro, contrato, documentos, vencimentos, acesso temporário e avaliação

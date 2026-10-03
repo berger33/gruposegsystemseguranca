@@ -99,6 +99,7 @@ import { createAdmPanelApi } from "./src/server/adm-panel-api.mjs";
 import { createAstApi } from "./src/server/ast-api.mjs";
 import { createAstAdvancedApi } from "./src/server/ast-advanced-api.mjs";
 import { createExtApi } from "./src/server/ext-api.mjs";
+import { createExtFleetApi } from "./src/server/ext-fleet-api.mjs";
 import { createExtAdvancedApi } from "./src/server/ext-advanced-api.mjs";
 import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
 import { createCommercialHistoryApi } from "./src/server/commercial-history-api.mjs";
@@ -2242,6 +2243,15 @@ const extApi = createExtApi({
   },
 });
 
+// EXT-01 frota canônica: a auditoria NÃO usa o auditLog tolerante a falha do
+// restante do servidor — o módulo grava audit_log dentro da própria transação
+// e devolve 503 com rollback quando a auditoria está indisponível.
+const extFleetApi = createExtFleetApi({
+  pool: getPool(),
+  sameOrigin,
+  requireSession: readSession,
+});
+
 const extAdvancedApi = createExtAdvancedApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -4012,18 +4022,38 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/ast-cleaning-materials" || url.pathname === "/api/crm/hr/ast-cleaning-materials" || url.pathname === "/api/hr/ast-cleaning-materials" || url.pathname === "/api/ast/cleaning-materials") {
     return astAdvancedApi.handleCleaningMaterials(req, res);
   }
-  // EXT-01 frota própria existir histórico/custo por veículo alerta manutenção
+  // EXT-01 frota canônica (migração 147): histórico/custo por veículo e alerta
+  // de manutenção por regra explícita, com transação única e idempotência.
+  if (url.pathname === "/api/ext/fleet/vehicles") {
+    return extFleetApi.handleVehicles(req, res);
+  }
+  const fleetVehicleMatch = url.pathname.match(/^\/api\/ext\/fleet\/vehicles\/([0-9a-f-]{36})$/i);
+  if (fleetVehicleMatch) return extFleetApi.handleVehicleById(req, res, fleetVehicleMatch[1]);
+  const fleetResponsibleMatch = url.pathname.match(/^\/api\/ext\/fleet\/vehicles\/([0-9a-f-]{36})\/responsible$/i);
+  if (fleetResponsibleMatch) return extFleetApi.handleVehicleResponsible(req, res, fleetResponsibleMatch[1]);
+  const fleetFuelMatch = url.pathname.match(/^\/api\/ext\/fleet\/vehicles\/([0-9a-f-]{36})\/fuel-logs$/i);
+  if (fleetFuelMatch) return extFleetApi.handleVehicleFuelLogs(req, res, fleetFuelMatch[1]);
+  const fleetMaintenanceMatch = url.pathname.match(/^\/api\/ext\/fleet\/vehicles\/([0-9a-f-]{36})\/maintenance-logs$/i);
+  if (fleetMaintenanceMatch) return extFleetApi.handleVehicleMaintenanceLogs(req, res, fleetMaintenanceMatch[1]);
+  const fleetVehicleDocumentsMatch = url.pathname.match(/^\/api\/ext\/fleet\/vehicles\/([0-9a-f-]{36})\/documents$/i);
+  if (fleetVehicleDocumentsMatch) return extFleetApi.handleVehicleDocuments(req, res, fleetVehicleDocumentsMatch[1]);
+  const fleetRulesMatch = url.pathname.match(/^\/api\/ext\/fleet\/vehicles\/([0-9a-f-]{36})\/maintenance-rules$/i);
+  if (fleetRulesMatch) return extFleetApi.handleVehicleMaintenanceRules(req, res, fleetRulesMatch[1]);
+  const fleetDocumentMatch = url.pathname.match(/^\/api\/ext\/fleet\/documents\/([0-9a-f-]{36})$/i);
+  if (fleetDocumentMatch) return extFleetApi.handleDocumentById(req, res, fleetDocumentMatch[1]);
+  // Rotas legadas de frota: leitura pela mesma autorização; mutação aposentada
+  // (410) — a rota antiga não é atalho sem transação/idempotência.
   if (url.pathname === "/api/admin/hr/ext-fleet-vehicles" || url.pathname === "/api/crm/hr/ext-fleet-vehicles" || url.pathname === "/api/hr/ext-fleet-vehicles" || url.pathname === "/api/ext/fleet-vehicles") {
-    return extApi.handleFleetVehicles(req, res);
+    return extFleetApi.handleLegacyVehicles(req, res);
   }
   if (url.pathname === "/api/admin/hr/ext-fleet-fuel-logs" || url.pathname === "/api/crm/hr/ext-fleet-fuel-logs" || url.pathname === "/api/hr/ext-fleet-fuel-logs" || url.pathname === "/api/ext/fleet-fuel-logs") {
-    return extApi.handleFleetFuelLogs(req, res);
+    return extFleetApi.handleLegacyFuelLogs(req, res);
   }
   if (url.pathname === "/api/admin/hr/ext-fleet-maintenance-logs" || url.pathname === "/api/crm/hr/ext-fleet-maintenance-logs" || url.pathname === "/api/hr/ext-fleet-maintenance-logs" || url.pathname === "/api/ext/fleet-maintenance-logs") {
-    return extApi.handleFleetMaintenanceLogs(req, res);
+    return extFleetApi.handleLegacyMaintenanceLogs(req, res);
   }
   if (url.pathname === "/api/admin/hr/ext-fleet-documents" || url.pathname === "/api/crm/hr/ext-fleet-documents" || url.pathname === "/api/hr/ext-fleet-documents" || url.pathname === "/api/ext/fleet-documents") {
-    return extApi.handleFleetDocuments(req, res);
+    return extFleetApi.handleLegacyDocuments(req, res);
   }
   // EXT-02 terceiros acessam só OS/contrato autorizado perdem acesso ao término
   if (url.pathname === "/api/admin/hr/ext-third-parties" || url.pathname === "/api/crm/hr/ext-third-parties" || url.pathname === "/api/hr/ext-third-parties" || url.pathname === "/api/ext/third-parties") {
@@ -5540,6 +5570,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/crm/hr/ext-fleet-vehicles"
   || pathname === "/api/hr/ext-fleet-vehicles"
   || pathname === "/api/ext/fleet-vehicles"
+  || pathname.startsWith("/api/ext/fleet/")
   || pathname === "/api/admin/hr/ext-fleet-fuel-logs"
   || pathname === "/api/crm/hr/ext-fleet-fuel-logs"
   || pathname === "/api/hr/ext-fleet-fuel-logs"

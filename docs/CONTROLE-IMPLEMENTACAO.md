@@ -1,5 +1,14 @@
 # Controle de implementação — SEG System
 
+## Atualização 2026-10-03 — EXT-01 frota ligada ao backend canônico real
+
+- Sincronização: PR #95 confirmada como `MERGED` no merge commit `3353b2f013b7c51e74e50460ce62c1fa243c460f`; `origin/main` e a branch da sessão (`arena/01a1023b-gruposegsystemseguranca`) partiram desse mesmo SHA, divergência 0/0.
+- Entrega: EXT-01 — jornada staff real em `/admin/frota` e `/api/ext/fleet/*` (papéis admin/marcelo/ti; anônimo 401, papel não autorizado 403), com veículo, responsável (histórico imutável), abastecimento, manutenção, documentos (desativação declarada) e custo; histórico/custo por veículo somente de registros canônicos com fonte e data-base declaradas; alerta de manutenção derivado exclusivamente de regra explícita registrada; "se frota própria existir" declarado quando não há registro canônico.
+- Persistência: tabelas `ext_fleet_*` da 085 continuam a fonte canônica; a migração aditiva `147-ext01-fleet-canonical-journey.sql` acrescenta origem da jornada, `ext_fleet_responsible_history`, `ext_fleet_maintenance_rules`, `ext_fleet_vehicle_events` (ledger de idempotência por identidade staff) e triggers de imutabilidade; 001–146 não foram alteradas; próxima migração livre: 148. Guarda de manifesto (`migrate-site-visual.mjs`) e `latestMigration` (`qa-wave0-static.mjs`) atualizados juntos.
+- Segurança transacional: autoria derivada da sessão e vínculo derivado da URL (corpo forjado ignorado); same-origin + `Idempotency-Key` em toda mutação (replay sem duplicar; reuso divergente 409); negócio + evento + `audit_log` na mesma transação com 503/rollback em falha da auditoria; km não regride; datas futuras recusadas; rotas legadas `/api/ext/fleet-*` com mutação aposentada (410) e leitura sob a mesma autorização.
+- Validação rápida: teste focal EXT-01 20/20, Wave 0 estático 5/5 (001–147), typecheck OK, `npm test` 265/265, build 86 páginas (`/admin/frota`), `test:migrations:pg` 147/147 ×2, `test:l08-delivery:pg` 51/51 (não cobre a jornada EXT-01) e `test:demo-local:pg` OK.
+- EXT-02..17 não foram promovidos neste lote; CLI-01..15 preservadas sem reabertura; o componente órfão EXT de `/admin/ti` não foi contado como jornada. A homologação final Windows continua pendente e adiada até o fechamento integral do sistema.
+
 ## Atualização 2026-10-03 — L08 CLI-10 solicitação de serviço adicional
 
 - Sincronização: PR #89 confirmada como `MERGED` no merge commit `f67c5ffe5d5fe30825167b34c99b35733e3df6d9`; `origin/main` e a branch da sessão partiram desse mesmo SHA.

@@ -235,3 +235,14 @@ Jornada cliente real em `/cliente/app/reclamacoes-colaborador` e `/api/client/em
 A rota administrativa legada não é atalho: cookie de cliente não produz sessão staff (401), papéis staff não autorizados recebem 403 `forbidden_restricted_channel` em listagem/mensagens/evidências e o RH passou a ver somente a projeção mínima de reclamações efetivamente compartilhadas (detalhe não compartilhado responde 404). A UI tem carregamento, vazio, erro, retry e confirmação apenas após resposta real, preservando a chave de idempotência em falha de transporte.
 
 Validações: estático 5/5 (001–146), typecheck OK, `tests/cli15-employee-complaint.test.mjs` 15/15 (registrado em `test:unit`), `npm test` 245/245, build 85 páginas com a rota cliente listada e `npm run test:l08-delivery:pg` 51/51 (aplica 001–146; cobre CLI-01..05, não a jornada CLI-15 — não é apresentado como prova desta fatia). Bateria pesada específica, cascata completa, aplicação em destino, aceite humano e Windows permanecem pendentes; o aceite Marcelo/Andreia preservado é somente L07. EXT-01..17 e órfãos continuam não promovidos. Relatório: [CLI-15](ENTREGA-L08-RELATORIO-2026-10-03-CLI15-RECLAMACAO.md).
+
+## Continuação após CLI-15 — lote EXT iniciado em documento próprio
+
+Com CLI-01..15 entregues localmente, a fatia seguinte (EXT-01 frota,
+03/10/2026, base `3353b2f`/PR #95) inaugurou o lote EXT em
+[`ENTREGA-EXT.md`](ENTREGA-EXT.md), com relatório em
+[`ENTREGA-RELATORIO-2026-10-03-EXT01-FROTA.md`](ENTREGA-RELATORIO-2026-10-03-EXT01-FROTA.md).
+Nada do L08 foi reaberto: CLI-15 permanece como entregue (sessão de cliente
+canônica `auth_sessions`, tabelas da 093 estendidas pela 146 e envelope mínimo
+do RH em `cli_employee_complaint_hr_shares`); a migração 147 é aditiva e
+001–146 permanecem imutáveis.
