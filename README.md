@@ -1,14 +1,14 @@
 # Grupo SEG System
 
-## Continuação atual: L08 — CLI-13 entregue, CLI-14 é o próximo
+## Continuação atual: L08 — CLI-14 entregue localmente, CLI-15 é o próximo
 
-Base desta fatia: `main` `fa75e32` (merge da PR #92), migrações **001–144** (próxima livre: 145).
+Base confirmada: `main` `508daad55cf239113337b6ed7b33a04d356a66cc` (PR #93 MERGED), divergência inicial 0/0. Migrações **001–145**; próxima livre: 146.
 
-Em 2026-10-03 foi entregue **CLI-13 — modos convite, solicitação com aprovação e autocadastro configuráveis**. `/cliente/acesso` registra pedidos reais sempre pendentes após validar conta/documento no servidor; `/admin/portal/solicitacoes` configura os três modos e revisa pedidos com autoria, motivo, histórico e auditoria transacionais. Aprovação emite somente o convite canônico da 003; não cria identidade, sessão, grant ou contrato. Autocadastro nunca libera contratos sozinho (API 400 e CHECK da 076). Idempotência combina identidade pública, origem, chave e fingerprint do conteúdo.
+CLI-14 liga `/cliente/app/seguranca` ao backend canônico real: MFA TOTP opcional em `auth_mfa`, sessões em `auth_sessions` e troca de e-mail em `auth_email_change`, com auditoria transacional, reautenticação, tokens hash e URL manual local. As tabelas v2 não são fonte de autenticação. Migração 145 é aditiva.
 
-Validação rápida: estático 5/5 (001–144), typecheck OK, teste CLI-13 11/11, `npm test` **226/226** e build **84 páginas**. O gate PostgreSQL/HTTP/Chromium, a cascata L03..L08, aplicação da migração 144, aceite humano e Windows permanecem pendentes por decisão do proprietário.
+Validação desta fatia: `npm ci`, estático 5/5 (001–145), typecheck e teste dedicado CLI-14 4/4; bateria integral 230/230 e build 84 páginas. Gates pesados L03..L08, aplicação em destino, aceite humano e Windows permanecem pendentes.
 
-Próximo alvo: **CLI-14**, depois CLI-15. O aceite humano anterior de Marcelo e Andreia em L07 foi preservado; não houve aceite novo. Leia o [relatório CLI-13](docs/ENTREGA-L08-RELATORIO-2026-10-03-CLI13-ACESSO.md), a [entrega L08](docs/ENTREGA-L08.md) e o [estado atual](docs/ESTADO-EXECUCAO-LOCAL.md).
+Leia o [relatório CLI-14](docs/ENTREGA-L08-RELATORIO-2026-10-03-CLI14-SEGURANCA.md), a [entrega L08](docs/ENTREGA-L08.md) e o [estado atual](docs/ESTADO-EXECUCAO-LOCAL.md).
 
 ## Demonstração local persistente — apenas massa fictícia
 

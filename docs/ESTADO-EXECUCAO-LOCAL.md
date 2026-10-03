@@ -1,6 +1,13 @@
 # Estado da execução — entrega local integral
 
-## Estado vigente — L08/CLI-13 entregue com validação rápida (2026-10-03)
+## Estado vigente — L08/CLI-14 entregue com validação rápida (2026-10-03)
+
+Base oficial `main` `508daad55cf239113337b6ed7b33a04d356a66cc` (PR #93 MERGED), divergência inicial 0/0. Branch `arena/01a1008a-gruposegsystemseguranca`. CLI-14 promove segurança da conta no backend canônico: `auth_mfa`, `auth_sessions`, `auth_email_change`, `auth_identities` e `auth_access_audit`; tabelas v2 não são fonte de autenticação. Migração aditiva 145; 001–144 imutáveis; próxima livre 146.
+
+MFA TOTP cifrado, códigos de recuperação protegidos, reautenticação, sessões da própria identidade com revogação imediata e troca de e-mail com token hash de 24 horas, colisão protegida, revogação/rotação de sessões e auditoria transacional. Falha da auditoria retorna 503 e reverte. UI real em `/cliente/app/seguranca` cobre carregamento, erro/retry, MFA, sessões e troca sem sucesso prematuro.
+
+Validação rápida: `npm ci`, estático 5/5 (001–145), typecheck, teste dedicado CLI-14 4/4 e rotas 9/9. `npm test` integral 230/230 e build 84 páginas. Bateria pesada CLI-14, cascata L03..L08, aplicação em destino, aceite humano e Windows continuam pendentes. Aceite anterior de Marcelo e Andreia permanece somente no L07; não houve aceite novo. Próximo CLI-15. Relatório: [CLI-14](ENTREGA-L08-RELATORIO-2026-10-03-CLI14-SEGURANCA.md).
+
 
 Base oficial `fa75e32` (PR #92 MERGED, divergência inicial 0/0); branch
 `arena/01a10074-gruposegsystemseguranca`. CLI-13 promove a configuração real

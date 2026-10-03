@@ -962,10 +962,10 @@ modos convite, solicitação com aprovação e autocadastro configuráveis; vín
 
 ## CLI-14
 segurança da conta com MFA opcional, gestão de sessões e troca de e-mail concluída; fluxos ligados ao backend real.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: `/cliente/app/seguranca` opera MFA; APIs 005/097–099; gestão v2 em 076.
-- Integração e evidência (teste, resultado, commit): MFA/sessão legados têm testes; gestão completa v2 e escopo cliente não têm gate L08.
-- Pendência / fronteira externa / aceite humano: Parcial/legado; aceite pendente.
+- Estado: pronto_local (validação automática rápida; gate pesado e aceite humano pendentes)
+- Tela / API / dados / autorização: `/cliente/app/seguranca`; MFA em `auth_mfa`, sessões em `auth_sessions`, troca em `auth_email_change`; sessão cliente, same-origin e autoria derivada no servidor; migração aditiva 145.
+- Integração e evidência (teste, resultado, commit): `tests/cli14-account-security.test.mjs` 4/4 e rotas 9/9; estático 5/5 (001–145), typecheck OK. Integral/build a registrar após execução.
+- Pendência / fronteira externa / aceite humano: bateria pesada CLI-14, cascata L03..L08, aplicação destino, aceite e Windows pendentes; sem aceite humano novo.
 
 ## CLI-15
 reclamação sobre colaborador tratada em canal restrito, com compartilhamento mínimo com RH.
