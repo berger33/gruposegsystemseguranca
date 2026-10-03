@@ -30,6 +30,12 @@ A migração 093 criou as tabelas (`cli_employee_complaints`, mensagens, evidên
 - `npm test`: **245/245**.
 - `npm run build`: exit 0, **85 páginas**, rota `/cliente/app/reclamacoes-colaborador` listada.
 - `npm run test:l08-delivery:pg`: **51/51** em PostgreSQL descartável — aplica as migrações 001–146 (prova que a 146 aplica limpa) e preserva CLI-01..05; **este gate não cobre a jornada CLI-15 e não é apresentado como prova dela**.
+- `npm run test:migrations:pg`: **146/146** em PostgreSQL descartável, dois passes (replay integral "Already applied"), checksum negativo deliberado rejeitado e clone TEMPLATE preservado (532 tabelas).
+- `npm run test:demo-local:pg` (QA-HOM-008/009): passou com reinício persistente sintético, escopo A/B e cópia fria/restore isolados.
+
+### Correção pós-abertura da PR (mesma fatia)
+
+A primeira rodada de CI da PR #95 falhou nos workflows L04..L07 (passo "Migrations, replay and checksum") e no `static-and-smoke` (passo QA-HOM-008): a guarda de manifesto de `scripts/migrate-site-visual.mjs` ainda exigia exatamente 145 arquivos (e o log final dizia "001–145"), defasada após a adição da 146 — o mesmo tipo de defasagem já corrigido na fatia CLI-12 ("001–140"). A correção atualizou somente a guarda/log para 146; nenhuma migração foi alterada. Reprodução local antes da correção (`migration_manifest_mismatch`) e prova local depois: `test:migrations:pg` 146/146 e `test:demo-local:pg` OK, conforme acima. O gate L08 (`client-portal-postgres-browser`) já passava porque aplica as migrações lendo o diretório diretamente.
 
 O teste dedicado prova, no contrato implementado: sessão cliente obrigatória, same-origin, isolamento A≠B auditado em lista e detalhe, escopo por identidade+conta+origem, projeção sem campos internos, corpo forjado ignorado, transação única (negócio+histórico+envelope RH+auditoria), 400 sem `Idempotency-Key`, replay sem duplicação, 409 divergente, 503+rollback em falha da auditoria, e o fechamento do canal restrito na rota legada (401/403/projeção mínima RH/404). Sem skip, sem assert enfraquecido, sem timeout aumentado, sem dados reais e sem SMTP real.
 

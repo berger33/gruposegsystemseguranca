@@ -2146,7 +2146,11 @@ Provas executadas nesta sessão, em dados sintéticos e sem SMTP real:
 | `npm test` (teste novo registrado em `test:unit`) | 245/245 |
 | `npm run build` | exit 0; 85 páginas; `/cliente/app/reclamacoes-colaborador` listada |
 | `npm run test:l08-delivery:pg` | 51/51 em PostgreSQL descartável; aplica 001–146; cobre CLI-01..05, **não** a jornada CLI-15 |
+| `npm run test:migrations:pg` (após correção da guarda do migrador) | 146/146; dois passes com replay integral; checksum negativo deliberado rejeitado; clone TEMPLATE preservado (532 tabelas) |
+| `npm run test:demo-local:pg` (QA-HOM-008/009) | OK; reinício persistente sintético, escopo A/B e cópia fria/restore isolados |
 
 O teste dedicado prova no contrato implementado: sessão cliente obrigatória (401 sem ela), same-origin na mutação, isolamento A≠B com 403 genérico e `authorization_denied` auditado (lista e detalhe), escopo da listagem por identidade+conta+origem portal, projeção sem campos internos, corpo forjado ignorado (ID/protocolo/autoria derivados no servidor, `is_restricted`/`minimal_share` forçados), abertura+histórico+envelope mínimo de RH+auditoria entre `BEGIN` e `COMMIT`, 400 sem `Idempotency-Key`, replay idêntico sem duplicar, 409 em reuso divergente, 503 com `ROLLBACK` em falha da auditoria, e na rota legada: 401 sem sessão staff, 403 `forbidden_restricted_channel` para papéis não autorizados, RH restrito ao envelope mínimo de reclamações compartilhadas e 404 no detalhe não compartilhado.
+
+Correção na mesma fatia: a primeira rodada de CI da PR #95 falhou em L04..L07 e no QA-HOM-008 porque a guarda de manifesto de `scripts/migrate-site-visual.mjs` ainda exigia 145 arquivos; a guarda e o log foram atualizados para 146 (nenhuma migração alterada) e os gates acima foram reproduzidos/aprovados localmente.
 
 Fronteiras: isto é validação automática local (unitária + estática + build + gate legado); não é a bateria pesada HTTP/DB dedicada de CLI-15, não é aceite humano e não é homologação Windows. O aceite anterior de Marcelo e Andreia permanece restrito ao L07.
