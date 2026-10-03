@@ -1701,3 +1701,19 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 - [x] Tarefa canônica definida: `ext_compliance_tasks`, com unicidade por documento/período/regra.
 - [x] Critério estrutural: documento privado e avaliação temporal idempotente.
 - [ ] Gate PostgreSQL real e homologação permanecem pendentes até execução do ambiente dedicado.
+
+### EXT-07 — endurecimento da sessão 2026-10-03 (base: merge da PR #103)
+- [x] Roteador reconhece `/api/ext/compliance/*`; a jornada canônica deixou de responder `404`.
+- [x] Critério automatizado verificado por HTTP+SQL: vencimento gera tarefa e documento privado.
+- [x] Migração 154 aditiva; 001–153 intocadas; sem seed; `NOT VALID` onde necessário.
+- [x] Renovação é registro novo com histórico preservado, autor, carimbo e justificativa; sobrescrita destrutiva rejeitada.
+- [x] No máximo uma versão atual por obrigação, inclusive em cadeia; ciclo de substituição barrado pelo banco.
+- [x] Tarefa única por documento/período/regra, idempotente sob repetição e concorrência, fail-closed sem responsável ativo.
+- [x] `audit_log` indisponível devolve 503 e reverte negócio e evento.
+- [x] Projeção de listagem sem `storage_key`, sem URL privada e sem número documental completo; sem rota pública.
+- [x] Legado `/api/ext/compliance-documents` preservado: leitura, alias `items`, 401 anônimo, 403 papel sem permissão, same-origin antes do 410.
+- [x] EXT-08, EXT-09, EXT-11 e EXT-12 sem regressão no gate.
+- [x] Workflow `ext07-delivery.yml` com a chave `on:` corrigida (estava `ton:`, nunca executou).
+- [ ] Monitoramento contínuo por execução agendada — não implementado; avaliação é sob demanda.
+- [ ] Defeito PRÉ-EXISTENTE da EXT-10 (`/api/ext/continuity-plans` não responde) — registrado, fora do escopo da EXT-07, não corrigido.
+- [ ] Aceite humano — não realizado nem presumido.

@@ -778,3 +778,17 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 
 ## EXT-07 — Compliance (migração 153)
 A fonte canônica é `ext_compliance_documents`, endurecida aditivamente; registros 086 permanecem `registro_legado`. A obrigação aplicável vive em `ext_compliance_obligations` e a tarefa não reutiliza CRM/RH: `ext_compliance_tasks` impõe vínculo, regra, fatos, responsável e unicidade. Eventos e idempotência são transacionais com `audit_log`; falha de auditoria retorna 503 e faz rollback. Referência é privada e declarada, não arquivo verificado.
+
+## EXT-07 — endurecimento (migração 154)
+| Item | Estado | Prova |
+| --- | --- | --- |
+| Roteamento canônico `/api/ext/compliance/*` | Corrigido | `API_PATH_MATCH` em `server.mjs`; antes toda a jornada caía em `404` |
+| Validade (emissão, início, vencimento, regra) | Implementado | API + CHECK/trigger 154; relógio do cliente ignorado, data vem de `CURRENT_DATE` do servidor |
+| Tarefa de vencimento | Implementado | `ext_compliance_tasks`, mesma transação da avaliação, única por documento/período/regra, fail-closed sem responsável ativo |
+| Versionamento/renovação | Implementado | registro novo + `replacement_of` + supersessão formal; FK adiada evita colisão com o índice de versão atual |
+| Privacidade | Implementado | `is_private` estrutural, projeção sem `storage_key`, sem URL privada e sem número documental completo |
+| Transação/auditoria/idempotência | Implementado | `Idempotency-Key` obrigatório, replay sem duplicar, `409` em fingerprint divergente, `503` + rollback se `audit_log` falhar |
+| Legado | Preservado | `/api/ext/compliance-documents` mantém leitura, alias `items`, 401/403 antes do 410 e same-origin antes do 410 |
+| Gate dedicado | Probatório | `npm run test:ext07-compliance:pg`: PostgreSQL 17 descartável, HTTP real, 55 casos de integração, mínimo exigido 50 |
+| Monitoramento contínuo agendado | Pendente | avaliação é sob demanda; não há agendador implementado |
+| Aceite humano/destino | Pendente | não realizado nem presumido |

@@ -5770,6 +5770,10 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/ext/supplier/")
   || pathname.startsWith("/api/ext/quality/")
   || pathname.startsWith("/api/ext/satisfaction/")
+  // EXT-07: sem este prefixo a jornada canônica de compliance nunca chega ao
+  // handler e o Next devolve 404 para 401/403/201 — o estado reproduzido antes
+  // do endurecimento.
+  || pathname.startsWith("/api/ext/compliance/")
   || pathname === "/api/admin/hr/ext-bidding-documents"
   || pathname === "/api/crm/hr/ext-bidding-documents"
   || pathname === "/api/hr/ext-bidding-documents"

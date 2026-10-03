@@ -1,7 +1,171 @@
 #!/usr/bin/env node
-// Gate EXT-07: cluster PostgreSQL 17 descartável, migrações 001–153 e TAP sem skip.
-import EmbeddedPostgres from "embedded-postgres";
-import {randomBytes} from "node:crypto"; import {mkdtemp,rm} from "node:fs/promises"; import {tmpdir} from "node:os"; import path from "node:path"; import {spawn} from "node:child_process";
-if(process.env.DATABASE_URL||process.env.DATABASE_MIGRATION_URL)throw new Error("QA_PG_REFUSED: URLs herdadas recusadas");
-const root=path.resolve(import.meta.dirname,".."); const dir=await mkdtemp(path.join(tmpdir(),"seg-qa-ext07-pg-")); const port=5440+Math.floor(Math.random()*500); const password=randomBytes(24).toString("hex"); const db=new EmbeddedPostgres({databaseDir:path.join(dir,"data"),port,user:"seg_qa",password,persistent:false,postgresFlags:["-c","listen_addresses=127.0.0.1"],onLog:()=>{},onError:e=>console.error("QA_PG_ENGINE_ERROR",String(e).slice(0,300))});
-const run=(args,env)=>new Promise((resolve,reject)=>{const p=spawn(process.execPath,args,{cwd:root,env:{...process.env,...env},stdio:["ignore","pipe","pipe"]});let out="";p.stdout.on("data",x=>out+=x);p.stderr.on("data",x=>out+=x);p.on("error",reject);p.on("exit",code=>resolve({code,out}))});let exit=1;try{await db.initialise();await db.start();await db.createDatabase("seg_qa_ext07");const url=`postgresql://seg_qa:${password}@127.0.0.1:${port}/seg_qa_ext07`;const m=await run(["scripts/migrate-site-visual.mjs"],{DATABASE_MIGRATION_URL:url,DATABASE_URL:"",QA_MIGRATION_ONLY:"true"});if(m.code)throw Error(`migrations_failed: ${m.out.slice(-800)}`);const t=await run(["--test","--test-concurrency=1","tests/ext07-compliance.test.mjs"],{DATABASE_URL:"",DATABASE_MIGRATION_URL:""});process.stdout.write(t.out);if(t.code)throw Error("EXT07_TAP_FAILED");console.log("EXT07_GATE_SUMMARY: pass=4 fail=0 skipped=0 todo=0; migrations=153/153; cluster=temporary");exit=0}catch(e){console.error("EXT07_GATE_REJECTED",e.message)}finally{await db.stop().catch(()=>{});await rm(dir,{recursive:true,force:true}).catch(()=>{});console.log("QA_EXT07_PG_TEMP_CLEANED: true")}process.exit(exit);
+// EXT-07 — Gate da jornada de compliance corporativo em PostgreSQL REAL e
+// descartável. Sobe um cluster temporário, aplica as migrações 001–154,
+// executa o servidor HTTP de verdade e exercita a jornada por HTTP com sessão
+// staff real. Nunca toca em banco do operador.
+//
+// Este gate cobre a jornada EXT-07 (obrigação aplicável, referência documental
+// privada, validade, renovação versionada e tarefa de vencimento). Ele NÃO
+// substitui a bateria pesada nem o aceite humano, e NÃO confirma upload,
+// bytes, checksum, malware scan, armazenamento verificado ou download — nada
+// disso existe nesta entrega.
+//
+// O gate reprova (não pula) se o PostgreSQL não subir: CI verde sem banco real
+// não prova jornada nenhuma.
+
+import EmbeddedPostgres from 'embedded-postgres';
+import { spawn } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { createServer } from 'node:net';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
+if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.RUN_DATABASE_INTEGRATION_REMOTE === '1') {
+  console.error('QA_PG_REFUSED: limpe DATABASE_URL, DATABASE_MIGRATION_URL e RUN_DATABASE_INTEGRATION_REMOTE antes deste teste local.');
+  process.exit(2);
+}
+
+const root = path.resolve(import.meta.dirname, '..');
+
+async function freeLoopbackPort() {
+  return new Promise((resolve, reject) => {
+    const probe = createServer();
+    probe.once('error', reject);
+    probe.listen(0, '127.0.0.1', () => {
+      const { port } = probe.address();
+      probe.close(() => resolve(port));
+    });
+  });
+}
+
+function run(cmd, args, env) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, args, { cwd: root, env: { ...process.env, ...env }, stdio: 'inherit' });
+    child.once('error', reject);
+    child.once('exit', code => resolve(code ?? 1));
+  });
+}
+
+/** Igual a run(), mas devolve também a saída, para auditar o resumo TAP. */
+function runCapturing(cmd, args, env) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, args, { cwd: root, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
+    let output = '';
+    child.stdout.on('data', chunk => { output += chunk; process.stdout.write(chunk); });
+    child.stderr.on('data', chunk => { output += chunk; process.stderr.write(chunk); });
+    child.once('error', reject);
+    child.once('exit', code => resolve({ code: code ?? 1, output }));
+  });
+}
+
+// O gate só é verde se a suíte REALMENTE rodou contra o banco: nada de passar
+// por skip, e nada de passar com menos casos do que a jornada exige.
+const MINIMUM_CASES = 50;
+
+function auditTapSummary(output, label) {
+  const number = name => {
+    const found = output.match(new RegExp(`^# ${name} (\\d+)$`, 'm'));
+    return found ? Number(found[1]) : null;
+  };
+  const pass = number('pass');
+  const fail = number('fail');
+  const skipped = number('skipped');
+  const todo = number('todo');
+  const problems = [];
+  if (pass === null || fail === null) problems.push(`${label}: resumo TAP ausente — a suíte não chegou a rodar`);
+  if (fail) problems.push(`${label}: ${fail} caso(s) reprovado(s)`);
+  if (skipped) problems.push(`${label}: ${skipped} caso(s) pulado(s) — skip não é prova`);
+  if (todo) problems.push(`${label}: ${todo} caso(s) marcado(s) como todo`);
+  return { pass, fail, skipped, todo, problems };
+}
+
+const database = 'seg_qa_ext07';
+const port = await freeLoopbackPort();
+const directory = await mkdtemp(path.join(tmpdir(), 'seg-qa-ext07-pg-'));
+const password = randomBytes(24).toString('hex');
+const postgres = new EmbeddedPostgres({
+  databaseDir: path.join(directory, 'data'),
+  port, user: 'seg_qa', password, persistent: false,
+  postgresFlags: ['-c', 'listen_addresses=127.0.0.1'],
+  onLog: () => {},
+  onError: error => console.error('QA_PG_ENGINE_ERROR', String(error).replaceAll(password, '[redacted]').slice(0, 300)),
+});
+
+let result = 1;
+try {
+  await postgres.initialise();
+  await postgres.start();
+  await postgres.createDatabase(database);
+  const url = `postgresql://seg_qa:${password}@127.0.0.1:${port}/${database}`;
+  console.log(`QA_PG_READY: 127.0.0.1:${port}/${database}; cluster temporário exclusivo; segredo omitido.`);
+
+  const migrated = await run(process.execPath, ['scripts/migrate-site-visual.mjs'], {
+    DATABASE_MIGRATION_URL: url, DATABASE_URL: '', QA_MIGRATION_ONLY: 'true',
+  });
+  if (migrated !== 0) throw new Error(`migrations_failed_exit_${migrated}`);
+
+  // 1) Suíte focal: contrato do módulo e das migrações 153/154.
+  const focal = await runCapturing(process.execPath, ['--test', '--test-concurrency=1', 'tests/ext07-compliance.test.mjs'], {
+    DATABASE_URL: '', DATABASE_MIGRATION_URL: '', NEXT_TELEMETRY_DISABLED: '1',
+  });
+  const focalSummary = auditTapSummary(focal.output, 'focal');
+  console.log(`EXT07_FOCAL_TAP_SUMMARY: pass=${focalSummary.pass} fail=${focalSummary.fail} skipped=${focalSummary.skipped} todo=${focalSummary.todo}`);
+
+  // 2) Jornada por HTTP real contra o cluster descartável.
+  const executed = await runCapturing(process.execPath, ['--test', '--test-concurrency=1', 'tests/ext07-compliance.integration.test.mjs'], {
+    RUN_DATABASE_INTEGRATION: '1',
+    QA_EXT07_REQUIRE_DB: '1',
+    RUN_DATABASE_INTEGRATION_REMOTE: '',
+    DATABASE_URL: url,
+    DATABASE_MIGRATION_URL: '',
+    QA_PGLITE_ONLY: '',
+    ALLOW_REMOTE_MIGRATIONS: '',
+    OLLAMA_ENABLED: 'false',
+    MAIL_HOST: '',
+    NEXT_TELEMETRY_DISABLED: '1',
+  });
+  result = executed.code || focal.code;
+
+  const summary = auditTapSummary(executed.output, 'integração');
+  const problems = [...focalSummary.problems, ...summary.problems];
+  if (summary.pass !== null && summary.pass < MINIMUM_CASES) {
+    problems.push(`integração: apenas ${summary.pass} caso(s) aprovado(s); a jornada exige ao menos ${MINIMUM_CASES}`);
+  }
+  // Provas que o gate exige ver NOMEADAS na saída: sem elas, o número de casos
+  // não diz o que foi provado.
+  const requiredEvidence = [
+    'vencimento gera tarefa com regra, data-base e fatos',
+    'documento canônico é privado por estrutura',
+    'falha de audit_log faz rollback completo e devolve 503',
+    'concorrência real com a mesma chave cria um único registro',
+    'renovação cria nova versão e preserva o registro anterior',
+    'avaliação falha fechada quando o responsável deixa de ser staff ativo',
+    'não existe rota pública de compliance',
+    'tela /admin/compliance responde e declara as fronteiras',
+    'não regride EXT-08..12',
+    'escritor legado recebe 410 só depois dos guardas',
+  ];
+  for (const evidence of requiredEvidence) {
+    if (!executed.output.includes(evidence)) problems.push(`integração: prova ausente — "${evidence}"`);
+  }
+
+  console.log(`EXT07_TAP_SUMMARY: pass=${summary.pass} fail=${summary.fail} skipped=${summary.skipped} todo=${summary.todo} minimo_exigido=${MINIMUM_CASES}`);
+  if (problems.length) {
+    console.error(`EXT07_GATE_REJECTED: ${problems.join('; ')}`);
+    result = result || 1;
+  }
+  console.log(`EXT07_COMPLIANCE_TEST_EXIT: ${result}`);
+  if (result === 0) {
+    console.log('EXT07_GATE_SUMMARY: migrations=001-154; cluster=temporario; http=real; sessao=staff_real; dados=sinteticos_invalid');
+  }
+} catch (error) {
+  console.error('QA_PG_FAILED', String(error?.message || error).replaceAll(password, '[redacted]').slice(0, 500));
+  result = 1;
+} finally {
+  await postgres.stop().catch(() => {});
+  await rm(directory, { recursive: true, force: true }).catch(() => {});
+  console.log('QA_EXT07_PG_TEMP_CLEANED: true');
+}
+
+process.exit(result);

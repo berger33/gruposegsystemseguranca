@@ -189,3 +189,5 @@ A migração `152-ext06-satisfaction-journey.sql` promove a fonte funcional da C
 
 ### EXT-07 — Compliance corporativo
 A jornada canônica interna de compliance usa `/admin/compliance` e `/api/ext/compliance/*`. Obrigações são declaradas com fonte, aplicabilidade e responsável staff; referências documentais são privadas e não representam upload ou arquivo verificado. A avaliação temporal na data do servidor cria uma tarefa dedicada, idempotente, por documento/período/regra.
+
+O endurecimento da migração `154-ext07-compliance-hardening.sql` fechou o que a entrega anterior deixou declarado mas não executável: as rotas canônicas passaram a ser reconhecidas pelo roteador (`API_PATH_MATCH`), a renovação virou registro novo versionado com substituição formal do anterior, a tarefa de vencimento é criada na mesma transação da avaliação e falha fechada sem responsável ativo, e `audit_log` indisponível devolve `503` com rollback. Gate: `npm run test:ext07-compliance:pg` (PostgreSQL 17 descartável, HTTP real, sessão staff real). O monitoramento contínuo ainda depende de execução agendada: hoje a avaliação é sob demanda.
