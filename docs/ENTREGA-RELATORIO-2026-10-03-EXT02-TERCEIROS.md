@@ -91,6 +91,65 @@ Esse gate entrou na CI como `.github/workflows/ext02-delivery.yml` (migrações 
 
 A primeira execução do gate real reprovou 7 casos. Seis eram defeitos do próprio teste (leitura dupla do corpo da resposta, comparação de `Date` consigo mesma, filtro dependente da ordem dos testes) e foram corrigidos no teste. **Um era defeito do produto**: ao delegar a rota legada para o handler canônico, a resposta passou a sair em `third_parties` e a chave `items`, que a rota legada sempre usou, sumiu — quebrando em silêncio qualquer leitor legado. O handler passou a devolver o alias `items` **apenas** na rota legada (com `canonical` apontando a rota nova), e um teste unitário fixa as duas pontas do contrato: `items` presente no legado, ausente no canônico. Nenhum assert foi enfraquecido para fechar a conta.
 
+## Cascata de regressão em PostgreSQL descartável (16 gates)
+
+Executada **após** a PR #97 abrir verde, para responder a uma pergunta
+específica: a migração 148 e a jornada EXT-02 quebraram alguma entrega
+anterior? Os 16 gates do repositório foram rodados em sequência, cada um com
+seu próprio cluster descartável.
+
+| Gate | Resultado | Observação |
+|---|---|---|
+| `test:migrations:pg` | PASS | 148/148, dois passes |
+| `test:staff-auth:pg` | PASS 21/21 | L01 |
+| `test:tenant:pg` | PASS 22/22 | |
+| `test:client-access:pg` | PASS 27/27 | |
+| `test:cli-v2:pg` | **FAIL 7/2** | **pré-existente — reproduzido idêntico na base `48aa7a4`** |
+| `test:backup-restore:pg` | **exit 2** | **recusa de ambiente: exige `pg_dump`/`pg_restore` 17; nenhum banco criado** |
+| `test:rag` | PASS | |
+| `test:l02-delivery:pg` | PASS 14/14 | |
+| `test:l03-delivery:pg` | PASS 1/1 | |
+| `test:l04-delivery:pg` | PASS 20/20 | |
+| `test:l05-delivery:pg` | PASS 1/1 | |
+| `test:l06-delivery:pg` | **FAIL 8/1 (intermitente)** | **flake de timing do Chromium, reproduzido na base** |
+| `test:l08-delivery:pg` | PASS 51/51 | |
+| `test:ext02-third-parties:pg` | PASS 22/22 | jornada desta fatia |
+| `test:demo-local:pg` | PASS | QA-HOM-008/009 |
+| `test:l07-delivery:pg` | PASS 43/43 | |
+
+**13 PASS, 3 não-PASS — nenhum deles causado por EXT-02**, e cada classificação
+foi provada, não suposta:
+
+- **`test:cli-v2:pg`** — falha determinística em `signed RH staff session cannot
+  read/list/write v2 documents via any alias`: `/api/client/charges-v2` devolve
+  `401 client_session_required` onde o teste espera `403`. Um clone do commit
+  base `48aa7a4` (sem a 148, sem `ext-third-party-api.mjs`) reproduz a **mesma**
+  assinatura — mesmo subteste, mesmo `401 !== 403`, mesmos 7 pass / 2 fail.
+  Pré-existente na `main`; **não foi tocado nesta fatia** para não reabrir CLI.
+- **`test:backup-restore:pg`** — não chegou a rodar: o script recusa o ambiente
+  (`QA_RESTORE_CLIENT_MISSING_OR_INCOMPATIBLE`, exige `pg_dump`/`pg_restore` 17,
+  ausentes nesta máquina) e declara que nenhum banco foi criado. Limitação de
+  ambiente, não resultado de teste — **não pode ser contado como verde nem como
+  vermelho de EXT-02**.
+- **`test:l06-delivery:pg`** — flake de timing do Chromium: a asserção
+  `product SKU rendered in table` encontra a tela ainda em `Carregando dados...`.
+  Repetido **integral**, sem mascarar e sem aumentar timeout: no branch, 1 PASS
+  e 1 FAIL em duas repetições; na base `48aa7a4`, 1 FAIL e 2 PASS em três. Flake
+  pré-existente nos dois lados.
+
+**Achado colateral para o proprietário:** seis gates não são executados por
+nenhum workflow — `test:cli-v2:pg`, `test:staff-auth:pg`, `test:client-access:pg`,
+`test:backup-restore:pg`, `test:l02-delivery:pg` e `test:l03-delivery:pg`. É por
+isso que a falha determinística do `cli-v2` convive com a `main` verde. Corrigir
+isso está **fora do escopo de EXT-02** e não foi feito aqui; fica registrado como
+decisão para o proprietário.
+
+Classificação honesta: isto é uma **cascata de regressão**, não a bateria pesada
+integral homologada — dois gates não produziram veredito verde nesta máquina
+(um por falha pré-existente, outro por ambiente) e o L06 é intermitente. O que
+está provado é que **EXT-02 não introduziu regressão** em nenhuma entrega
+anterior.
+
 ## Fronteiras e aceite
 
 Classificação: **implementação local + validação automática rápida + gate dedicado HTTP/DB da jornada EXT-02**. Isto **não** é a bateria pesada integral, **não** é aplicação em destino, **não** é aceite humano e **não** é homologação Windows — todos permanecem pendentes por decisão do proprietário. Nenhum aceite humano é inventado aqui: o aceite anterior de Marcelo e Andreia refere-se **somente ao L07** e não é renovado por esta fatia.
