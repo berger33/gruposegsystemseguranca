@@ -3674,7 +3674,7 @@ async function routeApi(req, res) {
     return cliFinanceApi.handleServiceRequests(req, res);
   }
   // CLI-11 satisfação pós-atendimento periódica plano ação risco renovação baseado em fatos
-  if (url.pathname === "/api/admin/hr/cli-satisfaction-surveys" || url.pathname === "/api/crm/hr/cli-satisfaction-surveys" || url.pathname === "/api/hr/cli-satisfaction-surveys" || url.pathname === "/api/cli/satisfaction-surveys") {
+  if (url.pathname === "/api/admin/hr/cli-satisfaction-surveys" || url.pathname === "/api/crm/hr/cli-satisfaction-surveys" || url.pathname === "/api/hr/cli-satisfaction-surveys" || url.pathname === "/api/cli/satisfaction-surveys" || url.pathname === "/api/client/satisfaction-surveys") {
     return cliFinanceApi.handleSatisfactionSurveys(req, res);
   }
   if (url.pathname === "/api/admin/hr/cli-satisfaction-action-plans" || url.pathname === "/api/crm/hr/cli-satisfaction-action-plans" || url.pathname === "/api/hr/cli-satisfaction-action-plans" || url.pathname === "/api/cli/satisfaction-action-plans") {
@@ -5170,6 +5170,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/crm/hr/cli-satisfaction-surveys"
   || pathname === "/api/hr/cli-satisfaction-surveys"
   || pathname === "/api/cli/satisfaction-surveys"
+  || pathname === "/api/client/satisfaction-surveys"
   || pathname === "/api/admin/hr/cli-satisfaction-action-plans"
   || pathname === "/api/crm/hr/cli-satisfaction-action-plans"
   || pathname === "/api/hr/cli-satisfaction-action-plans"

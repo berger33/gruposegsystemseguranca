@@ -325,8 +325,251 @@ export function createCliFinanceApi({ pool, auditLog, sameOrigin, requireSession
     return json(res, 405, { error: "method_not_allowed" });
   }
 
-  // CLI-11 satisfação pós-atendimento periódica plano ação risco renovação baseado em fatos
+  // CLI-11 satisfação pós-atendimento e periódica no portal do cliente.
+  // A resposta é idempotente por identidade, o plano de ação usa responsável
+  // real do CRM e o risco de renovação só é classificado a partir de fatos
+  // contados em registros canônicos. Nenhum número é estimado.
+  function classifyRenewalRisk(facts) {
+    if (facts.score === null) return null;
+    const aggravating = facts.open_tickets > 0 || facts.previous_low_scores > 0 || facts.overdue_charges > 0;
+    if (facts.score <= 6) return aggravating ? "alto" : "medio";
+    if (facts.score <= 8) return aggravating ? "medio" : null;
+    return aggravating ? "medio" : "baixo";
+  }
+
+  function renewalRiskReason(risk, facts) {
+    return [
+      `Classificação ${risk} derivada de fatos registrados em ${facts.as_of}:`,
+      `nota informada ${facts.score}`,
+      `chamados abertos ${facts.open_tickets}`,
+      `cobranças vencidas ${facts.overdue_charges}`,
+      `respostas anteriores com nota até 6: ${facts.previous_low_scores}`,
+    ].join(" ");
+  }
+
+  async function handleClientSatisfactionSurveys(req, res) {
+    const session = await requireClientSession?.(req);
+    if (!session?.identityId) return json(res, 401, { error: "client_session_required" });
+    if (!sameOrigin(req)) return json(res, 403, { error: "origin_forbidden" });
+    if (!["GET", "POST"].includes(req.method)) return json(res, 405, { error: "method_not_allowed" });
+
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    if (req.method === "GET") {
+      const accountId = String(url.searchParams.get("account") || "");
+      if (!UUID_PATTERN.test(accountId)) return json(res, 400, { error: "invalid_account_id" });
+      try {
+        const scoped = await pool.query(
+          `SELECT 1 FROM client_access_grants grant_row
+             JOIN client_accounts account ON account.id = grant_row.client_account_id
+            WHERE grant_row.identity_id=$1 AND grant_row.client_account_id=$2
+              AND grant_row.revoked_at IS NULL AND account.status='active'`,
+          [session.identityId, accountId],
+        );
+        if (!scoped.rows[0]) {
+          await pool.query(
+            `INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category)
+             VALUES ('client',$1,'satisfaction_survey_list',$2,'denied','authorization_denied')`,
+            [session.identityId, accountId],
+          );
+          return json(res, 403, { error: "forbidden" });
+        }
+        const result = await pool.query(
+          `SELECT id, protocol, client_account_id, contract_id, survey_type, status, score, feedback,
+                  renewal_risk, renewal_risk_reason, facts_json, action_plan_pending_reason,
+                  created_at, responded_at
+             FROM cli_satisfaction_surveys
+            WHERE client_account_id=$1 AND target_identity_id=$2
+            ORDER BY created_at DESC LIMIT 100`,
+          [accountId, session.identityId],
+        );
+        await pool.query(
+          `INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category)
+           VALUES ('client',$1,'satisfaction_survey_list',$2,'allowed','none')`,
+          [session.identityId, accountId],
+        );
+        return json(res, 200, {
+          surveys: result.rows,
+          note: "Somente pesquisas endereçadas a esta identidade na conta selecionada.",
+        });
+      } catch (error) {
+        console.error("CLI-11 client list failed", error instanceof Error ? error.message : error);
+        return json(res, 503, { error: "satisfaction_surveys_unavailable" });
+      }
+    }
+
+    let body;
+    try {
+      const chunks = [];
+      let size = 0;
+      for await (const chunk of req) {
+        size += chunk.length;
+        if (size > 32_768) return json(res, 413, { error: "body_too_large" });
+        chunks.push(chunk);
+      }
+      body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+    } catch {
+      return json(res, 400, { error: "invalid_request" });
+    }
+
+    const surveyId = String(body.survey_id || "");
+    const feedback = String(body.feedback || "").trim();
+    const key = String(req.headers["idempotency-key"] || "").trim();
+    const score = Number.isInteger(body.score) ? body.score : null;
+    if (!UUID_PATTERN.test(surveyId)) return json(res, 400, { error: "invalid_reference" });
+    if (!IDEMPOTENCY_KEY_PATTERN.test(key)) return json(res, 400, { error: "idempotency_key_required" });
+    if (score === null || score < 0 || score > 10) return json(res, 400, { error: "score_0_10" });
+    if (feedback.length < 10 || feedback.length > 2000) return json(res, 400, { error: "feedback_10_2000" });
+
+    const fingerprint = requestFingerprint({ surveyId, score, feedback });
+    let client;
+    try {
+      client = await pool.connect();
+      await client.query("BEGIN");
+
+      const replay = await client.query(
+        `SELECT * FROM cli_satisfaction_surveys WHERE responded_by_identity=$1 AND response_idempotency_key=$2 FOR UPDATE`,
+        [session.identityId, key],
+      );
+      if (replay.rows[0]) {
+        if (replay.rows[0].response_fingerprint !== fingerprint) {
+          await client.query("ROLLBACK");
+          return json(res, 409, { error: "idempotency_key_reused" });
+        }
+        await client.query("COMMIT");
+        return json(res, 200, { survey: replay.rows[0], replayed: true });
+      }
+
+      const scoped = await client.query(
+        `SELECT survey.id, survey.status, survey.client_account_id,
+                company.responsible_id, company.responsible_name
+           FROM cli_satisfaction_surveys survey
+           JOIN client_access_grants grant_row
+             ON grant_row.client_account_id = survey.client_account_id
+            AND grant_row.identity_id = $1
+            AND grant_row.revoked_at IS NULL
+           JOIN client_accounts account
+             ON account.id = survey.client_account_id AND account.status='active'
+           LEFT JOIN crm_companies company
+             ON company.id = account.crm_company_id AND company.status='active'
+          WHERE survey.id=$2 AND survey.target_identity_id=$1
+          FOR UPDATE OF survey`,
+        [session.identityId, surveyId],
+      );
+      const survey = scoped.rows[0];
+      if (!survey) {
+        await client.query(
+          `INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category)
+           VALUES ('client',$1,'satisfaction_survey_respond',$2,'denied','authorization_denied')`,
+          [session.identityId, surveyId],
+        );
+        await client.query("COMMIT");
+        return json(res, 403, { error: "forbidden" });
+      }
+      if (survey.status !== "pendente") {
+        await client.query("ROLLBACK");
+        return json(res, 409, { error: "survey_already_answered" });
+      }
+
+      // Fatos contados em registros canônicos. Falha de leitura aborta a
+      // transação; nenhuma contagem ausente vira zero.
+      const factsQuery = await client.query(
+        `SELECT
+           (SELECT COUNT(*) FROM client_tickets
+             WHERE client_account_id=$1 AND status IN ('open','in_progress')) AS open_tickets,
+           (SELECT COUNT(*) FROM cli_charges_v2
+             WHERE client_account_id=$1 AND status='vencido') AS overdue_charges,
+           (SELECT COUNT(*) FROM cli_satisfaction_surveys
+             WHERE client_account_id=$1 AND id<>$2 AND score IS NOT NULL AND score<=6) AS previous_low_scores`,
+        [survey.client_account_id, surveyId],
+      );
+      const counts = factsQuery.rows[0];
+      if (!counts) {
+        await client.query("ROLLBACK");
+        return json(res, 503, { error: "satisfaction_facts_unavailable" });
+      }
+      const facts = {
+        score,
+        open_tickets: Number(counts.open_tickets),
+        overdue_charges: Number(counts.overdue_charges),
+        previous_low_scores: Number(counts.previous_low_scores),
+        sources: ["client_tickets", "cli_charges_v2", "cli_satisfaction_surveys"],
+        as_of: new Date().toISOString(),
+      };
+      const risk = classifyRenewalRisk(facts);
+      const reason = risk ? renewalRiskReason(risk, facts) : null;
+
+      const needsActionPlan = score <= 6;
+      const hasResponsible = Boolean(survey.responsible_name);
+      const pendingReason = needsActionPlan && !hasResponsible
+        ? "Plano de ação pendente: a conta ainda não possui responsável comercial real cadastrado no CRM."
+        : null;
+      const nextStatus = needsActionPlan && hasResponsible ? "em_acao" : "respondida";
+
+      const updated = await client.query(
+        `UPDATE cli_satisfaction_surveys
+            SET score=$2, feedback=$3, status=$4, renewal_risk=$5, renewal_risk_reason=$6,
+                facts_json=$7::jsonb, action_plan_pending_reason=$8,
+                responded_by_identity=$9, response_idempotency_key=$10, response_fingerprint=$11,
+                responded_at=NOW(), updated_at=NOW()
+          WHERE id=$1 AND status='pendente'
+          RETURNING *`,
+        [surveyId, score, feedback, nextStatus, risk, reason, JSON.stringify(facts), pendingReason,
+          session.identityId, key, fingerprint],
+      );
+      if (!updated.rows[0]) {
+        await client.query("ROLLBACK");
+        return json(res, 409, { error: "survey_already_answered" });
+      }
+
+      let actionPlan = null;
+      if (needsActionPlan && hasResponsible) {
+        const due = new Date();
+        due.setUTCDate(due.getUTCDate() + 7);
+        const plan = await client.query(
+          `INSERT INTO cli_satisfaction_action_plans
+             (id, survey_id, action, responsible_name, responsible_identity_id, due_date, status, origin, facts_json)
+           VALUES ($1,$2,$3,$4,$5,$6,'aberta','portal_cliente',$7::jsonb)
+           RETURNING *`,
+          [randomUUID(), surveyId,
+            `Tratar insatisfação registrada na pesquisa ${survey.id}: contatar o cliente e endereçar os fatos apurados.`,
+            survey.responsible_name, survey.responsible_id || null,
+            due.toISOString().slice(0, 10), JSON.stringify(facts)],
+        );
+        actionPlan = plan.rows[0];
+      }
+
+      await client.query(
+        `INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category)
+         VALUES ('client',$1,'satisfaction_survey_respond',$2,'allowed','none')`,
+        [session.identityId, surveyId],
+      );
+      await client.query("COMMIT");
+      return json(res, 200, {
+        survey: updated.rows[0],
+        actionPlan,
+        note: "Resposta registrada. O risco de renovação é calculado apenas a partir de registros existentes e não altera contrato, cobrança ou obrigação.",
+      });
+    } catch (error) {
+      await client?.query("ROLLBACK").catch(() => {});
+      if (error && typeof error === "object" && error.code === "23505") {
+        try {
+          const replay = await client.query(
+            `SELECT * FROM cli_satisfaction_surveys WHERE responded_by_identity=$1 AND response_idempotency_key=$2`,
+            [session.identityId, key],
+          );
+          if (replay.rows[0]?.response_fingerprint === fingerprint) return json(res, 200, { survey: replay.rows[0], replayed: true });
+          if (replay.rows[0]) return json(res, 409, { error: "idempotency_key_reused" });
+        } catch {}
+      }
+      console.error("CLI-11 client respond failed", error instanceof Error ? error.message : error);
+      return json(res, 503, { error: "satisfaction_survey_unavailable" });
+    } finally {
+      client?.release();
+    }
+  }
+
   async function handleSatisfactionSurveys(req, res) {
+    if (req.url.startsWith("/api/client/")) return handleClientSatisfactionSurveys(req, res);
     const session = await ensureAuth(req, res, ["admin","ti","comercial","rh"]);
     if (!session) return;
     const url = new URL(req.url, `http://${req.headers.host}`);

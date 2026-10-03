@@ -138,3 +138,33 @@ CLI-06..15, EXT-01..17 e componentes órfãos permanecem não promovidos.
 O aceite humano local de Marcelo e Andreia sobre L07 permanece preservado;
 a homologação final Windows continua pendente e adiada até o fechamento
 integral do sistema.
+
+## CLI-11 satisfação, plano de ação e risco de renovação — 03/10/2026
+
+Fatia partindo da `main` oficial em `1024b3b` (merge da PR #90). Promove somente
+**CLI-11** com jornada cliente real em `/cliente/app/satisfacao` e rota
+`/api/client/satisfaction-surveys` sob sessão de cliente: leitura restrita às
+pesquisas endereçadas à identidade autenticada, resposta idempotente por
+identidade, autoria derivada da sessão, segunda resposta recusada com 409.
+
+O risco de renovação é classificado apenas a partir de contagens canônicas
+(`client_tickets`, `cli_charges_v2`, respostas anteriores), gravadas em
+`facts_json` com fontes e data-base; quando os fatos não sustentam uma
+classificação, a tela declara “não classificado”. O plano de ação só nasce com
+responsável comercial real do CRM; sem ele, a pendência é registrada em
+`action_plan_pending_reason`, sem nome inventado. Resposta, fatos, plano e
+auditoria ocorrem na mesma transação, com rollback e 503 em falha; nada é
+escrito em contratos, cobranças ou obrigações.
+
+Migração aditiva única: `142-l08-cli11-satisfaction-portal.sql`; 001–141
+permanecem imutáveis e a próxima livre passa a ser 143. Validações rápidas:
+estático 5/5 (001–142), typecheck OK, `npm test` 205/205, build 83 páginas,
+`tests/cli11-satisfaction-portal.test.mjs` 6/6. Os gates pesados
+(L03..L08 em cascata, Chromium e PostgreSQL descartável) foram adiados por
+decisão do proprietário para depois da entrega do sistema.
+
+CLI-12..15, EXT-01..17 e os órfãos de `/admin/ti` continuam não promovidos. O
+aceite humano anterior de Marcelo e Andreia sobre L07 permanece preservado; não
+há novo aceite humano nesta fatia e a homologação final Windows continua
+pendente e adiada até o fechamento integral do sistema. Relatório:
+[`ENTREGA-L08-RELATORIO-2026-10-03-CLI11-SATISFACAO.md`](ENTREGA-L08-RELATORIO-2026-10-03-CLI11-SATISFACAO.md).
