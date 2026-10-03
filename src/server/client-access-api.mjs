@@ -45,6 +45,14 @@ function errorMessage(error) {
   return error instanceof Error ? error.message : "unknown";
 }
 
+class AuditUnavailableError extends Error {
+  constructor(cause) {
+    super("AUDIT_UNAVAILABLE", { cause });
+    this.name = "AuditUnavailableError";
+    this.code = "AUDIT_UNAVAILABLE";
+  }
+}
+
 async function audit(db, { actorKind, actorId = null, action, target = null, result, category = "none" }) {
   try {
     await db.query(
@@ -53,15 +61,17 @@ async function audit(db, { actorKind, actorId = null, action, target = null, res
     );
   } catch (error) {
     console.error("Could not record client access audit.", { action, message: errorMessage(error) });
+    throw new AuditUnavailableError(error);
   }
 }
 
 function databaseFailure(ctx, res, error, context) {
   const unconfigured = error instanceof Error && error.message === "DATABASE_NOT_CONFIGURED";
   const migrationMissing = error && typeof error === "object" && error.code === "42P01";
-  if (!unconfigured) console.error(context, errorMessage(error));
+  const auditUnavailable = error instanceof AuditUnavailableError || (error && typeof error === "object" && error.code === "AUDIT_UNAVAILABLE");
+  if (!unconfigured && !auditUnavailable) console.error(context, errorMessage(error));
   return ctx.json(res, 503, {
-    error: unconfigured ? "database_not_configured" : migrationMissing ? "migration_required" : "auth_unavailable",
+    error: auditUnavailable ? "audit_unavailable" : unconfigured ? "database_not_configured" : migrationMissing ? "migration_required" : "auth_unavailable",
   });
 }
 
@@ -175,6 +185,21 @@ export function createClientAccessApi(ctx) {
     }
   }
 
+  async function transaction(db, work) {
+    const client = await db.connect();
+    try {
+      await client.query("BEGIN");
+      const result = await work(client);
+      await client.query("COMMIT");
+      return result;
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async function recentEmailTokenTimestamps(db, email, kind) {
     const result = await db.query(
       `SELECT created_at FROM auth_email_tokens
@@ -222,16 +247,20 @@ export function createClientAccessApi(ctx) {
     }
     if (new Date(row.expires_at).getTime() <= Date.now()) return null;
     if (row.status === "suspended" || row.status === "disabled") {
-      await db
-        .query("UPDATE auth_sessions SET revoked_at = NOW(), revoke_reason = 'status_block' WHERE id = $1 AND revoked_at IS NULL", [row.session_id])
-        .catch(() => {});
-      await audit(db, {
-        actorKind: "system",
-        action: "session_revoke_all",
-        target: row.identity_id,
-        result: "allowed",
-        category: "authorization_denied",
-      });
+      try {
+        await transaction(db, async client => {
+          await client.query("UPDATE auth_sessions SET revoked_at = NOW(), revoke_reason = 'status_block' WHERE id = $1 AND revoked_at IS NULL", [row.session_id]);
+          await audit(client, {
+            actorKind: "system",
+            action: "session_revoke_all",
+            target: row.identity_id,
+            result: "allowed",
+            category: "authorization_denied",
+          });
+        });
+      } catch (error) {
+        console.error("Could not atomically revoke the blocked client session.", errorMessage(error));
+      }
       return null;
     }
     // A password-only session created while awaiting review is never promoted
@@ -306,49 +335,60 @@ export function createClientAccessApi(ctx) {
     const passwordMatches = await verifyPassword(password, hash);
     const valid = Boolean(record) && passwordMatches;
     if (!valid) {
-      await registerLoginFailure(db, email.value, originHash, record?.id || null);
+      try {
+        await registerLoginFailure(db, email.value, originHash, record?.id || null);
+      } catch (error) {
+        return databaseFailure(ctx, res, error, "Could not atomically record the denied login.");
+      }
       return ctx.json(res, 401, { error: "invalid_credentials" });
     }
-    if (record.status !== "active" || !['email_link', 'manual'].includes(record.verification_method)) {
-      await audit(db, { actorKind: "client", actorId: record.id, action: "login", target: record.id, result: "denied", category: "authorization_denied" });
-      return ctx.json(res, record.status === 'pending_email' || record.status === 'active' ? 403 : 401,
-        { error: record.status === 'pending_email' || record.status === 'active' ? 'verification_required' : 'invalid_credentials' });
+    if (record.status !== "active" || !["email_link", "manual"].includes(record.verification_method)) {
+      try {
+        await audit(db, { actorKind: "client", actorId: record.id, action: "login", target: record.id, result: "denied", category: "authorization_denied" });
+      } catch (error) {
+        return databaseFailure(ctx, res, error, "Could not record the denied login.");
+      }
+      return ctx.json(res, record.status === "pending_email" || record.status === "active" ? 403 : 401,
+        { error: record.status === "pending_email" || record.status === "active" ? "verification_required" : "invalid_credentials" });
     }
     // A valid password is not sufficient once MFA is active. A short-lived,
     // one-use challenge is NOT an authenticated session/cookie.
     if (record.mfa_active) {
       try {
         decryptMfaSecret(record.mfa_secret, record.id);
-        const challenge = generateToken();
-        await db.query("UPDATE auth_mfa_challenges SET used_at = NOW() WHERE identity_id = $1 AND used_at IS NULL", [record.id]);
-        await db.query(`INSERT INTO auth_mfa_challenges (id, identity_id, token_hash, expires_at)
-          VALUES ($1,$2,$3,NOW() + INTERVAL '5 minutes')`, [randomUUID(), record.id, hashToken(challenge)]);
-        await audit(db, { actorKind: 'client', actorId: record.id, action: 'mfa_challenge_issue', target: record.id, result: 'allowed' });
-        return ctx.json(res, 202, { mfaRequired: true, challenge });
       } catch {
         // Bad/missing key and legacy plaintext secrets must NEVER downgrade MFA.
-        return ctx.json(res, 503, { error: 'mfa_login_unavailable' });
+        return ctx.json(res, 503, { error: "mfa_login_unavailable" });
       }
-    }
-
-    try {
-      await db.query("DELETE FROM auth_login_throttle WHERE email = $1 AND origin_hash = $2", [email.value, originHash]);
-    } catch (error) {
-      console.error("Could not clear the login throttle.", errorMessage(error));
+      const challenge = generateToken();
+      try {
+        await transaction(db, async client => {
+          await client.query("UPDATE auth_mfa_challenges SET used_at = NOW() WHERE identity_id = $1 AND used_at IS NULL", [record.id]);
+          await client.query(`INSERT INTO auth_mfa_challenges (id, identity_id, token_hash, expires_at)
+            VALUES ($1,$2,$3,NOW() + INTERVAL '5 minutes')`, [randomUUID(), record.id, hashToken(challenge)]);
+          await audit(client, { actorKind: "client", actorId: record.id, action: "mfa_challenge_issue", target: record.id, result: "allowed" });
+        });
+        return ctx.json(res, 202, { mfaRequired: true, challenge });
+      } catch (error) {
+        return databaseFailure(ctx, res, error, "Could not atomically create the MFA challenge.");
+      }
     }
 
     const token = generateToken();
     const expiresAt = Date.now() + SESSION_TTL_MS;
     try {
-      await db.query(
-        `INSERT INTO auth_sessions (id, identity_id, token_hash, expires_at, ip_hash, user_agent)
-         VALUES ($1,$2,$3,$4,$5,$6)`,
-        [randomUUID(), record.id, hashToken(token), new Date(expiresAt), originHash, String(req.headers["user-agent"] || "").slice(0, 200)],
-      );
+      await transaction(db, async client => {
+        await client.query("DELETE FROM auth_login_throttle WHERE email = $1 AND origin_hash = $2", [email.value, originHash]);
+        await client.query(
+          `INSERT INTO auth_sessions (id, identity_id, token_hash, expires_at, ip_hash, user_agent)
+           VALUES ($1,$2,$3,$4,$5,$6)`,
+          [randomUUID(), record.id, hashToken(token), new Date(expiresAt), originHash, String(req.headers["user-agent"] || "").slice(0, 200)],
+        );
+        await audit(client, { actorKind: "client", actorId: record.id, action: "login", target: record.id, result: "allowed" });
+      });
     } catch (error) {
-      return databaseFailure(ctx, res, error, "Could not create the client session.");
+      return databaseFailure(ctx, res, error, "Could not atomically create the client session.");
     }
-    await audit(db, { actorKind: "client", actorId: record.id, action: "login", target: record.id, result: "allowed" });
     return ctx.json(res, 200, { ok: true, status: record.status,
       verificationMethod: record.verification_method, emailConfirmed: record.verification_method === 'email_link' }, {
       "Set-Cookie": clientCookie(req, token, Math.floor(SESSION_TTL_MS / 1000)),
@@ -403,20 +443,20 @@ export function createClientAccessApi(ctx) {
         }
       }
       if (!valid) {
-        await client.query('UPDATE auth_mfa_challenges SET attempts=attempts+1 WHERE id=$1', [entry.challenge_id]);
-        await client.query('COMMIT');
-        await registerLoginFailure(db, entry.email, originHash, entry.identity_id);
-        return ctx.json(res, 401, { error: 'mfa_code_invalid' });
+        await client.query("UPDATE auth_mfa_challenges SET attempts=attempts+1 WHERE id=$1", [entry.challenge_id]);
+        await writeLoginFailure(client, entry.email, originHash, entry.identity_id);
+        await client.query("COMMIT");
+        return ctx.json(res, 401, { error: "mfa_code_invalid" });
       }
       const token = generateToken();
       const expiresAt = Date.now() + SESSION_TTL_MS;
-      await client.query('UPDATE auth_mfa_challenges SET used_at=NOW() WHERE id=$1', [entry.challenge_id]);
+      await client.query("UPDATE auth_mfa_challenges SET used_at=NOW() WHERE id=$1", [entry.challenge_id]);
       await client.query(`INSERT INTO auth_sessions (id, identity_id, token_hash, expires_at, ip_hash, user_agent, mfa_verified_at)
         VALUES ($1,$2,$3,$4,$5,$6,NOW())`, [randomUUID(), entry.identity_id, hashToken(token), new Date(expiresAt), originHash,
-        String(req.headers['user-agent'] || '').slice(0, 200)]);
-      await client.query('DELETE FROM auth_login_throttle WHERE email=$1 AND origin_hash=$2', [entry.email, originHash]);
-      await client.query('COMMIT');
-      await audit(db, { actorKind: 'client', actorId: entry.identity_id, action: 'mfa_challenge_verify', target: entry.identity_id, result: 'allowed' });
+        String(req.headers["user-agent"] || "").slice(0, 200)]);
+      await client.query("DELETE FROM auth_login_throttle WHERE email=$1 AND origin_hash=$2", [entry.email, originHash]);
+      await audit(client, { actorKind: "client", actorId: entry.identity_id, action: "mfa_challenge_verify", target: entry.identity_id, result: "allowed" });
+      await client.query("COMMIT");
       return ctx.json(res, 200, { ok: true, status: entry.status,
         verificationMethod: entry.verification_method, emailConfirmed: entry.verification_method === 'email_link' },
         { 'Set-Cookie': clientCookie(req, token, Math.floor(SESSION_TTL_MS / 1000)) });
@@ -426,29 +466,25 @@ export function createClientAccessApi(ctx) {
     } finally { client?.release(); }
   }
 
-  async function registerLoginFailure(db, email, originHash, identityId) {
-    try {
-      const now = Date.now();
-      const existing = await db.query(
-        "SELECT failures, last_failure_at FROM auth_login_throttle WHERE email = $1 AND origin_hash = $2",
-        [email, originHash],
-      );
-      const row = existing.rows[0];
-      const lastAt = row?.last_failure_at ? new Date(row.last_failure_at).getTime() : 0;
-      const failures = row && !throttleShouldReset(lastAt, now) ? row.failures + 1 : 1;
-      const delaySeconds = loginThrottleDelaySeconds(failures);
-      const lockedUntil = delaySeconds > 0 ? new Date(now + delaySeconds * 1000) : null;
-      await db.query(
-        `INSERT INTO auth_login_throttle (email, origin_hash, failures, locked_until, last_failure_at, updated_at)
-         VALUES ($1,$2,$3,$4,NOW(),NOW())
-         ON CONFLICT (email, origin_hash)
-         DO UPDATE SET failures = $3, locked_until = $4, last_failure_at = NOW(), updated_at = NOW()`,
-        [email, originHash, failures, lockedUntil],
-      );
-    } catch (error) {
-      console.error("Could not register the login failure.", errorMessage(error));
-    }
-    await audit(db, {
+  async function writeLoginFailure(client, email, originHash, identityId) {
+    const now = Date.now();
+    const existing = await client.query(
+      "SELECT failures, last_failure_at FROM auth_login_throttle WHERE email = $1 AND origin_hash = $2 FOR UPDATE",
+      [email, originHash],
+    );
+    const row = existing.rows[0];
+    const lastAt = row?.last_failure_at ? new Date(row.last_failure_at).getTime() : 0;
+    const failures = row && !throttleShouldReset(lastAt, now) ? row.failures + 1 : 1;
+    const delaySeconds = loginThrottleDelaySeconds(failures);
+    const lockedUntil = delaySeconds > 0 ? new Date(now + delaySeconds * 1000) : null;
+    await client.query(
+      `INSERT INTO auth_login_throttle (email, origin_hash, failures, locked_until, last_failure_at, updated_at)
+       VALUES ($1,$2,$3,$4,NOW(),NOW())
+       ON CONFLICT (email, origin_hash)
+       DO UPDATE SET failures = $3, locked_until = $4, last_failure_at = NOW(), updated_at = NOW()`,
+      [email, originHash, failures, lockedUntil],
+    );
+    await audit(client, {
       actorKind: "client",
       actorId: identityId,
       action: "login",
@@ -458,20 +494,23 @@ export function createClientAccessApi(ctx) {
     });
   }
 
+  async function registerLoginFailure(db, email, originHash, identityId) {
+    await transaction(db, client => writeLoginFailure(client, email, originHash, identityId));
+  }
+
   async function handleLogout(req, res) {
     if (!requireMethod(req, res, ["POST"])) return;
     if (!requireSameOrigin(req, res)) return;
     const session = await readClientSession(req);
     if (session) {
-      let db;
       try {
-        db = ctx.getPool();
-        await db.query("UPDATE auth_sessions SET revoked_at = NOW(), revoke_reason = 'logout' WHERE id = $1", [session.sessionId]);
-        await audit(db, { actorKind: "client", actorId: session.identityId, action: "logout", target: session.sessionId, result: "allowed" });
+        const db = ctx.getPool();
+        await transaction(db, async client => {
+          await client.query("UPDATE auth_sessions SET revoked_at = NOW(), revoke_reason = 'logout' WHERE id = $1", [session.sessionId]);
+          await audit(client, { actorKind: "client", actorId: session.identityId, action: "logout", target: session.sessionId, result: "allowed" });
+        });
       } catch (error) {
-        if (!(error && typeof error === "object" && error.code === "42P01")) {
-          console.error("Could not close the client session.", errorMessage(error));
-        }
+        return databaseFailure(ctx, res, error, "Could not atomically close the client session.");
       }
     }
     return ctx.json(res, 200, { ok: true }, { "Set-Cookie": clientCookie(req, "", 0) });
@@ -568,6 +607,7 @@ export function createClientAccessApi(ctx) {
         "INSERT INTO auth_email_tokens (id, identity_id, kind, email, token_hash, expires_at) VALUES ($1,$2,'confirm_email',$3,$4,$5)",
         [randomUUID(), identityId, inviteEmail, hashToken(confirmToken), new Date(Date.now() + CONFIRM_EMAIL_TTL_MS)],
       );
+      await audit(client, { actorKind: "client", actorId: identityId, action: "invite_accept", target: identityId, result: "allowed" });
       await client.query("COMMIT");
     } catch (error) {
       if (client) await client.query("ROLLBACK").catch(() => {});
@@ -575,7 +615,6 @@ export function createClientAccessApi(ctx) {
     } finally {
       client?.release();
     }
-    await audit(db, { actorKind: "client", actorId: identityId, action: "invite_accept", target: identityId, result: "allowed" });
     const confirmUrl = `${ctx.baseUrl}/cliente/confirmar-email?token=${confirmToken}`;
     const emailStatus = await trySendAuthEmail({
       to: inviteEmail,
@@ -642,8 +681,8 @@ export function createClientAccessApi(ctx) {
         await client.query('ROLLBACK');
         return ctx.json(res, 400, { error: 'confirmation_link_invalid' });
       }
+      await audit(client, { actorKind: "client", actorId: row.identity_id, action: "email_confirm", target: row.identity_id, result: "allowed" });
       await client.query("COMMIT");
-      await audit(db, { actorKind: "client", actorId: row.identity_id, action: "email_confirm", target: row.identity_id, result: "allowed" });
       return ctx.json(res, 200, { ok: true });
     } catch (error) {
       if (client) await client.query("ROLLBACK").catch(() => {});
@@ -691,6 +730,7 @@ export function createClientAccessApi(ctx) {
               "INSERT INTO auth_email_tokens (id, identity_id, kind, email, token_hash, expires_at) VALUES ($1,$2,$3,$4,$5,$6)",
               [randomUUID(), identity.id, kind, email.value, hashToken(rawToken), new Date(Date.now() + ttlMs)],
             );
+            await audit(client, { actorKind: "client", actorId: identity.id, action: auditAction, target: identity.id, result: "allowed" });
             await client.query("COMMIT");
           } catch (error) {
             await client.query("ROLLBACK").catch(() => {});
@@ -698,7 +738,6 @@ export function createClientAccessApi(ctx) {
           } finally {
             client.release();
           }
-          await audit(db, { actorKind: "client", actorId: identity.id, action: auditAction, target: identity.id, result: "allowed" });
         }
       } catch (error) {
         return databaseFailure(ctx, res, error, "Could not prepare the client access link.");
@@ -794,9 +833,9 @@ export function createClientAccessApi(ctx) {
         [row.identity_id],
       );
       await client.query("UPDATE auth_sessions SET revoked_at = NOW(), revoke_reason = 'password_reset' WHERE identity_id = $1 AND revoked_at IS NULL", [row.identity_id]);
+      await audit(client, { actorKind: "client", actorId: row.identity_id, action: "password_reset_complete", target: row.identity_id, result: "allowed" });
+      await audit(client, { actorKind: "client", actorId: row.identity_id, action: "session_revoke_all", target: row.identity_id, result: "allowed" });
       await client.query("COMMIT");
-      await audit(db, { actorKind: "client", actorId: row.identity_id, action: "password_reset_complete", target: row.identity_id, result: "allowed" });
-      await audit(db, { actorKind: "client", actorId: row.identity_id, action: "session_revoke_all", target: row.identity_id, result: "allowed" });
       return ctx.json(res, 200, { ok: true });
     } catch (error) {
       if (client) await client.query("ROLLBACK").catch(() => {});
@@ -810,6 +849,14 @@ export function createClientAccessApi(ctx) {
     const session = await ctx.readAdminSession(req);
     if (!session) {
       ctx.json(res, 401, { error: "admin_session_required" });
+      return null;
+    }
+    if (!["marcelo", "ti"].includes(session.role)) {
+      ctx.json(res, 403, { error: "forbidden" });
+      return null;
+    }
+    if (!session.identityId) {
+      ctx.json(res, 403, { error: "individual_staff_required" });
       return null;
     }
     return session;
@@ -878,15 +925,22 @@ export function createClientAccessApi(ctx) {
         return ctx.json(res, 429, { error: 'temporarily_limited' });
       }
       if (!await verifyPassword(body.password, verifier.staff.password_hash)) {
-        const failures = current && !throttleShouldReset(new Date(current.last_failure_at).getTime(), Date.now()) ? current.failures + 1 : 1;
-        const delay = loginThrottleDelaySeconds(failures);
-        await verifier.db.query(`INSERT INTO auth_login_throttle (email, origin_hash, failures, locked_until, last_failure_at)
-          VALUES ($1,$2,$3,$4,NOW()) ON CONFLICT (email,origin_hash) DO UPDATE SET
-          failures=$3, locked_until=$4, last_failure_at=NOW(), updated_at=NOW()`,
-          [verifier.staff.email, originHash, failures, delay ? new Date(Date.now() + delay * 1000) : null]);
-        await audit(verifier.db, { actorKind: 'staff', actorId: verifier.staff.id, action: 'account_status',
-          target: identityId, result: 'denied', category: 'invalid_credentials' });
-        return ctx.json(res, 403, { error: 'invalid_credentials' });
+        await transaction(verifier.db, async client => {
+          const locked = await client.query(
+            "SELECT failures, last_failure_at FROM auth_login_throttle WHERE email=$1 AND origin_hash=$2 FOR UPDATE",
+            [verifier.staff.email, originHash],
+          );
+          const latest = locked.rows[0];
+          const failures = latest && !throttleShouldReset(new Date(latest.last_failure_at).getTime(), Date.now()) ? latest.failures + 1 : 1;
+          const delay = loginThrottleDelaySeconds(failures);
+          await client.query(`INSERT INTO auth_login_throttle (email, origin_hash, failures, locked_until, last_failure_at)
+            VALUES ($1,$2,$3,$4,NOW()) ON CONFLICT (email,origin_hash) DO UPDATE SET
+            failures=$3, locked_until=$4, last_failure_at=NOW(), updated_at=NOW()`,
+            [verifier.staff.email, originHash, failures, delay ? new Date(Date.now() + delay * 1000) : null]);
+          await audit(client, { actorKind: "staff", actorId: verifier.staff.id, action: "account_status",
+            target: identityId, result: "denied", category: "invalid_credentials" });
+        });
+        return ctx.json(res, 403, { error: "invalid_credentials" });
       }
     } catch (error) { return databaseFailure(ctx, res, error, 'Could not re-authenticate manual verifier.'); }
     let client;
@@ -913,8 +967,8 @@ export function createClientAccessApi(ctx) {
         WHERE identity_id=$1 AND kind='confirm_email' AND used_at IS NULL AND superseded_at IS NULL`, [identityId]);
       await client.query(`UPDATE auth_sessions SET revoked_at=NOW(), revoke_reason='status_block'
         WHERE identity_id=$1 AND revoked_at IS NULL`, [identityId]);
-      await client.query(`INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category)
-        VALUES ('staff',$1,'account_status',$2,'allowed','none')`, [verifier.staff.id, identityId]);
+      await audit(client, { actorKind: "staff", actorId: verifier.staff.id, action: "account_status",
+        target: identityId, result: "allowed" });
       await client.query('DELETE FROM auth_login_throttle WHERE email=$1 AND origin_hash=$2', [verifier.staff.email, originHash]);
       await client.query('COMMIT');
       return ctx.json(res, 200, { ok: true, verificationMethod: 'manual', emailConfirmed: false });
@@ -949,18 +1003,22 @@ export function createClientAccessApi(ctx) {
     const expiresAt = new Date(Date.now() + INVITE_TTL_MS);
     try {
       db = ctx.getPool();
-      const existing = await db.query("SELECT id FROM auth_identities WHERE kind = 'client' AND email = $1", [email.value]);
-      if (existing.rows[0]) {
-        await audit(db, { actorKind: session.role, action: "invite_issue", target: existing.rows[0].id, result: "denied", category: "transition_invalid" });
-        return ctx.json(res, 409, { error: "identity_exists" });
-      }
-      await db.query(
-        "INSERT INTO auth_invites (id, kind, email, token_hash, scope_note, issued_by, expires_at) VALUES ($1,'client',$2,$3,$4,$5,$6)",
-        [inviteId, email.value, hashToken(rawToken), scopeNote, session.role, expiresAt],
-      );
-      await audit(db, { actorKind: session.role, action: "invite_issue", target: inviteId, result: "allowed" });
+      const outcome = await transaction(db, async client => {
+        const existing = await client.query("SELECT id FROM auth_identities WHERE kind = 'client' AND email = $1 FOR SHARE", [email.value]);
+        if (existing.rows[0]) {
+          await audit(client, { actorKind: session.role, actorId: session.identityId, action: "invite_issue", target: existing.rows[0].id, result: "denied", category: "transition_invalid" });
+          return "identity_exists";
+        }
+        await client.query(
+          "INSERT INTO auth_invites (id, kind, email, token_hash, scope_note, issued_by, expires_at) VALUES ($1,'client',$2,$3,$4,$5,$6)",
+          [inviteId, email.value, hashToken(rawToken), scopeNote, session.role, expiresAt],
+        );
+        await audit(client, { actorKind: session.role, actorId: session.identityId, action: "invite_issue", target: inviteId, result: "allowed" });
+        return "created";
+      });
+      if (outcome === "identity_exists") return ctx.json(res, 409, { error: "identity_exists" });
     } catch (error) {
-      return databaseFailure(ctx, res, error, "Could not create the client invite.");
+      return databaseFailure(ctx, res, error, "Could not atomically create the client invite.");
     }
 
     const inviteUrl = `${ctx.baseUrl}/cliente/convite?token=${rawToken}`;
@@ -1055,6 +1113,7 @@ export function createClientAccessApi(ctx) {
         outcome = row.revoked_at ? "already_revoked" : "revoked";
         if (!row.revoked_at) {
           await client.query("UPDATE auth_invites SET revoked_at = NOW() WHERE id = $1", [inviteId]);
+          await audit(client, { actorKind: session.role, actorId: session.identityId, action: "invite_revoke", target: inviteId, result: "allowed" });
         }
         await client.query("COMMIT");
       } catch (error) {
@@ -1062,9 +1121,6 @@ export function createClientAccessApi(ctx) {
         throw error;
       } finally {
         client.release();
-      }
-      if (outcome === "revoked") {
-        await audit(db, { actorKind: session.role, action: "invite_revoke", target: inviteId, result: "allowed" });
       }
       return ctx.json(res, 200, { ok: true, outcome });
     } catch (error) {

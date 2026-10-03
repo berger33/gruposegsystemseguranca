@@ -11,8 +11,7 @@
 // - documentos vivem fora do banco, em armazenamento privado (ctx.docsDir); cada
 //   download revalida o vínculo e é auditado.
 
-import { createReadStream } from "node:fs";
-import { mkdir, stat, writeFile, readFile } from "node:fs/promises";
+import { mkdir, stat, writeFile, readFile, unlink } from "node:fs/promises";
 import { randomBytes, randomUUID, createHash } from "node:crypto";
 import path from "node:path";
 import {
@@ -33,9 +32,27 @@ import { PUBLIC_SERVICES } from "../lib/service-catalog.mjs";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const UPLOAD_BODY_LIMIT = 15 * 1024 * 1024;
 const STORAGE_KEY_PATTERN = /^[0-9a-f]{48}$/;
+const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,199}$/;
+
+class AuditUnavailableError extends Error {
+  constructor(cause) {
+    super("AUDIT_UNAVAILABLE", { cause });
+    this.name = "AuditUnavailableError";
+    this.code = "AUDIT_UNAVAILABLE";
+  }
+}
 
 function errorMessage(error) {
   return error instanceof Error ? error.message : "unknown";
+}
+
+function idempotencyKey(req) {
+  const value = String(req.headers["idempotency-key"] || "").trim();
+  return IDEMPOTENCY_KEY_PATTERN.test(value) ? value : null;
+}
+
+function fingerprint(value) {
+  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
 function isValidServiceName(value) {
@@ -46,8 +63,17 @@ export function createClientSpaceApi(ctx) {
   function databaseFailure(res, error, context) {
     const unconfigured = error instanceof Error && error.message === "DATABASE_NOT_CONFIGURED";
     const migrationMissing = error && typeof error === "object" && error.code === "42P01";
-    const generic = { error: unconfigured ? "database_not_configured" : migrationMissing ? "migration_required" : "client_space_unavailable" };
-    if (!unconfigured && !migrationMissing) console.error(context, errorMessage(error));
+    const auditUnavailable = error instanceof AuditUnavailableError || (error && typeof error === "object" && error.code === "AUDIT_UNAVAILABLE");
+    const generic = {
+      error: auditUnavailable
+        ? "audit_unavailable"
+        : unconfigured
+          ? "database_not_configured"
+          : migrationMissing
+            ? "migration_required"
+            : "client_space_unavailable",
+    };
+    if (!unconfigured && !migrationMissing && !auditUnavailable) console.error(context, errorMessage(error));
     return ctx.json(res, 503, generic);
   }
 
@@ -59,6 +85,36 @@ export function createClientSpaceApi(ctx) {
       );
     } catch (error) {
       console.error("Could not record client space audit.", { action, message: errorMessage(error) });
+      throw new AuditUnavailableError(error);
+    }
+  }
+
+  async function auditOr503(db, res, event) {
+    try {
+      await audit(db, event);
+      return true;
+    } catch (error) {
+      databaseFailure(res, error, "Could not record the mandatory client-space audit.");
+      return false;
+    }
+  }
+
+  async function rollback(client) {
+    if (client) await client.query("ROLLBACK").catch(() => {});
+  }
+
+  async function transaction(db, work) {
+    const client = await db.connect();
+    try {
+      await client.query("BEGIN");
+      const result = await work(client);
+      await client.query("COMMIT");
+      return result;
+    } catch (error) {
+      await rollback(client);
+      throw error;
+    } finally {
+      client.release();
     }
   }
 
@@ -91,8 +147,12 @@ export function createClientSpaceApi(ctx) {
     }
     // The legacy account/grant schema only accepts these two roles as actors.
     // In particular, a valid RH cookie must never expose client accounts.
-    if (!['marcelo', 'ti'].includes(session.role)) {
+    if (!["marcelo", "ti"].includes(session.role)) {
       ctx.json(res, 403, { error: "forbidden" });
+      return null;
+    }
+    if (!session.identityId) {
+      ctx.json(res, 403, { error: "individual_staff_required" });
       return null;
     }
     return session;
@@ -125,14 +185,14 @@ export function createClientSpaceApi(ctx) {
       return null;
     }
     if (!result.rows[0]) {
-      await audit(db, {
+      if (!await auditOr503(db, res, {
         actorKind: "client",
         actorId: session.identityId,
         action,
         target: accountId,
         result: "denied",
         category: "authorization_denied",
-      });
+      })) return null;
       ctx.json(res, 403, { error: "forbidden" });
       return null;
     }
@@ -159,7 +219,7 @@ export function createClientSpaceApi(ctx) {
       return null;
     }
     if (!unitGrant || !unitAllowed) {
-      await audit(db, { actorKind: "client", actorId: session.identityId, action, target: accountId, result: "denied", category: "authorization_denied" });
+      if (!await auditOr503(db, res, { actorKind: "client", actorId: session.identityId, action, target: accountId, result: "denied", category: "authorization_denied" })) return null;
       ctx.json(res, 403, { error: "forbidden" });
       return null;
     }
@@ -212,7 +272,7 @@ export function createClientSpaceApi(ctx) {
       // Sem linha = grant revogado entre verificações; modo inválido = dado
       // inconsistente. Nenhuma das situações pode virar consulta sem filtro.
       if (!g || !["all", "selected"].includes(g.contract_scope_mode)) {
-        await audit(db, { actorKind: "client", actorId: session.identityId, action: "contract_list", target: accountId, result: "denied", category: "authorization_denied" });
+        if (!await auditOr503(db, res, { actorKind: "client", actorId: session.identityId, action: "contract_list", target: accountId, result: "denied", category: "authorization_denied" })) return;
         return ctx.json(res, 403, { error: "forbidden" });
       }
       if (g.contract_scope_mode === "selected") {
@@ -271,38 +331,37 @@ export function createClientSpaceApi(ctx) {
     }
     const filePath = path.join(ctx.docsDir, document.storage_key);
     let fileStat;
+    let contents;
     try {
-      fileStat = await stat(filePath);
+      [fileStat, contents] = await Promise.all([stat(filePath), readFile(filePath)]);
     } catch {
       console.error("Document file missing on private storage.", { documentId: document.id });
       return ctx.json(res, 404, { error: "document_file_missing" });
     }
-    // L02 — conferência de integridade antes de entregar um byte. Um arquivo
-    // trocado ou truncado por fora do sistema não é servido silenciosamente.
+    // L02 — conferência de integridade antes de entregar um byte. O buffer
+    // validado é também o buffer servido, eliminando troca entre hash e stream.
     if (document.content_sha256) {
-      if (fileStat.size !== Number(document.size_bytes)) {
-        console.error("Document size mismatch on private storage.", { documentId: document.id });
-        await audit(ctx.getPool(), { ...auditContext, action: "document_download", target: document.id, result: "denied" });
-        return ctx.json(res, 409, { error: "document_integrity_failed" });
-      }
-      const actual = createHash("sha256").update(await readFile(filePath)).digest("hex");
-      if (actual !== document.content_sha256) {
-        console.error("Document hash mismatch on private storage.", { documentId: document.id });
-        await audit(ctx.getPool(), { ...auditContext, action: "document_download", target: document.id, result: "denied" });
+      const actual = createHash("sha256").update(contents).digest("hex");
+      if (fileStat.size !== Number(document.size_bytes) || actual !== document.content_sha256) {
+        console.error("Document integrity mismatch on private storage.", { documentId: document.id });
+        if (!await auditOr503(ctx.getPool(), res, { ...auditContext, action: "document_download", target: document.id, result: "denied" })) return;
         return ctx.json(res, 409, { error: "document_integrity_failed" });
       }
     }
+
+    // A auditoria obrigatória termina antes de qualquer header ou byte privado.
+    // Se ela falhar, auditOr503 emite somente o erro JSON 503.
+    if (!await auditOr503(ctx.getPool(), res, { ...auditContext, action: "document_download", target: document.id, result: "allowed" })) return;
+
     const safeName = document.original_filename.replace(/["\\]/g, "_") || "documento";
     res.writeHead(200, {
       "Content-Type": document.content_type,
-      "Content-Length": fileStat.size,
+      "Content-Length": contents.length,
       "Content-Disposition": `attachment; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(document.original_filename)}`,
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
     });
-    createReadStream(filePath).pipe(res);
-    const db = ctx.getPool();
-    await audit(db, { ...auditContext, action: "document_download", target: document.id, result: "allowed" });
+    res.end(contents);
   }
 
   async function handleClientDocumentDownload(req, res, documentId) {
@@ -350,20 +409,81 @@ export function createClientSpaceApi(ctx) {
       if (!UUID_PATTERN.test(accountId)) return ctx.json(res, 400, { error: "invalid_account_id" });
       const validated = validateTicketInput(body);
       if (validated.error) return ctx.json(res, 400, { error: validated.error });
+      const requestKey = idempotencyKey(req);
+      if (!requestKey) return ctx.json(res, 400, { error: "idempotency_key_required_or_invalid" });
+
       const db = ctx.getPool();
       if (!(await requireAccountScope(db, { req, res, session, accountId, action: "ticket_open" }))) return;
+      const requestFingerprint = fingerprint({ accountId, ...validated.value });
       const ticketId = randomUUID();
+      let client;
       try {
-        await db.query(
-          `INSERT INTO client_tickets (id, client_account_id, opened_by_identity, category, title, details)
-           VALUES ($1,$2,$3,$4,$5,$6)`,
-          [ticketId, accountId, session.identityId, validated.value.category, validated.value.title, validated.value.details],
+        client = await db.connect();
+        await client.query("BEGIN");
+        const stillAllowed = await client.query(
+          `SELECT g.id
+           FROM client_access_grants g
+           JOIN client_accounts a ON a.id = g.client_account_id
+           WHERE g.identity_id = $1 AND g.client_account_id = $2
+             AND g.revoked_at IS NULL AND a.status = 'active'
+           FOR SHARE OF g, a`,
+          [session.identityId, accountId],
         );
+        if (!stillAllowed.rows[0]) {
+          await client.query("ROLLBACK");
+          if (!await auditOr503(db, res, { actorKind: "client", actorId: session.identityId, action: "ticket_open", target: accountId, result: "denied", category: "authorization_denied" })) return;
+          return ctx.json(res, 403, { error: "forbidden" });
+        }
+
+        const prior = await client.query(
+          `SELECT id, status, request_fingerprint
+           FROM client_tickets
+           WHERE opened_by_identity = $1 AND idempotency_key = $2`,
+          [session.identityId, requestKey],
+        );
+        if (prior.rows[0]) {
+          await client.query("ROLLBACK");
+          if (prior.rows[0].request_fingerprint !== requestFingerprint) {
+            return ctx.json(res, 409, { error: "idempotency_conflict" });
+          }
+          return ctx.json(res, 200, { ok: true, ticketId: prior.rows[0].id, status: prior.rows[0].status, replayed: true });
+        }
+
+        await client.query(
+          `INSERT INTO client_tickets
+             (id, client_account_id, opened_by_identity, category, title, details, idempotency_key, request_fingerprint)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+          [ticketId, accountId, session.identityId, validated.value.category, validated.value.title, validated.value.details, requestKey, requestFingerprint],
+        );
+        await client.query(
+          `INSERT INTO client_ticket_status_audit
+             (ticket_id, previous_status, next_status, changed_by, changed_by_identity)
+           VALUES ($1,NULL,'open','client',$2)`,
+          [ticketId, session.identityId],
+        );
+        await audit(client, { actorKind: "client", actorId: session.identityId, action: "ticket_open", target: ticketId, result: "allowed" });
+        await client.query("COMMIT");
+        return ctx.json(res, 201, { ok: true, ticketId, status: "open", replayed: false });
       } catch (error) {
-        return databaseFailure(res, error, "Could not open the client ticket.");
+        await rollback(client);
+        if (error && typeof error === "object" && error.code === "23505") {
+          const prior = await db.query(
+            `SELECT id, status, request_fingerprint
+             FROM client_tickets
+             WHERE opened_by_identity = $1 AND idempotency_key = $2`,
+            [session.identityId, requestKey],
+          ).catch(() => ({ rows: [] }));
+          if (prior.rows[0]) {
+            if (prior.rows[0].request_fingerprint !== requestFingerprint) {
+              return ctx.json(res, 409, { error: "idempotency_conflict" });
+            }
+            return ctx.json(res, 200, { ok: true, ticketId: prior.rows[0].id, status: prior.rows[0].status, replayed: true });
+          }
+        }
+        return databaseFailure(res, error, "Could not atomically open the client ticket.");
+      } finally {
+        client?.release();
       }
-      await audit(db, { actorKind: "client", actorId: session.identityId, action: "ticket_open", target: ticketId, result: "allowed" });
-      return ctx.json(res, 201, { ticketId, status: "open" });
     }
     return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, POST" });
   }
@@ -423,15 +543,17 @@ export function createClientSpaceApi(ctx) {
       const accountId = randomUUID();
       const db = ctx.getPool();
       try {
-        await db.query(
-          "INSERT INTO client_accounts (id, display_name, document_ref, notes, created_by) VALUES ($1,$2,$3,$4,$5)",
-          [accountId, validated.value.displayName, validated.value.documentRef, validated.value.notes, session.role],
-        );
+        await transaction(db, async client => {
+          await client.query(
+            "INSERT INTO client_accounts (id, display_name, document_ref, notes, created_by) VALUES ($1,$2,$3,$4,$5)",
+            [accountId, validated.value.displayName, validated.value.documentRef, validated.value.notes, session.role],
+          );
+          await audit(client, { actorKind: session.role, actorId: session.identityId, action: "account_create", target: accountId, result: "allowed" });
+        });
+        return ctx.json(res, 201, { accountId, status: "active" });
       } catch (error) {
-        return databaseFailure(res, error, "Could not create the client account.");
+        return databaseFailure(res, error, "Could not atomically create the client account.");
       }
-      await audit(db, { actorKind: session.role, action: "account_create", target: accountId, result: "allowed" });
-      return ctx.json(res, 201, { accountId, status: "active" });
     }
     return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, POST" });
   }
@@ -447,15 +569,19 @@ export function createClientSpaceApi(ctx) {
     if (!isAccountStatus(body?.status)) return ctx.json(res, 400, { error: "account_status_invalid" });
     const db = ctx.getPool();
     try {
-      const updated = await db.query(
-        "UPDATE client_accounts SET status = $2, updated_at = NOW() WHERE id = $1 RETURNING status",
-        [accountId, body.status],
-      );
-      if (!updated.rows[0]) return ctx.json(res, 404, { error: "account_not_found" });
-      await audit(db, { actorKind: session.role, action: "account_status", target: accountId, result: "allowed" });
-      return ctx.json(res, 200, { accountId, status: updated.rows[0].status });
+      const updated = await transaction(db, async client => {
+        const result = await client.query(
+          "UPDATE client_accounts SET status = $2, updated_at = NOW() WHERE id = $1 RETURNING status",
+          [accountId, body.status],
+        );
+        if (!result.rows[0]) return null;
+        await audit(client, { actorKind: session.role, actorId: session.identityId, action: "account_status", target: accountId, result: "allowed" });
+        return result.rows[0];
+      });
+      if (!updated) return ctx.json(res, 404, { error: "account_not_found" });
+      return ctx.json(res, 200, { accountId, status: updated.status });
     } catch (error) {
-      return databaseFailure(res, error, "Could not update the client account status.");
+      return databaseFailure(res, error, "Could not atomically update the client account status.");
     }
   }
 
@@ -508,32 +634,37 @@ export function createClientSpaceApi(ctx) {
       const scopeNote = validateScopeNote(body?.scopeNote);
       if (scopeNote.error) return ctx.json(res, 400, { error: scopeNote.error });
       const db = ctx.getPool();
+      const grantId = randomUUID();
       try {
-        const identity = await db.query("SELECT id, status FROM auth_identities WHERE kind = 'client' AND id = $1", [identityId]);
-        if (!identity.rows[0]) return ctx.json(res, 404, { error: "identity_not_found" });
-        if (identity.rows[0].status === "disabled") {
-          await audit(db, { actorKind: session.role, action: "grant_issue", target: identityId, result: "denied", category: "authorization_denied" });
-          return ctx.json(res, 409, { error: "identity_disabled" });
-        }
-        const account = await db.query("SELECT id FROM client_accounts WHERE id = $1", [accountId]);
-        if (!account.rows[0]) return ctx.json(res, 404, { error: "account_not_found" });
-        const grantId = randomUUID();
-        try {
-          await db.query(
+        const outcome = await transaction(db, async client => {
+          const identity = await client.query(
+            "SELECT id, status FROM auth_identities WHERE kind = 'client' AND id = $1 FOR SHARE",
+            [identityId],
+          );
+          if (!identity.rows[0]) return "identity_not_found";
+          if (identity.rows[0].status === "disabled") {
+            await audit(client, { actorKind: session.role, actorId: session.identityId, action: "grant_issue", target: identityId, result: "denied", category: "authorization_denied" });
+            return "identity_disabled";
+          }
+          const account = await client.query("SELECT id FROM client_accounts WHERE id = $1 FOR SHARE", [accountId]);
+          if (!account.rows[0]) return "account_not_found";
+          await client.query(
             `INSERT INTO client_access_grants (id, identity_id, client_account_id, scope_note, reason, granted_by)
              VALUES ($1,$2,$3,$4,$5,$6)`,
             [grantId, identityId, accountId, scopeNote.value, reason.value, session.role],
           );
-        } catch (error) {
-          if (error && typeof error === "object" && error.code === "23505") {
-            return ctx.json(res, 409, { error: "grant_exists" });
-          }
-          throw error;
-        }
-        await audit(db, { actorKind: session.role, action: "grant_issue", target: grantId, result: "allowed" });
+          await audit(client, { actorKind: session.role, actorId: session.identityId, action: "grant_issue", target: grantId, result: "allowed" });
+          return "created";
+        });
+        if (outcome === "identity_not_found") return ctx.json(res, 404, { error: outcome });
+        if (outcome === "account_not_found") return ctx.json(res, 404, { error: outcome });
+        if (outcome === "identity_disabled") return ctx.json(res, 409, { error: outcome });
         return ctx.json(res, 201, { grantId });
       } catch (error) {
-        return databaseFailure(res, error, "Could not create the client access grant.");
+        if (error && typeof error === "object" && error.code === "23505") {
+          return ctx.json(res, 409, { error: "grant_exists" });
+        }
+        return databaseFailure(res, error, "Could not atomically create the client access grant.");
       }
     }
     return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, POST" });
@@ -555,20 +686,23 @@ export function createClientSpaceApi(ctx) {
     if (reason.error) return ctx.json(res, 400, { error: reason.error });
     const db = ctx.getPool();
     try {
-      const updated = await db.query(
-        `UPDATE client_access_grants SET revoked_at = NOW(), revoked_by = $2, revoke_reason = $3
-         WHERE id = $1 AND revoked_at IS NULL RETURNING id`,
-        [grantId, session.role, reason.value],
-      );
-      if (!updated.rows[0]) {
-        const existing = await db.query("SELECT revoked_at FROM client_access_grants WHERE id = $1", [grantId]);
-        if (!existing.rows[0]) return ctx.json(res, 404, { error: "grant_not_found" });
-        return ctx.json(res, 200, { ok: true, outcome: "already_revoked" });
-      }
-      await audit(db, { actorKind: session.role, action: "grant_revoke", target: grantId, result: "allowed" });
-      return ctx.json(res, 200, { ok: true, outcome: "revoked" });
+      const outcome = await transaction(db, async client => {
+        const updated = await client.query(
+          `UPDATE client_access_grants SET revoked_at = NOW(), revoked_by = $2, revoke_reason = $3
+           WHERE id = $1 AND revoked_at IS NULL RETURNING id`,
+          [grantId, session.role, reason.value],
+        );
+        if (!updated.rows[0]) {
+          const existing = await client.query("SELECT revoked_at FROM client_access_grants WHERE id = $1", [grantId]);
+          return existing.rows[0] ? "already_revoked" : "not_found";
+        }
+        await audit(client, { actorKind: session.role, actorId: session.identityId, action: "grant_revoke", target: grantId, result: "allowed" });
+        return "revoked";
+      });
+      if (outcome === "not_found") return ctx.json(res, 404, { error: "grant_not_found" });
+      return ctx.json(res, 200, { ok: true, outcome });
     } catch (error) {
-      return databaseFailure(res, error, "Could not revoke the client access grant.");
+      return databaseFailure(res, error, "Could not atomically revoke the client access grant.");
     }
   }
 
@@ -606,19 +740,23 @@ export function createClientSpaceApi(ctx) {
       if (validated.error) return ctx.json(res, 400, { error: validated.error });
       if (!isValidServiceName(validated.value.service)) return ctx.json(res, 400, { error: "contract_service_unknown" });
       const db = ctx.getPool();
+      const contractId = randomUUID();
       try {
-        const account = await db.query("SELECT id FROM client_accounts WHERE id = $1", [accountId]);
-        if (!account.rows[0]) return ctx.json(res, 404, { error: "account_not_found" });
-        const contractId = randomUUID();
-        await db.query(
-          `INSERT INTO client_contracts (id, client_account_id, title, service, status, starts_on, ends_on, summary, created_by)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-          [contractId, accountId, validated.value.title, validated.value.service, validated.value.status, validated.value.startsOn, validated.value.endsOn, validated.value.summary, session.role],
-        );
-        await audit(db, { actorKind: session.role, action: "contract_create", target: contractId, result: "allowed" });
+        const created = await transaction(db, async client => {
+          const account = await client.query("SELECT id FROM client_accounts WHERE id = $1 FOR SHARE", [accountId]);
+          if (!account.rows[0]) return false;
+          await client.query(
+            `INSERT INTO client_contracts (id, client_account_id, title, service, status, starts_on, ends_on, summary, created_by)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+            [contractId, accountId, validated.value.title, validated.value.service, validated.value.status, validated.value.startsOn, validated.value.endsOn, validated.value.summary, session.role],
+          );
+          await audit(client, { actorKind: session.role, actorId: session.identityId, action: "contract_create", target: contractId, result: "allowed" });
+          return true;
+        });
+        if (!created) return ctx.json(res, 404, { error: "account_not_found" });
         return ctx.json(res, 201, { contractId });
       } catch (error) {
-        return databaseFailure(res, error, "Could not create the client contract.");
+        return databaseFailure(res, error, "Could not atomically create the client contract.");
       }
     }
     return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, POST" });
@@ -635,15 +773,19 @@ export function createClientSpaceApi(ctx) {
     if (!isContractStatus(body?.status)) return ctx.json(res, 400, { error: "contract_status_invalid" });
     const db = ctx.getPool();
     try {
-      const updated = await db.query(
-        "UPDATE client_contracts SET status = $2, updated_at = NOW() WHERE id = $1 RETURNING status",
-        [contractId, body.status],
-      );
-      if (!updated.rows[0]) return ctx.json(res, 404, { error: "contract_not_found" });
-      await audit(db, { actorKind: session.role, action: "contract_status", target: contractId, result: "allowed" });
-      return ctx.json(res, 200, { contractId, status: updated.rows[0].status });
+      const updated = await transaction(db, async client => {
+        const result = await client.query(
+          "UPDATE client_contracts SET status = $2, updated_at = NOW() WHERE id = $1 RETURNING status",
+          [contractId, body.status],
+        );
+        if (!result.rows[0]) return null;
+        await audit(client, { actorKind: session.role, actorId: session.identityId, action: "contract_status", target: contractId, result: "allowed" });
+        return result.rows[0];
+      });
+      if (!updated) return ctx.json(res, 404, { error: "contract_not_found" });
+      return ctx.json(res, 200, { contractId, status: updated.status });
     } catch (error) {
-      return databaseFailure(res, error, "Could not update the contract status.");
+      return databaseFailure(res, error, "Could not atomically update the contract status.");
     }
   }
 
@@ -687,31 +829,97 @@ export function createClientSpaceApi(ctx) {
       const content = Buffer.from(base64, "base64");
       if (!content.length) return ctx.json(res, 400, { error: "document_empty" });
       if (content.length > MAX_DOCUMENT_BYTES) return ctx.json(res, 413, { error: "document_too_large" });
+      const requestKey = idempotencyKey(req);
+      if (!requestKey) return ctx.json(res, 400, { error: "idempotency_key_required_or_invalid" });
+      const contentSha256 = createHash("sha256").update(content).digest("hex");
+      const requestFingerprint = fingerprint({ accountId, ...meta.value, contentSha256 });
       const db = ctx.getPool();
+      const documentId = randomUUID();
+      let client;
+      let storedPath = null;
       try {
-        const account = await db.query("SELECT id FROM client_accounts WHERE id = $1", [accountId]);
-        if (!account.rows[0]) return ctx.json(res, 404, { error: "account_not_found" });
+        client = await db.connect();
+        await client.query("BEGIN");
+        const account = await client.query("SELECT id FROM client_accounts WHERE id = $1 FOR SHARE", [accountId]);
+        if (!account.rows[0]) {
+          await client.query("ROLLBACK");
+          return ctx.json(res, 404, { error: "account_not_found" });
+        }
+
+        const prior = await client.query(
+          `SELECT id, size_bytes, content_type, content_sha256, request_fingerprint
+           FROM client_documents
+           WHERE uploaded_by_identity = $1 AND idempotency_key = $2`,
+          [session.identityId, requestKey],
+        );
+        if (prior.rows[0]) {
+          await client.query("ROLLBACK");
+          if (prior.rows[0].request_fingerprint !== requestFingerprint) {
+            return ctx.json(res, 409, { error: "idempotency_conflict" });
+          }
+          return ctx.json(res, 200, {
+            ok: true,
+            documentId: prior.rows[0].id,
+            sizeBytes: Number(prior.rows[0].size_bytes),
+            contentType: prior.rows[0].content_type,
+            contentSha256: prior.rows[0].content_sha256,
+            replayed: true,
+          });
+        }
+
         await mkdir(ctx.docsDir, { recursive: true });
         const storageKey = randomBytes(24).toString("hex");
-        // L02: a chave é gerada pelo servidor (24 bytes aleatórios em hex) e
-        // nunca deriva do nome enviado pelo cliente — é o que torna o caminho
-        // imune a travessia. O hash é calculado sobre os bytes efetivamente
-        // gravados e conferido em toda leitura.
-        const contentSha256 = createHash("sha256").update(content).digest("hex");
-        await writeFile(path.join(ctx.docsDir, storageKey), content);
-        const documentId = randomUUID();
-        await db.query(
+        storedPath = path.join(ctx.docsDir, storageKey);
+        // A chave é gerada pelo servidor e nunca deriva do nome enviado. Se
+        // insert/auditoria/commit falhar, o catch remove este arquivo.
+        await writeFile(storedPath, content, { flag: "wx" });
+        await client.query(
           `INSERT INTO client_documents
              (id, client_account_id, title, category, original_filename, content_type, size_bytes,
-              storage_key, uploaded_by, uploaded_by_identity, content_sha256)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+              storage_key, uploaded_by, uploaded_by_identity, content_sha256, idempotency_key, request_fingerprint)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
           [documentId, accountId, meta.value.title, meta.value.category, meta.value.originalFilename,
-           meta.value.contentType, content.length, storageKey, session.role, session.identityId ?? null, contentSha256],
+           meta.value.contentType, content.length, storageKey, session.role, session.identityId,
+           contentSha256, requestKey, requestFingerprint],
         );
-        await audit(db, { actorKind: session.role, action: "document_upload", target: documentId, result: "allowed" });
-        return ctx.json(res, 201, { documentId, sizeBytes: content.length, contentType: meta.value.contentType, contentSha256 });
+        await audit(client, { actorKind: session.role, actorId: session.identityId, action: "document_upload", target: documentId, result: "allowed" });
+        await client.query("COMMIT");
+        storedPath = null;
+        return ctx.json(res, 201, {
+          ok: true,
+          documentId,
+          sizeBytes: content.length,
+          contentType: meta.value.contentType,
+          contentSha256,
+          replayed: false,
+        });
       } catch (error) {
-        return databaseFailure(res, error, "Could not store the client document.");
+        await rollback(client);
+        if (storedPath) await unlink(storedPath).catch(() => {});
+        if (error && typeof error === "object" && error.code === "23505") {
+          const prior = await db.query(
+            `SELECT id, size_bytes, content_type, content_sha256, request_fingerprint
+             FROM client_documents
+             WHERE uploaded_by_identity = $1 AND idempotency_key = $2`,
+            [session.identityId, requestKey],
+          ).catch(() => ({ rows: [] }));
+          if (prior.rows[0]) {
+            if (prior.rows[0].request_fingerprint !== requestFingerprint) {
+              return ctx.json(res, 409, { error: "idempotency_conflict" });
+            }
+            return ctx.json(res, 200, {
+              ok: true,
+              documentId: prior.rows[0].id,
+              sizeBytes: Number(prior.rows[0].size_bytes),
+              contentType: prior.rows[0].content_type,
+              contentSha256: prior.rows[0].content_sha256,
+              replayed: true,
+            });
+          }
+        }
+        return databaseFailure(res, error, "Could not atomically store the client document.");
+      } finally {
+        client?.release();
       }
     }
     return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, POST" });
@@ -731,7 +939,7 @@ export function createClientSpaceApi(ctx) {
       return databaseFailure(res, error, "Could not load the client document.");
     }
     if (!document) return ctx.json(res, 404, { error: "document_not_found" });
-    return streamDocument({ req, res, document, auditContext: { actorKind: session.role, actorId: session.role } });
+    return streamDocument({ req, res, document, auditContext: { actorKind: session.role, actorId: session.identityId } });
   }
 
   async function handleAdminTickets(req, res, url) {
@@ -797,12 +1005,14 @@ export function createClientSpaceApi(ctx) {
       );
       if (previousStatus !== body.status) {
         await client.query(
-          "INSERT INTO client_ticket_status_audit (ticket_id, previous_status, next_status, changed_by) VALUES ($1,$2,$3,$4)",
-          [ticketId, previousStatus, body.status, session.role],
+          `INSERT INTO client_ticket_status_audit
+             (ticket_id, previous_status, next_status, changed_by, changed_by_identity)
+           VALUES ($1,$2,$3,$4,$5)`,
+          [ticketId, previousStatus, body.status, session.role, session.identityId],
         );
       }
+      await audit(client, { actorKind: session.role, actorId: session.identityId, action: "ticket_status", target: ticketId, result: "allowed" });
       await client.query("COMMIT");
-      await audit(db, { actorKind: session.role, action: "ticket_status", target: ticketId, result: "allowed" });
       return ctx.json(res, 200, { ticketId, previousStatus, status: body.status });
     } catch (error) {
       if (client) await client.query("ROLLBACK").catch(() => {});

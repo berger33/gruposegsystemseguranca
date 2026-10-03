@@ -9,8 +9,12 @@ test('PLT-BAK-001: contrato legado aponta escrita/leitura local mas só inventá
   const legacy = storageContractFor('client_documents', 'storage_key');
   assert.equal(legacy.contract, 'local-private-file-candidate');
   const code = await source('client-space-api.mjs');
-  assert.match(code, /writeFile\(path\.join\(ctx\.docsDir, storageKey\), content\)/);
-  assert.match(code, /createReadStream\(filePath\)\.pipe\(res\)/);
+  assert.match(code, /storedPath = path\.join\(ctx\.docsDir, storageKey\)/);
+  assert.match(code, /writeFile\(storedPath, content, \{ flag: "wx" \}\)/);
+  assert.match(code, /if \(storedPath\) await unlink\(storedPath\)/);
+  assert.match(code, /contents.*await Promise\.all\(\[stat\(filePath\), readFile\(filePath\)\]\)/s);
+  assert.match(code, /await auditOr503[\s\S]*res\.writeHead\(200/);
+  assert.match(code, /res\.end\(contents\)/);
   assert.match(code, /INSERT INTO client_documents/);
 });
 

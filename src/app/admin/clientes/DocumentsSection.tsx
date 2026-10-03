@@ -47,6 +47,7 @@ export default function DocumentsSection({ accounts }: { accounts: AdminAccount[
   const [category, setCategory] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const fileInput = useRef<HTMLInputElement | null>(null);
+  const retryRequest = useRef<{ file: File; fingerprint: string; key: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -83,10 +84,17 @@ export default function DocumentsSection({ accounts }: { accounts: AdminAccount[
     setBusy(true);
     try {
       const contentBase64 = await readAsBase64(file);
-      await callApi(
-        "/api/admin/documents",
-        jsonInit("POST", { accountId, title, category, filename: file.name, contentBase64 }),
-      );
+      const requestBody = { accountId, title, category, filename: file.name, contentBase64 };
+      const fingerprint = JSON.stringify({ accountId, title, category, name: file.name, size: file.size, lastModified: file.lastModified });
+      if (!retryRequest.current || retryRequest.current.file !== file || retryRequest.current.fingerprint !== fingerprint) {
+        retryRequest.current = { file, fingerprint, key: crypto.randomUUID() };
+      }
+      const init = jsonInit("POST", requestBody);
+      const headers = new Headers(init.headers);
+      headers.set("Idempotency-Key", retryRequest.current.key);
+      init.headers = headers;
+      await callApi("/api/admin/documents", init);
+      retryRequest.current = null;
       setNotice(`Documento “${title.trim()}” publicado. O vínculo ativo já consegue ver e baixar.`);
       setTitle("");
       setCategory("");

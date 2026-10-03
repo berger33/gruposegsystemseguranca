@@ -51,7 +51,7 @@ function fixture({ fault, unit = UNIT, unitAllowed = true, grantExists = true, u
   });
   const res = {};
   const url = new URL(`http://local.invalid/api/client/contracts?account=${ACCOUNT}`);
-  return { api, calls, res, url, req: { method: 'GET' },
+  return { api, calls, res, url, req: { method: 'GET', headers: { 'idempotency-key': 'qa-unit-ticket-001' } },
     protectedReads() { return calls.filter(c => /FROM client_(contracts|documents|tickets) WHERE/.test(c.sql)); },
     mutations() { return calls.filter(c => c.sql.includes('INSERT INTO client_tickets')); },
   };

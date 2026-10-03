@@ -7,6 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import nextEnv from "@next/env";
 import pg from "pg";
+import { generate as generateTotp } from "otplib";
 import { provisionStaff, STAFF_TEST_PASSWORD } from "./helpers/staff-login.mjs";
 
 // L01/SEC-05: sessão administrativa por conta individual; o token compartilhado
@@ -197,9 +198,18 @@ function extractLink(message, pathFragment) {
 async function applyMigrations() {
   const pool = new Pool({ connectionString: databaseUrl, max: 1 });
   try {
-    for (const filename of ["001-site-visual.sql","002-public-leads.sql","003-client-access.sql","004-client-space.sql","005-client-security.sql","006-admin-identities.sql","007-opcao-b-funcionarios.sql", "011-audit-and-notifications.sql", "097-client-mfa-session.sql", "098-client-manual-verification.sql", "099-sec-staff-session-hardening.sql",
+    const ready = await pool.query(`SELECT
+      to_regclass('auth_mfa_challenges') IS NOT NULL
+      AND to_regclass('auth_staff_sessions') IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema='public' AND table_name='client_tickets' AND column_name='idempotency_key'
+      ) AS ready`);
+    if (ready.rows[0]?.ready) return;
+    for (const filename of ["001-site-visual.sql","002-public-leads.sql","003-client-access.sql","004-client-space.sql","005-client-security.sql","006-admin-identities.sql","007-opcao-b-funcionarios.sql", "009-mfa-challenge.sql", "011-audit-and-notifications.sql", "097-client-mfa-session.sql", "098-client-manual-verification.sql", "099-sec-staff-session-hardening.sql",
   "100-l02-local-outbox.sql",
-  "101-l02-document-integrity.sql"]) {
+  "101-l02-document-integrity.sql",
+  "139-l08-client-space-atomic-idempotency.sql"]) {
       const sql = await readFile(path.join(projectRoot, "db/migrations", filename), "utf8");
       await pool.query(sql);
     }
@@ -223,6 +233,7 @@ function startServer(port, smtpPort) {
       SITE_ADMIN_TOKEN_MARCELO: ADMIN_TOKEN_MARCELO,
       SITE_ADMIN_TOKEN_TI: ADMIN_TOKEN_TI,
       SITE_ADMIN_SESSION_SECRET: SESSION_SECRET,
+      CLIENT_MFA_ENCRYPTION_KEY: Buffer.alloc(32, 0x5a).toString("base64url"),
       MAIL_HOST: "127.0.0.1",
       MAIL_PORT: String(smtpPort),
       MAIL_SECURE: "false",
@@ -271,7 +282,25 @@ test("client access works end to end against a real PostgreSQL", testOptions, as
   const secondEmail = `integracao.segundo.${runId}@exemplo.invalid`;
   const thirdEmail = `integracao.terceiro.${runId}@exemplo.invalid`;
 
-  const pool = new Pool({ connectionString: databaseUrl, max: 2 });
+  const pool = new Pool({ connectionString: databaseUrl, max: 6 });
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS qa_l08_access_audit_failure (
+      action TEXT PRIMARY KEY
+    );
+    CREATE OR REPLACE FUNCTION qa_l08_reject_access_audit() RETURNS trigger
+    LANGUAGE plpgsql AS $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM qa_l08_access_audit_failure f WHERE f.action = NEW.action) THEN
+        RAISE EXCEPTION 'forced_l08_access_audit_failure:%', NEW.action;
+      END IF;
+      RETURN NEW;
+    END;
+    $$;
+    DROP TRIGGER IF EXISTS qa_l08_reject_access_audit ON auth_access_audit;
+    CREATE TRIGGER qa_l08_reject_access_audit
+      BEFORE INSERT ON auth_access_audit
+      FOR EACH ROW EXECUTE FUNCTION qa_l08_reject_access_audit();
+  `);
   const cleanupIds = [];
   t.after(async () => {
     await pool.query("DELETE FROM auth_login_throttle WHERE email LIKE 'integracao.%'").catch(() => {});
@@ -282,6 +311,9 @@ test("client access works end to end against a real PostgreSQL", testOptions, as
     await pool.query("DELETE FROM auth_email_tokens WHERE email LIKE 'integracao.%'").catch(() => {});
     await pool.query("DELETE FROM auth_invites WHERE email LIKE 'integracao.%'").catch(() => {});
     await pool.query("DELETE FROM auth_identities WHERE email LIKE 'integracao.%'").catch(() => {});
+    await pool.query("DROP TRIGGER IF EXISTS qa_l08_reject_access_audit ON auth_access_audit").catch(() => {});
+    await pool.query("DROP FUNCTION IF EXISTS qa_l08_reject_access_audit()").catch(() => {});
+    await pool.query("DROP TABLE IF EXISTS qa_l08_access_audit_failure").catch(() => {});
     await pool.end();
   });
 
@@ -306,6 +338,15 @@ test("client access works end to end against a real PostgreSQL", testOptions, as
     return { status: response.status, body: parsed, setCookie, headers: response.headers };
   }
 
+  async function withForcedAuditFailure(action, work) {
+    await pool.query("INSERT INTO qa_l08_access_audit_failure (action) VALUES ($1) ON CONFLICT DO NOTHING", [action]);
+    try {
+      return await work();
+    } finally {
+      await pool.query("DELETE FROM qa_l08_access_audit_failure WHERE action = $1", [action]);
+    }
+  }
+
   await waitForServer(child, logs);
 
   let adminCookie = null;
@@ -315,6 +356,21 @@ test("client access works end to end against a real PostgreSQL", testOptions, as
     const anonymous = await api("/api/admin/invites", { method: "POST", body: { email: clientEmail } });
     assert.equal(anonymous.status, 401);
     assert.deepEqual(anonymous.body, { error: "admin_session_required" });
+
+    const rhStaff = await provisionStaff(pool, { role: "rh" });
+    const rhSession = await api("/api/admin/session", {
+      method: "POST",
+      body: { email: rhStaff.email, password: STAFF_TEST_PASSWORD },
+    });
+    assert.equal(rhSession.status, 200);
+    const rhCookie = rhSession.setCookie.map(item => item.split(";")[0]).join("; ");
+    const deniedRole = await api("/api/admin/invites", {
+      method: "POST",
+      body: { email: `integracao.rh.negado.${runId}@exemplo.invalid` },
+      cookie: rhCookie,
+    });
+    assert.equal(deniedRole.status, 403);
+    assert.deepEqual(deniedRole.body, { error: "forbidden" });
 
     const session = await api("/api/admin/session", { method: "POST", body: await staffCredentials(pool) });
     assert.equal(session.status, 200);
@@ -567,6 +623,23 @@ test("client access works end to end against a real PostgreSQL", testOptions, as
     assert.ok(throttledAudit.rows[0].total >= 1);
   });
 
+  await t.test("expired server-side sessions are refused and a fresh login remains possible", async () => {
+    await pool.query(
+      "UPDATE auth_sessions SET expires_at=NOW() - INTERVAL '1 minute' WHERE identity_id=$1 AND revoked_at IS NULL",
+      [identityId],
+    );
+    const expired = await api("/api/auth/me", { cookie: clientCookie });
+    assert.equal(expired.status, 401);
+    assert.deepEqual(expired.body, { error: "client_session_required" });
+
+    const login = await api("/api/auth/login", {
+      method: "POST",
+      body: { email: clientEmail, password: "nova trilha verde 55 portal" },
+    });
+    assert.equal(login.status, 200);
+    clientCookie = login.setCookie.find(line => line.startsWith("seg_client_session=")).split(";")[0];
+  });
+
   await t.test("logout revokes the session server-side", async () => {
     const logout = await api("/api/auth/logout", { method: "POST", cookie: clientCookie });
     assert.equal(logout.status, 200);
@@ -623,6 +696,275 @@ test("client access works end to end against a real PostgreSQL", testOptions, as
     });
     assert.equal(acceptExpired.status, 400);
     assert.deepEqual(acceptExpired.body, { error: "invite_expired" });
+  });
+
+  const auditEmail = `integracao.audit.${runId}@exemplo.invalid`;
+  const auditPassword = "senha auditável longa 73 portal";
+  const auditNewPassword = "senha auditável nova 84 portal";
+  let auditInviteId = null;
+  let auditInviteToken = null;
+  let auditIdentityId = null;
+  let auditConfirmationToken = null;
+  let auditResetToken = null;
+  let auditClientCookie = null;
+
+  await t.test("invite creation rolls back when its mandatory audit fails", async () => {
+    const failedEmail = `integracao.audit.issue.${runId}@exemplo.invalid`;
+    const response = await withForcedAuditFailure("invite_issue", () => api("/api/admin/invites", {
+      method: "POST",
+      body: { email: failedEmail, displayName: "Convite rollback" },
+      cookie: adminCookie,
+    }));
+    assert.equal(response.status, 503);
+    assert.deepEqual(response.body, { error: "audit_unavailable" });
+    const persisted = await pool.query("SELECT count(*)::int AS count FROM auth_invites WHERE email = $1", [failedEmail]);
+    assert.equal(persisted.rows[0].count, 0);
+  });
+
+  await t.test("invite revocation rolls back when its mandatory audit fails", async () => {
+    const created = await api("/api/admin/invites", {
+      method: "POST",
+      body: { email: auditEmail, displayName: "Cliente auditável" },
+      cookie: adminCookie,
+    });
+    assert.equal(created.status, 201, JSON.stringify(created.body));
+    auditInviteId = created.body.inviteId;
+    cleanupIds.push(auditInviteId);
+    const message = await waitForMessage(messages, raw => raw.includes(auditEmail) && raw.includes("Convite de acesso ao portal do cliente"));
+    auditInviteToken = extractLink(message, "/cliente/convite?token=").split("token=")[1];
+
+    const response = await withForcedAuditFailure("invite_revoke", () => api(`/api/admin/invites/${auditInviteId}`, {
+      method: "DELETE",
+      cookie: adminCookie,
+    }));
+    assert.equal(response.status, 503);
+    assert.deepEqual(response.body, { error: "audit_unavailable" });
+    const persisted = await pool.query("SELECT used_at, revoked_at FROM auth_invites WHERE id = $1", [auditInviteId]);
+    assert.deepEqual(persisted.rows[0], { used_at: null, revoked_at: null });
+  });
+
+  await t.test("invite acceptance rolls back identity, credential, token and invite use on audit failure", async () => {
+    const body = { token: auditInviteToken, password: auditPassword, displayName: "Cliente auditável" };
+    const failed = await withForcedAuditFailure("invite_accept", () => api("/api/auth/invite/accept", { method: "POST", body }));
+    assert.equal(failed.status, 503);
+    assert.deepEqual(failed.body, { error: "audit_unavailable" });
+    const afterFailure = await pool.query(
+      `SELECT v.used_at,
+              (SELECT count(*)::int FROM auth_identities i WHERE i.kind='client' AND i.email=$2) AS identities,
+              (SELECT count(*)::int FROM auth_email_tokens e WHERE e.email=$2) AS tokens
+       FROM auth_invites v WHERE v.id=$1`,
+      [auditInviteId, auditEmail],
+    );
+    assert.deepEqual(afterFailure.rows[0], { used_at: null, identities: 0, tokens: 0 });
+
+    const retried = await api("/api/auth/invite/accept", { method: "POST", body });
+    assert.equal(retried.status, 201, JSON.stringify(retried.body));
+    const identity = await pool.query("SELECT id, status FROM auth_identities WHERE kind='client' AND email=$1", [auditEmail]);
+    assert.equal(identity.rows[0].status, "pending_email");
+    auditIdentityId = identity.rows[0].id;
+    cleanupIds.push(auditIdentityId);
+    const message = await waitForMessage(messages, raw => raw.includes(auditEmail) && raw.includes("Confirme seu e-mail"));
+    auditConfirmationToken = extractLink(message, "/cliente/confirmar-email?token=").split("token=")[1];
+  });
+
+  await t.test("e-mail confirmation rolls back token use and activation on audit failure", async () => {
+    const failed = await withForcedAuditFailure("email_confirm", () => api("/api/auth/confirm-email", {
+      method: "POST",
+      body: { token: auditConfirmationToken },
+    }));
+    assert.equal(failed.status, 503);
+    assert.deepEqual(failed.body, { error: "audit_unavailable" });
+    const afterFailure = await pool.query(
+      `SELECT i.status, i.verification_method, e.used_at
+       FROM auth_identities i JOIN auth_email_tokens e ON e.identity_id=i.id
+       WHERE i.id=$1 AND e.kind='confirm_email' AND e.token_hash IS NOT NULL`,
+      [auditIdentityId],
+    );
+    assert.deepEqual(afterFailure.rows[0], { status: "pending_email", verification_method: null, used_at: null });
+
+    const retried = await api("/api/auth/confirm-email", { method: "POST", body: { token: auditConfirmationToken } });
+    assert.equal(retried.status, 200);
+    const active = await pool.query("SELECT status, verification_method FROM auth_identities WHERE id=$1", [auditIdentityId]);
+    assert.deepEqual(active.rows[0], { status: "active", verification_method: "email_link" });
+  });
+
+  await t.test("login emits no cookie and no session when its mandatory audit fails", async () => {
+    const before = await pool.query("SELECT count(*)::int AS count FROM auth_sessions WHERE identity_id=$1", [auditIdentityId]);
+    const failed = await withForcedAuditFailure("login", () => api("/api/auth/login", {
+      method: "POST",
+      body: { email: auditEmail, password: auditPassword },
+    }));
+    assert.equal(failed.status, 503);
+    assert.deepEqual(failed.body, { error: "audit_unavailable" });
+    assert.equal(failed.setCookie.length, 0);
+    const after = await pool.query("SELECT count(*)::int AS count FROM auth_sessions WHERE identity_id=$1", [auditIdentityId]);
+    assert.equal(after.rows[0].count, before.rows[0].count);
+
+    const retried = await api("/api/auth/login", {
+      method: "POST",
+      body: { email: auditEmail, password: auditPassword },
+    });
+    assert.equal(retried.status, 200);
+    auditClientCookie = retried.setCookie.find(line => line.startsWith("seg_client_session=")).split(";")[0];
+  });
+
+  await t.test("password recovery token rotation rolls back when its mandatory audit fails", async () => {
+    const before = await pool.query(
+      "SELECT count(*)::int AS count FROM auth_email_tokens WHERE identity_id=$1 AND kind='password_reset'",
+      [auditIdentityId],
+    );
+    const failed = await withForcedAuditFailure("password_reset_request", () => api("/api/auth/recover", {
+      method: "POST",
+      body: { email: auditEmail },
+    }));
+    assert.equal(failed.status, 503);
+    assert.deepEqual(failed.body, { error: "audit_unavailable" });
+    const after = await pool.query(
+      "SELECT count(*)::int AS count FROM auth_email_tokens WHERE identity_id=$1 AND kind='password_reset'",
+      [auditIdentityId],
+    );
+    assert.equal(after.rows[0].count, before.rows[0].count);
+
+    const retried = await api("/api/auth/recover", { method: "POST", body: { email: auditEmail } });
+    assert.equal(retried.status, 202);
+    const message = await waitForMessage(messages, raw => raw.includes(auditEmail) && raw.includes("Recuperação de senha"));
+    auditResetToken = extractLink(message, "/cliente/redefinir-senha?token=").split("token=")[1];
+  });
+
+  await t.test("password reset and session revocation roll back together on audit failure", async () => {
+    const failed = await withForcedAuditFailure("password_reset_complete", () => api("/api/auth/reset", {
+      method: "POST",
+      body: { token: auditResetToken, password: auditNewPassword },
+    }));
+    assert.equal(failed.status, 503);
+    assert.deepEqual(failed.body, { error: "audit_unavailable" });
+    const afterFailure = await pool.query(
+      `SELECT e.used_at,
+              (SELECT count(*)::int FROM auth_sessions s WHERE s.identity_id=$1 AND s.revoked_at IS NULL) AS active_sessions
+       FROM auth_email_tokens e WHERE e.identity_id=$1 AND e.kind='password_reset' ORDER BY e.created_at DESC LIMIT 1`,
+      [auditIdentityId],
+    );
+    assert.equal(afterFailure.rows[0].used_at, null);
+    assert.ok(afterFailure.rows[0].active_sessions >= 1);
+    const stillAuthenticated = await api("/api/auth/me", { cookie: auditClientCookie });
+    assert.equal(stillAuthenticated.status, 200);
+
+    const retried = await api("/api/auth/reset", {
+      method: "POST",
+      body: { token: auditResetToken, password: auditNewPassword },
+    });
+    assert.equal(retried.status, 200);
+    const oldSession = await api("/api/auth/me", { cookie: auditClientCookie });
+    assert.equal(oldSession.status, 401);
+    const login = await api("/api/auth/login", {
+      method: "POST",
+      body: { email: auditEmail, password: auditNewPassword },
+    });
+    assert.equal(login.status, 200);
+    auditClientCookie = login.setCookie.find(line => line.startsWith("seg_client_session=")).split(";")[0];
+  });
+
+  await t.test("logout rolls back revocation and emits no clearing cookie when audit fails", async () => {
+    const failed = await withForcedAuditFailure("logout", () => api("/api/auth/logout", {
+      method: "POST",
+      cookie: auditClientCookie,
+    }));
+    assert.equal(failed.status, 503);
+    assert.deepEqual(failed.body, { error: "audit_unavailable" });
+    assert.equal(failed.setCookie.length, 0);
+    const stillAuthenticated = await api("/api/auth/me", { cookie: auditClientCookie });
+    assert.equal(stillAuthenticated.status, 200);
+
+    const retried = await api("/api/auth/logout", { method: "POST", cookie: auditClientCookie });
+    assert.equal(retried.status, 200);
+    const revoked = await api("/api/auth/me", { cookie: auditClientCookie });
+    assert.equal(revoked.status, 401);
+  });
+
+  let auditMfaSecret = null;
+  let auditRecoveryCodes = null;
+  await t.test("MFA setup rolls back the encrypted secret when its mandatory audit fails", async () => {
+    const login = await api("/api/auth/login", {
+      method: "POST",
+      body: { email: auditEmail, password: auditNewPassword },
+    });
+    assert.equal(login.status, 200);
+    auditClientCookie = login.setCookie.find(line => line.startsWith("seg_client_session=")).split(";")[0];
+
+    const failed = await withForcedAuditFailure("mfa_activate", () => api("/api/client/security/mfa/setup", {
+      method: "POST",
+      body: { password: auditNewPassword },
+      cookie: auditClientCookie,
+    }));
+    assert.equal(failed.status, 503);
+    assert.deepEqual(failed.body, { error: "audit_unavailable" });
+    const afterFailure = await pool.query("SELECT count(*)::int AS count FROM auth_mfa WHERE identity_id=$1", [auditIdentityId]);
+    assert.equal(afterFailure.rows[0].count, 0);
+
+    const retried = await api("/api/client/security/mfa/setup", {
+      method: "POST",
+      body: { password: auditNewPassword },
+      cookie: auditClientCookie,
+    });
+    assert.equal(retried.status, 200, JSON.stringify(retried.body));
+    auditMfaSecret = retried.body.secret;
+    assert.match(auditMfaSecret, /^[A-Z2-7]+$/);
+  });
+
+  await t.test("MFA activation rolls back recovery codes and activation on audit failure", async () => {
+    const code = await generateTotp({ secret: auditMfaSecret });
+    const failed = await withForcedAuditFailure("mfa_activate", () => api("/api/client/security/mfa/activate", {
+      method: "POST",
+      body: { code },
+      cookie: auditClientCookie,
+    }));
+    assert.equal(failed.status, 503);
+    assert.deepEqual(failed.body, { error: "audit_unavailable" });
+    const afterFailure = await pool.query("SELECT activated_at, recovery_hashes FROM auth_mfa WHERE identity_id=$1", [auditIdentityId]);
+    assert.equal(afterFailure.rows[0].activated_at, null);
+    assert.deepEqual(afterFailure.rows[0].recovery_hashes, []);
+
+    const retried = await api("/api/client/security/mfa/activate", {
+      method: "POST",
+      body: { code },
+      cookie: auditClientCookie,
+    });
+    assert.equal(retried.status, 200, JSON.stringify(retried.body));
+    auditRecoveryCodes = retried.body.recoveryCodes;
+    assert.equal(auditRecoveryCodes.length, 8);
+  });
+
+  await t.test("MFA disable rolls back factor state and session revocation on audit failure", async () => {
+    const login = await api("/api/auth/login", {
+      method: "POST",
+      body: { email: auditEmail, password: auditNewPassword },
+    });
+    assert.equal(login.status, 202);
+    const code = await generateTotp({ secret: auditMfaSecret });
+    const completed = await api("/api/auth/mfa/complete", {
+      method: "POST",
+      body: { challenge: login.body.challenge, code },
+    });
+    assert.equal(completed.status, 200, JSON.stringify(completed.body));
+    auditClientCookie = completed.setCookie.find(line => line.startsWith("seg_client_session=")).split(";")[0];
+
+    const body = { password: auditNewPassword, code: auditRecoveryCodes[0] };
+    const failed = await withForcedAuditFailure("mfa_disable", () => api("/api/client/security/mfa/disable", {
+      method: "POST", body, cookie: auditClientCookie,
+    }));
+    assert.equal(failed.status, 503);
+    assert.deepEqual(failed.body, { error: "audit_unavailable" });
+    const afterFailure = await pool.query("SELECT activated_at FROM auth_mfa WHERE identity_id=$1", [auditIdentityId]);
+    assert.ok(afterFailure.rows[0].activated_at);
+    assert.equal((await api("/api/auth/me", { cookie: auditClientCookie })).status, 200);
+
+    const retried = await api("/api/client/security/mfa/disable", {
+      method: "POST", body, cookie: auditClientCookie,
+    });
+    assert.equal(retried.status, 200);
+    const disabled = await pool.query("SELECT activated_at FROM auth_mfa WHERE identity_id=$1", [auditIdentityId]);
+    assert.equal(disabled.rows[0].activated_at, null);
+    assert.equal((await api("/api/auth/me", { cookie: auditClientCookie })).status, 401);
   });
 
   await t.test("the real sign-in page is served", async () => {
