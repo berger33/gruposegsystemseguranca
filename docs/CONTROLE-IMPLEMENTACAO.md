@@ -775,3 +775,22 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 | Transação/auditoria/idempotência | Implementado | gate PG/HTTP EXT-06 |
 | Legado | Somente leitura | `items`; writers 410 pós-guardas |
 | Aceite humano/destino/Windows | Pendente | fora desta implementação |
+
+## EXT-07 — controle da fatia
+
+| Item | Estado | Evidência |
+|---|---|---|
+| Fonte canônica `ext_compliance_documents` endurecida | Implementado | migração 153 + `ext-compliance-api.mjs` |
+| Obrigação aplicável com fundamento/escopo/justificativa | Implementado | `ext_compliance_obligations` |
+| Jornada staff | Implementado | `/admin/compliance`, `/api/ext/compliance/*` |
+| Documento privado e projeção minimizada | Implementado | `is_private` imposto + allowlist de listagem |
+| Validade e estado derivado da data-base do servidor | Implementado | CHECK temporal + `deriveTemporalState` |
+| Tarefa única por documento/período/regra | Implementado | `ext_compliance_tasks` + índice único |
+| Responsável canônico e modo fail-closed | Implementado | pendência explícita; conclusão bloqueada |
+| Histórico/versionamento/renovação | Implementado | versões, substituição formal, triggers |
+| Transação/auditoria/idempotência/concorrência | Implementado | gate PG/HTTP EXT-07 54/54 |
+| Legado | Somente leitura | `items`; writers 410 pós-guardas |
+| Arquivo real (upload/bytes/checksum/download) | Não implementado | fronteira declarada: referência documental |
+| Integração regulatória / consulta a órgão público | Não implementado | fundamento é declaração interna |
+| Scheduler contínuo | Não implementado | avaliação é operação administrativa explícita |
+| Aceite humano/destino/Windows | Pendente | fora desta implementação |

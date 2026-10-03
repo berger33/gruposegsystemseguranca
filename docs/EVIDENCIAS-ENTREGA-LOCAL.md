@@ -2291,3 +2291,16 @@ Fronteiras: isto é validação automática local (unitária + estática + build
 - Prova focal: `tests/ext06-satisfaction.test.mjs`.
 - Privacidade: allowlist cliente e asserção negativa para responsável/identidade/fatos/risco/tarefa/auditoria.
 - Não provado por esta evidência: aceite humano, implantação em destino, bateria pesada integral ou homologação Windows.
+
+## Evidências EXT-07 — 2026-10-03
+
+- Base: PR #101 `MERGED`; merge `efc74bacb7a23314db1d267d91438519dc342a8c`; feature `3d573f18293ed9bad810fa03e4654ddf1fbd4d30`; HEAD/origin/main iguais, divergência `0 0`, árvore inicialmente limpa.
+- Migração: 153 aditiva sobre `ext_compliance_documents` (086); linhas antigas classificadas `registro_legado`; sem seed.
+- Prova dedicada: `tests/ext07-compliance.integration.test.mjs` em PostgreSQL 17 descartável e servidor HTTP real — 54/54, 0 fail/skip/todo, mínimo exigido 40, resumo autoauditado pelo gate.
+- Prova focal: `tests/ext07-compliance.test.mjs` — 13/13.
+- Estático 5/5 com 001–153; typecheck limpo; `npm test` 451/451; build 92 páginas com `/admin/compliance`; `test:migrations:pg` 153/153 em primeira aplicação, replay, checksum negativo rejeitado e clone/restauração.
+- Regressão da entrega anterior: `test:ext06-satisfaction:pg` 36/36.
+- Privacidade: allowlist de listagem com asserção negativa para `file_url`, `storage_key`, `file_name`, número documental, referência declarada, notas, fatos de tarefa e auditoria.
+- Lacunas reproduzidas por execução antes da implementação (probe temporário, já removido): rota canônica e tela ausentes (404); papel `rh` recebia `401` em vez de `403`; criação sem obrigação e sem responsável; `responsible_name` forjado aceito; `vigente` default mesmo vencido há anos; PATCH arbitrário e reabertura de terminal; retry e concorrência duplicando linhas; nenhuma tarefa por vencimento; `SELECT *` expondo `file_url`/`storage_key`/número; sem versionamento; auditoria desacoplada sem rollback; data inválida derrubando o processo HTTP.
+- Defeito pré-existente observado e **não** corrigido nesta fatia: `/api/ext/continuity-plans` (EXT-10) consulta `ca.name`, coluna inexistente em `client_accounts`, e a rejeição não tratada derruba o processo. Handler byte-idêntico à base mesclada; não é regressão da EXT-07.
+- Não provado por esta evidência: upload/bytes/checksum/varredura/armazenamento verificado/download, consulta a órgão público, ator externo, scheduler contínuo, aceite humano, implantação em destino, bateria pesada integral ou homologação Windows.

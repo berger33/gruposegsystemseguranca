@@ -105,6 +105,7 @@ import { createExtBiddingApi } from "./src/server/ext-bidding-api.mjs";
 import { createExtSupplierApi } from "./src/server/ext-supplier-api.mjs";
 import { createExtQualityApi } from "./src/server/ext-quality-api.mjs";
 import { createExtSatisfactionApi } from "./src/server/ext-satisfaction-api.mjs";
+import { createExtComplianceApi } from "./src/server/ext-compliance-api.mjs";
 import { createExtAdvancedApi } from "./src/server/ext-advanced-api.mjs";
 import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
 import { createCommercialHistoryApi } from "./src/server/commercial-history-api.mjs";
@@ -2283,6 +2284,15 @@ const extSatisfactionApi = createExtSatisfactionApi({
   requireClientSession: clientAccessApi.readClientSession,
 });
 
+// EXT-07: ext_compliance_documents (086) endurecida como fonte canônica pela 153.
+// Obrigação aplicável, documento/referência privada, versionamento e tarefa de
+// vencimento são atômicos; a autoridade de escrita saiu de ext-advanced-api.mjs.
+const extComplianceApi = createExtComplianceApi({
+  pool: getPool(),
+  sameOrigin,
+  requireSession: readSession,
+});
+
 const extAdvancedApi = createExtAdvancedApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -4244,9 +4254,24 @@ async function routeApi(req, res) {
   if (["/api/admin/hr/ext-satisfaction-surveys","/api/crm/hr/ext-satisfaction-surveys","/api/hr/ext-satisfaction-surveys","/api/ext/satisfaction-surveys"].includes(url.pathname)) {
     return extSatisfactionApi.handleLegacy(req,res);
   }
-  // EXT-07 compliance vencimento gera tarefa documento privado
+  // EXT-07 compliance canônico (migração 153): vencimento gera tarefa e documento privado.
+  if (url.pathname === "/api/ext/compliance/references") return extComplianceApi.handleReferences(req, res);
+  if (url.pathname === "/api/ext/compliance/obligations") {
+    if (req.method === "POST") return extComplianceApi.handleObligationCreate(req, res);
+    return extComplianceApi.handleObligationList(req, res);
+  }
+  if (url.pathname === "/api/ext/compliance/evaluate") return extComplianceApi.handleEvaluate(req, res);
+  const complianceDocuments = url.pathname.match(/^\/api\/ext\/compliance\/obligations\/([0-9a-f-]{36})\/documents$/i);
+  if (complianceDocuments) return extComplianceApi.handleDocumentCreate(req, res, complianceDocuments[1]);
+  const complianceClose = url.pathname.match(/^\/api\/ext\/compliance\/obligations\/([0-9a-f-]{36})\/close$/i);
+  if (complianceClose) return extComplianceApi.handleObligationClose(req, res, complianceClose[1]);
+  const complianceDetail = url.pathname.match(/^\/api\/ext\/compliance\/obligations\/([0-9a-f-]{36})$/i);
+  if (complianceDetail) return extComplianceApi.handleObligationDetail(req, res, complianceDetail[1]);
+  const complianceTask = url.pathname.match(/^\/api\/ext\/compliance\/tasks\/([0-9a-f-]{36})\/(start|complete|cancel)$/i);
+  if (complianceTask) { const fn = { start: "handleTaskStart", complete: "handleTaskComplete", cancel: "handleTaskCancel" }[complianceTask[2]]; return extComplianceApi[fn](req, res, complianceTask[1]); }
+  // Rotas exatas legadas da 086: leitura autorizada com items; escrita aposentada após guardas.
   if (url.pathname === "/api/admin/hr/ext-compliance-documents" || url.pathname === "/api/crm/hr/ext-compliance-documents" || url.pathname === "/api/hr/ext-compliance-documents" || url.pathname === "/api/ext/compliance-documents") {
-    return extAdvancedApi.handleComplianceDocuments(req, res);
+    return extComplianceApi.handleLegacy(req, res);
   }
   // EXT-08 base conhecimento procedimentos versionados busca acesso ciência usuário encontra apenas conteúdo de seu escopo
   if (url.pathname === "/api/admin/hr/ext-knowledge-base" || url.pathname === "/api/crm/hr/ext-knowledge-base" || url.pathname === "/api/hr/ext-knowledge-base" || url.pathname === "/api/ext/knowledge-base") {
@@ -5780,6 +5805,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/crm/hr/ext-satisfaction-surveys"
   || pathname === "/api/hr/ext-satisfaction-surveys"
   || pathname === "/api/ext/satisfaction-surveys"
+  || pathname.startsWith("/api/ext/compliance/")
   || pathname === "/api/admin/hr/ext-compliance-documents"
   || pathname === "/api/crm/hr/ext-compliance-documents"
   || pathname === "/api/hr/ext-compliance-documents"

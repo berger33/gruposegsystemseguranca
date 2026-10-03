@@ -243,3 +243,23 @@ promovidos. Relatório:
 ## EXT-06 — satisfação/carteira
 
 **Fonte canônica:** `cli_satisfaction_surveys`/`cli_satisfaction_action_plans`, endurecida pela 152. `ext_satisfaction_surveys` é legado somente leitura; nenhum registro foi migrado por presunção. Pesquisa declara finalidade, metodologia, escala, fonte, período, destinatário e limiar próprio. NPS exige 0–10; CSAT exige 1–5; genérica não recebe esses rótulos. Resposta cria histórico imutável e, quando `score <= follow_up_threshold`, acompanhamento único na mesma transação ou pendência explícita sem responsável inventado. A projeção cliente exclui dados internos. Critério automatizado: **Resposta gera acompanhamento sem expor funcionário**.
+
+## EXT-07 — compliance corporativo
+
+**Fonte canônica:** `ext_compliance_documents` (086) endurecida pela 153, acompanhada de `ext_compliance_obligations`, `ext_compliance_tasks` e `ext_compliance_events`. Nenhum registro antigo foi migrado por presunção: sem evidência de obrigação, responsável, autoria, privacidade, origem, regra de validade, tarefa ou armazenamento verificado, a linha permanece `registro_legado`.
+
+**Fonte da tarefa:** tabela dedicada `ext_compliance_tasks`. `crm_tasks` (014) foi inspecionada e recusada — escopo e autorização de CRM (oportunidade/empresa), sem vínculo a documento/período de validade, sem ledger de idempotência, sem privacidade, sem imutabilidade e sem unicidade por vencimento. `crm_document_obligations` (037) modela documento contratual do cliente, não compliance corporativo da entidade.
+
+**Fronteira de ator:** jornada interna de staff (`admin|marcelo|ti`). Anônimo `401`, papel autenticado não autorizado `403`, autoria derivada da sessão, mutações same-origin com `Idempotency-Key`. Não há ator externo, portal de órgão emissor, login de seguradora/corretora, link público nem token documental.
+
+**Obrigação aplicável:** tipo, título, descrição, fundamento/fonte declarada e sua natureza, escopo (entidade/unidade/contrato/operação), justificativa de aplicabilidade, periodicidade, janela de renovação, criticidade opcional, responsável canônico, estado e autoria com data do servidor. A aplicabilidade é **declaração interna rastreável**, não parecer jurídico verificado nem consulta automática a órgão público.
+
+**Documento privado:** `is_private` imposto pelo servidor e pela CHECK canônica. A listagem staff mais ampla usa allowlist e não expõe `file_url`, `storage_key`, `file_name`, número documental, referência declarada, notas, fatos da tarefa nem auditoria. O detalhe autorizado mostra os metadados de gestão e declara a fronteira: é **referência documental declarada**, não arquivo armazenado ou verificado. `file_name`/`file_url`/`storage_key` da 086 seguem como metadados legados que não provam upload, bytes, checksum, varredura, armazenamento nem download.
+
+**Validade:** emissão, início de vigência, vencimento (ou ausência explícita de vencimento, distinta de "sem risco"), data-base do servidor, regra armazenada e antecedência configurada. Vencimento anterior à emissão/início é recusado; "vigente" com data vencida e "vencida" antes do vencimento são recusados na API e na CHECK; o relógio do cliente nunca é autoridade.
+
+**Tarefa por vencimento:** criada quando o documento entra na janela registrada ou já venceu, na mesma transação que avalia o vencimento, vinculada a obrigação, documento e período, com regra, fatos e data-base, autor e data do servidor, e **exatamente uma vez** por documento/período/regra (índice único + `ON CONFLICT`). Sem responsável staff ativo o registro é fail-closed: pendência explícita, nenhum nome inventado e conclusão bloqueada. Não há scheduler canônico nesta base: a avaliação temporal é operação administrativa explícita (`POST /api/ext/compliance/evaluate`) e a geração contínua depende de execução agendada futura.
+
+**Histórico/renovação:** a renovação cria nova versão vinculada à anterior, preserva número, emissor, validade, referência e responsável antigos, exige justificativa e encerra formalmente a versão anterior como `substituida`. Índices únicos impedem duas versões atuais e reuso de substituição; triggers impedem autossubstituição, reativação de versão substituída e sobrescrita destrutiva.
+
+Critério automatizado: **Vencimento gera tarefa e documento privado**.

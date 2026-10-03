@@ -1240,3 +1240,9 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 ## EXT-06 — satisfação/carteira (2026-10-03)
 
 Implementada na migração 152 sobre a fonte CLI-11, sem seed e sem copiar `ext_satisfaction_surveys`. Rotas reais: staff `/admin/satisfacao` + `/api/ext/satisfaction/*`; cliente `/cliente/app/satisfacao` + `/api/client/satisfaction-surveys`. Resposta imutável, regra de acompanhamento por pesquisa, responsável CRM fail-closed, evento/auditoria/idempotência na mesma transação e projeção cliente mínima. Validação dedicada: `test:ext06-satisfaction:pg` (PostgreSQL 17 descartável).
+
+## EXT-07 — compliance corporativo (2026-10-03)
+
+Base `main` `efc74bacb7a23314db1d267d91438519dc342a8c` (PR #101 MERGED, feature `3d573f18293ed9bad810fa03e4654ddf1fbd4d30`), branch `arena/01a10376-gruposegsystemseguranca`, divergência inicial 0/0 e árvore limpa. Sexta fatia EXT: `/admin/compliance`, `/api/ext/compliance/*`, migração aditiva 153; 001–152 imutáveis, próxima livre 154.
+
+Implementada sobre `ext_compliance_documents` (086) endurecida, sem seed e sem tabela paralela equivalente de documento. Novas tabelas: `ext_compliance_obligations` (obrigação aplicável declarada), `ext_compliance_tasks` (tarefa de vencimento dedicada) e `ext_compliance_events` (evento imutável + ledger de idempotência). Linhas antigas da 086 permanecem `origin='registro_legado'`. Estado temporal derivado da data-base do servidor; tarefa única por documento/período/regra criada na mesma transação; responsável canônico com modo fail-closed; documento privado imposto por servidor e banco; renovação versionada sem sobrescrita. Validação dedicada: `test:ext07-compliance:pg` (PostgreSQL 17 descartável, 54/54).
