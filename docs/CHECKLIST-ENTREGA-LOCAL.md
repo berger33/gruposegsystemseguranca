@@ -1653,3 +1653,12 @@ Windows.
 A matriz obrigatória foi repetida após esta atualização documental e terminou
 integralmente verde, inclusive L06 9/9; o SIGSEGV anterior não recorreu. L07
 passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
+
+## Resiliência de Interface e Separação de Sessões pós-PR #85 — 03/10/2026
+
+- **Lote/base:** L08 pós-merge da PR #85, baseado na `main` oficial em `8eae38ae7ce84b9a824a63d469d36e03a3b0a5c0`. Branch de trabalho: `arena/01a0fffd-gruposegsystemseguranca`.
+- **Mudança:** resiliência das telas do portal do cliente (`ClientSpaceProvider`, `/cliente/app`, `/contratos`, `/documentos`, `/chamados`, `/seguranca`) com retry explícito (`Tentar novamente`) em alertas e distinção de falha do provedor de contas; adicionado subteste de separação estrita de sessões staff × cliente em `tests/client-space.integration.test.mjs`.
+- **Fonte/tabelas:** CLI-01..05 permanecem na fonte legada canônica (`auth_*`, `client_accounts`, `client_access_grants`, `client_contracts`, `client_documents`, `client_tickets` e auditorias). Nenhuma migração criada; 001–139 imutáveis; próxima livre: 140.
+- **Validação:** estático 5/5 OK, typecheck OK (`tsc --noEmit`), unitários 196/196 OK, build 78 páginas OK (`next build` Turbopack).
+- **Classificação:** implementação local + validação estática/unitária/build. Aceite humano local de Marcelo e Andreia sobre L07 preservado; homologação Windows continua pendente e adiada até o fechamento integral.
+- **Não promovidos:** CLI-06..15, EXT-01..17, órfãos `/admin/ti`, fornecedor restrito e integrações externas. Próximo passo: PR contra main para revisão humana; sem merge automático.

@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { RotateCw } from "lucide-react";
 import { useClientSpace } from "../ClientSpaceProvider";
 import styles from "../../RealAccess.module.css";
 import appStyles from "../ClientApp.module.css";
@@ -9,7 +10,7 @@ import appStyles from "../ClientApp.module.css";
 type Setup = { secret: string; uri: string };
 
 export default function ClientMfaPage() {
-  const { session, loading } = useClientSpace();
+  const { session, loading, notice: spaceNotice, reload } = useClientSpace();
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
@@ -57,7 +58,34 @@ export default function ClientMfaPage() {
     finally { setBusy(false); }
   }
 
-  if (loading || !session) return <p role="status">Verificando sua sessão…</p>;
+  if (loading) {
+    return (
+      <div className={appStyles.loadingWrapWide}>
+        <span className={styles.spinner} aria-hidden="true" />
+        Verificando sua sessão…
+      </div>
+    );
+  }
+
+  if (!session) {
+    if (spaceNotice) {
+      return (
+        <section className={appStyles.sectionCard} aria-labelledby="mfa-title">
+          <h1 id="mfa-title" className={appStyles.sectionTitle}>
+            Segurança da conta · aplicativo autenticador
+          </h1>
+          <p className={`${styles.message} ${styles.messageError}`} role="alert">
+            <span>{spaceNotice}</span>
+            <button className={appStyles.retryButton} type="button" onClick={() => reload()}>
+              <RotateCw size={13} aria-hidden="true" />
+              Tentar novamente
+            </button>
+          </p>
+        </section>
+      );
+    }
+    return <p role="status">Verificando sua sessão…</p>;
+  }
   return <section className={appStyles.sectionCard} aria-labelledby="mfa-title">
     <h1 id="mfa-title" className={appStyles.sectionTitle}>Segurança da conta · aplicativo autenticador</h1>
     <p className={appStyles.sectionHint}>Use um aplicativo autenticador TOTP. Não há envio de e-mail ou SMS. Guarde os códigos de recuperação longe deste computador.</p>

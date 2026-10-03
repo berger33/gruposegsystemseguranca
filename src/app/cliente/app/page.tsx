@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CheckCircle2, ShieldCheck } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { CheckCircle2, RotateCw, ShieldCheck } from "lucide-react";
 import { useClientSpace } from "./ClientSpaceProvider";
 import styles from "../RealAccess.module.css";
 import appStyles from "./ClientApp.module.css";
@@ -19,40 +19,38 @@ type SpaceStats = { contractsTotal: number; contractsActive: number; ticketsOpen
 // Visão geral da área real do cliente: identidade confirmada no servidor,
 // vínculos cadastrais e um resumo dos dados protegidos da conta selecionada.
 export default function ClientAppPage() {
-  const { session, accounts, activeAccount, loading, notice } = useClientSpace();
+  const { session, accounts, activeAccount, loading, notice, reload } = useClientSpace();
   const [stats, setStats] = useState<SpaceStats | null>(null);
   const [statsFailed, setStatsFailed] = useState(false);
+
+  const loadStats = useCallback(async (accountId: string) => {
+    const scoped = `account=${encodeURIComponent(accountId)}`;
+    setStatsFailed(false);
+    try {
+      const [contractsResponse, ticketsResponse] = await Promise.all([
+        fetch(`/api/client/contracts?${scoped}`, { cache: "no-store" }),
+        fetch(`/api/client/tickets?${scoped}`, { cache: "no-store" }),
+      ]);
+      if (!contractsResponse.ok || !ticketsResponse.ok) throw new Error("unexpected");
+      const contracts = (await contractsResponse.json()) as { contracts: { status: string }[] };
+      const tickets = (await ticketsResponse.json()) as { tickets: { status: string }[] };
+      setStats({
+        contractsTotal: contracts.contracts.length,
+        contractsActive: contracts.contracts.filter(contract => contract.status === "active").length,
+        ticketsOpen: tickets.tickets.filter(ticket => ["open", "in_progress"].includes(ticket.status)).length,
+      });
+    } catch {
+      setStatsFailed(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (!activeAccount || activeAccount.status !== "active") {
       setStats(null);
       return;
     }
-    const scoped = `account=${encodeURIComponent(activeAccount.id)}`;
-    setStatsFailed(false);
-    let cancelled = false;
-    Promise.all([
-      fetch(`/api/client/contracts?${scoped}`, { cache: "no-store" }),
-      fetch(`/api/client/tickets?${scoped}`, { cache: "no-store" }),
-    ])
-      .then(async ([contractsResponse, ticketsResponse]) => {
-        if (!contractsResponse.ok || !ticketsResponse.ok) throw new Error("unexpected");
-        const contracts = (await contractsResponse.json()) as { contracts: { status: string }[] };
-        const tickets = (await ticketsResponse.json()) as { tickets: { status: string }[] };
-        if (cancelled) return;
-        setStats({
-          contractsTotal: contracts.contracts.length,
-          contractsActive: contracts.contracts.filter(contract => contract.status === "active").length,
-          ticketsOpen: tickets.tickets.filter(ticket => ["open", "in_progress"].includes(ticket.status)).length,
-        });
-      })
-      .catch(() => {
-        if (!cancelled) setStatsFailed(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeAccount]);
+    loadStats(activeAccount.id);
+  }, [activeAccount, loadStats]);
 
   if (loading || !session) {
     return (
@@ -67,7 +65,11 @@ export default function ClientAppPage() {
     <>
       {notice ? (
         <p className={`${styles.message} ${styles.messageError}`} role="alert">
-          {notice}
+          <span>{notice}</span>
+          <button className={appStyles.retryButton} type="button" onClick={() => reload()}>
+            <RotateCw size={13} aria-hidden="true" />
+            Tentar novamente
+          </button>
         </p>
       ) : null}
 
@@ -153,7 +155,17 @@ export default function ClientAppPage() {
             </div>
           ) : statsFailed ? (
             <div className={appStyles.emptyState}>
-              Não foi possível carregar o resumo agora. Tente recarregar a página.
+              <p className={`${styles.message} ${styles.messageError}`} role="alert">
+                <span>Não foi possível carregar o resumo agora.</span>
+                <button
+                  className={appStyles.retryButton}
+                  type="button"
+                  onClick={() => activeAccount && loadStats(activeAccount.id)}
+                >
+                  <RotateCw size={13} aria-hidden="true" />
+                  Tentar novamente
+                </button>
+              </p>
             </div>
           ) : !stats ? (
             <div className={appStyles.loadingWrapWide}>

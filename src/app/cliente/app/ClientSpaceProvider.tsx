@@ -46,6 +46,8 @@ export function ClientSpaceProvider({ children }: { children: ReactNode }) {
   const [notice, setNotice] = useState("");
 
   const reload = useCallback(async () => {
+    setNotice("");
+    setLoading(true);
     try {
       const me = await fetch("/api/auth/me", { cache: "no-store" });
       if (me.status === 401) {
@@ -64,7 +66,7 @@ export function ClientSpaceProvider({ children }: { children: ReactNode }) {
         return data.accounts.find(account => account.status === "active")?.id ?? data.accounts[0]?.id ?? null;
       });
     } catch {
-      setNotice("Não foi possível carregar sua área agora. Verifique sua conexão e recarregue a página.");
+      setNotice("Não foi possível carregar sua área agora. Verifique sua conexão.");
     } finally {
       setLoading(false);
     }

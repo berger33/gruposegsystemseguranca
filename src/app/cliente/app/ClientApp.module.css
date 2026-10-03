@@ -229,6 +229,26 @@
 
 .downloadButton:hover { background: var(--wash, #e7f2fc); }
 
+.retryButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  margin-left: 10px;
+  border: 1px solid var(--blue, #1a5db2);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--blue, #1a5db2);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.retryButton:hover {
+  background: var(--wash, #e7f2fc);
+}
+
 .dividerLine { height: 1px; background: var(--line, #dce7f0); margin: 20px 0; }
 
 .formGrid { display: grid; gap: 14px; }
