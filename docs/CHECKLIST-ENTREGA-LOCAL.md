@@ -1460,11 +1460,11 @@ Portal fornecedores Aceite: Cotações/documentos/pedidos com escopo próprio; s
 - Pendência / fronteira externa / aceite humano: não existe identidade/login/sessão/grant/canal/upload/aceite de fornecedor; "escopo próprio" externo permanece pendente e não é apresentado como aceite. `file_url`/`storage_key` são referências. Confirmação de volume, bateria pesada, destino, aceite humano e Windows pendentes; aceite Marcelo/Andreia somente L07. Órfão `/admin/ti/ExtClient.tsx` não promovido.
 
 ## EXT-05
-Qualidade Aceite: Não conformidade, causa, ação corretiva, verificação e reincidência
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Handlers `/api/ext/*` para não conformidades/ações; tabelas `ext_quality_*`/085; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
-- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
-- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
+Qualidade Aceite: Não conformidade, causa, ação corretiva, verificação e reincidência; **Encerrar apenas com evidência e responsável**
+- Estado: pronto_local (jornada interna de staff + gate HTTP/PostgreSQL dedicado; destino, aceite humano e Windows pendentes).
+- Tela / API / dados / autorização: `/admin/qualidade`; `/api/ext/quality/*`; migração 151 sobre as tabelas 085. Staff admin/marcelo/ti; 401/403 distintos; same-origin; autoria da sessão; vínculos da URL/registro; UUID/corpo limitado; idempotência por identidade. Causa, ação, verificação, fechamento, reabertura e reincidência têm históricos canônicos imutáveis. Estados e pré-condições do fechamento existem na API e no PostgreSQL. Legado lê com `items` e mutação retorna 410 após guardas.
+- Integração e evidência: probe anterior 9/9 lacunas; focal 6/6; `npm test` 430/430; Wave 0 5/5 (001–151); build 90 com rota real; migrations 151/151 ×2; gate dedicado **33/33**, zero skip/todo, HTTP real + PostgreSQL 17 + sessão staff + 503/rollback. Estático/typecheck/unit/build/migrations e demais gates não cobrem a jornada.
+- Pendência / fronteira externa / aceite humano: jornada exclusivamente interna, sem ator externo exigido ou inventado. Evidência é referência declarada, não upload/arquivo verificado/armazenamento. Bateria pesada integral, aplicação em destino, aceite humano e Windows pendentes; Marcelo/Andreia somente L07. `ExtClient.tsx` preservado.
 
 ## EXT-06
 Satisfação/carteira Aceite: Pesquisas, CSAT/NPS quando adequado, histórico e tarefa de recuperação

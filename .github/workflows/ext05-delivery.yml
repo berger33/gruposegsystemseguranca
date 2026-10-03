@@ -1,0 +1,42 @@
+name: EXT-05 quality delivery
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/server/ext-quality-api.mjs'
+      - 'src/server/ext-api.mjs'
+      - 'src/app/admin/qualidade/**'
+      - 'server.mjs'
+      - 'tests/ext05-quality*.test.mjs'
+      - 'scripts/qa-ext05-quality-postgres.mjs'
+      - 'scripts/migrate-site-visual.mjs'
+      - 'scripts/qa-wave0-static.mjs'
+      - 'db/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/ext05-delivery.yml'
+concurrency:
+  group: ext05-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  quality-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Ledger de migrações 001-151 em PostgreSQL descartável
+        run: npm run test:migrations:pg
+      - name: Jornada EXT-05 (qualidade interna) por HTTP real contra PostgreSQL real
+        run: npm run test:ext05-quality:pg

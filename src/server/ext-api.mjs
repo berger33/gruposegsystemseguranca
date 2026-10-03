@@ -35,106 +35,8 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
   // src/server/ext-supplier-api.mjs (migração 150). Este módulo legado não
   // atende mais cotações: leitura/410 passam pelo módulo canônico.
 
-  // EXT-05 qualidade
-  const handleQualityNonconformities = async (req,res) => {
-    if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=await requireSession(req);
-    if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
-    if(req.method==='GET'){
-      const { rows } = await pool.query(`SELECT * FROM ext_quality_nonconformities ORDER BY created_at DESC LIMIT 200`);
-      return json(res,200,{items:rows, note:'encerrar apenas com evidencia e responsavel'});
-    }
-    if(req.method==='POST'){
-      const b=await readJson(req);
-      const title=String(b.title||'').trim();
-      const description=String(b.description||'').trim();
-      const category=String(b.category||'').trim();
-      const severity=String(b.severity||'media').trim();
-      const responsible_name=b.responsible_name?String(b.responsible_name).trim():null;
-      const related_contract_id=b.related_contract_id||null;
-      if(title.length<5||title.length>200) return json(res,400,{error:'invalid_title'});
-      if(description.length<10||description.length>2000) return json(res,400,{error:'invalid_description'});
-      if(category.length<3||category.length>100) return json(res,400,{error:'invalid_category'});
-      const validSev=['baixa','media','alta','critica'];
-      if(!validSev.includes(severity)) return json(res,400,{error:'invalid_severity'});
-      if(responsible_name && (responsible_name.length<2||responsible_name.length>200)) return json(res,400,{error:'invalid_responsible'});
-      const protocol=generateProtocol('QUAL-EXT');
-      const { rows } = await pool.query(`INSERT INTO ext_quality_nonconformities (protocol, title, description, category, severity, responsible_name, responsible_identity, related_contract_id, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`, [protocol, title, description, category, severity, responsible_name, sess.identityId||null, related_contract_id, sess.identityId||null]);
-      await auditLog({ action:'ext_quality_nonconformity_create', actor:sess.identityId||'system', target:rows[0].id, meta:{ protocol, severity } });
-      return json(res,201,rows[0]);
-    }
-    if(req.method==='PATCH'){
-      const b=await readJson(req);
-      const id=b.id;
-      if(!id) return json(res,400,{error:'missing_id'});
-      const { rows: existing } = await pool.query(`SELECT * FROM ext_quality_nonconformities WHERE id=$1`, [id]);
-      if(!existing.length) return json(res,404,{error:'not_found'});
-      const status=b.status?String(b.status).trim():existing[0].status;
-      const validStatus=['aberta','em_analise','em_acao_corretiva','verificacao','encerrada','reaberta'];
-      if(!validStatus.includes(status)) return json(res,400,{error:'invalid_status'});
-      const cause=b.cause?String(b.cause).trim():existing[0].cause;
-      const corrective_action=b.corrective_action?String(b.corrective_action).trim():existing[0].corrective_action;
-      const verification=b.verification?String(b.verification).trim():existing[0].verification;
-      if(status==='encerrada'){
-        if(!cause || cause.length<10) return json(res,400,{error:'cause_required_to_close'});
-        if(!corrective_action || corrective_action.length<10) return json(res,400,{error:'corrective_action_required_to_close'});
-        if(!verification || verification.length<10) return json(res,400,{error:'verification_required_to_close_encerrar_apenas_com_evidencia_e_responsavel'});
-      }
-      const responsible_name=b.responsible_name?String(b.responsible_name).trim():existing[0].responsible_name;
-      const recurrence_count=b.recurrence_count!=null?Number(b.recurrence_count):existing[0].recurrence_count;
-      const { rows } = await pool.query(`UPDATE ext_quality_nonconformities SET status=$2, cause=$3, corrective_action=$4, verification=$5, responsible_name=$6, recurrence_count=$7, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, status, cause, corrective_action, verification, responsible_name, recurrence_count]);
-      await auditLog({ action:'ext_quality_nonconformity_update', actor:sess.identityId||'system', target:id, meta:{ status } });
-      return json(res,200,rows[0]);
-    }
-    return json(res,405,{error:'method_not_allowed'});
-  };
-
-  const handleQualityActions = async (req,res) => {
-    if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=await requireSession(req);
-    if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
-    if(req.method==='GET'){
-      const url=new URL(req.url,'http://localhost');
-      const nonconformity_id=url.searchParams.get('nonconformity_id');
-      let q=`SELECT * FROM ext_quality_actions`;
-      const params=[];
-      if(nonconformity_id){ params.push(nonconformity_id); q+=` WHERE nonconformity_id=$${params.length}`; }
-      q+=` ORDER BY due_date ASC LIMIT 200`;
-      const { rows } = await pool.query(q, params);
-      return json(res,200,{items:rows});
-    }
-    if(req.method==='POST'){
-      const b=await readJson(req);
-      const nonconformity_id=b.nonconformity_id;
-      const action_type=String(b.action_type||'').trim();
-      const description=String(b.description||'').trim();
-      const responsible_name=b.responsible_name?String(b.responsible_name).trim():null;
-      const due_date=b.due_date||null;
-      if(!nonconformity_id) return json(res,400,{error:'missing_nonconformity_id'});
-      if(action_type.length<3||action_type.length>100) return json(res,400,{error:'invalid_action_type'});
-      if(description.length<10||description.length>2000) return json(res,400,{error:'invalid_description'});
-      if(responsible_name && (responsible_name.length<2||responsible_name.length>200)) return json(res,400,{error:'invalid_responsible'});
-      const { rows } = await pool.query(`INSERT INTO ext_quality_actions (nonconformity_id, action_type, description, responsible_name, responsible_identity, due_date, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`, [nonconformity_id, action_type, description, responsible_name, sess.identityId||null, due_date, sess.identityId||null]);
-      await auditLog({ action:'ext_quality_action_create', actor:sess.identityId||'system', target:rows[0].id, meta:{ nonconformity_id, action_type } });
-      return json(res,201,rows[0]);
-    }
-    if(req.method==='PATCH'){
-      const b=await readJson(req);
-      const id=b.id;
-      const status=b.status?String(b.status).trim():null;
-      if(!id) return json(res,400,{error:'missing_id'});
-      const { rows: existing } = await pool.query(`SELECT * FROM ext_quality_actions WHERE id=$1`, [id]);
-      if(!existing.length) return json(res,404,{error:'not_found'});
-      const nextStatus=status||existing[0].status;
-      const valid=['pendente','concluida','cancelada'];
-      if(!valid.includes(nextStatus)) return json(res,400,{error:'invalid_status'});
-      const completed_at=nextStatus==='concluida'?new Date():null;
-      const { rows } = await pool.query(`UPDATE ext_quality_actions SET status=$2, completed_at=$3 WHERE id=$1 RETURNING *`, [id, nextStatus, completed_at]);
-      await auditLog({ action:'ext_quality_action_update', actor:sess.identityId||'system', target:id, meta:{ status: nextStatus } });
-      return json(res,200,rows[0]);
-    }
-    return json(res,405,{error:'method_not_allowed'});
-  };
+  // EXT-05 qualidade foi transferida para src/server/ext-quality-api.mjs
+  // (migração 151). Este módulo legado não mantém autoridade de escrita.
 
   // EXT-06 satisfação
   const handleSatisfactionSurveys = async (req,res) => {
@@ -183,5 +85,5 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
     return json(res,405,{error:'method_not_allowed'});
   };
 
-  return { handleQualityNonconformities, handleQualityActions, handleSatisfactionSurveys };
+  return { handleSatisfactionSurveys };
 }
