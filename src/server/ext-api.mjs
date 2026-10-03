@@ -3,169 +3,12 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
   const readJson = async (req) => { const chunks=[]; for await (const c of req) chunks.push(c); const raw=Buffer.concat(chunks).toString('utf8'); if(!raw) return {}; try{ return JSON.parse(raw);} catch{ return {}; } };
   const generateProtocol = (prefix) => { const d=new Date(); const y=d.getFullYear().toString(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); const rand=Math.random().toString(36).substring(2,6).toUpperCase(); return `${prefix}-${y}${m}${day}-${rand}`; };
 
-  // EXT-01 frota
-  const handleFleetVehicles = async (req,res) => {
-    if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=await requireSession(req);
-    if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
-    if(req.method==='GET'){
-      const { rows } = await pool.query(`SELECT * FROM ext_fleet_vehicles ORDER BY plate ASC LIMIT 200`);
-      return json(res,200,{items:rows, note:'frota propria existir historico/custo por veiculo alerta manutencao'});
-    }
-    if(req.method==='POST'){
-      const b=await readJson(req);
-      const plate=String(b.plate||'').trim();
-      const model=String(b.model||'').trim();
-      const manufacturer=b.manufacturer?String(b.manufacturer).trim():null;
-      const year=b.year!=null?Number(b.year):null;
-      const fuel_type=String(b.fuel_type||'flex').trim();
-      const responsible_name=b.responsible_name?String(b.responsible_name).trim():null;
-      const mileage=b.mileage!=null?Number(b.mileage):0;
-      const cost_center=b.cost_center?String(b.cost_center).trim():null;
-      const notes=b.notes?String(b.notes).trim():null;
-      if(plate.length<3||plate.length>20) return json(res,400,{error:'invalid_plate'});
-      if(model.length<3||model.length>200) return json(res,400,{error:'invalid_model'});
-      if(manufacturer && (manufacturer.length<2||manufacturer.length>200)) return json(res,400,{error:'invalid_manufacturer'});
-      if(year!=null && (!Number.isFinite(year)||year<1900||year>2100)) return json(res,400,{error:'invalid_year'});
-      const validFuel=['gasolina','etanol','diesel','flex','eletrico','hibrido','outro'];
-      if(!validFuel.includes(fuel_type)) return json(res,400,{error:'invalid_fuel_type'});
-      if(responsible_name && (responsible_name.length<2||responsible_name.length>200)) return json(res,400,{error:'invalid_responsible'});
-      if(!Number.isFinite(mileage)||mileage<0) return json(res,400,{error:'invalid_mileage'});
-      if(cost_center && (cost_center.length<3||cost_center.length>100)) return json(res,400,{error:'invalid_cost_center'});
-      if(notes && (notes.length<10||notes.length>1000)) return json(res,400,{error:'invalid_notes'});
-      try{
-        const { rows } = await pool.query(`INSERT INTO ext_fleet_vehicles (plate, model, manufacturer, year, fuel_type, responsible_name, responsible_identity, mileage, cost_center, notes, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`, [plate, model, manufacturer, year, fuel_type, responsible_name, sess.identityId||null, mileage, cost_center, notes, sess.identityId||null]);
-        await auditLog({ action:'ext_fleet_vehicle_create', actor:sess.identityId||'system', target:rows[0].id, meta:{ plate } });
-        return json(res,201,rows[0]);
-      } catch(e){ if(e.code==='23505') return json(res,409,{error:'duplicate_plate'}); throw e; }
-    }
-    if(req.method==='PATCH'){
-      const b=await readJson(req);
-      const id=b.id;
-      if(!id) return json(res,400,{error:'missing_id'});
-      const { rows: existing } = await pool.query(`SELECT * FROM ext_fleet_vehicles WHERE id=$1`, [id]);
-      if(!existing.length) return json(res,404,{error:'not_found'});
-      const status=b.status?String(b.status).trim():existing[0].status;
-      const validStatus=['disponivel','em_uso','em_manutencao','baixado','reservado'];
-      if(!validStatus.includes(status)) return json(res,400,{error:'invalid_status'});
-      const mileage=b.mileage!=null?Number(b.mileage):existing[0].mileage;
-      const next_maintenance=b.next_maintenance_date!==undefined?b.next_maintenance_date:existing[0].next_maintenance_date;
-      const { rows } = await pool.query(`UPDATE ext_fleet_vehicles SET status=$2, mileage=$3, next_maintenance_date=$4, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, status, mileage, next_maintenance]);
-      await auditLog({ action:'ext_fleet_vehicle_update', actor:sess.identityId||'system', target:id, meta:{ status, mileage } });
-      return json(res,200,rows[0]);
-    }
-    return json(res,405,{error:'method_not_allowed'});
-  };
-
-  const handleFleetFuelLogs = async (req,res) => {
-    if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=await requireSession(req);
-    if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
-    if(req.method==='GET'){
-      const url=new URL(req.url,'http://localhost');
-      const vehicle_id=url.searchParams.get('vehicle_id');
-      let q=`SELECT fl.*, v.plate FROM ext_fleet_fuel_logs fl JOIN ext_fleet_vehicles v ON v.id=fl.vehicle_id`;
-      const params=[];
-      if(vehicle_id){ params.push(vehicle_id); q+=` WHERE fl.vehicle_id=$${params.length}`; }
-      q+=` ORDER BY fl.fuel_date DESC LIMIT 200`;
-      const { rows } = await pool.query(q, params);
-      return json(res,200,{items:rows});
-    }
-    if(req.method==='POST'){
-      const b=await readJson(req);
-      const vehicle_id=b.vehicle_id;
-      const fuel_date=b.fuel_date;
-      const liters=Number(b.liters);
-      const cost_cents=Number(b.cost_cents);
-      const mileage=b.mileage!=null?Number(b.mileage):null;
-      const station=b.station?String(b.station).trim():null;
-      if(!vehicle_id) return json(res,400,{error:'missing_vehicle_id'});
-      if(!fuel_date) return json(res,400,{error:'missing_fuel_date'});
-      if(!Number.isFinite(liters)||liters<=0) return json(res,400,{error:'invalid_liters'});
-      if(!Number.isFinite(cost_cents)||cost_cents<0) return json(res,400,{error:'invalid_cost'});
-      if(mileage!=null && (!Number.isFinite(mileage)||mileage<0)) return json(res,400,{error:'invalid_mileage'});
-      if(station && (station.length<3||station.length>200)) return json(res,400,{error:'invalid_station'});
-      const { rows } = await pool.query(`INSERT INTO ext_fleet_fuel_logs (vehicle_id, fuel_date, liters, cost_cents, mileage, station, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`, [vehicle_id, fuel_date, liters, cost_cents, mileage, station, sess.identityId||null]);
-      await auditLog({ action:'ext_fleet_fuel_create', actor:sess.identityId||'system', target:rows[0].id, meta:{ vehicle_id, cost_cents } });
-      return json(res,201,rows[0]);
-    }
-    return json(res,405,{error:'method_not_allowed'});
-  };
-
-  const handleFleetMaintenanceLogs = async (req,res) => {
-    if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=await requireSession(req);
-    if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
-    if(req.method==='GET'){
-      const url=new URL(req.url,'http://localhost');
-      const vehicle_id=url.searchParams.get('vehicle_id');
-      let q=`SELECT ml.*, v.plate FROM ext_fleet_maintenance_logs ml JOIN ext_fleet_vehicles v ON v.id=ml.vehicle_id`;
-      const params=[];
-      if(vehicle_id){ params.push(vehicle_id); q+=` WHERE ml.vehicle_id=$${params.length}`; }
-      q+=` ORDER BY ml.performed_at DESC LIMIT 200`;
-      const { rows } = await pool.query(q, params);
-      return json(res,200,{items:rows});
-    }
-    if(req.method==='POST'){
-      const b=await readJson(req);
-      const vehicle_id=b.vehicle_id;
-      const maintenance_type=String(b.maintenance_type||'').trim();
-      const description=String(b.description||'').trim();
-      const cost_cents=Number(b.cost_cents);
-      const mileage=b.mileage!=null?Number(b.mileage):null;
-      const performed_at=b.performed_at;
-      const next_due_date=b.next_due_date||null;
-      if(!vehicle_id) return json(res,400,{error:'missing_vehicle_id'});
-      if(maintenance_type.length<3||maintenance_type.length>100) return json(res,400,{error:'invalid_maintenance_type'});
-      if(description.length<10||description.length>2000) return json(res,400,{error:'invalid_description'});
-      if(!Number.isFinite(cost_cents)||cost_cents<0) return json(res,400,{error:'invalid_cost'});
-      if(!performed_at) return json(res,400,{error:'missing_performed_at'});
-      const { rows } = await pool.query(`INSERT INTO ext_fleet_maintenance_logs (vehicle_id, maintenance_type, description, cost_cents, mileage, performed_at, next_due_date, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`, [vehicle_id, maintenance_type, description, cost_cents, mileage, performed_at, next_due_date, sess.identityId||null]);
-      // atualizar veículo last/next maintenance
-      await pool.query(`UPDATE ext_fleet_vehicles SET last_maintenance_date=$2, next_maintenance_date=$3, updated_at=NOW() WHERE id=$1`, [vehicle_id, performed_at, next_due_date]);
-      await auditLog({ action:'ext_fleet_maintenance_create', actor:sess.identityId||'system', target:rows[0].id, meta:{ vehicle_id, maintenance_type } });
-      return json(res,201,rows[0]);
-    }
-    return json(res,405,{error:'method_not_allowed'});
-  };
-
-  const handleFleetDocuments = async (req,res) => {
-    if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=await requireSession(req);
-    if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
-    if(req.method==='GET'){
-      const url=new URL(req.url,'http://localhost');
-      const vehicle_id=url.searchParams.get('vehicle_id');
-      let q=`SELECT * FROM ext_fleet_documents`;
-      const params=[];
-      if(vehicle_id){ params.push(vehicle_id); q+=` WHERE vehicle_id=$${params.length}`; }
-      q+=` ORDER BY expiry_date ASC LIMIT 200`;
-      const { rows } = await pool.query(q, params);
-      return json(res,200,{items:rows});
-    }
-    if(req.method==='POST'){
-      const b=await readJson(req);
-      const vehicle_id=b.vehicle_id;
-      const document_type=String(b.document_type||'').trim();
-      const document_number=b.document_number?String(b.document_number).trim():null;
-      const expiry_date=b.expiry_date||null;
-      const file_name=b.file_name?String(b.file_name).trim():null;
-      const file_url=b.file_url?String(b.file_url).trim():null;
-      const storage_key=b.storage_key?String(b.storage_key).trim():null;
-      if(!vehicle_id) return json(res,400,{error:'missing_vehicle_id'});
-      if(document_type.length<3||document_type.length>100) return json(res,400,{error:'invalid_document_type'});
-      if(document_number && (document_number.length<3||document_number.length>200)) return json(res,400,{error:'invalid_document_number'});
-      if(file_name && (file_name.length<1||file_name.length>500)) return json(res,400,{error:'invalid_file_name'});
-      if(file_url && (file_url.length<5||file_url.length>1000)) return json(res,400,{error:'invalid_file_url'});
-      if(storage_key && (storage_key.length<5||storage_key.length>500)) return json(res,400,{error:'invalid_storage_key'});
-      try{
-        const { rows } = await pool.query(`INSERT INTO ext_fleet_documents (vehicle_id, document_type, document_number, expiry_date, file_name, file_url, storage_key, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`, [vehicle_id, document_type, document_number, expiry_date, file_name, file_url, storage_key, sess.identityId||null]);
-        await auditLog({ action:'ext_fleet_document_create', actor:sess.identityId||'system', target:rows[0].id, meta:{ vehicle_id, document_type } });
-        return json(res,201,rows[0]);
-      } catch(e){ if(e.code==='23505') return json(res,409,{error:'duplicate_storage_key'}); throw e; }
-    }
-    return json(res,405,{error:'method_not_allowed'});
-  };
+  // EXT-01 frota: os handlers legados foram substituídos pela jornada
+  // canônica hardenada em src/server/ext-fleet-api.mjs (migração 147):
+  // autorização por papel com 401/403 distintos, autoria derivada da sessão,
+  // transação única negócio+evento+auditoria com 503/rollback, idempotência
+  // por identidade e histórico imutável. As rotas /api/ext/fleet-* continuam
+  // atendidas por aquele módulo (leitura) ou aposentadas (mutação legada).
 
   // EXT-02 terceiros
   const handleThirdParties = async (req,res) => {
@@ -536,5 +379,5 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
     return json(res,405,{error:'method_not_allowed'});
   };
 
-  return { handleFleetVehicles, handleFleetFuelLogs, handleFleetMaintenanceLogs, handleFleetDocuments, handleThirdParties, handleThirdPartyDocuments, handleBiddingNotices, handleBiddingDocuments, handleSupplierPortalQuotations, handleQualityNonconformities, handleQualityActions, handleSatisfactionSurveys };
+  return { handleThirdParties, handleThirdPartyDocuments, handleBiddingNotices, handleBiddingDocuments, handleSupplierPortalQuotations, handleQualityNonconformities, handleQualityActions, handleSatisfactionSurveys };
 }

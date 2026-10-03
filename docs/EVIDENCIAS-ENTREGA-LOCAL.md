@@ -1,6 +1,31 @@
 # Evidências — entrega local integral
 
-## Evidência vigente — aceite L07 e bloqueio Windows (2026-10-02)
+## Evidência vigente — EXT-01 frota (2026-10-03)
+
+Base `main` `3353b2f013b7c51e74e50460ce62c1fa243c460f` (PR #95 MERGED, divergência inicial 0/0); branch `arena/01a1023b-gruposegsystemseguranca`; dados sintéticos e PostgreSQL descartável.
+
+- **Implementação:** EXT-01 promovida a jornada funcional (`/admin/frota` + `/api/ext/fleet/*` + migração aditiva 147). Lacunas reproduzidas antes de implementar estão no relatório; API administrativa e componente órfão não foram contados como jornada.
+- **Validação automática:**
+
+| Prova | Resultado |
+|---|---|
+| `npm ci` | OK (exit 0) |
+| `node scripts/qa-wave0-static.mjs` | 5/5; 001–147 |
+| `npm run typecheck` | 0 erros |
+| `node --test tests/ext01-fleet.test.mjs` | 20/20 (registrado em `test:unit`) |
+| `npm test` | 265/265 |
+| `npm run build` | exit 0; 86 páginas; `/admin/frota` listada |
+| `npm run test:migrations:pg` | 147/147 em dois passes; replay "Already applied"; checksum negativo rejeitado; clone TEMPLATE preservado (535 tabelas) |
+| `npm run test:l08-delivery:pg` | 51/51 (aplica 001–147; cobre CLI-01..05 — **não** é prova da jornada EXT-01) |
+| `npm run test:demo-local:pg` | OK (QA-HOM-008/009; exercita a guarda de manifesto 147 atualizada) |
+
+- **Fronteiras:** sem dados reais, sem SMTP real, sem upload de arquivo real de documento (metadados sintéticos declarados). Sem skip, sem assert enfraquecido, sem timeout aumentado.
+- **Aceite humano:** nenhum novo; o aceite Marcelo/Andreia permanece restrito ao L07. **Windows:** pendente, adiado ao fechamento integral.
+- **Pendentes após esta fatia:** EXT-02..17, bateria pesada integral, aplicação final em destino e homologação Windows.
+
+Relatório da sessão: [`ENTREGA-RELATORIO-2026-10-03-EXT01-FROTA.md`](ENTREGA-RELATORIO-2026-10-03-EXT01-FROTA.md).
+
+## Evidência anterior — aceite L07 e bloqueio Windows (2026-10-02)
 
 Base `main` `ad01d7d`; branch `arena/01a0fdbd-gruposegsystemseguranca`; dados sintéticos e PostgreSQL descartável.
 

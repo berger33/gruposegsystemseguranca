@@ -28,7 +28,7 @@ add('PLT-SMK-001', 'Dependências runtime declaradas em manifest e lockfile', [
 ]);
 
 const migrationDir = path.join(root, 'db', 'migrations');
-const latestMigration = 146;
+const latestMigration = 147;
 const migrationRange = Array.from({ length: latestMigration }, (_, i) => i + 1);
 const sqlFiles = fs.existsSync(migrationDir) ? fs.readdirSync(migrationDir).filter(f => /^\d{3}-.*\.sql$/.test(f)) : [];
 const byNumber = new Map();

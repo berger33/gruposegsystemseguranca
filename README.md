@@ -1,14 +1,14 @@
 # Grupo SEG System
 
-## Continuação atual: L08 — CLI-15 entregue localmente
+## Continuação atual: EXT-01 — frota entregue localmente
 
-Base confirmada: `main` `1d41160366266ab57a07b82f2b1a3e346e8bd528` (PR #94 MERGED), divergência inicial 0/0. Migrações **001–146**; próxima livre: 147.
+Base confirmada: `main` `3353b2f013b7c51e74e50460ce62c1fa243c460f` (PR #95 MERGED), divergência inicial 0/0. Migrações **001–147**; próxima livre: 148.
 
-CLI-15 liga `/cliente/app/reclamacoes-colaborador` ao backend canônico real: reclamação sobre colaborador aberta por sessão de cliente em `/api/client/employee-complaints`, em canal restrito, com autoria/IDs derivados no servidor, idempotência por identidade, isolamento A≠B com 403 genérico auditado e compartilhamento mínimo e justificado com RH (somente protocolo, categoria, severidade e situação, campo a campo em `cli_employee_complaint_hr_shares`). Abertura, histórico, envelope de RH e `auth_access_audit` ocorrem na mesma transação; falha da auditoria devolve 503 com rollback. A rota administrativa legada deixou de listar o canal restrito para papéis não autorizados e o RH passou a receber apenas a projeção mínima. Migração 146 é aditiva.
+EXT-01 liga `/admin/frota` ao backend canônico real: veículo, responsável, abastecimento, manutenção, documentos e custo em `/api/ext/fleet/*` (tabelas `ext_fleet_*` da 085 + jornada da 147), para os papéis staff admin/marcelo/ti. Autoria derivada da sessão e vínculos derivados da URL (corpo forjado ignorado); negócio, evento imutável e `audit_log` na mesma transação, com 503 e rollback em falha da auditoria; `Idempotency-Key` em toda mutação (replay idêntico não duplica; reuso divergente 409); histórico/custo por veículo somente de registros canônicos com fonte e data-base declaradas; alerta de manutenção derivado exclusivamente de regra explícita registrada (`sem_regra`/`sem_base` declarados). A condição do plano é "se frota própria existir": sem registro canônico, a tela declara a ausência — nada é inventado. As rotas legadas `/api/ext/fleet-*` deixaram de ser atalho (mutação 410). Migração 147 é aditiva.
 
-Validação desta fatia: `npm ci`, estático 5/5 (001–146), typecheck e teste dedicado CLI-15 15/15; bateria integral 245/245 e build 85 páginas com a rota cliente listada; gate L08 legado 51/51 em PostgreSQL descartável (aplica 001–146, mas não prova a jornada CLI-15). Bateria pesada específica, aplicação em destino, aceite humano e Windows permanecem pendentes.
+Validação desta fatia: `npm ci`, estático 5/5 (001–147), typecheck e teste dedicado EXT-01 20/20; bateria integral 265/265 e build 86 páginas com `/admin/frota` listada; migrações 147/147 em dois passes com checksum negativo rejeitado; gate L08 legado 51/51 em PostgreSQL descartável (aplica 001–147, mas não prova a jornada EXT-01) e ensaio do demo local OK. Bateria pesada específica, aplicação em destino, aceite humano e Windows permanecem pendentes.
 
-Leia o [relatório CLI-15](docs/ENTREGA-L08-RELATORIO-2026-10-03-CLI15-RECLAMACAO.md), a [entrega L08](docs/ENTREGA-L08.md) e o [estado atual](docs/ESTADO-EXECUCAO-LOCAL.md).
+Leia o [relatório EXT-01](docs/ENTREGA-RELATORIO-2026-10-03-EXT01-FROTA.md), a [entrega EXT](docs/ENTREGA-EXT.md), a [entrega L08](docs/ENTREGA-L08.md) e o [estado atual](docs/ESTADO-EXECUCAO-LOCAL.md).
 
 ## Demonstração local persistente — apenas massa fictícia
 
