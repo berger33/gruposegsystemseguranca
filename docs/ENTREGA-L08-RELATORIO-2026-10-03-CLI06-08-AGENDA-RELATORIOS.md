@@ -121,8 +121,10 @@ O lote seguiu a orientação do proprietário: foco em execução e implementaç
 - `npm run typecheck` → OK (`tsc --noEmit`).
 - `npm test` → 196/196 testes unitários rápidos OK em ~4,4s.
 - `npm run build` → OK; Next.js compilou 80 páginas, incluindo `/cliente/app/agenda` e `/cliente/app/relatorios`.
+- Pós-PR: `npm run test:tenant:pg` → OK após compatibilidade com o gate legado de `client_tickets` até a aplicação da migração 140.
+- Pós-PR: `npm run test:l08-delivery:pg` → OK, 51/51.
 
-`next-env.d.ts` foi restaurado após o build.
+`next-env.d.ts` e `tsconfig.json` foram restaurados após build/gates que geram tipos temporários.
 
 ---
 
