@@ -1,16 +1,16 @@
 # Grupo SEG System
 
-## Continuação atual: L08 — portal do cliente (CLI-11 entregue, CLI-12 é o próximo)
+## Continuação atual: L08 — portal do cliente (CLI-12 entregue, CLI-13 é o próximo)
 
-Base de trabalho desta fatia: `main` `1024b3b` (merge da PR #90), migrações **001–142** (próxima livre: 143).
+Base de trabalho desta fatia: `main` `5cff301` (merge da PR #91), migrações **001–143** (próxima livre: 144).
 
-Em 2026-10-03 foi entregue **CLI-11 — satisfação pós-atendimento e periódica, plano de ação e risco de renovação baseado em fatos**, de forma aditiva, na jornada autenticada do portal: tela real `/cliente/app/satisfacao`, rota `/api/client/satisfaction-surveys` sob sessão de cliente, resposta idempotente por identidade com autoria derivada da sessão, risco classificado **somente** a partir de contagens em registros canônicos (`client_tickets`, `cli_charges_v2` e respostas anteriores) gravadas em `facts_json` com fonte e data-base, e plano de ação aberto apenas quando existe responsável comercial real no CRM — sem responsável, a pendência é declarada em vez de inventar um nome. Resposta, fatos, plano e auditoria ocorrem na mesma transação, com rollback e 503 em falha; nada é escrito em contratos, cobranças ou obrigações. Migração aditiva **142**.
+Em 2026-10-03 foi entregue **CLI-12 — renovação e comunicação contratual com registro, sem bloquear indiscriminadamente o portal por inadimplência**, de forma aditiva, na jornada autenticada do portal: tela real `/cliente/app/renovacao`, rota `/api/client/renewal-communications` sob sessão de cliente. O cliente vê somente comunicações registradas, dirigidas à sua conta e com envio local registrado (`sent_at`), com tipo, data, conteúdo e contrato relacionado; registra ciência (e, quando o tipo permite, interesse em renovar ou pedido de contato) com autoria derivada da sessão, idempotência por identidade e histórico imutável — a manifestação não renova contrato, não cria cobrança e não altera valor. Inadimplência em `cli_charges_v2` **não** restringe o portal (provado por teste); restrição só vem de comunicação `encerramento` com `block_reason` explícito, declarada com motivo e origem. Vencimentos vêm de `client_contracts.ends_on` e `crm_renewals.renewal_date` com fonte e data-base visíveis; ausência de dado é declarada, nunca vira zero ou "em dia". Migração aditiva **143**; rota administrativa legada preservada.
 
-Validação desta fatia (rápida, por decisão do proprietário de que **os testes pesados ficam para depois da entrega do sistema**): estático 5/5 (001–142), typecheck OK, unitários **205/205**, build OK com 83 páginas e `tests/cli11-satisfaction-portal.test.mjs` 6/6. Gates L03..L08 em cascata, Chromium e PostgreSQL descartável **não** foram executados nesta sessão.
+Validação desta fatia (rápida, por decisão do proprietário de que **os testes pesados ficam para depois da entrega do sistema**): estático 5/5 (001–143), typecheck OK, unitários **215/215**, build OK com 84 páginas e `tests/cli12-renewal-communications.test.mjs` 10/10 (registrado em `test:unit`). Gates L03..L08 em cascata, Chromium e PostgreSQL descartável **não** foram executados nesta sessão.
 
-CLI-12..15, EXT-01..17 e os 80 órfãos de `/admin/ti` continuam não promovidos. L07 teve aceite humano de Marcelo e Andreia; a **homologação final Windows permanece pendente e adiada até o fechamento integral do sistema**.
+CLI-13..15, EXT-01..17 e os 80 órfãos de `/admin/ti` continuam não promovidos. L07 teve aceite humano de Marcelo e Andreia; a **homologação final Windows permanece pendente e adiada até o fechamento integral do sistema**.
 
-Leia o [relatório da entrega CLI-11](docs/ENTREGA-L08-RELATORIO-2026-10-03-CLI11-SATISFACAO.md), a [entrega L08 consolidada](docs/ENTREGA-L08.md), o [estado atual](docs/ESTADO-EXECUCAO-LOCAL.md) e o [checklist por requisito](docs/CHECKLIST-ENTREGA-LOCAL.md). Não repetir L04–L07 nem reabrir FIN/ADM já fechados.
+Leia o [relatório da entrega CLI-12](docs/ENTREGA-L08-RELATORIO-2026-10-03-CLI12-RENOVACAO.md), o [relatório da entrega CLI-11](docs/ENTREGA-L08-RELATORIO-2026-10-03-CLI11-SATISFACAO.md), a [entrega L08 consolidada](docs/ENTREGA-L08.md), o [estado atual](docs/ESTADO-EXECUCAO-LOCAL.md) e o [checklist por requisito](docs/CHECKLIST-ENTREGA-LOCAL.md). Não repetir L04–L07 nem reabrir FIN/ADM já fechados.
 
 ## Demonstração local persistente — apenas massa fictícia
 

@@ -168,3 +168,40 @@ aceite humano anterior de Marcelo e Andreia sobre L07 permanece preservado; não
 há novo aceite humano nesta fatia e a homologação final Windows continua
 pendente e adiada até o fechamento integral do sistema. Relatório:
 [`ENTREGA-L08-RELATORIO-2026-10-03-CLI11-SATISFACAO.md`](ENTREGA-L08-RELATORIO-2026-10-03-CLI11-SATISFACAO.md).
+
+## CLI-12 renovação e comunicação contratual no portal — 03/10/2026
+
+Fatia partindo da `main` oficial em `5cff301` (merge da PR #91, confirmado no
+remoto antes de editar; divergência 0/0). Promove somente **CLI-12** com
+jornada cliente real em `/cliente/app/renovacao` e rota
+`/api/client/renewal-communications` sob sessão de cliente: leitura restrita a
+comunicações registradas, dirigidas à própria conta e com envio local
+registrado (`sent_at`); ciência/interesse em renovar/pedido de contato com
+autoria derivada da sessão, idempotência por identidade (chave + fingerprint;
+reuso divergente 409; manifestação duplicada 409) e histórico imutável em
+`cli_renewal_comm_responses`, na mesma transação da auditoria canônica
+(rollback e 503 em falha). A manifestação não renova contrato, não cria
+cobrança e não altera valor.
+
+O não bloqueio indiscriminado está provado por teste: inadimplência em
+`cli_charges_v2` não participa de nenhuma decisão de acesso (CLI-12 e também
+as leituras autenticadas CLI-10/CLI-11); restrição só pode vir de comunicação
+`encerramento` com `is_blocking` e `block_reason` explícito (CHECK da 076),
+declarada ao cliente com motivo, origem e protocolo. Vencimentos vêm somente
+de `client_contracts.ends_on` e `crm_renewals.renewal_date`, com fonte e
+data-base visíveis; ausência de dado é declarada, sem risco, previsão ou valor
+calculado. A rota administrativa legada foi preservada sem mudança de contrato.
+
+Migração aditiva única: `143-l08-cli12-renewal-communications-portal.sql`;
+001–142 permanecem imutáveis e a próxima livre passa a ser 144. Validações
+rápidas: estático 5/5 (001–143), typecheck OK, `npm test` 215/215 (teste novo
+registrado em `test:unit`), build 84 páginas,
+`tests/cli12-renewal-communications.test.mjs` 10/10. Os gates pesados
+(L03..L08 em cascata, Chromium e PostgreSQL descartável) seguem adiados por
+decisão do proprietário para depois da entrega do sistema.
+
+CLI-13..15, EXT-01..17 e os órfãos de `/admin/ti` continuam não promovidos. O
+aceite humano anterior de Marcelo e Andreia sobre L07 permanece preservado; não
+há novo aceite humano nesta fatia e a homologação final Windows continua
+pendente e adiada até o fechamento integral do sistema. Relatório:
+[`ENTREGA-L08-RELATORIO-2026-10-03-CLI12-RENOVACAO.md`](ENTREGA-L08-RELATORIO-2026-10-03-CLI12-RENOVACAO.md).

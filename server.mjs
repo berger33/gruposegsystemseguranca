@@ -3681,7 +3681,7 @@ async function routeApi(req, res) {
     return cliFinanceApi.handleSatisfactionActionPlans(req, res);
   }
   // CLI-12 renovação comunicação contratual registro sem bloquear indiscriminadamente portal por inadimplência
-  if (url.pathname === "/api/admin/hr/cli-renewal-communications" || url.pathname === "/api/crm/hr/cli-renewal-communications" || url.pathname === "/api/hr/cli-renewal-communications" || url.pathname === "/api/cli/renewal-communications") {
+  if (url.pathname === "/api/admin/hr/cli-renewal-communications" || url.pathname === "/api/crm/hr/cli-renewal-communications" || url.pathname === "/api/hr/cli-renewal-communications" || url.pathname === "/api/cli/renewal-communications" || url.pathname === "/api/client/renewal-communications") {
     return cliFinanceApi.handleRenewalCommunications(req, res);
   }
   // CLI-13 modos convite solicitação com aprovação autocadastro configuráveis vínculo verificado servidor autocadastro nunca libera contratos sozinho

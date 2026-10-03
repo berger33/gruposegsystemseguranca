@@ -1,6 +1,45 @@
 # Estado da execução — entrega local integral
 
-## Estado vigente — L08/CLI-11 entregue com validação rápida (2026-10-03)
+## Estado vigente — L08/CLI-12 entregue com validação rápida (2026-10-03)
+
+Base oficial: `main` em `5cff301` (merge da PR #91, confirmada mergeada no
+remoto antes de editar; divergência 0/0 da branch nova contra `origin/main`).
+Branch desta sessão: `arena/01a10062-gruposegsystemseguranca`. Continuidade
+retomada exatamente onde CLI-11 parou: a fatia promove **somente CLI-12**
+(renovação e comunicação contratual com registro, sem bloquear
+indiscriminadamente o portal por inadimplência), com tela real
+`/cliente/app/renovacao`, rota `/api/client/renewal-communications` sob sessão
+de cliente e migração aditiva **143** (001–142 imutáveis; próxima livre: 144).
+
+O cliente lê somente comunicações registradas, dirigidas à própria conta e com
+envio local registrado; registra ciência/interesse/pedido de contato com
+autoria da sessão, idempotência por identidade (chave + fingerprint; reuso
+divergente 409) e histórico imutável, na mesma transação da auditoria
+canônica. Provado por teste que inadimplência em `cli_charges_v2` não participa
+de nenhuma decisão de acesso (CLI-12 e também as leituras CLI-10/CLI-11);
+restrição só por `encerramento` bloqueante com `block_reason`, declarada com
+motivo e origem. Vencimentos só de `client_contracts.ends_on` e
+`crm_renewals.renewal_date`, com fonte e data-base; ausência declarada. A rota
+administrativa legada foi preservada sem mudança de contrato.
+
+Por decisão explícita do proprietário, **os testes pesados ficam para depois da
+entrega do sistema**: nesta sessão não foram executados gates L03..L08 em
+cascata, Chromium massivo nem PostgreSQL descartável em loop. Validação
+executada: `npm ci` OK, estático **5/5 (001–143)**, typecheck OK, `npm test`
+**215/215** (novo teste registrado em `test:unit`), build OK com **84 páginas**
+e `tests/cli12-renewal-communications.test.mjs` **10/10**.
+
+Estado declarado: CLI-12 passa a `pronto_local` **apenas na validação
+automática rápida**; gate PostgreSQL/HTTP/Chromium, aplicação da migração 143
+em destino, aceite humano e homologação Windows continuam pendentes.
+CLI-13..15, EXT-01..17 e os 80 órfãos de `/admin/ti` continuam não promovidos.
+Próximo passo real: CLI-13 (modos de acesso configuráveis; autocadastro nunca
+libera contrato sozinho), depois CLI-14 e CLI-15; a bateria pesada e a
+homologação Windows só entram no fechamento integral. Relatório:
+[`ENTREGA-L08-RELATORIO-2026-10-03-CLI12-RENOVACAO.md`](ENTREGA-L08-RELATORIO-2026-10-03-CLI12-RENOVACAO.md).
+
+
+## Estado anterior — L08/CLI-11 entregue com validação rápida (2026-10-03)
 
 Base oficial: `main` em `1024b3b` (merge da PR #90). Branch desta sessão:
 `arena/01a10049-gruposegsystemseguranca`. Continuidade retomada exatamente onde

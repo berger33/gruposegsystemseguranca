@@ -633,8 +633,276 @@ export function createCliFinanceApi({ pool, auditLog, sameOrigin, requireSession
     return json(res,405,{ error:"method_not_allowed" });
   }
 
+  // CLI-12 renovação e comunicação contratual no portal do cliente.
+  // Leitura restrita à própria conta, ciência/resposta idempotente por
+  // identidade com histórico imutável e autoria derivada da sessão. A
+  // manifestação não renova contrato, não cria cobrança e não altera valor.
+  // Inadimplência em cli_charges_v2 nunca é consultada para decidir acesso:
+  // restrição só pode vir de comunicação 'encerramento' com block_reason
+  // explícito (CHECK da migração 076), declarada ao cliente com motivo e origem.
+  const RENEWAL_RESPONSE_KINDS = {
+    aviso_vencimento: ["ciencia", "interesse_renovar", "solicitar_contato"],
+    proposta_renovacao: ["ciencia", "interesse_renovar", "solicitar_contato"],
+    reajuste: ["ciencia", "solicitar_contato"],
+    encerramento: ["ciencia", "solicitar_contato"],
+    outro: ["ciencia"],
+  };
+
+  async function handleClientRenewalCommunications(req, res) {
+    const session = await requireClientSession?.(req);
+    if (!session?.identityId) return json(res, 401, { error: "client_session_required" });
+    if (!sameOrigin(req)) return json(res, 403, { error: "origin_forbidden" });
+    if (!["GET", "POST"].includes(req.method)) return json(res, 405, { error: "method_not_allowed" });
+
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    if (req.method === "GET") {
+      const accountId = String(url.searchParams.get("account") || "");
+      if (!UUID_PATTERN.test(accountId)) return json(res, 400, { error: "invalid_account_id" });
+      try {
+        const scoped = await pool.query(
+          `SELECT grant_row.contract_scope_mode, grant_row.allowed_contract_ids, account.crm_company_id
+             FROM client_access_grants grant_row
+             JOIN client_accounts account ON account.id = grant_row.client_account_id
+            WHERE grant_row.identity_id=$1 AND grant_row.client_account_id=$2
+              AND grant_row.revoked_at IS NULL AND account.status='active'`,
+          [session.identityId, accountId],
+        );
+        const access = scoped.rows[0];
+        if (!access) {
+          await pool.query(
+            `INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category)
+             VALUES ('client',$1,'renewal_communication_list',$2,'denied','authorization_denied')`,
+            [session.identityId, accountId],
+          );
+          return json(res, 403, { error: "forbidden" });
+        }
+
+        // Somente comunicações efetivamente registradas, dirigidas à conta e
+        // com envio local registrado (sent_at). Nada é gerado para preencher tela.
+        const communications = await pool.query(
+          `SELECT comm.id, comm.protocol, comm.comm_type, comm.title, comm.content, comm.sent_at,
+                  comm.is_blocking, comm.block_reason, comm.contract_id, comm.created_at,
+                  contract.title AS contract_title, contract.ends_on AS contract_ends_on
+             FROM cli_renewal_communications comm
+             LEFT JOIN client_contracts contract ON contract.id = comm.contract_id
+            WHERE comm.client_account_id=$1 AND comm.sent_at IS NOT NULL
+            ORDER BY comm.sent_at DESC LIMIT 100`,
+          [accountId],
+        );
+        const myResponses = await pool.query(
+          `SELECT id, communication_id, response_kind, message, created_at
+             FROM cli_renewal_comm_responses
+            WHERE client_account_id=$1 AND identity_id=$2
+            ORDER BY created_at DESC LIMIT 300`,
+          [accountId, session.identityId],
+        );
+
+        // Vencimentos reais: somente registros canônicos, com fonte declarada.
+        // Ausência de data permanece nula e é declarada; nunca vira "em dia".
+        const contractParams = [accountId];
+        let contractScopeSql = "";
+        if (access.contract_scope_mode === "selected") {
+          contractParams.push(Array.isArray(access.allowed_contract_ids) ? access.allowed_contract_ids : []);
+          contractScopeSql = " AND id = ANY($2::uuid[])";
+        }
+        const contracts = await pool.query(
+          `SELECT id, title, status, ends_on FROM client_contracts
+            WHERE client_account_id=$1${contractScopeSql}
+            ORDER BY created_at DESC LIMIT 100`,
+          contractParams,
+        );
+        let crmRenewals = { rows: [] };
+        if (access.crm_company_id) {
+          crmRenewals = await pool.query(
+            `SELECT id, title, status, renewal_date FROM crm_renewals
+              WHERE company_id=$1
+              ORDER BY renewal_date ASC NULLS LAST LIMIT 100`,
+            [access.crm_company_id],
+          );
+        }
+
+        // Restrição declarada: apenas encerramento bloqueante com motivo
+        // explícito. Nenhuma consulta a inadimplência participa desta decisão.
+        const blocking = communications.rows.find(
+          row => row.is_blocking && row.comm_type === "encerramento" && row.block_reason,
+        );
+        const accessRestriction = blocking
+          ? {
+              restricted: true,
+              reason: blocking.block_reason,
+              origin: "cli_renewal_communications",
+              protocol: blocking.protocol,
+              communication_id: blocking.id,
+            }
+          : { restricted: false, reason: null, origin: null };
+
+        await pool.query(
+          `INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category)
+           VALUES ('client',$1,'renewal_communication_list',$2,'allowed','none')`,
+          [session.identityId, accountId],
+        );
+        return json(res, 200, {
+          communications: communications.rows.map(row => ({
+            ...row,
+            allowed_response_kinds: RENEWAL_RESPONSE_KINDS[row.comm_type] || ["ciencia"],
+          })),
+          responses: myResponses.rows,
+          renewalDates: {
+            as_of: new Date().toISOString(),
+            contracts: contracts.rows.map(row => ({
+              contract_id: row.id,
+              title: row.title,
+              status: row.status,
+              ends_on: row.ends_on,
+              source: "client_contracts.ends_on",
+            })),
+            crmRenewals: crmRenewals.rows.map(row => ({
+              renewal_id: row.id,
+              title: row.title,
+              status: row.status,
+              renewal_date: row.renewal_date,
+              source: "crm_renewals.renewal_date",
+            })),
+            note: "Datas de registros canônicos; ausência de data é declarada, não vira estimativa.",
+          },
+          accessRestriction,
+          note: "Somente comunicações registradas e enviadas para esta conta. Inadimplência não restringe o portal; restrição só por encerramento com motivo explícito.",
+        });
+      } catch (error) {
+        console.error("CLI-12 client list failed", error instanceof Error ? error.message : error);
+        return json(res, 503, { error: "renewal_communications_unavailable" });
+      }
+    }
+
+    let body;
+    try {
+      const chunks = [];
+      let size = 0;
+      for await (const chunk of req) {
+        size += chunk.length;
+        if (size > 32_768) return json(res, 413, { error: "body_too_large" });
+        chunks.push(chunk);
+      }
+      body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+    } catch {
+      return json(res, 400, { error: "invalid_request" });
+    }
+
+    // Identidade, conta ou responsável vindos do corpo são ignorados: a
+    // autoria é sempre a sessão e a conta é derivada da própria comunicação.
+    const communicationId = String(body.communication_id || "");
+    const responseKind = String(body.response_kind || "");
+    const rawMessage = typeof body.message === "string" ? body.message.trim() : "";
+    const message = rawMessage.length > 0 ? rawMessage : null;
+    const key = String(req.headers["idempotency-key"] || "").trim();
+    if (!UUID_PATTERN.test(communicationId)) return json(res, 400, { error: "invalid_reference" });
+    if (!["ciencia", "interesse_renovar", "solicitar_contato"].includes(responseKind)) return json(res, 400, { error: "invalid_response_kind" });
+    if (!IDEMPOTENCY_KEY_PATTERN.test(key)) return json(res, 400, { error: "idempotency_key_required" });
+    if (message !== null && (message.length < 5 || message.length > 1000)) return json(res, 400, { error: "message_5_1000" });
+
+    const fingerprint = requestFingerprint({ communicationId, responseKind, message });
+    let client;
+    try {
+      client = await pool.connect();
+      await client.query("BEGIN");
+
+      const replay = await client.query(
+        `SELECT * FROM cli_renewal_comm_responses WHERE identity_id=$1 AND idempotency_key=$2 FOR UPDATE`,
+        [session.identityId, key],
+      );
+      if (replay.rows[0]) {
+        if (replay.rows[0].request_fingerprint !== fingerprint) {
+          await client.query("ROLLBACK");
+          return json(res, 409, { error: "idempotency_key_reused" });
+        }
+        await client.query("COMMIT");
+        return json(res, 200, { response: replay.rows[0], replayed: true });
+      }
+
+      // Grant não revogado, conta ativa e comunicação enviada são revalidados
+      // na mesma transação; comunicação não enviada se comporta como inexistente.
+      const scoped = await client.query(
+        `SELECT comm.id, comm.comm_type, comm.client_account_id
+           FROM cli_renewal_communications comm
+           JOIN client_access_grants grant_row
+             ON grant_row.client_account_id = comm.client_account_id
+            AND grant_row.identity_id = $1
+            AND grant_row.revoked_at IS NULL
+           JOIN client_accounts account
+             ON account.id = comm.client_account_id AND account.status='active'
+          WHERE comm.id=$2 AND comm.sent_at IS NOT NULL
+          FOR UPDATE OF comm`,
+        [session.identityId, communicationId],
+      );
+      const communication = scoped.rows[0];
+      if (!communication) {
+        await client.query(
+          `INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category)
+           VALUES ('client',$1,'renewal_communication_respond',$2,'denied','authorization_denied')`,
+          [session.identityId, communicationId],
+        );
+        await client.query("COMMIT");
+        return json(res, 403, { error: "forbidden" });
+      }
+
+      const allowedKinds = RENEWAL_RESPONSE_KINDS[communication.comm_type] || ["ciencia"];
+      if (!allowedKinds.includes(responseKind)) {
+        await client.query("ROLLBACK");
+        return json(res, 409, { error: "response_kind_not_allowed_for_type" });
+      }
+
+      const existing = await client.query(
+        `SELECT id FROM cli_renewal_comm_responses
+          WHERE communication_id=$1 AND identity_id=$2 AND response_kind=$3`,
+        [communicationId, session.identityId, responseKind],
+      );
+      if (existing.rows[0]) {
+        await client.query("ROLLBACK");
+        return json(res, 409, { error: "response_already_registered" });
+      }
+
+      const created = await client.query(
+        `INSERT INTO cli_renewal_comm_responses
+           (id, communication_id, client_account_id, identity_id, response_kind, message,
+            idempotency_key, request_fingerprint)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+         RETURNING *`,
+        [randomUUID(), communicationId, communication.client_account_id, session.identityId,
+          responseKind, message, key, fingerprint],
+      );
+      await client.query(
+        `INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category)
+         VALUES ('client',$1,'renewal_communication_respond',$2,'allowed','none')`,
+        [session.identityId, communicationId],
+      );
+      await client.query("COMMIT");
+      return json(res, 201, {
+        response: created.rows[0],
+        note: "Manifestação registrada. Ela não renova contrato, não cria cobrança e não altera valor; a tratativa é feita pela equipe.",
+      });
+    } catch (error) {
+      await client?.query("ROLLBACK").catch(() => {});
+      if (error && typeof error === "object" && error.code === "23505") {
+        try {
+          const replay = await client.query(
+            `SELECT * FROM cli_renewal_comm_responses WHERE identity_id=$1 AND idempotency_key=$2`,
+            [session.identityId, key],
+          );
+          if (replay.rows[0]?.request_fingerprint === fingerprint) return json(res, 200, { response: replay.rows[0], replayed: true });
+          if (replay.rows[0]) return json(res, 409, { error: "idempotency_key_reused" });
+          return json(res, 409, { error: "response_already_registered" });
+        } catch {}
+      }
+      console.error("CLI-12 client respond failed", error instanceof Error ? error.message : error);
+      return json(res, 503, { error: "renewal_communication_unavailable" });
+    } finally {
+      client?.release();
+    }
+  }
+
   // CLI-12 renovação comunicação contratual registro sem bloquear indiscriminadamente portal por inadimplência
   async function handleRenewalCommunications(req, res) {
+    if (req.url.startsWith("/api/client/")) return handleClientRenewalCommunications(req, res);
     const session = await ensureAuth(req, res, ["admin","ti","comercial"]);
     if (!session) return;
     const url = new URL(req.url, `http://${req.headers.host}`);

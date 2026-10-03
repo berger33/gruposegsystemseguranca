@@ -948,10 +948,10 @@ satisfação pós-atendimento e periódica, plano de ação e risco de renovaç�
 
 ## CLI-12
 renovação e comunicação contratual com registro, sem bloquear indiscriminadamente o portal por inadimplência.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: API/tabela 076 de comunicações de renovação; sem tela cliente.
-- Integração e evidência (teste, resultado, commit): Sem prova de comunicação e de não bloqueio indiscriminado.
-- Pendência / fronteira externa / aceite humano: Órfão/não provado.
+- Estado: pronto_local (validação automática rápida; gate pesado e aceite humano pendentes)
+- Tela / API / dados / autorização: Tela `/cliente/app/renovacao` e rota `/api/client/renewal-communications` sob sessão de cliente (`cli-finance-api.mjs`). Fontes canônicas: `cli_renewal_communications` (076), nova `cli_renewal_comm_responses` (143), `client_contracts.ends_on`, `crm_renewals.renewal_date`, `client_access_grants` e `auth_access_audit`. Anônimo 401, conta sem grant 403 auditado, comunicação não enviada tratada como inexistente, autoria derivada da sessão (corpo forjado ignorado), manifestação duplicada/tipo não permitido/chave reusada divergente 409.
+- Integração e evidência (teste, resultado, commit): `tests/cli12-renewal-communications.test.mjs` 10/10 (registrado em `test:unit`); estático 5/5 (001–143); typecheck OK; `npm test` 215/215; build 84 páginas. Provado por teste que inadimplência em `cli_charges_v2` não participa da autorização (CLI-12 e leituras CLI-10/CLI-11); restrição só por `encerramento` bloqueante com `block_reason`, declarada com motivo e origem; manifestação não escreve em contratos, cobranças ou renovações; ciência e auditoria na mesma transação com rollback/503; vencimentos com fonte e data-base declaradas e ausência preservada. Rota administrativa legada intacta. Relatório: [ENTREGA-L08-RELATORIO-2026-10-03-CLI12-RENOVACAO.md](ENTREGA-L08-RELATORIO-2026-10-03-CLI12-RENOVACAO.md).
+- Pendência / fronteira externa / aceite humano: gate `test:l08-delivery:pg` com HTTP/PostgreSQL/Chromium reais adiado junto da bateria pesada; migração 143 ainda não aplicada em ambiente de destino; comunicações históricas sem `sent_at` não aparecem no portal até terem envio registrado; tratativa da manifestação permanece manual pela equipe; aceite humano e Windows pendentes.
 
 ## CLI-13
 modos convite, solicitação com aprovação e autocadastro configuráveis; vínculo verificado no servidor em todos. Autocadastro nunca libera contratos sozinho.

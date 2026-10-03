@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BriefcaseBusiness, CalendarClock, CirclePlus, ClipboardCheck, FileText, Headphones, LayoutDashboard, LogOut, ShieldCheck, Receipt, Star } from "lucide-react";
+import { BriefcaseBusiness, CalendarClock, CirclePlus, ClipboardCheck, FileText, Headphones, LayoutDashboard, LogOut, RefreshCw, ShieldCheck, Receipt, Star } from "lucide-react";
 import { useClientSpace } from "./ClientSpaceProvider";
 import styles from "./ClientApp.module.css";
 
@@ -16,6 +16,7 @@ const destinations = [
   { href: "/cliente/app/cobrancas", label: "Cobranças", icon: Receipt },
   { href: "/cliente/app/solicitacoes", label: "Serviço adicional", icon: CirclePlus },
   { href: "/cliente/app/satisfacao", label: "Satisfação", icon: Star },
+  { href: "/cliente/app/renovacao", label: "Renovação", icon: RefreshCw },
   { href: "/cliente/app/seguranca", label: "Segurança", icon: ShieldCheck },
 ];
 
