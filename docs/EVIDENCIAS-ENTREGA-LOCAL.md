@@ -2282,3 +2282,12 @@ O teste dedicado prova no contrato implementado: sessão cliente obrigatória (4
 Correção na mesma fatia: a primeira rodada de CI da PR #95 falhou em L04..L07 e no QA-HOM-008 porque a guarda de manifesto de `scripts/migrate-site-visual.mjs` ainda exigia 145 arquivos; a guarda e o log foram atualizados para 146 (nenhuma migração alterada) e os gates acima foram reproduzidos/aprovados localmente.
 
 Fronteiras: isto é validação automática local (unitária + estática + build + gate legado); não é a bateria pesada HTTP/DB dedicada de CLI-15, não é aceite humano e não é homologação Windows. O aceite anterior de Marcelo e Andreia permanece restrito ao L07.
+
+## Evidências EXT-06 — 2026-10-03
+
+- Base: PR #100 `MERGED`; merge `5c0ebe799517ec112d2ed8ea353a001e9d360912`; feature informada pela API GitHub `492e6723557786d792e91711669af13be49dbe06`; HEAD/origin/main iguais, divergência `0 0`, árvore inicialmente limpa.
+- Migração: 152 aditiva, fonte CLI-11; `ext_satisfaction_surveys` classificada como legado.
+- Prova dedicada: `tests/ext06-satisfaction.integration.test.mjs` em PostgreSQL 17 descartável e servidor HTTP real; resumo autoauditado pelo gate.
+- Prova focal: `tests/ext06-satisfaction.test.mjs`.
+- Privacidade: allowlist cliente e asserção negativa para responsável/identidade/fatos/risco/tarefa/auditoria.
+- Não provado por esta evidência: aceite humano, implantação em destino, bateria pesada integral ou homologação Windows.

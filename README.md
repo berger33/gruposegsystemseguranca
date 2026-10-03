@@ -182,3 +182,7 @@ npm run build
 Para desenvolver os fluxos de pedidos, configure PostgreSQL e os segredos administrativos conforme [administração e configuração](docs/administracao-visual.md), copie `.env.example` para `.env.local` e execute `npm run db:up` e `npm run db:migrate`. Para alertas por e-mail, preencha `MAIL_HOST`, `MAIL_PORT`, `MAIL_SECURE`, `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_FROM` e `LEADS_NOTIFY_EMAIL` com os dados do serviço SMTP escolhido. Nunca versione credenciais. A autenticação por token é uma base inicial; concluir RBAC completo e 2FA antes da produção. Os ZIPs de download são snapshots estáticos e não incluem esta API.
 
 - Etapa 3A (segurança/admin): migrações 005/006 ativas, vínculo restrito, MFA opcional, troca de e-mail, administradores por convite individual. Ainda dependem: SMTP, CNPJ/contatos oficiais, logotipo/licenças, política aprovada, provisionamento seguro das senhas, retenção 12 meses ativa, backup/teste.
+
+### EXT-06 — satisfação/carteira
+
+A migração `152-ext06-satisfaction-journey.sql` promove a fonte funcional da CLI-11 (`cli_satisfaction_surveys`) para fonte canônica compartilhada. A gestão usa `/admin/satisfacao` e `/api/ext/satisfaction/*`; o cliente preserva `/cliente/app/satisfacao` e `/api/client/satisfaction-surveys`, com projeção allowlist sem funcionário, fatos internos, risco, tarefa ou auditoria. Escritas legadas foram aposentadas com `410` após os guardas. Gate: `npm run test:ext06-satisfaction:pg`.

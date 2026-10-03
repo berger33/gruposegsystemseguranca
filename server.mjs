@@ -98,12 +98,13 @@ import { createAdmAdvancedApi } from "./src/server/adm-advanced-api.mjs";
 import { createAdmPanelApi } from "./src/server/adm-panel-api.mjs";
 import { createAstApi } from "./src/server/ast-api.mjs";
 import { createAstAdvancedApi } from "./src/server/ast-advanced-api.mjs";
-import { createExtApi } from "./src/server/ext-api.mjs";
+
 import { createExtFleetApi } from "./src/server/ext-fleet-api.mjs";
 import { createExtThirdPartyApi } from "./src/server/ext-third-party-api.mjs";
 import { createExtBiddingApi } from "./src/server/ext-bidding-api.mjs";
 import { createExtSupplierApi } from "./src/server/ext-supplier-api.mjs";
 import { createExtQualityApi } from "./src/server/ext-quality-api.mjs";
+import { createExtSatisfactionApi } from "./src/server/ext-satisfaction-api.mjs";
 import { createExtAdvancedApi } from "./src/server/ext-advanced-api.mjs";
 import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
 import { createCommercialHistoryApi } from "./src/server/commercial-history-api.mjs";
@@ -2229,24 +2230,6 @@ const astAdvancedApi = createAstAdvancedApi({
   },
 });
 
-const extApi = createExtApi({
-  pool: getPool(),
-  auditLog: async ({ action, actor, target, meta }) => {
-    try {
-      await getPool().query(
-        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
-        [action, actor, target, meta ? JSON.stringify(meta) : null]
-      );
-    } catch {}
-  },
-  sameOrigin,
-  requireSession: readSession,
-  requireRole: (sess, roles) => {
-    const r = (sess.role || sess.userRole || '').toLowerCase();
-    return roles.includes(r) || r === 'admin';
-  },
-});
-
 // EXT-01 frota canônica: a auditoria NÃO usa o auditLog tolerante a falha do
 // restante do servidor — o módulo grava audit_log dentro da própria transação
 // e devolve 503 com rollback quando a auditoria está indisponível.
@@ -2289,6 +2272,15 @@ const extQualityApi = createExtQualityApi({
   pool: getPool(),
   sameOrigin,
   requireSession: readSession,
+});
+
+// EXT-06: CLI-11 promovida como fonte canônica compartilhada, com projeções
+// separadas e auditoria atômica (sem o helper legado tolerante a falha).
+const extSatisfactionApi = createExtSatisfactionApi({
+  pool: getPool(),
+  sameOrigin,
+  requireSession: readSession,
+  requireClientSession: clientAccessApi.readClientSession,
 });
 
 const extAdvancedApi = createExtAdvancedApi({
@@ -3740,12 +3732,13 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/cli-service-requests" || url.pathname === "/api/crm/hr/cli-service-requests" || url.pathname === "/api/hr/cli-service-requests" || url.pathname === "/api/cli/service-requests" || url.pathname === "/api/client/service-requests") {
     return cliFinanceApi.handleServiceRequests(req, res);
   }
-  // CLI-11 satisfação pós-atendimento periódica plano ação risco renovação baseado em fatos
-  if (url.pathname === "/api/admin/hr/cli-satisfaction-surveys" || url.pathname === "/api/crm/hr/cli-satisfaction-surveys" || url.pathname === "/api/hr/cli-satisfaction-surveys" || url.pathname === "/api/cli/satisfaction-surveys" || url.pathname === "/api/client/satisfaction-surveys") {
-    return cliFinanceApi.handleSatisfactionSurveys(req, res);
+  // CLI-11/EXT-06: a fonte é compartilhada, mas as projeções cliente/staff
+  // são separadas. Aliases administrativos antigos não mantêm writer.
+  if (url.pathname === "/api/client/satisfaction-surveys") {
+    return extSatisfactionApi.handleClient(req, res);
   }
-  if (url.pathname === "/api/admin/hr/cli-satisfaction-action-plans" || url.pathname === "/api/crm/hr/cli-satisfaction-action-plans" || url.pathname === "/api/hr/cli-satisfaction-action-plans" || url.pathname === "/api/cli/satisfaction-action-plans") {
-    return cliFinanceApi.handleSatisfactionActionPlans(req, res);
+  if (["/api/admin/hr/cli-satisfaction-surveys","/api/crm/hr/cli-satisfaction-surveys","/api/hr/cli-satisfaction-surveys","/api/cli/satisfaction-surveys","/api/admin/hr/cli-satisfaction-action-plans","/api/crm/hr/cli-satisfaction-action-plans","/api/hr/cli-satisfaction-action-plans","/api/cli/satisfaction-action-plans"].includes(url.pathname)) {
+    return extSatisfactionApi.handleLegacy(req, res, {cli:true});
   }
   // CLI-12 renovação comunicação contratual registro sem bloquear indiscriminadamente portal por inadimplência
   if (url.pathname === "/api/admin/hr/cli-renewal-communications" || url.pathname === "/api/crm/hr/cli-renewal-communications" || url.pathname === "/api/hr/cli-renewal-communications" || url.pathname === "/api/cli/renewal-communications" || url.pathname === "/api/client/renewal-communications") {
@@ -4237,9 +4230,19 @@ async function routeApi(req, res) {
   // Rotas exatas legadas: leitura com items; escrita aposentada após guardas.
   if (["/api/admin/hr/ext-quality-nonconformities","/api/crm/hr/ext-quality-nonconformities","/api/hr/ext-quality-nonconformities","/api/ext/quality-nonconformities"].includes(url.pathname)) return extQualityApi.handleList(req,res,{legacy:true});
   if (["/api/admin/hr/ext-quality-actions","/api/crm/hr/ext-quality-actions","/api/hr/ext-quality-actions","/api/ext/quality-actions"].includes(url.pathname)) return extQualityApi.handleLegacyActions(req,res);
-  // EXT-06 satisfação resposta gera acompanhamento sem expor funcionário
-  if (url.pathname === "/api/admin/hr/ext-satisfaction-surveys" || url.pathname === "/api/crm/hr/ext-satisfaction-surveys" || url.pathname === "/api/hr/ext-satisfaction-surveys" || url.pathname === "/api/ext/satisfaction-surveys") {
-    return extApi.handleSatisfactionSurveys(req, res);
+  // EXT-06 satisfação canônica (migração 152), compartilhada com CLI-11.
+  if (url.pathname === "/api/ext/satisfaction/references") return extSatisfactionApi.handleReferences(req,res);
+  if (url.pathname === "/api/ext/satisfaction/surveys") {
+    if (req.method === "POST") return extSatisfactionApi.handleCreate(req,res);
+    return extSatisfactionApi.handleList(req,res);
+  }
+  const satisfactionDetail=url.pathname.match(/^\/api\/ext\/satisfaction\/surveys\/([0-9a-f-]{36})$/i);
+  if(satisfactionDetail)return extSatisfactionApi.handleDetail(req,res,satisfactionDetail[1]);
+  const satisfactionPlan=url.pathname.match(/^\/api\/ext\/satisfaction\/plans\/([0-9a-f-]{36})\/(start|complete|cancel)$/i);
+  if(satisfactionPlan){const fn={start:"handlePlanStart",complete:"handlePlanComplete",cancel:"handlePlanCancel"}[satisfactionPlan[2]];return extSatisfactionApi[fn](req,res,satisfactionPlan[1]);}
+  // Legado preserva leitura/items e aposenta escrita depois dos guardas.
+  if (["/api/admin/hr/ext-satisfaction-surveys","/api/crm/hr/ext-satisfaction-surveys","/api/hr/ext-satisfaction-surveys","/api/ext/satisfaction-surveys"].includes(url.pathname)) {
+    return extSatisfactionApi.handleLegacy(req,res);
   }
   // EXT-07 compliance vencimento gera tarefa documento privado
   if (url.pathname === "/api/admin/hr/ext-compliance-documents" || url.pathname === "/api/crm/hr/ext-compliance-documents" || url.pathname === "/api/hr/ext-compliance-documents" || url.pathname === "/api/ext/compliance-documents") {
@@ -5756,6 +5759,7 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/ext/bidding/")
   || pathname.startsWith("/api/ext/supplier/")
   || pathname.startsWith("/api/ext/quality/")
+  || pathname.startsWith("/api/ext/satisfaction/")
   || pathname === "/api/admin/hr/ext-bidding-documents"
   || pathname === "/api/crm/hr/ext-bidding-documents"
   || pathname === "/api/hr/ext-bidding-documents"

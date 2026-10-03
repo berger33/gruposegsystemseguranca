@@ -1682,3 +1682,16 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 - **Validação:** estático 5/5 OK, typecheck OK (`tsc --noEmit`), unitários 196/196 OK, build 78 páginas OK (`next build` Turbopack).
 - **Classificação:** implementação local + validação estática/unitária/build. Aceite humano local de Marcelo e Andreia sobre L07 preservado; homologação Windows continua pendente e adiada até o fechamento integral.
 - **Não promovidos:** CLI-06..15, EXT-01..17, órfãos `/admin/ti`, fornecedor restrito e integrações externas. Próximo passo: PR contra main para revisão humana; sem merge automático.
+
+### EXT-06 — satisfação/carteira — evidência de implementação (2026-10-03)
+
+- [x] Fonte CLI-11 promovida; nenhuma terceira fonte e legado 085 sem writer.
+- [x] `/admin/satisfacao` e `/api/ext/satisfaction/*` reais.
+- [x] Portal e API cliente preservados com conta/grant/destinatário.
+- [x] Metodologia/escala/fonte/período e regra de acompanhamento explícitos.
+- [x] Resposta e eventos imutáveis; retry, conflito e concorrência cobertos.
+- [x] Acompanhamento único, responsável canônico ou pendência fail-closed.
+- [x] Conclusão com resultado; cancelamento com justificativa; terminais sem reabertura silenciosa.
+- [x] Projeção cliente sem funcionário, identidade interna, fatos, risco, tarefa e auditoria.
+- [x] Falha de `audit_log` retorna 503 e reverte negócio/evento.
+- [ ] Aceite humano — não realizado nem presumido.
