@@ -1,6 +1,18 @@
 # Estado da execução — entrega local integral
 
-## Estado vigente — EXT-01 frota entregue com validação rápida (2026-10-03)
+## Estado vigente — EXT-02 terceiros entregue com gate HTTP/DB dedicado (2026-10-03)
+
+Base oficial `main` `48aa7a43251a8b5affcb6627b0096c14cf15aa3a` (PR #96 MERGED), divergência inicial 0/0 confirmada antes de editar. Branch `arena/01a1026a-gruposegsystemseguranca`. Segunda fatia do lote EXT: EXT-02 promove terceiros de API/tabela/órfão para jornada funcional — `/admin/terceiros` e `/api/ext/third-party/*` sobre as tabelas `ext_third_part*` da 085, com a jornada canônica da migração aditiva 148 (001–147 imutáveis; próxima livre 149).
+
+Critério do plano imposto: **"terceiro acessa só OS/contrato autorizado e perde acesso ao término"**. A janela deixa de ser campo livre em `ext_third_parties` (as colunas `access_start`/`access_end` ficam marcadas LEGADO por COMMENT e nenhuma derivação as lê) e passa a viver em `ext_third_party_access_grants`, presa a um único escopo autorizado, com término obrigatório e revogação declarada. A vigência é derivada; o banco recusa esticar o término, trocar o escopo, reabrir ou apagar a janela. Encerrar o terceiro revoga as janelas vivas na mesma transação.
+
+**Fronteira declarada:** não existe ator externo "terceiro" autenticado; nenhuma sessão, login ou canal externo foi criado ou simulado. O acesso do próprio terceiro permanece pendente e é declarado pela API (`external_actor_boundary`) e pela tela. As sessões canônicas seguem três: `auth_staff_sessions`, `auth_sessions` e `auth_employee_sessions`.
+
+Validação: `npm ci`, estático 5/5 (001–148; guarda de manifesto de `migrate-site-visual.mjs` e `latestMigration` de `qa-wave0-static.mjs` atualizados juntos com a migração), typecheck, teste dedicado EXT-02 50/50 (`tests/ext02-third-parties.test.mjs`, registrado em `test:unit`), `npm test` integral 315/315 e build 87 páginas com `/admin/terceiros` listada. `npm run test:migrations:pg` 148/148 em dois passes (replay, checksum negativo rejeitado, clone 539 tabelas). **`npm run test:ext02-third-parties:pg` 22/22** — gate novo e dedicado desta jornada, por HTTP real contra PostgreSQL real descartável, com servidor de verdade e sessão staff canônica (`scripts/qa-ext02-third-parties-postgres.mjs` + `tests/ext02-third-parties.integration.test.mjs`, na CI em `.github/workflows/ext02-delivery.yml`). `npm run test:l08-delivery:pg` 51/51 e `npm run test:demo-local:pg` OK aplicam 001–148 e preservam CLI-01..05, mas **não** cobrem a jornada EXT-02 e não são apresentados como prova dela.
+
+Bateria pesada integral, cascata completa, aplicação em destino, aceite humano e Windows continuam pendentes. Aceite anterior de Marcelo e Andreia permanece somente no L07; não houve aceite novo. CLI-01..15 e EXT-01 preservadas sem reabertura; EXT-03..17 pendentes. Relatório: [EXT-02](ENTREGA-RELATORIO-2026-10-03-EXT02-TERCEIROS.md); lote: [ENTREGA-EXT](ENTREGA-EXT.md).
+
+## Estado anterior — EXT-01 frota entregue com validação rápida (2026-10-03)
 
 Base oficial `main` `3353b2f013b7c51e74e50460ce62c1fa243c460f` (PR #95 MERGED), divergência inicial 0/0. Branch `arena/01a1023b-gruposegsystemseguranca`. Primeira fatia do lote EXT: EXT-01 promove a frota de API/tabela/órfão para jornada funcional — `/admin/frota` e `/api/ext/fleet/*` sobre as tabelas `ext_fleet_*` da 085, com a jornada canônica da migração aditiva 147 (001–146 imutáveis; próxima livre 148). A condição do plano é "se frota própria existir": sem registro canônico, a tela e a API declaram a ausência; nenhum veículo, custo ou histórico é inventado.
 

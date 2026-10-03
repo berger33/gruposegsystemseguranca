@@ -1,6 +1,34 @@
 # Evidências — entrega local integral
 
-## Evidência vigente — EXT-01 frota (2026-10-03)
+## Evidência vigente — EXT-02 terceiros (2026-10-03)
+
+Base `main` `48aa7a43251a8b5affcb6627b0096c14cf15aa3a` (PR #96 MERGED, divergência inicial 0/0); branch `arena/01a1026a-gruposegsystemseguranca`; dados sintéticos e PostgreSQL descartável.
+
+- **Implementação:** EXT-02 promovida a jornada funcional (`/admin/terceiros` + `/api/ext/third-party/*` + migração aditiva 148). As 12 lacunas foram reproduzidas por execução contra o código anterior **antes** de implementar e estão listadas no relatório; API administrativa e componente órfão não foram contados como jornada.
+- **Fronteira declarada:** não existe ator externo "terceiro" autenticado; nenhuma sessão, login ou canal externo foi criado ou simulado. O acesso do próprio terceiro permanece pendente e é declarado pela API (`external_actor_boundary`) e pela tela.
+- **Validação automática:**
+
+| Prova | Resultado |
+|---|---|
+| `npm ci` | OK (exit 0); 0 vulnerabilidades |
+| `node scripts/qa-wave0-static.mjs` | 5/5; 001–148; 0 migrações ausentes |
+| `npm run typecheck` | 0 erros |
+| `node --test tests/ext02-third-parties.test.mjs` | 50/50 (registrado em `test:unit`) |
+| `npm test` | 315/315 (baseline anterior 265/265) |
+| `npm run build` | exit 0; 87 páginas (baseline 86); `/admin/terceiros` listada |
+| `npm run test:migrations:pg` | 148/148 em dois passes; replay "Already applied"; checksum negativo rejeitado (`006`, sem rebaseline automático); clone TEMPLATE preservado (539 tabelas) |
+| **`npm run test:ext02-third-parties:pg`** | **22/22 — gate dedicado desta jornada, HTTP real + PostgreSQL real descartável, servidor de verdade e sessão staff canônica; 0 pulados, auditados pelo próprio gate** |
+| `npm run test:l08-delivery:pg` | 51/51 (aplica 001–148; cobre CLI-01..05 — **não** é prova da jornada EXT-02) |
+| `npm run test:demo-local:pg` | OK (QA-HOM-008/009; exercita a guarda de manifesto 148 — **não** cobre a jornada EXT-02) |
+
+- **O que o gate HTTP/DB prova no banco (não por mock):** autoria derivada da sessão com corpo forjado ignorado (id, autoria, origem, contrato, janela e nota enviados juntos não entram); retry idêntico com 1 só linha e reuso divergente 409; contrato inexistente 404 sem persistir vínculo; **acesso válido só para o escopo autorizado** (outro contrato e OS não concedida ⇒ `escopo_nao_autorizado`); **perda de acesso ao término** (`janela_encerrada`/`expirado`) derivada das datas gravadas; revogação declarada cortando o acesso e preservando a janela original; encerramento do terceiro revogando as janelas vivas na mesma transação; **auditoria derrubada por trigger ⇒ 503 `audit_unavailable` com nada persistido**, voltando a 201 após restaurá-la; triggers recusando esticar término, trocar escopo, apagar janela e alterar avaliações/eventos; "a vencer" surgindo só após a regra explícita; rota legada em 410 na mutação e preservando `items` na leitura.
+- **Guarda anti-skip:** o gate audita o resumo TAP e reprova com qualquer caso pulado, qualquer `todo` ou menos de 21 aprovados; a suíte ainda carrega um caso que reprova se o banco real não estiver presente (`QA_EXT02_REQUIRE_DB`). Verificado nos dois sentidos. Um verde sem banco real é impossível por construção.
+- **Achado corrigido pela prova HTTP:** a primeira execução reprovou 7 casos — 6 eram defeitos do próprio teste (corrigidos no teste) e **1 era defeito do produto**: ao delegar a rota legada ao handler canônico, a chave `items` sumiu da resposta, quebrando leitores legados em silêncio. O alias foi restaurado só na rota legada e fixado por teste unitário nas duas pontas. Nenhum assert foi enfraquecido.
+- **Fronteiras:** sem dados reais, sem SMTP real, sem upload de arquivo real de documento (metadados sintéticos declarados). Sem skip, sem assert enfraquecido, sem timeout aumentado.
+- **Aceite humano:** nenhum novo; o aceite Marcelo/Andreia permanece restrito ao L07. **Windows:** pendente, adiado ao fechamento integral.
+- **Pendentes após esta fatia:** EXT-03..17, bateria pesada integral, aplicação final em destino e homologação Windows.
+
+## Evidência anterior — EXT-01 frota (2026-10-03)
 
 Base `main` `3353b2f013b7c51e74e50460ce62c1fa243c460f` (PR #95 MERGED, divergência inicial 0/0); branch `arena/01a1023b-gruposegsystemseguranca`; dados sintéticos e PostgreSQL descartável.
 

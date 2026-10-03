@@ -1,0 +1,41 @@
+name: EXT-02 third parties delivery
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/server/ext-third-party-api.mjs'
+      - 'src/app/admin/terceiros/**'
+      - 'server.mjs'
+      - 'tests/ext02-third-parties.test.mjs'
+      - 'tests/ext02-third-parties.integration.test.mjs'
+      - 'scripts/qa-ext02-third-parties-postgres.mjs'
+      - 'scripts/migrate-site-visual.mjs'
+      - 'db/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/ext02-delivery.yml'
+concurrency:
+  group: ext02-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  third-parties-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Ledger de migrações 001-148 em PostgreSQL descartável
+        run: npm run test:migrations:pg
+      - name: Jornada EXT-02 (terceiros) por HTTP real contra PostgreSQL real
+        run: npm run test:ext02-third-parties:pg
