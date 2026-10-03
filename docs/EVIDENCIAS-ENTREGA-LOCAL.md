@@ -2291,3 +2291,6 @@ Fronteiras: isto é validação automática local (unitária + estática + build
 - Prova focal: `tests/ext06-satisfaction.test.mjs`.
 - Privacidade: allowlist cliente e asserção negativa para responsável/identidade/fatos/risco/tarefa/auditoria.
 - Não provado por esta evidência: aceite humano, implantação em destino, bateria pesada integral ou homologação Windows.
+
+## EXT-07 — 2026-10-03
+Base: PR #101 `MERGED`, merge `efc74bacb7a23314db1d267d91438519dc342a8c`; `HEAD` e `origin/main` coincidentes, árvore inicial limpa. Pré-inspeção confirmou rota legada e UI órfã, sem jornada canônica, tarefa, obrigação ou gate. Implementação: migração 153, API/UI canônicas, eventos, idempotência, privacidade estrutural, validade e tarefa dedicada. Evidência documental continua referência declarada; não há upload, bytes, checksum, malware scan, armazenamento verificado ou download.

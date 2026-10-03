@@ -243,3 +243,6 @@ promovidos. Relatório:
 ## EXT-06 — satisfação/carteira
 
 **Fonte canônica:** `cli_satisfaction_surveys`/`cli_satisfaction_action_plans`, endurecida pela 152. `ext_satisfaction_surveys` é legado somente leitura; nenhum registro foi migrado por presunção. Pesquisa declara finalidade, metodologia, escala, fonte, período, destinatário e limiar próprio. NPS exige 0–10; CSAT exige 1–5; genérica não recebe esses rótulos. Resposta cria histórico imutável e, quando `score <= follow_up_threshold`, acompanhamento único na mesma transação ou pendência explícita sem responsável inventado. A projeção cliente exclui dados internos. Critério automatizado: **Resposta gera acompanhamento sem expor funcionário**.
+
+## EXT-07 — Compliance corporativo
+Jornada canônica `/admin/compliance`, API `/api/ext/compliance/*`, obrigação aplicável, responsável staff, validade, referência privada e tarefa de vencimento dedicada. Migração 153 aditiva; documentos 086 permanecem legados. Sem ator externo e sem alegação de upload/armazenamento verificado.

@@ -1695,3 +1695,9 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 - [x] Projeção cliente sem funcionário, identidade interna, fatos, risco, tarefa e auditoria.
 - [x] Falha de `audit_log` retorna 503 e reverte negócio/evento.
 - [ ] Aceite humano — não realizado nem presumido.
+
+### EXT-07 — evidência da sessão 2026-10-03
+- [x] Fonte canônica definida: `ext_compliance_documents` endurecida, linhas antigas classificadas como legado.
+- [x] Tarefa canônica definida: `ext_compliance_tasks`, com unicidade por documento/período/regra.
+- [x] Critério estrutural: documento privado e avaliação temporal idempotente.
+- [ ] Gate PostgreSQL real e homologação permanecem pendentes até execução do ambiente dedicado.
