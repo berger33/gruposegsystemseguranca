@@ -30,6 +30,10 @@ export const ticketStatusLabel: Record<string, string> = {
 const apiErrors: Record<string, string> = {
   database_not_configured: "O PostgreSQL não está configurado no servidor.",
   migration_required: "A estrutura do banco ainda não foi migrada (npm run db:migrate).",
+  audit_unavailable: "A auditoria obrigatória está indisponível. Nada foi alterado; tente novamente.",
+  idempotency_key_required_or_invalid: "A chave segura desta tentativa não foi reconhecida. Reenvie o formulário.",
+  idempotency_conflict: "Os dados mudaram durante uma repetição do envio. Revise e tente novamente.",
+  individual_staff_required: "Esta operação exige uma sessão individual da equipe.",
   admin_session_required: "Sua sessão administrativa expirou. Entre novamente.",
   admin_session_expired: "Sua sessão administrativa expirou. Entre novamente.",
   invalid_json: "O envio não foi reconhecido pelo servidor. Tente novamente.",

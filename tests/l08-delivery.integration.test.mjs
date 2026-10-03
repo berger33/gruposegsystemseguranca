@@ -10,14 +10,27 @@ import { createServer } from "node:net";
 
 // These are the maintained real-HTTP PostgreSQL journeys. Importing them here
 // makes L08 a single auditable gate without duplicating the legacy portal setup.
+import "./client-access.integration.test.mjs";
 import "./client-space.integration.test.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 test("L08 contract inventory keeps CLI-01..05 on one canonical legacy source", async () => {
   const server = await readFile(path.join(root, "server.mjs"), "utf8");
+  const access = await readFile(path.join(root, "src/server/client-access-api.mjs"), "utf8");
   const space = await readFile(path.join(root, "src/server/client-space-api.mjs"), "utf8");
-  const routes = ["/api/client/accounts", "/api/client/contracts", "/api/client/documents", "/api/client/tickets"];
-  for (const route of routes) assert.match(server, new RegExp(route.replaceAll("/", "\\/")));
+  const authRoutes = [
+    "/api/auth/login", "/api/auth/logout", "/api/auth/invite/accept", "/api/auth/confirm-email",
+    "/api/auth/recover", "/api/auth/reset",
+  ];
+  const serverRoutes = [
+    "/api/admin/invites", "/api/client/accounts", "/api/client/contracts", "/api/client/documents", "/api/client/tickets",
+    "/api/admin/client-accounts", "/api/admin/grants", "/api/admin/contracts", "/api/admin/documents", "/api/admin/tickets",
+  ];
+  for (const route of authRoutes) assert.match(access, new RegExp(route.replaceAll("/", "\\/")));
+  for (const route of serverRoutes) assert.match(server, new RegExp(route.replaceAll("/", "\\/")));
+  assert.match(access, /auth_invites/);
+  assert.match(access, /auth_email_tokens/);
+  assert.match(access, /auth_sessions/);
   assert.match(space, /client_accounts/);
   assert.match(space, /client_contracts/);
   assert.match(space, /client_documents/);

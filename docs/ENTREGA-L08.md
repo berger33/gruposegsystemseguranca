@@ -16,8 +16,8 @@ protótipos e só podem ser promovidos por área com prova.
 | CLI-01 | `/cliente/entrar`, convite, recuperação, `/api/auth/*` | `auth_*` (003, 097–101) | client-access PG/HTTP | consolidado |
 | CLI-02 | `/cliente/app/conta`, `/api/client/accounts` | `client_accounts`, `client_access_grants` (003) | client-space PG, A≠B e revogação | consolidado |
 | CLI-03 | `/cliente/app/contratos`, `/api/client/contracts` | `client_contracts` (004) | escopo derivado da sessão | consolidado |
-| CLI-04 | `/cliente/app/documentos`, listagem/download privado | `client_documents` (004), integridade 101 | bytes, headers e A≠B | consolidado |
-| CLI-05 | `/cliente/app/chamados`, `/api/client/tickets` | `client_tickets` (004) e auditoria | protocolo, status, mensagens e isolamento | consolidado |
+| CLI-04 | `/cliente/app/documentos`, listagem/download privado | `client_documents` (004), integridade 101, idempotência 139 | bytes, headers e A≠B | consolidado |
+| CLI-05 | `/cliente/app/chamados`, `/api/client/tickets` | `client_tickets` (004), histórico/idempotência 139 e auditoria | abertura, status, resposta administrativa e isolamento | consolidado |
 
 “Consolidado” nesta entrega significa a primeira fatia verificável localmente;
 não é aceite de negócio nem homologação Windows.
@@ -45,3 +45,49 @@ são imutáveis; a próxima livre continua sendo 139.
 - **Regressões:** estático 5/5, typecheck OK, build exit 0. A execução unitária inicial no ambiente desta sessão teve falhas ambientais pré-existentes relacionadas à versão Node 20/dependências do conjunto de backup/homologação; não foram mascaradas nem alteradas. Windows não foi executado e continua pendente.
 - **Classificação:** implementação local + validação automática Linux/PostgreSQL descartável. Aceite humano anterior de Marcelo e Andreia permanece preservado; isto não constitui aceite novo nem homologação Windows.
 - **Não promovidos:** CLI-06..15, EXT-01..17, órfãos `/admin/ti`, fornecedor restrito e integrações externas. Próximo passo: revisão humana da PR; merge somente após revisão, sem merge automático.
+
+## Hardening transacional CLI-01..05 após PR #80 — 02/10/2026
+
+Esta série parte da `main` oficial em `52afebb1097d60a383c7219e7f3fe927a52ba3a6`
+e não muda o limite funcional do lote. A migração aditiva
+`139-l08-client-space-atomic-idempotency.sql` preserva 001–138 e acrescenta:
+
+- chave de idempotência + fingerprint para `client_tickets` e
+  `client_documents`, com unicidade por identidade autenticada;
+- identidade individual no histórico de status e histórico inicial da abertura
+  do chamado;
+- compatibilidade das linhas legadas, sem reescrever migração anterior.
+
+As mutações canônicas de acesso, vínculo, cadastro, contrato, documento, chamado
+e MFA passam a concluir negócio/histórico/auditoria na mesma transação. Falha da
+auditoria obrigatória devolve `503 audit_unavailable`, sem cookie, arquivo,
+header privado ou mutação parcial. Upload que falha antes do commit remove o
+arquivo recém-gravado. Como PostgreSQL e filesystem não compartilham transação
+distribuída, não se declara eliminação de órfão no caso de queda abrupta do
+processo entre a gravação e o rollback; o que está provado é a limpeza dos
+caminhos de erro controlados.
+
+O download privado lê e valida o buffer, conclui a auditoria e só depois envia
+headers e bytes. A prova real HTTP cobre A≠B, bytes exatos, headers seguros,
+falha pré-header e retry.
+
+Chamados e documentos exigem `Idempotency-Key`: replay idêntico devolve o mesmo
+ID, reuso divergente devolve `409 idempotency_conflict` e seis requisições
+simultâneas deixam uma linha, um histórico/arquivo e uma auditoria. Os clientes
+React mantêm a mesma chave após falha de transporte/servidor. As tabelas e APIs
+v2 (`cli_tickets_v2`, mensagens e anexos v2) continuam fora desta promoção; a
+API legada canônica não expõe mutações de mensagem/anexo nem protocolo e este
+documento não as apresenta como comprovadas.
+
+O gate L08 agora inclui a jornada CLI-01 inteira: convite, aceite, confirmação,
+login, sessão expirada/revogada, recuperação/reset, logout e MFA. Há injeção de
+falha de auditoria com PostgreSQL real para cada fluxo alterado, sempre via HTTP
+real. O runner permanece descartável, com dados sintéticos, SMTP de captura
+local autocontido na jornada de acesso e Chromium empacotado navegando na rota
+real `/cliente/entrar`.
+
+Permanecem fora do escopo: CLI-06..15, EXT-01..17, órfãos `/admin/ti`, fornecedor
+restrito, CLI-15, integrações externas e qualquer API v2 não provada. A
+classificação continua sendo implementação local + validação automática Linux
+com PostgreSQL descartável; não equivale a novo aceite humano nem homologação
+Windows.

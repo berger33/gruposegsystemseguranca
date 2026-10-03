@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Headphones, Send } from "lucide-react";
 import { TICKET_CATEGORIES } from "@/lib/client-space-core.mjs";
 import { useClientSpace } from "../ClientSpaceProvider";
@@ -31,6 +31,7 @@ const openErrors: Record<string, string> = {
   ticket_title_too_long: "O título deve ter no máximo 120 caracteres.",
   ticket_details_required: "Descreva o que aconteceu para a equipe poder ajudar.",
   ticket_details_too_long: "A descrição deve ter no máximo 500 caracteres.",
+  idempotency_conflict: "Este envio mudou desde a última tentativa. Revise os dados e envie novamente.",
   forbidden: "Este cadastro não permite abrir chamados no momento.",
 };
 
@@ -43,6 +44,7 @@ export default function ClientTicketsPage() {
   const [details, setDetails] = useState("");
   const [state, setState] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
+  const retryRequest = useRef<{ fingerprint: string; key: string } | null>(null);
 
   const loadTickets = useCallback((accountId: string) => {
     setLoadError("");
@@ -68,20 +70,30 @@ export default function ClientTicketsPage() {
     if (!activeAccount) return;
     setState("submitting");
     setMessage("");
+    const requestBody = { accountId: activeAccount.id, category, title, details };
+    const requestFingerprint = JSON.stringify(requestBody);
+    if (!retryRequest.current || retryRequest.current.fingerprint !== requestFingerprint) {
+      retryRequest.current = { fingerprint: requestFingerprint, key: crypto.randomUUID() };
+    }
     try {
       const response = await fetch("/api/client/tickets", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accountId: activeAccount.id, category, title, details }),
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": retryRequest.current.key,
+        },
+        body: requestFingerprint,
       });
       const payload = (await response.json().catch(() => ({}))) as { ok?: boolean; error?: string };
       if (!response.ok || !payload.ok) {
+        if (response.status < 500) retryRequest.current = null;
         setState("error");
         setMessage(
           openErrors[payload.error ?? ""] ?? "Não foi possível abrir o chamado agora. Tente novamente em instantes.",
         );
         return;
       }
+      retryRequest.current = null;
       setState("success");
       setMessage("Chamado registrado. A equipe acompanha pelo portal e responde por aqui mesmo.");
       setTitle("");

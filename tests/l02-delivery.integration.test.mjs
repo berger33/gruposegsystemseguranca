@@ -44,6 +44,7 @@ async function api(pathname, { method = 'GET', body, cookie, raw = false } = {})
       accept: 'application/json',
       ...(body !== undefined ? { 'content-type': 'application/json' } : {}),
       ...(method !== 'GET' ? { origin: baseUrl } : {}),
+      ...(method === 'POST' && pathname === '/api/admin/documents' ? { 'idempotency-key': randomUUID() } : {}),
       ...(cookie ? { cookie } : {}),
     },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),

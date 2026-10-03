@@ -33,7 +33,7 @@ try {
   await postgres.initialise(); await postgres.start(); await postgres.createDatabase(database);
   const databaseUrl = `postgresql://seg_qa:${password}@127.0.0.1:${port}/${database}`;
   console.log(`QA_L08_PG_READY: 127.0.0.1:${port}/${database}; temporary isolated cluster; secret omitted.`);
-  console.log("QA_L08_SCOPE: CLI-01..05 legacy portal canonical source; client A/B isolation, forged body scope, private downloads, ticket idempotency/audit and Chromium entry smoke; CLI-06..15 and EXT-01..17 not promoted.");
+  console.log("QA_L08_SCOPE: CLI-01..05 canonical legacy portal; full access journey, fail-closed atomic audit, A/B isolation, pre-header private-download audit, ticket/document idempotency and real Chromium entry; CLI-06..15, EXT-01..17 and v2 APIs not promoted.");
   result = await run(process.execPath, ["--test", "--test-concurrency=1", "tests/l08-delivery.integration.test.mjs"], {
     RUN_DATABASE_INTEGRATION: "1", DATABASE_URL: databaseUrl, DATABASE_MIGRATION_URL: "", RUN_DATABASE_INTEGRATION_REMOTE: "", QA_PGLITE_ONLY: "", ALLOW_REMOTE_MIGRATIONS: "", OLLAMA_ENABLED: "false", MAIL_HOST: "", NEXT_TELEMETRY_DISABLED: "1", CLIENT_DOCS_DIR: path.join(directory, "private-documents"), AWS_EXECUTION_ENV: "AWS_Lambda_nodejs22.x",
   });

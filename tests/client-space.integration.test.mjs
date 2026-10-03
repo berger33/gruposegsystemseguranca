@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -67,9 +67,18 @@ async function freePort() {
 async function applyMigrations() {
   const pool = new Pool({ connectionString: databaseUrl, max: 1 });
   try {
-    for (const filename of ["001-site-visual.sql", "002-public-leads.sql", "003-client-access.sql", "004-client-space.sql", "005-client-security.sql", "006-admin-identities.sql", "007-opcao-b-funcionarios.sql", "011-audit-and-notifications.sql", "097-client-mfa-session.sql", "098-client-manual-verification.sql", "099-sec-staff-session-hardening.sql",
+    const ready = await pool.query(`SELECT
+      to_regclass('auth_mfa_challenges') IS NOT NULL
+      AND to_regclass('auth_staff_sessions') IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema='public' AND table_name='client_tickets' AND column_name='idempotency_key'
+      ) AS ready`);
+    if (ready.rows[0]?.ready) return;
+    for (const filename of ["001-site-visual.sql", "002-public-leads.sql", "003-client-access.sql", "004-client-space.sql", "005-client-security.sql", "006-admin-identities.sql", "007-opcao-b-funcionarios.sql", "009-mfa-challenge.sql", "011-audit-and-notifications.sql", "097-client-mfa-session.sql", "098-client-manual-verification.sql", "099-sec-staff-session-hardening.sql",
   "100-l02-local-outbox.sql",
-  "101-l02-document-integrity.sql"]) {
+  "101-l02-document-integrity.sql",
+  "139-l08-client-space-atomic-idempotency.sql"]) {
       const sql = await readFile(path.join(projectRoot, "db/migrations", filename), "utf8");
       await pool.query(sql);
     }
@@ -139,7 +148,25 @@ test("client space enforces verified scoping end to end", testOptions, async t =
   const clientBEmail = `integracao.espaco.b.${runId}@exemplo.invalid`;
   const clientPassword = "Nao-serve-para-teste123!";
 
-  const pool = new Pool({ connectionString: databaseUrl, max: 2 });
+  const pool = new Pool({ connectionString: databaseUrl, max: 8 });
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS qa_l08_forced_audit_failure (
+      action TEXT PRIMARY KEY
+    );
+    CREATE OR REPLACE FUNCTION qa_l08_reject_selected_audit() RETURNS trigger
+    LANGUAGE plpgsql AS $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM qa_l08_forced_audit_failure f WHERE f.action = NEW.action) THEN
+        RAISE EXCEPTION 'forced_l08_audit_failure:%', NEW.action;
+      END IF;
+      RETURN NEW;
+    END;
+    $$;
+    DROP TRIGGER IF EXISTS qa_l08_reject_selected_audit ON auth_access_audit;
+    CREATE TRIGGER qa_l08_reject_selected_audit
+      BEFORE INSERT ON auth_access_audit
+      FOR EACH ROW EXECUTE FUNCTION qa_l08_reject_selected_audit();
+  `);
   const cleanupIds = [];
   t.after(async () => {
     const ids = [...cleanupIds];
@@ -158,13 +185,19 @@ test("client space enforces verified scoping end to end", testOptions, async t =
       await pool.query("DELETE FROM auth_access_audit WHERE target = ANY($1::text[]) OR actor_id = ANY($1::text[])", [ids]).catch(() => {});
     }
     await pool.query("DELETE FROM auth_identities WHERE email LIKE 'integracao.espaco.%'").catch(() => {});
+    await pool.query("DROP TRIGGER IF EXISTS qa_l08_reject_selected_audit ON auth_access_audit").catch(() => {});
+    await pool.query("DROP FUNCTION IF EXISTS qa_l08_reject_selected_audit()").catch(() => {});
+    await pool.query("DROP TABLE IF EXISTS qa_l08_forced_audit_failure").catch(() => {});
     await pool.end();
   });
 
-  async function api(pathname, { method = "GET", body, cookie } = {}) {
+  async function api(pathname, { method = "GET", body, cookie, idempotencyKey } = {}) {
     const headers = { Origin: origin };
     if (cookie) headers.Cookie = cookie;
     if (body !== undefined) headers["Content-Type"] = "application/json";
+    if (method === "POST" && ["/api/admin/documents", "/api/client/tickets"].includes(pathname)) {
+      headers["Idempotency-Key"] = idempotencyKey ?? randomUUID();
+    }
     const response = await fetch(`${origin}${pathname}`, {
       method,
       headers,
@@ -181,9 +214,19 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     return { status: response.status, body: parsed, setCookie, headers: response.headers };
   }
 
+  async function withForcedAuditFailure(action, work) {
+    await pool.query("INSERT INTO qa_l08_forced_audit_failure (action) VALUES ($1) ON CONFLICT DO NOTHING", [action]);
+    try {
+      return await work();
+    } finally {
+      await pool.query("DELETE FROM qa_l08_forced_audit_failure WHERE action = $1", [action]);
+    }
+  }
+
   await waitForServer(child, logs);
 
   let adminCookie = null;
+  let staffIdentityId = null;
   let identityA = null;
   let identityB = null;
   await t.test("seeds two client identities and authenticates the admin role", async () => {
@@ -206,6 +249,7 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     // compartilhado (que agora é recusado por padrão).
     const staff = await provisionAndLoginStaff(pool, api, { role: "ti" });
     adminCookie = staff.cookie;
+    staffIdentityId = staff.id;
     assert.match(adminCookie, /^[^=]+=/);
   });
 
@@ -661,10 +705,15 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     assert.equal(clientSees.body.tickets[0].admin_response, "Sim, é um cenário de teste. Acompanhamos por aqui.");
 
     const statusAudit = await pool.query(
-      "SELECT previous_status, next_status, changed_by FROM client_ticket_status_audit WHERE ticket_id = $1",
+      `SELECT previous_status, next_status, changed_by, changed_by_identity
+       FROM client_ticket_status_audit
+       WHERE ticket_id = $1 ORDER BY id`,
       [ticketId],
     );
-    assert.deepEqual(statusAudit.rows[0], { previous_status: "open", next_status: "in_progress", changed_by: "ti" });
+    assert.deepEqual(statusAudit.rows, [
+      { previous_status: null, next_status: "open", changed_by: "client", changed_by_identity: identityA },
+      { previous_status: "open", next_status: "in_progress", changed_by: "ti", changed_by_identity: staffIdentityId },
+    ]);
 
     const invalidStatus = await api(`/api/admin/tickets/${ticketId}`, {
       method: "PATCH",
@@ -673,6 +722,262 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     });
     assert.equal(invalidStatus.status, 400);
     assert.equal(invalidStatus.body.error, "ticket_status_invalid");
+  });
+
+  await t.test("account creation rolls back when its mandatory audit fails", async () => {
+    const name = `Conta rollback ${runId}`;
+    const response = await withForcedAuditFailure("account_create", () => api("/api/admin/client-accounts", {
+      method: "POST",
+      body: { displayName: name },
+      cookie: adminCookie,
+    }));
+    assert.equal(response.status, 503);
+    assert.deepEqual(response.body, { error: "audit_unavailable" });
+    const persisted = await pool.query("SELECT count(*)::int AS count FROM client_accounts WHERE display_name = $1", [name]);
+    assert.equal(persisted.rows[0].count, 0);
+  });
+
+  await t.test("account status rolls back when its mandatory audit fails", async () => {
+    const response = await withForcedAuditFailure("account_status", () => api(`/api/admin/client-accounts/${accountA3}`, {
+      method: "PATCH",
+      body: { status: "active" },
+      cookie: adminCookie,
+    }));
+    assert.equal(response.status, 503);
+    assert.deepEqual(response.body, { error: "audit_unavailable" });
+    const persisted = await pool.query("SELECT status FROM client_accounts WHERE id = $1", [accountA3]);
+    assert.equal(persisted.rows[0].status, "suspended");
+  });
+
+  await t.test("grant issuance rolls back when its mandatory audit fails", async () => {
+    const response = await withForcedAuditFailure("grant_issue", () => api("/api/admin/grants", {
+      method: "POST",
+      body: { identityId: identityB, clientAccountId: accountA1, reason: "Cenário sintético de rollback" },
+      cookie: adminCookie,
+    }));
+    assert.equal(response.status, 503);
+    assert.deepEqual(response.body, { error: "audit_unavailable" });
+    const persisted = await pool.query(
+      "SELECT count(*)::int AS count FROM client_access_grants WHERE identity_id = $1 AND client_account_id = $2",
+      [identityB, accountA1],
+    );
+    assert.equal(persisted.rows[0].count, 0);
+  });
+
+  await t.test("grant revocation rolls back when its mandatory audit fails", async () => {
+    const response = await withForcedAuditFailure("grant_revoke", () => api(`/api/admin/grants/${grantA1}`, {
+      method: "DELETE",
+      body: { reason: "Cenário sintético de rollback" },
+      cookie: adminCookie,
+    }));
+    assert.equal(response.status, 503);
+    assert.deepEqual(response.body, { error: "audit_unavailable" });
+    const persisted = await pool.query("SELECT revoked_at FROM client_access_grants WHERE id = $1", [grantA1]);
+    assert.equal(persisted.rows[0].revoked_at, null);
+  });
+
+  await t.test("contract creation rolls back when its mandatory audit fails", async () => {
+    const title = `Contrato rollback ${runId}`;
+    const response = await withForcedAuditFailure("contract_create", () => api("/api/admin/contracts", {
+      method: "POST",
+      body: { accountId: accountA1, title, service: "Supervisão e Ronda", status: "active" },
+      cookie: adminCookie,
+    }));
+    assert.equal(response.status, 503);
+    assert.deepEqual(response.body, { error: "audit_unavailable" });
+    const persisted = await pool.query("SELECT count(*)::int AS count FROM client_contracts WHERE title = $1", [title]);
+    assert.equal(persisted.rows[0].count, 0);
+  });
+
+  await t.test("contract status rolls back when its mandatory audit fails", async () => {
+    const response = await withForcedAuditFailure("contract_status", () => api(`/api/admin/contracts/${contractId}`, {
+      method: "PATCH",
+      body: { status: "active" },
+      cookie: adminCookie,
+    }));
+    assert.equal(response.status, 503);
+    assert.deepEqual(response.body, { error: "audit_unavailable" });
+    const persisted = await pool.query("SELECT status FROM client_contracts WHERE id = $1", [contractId]);
+    assert.equal(persisted.rows[0].status, "ended");
+  });
+
+  await t.test("document upload rolls back database and file when its mandatory audit fails", async () => {
+    const beforeFiles = (await readdir(docsDir)).sort();
+    const title = `Documento rollback ${runId}`;
+    const response = await withForcedAuditFailure("document_upload", () => api("/api/admin/documents", {
+      method: "POST",
+      body: {
+        accountId: accountA1,
+        title,
+        category: "Teste",
+        filename: "rollback.txt",
+        contentBase64: Buffer.from("não deve persistir").toString("base64"),
+      },
+      cookie: adminCookie,
+      idempotencyKey: `document-rollback-${runId}`,
+    }));
+    assert.equal(response.status, 503);
+    assert.deepEqual(response.body, { error: "audit_unavailable" });
+    const persisted = await pool.query("SELECT count(*)::int AS count FROM client_documents WHERE title = $1", [title]);
+    assert.equal(persisted.rows[0].count, 0);
+    assert.deepEqual((await readdir(docsDir)).sort(), beforeFiles);
+  });
+
+  await t.test("private download emits no private headers or bytes when audit fails and is retryable", async () => {
+    const failed = await withForcedAuditFailure("document_download", () => fetch(
+      `${origin}/api/client/documents/${documentId}/download`,
+      { headers: { Origin: origin, Cookie: cookieA } },
+    ));
+    assert.equal(failed.status, 503);
+    assert.equal(failed.headers.get("content-disposition"), null);
+    assert.notEqual(failed.headers.get("content-type"), "text/plain; charset=utf-8");
+    assert.deepEqual(await failed.json(), { error: "audit_unavailable" });
+
+    const retried = await fetch(`${origin}/api/client/documents/${documentId}/download`, {
+      headers: { Origin: origin, Cookie: cookieA },
+    });
+    assert.equal(retried.status, 200);
+    assert.deepEqual(Buffer.from(await retried.arrayBuffer()), documentPayload);
+  });
+
+  await t.test("ticket opening rolls back domain and history on audit failure, then retries safely", async () => {
+    const requestKey = `ticket-audit-retry-${runId}`;
+    const body = {
+      accountId: accountA1,
+      category: "Outro assunto",
+      title: `Rollback auditável ${runId}`,
+      details: "A primeira tentativa deve falhar fechada e a segunda deve criar uma única linha.",
+    };
+    const failed = await withForcedAuditFailure("ticket_open", () => api("/api/client/tickets", {
+      method: "POST", body, cookie: cookieA, idempotencyKey: requestKey,
+    }));
+    assert.equal(failed.status, 503);
+    assert.deepEqual(failed.body, { error: "audit_unavailable" });
+    const afterFailure = await pool.query(
+      "SELECT count(*)::int AS count FROM client_tickets WHERE opened_by_identity = $1 AND idempotency_key = $2",
+      [identityA, requestKey],
+    );
+    assert.equal(afterFailure.rows[0].count, 0);
+
+    const retried = await api("/api/client/tickets", {
+      method: "POST", body, cookie: cookieA, idempotencyKey: requestKey,
+    });
+    assert.equal(retried.status, 201, JSON.stringify(retried.body));
+    cleanupIds.push(retried.body.ticketId);
+    const history = await pool.query("SELECT previous_status, next_status FROM client_ticket_status_audit WHERE ticket_id = $1", [retried.body.ticketId]);
+    assert.deepEqual(history.rows, [{ previous_status: null, next_status: "open" }]);
+  });
+
+  await t.test("ticket status and history roll back together when audit fails", async () => {
+    const beforeHistory = await pool.query("SELECT count(*)::int AS count FROM client_ticket_status_audit WHERE ticket_id = $1", [ticketId]);
+    const failed = await withForcedAuditFailure("ticket_status", () => api(`/api/admin/tickets/${ticketId}`, {
+      method: "PATCH",
+      body: { status: "resolved", adminResponse: "Esta resposta não pode persistir." },
+      cookie: adminCookie,
+    }));
+    assert.equal(failed.status, 503);
+    assert.deepEqual(failed.body, { error: "audit_unavailable" });
+    const persisted = await pool.query("SELECT status, admin_response FROM client_tickets WHERE id = $1", [ticketId]);
+    assert.equal(persisted.rows[0].status, "in_progress");
+    assert.equal(persisted.rows[0].admin_response, "Sim, é um cenário de teste. Acompanhamos por aqui.");
+    const afterHistory = await pool.query("SELECT count(*)::int AS count FROM client_ticket_status_audit WHERE ticket_id = $1", [ticketId]);
+    assert.equal(afterHistory.rows[0].count, beforeHistory.rows[0].count);
+
+    const retried = await api(`/api/admin/tickets/${ticketId}`, {
+      method: "PATCH",
+      body: { status: "resolved", adminResponse: "Resposta persistida apenas no retry auditável." },
+      cookie: adminCookie,
+    });
+    assert.equal(retried.status, 200);
+    const afterRetry = await pool.query(
+      `SELECT t.status, t.admin_response,
+              (SELECT count(*)::int FROM client_ticket_status_audit h WHERE h.ticket_id = t.id) AS history_count
+       FROM client_tickets t WHERE t.id = $1`,
+      [ticketId],
+    );
+    assert.deepEqual(afterRetry.rows[0], {
+      status: "resolved",
+      admin_response: "Resposta persistida apenas no retry auditável.",
+      history_count: beforeHistory.rows[0].count + 1,
+    });
+  });
+
+  await t.test("simultaneous ticket retries create one ticket, one initial history, and one audit", async () => {
+    const requestKey = `ticket-concurrent-${runId}`;
+    const body = {
+      accountId: accountA1,
+      category: "Atendimento sobre serviço",
+      title: `Concorrência ${runId}`,
+      details: "Todas as requisições simultâneas representam a mesma intenção.",
+    };
+    const responses = await Promise.all(Array.from({ length: 6 }, () => api("/api/client/tickets", {
+      method: "POST", body, cookie: cookieA, idempotencyKey: requestKey,
+    })));
+    assert.equal(responses.filter(item => item.status === 201).length, 1);
+    assert.ok(responses.every(item => [200, 201].includes(item.status)), JSON.stringify(responses));
+    const ticketIds = new Set(responses.map(item => item.body.ticketId));
+    assert.equal(ticketIds.size, 1);
+    const [concurrentTicketId] = ticketIds;
+    cleanupIds.push(concurrentTicketId);
+
+    const rows = await pool.query(
+      `SELECT t.id,
+              (SELECT count(*)::int FROM client_ticket_status_audit h WHERE h.ticket_id = t.id) AS history_count,
+              (SELECT count(*)::int FROM auth_access_audit a WHERE a.target = t.id::text AND a.action = 'ticket_open') AS audit_count
+       FROM client_tickets t WHERE t.opened_by_identity = $1 AND t.idempotency_key = $2`,
+      [identityA, requestKey],
+    );
+    assert.equal(rows.rowCount, 1);
+    assert.deepEqual(rows.rows[0], { id: concurrentTicketId, history_count: 1, audit_count: 1 });
+
+    const conflict = await api("/api/client/tickets", {
+      method: "POST",
+      body: { ...body, details: "Payload divergente sob a mesma chave." },
+      cookie: cookieA,
+      idempotencyKey: requestKey,
+    });
+    assert.equal(conflict.status, 409);
+    assert.deepEqual(conflict.body, { error: "idempotency_conflict" });
+  });
+
+  await t.test("simultaneous document retries create one row, one file, and one audit", async () => {
+    const requestKey = `document-concurrent-${runId}`;
+    const body = {
+      accountId: accountA1,
+      title: `Documento concorrente ${runId}`,
+      category: "Teste",
+      filename: "concorrente.txt",
+      contentBase64: Buffer.from("mesma intenção concorrente").toString("base64"),
+    };
+    const beforeFiles = (await readdir(docsDir)).length;
+    const responses = await Promise.all(Array.from({ length: 6 }, () => api("/api/admin/documents", {
+      method: "POST", body, cookie: adminCookie, idempotencyKey: requestKey,
+    })));
+    assert.equal(responses.filter(item => item.status === 201).length, 1);
+    assert.ok(responses.every(item => [200, 201].includes(item.status)), JSON.stringify(responses));
+    const documentIds = new Set(responses.map(item => item.body.documentId));
+    assert.equal(documentIds.size, 1);
+    const [concurrentDocumentId] = documentIds;
+    cleanupIds.push(concurrentDocumentId);
+
+    const rows = await pool.query(
+      `SELECT d.id,
+              (SELECT count(*)::int FROM auth_access_audit a WHERE a.target = d.id::text AND a.action = 'document_upload') AS audit_count
+       FROM client_documents d WHERE d.uploaded_by_identity = $1 AND d.idempotency_key = $2`,
+      [staffIdentityId, requestKey],
+    );
+    assert.equal(rows.rowCount, 1);
+    assert.deepEqual(rows.rows[0], { id: concurrentDocumentId, audit_count: 1 });
+    assert.equal((await readdir(docsDir)).length, beforeFiles + 1);
+
+    const conflict = await api("/api/admin/documents", {
+      method: "POST",
+      body: { ...body, title: "Payload divergente" },
+      cookie: adminCookie,
+      idempotencyKey: requestKey,
+    });
+    assert.equal(conflict.status, 409);
+    assert.deepEqual(conflict.body, { error: "idempotency_conflict" });
   });
 
   await t.test("revoking the grant cuts access immediately and is idempotent", async () => {
