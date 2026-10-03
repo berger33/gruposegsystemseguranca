@@ -56,7 +56,8 @@
     "test:ext04-suppliers:pg": "node scripts/qa-ext04-suppliers-postgres.mjs",
     "test:ext05-quality:pg": "node scripts/qa-ext05-quality-postgres.mjs",
     "test:ext06-satisfaction:pg": "node scripts/qa-ext06-satisfaction-postgres.mjs",
-    "test:ext07-compliance:pg": "node scripts/qa-ext07-compliance-postgres.mjs"
+    "test:ext07-compliance:pg": "node scripts/qa-ext07-compliance-postgres.mjs",
+    "test:ext07-compliance:integration": "RUN_DATABASE_INTEGRATION=1 node --test --test-concurrency=1 tests/ext07-compliance.integration.test.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",

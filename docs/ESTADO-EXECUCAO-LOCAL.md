@@ -1243,3 +1243,6 @@ Implementada na migração 152 sobre a fonte CLI-11, sem seed e sem copiar `ext_
 
 ## EXT-07 (2026-10-03)
 A base da sessão é o merge da PR #101 (`efc74bacb7a23314db1d267d91438519dc342a8c`), sem divergência inicial. A implementação aditiva 153 preserva linhas 086 como `registro_legado`; a comprovação documental é referência privada declarada, sem bytes/arquivo verificado. Gate dedicado EXT-07 foi criado; validação PostgreSQL completa e aplicação em destino permanecem pendentes quando o ambiente não fornece o cluster descartável.
+
+## EXT-07 hardening — 2026-10-03
+A base confirmada é a main pós-PR #103. A migração 154 é aditiva: impõe privacidade, validade, tarefas fail-closed e vínculo de renovação. A prova de arquivo armazenado, checksum, malware scan ou download não é declarada; `declared_reference` é apenas referência documental. O gate dedicado deve usar PostgreSQL 17 descartável, HTTP real e dados sintéticos `.invalid`.

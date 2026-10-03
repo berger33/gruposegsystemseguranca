@@ -2294,3 +2294,6 @@ Fronteiras: isto é validação automática local (unitária + estática + build
 
 ## EXT-07 — 2026-10-03
 Base: PR #101 `MERGED`, merge `efc74bacb7a23314db1d267d91438519dc342a8c`; `HEAD` e `origin/main` coincidentes, árvore inicial limpa. Pré-inspeção confirmou rota legada e UI órfã, sem jornada canônica, tarefa, obrigação ou gate. Implementação: migração 153, API/UI canônicas, eventos, idempotência, privacidade estrutural, validade e tarefa dedicada. Evidência documental continua referência declarada; não há upload, bytes, checksum, malware scan, armazenamento verificado ou download.
+
+## EXT-07 hardening — 2026-10-03
+A base confirmada é a main pós-PR #103. A migração 154 é aditiva: impõe privacidade, validade, tarefas fail-closed e vínculo de renovação. A prova de arquivo armazenado, checksum, malware scan ou download não é declarada; `declared_reference` é apenas referência documental. O gate dedicado deve usar PostgreSQL 17 descartável, HTTP real e dados sintéticos `.invalid`.

@@ -246,3 +246,6 @@ promovidos. Relatório:
 
 ## EXT-07 — Compliance corporativo
 Jornada canônica `/admin/compliance`, API `/api/ext/compliance/*`, obrigação aplicável, responsável staff, validade, referência privada e tarefa de vencimento dedicada. Migração 153 aditiva; documentos 086 permanecem legados. Sem ator externo e sem alegação de upload/armazenamento verificado.
+
+## EXT-07 hardening — 2026-10-03
+A base confirmada é a main pós-PR #103. A migração 154 é aditiva: impõe privacidade, validade, tarefas fail-closed e vínculo de renovação. A prova de arquivo armazenado, checksum, malware scan ou download não é declarada; `declared_reference` é apenas referência documental. O gate dedicado deve usar PostgreSQL 17 descartável, HTTP real e dados sintéticos `.invalid`.

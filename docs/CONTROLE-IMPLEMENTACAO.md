@@ -778,3 +778,6 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 
 ## EXT-07 — Compliance (migração 153)
 A fonte canônica é `ext_compliance_documents`, endurecida aditivamente; registros 086 permanecem `registro_legado`. A obrigação aplicável vive em `ext_compliance_obligations` e a tarefa não reutiliza CRM/RH: `ext_compliance_tasks` impõe vínculo, regra, fatos, responsável e unicidade. Eventos e idempotência são transacionais com `audit_log`; falha de auditoria retorna 503 e faz rollback. Referência é privada e declarada, não arquivo verificado.
+
+## EXT-07 hardening — 2026-10-03
+A base confirmada é a main pós-PR #103. A migração 154 é aditiva: impõe privacidade, validade, tarefas fail-closed e vínculo de renovação. A prova de arquivo armazenado, checksum, malware scan ou download não é declarada; `declared_reference` é apenas referência documental. O gate dedicado deve usar PostgreSQL 17 descartável, HTTP real e dados sintéticos `.invalid`.

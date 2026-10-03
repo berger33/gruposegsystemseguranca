@@ -189,3 +189,6 @@ A migração `152-ext06-satisfaction-journey.sql` promove a fonte funcional da C
 
 ### EXT-07 — Compliance corporativo
 A jornada canônica interna de compliance usa `/admin/compliance` e `/api/ext/compliance/*`. Obrigações são declaradas com fonte, aplicabilidade e responsável staff; referências documentais são privadas e não representam upload ou arquivo verificado. A avaliação temporal na data do servidor cria uma tarefa dedicada, idempotente, por documento/período/regra.
+
+### EXT-07 — hardening (154)
+A jornada canônica de compliance permanece interna a staff: `ext_compliance_documents` é a fonte documental, referências declaradas não são arquivos verificados e `ext_compliance_tasks` é a fonte de tarefas. A migração 154 adiciona privacidade estrutural, validade temporal e renovação versionada sem alterar 001–153.
