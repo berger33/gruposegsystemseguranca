@@ -1,4 +1,41 @@
 import { createHash, randomUUID } from "node:crypto";
+import { classifyScore, evaluateRecovery } from "./satisfaction-methodology.mjs";
+
+// Comportamento histórico (pré-152) preservado SOMENTE quando a própria
+// pesquisa não declara recovery_rule (dado legado). A partir da jornada
+// canônica EXT-06 (src/server/ext-satisfaction-api.mjs), toda pesquisa nova
+// declara a regra explicitamente — nunca cai aqui por omissão silenciosa.
+const LEGACY_DEFAULT_RECOVERY_RULE = Object.freeze({ trigger: "score_at_or_below", threshold: 6 });
+
+// Projeção do portal do cliente: nunca inclui responsável, autor interno,
+// fatos internos (chamados/cobranças/histórico) ou motivo de risco. Critério
+// de aceite EXT-06: "Resposta gera acompanhamento sem expor funcionário".
+function projectClientSurvey(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    protocol: row.protocol,
+    client_account_id: row.client_account_id,
+    contract_id: row.contract_id,
+    survey_type: row.survey_type,
+    status: row.status,
+    methodology: row.methodology ?? null,
+    scale_min: row.scale_min ?? null,
+    scale_max: row.scale_max ?? null,
+    score: row.score,
+    feedback: row.feedback,
+    score_classification: row.score_classification ?? null,
+    created_at: row.created_at,
+    responded_at: row.responded_at,
+  };
+}
+
+// Projeção do plano de acompanhamento exposta ao cliente: apenas prova de
+// que existe um acompanhamento e seu estado público, nunca o responsável.
+function projectClientActionPlan(row) {
+  if (!row) return null;
+  return { survey_id: row.survey_id, status: row.status };
+}
 
 function generateProtocol(prefix) {
   const d = new Date();
@@ -375,8 +412,7 @@ export function createCliFinanceApi({ pool, auditLog, sameOrigin, requireSession
         }
         const result = await pool.query(
           `SELECT id, protocol, client_account_id, contract_id, survey_type, status, score, feedback,
-                  renewal_risk, renewal_risk_reason, facts_json, action_plan_pending_reason,
-                  created_at, responded_at
+                  methodology, scale_min, scale_max, score_classification, created_at, responded_at
              FROM cli_satisfaction_surveys
             WHERE client_account_id=$1 AND target_identity_id=$2
             ORDER BY created_at DESC LIMIT 100`,
@@ -388,8 +424,8 @@ export function createCliFinanceApi({ pool, auditLog, sameOrigin, requireSession
           [session.identityId, accountId],
         );
         return json(res, 200, {
-          surveys: result.rows,
-          note: "Somente pesquisas endereçadas a esta identidade na conta selecionada.",
+          surveys: result.rows.map(projectClientSurvey),
+          note: "Somente pesquisas endereçadas a esta identidade na conta selecionada. O responsável pelo acompanhamento é interno e não é exibido aqui.",
         });
       } catch (error) {
         console.error("CLI-11 client list failed", error instanceof Error ? error.message : error);
@@ -435,12 +471,21 @@ export function createCliFinanceApi({ pool, auditLog, sameOrigin, requireSession
           await client.query("ROLLBACK");
           return json(res, 409, { error: "idempotency_key_reused" });
         }
+        const replayedPlan = await client.query(
+          `SELECT * FROM cli_satisfaction_action_plans WHERE survey_id=$1 AND origin='portal_cliente'`,
+          [replay.rows[0].id],
+        );
         await client.query("COMMIT");
-        return json(res, 200, { survey: replay.rows[0], replayed: true });
+        return json(res, 200, {
+          survey: projectClientSurvey(replay.rows[0]),
+          actionPlan: projectClientActionPlan(replayedPlan.rows[0]),
+          replayed: true,
+        });
       }
 
       const scoped = await client.query(
         `SELECT survey.id, survey.status, survey.client_account_id,
+                survey.methodology, survey.scale_min, survey.scale_max, survey.classification_rule, survey.recovery_rule,
                 company.responsible_id, company.responsible_name
            FROM cli_satisfaction_surveys survey
            JOIN client_access_grants grant_row
@@ -468,6 +513,12 @@ export function createCliFinanceApi({ pool, auditLog, sameOrigin, requireSession
       if (survey.status !== "pendente") {
         await client.query("ROLLBACK");
         return json(res, 409, { error: "survey_already_answered" });
+      }
+      // A escala 0-10 é apenas o limite externo validado antes de abrir a
+      // transação; cada pesquisa pode declarar uma escala mais estreita.
+      if (survey.scale_min != null && survey.scale_max != null && (score < survey.scale_min || score > survey.scale_max)) {
+        await client.query("ROLLBACK");
+        return json(res, 400, { error: "score_out_of_declared_scale", scale_min: survey.scale_min, scale_max: survey.scale_max });
       }
 
       // Fatos contados em registros canônicos. Falha de leitura aborta a
@@ -498,7 +549,15 @@ export function createCliFinanceApi({ pool, auditLog, sameOrigin, requireSession
       const risk = classifyRenewalRisk(facts);
       const reason = risk ? renewalRiskReason(risk, facts) : null;
 
-      const needsActionPlan = score <= 6;
+      // Classificação e regra de acompanhamento vêm da própria pesquisa
+      // (metodologia declarada), nunca de um limiar global embutido aqui.
+      // Pesquisas anteriores a esta declaração explícita (recovery_rule
+      // ausente) preservam o comportamento histórico documentado em
+      // LEGACY_DEFAULT_RECOVERY_RULE; nenhuma pesquisa nova cai nesse caso.
+      const classification = classifyScore({ methodology: survey.methodology, classification_rule: survey.classification_rule, score });
+      const recoveryRule = survey.recovery_rule || LEGACY_DEFAULT_RECOVERY_RULE;
+      const recoveryEvaluation = evaluateRecovery({ recovery_rule: recoveryRule, methodology: survey.methodology, classification, score });
+      const needsActionPlan = recoveryEvaluation.required;
       const hasResponsible = Boolean(survey.responsible_name);
       const pendingReason = needsActionPlan && !hasResponsible
         ? "Plano de ação pendente: a conta ainda não possui responsável comercial real cadastrado no CRM."
@@ -510,11 +569,13 @@ export function createCliFinanceApi({ pool, auditLog, sameOrigin, requireSession
             SET score=$2, feedback=$3, status=$4, renewal_risk=$5, renewal_risk_reason=$6,
                 facts_json=$7::jsonb, action_plan_pending_reason=$8,
                 responded_by_identity=$9, response_idempotency_key=$10, response_fingerprint=$11,
-                responded_at=NOW(), updated_at=NOW()
+                responded_at=NOW(), updated_at=NOW(),
+                score_classification=$12, recovery_required=$13, recovery_facts=$14::jsonb
           WHERE id=$1 AND status='pendente'
           RETURNING *`,
         [surveyId, score, feedback, nextStatus, risk, reason, JSON.stringify(facts), pendingReason,
-          session.identityId, key, fingerprint],
+          session.identityId, key, fingerprint,
+          classification, needsActionPlan, JSON.stringify(recoveryEvaluation.facts)],
       );
       if (!updated.rows[0]) {
         await client.query("ROLLBACK");
@@ -545,9 +606,12 @@ export function createCliFinanceApi({ pool, auditLog, sameOrigin, requireSession
       );
       await client.query("COMMIT");
       return json(res, 200, {
-        survey: updated.rows[0],
-        actionPlan,
-        note: "Resposta registrada. O risco de renovação é calculado apenas a partir de registros existentes e não altera contrato, cobrança ou obrigação.",
+        survey: projectClientSurvey(updated.rows[0]),
+        actionPlan: projectClientActionPlan(actionPlan),
+        follow_up_required: needsActionPlan,
+        note: needsActionPlan
+          ? "Resposta registrada. Sua manifestação gerou um acompanhamento interno; nenhum dado de equipe interna é exibido aqui."
+          : "Resposta registrada. O risco de renovação é calculado apenas a partir de registros existentes e não altera contrato, cobrança ou obrigação.",
       });
     } catch (error) {
       await client?.query("ROLLBACK").catch(() => {});
@@ -557,7 +621,7 @@ export function createCliFinanceApi({ pool, auditLog, sameOrigin, requireSession
             `SELECT * FROM cli_satisfaction_surveys WHERE responded_by_identity=$1 AND response_idempotency_key=$2`,
             [session.identityId, key],
           );
-          if (replay.rows[0]?.response_fingerprint === fingerprint) return json(res, 200, { survey: replay.rows[0], replayed: true });
+          if (replay.rows[0]?.response_fingerprint === fingerprint) return json(res, 200, { survey: projectClientSurvey(replay.rows[0]), replayed: true });
           if (replay.rows[0]) return json(res, 409, { error: "idempotency_key_reused" });
         } catch {}
       }
@@ -582,31 +646,13 @@ export function createCliFinanceApi({ pool, auditLog, sameOrigin, requireSession
       const { rows } = await pool.query(q, params);
       return json(res,200,{ surveys: rows });
     }
-    if (req.method === "POST") {
-      let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
-      const { client_account_id, contract_id, ticket_id, visit_id, survey_type, score, feedback, renewal_risk, renewal_risk_reason, facts_json, action_plan } = body;
-      if (!client_account_id) return json(res,400,{ error:"missing_account" });
-      if (renewal_risk && (!facts_json || !renewal_risk_reason)) return json(res,400,{ error:"renewal_risk_requires_facts", note:"risco renovação baseado em fatos" });
-      if (score!=null && (score<0 || score>10)) return json(res,400,{ error:"score_0_10" });
-      if (score!=null && !feedback) return json(res,400,{ error:"feedback_required_with_score" });
-      const protocol = generateProtocol("SAT-CLI");
-      const { rows } = await pool.query(
-        `INSERT INTO cli_satisfaction_surveys (protocol, client_account_id, contract_id, ticket_id, visit_id, survey_type, score, feedback, renewal_risk, renewal_risk_reason, facts_json, action_plan, created_by_identity)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
-        [protocol, client_account_id, contract_id||null, ticket_id||null, visit_id||null, survey_type||'pos_atendimento', score||null, feedback||null, renewal_risk||null, renewal_risk_reason||null, facts_json? JSON.stringify(facts_json): null, action_plan||null, session.identityId||null]
-      );
-      await auditLog({ action:"cli_satisfaction_survey_create", actor: session.identityId||"unknown", target: rows[0].id, meta:{ protocol, survey_type, score, renewal_risk } });
-      return json(res,201,{ survey: rows[0] });
-    }
-    if (req.method === "PATCH") {
-      let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
-      const { id, score, feedback, status, action_plan, renewal_risk, renewal_risk_reason, facts_json } = body;
-      if (!id) return json(res,400,{ error:"missing_id" });
-      if (renewal_risk && (!facts_json || !renewal_risk_reason)) return json(res,400,{ error:"renewal_risk_requires_facts" });
-      await pool.query(`UPDATE cli_satisfaction_surveys SET score=COALESCE($2,score), feedback=COALESCE($3,feedback), status=COALESCE($4,status), action_plan=COALESCE($5,action_plan), renewal_risk=COALESCE($6,renewal_risk), renewal_risk_reason=COALESCE($7,renewal_risk_reason), facts_json=COALESCE($8,facts_json), responded_at=CASE WHEN $2 IS NOT NULL THEN NOW() ELSE responded_at END WHERE id=$1`, [id, score||null, feedback||null, status||null, action_plan||null, renewal_risk||null, renewal_risk_reason||null, facts_json? JSON.stringify(facts_json): null]);
-      await auditLog({ action:"cli_satisfaction_response", actor: session.identityId||"unknown", target: id, meta:{ score, renewal_risk } });
-      const { rows } = await pool.query(`SELECT * FROM cli_satisfaction_surveys WHERE id=$1`, [id]);
-      return json(res,200,{ survey: rows[0] });
+    // EXT-06: esta rota interna deixou de ser uma segunda autoridade de
+    // escrita (gravava score/status/renewal_risk direto do corpo, sem
+    // transação, idempotência ou regra declarada). A criação e as transições
+    // passam a ser exclusivas de /api/ext/satisfaction/* (ext-satisfaction-api.mjs).
+    // A leitura continua disponível depois de autenticação+papel+same-origin.
+    if (req.method === "POST" || req.method === "PATCH") {
+      return json(res, 410, { error: "legacy_mutation_retired", canonical: "/api/ext/satisfaction/surveys" });
     }
     return json(res,405,{ error:"method_not_allowed" });
   }
@@ -621,14 +667,11 @@ export function createCliFinanceApi({ pool, auditLog, sameOrigin, requireSession
       const { rows } = await pool.query(`SELECT * FROM cli_satisfaction_action_plans WHERE survey_id=$1 ORDER BY due_date ASC`, [surveyId]);
       return json(res,200,{ actionPlans: rows });
     }
+    // EXT-06: aceitava responsible_name livre do corpo, sem derivar do CRM e
+    // sem transação/idempotência. Criação e transições do plano agora são
+    // exclusivas de /api/ext/satisfaction/* (responsável sempre canônico).
     if (req.method === "POST") {
-      let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
-      const { survey_id, action, responsible_name, due_date } = body;
-      if (!survey_id || !action || !responsible_name || !due_date) return json(res,400,{ error:"missing_fields" });
-      if (String(action).length <10 || String(action).length>1000) return json(res,400,{ error:"action_10_1000" });
-      const { rows } = await pool.query(`INSERT INTO cli_satisfaction_action_plans (survey_id, action, responsible_name, due_date) VALUES ($1,$2,$3,$4) RETURNING *`, [survey_id, action, responsible_name, due_date]);
-      await auditLog({ action:"cli_satisfaction_action_plan_create", actor: session.identityId||"unknown", target: survey_id, meta:{ action, responsible: responsible_name } });
-      return json(res,201,{ actionPlan: rows[0] });
+      return json(res, 410, { error: "legacy_mutation_retired", canonical: "/api/ext/satisfaction/surveys/:id/action-plan" });
     }
     return json(res,405,{ error:"method_not_allowed" });
   }

@@ -1,32 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { RotateCw, Send, Star } from "lucide-react";
 import { useClientSpace } from "../ClientSpaceProvider";
 import styles from "../../RealAccess.module.css";
 import appStyles from "../ClientApp.module.css";
 
-type Facts = {
-  score: number;
-  open_tickets: number;
-  overdue_charges: number;
-  previous_low_scores: number;
-  sources: string[];
-  as_of: string;
-};
-
+// EXT-06: esta página nunca exibe responsável, autor interno, nota de risco
+// interna ou fatos internos (chamados/cobranças). A API já deixou de
+// devolver esses campos (src/server/cli-finance-api.mjs); a página também
+// não lê nenhum campo equivalente, mesmo que a resposta do backend mude.
 type Survey = {
   id: string;
   protocol: string;
   contract_id: string | null;
   survey_type: string;
   status: string;
+  methodology: string;
+  scale_min: number | null;
+  scale_max: number | null;
   score: number | null;
   feedback: string | null;
-  renewal_risk: string | null;
-  renewal_risk_reason: string | null;
-  facts_json: Facts | null;
-  action_plan_pending_reason: string | null;
+  score_classification: string | null;
   created_at: string;
   responded_at: string | null;
 };
@@ -34,8 +29,9 @@ type Survey = {
 const statusLabel: Record<string, string> = {
   pendente: "Aguardando sua resposta",
   respondida: "Respondida",
-  em_acao: "Em plano de ação",
+  em_acao: "Em acompanhamento",
   concluida: "Concluída",
+  cancelada: "Cancelada",
 };
 
 const typeLabel: Record<string, string> = {
@@ -44,10 +40,12 @@ const typeLabel: Record<string, string> = {
   outro: "Outro",
 };
 
-const riskLabel: Record<string, string> = {
-  baixo: "Risco de renovação baixo",
-  medio: "Risco de renovação médio",
-  alto: "Risco de renovação alto",
+const classificationLabel: Record<string, string> = {
+  promotor: "Promotor",
+  neutro: "Neutro",
+  detrator: "Detrator",
+  satisfeito: "Satisfeito",
+  insatisfeito: "Insatisfeito",
 };
 
 function newIdempotencyKey() {
@@ -94,6 +92,10 @@ export default function ClientSatisfactionPage() {
   }, [activeAccount, load]);
 
   const pending = (items || []).filter(item => item.status === "pendente");
+  const selected = pending.find(item => item.id === selectedId) || null;
+  const scaleMin = selected?.scale_min ?? 0;
+  const scaleMax = selected?.scale_max ?? 10;
+  const scaleHint = useMemo(() => `Nota de ${scaleMin} a ${scaleMax}`, [scaleMin, scaleMax]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -108,16 +110,20 @@ export default function ClientSatisfactionPage() {
         headers: { "Content-Type": "application/json", "Idempotency-Key": keyRef.current },
         body: JSON.stringify({ survey_id: selectedId, score: Number(score), feedback }),
       });
-      const data = await response.json() as { survey?: Survey; error?: string; replayed?: boolean };
+      const data = await response.json() as { survey?: Survey; error?: string; replayed?: boolean; follow_up_required?: boolean };
       if (!response.ok || !data.survey) {
         const messages: Record<string, string> = {
           survey_already_answered: "Esta pesquisa já foi respondida.",
           idempotency_key_reused: "Esta tentativa conflitou com outra resposta. Recarregue a página.",
           forbidden: "A pesquisa selecionada não está disponível no seu vínculo.",
+          score_out_of_declared_scale: "A nota informada está fora da escala desta pesquisa.",
         };
         throw new Error(messages[data.error || ""] || "Não foi possível registrar a resposta.");
       }
-      setSuccess(`${data.replayed ? "Resposta recuperada" : "Resposta registrada"}: protocolo ${data.survey.protocol}.`);
+      const followUp = data.follow_up_required
+        ? " Sua resposta gerou um acompanhamento interno; nossa equipe entrará em contato."
+        : "";
+      setSuccess(`${data.replayed ? "Resposta recuperada" : "Resposta registrada"}: protocolo ${data.survey.protocol}.${followUp}`);
       setSelectedId("");
       setScore("");
       setFeedback("");
@@ -153,8 +159,8 @@ export default function ClientSatisfactionPage() {
               {pending.map(item => <option key={item.id} value={item.id}>{item.protocol} · {typeLabel[item.survey_type] || item.survey_type}</option>)}
             </select>
           </label>
-          <label>Nota de 0 a 10
-            <input className={appStyles.inputLike} type="number" required min={0} max={10} step={1} value={score} onChange={event => setScore(event.target.value)} />
+          <label>{scaleHint}
+            <input className={appStyles.inputLike} type="number" required min={scaleMin} max={scaleMax} step={1} value={score} onChange={event => setScore(event.target.value)} />
           </label>
           <label>Comentário
             <textarea className={appStyles.textarea} required minLength={10} maxLength={2000} value={feedback} onChange={event => setFeedback(event.target.value)} placeholder="Descreva o que motivou a nota. O comentário fica registrado junto da pesquisa." />
@@ -169,7 +175,7 @@ export default function ClientSatisfactionPage() {
 
     <section className={appStyles.sectionCard} aria-labelledby="survey-history-title">
       <h2 id="survey-history-title" className={appStyles.sectionTitle}>Minhas pesquisas</h2>
-      <p className={appStyles.sectionHint}>Somente pesquisas endereçadas a esta identidade na conta selecionada.</p>
+      <p className={appStyles.sectionHint}>Somente pesquisas endereçadas a esta identidade na conta selecionada. Dados internos de equipe não são exibidos aqui.</p>
       {loadError ? <p className={`${styles.message} ${styles.messageError}`} role="alert">{loadError}<button className={appStyles.retryButton} type="button" onClick={() => void load(activeAccount.id)}><RotateCw size={13} />Tentar novamente</button></p>
       : !items ? <div className={appStyles.loadingWrapWide}><span className={styles.spinner} aria-hidden="true" />Carregando pesquisas…</div>
       : items.length === 0 ? <div className={appStyles.emptyState}>Nenhuma pesquisa de satisfação registrada.</div>
@@ -180,17 +186,9 @@ export default function ClientSatisfactionPage() {
           </div>
           <span className={`${appStyles.chip} ${appStyles.chipOpen}`}>{statusLabel[item.status] || item.status}</span>
           {item.score === null ? <p className={appStyles.listItemDetail}>Ainda sem nota registrada.</p>
-            : <p className={appStyles.listItemDetail}>Nota {item.score}/10. {item.feedback}</p>}
-          {item.renewal_risk && item.facts_json ? (
-            <div className={appStyles.responseBox}>
-              <strong>{riskLabel[item.renewal_risk] || item.renewal_risk}</strong>
-              Base factual em {new Date(item.facts_json.as_of).toLocaleString("pt-BR")}: chamados abertos {item.facts_json.open_tickets}, cobranças vencidas {item.facts_json.overdue_charges}, respostas anteriores com nota até 6: {item.facts_json.previous_low_scores}.
-            </div>
-          ) : item.score !== null ? (
-            <div className={appStyles.responseBox}><strong>Risco de renovação</strong>Não classificado: os registros existentes não sustentam uma classificação.</div>
-          ) : null}
-          {item.action_plan_pending_reason ? <div className={appStyles.responseBox}><strong>Plano de ação</strong>{item.action_plan_pending_reason}</div> : null}
-          {item.status === "em_acao" ? <div className={appStyles.responseBox}><strong>Plano de ação</strong>Um plano de ação foi aberto com o responsável comercial da sua conta.</div> : null}
+            : <p className={appStyles.listItemDetail}>Nota {item.score}{item.scale_max != null ? `/${item.scale_max}` : ""}{item.score_classification ? ` · ${classificationLabel[item.score_classification] || item.score_classification}` : ""}. {item.feedback}</p>}
+          {item.status === "em_acao" ? <div className={appStyles.responseBox}><strong>Acompanhamento em andamento</strong>Sua resposta gerou um acompanhamento interno; nossa equipe cuida do retorno.</div> : null}
+          {item.status === "concluida" ? <div className={appStyles.responseBox}><strong>Encerrado</strong>Este acompanhamento foi concluído pela nossa equipe.</div> : null}
         </li>)}</ul>}
     </section>
   </>;

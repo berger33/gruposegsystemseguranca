@@ -38,49 +38,28 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
   // EXT-05 qualidade foi transferida para src/server/ext-quality-api.mjs
   // (migração 151). Este módulo legado não mantém autoridade de escrita.
 
-  // EXT-06 satisfação
+  // EXT-06 satisfação foi transferida para src/server/ext-satisfaction-api.mjs
+  // (migração 152), que endurece cli_satisfaction_surveys/
+  // cli_satisfaction_action_plans (CLI-11) como fonte única. Esta rota legada
+  // (ext_satisfaction_surveys, migração 085) preserva apenas leitura
+  // histórica com o alias `items`; não mantém autoridade de escrita.
+  //
+  // Guarda em duas etapas como as demais jornadas EXT: 401 quando não há
+  // sessão, 403 quando a sessão existe mas o papel não é autorizado ou a
+  // origem não é confiável. Same-origin só é exigido em mutação (GET sempre
+  // foi leitura e não deve recusar por origem, ao contrário do comportamento
+  // anterior que misturava os dois).
   const handleSatisfactionSurveys = async (req,res) => {
-    if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=await requireSession(req);
-    if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
-    if(req.method==='GET'){
-      const { rows } = await pool.query(`SELECT s.*, ca.name as client_name FROM ext_satisfaction_surveys s LEFT JOIN client_accounts ca ON ca.id=s.client_account_id ORDER BY s.created_at DESC LIMIT 200`);
-      return json(res,200,{items:rows, note:'resposta gera acompanhamento sem expor funcionario'});
+    const sess = await requireSession(req);
+    if (!sess) return json(res,401,{error:'unauthorized'});
+    if (!requireRole(sess,['admin','ti'])) return json(res,403,{error:'forbidden_role'});
+    if (req.method === 'GET') {
+      const { rows } = await pool.query(`SELECT s.*, ca.display_name as client_name FROM ext_satisfaction_surveys s LEFT JOIN client_accounts ca ON ca.id=s.client_account_id ORDER BY s.created_at DESC LIMIT 200`);
+      return json(res,200,{ items: rows, surveys: rows, canonical: '/api/ext/satisfaction/surveys', note: 'resposta gera acompanhamento sem expor funcionario' });
     }
-    if(req.method==='POST'){
-      const b=await readJson(req);
-      const client_account_id=b.client_account_id||null;
-      const contract_id=b.contract_id||null;
-      const survey_type=String(b.survey_type||'pesquisa').trim();
-      const score=b.score!=null?Number(b.score):null;
-      const comment=b.comment?String(b.comment).trim():null;
-      const recovery_task=b.recovery_task?String(b.recovery_task).trim():null;
-      const validTypes=['pesquisa','csat','nps','outro'];
-      if(!validTypes.includes(survey_type)) return json(res,400,{error:'invalid_survey_type'});
-      if(score!=null && (!Number.isFinite(score)||score<0||score>10)) return json(res,400,{error:'invalid_score'});
-      if(comment && (comment.length<10||comment.length>2000)) return json(res,400,{error:'invalid_comment'});
-      if(recovery_task && (recovery_task.length<10||recovery_task.length>2000)) return json(res,400,{error:'invalid_recovery_task'});
-      const protocol=generateProtocol('SAT-EXT');
-      const { rows } = await pool.query(`INSERT INTO ext_satisfaction_surveys (protocol, client_account_id, contract_id, survey_type, score, comment, recovery_task, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`, [protocol, client_account_id, contract_id, survey_type, score, comment, recovery_task, sess.identityId||null]);
-      await auditLog({ action:'ext_satisfaction_create', actor:sess.identityId||'system', target:rows[0].id, meta:{ protocol, score } });
-      return json(res,201,rows[0]);
-    }
-    if(req.method==='PATCH'){
-      const b=await readJson(req);
-      const id=b.id;
-      const status=b.status?String(b.status).trim():null;
-      const recovery_task=b.recovery_task?String(b.recovery_task).trim():null;
-      if(!id) return json(res,400,{error:'missing_id'});
-      const { rows: existing } = await pool.query(`SELECT * FROM ext_satisfaction_surveys WHERE id=$1`, [id]);
-      if(!existing.length) return json(res,404,{error:'not_found'});
-      const nextStatus=status||existing[0].status;
-      const valid=['pendente','em_acompanhamento','concluida','cancelada'];
-      if(!valid.includes(nextStatus)) return json(res,400,{error:'invalid_status'});
-      const nextRecovery=recovery_task!==null && recovery_task!==undefined?recovery_task:existing[0].recovery_task;
-      if(nextRecovery && (nextRecovery.length<10||nextRecovery.length>2000)) return json(res,400,{error:'invalid_recovery_task'});
-      const { rows } = await pool.query(`UPDATE ext_satisfaction_surveys SET status=$2, recovery_task=$3, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, nextStatus, nextRecovery]);
-      await auditLog({ action:'ext_satisfaction_update', actor:sess.identityId||'system', target:id, meta:{ status: nextStatus } });
-      return json(res,200,rows[0]);
+    if (req.method === 'POST' || req.method === 'PATCH') {
+      if (!sameOrigin(req)) return json(res,403,{error:'origin_forbidden'});
+      return json(res,410,{error:'legacy_mutation_retired', canonical:'/api/ext/satisfaction/surveys'});
     }
     return json(res,405,{error:'method_not_allowed'});
   };

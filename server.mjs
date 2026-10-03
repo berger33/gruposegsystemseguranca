@@ -104,6 +104,7 @@ import { createExtThirdPartyApi } from "./src/server/ext-third-party-api.mjs";
 import { createExtBiddingApi } from "./src/server/ext-bidding-api.mjs";
 import { createExtSupplierApi } from "./src/server/ext-supplier-api.mjs";
 import { createExtQualityApi } from "./src/server/ext-quality-api.mjs";
+import { createExtSatisfactionApi } from "./src/server/ext-satisfaction-api.mjs";
 import { createExtAdvancedApi } from "./src/server/ext-advanced-api.mjs";
 import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
 import { createCommercialHistoryApi } from "./src/server/commercial-history-api.mjs";
@@ -2291,6 +2292,15 @@ const extQualityApi = createExtQualityApi({
   requireSession: readSession,
 });
 
+// EXT-06 satisfação: reaproveita cli_satisfaction_surveys/cli_satisfaction_action_plans
+// (CLI-11, migrações 076/142/152); mesma transação negócio+evento+audit_log
+// fail-closed usada pelas demais jornadas EXT.
+const extSatisfactionApi = createExtSatisfactionApi({
+  pool: getPool(),
+  sameOrigin,
+  requireSession: readSession,
+});
+
 const extAdvancedApi = createExtAdvancedApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -4237,6 +4247,29 @@ async function routeApi(req, res) {
   // Rotas exatas legadas: leitura com items; escrita aposentada após guardas.
   if (["/api/admin/hr/ext-quality-nonconformities","/api/crm/hr/ext-quality-nonconformities","/api/hr/ext-quality-nonconformities","/api/ext/quality-nonconformities"].includes(url.pathname)) return extQualityApi.handleList(req,res,{legacy:true});
   if (["/api/admin/hr/ext-quality-actions","/api/crm/hr/ext-quality-actions","/api/hr/ext-quality-actions","/api/ext/quality-actions"].includes(url.pathname)) return extQualityApi.handleLegacyActions(req,res);
+  // EXT-06 satisfação canônica (migração 152): staff, cli_satisfaction_surveys/
+  // cli_satisfaction_action_plans endurecidas. A jornada do cliente continua
+  // em /api/client/satisfaction-surveys (cli-finance-api.mjs).
+  if (url.pathname === "/api/ext/satisfaction/references") return extSatisfactionApi.handleReferences(req,res);
+  if (url.pathname === "/api/ext/satisfaction/surveys") {
+    if (req.method === "POST") return extSatisfactionApi.handleCreate(req,res);
+    return extSatisfactionApi.handleList(req,res);
+  }
+  if (url.pathname === "/api/ext/satisfaction/aggregates") return extSatisfactionApi.handleAggregates(req,res);
+  const satisfactionDetail = url.pathname.match(/^\/api\/ext\/satisfaction\/surveys\/([0-9a-f-]{36})$/i);
+  if (satisfactionDetail) return extSatisfactionApi.handleDetail(req,res,satisfactionDetail[1]);
+  const satisfactionCancel = url.pathname.match(/^\/api\/ext\/satisfaction\/surveys\/([0-9a-f-]{36})\/cancel$/i);
+  if (satisfactionCancel) return extSatisfactionApi.handleCancel(req,res,satisfactionCancel[1]);
+  const satisfactionConclude = url.pathname.match(/^\/api\/ext\/satisfaction\/surveys\/([0-9a-f-]{36})\/conclude$/i);
+  if (satisfactionConclude) return extSatisfactionApi.handleConclude(req,res,satisfactionConclude[1]);
+  const satisfactionPlanCreate = url.pathname.match(/^\/api\/ext\/satisfaction\/surveys\/([0-9a-f-]{36})\/action-plan$/i);
+  if (satisfactionPlanCreate) return extSatisfactionApi.handlePlanCreate(req,res,satisfactionPlanCreate[1]);
+  const satisfactionPlanStart = url.pathname.match(/^\/api\/ext\/satisfaction\/action-plans\/([0-9a-f-]{36})\/start$/i);
+  if (satisfactionPlanStart) return extSatisfactionApi.handlePlanStart(req,res,satisfactionPlanStart[1]);
+  const satisfactionPlanComplete = url.pathname.match(/^\/api\/ext\/satisfaction\/action-plans\/([0-9a-f-]{36})\/complete$/i);
+  if (satisfactionPlanComplete) return extSatisfactionApi.handlePlanComplete(req,res,satisfactionPlanComplete[1]);
+  const satisfactionPlanCancel = url.pathname.match(/^\/api\/ext\/satisfaction\/action-plans\/([0-9a-f-]{36})\/cancel$/i);
+  if (satisfactionPlanCancel) return extSatisfactionApi.handlePlanCancel(req,res,satisfactionPlanCancel[1]);
   // EXT-06 satisfação resposta gera acompanhamento sem expor funcionário
   if (url.pathname === "/api/admin/hr/ext-satisfaction-surveys" || url.pathname === "/api/crm/hr/ext-satisfaction-surveys" || url.pathname === "/api/hr/ext-satisfaction-surveys" || url.pathname === "/api/ext/satisfaction-surveys") {
     return extApi.handleSatisfactionSurveys(req, res);
@@ -5756,6 +5789,7 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/ext/bidding/")
   || pathname.startsWith("/api/ext/supplier/")
   || pathname.startsWith("/api/ext/quality/")
+  || pathname.startsWith("/api/ext/satisfaction/")
   || pathname === "/api/admin/hr/ext-bidding-documents"
   || pathname === "/api/crm/hr/ext-bidding-documents"
   || pathname === "/api/hr/ext-bidding-documents"

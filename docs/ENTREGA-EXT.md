@@ -1,5 +1,13 @@
 # Entrega EXT — expansões condicionais ligadas ao backend canônico
 
+## EXT-06 satisfação/carteira — 03/10/2026
+
+Partindo da `main` `5c0ebe7` (PR #100 MERGED; divergência 0/0), promove satisfação/carteira para jornada real: `/admin/satisfacao`, `/api/ext/satisfaction/*` e migração 152 aditiva. Reconciliação por evidência entre `ext_satisfaction_surveys` (085, só leitura legada) e CLI-11 `cli_satisfaction_surveys`/`cli_satisfaction_action_plans` (076/142): a segunda foi escolhida e endurecida como fonte única por já ter vínculo real com o ator autenticado do cliente; nenhuma terceira tabela foi criada e nenhum registro foi migrado entre as famílias.
+
+Metodologia (CSAT/NPS/nenhuma) é declarada por pesquisa, com escala e regra de classificação explícitas; sem limiar global hardcoded para disparo de acompanhamento. Plano de recuperação nasce na mesma transação da resposta, com responsável derivado da fonte canônica (fail-closed quando ausente) e máquina de estados sem saltos, verificada em API e banco. A resposta HTTP endereçada ao cliente nunca expõe identidade/nome do responsável, risco de renovação ou fatos internos — defeito pré-existente corrigido em `cli-finance-api.mjs` — enquanto o registro interno preserva o dado real para a equipe. Legado (`ext_satisfaction_surveys`, `cli-satisfaction-surveys`/`-action-plans` de HR) preserva leitura/alias e aposenta mutação com 410 após guardas; `ExtClient.tsx` não foi tocado.
+
+Provas: focal 12/12; suíte 442/442; estático 5/5; build 91 páginas; migrations 152/152; gate HTTP/PG dedicado 32/32 e workflow próprio. Demais gates não cobrem a jornada. Bateria pesada, destino, aceite humano e Windows pendentes. Relatório: [EXT-06](ENTREGA-RELATORIO-2026-10-03-EXT06-SATISFACAO.md).
+
 ## EXT-05 qualidade — 03/10/2026
 
 Partindo da `main` `ba2202f` (PR #99 MERGED; divergência 0/0), promove qualidade para jornada interna real: `/admin/qualidade`, `/api/ext/quality/*` e migração 151 aditiva. O probe da base em PostgreSQL 17 + HTTP real reproduziu 9/9 lacunas: rota/tela 404, rh tratado como 401, retry duplicado, salto/fechamento e contador forjável, texto livre no lugar de evidência, auditoria sem rollback, ausência de históricos e zero seed.
