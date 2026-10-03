@@ -1241,5 +1241,8 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 
 Implementada na migração 152 sobre a fonte CLI-11, sem seed e sem copiar `ext_satisfaction_surveys`. Rotas reais: staff `/admin/satisfacao` + `/api/ext/satisfaction/*`; cliente `/cliente/app/satisfacao` + `/api/client/satisfaction-surveys`. Resposta imutável, regra de acompanhamento por pesquisa, responsável CRM fail-closed, evento/auditoria/idempotência na mesma transação e projeção cliente mínima. Validação dedicada: `test:ext06-satisfaction:pg` (PostgreSQL 17 descartável).
 
-## EXT-07 (2026-10-03)
-A base da sessão é o merge da PR #101 (`efc74bacb7a23314db1d267d91438519dc342a8c`), sem divergência inicial. A implementação aditiva 153 preserva linhas 086 como `registro_legado`; a comprovação documental é referência privada declarada, sem bytes/arquivo verificado. Gate dedicado EXT-07 foi criado; validação PostgreSQL completa e aplicação em destino permanecem pendentes quando o ambiente não fornece o cluster descartável.
+## EXT-07 hardening (2026-10-03)
+
+Base executada: PR #103 `MERGED`; merge `eff0bbddb5d5681d2612010e4349cfb9ff61234b`; feature `3cf218d949e3ce04fe49e82ce2dcd1ca6b874584`; `HEAD`, `origin/main` e merge-base iguais, divergência inicial `0/0`, árvore limpa e última migração 153. A 154 é aditiva e mantém `ext_compliance_documents`/`ext_compliance_tasks` como fontes, com renovação versionada, validade pelo servidor, projeções mínimas e transação negócio + tarefa + evento + `audit_log`.
+
+O gate dedicado agora é operacional: PostgreSQL 17 descartável, migrações 001–154, servidor HTTP e sessão staff reais, fixtures `.invalid`, **54/54** casos e 0 fail/skip/todo; cluster, servidor e diretórios temporários são limpos. Ele cobre a jornada EXT-07 e guardas/rotas EXT-08..12, mas não substitui implantação em destino, execução agendada contínua, aceite humano ou homologação Windows. Referência documental continua sem bytes, upload ou armazenamento verificado.

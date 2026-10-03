@@ -187,5 +187,8 @@ Para desenvolver os fluxos de pedidos, configure PostgreSQL e os segredos admini
 
 A migração `152-ext06-satisfaction-journey.sql` promove a fonte funcional da CLI-11 (`cli_satisfaction_surveys`) para fonte canônica compartilhada. A gestão usa `/admin/satisfacao` e `/api/ext/satisfaction/*`; o cliente preserva `/cliente/app/satisfacao` e `/api/client/satisfaction-surveys`, com projeção allowlist sem funcionário, fatos internos, risco, tarefa ou auditoria. Escritas legadas foram aposentadas com `410` após os guardas. Gate: `npm run test:ext06-satisfaction:pg`.
 
-### EXT-07 — Compliance corporativo
-A jornada canônica interna de compliance usa `/admin/compliance` e `/api/ext/compliance/*`. Obrigações são declaradas com fonte, aplicabilidade e responsável staff; referências documentais são privadas e não representam upload ou arquivo verificado. A avaliação temporal na data do servidor cria uma tarefa dedicada, idempotente, por documento/período/regra.
+### EXT-07 — Compliance corporativo endurecido
+
+A fonte canônica continua sendo `ext_compliance_documents`; registros anteriores sem prova suficiente permanecem `registro_legado`. A tarefa continua em `ext_compliance_tasks`. A migração aditiva `154-ext07-compliance-hardening.sql` reforça validade, privacidade, estados, uma versão atual por obrigação e renovação por nova linha ligada à anterior — nunca por sobrescrita.
+
+A jornada interna usa `/admin/compliance` e `/api/ext/compliance/*`, sessão staff `admin|ti`, autor da sessão, responsável staff ativo, same-origin nas mutações e idempotência concorrente. A avaliação administrativa usa `CURRENT_DATE`, cria a tarefa na mesma transação e registra regra, data-base e fatos. Referência privada não significa upload, bytes, checksum, malware scan, armazenamento verificado ou download. O gate `npm run test:ext07-compliance:pg` sobe PostgreSQL 17 descartável, aplica 001–154 e executa servidor/login reais com mínimo explícito de 50 casos (resultado observado nesta entrega: 54/54, sem skip/todo). Monitoramento contínuo ainda requer execução agendada futura; destino, aceite humano e Windows permanecem pendentes.

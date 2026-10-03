@@ -2292,5 +2292,22 @@ Fronteiras: isto é validação automática local (unitária + estática + build
 - Privacidade: allowlist cliente e asserção negativa para responsável/identidade/fatos/risco/tarefa/auditoria.
 - Não provado por esta evidência: aceite humano, implantação em destino, bateria pesada integral ou homologação Windows.
 
-## EXT-07 — 2026-10-03
-Base: PR #101 `MERGED`, merge `efc74bacb7a23314db1d267d91438519dc342a8c`; `HEAD` e `origin/main` coincidentes, árvore inicial limpa. Pré-inspeção confirmou rota legada e UI órfã, sem jornada canônica, tarefa, obrigação ou gate. Implementação: migração 153, API/UI canônicas, eventos, idempotência, privacidade estrutural, validade e tarefa dedicada. Evidência documental continua referência declarada; não há upload, bytes, checksum, malware scan, armazenamento verificado ou download.
+## EXT-07 hardening — 2026-10-03
+
+### Base executada
+- PR #103: `MERGED` em 2026-10-03T20:48:13Z.
+- Merge commit: `eff0bbddb5d5681d2612010e4349cfb9ff61234b`.
+- Feature commit: `3cf218d949e3ce04fe49e82ce2dcd1ca6b874584`.
+- `HEAD` = `origin/main` = merge-base = `eff0bbd`; divergência `0 0`; árvore inicial limpa; última migração real 153.
+
+### Probe anterior à correção
+PostgreSQL 17 descartável, 001–153, servidor/login staff reais e dados `.invalid`: a tela respondia 200, mas `/api/ext/compliance/*` chegava ao Next e respondia 404 porque faltava no matcher do servidor. Aliases RH eram interceptados por autorização genérica; só `/api/ext/compliance-documents` preservava leitura/410. O banco aceitava documento vencido como `vigente` e alteração destrutiva de `effective_start_date`; legado expunha `SELECT *`; renovação não existia. Travas de evento, terminal de tarefa, unicidade e rollback de auditoria já existiam parcialmente. Temporários foram removidos e nenhum banco real foi usado.
+
+### Prova após 154
+- Migração aditiva: `154-ext07-compliance-hardening.sql`; 001–153 inalteradas.
+- Fontes: `ext_compliance_documents` e `ext_compliance_tasks`.
+- Gate: `npm run test:ext07-compliance:pg` — **54 testes, 54 pass, 0 fail, 0 cancelled, 0 skipped, 0 todo**, mínimo 50; 154 migrações aplicadas; cleanup confirmado.
+- Cobertura HTTP/PG real: sessão staff, 401/403, same-origin, corpo/JSON/UUID, responsável ativo, autoria/IDs/estado/datas forjados, validade, privacidade, detalhe/lista, ausência pública, retry/divergência/concorrência, renovação/histórico, tarefa/estados, eventos, legado e 503/rollback de `audit_log`.
+- Regressão EXT-08..12: rotas autorizadas exercitadas para EXT-08/09/11/12 e guard staff real exercitado para EXT-10 sem alterar sua projeção legada fora do escopo.
+- Fronteira: referência declarada; não há upload, bytes, checksum, malware scan, armazenamento verificado ou download.
+- Não provado: agendamento contínuo, implantação em destino, aceite humano, SMTP/armazenamento externo ou Windows.

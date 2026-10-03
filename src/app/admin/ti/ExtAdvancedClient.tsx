@@ -12,7 +12,6 @@ export default function ExtAdvancedClient() {
   const [layouts, setLayouts] = useState<any[]>([]);
   const [msg, setMsg] = useState<string>("");
 
-  const [compForm, setCompForm] = useState({ title:"", description:"", compliance_type:"licenca", document_number:"", issuer:"", responsible_name:"", issue_date:"", expiry_date:"", file_name:"", file_url:"", storage_key:"" });
   const [kbForm, setKbForm] = useState({ slug:"", title:"", content:"", category:"", tags:"", access_roles:"" });
   const [expForm, setExpForm] = useState({ title:"", description:"", premises:"", target_location:"", capacity:0, estimated_cost_cents:0, estimated_revenue_cents:0 });
   const [scenForm, setScenForm] = useState({ plan_id:"", scenario_name:"", premises:"", projected_cost_cents:0, projected_revenue_cents:0 });
@@ -50,24 +49,9 @@ export default function ExtAdvancedClient() {
       <h2>EXT-07..12 — Compliance, base conhecimento, expansão, continuidade, analytics A/B, editor visual avançado</h2>
       {msg && <p style={{color:"red"}}>{msg}</p>}
 
-      <h3>EXT-07 Compliance (título 5..200, desc 10..2000, tipo licenca/certidao/seguro/alvara/outro, número 3..200, emissor 3..200, responsável 2..200, emissão/validade expiry&gt;=issue, file 1..500/5..1000, storage_key 5..500 UNIQUE, status vigente/a_vencer/vencida/em_renovacao/cancelada, protocolo COMP-EXT- — vencimento gera tarefa documento privado)</h3>
-      <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
-        <input placeholder="título 5..200" value={compForm.title} onChange={e=>setCompForm({...compForm, title:e.target.value})} />
-        <input placeholder="descrição 10..2000" value={compForm.description} onChange={e=>setCompForm({...compForm, description:e.target.value})} />
-        <select value={compForm.compliance_type} onChange={e=>setCompForm({...compForm, compliance_type:e.target.value})}>
-          <option value="licenca">licenca</option><option value="certidao">certidao</option><option value="seguro">seguro</option><option value="alvara">alvara</option><option value="outro">outro</option>
-        </select>
-        <input placeholder="número 3..200" value={compForm.document_number} onChange={e=>setCompForm({...compForm, document_number:e.target.value})} />
-        <input placeholder="emissor 3..200" value={compForm.issuer} onChange={e=>setCompForm({...compForm, issuer:e.target.value})} />
-        <input placeholder="responsável 2..200" value={compForm.responsible_name} onChange={e=>setCompForm({...compForm, responsible_name:e.target.value})} />
-        <input type="date" value={compForm.issue_date} onChange={e=>setCompForm({...compForm, issue_date:e.target.value})} />
-        <input type="date" value={compForm.expiry_date} onChange={e=>setCompForm({...compForm, expiry_date:e.target.value})} />
-        <input placeholder="file_name" value={compForm.file_name} onChange={e=>setCompForm({...compForm, file_name:e.target.value})} />
-        <input placeholder="file_url" value={compForm.file_url} onChange={e=>setCompForm({...compForm, file_url:e.target.value})} />
-        <input placeholder="storage_key UNIQUE" value={compForm.storage_key} onChange={e=>setCompForm({...compForm, storage_key:e.target.value})} />
-        <button onClick={async()=>{ try{ await post("/api/ext/compliance-documents", compForm); setMsg("compliance criado vencimento gera tarefa privado"); load(); } catch(e:any){ setMsg(e.message); } }}>Criar compliance</button>
-      </div>
-      <ul>{compliance.map((c:any)=><li key={c.id}>{c.protocol} {c.title} tipo:{c.compliance_type} status:{c.status} emissor:{c.issuer} val:{c.expiry_date}</li>)}</ul>
+      <h3>EXT-07 Compliance — leitura legada minimizada</h3>
+      <p>O escritor legado foi aposentado. Obrigações, referências privadas, avaliação, renovação e tarefas usam exclusivamente <a href="/admin/compliance">/admin/compliance</a>. Referência não significa upload, bytes, checksum, malware scan, armazenamento verificado ou download.</p>
+      <ul>{compliance.map((c:any)=><li key={c.id}>{c.protocol} {c.title} tipo:{c.compliance_type} status:{c.status} versão:{c.version_no} atual:{String(c.is_current)} validade:{c.expiry_date}</li>)}</ul>
 
       <h3>EXT-08 Base conhecimento (slug 3..200, título 5..200, conteúdo 50..20000, categoria 3..100, tags, access_roles, versão auto, status rascunho/em_revisao/aprovado/publicado/arquivado — usuário encontra apenas conteúdo de seu escopo)</h3>
       <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>

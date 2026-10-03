@@ -1474,11 +1474,11 @@ Satisfação/carteira Aceite: Pesquisas, CSAT/NPS quando adequado, histórico e 
 - Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
 
 ## EXT-07
-Compliance corporativo Aceite: Licenças/certidões/seguros e obrigações aplicáveis com responsável e validade
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Handlers `/api/ext/*` para compliance; tabelas `ext_compliance_documents`/086; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
-- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
-- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
+Compliance corporativo — aceite técnico automatizado: vencimento gera tarefa e documento privado.
+- Estado: `pronto_local_por_gate_dedicado`; aceite humano e destino pendentes.
+- Tela / API / dados / autorização: `/admin/compliance`; `/api/ext/compliance/*`; `ext_compliance_obligations`, `ext_compliance_documents`, `ext_compliance_tasks` e eventos. Jornada interna `admin|ti`, 401/403, sessão staff real, same-origin e idempotência.
+- Integração e evidência: migrações 001–154 em PostgreSQL 17 descartável + HTTP/login reais; gate autoauditado 54/54, 0 fail/skip/todo. Renovação, concorrência, rollback de auditoria, privacidade, legado e regressão de rotas EXT-08..12 incluídos.
+- Pendência / fronteira: referência declarada não possui upload/bytes/checksum/malware scan/armazenamento verificado/download. Monitoramento contínuo requer agendamento futuro; implantação, aceite humano e Windows não executados.
 
 ## EXT-08
 Base de conhecimento Aceite: Procedimentos versionados, busca, acesso e ciência
@@ -1696,8 +1696,12 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 - [x] Falha de `audit_log` retorna 503 e reverte negócio/evento.
 - [ ] Aceite humano — não realizado nem presumido.
 
-### EXT-07 — evidência da sessão 2026-10-03
-- [x] Fonte canônica definida: `ext_compliance_documents` endurecida, linhas antigas classificadas como legado.
-- [x] Tarefa canônica definida: `ext_compliance_tasks`, com unicidade por documento/período/regra.
-- [x] Critério estrutural: documento privado e avaliação temporal idempotente.
-- [ ] Gate PostgreSQL real e homologação permanecem pendentes até execução do ambiente dedicado.
+### EXT-07 — hardening probatório — 2026-10-03
+- [x] PR #103 confirmada `MERGED`; merge `eff0bbd`, feature `3cf218d`; base sem divergência e árvore inicial limpa.
+- [x] Fonte documental `ext_compliance_documents` e fonte de tarefa `ext_compliance_tasks` preservadas; 001–153 inalteradas.
+- [x] Migração 154 aditiva: validade, privacidade, estados, renovação não destrutiva, uma versão atual e eventos imutáveis.
+- [x] HTTP real: 401/403, same-origin, JSON/corpo/UUID, autoria/IDs forjados, responsável, retry/conflito/concorrência, legado e ausência pública.
+- [x] Tarefa: avaliação pelo servidor, regra/fatos/data-base, unicidade, conclusão/cancelamento/terminais e fail-closed.
+- [x] Auditoria: falha injetada em `audit_log` resulta 503 e rollback total.
+- [x] Gate dedicado: 54/54, 0 fail/skip/todo; PostgreSQL 17 e temporários limpos.
+- [ ] Aceite humano, aplicação em destino, agendamento contínuo e homologação Windows — não realizados nem presumidos.

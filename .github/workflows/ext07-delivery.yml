@@ -1,23 +1,42 @@
-name: EXT-07 compliance delivery
-ton:
+name: EXT-07 compliance hardening
+
+on:
   pull_request:
-    paths: ['db/migrations/153-ext07-compliance-journey.sql','src/server/ext-compliance-api.mjs','src/app/admin/compliance/**','tests/ext07-*','scripts/qa-ext07-compliance-postgres.mjs']
+    paths:
+      - "db/migrations/154-ext07-compliance-hardening.sql"
+      - "src/server/ext-compliance-api.mjs"
+      - "src/app/admin/compliance/**"
+      - "src/app/admin/ti/ExtAdvancedClient.tsx"
+      - "server.mjs"
+      - "tests/ext07-*"
+      - "scripts/qa-ext07-compliance-postgres.mjs"
+      - "scripts/migrate-site-visual.mjs"
+      - "scripts/qa-wave0-static.mjs"
+      - "package.json"
+      - ".github/workflows/ext07-delivery.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
 jobs:
   ext07:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17
-        env: { POSTGRES_PASSWORD: postgres, POSTGRES_DB: seg_ext07 }
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd "pg_isready -U postgres -d seg_ext07" --health-interval 5s --health-timeout 5s --health-retries 20
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
+        with:
+          node-version: 22
+          cache: npm
       - run: npm ci
+      - name: Syntax
+        run: |
+          node --check src/server/ext-compliance-api.mjs
+          node --check scripts/qa-ext07-compliance-postgres.mjs
+          node --check tests/ext07-compliance.integration.test.mjs
+      - run: node scripts/qa-wave0-static.mjs
       - run: npm run typecheck
       - run: node --test tests/ext07-compliance.test.mjs
-      - run: npm run test:ext07-compliance:pg
-        env: { EXT07_DATABASE_URL: postgres://postgres:postgres@localhost:5432/seg_ext07 }
+      - name: PostgreSQL 17 + HTTP real + sessão staff
+        run: npm run test:ext07-compliance:pg

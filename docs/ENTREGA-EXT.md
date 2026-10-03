@@ -244,5 +244,12 @@ promovidos. Relatório:
 
 **Fonte canônica:** `cli_satisfaction_surveys`/`cli_satisfaction_action_plans`, endurecida pela 152. `ext_satisfaction_surveys` é legado somente leitura; nenhum registro foi migrado por presunção. Pesquisa declara finalidade, metodologia, escala, fonte, período, destinatário e limiar próprio. NPS exige 0–10; CSAT exige 1–5; genérica não recebe esses rótulos. Resposta cria histórico imutável e, quando `score <= follow_up_threshold`, acompanhamento único na mesma transação ou pendência explícita sem responsável inventado. A projeção cliente exclui dados internos. Critério automatizado: **Resposta gera acompanhamento sem expor funcionário**.
 
-## EXT-07 — Compliance corporativo
-Jornada canônica `/admin/compliance`, API `/api/ext/compliance/*`, obrigação aplicável, responsável staff, validade, referência privada e tarefa de vencimento dedicada. Migração 153 aditiva; documentos 086 permanecem legados. Sem ator externo e sem alegação de upload/armazenamento verificado.
+## EXT-07 — Compliance corporativo endurecido
+
+**Fontes:** `ext_compliance_documents` para referências documentais e `ext_compliance_tasks` para tarefas; a 154 não cria tabela paralela nem promove registro 086 por presunção. Obrigações registram tipo, fonte declarada, escopo, justificativa, regra, criticidade, responsável e autoria. Aplicabilidade declarada não é validação jurídica ou confirmação pública.
+
+**Jornada:** `/admin/compliance` e `/api/ext/compliance/*`, somente staff `admin|ti`. A API diferencia 401/403, exige same-origin e `Idempotency-Key` em mutações, deriva autor da sessão, revalida responsável ativo e usa data do servidor. Avaliação explícita cria tarefa única com obrigação/documento/período/regra/fatos na mesma transação. Conclusão exige início, responsável e resultado; cancelamento exige justificativa; terminais não reabrem.
+
+**Documento:** privado por estrutura e minimizado em listas/legado. Detalhe autorizado usa allowlist. Renovação cria nova versão com anterior/sucessora, autor, timestamp e justificativa; a anterior é preservada. Referência não é upload, bytes, checksum, malware scan, armazenamento verificado ou download.
+
+**Prova:** `npm run test:ext07-compliance:pg` aplica 001–154 em PostgreSQL 17 descartável e executa HTTP/login reais: **54/54**, sem fail/skip/todo. Relatório: [EXT-07 hardening](ENTREGA-RELATORIO-2026-10-03-EXT07-COMPLIANCE-HARDENING.md). Execução agendada contínua, destino, aceite humano e Windows permanecem pendentes.

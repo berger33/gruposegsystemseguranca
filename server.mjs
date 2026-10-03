@@ -2583,7 +2583,15 @@ async function routeApi(req, res) {
   // na borda. Um alias ops-* desconhecido não é despachado para handler algum
   // e termina em 404 no fim do roteador.
   const legacyOpsAlias = /^\/api\/(?:admin\/|crm\/)?hr\/(?:ops|fin|adm)-[a-z0-9-]+$/.test(url.pathname);
-  if (!legacyOpsAlias
+  // EXT-07 aplica 401/403 e papel admin|ti no próprio handler canônico. Os
+  // aliases exatos não são recursos de funcionário e não podem ser capturados
+  // antes pela borda genérica de RH (que exige employees.read/write).
+  const legacyComplianceAlias = [
+    "/api/admin/hr/ext-compliance-documents",
+    "/api/crm/hr/ext-compliance-documents",
+    "/api/hr/ext-compliance-documents",
+  ].includes(url.pathname);
+  if (!legacyOpsAlias && !legacyComplianceAlias
       && (url.pathname.startsWith("/api/hr/")
           || url.pathname.startsWith("/api/admin/hr/")
           || url.pathname.startsWith("/api/crm/hr/")
@@ -4249,14 +4257,10 @@ async function routeApi(req, res) {
   }
   // EXT-07 canônica: obrigações, referências privadas e tarefas de vencimento.
   if (url.pathname.startsWith("/api/ext/compliance/")) return extComplianceApi.handle(req, res);
-  // Legado: leitura autorizada preserva items; escrita é aposentada após os guardas.
+  // Legado EXT-07: leitura `items` usa a projeção minimizada da mesma fonte;
+  // escritores antigos recebem 410 somente após sessão, papel e same-origin.
   if (["/api/admin/hr/ext-compliance-documents","/api/crm/hr/ext-compliance-documents","/api/hr/ext-compliance-documents","/api/ext/compliance-documents"].includes(url.pathname)) {
-    const legacySession = await readSession(req);
-    if (!legacySession) return json(res,401,{error:"unauthorized"});
-    const legacyRole=String(legacySession.role||legacySession.userRole||"").toLowerCase();
-    if (!["admin","ti"].includes(legacyRole)) return json(res,403,{error:"forbidden"});
-    if (req.method !== "GET") { if (!sameOrigin(req)) return json(res,403,{error:"forbidden"}); return json(res,410,{error:"legacy_writer_retired",canonical:"/api/ext/compliance/*"}); }
-    return extAdvancedApi.handleComplianceDocuments(req, res);
+    return extComplianceApi.handleLegacy(req, res);
   }
   // EXT-08 base conhecimento procedimentos versionados busca acesso ciência usuário encontra apenas conteúdo de seu escopo
   if (url.pathname === "/api/admin/hr/ext-knowledge-base" || url.pathname === "/api/crm/hr/ext-knowledge-base" || url.pathname === "/api/hr/ext-knowledge-base" || url.pathname === "/api/ext/knowledge-base") {
@@ -5770,6 +5774,7 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/ext/supplier/")
   || pathname.startsWith("/api/ext/quality/")
   || pathname.startsWith("/api/ext/satisfaction/")
+  || pathname.startsWith("/api/ext/compliance/")
   || pathname === "/api/admin/hr/ext-bidding-documents"
   || pathname === "/api/crm/hr/ext-bidding-documents"
   || pathname === "/api/hr/ext-bidding-documents"
