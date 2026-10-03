@@ -103,6 +103,7 @@ import { createExtFleetApi } from "./src/server/ext-fleet-api.mjs";
 import { createExtThirdPartyApi } from "./src/server/ext-third-party-api.mjs";
 import { createExtBiddingApi } from "./src/server/ext-bidding-api.mjs";
 import { createExtSupplierApi } from "./src/server/ext-supplier-api.mjs";
+import { createExtQualityApi } from "./src/server/ext-quality-api.mjs";
 import { createExtAdvancedApi } from "./src/server/ext-advanced-api.mjs";
 import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
 import { createCommercialHistoryApi } from "./src/server/commercial-history-api.mjs";
@@ -2283,6 +2284,13 @@ const extSupplierApi = createExtSupplierApi({
   requireSession: readSession,
 });
 
+// EXT-05 qualidade: jornada interna, auditoria fail-closed no mesmo commit.
+const extQualityApi = createExtQualityApi({
+  pool: getPool(),
+  sameOrigin,
+  requireSession: readSession,
+});
+
 const extAdvancedApi = createExtAdvancedApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -4200,13 +4208,35 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/ext-supplier-portal-quotations" || url.pathname === "/api/crm/hr/ext-supplier-portal-quotations" || url.pathname === "/api/hr/ext-supplier-portal-quotations" || url.pathname === "/api/ext/supplier-portal-quotations") {
     return extSupplierApi.handleLegacyQuotations(req, res);
   }
-  // EXT-05 qualidade encerrar apenas com evidência e responsável
-  if (url.pathname === "/api/admin/hr/ext-quality-nonconformities" || url.pathname === "/api/crm/hr/ext-quality-nonconformities" || url.pathname === "/api/hr/ext-quality-nonconformities" || url.pathname === "/api/ext/quality-nonconformities") {
-    return extApi.handleQualityNonconformities(req, res);
+  // EXT-05 qualidade canônica (migração 151), jornada interna de staff.
+  if (url.pathname === "/api/ext/quality/references") return extQualityApi.handleReferences(req,res);
+  if (url.pathname === "/api/ext/quality/nonconformities") {
+    if (req.method === "POST") return extQualityApi.handleCreate(req,res);
+    return extQualityApi.handleList(req,res);
   }
-  if (url.pathname === "/api/admin/hr/ext-quality-actions" || url.pathname === "/api/crm/hr/ext-quality-actions" || url.pathname === "/api/hr/ext-quality-actions" || url.pathname === "/api/ext/quality-actions") {
-    return extApi.handleQualityActions(req, res);
-  }
+  const qualityDetail = url.pathname.match(/^\/api\/ext\/quality\/nonconformities\/([0-9a-f-]{36})$/i);
+  if (qualityDetail) return extQualityApi.handleDetail(req,res,qualityDetail[1]);
+  const qualityCause = url.pathname.match(/^\/api\/ext\/quality\/nonconformities\/([0-9a-f-]{36})\/causes$/i);
+  if (qualityCause) return extQualityApi.handleCause(req,res,qualityCause[1]);
+  const qualityAction = url.pathname.match(/^\/api\/ext\/quality\/nonconformities\/([0-9a-f-]{36})\/responsibles\/([0-9a-f-]{36})\/actions$/i);
+  if (qualityAction) return extQualityApi.handleActionCreate(req,res,qualityAction[1],qualityAction[2]);
+  const qualityVerification = url.pathname.match(/^\/api\/ext\/quality\/nonconformities\/([0-9a-f-]{36})\/verifications$/i);
+  if (qualityVerification) return extQualityApi.handleVerification(req,res,qualityVerification[1]);
+  const qualityTransition = url.pathname.match(/^\/api\/ext\/quality\/nonconformities\/([0-9a-f-]{36})\/transition$/i);
+  if (qualityTransition) return extQualityApi.handleTransition(req,res,qualityTransition[1]);
+  const qualityClose = url.pathname.match(/^\/api\/ext\/quality\/nonconformities\/([0-9a-f-]{36})\/close$/i);
+  if (qualityClose) return extQualityApi.handleClose(req,res,qualityClose[1]);
+  const qualityReopen = url.pathname.match(/^\/api\/ext\/quality\/nonconformities\/([0-9a-f-]{36})\/reopen$/i);
+  if (qualityReopen) return extQualityApi.handleReopen(req,res,qualityReopen[1]);
+  const qualityRecurrence = url.pathname.match(/^\/api\/ext\/quality\/nonconformities\/([0-9a-f-]{36})\/recurrences$/i);
+  if (qualityRecurrence) return extQualityApi.handleRecurrence(req,res,qualityRecurrence[1]);
+  const qualityActionComplete = url.pathname.match(/^\/api\/ext\/quality\/actions\/([0-9a-f-]{36})\/complete$/i);
+  if (qualityActionComplete) return extQualityApi.handleActionComplete(req,res,qualityActionComplete[1]);
+  const qualityActionCancel = url.pathname.match(/^\/api\/ext\/quality\/actions\/([0-9a-f-]{36})\/cancel$/i);
+  if (qualityActionCancel) return extQualityApi.handleActionCancel(req,res,qualityActionCancel[1]);
+  // Rotas exatas legadas: leitura com items; escrita aposentada após guardas.
+  if (["/api/admin/hr/ext-quality-nonconformities","/api/crm/hr/ext-quality-nonconformities","/api/hr/ext-quality-nonconformities","/api/ext/quality-nonconformities"].includes(url.pathname)) return extQualityApi.handleList(req,res,{legacy:true});
+  if (["/api/admin/hr/ext-quality-actions","/api/crm/hr/ext-quality-actions","/api/hr/ext-quality-actions","/api/ext/quality-actions"].includes(url.pathname)) return extQualityApi.handleLegacyActions(req,res);
   // EXT-06 satisfação resposta gera acompanhamento sem expor funcionário
   if (url.pathname === "/api/admin/hr/ext-satisfaction-surveys" || url.pathname === "/api/crm/hr/ext-satisfaction-surveys" || url.pathname === "/api/hr/ext-satisfaction-surveys" || url.pathname === "/api/ext/satisfaction-surveys") {
     return extApi.handleSatisfactionSurveys(req, res);
@@ -5725,6 +5755,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/ext/bidding-notices"
   || pathname.startsWith("/api/ext/bidding/")
   || pathname.startsWith("/api/ext/supplier/")
+  || pathname.startsWith("/api/ext/quality/")
   || pathname === "/api/admin/hr/ext-bidding-documents"
   || pathname === "/api/crm/hr/ext-bidding-documents"
   || pathname === "/api/hr/ext-bidding-documents"

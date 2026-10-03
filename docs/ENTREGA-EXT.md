@@ -1,5 +1,13 @@
 # Entrega EXT — expansões condicionais ligadas ao backend canônico
 
+## EXT-05 qualidade — 03/10/2026
+
+Partindo da `main` `ba2202f` (PR #99 MERGED; divergência 0/0), promove qualidade para jornada interna real: `/admin/qualidade`, `/api/ext/quality/*` e migração 151 aditiva. O probe da base em PostgreSQL 17 + HTTP real reproduziu 9/9 lacunas: rota/tela 404, rh tratado como 401, retry duplicado, salto/fechamento e contador forjável, texto livre no lugar de evidência, auditoria sem rollback, ausência de históricos e zero seed.
+
+Causa é histórica e imutável; ação tem responsável staff, prazo com fonte/data-base e terminais explícitos; verificação estruturada contém autor/data e referência declarada; fechamento exige responsável, causa, ação concluída, nenhuma pendência e verificação eficaz. Reabertura é formal e preserva o fechamento; reincidência liga predecessor e nova NC, e o contador é derivado. Estados, imutabilidade e pré-condições existem na API e no banco. Toda mutação usa sessão, URL canônica, same-origin, idempotência e transação negócio+evento+auditoria; falha audit_log = 503/rollback. Nenhum ator externo/upload/armazenamento/aceite foi inventado.
+
+Provas: focal 6/6; suíte 430/430; estático 5/5; build 90; migrations 151/151; gate HTTP/PG dedicado 33/33 e workflow próprio. Demais gates não cobrem a jornada. Bateria pesada, destino, aceite humano e Windows pendentes. Relatório: [EXT-05](ENTREGA-RELATORIO-2026-10-03-EXT05-QUALIDADE.md).
+
 Este documento acompanha o lote EXT (EXT-01..17), iniciado após o fechamento
 local de CLI-15 no L08. Cada fatia promove um requisito EXT de "API/tabela/
 componente órfão" para jornada funcional provada; a existência de tabela ou

@@ -1,5 +1,13 @@
 # Estado da execução — entrega local integral
 
+## Estado vigente — EXT-05 qualidade com gate HTTP/DB dedicado (2026-10-03)
+
+Base `main` `ba2202ff6655f425edf405afc42de7ce3786a2a0` (PR #99 MERGED), branch `arena/01a10335-gruposegsystemseguranca`, divergência inicial 0/0 e árvore limpa. Quinta fatia EXT: `/admin/qualidade`, `/api/ext/quality/*`, migração aditiva 151; 001–150 imutáveis, próxima livre 152.
+
+Jornada exclusivamente staff admin/marcelo/ti, sem ator externo inventado. Causa, ação, verificação, fechamento, reabertura e reincidência são históricos canônicos. API e banco impõem estados e **“Encerrar apenas com evidência e responsável”**; evidência é referência declarada, não upload/armazenamento. Idempotência por identidade, evento imutável e `audit_log` estão no mesmo commit; falha de auditoria retorna 503 e rollback. Legado preserva leitura `items` e mutação 410 após 401/403/same-origin. `ExtClient.tsx` foi preservado.
+
+Validação: npm ci; sintaxe; estático 5/5 (001–151); typecheck; focal 6/6; suíte 430/430; build 90 páginas; migrations 151/151 ×2 + negativo + clone; gate dedicado EXT-05 **33/33**, zero skip/todo. Primeira execução do gate expôs allowlist ausente (27/33 falharam em 404), corrigida e repetida integralmente. Demais gates não cobrem EXT-05; bateria pesada não executada. Destino, aceite humano e Windows pendentes; Marcelo/Andreia somente L07. [Relatório](ENTREGA-RELATORIO-2026-10-03-EXT05-QUALIDADE.md).
+
 ## Estado vigente — EXT-04 fornecedores internos com gate HTTP/DB dedicado (2026-10-03)
 
 Base oficial `main` `5abc199a7694c5bc0f508ac13cb2569a515a034d` (PR #98 / EXT-03 mesclada por decisão expressa do proprietário nesta sessão), divergência 0/0 antes da implementação. Branch `arena/01a10305-gruposegsystemseguranca`. Quarta fatia EXT: tela real `/admin/fornecedores`, API `/api/ext/supplier/*` e migração aditiva 150; 001–149 imutáveis, próxima livre 151.

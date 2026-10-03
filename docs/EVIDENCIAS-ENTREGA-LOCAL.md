@@ -1,5 +1,23 @@
 # Evidências — entrega local integral
 
+## Evidência vigente — EXT-05 qualidade (2026-10-03)
+
+Base `ba2202ff6655f425edf405afc42de7ce3786a2a0`, PR #99 MERGED, branch da sessão e `origin/main` 0/0, árvore limpa. Probe temporário contra a base 001–150 + HTTP real: 9/9 lacunas reproduzidas (404 canônico/UI; 401 indevido para rh; duplicação; salto/fechamento/contador forjado; evidência texto livre; audit_log sem rollback; sem históricos; zero seed). O probe foi apagado e só usou sintéticos `.invalid`.
+
+Entrega: migração 151; `/admin/qualidade`; `/api/ext/quality/*`; estados e fechamento protegidos em API+banco; causa/ação/verificação/fechamento/reabertura/reincidência históricos; idempotência concorrente; evento+auditoria atômicos; legado `items`/410. A fronteira é staff interna; referência documental não é upload, arquivo verificado ou armazenamento.
+
+| Prova | Resultado |
+|---|---|
+| npm ci / sintaxe / typecheck | OK |
+| Wave 0 | 5/5, 001–151 |
+| Focal EXT-05 | 6/6 |
+| npm test | 430/430, zero skip/todo |
+| build | 90 páginas; `/admin/qualidade` |
+| migrations PG | 151/151 ×2; negativo rejeitado; clone 151/151 |
+| gate EXT-05 HTTP/PG | **33/33**, zero skip/todo; mínimo 30 |
+
+Estático, typecheck, unit, build, migrations e gates EXT-02/03/04, L02–L08, tenant, staff-auth, client-access, CLI v2, backup, RAG e demo-local não cobrem EXT-05. Bateria pesada não executada. Destino, aceite humano e Windows pendentes; Marcelo/Andreia somente L07. [Relatório](ENTREGA-RELATORIO-2026-10-03-EXT05-QUALIDADE.md).
+
 ## Evidência vigente — EXT-04 fornecedores internos (2026-10-03)
 
 Base `main` `5abc199a7694c5bc0f508ac13cb2569a515a034d` (PR #98 / EXT-03 MERGED após decisão expressa; divergência 0/0); branch `arena/01a10305-gruposegsystemseguranca`; migração aditiva 150, 001–149 imutáveis.

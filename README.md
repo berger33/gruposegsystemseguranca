@@ -1,5 +1,13 @@
 # Grupo SEG System
 
+## Continuação atual: EXT-05 — qualidade entregue localmente
+
+Base confirmada: PR #99 `MERGED`, merge commit `ba2202ff6655f425edf405afc42de7ce3786a2a0`, head EXT-04 `0c3a560d9ff1d4622a58e3fd306fb35bd4b26e6a`; após fetch, branch da sessão e `origin/main` em divergência **0/0**, árvore limpa. A migração aditiva 151 promove EXT-05 sem alterar 001–150.
+
+A jornada interna de staff em `/admin/qualidade` + `/api/ext/quality/*` cobre não conformidade, causa histórica, ação corretiva com responsável canônico, verificação/evidência declarada, encerramento/reabertura formal e reincidência explícita. O critério **“Encerrar apenas com evidência e responsável”** é imposto na API e no PostgreSQL. Referência de evidência não significa upload, arquivo verificado ou armazenamento. Autoria vem da sessão; vínculo vem da URL/registro; mutações têm same-origin, idempotência e transação única de negócio + evento + `audit_log`, com 503/rollback. Legado lê com `items` e escreve 410 após guardas.
+
+Validação: `npm ci`; sintaxe; estático **5/5 (001–151)**; typecheck; focal **6/6**; `npm test` **430/430**; build **90 páginas** com `/admin/qualidade`; migrações **151/151 ×2**, checksum negativo rejeitado e clone 151/151; gate dedicado **`test:ext05-quality:pg` 33/33**, 0 skip/todo, HTTP e PostgreSQL 17 reais. Estático/typecheck/unit/build/migrations e demais gates não cobrem EXT-05. Bateria pesada, destino, aceite humano e Windows permanecem pendentes; Marcelo/Andreia somente L07. [Relatório EXT-05](docs/ENTREGA-RELATORIO-2026-10-03-EXT05-QUALIDADE.md).
+
 ## Continuação atual: EXT-04 — fornecedores internos entregues localmente
 
 Base confirmada: `main` `5abc199a7694c5bc0f508ac13cb2569a515a034d` (PR #98 / EXT-03 MERGED por decisão expressa nesta sessão), divergência 0/0 antes de implementar. Migrações 001–149 imutáveis; esta fatia acrescenta somente a **150**, aditiva.
