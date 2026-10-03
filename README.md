@@ -1,5 +1,19 @@
 # Grupo SEG System
 
+## Continuação atual: EXT-04 — fornecedores internos entregues localmente
+
+Base confirmada: `main` `5abc199a7694c5bc0f508ac13cb2569a515a034d` (PR #98 / EXT-03 MERGED por decisão expressa nesta sessão), divergência 0/0 antes de implementar. Migrações 001–149 imutáveis; esta fatia acrescenta somente a **150**, aditiva.
+
+**Condição do critério:** *"se volume justificar"* foi avaliada contra o repositório e recebeu veredito **SEM EVIDÊNCIA**. `docs/PLANO-MESTRE-IMPLEMENTACAO.md:423` declara a condição; `docs/AUDITORIA-TERRENO-L08.md:85` registra somente handler/tabelas sem fornecedor restrito provado; não existe medição, meta ou histórico de volume. A API (`volume_condition.situacao = "sem_evidencia"`), a tela e a documentação dizem isso explicitamente. Nenhum dado é semeado e o proprietário ainda pode vetar a capacidade.
+
+**Fronteira de ator externo:** não existe identidade, login, sessão, grant, canal HTTP, upload ou aceite de fornecedor. A entrega é uma jornada **interna de staff** em `/admin/fornecedores` + `/api/ext/supplier/*`; o "escopo próprio" do fornecedor permanece pendente e não é simulado. `file_url`/`storage_key` são referências declaradas, não arquivos enviados.
+
+Papéis admin/marcelo/ti gerenciam cotações, validade com fonte, regra explícita de alerta, decisão imutável, referências documentais versionadas sob lock e pedidos derivados de cotação aprovada, com prazos/fonte e máquinas de estado protegidas também no banco. IDs/vínculos vêm da URL ou do registro canônico; autoria vem da sessão; same-origin e `Idempotency-Key` são obrigatórios. Negócio + evento imutável + `audit_log` usam a mesma transação; falha de auditoria retorna 503 com rollback. Legado `/api/ext/supplier-portal-quotations`: leitura autorizada com `items`, mutação 410 depois das guardas.
+
+Validação: `npm ci`; estático **5/5 (001–150)**; typecheck; teste dedicado **42/42**; `npm test` **424/424**, 0 pulados; build **89 páginas** com `/admin/fornecedores`; migrações **150/150 ×2** com checksum negativo rejeitado; gate dedicado **`test:ext04-suppliers:pg` 28/28**, HTTP real + PostgreSQL real, resumo TAP autoauditado. Os demais gates não cobrem EXT-04. Bateria pesada integral, destino, aceite humano e Windows permanecem pendentes; o aceite Marcelo/Andreia vale somente para L07.
+
+Leia o [relatório EXT-04](docs/ENTREGA-RELATORIO-2026-10-03-EXT04-FORNECEDORES.md), a [entrega EXT](docs/ENTREGA-EXT.md) e o [estado atual](docs/ESTADO-EXECUCAO-LOCAL.md).
+
 ## Continuação atual: EXT-03 — licitações entregues localmente
 
 Base confirmada: `main` `4518b3f0a7e2c8e900e135a656f8b73b2fa5dfaa` (PR #97 MERGED), divergência inicial 0/0. Migrações 001–148 imutáveis; esta fatia acrescenta somente a **149**, aditiva.

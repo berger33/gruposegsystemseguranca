@@ -102,6 +102,7 @@ import { createExtApi } from "./src/server/ext-api.mjs";
 import { createExtFleetApi } from "./src/server/ext-fleet-api.mjs";
 import { createExtThirdPartyApi } from "./src/server/ext-third-party-api.mjs";
 import { createExtBiddingApi } from "./src/server/ext-bidding-api.mjs";
+import { createExtSupplierApi } from "./src/server/ext-supplier-api.mjs";
 import { createExtAdvancedApi } from "./src/server/ext-advanced-api.mjs";
 import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
 import { createCommercialHistoryApi } from "./src/server/commercial-history-api.mjs";
@@ -2274,6 +2275,14 @@ const extBiddingApi = createExtBiddingApi({
   requireSession: readSession,
 });
 
+// EXT-04 fornecedores canônicos: jornada exclusivamente interna de staff;
+// transação única negócio + evento imutável + audit_log, sem auditLog legado.
+const extSupplierApi = createExtSupplierApi({
+  pool: getPool(),
+  sameOrigin,
+  requireSession: readSession,
+});
+
 const extAdvancedApi = createExtAdvancedApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -4152,9 +4161,44 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/ext-bidding-documents" || url.pathname === "/api/crm/hr/ext-bidding-documents" || url.pathname === "/api/hr/ext-bidding-documents" || url.pathname === "/api/ext/bidding-documents") {
     return extBiddingApi.handleLegacyBiddingDocuments(req, res);
   }
-  // EXT-04 portal fornecedores fornecedor não vê concorrente nem dados de RH
+  // EXT-04 fornecedores canônicos (migração 150): jornada INTERNA de staff.
+  // Não existe sessão/canal/upload/aceite do fornecedor; a fronteira externa e
+  // a condição "se volume justificar" são declaradas pela API e pela tela.
+  if (url.pathname === "/api/ext/supplier/references") return extSupplierApi.handleReferences(req, res);
+  if (url.pathname === "/api/ext/supplier/quotations") return extSupplierApi.handleQuotations(req, res);
+  if (url.pathname === "/api/ext/supplier/orders") return extSupplierApi.handleOrders(req, res);
+  const supplierQuotationCreateMatch = url.pathname.match(/^\/api\/ext\/supplier\/suppliers\/([0-9a-f-]{36})\/products\/([0-9a-f-]{36})\/quotations$/i);
+  if (supplierQuotationCreateMatch) return extSupplierApi.handleCreateQuotation(req, res, supplierQuotationCreateMatch[1], supplierQuotationCreateMatch[2]);
+  const supplierQuotationMatch = url.pathname.match(/^\/api\/ext\/supplier\/quotations\/([0-9a-f-]{36})$/i);
+  if (supplierQuotationMatch) return extSupplierApi.handleQuotationById(req, res, supplierQuotationMatch[1]);
+  const supplierQuotationStatusMatch = url.pathname.match(/^\/api\/ext\/supplier\/quotations\/([0-9a-f-]{36})\/status$/i);
+  if (supplierQuotationStatusMatch) return extSupplierApi.handleQuotationStatus(req, res, supplierQuotationStatusMatch[1]);
+  const supplierQuotationDecisionMatch = url.pathname.match(/^\/api\/ext\/supplier\/quotations\/([0-9a-f-]{36})\/decision$/i);
+  if (supplierQuotationDecisionMatch) return extSupplierApi.handleQuotationDecision(req, res, supplierQuotationDecisionMatch[1]);
+  const supplierValidityMatch = url.pathname.match(/^\/api\/ext\/supplier\/quotations\/([0-9a-f-]{36})\/validities$/i);
+  if (supplierValidityMatch) return extSupplierApi.handleQuotationValidities(req, res, supplierValidityMatch[1]);
+  const supplierValiditySupersedeMatch = url.pathname.match(/^\/api\/ext\/supplier\/validities\/([0-9a-f-]{36})\/supersede$/i);
+  if (supplierValiditySupersedeMatch) return extSupplierApi.handleValiditySupersede(req, res, supplierValiditySupersedeMatch[1]);
+  const supplierAlertRulesMatch = url.pathname.match(/^\/api\/ext\/supplier\/quotations\/([0-9a-f-]{36})\/alert-rules$/i);
+  if (supplierAlertRulesMatch) return extSupplierApi.handleAlertRules(req, res, supplierAlertRulesMatch[1]);
+  const supplierDocumentsMatch = url.pathname.match(/^\/api\/ext\/supplier\/quotations\/([0-9a-f-]{36})\/documents$/i);
+  if (supplierDocumentsMatch) return extSupplierApi.handleDocuments(req, res, supplierDocumentsMatch[1]);
+  const supplierDocumentVersionMatch = url.pathname.match(/^\/api\/ext\/supplier\/documents\/([0-9a-f-]{36})\/versions$/i);
+  if (supplierDocumentVersionMatch) return extSupplierApi.handleDocumentVersion(req, res, supplierDocumentVersionMatch[1]);
+  const supplierDocumentDeactivateMatch = url.pathname.match(/^\/api\/ext\/supplier\/documents\/([0-9a-f-]{36})\/deactivate$/i);
+  if (supplierDocumentDeactivateMatch) return extSupplierApi.handleDocumentDeactivate(req, res, supplierDocumentDeactivateMatch[1]);
+  const supplierOrderCreateMatch = url.pathname.match(/^\/api\/ext\/supplier\/quotations\/([0-9a-f-]{36})\/orders$/i);
+  if (supplierOrderCreateMatch) return extSupplierApi.handleCreateOrder(req, res, supplierOrderCreateMatch[1]);
+  const supplierOrderStatusMatch = url.pathname.match(/^\/api\/ext\/supplier\/orders\/([0-9a-f-]{36})\/status$/i);
+  if (supplierOrderStatusMatch) return extSupplierApi.handleOrderStatus(req, res, supplierOrderStatusMatch[1]);
+  const supplierOrderDeadlinesMatch = url.pathname.match(/^\/api\/ext\/supplier\/orders\/([0-9a-f-]{36})\/deadlines$/i);
+  if (supplierOrderDeadlinesMatch) return extSupplierApi.handleOrderDeadlines(req, res, supplierOrderDeadlinesMatch[1]);
+  const supplierOrderDeadlineSupersedeMatch = url.pathname.match(/^\/api\/ext\/supplier\/order-deadlines\/([0-9a-f-]{36})\/supersede$/i);
+  if (supplierOrderDeadlineSupersedeMatch) return extSupplierApi.handleOrderDeadlineSupersede(req, res, supplierOrderDeadlineSupersedeMatch[1]);
+  // Legado: leitura autorizada preserva `items`; mutação retorna 410 somente
+  // depois de 401/403/same-origin/identidade, sem atalho inseguro.
   if (url.pathname === "/api/admin/hr/ext-supplier-portal-quotations" || url.pathname === "/api/crm/hr/ext-supplier-portal-quotations" || url.pathname === "/api/hr/ext-supplier-portal-quotations" || url.pathname === "/api/ext/supplier-portal-quotations") {
-    return extApi.handleSupplierPortalQuotations(req, res);
+    return extSupplierApi.handleLegacyQuotations(req, res);
   }
   // EXT-05 qualidade encerrar apenas com evidência e responsável
   if (url.pathname === "/api/admin/hr/ext-quality-nonconformities" || url.pathname === "/api/crm/hr/ext-quality-nonconformities" || url.pathname === "/api/hr/ext-quality-nonconformities" || url.pathname === "/api/ext/quality-nonconformities") {
@@ -5680,6 +5724,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/hr/ext-bidding-notices"
   || pathname === "/api/ext/bidding-notices"
   || pathname.startsWith("/api/ext/bidding/")
+  || pathname.startsWith("/api/ext/supplier/")
   || pathname === "/api/admin/hr/ext-bidding-documents"
   || pathname === "/api/crm/hr/ext-bidding-documents"
   || pathname === "/api/hr/ext-bidding-documents"

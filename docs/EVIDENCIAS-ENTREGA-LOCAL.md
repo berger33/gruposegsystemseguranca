@@ -1,5 +1,30 @@
 # Evidências — entrega local integral
 
+## Evidência vigente — EXT-04 fornecedores internos (2026-10-03)
+
+Base `main` `5abc199a7694c5bc0f508ac13cb2569a515a034d` (PR #98 / EXT-03 MERGED após decisão expressa; divergência 0/0); branch `arena/01a10305-gruposegsystemseguranca`; migração aditiva 150, 001–149 imutáveis.
+
+- **Condição:** `docs/PLANO-MESTRE-IMPLEMENTACAO.md:423` exige "se volume justificar"; `docs/AUDITORIA-TERRENO-L08.md:85` registra só handler/tabelas sem fornecedor restrito provado; nenhuma medição/meta/histórico de volume foi encontrada. Cluster limpo: suppliers=0, ast_quotations=0, ast_orders=0, portal_quotations=0, portal_documents=0 — ausência de seed, não prova de volume real. Veredito API/tela/docs: **`sem_evidencia`**; confirmação/veto do proprietário pendente.
+- **Fronteira:** nenhum ator fornecedor canônico, login, sessão, grant, canal HTTP, upload ou aceite. Jornada somente staff; "escopo próprio" externo pendente. `file_url`/`storage_key` são referências declaradas.
+- **Lacunas executadas antes de implementar:** rotas canônica/documento/pedido e tela 404; `rh` 401 em vez de 403; retry 201/201 e duas linhas; máquina permitia aprovado→rascunho; auditoria indisponível retornava 201 e persistia; respostas não declaravam condição/fronteira. Relatório traz a saída literal. API/tabela/órfão não foram contados como jornada.
+- **Implementação:** `/admin/fornecedores`, `/api/ext/supplier/*`, migração 150; cotações, validade/fonte, regra de alerta, decisão imutável, documentos versionados sob lock, pedidos derivados e prazos; máquinas API+banco; autoria da sessão; vínculos URL/registro; idempotência; evento e auditoria na mesma transação; legado leitura+`items`/mutação 410.
+
+| Prova | Resultado |
+|---|---|
+| `npm ci` | exit 0; 0 vulnerabilidades |
+| `node scripts/qa-wave0-static.mjs` | **5/5**, 001–150 |
+| `npm run typecheck` | 0 erros |
+| `node --test tests/ext04-suppliers.test.mjs` | **42/42**, 0 pulados |
+| `npm test` | **424/424**, 0 pulados; baseline 382/382 |
+| `npm run build` | **89 páginas**, `/admin/fornecedores`; baseline 88 |
+| `npm run test:migrations:pg` | **150/150 ×2**, replay e checksum negativo rejeitado |
+| **`npm run test:ext04-suppliers:pg`** | **28/28**, 0 skipped/todo; HTTP/DB real, autoauditado |
+
+- **Prova dedicada:** autoria/IDs/total forjados ignorados; vínculo produto-fornecedor; retry e 409 divergente; estados/decisão protegidos em API+banco; validade/prazo com fonte/data-base e ausência declarada; `a_vencer` só após regra; validade substituída sem edição; concorrência documental produz versões 1/2; pedido deriva todos os vínculos/valores e terminal não reabre; evento imutável; auditoria derrubada ⇒ 503 sem negócio/evento; legado preserva `items`, 401 e 410.
+- **Anti-skip:** sem DB sob `QA_EXT04_REQUIRE_DB=1` ⇒ exit 1; URL externa herdada ⇒ `QA_PG_REFUSED`, exit 2; execução correta ⇒ resumo 28/28, nenhum skip/todo.
+- **Não cobertura:** estático, typecheck, unit, build e migrations não substituem o gate; EXT-02/03, L04–L08, tenant, staff-auth, client-access, CLI v2, backup, RAG e demo-local não cobrem EXT-04 e não são apresentados como prova. Cascata pesada não foi executada nesta fatia.
+- **Aceite/homologação:** nenhum aceite humano novo; Marcelo/Andreia somente L07. Windows, destino, bateria pesada, confirmação de volume, ator externo e EXT-05..17 pendentes. Órfão `ExtClient.tsx` preservado sem promoção.
+
 ## Evidência vigente — EXT-03 licitações (2026-10-03)
 
 Base `main` `4518b3f0a7e2c8e900e135a656f8b73b2fa5dfaa` (PR #97 MERGED, divergência inicial 0/0); branch `arena/01a1026a-gruposegsystemseguranca`; migração aditiva 149 (001–148 imutáveis).
