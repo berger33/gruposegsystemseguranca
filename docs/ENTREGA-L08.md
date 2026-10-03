@@ -219,3 +219,9 @@ Migração 144 aditiva; validação rápida 5/5, typecheck, teste dedicado 11/11
 integral 226/226 e build 84. Gate PostgreSQL/HTTP/Chromium, cascata L03..L08,
 aplicação em destino, aceite humano e Windows pendentes. Próximo CLI-14, depois
 CLI-15. Relatório: [CLI-13](ENTREGA-L08-RELATORIO-2026-10-03-CLI13-ACESSO.md).
+
+## CLI-14 segurança da conta — 03/10/2026
+
+CLI-14 foi promovida localmente sobre a `main` `508daad55cf239113337b6ed7b33a04d356a66cc`, PR #93 MERGED, divergência inicial 0/0. Migração aditiva 145 preserva 001–144. MFA, sessões e troca de e-mail usam exclusivamente `auth_*`; as tabelas v2 da 076 não são fonte de autenticação. A UI `/cliente/app/seguranca` é real, com estados e retry.
+
+Validação rápida: `npm ci`, estático 5/5 (001–145), typecheck, teste CLI-14 4/4 e rotas 9/9. Integral 230/230 e build 84 páginas. Gates pesados, aplicação em destino, aceite humano e Windows permanecem pendentes. Não há aceite humano novo; o aceite Marcelo/Andreia preservado é somente L07. Relatório: [CLI-14](ENTREGA-L08-RELATORIO-2026-10-03-CLI14-SEGURANCA.md).

@@ -34,12 +34,11 @@ for (const [handler, method] of routes) {
     assert.equal(anonymous.responses.pop().status, 401);
   });
 }
-test('SEC-07 e-mail change never claims success without verified delivery', async () => {
+test('SEC-07 e-mail change is server-backed and never claims completion before confirmation', async () => {
   const t = setup({ authorized: true });
-  for (const [handler, method] of routes.filter(([name]) => name.startsWith('handleEmailChange'))) {
-    await t.api[handler]({ method }, {});
-    assert.deepEqual(t.responses.pop().body, { error: 'email_change_unavailable' });
-  }
+  await t.api.handleEmailChangeRequest({ method: 'POST', body: { newEmail: 'new@example.invalid' } }, {});
+  assert.equal(t.responses.pop().status, 503, 'database failure is visible as unavailable, never a false success');
+  assert.equal(t.responses.pop(), undefined);
 });
 test('SEC-06 TOTP secret encrypts with per-identity AAD, verifies code and rejects replay', async () => {
   const before = process.env.CLIENT_MFA_ENCRYPTION_KEY;

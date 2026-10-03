@@ -2126,3 +2126,7 @@ como o log remoto não pôde ser recuperado pelo GitHub (endpoint devolveu EOF),
 o mesmo comando foi repetido integralmente, sem alterar timeout, skip ou
 assertivas: `npm run test:l07-delivery:pg` passou **43/43** com migrações
 001–144. Um novo ciclo de checks foi disparado para confirmação remota.
+
+## Evidência da fatia CLI-14 — 03/10/2026
+
+Base `main` `508daad55cf239113337b6ed7b33a04d356a66cc`, PR #93 MERGED, divergência inicial 0/0; branch `arena/01a1008a-gruposegsystemseguranca`. Implementação usa somente `auth_mfa`, `auth_sessions`, `auth_email_change`, identidades canônicas e auditoria transacional; migração 145 aditiva. `npm ci`, estático 5/5 (001–145), typecheck, CLI-14 4/4 e rotas 9/9 foram executados. A bateria pesada, integral/build, gates em cascata, aplicação em destino, aceite humano e Windows permanecem pendentes. Sem aceite humano novo.

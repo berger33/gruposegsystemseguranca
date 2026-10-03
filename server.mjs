@@ -1214,6 +1214,7 @@ const clientSecurityApi = createClientSecurityApi({
   cookieSecure,
   clientIp,
   baseUrl: publicBaseUrl,
+  localOutbox,
 });
 const adminRbacApi = createAdminRbacApi({
   json,
@@ -2566,6 +2567,13 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/client/security/mfa/activate") return clientSecurityApi.handleMfaActivate(req, res);
   if (url.pathname === "/api/client/security/mfa/verify") return clientSecurityApi.handleMfaVerify(req, res);
   if (url.pathname === "/api/client/security/mfa/disable") return clientSecurityApi.handleMfaDisable(req, res);
+  if (url.pathname === "/api/client/security/sessions") {
+    if (req.method === "GET") return clientSecurityApi.handleSessions(req, res);
+    if (req.method === "POST") return clientSecurityApi.handleSessionRevokeOthers(req, res);
+    return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, POST" });
+  }
+  const clientSecuritySessionMatch = url.pathname.match(/^\/api\/client\/security\/sessions\/([0-9a-f-]{36})$/i);
+  if (clientSecuritySessionMatch) return clientSecurityApi.handleSessionRevoke(req, res, clientSecuritySessionMatch[1]);
   if (url.pathname === "/api/client/security/email-change") {
     if (req.method === "POST") return clientSecurityApi.handleEmailChangeRequest(req, res);
     if (req.method === "PUT") return clientSecurityApi.handleEmailChangeConfirm(req, res);

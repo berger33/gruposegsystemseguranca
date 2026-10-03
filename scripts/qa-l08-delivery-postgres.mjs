@@ -6,15 +6,25 @@ import EmbeddedPostgres from "embedded-postgres";
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
+import { symlinkSync, existsSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
+
+const root = path.resolve(import.meta.dirname, "..");
+// embedded-postgres ships libpq/ICU beside the native binaries; expose that
+// directory explicitly on minimal GitHub runners and local QA images.
+const embeddedNativeLib = path.join(root, "node_modules", "@embedded-postgres", "linux-x64", "native", "lib");
+for (const [soname, file] of [["libpq.so.5", "libpq.so.5.17"], ["libicuuc.so.60", "libicuuc.so.60.2"], ["libicui18n.so.60", "libicui18n.so.60.2"], ["libicudata.so.60", "libicudata.so.60.2"]]) {
+  const link = path.join(embeddedNativeLib, soname);
+  if (!existsSync(link)) { try { symlinkSync(file, link); } catch {} }
+}
+process.env.LD_LIBRARY_PATH = [embeddedNativeLib, process.env.LD_LIBRARY_PATH].filter(Boolean).join(":");
 
 if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.RUN_DATABASE_INTEGRATION_REMOTE === "1") {
   console.error("QA_PG_REFUSED: clear DATABASE_URL, DATABASE_MIGRATION_URL and RUN_DATABASE_INTEGRATION_REMOTE.");
   process.exit(2);
 }
-const root = path.resolve(import.meta.dirname, "..");
 const freePort = () => new Promise((resolve, reject) => {
   const server = createServer(); server.once("error", reject);
   server.listen(0, "127.0.0.1", () => { const { port } = server.address(); server.close(() => resolve(port)); });
