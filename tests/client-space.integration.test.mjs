@@ -980,6 +980,108 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     assert.deepEqual(conflict.body, { error: "idempotency_conflict" });
   });
 
+  // L08 / CLI-01..05 — critério 7 do gate: "aliases relevantes negam acesso
+  // inadequado". Um alias sob /api/client/ não prova autorização de cliente: os
+  // handlers v2 leem a sessão de staff, não o cookie do portal. Este subteste
+  // exerce HTTP real com a sessão de cliente A ainda plenamente vinculada
+  // (antes da revogação abaixo), de modo que a negação não possa ser creditada
+  // à perda de vínculo. O inventário é derivado de server.mjs: um alias novo
+  // sob /api/client/ reprova o gate até ser classificado e provado.
+  await t.test("non-promoted v2 aliases under /api/client never answer to a valid portal session", async () => {
+    const serverSource = await readFile(path.join(projectRoot, "server.mjs"), "utf8");
+    const routedAliases = new Set(
+      (serverSource.match(/"\/api\/client\/[a-z0-9./-]*"/g) ?? [])
+        .map(item => item.slice(1, -1))
+        .filter(item => item !== "/api/client/"),
+    );
+    // Superfície legada canônica efetivamente promovida em CLI-01..05/CLI-14.
+    const promoted = new Set([
+      "/api/client/accounts",
+      "/api/client/contracts",
+      "/api/client/documents",
+      "/api/client/tickets",
+      "/api/client/security/mfa/setup",
+      "/api/client/security/mfa/activate",
+      "/api/client/security/mfa/verify",
+      "/api/client/security/mfa/disable",
+      "/api/client/security/email-change",
+    ]);
+    // Aliases v2 roteados sob /api/client/ e NÃO promovidos nesta fatia.
+    const nonPromoted = [
+      "/api/client/charges-v2",
+      "/api/client/document-download",
+      "/api/client/documents-v2",
+      "/api/client/email-change-requests",
+      "/api/client/portal-access-requests",
+      "/api/client/reports-v2",
+      "/api/client/service-requests",
+      "/api/client/tickets-v2",
+      "/api/client/visits",
+    ];
+    assert.deepEqual(
+      [...routedAliases].filter(item => !promoted.has(item)).sort(),
+      [...nonPromoted].sort(),
+      "um alias /api/client/ novo precisa ser classificado como promovido ou provado como negado",
+    );
+
+    // Controle positivo: a sessão usada aqui é a mesma que opera o legado.
+    const canonical = await api("/api/client/accounts", { cookie: cookieA });
+    assert.equal(canonical.status, 200, JSON.stringify(canonical.body));
+    assert.ok(canonical.body.accounts.length > 0, "a sessão de controle precisa estar vinculada");
+
+    const secrets = [accountA1, accountA2, accountA3, documentId, ticketId].filter(Boolean).map(String);
+    const storage = await pool.query("SELECT storage_key FROM client_documents WHERE id = $1", [documentId]);
+    if (storage.rows[0]?.storage_key) secrets.push(String(storage.rows[0].storage_key));
+
+    for (const alias of nonPromoted) {
+      for (const method of ["GET", "POST"]) {
+        const query = alias === "/api/client/document-download" ? `?document_id=${documentId}` : "";
+        const response = await api(`${alias}${query}`, {
+          method,
+          cookie: cookieA,
+          ...(method === "POST" ? { body: { client_account_id: accountA1, document_id: documentId } } : {}),
+        });
+        assert.ok(
+          [401, 403, 405].includes(response.status),
+          `${method} ${alias} devolveu ${response.status}: ${JSON.stringify(response.body)}`,
+        );
+        const serialized = JSON.stringify(response.body ?? {});
+        for (const secret of secrets) {
+          assert.ok(!serialized.includes(secret), `${method} ${alias} vazou o identificador ${secret}`);
+        }
+        assert.equal(response.headers.get("content-disposition"), null, `${method} ${alias} enviou header de anexo`);
+      }
+
+      const anonymous = await api(alias, {});
+      assert.ok([401, 403, 405].includes(anonymous.status), `${alias} anônimo devolveu ${anonymous.status}`);
+    }
+
+    // O alias de download v2 não pode entregar bytes privados em nenhum caminho,
+    // nem com o documento de A, nem com o cookie do portal de B.
+    for (const cookie of [cookieA, cookieB]) {
+      const attempt = await fetch(`${origin}/api/client/document-download?document_id=${documentId}`, {
+        headers: { Origin: origin, Cookie: cookie },
+      });
+      assert.ok([401, 403].includes(attempt.status), `download v2 devolveu ${attempt.status}`);
+      assert.equal(attempt.headers.get("content-disposition"), null);
+      const payload = Buffer.from(await attempt.arrayBuffer());
+      assert.notDeepEqual(payload, documentPayload, "o alias v2 não pode devolver bytes privados");
+      assert.ok(
+        !payload.includes(documentPayload.subarray(0, 24)),
+        "o alias v2 não pode devolver nenhum trecho do arquivo privado",
+      );
+    }
+
+    // Nenhuma escrita pode ter nascido das tentativas acima.
+    const untouched = await pool.query(
+      `SELECT (SELECT count(*)::int FROM client_documents WHERE client_account_id = $1) AS documents,
+              (SELECT count(*)::int FROM client_tickets WHERE client_account_id = $1) AS tickets`,
+      [accountA1],
+    );
+    assert.ok(untouched.rows[0].documents >= 1);
+    assert.ok(untouched.rows[0].tickets >= 1);
+  });
+
   await t.test("revoking the grant cuts access immediately and is idempotent", async () => {
     const revoked = await api(`/api/admin/grants/${grantA1}`, {
       method: "DELETE",
