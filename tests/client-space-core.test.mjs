@@ -6,9 +6,13 @@ import {
   TEXT_LIMITS,
   TICKET_CATEGORIES,
   TICKET_STATUSES,
+  VISIT_STATUSES,
+  REPORT_STATUSES,
   isAccountStatus,
   isContractStatus,
   isTicketStatus,
+  isVisitStatus,
+  isReportStatus,
   sanitizeFilename,
   validateAccountInput,
   validateContractInput,
@@ -94,7 +98,14 @@ test("status guards accept only the closed lists", () => {
   assert.equal(isContractStatus("planned"), true);
   assert.equal(isContractStatus("cancelled"), false);
   assert.equal(isTicketStatus("open"), true);
+  assert.equal(isTicketStatus("waiting_client"), true);
   assert.equal(isTicketStatus("in analysis"), false);
-  assert.deepEqual([...TICKET_STATUSES], ["open", "in_progress", "resolved", "closed"]);
+  assert.deepEqual([...TICKET_STATUSES], ["open", "in_progress", "waiting_client", "resolved", "closed"]);
+  assert.equal(isVisitStatus("rescheduled"), true);
+  assert.equal(isVisitStatus("done"), false);
+  assert.equal(isReportStatus("acknowledged"), true);
+  assert.equal(isReportStatus("published"), false);
+  assert.deepEqual([...VISIT_STATUSES], ["scheduled", "confirmed", "rescheduled", "completed", "cancelled", "no_show"]);
+  assert.deepEqual([...REPORT_STATUSES], ["draft", "in_review", "approved", "rejected", "sent", "acknowledged"]);
   assert.equal(TEXT_LIMITS.reasonMax, 500);
 });

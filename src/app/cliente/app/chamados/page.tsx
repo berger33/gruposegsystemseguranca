@@ -12,15 +12,24 @@ type Ticket = {
   category: string;
   title: string;
   details: string;
-  status: "open" | "in_progress" | "resolved" | "closed";
+  status: "open" | "in_progress" | "waiting_client" | "resolved" | "closed";
   created_at: string;
   updated_at: string;
   admin_response: string | null;
+  sla_due_at: string | null;
+  sla_paused_at: string | null;
+  sla_pause_reason: string | null;
+  sla_total_paused_seconds: number | string | null;
+  reopen_count: number | null;
+  last_reopen_reason: string | null;
+  resolved_at: string | null;
+  closed_at: string | null;
 };
 
 const ticketStatus: Record<Ticket["status"], { text: string; chip: string }> = {
   open: { text: "Aberto", chip: appStyles.chipOpen },
   in_progress: { text: "Em atendimento", chip: appStyles.chipProgress },
+  waiting_client: { text: "Aguardando cliente", chip: appStyles.chipProgress },
   resolved: { text: "Resolvido", chip: appStyles.chipResolved },
   closed: { text: "Encerrado", chip: appStyles.chipClosed },
 };
@@ -33,6 +42,9 @@ const openErrors: Record<string, string> = {
   ticket_details_too_long: "A descrição deve ter no máximo 500 caracteres.",
   idempotency_conflict: "Este envio mudou desde a última tentativa. Revise os dados e envie novamente.",
   forbidden: "Este cadastro não permite abrir chamados no momento.",
+  ticket_reopen_reason_required: "Informe um motivo de reabertura com pelo menos 10 caracteres.",
+  ticket_reopen_reason_too_long: "O motivo de reabertura deve ter no máximo 500 caracteres.",
+  ticket_reopen_only_resolved_or_closed: "Somente chamados resolvidos ou encerrados podem ser reabertos.",
 };
 
 export default function ClientTicketsPage() {
@@ -44,6 +56,8 @@ export default function ClientTicketsPage() {
   const [details, setDetails] = useState("");
   const [state, setState] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
+  const [reopenReason, setReopenReason] = useState<Record<string, string>>({});
+  const [reopenBusy, setReopenBusy] = useState<string | null>(null);
   const retryRequest = useRef<{ fingerprint: string; key: string } | null>(null);
 
   const loadTickets = useCallback((accountId: string) => {
@@ -102,6 +116,35 @@ export default function ClientTicketsPage() {
     } catch {
       setState("error");
       setMessage("Não foi possível conectar agora. Tente novamente em instantes.");
+    }
+  };
+
+  const reopenTicket = async (ticket: Ticket) => {
+    const reason = (reopenReason[ticket.id] ?? "").trim();
+    setReopenBusy(ticket.id);
+    setState("idle");
+    setMessage("");
+    try {
+      const response = await fetch(`/api/client/tickets/${ticket.id}/reopen`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        setState("error");
+        setMessage(openErrors[payload.error ?? ""] ?? "Não foi possível reabrir o chamado agora.");
+        return;
+      }
+      setReopenReason(current => ({ ...current, [ticket.id]: "" }));
+      setState("success");
+      setMessage("Chamado reaberto. A equipe receberá a justificativa pelo histórico auditado.");
+      if (activeAccount) loadTickets(activeAccount.id);
+    } catch {
+      setState("error");
+      setMessage("Não foi possível conectar agora. Tente novamente em instantes.");
+    } finally {
+      setReopenBusy(null);
     }
   };
 
@@ -261,6 +304,33 @@ export default function ClientTicketsPage() {
                     <div className={appStyles.responseBox}>
                       <strong>Resposta da equipe</strong>
                       {ticket.admin_response}
+                    </div>
+                  ) : null}
+                  {ticket.sla_paused_at ? (
+                    <div className={appStyles.responseBox}>
+                      <strong>SLA pausado</strong>
+                      A equipe marcou este chamado como aguardando cliente em {new Date(ticket.sla_paused_at).toLocaleString("pt-BR")}.
+                    </div>
+                  ) : null}
+                  {ticket.status === "resolved" || ticket.status === "closed" ? (
+                    <div className={appStyles.inlineAction}>
+                      <textarea
+                        className={appStyles.textarea}
+                        value={reopenReason[ticket.id] ?? ""}
+                        maxLength={500}
+                        onChange={event => setReopenReason(current => ({ ...current, [ticket.id]: event.target.value }))}
+                        placeholder="Motivo da reabertura (mín. 10 caracteres)"
+                        aria-label={`Motivo para reabrir chamado ${ticket.title}`}
+                      />
+                      <button
+                        type="button"
+                        className={appStyles.retryButton}
+                        disabled={reopenBusy === ticket.id}
+                        onClick={() => void reopenTicket(ticket)}
+                      >
+                        <RotateCw size={13} aria-hidden="true" />
+                        {reopenBusy === ticket.id ? "Reabrindo…" : "Reabrir chamado"}
+                      </button>
                     </div>
                   ) : null}
                 </li>

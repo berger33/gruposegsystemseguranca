@@ -170,6 +170,18 @@
 
 .responseBox strong { display: block; margin-bottom: 3px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
 
+.inlineAction {
+  flex-basis: 100%;
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.inlineAction .retryButton {
+  justify-self: start;
+  margin-left: 0;
+}
+
 .chip {
   display: inline-flex;
   align-items: center;
@@ -256,6 +268,18 @@
 .formRow { display: grid; gap: 14px; grid-template-columns: 1fr; }
 @media (min-width: 620px) {
   .formRow { grid-template-columns: 1fr 1fr; }
+}
+
+.inputLike {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line, #dce7f0);
+  border-radius: 10px;
+  background: #fbfdff;
+  color: var(--text, #112f52);
+  font-size: 13px;
+  font-family: inherit;
+  box-sizing: border-box;
 }
 
 .textarea {

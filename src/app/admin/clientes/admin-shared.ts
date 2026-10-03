@@ -23,8 +23,42 @@ export const contractStatusLabel: Record<string, string> = {
 export const ticketStatusLabel: Record<string, string> = {
   open: "Aberto",
   in_progress: "Em atendimento",
+  waiting_client: "Aguardando cliente",
   resolved: "Resolvido",
   closed: "Encerrado",
+};
+
+export const visitStatusLabel: Record<string, string> = {
+  scheduled: "Agendada",
+  confirmed: "Confirmada",
+  rescheduled: "Reagendada",
+  completed: "Realizada",
+  cancelled: "Cancelada",
+  no_show: "Não compareceu",
+};
+
+export const visitTypeLabel: Record<string, string> = {
+  technical: "Visita técnica",
+  maintenance: "Manutenção",
+  inspection: "Vistoria",
+  meeting: "Reunião",
+  other: "Outro",
+};
+
+export const reportStatusLabel: Record<string, string> = {
+  draft: "Rascunho",
+  in_review: "Em revisão",
+  approved: "Aprovado",
+  rejected: "Rejeitado",
+  sent: "Enviado",
+  acknowledged: "Aceito/Ciente",
+};
+
+export const reportTypeLabel: Record<string, string> = {
+  execution: "Execução",
+  measurement: "Medição",
+  acceptance: "Aceite",
+  other: "Outro",
 };
 
 const apiErrors: Record<string, string> = {
@@ -55,6 +89,9 @@ const apiErrors: Record<string, string> = {
   invalid_grant_id: "Vínculo inválido. Recarregue a página.",
   identity_disabled: "Esta identidade de acesso está desabilitada e não pode receber vínculos.",
   ticket_response_too_long: "Resposta muito longa (máx. 500 caracteres).",
+  ticket_reopen_reason_required: "Informe um motivo de reabertura com pelo menos 10 caracteres.",
+  ticket_reopen_reason_too_long: "Motivo de reabertura muito longo (máx. 500 caracteres).",
+  ticket_reopen_only_resolved_or_closed: "Somente chamados resolvidos ou encerrados podem ser reabertos.",
   contract_title_required: "Informe o título do contrato.",
   contract_title_too_long: "Título do contrato muito longo (máx. 160 caracteres).",
   contract_service_required: "Informe o serviço do contrato.",
@@ -80,6 +117,28 @@ const apiErrors: Record<string, string> = {
   ticket_status_invalid: "Situação do chamado inválida.",
   ticket_not_found: "Chamado não encontrado. Recarregue a página.",
   upload_too_large: "Envio muito grande. Arquivos de até 10 MB.",
+  visit_status_invalid: "Situação de visita inválida.",
+  visit_type_invalid: "Tipo de visita inválido.",
+  visit_title_required: "Informe o título da visita.",
+  visit_title_too_long: "Título da visita muito longo (máx. 160 caracteres).",
+  visit_scheduled_at_invalid: "Informe data e hora válidas para a visita.",
+  visit_rescheduled_to_invalid: "Informe a nova data/hora do reagendamento.",
+  visit_reschedule_reason_required: "Informe o motivo do reagendamento (mín. 10 caracteres).",
+  visit_final_status: "Visitas finalizadas/canceladas não podem ser alteradas pelo cliente.",
+  contract_account_mismatch: "O contrato escolhido não pertence a este cadastro.",
+  ticket_account_mismatch: "O chamado escolhido não pertence a este cadastro.",
+  visit_account_mismatch: "A visita escolhida não pertence a este cadastro.",
+  report_status_invalid: "Situação de relatório inválida.",
+  report_type_invalid: "Tipo de relatório inválido.",
+  report_title_required: "Informe o título do relatório.",
+  report_summary_required: "Descreva o relatório com pelo menos 20 caracteres.",
+  report_summary_too_long: "Resumo do relatório muito longo (máx. 1000 caracteres).",
+  report_review_required: "Registre uma nota de revisão antes de avançar.",
+  report_review_too_short: "Nota de revisão deve ter pelo menos 10 caracteres.",
+  report_review_too_long: "Nota de revisão muito longa (máx. 1000 caracteres).",
+  report_approval_required: "O relatório precisa estar aprovado antes de ser enviado.",
+  report_not_published: "Este relatório ainda não foi publicado para aceite do cliente.",
+  client_acknowledgement_required: "O aceite/ciente deve ser registrado pelo cliente autenticado.",
 };
 
 export function explainApiError(code: unknown, fallback = "O servidor respondeu de forma inesperada.") {
