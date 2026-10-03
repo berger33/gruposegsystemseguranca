@@ -1,23 +1,46 @@
 name: EXT-07 compliance delivery
-ton:
+on:
   pull_request:
-    paths: ['db/migrations/153-ext07-compliance-journey.sql','src/server/ext-compliance-api.mjs','src/app/admin/compliance/**','tests/ext07-*','scripts/qa-ext07-compliance-postgres.mjs']
+    branches: [main]
+    paths:
+      - 'src/server/ext-compliance-api.mjs'
+      - 'src/server/ext-advanced-api.mjs'
+      - 'src/app/admin/compliance/**'
+      - 'server.mjs'
+      - 'tests/ext07-compliance*.test.mjs'
+      - 'scripts/qa-ext07-compliance-postgres.mjs'
+      - 'scripts/migrate-site-visual.mjs'
+      - 'scripts/qa-wave0-static.mjs'
+      - 'db/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/ext07-delivery.yml'
+concurrency:
+  group: ext07-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
 jobs:
-  ext07:
+  compliance-postgres:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17
-        env: { POSTGRES_PASSWORD: postgres, POSTGRES_DB: seg_ext07 }
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd "pg_isready -U postgres -d seg_ext07" --health-interval 5s --health-timeout 5s --health-retries 20
+    timeout-minutes: 25
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
+        with:
+          node-version: '22'
+          cache: npm
       - run: npm ci
-      - run: npm run typecheck
-      - run: node --test tests/ext07-compliance.test.mjs
-      - run: npm run test:ext07-compliance:pg
-        env: { EXT07_DATABASE_URL: postgres://postgres:postgres@localhost:5432/seg_ext07 }
+      - name: Typecheck e provas estáticas/fake-pool EXT-07
+        run: |
+          npm run typecheck
+          node --test tests/ext07-compliance.test.mjs
+      - name: Ledger de migrações 001-154 em PostgreSQL descartável
+        run: npm run test:migrations:pg
+      - name: Jornada EXT-07 (compliance corporativo) por HTTP real contra PostgreSQL real
+        run: npm run test:ext07-compliance:pg

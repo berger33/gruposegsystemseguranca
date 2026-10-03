@@ -2583,7 +2583,16 @@ async function routeApi(req, res) {
   // na borda. Um alias ops-* desconhecido não é despachado para handler algum
   // e termina em 404 no fim do roteador.
   const legacyOpsAlias = /^\/api\/(?:admin\/|crm\/)?hr\/(?:ops|fin|adm)-[a-z0-9-]+$/.test(url.pathname);
-  if (!legacyOpsAlias
+  // EXT-07: os 3 aliases históricos de compliance publicados sob o namespace
+  // de RH em 086 não transportam dado de funcionário — são o mesmo recurso
+  // servido por /api/ext/compliance-documents (leitura GET minimizada, 410 nos
+  // demais verbos), com a MESMA autorização aplicada pelo bloco dedicado mais
+  // adiante no roteador. Passar pela borda granular de RH criava dois aliases
+  // com duas autorizações conflitantes para o mesmo recurso (admin/ti negados
+  // aqui, permitidos no alias canônico), então seguem o precedente ops-*:
+  // isentos da borda, autorizados pelo próprio handler legado.
+  const legacyComplianceAlias = /^\/api\/(?:admin\/|crm\/)?hr\/ext-compliance-documents(?:-(?:requirements|clients))?$/.test(url.pathname);
+  if (!legacyOpsAlias && !legacyComplianceAlias
       && (url.pathname.startsWith("/api/hr/")
           || url.pathname.startsWith("/api/admin/hr/")
           || url.pathname.startsWith("/api/crm/hr/")
@@ -4271,7 +4280,11 @@ async function routeApi(req, res) {
   }
   // EXT-10 continuidade operacional simulado documentado com responsáveis
   if (url.pathname === "/api/admin/hr/ext-continuity-plans" || url.pathname === "/api/crm/hr/ext-continuity-plans" || url.pathname === "/api/hr/ext-continuity-plans" || url.pathname === "/api/ext/continuity-plans") {
-    return extAdvancedApi.handleContinuityPlans(req, res);
+    // Sem handler global: erro de banco aqui vira unhandledRejection e o
+    // servidor morre mudo (a requisição nunca responde). Falha fechada com
+    // resposta explícita preserva o contrato de erro do servidor.
+    try { return await extAdvancedApi.handleContinuityPlans(req, res); }
+    catch (error) { console.error("EXT-10 continuity handler failed:", error?.message); return json(res, 500, { error: "continuity_unavailable" }); }
   }
   // EXT-11 analytics A/B experimento reversível resultado sem dados inventados
   if (url.pathname === "/api/admin/hr/ext-analytics-experiments" || url.pathname === "/api/crm/hr/ext-analytics-experiments" || url.pathname === "/api/hr/ext-analytics-experiments" || url.pathname === "/api/ext/analytics-experiments") {
@@ -5770,6 +5783,7 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/ext/supplier/")
   || pathname.startsWith("/api/ext/quality/")
   || pathname.startsWith("/api/ext/satisfaction/")
+  || pathname.startsWith("/api/ext/compliance/")
   || pathname === "/api/admin/hr/ext-bidding-documents"
   || pathname === "/api/crm/hr/ext-bidding-documents"
   || pathname === "/api/hr/ext-bidding-documents"

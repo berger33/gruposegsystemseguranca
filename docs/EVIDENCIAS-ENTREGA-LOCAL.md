@@ -2294,3 +2294,10 @@ Fronteiras: isto é validação automática local (unitária + estática + build
 
 ## EXT-07 — 2026-10-03
 Base: PR #101 `MERGED`, merge `efc74bacb7a23314db1d267d91438519dc342a8c`; `HEAD` e `origin/main` coincidentes, árvore inicial limpa. Pré-inspeção confirmou rota legada e UI órfã, sem jornada canônica, tarefa, obrigação ou gate. Implementação: migração 153, API/UI canônicas, eventos, idempotência, privacidade estrutural, validade e tarefa dedicada. Evidência documental continua referência declarada; não há upload, bytes, checksum, malware scan, armazenamento verificado ou download.
+
+### EXT-07 — hardening (sessão 2026-10-03, base merge #103 `eff0bbddb5d5681d2612010e4349cfb9ff61234b`)
+- Sonda direta PG17 (descartável, apagada): reproduziu fronteira temporal da guarda de vencimento (503 na avaliação) e validou cadeia (versão/ponta/ciclo) e fronteira corrigida; prova não registrada como evidência permanente por ser sonda — evidência permanente é o gate.
+- Gate executado: `npm run test:ext07-compliance:pg` → **47/47, 0 fail/skip/todo, EXIT 0**, migrações 001–154 em cluster PG17 descartável (URLs herdadas recusadas), servidor HTTP real, sessão staff real, fixtures `.invalid`, auditoria TAP com mínimo explícito 46 e rejeição de skip/todo.
+- Defeitos de produção encontrados pelo gate endurecido e corrigidos: namespace `/api/ext/compliance/` ausente no roteamento; aliases legados sob RH 403 (isenção dedicada); EXT-10 com `unhandledRejection`/hang silencioso por coluna inexistente (`ca.name`→`ca.display_name`) + agora falha fechada; UUID de detalhe 405→400.
+- Verificações complementares: unit focal 13/13; typecheck OK; estático 5/5; migrations gate EXIT 0 (154/154 checksums, replay idempotente, clone adulterado rejeitado, 561 tabelas).
+- Não provado por esta evidência: aceite humano, implantação em destino, bateria pesada integral ou homologação Windows.

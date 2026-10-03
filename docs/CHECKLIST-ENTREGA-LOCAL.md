@@ -1700,4 +1700,5 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 - [x] Fonte canônica definida: `ext_compliance_documents` endurecida, linhas antigas classificadas como legado.
 - [x] Tarefa canônica definida: `ext_compliance_tasks`, com unicidade por documento/período/regra.
 - [x] Critério estrutural: documento privado e avaliação temporal idempotente.
-- [ ] Gate PostgreSQL real e homologação permanecem pendentes até execução do ambiente dedicado.
+- [x] Gate PostgreSQL real executado na sessão de hardening: `npm run test:ext07-compliance:pg` 47/47 EXIT 0 (migrações 001–154).
+- [ ] Homologação/aceite humano permanecem fora do escopo desta entrega de código.

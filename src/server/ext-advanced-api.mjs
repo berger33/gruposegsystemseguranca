@@ -3,61 +3,21 @@ export function createExtAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
   const readJson = async (req) => { const chunks=[]; for await (const c of req) chunks.push(c); const raw=Buffer.concat(chunks).toString('utf8'); if(!raw) return {}; try{ return JSON.parse(raw);} catch{ return {}; } };
   const generateProtocol = (prefix) => { const d=new Date(); const y=d.getFullYear().toString(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); const rand=Math.random().toString(36).substring(2,6).toUpperCase(); return `${prefix}-${y}${m}${day}-${rand}`; };
 
-  // EXT-07 compliance
+  // EXT-07 compliance — somente leitura legada (POST/PATCH são aposentados no
+  // servidor com 410 após os guardas de sessão/origem). Não resta escritor
+  // concorrente neste módulo: /api/ext/compliance/* é a única fonte de escrita.
   const handleComplianceDocuments = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
     const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
-      const { rows } = await pool.query(`SELECT * FROM ext_compliance_documents ORDER BY expiry_date ASC LIMIT 200`);
-      return json(res,200,{items:rows, note:'vencimento gera tarefa e documento privado'});
+      // Leitura legada preservada com projeção minimizada (154): nunca expõe
+      // storage_key, file_url, file_name, número documental completo, referência
+      // declarada ou identidades — a fonte canônica de escrita é /api/ext/compliance/*.
+      const { rows } = await pool.query(`SELECT id, protocol, title, compliance_type, status, issuer, issue_date, expiry_date, origin, is_private, created_at FROM ext_compliance_documents ORDER BY expiry_date ASC LIMIT 200`);
+      return json(res,200,{items:rows, note:'leitura legada minimizada; escrita aposentada (410); fonte canônica /api/ext/compliance/* — referência privada declarada, não arquivo verificado'});
     }
-    if(req.method==='POST'){
-      const b=await readJson(req);
-      const title=String(b.title||'').trim();
-      const description=String(b.description||'').trim();
-      const compliance_type=String(b.compliance_type||'outro').trim();
-      const document_number=b.document_number?String(b.document_number).trim():null;
-      const issuer=b.issuer?String(b.issuer).trim():null;
-      const responsible_name=b.responsible_name?String(b.responsible_name).trim():null;
-      const issue_date=b.issue_date||null;
-      const expiry_date=b.expiry_date||null;
-      const file_name=b.file_name?String(b.file_name).trim():null;
-      const file_url=b.file_url?String(b.file_url).trim():null;
-      const storage_key=b.storage_key?String(b.storage_key).trim():null;
-      if(title.length<5||title.length>200) return json(res,400,{error:'invalid_title'});
-      if(description.length<10||description.length>2000) return json(res,400,{error:'invalid_description'});
-      const validTypes=['licenca','certidao','seguro','alvara','outro'];
-      if(!validTypes.includes(compliance_type)) return json(res,400,{error:'invalid_compliance_type'});
-      if(document_number && (document_number.length<3||document_number.length>200)) return json(res,400,{error:'invalid_document_number'});
-      if(issuer && (issuer.length<3||issuer.length>200)) return json(res,400,{error:'invalid_issuer'});
-      if(responsible_name && (responsible_name.length<2||responsible_name.length>200)) return json(res,400,{error:'invalid_responsible'});
-      if(issue_date && expiry_date && new Date(expiry_date) < new Date(issue_date)) return json(res,400,{error:'invalid_expiry_before_issue'});
-      if(file_name && (file_name.length<1||file_name.length>500)) return json(res,400,{error:'invalid_file_name'});
-      if(file_url && (file_url.length<5||file_url.length>1000)) return json(res,400,{error:'invalid_file_url'});
-      if(storage_key && (storage_key.length<5||storage_key.length>500)) return json(res,400,{error:'invalid_storage_key'});
-      const protocol=generateProtocol('COMP-EXT');
-      try{
-        const { rows } = await pool.query(`INSERT INTO ext_compliance_documents (protocol, title, description, compliance_type, document_number, issuer, responsible_name, responsible_identity, issue_date, expiry_date, file_name, file_url, storage_key, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`, [protocol, title, description, compliance_type, document_number, issuer, responsible_name, sess.identityId||null, issue_date, expiry_date, file_name, file_url, storage_key, sess.identityId||null]);
-        await auditLog({ action:'ext_compliance_create', actor:sess.identityId||'system', target:rows[0].id, meta:{ protocol, compliance_type } });
-        return json(res,201,rows[0]);
-      } catch(e){ if(e.code==='23505'){ if(e.constraint && e.constraint.includes('storage_key')) return json(res,409,{error:'duplicate_storage_key'}); return json(res,409,{error:'duplicate_protocol'}); } throw e; }
-    }
-    if(req.method==='PATCH'){
-      const b=await readJson(req);
-      const id=b.id;
-      const status=b.status?String(b.status).trim():null;
-      if(!id) return json(res,400,{error:'missing_id'});
-      const { rows: existing } = await pool.query(`SELECT * FROM ext_compliance_documents WHERE id=$1`, [id]);
-      if(!existing.length) return json(res,404,{error:'not_found'});
-      const nextStatus=status||existing[0].status;
-      const valid=['vigente','a_vencer','vencida','em_renovacao','cancelada'];
-      if(!valid.includes(nextStatus)) return json(res,400,{error:'invalid_status'});
-      const { rows } = await pool.query(`UPDATE ext_compliance_documents SET status=$2, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, nextStatus]);
-      await auditLog({ action:'ext_compliance_update', actor:sess.identityId||'system', target:id, meta:{ status: nextStatus } });
-      return json(res,200,rows[0]);
-    }
-    return json(res,405,{error:'method_not_allowed'});
+    return json(res,410,{error:'legacy_writer_retired',canonical:'/api/ext/compliance/*'});
   };
 
   // EXT-08 base conhecimento
@@ -212,7 +172,8 @@ export function createExtAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
     const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
-      const { rows } = await pool.query(`SELECT cp.*, ca.name as client_name FROM ext_continuity_plans cp LEFT JOIN client_accounts ca ON ca.id=cp.client_account_id ORDER BY cp.next_test_due ASC LIMIT 200`);
+      // client_accounts expõe display_name (não "name") — projection explícita.
+      const { rows } = await pool.query(`SELECT cp.*, ca.display_name as client_name FROM ext_continuity_plans cp LEFT JOIN client_accounts ca ON ca.id=cp.client_account_id ORDER BY cp.next_test_due ASC LIMIT 200`);
       return json(res,200,{items:rows, note:'simulado documentado com responsaveis'});
     }
     if(req.method==='POST'){
