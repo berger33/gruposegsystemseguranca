@@ -205,3 +205,17 @@ aceite humano anterior de Marcelo e Andreia sobre L07 permanece preservado; não
 há novo aceite humano nesta fatia e a homologação final Windows continua
 pendente e adiada até o fechamento integral do sistema. Relatório:
 [`ENTREGA-L08-RELATORIO-2026-10-03-CLI12-RENOVACAO.md`](ENTREGA-L08-RELATORIO-2026-10-03-CLI12-RENOVACAO.md).
+
+## CLI-13 modos de acesso configuráveis — 03/10/2026
+
+Fatia baseada em `fa75e32` (merge da PR #92). Promove a camada 076 para jornada
+real: configuração admin/ti com autoria e histórico; solicitação pública sempre
+pendente após vínculo conta/documento validado no servidor; idempotência por
+identidade/origem/chave/fingerprint; revisão motivada que cria somente convite
+canônico da 003. Grant com emissor e motivo continua ação explícita separada.
+Autocadastro nunca libera contrato sozinho (400 e CHECK da 076).
+
+Migração 144 aditiva; validação rápida 5/5, typecheck, teste dedicado 11/11,
+integral 226/226 e build 84. Gate PostgreSQL/HTTP/Chromium, cascata L03..L08,
+aplicação em destino, aceite humano e Windows pendentes. Próximo CLI-14, depois
+CLI-15. Relatório: [CLI-13](ENTREGA-L08-RELATORIO-2026-10-03-CLI13-ACESSO.md).

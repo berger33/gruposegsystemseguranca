@@ -3688,7 +3688,7 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/cli-portal-mode-configs" || url.pathname === "/api/crm/hr/cli-portal-mode-configs" || url.pathname === "/api/hr/cli-portal-mode-configs" || url.pathname === "/api/cli/portal-mode-configs") {
     return cliFinanceApi.handlePortalModeConfigs(req, res);
   }
-  if (url.pathname === "/api/admin/hr/cli-portal-access-requests" || url.pathname === "/api/crm/hr/cli-portal-access-requests" || url.pathname === "/api/hr/cli-portal-access-requests" || url.pathname === "/api/cli/portal-access-requests" || url.pathname === "/api/client/portal-access-requests") {
+  if (url.pathname === "/api/admin/hr/cli-portal-access-requests" || url.pathname === "/api/crm/hr/cli-portal-access-requests" || url.pathname === "/api/hr/cli-portal-access-requests" || url.pathname === "/api/cli/portal-access-requests" || url.pathname === "/api/client/portal-access-requests" || url.pathname === "/api/public/portal-access-requests") {
     return cliFinanceApi.handlePortalAccessRequests(req, res);
   }
   // CLI-14 segurança conta MFA opcional gestão sessões troca e-mail concluída fluxos backend real

@@ -697,3 +697,11 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 - **Validação rápida:** `npm ci` OK; `node scripts/qa-wave0-static.mjs` 5/5 OK (001–143); `npm run typecheck` OK; `npm test` 215/215 OK (teste novo registrado em `test:unit`); `npm run build` OK com 84 páginas; `tests/cli12-renewal-communications.test.mjs` 10/10.
 - **Classificação:** implementação local + validação estática/unitária/build. Testes pesados (gates L03..L08 em cascata, Chromium, PostgreSQL descartável) adiados por decisão do proprietário para depois da entrega do sistema. Sem novo aceite humano.
 - **Não promovidos neste lote:** CLI-13..15, EXT-01..17, órfãos `/admin/ti`, fornecedor restrito, integrações externas e homologação final Windows.
+
+## Promoção canônica CLI-13 — 03/10/2026
+
+- **Base:** `fa75e32` (PR #92 MERGED; divergência inicial 0/0); branch `arena/01a10074-gruposegsystemseguranca`.
+- **Implementação:** modos reais, solicitação pública pendente, revisão admin/ti e convite canônico; nenhuma aprovação cria identidade, sessão, grant ou contrato.
+- **Migração:** 144 aditiva; 001–143 imutáveis; próxima 145.
+- **Validação rápida:** baseline 215/215; final estático 5/5, typecheck, CLI-13 11/11, integral 226/226, build 84.
+- **Classificação:** pronto local por automação rápida. Gate pesado, aplicação em destino, aceite humano e Windows pendentes. Próximo CLI-14, depois CLI-15.

@@ -2104,3 +2104,11 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 - **Validação:** `tests/cli12-renewal-communications.test.mjs` 10/10 (registrado em `test:unit`); estático 5/5 (001–143); typecheck OK; `npm test` 215/215; `npm run build` OK com 84 páginas (`/cliente/app/renovacao` listada). Provas-chave: inadimplência em `cli_charges_v2` fora de qualquer autorização (CLI-12 e leituras CLI-10/CLI-11); restrição declarada só por `encerramento` bloqueante com motivo e origem; corpo forjado (identidade/conta) ignorado; chave reusada com conteúdo diferente 409; vencimentos com fonte/data-base e ausência preservada como nula.
 - **Limites:** gate `test:l08-delivery:pg` com HTTP/PostgreSQL/Chromium reais para CLI-12 não foi executado nesta sessão — bateria pesada adiada para depois da entrega; migração 143 não aplicada em ambiente operacional; comunicações históricas sem `sent_at` permanecem fora do portal até terem envio registrado; tratativa da manifestação permanece manual.
 - **Classificação:** implementação local + validação automática rápida. Sem novo aceite humano; homologação final Windows continua pendente e adiada até o fechamento integral.
+
+## CLI-13 modos de acesso configuráveis — 03/10/2026
+
+- **Sincronização:** PR #92 MERGED; base `fa75e32`; divergência 0/0.
+- **Lacuna prévia reproduzida:** alias cliente respondia 401 no guard staff; tela administrativa mantinha somente estado demonstrativo.
+- **Prova dedicada:** `tests/cli13-portal-access-modes.test.mjs` 11/11 cobre separação de jornadas, modo inativo, vínculo servidor, recusa auditada, idempotência, API/CHECK contra auto-release, autoria, decisão motivada, convite sem grant/contrato e rollback em falha de auditoria.
+- **Regressão:** estático 5/5 (001–144), typecheck, `npm test` 226/226 e build 84.
+- **Limite:** nenhuma execução pesada ou aplicação da migração 144 em destino; sem aceite humano ou homologação Windows.

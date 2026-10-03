@@ -1004,6 +1004,14 @@ export function createClientAccessApi(ctx) {
     try {
       db = ctx.getPool();
       const outcome = await transaction(db, async client => {
+        // CLI-13: o convite canônico também obedece ao modo configurado. O
+        // vínculo de conta continua sendo concedido somente depois, pelo fluxo
+        // explícito de grant (identidade + conta + emissor + motivo).
+        const inviteMode = await client.query("SELECT is_active FROM cli_portal_mode_configs WHERE mode='convite' FOR SHARE");
+        if (!inviteMode.rows[0]?.is_active) {
+          await audit(client, { actorKind: session.role, actorId: session.identityId, action: "invite_issue", result: "denied", category: "policy_violation" });
+          return "mode_inactive";
+        }
         const existing = await client.query("SELECT id FROM auth_identities WHERE kind = 'client' AND email = $1 FOR SHARE", [email.value]);
         if (existing.rows[0]) {
           await audit(client, { actorKind: session.role, actorId: session.identityId, action: "invite_issue", target: existing.rows[0].id, result: "denied", category: "transition_invalid" });
@@ -1016,6 +1024,7 @@ export function createClientAccessApi(ctx) {
         await audit(client, { actorKind: session.role, actorId: session.identityId, action: "invite_issue", target: inviteId, result: "allowed" });
         return "created";
       });
+      if (outcome === "mode_inactive") return ctx.json(res, 409, { error: "mode_inactive" });
       if (outcome === "identity_exists") return ctx.json(res, 409, { error: "identity_exists" });
     } catch (error) {
       return databaseFailure(ctx, res, error, "Could not atomically create the client invite.");

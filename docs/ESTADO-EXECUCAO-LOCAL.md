@@ -1,5 +1,21 @@
 # Estado da execução — entrega local integral
 
+## Estado vigente — L08/CLI-13 entregue com validação rápida (2026-10-03)
+
+Base oficial `fa75e32` (PR #92 MERGED, divergência inicial 0/0); branch
+`arena/01a10074-gruposegsystemseguranca`. CLI-13 promove a configuração real
+dos três modos, solicitação pública pendente com vínculo conta/documento
+verificado no servidor e revisão admin/ti. Aprovação cria somente convite 003;
+identidade, sessão, grant e contrato não são criados. Migração aditiva 144;
+001–143 imutáveis; próxima livre 145.
+
+Baseline: npm ci, estático 5/5 (001–143), typecheck, 215/215 e build 84.
+Resultado: estático 5/5 (001–144), typecheck, teste dedicado 11/11, npm test
+226/226 e build 84. Gate pesado PostgreSQL/HTTP/Chromium, cascata L03..L08,
+aplicação em destino, aceite humano e Windows pendentes. Próximo: CLI-14,
+depois CLI-15. Relatório: [CLI-13](ENTREGA-L08-RELATORIO-2026-10-03-CLI13-ACESSO.md).
+
+
 ## Estado vigente — L08/CLI-12 entregue com validação rápida (2026-10-03)
 
 Base oficial: `main` em `5cff301` (merge da PR #91, confirmada mergeada no

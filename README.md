@@ -1,16 +1,14 @@
 # Grupo SEG System
 
-## Continuação atual: L08 — portal do cliente (CLI-12 entregue, CLI-13 é o próximo)
+## Continuação atual: L08 — CLI-13 entregue, CLI-14 é o próximo
 
-Base de trabalho desta fatia: `main` `5cff301` (merge da PR #91), migrações **001–143** (próxima livre: 144).
+Base desta fatia: `main` `fa75e32` (merge da PR #92), migrações **001–144** (próxima livre: 145).
 
-Em 2026-10-03 foi entregue **CLI-12 — renovação e comunicação contratual com registro, sem bloquear indiscriminadamente o portal por inadimplência**, de forma aditiva, na jornada autenticada do portal: tela real `/cliente/app/renovacao`, rota `/api/client/renewal-communications` sob sessão de cliente. O cliente vê somente comunicações registradas, dirigidas à sua conta e com envio local registrado (`sent_at`), com tipo, data, conteúdo e contrato relacionado; registra ciência (e, quando o tipo permite, interesse em renovar ou pedido de contato) com autoria derivada da sessão, idempotência por identidade e histórico imutável — a manifestação não renova contrato, não cria cobrança e não altera valor. Inadimplência em `cli_charges_v2` **não** restringe o portal (provado por teste); restrição só vem de comunicação `encerramento` com `block_reason` explícito, declarada com motivo e origem. Vencimentos vêm de `client_contracts.ends_on` e `crm_renewals.renewal_date` com fonte e data-base visíveis; ausência de dado é declarada, nunca vira zero ou "em dia". Migração aditiva **143**; rota administrativa legada preservada.
+Em 2026-10-03 foi entregue **CLI-13 — modos convite, solicitação com aprovação e autocadastro configuráveis**. `/cliente/acesso` registra pedidos reais sempre pendentes após validar conta/documento no servidor; `/admin/portal/solicitacoes` configura os três modos e revisa pedidos com autoria, motivo, histórico e auditoria transacionais. Aprovação emite somente o convite canônico da 003; não cria identidade, sessão, grant ou contrato. Autocadastro nunca libera contratos sozinho (API 400 e CHECK da 076). Idempotência combina identidade pública, origem, chave e fingerprint do conteúdo.
 
-Validação desta fatia (rápida, por decisão do proprietário de que **os testes pesados ficam para depois da entrega do sistema**): estático 5/5 (001–143), typecheck OK, unitários **215/215**, build OK com 84 páginas e `tests/cli12-renewal-communications.test.mjs` 10/10 (registrado em `test:unit`). Gates L03..L08 em cascata, Chromium e PostgreSQL descartável **não** foram executados nesta sessão.
+Validação rápida: estático 5/5 (001–144), typecheck OK, teste CLI-13 11/11, `npm test` **226/226** e build **84 páginas**. O gate PostgreSQL/HTTP/Chromium, a cascata L03..L08, aplicação da migração 144, aceite humano e Windows permanecem pendentes por decisão do proprietário.
 
-CLI-13..15, EXT-01..17 e os 80 órfãos de `/admin/ti` continuam não promovidos. L07 teve aceite humano de Marcelo e Andreia; a **homologação final Windows permanece pendente e adiada até o fechamento integral do sistema**.
-
-Leia o [relatório da entrega CLI-12](docs/ENTREGA-L08-RELATORIO-2026-10-03-CLI12-RENOVACAO.md), o [relatório da entrega CLI-11](docs/ENTREGA-L08-RELATORIO-2026-10-03-CLI11-SATISFACAO.md), a [entrega L08 consolidada](docs/ENTREGA-L08.md), o [estado atual](docs/ESTADO-EXECUCAO-LOCAL.md) e o [checklist por requisito](docs/CHECKLIST-ENTREGA-LOCAL.md). Não repetir L04–L07 nem reabrir FIN/ADM já fechados.
+Próximo alvo: **CLI-14**, depois CLI-15. O aceite humano anterior de Marcelo e Andreia em L07 foi preservado; não houve aceite novo. Leia o [relatório CLI-13](docs/ENTREGA-L08-RELATORIO-2026-10-03-CLI13-ACESSO.md), a [entrega L08](docs/ENTREGA-L08.md) e o [estado atual](docs/ESTADO-EXECUCAO-LOCAL.md).
 
 ## Demonstração local persistente — apenas massa fictícia
 
