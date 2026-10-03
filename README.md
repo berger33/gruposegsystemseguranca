@@ -186,3 +186,7 @@ Para desenvolver os fluxos de pedidos, configure PostgreSQL e os segredos admini
 ### EXT-06 — satisfação/carteira
 
 A migração `152-ext06-satisfaction-journey.sql` promove a fonte funcional da CLI-11 (`cli_satisfaction_surveys`) para fonte canônica compartilhada. A gestão usa `/admin/satisfacao` e `/api/ext/satisfaction/*`; o cliente preserva `/cliente/app/satisfacao` e `/api/client/satisfaction-surveys`, com projeção allowlist sem funcionário, fatos internos, risco, tarefa ou auditoria. Escritas legadas foram aposentadas com `410` após os guardas. Gate: `npm run test:ext06-satisfaction:pg`.
+
+### EXT-07 — compliance corporativo
+
+A migração `153-ext07-compliance-journey.sql` endurece `ext_compliance_documents` como fonte canônica e acrescenta `ext_compliance_obligations`, `ext_compliance_tasks` e `ext_compliance_events`. A gestão usa `/admin/compliance` e `/api/ext/compliance/*`, restritos a equipe interna. O documento é sempre privado por banco e aplicação, com referência apenas declarada — sem upload, bytes, checksum ou download — e número mascarado nas projeções. Responsável é identidade staff ativa, nunca nome livre. A data-base é do servidor: entrar na janela de renovação ou vencer gera **exatamente uma** tarefa por documento/período/regra na mesma transação, com pendência fail-closed quando não há responsável. Escritas legadas foram aposentadas com `410` após os guardas, preservando a leitura autorizada com o alias `items`. Gate: `npm run test:ext07-compliance:pg`.

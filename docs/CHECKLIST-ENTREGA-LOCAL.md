@@ -1475,10 +1475,10 @@ Satisfação/carteira Aceite: Pesquisas, CSAT/NPS quando adequado, histórico e 
 
 ## EXT-07
 Compliance corporativo Aceite: Licenças/certidões/seguros e obrigações aplicáveis com responsável e validade
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Handlers `/api/ext/*` para compliance; tabelas `ext_compliance_documents`/086; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
-- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
-- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
+- Estado: implementado com gate dedicado (2026-10-03)
+- Tela / API / dados / autorização: `/admin/compliance` e `/api/ext/compliance/*`; migração 153 endurece `ext_compliance_documents` e cria `ext_compliance_obligations`, `ext_compliance_tasks` e `ext_compliance_events`; somente equipe interna (401 anônimo, 403 papel não autorizado, same-origin em mutação, autoria da sessão, `Idempotency-Key` obrigatória).
+- Integração e evidência (teste, resultado, commit): `npm run test:ext07-compliance:pg` 45/45 (mínimo 40) em PostgreSQL 17 descartável com servidor HTTP real; focal `tests/ext07-compliance.test.mjs` 12/12; estático 5/5 (001–153); `npm test` 450/450; build 92 páginas. Vencimento e janela de renovação geram tarefa única por documento/período/regra na mesma transação; documento privado por CHECK. Relatório: [ENTREGA-RELATORIO-2026-10-03-EXT07-COMPLIANCE.md](ENTREGA-RELATORIO-2026-10-03-EXT07-COMPLIANCE.md).
+- Pendência / fronteira externa / aceite humano: sem ator externo por decisão de escopo — não há portal de emissor, login de seguradora/corretor/contador/fornecedor, respondente externo, link público ou token de documento; a referência documental é apenas declarada, sem upload, bytes, checksum, varredura ou download. Órfão `ExtAdvancedClient.tsx` preservado e pendente de decisão do dono. Aceite humano não realizado nem presumido.
 
 ## EXT-08
 Base de conhecimento Aceite: Procedimentos versionados, busca, acesso e ciência
@@ -1694,4 +1694,21 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 - [x] Conclusão com resultado; cancelamento com justificativa; terminais sem reabertura silenciosa.
 - [x] Projeção cliente sem funcionário, identidade interna, fatos, risco, tarefa e auditoria.
 - [x] Falha de `audit_log` retorna 503 e reverte negócio/evento.
+- [ ] Aceite humano — não realizado nem presumido.
+
+### EXT-07 — compliance corporativo — evidência de implementação (2026-10-03)
+
+- [x] `ext_compliance_documents` promovida a fonte canônica; sem família paralela e sem reclassificar legado.
+- [x] `/admin/compliance` e `/api/ext/compliance/*` reais, somente equipe interna (401 anônimo, 403 papel não autorizado).
+- [x] Obrigação aplicável com fundamento, fonte, escopo, aplicabilidade, periodicidade e criticidade declarados.
+- [x] Responsável é identidade staff ativa verificada na transação; nome isolado recusado.
+- [x] Validade e estado derivados da data-base do servidor; `vigente` vencido recusado também por trigger.
+- [x] Vencimento e janela de renovação geram tarefa única por documento/período/regra na mesma transação.
+- [x] Sem responsável, a tarefa nasce fail-closed com `pending_reason`; nada é fabricado.
+- [x] Documento privado por CHECK e aplicação; sem rota pública, link ou token; número mascarado e `file_url`/`storage_key` fora das projeções.
+- [x] Histórico imutável; renovação versionada com substituição e FK adiada validada no commit.
+- [x] Idempotência serializada por ator+chave; replay sem duplicar; fingerprint divergente 409; concorrência real provada.
+- [x] Falha de `audit_log` retorna 503 e reverte negócio, tarefa e evento.
+- [x] Legado preservado: leitura autorizada com `items`; mutação 410 somente após autenticação, papel e same-origin.
+- [ ] Decisão do dono sobre `src/app/admin/ti/ExtAdvancedClient.tsx` — componente órfão preservado; seu POST de compliance agora recebe 410.
 - [ ] Aceite humano — não realizado nem presumido.

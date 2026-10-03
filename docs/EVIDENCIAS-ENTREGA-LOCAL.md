@@ -2291,3 +2291,16 @@ Fronteiras: isto é validação automática local (unitária + estática + build
 - Prova focal: `tests/ext06-satisfaction.test.mjs`.
 - Privacidade: allowlist cliente e asserção negativa para responsável/identidade/fatos/risco/tarefa/auditoria.
 - Não provado por esta evidência: aceite humano, implantação em destino, bateria pesada integral ou homologação Windows.
+
+## Evidências EXT-07 — 2026-10-03
+
+- Base: PR #101 `MERGED` em 2026-10-03T20:20:28Z; merge `efc74bacb7a23314db1d267d91438519dc342a8c`; feature (`headRefOid`) `3d573f18293ed9bad810fa03e4654ddf1fbd4d30`, confirmada como ancestral após `git fetch --deepen`; árvore inicialmente limpa; 152 migrações, próxima livre 153.
+- Lacuna reproduzida por execução: probe temporário em PostgreSQL 17 descartável sobre 001–152, servidor HTTP real e fixtures `.invalid`, **26/26** verificações confirmando ausência de jornada; probe removido e cluster destruído. Nenhum banco real foi usado.
+- Migração: 153 aditiva, sem seed, `NOT VALID` sobre a tabela histórica e `::text` nas comparações de enum; 001–152 imutáveis.
+- Prova dedicada: `tests/ext07-compliance.integration.test.mjs` em PostgreSQL 17 descartável e servidor HTTP real; **45/45**, mínimo exigido 40, 0 fail/skip/todo; resumo autoauditado pelo gate; `QA_EXT07_PG_TEMP_CLEANED: true`.
+- Prova focal: `tests/ext07-compliance.test.mjs` **12/12**.
+- Demais medições nesta base: estático 5/5 (001–153); typecheck OK; `npm test` 450/450; build 92 páginas com `/admin/compliance`; `test:migrations:pg` com checksums 153/153 nas duas passagens, negativo 006 rejeitado, clone/restauração e 561 tabelas; `git diff --check` OK.
+- Não-regressão: `test:ext06-satisfaction:pg` 36/36 e `test:ext05-quality:pg` 33/33, executados porque a correção do despacho de API é global.
+- Privacidade: `is_private` imposto por CHECK; projeções allowlist com asserção negativa para `file_url`, `storage_key` e número integral; nenhuma rota pública, link ou token de documento.
+- Falhas tratadas como defeito, nunca como instabilidade: o gate foi executado cinco vezes e as três primeiras reprovações viraram correção de produto ou de teste; as duas últimas passaram 45/45 de forma idêntica. O caso de concorrência, que alternava, era defeito real de serialização de idempotência e teve a asserção endurecida.
+- Não provado por esta evidência: aceite humano, implantação em destino, bateria pesada integral, homologação Windows e os seis gates sem workflow (`cli-v2:pg`, `staff-auth:pg`, `client-access:pg`, `backup-restore:pg`, `l02-delivery:pg`, `l03-delivery:pg`).

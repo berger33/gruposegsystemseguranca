@@ -105,6 +105,7 @@ import { createExtBiddingApi } from "./src/server/ext-bidding-api.mjs";
 import { createExtSupplierApi } from "./src/server/ext-supplier-api.mjs";
 import { createExtQualityApi } from "./src/server/ext-quality-api.mjs";
 import { createExtSatisfactionApi } from "./src/server/ext-satisfaction-api.mjs";
+import { createExtComplianceApi } from "./src/server/ext-compliance-api.mjs";
 import { createExtAdvancedApi } from "./src/server/ext-advanced-api.mjs";
 import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
 import { createCommercialHistoryApi } from "./src/server/commercial-history-api.mjs";
@@ -2283,6 +2284,14 @@ const extSatisfactionApi = createExtSatisfactionApi({
   requireClientSession: clientAccessApi.readClientSession,
 });
 
+// EXT-07 compliance: jornada interna de staff sobre ext_compliance_documents
+// endurecida (153). Auditoria no mesmo commit, sem o helper tolerante a falha.
+const extComplianceApi = createExtComplianceApi({
+  pool: getPool(),
+  sameOrigin,
+  requireSession: readSession,
+});
+
 const extAdvancedApi = createExtAdvancedApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -4244,9 +4253,37 @@ async function routeApi(req, res) {
   if (["/api/admin/hr/ext-satisfaction-surveys","/api/crm/hr/ext-satisfaction-surveys","/api/hr/ext-satisfaction-surveys","/api/ext/satisfaction-surveys"].includes(url.pathname)) {
     return extSatisfactionApi.handleLegacy(req,res);
   }
-  // EXT-07 compliance vencimento gera tarefa documento privado
+  // EXT-07 compliance canônico (migração 153): vencimento gera tarefa e
+  // documento privado. Jornada interna de staff, sem rota pública.
+  if (url.pathname === "/api/ext/compliance/references") return extComplianceApi.handleReferences(req, res);
+  if (url.pathname === "/api/ext/compliance/obligations") {
+    if (req.method === "POST") return extComplianceApi.handleObligationCreate(req, res);
+    return extComplianceApi.handleObligationList(req, res);
+  }
+  if (url.pathname === "/api/ext/compliance/documents") return extComplianceApi.handleDocumentList(req, res);
+  if (url.pathname === "/api/ext/compliance/tasks") return extComplianceApi.handleTaskList(req, res);
+  if (url.pathname === "/api/ext/compliance/evaluate") return extComplianceApi.handleEvaluate(req, res);
+  const complianceObligationDetail = url.pathname.match(/^\/api\/ext\/compliance\/obligations\/([0-9a-f-]{36})$/i);
+  if (complianceObligationDetail) return extComplianceApi.handleObligationDetail(req, res, complianceObligationDetail[1]);
+  const complianceObligationClose = url.pathname.match(/^\/api\/ext\/compliance\/obligations\/([0-9a-f-]{36})\/close$/i);
+  if (complianceObligationClose) return extComplianceApi.handleObligationClose(req, res, complianceObligationClose[1]);
+  const complianceDocumentCreate = url.pathname.match(/^\/api\/ext\/compliance\/obligations\/([0-9a-f-]{36})\/documents$/i);
+  if (complianceDocumentCreate) return extComplianceApi.handleDocumentCreate(req, res, complianceDocumentCreate[1]);
+  const complianceRenewalStart = url.pathname.match(/^\/api\/ext\/compliance\/documents\/([0-9a-f-]{36})\/renewal-start$/i);
+  if (complianceRenewalStart) return extComplianceApi.handleRenewalStart(req, res, complianceRenewalStart[1]);
+  const complianceRenew = url.pathname.match(/^\/api\/ext\/compliance\/documents\/([0-9a-f-]{36})\/renew$/i);
+  if (complianceRenew) return extComplianceApi.handleRenew(req, res, complianceRenew[1]);
+  const complianceDocumentCancel = url.pathname.match(/^\/api\/ext\/compliance\/documents\/([0-9a-f-]{36})\/cancel$/i);
+  if (complianceDocumentCancel) return extComplianceApi.handleDocumentCancel(req, res, complianceDocumentCancel[1]);
+  const complianceTask = url.pathname.match(/^\/api\/ext\/compliance\/tasks\/([0-9a-f-]{36})\/(start|complete|cancel)$/i);
+  if (complianceTask) {
+    const fn = { start: "handleTaskStart", complete: "handleTaskComplete", cancel: "handleTaskCancel" }[complianceTask[2]];
+    return extComplianceApi[fn](req, res, complianceTask[1]);
+  }
+  // Rotas exatas legadas: leitura autorizada mantém `items`, já minimizada;
+  // mutação retorna 410 somente após autenticação, papel e same-origin.
   if (url.pathname === "/api/admin/hr/ext-compliance-documents" || url.pathname === "/api/crm/hr/ext-compliance-documents" || url.pathname === "/api/hr/ext-compliance-documents" || url.pathname === "/api/ext/compliance-documents") {
-    return extAdvancedApi.handleComplianceDocuments(req, res);
+    return extComplianceApi.handleLegacy(req, res);
   }
   // EXT-08 base conhecimento procedimentos versionados busca acesso ciência usuário encontra apenas conteúdo de seu escopo
   if (url.pathname === "/api/admin/hr/ext-knowledge-base" || url.pathname === "/api/crm/hr/ext-knowledge-base" || url.pathname === "/api/hr/ext-knowledge-base" || url.pathname === "/api/ext/knowledge-base") {
@@ -5760,6 +5797,7 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/ext/supplier/")
   || pathname.startsWith("/api/ext/quality/")
   || pathname.startsWith("/api/ext/satisfaction/")
+  || pathname.startsWith("/api/ext/compliance/")
   || pathname === "/api/admin/hr/ext-bidding-documents"
   || pathname === "/api/crm/hr/ext-bidding-documents"
   || pathname === "/api/hr/ext-bidding-documents"
@@ -5979,7 +6017,19 @@ await app.prepare();
 const server = createServer(async (req, res) => {
   const pathname = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`).pathname;
   if (API_PATH_MATCH(pathname)) {
-    await routeApi(req, res);
+    // `routeApi` despacha com `return handler(req, res)`: em função async a
+    // rejeição é resolvida FORA do try/catch interno, então um handler que
+    // falha vira unhandledRejection e a requisição fica sem resposta até o
+    // cliente desistir. Rede de segurança: toda falha vira 500 imediato.
+    try {
+      await routeApi(req, res);
+    } catch (e) {
+      console.error("[routeApi] falha não tratada", pathname, e?.message);
+      if (!res.headersSent) {
+        res.writeHead(500, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+        res.end(JSON.stringify({ error: "internal_error" }));
+      } else if (!res.writableEnded) res.end();
+    }
     return;
   }
   // PUB-08: antes de entregar ao Next, um único salto de redirect cadastrado.

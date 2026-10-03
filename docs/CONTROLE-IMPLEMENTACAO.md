@@ -775,3 +775,23 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 | Transação/auditoria/idempotência | Implementado | gate PG/HTTP EXT-06 |
 | Legado | Somente leitura | `items`; writers 410 pós-guardas |
 | Aceite humano/destino/Windows | Pendente | fora desta implementação |
+
+## EXT-07 — controle da fatia
+
+| Item | Estado | Evidência |
+|---|---|---|
+| Fonte canônica `ext_compliance_documents` endurecida | Implementado | migração 153 + `ext-compliance-api.mjs` |
+| Obrigação aplicável com fundamento/escopo/aplicabilidade | Implementado | `ext_compliance_obligations` |
+| Responsável canônico (identidade staff ativa) | Implementado | verificação transacional; nome isolado recusado |
+| Validade por data-base do servidor | Implementado | `deriveDocumentState` + trigger de estado |
+| Tarefa por vencimento, única por documento/período/regra | Implementado | `ext_compliance_tasks` + UNIQUE no banco |
+| Pendência fail-closed sem responsável | Implementado | XOR por CHECK + gate PG/HTTP |
+| Documento privado e referência apenas declarada | Implementado | CHECK `is_private`, projeções allowlist |
+| Histórico imutável e renovação versionada | Implementado | `ext_compliance_events` + FK adiada |
+| Transação/auditoria/idempotência | Implementado | gate PG/HTTP EXT-07 (45/45) |
+| Legado | Somente leitura | `items`; writers 410 pós-guardas |
+| Órfão `ExtAdvancedClient.tsx` | Pendente de decisão do dono | preservado; POST de compliance agora 410 |
+| Aceite humano/destino/Windows | Pendente | fora desta implementação |
+
+- **Mudança colateral:** três defeitos preexistentes do produto foram corrigidos por terem sido reproduzidos por execução — `GET /api/ext/continuity-plans` consultava `ca.name` inexistente (EXT-10), o despacho de API em `server.mjs` deixava a requisição sem resposta quando um handler falhava, e a recusa de corpo grande destruía a conexão em vez de devolver 413. Não-regressão provada por `test:ext05-quality:pg` 33/33 e `test:ext06-satisfaction:pg` 36/36.
+- **Classificação:** pronto local por automação rápida e gate dedicado. Bateria pesada integral, aplicação em destino, aceite humano e Windows pendentes. Sem aceite humano novo; aceite Marcelo/Andreia preservado somente para L07.
