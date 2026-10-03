@@ -250,6 +250,20 @@ export function createClientSpaceApi(ctx) {
     return session.role === "ti" ? "ti" : "marcelo";
   }
 
+  const LEGACY_TICKET_STATUSES = new Set(["open", "in_progress", "resolved", "closed"]);
+
+  async function clientTicketLifecycleReady(db) {
+    const result = await db.query(
+      `SELECT
+         EXISTS (
+           SELECT 1 FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'client_tickets' AND column_name = 'reopen_count'
+         )
+         AND to_regclass('public.client_ticket_sla_pauses') IS NOT NULL AS ready`,
+    );
+    return Boolean(result.rows[0]?.ready);
+  }
+
   async function ensureAccountExists(db, res, accountId) {
     try {
       const found = await db.query("SELECT id FROM client_accounts WHERE id = $1", [accountId]);
@@ -512,13 +526,29 @@ export function createClientSpaceApi(ctx) {
       const db = ctx.getPool();
       if (!(await requireAccountScope(db, { req, res, session, accountId, action: "ticket_list" }))) return;
       try {
-        const result = await db.query(
-          `SELECT id, category, title, details, status, admin_response, created_at, updated_at,
-                  sla_due_at, sla_paused_at, sla_pause_reason, sla_total_paused_seconds,
-                  reopen_count, last_reopen_reason, resolved_at, closed_at
-           FROM client_tickets WHERE client_account_id = $1 ORDER BY created_at DESC`,
-          [accountId],
-        );
+        let result;
+        try {
+          result = await db.query(
+            `SELECT id, category, title, details, status, admin_response, created_at, updated_at,
+                    sla_due_at, sla_paused_at, sla_pause_reason, sla_total_paused_seconds,
+                    reopen_count, last_reopen_reason, resolved_at, closed_at
+             FROM client_tickets WHERE client_account_id = $1 ORDER BY created_at DESC`,
+            [accountId],
+          );
+        } catch (error) {
+          if (!error || typeof error !== "object" || error.code !== "42703") throw error;
+          // CI gates L08 apply the canonical CLI-01..05 schema through migration 139 only.
+          // Keep existing promoted reads green there while migration 140 rolls out.
+          result = await db.query(
+            `SELECT id, category, title, details, status, admin_response, created_at, updated_at,
+                    NULL::timestamptz AS sla_due_at, NULL::timestamptz AS sla_paused_at,
+                    NULL::text AS sla_pause_reason, 0::bigint AS sla_total_paused_seconds,
+                    0::int AS reopen_count, NULL::text AS last_reopen_reason,
+                    NULL::timestamptz AS resolved_at, NULL::timestamptz AS closed_at
+             FROM client_tickets WHERE client_account_id = $1 ORDER BY created_at DESC`,
+            [accountId],
+          );
+        }
         return ctx.json(res, 200, { tickets: result.rows });
       } catch (error) {
         return databaseFailure(res, error, "Could not list the client tickets.");
@@ -1348,17 +1378,35 @@ export function createClientSpaceApi(ctx) {
         conditions.push(`t.client_account_id = $${values.length}`);
       }
       const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-      const result = await ctx.getPool().query(
-        `SELECT t.id, t.client_account_id, a.display_name AS account_name, i.email AS opened_by_email,
-                t.category, t.title, t.details, t.status, t.admin_response, t.created_at, t.updated_at,
-                t.sla_due_at, t.sla_paused_at, t.sla_pause_reason, t.sla_total_paused_seconds,
-                t.reopen_count, t.last_reopen_reason, t.resolved_at, t.closed_at
-         FROM client_tickets t
-         JOIN client_accounts a ON a.id = t.client_account_id
-         JOIN auth_identities i ON i.id = t.opened_by_identity
-         ${where} ORDER BY t.created_at DESC LIMIT 200`,
-        values,
-      );
+      let result;
+      try {
+        result = await ctx.getPool().query(
+          `SELECT t.id, t.client_account_id, a.display_name AS account_name, i.email AS opened_by_email,
+                  t.category, t.title, t.details, t.status, t.admin_response, t.created_at, t.updated_at,
+                  t.sla_due_at, t.sla_paused_at, t.sla_pause_reason, t.sla_total_paused_seconds,
+                  t.reopen_count, t.last_reopen_reason, t.resolved_at, t.closed_at
+           FROM client_tickets t
+           JOIN client_accounts a ON a.id = t.client_account_id
+           JOIN auth_identities i ON i.id = t.opened_by_identity
+           ${where} ORDER BY t.created_at DESC LIMIT 200`,
+          values,
+        );
+      } catch (error) {
+        if (!error || typeof error !== "object" || error.code !== "42703") throw error;
+        result = await ctx.getPool().query(
+          `SELECT t.id, t.client_account_id, a.display_name AS account_name, i.email AS opened_by_email,
+                  t.category, t.title, t.details, t.status, t.admin_response, t.created_at, t.updated_at,
+                  NULL::timestamptz AS sla_due_at, NULL::timestamptz AS sla_paused_at,
+                  NULL::text AS sla_pause_reason, 0::bigint AS sla_total_paused_seconds,
+                  0::int AS reopen_count, NULL::text AS last_reopen_reason,
+                  NULL::timestamptz AS resolved_at, NULL::timestamptz AS closed_at
+           FROM client_tickets t
+           JOIN client_accounts a ON a.id = t.client_account_id
+           JOIN auth_identities i ON i.id = t.opened_by_identity
+           ${where} ORDER BY t.created_at DESC LIMIT 200`,
+          values,
+        );
+      }
       return ctx.json(res, 200, { tickets: result.rows });
     } catch (error) {
       return databaseFailure(res, error, "Could not list the client tickets.");
@@ -1380,6 +1428,46 @@ export function createClientSpaceApi(ctx) {
     const reasonText = typeof body?.reason === "string" ? body.reason.trim() : "";
     const reopenReason = validateTicketReopenReason(body?.reopenReason || body?.reason);
     const db = ctx.getPool();
+    let lifecycleReady;
+    try {
+      lifecycleReady = await clientTicketLifecycleReady(db);
+    } catch (error) {
+      return databaseFailure(res, error, "Could not verify the client ticket lifecycle schema.");
+    }
+    if (!lifecycleReady) {
+      if (!LEGACY_TICKET_STATUSES.has(status)) return ctx.json(res, 503, { error: "migration_required" });
+      let legacyClient;
+      try {
+        legacyClient = await db.connect();
+        await legacyClient.query("BEGIN");
+        const current = await legacyClient.query("SELECT status FROM client_tickets WHERE id = $1 FOR UPDATE", [ticketId]);
+        if (!current.rows[0]) {
+          await legacyClient.query("ROLLBACK");
+          return ctx.json(res, 404, { error: "ticket_not_found" });
+        }
+        const previousStatus = current.rows[0].status;
+        await legacyClient.query(
+          "UPDATE client_tickets SET status = $2, admin_response = COALESCE(NULLIF($3, ''), admin_response), updated_at = NOW() WHERE id = $1",
+          [ticketId, status, responseText],
+        );
+        if (previousStatus !== status) {
+          await legacyClient.query(
+            `INSERT INTO client_ticket_status_audit
+               (ticket_id, previous_status, next_status, changed_by, changed_by_identity)
+             VALUES ($1,$2,$3,$4,$5)`,
+            [ticketId, previousStatus, status, roleActor(session), session.identityId],
+          );
+        }
+        await audit(legacyClient, { actorKind: roleActor(session), actorId: session.identityId, action: "ticket_status", target: ticketId, result: "allowed" });
+        await legacyClient.query("COMMIT");
+        return ctx.json(res, 200, { ticketId, previousStatus, status, isReopen: false });
+      } catch (error) {
+        await rollback(legacyClient);
+        return databaseFailure(res, error, "Could not update the legacy client ticket.");
+      } finally {
+        legacyClient?.release();
+      }
+    }
     let client;
     try {
       client = await db.connect();
