@@ -5,6 +5,29 @@ local de CLI-15 no L08. Cada fatia promove um requisito EXT de "API/tabela/
 componente órfão" para jornada funcional provada; a existência de tabela ou
 handler não é tratada como entrega.
 
+
+## EXT-04 fornecedores — 03/10/2026
+
+Fatia partindo da `main` oficial em `5abc199` (merge da PR #98 / EXT-03, feito por decisão expressa do proprietário nesta sessão; divergência 0/0). Promove somente **EXT-04** para jornada administrativa interna: `/admin/fornecedores`, `/api/ext/supplier/*` e migração aditiva 150, com 001–149 imutáveis.
+
+### Condição e fronteira
+
+O plano em `PLANO-MESTRE-IMPLEMENTACAO.md:423` exige *"se volume justificar"*. Não existe no repositório medição, meta ou histórico de volume; `AUDITORIA-TERRENO-L08.md:85` registra apenas handler/tabelas sem fornecedor restrito provado. Veredito declarado em API, tela e docs: **`sem_evidencia`**. Nenhum dado foi semeado; a ativação segue pendente de decisão do proprietário.
+
+Não existe ator externo fornecedor canônico: nenhuma identidade, credencial, sessão, grant, rota externa, upload ou aceite. A jornada usa somente sessão staff. Portanto o "escopo próprio" do fornecedor permanece **PENDENTE**, não é simulado e não recebe aceite. `file_url`/`storage_key` são somente referências declaradas.
+
+### Lacunas executadas e implementação
+
+Antes de implementar, um PostgreSQL 17 descartável + servidor HTTP real confirmou: namespace e tela canônicos 404; rotas de documentos/pedidos 404; `rh` recebia 401 como anônimo; retry idêntico retornava 201/201 e gravava 2 linhas; `aprovado → rascunho` retornava 200; e auditoria indisponível ainda retornava 201 e aumentava a contagem. O banco limpo tinha zero fornecedores/cotações/pedidos/documentos, o que prova ausência de seed — não prova volume real.
+
+A 150 acrescenta origem/decisão imutável à cotação, validade com fonte e substituição, documento versionado/desativável, pedido derivado da cotação aprovada, prazo do pedido, regra explícita de alerta e eventos imutáveis/idempotentes. Máquinas de estado existem em API e gatilhos; pedido fechado/cancelado e cotação terminal não reabrem. Documento recebe versão dentro de transação após lock; duas escritas concorrentes produziram versões 1 e 2. Toda mutação usa autoria da sessão, vínculo da URL/registro, same-origin, UUID validado, idempotência e transação única com evento + `audit_log`; falha de auditoria ⇒ 503/rollback.
+
+### Validação e classificação
+
+Estático 5/5 (001–150), typecheck, teste focal 42/42, `npm test` 424/424, build 89 páginas, migrations 150/150 ×2 e **gate dedicado `test:ext04-suppliers:pg` 28/28**, zero skip/todo, por HTTP e PostgreSQL reais (`.github/workflows/ext04-delivery.yml`). Estático/typecheck/unit/build/migrations e todos os demais gates **não** são apresentados como prova da jornada; só o gate EXT-04 a exercita ponta a ponta.
+
+Classificação: implementação local + validação automática + gate dedicado. Bateria pesada integral, aplicação em destino, aceite humano, confirmação de volume, ator externo e Windows pendentes. CLI-01..15 e EXT-01..03 preservadas; EXT-05..17 pendentes. O órfão `src/app/admin/ti/ExtClient.tsx` continua não promovido e não foi removido. Relatório: [EXT-04](ENTREGA-RELATORIO-2026-10-03-EXT04-FORNECEDORES.md).
+
 ## EXT-03 licitações — 03/10/2026
 
 Fatia partindo da `main` oficial em `4518b3f` (merge da PR #97, confirmado

@@ -1,5 +1,19 @@
 # Estado da execução — entrega local integral
 
+## Estado vigente — EXT-04 fornecedores internos com gate HTTP/DB dedicado (2026-10-03)
+
+Base oficial `main` `5abc199a7694c5bc0f508ac13cb2569a515a034d` (PR #98 / EXT-03 mesclada por decisão expressa do proprietário nesta sessão), divergência 0/0 antes da implementação. Branch `arena/01a10305-gruposegsystemseguranca`. Quarta fatia EXT: tela real `/admin/fornecedores`, API `/api/ext/supplier/*` e migração aditiva 150; 001–149 imutáveis, próxima livre 151.
+
+A condição *"se volume justificar"* foi avaliada, não presumida. `PLANO-MESTRE-IMPLEMENTACAO.md:423` declara a condição; `AUDITORIA-TERRENO-L08.md:85` registra somente tabela/handler e ausência de prova do fornecedor restrito; não existe medição, meta ou histórico de volume. Veredito em API/tela/docs: **`sem_evidencia`**. Um cluster limpo apresentou zero registros, o que prova ausência de seed e não volume real. Confirmação do proprietário continua pendente.
+
+A entrega é exclusivamente interna de staff admin/marcelo/ti. Não existe ator fornecedor canônico (identidade/login/sessão/grant/canal), upload ou aceite; `external_actor_boundary` declara tudo como falso e situação pendente. Logo "fornecedor não vê concorrente/RH" não é apresentado como aceite ponta a ponta. `file_url`/`storage_key` são referências declaradas.
+
+Cotações usam fornecedor/produto canônicos, validade com fonte e situação derivada, alerta só com regra explícita, decisão com autor/data/justificativa imutável, documento versionado sob lock e pedido inteiramente derivado da cotação aprovada, com prazo/fonte e máquina de estados. Autoria vem da sessão; IDs/vínculos vêm da URL ou registro; corpo forjado é ignorado. 401/403 distintos, same-origin, UUID e `Idempotency-Key`; negócio + evento + `audit_log` na mesma transação, 503/rollback se auditoria falhar. Rotas legadas preservam `items` em leitura e devolvem 410 em mutação após guardas.
+
+Validação: `npm ci`; estático 5/5 (001–150, os três pontos da guarda atualizados juntos); typecheck; teste focal 42/42; `npm test` 424/424 com zero pulados; build 89 páginas com `/admin/fornecedores`; `test:migrations:pg` 150/150 ×2 com checksum negativo rejeitado; **`test:ext04-suppliers:pg` 28/28**, zero skip/todo, HTTP real contra PostgreSQL real e workflow próprio `.github/workflows/ext04-delivery.yml`. Os demais gates não cobrem EXT-04 e não foram usados como prova. Não houve cascata/bateria pesada integral nesta fatia.
+
+Bateria pesada integral, aplicação em destino, confirmação de volume, ator externo, aceite humano e Windows seguem pendentes. O aceite de Marcelo/Andreia permanece somente L07. CLI-01..15 e EXT-01..03 preservadas; EXT-05..17 pendentes; os seis gates sem workflow permanecem pendentes. O órfão `ExtClient.tsx` continua não promovido. Relatório: [EXT-04](ENTREGA-RELATORIO-2026-10-03-EXT04-FORNECEDORES.md); lote: [ENTREGA-EXT](ENTREGA-EXT.md).
+
 ## Estado vigente — EXT-03 licitações entregue com gate HTTP/DB dedicado (2026-10-03)
 
 Base oficial `main` `4518b3f0a7e2c8e900e135a656f8b73b2fa5dfaa` (PR #97 MERGED), divergência inicial 0/0 confirmada antes de editar. Branch `arena/01a1026a-gruposegsystemseguranca`. Terceira fatia do lote EXT: EXT-03 promove licitações de API/tabela/órfão para jornada funcional — `/admin/licitacoes` e `/api/ext/bidding/*` sobre as tabelas `ext_bidding_*` da 085, com a jornada canônica da migração aditiva 149 (001–148 imutáveis; próxima livre 150).

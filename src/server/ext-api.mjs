@@ -31,49 +31,9 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
   // identidade e histórico imutável. As rotas /api/ext/bidding-* continuam
   // atendidas por aquele módulo (leitura) ou aposentadas (mutação legada).
 
-  // EXT-04 portal fornecedores
-  const handleSupplierPortalQuotations = async (req,res) => {
-    if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=await requireSession(req);
-    if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
-    if(req.method==='GET'){
-      const { rows } = await pool.query(`SELECT q.*, s.name as supplier_name, p.name as product_name FROM ext_supplier_portal_quotations q LEFT JOIN ast_suppliers s ON s.id=q.supplier_id LEFT JOIN ast_products p ON p.id=q.product_id ORDER BY q.created_at DESC LIMIT 200`);
-      return json(res,200,{items:rows, note:'fornecedor nao ve concorrente nem dados de RH'});
-    }
-    if(req.method==='POST'){
-      const b=await readJson(req);
-      const supplier_id=b.supplier_id||null;
-      const product_id=b.product_id||null;
-      const quantity=Number(b.quantity);
-      const unit_price_cents=Number(b.unit_price_cents);
-      const total_price_cents=Number(b.total_price_cents);
-      const notes=b.notes?String(b.notes).trim():null;
-      const is_visible_to_supplier=!!b.is_visible_to_supplier;
-      if(!Number.isFinite(quantity)||quantity<=0) return json(res,400,{error:'invalid_quantity'});
-      if(!Number.isFinite(unit_price_cents)||unit_price_cents<0) return json(res,400,{error:'invalid_unit_price'});
-      if(!Number.isFinite(total_price_cents)||total_price_cents<0) return json(res,400,{error:'invalid_total_price'});
-      if(notes && (notes.length<10||notes.length>1000)) return json(res,400,{error:'invalid_notes'});
-      const protocol=generateProtocol('FORN-EXT');
-      const { rows } = await pool.query(`INSERT INTO ext_supplier_portal_quotations (protocol, supplier_id, product_id, quantity, unit_price_cents, total_price_cents, notes, is_visible_to_supplier, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`, [protocol, supplier_id, product_id, quantity, unit_price_cents, total_price_cents, notes, is_visible_to_supplier, sess.identityId||null]);
-      await auditLog({ action:'ext_supplier_portal_quotation_create', actor:sess.identityId||'system', target:rows[0].id, meta:{ protocol, supplier_id } });
-      return json(res,201,rows[0]);
-    }
-    if(req.method==='PATCH'){
-      const b=await readJson(req);
-      const id=b.id;
-      const status=b.status?String(b.status).trim():null;
-      if(!id) return json(res,400,{error:'missing_id'});
-      const { rows: existing } = await pool.query(`SELECT * FROM ext_supplier_portal_quotations WHERE id=$1`, [id]);
-      if(!existing.length) return json(res,404,{error:'not_found'});
-      const nextStatus=status||existing[0].status;
-      const valid=['rascunho','enviado','em_analise','aprovado','rejeitado','cancelado'];
-      if(!valid.includes(nextStatus)) return json(res,400,{error:'invalid_status'});
-      const { rows } = await pool.query(`UPDATE ext_supplier_portal_quotations SET status=$2, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, nextStatus]);
-      await auditLog({ action:'ext_supplier_portal_quotation_update', actor:sess.identityId||'system', target:id, meta:{ status: nextStatus } });
-      return json(res,200,rows[0]);
-    }
-    return json(res,405,{error:'method_not_allowed'});
-  };
+  // EXT-04 fornecedores foi promovido para a jornada canônica hardenada em
+  // src/server/ext-supplier-api.mjs (migração 150). Este módulo legado não
+  // atende mais cotações: leitura/410 passam pelo módulo canônico.
 
   // EXT-05 qualidade
   const handleQualityNonconformities = async (req,res) => {
@@ -223,5 +183,5 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
     return json(res,405,{error:'method_not_allowed'});
   };
 
-  return { handleSupplierPortalQuotations, handleQualityNonconformities, handleQualityActions, handleSatisfactionSurveys };
+  return { handleQualityNonconformities, handleQualityActions, handleSatisfactionSurveys };
 }

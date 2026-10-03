@@ -1,5 +1,9 @@
 # Checklist da entrega local — 222 requisitos
 
+## Atualização 2026-10-03 — EXT-04 fornecedores internos entregue localmente
+
+Quarta fatia EXT sobre `5abc199` (PR #98 MERGED): EXT-04 passa a `pronto_local` **somente como jornada interna de staff**, com `/admin/fornecedores`, `/api/ext/supplier/*`, migração 150, teste focal 42/42, suíte 424/424, build 89, migrations 150/150 e gate dedicado 28/28. Condição "se volume justificar": **SEM EVIDÊNCIA**; ator externo/login/sessão/grant/upload/aceite: **PENDENTE**, não simulado. CLI-01..15 e EXT-01..03 preservadas; EXT-05..17 pendentes. Bateria pesada, destino, aceite humano e Windows pendentes. Ver [relatório EXT-04](ENTREGA-RELATORIO-2026-10-03-EXT04-FORNECEDORES.md).
+
 ## Atualização 2026-10-03 — EXT-03 licitações entregue localmente (terceira fatia do lote EXT)
 
 Terceira fatia do lote EXT sobre a base `4518b3f` (PR #97 MERGED): EXT-03 passou a `pronto_local` por validação automática rápida **mais um gate HTTP/DB dedicado à jornada** (tela real `/admin/licitacoes` + `/api/ext/bidding/*`, migração aditiva 149, teste dedicado 67/67, suíte 382/382, migrações 149/149, `test:ext03-biddings:pg` 26/26 — este reprovou 22/26 na primeira execução e expôs defeito real, corrigido e re-provado). A condição do plano *"se mercado relevante"* foi avaliada contra o repositório e declarada **indicada e não confirmada** — não foi presumida. CLI-01..15, EXT-01 e EXT-02 preservadas sem reabertura; EXT-04..17 e os órfãos de `/admin/ti` permanecem nos estados abaixo. Ver [`ENTREGA-EXT.md`](ENTREGA-EXT.md) e [`ENTREGA-RELATORIO-2026-10-03-EXT03-LICITACOES.md`](ENTREGA-RELATORIO-2026-10-03-EXT03-LICITACOES.md). Aceite humano e Windows seguem pendentes.
@@ -1449,10 +1453,11 @@ Licitações Aceite: Edital, prazos, documentos, responsáveis, proposta e resul
 
 ## EXT-04
 Portal fornecedores Aceite: Cotações/documentos/pedidos com escopo próprio; se volume justificar
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Handlers `/api/ext/*` para cotações de fornecedor; tabelas `ext_supplier_portal_*`/085; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
-- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
-- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
+- Estado: pronto_local **da jornada interna de staff** (gate HTTP/DB dedicado; condição de volume e ator externo pendentes)
+- Condição: `sem_evidencia`. `PLANO-MESTRE-IMPLEMENTACAO.md:423` declara "se volume justificar"; `AUDITORIA-TERRENO-L08.md:85` registra apenas handler/tabelas sem fornecedor restrito provado; não há medição/meta/histórico. API, tela e docs declaram o veredito; nenhum dado semeado.
+- Tela / API / dados / autorização: `/admin/fornecedores`; `/api/ext/supplier/*`; tabelas 085 endurecidas + validade, pedidos, prazos, alertas e eventos da 150. Staff admin/marcelo/ti; anônimo 401, papel indevido 403; same-origin; autoria da sessão; IDs/vínculos pela URL/registro; idempotência; transação única negócio+evento+auditoria, 503/rollback; decisão e terminais protegidos; versão documental sob lock. Legado preserva `items` na leitura e retorna 410 na mutação depois das guardas.
+- Integração e evidência: focal 42/42; `npm test` 424/424; estático 5/5 (001–150); build 89; migrations 150/150 ×2; **`test:ext04-suppliers:pg` 28/28**, zero skip/todo, HTTP+PostgreSQL reais e CI própria. Demais gates não cobrem EXT-04.
+- Pendência / fronteira externa / aceite humano: não existe identidade/login/sessão/grant/canal/upload/aceite de fornecedor; "escopo próprio" externo permanece pendente e não é apresentado como aceite. `file_url`/`storage_key` são referências. Confirmação de volume, bateria pesada, destino, aceite humano e Windows pendentes; aceite Marcelo/Andreia somente L07. Órfão `/admin/ti/ExtClient.tsx` não promovido.
 
 ## EXT-05
 Qualidade Aceite: Não conformidade, causa, ação corretiva, verificação e reincidência
