@@ -10,94 +10,15 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
   // por identidade e histórico imutável. As rotas /api/ext/fleet-* continuam
   // atendidas por aquele módulo (leitura) ou aposentadas (mutação legada).
 
-  // EXT-02 terceiros
-  const handleThirdParties = async (req,res) => {
-    if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=await requireSession(req);
-    if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
-    if(req.method==='GET'){
-      const { rows } = await pool.query(`SELECT tp.*, c.title as contract_title FROM ext_third_parties tp LEFT JOIN crm_contracts c ON c.id=tp.contract_id ORDER BY tp.name ASC LIMIT 200`);
-      return json(res,200,{items:rows, note:'terceiro acessa so OS/contrato autorizado e perde acesso ao termino'});
-    }
-    if(req.method==='POST'){
-      const b=await readJson(req);
-      const name=String(b.name||'').trim();
-      const document=b.document?String(b.document).trim():null;
-      const category=b.category?String(b.category).trim():null;
-      const contract_id=b.contract_id||null;
-      const responsible_name=b.responsible_name?String(b.responsible_name).trim():null;
-      const access_start=b.access_start||null;
-      const access_end=b.access_end||null;
-      const evaluation_score=b.evaluation_score!=null?Number(b.evaluation_score):null;
-      const notes=b.notes?String(b.notes).trim():null;
-      if(name.length<3||name.length>200) return json(res,400,{error:'invalid_name'});
-      if(document && (document.length<3||document.length>30)) return json(res,400,{error:'invalid_document'});
-      if(category && (category.length<3||category.length>100)) return json(res,400,{error:'invalid_category'});
-      if(responsible_name && (responsible_name.length<2||responsible_name.length>200)) return json(res,400,{error:'invalid_responsible'});
-      if(evaluation_score!=null && (!Number.isFinite(evaluation_score)||evaluation_score<0||evaluation_score>10)) return json(res,400,{error:'invalid_score'});
-      if(notes && (notes.length<10||notes.length>1000)) return json(res,400,{error:'invalid_notes'});
-      if(access_start && access_end && new Date(access_end) < new Date(access_start)) return json(res,400,{error:'invalid_access_period'});
-      const { rows } = await pool.query(`INSERT INTO ext_third_parties (name, document, category, contract_id, responsible_name, responsible_identity, access_start, access_end, evaluation_score, notes, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`, [name, document, category, contract_id, responsible_name, sess.identityId||null, access_start, access_end, evaluation_score, notes, sess.identityId||null]);
-      await auditLog({ action:'ext_third_party_create', actor:sess.identityId||'system', target:rows[0].id, meta:{ name, contract_id } });
-      return json(res,201,rows[0]);
-    }
-    if(req.method==='PATCH'){
-      const b=await readJson(req);
-      const id=b.id;
-      if(!id) return json(res,400,{error:'missing_id'});
-      const { rows: existing } = await pool.query(`SELECT * FROM ext_third_parties WHERE id=$1`, [id]);
-      if(!existing.length) return json(res,404,{error:'not_found'});
-      const status=b.status?String(b.status).trim():existing[0].status;
-      const valid=['ativo','inativo','suspenso','encerrado'];
-      if(!valid.includes(status)) return json(res,400,{error:'invalid_status'});
-      const evaluation_score=b.evaluation_score!==undefined? (b.evaluation_score!=null?Number(b.evaluation_score):null) : existing[0].evaluation_score;
-      const access_end=b.access_end!==undefined?b.access_end:existing[0].access_end;
-      const { rows } = await pool.query(`UPDATE ext_third_parties SET status=$2, evaluation_score=$3, access_end=$4, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, status, evaluation_score, access_end]);
-      // se encerrado, registrar log acesso perde acesso ao término
-      if(status==='encerrado'){
-        await pool.query(`INSERT INTO ext_third_party_access_logs (third_party_id, access_type, granted_by_identity, revoked_at, reason) VALUES ($1,'revogacao',$2,NOW(),$3)`, [id, sess.identityId||null, 'Terceiro encerrado perde acesso ao término']);
-      }
-      await auditLog({ action:'ext_third_party_update', actor:sess.identityId||'system', target:id, meta:{ status } });
-      return json(res,200,rows[0]);
-    }
-    return json(res,405,{error:'method_not_allowed'});
-  };
-
-  const handleThirdPartyDocuments = async (req,res) => {
-    if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=await requireSession(req);
-    if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
-    if(req.method==='GET'){
-      const url=new URL(req.url,'http://localhost');
-      const third_party_id=url.searchParams.get('third_party_id');
-      let q=`SELECT * FROM ext_third_party_documents`;
-      const params=[];
-      if(third_party_id){ params.push(third_party_id); q+=` WHERE third_party_id=$${params.length}`; }
-      q+=` ORDER BY expiry_date ASC LIMIT 200`;
-      const { rows } = await pool.query(q, params);
-      return json(res,200,{items:rows});
-    }
-    if(req.method==='POST'){
-      const b=await readJson(req);
-      const third_party_id=b.third_party_id;
-      const document_type=String(b.document_type||'').trim();
-      const file_name=b.file_name?String(b.file_name).trim():null;
-      const file_url=b.file_url?String(b.file_url).trim():null;
-      const storage_key=b.storage_key?String(b.storage_key).trim():null;
-      const expiry_date=b.expiry_date||null;
-      if(!third_party_id) return json(res,400,{error:'missing_third_party_id'});
-      if(document_type.length<3||document_type.length>100) return json(res,400,{error:'invalid_document_type'});
-      if(file_name && (file_name.length<1||file_name.length>500)) return json(res,400,{error:'invalid_file_name'});
-      if(file_url && (file_url.length<5||file_url.length>1000)) return json(res,400,{error:'invalid_file_url'});
-      if(storage_key && (storage_key.length<5||storage_key.length>500)) return json(res,400,{error:'invalid_storage_key'});
-      try{
-        const { rows } = await pool.query(`INSERT INTO ext_third_party_documents (third_party_id, document_type, file_name, file_url, storage_key, expiry_date, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`, [third_party_id, document_type, file_name, file_url, storage_key, expiry_date, sess.identityId||null]);
-        await auditLog({ action:'ext_third_party_document_create', actor:sess.identityId||'system', target:rows[0].id, meta:{ third_party_id, document_type } });
-        return json(res,201,rows[0]);
-      } catch(e){ if(e.code==='23505') return json(res,409,{error:'duplicate_storage_key'}); throw e; }
-    }
-    return json(res,405,{error:'method_not_allowed'});
-  };
+  // EXT-02 terceiros: os handlers legados foram substituídos pela jornada
+  // canônica hardenada em src/server/ext-third-party-api.mjs (migração 148):
+  // autorização por papel com 401/403 distintos, autoria derivada da sessão,
+  // contrato vinculado só após validação canônica, janela de acesso temporária
+  // presa a OS/contrato autorizado com vigência derivada, avaliação com autor/
+  // data/justificativa, transação única negócio+evento+auditoria com
+  // 503/rollback, idempotência por identidade e histórico imutável. As rotas
+  // /api/ext/third-part* continuam atendidas por aquele módulo (leitura) ou
+  // aposentadas (mutação legada).
 
   // EXT-03 licitações
   const handleBiddingNotices = async (req,res) => {
@@ -379,5 +300,5 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
     return json(res,405,{error:'method_not_allowed'});
   };
 
-  return { handleThirdParties, handleThirdPartyDocuments, handleBiddingNotices, handleBiddingDocuments, handleSupplierPortalQuotations, handleQualityNonconformities, handleQualityActions, handleSatisfactionSurveys };
+  return { handleBiddingNotices, handleBiddingDocuments, handleSupplierPortalQuotations, handleQualityNonconformities, handleQualityActions, handleSatisfactionSurveys };
 }

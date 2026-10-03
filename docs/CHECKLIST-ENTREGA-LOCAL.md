@@ -1,5 +1,9 @@
 # Checklist da entrega local — 222 requisitos
 
+## Atualização 2026-10-03 — EXT-02 terceiros entregue localmente (segunda fatia do lote EXT)
+
+Segunda fatia do lote EXT sobre a base `48aa7a4` (PR #96 MERGED): EXT-02 passou a `pronto_local` por validação automática rápida **mais um gate HTTP/DB dedicado à jornada** (tela real `/admin/terceiros` + `/api/ext/third-party/*`, migração aditiva 148, teste dedicado 50/50, suíte 315/315, migrações 148/148, `test:ext02-third-parties:pg` 21/21). CLI-01..15 e EXT-01 preservadas sem reabertura; EXT-03..17 e os órfãos de `/admin/ti` permanecem nos estados abaixo. Ver [`ENTREGA-EXT.md`](ENTREGA-EXT.md) e [`ENTREGA-RELATORIO-2026-10-03-EXT02-TERCEIROS.md`](ENTREGA-RELATORIO-2026-10-03-EXT02-TERCEIROS.md). Aceite humano e Windows seguem pendentes.
+
 ## Atualização 2026-10-03 — EXT-01 frota entregue localmente (lote EXT iniciado)
 
 Primeira fatia do lote EXT sobre a base `3353b2f` (PR #95 MERGED): EXT-01 passou a `pronto_local` por validação automática rápida (jornada real `/admin/frota` + `/api/ext/fleet/*`, migração aditiva 147, teste dedicado 20/20, suíte 265/265, migrações 147/147). CLI-01..15 preservadas sem reabertura; EXT-02..17 e os órfãos de `/admin/ti` permanecem nos estados abaixo. Ver [`ENTREGA-EXT.md`](ENTREGA-EXT.md) e [`ENTREGA-RELATORIO-2026-10-03-EXT01-FROTA.md`](ENTREGA-RELATORIO-2026-10-03-EXT01-FROTA.md). Aceite humano e Windows seguem pendentes.
@@ -1424,10 +1428,11 @@ Frota Aceite: Veículo, responsável, abastecimento, manutenção, documentos e 
 
 ## EXT-02
 Terceiros Aceite: Cadastro, contrato, documentos, vencimentos, acesso temporário e avaliação
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Handlers `/api/ext/*` para terceiros/documentos; tabelas `ext_third_part*`/085; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
-- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
-- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
+- Estado: pronto_local (validação automática rápida + gate HTTP/DB dedicado da jornada; bateria pesada integral, aceite humano e Windows pendentes)
+- Critério do plano: "terceiro acessa só OS/contrato autorizado e perde acesso ao término" — imposto por `ext_third_party_access_grants` (escopo único autorizado, término obrigatório, vigência derivada, revogação declarada) e provado por HTTP/DB.
+- Tela / API / dados / autorização: Tela real `/admin/terceiros` (TerceirosWorkspace) e API canônica `/api/ext/third-party/*` (`src/server/ext-third-party-api.mjs`); tabelas `ext_third_part*` da 085 + `ext_third_party_access_grants`/`ext_third_party_evaluations`/`ext_third_party_document_rules`/`ext_third_party_events` da 148; papéis admin/marcelo/ti (anônimo 401, papel não autorizado 403); autoria da sessão, vínculo da URL, corpo forjado ignorado; contrato vinculado só após validação canônica em `crm_contracts` com quem verificou/quando/situação; same-origin + `Idempotency-Key` em toda mutação; transação única negócio+evento+`audit_log` com 503/rollback; vencimento derivado só da data registrada e "a vencer" só com regra explícita; avaliação com autor, data e justificativa; rotas legadas com leitura autorizada (chave `items` preservada) e mutação 410.
+- Integração e evidência (teste, resultado, commit): `tests/ext02-third-parties.test.mjs` 50/50 (em `test:unit`); **`npm run test:ext02-third-parties:pg` 21/21 por HTTP real contra PostgreSQL real** (`tests/ext02-third-parties.integration.test.mjs` + `scripts/qa-ext02-third-parties-postgres.mjs`, CI em `.github/workflows/ext02-delivery.yml`); `npm test` 315/315; estático 5/5 (001–148); build 87 páginas com `/admin/terceiros`; `test:migrations:pg` 148/148 ×2 com checksum negativo rejeitado; `test:l08-delivery:pg` 51/51 e `test:demo-local:pg` OK (aplicam 001–148; **não** cobrem a jornada EXT-02). Relatório `ENTREGA-RELATORIO-2026-10-03-EXT02-TERCEIROS.md`.
+- Pendência / fronteira externa / aceite humano: **Não existe ator externo "terceiro" autenticado**; nenhuma sessão, login ou canal externo foi criado ou simulado — o acesso do próprio terceiro permanece PENDENTE e é declarado pela API (`external_actor_boundary`) e pela tela. Upload real de arquivo de documento fica fora desta fatia (metadados sintéticos declarados). Bateria pesada integral, aplicação em destino, aceite humano e homologação Windows pendentes. O órfão EXT de `/admin/ti` segue não promovido.
 
 ## EXT-03
 Licitações Aceite: Edital, prazos, documentos, responsáveis, proposta e resultado; se mercado relevante
