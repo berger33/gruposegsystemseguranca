@@ -1,6 +1,22 @@
 # Grupo SEG System
 
-## Continuação atual: EXT-02 — terceiros entregues localmente
+## Continuação atual: EXT-03 — licitações entregues localmente
+
+Base confirmada: `main` `4518b3f0a7e2c8e900e135a656f8b73b2fa5dfaa` (PR #97 MERGED), divergência inicial 0/0. Migrações 001–148 imutáveis; esta fatia acrescenta somente a **149**, aditiva.
+
+**Condição do critério, avaliada e declarada:** o plano pede EXT-03 *"se mercado relevante"*. A única evidência no repositório é `docs/referencias-marca.md`, que cita **"órgãos públicos"** entre os segmentos do site atual — dentro da seção marcada como *"confirmar antes da nova publicação"*. Logo a relevância está **indicada e não confirmada**. O módulo registra licitações quando a equipe as cadastrar, declara essa condição em API e tela (`market_relevance: "indicada_nao_confirmada"`) e **não afirma** que a empresa participa de licitações nem semeia edital algum. Confirmação do proprietário segue pendente.
+
+EXT-03 liga `/admin/licitacoes` ao backend canônico real: edital, prazos, documentos, responsáveis, proposta e resultado em `/api/ext/bidding/*` (tabelas `ext_bidding_*` da 085 + jornada da 149), para os papéis staff admin/marcelo/ti. O critério do plano é imposto por registro canônico em **dois níveis**: a **proposta** sai do nada e passa a existir em `ext_bidding_proposals`, versionada pelo servidor e presa ao prazo de entrega registrado — o PostgreSQL recusa, por `CHECK`, proposta posterior ao prazo; o **prazo** sai dos campos livres e passa a viver em `ext_bidding_deadlines`, um por tipo, com **fonte declarada** e substituição explícita (editar é proibido por gatilho); o **resultado** só é aceito com o edital encerrado, exige autor, data e justificativa, e torna-se imutável; a **situação terminal é final** — edital homologado não reabre, nem pela API nem pelo banco; o **responsável** deixa de ser texto livre e passa a ser identidade canônica de equipe, com o papel copiado no ato e histórico de passagem; o **checklist** é derivado dos documentos ativos, nunca marcado à mão; e o **alerta** de prazo só existe com regra de antecedência explicitamente registrada. Autoria derivada da sessão e vínculos derivados da URL (corpo forjado ignorado); negócio, evento imutável e `audit_log` na mesma transação, com 503 e rollback em falha da auditoria; `Idempotency-Key` em toda mutação (replay idêntico não duplica; reuso divergente 409). As rotas legadas seguem com leitura autorizada (preservando a chave `items`) e mutação aposentada em 410. Migração 149 é aditiva.
+
+**Fronteira declarada:** não existe integração com portal público de compras (ComprasNet, BEC/SP, PNCP ou equivalente), importação automática de edital, envio de proposta a órgão nem upload real de arquivo. `file_url` e `storage_key` são **referências declaradas pela equipe**; a API nunca afirma que o arquivo foi recebido ou verificado.
+
+Validação desta fatia: `npm ci`, estático 5/5 (001–149), typecheck e teste dedicado EXT-03 67/67; bateria integral 382/382 e build 88 páginas com `/admin/licitacoes` listada; migrações 149/149 em dois passes com checksum negativo rejeitado; **gate dedicado `test:ext03-biddings:pg` 26/26 por HTTP real contra PostgreSQL real** (inclui 503 + rollback com auditoria derrubada e as travas de imutabilidade do banco). Na **primeira** execução esse gate reprovou 22/26 e expôs um defeito real de comparação entre `enum` e `text` em gatilho, corrigido e re-provado — nenhuma asserção foi enfraquecida. Bateria pesada integral, aplicação em destino, aceite humano e Windows permanecem pendentes.
+
+EXT-01 (frota, `/admin/frota`, migração 147) e EXT-02 (terceiros, `/admin/terceiros`, migração 148) seguem íntegras e não foram reabertas.
+
+Leia o [relatório EXT-03](docs/ENTREGA-RELATORIO-2026-10-03-EXT03-LICITACOES.md), o [relatório EXT-02](docs/ENTREGA-RELATORIO-2026-10-03-EXT02-TERCEIROS.md), a [entrega EXT](docs/ENTREGA-EXT.md) e o [estado atual](docs/ESTADO-EXECUCAO-LOCAL.md).
+
+## Fatia anterior: EXT-02 — terceiros entregues localmente
 
 Base confirmada: `main` `48aa7a43251a8b5affcb6627b0096c14cf15aa3a` (PR #96 MERGED), divergência inicial 0/0. Migrações **001–148**; próxima livre: 149.
 

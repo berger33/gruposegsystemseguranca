@@ -5,6 +5,74 @@ local de CLI-15 no L08. Cada fatia promove um requisito EXT de "API/tabela/
 componente órfão" para jornada funcional provada; a existência de tabela ou
 handler não é tratada como entrega.
 
+## EXT-03 licitações — 03/10/2026
+
+Fatia partindo da `main` oficial em `4518b3f` (merge da PR #97, confirmado
+MERGED no remoto antes de editar; divergência 0/0). Promove somente **EXT-03**:
+edital, prazos, documentos, responsáveis, proposta e resultado, ligados ao
+backend canônico real (tabelas `ext_bidding_*` da 085 + jornada da 149).
+
+### A condição "se mercado relevante", avaliada e não presumida
+
+O critério do plano é condicional. A evidência disponível é
+`docs/referencias-marca.md`, que registra "órgãos públicos" entre os segmentos
+citados **pelo site atual**, em seção explicitamente marcada como "confirmar
+antes da nova publicação". Portanto a relevância está **indicada e NÃO
+confirmada pelo proprietário**. A decisão tomada foi implementar a jornada e
+**declarar a condição** (`market_relevance: "indicada_nao_confirmada"`) em API,
+tela e documentação, sem afirmar participação em licitações e sem semear
+nenhum edital. Confirmação do proprietário é pendência registrada.
+
+### Lacunas reproduzidas antes de implementar
+
+Nove lacunas foram reproduzidas **por execução contra o código anterior**, não
+por leitura: 401 para papel sem direito (sem 403); auditoria que falhava
+**depois** da gravação, sem transação nem rollback; retry que duplicava; `PATCH`
+que aceitava id do corpo e **reabria licitação homologada**; resultado
+sobrescrito sem histórico; prazos sem derivação e listagem sem fonte/data-base;
+documento com `bidding_id` não validado e versão calculada fora de transação;
+**proposta inexistente** como registro canônico; e responsável em texto livre.
+
+### O que passou a valer
+
+Rotas canônicas `/api/ext/bidding/*` com guardas 401/403 distintas, autoria
+derivada da sessão, transação única negócio+evento+auditoria (503 com rollback),
+idempotência por `(identidade, chave)` e histórico apenas-acréscimo. O critério
+é imposto **também pelo banco**: `CHECK` recusa proposta posterior ao prazo de
+entrega registrado; gatilhos recusam reabrir edital encerrado, sobrescrever
+resultado, editar ou apagar prazo, e apagar histórico. Checklist é derivado dos
+documentos ativos e "a vencer" só existe com regra de antecedência registrada.
+Rotas legadas mantêm leitura autorizada com o alias `items` e devolvem 410 na
+mutação — **depois** das guardas, de modo que anônimo continua recebendo 401.
+
+### Validação
+
+Estático 5/5 (001–149), typecheck limpo, teste dedicado 67/67 em `test:unit`,
+`npm test` 382/382, build 88 páginas com `/admin/licitacoes` listada,
+`test:migrations:pg` 149/149 em dois passes com checksum negativo rejeitado e
+**`test:ext03-biddings:pg` 26/26** por HTTP real contra PostgreSQL real
+descartável (`.github/workflows/ext03-delivery.yml`).
+
+Na primeira execução esse gate devolveu **22/26**: três reprovações vinham de um
+**defeito real** — o gatilho comparava `ext_bidding_status` (enum) com `TEXT[]`,
+e o PostgreSQL recusa (`operator does not exist`), derrubando toda atualização
+de edital canônico em 503. A causa foi isolada em laboratório antes da correção
+(`::text` resolve) e o filtro `stage`, que usava cast frágil e não tinha teste,
+passou a ser exercitado nos dois sentidos. A quarta reprovação era do próprio
+teste, que tentava burlar o gatilho de prazo; foi corrigida registrando o prazo
+vencido pela API. Nenhuma asserção enfraquecida, nenhum caso pulado, nenhum
+timeout aumentado.
+
+### Fronteira declarada
+
+Não existe portal público de compras integrado, importação automática de edital,
+envio de proposta a órgão nem upload real de arquivo. `file_url` e `storage_key`
+são referências declaradas pela equipe. Bateria pesada integral, aplicação em
+destino, aceite humano e Windows seguem pendentes; o aceite de Marcelo e Andreia
+continua valendo somente para L07. CLI-01..15, EXT-01 e EXT-02 preservadas;
+EXT-04..17 pendentes. Relatório:
+[EXT-03](ENTREGA-RELATORIO-2026-10-03-EXT03-LICITACOES.md).
+
 ## EXT-02 terceiros — 03/10/2026
 
 Fatia partindo da `main` oficial em `48aa7a4` (merge da PR #96, confirmado

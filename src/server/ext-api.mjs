@@ -20,93 +20,16 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
   // /api/ext/third-part* continuam atendidas por aquele módulo (leitura) ou
   // aposentadas (mutação legada).
 
-  // EXT-03 licitações
-  const handleBiddingNotices = async (req,res) => {
-    if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=await requireSession(req);
-    if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
-    if(req.method==='GET'){
-      const { rows } = await pool.query(`SELECT * FROM ext_bidding_notices ORDER BY deadline_date ASC LIMIT 200`);
-      return json(res,200,{items:rows, note:'checklist e alerta por edital dossie versionado'});
-    }
-    if(req.method==='POST'){
-      const b=await readJson(req);
-      const title=String(b.title||'').trim();
-      const description=String(b.description||'').trim();
-      const edital_number=String(b.edital_number||'').trim();
-      const publication_date=b.publication_date||null;
-      const deadline_date=b.deadline_date||null;
-      const responsible_name=b.responsible_name?String(b.responsible_name).trim():null;
-      const estimated_value_cents=b.estimated_value_cents!=null?Number(b.estimated_value_cents):null;
-      if(title.length<5||title.length>200) return json(res,400,{error:'invalid_title'});
-      if(description.length<10||description.length>2000) return json(res,400,{error:'invalid_description'});
-      if(edital_number.length<3||edital_number.length>200) return json(res,400,{error:'invalid_edital_number'});
-      if(publication_date && deadline_date && new Date(deadline_date) < new Date(publication_date)) return json(res,400,{error:'invalid_deadline_before_publication'});
-      if(responsible_name && (responsible_name.length<2||responsible_name.length>200)) return json(res,400,{error:'invalid_responsible'});
-      if(estimated_value_cents!=null && (!Number.isFinite(estimated_value_cents)||estimated_value_cents<0)) return json(res,400,{error:'invalid_estimated_value'});
-      const protocol=generateProtocol('LIC-EXT');
-      try{
-        const { rows } = await pool.query(`INSERT INTO ext_bidding_notices (protocol, title, description, edital_number, publication_date, deadline_date, responsible_name, estimated_value_cents, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`, [protocol, title, description, edital_number, publication_date, deadline_date, responsible_name, estimated_value_cents, sess.identityId||null]);
-        await auditLog({ action:'ext_bidding_create', actor:sess.identityId||'system', target:rows[0].id, meta:{ protocol, edital_number } });
-        return json(res,201,rows[0]);
-      } catch(e){ if(e.code==='23505'){ if(e.constraint && e.constraint.includes('edital_number')) return json(res,409,{error:'duplicate_edital_number'}); return json(res,409,{error:'duplicate_protocol'}); } throw e; }
-    }
-    if(req.method==='PATCH'){
-      const b=await readJson(req);
-      const id=b.id;
-      const status=b.status?String(b.status).trim():null;
-      const result=b.result?String(b.result).trim():null;
-      if(!id) return json(res,400,{error:'missing_id'});
-      const { rows: existing } = await pool.query(`SELECT * FROM ext_bidding_notices WHERE id=$1`, [id]);
-      if(!existing.length) return json(res,404,{error:'not_found'});
-      const nextStatus=status||existing[0].status;
-      const valid=['rascunho','publicado','em_analise','homologado','vencido','cancelado','deserto'];
-      if(!valid.includes(nextStatus)) return json(res,400,{error:'invalid_status'});
-      if(result && (result.length<10||result.length>2000)) return json(res,400,{error:'invalid_result'});
-      const { rows } = await pool.query(`UPDATE ext_bidding_notices SET status=$2, result=$3, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, nextStatus, result||existing[0].result]);
-      await auditLog({ action:'ext_bidding_update', actor:sess.identityId||'system', target:id, meta:{ status: nextStatus } });
-      return json(res,200,rows[0]);
-    }
-    return json(res,405,{error:'method_not_allowed'});
-  };
-
-  const handleBiddingDocuments = async (req,res) => {
-    if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
-    const sess=await requireSession(req);
-    if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
-    if(req.method==='GET'){
-      const url=new URL(req.url,'http://localhost');
-      const bidding_id=url.searchParams.get('bidding_id');
-      let q=`SELECT * FROM ext_bidding_documents`;
-      const params=[];
-      if(bidding_id){ params.push(bidding_id); q+=` WHERE bidding_id=$${params.length}`; }
-      q+=` ORDER BY version DESC LIMIT 200`;
-      const { rows } = await pool.query(q, params);
-      return json(res,200,{items:rows});
-    }
-    if(req.method==='POST'){
-      const b=await readJson(req);
-      const bidding_id=b.bidding_id;
-      const document_type=String(b.document_type||'').trim();
-      const file_name=String(b.file_name||'').trim();
-      const file_url=String(b.file_url||'').trim();
-      const storage_key=String(b.storage_key||'').trim();
-      if(!bidding_id) return json(res,400,{error:'missing_bidding_id'});
-      if(document_type.length<3||document_type.length>100) return json(res,400,{error:'invalid_document_type'});
-      if(file_name.length<1||file_name.length>500) return json(res,400,{error:'invalid_file_name'});
-      if(file_url.length<5||file_url.length>1000) return json(res,400,{error:'invalid_file_url'});
-      if(storage_key.length<5||storage_key.length>500) return json(res,400,{error:'invalid_storage_key'});
-      // versionamento
-      const { rows: maxRows } = await pool.query(`SELECT COALESCE(MAX(version),0) as max_version FROM ext_bidding_documents WHERE bidding_id=$1`, [bidding_id]);
-      const nextVersion=Number(maxRows[0].max_version)+1;
-      try{
-        const { rows } = await pool.query(`INSERT INTO ext_bidding_documents (bidding_id, document_type, file_name, file_url, storage_key, version, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`, [bidding_id, document_type, file_name, file_url, storage_key, nextVersion, sess.identityId||null]);
-        await auditLog({ action:'ext_bidding_document_create', actor:sess.identityId||'system', target:rows[0].id, meta:{ bidding_id, version: nextVersion } });
-        return json(res,201,rows[0]);
-      } catch(e){ if(e.code==='23505') return json(res,409,{error:'duplicate_storage_key'}); throw e; }
-    }
-    return json(res,405,{error:'method_not_allowed'});
-  };
+  // EXT-03 licitações: os handlers legados foram substituídos pela jornada
+  // canônica hardenada em src/server/ext-bidding-api.mjs (migração 149):
+  // autorização por papel com 401/403 distintos, autoria derivada da sessão,
+  // máquina de estados com situação terminal final, prazos com fonte declarada
+  // e substituição explícita, proposta versionada que o banco recusa fora do
+  // prazo de entrega registrado, resultado só em edital encerrado e imutável,
+  // checklist derivado do dossiê, alerta só com regra explícita, transação
+  // única negócio+evento+auditoria com 503/rollback, idempotência por
+  // identidade e histórico imutável. As rotas /api/ext/bidding-* continuam
+  // atendidas por aquele módulo (leitura) ou aposentadas (mutação legada).
 
   // EXT-04 portal fornecedores
   const handleSupplierPortalQuotations = async (req,res) => {
@@ -300,5 +223,5 @@ export function createExtApi({ pool, auditLog, sameOrigin, requireSession, requi
     return json(res,405,{error:'method_not_allowed'});
   };
 
-  return { handleBiddingNotices, handleBiddingDocuments, handleSupplierPortalQuotations, handleQualityNonconformities, handleQualityActions, handleSatisfactionSurveys };
+  return { handleSupplierPortalQuotations, handleQualityNonconformities, handleQualityActions, handleSatisfactionSurveys };
 }
