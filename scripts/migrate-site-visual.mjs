@@ -150,13 +150,14 @@ const files = [
   '137-fin14-15-16-ui-idempotency-closure-lock.sql',
   '138-adm01-12-painel-marcelo-decisoes-escopo.sql',
   '139-l08-client-space-atomic-idempotency.sql',
-  '140-l08-cli06-08-lifecycle-visits-reports.sql'
+  '140-l08-cli06-08-lifecycle-visits-reports.sql',
+  '141-l08-cli10-service-request-portal.sql'
 ];
 
 async function main() {
   const actual = (await readdir(dir)).filter(f => /^\d{3}-.*\.sql$/.test(f)).sort();
-  if (files.length !== 140 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
-    throw new Error('migration_manifest_mismatch: compare 001–140 with db/migrations before connecting');
+  if (files.length !== 141 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
+    throw new Error('migration_manifest_mismatch: compare 001–141 with db/migrations before connecting');
   }
   const urlText = process.env.DATABASE_MIGRATION_URL || process.env.DATABASE_URL;
   if (!urlText) throw new Error('DATABASE_MIGRATION_URL or DATABASE_URL is required');

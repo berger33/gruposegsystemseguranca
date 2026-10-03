@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 function generateProtocol(prefix) {
   const d = new Date();
@@ -9,7 +9,14 @@ function generateProtocol(prefix) {
   return `${prefix}-${y}${m}${day}-${rand}`;
 }
 
-export function createCliFinanceApi({ pool, auditLog, sameOrigin, requireSession, requireRole }) {
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,199}$/;
+
+function requestFingerprint(value) {
+  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+}
+
+export function createCliFinanceApi({ pool, auditLog, sameOrigin, requireSession, requireClientSession, requireRole }) {
   async function ensureAuth(req, res, roles) {
     const session = await requireSession(req);
     if (!session) { res.writeHead(401, { "Content-Type":"application/json" }); res.end(JSON.stringify({ error:"unauthorized" })); return null; }
@@ -90,52 +97,232 @@ export function createCliFinanceApi({ pool, auditLog, sameOrigin, requireSession
     return json(res,405,{ error:"method_not_allowed" });
   }
 
-  // CLI-10 solicitação serviço adicional gera oportunidade CRM origem responsável
+  // CLI-10 solicitação de serviço adicional: a rota do cliente deriva autoria
+  // da sessão, revalida conta/contrato e cria a oportunidade canônica na mesma
+  // transação. Nenhuma etapa cria contrato, cobrança ou obrigação.
+  async function handleClientServiceRequests(req, res) {
+    const session = await requireClientSession?.(req);
+    if (!session?.identityId) return json(res, 401, { error: "client_session_required" });
+    if (!sameOrigin(req)) return json(res, 403, { error: "origin_forbidden" });
+    if (!["GET", "POST"].includes(req.method)) return json(res, 405, { error: "method_not_allowed" });
+
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    if (req.method === "GET") {
+      const accountId = String(url.searchParams.get("account") || "");
+      if (!UUID_PATTERN.test(accountId)) return json(res, 400, { error: "invalid_account_id" });
+      try {
+        const scoped = await pool.query(
+          `SELECT 1 FROM client_access_grants grant_row
+             JOIN client_accounts account ON account.id = grant_row.client_account_id
+            WHERE grant_row.identity_id=$1 AND grant_row.client_account_id=$2
+              AND grant_row.revoked_at IS NULL AND account.status='active'`,
+          [session.identityId, accountId],
+        );
+        if (!scoped.rows[0]) {
+          await pool.query(
+            `INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category)
+             VALUES ('client',$1,'service_request_list',$2,'denied','authorization_denied')`,
+            [session.identityId, accountId],
+          );
+          return json(res, 403, { error: "forbidden" });
+        }
+        const result = await pool.query(
+          `SELECT id, protocol, client_account_id, contract_id, title, description, status,
+                  origin, responsible_name, crm_opportunity_id, created_at, updated_at
+             FROM cli_service_requests
+            WHERE client_account_id=$1 AND created_by_identity=$2
+            ORDER BY created_at DESC LIMIT 100`,
+          [accountId, session.identityId],
+        );
+        await pool.query(
+          `INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category)
+           VALUES ('client',$1,'service_request_list',$2,'allowed','none')`,
+          [session.identityId, accountId],
+        );
+        return json(res, 200, { serviceRequests: result.rows });
+      } catch (error) {
+        console.error("CLI-10 client list failed", error instanceof Error ? error.message : error);
+        return json(res, 503, { error: "service_requests_unavailable" });
+      }
+    }
+
+    let body;
+    try {
+      const chunks = [];
+      let size = 0;
+      for await (const chunk of req) {
+        size += chunk.length;
+        if (size > 32_768) return json(res, 413, { error: "body_too_large" });
+        chunks.push(chunk);
+      }
+      body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+    } catch {
+      return json(res, 400, { error: "invalid_request" });
+    }
+
+    const accountId = String(body.account_id || "");
+    const contractId = body.contract_id ? String(body.contract_id) : null;
+    const title = String(body.title || "").trim();
+    const description = String(body.description || "").trim();
+    const key = String(req.headers["idempotency-key"] || "").trim();
+    if (!UUID_PATTERN.test(accountId) || (contractId && !UUID_PATTERN.test(contractId))) return json(res, 400, { error: "invalid_reference" });
+    if (!IDEMPOTENCY_KEY_PATTERN.test(key)) return json(res, 400, { error: "idempotency_key_required" });
+    if (title.length < 5 || title.length > 200) return json(res, 400, { error: "title_5_200" });
+    if (description.length < 10 || description.length > 2000) return json(res, 400, { error: "description_10_2000" });
+
+    const fingerprint = requestFingerprint({ accountId, contractId, title, description });
+    let client;
+    try {
+      client = await pool.connect();
+      await client.query("BEGIN");
+
+      const replay = await client.query(
+        `SELECT * FROM cli_service_requests WHERE created_by_identity=$1 AND idempotency_key=$2 FOR UPDATE`,
+        [session.identityId, key],
+      );
+      if (replay.rows[0]) {
+        if (replay.rows[0].request_fingerprint !== fingerprint) {
+          await client.query("ROLLBACK");
+          return json(res, 409, { error: "idempotency_key_reused" });
+        }
+        await client.query("COMMIT");
+        return json(res, 200, { serviceRequest: replay.rows[0], replayed: true });
+      }
+
+      const scope = await client.query(
+        `SELECT grant_row.contract_scope_mode, grant_row.allowed_contract_ids,
+                account.crm_company_id, company.responsible_id, company.responsible_name
+           FROM client_access_grants grant_row
+           JOIN client_accounts account ON account.id=grant_row.client_account_id AND account.status='active'
+           LEFT JOIN crm_companies company ON company.id=account.crm_company_id AND company.status='active'
+          WHERE grant_row.identity_id=$1 AND grant_row.client_account_id=$2 AND grant_row.revoked_at IS NULL
+          FOR UPDATE OF grant_row, account`,
+        [session.identityId, accountId],
+      );
+      const access = scope.rows[0];
+      if (!access) {
+        await client.query(
+          `INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category)
+           VALUES ('client',$1,'service_request_create',$2,'denied','authorization_denied')`,
+          [session.identityId, accountId],
+        );
+        await client.query("COMMIT");
+        return json(res, 403, { error: "forbidden" });
+      }
+      if (!access.crm_company_id) {
+        await client.query("ROLLBACK");
+        return json(res, 409, { error: "crm_company_link_required" });
+      }
+      if (!access.responsible_id && !access.responsible_name) {
+        await client.query("ROLLBACK");
+        return json(res, 409, { error: "crm_responsible_required" });
+      }
+      if (contractId) {
+        const contract = await client.query(
+          `SELECT id FROM client_contracts WHERE id=$1 AND client_account_id=$2`,
+          [contractId, accountId],
+        );
+        const allowedContracts = Array.isArray(access.allowed_contract_ids) ? access.allowed_contract_ids : [];
+        const grantAllows = access.contract_scope_mode === "all"
+          || (access.contract_scope_mode === "selected" && allowedContracts.includes(contractId));
+        if (!contract.rows[0] || !grantAllows) {
+          await client.query("ROLLBACK");
+          return json(res, 403, { error: "contract_forbidden" });
+        }
+      }
+
+      const requestId = randomUUID();
+      const protocol = generateProtocol("SRV-CLI");
+      const opportunityId = randomUUID();
+      const created = await client.query(
+        `INSERT INTO cli_service_requests
+           (id, protocol, client_account_id, contract_id, title, description, status, origin,
+            responsible_name, responsible_identity_id, crm_opportunity_id, created_by_identity,
+            idempotency_key, request_fingerprint)
+         VALUES ($1,$2,$3,$4,$5,$6,'solicitada','portal_cliente',$7,$8,$9,$10,$11,$12)
+         RETURNING *`,
+        [requestId, protocol, accountId, contractId, title, description, access.responsible_name || null,
+          access.responsible_id || null, opportunityId, session.identityId, key, fingerprint],
+      );
+      await client.query(
+        `INSERT INTO crm_opportunities
+           (id, company_id, title, need_description, responsible_id, responsible_name, origin,
+            priority, created_by_id, stage, next_action)
+         VALUES ($1,$2,$3,$4,$5,$6,'portal_cliente','media',$7,'novo','Analisar solicitação de serviço adicional')`,
+        [opportunityId, access.crm_company_id, `Serviço adicional: ${title}`.slice(0, 200), description,
+          access.responsible_id || null, access.responsible_name || null, session.identityId],
+      );
+      await client.query(
+        `INSERT INTO crm_opportunity_stages
+           (id, opportunity_id, previous_stage, next_stage, changed_by_id, changed_by_role, reason)
+         VALUES ($1,$2,NULL,'novo',$3,'client','Solicitação criada no portal do cliente')`,
+        [randomUUID(), opportunityId, session.identityId],
+      );
+      await client.query(
+        `INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category)
+         VALUES ('client',$1,'service_request_create',$2,'allowed','none')`,
+        [session.identityId, requestId],
+      );
+      await client.query("COMMIT");
+      return json(res, 201, {
+        serviceRequest: created.rows[0],
+        note: "A solicitação abriu uma oportunidade para análise; não cria contrato, cobrança ou obrigação.",
+      });
+    } catch (error) {
+      await client?.query("ROLLBACK").catch(() => {});
+      if (error && typeof error === "object" && error.code === "23505") {
+        try {
+          const replay = await client.query(
+            `SELECT * FROM cli_service_requests WHERE created_by_identity=$1 AND idempotency_key=$2`,
+            [session.identityId, key],
+          );
+          if (replay.rows[0]?.request_fingerprint === fingerprint) return json(res, 200, { serviceRequest: replay.rows[0], replayed: true });
+          if (replay.rows[0]) return json(res, 409, { error: "idempotency_key_reused" });
+        } catch {}
+      }
+      console.error("CLI-10 client create failed", error instanceof Error ? error.message : error);
+      return json(res, 503, { error: "service_request_unavailable" });
+    } finally {
+      client?.release();
+    }
+  }
+
   async function handleServiceRequests(req, res) {
+    if (req.url.startsWith("/api/client/")) return handleClientServiceRequests(req, res);
     const session = await ensureAuth(req, res, ["admin","ti","comercial"]);
     if (!session) return;
     const url = new URL(req.url, `http://${req.headers.host}`);
     if (req.method === "GET") {
       const accountId = url.searchParams.get("client_account_id");
-      let q=`SELECT * FROM cli_service_requests WHERE 1=1`;
-      const params=[]; let idx=1;
-      if (accountId) { q+=` AND client_account_id=$${idx++}`; params.push(accountId); }
-      q+=` ORDER BY created_at DESC LIMIT 100`;
-      const { rows } = await pool.query(q, params);
-      return json(res,200,{ serviceRequests: rows });
+      let query = `SELECT * FROM cli_service_requests WHERE 1=1`;
+      const params = [];
+      if (accountId) { query += ` AND client_account_id=$1`; params.push(accountId); }
+      query += ` ORDER BY created_at DESC LIMIT 100`;
+      const { rows } = await pool.query(query, params);
+      return json(res, 200, { serviceRequests: rows });
     }
+    // Compatibilidade administrativa legada: a promoção CLI-10 altera apenas a
+    // jornada /api/client. A equipe ainda pode registrar solicitações internas.
     if (req.method === "POST") {
-      let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
+      let body = {};
+      try { const chunks = []; for await (const chunk of req) chunks.push(chunk); body = JSON.parse(Buffer.concat(chunks).toString() || "{}"); }
+      catch { return json(res, 400, { error: "invalid_request" }); }
       const { client_account_id, contract_id, contact_id, title, description, origin, responsible_name } = body;
-      if (!client_account_id || !title || !description) return json(res,400,{ error:"missing_fields" });
-      if (String(title).length <5 || String(title).length>200) return json(res,400,{ error:"title_5_200" });
-      if (String(description).length <10 || String(description).length>2000) return json(res,400,{ error:"description_10_2000" });
+      if (!client_account_id || !title || !description) return json(res, 400, { error: "missing_fields" });
+      if (String(title).length < 5 || String(title).length > 200) return json(res, 400, { error: "title_5_200" });
+      if (String(description).length < 10 || String(description).length > 2000) return json(res, 400, { error: "description_10_2000" });
       const protocol = generateProtocol("SRV-CLI");
       const { rows } = await pool.query(
-        `INSERT INTO cli_service_requests (protocol, client_account_id, contract_id, contact_id, title, description, origin, responsible_name, created_by_identity)
+        `INSERT INTO cli_service_requests
+           (protocol, client_account_id, contract_id, contact_id, title, description, origin, responsible_name, created_by_identity)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-        [protocol, client_account_id, contract_id||null, contact_id||null, title, description, origin||'portal_cliente', responsible_name||null, session.identityId||null]
+        [protocol, client_account_id, contract_id || null, contact_id || null, title, description,
+          origin || "portal_cliente", responsible_name || null, session.identityId || null],
       );
-      // gera oportunidade CRM com origem e responsável
-      let crmOpportunityId = null;
-      try {
-        // tenta inserir em crm_opportunities se existir
-        const crmRes = await pool.query(`SELECT to_regclass('crm_opportunities') as tbl`);
-        if (crmRes.rows[0].tbl) {
-          const opp = await pool.query(
-            `INSERT INTO crm_opportunities (id, client_account_id, title, description, origin, responsible_name, status, created_at) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, 'aberta', NOW()) RETURNING id`,
-            [client_account_id, `Serviço adicional: ${title}`, description, origin||'portal_cliente', responsible_name||null]
-          );
-          crmOpportunityId = opp.rows[0].id;
-          await pool.query(`UPDATE cli_service_requests SET crm_opportunity_id=$2, status='convertida_crm' WHERE id=$1`, [rows[0].id, crmOpportunityId]);
-        }
-      } catch(e) { /* crm pode não existir, mantém solicitação */ }
-      await auditLog({ action:"cli_service_request_create", actor: session.identityId||"unknown", target: rows[0].id, meta:{ protocol, origin, responsible: responsible_name, crm_opportunity_id: crmOpportunityId } });
-      if (crmOpportunityId) await auditLog({ action:"cli_service_request_crm", actor: session.identityId||"unknown", target: rows[0].id, meta:{ crm_opportunity_id: crmOpportunityId } });
-      const updated = await pool.query(`SELECT * FROM cli_service_requests WHERE id=$1`, [rows[0].id]);
-      return json(res,201,{ serviceRequest: updated.rows[0], note:"solicitação gera oportunidade CRM origem responsável" });
+      await auditLog({ action: "cli_service_request_create", actor: session.identityId || "unknown", target: rows[0].id, meta: { protocol, origin, responsible: responsible_name } });
+      return json(res, 201, { serviceRequest: rows[0] });
     }
-    return json(res,405,{ error:"method_not_allowed" });
+    return json(res, 405, { error: "method_not_allowed" });
   }
 
   // CLI-11 satisfação pós-atendimento periódica plano ação risco renovação baseado em fatos
