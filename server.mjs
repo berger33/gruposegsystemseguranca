@@ -2060,6 +2060,7 @@ const cliFinanceApi = createCliFinanceApi({
   },
   sameOrigin,
   requireSession: readSession,
+  requireClientSession: clientAccessApi.readClientSession,
   requireRole: (sess, roles) => {
     const r = (sess.role || sess.userRole || '').toLowerCase();
     return roles.includes(r) || r === 'admin';

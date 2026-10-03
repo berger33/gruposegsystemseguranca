@@ -1,5 +1,16 @@
 # Controle de implementação — SEG System
 
+## Atualização 2026-10-03 — L08 CLI-10 solicitação de serviço adicional
+
+- Sincronização: PR #89 confirmada como `MERGED` no merge commit `f67c5ffe5d5fe30825167b34c99b35733e3df6d9`; `origin/main` e a branch da sessão partiram desse mesmo SHA.
+- Entrega: jornada real em `/cliente/app/solicitacoes` e `/api/client/service-requests`, com sessão cliente, same-origin, grant e conta ativa revalidados no servidor, contrato opcional limitado ao vínculo e consulta restrita à identidade/conta autenticada.
+- Persistência: `cli_service_requests` continua como fonte canônica da solicitação e `crm_opportunities` como fonte canônica da oportunidade. A criação é uma única transação com protocolo, origem `portal_cliente`, conta, contrato opcional, responsável real do CRM, histórico inicial, auditoria obrigatória e idempotência por identidade.
+- Migração: `141-l08-cli10-service-request-portal.sql`, somente aditiva; 001–140 não foram alteradas. Ela registra vínculo explícito `client_accounts.crm_company_id`, backfill conservador por documento, autoria do responsável e chave/fingerprint de idempotência.
+- Limite de negócio: a solicitação abre oportunidade em estágio `novo` para análise, sem criar ou alterar contrato, cobrança ou obrigação.
+- CLI-11 e CLI-12 não foram promovidos neste lote; APIs/componentes administrativos preexistentes não foram contados como jornada cliente.
+- Validação rápida: teste focal CLI-10 3/3, Wave 0 estático 5/5 e typecheck OK; suíte unitária e build registrados no relatório de entrega.
+- A homologação final Windows continua pendente e adiada até o fechamento integral do sistema.
+
 ## Atualização 2026-10-03 — L08 CLI-09 leitura privada de cobranças
 
 - Base confirmada em `origin/main`/`HEAD`: `e7b18cd52a68286d08b79ee4a642443cc5426b7a`, contendo o merge da PR #88.
