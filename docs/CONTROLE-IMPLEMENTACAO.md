@@ -643,3 +643,15 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 - **Validação:** estático 5/5 OK, typecheck OK (`tsc --noEmit`), unitários 196/196 OK, build 78 páginas OK (`next build` Turbopack).
 - **Classificação:** implementação local + validação estática/unitária/build. Aceite humano local de Marcelo e Andreia sobre L07 preservado; homologação Windows continua pendente e adiada até o fechamento integral.
 - **Não promovidos:** CLI-06..15, EXT-01..17, órfãos `/admin/ti`, fornecedor restrito e integrações externas. Próximo passo: PR contra main para revisão humana; sem merge automático.
+
+## Promoção canônica CLI-06..08 — 03/10/2026
+
+- **Lote/base:** L08 pós-merge da PR #87, baseado na `main` oficial em `49b49b9192f83a058adc29b9567851119f829991`. Branch de trabalho: `arena/01a1000c-gruposegsystemseguranca`.
+- **Confirmação remota:** PR #87 `MERGED` (merge commit `49b49b9192f83a058adc29b9567851119f829991`, head `b5485f7c8437f491bc9428c9be16107f4cb0061f`); PR #85 `MERGED` (merge commit `8eae38ae7ce84b9a824a63d469d36e03a3b0a5c0`); `HEAD...origin/main` = `0 0`; `git merge-base --is-ancestor b5485f7 origin/main` = `0` após fetch do objeto no clone raso.
+- **Mudança:** CLI-06..08 promovidos sobre o espaço real do cliente: ciclo de chamado com `waiting_client`, reabertura motivada e pausas de SLA; agenda canônica de visitas/manutenções com confirmação e reagendamento; relatórios de execução/medição/aceite com revisão staff, publicação ao cliente e aceite/ciência autenticado.
+- **Migração:** `140-l08-cli06-08-lifecycle-visits-reports.sql` aditiva; 001–139 permanecem imutáveis; próxima livre **141**. Migrador PG e qa-wave0-static atualizados para 001–140.
+- **APIs:** `/api/client/tickets/:id/reopen`, `/api/client/visits`, `/api/client/visits/:id`, `/api/client/reports`, `/api/client/reports/:id/acknowledge`, `/api/admin/client-visits`, `/api/admin/client-visits/:id`, `/api/admin/client-reports`, `/api/admin/client-reports/:id`, além do hardening do PATCH de `/api/admin/tickets/:id`.
+- **UI:** `/cliente/app/chamados` com reabertura e pausa de SLA visível; novas páginas `/cliente/app/agenda` e `/cliente/app/relatorios`; navegação do portal atualizada; `/admin/clientes` passa a ter seções funcionais de visitas e relatórios (`VisitsSection.tsx`, `ReportsSection.tsx`) além do status `Aguardando cliente` nos chamados.
+- **Validação rápida:** `npm ci` OK; `node scripts/qa-wave0-static.mjs` 5/5 OK; `npm run typecheck` OK; `npm test` 196/196 OK; `npm run build` OK com 80 páginas. `next-env.d.ts` restaurado após build. Pós-PR, a falha dos gates `test:tenant:pg`/`test:l08-delivery:pg` foi corrigida preservando compatibilidade dos chamados com o schema legado L08 até migração 140; ambos passaram localmente (`test:tenant:pg` 22/22; `test:l08-delivery:pg` 51/51).
+- **Classificação:** implementação local + validação estática/unitária/build. Sem matriz pesada L03..L08 em cascata nesta fase por diretriz do proprietário.
+- **Não promovidos neste lote:** CLI-09..15, EXT-01..17, fornecedor restrito, integrações externas e homologação final Windows.

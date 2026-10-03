@@ -19,13 +19,20 @@ import {
   TEXT_LIMITS,
   isAccountStatus,
   isContractStatus,
+  isReportStatus,
   isTicketStatus,
+  isVisitStatus,
   validateAccountInput,
   validateContractInput,
   validateDocumentMeta,
   validateReason,
   validateScopeNote,
   validateTicketInput,
+  validateTicketReopenReason,
+  validateVisitInput,
+  validateVisitReschedule,
+  validateReportInput,
+  validateReportNote,
 } from "../lib/client-space-core.mjs";
 import { PUBLIC_SERVICES } from "../lib/service-catalog.mjs";
 
@@ -62,7 +69,7 @@ function isValidServiceName(value) {
 export function createClientSpaceApi(ctx) {
   function databaseFailure(res, error, context) {
     const unconfigured = error instanceof Error && error.message === "DATABASE_NOT_CONFIGURED";
-    const migrationMissing = error && typeof error === "object" && error.code === "42P01";
+    const migrationMissing = error && typeof error === "object" && ["42P01", "42703"].includes(error.code);
     const auditUnavailable = error instanceof AuditUnavailableError || (error && typeof error === "object" && error.code === "AUDIT_UNAVAILABLE");
     const generic = {
       error: auditUnavailable
@@ -232,6 +239,134 @@ export function createClientSpaceApi(ctx) {
     return { limit, offset };
   }
 
+  function optionalUuid(value) {
+    const text = String(value || "").trim();
+    if (!text) return { value: null };
+    if (!UUID_PATTERN.test(text)) return { error: "invalid_uuid" };
+    return { value: text };
+  }
+
+  function roleActor(session) {
+    return session.role === "ti" ? "ti" : "marcelo";
+  }
+
+  const LEGACY_TICKET_STATUSES = new Set(["open", "in_progress", "resolved", "closed"]);
+
+  async function clientTicketLifecycleReady(db) {
+    const result = await db.query(
+      `SELECT
+         EXISTS (
+           SELECT 1 FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'client_tickets' AND column_name = 'reopen_count'
+         )
+         AND to_regclass('public.client_ticket_sla_pauses') IS NOT NULL AS ready`,
+    );
+    return Boolean(result.rows[0]?.ready);
+  }
+
+  async function ensureAccountExists(db, res, accountId) {
+    try {
+      const found = await db.query("SELECT id FROM client_accounts WHERE id = $1", [accountId]);
+      if (!found.rows[0]) {
+        ctx.json(res, 404, { error: "account_not_found" });
+        return false;
+      }
+      return true;
+    } catch (error) {
+      databaseFailure(res, error, "Could not validate the client account.");
+      return false;
+    }
+  }
+
+  async function validateClientRefs(db, res, { accountId, contractId = null, ticketId = null, visitId = null }) {
+    try {
+      if (contractId) {
+        const contract = await db.query("SELECT id FROM client_contracts WHERE id = $1 AND client_account_id = $2", [contractId, accountId]);
+        if (!contract.rows[0]) {
+          ctx.json(res, 400, { error: "contract_account_mismatch" });
+          return false;
+        }
+      }
+      if (ticketId) {
+        const ticket = await db.query("SELECT id FROM client_tickets WHERE id = $1 AND client_account_id = $2", [ticketId, accountId]);
+        if (!ticket.rows[0]) {
+          ctx.json(res, 400, { error: "ticket_account_mismatch" });
+          return false;
+        }
+      }
+      if (visitId) {
+        const visit = await db.query("SELECT id FROM client_visits WHERE id = $1 AND client_account_id = $2", [visitId, accountId]);
+        if (!visit.rows[0]) {
+          ctx.json(res, 400, { error: "visit_account_mismatch" });
+          return false;
+        }
+      }
+      return true;
+    } catch (error) {
+      databaseFailure(res, error, "Could not validate scoped client references.");
+      return false;
+    }
+  }
+
+  async function pauseTicketSla(client, { ticketId, actorKind, actorId, reason = "waiting_client", notes = null }) {
+    const inserted = await client.query(
+      `INSERT INTO client_ticket_sla_pauses (ticket_id, reason, notes, paused_by, paused_by_identity)
+       SELECT $1,$2,$3,$4,$5
+       WHERE NOT EXISTS (
+         SELECT 1 FROM client_ticket_sla_pauses WHERE ticket_id = $1 AND resumed_at IS NULL
+       )
+       RETURNING id`,
+      [ticketId, reason, notes, actorKind, actorId],
+    );
+    await client.query(
+      "UPDATE client_tickets SET sla_paused_at = COALESCE(sla_paused_at, NOW()), sla_pause_reason = $2 WHERE id = $1",
+      [ticketId, reason],
+    );
+    return inserted.rows[0]?.id ?? null;
+  }
+
+  async function resumeTicketSla(client, { ticketId, actorKind, actorId }) {
+    const resumed = await client.query(
+      `UPDATE client_ticket_sla_pauses
+          SET resumed_by = $2, resumed_by_identity = $3, resumed_at = NOW()
+        WHERE id = (
+          SELECT id FROM client_ticket_sla_pauses
+           WHERE ticket_id = $1 AND resumed_at IS NULL
+           ORDER BY paused_at DESC LIMIT 1
+        )
+        RETURNING id, EXTRACT(EPOCH FROM (resumed_at - paused_at))::BIGINT AS paused_seconds`,
+      [ticketId, actorKind, actorId],
+    );
+    const seconds = Number(resumed.rows[0]?.paused_seconds || 0);
+    await client.query(
+      `UPDATE client_tickets
+          SET sla_total_paused_seconds = sla_total_paused_seconds + $2,
+              sla_paused_at = NULL,
+              sla_pause_reason = NULL
+        WHERE id = $1`,
+      [ticketId, seconds],
+    );
+    return resumed.rows[0]?.id ?? null;
+  }
+
+  function requireVisitStatus(body, res) {
+    const status = String(body?.status || "");
+    if (!isVisitStatus(status)) {
+      ctx.json(res, 400, { error: "visit_status_invalid" });
+      return null;
+    }
+    return status;
+  }
+
+  function requireReportStatus(body, res) {
+    const status = String(body?.status || "");
+    if (!isReportStatus(status)) {
+      ctx.json(res, 400, { error: "report_status_invalid" });
+      return null;
+    }
+    return status;
+  }
+
   // ---------- espaço do cliente autenticado ----------
 
   async function handleClientAccounts(req, res) {
@@ -391,11 +526,29 @@ export function createClientSpaceApi(ctx) {
       const db = ctx.getPool();
       if (!(await requireAccountScope(db, { req, res, session, accountId, action: "ticket_list" }))) return;
       try {
-        const result = await db.query(
-          `SELECT id, category, title, details, status, admin_response, created_at, updated_at
-           FROM client_tickets WHERE client_account_id = $1 ORDER BY created_at DESC`,
-          [accountId],
-        );
+        let result;
+        try {
+          result = await db.query(
+            `SELECT id, category, title, details, status, admin_response, created_at, updated_at,
+                    sla_due_at, sla_paused_at, sla_pause_reason, sla_total_paused_seconds,
+                    reopen_count, last_reopen_reason, resolved_at, closed_at
+             FROM client_tickets WHERE client_account_id = $1 ORDER BY created_at DESC`,
+            [accountId],
+          );
+        } catch (error) {
+          if (!error || typeof error !== "object" || error.code !== "42703") throw error;
+          // CI gates L08 apply the canonical CLI-01..05 schema through migration 139 only.
+          // Keep existing promoted reads green there while migration 140 rolls out.
+          result = await db.query(
+            `SELECT id, category, title, details, status, admin_response, created_at, updated_at,
+                    NULL::timestamptz AS sla_due_at, NULL::timestamptz AS sla_paused_at,
+                    NULL::text AS sla_pause_reason, 0::bigint AS sla_total_paused_seconds,
+                    0::int AS reopen_count, NULL::text AS last_reopen_reason,
+                    NULL::timestamptz AS resolved_at, NULL::timestamptz AS closed_at
+             FROM client_tickets WHERE client_account_id = $1 ORDER BY created_at DESC`,
+            [accountId],
+          );
+        }
         return ctx.json(res, 200, { tickets: result.rows });
       } catch (error) {
         return databaseFailure(res, error, "Could not list the client tickets.");
@@ -486,6 +639,269 @@ export function createClientSpaceApi(ctx) {
       }
     }
     return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, POST" });
+  }
+
+  async function handleClientTicketReopen(req, res, ticketId) {
+    if (!requireMethod(req, res, ["PATCH"])) return;
+    if (!requireSameOrigin(req, res)) return;
+    const session = await requireClientSession(req, res);
+    if (!session) return;
+    if (!UUID_PATTERN.test(ticketId)) return ctx.json(res, 400, { error: "invalid_ticket_id" });
+    const body = await readJsonOr400(req, res);
+    if (body === undefined) return;
+    const reason = validateTicketReopenReason(body?.reason);
+    if (reason.error) return ctx.json(res, 400, { error: reason.error });
+    const db = ctx.getPool();
+    let current;
+    try {
+      const found = await db.query("SELECT id, client_account_id, status FROM client_tickets WHERE id = $1", [ticketId]);
+      current = found.rows[0];
+    } catch (error) {
+      return databaseFailure(res, error, "Could not load the client ticket for reopen.");
+    }
+    if (!current) return ctx.json(res, 404, { error: "ticket_not_found" });
+    if (!(await requireAccountScope(db, { req, res, session, accountId: current.client_account_id, action: "ticket_reopen" }))) return;
+    if (!["resolved", "closed"].includes(current.status)) return ctx.json(res, 409, { error: "ticket_reopen_only_resolved_or_closed" });
+
+    let client;
+    try {
+      client = await db.connect();
+      await client.query("BEGIN");
+      const locked = await client.query("SELECT status FROM client_tickets WHERE id = $1 FOR UPDATE", [ticketId]);
+      const previousStatus = locked.rows[0]?.status;
+      if (!previousStatus) {
+        await client.query("ROLLBACK");
+        return ctx.json(res, 404, { error: "ticket_not_found" });
+      }
+      if (!["resolved", "closed"].includes(previousStatus)) {
+        await client.query("ROLLBACK");
+        return ctx.json(res, 409, { error: "ticket_reopen_only_resolved_or_closed" });
+      }
+      await client.query(
+        `UPDATE client_tickets
+            SET status = 'open',
+                reopen_count = reopen_count + 1,
+                last_reopen_reason = $2,
+                resolved_at = NULL,
+                closed_at = NULL,
+                updated_at = NOW()
+          WHERE id = $1`,
+        [ticketId, reason.value],
+      );
+      await client.query(
+        `INSERT INTO client_ticket_status_audit
+           (ticket_id, previous_status, next_status, changed_by, changed_by_identity, reason, is_reopen)
+         VALUES ($1,$2,'open','client',$3,$4,TRUE)`,
+        [ticketId, previousStatus, session.identityId, reason.value],
+      );
+      await audit(client, { actorKind: "client", actorId: session.identityId, action: "ticket_reopen", target: ticketId, result: "allowed" });
+      await client.query("COMMIT");
+      return ctx.json(res, 200, { ticketId, previousStatus, status: "open", reopened: true });
+    } catch (error) {
+      await rollback(client);
+      return databaseFailure(res, error, "Could not reopen the client ticket.");
+    } finally {
+      client?.release();
+    }
+  }
+
+  async function handleClientVisits(req, res, url) {
+    const session = await requireClientSession(req, res);
+    if (!session) return;
+    if (req.method === "GET") {
+      const accountId = String(url.searchParams.get("account") || "");
+      if (!UUID_PATTERN.test(accountId)) return ctx.json(res, 400, { error: "invalid_account_id" });
+      const status = url.searchParams.get("status");
+      if (status && !isVisitStatus(status)) return ctx.json(res, 400, { error: "visit_status_invalid" });
+      const db = ctx.getPool();
+      if (!(await requireAccountScope(db, { req, res, session, accountId, action: "visit_list" }))) return;
+      try {
+        const values = [accountId];
+        const statusSql = status ? " AND status = $2" : "";
+        if (status) values.push(status);
+        const result = await db.query(
+          `SELECT id, client_account_id, contract_id, ticket_id, visit_type, title, details,
+                  scheduled_at, status, confirmed_at, rescheduled_from, rescheduled_to,
+                  reschedule_reason, responsible_name, location, created_at, updated_at
+             FROM client_visits
+            WHERE client_account_id = $1${statusSql}
+            ORDER BY scheduled_at ASC LIMIT 100`,
+          values,
+        );
+        await audit(db, { actorKind: "client", actorId: session.identityId, action: "visit_list", target: accountId, result: "allowed" });
+        return ctx.json(res, 200, { visits: result.rows });
+      } catch (error) {
+        return databaseFailure(res, error, "Could not list client visits.");
+      }
+    }
+    return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
+  }
+
+  async function handleClientVisitUpdate(req, res, visitId) {
+    if (!requireMethod(req, res, ["PATCH"])) return;
+    if (!requireSameOrigin(req, res)) return;
+    const session = await requireClientSession(req, res);
+    if (!session) return;
+    if (!UUID_PATTERN.test(visitId)) return ctx.json(res, 400, { error: "invalid_visit_id" });
+    const body = await readJsonOr400(req, res);
+    if (body === undefined) return;
+    const status = requireVisitStatus(body, res);
+    if (!status) return;
+    if (!["confirmed", "rescheduled"].includes(status)) return ctx.json(res, 403, { error: "client_visit_action_not_allowed" });
+    const reschedule = status === "rescheduled" ? validateVisitReschedule({ rescheduledTo: body?.rescheduledTo, reason: body?.reason }) : null;
+    if (reschedule?.error) return ctx.json(res, 400, { error: reschedule.error });
+    const db = ctx.getPool();
+    let current;
+    try {
+      const found = await db.query("SELECT * FROM client_visits WHERE id = $1", [visitId]);
+      current = found.rows[0];
+    } catch (error) {
+      return databaseFailure(res, error, "Could not load the client visit.");
+    }
+    if (!current) return ctx.json(res, 404, { error: "visit_not_found" });
+    if (!(await requireAccountScope(db, { req, res, session, accountId: current.client_account_id, action: "visit_status" }))) return;
+    if (["completed", "cancelled", "no_show"].includes(current.status)) return ctx.json(res, 409, { error: "visit_final_status" });
+
+    let client;
+    try {
+      client = await db.connect();
+      await client.query("BEGIN");
+      const locked = await client.query("SELECT * FROM client_visits WHERE id = $1 FOR UPDATE", [visitId]);
+      const previous = locked.rows[0];
+      if (!previous) {
+        await client.query("ROLLBACK");
+        return ctx.json(res, 404, { error: "visit_not_found" });
+      }
+      if (["completed", "cancelled", "no_show"].includes(previous.status)) {
+        await client.query("ROLLBACK");
+        return ctx.json(res, 409, { error: "visit_final_status" });
+      }
+      if (status === "confirmed") {
+        await client.query(
+          "UPDATE client_visits SET status = 'confirmed', confirmed_at = NOW() WHERE id = $1",
+          [visitId],
+        );
+        await client.query(
+          `INSERT INTO client_visit_status_audit
+             (visit_id, previous_status, next_status, changed_by, changed_by_identity, reason)
+           VALUES ($1,$2,'confirmed','client',$3,$4)`,
+          [visitId, previous.status, session.identityId, "Confirmação pelo cliente"],
+        );
+      } else {
+        await client.query(
+          `UPDATE client_visits
+              SET status = 'rescheduled', scheduled_at = $2, rescheduled_from = $3,
+                  rescheduled_to = $2, reschedule_reason = $4
+            WHERE id = $1`,
+          [visitId, reschedule.value.rescheduledTo, previous.scheduled_at, reschedule.value.reason],
+        );
+        await client.query(
+          `INSERT INTO client_visit_status_audit
+             (visit_id, previous_status, next_status, changed_by, changed_by_identity, reason, scheduled_from, scheduled_to)
+           VALUES ($1,$2,'rescheduled','client',$3,$4,$5,$6)`,
+          [visitId, previous.status, session.identityId, reschedule.value.reason, previous.scheduled_at, reschedule.value.rescheduledTo],
+        );
+      }
+      await audit(client, { actorKind: "client", actorId: session.identityId, action: "visit_status", target: visitId, result: "allowed" });
+      await client.query("COMMIT");
+      const updated = await db.query("SELECT * FROM client_visits WHERE id = $1", [visitId]);
+      return ctx.json(res, 200, { visit: updated.rows[0] });
+    } catch (error) {
+      await rollback(client);
+      return databaseFailure(res, error, "Could not update the client visit.");
+    } finally {
+      client?.release();
+    }
+  }
+
+  async function handleClientReports(req, res, url) {
+    const session = await requireClientSession(req, res);
+    if (!session) return;
+    if (req.method === "GET") {
+      const accountId = String(url.searchParams.get("account") || "");
+      if (!UUID_PATTERN.test(accountId)) return ctx.json(res, 400, { error: "invalid_account_id" });
+      const db = ctx.getPool();
+      if (!(await requireAccountScope(db, { req, res, session, accountId, action: "report_list" }))) return;
+      try {
+        const result = await db.query(
+          `SELECT id, client_account_id, contract_id, visit_id, report_type, title, summary,
+                  period_start, period_end, status, review_notes, reviewed_at, approved_at,
+                  sent_at, acknowledged_at, acknowledgement_note, created_at, updated_at
+             FROM client_reports
+            WHERE client_account_id = $1 AND status IN ('approved','sent','acknowledged')
+            ORDER BY COALESCE(period_end, created_at::date) DESC, created_at DESC LIMIT 100`,
+          [accountId],
+        );
+        await audit(db, { actorKind: "client", actorId: session.identityId, action: "report_list", target: accountId, result: "allowed" });
+        return ctx.json(res, 200, { reports: result.rows });
+      } catch (error) {
+        return databaseFailure(res, error, "Could not list client reports.");
+      }
+    }
+    return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
+  }
+
+  async function handleClientReportAcknowledge(req, res, reportId) {
+    if (!requireMethod(req, res, ["PATCH"])) return;
+    if (!requireSameOrigin(req, res)) return;
+    const session = await requireClientSession(req, res);
+    if (!session) return;
+    if (!UUID_PATTERN.test(reportId)) return ctx.json(res, 400, { error: "invalid_report_id" });
+    const body = await readJsonOr400(req, res);
+    if (body === undefined) return;
+    const note = validateReportNote(body?.note, { field: "report_acknowledgement" });
+    if (note.error) return ctx.json(res, 400, { error: note.error });
+    const db = ctx.getPool();
+    let current;
+    try {
+      const found = await db.query("SELECT * FROM client_reports WHERE id = $1", [reportId]);
+      current = found.rows[0];
+    } catch (error) {
+      return databaseFailure(res, error, "Could not load the client report.");
+    }
+    if (!current) return ctx.json(res, 404, { error: "report_not_found" });
+    if (!(await requireAccountScope(db, { req, res, session, accountId: current.client_account_id, action: "report_acknowledge" }))) return;
+    if (!['approved','sent','acknowledged'].includes(current.status)) return ctx.json(res, 403, { error: "report_not_published" });
+    if (current.status === "acknowledged") return ctx.json(res, 200, { reportId, status: "acknowledged", replayed: true });
+
+    let client;
+    try {
+      client = await db.connect();
+      await client.query("BEGIN");
+      const locked = await client.query("SELECT status FROM client_reports WHERE id = $1 FOR UPDATE", [reportId]);
+      const previousStatus = locked.rows[0]?.status;
+      if (!previousStatus) {
+        await client.query("ROLLBACK");
+        return ctx.json(res, 404, { error: "report_not_found" });
+      }
+      if (!['approved','sent'].includes(previousStatus)) {
+        await client.query("ROLLBACK");
+        return previousStatus === "acknowledged"
+          ? ctx.json(res, 200, { reportId, status: "acknowledged", replayed: true })
+          : ctx.json(res, 403, { error: "report_not_published" });
+      }
+      await client.query(
+        `UPDATE client_reports
+            SET status = 'acknowledged', acknowledged_by_identity = $2,
+                acknowledged_at = NOW(), acknowledgement_note = $3
+          WHERE id = $1`,
+        [reportId, session.identityId, note.value],
+      );
+      await client.query(
+        `INSERT INTO client_report_status_audit
+           (report_id, previous_status, next_status, changed_by, changed_by_identity, reason)
+         VALUES ($1,$2,'acknowledged','client',$3,$4)`,
+        [reportId, previousStatus, session.identityId, note.value],
+      );
+      await audit(client, { actorKind: "client", actorId: session.identityId, action: "report_acknowledge", target: reportId, result: "allowed" });
+      await client.query("COMMIT");
+      return ctx.json(res, 200, { reportId, previousStatus, status: "acknowledged", replayed: false });
+    } catch (error) {
+      await rollback(client);
+      return databaseFailure(res, error, "Could not acknowledge the client report.");
+    } finally {
+      client?.release();
+    }
   }
 
   // ---------- administração (Marcelo/TI) ----------
@@ -962,15 +1378,35 @@ export function createClientSpaceApi(ctx) {
         conditions.push(`t.client_account_id = $${values.length}`);
       }
       const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-      const result = await ctx.getPool().query(
-        `SELECT t.id, t.client_account_id, a.display_name AS account_name, i.email AS opened_by_email,
-                t.category, t.title, t.details, t.status, t.admin_response, t.created_at, t.updated_at
-         FROM client_tickets t
-         JOIN client_accounts a ON a.id = t.client_account_id
-         JOIN auth_identities i ON i.id = t.opened_by_identity
-         ${where} ORDER BY t.created_at DESC LIMIT 200`,
-        values,
-      );
+      let result;
+      try {
+        result = await ctx.getPool().query(
+          `SELECT t.id, t.client_account_id, a.display_name AS account_name, i.email AS opened_by_email,
+                  t.category, t.title, t.details, t.status, t.admin_response, t.created_at, t.updated_at,
+                  t.sla_due_at, t.sla_paused_at, t.sla_pause_reason, t.sla_total_paused_seconds,
+                  t.reopen_count, t.last_reopen_reason, t.resolved_at, t.closed_at
+           FROM client_tickets t
+           JOIN client_accounts a ON a.id = t.client_account_id
+           JOIN auth_identities i ON i.id = t.opened_by_identity
+           ${where} ORDER BY t.created_at DESC LIMIT 200`,
+          values,
+        );
+      } catch (error) {
+        if (!error || typeof error !== "object" || error.code !== "42703") throw error;
+        result = await ctx.getPool().query(
+          `SELECT t.id, t.client_account_id, a.display_name AS account_name, i.email AS opened_by_email,
+                  t.category, t.title, t.details, t.status, t.admin_response, t.created_at, t.updated_at,
+                  NULL::timestamptz AS sla_due_at, NULL::timestamptz AS sla_paused_at,
+                  NULL::text AS sla_pause_reason, 0::bigint AS sla_total_paused_seconds,
+                  0::int AS reopen_count, NULL::text AS last_reopen_reason,
+                  NULL::timestamptz AS resolved_at, NULL::timestamptz AS closed_at
+           FROM client_tickets t
+           JOIN client_accounts a ON a.id = t.client_account_id
+           JOIN auth_identities i ON i.id = t.opened_by_identity
+           ${where} ORDER BY t.created_at DESC LIMIT 200`,
+          values,
+        );
+      }
       return ctx.json(res, 200, { tickets: result.rows });
     } catch (error) {
       return databaseFailure(res, error, "Could not list the client tickets.");
@@ -988,7 +1424,50 @@ export function createClientSpaceApi(ctx) {
     if (!isTicketStatus(body?.status)) return ctx.json(res, 400, { error: "ticket_status_invalid" });
     const responseText = typeof body?.adminResponse === "string" ? body.adminResponse.trim() : "";
     if (responseText.length > TEXT_LIMITS.ticketResponse) return ctx.json(res, 400, { error: "ticket_response_too_long" });
+    const status = String(body.status);
+    const reasonText = typeof body?.reason === "string" ? body.reason.trim() : "";
+    const reopenReason = validateTicketReopenReason(body?.reopenReason || body?.reason);
     const db = ctx.getPool();
+    let lifecycleReady;
+    try {
+      lifecycleReady = await clientTicketLifecycleReady(db);
+    } catch (error) {
+      return databaseFailure(res, error, "Could not verify the client ticket lifecycle schema.");
+    }
+    if (!lifecycleReady) {
+      if (!LEGACY_TICKET_STATUSES.has(status)) return ctx.json(res, 503, { error: "migration_required" });
+      let legacyClient;
+      try {
+        legacyClient = await db.connect();
+        await legacyClient.query("BEGIN");
+        const current = await legacyClient.query("SELECT status FROM client_tickets WHERE id = $1 FOR UPDATE", [ticketId]);
+        if (!current.rows[0]) {
+          await legacyClient.query("ROLLBACK");
+          return ctx.json(res, 404, { error: "ticket_not_found" });
+        }
+        const previousStatus = current.rows[0].status;
+        await legacyClient.query(
+          "UPDATE client_tickets SET status = $2, admin_response = COALESCE(NULLIF($3, ''), admin_response), updated_at = NOW() WHERE id = $1",
+          [ticketId, status, responseText],
+        );
+        if (previousStatus !== status) {
+          await legacyClient.query(
+            `INSERT INTO client_ticket_status_audit
+               (ticket_id, previous_status, next_status, changed_by, changed_by_identity)
+             VALUES ($1,$2,$3,$4,$5)`,
+            [ticketId, previousStatus, status, roleActor(session), session.identityId],
+          );
+        }
+        await audit(legacyClient, { actorKind: roleActor(session), actorId: session.identityId, action: "ticket_status", target: ticketId, result: "allowed" });
+        await legacyClient.query("COMMIT");
+        return ctx.json(res, 200, { ticketId, previousStatus, status, isReopen: false });
+      } catch (error) {
+        await rollback(legacyClient);
+        return databaseFailure(res, error, "Could not update the legacy client ticket.");
+      } finally {
+        legacyClient?.release();
+      }
+    }
     let client;
     try {
       client = await db.connect();
@@ -999,24 +1478,358 @@ export function createClientSpaceApi(ctx) {
         return ctx.json(res, 404, { error: "ticket_not_found" });
       }
       const previousStatus = current.rows[0].status;
+      const isReopen = ["resolved", "closed"].includes(previousStatus) && ["open", "in_progress"].includes(status);
+      if (isReopen && reopenReason.error) {
+        await client.query("ROLLBACK");
+        return ctx.json(res, 400, { error: reopenReason.error });
+      }
+      let slaPauseId = null;
+      if (status === "waiting_client" && previousStatus !== "waiting_client") {
+        slaPauseId = await pauseTicketSla(client, {
+          ticketId,
+          actorKind: roleActor(session),
+          actorId: session.identityId,
+          reason: "waiting_client",
+          notes: reasonText || responseText || "Aguardando retorno do cliente",
+        });
+      }
+      if (previousStatus === "waiting_client" && status !== "waiting_client") {
+        slaPauseId = await resumeTicketSla(client, {
+          ticketId,
+          actorKind: roleActor(session),
+          actorId: session.identityId,
+        });
+      }
       await client.query(
-        "UPDATE client_tickets SET status = $2, admin_response = COALESCE(NULLIF($3, ''), admin_response), updated_at = NOW() WHERE id = $1",
-        [ticketId, body.status, responseText],
+        `UPDATE client_tickets
+            SET status = $2,
+                admin_response = COALESCE(NULLIF($3, ''), admin_response),
+                reopen_count = CASE WHEN $4 THEN reopen_count + 1 ELSE reopen_count END,
+                last_reopen_reason = CASE WHEN $4 THEN $5 ELSE last_reopen_reason END,
+                resolved_at = CASE WHEN $2 = 'resolved' THEN NOW()
+                                   WHEN $2 IN ('open','in_progress','waiting_client') THEN NULL
+                                   ELSE resolved_at END,
+                closed_at = CASE WHEN $2 = 'closed' THEN NOW()
+                                 WHEN $2 IN ('open','in_progress','waiting_client','resolved') THEN NULL
+                                 ELSE closed_at END,
+                updated_at = NOW()
+          WHERE id = $1`,
+        [ticketId, status, responseText, isReopen, isReopen ? reopenReason.value : null],
       );
-      if (previousStatus !== body.status) {
+      if (previousStatus !== status) {
         await client.query(
           `INSERT INTO client_ticket_status_audit
-             (ticket_id, previous_status, next_status, changed_by, changed_by_identity)
-           VALUES ($1,$2,$3,$4,$5)`,
-          [ticketId, previousStatus, body.status, session.role, session.identityId],
+             (ticket_id, previous_status, next_status, changed_by, changed_by_identity, reason, is_reopen, sla_pause_id)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+          [ticketId, previousStatus, status, roleActor(session), session.identityId, isReopen ? reopenReason.value : (reasonText || null), isReopen, slaPauseId],
         );
       }
-      await audit(client, { actorKind: session.role, actorId: session.identityId, action: "ticket_status", target: ticketId, result: "allowed" });
+      await audit(client, { actorKind: roleActor(session), actorId: session.identityId, action: isReopen ? "ticket_reopen" : "ticket_status", target: ticketId, result: "allowed" });
       await client.query("COMMIT");
-      return ctx.json(res, 200, { ticketId, previousStatus, status: body.status });
+      return ctx.json(res, 200, { ticketId, previousStatus, status, isReopen });
     } catch (error) {
       if (client) await client.query("ROLLBACK").catch(() => {});
       return databaseFailure(res, error, "Could not update the client ticket.");
+    } finally {
+      client?.release();
+    }
+  }
+
+  async function handleAdminVisits(req, res, url) {
+    const session = await requireAdminSession(req, res);
+    if (!session) return;
+    const db = ctx.getPool();
+    if (req.method === "GET") {
+      const status = url.searchParams.get("status");
+      if (status && !isVisitStatus(status)) return ctx.json(res, 400, { error: "visit_status_invalid" });
+      const accountId = url.searchParams.get("account");
+      if (accountId && !UUID_PATTERN.test(accountId)) return ctx.json(res, 400, { error: "invalid_account_id" });
+      const values = [];
+      const conditions = [];
+      if (status) { values.push(status); conditions.push(`v.status = $${values.length}`); }
+      if (accountId) { values.push(accountId); conditions.push(`v.client_account_id = $${values.length}`); }
+      const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+      try {
+        const result = await db.query(
+          `SELECT v.*, a.display_name AS account_name, c.title AS contract_title, t.title AS ticket_title
+             FROM client_visits v
+             JOIN client_accounts a ON a.id = v.client_account_id
+             LEFT JOIN client_contracts c ON c.id = v.contract_id
+             LEFT JOIN client_tickets t ON t.id = v.ticket_id
+             ${where}
+            ORDER BY v.scheduled_at DESC LIMIT 200`,
+          values,
+        );
+        return ctx.json(res, 200, { visits: result.rows });
+      } catch (error) {
+        return databaseFailure(res, error, "Could not list client visits for admin.");
+      }
+    }
+    if (req.method === "POST") {
+      if (!requireSameOrigin(req, res)) return;
+      const body = await readJsonOr400(req, res);
+      if (body === undefined) return;
+      const input = validateVisitInput({
+        accountId: body?.accountId,
+        contractId: body?.contractId,
+        ticketId: body?.ticketId,
+        visitType: body?.visitType,
+        title: body?.title,
+        details: body?.details,
+        scheduledAt: body?.scheduledAt,
+        responsibleName: body?.responsibleName,
+        location: body?.location,
+      });
+      if (input.error) return ctx.json(res, 400, { error: input.error });
+      if (!UUID_PATTERN.test(input.value.accountId)) return ctx.json(res, 400, { error: "invalid_account_id" });
+      const contract = optionalUuid(input.value.contractId); if (contract.error) return ctx.json(res, 400, { error: "invalid_contract_id" });
+      const ticket = optionalUuid(input.value.ticketId); if (ticket.error) return ctx.json(res, 400, { error: "invalid_ticket_id" });
+      if (!(await ensureAccountExists(db, res, input.value.accountId))) return;
+      if (!(await validateClientRefs(db, res, { accountId: input.value.accountId, contractId: contract.value, ticketId: ticket.value }))) return;
+      let client;
+      try {
+        client = await db.connect();
+        await client.query("BEGIN");
+        const inserted = await client.query(
+          `INSERT INTO client_visits
+             (client_account_id, contract_id, ticket_id, visit_type, title, details, scheduled_at,
+              responsible_name, location, created_by, created_by_identity)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+           RETURNING *`,
+          [input.value.accountId, contract.value, ticket.value, input.value.visitType, input.value.title,
+           input.value.details, input.value.scheduledAt, input.value.responsibleName, input.value.location,
+           roleActor(session), session.identityId],
+        );
+        await client.query(
+          `INSERT INTO client_visit_status_audit
+             (visit_id, previous_status, next_status, changed_by, changed_by_identity, reason, scheduled_to)
+           VALUES ($1,NULL,'scheduled',$2,$3,$4,$5)`,
+          [inserted.rows[0].id, roleActor(session), session.identityId, "Agendamento inicial", input.value.scheduledAt],
+        );
+        await audit(client, { actorKind: roleActor(session), actorId: session.identityId, action: "visit_create", target: inserted.rows[0].id, result: "allowed" });
+        await client.query("COMMIT");
+        return ctx.json(res, 201, { visit: inserted.rows[0] });
+      } catch (error) {
+        await rollback(client);
+        return databaseFailure(res, error, "Could not create the client visit.");
+      } finally {
+        client?.release();
+      }
+    }
+    return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, POST" });
+  }
+
+  async function handleAdminVisitUpdate(req, res, visitId) {
+    if (!requireMethod(req, res, ["PATCH"])) return;
+    if (!requireSameOrigin(req, res)) return;
+    const session = await requireAdminSession(req, res);
+    if (!session) return;
+    if (!UUID_PATTERN.test(visitId)) return ctx.json(res, 400, { error: "invalid_visit_id" });
+    const body = await readJsonOr400(req, res);
+    if (body === undefined) return;
+    const status = requireVisitStatus(body, res);
+    if (!status) return;
+    const reschedule = status === "rescheduled" ? validateVisitReschedule({ rescheduledTo: body?.rescheduledTo, reason: body?.reason }) : null;
+    if (reschedule?.error) return ctx.json(res, 400, { error: reschedule.error });
+    const reasonText = typeof body?.reason === "string" ? body.reason.trim() : "";
+    let client;
+    try {
+      client = await ctx.getPool().connect();
+      await client.query("BEGIN");
+      const current = await client.query("SELECT * FROM client_visits WHERE id = $1 FOR UPDATE", [visitId]);
+      const previous = current.rows[0];
+      if (!previous) {
+        await client.query("ROLLBACK");
+        return ctx.json(res, 404, { error: "visit_not_found" });
+      }
+      if (status === "rescheduled") {
+        await client.query(
+          `UPDATE client_visits
+              SET status = 'rescheduled', scheduled_at = $2, rescheduled_from = $3,
+                  rescheduled_to = $2, reschedule_reason = $4,
+                  responsible_name = COALESCE(NULLIF($5,''), responsible_name),
+                  location = COALESCE(NULLIF($6,''), location)
+            WHERE id = $1`,
+          [visitId, reschedule.value.rescheduledTo, previous.scheduled_at, reschedule.value.reason,
+           String(body?.responsibleName || "").trim(), String(body?.location || "").trim()],
+        );
+        await client.query(
+          `INSERT INTO client_visit_status_audit
+             (visit_id, previous_status, next_status, changed_by, changed_by_identity, reason, scheduled_from, scheduled_to)
+           VALUES ($1,$2,'rescheduled',$3,$4,$5,$6,$7)`,
+          [visitId, previous.status, roleActor(session), session.identityId, reschedule.value.reason, previous.scheduled_at, reschedule.value.rescheduledTo],
+        );
+      } else {
+        await client.query(
+          `UPDATE client_visits
+              SET status = $2,
+                  confirmed_at = CASE WHEN $2 = 'confirmed' THEN COALESCE(confirmed_at, NOW()) ELSE confirmed_at END,
+                  responsible_name = COALESCE(NULLIF($3,''), responsible_name),
+                  location = COALESCE(NULLIF($4,''), location)
+            WHERE id = $1`,
+          [visitId, status, String(body?.responsibleName || "").trim(), String(body?.location || "").trim()],
+        );
+        if (previous.status !== status) {
+          await client.query(
+            `INSERT INTO client_visit_status_audit
+               (visit_id, previous_status, next_status, changed_by, changed_by_identity, reason)
+             VALUES ($1,$2,$3,$4,$5,$6)`,
+            [visitId, previous.status, status, roleActor(session), session.identityId, reasonText || null],
+          );
+        }
+      }
+      await audit(client, { actorKind: roleActor(session), actorId: session.identityId, action: "visit_status", target: visitId, result: "allowed" });
+      await client.query("COMMIT");
+      const updated = await ctx.getPool().query("SELECT * FROM client_visits WHERE id = $1", [visitId]);
+      return ctx.json(res, 200, { visit: updated.rows[0] });
+    } catch (error) {
+      await rollback(client);
+      return databaseFailure(res, error, "Could not update the client visit.");
+    } finally {
+      client?.release();
+    }
+  }
+
+  async function handleAdminReports(req, res, url) {
+    const session = await requireAdminSession(req, res);
+    if (!session) return;
+    const db = ctx.getPool();
+    if (req.method === "GET") {
+      const status = url.searchParams.get("status");
+      if (status && !isReportStatus(status)) return ctx.json(res, 400, { error: "report_status_invalid" });
+      const accountId = url.searchParams.get("account");
+      if (accountId && !UUID_PATTERN.test(accountId)) return ctx.json(res, 400, { error: "invalid_account_id" });
+      const values = [];
+      const conditions = [];
+      if (status) { values.push(status); conditions.push(`r.status = $${values.length}`); }
+      if (accountId) { values.push(accountId); conditions.push(`r.client_account_id = $${values.length}`); }
+      const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+      try {
+        const result = await db.query(
+          `SELECT r.*, a.display_name AS account_name, c.title AS contract_title, v.title AS visit_title
+             FROM client_reports r
+             JOIN client_accounts a ON a.id = r.client_account_id
+             LEFT JOIN client_contracts c ON c.id = r.contract_id
+             LEFT JOIN client_visits v ON v.id = r.visit_id
+             ${where}
+            ORDER BY r.created_at DESC LIMIT 200`,
+          values,
+        );
+        return ctx.json(res, 200, { reports: result.rows });
+      } catch (error) {
+        return databaseFailure(res, error, "Could not list client reports for admin.");
+      }
+    }
+    if (req.method === "POST") {
+      if (!requireSameOrigin(req, res)) return;
+      const body = await readJsonOr400(req, res);
+      if (body === undefined) return;
+      const input = validateReportInput({
+        accountId: body?.accountId,
+        contractId: body?.contractId,
+        visitId: body?.visitId,
+        reportType: body?.reportType,
+        title: body?.title,
+        summary: body?.summary,
+        periodStart: body?.periodStart,
+        periodEnd: body?.periodEnd,
+      });
+      if (input.error) return ctx.json(res, 400, { error: input.error });
+      if (!UUID_PATTERN.test(input.value.accountId)) return ctx.json(res, 400, { error: "invalid_account_id" });
+      const contract = optionalUuid(input.value.contractId); if (contract.error) return ctx.json(res, 400, { error: "invalid_contract_id" });
+      const visit = optionalUuid(input.value.visitId); if (visit.error) return ctx.json(res, 400, { error: "invalid_visit_id" });
+      if (!(await ensureAccountExists(db, res, input.value.accountId))) return;
+      if (!(await validateClientRefs(db, res, { accountId: input.value.accountId, contractId: contract.value, visitId: visit.value }))) return;
+      let client;
+      try {
+        client = await db.connect();
+        await client.query("BEGIN");
+        const inserted = await client.query(
+          `INSERT INTO client_reports
+             (client_account_id, contract_id, visit_id, report_type, title, summary, period_start, period_end, created_by, created_by_identity)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+           RETURNING *`,
+          [input.value.accountId, contract.value, visit.value, input.value.reportType, input.value.title,
+           input.value.summary, input.value.periodStart, input.value.periodEnd, roleActor(session), session.identityId],
+        );
+        await client.query(
+          `INSERT INTO client_report_status_audit
+             (report_id, previous_status, next_status, changed_by, changed_by_identity, reason)
+           VALUES ($1,NULL,'draft',$2,$3,$4)`,
+          [inserted.rows[0].id, roleActor(session), session.identityId, "Criação inicial"],
+        );
+        await audit(client, { actorKind: roleActor(session), actorId: session.identityId, action: "report_create", target: inserted.rows[0].id, result: "allowed" });
+        await client.query("COMMIT");
+        return ctx.json(res, 201, { report: inserted.rows[0] });
+      } catch (error) {
+        await rollback(client);
+        return databaseFailure(res, error, "Could not create the client report.");
+      } finally {
+        client?.release();
+      }
+    }
+    return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, POST" });
+  }
+
+  async function handleAdminReportUpdate(req, res, reportId) {
+    if (!requireMethod(req, res, ["PATCH"])) return;
+    if (!requireSameOrigin(req, res)) return;
+    const session = await requireAdminSession(req, res);
+    if (!session) return;
+    if (!UUID_PATTERN.test(reportId)) return ctx.json(res, 400, { error: "invalid_report_id" });
+    const body = await readJsonOr400(req, res);
+    if (body === undefined) return;
+    const status = requireReportStatus(body, res);
+    if (!status) return;
+    if (status === "acknowledged") return ctx.json(res, 400, { error: "client_acknowledgement_required" });
+    const reviewNote = validateReportNote(body?.reviewNotes, { required: status === "in_review" || status === "rejected", field: "report_review" });
+    if (reviewNote.error) return ctx.json(res, 400, { error: reviewNote.error });
+    const reasonText = typeof body?.reason === "string" ? body.reason.trim() : "";
+    let client;
+    try {
+      client = await ctx.getPool().connect();
+      await client.query("BEGIN");
+      const current = await client.query("SELECT * FROM client_reports WHERE id = $1 FOR UPDATE", [reportId]);
+      const previous = current.rows[0];
+      if (!previous) {
+        await client.query("ROLLBACK");
+        return ctx.json(res, 404, { error: "report_not_found" });
+      }
+      if (status === "approved" && !previous.reviewed_at) {
+        await client.query("ROLLBACK");
+        return ctx.json(res, 400, { error: "report_review_required" });
+      }
+      if (status === "sent" && previous.status !== "approved" && previous.status !== "sent") {
+        await client.query("ROLLBACK");
+        return ctx.json(res, 400, { error: "report_approval_required" });
+      }
+      await client.query(
+        `UPDATE client_reports
+            SET status = $2,
+                review_notes = COALESCE($3, review_notes),
+                reviewed_by_identity = CASE WHEN $2 IN ('in_review','rejected') THEN $4 ELSE reviewed_by_identity END,
+                reviewed_at = CASE WHEN $2 IN ('in_review','rejected') THEN NOW() ELSE reviewed_at END,
+                approved_by_identity = CASE WHEN $2 = 'approved' THEN $4 ELSE approved_by_identity END,
+                approved_at = CASE WHEN $2 = 'approved' THEN NOW() ELSE approved_at END,
+                sent_at = CASE WHEN $2 = 'sent' THEN COALESCE(sent_at, NOW()) ELSE sent_at END
+          WHERE id = $1`,
+        [reportId, status, reviewNote.value, session.identityId],
+      );
+      if (previous.status !== status) {
+        await client.query(
+          `INSERT INTO client_report_status_audit
+             (report_id, previous_status, next_status, changed_by, changed_by_identity, reason)
+           VALUES ($1,$2,$3,$4,$5,$6)`,
+          [reportId, previous.status, status, roleActor(session), session.identityId, reviewNote.value || reasonText || null],
+        );
+      }
+      await audit(client, { actorKind: roleActor(session), actorId: session.identityId, action: "report_status", target: reportId, result: "allowed" });
+      await client.query("COMMIT");
+      const updated = await ctx.getPool().query("SELECT * FROM client_reports WHERE id = $1", [reportId]);
+      return ctx.json(res, 200, { report: updated.rows[0] });
+    } catch (error) {
+      await rollback(client);
+      return databaseFailure(res, error, "Could not update the client report.");
     } finally {
       client?.release();
     }
@@ -1028,6 +1841,11 @@ export function createClientSpaceApi(ctx) {
     handleClientDocuments,
     handleClientDocumentDownload,
     handleClientTickets,
+    handleClientTicketReopen,
+    handleClientVisits,
+    handleClientVisitUpdate,
+    handleClientReports,
+    handleClientReportAcknowledge,
     handleAdminIdentities,
     handleAdminAccounts,
     handleAdminAccountStatus,
@@ -1039,5 +1857,9 @@ export function createClientSpaceApi(ctx) {
     handleAdminDocumentDownload,
     handleAdminTickets,
     handleAdminTicketUpdate,
+    handleAdminVisits,
+    handleAdminVisitUpdate,
+    handleAdminReports,
+    handleAdminReportUpdate,
   };
 }

@@ -13,19 +13,26 @@ type AdminTicket = {
   category: string;
   title: string;
   details: string;
-  status: "open" | "in_progress" | "resolved" | "closed";
+  status: "open" | "in_progress" | "waiting_client" | "resolved" | "closed";
   created_at: string;
   updated_at: string;
   admin_response: string | null;
+  sla_paused_at: string | null;
+  sla_pause_reason: string | null;
+  sla_total_paused_seconds: number | string | null;
+  reopen_count: number | null;
+  last_reopen_reason: string | null;
+  resolved_at: string | null;
+  closed_at: string | null;
 };
 
-const TICKET_STATUSES: AdminTicket["status"][] = ["open", "in_progress", "resolved", "closed"];
+const TICKET_STATUSES: AdminTicket["status"][] = ["open", "in_progress", "waiting_client", "resolved", "closed"];
 
 export default function TicketsSection({ accounts }: { accounts: AdminAccount[] | null }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [accountFilter, setAccountFilter] = useState("");
   const [tickets, setTickets] = useState<AdminTicket[] | null>(null);
-  const [editing, setEditing] = useState<Record<string, { status: AdminTicket["status"]; response: string }>>({});
+  const [editing, setEditing] = useState<Record<string, { status: AdminTicket["status"]; response: string; reason: string }>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -49,9 +56,9 @@ export default function TicketsSection({ accounts }: { accounts: AdminAccount[] 
   }, [reload]);
 
   const getEdit = (ticket: AdminTicket) =>
-    editing[ticket.id] ?? { status: ticket.status, response: ticket.admin_response ?? "" };
+    editing[ticket.id] ?? { status: ticket.status, response: ticket.admin_response ?? "", reason: "" };
 
-  const setEdit = (ticket: AdminTicket, partial: Partial<{ status: AdminTicket["status"]; response: string }>) =>
+  const setEdit = (ticket: AdminTicket, partial: Partial<{ status: AdminTicket["status"]; response: string; reason: string }>) =>
     setEditing(current => ({ ...current, [ticket.id]: { ...getEdit(ticket), ...partial } }));
 
   async function save(ticket: AdminTicket) {
@@ -62,7 +69,12 @@ export default function TicketsSection({ accounts }: { accounts: AdminAccount[] 
     try {
       await callApi(
         `/api/admin/tickets/${ticket.id}`,
-        jsonInit("PATCH", { status: draft.status, adminResponse: draft.response }),
+        jsonInit("PATCH", {
+          status: draft.status,
+          adminResponse: draft.response,
+          reason: draft.reason,
+          reopenReason: draft.reason,
+        }),
       );
       setNotice(`Chamado “${ticket.title}” atualizado para “${ticketStatusLabel[draft.status]}”.`);
       setEditing(current => {
@@ -135,7 +147,7 @@ export default function TicketsSection({ accounts }: { accounts: AdminAccount[] 
             const chip =
               ticket.status === "open"
                 ? styles.chipOpen
-                : ticket.status === "in_progress"
+                : ticket.status === "in_progress" || ticket.status === "waiting_client"
                   ? styles.chipProgress
                   : ticket.status === "resolved"
                     ? styles.chipResolved
@@ -178,6 +190,24 @@ export default function TicketsSection({ accounts }: { accounts: AdminAccount[] 
                     placeholder="Resposta para o cliente (opcional, máx. 500 caracteres)"
                     aria-label={`Resposta do chamado ${ticket.title}`}
                   />
+                  <textarea
+                    value={draft.reason}
+                    maxLength={500}
+                    disabled={busy}
+                    onChange={event => setEdit(ticket, { reason: event.target.value })}
+                    placeholder="Motivo se pausar SLA, reabrir ou registrar contexto da mudança"
+                    aria-label={`Motivo da mudança do chamado ${ticket.title}`}
+                  />
+                  {ticket.sla_paused_at ? (
+                    <p className={styles.listItemDetail} style={{ background: "#fdf6e3", padding: "8px 10px", borderRadius: 8 }}>
+                      SLA pausado: aguardando cliente desde {new Date(ticket.sla_paused_at).toLocaleString("pt-BR")}. Pausas acumuladas: {Math.round(Number(ticket.sla_total_paused_seconds ?? 0) / 60)} min.
+                    </p>
+                  ) : null}
+                  {ticket.reopen_count ? (
+                    <p className={styles.listItemDetail}>
+                      Reaberturas: {ticket.reopen_count}{ticket.last_reopen_reason ? ` · último motivo: ${ticket.last_reopen_reason}` : ""}
+                    </p>
+                  ) : null}
                   <button type="button" className={styles.submit} disabled={busy || !dirty} onClick={() => void save(ticket)} style={{ padding: "9px 14px" }}>
                     <Save size={13} aria-hidden="true" />
                     {busy ? "Salvando…" : "Salvar"}

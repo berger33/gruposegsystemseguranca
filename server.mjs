@@ -2553,6 +2553,14 @@ async function routeApi(req, res) {
   const clientDocMatch = url.pathname.match(/^\/api\/client\/documents\/([0-9a-f-]{36})\/download$/i);
   if (clientDocMatch) return clientSpaceApi.handleClientDocumentDownload(req, res, clientDocMatch[1]);
   if (url.pathname === "/api/client/tickets") return clientSpaceApi.handleClientTickets(req, res, url);
+  const clientTicketReopenMatch = url.pathname.match(/^\/api\/client\/tickets\/([0-9a-f-]{36})\/reopen$/i);
+  if (clientTicketReopenMatch) return clientSpaceApi.handleClientTicketReopen(req, res, clientTicketReopenMatch[1]);
+  if (url.pathname === "/api/client/visits") return clientSpaceApi.handleClientVisits(req, res, url);
+  const clientVisitMatch = url.pathname.match(/^\/api\/client\/visits\/([0-9a-f-]{36})$/i);
+  if (clientVisitMatch) return clientSpaceApi.handleClientVisitUpdate(req, res, clientVisitMatch[1]);
+  if (url.pathname === "/api/client/reports") return clientSpaceApi.handleClientReports(req, res, url);
+  const clientReportAckMatch = url.pathname.match(/^\/api\/client\/reports\/([0-9a-f-]{36})\/acknowledge$/i);
+  if (clientReportAckMatch) return clientSpaceApi.handleClientReportAcknowledge(req, res, clientReportAckMatch[1]);
   if (url.pathname === "/api/client/security/mfa/setup") return clientSecurityApi.handleMfaSetup(req, res);
   if (url.pathname === "/api/client/security/mfa/activate") return clientSecurityApi.handleMfaActivate(req, res);
   if (url.pathname === "/api/client/security/mfa/verify") return clientSecurityApi.handleMfaVerify(req, res);
@@ -2579,6 +2587,12 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/tickets") return clientSpaceApi.handleAdminTickets(req, res, url);
   const ticketMatch = url.pathname.match(/^\/api\/admin\/tickets\/([0-9a-f-]{36})$/i);
   if (ticketMatch) return clientSpaceApi.handleAdminTicketUpdate(req, res, ticketMatch[1]);
+  if (url.pathname === "/api/admin/client-visits") return clientSpaceApi.handleAdminVisits(req, res, url);
+  const adminVisitMatch = url.pathname.match(/^\/api\/admin\/client-visits\/([0-9a-f-]{36})$/i);
+  if (adminVisitMatch) return clientSpaceApi.handleAdminVisitUpdate(req, res, adminVisitMatch[1]);
+  if (url.pathname === "/api/admin/client-reports") return clientSpaceApi.handleAdminReports(req, res, url);
+  const adminReportMatch = url.pathname.match(/^\/api\/admin\/client-reports\/([0-9a-f-]{36})$/i);
+  if (adminReportMatch) return clientSpaceApi.handleAdminReportUpdate(req, res, adminReportMatch[1]);
   if (url.pathname === "/api/admin/permissions") {
     if (req.method === "GET") return adminRbacApi.handleListPermissions(req, res, url);
     if (req.method === "POST") return adminRbacApi.handleGrantPermission(req, res);
@@ -4272,6 +4286,10 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/admin/documents/")
   || pathname === "/api/admin/tickets"
   || pathname.startsWith("/api/admin/tickets/")
+  || pathname === "/api/admin/client-visits"
+  || pathname.startsWith("/api/admin/client-visits/")
+  || pathname === "/api/admin/client-reports"
+  || pathname.startsWith("/api/admin/client-reports/")
   || pathname === "/api/admin/permissions"
   || pathname.startsWith("/api/admin/permissions/")
   || pathname === "/api/admin/access-reviews"

@@ -8,6 +8,8 @@ import GrantsSection from "./GrantsSection";
 import ContractsSection from "./ContractsSection";
 import DocumentsSection from "./DocumentsSection";
 import TicketsSection from "./TicketsSection";
+import VisitsSection from "./VisitsSection";
+import ReportsSection from "./ReportsSection";
 import InvitesSection from "./InvitesSection";
 import { callApi, jsonInit, type AdminAccount } from "./admin-shared";
 import styles from "./AdminClientes.module.css";
@@ -182,8 +184,8 @@ export default function ClientAdminPage() {
               <p className={styles.hint}>
                 Fluxo em ordem: <strong>1</strong> crie/verifique o cadastro central → <strong>2</strong> emita o
                 vínculo com a identidade de acesso (com motivo) → <strong>3</strong> registre contratos →{" "}
-                <strong>4</strong> publique documentos → <strong>5</strong> acompanhe os chamados. Cada operação
-                relevante vai para a trilha de auditoria sem conter dados sensíveis.
+                <strong>4</strong> publique documentos → <strong>5</strong> acompanhe os chamados → <strong>6</strong> agende visitas →{" "}
+                <strong>7</strong> publique relatórios revisados. Cada operação relevante vai para a trilha de auditoria sem conter dados sensíveis.
               </p>
             </section>
             {role === 'ti' ? <InvitesSection /> : null}
@@ -192,6 +194,8 @@ export default function ClientAdminPage() {
             <ContractsSection accounts={accounts} />
             <DocumentsSection accounts={accounts} />
             <TicketsSection accounts={accounts} />
+            <VisitsSection accounts={accounts} />
+            <ReportsSection accounts={accounts} />
           </>
         )}
       </div>

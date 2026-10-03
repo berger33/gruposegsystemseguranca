@@ -4,7 +4,14 @@
 
 export const ACCOUNT_STATUSES = Object.freeze(["active", "suspended", "closed"]);
 export const CONTRACT_STATUSES = Object.freeze(["planned", "active", "suspended", "ended"]);
-export const TICKET_STATUSES = Object.freeze(["open", "in_progress", "resolved", "closed"]);
+export const TICKET_STATUSES = Object.freeze(["open", "in_progress", "waiting_client", "resolved", "closed"]);
+export const TICKET_REOPEN_TARGETS = Object.freeze(["open", "in_progress"]);
+export const SLA_PAUSE_REASONS = Object.freeze(["waiting_client", "third_party", "maintenance_window", "other"]);
+
+export const VISIT_TYPES = Object.freeze(["technical", "maintenance", "inspection", "meeting", "other"]);
+export const VISIT_STATUSES = Object.freeze(["scheduled", "confirmed", "rescheduled", "completed", "cancelled", "no_show"]);
+export const REPORT_TYPES = Object.freeze(["execution", "measurement", "acceptance", "other"]);
+export const REPORT_STATUSES = Object.freeze(["draft", "in_review", "approved", "rejected", "sent", "acknowledged"]);
 
 // Mesma lista do protótipo de chamados já apresentado ao responsável.
 export const TICKET_CATEGORIES = Object.freeze([
@@ -30,6 +37,22 @@ export const TEXT_LIMITS = Object.freeze({
   ticketTitle: 120,
   ticketDetails: 500,
   ticketResponse: 500,
+  ticketReopenReasonMin: 10,
+  ticketReopenReason: 500,
+  ticketSlaPauseNotes: 500,
+  visitTitle: 160,
+  visitDetails: 1000,
+  visitReasonMin: 10,
+  visitReason: 500,
+  visitResponsible: 160,
+  visitLocation: 200,
+  reportTitle: 160,
+  reportSummaryMin: 20,
+  reportSummary: 1000,
+  reportReviewMin: 10,
+  reportReview: 1000,
+  reportAcknowledgementMin: 3,
+  reportAcknowledgement: 500,
 });
 
 export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
@@ -162,6 +185,91 @@ export function validateTicketInput({ category, title, details } = {}) {
   return { value: { category: cat, title: name, details: body } };
 }
 
+export function validateTicketReopenReason(candidate) {
+  const reason = trimToString(candidate);
+  if (reason.length < TEXT_LIMITS.ticketReopenReasonMin) return { error: "ticket_reopen_reason_required" };
+  if (reason.length > TEXT_LIMITS.ticketReopenReason) return { error: "ticket_reopen_reason_too_long" };
+  return { value: reason };
+}
+
+export function validateVisitInput({ accountId, contractId, ticketId, visitType, title, details, scheduledAt, responsibleName, location } = {}) {
+  const type = trimToString(visitType) || "technical";
+  if (!VISIT_TYPES.includes(type)) return { error: "visit_type_invalid" };
+  const name = trimToString(title);
+  if (!name) return { error: "visit_title_required" };
+  if (name.length > TEXT_LIMITS.visitTitle) return { error: "visit_title_too_long" };
+  if (hasControlOrAngles(name)) return { error: "visit_title_invalid" };
+  const detail = trimToString(details);
+  if (detail.length > TEXT_LIMITS.visitDetails) return { error: "visit_details_too_long" };
+  const schedule = trimToString(scheduledAt);
+  if (!schedule || Number.isNaN(Date.parse(schedule))) return { error: "visit_scheduled_at_invalid" };
+  const responsible = trimToString(responsibleName);
+  if (responsible.length > TEXT_LIMITS.visitResponsible) return { error: "visit_responsible_too_long" };
+  const visitLocation = trimToString(location);
+  if (visitLocation.length > TEXT_LIMITS.visitLocation) return { error: "visit_location_too_long" };
+  return {
+    value: {
+      accountId: trimToString(accountId),
+      contractId: trimToString(contractId) || null,
+      ticketId: trimToString(ticketId) || null,
+      visitType: type,
+      title: name,
+      details: detail || null,
+      scheduledAt: schedule,
+      responsibleName: responsible || null,
+      location: visitLocation || null,
+    },
+  };
+}
+
+export function validateVisitReschedule({ rescheduledTo, reason } = {}) {
+  const scheduledAt = trimToString(rescheduledTo);
+  if (!scheduledAt || Number.isNaN(Date.parse(scheduledAt))) return { error: "visit_rescheduled_to_invalid" };
+  const text = trimToString(reason);
+  if (text.length < TEXT_LIMITS.visitReasonMin) return { error: "visit_reschedule_reason_required" };
+  if (text.length > TEXT_LIMITS.visitReason) return { error: "visit_reschedule_reason_too_long" };
+  return { value: { rescheduledTo: scheduledAt, reason: text } };
+}
+
+export function validateReportInput({ accountId, contractId, visitId, reportType, title, summary, periodStart, periodEnd } = {}) {
+  const type = trimToString(reportType) || "execution";
+  if (!REPORT_TYPES.includes(type)) return { error: "report_type_invalid" };
+  const name = trimToString(title);
+  if (!name) return { error: "report_title_required" };
+  if (name.length > TEXT_LIMITS.reportTitle) return { error: "report_title_too_long" };
+  if (hasControlOrAngles(name)) return { error: "report_title_invalid" };
+  const body = trimToString(summary);
+  if (body.length < TEXT_LIMITS.reportSummaryMin) return { error: "report_summary_required" };
+  if (body.length > TEXT_LIMITS.reportSummary) return { error: "report_summary_too_long" };
+  const start = normalizeDate(periodStart, "report_period_start");
+  if (start.error) return { error: start.error };
+  const end = normalizeDate(periodEnd, "report_period_end");
+  if (end.error) return { error: end.error };
+  if (start.value && end.value && end.value < start.value) return { error: "report_period_inverted" };
+  return {
+    value: {
+      accountId: trimToString(accountId),
+      contractId: trimToString(contractId) || null,
+      visitId: trimToString(visitId) || null,
+      reportType: type,
+      title: name,
+      summary: body,
+      periodStart: start.value,
+      periodEnd: end.value,
+    },
+  };
+}
+
+export function validateReportNote(candidate, { required = false, field = "report_review" } = {}) {
+  const note = trimToString(candidate);
+  const min = field === "report_acknowledgement" ? TEXT_LIMITS.reportAcknowledgementMin : TEXT_LIMITS.reportReviewMin;
+  const max = field === "report_acknowledgement" ? TEXT_LIMITS.reportAcknowledgement : TEXT_LIMITS.reportReview;
+  if (required && note.length < min) return { error: `${field}_required` };
+  if (note && note.length < min) return { error: `${field}_too_short` };
+  if (note.length > max) return { error: `${field}_too_long` };
+  return { value: note || null };
+}
+
 export function isAccountStatus(candidate) {
   return ACCOUNT_STATUSES.includes(candidate);
 }
@@ -172,4 +280,24 @@ export function isContractStatus(candidate) {
 
 export function isTicketStatus(candidate) {
   return TICKET_STATUSES.includes(candidate);
+}
+
+export function isSlaPauseReason(candidate) {
+  return SLA_PAUSE_REASONS.includes(candidate);
+}
+
+export function isVisitStatus(candidate) {
+  return VISIT_STATUSES.includes(candidate);
+}
+
+export function isVisitType(candidate) {
+  return VISIT_TYPES.includes(candidate);
+}
+
+export function isReportStatus(candidate) {
+  return REPORT_STATUSES.includes(candidate);
+}
+
+export function isReportType(candidate) {
+  return REPORT_TYPES.includes(candidate);
 }

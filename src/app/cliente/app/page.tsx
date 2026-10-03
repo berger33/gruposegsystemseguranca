@@ -37,7 +37,7 @@ export default function ClientAppPage() {
       setStats({
         contractsTotal: contracts.contracts.length,
         contractsActive: contracts.contracts.filter(contract => contract.status === "active").length,
-        ticketsOpen: tickets.tickets.filter(ticket => ["open", "in_progress"].includes(ticket.status)).length,
+        ticketsOpen: tickets.tickets.filter(ticket => ["open", "in_progress", "waiting_client"].includes(ticket.status)).length,
       });
     } catch {
       setStatsFailed(true);
