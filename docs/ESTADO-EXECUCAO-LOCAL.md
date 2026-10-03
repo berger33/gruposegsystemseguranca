@@ -1048,3 +1048,21 @@ promovidos.
 - **Regressões:** estático 5/5, typecheck OK, build exit 0. A execução unitária inicial no ambiente desta sessão teve falhas ambientais pré-existentes relacionadas à versão Node 20/dependências do conjunto de backup/homologação; não foram mascaradas nem alteradas. Windows não foi executado e continua pendente.
 - **Classificação:** implementação local + validação automática Linux/PostgreSQL descartável. Aceite humano anterior de Marcelo e Andreia permanece preservado; isto não constitui aceite novo nem homologação Windows.
 - **Não promovidos:** CLI-06..15, EXT-01..17, órfãos `/admin/ti`, fornecedor restrito e integrações externas. Próximo passo: revisão humana da PR; merge somente após revisão, sem merge automático.
+
+## L08 — estados de leitura CLI-02..05 (03/10/2026)
+
+- Base confirmada: `31834ec0983ead61ec316df90f8af958594b3c58`; branch fixa `arena/01a0ff46-gruposegsystemseguranca`.
+- Estado: hardening local em execução; nenhum requisito novo promovido.
+- Mudança: frame da área cliente bloqueia subpáginas quando sessão/contas falham; contratos, documentos, chamados e resumo distinguem erro de vazio/zero, oferecem retry e invalidam respostas antigas na troca de conta.
+- Prova adicionada: gate L08 51 subtestes; Chromium com sessão real do PostgreSQL percorre erro 503 de `/api/client/accounts`, confirma ausência distinta de “sem vínculo” e recupera o contrato pela API real após retry. O inventário do gate confere os estados de retry das quatro leituras.
+- Banco: nenhuma migração; 001–139 imutáveis; próxima livre 140.
+- Fontes: `auth_*`, `client_accounts`, `client_access_grants`, `client_contracts`, `client_documents`, `client_tickets`, históricos e auditorias.
+- Pendências: revisão humana da PR; CLI-06..15, EXT-01..17, v2 não promovida e integrações externas continuam fora. Windows continua pendente.
+
+### Resultado final do checkpoint 03/10/2026
+
+L08 passou 51/51 em duas execuções consecutivas. Estático, typecheck, unitários,
+build, migrações e L03–L06 passaram. L07 permaneceu instável (42/43, 42/43,
+43/43 e 41/43), incluindo três `SIGSEGV` de lançamento Chromium e uma divergência
+transitória de valor no painel ADM; portanto L07 não é declarado verde nesta
+execução, embora o aceite humano local anterior seja preservado.

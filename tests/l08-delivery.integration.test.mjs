@@ -35,6 +35,23 @@ test("L08 contract inventory keeps CLI-01..05 on one canonical legacy source", a
   assert.match(space, /client_contracts/);
   assert.match(space, /client_documents/);
   assert.match(space, /client_tickets/);
+
+  const uiFiles = await Promise.all([
+    "ClientAppFrame.tsx", "contratos/page.tsx", "documentos/page.tsx", "chamados/page.tsx", "page.tsx",
+  ].map(file => readFile(path.join(root, "src/app/cliente/app", file), "utf8")));
+  const [frame, contractsUi, documentsUi, ticketsUi, summaryUi] = uiFiles;
+  assert.match(frame, /client-space-load-error/);
+  assert.match(frame, /Tentar novamente/);
+  assert.match(contractsUi, /setContracts\(null\)/);
+  assert.match(contractsUi, /contracts-load-error/);
+  assert.match(documentsUi, /setDocuments\(null\)/);
+  assert.match(documentsUi, /documents-load-error/);
+  assert.match(ticketsUi, /loadSequence/);
+  assert.match(ticketsUi, /tickets-load-error/);
+  assert.match(summaryUi, /setStats\(null\)/);
+  assert.match(summaryUi, /summary-load-error/);
+  for (const source of [contractsUi, documentsUi, ticketsUi, summaryUi]) assert.match(source, /Tentar novamente/);
+
   assert.doesNotMatch(server, /TODO.*CLI-01/);
 });
 

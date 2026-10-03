@@ -1627,3 +1627,16 @@ promovidos.
 - **Regressões:** estático 5/5, typecheck OK, build exit 0. A execução unitária inicial no ambiente desta sessão teve falhas ambientais pré-existentes relacionadas à versão Node 20/dependências do conjunto de backup/homologação; não foram mascaradas nem alteradas. Windows não foi executado e continua pendente.
 - **Classificação:** implementação local + validação automática Linux/PostgreSQL descartável. Aceite humano anterior de Marcelo e Andreia permanece preservado; isto não constitui aceite novo nem homologação Windows.
 - **Não promovidos:** CLI-06..15, EXT-01..17, órfãos `/admin/ti`, fornecedor restrito e integrações externas. Próximo passo: revisão humana da PR; merge somente após revisão, sem merge automático.
+
+## Checkpoint L08 — estados de leitura CLI-02..05 (03/10/2026)
+
+- [x] CLI-02: falha de `/api/client/accounts` é erro bloqueante com retry; não é exibida como ausência de vínculo.
+- [x] CLI-03: contratos e resumo limpam estado anterior, separam erro de vazio/zero e oferecem retry.
+- [x] CLI-04: documentos limpam estado anterior, separam erro de lista vazia e oferecem retry; contrato de download privado permanece inalterado.
+- [x] CLI-05: chamados e resumo separam erro de ausência, oferecem retry e ignoram resposta obsoleta de outra conta.
+- [x] Chromium real usa sessão persistida pelo gate e rota HTTP real; nenhum `page.setContent` ou cookie falso.
+- [x] Nenhuma migração; 001–139 preservadas; próxima livre 140.
+- [ ] Aceite humano de negócio desta fatia L08.
+- [ ] Homologação final Windows.
+
+Classificação: implementação local + validação automática Linux/PostgreSQL descartável. Nenhuma promoção de CLI-06..15, EXT-01..17 ou API v2.

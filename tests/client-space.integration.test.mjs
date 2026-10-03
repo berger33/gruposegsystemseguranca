@@ -11,6 +11,8 @@ import nextEnv from "@next/env";
 import pg from "pg";
 import { hashPassword } from "../src/lib/client-auth-core.mjs";
 import { provisionAndLoginStaff } from "./helpers/staff-login.mjs";
+import { chromium } from "playwright";
+import packagedChromium from "@sparticuz/chromium";
 
 const { loadEnvConfig } = nextEnv;
 const { Pool } = pg;
@@ -978,6 +980,38 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     });
     assert.equal(conflict.status, 409);
     assert.deepEqual(conflict.body, { error: "idempotency_conflict" });
+  });
+
+  await t.test("real client UI distinguishes account-read failure from no link and retries", async () => {
+    const browser = await chromium.launch({
+      executablePath: await packagedChromium.executablePath(),
+      headless: true,
+      args: packagedChromium.args.filter(arg => arg !== "--disable-web-security"),
+    });
+    try {
+      const context = await browser.newContext();
+      await context.addCookies(cookieA.split("; ").map(part => {
+        const separator = part.indexOf("=");
+        return { name: part.slice(0, separator), value: part.slice(separator + 1), url: origin };
+      }));
+      const page = await context.newPage();
+      let failAccounts = true;
+      await page.route("**/api/client/accounts", async route => {
+        if (failAccounts) {
+          await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"database_unavailable"}' });
+          return;
+        }
+        await route.continue();
+      });
+      await page.goto(`${origin}/cliente/app/contratos`, { waitUntil: "domcontentloaded" });
+      await page.getByTestId("client-space-load-error").waitFor();
+      assert.equal(await page.getByText(/ainda não foi vinculada/i).count(), 0);
+      failAccounts = false;
+      await page.getByTestId("client-space-load-error").getByRole("button", { name: "Tentar novamente" }).click();
+      await page.getByText("Supervisão e ronda — sede", { exact: true }).waitFor();
+    } finally {
+      await browser.close();
+    }
   });
 
   await t.test("revoking the grant cuts access immediately and is idempotent", async () => {

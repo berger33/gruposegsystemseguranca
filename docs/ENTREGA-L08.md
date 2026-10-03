@@ -27,14 +27,14 @@ não é aceite de negócio nem homologação Windows.
 Criados `scripts/qa-l08-delivery-postgres.mjs`,
 `tests/l08-delivery.integration.test.mjs`, `test:l08-delivery:pg` e
 `.github/workflows/l08-delivery.yml`. O runner cria PostgreSQL descartável,
-aplica 001–138, executa HTTP real e roda em série as integrações de autenticação
+aplica 001–139, executa HTTP real e roda em série as integrações de autenticação
 e espaço do cliente. Os subtestes cobrem A/B, leitura/escrita/download fora do
 escopo, identidade/conta forjada, revogação, auditoria e smoke Chromium empacotado da entrada.
 Não há dados reais, SMTP externo, PSP ou serviço externo.
 
 CLI-06..15 e EXT-01..17 continuam `a_revalidar`/não promovidos. Nenhuma migração
-nova foi necessária; a fonte legada continua única e explícita. Migrações 001–138
-são imutáveis; a próxima livre continua sendo 139.
+nova foi necessária; a fonte legada continua única e explícita. Migrações 001–139
+são imutáveis; a próxima livre é 140.
 
 ## Série L08 hardening — 02/10/2026
 
@@ -91,3 +91,24 @@ restrito, CLI-15, integrações externas e qualquer API v2 não provada. A
 classificação continua sendo implementação local + validação automática Linux
 com PostgreSQL descartável; não equivale a novo aceite humano nem homologação
 Windows.
+
+## Estados de leitura CLI-02..05 — 03/10/2026
+
+Sobre a base oficial `31834ec`, a área cliente passou a tratar falha de
+`/api/client/accounts` como barreira: nenhuma subpágina converte erro em “sem
+vínculo”, e o retry recarrega sessão/contas antes de exibir conteúdo. Contratos,
+documentos, chamados e resumo agora limpam estado anterior, distinguem erro de
+vazio/zero, oferecem `Tentar novamente` e abortam ou ignoram respostas obsoletas
+na troca de conta.
+
+O gate L08 passa de 50 para 51 subtestes. A nova jornada Chromium usa a sessão
+real criada no PostgreSQL descartável, abre `/cliente/app/contratos`, verifica o
+503 controlado de contas e recupera o contrato real após retry. O inventário do
+gate confere estruturalmente os estados das quatro leituras; não se afirma
+jornada Chromium individual de falha para todas elas nesta série.
+
+Nenhuma migração foi criada: 001–139 permanecem imutáveis e a próxima livre é
+140. Fontes canônicas e autorização por sessão/grant permanecem inalteradas.
+CLI-06..15, EXT-01..17, v2, órfãos e integrações externas seguem fora do escopo.
+Esta é implementação local com validação automática Linux, não aceite humano
+novo nem homologação Windows.
