@@ -38,27 +38,32 @@ export default function ClientContractsPage() {
   const { activeAccount, loading } = useClientSpace();
   const [contracts, setContracts] = useState<Contract[] | null>(null);
   const [error, setError] = useState("");
+  const [retryAttempt, setRetryAttempt] = useState(0);
 
   useEffect(() => {
     if (!activeAccount || activeAccount.status !== "active") {
       setContracts(null);
       return;
     }
+    setContracts(null);
     setError("");
-    let cancelled = false;
-    fetch(`/api/client/contracts?account=${encodeURIComponent(activeAccount.id)}`, { cache: "no-store" })
+    const controller = new AbortController();
+    fetch(`/api/client/contracts?account=${encodeURIComponent(activeAccount.id)}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
       .then(async response => {
         if (!response.ok) throw new Error("unexpected");
         const data = (await response.json()) as { contracts: Contract[] };
-        if (!cancelled) setContracts(data.contracts);
+        if (!controller.signal.aborted) setContracts(data.contracts);
       })
-      .catch(() => {
-        if (!cancelled) setError("Não foi possível carregar seus contratos agora.");
+      .catch(error => {
+        if (!controller.signal.aborted && error?.name !== "AbortError") {
+          setError("Não foi possível carregar seus contratos agora.");
+        }
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeAccount]);
+    return () => controller.abort();
+  }, [activeAccount, retryAttempt]);
 
   if (loading) {
     return (
@@ -98,9 +103,12 @@ export default function ClientContractsPage() {
           exibidos enquanto a situação não é regularizada.
         </div>
       ) : error ? (
-        <p className={`${styles.message} ${styles.messageError}`} role="alert">
-          {error}
-        </p>
+        <div className={`${styles.message} ${styles.messageError}`} role="alert" data-testid="contracts-load-error">
+          <span>{error}</span>
+          <button className={styles.submit} type="button" onClick={() => setRetryAttempt(attempt => attempt + 1)}>
+            Tentar novamente
+          </button>
+        </div>
       ) : !contracts ? (
         <div className={appStyles.loadingWrapWide}>
           <span className={styles.spinner} aria-hidden="true" />

@@ -608,3 +608,15 @@ promovidos.
 - **Regressões:** estático 5/5, typecheck OK, build exit 0. A execução unitária inicial no ambiente desta sessão teve falhas ambientais pré-existentes relacionadas à versão Node 20/dependências do conjunto de backup/homologação; não foram mascaradas nem alteradas. Windows não foi executado e continua pendente.
 - **Classificação:** implementação local + validação automática Linux/PostgreSQL descartável. Aceite humano anterior de Marcelo e Andreia permanece preservado; isto não constitui aceite novo nem homologação Windows.
 - **Não promovidos:** CLI-06..15, EXT-01..17, órfãos `/admin/ti`, fornecedor restrito e integrações externas. Próximo passo: revisão humana da PR; merge somente após revisão, sem merge automático.
+
+## Checkpoint 03/10/2026 — L08 estados de leitura
+
+- Repositório/base: `berger33/gruposegsystemseguranca` / `31834ec0983ead61ec316df90f8af958594b3c58`.
+- Objetivo/IDs: hardening de leitura CLI-02..05; nenhuma promoção funcional adicional.
+- Rotas: `/cliente/app`, `/contratos`, `/documentos`, `/chamados`; APIs canônicas `/api/client/accounts|contracts|documents|tickets`.
+- Dados: fontes legadas canônicas; migrações 001–139 imutáveis; nenhuma migração; próxima 140.
+- Autorização: inalterada e derivada da sessão/grant. Identificadores do navegador não ampliam escopo.
+- Implementação: erro de conta bloqueia conteúdo; erro não vira vazio/zero; retry explícito; requisições obsoletas abortadas/ignoradas.
+- Prova: gate L08 passa a 51 subtestes, incluindo Chromium real com sessão persistida e retry após 503 de contas; inventário confere os quatro estados de UI.
+- Estado: implementação local validada automaticamente; aceite humano L08 e Windows pendentes.
+- Fora do escopo: CLI-06..15, EXT-01..17, órfãos `/admin/ti`, fornecedor, integrações e v2 não promovida.

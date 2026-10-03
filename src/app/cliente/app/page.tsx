@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2, ShieldCheck } from "lucide-react";
 import { useClientSpace } from "./ClientSpaceProvider";
 import styles from "../RealAccess.module.css";
@@ -22,15 +22,13 @@ export default function ClientAppPage() {
   const { session, accounts, activeAccount, loading, notice } = useClientSpace();
   const [stats, setStats] = useState<SpaceStats | null>(null);
   const [statsFailed, setStatsFailed] = useState(false);
+  const statsSequence = useRef(0);
 
-  useEffect(() => {
-    if (!activeAccount || activeAccount.status !== "active") {
-      setStats(null);
-      return;
-    }
-    const scoped = `account=${encodeURIComponent(activeAccount.id)}`;
+  const loadStats = useCallback((accountId: string) => {
+    const sequence = ++statsSequence.current;
+    const scoped = `account=${encodeURIComponent(accountId)}`;
+    setStats(null);
     setStatsFailed(false);
-    let cancelled = false;
     Promise.all([
       fetch(`/api/client/contracts?${scoped}`, { cache: "no-store" }),
       fetch(`/api/client/tickets?${scoped}`, { cache: "no-store" }),
@@ -39,7 +37,7 @@ export default function ClientAppPage() {
         if (!contractsResponse.ok || !ticketsResponse.ok) throw new Error("unexpected");
         const contracts = (await contractsResponse.json()) as { contracts: { status: string }[] };
         const tickets = (await ticketsResponse.json()) as { tickets: { status: string }[] };
-        if (cancelled) return;
+        if (sequence !== statsSequence.current) return;
         setStats({
           contractsTotal: contracts.contracts.length,
           contractsActive: contracts.contracts.filter(contract => contract.status === "active").length,
@@ -47,12 +45,19 @@ export default function ClientAppPage() {
         });
       })
       .catch(() => {
-        if (!cancelled) setStatsFailed(true);
+        if (sequence === statsSequence.current) setStatsFailed(true);
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeAccount]);
+  }, []);
+
+  useEffect(() => {
+    if (!activeAccount || activeAccount.status !== "active") {
+      statsSequence.current += 1;
+      setStats(null);
+      setStatsFailed(false);
+      return;
+    }
+    loadStats(activeAccount.id);
+  }, [activeAccount, loadStats]);
 
   if (loading || !session) {
     return (
@@ -152,8 +157,11 @@ export default function ClientAppPage() {
               protegidos não são exibidos por enquanto. Fale com a equipe para regularizar a situação.
             </div>
           ) : statsFailed ? (
-            <div className={appStyles.emptyState}>
-              Não foi possível carregar o resumo agora. Tente recarregar a página.
+            <div className={`${styles.message} ${styles.messageError}`} role="alert" data-testid="summary-load-error">
+              <span>Não foi possível carregar o resumo agora.</span>
+              <button className={styles.submit} type="button" onClick={() => loadStats(activeAccount.id)}>
+                Tentar novamente
+              </button>
             </div>
           ) : !stats ? (
             <div className={appStyles.loadingWrapWide}>

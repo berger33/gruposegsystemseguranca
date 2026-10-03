@@ -285,3 +285,15 @@ promovidos.
 - **Regressões:** estático 5/5, typecheck OK, build exit 0. A execução unitária inicial no ambiente desta sessão teve falhas ambientais pré-existentes relacionadas à versão Node 20/dependências do conjunto de backup/homologação; não foram mascaradas nem alteradas. Windows não foi executado e continua pendente.
 - **Classificação:** implementação local + validação automática Linux/PostgreSQL descartável. Aceite humano anterior de Marcelo e Andreia permanece preservado; isto não constitui aceite novo nem homologação Windows.
 - **Não promovidos:** CLI-06..15, EXT-01..17, órfãos `/admin/ti`, fornecedor restrito e integrações externas. Próximo passo: revisão humana da PR; merge somente após revisão, sem merge automático.
+
+## Execução L08 — estados de leitura CLI-02..05 (03/10/2026)
+
+1. Confirmadas PR #80 mergeada, `origin/main` em `31834ec`, ancestralidade de `a95872d` e PR #83 posterior.
+2. Reconfirmadas 139 migrações contínuas/únicas; próxima livre 140.
+3. Executada baseline antes de editar; dependências ausentes foram instaladas por `npm ci`. Instabilidades de lançamento Chromium em L04/L06 foram registradas e repetidas sem alterar testes.
+4. Auditada a PR #83: atomicidade/auditoria, download privado, idempotência concorrente e CLI-01 já estavam implementados. Selecionado o recorte mínimo restante de erro/vazio/retry nas leituras CLI-02..05.
+5. Implementado frame fail-closed de leitura, retry explícito e invalidação de respostas antigas; nenhuma API, autorização, tabela ou migração nova.
+6. Acrescentada prova Chromium com sessão e dados reais do PG descartável e verificação estrutural dos estados das demais páginas.
+7. CLI-06..15, EXT-01..17 e v2 não foram iniciados ou promovidos.
+
+Classificação: implementação local e validação automática Linux; sem novo aceite humano e sem homologação Windows.

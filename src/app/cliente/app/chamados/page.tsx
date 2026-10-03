@@ -45,21 +45,28 @@ export default function ClientTicketsPage() {
   const [state, setState] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
   const retryRequest = useRef<{ fingerprint: string; key: string } | null>(null);
+  const loadSequence = useRef(0);
 
   const loadTickets = useCallback((accountId: string) => {
+    const sequence = ++loadSequence.current;
+    setTickets(null);
     setLoadError("");
     fetch(`/api/client/tickets?account=${encodeURIComponent(accountId)}`, { cache: "no-store" })
       .then(async response => {
         if (!response.ok) throw new Error("unexpected");
         const data = (await response.json()) as { tickets: Ticket[] };
-        setTickets(data.tickets);
+        if (sequence === loadSequence.current) setTickets(data.tickets);
       })
-      .catch(() => setLoadError("Não foi possível carregar seus chamados agora."));
+      .catch(() => {
+        if (sequence === loadSequence.current) setLoadError("Não foi possível carregar seus chamados agora.");
+      });
   }, []);
 
   useEffect(() => {
     if (!activeAccount || activeAccount.status !== "active") {
+      loadSequence.current += 1;
       setTickets(null);
+      setLoadError("");
       return;
     }
     loadTickets(activeAccount.id);
@@ -207,9 +214,12 @@ export default function ClientTicketsPage() {
           Histórico de solicitações deste cadastro, na ordem da mais recente para a mais antiga.
         </p>
         {!activeAccount || activeAccount.status !== "active" ? null : loadError ? (
-          <p className={`${styles.message} ${styles.messageError}`} role="alert">
-            {loadError}
-          </p>
+          <div className={`${styles.message} ${styles.messageError}`} role="alert" data-testid="tickets-load-error">
+            <span>{loadError}</span>
+            <button className={styles.submit} type="button" onClick={() => loadTickets(activeAccount.id)}>
+              Tentar novamente
+            </button>
+          </div>
         ) : !tickets ? (
           <div className={appStyles.loadingWrapWide}>
             <span className={styles.spinner} aria-hidden="true" />

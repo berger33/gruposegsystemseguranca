@@ -26,27 +26,32 @@ export default function ClientDocumentsPage() {
   const { activeAccount, loading } = useClientSpace();
   const [documents, setDocuments] = useState<ClientDocument[] | null>(null);
   const [error, setError] = useState("");
+  const [retryAttempt, setRetryAttempt] = useState(0);
 
   useEffect(() => {
     if (!activeAccount || activeAccount.status !== "active") {
       setDocuments(null);
       return;
     }
+    setDocuments(null);
     setError("");
-    let cancelled = false;
-    fetch(`/api/client/documents?account=${encodeURIComponent(activeAccount.id)}`, { cache: "no-store" })
+    const controller = new AbortController();
+    fetch(`/api/client/documents?account=${encodeURIComponent(activeAccount.id)}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
       .then(async response => {
         if (!response.ok) throw new Error("unexpected");
         const data = (await response.json()) as { documents: ClientDocument[] };
-        if (!cancelled) setDocuments(data.documents);
+        if (!controller.signal.aborted) setDocuments(data.documents);
       })
-      .catch(() => {
-        if (!cancelled) setError("Não foi possível carregar seus documentos agora.");
+      .catch(error => {
+        if (!controller.signal.aborted && error?.name !== "AbortError") {
+          setError("Não foi possível carregar seus documentos agora.");
+        }
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeAccount]);
+    return () => controller.abort();
+  }, [activeAccount, retryAttempt]);
 
   if (loading) {
     return (
@@ -85,9 +90,12 @@ export default function ClientDocumentsPage() {
           exibidos enquanto a situação não é regularizada.
         </div>
       ) : error ? (
-        <p className={`${styles.message} ${styles.messageError}`} role="alert">
-          {error}
-        </p>
+        <div className={`${styles.message} ${styles.messageError}`} role="alert" data-testid="documents-load-error">
+          <span>{error}</span>
+          <button className={styles.submit} type="button" onClick={() => setRetryAttempt(attempt => attempt + 1)}>
+            Tentar novamente
+          </button>
+        </div>
       ) : !documents ? (
         <div className={appStyles.loadingWrapWide}>
           <span className={styles.spinner} aria-hidden="true" />

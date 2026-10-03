@@ -2051,3 +2051,23 @@ promovidos.
 - **Regressões:** estático 5/5, typecheck OK, build exit 0. A execução unitária inicial no ambiente desta sessão teve falhas ambientais pré-existentes relacionadas à versão Node 20/dependências do conjunto de backup/homologação; não foram mascaradas nem alteradas. Windows não foi executado e continua pendente.
 - **Classificação:** implementação local + validação automática Linux/PostgreSQL descartável. Aceite humano anterior de Marcelo e Andreia permanece preservado; isto não constitui aceite novo nem homologação Windows.
 - **Não promovidos:** CLI-06..15, EXT-01..17, órfãos `/admin/ti`, fornecedor restrito e integrações externas. Próximo passo: revisão humana da PR; merge somente após revisão, sem merge automático.
+
+## Evidência L08 — estados de leitura CLI-02..05 (03/10/2026)
+
+| Cenário | Perfil/dados | Passos | Esperado/observado | Evidência |
+|---|---|---|---|---|
+| CLI-02 falha de contas | cliente A sintético, identidade/senha/sessão/grant/conta reais no PG QA | Chromium abre `/cliente/app/contratos`; intercepta somente `/api/client/accounts` com 503 | erro visível; “ainda não foi vinculada” ausente; retry consulta servidor e mostra `Supervisão e ronda — sede` | subteste `real client UI distinguishes account-read failure from no link and retries` |
+| CLI-03 leitura e troca de conta | sessão/grant derivados no servidor | contratos zeram estado no início e abortam requisição anterior | erro não vira vazio; resposta antiga não substitui conta atual; retry explícito | inventário L08 + código `contratos/page.tsx` |
+| CLI-04 leitura | sessão/grant derivados no servidor | documentos zeram estado e abortam requisição anterior | erro não vira “nenhum documento”; retry explícito | inventário L08 + código `documentos/page.tsx` |
+| CLI-05 leitura | sessão/grant derivados no servidor | chamados/resumo numeram requisições | erro não vira histórico vazio/zero; resposta tardia é ignorada; retry explícito | inventário L08 + `chamados/page.tsx`/`page.tsx` |
+
+Baseline: estático 5/5; após `npm ci`, typecheck/test/build/migrações aprovados. L04 19/20 e L06 8/9 tiveram `SIGSEGV` no lançamento do Chromium; repetições isoladas 20/20 e 9/9. Gate L08 alterado: 51/51 em execução limpa de desenvolvimento. Exits e validação final constam no relatório da série. Nenhuma credencial, SMTP, serviço externo ou banco real foi usado.
+
+### Fechamento real desta execução
+
+No diff final: estático 5/5; typecheck exit 0; unitários 196/196; build exit 0;
+migrações 139/139 exit 0; L03 1/1; L04 20/20; L05 1/1; L06 9/9; L08 **51/51
+duas vezes consecutivas**. L07 não fechou duas vezes: 42/43, 42/43, repetição
+43/43 e repetição 41/43. Houve `SIGSEGV` de lançamento Chromium nos subtestes
+18, 22 e 24, e uma divergência transitória no subteste 43 (`R$ 9.340,00` versus
+`R$ 1.500,00`). Esses resultados permanecem reprovações registradas.

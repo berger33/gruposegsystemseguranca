@@ -146,3 +146,11 @@ EXT-01..17 permanecem não promovidos.
 - **Regressões:** estático 5/5, typecheck OK, build exit 0. A execução unitária inicial no ambiente desta sessão teve falhas ambientais pré-existentes relacionadas à versão Node 20/dependências do conjunto de backup/homologação; não foram mascaradas nem alteradas. Windows não foi executado e continua pendente.
 - **Classificação:** implementação local + validação automática Linux/PostgreSQL descartável. Aceite humano anterior de Marcelo e Andreia permanece preservado; isto não constitui aceite novo nem homologação Windows.
 - **Não promovidos:** CLI-06..15, EXT-01..17, órfãos `/admin/ti`, fornecedor restrito e integrações externas. Próximo passo: revisão humana da PR; merge somente após revisão, sem merge automático.
+
+## Reauditoria após PR #83 — 03/10/2026
+
+A `main` em `31834ec` já contém o hardening transacional da migração 139: auditoria obrigatória fail-closed, negócio/histórico/auditoria na mesma transação nos fluxos alterados, download auditado antes de headers/bytes e idempotência concorrente de chamados/documentos. Portanto a próxima migração livre é **140**; 001–139 são imutáveis.
+
+A lacuna real remanescente encontrada nesta sessão estava nos estados de leitura da UI: falha de contas podia parecer ausência de vínculo e as leituras de contratos, documentos, chamados e resumo não ofereciam retry explícito nem invalidavam de forma uniforme dados antigos. O recorte foi corrigido e acrescentado ao gate, sem promover aliases v2. A prova Chromium individual desta série cobre a falha/retry de contas; as demais páginas têm verificação estrutural no inventário e continuam sujeitas a expansão de jornada em série futura. Isso não reduz as provas HTTP/PG existentes de A≠B, download, atomicidade e idempotência.
+
+CLI-06..15, EXT-01..17, fornecedor restrito, CLI-15, órfãos `/admin/ti`, integrações externas e superfícies v2 continuam não promovidos. O aceite humano anterior de L07 é preservado; não existe novo aceite de negócio L08 nem homologação Windows.
