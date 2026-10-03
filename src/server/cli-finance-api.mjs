@@ -944,82 +944,215 @@ export function createCliFinanceApi({ pool, auditLog, sameOrigin, requireSession
     return json(res,405,{ error:"method_not_allowed" });
   }
 
-  // CLI-13 modos convite solicitação com aprovação autocadastro configuráveis vínculo verificado servidor todos autocadastro nunca libera contratos sozinho
+  // CLI-13 — configuração administrativa e entrada pública são jornadas
+  // separadas. A solicitação pública jamais lê cookie staff; configuração e
+  // revisão jamais aceitam sessão cliente.
+  async function portalTransaction(work) {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const result = await work(client);
+      await client.query("COMMIT");
+      return result;
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => {});
+      throw error;
+    } finally { client.release(); }
+  }
+
+  async function readPortalBody(req) {
+    try { const chunks=[]; for await (const chunk of req) chunks.push(chunk); return JSON.parse(Buffer.concat(chunks).toString() || "{}"); }
+    catch { return null; }
+  }
+
+  function portalOriginFingerprint(req) {
+    const forwarded = String(req.headers?.["x-forwarded-for"] || "").split(",")[0].trim();
+    return requestFingerprint({ origin: forwarded || req.socket?.remoteAddress || "unknown" });
+  }
+
   async function handlePortalModeConfigs(req, res) {
     const session = await ensureAuth(req, res, ["admin","ti"]);
-    if (!session) return;
+    if (!session?.identityId) return session ? json(res,403,{ error:"individual_staff_required" }) : undefined;
     if (req.method === "GET") {
-      const { rows } = await pool.query(`SELECT * FROM cli_portal_mode_configs ORDER BY mode ASC`);
-      return json(res,200,{ modes: rows, note:"autocadastro nunca libera contratos sozinho" });
+      try {
+        const modes = await portalTransaction(async client => {
+          const result = await client.query(`SELECT mode, is_active, requires_approval, auto_release_contracts,
+            description, updated_by_identity, updated_at FROM cli_portal_mode_configs ORDER BY mode ASC`);
+          await client.query(`INSERT INTO auth_access_audit
+            (actor_kind,actor_id,action,target,result,detail_category)
+            VALUES ($1,$2,'portal_access_request_list','portal-mode-configs','allowed','none')`,
+            [session.role, session.identityId]);
+          return result.rows;
+        });
+        return json(res,200,{ modes, note:"autocadastro nunca libera contratos sozinho" });
+      } catch { return json(res,503,{ error:"audit_unavailable" }); }
     }
-    if (req.method === "PATCH") {
-      let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
-      const { mode, is_active, requires_approval, auto_release_contracts } = body;
-      if (!mode) return json(res,400,{ error:"missing_mode" });
-      if (mode==='autocadastro' && auto_release_contracts===true) return json(res,400,{ error:"autocadastro_never_releases_contracts", note:"autocadastro nunca libera contratos sozinho" });
-      await pool.query(`UPDATE cli_portal_mode_configs SET is_active=COALESCE($2,is_active), requires_approval=COALESCE($3,requires_approval), auto_release_contracts=COALESCE($4,auto_release_contracts) WHERE mode=$1`, [mode, is_active, requires_approval, auto_release_contracts]);
-      await auditLog({ action:"cli_portal_mode_update", actor: session.identityId||"unknown", target: mode, meta:{ is_active, requires_approval, auto_release_contracts } });
-      const { rows } = await pool.query(`SELECT * FROM cli_portal_mode_configs WHERE mode=$1`, [mode]);
-      return json(res,200,{ mode: rows[0] });
+    if (req.method !== "PATCH") return json(res,405,{ error:"method_not_allowed" });
+    const body = await readPortalBody(req);
+    if (!body) return json(res,400,{ error:"invalid_request" });
+    const mode = String(body.mode || "");
+    if (!["convite","solicitacao_aprovacao","autocadastro"].includes(mode) ||
+        typeof body.is_active !== "boolean" || typeof body.requires_approval !== "boolean" ||
+        typeof body.auto_release_contracts !== "boolean") return json(res,400,{ error:"invalid_mode_config" });
+    const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+    if (reason.length < 10 || reason.length > 500) return json(res,400,{ error:"reason_10_500" });
+    if (mode === "autocadastro" && body.auto_release_contracts) {
+      return json(res,400,{ error:"autocadastro_never_releases_contracts" });
     }
-    return json(res,405,{ error:"method_not_allowed" });
+    try {
+      const updated = await portalTransaction(async client => {
+        const current = (await client.query(`SELECT * FROM cli_portal_mode_configs WHERE mode=$1 FOR UPDATE`, [mode])).rows[0];
+        if (!current) return null;
+        const row = (await client.query(`UPDATE cli_portal_mode_configs SET is_active=$2,
+          requires_approval=$3, auto_release_contracts=$4, updated_by_identity=$5, updated_at=NOW()
+          WHERE mode=$1 RETURNING mode,is_active,requires_approval,auto_release_contracts,description,updated_by_identity,updated_at`,
+          [mode,body.is_active,body.requires_approval,body.auto_release_contracts,session.identityId])).rows[0];
+        await client.query(`INSERT INTO cli_portal_mode_config_history
+          (id,mode,previous_is_active,next_is_active,previous_requires_approval,next_requires_approval,
+           previous_auto_release_contracts,next_auto_release_contracts,reason,changed_by_identity)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+          [randomUUID(),mode,current.is_active,row.is_active,current.requires_approval,row.requires_approval,
+           current.auto_release_contracts,row.auto_release_contracts,reason,session.identityId]);
+        await client.query(`INSERT INTO auth_access_audit
+          (actor_kind,actor_id,action,target,result,detail_category)
+          VALUES ($1,$2,'portal_mode_config_update',$3,'allowed','none')`,
+          [session.role,session.identityId,mode]);
+        return row;
+      });
+      if (!updated) return json(res,404,{ error:"mode_not_found" });
+      return json(res,200,{ mode:updated });
+    } catch { return json(res,503,{ error:"audit_unavailable" }); }
+  }
+
+  async function handlePublicPortalAccessRequest(req, res) {
+    if (req.method !== "POST") return json(res,405,{ error:"method_not_allowed" });
+    if (!sameOrigin(req)) return json(res,403,{ error:"origin_forbidden" });
+    const body = await readPortalBody(req);
+    if (!body) return json(res,400,{ error:"invalid_request" });
+    const mode = String(body.mode || "");
+    if (mode === "convite") return json(res,400,{ error:"invite_flow_required" });
+    if (!["solicitacao_aprovacao","autocadastro"].includes(mode)) return json(res,400,{ error:"invalid_mode" });
+    const accountId = String(body.client_account_id || "");
+    if (!UUID_PATTERN.test(accountId)) return json(res,400,{ error:"invalid_account_id" });
+    const email = String(body.requested_email || "").trim().toLowerCase();
+    const name = String(body.requested_name || "").trim();
+    const documentRef = String(body.document_ref || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    const key = String(req.headers?.["idempotency-key"] || body.idempotency_key || "").trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 200 || name.length < 2 || name.length > 200 ||
+        documentRef.length < 5 || documentRef.length > 32 || !IDEMPOTENCY_KEY_PATTERN.test(key)) {
+      return json(res,400,{ error:"invalid_request_fields" });
+    }
+    const requesterFp = requestFingerprint({ email, documentRef });
+    const originFp = portalOriginFingerprint(req);
+    const fingerprint = requestFingerprint({ mode, accountId, email, name, documentRef });
+    try {
+      const outcome = await portalTransaction(async client => {
+        await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`${requesterFp}:${originFp}:${key}`]);
+        const previous = (await client.query(`SELECT id,protocol,request_fingerprint,status FROM cli_portal_access_requests
+          WHERE requester_fingerprint=$1 AND origin_fingerprint=$2 AND idempotency_key=$3`, [requesterFp,originFp,key])).rows[0];
+        if (previous) return previous.request_fingerprint === fingerprint ? { kind:"replay", row:previous } : { kind:"conflict" };
+        const config = (await client.query(`SELECT is_active FROM cli_portal_mode_configs WHERE mode=$1 FOR SHARE`, [mode])).rows[0];
+        if (!config?.is_active) {
+          await client.query(`INSERT INTO auth_access_audit (actor_kind,action,target,result,detail_category)
+            VALUES ('client','portal_access_request_create',$1,'denied','policy_violation')`, [mode]);
+          return { kind:"inactive" };
+        }
+        // verified_link é calculado somente aqui. Nem account/identity/flag do
+        // corpo substitui a correspondência exata com conta ativa e documento.
+        const account = (await client.query(`SELECT id FROM client_accounts WHERE id=$1 AND status='active'
+          AND regexp_replace(upper(COALESCE(document_ref,'')),'[^A-Z0-9]','','g')=$2 FOR SHARE`, [accountId,documentRef])).rows[0];
+        if (!account) {
+          await client.query(`INSERT INTO auth_access_audit (actor_kind,action,target,result,detail_category)
+            VALUES ('client','portal_access_request_create',$1,'denied','authorization_denied')`, [accountId]);
+          return { kind:"denied" };
+        }
+        const id=randomUUID(), protocol=generateProtocol("ACC-CLI");
+        const row=(await client.query(`INSERT INTO cli_portal_access_requests
+          (id,protocol,mode,client_account_id,requested_email,requested_name,document_ref,status,verified_link,
+           idempotency_key,request_fingerprint,requester_fingerprint,origin_fingerprint)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,'pendente',true,$8,$9,$10,$11) RETURNING id,protocol,mode,status,created_at`,
+          [id,protocol,mode,accountId,email,name,documentRef,key,fingerprint,requesterFp,originFp])).rows[0];
+        await client.query(`INSERT INTO cli_portal_access_request_history
+          (id,request_id,previous_status,next_status,reason,actor_kind)
+          VALUES ($1,$2,NULL,'pendente','Solicitação recebida com vínculo conferido no servidor','public')`, [randomUUID(),id]);
+        await client.query(`INSERT INTO auth_access_audit (actor_kind,action,target,result,detail_category)
+          VALUES ('client','portal_access_request_create',$1,'allowed','none')`, [id]);
+        return { kind:"created", row };
+      });
+      if (outcome.kind === "conflict") return json(res,409,{ error:"idempotency_key_reused" });
+      if (outcome.kind === "inactive") return json(res,409,{ error:"mode_inactive" });
+      if (outcome.kind === "denied") return json(res,403,{ error:"link_not_verified" });
+      return json(res,outcome.kind === "created" ? 201 : 200,{ request:outcome.row, replay:outcome.kind === "replay",
+        note:"pedido pendente; nenhuma identidade, sessão, grant ou contrato foi criado" });
+    } catch { return json(res,503,{ error:"audit_unavailable" }); }
   }
 
   async function handlePortalAccessRequests(req, res) {
-    const session = await ensureAuth(req, res, ["admin","ti","comercial"]);
-    if (!session) return;
-    const url = new URL(req.url, `http://${req.headers.host}`);
+    const publicPath = req.url.startsWith("/api/client/") || req.url.startsWith("/api/public/") || req.url.startsWith("/api/cli/");
+    if (publicPath) return handlePublicPortalAccessRequest(req,res);
+    const session = await ensureAuth(req,res,["admin","ti"]);
+    if (!session?.identityId) return session ? json(res,403,{ error:"individual_staff_required" }) : undefined;
     if (req.method === "GET") {
-      const { rows } = await pool.query(`SELECT * FROM cli_portal_access_requests ORDER BY created_at DESC LIMIT 100`);
-      return json(res,200,{ requests: rows });
+      const url=new URL(req.url,`http://${req.headers.host}`);
+      const accountId=String(url.searchParams.get("account")||"");
+      if (accountId && !UUID_PATTERN.test(accountId)) return json(res,400,{ error:"invalid_account_id" });
+      try {
+        const requests=await portalTransaction(async client => {
+          const result=await client.query(`SELECT id,protocol,mode,client_account_id,requested_email,requested_name,
+            document_ref,status,verified_link,decision_reason,approved_by_identity,decided_at,invite_id,created_at,updated_at
+            FROM cli_portal_access_requests WHERE ($1::uuid IS NULL OR client_account_id=$1)
+            ORDER BY created_at DESC LIMIT 100`,[accountId||null]);
+          await client.query(`INSERT INTO auth_access_audit (actor_kind,actor_id,action,target,result,detail_category)
+            VALUES ($1,$2,'portal_access_request_list',$3,'allowed','none')`,[session.role,session.identityId,accountId||"portal-queue"]);
+          return result.rows;
+        });
+        return json(res,200,{requests});
+      } catch { return json(res,503,{error:"audit_unavailable"}); }
     }
-    if (req.method === "POST") {
-      let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
-      const { mode, client_account_id, requested_email, requested_name, document_ref } = body;
-      if (!mode || !requested_email || !requested_name) return json(res,400,{ error:"missing_fields" });
-      // vínculo verificado no servidor em todos
-      if (client_account_id) {
-        const acc = await pool.query(`SELECT id FROM client_accounts WHERE id=$1`, [client_account_id]);
-        if (acc.rows.length===0) return json(res,400,{ error:"invalid_account", note:"vínculo verificado no servidor" });
-      }
-      // check mode config
-      const cfg = await pool.query(`SELECT * FROM cli_portal_mode_configs WHERE mode=$1`, [mode]);
-      if (cfg.rows.length===0) return json(res,400,{ error:"invalid_mode" });
-      if (!cfg.rows[0].is_active) return json(res,400,{ error:"mode_inactive" });
-      const protocol = generateProtocol("ACC-CLI");
-      const { rows } = await pool.query(
-        `INSERT INTO cli_portal_access_requests (protocol, mode, client_account_id, requested_email, requested_name, document_ref, verified_link)
-         VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-        [protocol, mode, client_account_id||null, requested_email, requested_name, document_ref||null, true]
-      );
-      await auditLog({ action:"cli_portal_access_request_create", actor: session.identityId||"unknown", target: rows[0].id, meta:{ protocol, mode, verified_link: true } });
-      return json(res,201,{ request: rows[0], note:"vínculo verificado no servidor" });
+    if (req.method !== "PATCH") return json(res,405,{error:"method_not_allowed"});
+    const body=await readPortalBody(req);
+    const id=String(body?.id||""), decision=String(body?.status||""), reason=typeof body?.reason === "string" ? body.reason.trim() : "";
+    if (!UUID_PATTERN.test(id) || !["aprovada","rejeitada"].includes(decision) || reason.length<10 || reason.length>500) {
+      return json(res,400,{error:"decision_reason_10_500_required"});
     }
-    if (req.method === "PATCH") {
-      let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
-      const { id, status, rejection_reason } = body;
-      if (!id || !status) return json(res,400,{ error:"missing_fields" });
-      const allowed = ['pendente','aprovada','rejeitada','cancelada'];
-      if (!allowed.includes(status)) return json(res,400,{ error:"invalid_status" });
-      if (status==='aprovada') {
-        const cur = await pool.query(`SELECT * FROM cli_portal_access_requests WHERE id=$1`, [id]);
-        if (cur.rows.length===0) return json(res,404,{ error:"not_found" });
-        if (!cur.rows[0].verified_link) return json(res,400,{ error:"verified_link_required", note:"vínculo verificado no servidor" });
-        // autocadastro nunca libera contratos sozinho
-        if (cur.rows[0].mode==='autocadastro') {
-          // ensure no auto_release
-          const cfg = await pool.query(`SELECT auto_release_contracts FROM cli_portal_mode_configs WHERE mode='autocadastro'`);
-          if (cfg.rows.length>0 && cfg.rows[0].auto_release_contracts===true) return json(res,400,{ error:"autocadastro_never_releases_contracts" });
+    try {
+      const result=await portalTransaction(async client => {
+        const current=(await client.query(`SELECT * FROM cli_portal_access_requests WHERE id=$1 FOR UPDATE`,[id])).rows[0];
+        if (!current) return {kind:"missing"};
+        if (current.status!=="pendente") return {kind:"decided"};
+        if (!current.verified_link) return {kind:"unverified"};
+        let inviteId=null, inviteUrl=null;
+        if (decision==="aprovada") {
+          const config=(await client.query(`SELECT is_active,auto_release_contracts FROM cli_portal_mode_configs WHERE mode=$1 FOR SHARE`,[current.mode])).rows[0];
+          if (!config?.is_active || (current.mode==="autocadastro" && config.auto_release_contracts)) return {kind:"policy"};
+          const existing=(await client.query(`SELECT id FROM auth_identities WHERE kind='client' AND email=$1 FOR SHARE`,[current.requested_email])).rows[0];
+          if (existing) return {kind:"identity_exists"};
+          inviteId=randomUUID();
+          const rawToken=`${randomUUID().replaceAll("-","")}${randomUUID().replaceAll("-","")}`;
+          await client.query(`INSERT INTO auth_invites (id,kind,email,token_hash,scope_note,issued_by,expires_at)
+            VALUES ($1,'client',$2,$3,$4,$5,NOW()+INTERVAL '7 days')`,[inviteId,current.requested_email,
+            createHash("sha256").update(rawToken).digest("hex"),`CLI-13 ${current.protocol}: ${reason}`.slice(0,500),session.role]);
+          inviteUrl=`/cliente/convite?token=${rawToken}`;
         }
-        await pool.query(`UPDATE cli_portal_access_requests SET status='aprovada', approved_by_identity=$2, approved_at=NOW() WHERE id=$1`, [id, session.identityId||null]);
-        await auditLog({ action:"cli_portal_access_approve", actor: session.identityId||"unknown", target: id, meta:{ status:'aprovada' } });
-      } else {
-        await pool.query(`UPDATE cli_portal_access_requests SET status=$2, rejection_reason=$3 WHERE id=$1`, [id, status, rejection_reason||null]);
-      }
-      const { rows } = await pool.query(`SELECT * FROM cli_portal_access_requests WHERE id=$1`, [id]);
-      return json(res,200,{ request: rows[0] });
-    }
-    return json(res,405,{ error:"method_not_allowed" });
+        const row=(await client.query(`UPDATE cli_portal_access_requests SET status=$2,approved_by_identity=$3,
+          approved_at=CASE WHEN $2='aprovada' THEN NOW() ELSE NULL END,rejection_reason=CASE WHEN $2='rejeitada' THEN $4 ELSE NULL END,
+          decision_reason=$4,decided_at=NOW(),invite_id=$5,updated_at=NOW() WHERE id=$1
+          RETURNING id,protocol,mode,status,client_account_id,invite_id,decided_at`,[id,decision,session.identityId,reason,inviteId])).rows[0];
+        await client.query(`INSERT INTO cli_portal_access_request_history
+          (id,request_id,previous_status,next_status,reason,actor_kind,actor_identity_id)
+          VALUES ($1,$2,'pendente',$3,$4,'staff',$5)`,[randomUUID(),id,decision,reason,session.identityId]);
+        await client.query(`INSERT INTO auth_access_audit (actor_kind,actor_id,action,target,result,detail_category)
+          VALUES ($1,$2,'portal_access_request_review',$3,'allowed','none')`,[session.role,session.identityId,id]);
+        return {kind:"ok",row,inviteUrl};
+      });
+      if (result.kind==="missing") return json(res,404,{error:"request_not_found"});
+      if (result.kind==="decided") return json(res,409,{error:"request_already_decided"});
+      if (result.kind==="unverified") return json(res,409,{error:"verified_link_required"});
+      if (result.kind==="identity_exists") return json(res,409,{error:"identity_exists_use_explicit_grant_flow"});
+      if (result.kind==="policy") return json(res,409,{error:"mode_policy_blocks_approval"});
+      return json(res,200,{request:result.row,inviteUrl:result.inviteUrl,
+        note:"aprovação cria somente convite canônico; grant e escopo contratual exigem ação separada com motivo"});
+    } catch { return json(res,503,{error:"audit_unavailable"}); }
   }
 
   // CLI-14 segurança conta MFA opcional gestão sessões troca e-mail concluída fluxos ligados backend real

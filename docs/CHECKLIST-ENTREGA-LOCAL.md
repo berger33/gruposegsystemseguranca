@@ -955,10 +955,10 @@ renovação e comunicação contratual com registro, sem bloquear indiscriminada
 
 ## CLI-13
 modos convite, solicitação com aprovação e autocadastro configuráveis; vínculo verificado no servidor em todos. Autocadastro nunca libera contratos sozinho.
-- Estado: a_revalidar
-- Tela / API / dados / autorização: `/admin/portal/solicitacoes`; modos/solicitações v2 e alias cliente na 076; convite legado na 003.
-- Integração e evidência (teste, resultado, commit): Há guards de aprovação manual legada; modos/vínculo e negação de contrato automático não têm gate L08.
-- Pendência / fronteira externa / aceite humano: Parcial; camada v2 órfã.
+- Estado: pronto_local (validação automática rápida; gate pesado e aceite humano pendentes)
+- Tela / API / dados / autorização: `/cliente/acesso`, `/admin/portal/solicitacoes`, `/api/public/portal-access-requests` e aliases; configuração/revisão admin/ti separada da entrada pública. Fontes: tabelas 076, convite 003, grants 004, histórico e idempotência 144. Conta/documento verificados no servidor; autoria e aprovador derivados da sessão.
+- Integração e evidência (teste, resultado, commit): `tests/cli13-portal-access-modes.test.mjs` 11/11; estático 5/5 (001–144); typecheck OK; `npm test` 226/226; build 84 páginas. Modo inativo, recusa auditada, replay/conflito, 400 + CHECK contra auto-release, rollback/503 e ausência de INSERT em identidade/sessão/grant/contrato provados. Relatório: [ENTREGA-L08-RELATORIO-2026-10-03-CLI13-ACESSO.md](ENTREGA-L08-RELATORIO-2026-10-03-CLI13-ACESSO.md).
+- Pendência / fronteira externa / aceite humano: `test:l08-delivery:pg`, cascata L03..L08 e aplicação da migração 144 adiados; sem aceite humano novo; Windows pendente.
 
 ## CLI-14
 segurança da conta com MFA opcional, gestão de sessões e troca de e-mail concluída; fluxos ligados ao backend real.
