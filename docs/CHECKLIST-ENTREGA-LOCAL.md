@@ -1475,10 +1475,10 @@ Satisfação/carteira Aceite: Pesquisas, CSAT/NPS quando adequado, histórico e 
 
 ## EXT-07
 Compliance corporativo Aceite: Licenças/certidões/seguros e obrigações aplicáveis com responsável e validade
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Handlers `/api/ext/*` para compliance; tabelas `ext_compliance_documents`/086; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
-- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
-- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
+- Estado: pronto_local (jornada interna de staff com gate PostgreSQL 17/HTTP dedicado; destino, aceite humano e Windows pendentes).
+- Tela / API / dados / autorização: `/admin/compliance`; `/api/ext/compliance/*` (`obligations`, `documents`, `evaluate`, `tasks`); migração aditiva 154 sobre a 153 e tabelas 086. Staff admin/marcelo/ti com fronteira 401/403; same-origin para mutações; autoria na sessão; vínculos estritos; idempotência com rejeição 409 em payload divergente; atomicidade total com `audit_log` (503/rollback em falha). Documentos privados com versionamento incremental por obrigação, vínculo estrito de substituição (`replacement_of_document_id`), cancelamento com justificativa obrigatória e bloqueio de reabertura via triggers no PostgreSQL. Tarefas com transições estritas, histórico de eventos 100% imutável. Escrita legada aposentada com 410 pós-guardas.
+- Integração e evidência (teste, resultado, commit): Gate dedicado `scripts/qa-ext07-compliance-postgres.mjs` (`npm run test:ext07-compliance:pg`) com **39/39 casos aprovados** (zero skip, zero todo, zero fail, mínimo exigido 35), HTTP real + PostgreSQL 17 + fixtures sintéticas `.invalid` + 503/rollback + lock de versão. Testes unitários/estáticos em `tests/ext07-compliance.test.mjs`, `npm test` 443/443, Wave 0 5/5 (001–154), build 92 páginas estáticas, migrações 154/154.
+- Pendência / fronteira externa / aceite humano: Jornada exclusivamente interna, sem ator regulatório externo inventado. Evidência é referência declarada/privada, não upload ou armazenamento de bytes verificado. Destino, homologação Windows e aceite executivo formal de Marcelo/Andreia continuam pendentes; Marcelo/Andreia somente L07.
 
 ## EXT-08
 Base de conhecimento Aceite: Procedimentos versionados, busca, acesso e ciência
@@ -1696,8 +1696,15 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 - [x] Falha de `audit_log` retorna 503 e reverte negócio/evento.
 - [ ] Aceite humano — não realizado nem presumido.
 
-### EXT-07 — evidência da sessão 2026-10-03
-- [x] Fonte canônica definida: `ext_compliance_documents` endurecida, linhas antigas classificadas como legado.
-- [x] Tarefa canônica definida: `ext_compliance_tasks`, com unicidade por documento/período/regra.
-- [x] Critério estrutural: documento privado e avaliação temporal idempotente.
-- [ ] Gate PostgreSQL real e homologação permanecem pendentes até execução do ambiente dedicado.
+### EXT-07 — Compliance corporativo — evidência de implementação e endurecimento (2026-10-03)
+- [x] Fonte canônica definida: `ext_compliance_documents`, `ext_compliance_obligations`, `ext_compliance_tasks` e `ext_compliance_events` estruturadas e endurecidas pela migração 154 sobre a 153.
+- [x] UI staff real `/admin/compliance` e API canônica `/api/ext/compliance/*` implementadas com RBAC (admin/marcelo/ti) e 401/403.
+- [x] Versionamento incremental por obrigação, substituição versionada com vínculo obrigatório (`replacement_of_document_id`) e proibição de concorrência ativa.
+- [x] Cancelamento de documento com justificativa obrigatória e cancelamento em cascata de tarefas abertas.
+- [x] Triggers PostgreSQL `ext_compliance_document_guard` e `ext_compliance_task_guard` impedindo reabertura ou mutação ilegal.
+- [x] Tabela `ext_compliance_events` 100% imutável contra UPDATE e DELETE.
+- [x] Avaliação temporal determinística e idempotente com geração de tarefas de conformidade sem duplicatas.
+- [x] Idempotência com detecção de payload divergente (409) e atomicidade transacional com `audit_log` (503/rollback em falha).
+- [x] Rotas legadas preservadas com envelope `items` e mutações aposentadas com 410 pós-guardas.
+- [x] Gate dedicado `npm run test:ext07-compliance:pg` executando 39/39 casos em PostgreSQL 17 real e servidor HTTP real, com zero skip/fail/todo.
+- [ ] Aceite humano executivo de Marcelo e Andreia — não presumido nem simulado; restrito ao L07.

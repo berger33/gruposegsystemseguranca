@@ -2292,5 +2292,34 @@ Fronteiras: isto é validação automática local (unitária + estática + build
 - Privacidade: allowlist cliente e asserção negativa para responsável/identidade/fatos/risco/tarefa/auditoria.
 - Não provado por esta evidência: aceite humano, implantação em destino, bateria pesada integral ou homologação Windows.
 
-## EXT-07 — 2026-10-03
-Base: PR #101 `MERGED`, merge `efc74bacb7a23314db1d267d91438519dc342a8c`; `HEAD` e `origin/main` coincidentes, árvore inicial limpa. Pré-inspeção confirmou rota legada e UI órfã, sem jornada canônica, tarefa, obrigação ou gate. Implementação: migração 153, API/UI canônicas, eventos, idempotência, privacidade estrutural, validade e tarefa dedicada. Evidência documental continua referência declarada; não há upload, bytes, checksum, malware scan, armazenamento verificado ou download.
+## Evidências EXT-07 — Compliance corporativo — 2026-10-03
+
+- **Base de partida:** PR #103 `MERGED`, merge commit `eff0bbddb5d5681d2612010e4349cfb9ff61234b`, feature `3cf218d949e3ce04fe49e82ce2dcd1ca6b874584`. `HEAD`, `origin/arena/01a1041e-gruposegsystemseguranca` e `origin/main` alinhados sem divergência (`0 0`), árvore limpa.
+- **Migração:** `db/migrations/154-ext07-compliance-hardening.sql` (aditiva sobre 153 e 086; 001–153 preservadas imutáveis).
+- **Provas executadas e resultados:**
+
+| Prova | Comando / Script | Resultado |
+|---|---|---|
+| Gate dedicado EXT-07 | `npm run test:ext07-compliance:pg` | **39/39 aprovados** (0 fail, 0 skipped, 0 todo; PostgreSQL 17 + HTTP real) |
+| Suíte unitária/estática | `npm test` | **443/443 aprovados** (0 fail, 0 skipped, 0 todo) |
+| Verificação estática Wave 0 | `node scripts/qa-wave0-static.mjs` | **5/5 verificações OK** (001–154 contínuas) |
+| Typecheck TypeScript | `npm run typecheck` | **0 erros** (`tsc --noEmit`) |
+| Build de produção | `npm run build` | **92 páginas estáticas compiladas com sucesso** (Next.js Turbopack) |
+| Migrações idempotentes no PostgreSQL | `npm run test:migrations:pg` | **154/154 checksummed**, replay integral, clone e rejeição de mismatch |
+
+- **Invariantes e garantias comprovadas:**
+  1. RBAC staff estrito (admin, marcelo, ti) com separação 401/403.
+  2. Proteção Same-Origin em todas as mutações.
+  3. Idempotência transacional: replay 200 idêntico e rejeição 409 em payload divergente.
+  4. Documentos privados: metadados confidenciais omitidos em listagens públicas, versionamento incremental por obrigação.
+  5. Substituição com substituição de documento ativo (`replacement_of_document_id`) marcando anterior como `substituida`.
+  6. Cancelamento de documento com justificativa obrigatória e cancelamento automático de tarefas de conformidade abertas.
+  7. Triggers de banco no PostgreSQL bloqueando adulteração de chaves/documentos e impedindo reabertura de documentos ou tarefas em estado terminal.
+  8. Avaliação temporal determinística idempotente gerando tarefas de conformidade (`ext_compliance_tasks`) vinculadas a documentos vencidos.
+  9. Tabela de eventos (`ext_compliance_events`) 100% imutável contra UPDATE e DELETE.
+  10. Atomicidade transacional com `audit_log`: falha no log de auditoria reverte a transação de negócio e devolve HTTP 503.
+  11. Preservação de compatibilidade das rotas legadas (`items` e escritas 410 pós-guardas).
+- **Fronteiras e não-reivindicações:**
+  - Não há upload, download ou certificação de integridade de arquivos/bytes em armazenamento externo (referências documentais são privadas e puramente declarativas).
+  - Não foram inventados atores regulatórios externos nem aceites humanos fictícios.
+  - O aceite humano existente de Marcelo e Andreia permanece restrito à L07. Destino e homologação Windows seguem pendentes.

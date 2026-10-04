@@ -212,7 +212,7 @@ export function createExtAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
     const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
-      const { rows } = await pool.query(`SELECT cp.*, ca.name as client_name FROM ext_continuity_plans cp LEFT JOIN client_accounts ca ON ca.id=cp.client_account_id ORDER BY cp.next_test_due ASC LIMIT 200`);
+      const { rows } = await pool.query(`SELECT cp.*, ca.display_name as client_name FROM ext_continuity_plans cp LEFT JOIN client_accounts ca ON ca.id=cp.client_account_id ORDER BY cp.next_test_due ASC LIMIT 200`);
       return json(res,200,{items:rows, note:'simulado documentado com responsaveis'});
     }
     if(req.method==='POST'){
