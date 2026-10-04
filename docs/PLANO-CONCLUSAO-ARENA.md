@@ -1,6 +1,15 @@
 # Plano de conclusão (Arena) — lista única de trabalho
 
-## Atualização corrente — F03 funcionário → RH → retorno
+## Atualização corrente — F03 cliente → chamado → atendimento → aceite
+
+- **Base:** `origin/main` `a459e07d42a855f93af4d76d047b49f3ff5e204e` (merge da PR #127; a #126 já estava em `7a41837`); **branch fixa:** `arena/01a10789-gruposegsystemseguranca`; **commit de implementação:** `7b81141`; **PR:** aberta desta branch. Não recriar #126 nem #127.
+- A terceira jornada F03 foi validada localmente por `npm run test:f03-client-ticket-service-acceptance:pg` (**1/1**, PostgreSQL 17 descartável, HTTP real e Chromium), além de Wave 0 5/5, `npm run typecheck`, `npm test` **536/536**, `npm run test:l08-delivery:pg` **51/51**, `npm run test:migrations:pg` (ledger 158/158) e `npm run build`. A vaga livre **158** foi consumida aditivamente; 001–157 continuam imutáveis.
+- Regra de negócio consolidada: a equipe atende por uma máquina de estados explícita e **nunca encerra** o chamado; o encerramento nasce do aceite do cliente, na mesma transação, com trilha atribuída a `client`. Esquema parcialmente migrado responde 503 em vez de fingir suporte.
+- Falhas reais registradas e corrigidas: placeholder reutilizado para TEXT e UUID no gate (`operator does not exist: uuid = text`) e teste unitário novo ausente da lista explícita de `test:unit`. As provas foram repetidas sem enfraquecer asserções.
+- **Limites:** F03 ainda não está concluída — falta contas→baixa→relatório, além do aceite humano e de Windows/EPERM; SMTP, banco, eSocial, assinatura, hosting e IA externos continuam fora.
+
+
+## Atualização anterior — F03 funcionário → RH → retorno
 
 - **Base:** `origin/main` `7a41837385985e2321fc86f8b461f133d7c01423` (PR #126 já integrada); **branch fixa:** `arena/01a10761-gruposegsystemseguranca`; **commits:** `d0f1cdebfb5fecac2fc7bb639b554faf1724a7b7` (implementação) e `fcddf69` (evidência/documentação); **PR:** [#127](https://github.com/berger33/gruposegsystemseguranca/pull/127). Não recriar a #126.
 - A jornada funcionário→solicitação→análise RH→retorno foi validada localmente por `npm run test:f03-employee-request-rh-return:pg` (**1/1**, PostgreSQL 17 descartável, HTTP e Chromium), além de Wave 0 5/5, typecheck e `npm test` 526/526. A migração livre 157 foi consumida additivamente; 001–156 continuam imutáveis.
@@ -14,7 +23,7 @@ Data: 2026-10-04. Base vigente desta fatia: `origin/main` `972e6563f5ea4888b62e8
 ## Regras permanentes
 
 1. Uma fatia de implementação por PR; PR pequeno revisável; nunca mesclar PRs alternativas antigas.
-2. Migrações 001–156 são imutáveis; próxima livre no main vigente: **157** (reconfirmar antes de cada fatia).
+2. Migrações 001–158 são imutáveis; próxima livre após esta fatia: **159** (reconfirmar antes de cada fatia).
 3. Autorização no servidor em toda API; nunca apenas ocultação no menu. Fail-closed em erro de banco/permissão.
 4. Preservar PLAT-01 (despacho à prova de rejeição), credenciais individuais, isolamento entre clientes, auditoria transacional e idempotência.
 5. Evidência real por fatia: comando + resultado + SHA + limite da prova. Banco sempre descartável (embedded-postgres de teste ou Compose exclusivo do operador). Sem segredos em git/logs.
@@ -28,7 +37,7 @@ Data: 2026-10-04. Base vigente desta fatia: `origin/main` `972e6563f5ea4888b62e8
 | F00 | Reconciliação dos 222 IDs + classificação dos PRs abertos | — | **concluída nesta sessão**: STATUS-ATUAL-CONSOLIDADO.md + PRs classificados (27 superseded, #121 fonte) |
 | F01 | Entrada e navegação por papel: `/admin` hub, `/admin/entrar` login central, redirecionamento seguro com retorno, rótulo papel-neutro, menu por papel, 401/403/500 compreensíveis | F00 | **integrada pela PR #125 (`e2fa152`), merge `972e656`**; aceite humano pendente |
 | F02 | Windows/EPERM symlink, isolamento QA×ambiente, scripts start/stop/status, backup/restauração em instância separada | F01 | pendente — requer Windows do operador para aceite |
-| F03 | Massa de demonstração e jornadas de negócio ponta a ponta (lead→recebimento, funcionário→RH, cliente→chamado, contas→baixa) | F01 | **em execução**: fundação + primeira jornada lead→oportunidade→proposta revisada→contrato→implantação na PR #126 (`c1a557f`), gate 1/1; três jornadas ainda pendentes |
+| F03 | Massa de demonstração e jornadas de negócio ponta a ponta (lead→recebimento, funcionário→RH, cliente→chamado, contas→baixa) | F01 | **em execução**: fundação + lead→implantação (#126, merge `7a41837`) + funcionário→RH→retorno (#127, merge `a459e07`, migração 157) + cliente→chamado→atendimento→aceite (esta fatia, `7b81141`, migração 158), cada uma com gate 1/1; falta contas→baixa→relatório |
 | F04–F13 | EXT-08 conhecimento, EXT-09 expansão, EXT-10 continuidade, EXT-11 analytics, EXT-12 visual, EXT-13 relatórios, EXT-14 inteligência comercial, EXT-15 emergencial, EXT-16 central/vídeo (projeto separado), EXT-17 biometria (projeto separado) — um requisito por PR | F01 | pendentes; tabelas 086–087 existem sem jornada provada |
 | F14 | IA/RAG real: AI-06 recuperação autorizada + AI-09 curadoria primeiro; depois AI-01..05, 07, 08, 10. Fallback não é inferência. | F03 (massa e escopos) | pendente; OLLAMA_ENABLED=false hoje = fallback |
 | F15 | Fronteiras parciais: portal externo fornecedor, upload real, recuperação de conta sem SMTP, jobs vs reinício, notificações internas, isolamento A/B, EXT-07 obrigação vencida | F04+ | pendente |

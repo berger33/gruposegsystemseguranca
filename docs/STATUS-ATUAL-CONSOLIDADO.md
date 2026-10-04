@@ -1,8 +1,25 @@
-# Status atual consolidado — reconciliação F00 + F01 + primeira jornada F03
+# Status atual consolidado — reconciliação F00 + F01 + jornadas F03
+
+## Atualização F03 — cliente → chamado → atendimento → aceite
+
+**Base confirmada:** `origin/main` `a459e07d42a855f93af4d76d047b49f3ff5e204e` — merge da PR [#127](https://github.com/berger33/gruposegsystemseguranca/pull/127), verificado por `gh pr view 127` (MERGED) e `git fetch origin main`; a PR [#126](https://github.com/berger33/gruposegsystemseguranca/pull/126) já estava integrada em `7a41837`. **Nenhuma das duas pode ser recriada, reaberta ou remesclada.** **Branch fixa:** `arena/01a10789-gruposegsystemseguranca`; **commit de implementação:** `7b81141`; **PR:** aberta desta branch.
+
+A migração aditiva **158** dá origem rastreável ao aceite: `client_reports.ticket_id` (FK para `client_tickets`), chave/impressão de idempotência em `client_reports` e em `client_ticket_status_audit`, índice parcial garantindo **um único aceite pendente por chamado** e índices únicos parciais para os retries. `001–157` não foram tocadas; manifesto PG, Wave 0, asserção EXT-07 e relatório de evidência passaram a declarar `001–158`.
+
+A jornada é inteiramente HTTP: o cliente abre o chamado (`POST /api/client/tickets`), a equipe `marcelo|ti` atende em `PATCH /api/admin/tickets/:id` dentro de uma máquina de estados explícita, com `Idempotency-Key` e mensagem obrigatória ao cliente, e o aceite é publicado como relatório `acceptance` vinculado ao chamado. **Encerrar deixou de ser ato da equipe**: a tentativa responde `409 ticket_close_requires_client_acceptance` e o chamado só vai a `closed` dentro da transação do aceite do cliente, com `client_ticket_status_audit.changed_by='client'`. Se o chamado não estiver mais `resolved` (reabertura, por exemplo), o aceite é recusado em vez de encerrar algo reaberto.
+
+O handler classifica o esquema em `legacy`, `incomplete` e `canonical`: o espaço legado do cliente (sem o ciclo de vida da 140) continua atendido pelo bloco antigo — de que o gate `test:l08-delivery:pg` depende — e um banco parcialmente migrado responde `503 migration_required` em vez de simular suporte. A UI ficou honesta nos dois lados: o painel só oferece os passos possíveis e avisa que o encerramento depende do cliente; o portal informa que registrar o aceite encerra o chamado vinculado. Nenhuma tela afirma envio de e-mail. O legado `cli-advanced-api.mjs` (`cli_tickets_v2`) foi verificado e permanece fora do escopo, sem alteração.
+
+**Evidência atual:** `npm ci` (82 pacotes/0 vulnerabilidades), `node scripts/qa-wave0-static.mjs` (**5/5**), `npm run typecheck`, `npm test` (**536/536**), `npm run test:f03-client-ticket-service-acceptance:pg` (**1/1**, PostgreSQL 17 descartável + HTTP real + Chromium, aplicando 001–158 sobre o seed sintético `seg_demo_local`), `npm run test:l08-delivery:pg` (**51/51**, regressão do tier legado), `npm run test:migrations:pg` (ledger **158/158** com checksum) e `npm run build`. O gate cobre recusa de anônimo/origem cruzada/cliente B, abertura concorrente convergindo para um chamado, cliente e RH impedidos de atender, falta de chave/nota curta/salto de etapa sem efeito, quatro comandos concorrentes com um material e três replays, conflito em chave reutilizada, pausa/retomada de SLA, rollback completo sob falha de auditoria, encerramento pela equipe recusado, um aceite pendente por chamado, rascunho invisível ao cliente, ciência impossível pela equipe, aceite encerrando o chamado, replay sem segundo encerramento, reabertura pelo cliente e a jornada no Chromium em 390×844 e 1440×1000 sem console/rede/5xx.
+
+**Falhas encontradas/reparadas, sem reduzir prova:** (1) o gate falhou em `operator does not exist: uuid = text` porque um mesmo placeholder foi comparado a `auth_access_audit.target` (TEXT) e a colunas UUID — os parâmetros passaram a entrar como texto com `::uuid` onde necessário; (2) `npm test` seguia em 526 porque `test:unit` lista arquivos explicitamente — o novo teste unitário foi registrado e o total passou a 536.
+
+F03 permanece **em execução**: três jornadas entregues (#126, #127 e esta); faltam contas a pagar/receber → baixa → relatório, aceite humano e Windows/EPERM. Sem SMTP, banco bancário, eSocial, assinatura externa, dados reais, hosting ou IA externa.
+
 
 ## Atualização F03 — funcionário → solicitação → análise RH → retorno
 
-**Base confirmada:** `origin/main` `7a41837385985e2321fc86f8b461f133d7c01423` (PR #126 já integrada normalmente); **branch fixa:** `arena/01a10761-gruposegsystemseguranca`; **commits:** `d0f1cdebfb5fecac2fc7bb639b554faf1724a7b7` (implementação) e `fcddf69` (evidência/documentação); **PR:** [#127](https://github.com/berger33/gruposegsystemseguranca/pull/127). Portanto #126 não deve ser recriada nem mesclada de novo.
+**Base confirmada:** `origin/main` `7a41837385985e2321fc86f8b461f133d7c01423` (PR #126 já integrada normalmente); **branch fixa:** `arena/01a10761-gruposegsystemseguranca`; **commits:** `d0f1cdebfb5fecac2fc7bb639b554faf1724a7b7` (implementação) e `fcddf69` (evidência/documentação); **PR:** [#127](https://github.com/berger33/gruposegsystemseguranca/pull/127) — **mesclada em `a459e07d42a855f93af4d76d047b49f3ff5e204e`** (registro posterior ao merge). Portanto nem #126 nem #127 devem ser recriadas ou mescladas de novo.
 
 A migração aditiva **157** introduz chave/impressão de idempotência e índices únicos parciais para `emp_self_requests` e `emp_self_request_followups`; 001–156 não foram alteradas. O manifesto PG, Wave 0, a asserção EXT-07 e o relatório de evidência foram atualizados para o ledger 001–157. A API canônica vincula criação ao funcionário da sessão, exige mesma origem e `Idempotency-Key`, e usa lock/transaction/auditoria em conjunto. A fila RH requer as permissões reais `employees.read`/`employees.write` com escopo e permite somente `solicitado → em_analise → aprovado|rejeitado` com mensagem explícita. O portal exibe somente a solicitação do titular e seus retornos; `RhWorkspace` usa essa fila canônica e declara corretamente que não há SMTP.
 
@@ -31,7 +48,7 @@ Este documento é o inventário único de trabalho exigido pela etapa F00 do [pl
 - 222 IDs transcrevidos 1:1 do checklist, sem renumerar.
 - Maioria `pronto_local` por gates automáticos; aceite humano formal pendente para RH/funcionário/clientes e jornadas integradas.
 - **F01 (entrada e navegação) foi integrada pela PR #122**: `/admin` hub, `/admin/entrar`, retorno seguro, menu por papel e logout revogável. A expansão do `AdminGate` às 28 páginas restantes foi integrada pela PR #125 (`e2fa152`), com aceite humano ainda pendente.
-- **F03 está em execução após a fundação da massa sintética**: além do bootstrap transacional/idempotente e do gate `test:demo-local:pg`, a PR #126 prova a primeira jornada lead→oportunidade→proposta revisada→contrato→implantação com HTTP/PG/Chromium. Três jornadas permanecem pendentes; F03 não está concluída.
+- **F03 está em execução após a fundação da massa sintética**: além do bootstrap transacional/idempotente e do gate `test:demo-local:pg`, a PR #126 (merge `7a41837`) prova lead→oportunidade→proposta revisada→contrato→implantação, a PR #127 (merge `a459e07`) prova funcionário→solicitação→RH→retorno e esta fatia prova cliente→chamado→atendimento→aceite, todas com HTTP/PG/Chromium. Resta a jornada contas a pagar/receber→baixa→relatório; F03 não está concluída.
 - EXT-06 estava `a_revalidar` na auditoria: a PR #101 (EXT-06 satisfação) **está mesclada no main** (migração 152 + gate 36/36 declarado); a alternativa #102 foi fechada sem merge na limpeza pós-F00. Resta aceite humano/Windows.
 - PLT-01 estava `a_revalidar`: a PR #118 (despacho à prova de rejeição) **está mesclada no main** com testes e workflow próprios.
 - EXT-08 a EXT-17 e AI-01 a AI-10: existem tabelas (086–087, 095–096) e handlers legados; **sem jornada UI→API→PG provada** — não contar como entregues.
@@ -41,7 +58,8 @@ Este documento é o inventário único de trabalho exigido pela etapa F00 do [pl
 
 | PR | Tema | Classificação | Razão |
 |---|---|---|---|
-| #126 | F03 — lead até implantação | **em validação nesta branch** | primeira jornada sobre `origin/main` `972e656`; implementação `c1a557f`, gate HTTP/PG/Chromium, sem migração nova |
+| #127 | F03 — funcionário → solicitação → RH → retorno | **integrada** | segunda jornada; migração 157; merge `a459e07` confirmado por `gh pr view 127` |
+| #126 | F03 — lead até implantação | **integrada** | primeira jornada sobre `origin/main` `972e656`; implementação `c1a557f`, gate HTTP/PG/Chromium, sem migração nova; merge `7a41837` |
 | #125 | F01 — gate nas 28 páginas administrativas restantes | **integrada** | reaplicou o escopo válido da #124 sobre o main pós-#123; sem API/migração nova; merge `972e656` |
 | #124 | F01 — gate nas páginas administrativas restantes | fechada como superseded | diff correto como envelope, mas base antiga e `CONFLICTING`/`DIRTY`; checks conferidos e trabalho preservado na #125 |
 | #121 | docs/auditoria-2026-10-04 (instruções Arena) | fechada sem merge próprio | conteúdo incorporado, reconciliado e integrado pela #122 |

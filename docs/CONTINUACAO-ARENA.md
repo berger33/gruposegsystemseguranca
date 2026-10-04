@@ -1,9 +1,34 @@
 # Continuidade Arena — 2026-10-04 (F01 cobertura + F03)
 
+## Incremento 6 — F03 cliente → chamado → atendimento → aceite
+
+- **Base confirmada:** `origin/main` `a459e07d42a855f93af4d76d047b49f3ff5e204e` — merge normal da PR [#127](https://github.com/berger33/gruposegsystemseguranca/pull/127), confirmado por `gh pr view 127` (MERGED) e `git fetch origin main`. A PR [#126](https://github.com/berger33/gruposegsystemseguranca/pull/126) já estava integrada em `7a41837`; **nenhuma das duas deve ser recriada, reaberta ou remesclada**. **Branch fixa:** `arena/01a10789-gruposegsystemseguranca`.
+- **Commits desta fatia:** `7b81141` (implementação e provas) e o commit de documentação deste incremento. **PR desta fatia:** aberta a partir desta branch.
+- **Escopo entregue localmente:** o cliente autenticado abre o chamado por `POST /api/client/tickets`; a equipe (`marcelo`/`ti`) atende por `PATCH /api/admin/tickets/:id` seguindo uma máquina de estados explícita (`open→in_progress`, `in_progress→waiting_client|resolved`, `waiting_client→in_progress`, reabertura a partir de `resolved|closed`), sempre com `Idempotency-Key` e com uma mensagem ao cliente de pelo menos cinco caracteres; o aceite é publicado como relatório `acceptance` vinculado ao chamado (`POST /api/admin/client-reports` com `ticketId`) e **só o cliente encerra**, em `PATCH /api/client/reports/:id/acknowledge`.
+- **Decisão central:** `closed` deixou de ser um destino da equipe — a tentativa responde `409 ticket_close_requires_client_acceptance`. O encerramento acontece na **mesma transação** do aceite, grava `client_ticket_status_audit` com `changed_by='client'` e exige que o chamado ainda esteja `resolved`; se o cliente reabriu, o aceite é recusado (`409 ticket_not_resolved_for_acceptance`) em vez de encerrar algo reaberto.
+- **Garantias:** sessão individual `marcelo|ti` para atender e sessão de cliente com escopo de conta para aceitar; mesma origem; `FOR UPDATE` antes da decisão; replay resolvido depois do lock (200 `replayed:true`) e reuso divergente recusado (409 `idempotency_conflict`); pausa/retomada de SLA preservadas; trilha e `auth_access_audit` na mesma transação (falha de auditoria desfaz tudo). Um único aceite pendente por chamado, por índice parcial.
+- **Compatibilidade honesta:** o handler classifica o esquema em `legacy` (sem o ciclo de vida de 140), `incomplete` (140 sem 158) e `canonical`. O legado continua atendido pelo bloco antigo — o gate `test:l08-delivery:pg` depende dele — e o parcial responde `503 migration_required` em vez de fingir suporte.
+- **Migração:** nova `158-f03-client-ticket-service-acceptance.sql`, estritamente aditiva (`ticket_id`, chaves/impressões de idempotência, índices parciais, CHECKs `NOT VALID`); `001–157` permanecem imutáveis. Manifesto fechado, verificação estática, asserção EXT-07 e relatório de evidências passaram a registrar `001–158`.
+
+### Prova repetida e falhas reais corrigidas
+
+- `npm ci`: 82 pacotes, 0 vulnerabilidades (sem mudança de dependências).
+- `node scripts/qa-wave0-static.mjs`: **5/5**; `npm run typecheck`: passou; `node --check` dos arquivos alterados: passou.
+- `npm test`: **536/536**, 0 falhas (526 do baseline + 10 novos testes unitários da máquina de estados e das recusas).
+- `npm run test:f03-client-ticket-service-acceptance:pg`: **1/1** em PostgreSQL **17** descartável, HTTP real e Chromium; aplica `001–158`, usa somente o seed sintético `seg_demo_local` e remove o cluster temporário. Cobre: anônimo e origem cruzada recusados; cliente B bloqueado no cadastro de A; cinco aberturas concorrentes com a mesma chave gerando **um** chamado; sessão de cliente e sessão de RH recusadas no atendimento; ausência de chave, nota curta e salto de etapa recusados sem alterar o chamado; quatro comandos concorrentes com a mesma chave produzindo **um** material e três replays; chave reutilizada com corpo divergente em 409; pausa/retomada de SLA materializadas; rollback completo sob falha injetada de auditoria; tentativa de encerramento pela equipe em 409; aceite publicado só sobre chamado resolvido, um pendente por chamado; rascunho invisível e aceite antecipado recusado; equipe impedida de dar ciência pelo cliente; aceite encerrando o chamado com `changed_by='client'`; replay do aceite sem segundo encerramento; reabertura pelo cliente; e a jornada completa no Chromium (portal mobile 390×844, painel 1440×1000) sem erro de console, falha de rede ou HTTP 5xx.
+- `npm run test:l08-delivery:pg`: **51/51** (regressão do espaço do cliente no tier legado). `npm run test:migrations:pg`: ledger `158/158` com checksum, recusa de rebaseline automático. `npm run build`: passou.
+- **Falha real 1 — gate vermelho:** a primeira execução do gate parou em `operator does not exist: uuid = text` (42883). Causa: um mesmo `$n` foi usado contra `auth_access_audit.target` (TEXT) e contra colunas UUID, e o PostgreSQL deduz **um** tipo por placeholder. Correção: os parâmetros entram como texto e são convertidos com `::uuid` onde a coluna é UUID; nenhuma asserção foi enfraquecida e o gate passou na repetição.
+- **Falha real 2 — teste novo fora do comando:** `npm test` continuava em 526 porque `test:unit` lista os arquivos explicitamente. Correção: o novo teste unitário foi registrado na lista, e o total subiu para 536.
+
+### Limites e próximo passo
+
+F03 **continua em execução**, não concluída. Esta é a terceira jornada (lead→implantação na #126, funcionário→RH→retorno na #127, cliente→chamado→aceite nesta). Falta a quarta — contas a pagar/receber → baixa → relatório — além de Windows/EPERM (F02) e do aceite humano. O legado `cli-advanced-api.mjs` (`cli_tickets_v2`) foi verificado e permanece fora do escopo desta fatia, sem alteração. Não houve dados reais, segredos persistidos, SMTP, banco bancário, eSocial, assinatura externa, hospedagem permanente ou IA externa.
+
+
 ## Incremento 5 — F03 funcionário → solicitação → análise RH → retorno
 
 - **Base confirmada:** `origin/main` `7a41837385985e2321fc86f8b461f133d7c01423` (merge normal da PR #126). **Branch fixa:** `arena/01a10761-gruposegsystemseguranca`.
-- **Commits desta fatia:** `d0f1cdebfb5fecac2fc7bb639b554faf1724a7b7` (implementação) e `fcddf69` (evidência/documentação). **PR desta fatia:** [#127](https://github.com/berger33/gruposegsystemseguranca/pull/127), aberta a partir desta branch; não recriar a PR #126, já integrada.
+- **Commits desta fatia:** `d0f1cdebfb5fecac2fc7bb639b554faf1724a7b7` (implementação) e `fcddf69` (evidência/documentação). **PR desta fatia:** [#127](https://github.com/berger33/gruposegsystemseguranca/pull/127) — **mesclada** em `a459e07d42a855f93af4d76d047b49f3ff5e204e` (registro feito depois do merge; este documento foi escrito antes dele). Não recriar #126 nem #127, ambas integradas.
 - **Escopo entregue localmente:** o funcionário autenticado abre uma solicitação por `POST /api/employee/actions/request`, sempre pelo titular da sessão e com `Idempotency-Key`; RH lê somente o recorte permitido em `GET /api/admin/hr/l03/self-requests` e revisa em `PATCH` na ordem `solicitado → em_analise → aprovado|rejeitado`, com retorno de ao menos cinco caracteres. O portal próprio mostra os retornos canônicos; a aba **Solicitações** do RH não afirma SMTP.
 - **Garantias:** sessão individual e mesma origem; `hasPermission()` server-side com `employees.read`/`employees.write` e escopo de organização/unidade/contrato/próprio; lock transacional, impressão de requisição, replay 200, reutilização divergente 409, follow-up e `audit_log` na mesma transação. O legado EMP-12 mantém somente leitura compatível; `POST`/`PATCH` em `/api/admin|crm|hr/self-requests` e `POST` em follow-ups retornam 410 `legacy_emp12_write_retired`, impedindo bypass.
 - **Migração:** nova `157-f03-employee-request-rh-return.sql`; `001–156` permanecem imutáveis. O manifesto fechado, a verificação estática e o relatório de evidências agora registram `001–157`.
@@ -105,19 +130,22 @@ Também pendem Windows/EPERM (F02), aceite humano e integrações externas. Não
 ## Prompt completo para a próxima sessão
 
 ```text
-Continue berger33/gruposegsystemseguranca na branch fixa
-arena/01a1073d-gruposegsystemseguranca, a partir de origin/main
-972e6563f5ea4888b62e88b8c126a925d79f6068. Leia os quatro documentos de
-continuidade/status/plano/checklist. A PR #126 é a primeira jornada F03 e não
-pode ser tratada como F03 concluída: confira seus checks antes de qualquer merge.
-Não refaça F00/F01 nem o seed F03. Implemente somente a próxima fatia F03
-(funcionário → solicitação → análise RH → retorno), usando APIs/fontes canônicas,
-HTTP real, PostgreSQL 17 descartável e a massa sintética já existente. Preserve
-RBAC server-side, PLAT-01, sessões individuais, isolamento A/B, auditoria
-transacional, idempotência/retry e UI honesta. Migrações 001–156 permanecem
-imutáveis; reconfirme que a próxima livre é 157. Dados só em .invalid; sem SMTP
-real, banco bancário, eSocial, assinatura externa, hospedagem definitiva ou IA
-externa. Uma fatia por PR pequena; registre qualquer falha real, corrija e repita.
-Atualize continuidade, status, plano e checklist com SHA base, branch, PR,
-commits, comandos, resultados e limites; não declare F03 concluída.
+Continue berger33/gruposegsystemseguranca na branch fixa atribuída pelo Arena
+(nunca main), a partir de origin/main
+a459e07d42a855f93af4d76d047b49f3ff5e204e. Leia os quatro documentos de
+continuidade/status/plano/checklist. As PRs #126 e #127 já estão mescladas e a
+PR desta terceira jornada F03 (cliente → chamado → atendimento → aceite) foi
+aberta desta branch: não recrie, reabra nem remescle nenhuma delas, e não trate
+F03 como concluída. Não refaça F00/F01, o seed F03 nem as três jornadas já
+entregues. Implemente somente a próxima fatia F03 (contas a pagar/receber →
+baixa → relatório), confirmando antes as fontes canônicas existentes e fazendo
+os estados nascerem por APIs HTTP reais, com PostgreSQL 17 descartável e a massa
+sintética já existente. Preserve RBAC server-side fail-closed, PLAT-01, sessões
+individuais, isolamento A/B, auditoria transacional, idempotência/retry e UI
+honesta. Migrações 001–158 permanecem imutáveis; reconfirme que a próxima livre
+é 159. Dados só em .invalid; sem SMTP real, banco bancário, eSocial, assinatura
+externa, hospedagem definitiva ou IA externa. Uma fatia por PR pequena; registre
+qualquer falha real, a causa e a correção, e repita as provas sem enfraquecer
+asserções. Atualize continuidade, status, plano e checklist com SHA base,
+branch, PR, commits, comandos, resultados e limites.
 ```
