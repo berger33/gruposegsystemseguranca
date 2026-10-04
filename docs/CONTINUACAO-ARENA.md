@@ -4,6 +4,8 @@
 
 - Base: `b61691fb95aa68d1a43e5f3b5cf43131de2c397c` (main, merge da PR #122/F00+F01).
 - Branch: `arena/01a105a3-gruposegsystemseguranca`.
+- PR: **#123** — `feat(f03): massa sintética idempotente e isolada`.
+- Commit de implementação: `0fc7048` (o commit documental final apenas registra a PR).
 - Escopo desta fatia: limpeza pós-F00 no GitHub + fundação idempotente da massa F03.
 - Migrações: nenhuma; 001–156 permanecem imutáveis e a próxima livre continua 157 (reconfirmar no próximo main).
 
