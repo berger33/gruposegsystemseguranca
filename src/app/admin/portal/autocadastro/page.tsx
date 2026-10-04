@@ -4,10 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, CircleAlert, CircleCheck, ClipboardCheck, LockKeyhole, ShieldCheck, UserRoundPlus } from "lucide-react";
 import styles from "./SelfRegistration.module.css";
+import AdminGate from "../../AdminGate";
 
 type PreviewState = "pending" | "verified" | null;
 
-export default function SelfRegistrationPreviewPage() {
+function SelfRegistrationPreviewPageContent() {
   const [previewState, setPreviewState] = useState<PreviewState>(null);
 
   return (
@@ -57,5 +58,14 @@ export default function SelfRegistrationPreviewPage() {
         <footer className={styles.footer}><span>Não cria conta, não salva informações e não abre acesso ao portal.</span><Link href="/admin/portal">Voltar às opções de acesso <ArrowLeft size={13} /></Link></footer>
       </section>
     </main>
+  );
+}
+
+// F01: acesso restrito a TI/admin; demais papéis recebem o 403 claro do gate.
+export default function SelfRegistrationPreviewPage() {
+  return (
+    <AdminGate allowedRoles={["ti", "admin"]}>
+      <SelfRegistrationPreviewPageContent />
+    </AdminGate>
   );
 }

@@ -1,4 +1,6 @@
-export default function TiAdminPage() {
+import AdminGate from "../AdminGate";
+
+function TiAdminContent() {
   return (
     <main style={{ padding: 24, maxWidth: 1000, margin: "0 auto", fontFamily: "system-ui, sans-serif", color: "var(--theme-fg)", background: "var(--theme-bg)", borderRadius: "var(--theme-radius)", boxShadow: "var(--theme-shadow)" }}>
       <h1 style={{ fontFamily: "var(--theme-font)", color: "var(--theme-accent)" }}>Camada 4 — Administrador de sistema / TI</h1>
@@ -24,5 +26,16 @@ export default function TiAdminPage() {
         ))}
       </section>
     </main>
+  );
+}
+
+// F01: protótipo declarado, mas ainda assim restrito a TI/admin — anônimo e
+// demais papéis não visualizam a camada técnica. Nenhuma função ganhou acesso
+// real por este envelope; autorização segue nas APIs.
+export default function TiAdminPage() {
+  return (
+    <AdminGate allowedRoles={["ti", "admin"]}>
+      <TiAdminContent />
+    </AdminGate>
   );
 }

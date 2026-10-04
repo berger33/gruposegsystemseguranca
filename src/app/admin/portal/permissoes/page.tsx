@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Bell, Check, Clock3, History, ShieldCheck, UserRoundCog, UserRoundPlus, UserRoundX } from "lucide-react";
 import { evaluateManualStatusChange, MANUAL_STATUS_REASON_CATEGORIES, shouldNotifyPermissionRestored, type AdminAccountStatus } from "@/lib/admin-status-preview.mjs";
 import styles from "./ReminderPermissions.module.css";
+import AdminGate from "../../AdminGate";
 
 type PermissionAction = "grant" | "revoke";
 type PermissionEvent = {
@@ -50,7 +51,7 @@ function statusLabel(status: AdminAccountStatus) {
   return status === "ativa" ? "Ativa" : status === "suspensa" ? "Suspensa" : "Desativada";
 }
 
-export default function ReminderPermissionsPage() {
+function ReminderPermissionsPageContent() {
   const [target, setTarget] = useState("");
   const [directorySearch, setDirectorySearch] = useState("");
   const [reason, setReason] = useState("");
@@ -292,5 +293,14 @@ export default function ReminderPermissionsPage() {
         <footer className={styles.footer}><span>Somente uma demonstração local: não autentica, não envia avisos e não salva mudanças.</span><Link href="/admin/portal/alertas">Voltar à prévia de alertas <ArrowLeft size={13} /></Link></footer>
       </section>
     </main>
+  );
+}
+
+// F01: acesso restrito a TI/admin; demais papéis recebem o 403 claro do gate.
+export default function ReminderPermissionsPage() {
+  return (
+    <AdminGate allowedRoles={["ti", "admin"]}>
+      <ReminderPermissionsPageContent />
+    </AdminGate>
   );
 }

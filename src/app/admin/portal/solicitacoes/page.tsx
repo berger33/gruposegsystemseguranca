@@ -4,11 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CircleAlert, FileSearch } from "lucide-react";
 import styles from "./AccessRequests.module.css";
+import AdminGate from "../../AdminGate";
 
 type Mode={mode:string;is_active:boolean;requires_approval:boolean;auto_release_contracts:boolean};
 type AccessRequest={id:string;protocol:string;mode:string;requested_email:string;requested_name:string;client_account_id:string;document_ref:string;status:string;verified_link:boolean;decision_reason?:string};
 
-export default function PortalAccessRequestsPage(){
+function PortalAccessRequestsPageContent(){
   const [modes,setModes]=useState<Mode[]>([]); const [requests,setRequests]=useState<AccessRequest[]>([]);
   const [message,setMessage]=useState(""); const [loading,setLoading]=useState(true);
   const load=useCallback(async()=>{setLoading(true);setMessage("");try{const [m,r]=await Promise.all([fetch("/api/cli/portal-mode-configs"),fetch("/api/hr/cli-portal-access-requests")]);if(!m.ok||!r.ok)throw new Error();setModes((await m.json()).modes||[]);setRequests((await r.json()).requests||[]);}catch{setMessage("Não foi possível carregar a configuração e a fila.");}finally{setLoading(false);}},[]);
@@ -21,4 +22,13 @@ export default function PortalAccessRequestsPage(){
     <section className={styles.requesterSection}><div><span className={styles.sectionLabel}>MODOS DE ENTRADA</span><h2>Configuração vigente</h2></div><div className={styles.requesterActions}>{modes.map((mode,index)=><div className={styles.requestForm} key={mode.mode}><strong>{mode.mode}</strong><label><input type="checkbox" checked={mode.is_active} onChange={e=>setModes(current=>current.map((x,i)=>i===index?{...x,is_active:e.target.checked}:x))}/> Ativo</label><label><input type="checkbox" checked={mode.requires_approval} onChange={e=>setModes(current=>current.map((x,i)=>i===index?{...x,requires_approval:e.target.checked}:x))}/> Exige aprovação</label><label><input type="checkbox" checked={mode.auto_release_contracts} disabled={mode.mode==="autocadastro"} onChange={e=>setModes(current=>current.map((x,i)=>i===index?{...x,auto_release_contracts:e.target.checked}:x))}/> Libera contratos automaticamente</label><button type="button" onClick={()=>void saveMode(mode)}>Salvar com motivo</button></div>)}</div></section>
     <section className={styles.queue}><div className={styles.queueHeader}><div><span className={styles.sectionLabel}>FILA REAL</span><h2>Solicitações</h2></div><button type="button" onClick={()=>void load()}>Atualizar</button></div>{loading?<p>Carregando…</p>:requests.length===0?<p className={styles.emptyState}>Nenhum pedido registrado.</p>:<div className={styles.demoRequestList}>{requests.map(item=><article className={styles.demoRequest} key={item.id}><strong>{item.protocol}</strong><span className={styles.demoRequestStatus}>{item.status}</span><p>{item.requested_name} · {item.requested_email}</p><p>Modo: {item.mode} · conta: {item.client_account_id}</p><p>Documento: {item.document_ref} · vínculo: {item.verified_link?"verificado no servidor":"não verificado"}</p>{item.status==="pendente"&&<div className={styles.decisionGrid}><button type="button" className={styles.decisionButton} onClick={()=>void decide(item,"aprovada")}>Aprovar e emitir convite</button><button type="button" className={styles.decisionButton} onClick={()=>void decide(item,"rejeitada")}>Rejeitar com motivo</button></div>}</article>)}</div>}</section>
   </section></main>;
+}
+
+// F01: acesso restrito a TI/admin; demais papéis recebem o 403 claro do gate.
+export default function PortalAccessRequestsPage() {
+  return (
+    <AdminGate allowedRoles={["ti", "admin"]}>
+      <PortalAccessRequestsPageContent />
+    </AdminGate>
+  );
 }

@@ -1,6 +1,6 @@
 # Plano de conclusão (Arena) — lista única de trabalho
 
-Data: 2026-10-04. Base inicial: `main` `540faf6c5124fd243fc3e287527ff4f6983ce8f1`; F00/F01 integradas no merge `b61691fb95aa68d1a43e5f3b5cf43131de2c397c` da PR #122. Deriva de [docs/auditoria-2026-10-04/02-PLANO-ARENA.md](auditoria-2026-10-04/02-PLANO-ARENA.md) já reconciliado em [STATUS-ATUAL-CONSOLIDADO.md](STATUS-ATUAL-CONSOLIDADO.md). Este é o plano operacional vigente entre sessões; cada sessão atualiza a coluna "situação" e [CONTINUACAO-ARENA.md](CONTINUACAO-ARENA.md).
+Data: 2026-10-04. Base vigente de trabalho: `main` pós-PR #123 `7d0990aaca47a8ea21b2380834289d2c73165b81`; F00/F01 estão integradas pela PR #122 e a cobertura restante do F01 está na PR substituta #125 (`e2fa152`) antes da integração. Deriva de [docs/auditoria-2026-10-04/02-PLANO-ARENA.md](auditoria-2026-10-04/02-PLANO-ARENA.md) já reconciliado em [STATUS-ATUAL-CONSOLIDADO.md](STATUS-ATUAL-CONSOLIDADO.md). Este é o plano operacional vigente entre sessões; cada sessão atualiza a coluna "situação" e [CONTINUACAO-ARENA.md](CONTINUACAO-ARENA.md).
 
 ## Regras permanentes
 
@@ -16,8 +16,8 @@ Data: 2026-10-04. Base inicial: `main` `540faf6c5124fd243fc3e287527ff4f6983ce8f1
 
 | Etapa | Escopo | Dependência | Situação |
 |---|---|---|---|
-| F00 | Reconciliação dos 222 IDs + classificação dos PRs abertos | — | **concluída nesta sessão**: STATUS-ATUAL-CONSOLIDADO.md + PRs classificados (26 superseded, #121 fonte) |
-| F01 | Entrada e navegação por papel: `/admin` hub, `/admin/entrar` login central, redirecionamento seguro com retorno, rótulo papel-neutro, menu por papel, 401/403/500 compreensíveis | F00 | **concluída e integrada na PR #122**; aceite humano pendente |
+| F00 | Reconciliação dos 222 IDs + classificação dos PRs abertos | — | **concluída nesta sessão**: STATUS-ATUAL-CONSOLIDADO.md + PRs classificados (27 superseded, #121 fonte) |
+| F01 | Entrada e navegação por papel: `/admin` hub, `/admin/entrar` login central, redirecionamento seguro com retorno, rótulo papel-neutro, menu por papel, 401/403/500 compreensíveis | F00 | **núcleo integrado na PR #122; cobertura das 28 páginas restantes na PR #125 (`e2fa152`), aguardando integração nesta fotografia**; aceite humano pendente |
 | F02 | Windows/EPERM symlink, isolamento QA×ambiente, scripts start/stop/status, backup/restauração em instância separada | F01 | pendente — requer Windows do operador para aceite |
 | F03 | Massa de demonstração e jornadas de negócio ponta a ponta (lead→recebimento, funcionário→RH, cliente→chamado, contas→baixa) | F01 | **em execução**: fundação sintética idempotente A/B + staff + funcionário + contratos implementada; quatro jornadas ainda pendentes |
 | F04–F13 | EXT-08 conhecimento, EXT-09 expansão, EXT-10 continuidade, EXT-11 analytics, EXT-12 visual, EXT-13 relatórios, EXT-14 inteligência comercial, EXT-15 emergencial, EXT-16 central/vídeo (projeto separado), EXT-17 biometria (projeto separado) — um requisito por PR | F01 | pendentes; tabelas 086–087 existem sem jornada provada |
@@ -27,7 +27,7 @@ Data: 2026-10-04. Base inicial: `main` `540faf6c5124fd243fc3e287527ff4f6983ce8f1
 
 ## Trabalho imediato após F01 (ordem)
 
-1. ~~Fechar PRs superseded~~ — **concluído em 04/10/2026**: 27 alternativas fechadas sem merge + #121 fechada após integração documental pela #122; zero PR aberta.
+1. ~~Fechar PRs superseded~~ — **concluído em 04/10/2026**: 27 alternativas fechadas sem merge + #121 fechada após integração documental pela #122; a #124 foi revisada, fechada como superseded e reaplicada na PR #125 sobre o main pós-#123.
 2. **F03 — concluir as jornadas sobre a massa idempotente já criada**: lead→contrato→implantação; funcionário→RH→retorno; cliente→chamado→aceite; contas→baixa→relatório. Uma jornada por fatia revisável, sem duplicar fontes canônicas.
 3. **EXT-08 (F04)** — primeira fatia EXT pendente.
 4. Rodada dedicada: obrigação vencida do EXT-07 criando tarefa (pendência declarada no aceite técnico).
