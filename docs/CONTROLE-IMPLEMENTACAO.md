@@ -1,5 +1,14 @@
 # Controle de implementação — SEG System
 
+## Atualização 2026-10-04 — Aplicação em banco de destino: decisões, ensaio e runbook
+
+- Base: PR #119 `MERGED`, merge `70ee202cb5a2a5aa9849584005a7e9c90261f7e0`, divergência 0/0 e árvore limpa. **Sem migração nova e sem mudança de código** (001–156 intocadas; próxima livre 157): entrega documental.
+- Decisões do proprietário registradas: intervalo do agendador **3600 s**; identidade declarada = conta staff **TI** ativa (UUID obtido no destino pela query do runbook).
+- Entrega: **runbook do operador** `docs/APLICACAO-BANCO-DESTINO.md` (compose/migrações/verificações/identidade/ativação/monitoramento/notas Windows/fronteiras) e `.env.example` passou a documentar `EXT07_EVALUATE_INTERVAL_SECONDS`/`EXT07_EVALUATE_IDENTITY` (ausentes até então).
+- Ensaio ponta a ponta em cluster PostgreSQL 17.9 descartável (script temporário apagado): `db:migrate` oficial 156 Applied + replay idempotente; 562 tabelas; sem seed EXT-07; servidor sem agendador mantém padrão desligado; servidor com 3600+TI avalia sozinho no primeiro tick imediato (tarefa em nome da identidade declarada, run `concluida`, evento do dia 1×, rota `/schedule` 401/200); **32 verificações verdes em 9 passos**.
+- Validação: wave0 5/5; typecheck; `npm test` 514/514; migrations 156/156 ×2 + clone negativo; gate EXT-07 43/43; `git diff --check` limpo. Bateria integral não necessária (entrega documental). [Relatório](ENTREGA-RELATORIO-2026-10-04-APLICACAO-BANCO-DESTINO.md).
+- Pendências: executar o procedimento na máquina real do operador, aceite humano e Windows.
+
 ## Atualização 2026-10-04 — EXT-07 execução agendada da avaliação temporal
 
 - Base: PR #118 `MERGED`, merge `150052e7a391a32a447341089ce3451e62a3477e`, divergência 0/0 e árvore limpa. Migração **156** aditiva (`ext_compliance_evaluation_runs`, append-only); 001–155 intocadas; próxima livre 157.

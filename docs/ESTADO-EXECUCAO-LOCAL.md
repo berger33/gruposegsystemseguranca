@@ -1,5 +1,15 @@
 # Estado da execução — entrega local integral
 
+## Estado vigente — Aplicação em banco de destino: decisões, ensaio e runbook (2026-10-04)
+
+Base `main` `70ee202cb5a2a5aa9849584005a7e9c90261f7e0` (merge da PR #119 / EXT-07 agendamento), branch `arena/01a10507-gruposegsystemseguranca`, divergência inicial 0/0 e árvore limpa. **Nenhuma migração nova** (001–156 intocadas; próxima livre 157) e nenhuma mudança de código: entrega exclusivamente documental.
+
+Executa a parcela executável da pendência "aplicação em banco de destino". Decisões do proprietário registradas: intervalo **3600 s** e identidade declarada = conta staff **TI** ativa (UUID obtido no destino pela query da Etapa 4). O fluxo completo foi **ensaiado ponta a ponta em cluster PostgreSQL 17.9 descartável** (32 verificações verdes em 9 passos): `npm run db:migrate` oficial 156 Applied + re-execução idempotente 156 Already applied, ledger `__migrations` 156/156 com checksum, 562 tabelas, sem seed EXT-07; servidor real **sem** agendador mantém o padrão desligado e cria fixture sintética via API; servidor real **com** `EXT07_EVALUATE_INTERVAL_SECONDS=3600` + `EXT07_EVALUATE_IDENTITY` (TI) avalia sozinho no primeiro tick imediato — tarefa em nome da identidade declarada, run `concluida` (`interval_seconds`=3600), evento do dia 1× (chave `agendada:YYYY-MM-DD`), rota `GET /api/ext/compliance/schedule` 401/200 conforme sessão. Acompanhamento do ledger validado com as queries que foram para o runbook. Script do ensaio e clusters apagados; nenhum banco real tocado.
+
+Entregáveis versionados: **`docs/APLICACAO-BANCO-DESTINO.md`** (runbook do operador: banco via compose, migrações, verificações, identidade, ativação, monitoramento, notas Windows e fronteiras) e **`.env.example`** passou a documentar `EXT07_EVALUATE_INTERVAL_SECONDS`/`EXT07_EVALUATE_IDENTITY` (estavam ausentes). Gates focais: wave 0 5/5; typecheck limpo; `npm test` 514/514; migrations 156/156 ×2 + clone negativo; gate EXT-07 43/43; `git diff --check` limpo. Bateria integral não necessária (entrega documental). [Relatório](ENTREGA-RELATORIO-2026-10-04-APLICACAO-BANCO-DESTINO.md).
+
+Pendências que seguem: **executar o procedimento na máquina real do operador** (com as decisões já registradas), aceite humano e validação formal em Windows.
+
 ## Estado vigente — EXT-07 execução agendada da avaliação temporal (2026-10-04)
 
 Base `main` `150052e7a391a32a447341089ce3451e62a3477e` (merge da PR #118 / PLAT-01), branch `arena/01a104d5-gruposegsystemseguranca`, divergência inicial 0/0 e árvore limpa. **Migração 156** (`ext_compliance_evaluation_runs`, aditiva, append-only por trigger): 001–155 intocadas, próxima livre **157**.
