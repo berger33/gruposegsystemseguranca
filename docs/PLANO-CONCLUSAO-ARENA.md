@@ -1,3 +1,7 @@
+## Atualização corrente — EXT-10 / F06 Continuidade
+
+Implementar e provar planos de contingência, acionamento interno, simulados e recuperação pela API canônica; manter aceites humano e Windows como pendências.
+
 # Plano de conclusão (Arena) — lista única de trabalho
 
 ## Atualização corrente — EXT-09 / F05 Expansão, Dimensionamento e Cenários Financeiros

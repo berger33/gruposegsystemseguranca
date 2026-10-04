@@ -1,3 +1,13 @@
+# Continuidade Arena — 2026-10-04 (F06 / EXT-10)
+
+## Incremento 10 — Continuidade de Negócios e Contingência
+
+- Base: `origin/main` `7c30993352a306d8dd8767d8599b037954d124f7`; branch fixa `arena/01a108ab-gruposegsystemseguranca`. PRs #126, #127, #129, #132 e #133 permanecem integradas e não foram recriadas.
+- Migração aditiva **162** (`162-ext10-continuity-canonical-journey.sql`): eventos imutáveis, fingerprint SHA-256, idempotência por titular, permissões `continuity.read/write/activate` e ações de auditoria. 001–161 preservadas; próxima livre 163.
+- API canônica: `GET/POST /api/ext/continuity/plans`, detalhe, `POST /plans/:id/transition` e `POST /plans/:id/exercises`. Mutação HTTP real, same-origin, RBAC fail-closed, advisory lock + `FOR UPDATE`, auditoria transacional com 503/rollback. Acionamento é registro interno honesto; não há SMTP, telefonia ou gateway externo.
+- UI protegida por AdminGate em `/admin/continuidade`, com planos, responsáveis, passos de contingência/recuperação e trilha de simulados.
+- Validação prevista/executada nesta fatia: Wave0 5/5, typecheck, unitários, gate PG17 descartável EXT-10, migrações 162/162 e regressões canônicas. Aceite humano e Windows/EPERM continuam pendentes.
+
 # Continuidade Arena — 2026-10-04 (F01 cobertura + F03 + F04 / EXT-08 + F05 / EXT-09)
 
 ## Incremento 9 — F05: Expansão e Novas Unidades — Planejamento, Capacidade e Cenários Financeiros (EXT-09)

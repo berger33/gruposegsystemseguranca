@@ -112,6 +112,7 @@ import { createExtAdvancedApi } from "./src/server/ext-advanced-api.mjs";
 import { createExtComplianceApi } from "./src/server/ext-compliance-api.mjs";
 import { createExtKnowledgeApi } from "./src/server/ext-knowledge-api.mjs";
 import { createExtExpansionApi } from "./src/server/ext-expansion-api.mjs";
+import { createExtContinuityApi } from "./src/server/ext-continuity-api.mjs";
 import { parseSchedulerConfig, startExtComplianceScheduler } from "./src/server/ext-compliance-scheduler.mjs";
 import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
 import { createCommercialHistoryApi } from "./src/server/commercial-history-api.mjs";
@@ -2332,6 +2333,8 @@ const extExpansionApi = createExtExpansionApi({
   requireSession: readSession,
 });
 
+const extContinuityApi = createExtContinuityApi({ pool: getPool(), sameOrigin, requireSession: readSession });
+
 const extAdvancedApi = createExtAdvancedApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -4338,8 +4341,16 @@ async function routeApi(req, res) {
   }
   // EXT-10 continuidade operacional simulado documentado com responsáveis
   if (url.pathname === "/api/admin/hr/ext-continuity-plans" || url.pathname === "/api/crm/hr/ext-continuity-plans" || url.pathname === "/api/hr/ext-continuity-plans" || url.pathname === "/api/ext/continuity-plans") {
+    const legacySession = await readSession(req);
+    if (!legacySession) return json(res, 401, { error: "unauthorized" });
+    if (req.method !== "GET") {
+      if (!sameOrigin(req)) return json(res, 403, { error: "origin_forbidden" });
+      return json(res, 410, { error: "legacy_continuity_writer_retired", canonical: "/api/ext/continuity/plans" });
+    }
     return extAdvancedApi.handleContinuityPlans(req, res);
   }
+  // EXT-10 continuidade canônica: planos, acionamentos internos, simulados e recuperação.
+  if (url.pathname.startsWith("/api/ext/continuity/")) return extContinuityApi.handle(req, res);
   // EXT-11 analytics A/B experimento reversível resultado sem dados inventados
   if (url.pathname === "/api/admin/hr/ext-analytics-experiments" || url.pathname === "/api/crm/hr/ext-analytics-experiments" || url.pathname === "/api/hr/ext-analytics-experiments" || url.pathname === "/api/ext/analytics-experiments") {
     return extAdvancedApi.handleAnalyticsExperiments(req, res);
@@ -5855,6 +5866,7 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/ext/compliance/")
   || pathname.startsWith("/api/ext/knowledge/")
   || pathname.startsWith("/api/ext/expansion/")
+  || pathname.startsWith("/api/ext/continuity/")
   || pathname.startsWith("/api/ext/satisfaction/")
   || pathname === "/api/admin/hr/ext-bidding-documents"
   || pathname === "/api/crm/hr/ext-bidding-documents"
