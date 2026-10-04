@@ -49,7 +49,7 @@ const BATERIA = [
     titulo: "Wave 0 — conformidade estática e ledger de migrações",
     categoria: "Estático",
     comando: "node scripts/qa-wave0-static.mjs",
-    objetivo: "Verificar o inventário de migrações 001–157, manifesto e invariantes estáticas do projeto.",
+    objetivo: "Verificar o inventário de migrações 001–158, manifesto e invariantes estáticas do projeto.",
     timeout: 10 * MINUTO,
     peso: "leve",
   },
@@ -113,7 +113,7 @@ const BATERIA = [
   },
   {
     id: "migrations-pg",
-    titulo: "Ledger de migrações 001–157 em PostgreSQL descartável",
+    titulo: "Ledger de migrações 001–158 em PostgreSQL descartável",
     categoria: "Banco",
     comando: "npm run test:migrations:pg",
     objetivo: "Aplicar todas as migrações em cluster efêmero, repetir para provar idempotência e rejeitar checksum divergente.",

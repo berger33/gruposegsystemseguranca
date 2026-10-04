@@ -139,6 +139,12 @@ const apiErrors: Record<string, string> = {
   report_approval_required: "O relatório precisa estar aprovado antes de ser enviado.",
   report_not_published: "Este relatório ainda não foi publicado para aceite do cliente.",
   client_acknowledgement_required: "O aceite/ciente deve ser registrado pelo cliente autenticado.",
+  permission_scope_denied: "Sua conta não tem concessão sobre estes chamados. Peça ao administrador uma concessão client.tickets.* em /admin/identidades.",
+  legacy_cli_ticket_write_retired: "A rota antiga de edição de chamados foi aposentada. Use a fila canônica de atendimento.",
+  invalid_ticket_action: "Ação inválida: use assumir ou resolver.",
+  ticket_message_invalid: "A mensagem do atendimento precisa ter entre 5 e 1000 caracteres.",
+  ticket_transition_not_allowed: "O chamado não está na situação exigida por esta ação (assumir exige aberto; resolver exige em atendimento).",
+  ticket_accept_requires_resolved: "O aceite só pode ser registrado pelo cliente com o chamado resolvido.",
 };
 
 export function explainApiError(code: unknown, fallback = "O servidor respondeu de forma inesperada.") {

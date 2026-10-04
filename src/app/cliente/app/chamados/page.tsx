@@ -7,6 +7,14 @@ import { useClientSpace } from "../ClientSpaceProvider";
 import styles from "../../RealAccess.module.css";
 import appStyles from "../ClientApp.module.css";
 
+type TicketMessage = {
+  kind: "attendance" | "resolution" | "acceptance";
+  message: string;
+  author_kind: "client" | "staff";
+  author_name: string | null;
+  created_at: string;
+};
+
 type Ticket = {
   id: string;
   category: string;
@@ -24,6 +32,7 @@ type Ticket = {
   last_reopen_reason: string | null;
   resolved_at: string | null;
   closed_at: string | null;
+  messages: TicketMessage[] | null;
 };
 
 const ticketStatus: Record<Ticket["status"], { text: string; chip: string }> = {
@@ -32,6 +41,12 @@ const ticketStatus: Record<Ticket["status"], { text: string; chip: string }> = {
   waiting_client: { text: "Aguardando cliente", chip: appStyles.chipProgress },
   resolved: { text: "Resolvido", chip: appStyles.chipResolved },
   closed: { text: "Encerrado", chip: appStyles.chipClosed },
+};
+
+const messageKindLabel: Record<TicketMessage["kind"], string> = {
+  attendance: "Atendimento da equipe",
+  resolution: "Resolução da equipe",
+  acceptance: "Seu aceite",
 };
 
 const openErrors: Record<string, string> = {
@@ -45,6 +60,8 @@ const openErrors: Record<string, string> = {
   ticket_reopen_reason_required: "Informe um motivo de reabertura com pelo menos 10 caracteres.",
   ticket_reopen_reason_too_long: "O motivo de reabertura deve ter no máximo 500 caracteres.",
   ticket_reopen_only_resolved_or_closed: "Somente chamados resolvidos ou encerrados podem ser reabertos.",
+  ticket_accept_requires_resolved: "O aceite só pode ser registrado quando o chamado está resolvido pela equipe. Se algo ficou pendente, reabra o chamado.",
+  ticket_message_invalid: "O comentário do aceite deve ter entre 5 e 1000 caracteres (ou ficar em branco).",
 };
 
 export default function ClientTicketsPage() {
@@ -58,6 +75,8 @@ export default function ClientTicketsPage() {
   const [message, setMessage] = useState("");
   const [reopenReason, setReopenReason] = useState<Record<string, string>>({});
   const [reopenBusy, setReopenBusy] = useState<string | null>(null);
+  const [acceptNote, setAcceptNote] = useState<Record<string, string>>({});
+  const [acceptBusy, setAcceptBusy] = useState<string | null>(null);
   const retryRequest = useRef<{ fingerprint: string; key: string } | null>(null);
 
   const loadTickets = useCallback((accountId: string) => {
@@ -116,6 +135,40 @@ export default function ClientTicketsPage() {
     } catch {
       setState("error");
       setMessage("Não foi possível conectar agora. Tente novamente em instantes.");
+    }
+  };
+
+  const acceptTicket = async (ticket: Ticket) => {
+    const note = (acceptNote[ticket.id] ?? "").trim();
+    setAcceptBusy(ticket.id);
+    setState("idle");
+    setMessage("");
+    try {
+      const response = await fetch(`/api/client/tickets/${ticket.id}/accept`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          // Cada clique é uma intenção distinta; o retry seguro do servidor
+          // responde replay ao reaplicar a mesma chave após falha transitória.
+          "Idempotency-Key": `ticket-accept-${crypto.randomUUID()}`,
+        },
+        body: JSON.stringify(note ? { message: note } : {}),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        setState("error");
+        setMessage(openErrors[payload.error ?? ""] ?? "Não foi possível registrar o aceite agora.");
+        return;
+      }
+      setAcceptNote(current => ({ ...current, [ticket.id]: "" }));
+      setState("success");
+      setMessage("Aceite registrado. O chamado foi encerrado e o histórico completo fica auditado.");
+      if (activeAccount) loadTickets(activeAccount.id);
+    } catch {
+      setState("error");
+      setMessage("Não foi possível conectar agora. Tente novamente em instantes.");
+    } finally {
+      setAcceptBusy(null);
     }
   };
 
@@ -300,7 +353,22 @@ export default function ClientTicketsPage() {
                   </div>
                   <span className={`${appStyles.chip} ${status.chip}`}>{status.text}</span>
                   <p className={appStyles.listItemDetail}>{ticket.details}</p>
-                  {ticket.admin_response ? (
+                  {(ticket.messages ?? []).length > 0 ? (
+                    <div className={appStyles.responseBox}>
+                      <strong>Trilha do atendimento</strong>
+                      <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none" }}>
+                        {(ticket.messages ?? []).map((entry, index) => (
+                          <li key={`${ticket.id}-msg-${index}`} style={{ marginTop: index === 0 ? 0 : 8 }}>
+                            <strong>{messageKindLabel[entry.kind]}</strong>
+                            {entry.author_name ? ` · ${entry.author_name}` : ""} ·{" "}
+                            {new Date(entry.created_at).toLocaleString("pt-BR")}
+                            <br />
+                            {entry.message}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : ticket.admin_response ? (
                     <div className={appStyles.responseBox}>
                       <strong>Resposta da equipe</strong>
                       {ticket.admin_response}
@@ -310,6 +378,27 @@ export default function ClientTicketsPage() {
                     <div className={appStyles.responseBox}>
                       <strong>SLA pausado</strong>
                       A equipe marcou este chamado como aguardando cliente em {new Date(ticket.sla_paused_at).toLocaleString("pt-BR")}.
+                    </div>
+                  ) : null}
+                  {ticket.status === "resolved" ? (
+                    <div className={appStyles.inlineAction}>
+                      <textarea
+                        className={appStyles.textarea}
+                        value={acceptNote[ticket.id] ?? ""}
+                        maxLength={1000}
+                        onChange={event => setAcceptNote(current => ({ ...current, [ticket.id]: event.target.value }))}
+                        placeholder="Comentário do aceite (opcional, 5 a 1000 caracteres)"
+                        aria-label={`Comentário do aceite do chamado ${ticket.title}`}
+                      />
+                      <button
+                        type="button"
+                        className={styles.submit}
+                        disabled={acceptBusy === ticket.id}
+                        onClick={() => void acceptTicket(ticket)}
+                      >
+                        <Send size={13} aria-hidden="true" />
+                        {acceptBusy === ticket.id ? "Registrando…" : "Aceitar atendimento e encerrar"}
+                      </button>
                     </div>
                   ) : null}
                   {ticket.status === "resolved" || ticket.status === "closed" ? (

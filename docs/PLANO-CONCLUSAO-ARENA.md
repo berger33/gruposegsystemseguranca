@@ -1,6 +1,13 @@
 # Plano de conclusão (Arena) — lista única de trabalho
 
-## Atualização corrente — F03 funcionário → RH → retorno
+## Atualização corrente — F03 cliente → chamado → atendimento → aceite
+
+- **Base:** `origin/main` `a459e07d42a855f93af4d76d047b49f3ff5e204e` (PR #127 já integrada); **branch fixa:** `arena/01a107a9-gruposegsystemseguranca`; **commits:** `3c7e9ab1da469b94d7cf383491f9240df30a8b6e` (implementação) + documentação desta seção; **PR:** [#129](https://github.com/berger33/gruposegsystemseguranca/pull/129). Não recriar/remesclar #126 e #127.
+- A jornada cliente→chamado→atendimento→aceite foi validada por `npm run test:f03-client-ticket-acceptance:pg` (**1/1**, PostgreSQL 17 descartável, HTTP e Chromium), Wave 0 5/5, typecheck, `npm test` 526/526 e regressões (`test:l08-delivery:pg` **51/51**, client-space **22/22**, `test:client-access:pg` **27/27**, gates F03 #126/#127 **1/1**, `test:demo-local:pg`). A migração livre 158 foi consumida additivamente; 001–157 imutáveis; **próxima livre: 159**.
+- A prova preserva autorização fail-closed e mesma origem, sessões individuais, A/B, auditabilidade transacional, idempotência/retry e transações atômicas com trilha de mensagens; a escrita CLI-05 legada fechou com 410 `legacy_cli_ticket_write_retired`; a UI administrativa e o portal expõem a trilha e somente ações legais da máquina de estados. Falhas reais (helper de chave de idempotência, asserção de chamado prematuro, ordenação da trilha, health timeout ambiental) foram corrigidas e a execução repetida sem remover asserções.
+- **Limites:** F03 ainda não está concluída — falta contas→baixa→relatório, além do aceite humano e Windows/EPERM; SMTP, banco, eSocial, assinatura, hosting e IA externos continuam fora.
+
+## Atualização — F03 funcionário → RH → retorno
 
 - **Base:** `origin/main` `7a41837385985e2321fc86f8b461f133d7c01423` (PR #126 já integrada); **branch fixa:** `arena/01a10761-gruposegsystemseguranca`; **commits:** `d0f1cdebfb5fecac2fc7bb639b554faf1724a7b7` (implementação) e `fcddf69` (evidência/documentação); **PR:** [#127](https://github.com/berger33/gruposegsystemseguranca/pull/127). Não recriar a #126.
 - A jornada funcionário→solicitação→análise RH→retorno foi validada localmente por `npm run test:f03-employee-request-rh-return:pg` (**1/1**, PostgreSQL 17 descartável, HTTP e Chromium), além de Wave 0 5/5, typecheck e `npm test` 526/526. A migração livre 157 foi consumida additivamente; 001–156 continuam imutáveis.
@@ -14,7 +21,7 @@ Data: 2026-10-04. Base vigente desta fatia: `origin/main` `972e6563f5ea4888b62e8
 ## Regras permanentes
 
 1. Uma fatia de implementação por PR; PR pequeno revisável; nunca mesclar PRs alternativas antigas.
-2. Migrações 001–156 são imutáveis; próxima livre no main vigente: **157** (reconfirmar antes de cada fatia).
+2. Migrações 001–158 são imutáveis; próxima livre no main vigente: **159** (reconfirmar antes de cada fatia).
 3. Autorização no servidor em toda API; nunca apenas ocultação no menu. Fail-closed em erro de banco/permissão.
 4. Preservar PLAT-01 (despacho à prova de rejeição), credenciais individuais, isolamento entre clientes, auditoria transacional e idempotência.
 5. Evidência real por fatia: comando + resultado + SHA + limite da prova. Banco sempre descartável (embedded-postgres de teste ou Compose exclusivo do operador). Sem segredos em git/logs.
@@ -28,7 +35,7 @@ Data: 2026-10-04. Base vigente desta fatia: `origin/main` `972e6563f5ea4888b62e8
 | F00 | Reconciliação dos 222 IDs + classificação dos PRs abertos | — | **concluída nesta sessão**: STATUS-ATUAL-CONSOLIDADO.md + PRs classificados (27 superseded, #121 fonte) |
 | F01 | Entrada e navegação por papel: `/admin` hub, `/admin/entrar` login central, redirecionamento seguro com retorno, rótulo papel-neutro, menu por papel, 401/403/500 compreensíveis | F00 | **integrada pela PR #125 (`e2fa152`), merge `972e656`**; aceite humano pendente |
 | F02 | Windows/EPERM symlink, isolamento QA×ambiente, scripts start/stop/status, backup/restauração em instância separada | F01 | pendente — requer Windows do operador para aceite |
-| F03 | Massa de demonstração e jornadas de negócio ponta a ponta (lead→recebimento, funcionário→RH, cliente→chamado, contas→baixa) | F01 | **em execução**: fundação + primeira jornada lead→oportunidade→proposta revisada→contrato→implantação na PR #126 (`c1a557f`), gate 1/1; três jornadas ainda pendentes |
+| F03 | Massa de demonstração e jornadas de negócio ponta a ponta (lead→recebimento, funcionário→RH, cliente→chamado, contas→baixa) | F01 | **em execução**: fundação + três jornadas provadas (lead→contrato→implantação #126 `c1a557f`, gate 1/1; funcionário→solicitação→hora→retorno #127 `d0f1cde`, gate 1/1; cliente→chamado→atendimento→aceite #129 `3c7e9ab1`, gate 1/1); falta contas→baixa→relatório |
 | F04–F13 | EXT-08 conhecimento, EXT-09 expansão, EXT-10 continuidade, EXT-11 analytics, EXT-12 visual, EXT-13 relatórios, EXT-14 inteligência comercial, EXT-15 emergencial, EXT-16 central/vídeo (projeto separado), EXT-17 biometria (projeto separado) — um requisito por PR | F01 | pendentes; tabelas 086–087 existem sem jornada provada |
 | F14 | IA/RAG real: AI-06 recuperação autorizada + AI-09 curadoria primeiro; depois AI-01..05, 07, 08, 10. Fallback não é inferência. | F03 (massa e escopos) | pendente; OLLAMA_ENABLED=false hoje = fallback |
 | F15 | Fronteiras parciais: portal externo fornecedor, upload real, recuperação de conta sem SMTP, jobs vs reinício, notificações internas, isolamento A/B, EXT-07 obrigação vencida | F04+ | pendente |
@@ -37,7 +44,7 @@ Data: 2026-10-04. Base vigente desta fatia: `origin/main` `972e6563f5ea4888b62e8
 ## Trabalho imediato após F01 (ordem)
 
 1. ~~Fechar PRs superseded~~ — **concluído em 04/10/2026**: 27 alternativas fechadas sem merge + #121 fechada após integração documental pela #122; a #124 foi revisada, fechada como superseded e reaplicada na PR #125 sobre o main pós-#123.
-2. **F03 — concluir as jornadas sobre a massa idempotente já criada**: a primeira jornada lead→contrato→implantação foi provada na PR #126; seguem funcionário→RH→retorno, cliente→chamado→aceite e contas→baixa→relatório. Uma jornada por fatia revisável, sem duplicar fontes canônicas.
+2. **F03 — concluir as jornadas sobre a massa idempotente já criada**: lead→contrato→implantação (PR #126), funcionário→solicitação→RH→retorno (PR #127) e cliente→chamado→atendimento→aceite (PR #129) foram provadas; resta contas→baixa→relatório. Uma jornada por fatia revisável, sem duplicar fontes canônicas.
 3. **EXT-08 (F04)** — primeira fatia EXT pendente.
 4. Rodada dedicada: obrigação vencida do EXT-07 criando tarefa (pendência declarada no aceite técnico).
 

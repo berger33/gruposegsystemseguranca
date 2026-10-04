@@ -35,6 +35,7 @@ import {
   validateReportNote,
 } from "../lib/client-space-core.mjs";
 import { PUBLIC_SERVICES } from "../lib/service-catalog.mjs";
+import { hasPermission } from "./rbac.mjs";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const UPLOAD_BODY_LIMIT = 15 * 1024 * 1024;
@@ -250,20 +251,6 @@ export function createClientSpaceApi(ctx) {
     return session.role === "ti" ? "ti" : "marcelo";
   }
 
-  const LEGACY_TICKET_STATUSES = new Set(["open", "in_progress", "resolved", "closed"]);
-
-  async function clientTicketLifecycleReady(db) {
-    const result = await db.query(
-      `SELECT
-         EXISTS (
-           SELECT 1 FROM information_schema.columns
-            WHERE table_schema = 'public' AND table_name = 'client_tickets' AND column_name = 'reopen_count'
-         )
-         AND to_regclass('public.client_ticket_sla_pauses') IS NOT NULL AS ready`,
-    );
-    return Boolean(result.rows[0]?.ready);
-  }
-
   async function ensureAccountExists(db, res, accountId) {
     try {
       const found = await db.query("SELECT id FROM client_accounts WHERE id = $1", [accountId]);
@@ -306,23 +293,6 @@ export function createClientSpaceApi(ctx) {
       databaseFailure(res, error, "Could not validate scoped client references.");
       return false;
     }
-  }
-
-  async function pauseTicketSla(client, { ticketId, actorKind, actorId, reason = "waiting_client", notes = null }) {
-    const inserted = await client.query(
-      `INSERT INTO client_ticket_sla_pauses (ticket_id, reason, notes, paused_by, paused_by_identity)
-       SELECT $1,$2,$3,$4,$5
-       WHERE NOT EXISTS (
-         SELECT 1 FROM client_ticket_sla_pauses WHERE ticket_id = $1 AND resumed_at IS NULL
-       )
-       RETURNING id`,
-      [ticketId, reason, notes, actorKind, actorId],
-    );
-    await client.query(
-      "UPDATE client_tickets SET sla_paused_at = COALESCE(sla_paused_at, NOW()), sla_pause_reason = $2 WHERE id = $1",
-      [ticketId, reason],
-    );
-    return inserted.rows[0]?.id ?? null;
   }
 
   async function resumeTicketSla(client, { ticketId, actorKind, actorId }) {
@@ -526,29 +496,28 @@ export function createClientSpaceApi(ctx) {
       const db = ctx.getPool();
       if (!(await requireAccountScope(db, { req, res, session, accountId, action: "ticket_list" }))) return;
       try {
-        let result;
-        try {
-          result = await db.query(
-            `SELECT id, category, title, details, status, admin_response, created_at, updated_at,
-                    sla_due_at, sla_paused_at, sla_pause_reason, sla_total_paused_seconds,
-                    reopen_count, last_reopen_reason, resolved_at, closed_at
-             FROM client_tickets WHERE client_account_id = $1 ORDER BY created_at DESC`,
-            [accountId],
-          );
-        } catch (error) {
-          if (!error || typeof error !== "object" || error.code !== "42703") throw error;
-          // CI gates L08 apply the canonical CLI-01..05 schema through migration 139 only.
-          // Keep existing promoted reads green there while migration 140 rolls out.
-          result = await db.query(
-            `SELECT id, category, title, details, status, admin_response, created_at, updated_at,
-                    NULL::timestamptz AS sla_due_at, NULL::timestamptz AS sla_paused_at,
-                    NULL::text AS sla_pause_reason, 0::bigint AS sla_total_paused_seconds,
-                    0::int AS reopen_count, NULL::text AS last_reopen_reason,
-                    NULL::timestamptz AS resolved_at, NULL::timestamptz AS closed_at
-             FROM client_tickets WHERE client_account_id = $1 ORDER BY created_at DESC`,
-            [accountId],
-          );
-        }
+        const result = await db.query(
+          `SELECT t.id, t.category, t.title, t.details, t.status, t.admin_response, t.created_at, t.updated_at,
+                  t.sla_due_at, t.sla_paused_at, t.sla_pause_reason, t.sla_total_paused_seconds,
+                  t.reopen_count, t.last_reopen_reason, t.resolved_at, t.closed_at,
+                  COALESCE(msgs.rows, '[]'::jsonb) AS messages
+             FROM client_tickets t
+             LEFT JOIN LATERAL (
+               SELECT jsonb_agg(
+                        jsonb_build_object(
+                          'kind', m.message_kind,
+                          'message', m.message,
+                          'author_kind', m.author_kind,
+                          'author_name', m.author_name,
+                          'created_at', m.created_at
+                        ) ORDER BY m.created_at ASC
+                      ) AS rows
+                 FROM client_ticket_messages m
+                WHERE m.ticket_id = t.id
+             ) msgs ON TRUE
+            WHERE t.client_account_id = $1 ORDER BY t.created_at DESC`,
+          [accountId],
+        );
         return ctx.json(res, 200, { tickets: result.rows });
       } catch (error) {
         return databaseFailure(res, error, "Could not list the client tickets.");
@@ -1418,118 +1387,328 @@ export function createClientSpaceApi(ctx) {
     if (!requireSameOrigin(req, res)) return;
     const session = await requireAdminSession(req, res);
     if (!session) return;
-    if (!UUID_PATTERN.test(ticketId)) return ctx.json(res, 400, { error: "invalid_ticket_id" });
-    const body = await readJsonOr400(req, res);
-    if (body === undefined) return;
-    if (!isTicketStatus(body?.status)) return ctx.json(res, 400, { error: "ticket_status_invalid" });
-    const responseText = typeof body?.adminResponse === "string" ? body.adminResponse.trim() : "";
-    if (responseText.length > TEXT_LIMITS.ticketResponse) return ctx.json(res, 400, { error: "ticket_response_too_long" });
-    const status = String(body.status);
-    const reasonText = typeof body?.reason === "string" ? body.reason.trim() : "";
-    const reopenReason = validateTicketReopenReason(body?.reopenReason || body?.reason);
-    const db = ctx.getPool();
-    let lifecycleReady;
-    try {
-      lifecycleReady = await clientTicketLifecycleReady(db);
-    } catch (error) {
-      return databaseFailure(res, error, "Could not verify the client ticket lifecycle schema.");
+    // F03 (jornada cliente → chamado → atendimento → aceite): esta rota legada
+    // permitia qualquer transição arbitrária de chamado do staff, sem escopo
+    // granular por conta, sem idempotência e sem obrigação de devolutiva. A
+    // escrita canônica é a máquina de estados explícita de
+    // /api/admin/client/l08/tickets, que exige concessão client.tickets.write
+    // e registra mensagem + histórico + auditoria na mesma transação.
+    return ctx.json(res, 410, {
+      error: "legacy_cli_ticket_write_retired",
+      canonical_endpoint: "/api/admin/client/l08/tickets",
+    });
+  }
+
+  // ---------- F03 · jornada canônica de chamados: atendimento staff + aceite do cliente ----------
+
+  async function requireStaffSession(req, res) {
+    const session = await ctx.readAdminSession(req);
+    if (!session) {
+      ctx.json(res, 401, { error: "admin_session_required" });
+      return null;
     }
-    if (!lifecycleReady) {
-      if (!LEGACY_TICKET_STATUSES.has(status)) return ctx.json(res, 503, { error: "migration_required" });
-      let legacyClient;
+    if (!session.identityId) {
+      ctx.json(res, 403, { error: "individual_staff_required" });
+      return null;
+    }
+    return session;
+  }
+
+  async function loadAuthorName(db, identityId) {
+    const found = await db.query(
+      `SELECT COALESCE(NULLIF(TRIM(display_name), ''), email) AS name FROM auth_identities WHERE id = $1`,
+      [identityId],
+    );
+    return found.rows[0]?.name ?? null;
+  }
+
+  // Fila staff canônica (GET, escopo EXISTS sobre client.tickets.read) e
+  // transições de atendimento (PATCH assumir/resolver com client.tickets.write,
+  // idempotência, mensagem obrigatória e trilha canônica).
+  async function handleAdminClientTicketFlow(req, res, url) {
+    const session = await requireStaffSession(req, res);
+    if (!session) return;
+    const db = ctx.getPool();
+    if (req.method === "GET") {
+      const status = url.searchParams.get("status");
+      if (status && !isTicketStatus(status)) return ctx.json(res, 400, { error: "invalid_status_filter" });
+      const accountId = url.searchParams.get("account");
+      if (accountId && !UUID_PATTERN.test(accountId)) return ctx.json(res, 400, { error: "invalid_account_id" });
       try {
-        legacyClient = await db.connect();
-        await legacyClient.query("BEGIN");
-        const current = await legacyClient.query("SELECT status FROM client_tickets WHERE id = $1 FOR UPDATE", [ticketId]);
-        if (!current.rows[0]) {
-          await legacyClient.query("ROLLBACK");
-          return ctx.json(res, 404, { error: "ticket_not_found" });
-        }
-        const previousStatus = current.rows[0].status;
-        await legacyClient.query(
-          "UPDATE client_tickets SET status = $2, admin_response = COALESCE(NULLIF($3, ''), admin_response), updated_at = NOW() WHERE id = $1",
-          [ticketId, status, responseText],
+        const grants = await db.query(
+          `SELECT scope_type, scope_id FROM auth_permissions
+            WHERE identity_id = $1 AND permission = 'client.tickets.read' AND revoked_at IS NULL`,
+          [session.identityId],
         );
-        if (previousStatus !== status) {
-          await legacyClient.query(
-            `INSERT INTO client_ticket_status_audit
-               (ticket_id, previous_status, next_status, changed_by, changed_by_identity)
-             VALUES ($1,$2,$3,$4,$5)`,
-            [ticketId, previousStatus, status, roleActor(session), session.identityId],
-          );
+        if (!grants.rows.length) return ctx.json(res, 403, { error: "permission_scope_denied" });
+        const conditions = [];
+        const values = [session.identityId];
+        if (status) {
+          values.push(status);
+          conditions.push(`t.status = $${values.length}`);
         }
-        await audit(legacyClient, { actorKind: roleActor(session), actorId: session.identityId, action: "ticket_status", target: ticketId, result: "allowed" });
-        await legacyClient.query("COMMIT");
-        return ctx.json(res, 200, { ticketId, previousStatus, status, isReopen: false });
+        if (accountId) {
+          values.push(accountId);
+          conditions.push(`t.client_account_id = $${values.length}`);
+        }
+        const extra = conditions.length ? `AND ${conditions.join(" AND ")}` : "";
+        const result = await db.query(
+          `SELECT t.id, t.client_account_id, a.display_name AS account_name, i.email AS opened_by_email,
+                  t.category, t.title, t.details, t.status, t.admin_response, t.created_at, t.updated_at,
+                  t.sla_due_at, t.sla_paused_at, t.sla_pause_reason, t.sla_total_paused_seconds,
+                  t.reopen_count, t.last_reopen_reason, t.resolved_at, t.closed_at,
+                  COALESCE(msgs.rows, '[]'::jsonb) AS messages
+             FROM client_tickets t
+             JOIN client_accounts a ON a.id = t.client_account_id
+             JOIN auth_identities i ON i.id = t.opened_by_identity
+             LEFT JOIN LATERAL (
+               SELECT jsonb_agg(
+                        jsonb_build_object(
+                          'kind', m.message_kind,
+                          'message', m.message,
+                          'author_kind', m.author_kind,
+                          'author_name', m.author_name,
+                          'created_at', m.created_at
+                        ) ORDER BY m.created_at ASC
+                      ) AS rows
+                 FROM client_ticket_messages m
+                WHERE m.ticket_id = t.id
+             ) msgs ON TRUE
+            WHERE EXISTS (
+              SELECT 1 FROM auth_permissions p
+               WHERE p.identity_id = $1
+                 AND p.permission = 'client.tickets.read'
+                 AND p.revoked_at IS NULL
+                 AND (p.scope_type IN ('global','organization')
+                      OR (p.scope_type = 'account' AND p.scope_id = t.client_account_id))
+            ) ${extra}
+            ORDER BY t.created_at DESC LIMIT 200`,
+          values,
+        );
+        return ctx.json(
+          res,
+          200,
+          { tickets: result.rows, grants: grants.rows, scope: "permissões ativas de client.tickets.read" },
+          { "Cache-Control": "private, no-store" },
+        );
       } catch (error) {
-        await rollback(legacyClient);
-        return databaseFailure(res, error, "Could not update the legacy client ticket.");
-      } finally {
-        legacyClient?.release();
+        return databaseFailure(res, error, "Could not list the scoped client ticket queue.");
       }
     }
+    if (req.method !== "PATCH") {
+      return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, PATCH" });
+    }
+    if (!requireSameOrigin(req, res)) return;
+    const body = await readJsonOr400(req, res);
+    if (body === undefined) return;
+    const ticketId = String(body?.id || "");
+    if (!UUID_PATTERN.test(ticketId)) return ctx.json(res, 400, { error: "invalid_ticket_id" });
+    const action = String(body?.action || "").toLowerCase();
+    if (!["assumir", "resolver"].includes(action)) return ctx.json(res, 400, { error: "invalid_ticket_action" });
+    const message = typeof body?.message === "string" ? body.message.trim() : "";
+    if (message.length < 5 || message.length > 1000) return ctx.json(res, 400, { error: "ticket_message_invalid" });
+    const requestKey = idempotencyKey(req);
+    if (!requestKey) return ctx.json(res, 400, { error: "idempotency_key_required_or_invalid" });
+
+    let target;
+    try {
+      const found = await db.query("SELECT id, client_account_id FROM client_tickets WHERE id = $1", [ticketId]);
+      target = found.rows[0];
+    } catch (error) {
+      return databaseFailure(res, error, "Could not load the client ticket for attendance.");
+    }
+    if (!target) return ctx.json(res, 404, { error: "ticket_not_found" });
+    const allowed = await hasPermission(db, {
+      identityId: session.identityId,
+      permission: "client.tickets.write",
+      accountId: target.client_account_id,
+    });
+    if (!allowed) return ctx.json(res, 403, { error: "permission_scope_denied" });
+
+    const requestFingerprint = fingerprint({ ticketId, action, message });
+    const messageKind = action === "assumir" ? "attendance" : "resolution";
+    const auditAction = action === "assumir" ? "ticket_attend" : "ticket_resolve";
+    const nextStatus = action === "assumir" ? "in_progress" : "resolved";
+    const allowedPrevious = action === "assumir" ? ["open", "waiting_client"] : ["in_progress"];
     let client;
     try {
       client = await db.connect();
       await client.query("BEGIN");
-      const current = await client.query("SELECT status FROM client_tickets WHERE id = $1 FOR UPDATE", [ticketId]);
-      if (!current.rows[0]) {
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`client-ticket-transition:${ticketId}:${requestKey}`]);
+      const locked = await client.query("SELECT id, status FROM client_tickets WHERE id = $1 FOR UPDATE", [ticketId]);
+      const previousStatus = locked.rows[0]?.status;
+      if (!previousStatus) {
         await client.query("ROLLBACK");
         return ctx.json(res, 404, { error: "ticket_not_found" });
       }
-      const previousStatus = current.rows[0].status;
-      const isReopen = ["resolved", "closed"].includes(previousStatus) && ["open", "in_progress"].includes(status);
-      if (isReopen && reopenReason.error) {
+      const replay = await client.query(
+        `SELECT request_fingerprint FROM client_ticket_messages
+          WHERE ticket_id = $1 AND idempotency_key = $2`,
+        [ticketId, requestKey],
+      );
+      if (replay.rows[0]) {
+        if (replay.rows[0].request_fingerprint !== requestFingerprint) {
+          await client.query("ROLLBACK");
+          return ctx.json(res, 409, { error: "idempotency_conflict" });
+        }
+        const currentRow = await client.query("SELECT status FROM client_tickets WHERE id = $1", [ticketId]);
+        await client.query("COMMIT");
+        return ctx.json(res, 200, { ok: true, ticketId, status: currentRow.rows[0].status, replayed: true });
+      }
+      if (!allowedPrevious.includes(previousStatus)) {
         await client.query("ROLLBACK");
-        return ctx.json(res, 400, { error: reopenReason.error });
+        return ctx.json(res, 409, { error: "ticket_transition_not_allowed", status: previousStatus });
       }
+      // Retomar o SLA na mesma transação quando o chamado legado estava
+      // aguardando o cliente: nenhuma pausa pode durar para sempre.
       let slaPauseId = null;
-      if (status === "waiting_client" && previousStatus !== "waiting_client") {
-        slaPauseId = await pauseTicketSla(client, {
-          ticketId,
-          actorKind: roleActor(session),
-          actorId: session.identityId,
-          reason: "waiting_client",
-          notes: reasonText || responseText || "Aguardando retorno do cliente",
-        });
-      }
-      if (previousStatus === "waiting_client" && status !== "waiting_client") {
-        slaPauseId = await resumeTicketSla(client, {
-          ticketId,
-          actorKind: roleActor(session),
-          actorId: session.identityId,
-        });
+      if (previousStatus === "waiting_client") {
+        slaPauseId = await resumeTicketSla(client, { ticketId, actorKind: session.role, actorId: session.identityId });
       }
       await client.query(
         `UPDATE client_tickets
             SET status = $2,
-                admin_response = COALESCE(NULLIF($3, ''), admin_response),
-                reopen_count = CASE WHEN $4 THEN reopen_count + 1 ELSE reopen_count END,
-                last_reopen_reason = CASE WHEN $4 THEN $5 ELSE last_reopen_reason END,
-                resolved_at = CASE WHEN $2 = 'resolved' THEN NOW()
-                                   WHEN $2 IN ('open','in_progress','waiting_client') THEN NULL
-                                   ELSE resolved_at END,
-                closed_at = CASE WHEN $2 = 'closed' THEN NOW()
-                                 WHEN $2 IN ('open','in_progress','waiting_client','resolved') THEN NULL
-                                 ELSE closed_at END,
+                admin_response = $3,
+                resolved_at = CASE WHEN $2 = 'resolved' THEN COALESCE(resolved_at, NOW()) ELSE resolved_at END,
                 updated_at = NOW()
           WHERE id = $1`,
-        [ticketId, status, responseText, isReopen, isReopen ? reopenReason.value : null],
+        [ticketId, nextStatus, message],
       );
-      if (previousStatus !== status) {
-        await client.query(
-          `INSERT INTO client_ticket_status_audit
-             (ticket_id, previous_status, next_status, changed_by, changed_by_identity, reason, is_reopen, sla_pause_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-          [ticketId, previousStatus, status, roleActor(session), session.identityId, isReopen ? reopenReason.value : (reasonText || null), isReopen, slaPauseId],
-        );
-      }
-      await audit(client, { actorKind: roleActor(session), actorId: session.identityId, action: isReopen ? "ticket_reopen" : "ticket_status", target: ticketId, result: "allowed" });
+      await client.query(
+        `INSERT INTO client_ticket_status_audit
+           (ticket_id, previous_status, next_status, changed_by, changed_by_identity, reason, sla_pause_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [ticketId, previousStatus, nextStatus, session.role, session.identityId, message, slaPauseId],
+      );
+      await client.query(
+        `INSERT INTO client_ticket_messages
+           (ticket_id, message_kind, message, author_kind, author_identity, author_name, idempotency_key, request_fingerprint)
+         VALUES ($1,$2,$3,'staff',$4,$5,$6,$7)`,
+        [ticketId, messageKind, message, session.identityId, await loadAuthorName(client, session.identityId), requestKey, requestFingerprint],
+      );
+      await audit(client, { actorKind: session.role, actorId: session.identityId, action: auditAction, target: ticketId, result: "allowed" });
       await client.query("COMMIT");
-      return ctx.json(res, 200, { ticketId, previousStatus, status, isReopen });
+      return ctx.json(res, 200, { ok: true, ticketId, previousStatus, status: nextStatus, replayed: false });
     } catch (error) {
-      if (client) await client.query("ROLLBACK").catch(() => {});
-      return databaseFailure(res, error, "Could not update the client ticket.");
+      await rollback(client);
+      if (error && typeof error === "object" && error.code === "23505") {
+        // Corrida de replay: a primeira transação venceu; relesa para decidir.
+        const prior = await db.query(
+          `SELECT request_fingerprint FROM client_ticket_messages WHERE ticket_id = $1 AND idempotency_key = $2`,
+          [ticketId, requestKey],
+        ).catch(() => ({ rows: [] }));
+        if (prior.rows[0]) {
+          return ctx.json(
+            res,
+            prior.rows[0].request_fingerprint !== requestFingerprint ? 409 : 200,
+            prior.rows[0].request_fingerprint !== requestFingerprint
+              ? { error: "idempotency_conflict" }
+              : { ok: true, ticketId, status: nextStatus, replayed: true },
+          );
+        }
+      }
+      return databaseFailure(res, error, "Could not transition the client ticket.");
+    } finally {
+      client?.release();
+    }
+  }
+
+  // Aceite do cliente: resolved → closed, com mensagem opcional (canônica por
+  // padrão), idempotência por chamado e trilha conjunta. O aceite é a única
+  // via legítima de fechamento do chamado resolvido nesta jornada.
+  async function handleClientTicketAccept(req, res, ticketId) {
+    if (!requireMethod(req, res, ["PATCH"])) return;
+    if (!requireSameOrigin(req, res)) return;
+    const session = await requireClientSession(req, res);
+    if (!session) return;
+    if (!UUID_PATTERN.test(ticketId)) return ctx.json(res, 400, { error: "invalid_ticket_id" });
+    const body = await readJsonOr400(req, res);
+    if (body === undefined) return;
+    const provided = typeof body?.message === "string" ? body.message.trim() : "";
+    const message = provided || "Aceitei o atendimento deste chamado.";
+    if (message.length < 5 || message.length > 1000) return ctx.json(res, 400, { error: "ticket_message_invalid" });
+    const requestKey = idempotencyKey(req);
+    if (!requestKey) return ctx.json(res, 400, { error: "idempotency_key_required_or_invalid" });
+    const db = ctx.getPool();
+    let current;
+    try {
+      const found = await db.query("SELECT id, client_account_id, status FROM client_tickets WHERE id = $1", [ticketId]);
+      current = found.rows[0];
+    } catch (error) {
+      return databaseFailure(res, error, "Could not load the client ticket for acceptance.");
+    }
+    if (!current) return ctx.json(res, 404, { error: "ticket_not_found" });
+    if (!(await requireAccountScope(db, { req, res, session, accountId: current.client_account_id, action: "ticket_accept" }))) return;
+
+    const requestFingerprint = fingerprint({ ticketId, action: "aceite", message });
+    let client;
+    try {
+      client = await db.connect();
+      await client.query("BEGIN");
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`client-ticket-accept:${ticketId}:${requestKey}`]);
+      const locked = await client.query("SELECT id, status FROM client_tickets WHERE id = $1 FOR UPDATE", [ticketId]);
+      const previousStatus = locked.rows[0]?.status;
+      if (!previousStatus) {
+        await client.query("ROLLBACK");
+        return ctx.json(res, 404, { error: "ticket_not_found" });
+      }
+      const replay = await client.query(
+        `SELECT request_fingerprint FROM client_ticket_messages
+          WHERE ticket_id = $1 AND idempotency_key = $2`,
+        [ticketId, requestKey],
+      );
+      if (replay.rows[0]) {
+        if (replay.rows[0].request_fingerprint !== requestFingerprint) {
+          await client.query("ROLLBACK");
+          return ctx.json(res, 409, { error: "idempotency_conflict" });
+        }
+        const currentRow = await client.query("SELECT status FROM client_tickets WHERE id = $1", [ticketId]);
+        await client.query("COMMIT");
+        return ctx.json(res, 200, { ok: true, ticketId, status: currentRow.rows[0].status, replayed: true });
+      }
+      if (previousStatus !== "resolved") {
+        await client.query("ROLLBACK");
+        return ctx.json(res, 409, { error: "ticket_accept_requires_resolved", status: previousStatus });
+      }
+      await client.query(
+        `UPDATE client_tickets
+            SET status = 'closed', closed_at = NOW(), updated_at = NOW()
+          WHERE id = $1`,
+        [ticketId],
+      );
+      await client.query(
+        `INSERT INTO client_ticket_status_audit
+           (ticket_id, previous_status, next_status, changed_by, changed_by_identity, reason)
+         VALUES ($1,$2,'closed','client',$3,$4)`,
+        [ticketId, previousStatus, session.identityId, message],
+      );
+      await client.query(
+        `INSERT INTO client_ticket_messages
+           (ticket_id, message_kind, message, author_kind, author_identity, author_name, idempotency_key, request_fingerprint)
+         VALUES ($1,'acceptance',$2,'client',$3,$4,$5,$6)`,
+        [ticketId, message, session.identityId, session.displayName || session.email || null, requestKey, requestFingerprint],
+      );
+      await audit(client, { actorKind: "client", actorId: session.identityId, action: "ticket_accept", target: ticketId, result: "allowed" });
+      await client.query("COMMIT");
+      return ctx.json(res, 200, { ok: true, ticketId, previousStatus, status: "closed", replayed: false });
+    } catch (error) {
+      await rollback(client);
+      if (error && typeof error === "object" && error.code === "23505") {
+        const prior = await db.query(
+          `SELECT request_fingerprint FROM client_ticket_messages WHERE ticket_id = $1 AND idempotency_key = $2`,
+          [ticketId, requestKey],
+        ).catch(() => ({ rows: [] }));
+        if (prior.rows[0]) {
+          return ctx.json(
+            res,
+            prior.rows[0].request_fingerprint !== requestFingerprint ? 409 : 200,
+            prior.rows[0].request_fingerprint !== requestFingerprint
+              ? { error: "idempotency_conflict" }
+              : { ok: true, ticketId, status: "closed", replayed: true },
+          );
+        }
+      }
+      return databaseFailure(res, error, "Could not accept the client ticket.");
     } finally {
       client?.release();
     }
@@ -1857,6 +2036,8 @@ export function createClientSpaceApi(ctx) {
     handleAdminDocumentDownload,
     handleAdminTickets,
     handleAdminTicketUpdate,
+    handleAdminClientTicketFlow,
+    handleClientTicketAccept,
     handleAdminVisits,
     handleAdminVisitUpdate,
     handleAdminReports,

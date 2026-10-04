@@ -2643,6 +2643,8 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/client/tickets") return clientSpaceApi.handleClientTickets(req, res, url);
   const clientTicketReopenMatch = url.pathname.match(/^\/api\/client\/tickets\/([0-9a-f-]{36})\/reopen$/i);
   if (clientTicketReopenMatch) return clientSpaceApi.handleClientTicketReopen(req, res, clientTicketReopenMatch[1]);
+  const clientTicketAcceptMatch = url.pathname.match(/^\/api\/client\/tickets\/([0-9a-f-]{36})\/accept$/i);
+  if (clientTicketAcceptMatch) return clientSpaceApi.handleClientTicketAccept(req, res, clientTicketAcceptMatch[1]);
   if (url.pathname === "/api/client/visits") return clientSpaceApi.handleClientVisits(req, res, url);
   const clientVisitMatch = url.pathname.match(/^\/api\/client\/visits\/([0-9a-f-]{36})$/i);
   if (clientVisitMatch) return clientSpaceApi.handleClientVisitUpdate(req, res, clientVisitMatch[1]);
@@ -2682,6 +2684,7 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/tickets") return clientSpaceApi.handleAdminTickets(req, res, url);
   const ticketMatch = url.pathname.match(/^\/api\/admin\/tickets\/([0-9a-f-]{36})$/i);
   if (ticketMatch) return clientSpaceApi.handleAdminTicketUpdate(req, res, ticketMatch[1]);
+  if (url.pathname === "/api/admin/client/l08/tickets") return clientSpaceApi.handleAdminClientTicketFlow(req, res, url);
   if (url.pathname === "/api/admin/client-visits") return clientSpaceApi.handleAdminVisits(req, res, url);
   const adminVisitMatch = url.pathname.match(/^\/api\/admin\/client-visits\/([0-9a-f-]{36})$/i);
   if (adminVisitMatch) return clientSpaceApi.handleAdminVisitUpdate(req, res, adminVisitMatch[1]);
@@ -4555,6 +4558,7 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/admin/documents/")
   || pathname === "/api/admin/tickets"
   || pathname.startsWith("/api/admin/tickets/")
+  || pathname.startsWith("/api/admin/client/")
   || pathname === "/api/admin/client-visits"
   || pathname.startsWith("/api/admin/client-visits/")
   || pathname === "/api/admin/client-reports"

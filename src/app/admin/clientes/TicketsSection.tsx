@@ -1,13 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { RefreshCw, Save } from "lucide-react";
+import { RefreshCw, Send } from "lucide-react";
 import { callApi, jsonInit, ticketStatusLabel, type AdminAccount } from "./admin-shared";
 import styles from "./AdminClientes.module.css";
 
+type TicketMessage = {
+  kind: "attendance" | "resolution" | "acceptance";
+  message: string;
+  author_kind: "client" | "staff";
+  author_name: string | null;
+  created_at: string;
+};
+
 type AdminTicket = {
   id: string;
-  account_id: string;
+  client_account_id: string;
   account_name: string;
   opened_by_email: string;
   category: string;
@@ -24,30 +32,46 @@ type AdminTicket = {
   last_reopen_reason: string | null;
   resolved_at: string | null;
   closed_at: string | null;
+  messages: TicketMessage[] | null;
 };
 
 const TICKET_STATUSES: AdminTicket["status"][] = ["open", "in_progress", "waiting_client", "resolved", "closed"];
 
+const messageKindLabel: Record<TicketMessage["kind"], string> = {
+  attendance: "Atendimento",
+  resolution: "Resolução",
+  acceptance: "Aceite do cliente",
+};
+
+// Jornada canônica F03 (cliente → chamado → atendimento → aceite): o staff
+// assume chamados abertos (ou aguardando cliente) e resolve chamados em
+// atendimento, sempre com devolutiva escrita. O fechamento é exclusivamente o
+// aceite do cliente no portal — não há "salvar situação" arbitrário aqui.
 export default function TicketsSection({ accounts }: { accounts: AdminAccount[] | null }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [accountFilter, setAccountFilter] = useState("");
   const [tickets, setTickets] = useState<AdminTicket[] | null>(null);
-  const [editing, setEditing] = useState<Record<string, { status: AdminTicket["status"]; response: string; reason: string }>>({});
-  const [busy, setBusy] = useState(false);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [busyTicket, setBusyTicket] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [noScope, setNoScope] = useState(false);
 
   const reload = useCallback(async () => {
     setError("");
+    setNoScope(false);
     const params = new URLSearchParams();
     if (statusFilter !== "all") params.set("status", statusFilter);
     if (accountFilter) params.set("account", accountFilter);
     const suffix = params.size > 0 ? `?${params.toString()}` : "";
     try {
-      const data = await callApi(`/api/admin/tickets${suffix}`);
+      const data = await callApi(`/api/admin/client/l08/tickets${suffix}`);
       setTickets((data.tickets as AdminTicket[]) ?? []);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Não foi possível carregar os chamados.");
+      const message = cause instanceof Error ? cause.message : "Não foi possível carregar os chamados.";
+      setNoScope(true);
+      setTickets([]);
+      setError(message);
     }
   }, [statusFilter, accountFilter]);
 
@@ -55,29 +79,33 @@ export default function TicketsSection({ accounts }: { accounts: AdminAccount[] 
     void reload();
   }, [reload]);
 
-  const getEdit = (ticket: AdminTicket) =>
-    editing[ticket.id] ?? { status: ticket.status, response: ticket.admin_response ?? "", reason: "" };
+  const availableActions = (ticket: AdminTicket): { action: "assumir" | "resolver"; label: string }[] => {
+    if (ticket.status === "open" || ticket.status === "waiting_client") {
+      return [{ action: "assumir", label: "Assumir chamado" }];
+    }
+    if (ticket.status === "in_progress") {
+      return [{ action: "resolver", label: "Resolver chamado" }];
+    }
+    return [];
+  };
 
-  const setEdit = (ticket: AdminTicket, partial: Partial<{ status: AdminTicket["status"]; response: string; reason: string }>) =>
-    setEditing(current => ({ ...current, [ticket.id]: { ...getEdit(ticket), ...partial } }));
-
-  async function save(ticket: AdminTicket) {
-    setBusy(true);
+  async function transition(ticket: AdminTicket, action: "assumir" | "resolver") {
+    const message = (drafts[ticket.id] ?? "").trim();
+    setBusyTicket(ticket.id);
     setError("");
     setNotice("");
-    const draft = getEdit(ticket);
     try {
-      await callApi(
-        `/api/admin/tickets/${ticket.id}`,
-        jsonInit("PATCH", {
-          status: draft.status,
-          adminResponse: draft.response,
-          reason: draft.reason,
-          reopenReason: draft.reason,
-        }),
+      const init = jsonInit("PATCH", { id: ticket.id, action, message });
+      // Cada clicada é uma intenção distinta: nova chave. O retry seguro do
+      // mesmo envio é feito pelo servidor via replay desta mesma chave.
+      init.headers = { ...(init.headers as Record<string, string>), "Idempotency-Key": `ticket-${action}-${crypto.randomUUID()}` };
+      await callApi("/api/admin/client/l08/tickets", init);
+      setNotice(
+        action === "assumir"
+          ? `Chamado “${ticket.title}” assumido e devolutiva registrada em auditoria, visível ao cliente.`
+          : `Chamado “${ticket.title}” resolvido. Aguardando o aceite do cliente no portal.`,
       );
-      setNotice(`Chamado “${ticket.title}” atualizado para “${ticketStatusLabel[draft.status]}”.`);
-      setEditing(current => {
+      setDrafts(current => {
         const next = { ...current };
         delete next[ticket.id];
         return next;
@@ -86,7 +114,7 @@ export default function TicketsSection({ accounts }: { accounts: AdminAccount[] 
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Não foi possível atualizar o chamado.");
     } finally {
-      setBusy(false);
+      setBusyTicket("");
     }
   }
 
@@ -94,8 +122,9 @@ export default function TicketsSection({ accounts }: { accounts: AdminAccount[] 
     <section className={styles.card} aria-labelledby="tickets-section-title">
       <h2 id="tickets-section-title">5 · Chamados dos clientes</h2>
       <p className={styles.hint}>
-        Atendimento interno complementar. Toda mudança de situação fica registrada em auditoria com quem
-        alterou, quando, e de qual situação para qual; a resposta fica visível para o cliente no portal.
+        Atendimento canônico: assuma chamados abertos e resolva chamados em atendimento sempre com
+        devolutiva escrita. Cada passo fica na trilha do chamado e na auditoria com quem agiu e quando.
+        O fechamento é o aceite do próprio cliente no portal.
       </p>
 
       <div className={`${styles.formRow} ${styles.two}`} style={{ marginBottom: 16 }}>
@@ -125,6 +154,12 @@ export default function TicketsSection({ accounts }: { accounts: AdminAccount[] 
 
       {error ? <p className={`${styles.message} ${styles.messageError}`} role="alert">{error}</p> : null}
       {notice ? <p className={`${styles.message} ${styles.messageOk}`} role="status">{notice}</p> : null}
+      {noScope ? (
+        <p className={styles.hint} role="note">
+          A fila responde apenas dentro das concessões ativas de <code>client.tickets.read</code> da sua
+          identidade. Se o atendimento ficou indisponível de repente, a concessão pode ter sido revogada.
+        </p>
+      ) : null}
 
       <p className={styles.hint}>
         <button type="button" className={styles.ghostButton} onClick={() => void reload()} style={{ color: "#1a5db2", borderColor: "#1a5db2" }}>
@@ -142,8 +177,7 @@ export default function TicketsSection({ accounts }: { accounts: AdminAccount[] 
       ) : (
         <ul className={styles.list}>
           {tickets.map(ticket => {
-            const draft = getEdit(ticket);
-            const dirty = draft.status !== ticket.status || draft.response !== (ticket.admin_response ?? "");
+            const actions = availableActions(ticket);
             const chip =
               ticket.status === "open"
                 ? styles.chipOpen
@@ -163,56 +197,62 @@ export default function TicketsSection({ accounts }: { accounts: AdminAccount[] 
                 </div>
                 <span className={`${styles.chip} ${chip}`}>{ticketStatusLabel[ticket.status]}</span>
                 <p className={styles.listItemDetail}>{ticket.details}</p>
-                {ticket.admin_response ? (
-                  <p className={styles.listItemDetail} style={{ background: "#e7f2fc", padding: "8px 10px", borderRadius: 8 }}>
-                    Resposta atual ao cliente: {ticket.admin_response}
+                {(ticket.messages ?? []).length > 0 ? (
+                  <ul className={styles.listItemDetail} style={{ background: "#f2f7fd", padding: "8px 10px", borderRadius: 8, listStyle: "none", margin: 0 }}>
+                    {(ticket.messages ?? []).map((message, index) => (
+                      <li key={`${ticket.id}-${index}`} style={{ marginTop: index === 0 ? 0 : 6 }}>
+                        <strong>{messageKindLabel[message.kind]}</strong>
+                        {message.author_name ? ` · ${message.author_name}` : ""} ·{" "}
+                        {new Date(message.created_at).toLocaleString("pt-BR")}
+                        <br />
+                        {message.message}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                {ticket.sla_paused_at ? (
+                  <p className={styles.listItemDetail} style={{ background: "#fdf6e3", padding: "8px 10px", borderRadius: 8 }}>
+                    SLA pausado: aguardando cliente desde {new Date(ticket.sla_paused_at).toLocaleString("pt-BR")}. Pausas acumuladas: {Math.round(Number(ticket.sla_total_paused_seconds ?? 0) / 60)} min.
                   </p>
                 ) : null}
-                <div className={styles.inlineForm}>
-                  <select
-                    value={draft.status}
-                    disabled={busy}
-                    onChange={event => setEdit(ticket, { status: event.target.value as AdminTicket["status"] })}
-                    aria-label={`Nova situação do chamado ${ticket.title}`}
-                    style={{ flex: "0 1 170px" }}
-                  >
-                    {TICKET_STATUSES.map(status => (
-                      <option key={status} value={status}>
-                        {ticketStatusLabel[status]}
-                      </option>
+                {ticket.reopen_count ? (
+                  <p className={styles.listItemDetail}>
+                    Reaberturas: {ticket.reopen_count}{ticket.last_reopen_reason ? ` · último motivo: ${ticket.last_reopen_reason}` : ""}
+                  </p>
+                ) : null}
+                {ticket.status === "resolved" ? (
+                  <p className={styles.listItemDetail} style={{ background: "#eef6ee", padding: "8px 10px", borderRadius: 8 }}>
+                    Resolvido em {ticket.resolved_at ? new Date(ticket.resolved_at).toLocaleString("pt-BR") : "—"} · aguardando o aceite do cliente no portal.
+                  </p>
+                ) : null}
+                {ticket.closed_at ? (
+                  <p className={styles.listItemDetail}>Encerrado com aceite do cliente em {new Date(ticket.closed_at).toLocaleString("pt-BR")}.</p>
+                ) : null}
+                {actions.length > 0 ? (
+                  <div className={styles.inlineForm}>
+                    <textarea
+                      value={drafts[ticket.id] ?? ""}
+                      maxLength={1000}
+                      disabled={busyTicket !== ""}
+                      onChange={event => setDrafts(current => ({ ...current, [ticket.id]: event.target.value }))}
+                      placeholder="Devolutiva para o cliente (obrigatória, 5 a 1000 caracteres) — fica na trilha do chamado e no portal."
+                      aria-label={`Devolutiva do chamado ${ticket.title}`}
+                    />
+                    {actions.map(({ action, label }) => (
+                      <button
+                        key={action}
+                        type="button"
+                        className={styles.submit}
+                        disabled={busyTicket !== "" || (drafts[ticket.id] ?? "").trim().length < 5}
+                        onClick={() => void transition(ticket, action)}
+                        style={{ padding: "9px 14px" }}
+                      >
+                        <Send size={13} aria-hidden="true" />
+                        {busyTicket === ticket.id ? "Registrando…" : label}
+                      </button>
                     ))}
-                  </select>
-                  <textarea
-                    value={draft.response}
-                    maxLength={500}
-                    disabled={busy}
-                    onChange={event => setEdit(ticket, { response: event.target.value })}
-                    placeholder="Resposta para o cliente (opcional, máx. 500 caracteres)"
-                    aria-label={`Resposta do chamado ${ticket.title}`}
-                  />
-                  <textarea
-                    value={draft.reason}
-                    maxLength={500}
-                    disabled={busy}
-                    onChange={event => setEdit(ticket, { reason: event.target.value })}
-                    placeholder="Motivo se pausar SLA, reabrir ou registrar contexto da mudança"
-                    aria-label={`Motivo da mudança do chamado ${ticket.title}`}
-                  />
-                  {ticket.sla_paused_at ? (
-                    <p className={styles.listItemDetail} style={{ background: "#fdf6e3", padding: "8px 10px", borderRadius: 8 }}>
-                      SLA pausado: aguardando cliente desde {new Date(ticket.sla_paused_at).toLocaleString("pt-BR")}. Pausas acumuladas: {Math.round(Number(ticket.sla_total_paused_seconds ?? 0) / 60)} min.
-                    </p>
-                  ) : null}
-                  {ticket.reopen_count ? (
-                    <p className={styles.listItemDetail}>
-                      Reaberturas: {ticket.reopen_count}{ticket.last_reopen_reason ? ` · último motivo: ${ticket.last_reopen_reason}` : ""}
-                    </p>
-                  ) : null}
-                  <button type="button" className={styles.submit} disabled={busy || !dirty} onClick={() => void save(ticket)} style={{ padding: "9px 14px" }}>
-                    <Save size={13} aria-hidden="true" />
-                    {busy ? "Salvando…" : "Salvar"}
-                  </button>
-                </div>
+                  </div>
+                ) : null}
               </li>
             );
           })}
