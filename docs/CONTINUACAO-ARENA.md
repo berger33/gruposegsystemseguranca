@@ -3,6 +3,7 @@
 ## Incremento 12 — prova focal da continuidade canônica
 
 - Reconciliação desta sessão: `gh pr view 135` confirmou PR **MERGED** com merge commit real `cf3a1f4c580f44b92969a61548eec8d304e9c005`; o commit tem como pais o ponto anterior `58e213a11ccae35fc2f21002c9e1dda6b87bc333` e `9396d03f0ff1cc7064ed3675525f2387d0718a4c`. `origin/main`, `main` local e a branch fixa apontam para `cf3a1f4c580f44b92969a61548eec8d304e9c005`; o checkout iniciou sem alterações locais inesperadas.
+- Entrega desta fatia: commit de implementação `6d6ad1389c2554fbd5586081342f3dd5150ba294`, branch publicada e PR **#136** aberta para revisão: https://github.com/berger33/gruposegsystemseguranca/pull/136. Nenhum merge automático foi feito.
 - PRs #126, #127, #129, #132, #133 e #134 estão `MERGED` no GitHub e não foram recriadas, reabertas ou remescladas.
 - Branch de trabalho: `arena/01a108ea-gruposegsystemseguranca`. O ledger vigente é **001–163**, todos imutáveis nesta sessão; a próxima migração livre é **164**. Não foram aplicadas migrações no computador do operador e não foi criada a 164.
 - Implementação revisada: `db/migrations/162-ext10-continuity-canonical-journey.sql`, `src/server/ext-continuity-api.mjs`, dispatcher em `server.mjs` e UI `/admin/continuidade`. A correção desta fatia é somente na API: transições `arquivado`/`rascunho` usam a ação de auditoria já permitida `continuity_plan_update`, pois a migração 162 não adiciona ações dinâmicas para esses dois estados. A migração 162 não foi alterada.

@@ -4,6 +4,8 @@
 
 Base confirmada no GitHub e no checkout: PR #135 está `MERGED` com o merge commit real `cf3a1f4c580f44b92969a61548eec8d304e9c005`, que integra `58e213a11ccae35fc2f21002c9e1dda6b87bc333` e `9396d03f0ff1cc7064ed3675525f2387d0718a4c`. `origin/main`, `main` local e `arena/01a108ea-gruposegsystemseguranca` estão nesse SHA. O checkout iniciou limpo. #126, #127, #129, #132, #133 e #134 permanecem mescladas e não devem ser recriadas, reabertas ou remescladas.
 
+Entrega desta fatia: implementação no commit `6d6ad1389c2554fbd5586081342f3dd5150ba294`, PR #136 aberta para revisão. Não houve merge automático.
+
 O ledger é **001–163** e 001–163 permanecem imutáveis; a próxima migração livre é **164**. Nenhuma migração foi aplicada em banco do operador e nenhuma 164 foi criada.
 
 A implementação existente da migração 162, API, dispatcher e UI foi validada com uma bateria nova (`scripts/qa-ext10-continuity-postgres.mjs` + `tests/ext10-continuity.integration.test.mjs`). O gate aplicou 001–163 em PostgreSQL 17 descartável e executou servidor HTTP real, sessões staff fictícias distintas e Chromium real. Os planos, transições e exercícios foram criados exclusivamente por HTTP; SQL preparou somente identidades, credenciais, grants e controles de teste.
