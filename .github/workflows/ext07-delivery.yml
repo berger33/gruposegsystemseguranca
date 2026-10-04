@@ -1,7 +1,7 @@
 name: EXT-07 compliance delivery
 ton:
   pull_request:
-    paths: ['db/migrations/153-ext07-compliance-journey.sql','src/server/ext-compliance-api.mjs','src/app/admin/compliance/**','tests/ext07-*','scripts/qa-ext07-compliance-postgres.mjs']
+    paths: ['db/migrations/154-ext07-compliance-hardening.sql','src/server/ext-compliance-api.mjs','src/app/admin/compliance/**','tests/ext07-*','scripts/qa-ext07-compliance-postgres.mjs']
 jobs:
   ext07:
     runs-on: ubuntu-latest
