@@ -49,6 +49,10 @@ export const KNOWN_PERMISSIONS = Object.freeze([
   "expansion.read",
   "expansion.write",
   "expansion.approve",
+  "analytics.read",
+  "analytics.write",
+  "analytics.approve",
+  "analytics.execute",
 ]);
 
 export function isValidPermission(p) {

@@ -1,8 +1,18 @@
-# Status atual consolidado — reconciliação F00 + F01 + F03 + F04 (EXT-08) + F05 (EXT-09) + F06 (EXT-10)
+# Status atual consolidado — reconciliação F00 + F01 + F03 + F04 (EXT-08) + F05 (EXT-09) + F06 (EXT-10) + F07 (EXT-11)
+
+## Atualização F07 — EXT-11 Analytics e experimentos A/B controlados
+
+Base da sessão: merge commit `58e213a11ccae35fc2f21002c9e1dda6b87bc333`, branch `arena/01a108c7-gruposegsystemseguranca`. PRs #126, #127, #129, #132, #133 e #134 permanecem integradas sem recriação ou remesclagem.
+
+O ledger agora é **001–163**; 001–162 permanecem imutáveis. A migração 163 é aditiva sobre `ext_analytics_experiments` e cria `ext_analytics_experiment_events`/`ext_analytics_observations`. A API/UI canônicas usam aprovação humana antes da execução, cinco estados controlados, origem operacional interna obrigatória, minimização, trilha imutável, RBAC granular, same-origin, idempotência SHA-256, advisory locks, `FOR UPDATE` e auditoria atômica com rollback/503. A escrita legada responde 410 após as guardas.
+
+O sistema não realiza A/B externo, não inventa tráfego/conversões/resultados/vencedores/significância e não aceita esses valores como verdade. A conclusão é descritiva sobre observações reais; a UI `/admin/analytics` declara dados insuficientes quando não há observação de ambas as variantes. Não há promessa de SMTP, telefonia, gateway, IA ou fornecedor externo.
+
+**Validação:** a primeira execução da base encontrou dependências ausentes (`tsc`/`next`) e o ambiente embedded sem `libpq.so.5`; `npm ci` reparou somente esse ambiente, e o binário passou a usar `node_modules/@embedded-postgres/linux-x64/native/lib/libpq.so.5`. Depois: Wave0 5/5, typecheck OK, `npm test` 555/555, build com 98 páginas, `test:migrations:pg` 163/163, unitário EXT-11 10/10, gate PG17/HTTP/sessões `npm run test:ext11-analytics:pg` 18/18 e regressão EXT-07 43/43; `git diff --check`/`node --check` verdes. Nenhum banco remoto foi usado e nenhuma asserção foi relaxada.
 
 ## Atualização F06 — Continuidade de Negócios e Contingência
 
-Migração 162 aditiva, API canônica e tela `/admin/continuidade` entregues nesta branch. A jornada registra planos, transições, acionamentos internos e simulados com RBAC, idempotência, locks e auditoria atômica. Sem notificações externas simuladas. Ledger: 001–162; próxima 163. O gate PG17 focal ainda depende da biblioteca `libpq.so.5` disponível no ambiente.
+Migração 162 aditiva, API canônica e tela `/admin/continuidade` entregues nesta branch. A jornada registra planos, transições, acionamentos internos e simulados com RBAC, idempotência, locks e auditoria atômica. Sem notificações externas simuladas. Ledger histórico: 001–162; a 163 foi consumida pelo F07.
 
 ## Atualização F05 — Expansão e Novas Unidades (EXT-09)
 
@@ -425,7 +435,7 @@ Legenda do estado confirmado: `pronto_local` = validação automática local ant
 | EXT-08 | Base de conhecimento | pronto_local (jornada interna de staff com versionamento, ciência formal, rollback atômico e gate HTTP/DB/UI dedicado; aceite humano e Windows pendentes) | pronto_local (jornada interna de staff com versionamento, ciência formal, rollback atômico e gate HTTP/DB/UI dedicado; aceite humano e Windows pendentes) | Aceite humano do operador e validação Windows/EPERM pendentes. Não há IA externa nem integrações de terceiros. | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-09 | Expansão/unidades | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-10 | Continuidade operacional | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
-| EXT-11 | Analytics/A-B | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
+| EXT-11 | Analytics/A-B | entregue_e_verificado_gate_local | entregue_e_verificado_gate_local (migração 163, API/UI canônicas, RBAC, auditoria, idempotência e gate 18/18) | aceite humano, Windows/EPERM e aplicação no banco de destino; sem tráfego externo ou significância alegada | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-12 | Editor visual avançado | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-13 | Relatório periódico | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-14 | Inteligência comercial | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |

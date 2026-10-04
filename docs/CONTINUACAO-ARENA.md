@@ -1,4 +1,13 @@
-# Continuidade Arena — 2026-10-04 (F06 / EXT-10)
+# Continuidade Arena — 2026-10-04 (F07 / EXT-11)
+
+## Incremento 11 — EXT-11 / F07 Analytics e experimentos A/B controlados
+
+- Base confirmada: merge commit `58e213a11ccae35fc2f21002c9e1dda6b87bc333`; branch Arena fixa `arena/01a108c7-gruposegsystemseguranca`. PRs #126, #127, #129, #132, #133 e #134 já estão integradas e não foram recriadas, reabertas ou remescladas.
+- Migração aditiva **163** (`163-ext11-analytics-canonical-journey.sql`): preserva 001–162, classifica linhas legadas da tabela 086 como `registro_legado`, cria eventos/observações append-only e exige origem operacional interna, minimização e fingerprint SHA-256. Novos estados de negócio são criados somente pela API HTTP.
+- API canônica: `GET/POST /api/ext/analytics/experiments`, detalhe por id, aprovação em `/approve`, transição em `/transition` e observação real em `/observations`. Estados entregues: `rascunho`, `em_execucao`, `concluido`, `cancelado`, `arquivado`; execução exige aprovação humana anterior e conclusão exige observações reais de A e B.
+- Garantias: RBAC granular `analytics.read/write/approve/execute` server-side fail-closed, sessão individual, same-origin, Idempotency-Key/fingerprint, replay/conflict, advisory lock + `FOR UPDATE`, auditoria atômica `auth_access_audit` com rollback e 503. Eventos e observações possuem trigger imutável.
+- Escrita legada `/api/ext/analytics-experiments` recebe HTTP 410 após as guardas; não há tráfego, conversão, vencedor, significância estatística, integração externa ou dado inventado. A UI `/admin/analytics` usa `AdminGate` e informa quando faltam dados.
+- Evidência: `npm ci` reparou as dependências e disponibilizou `libpq.so.5` no pacote embedded; Wave0 5/5, `npm run typecheck` OK, `npm test` 555/555, `npm run build` 98 páginas, unitário EXT-11 10/10, `npm run test:ext11-analytics:pg` 18/18, `npm run test:migrations:pg` 163/163 e `npm run test:ext07-compliance:pg` 43/43 passaram; `git diff --check`/`node --check` verdes. Os gates PG usaram clusters descartáveis, HTTP real e sessões staff reais. Aceite humano e Windows/EPERM seguem fora do gate técnico.
 
 ## Incremento 10 — Continuidade de Negócios e Contingência
 
