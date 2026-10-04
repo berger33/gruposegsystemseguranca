@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import nextEnv from "@next/env";
 import pg from "pg";
 import { hashPassword } from "../src/lib/client-auth-core.mjs";
-import { provisionAndLoginStaff } from "./helpers/staff-login.mjs";
+import { loginStaff, provisionAndLoginStaff } from "./helpers/staff-login.mjs";
 
 const { loadEnvConfig } = nextEnv;
 const { Pool } = pg;
@@ -68,18 +68,17 @@ async function applyMigrations() {
   const pool = new Pool({ connectionString: databaseUrl, max: 1 });
   try {
     const ready = await pool.query(`SELECT
-      to_regclass('auth_mfa_challenges') IS NOT NULL
-      AND to_regclass('auth_staff_sessions') IS NOT NULL
-      AND EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema='public' AND table_name='client_tickets' AND column_name='idempotency_key'
-      ) AS ready`);
+      to_regclass('auth_permissions') IS NOT NULL
+      AND to_regclass('client_ticket_messages') IS NOT NULL AS ready`);
     if (ready.rows[0]?.ready) return;
-    for (const filename of ["001-site-visual.sql", "002-public-leads.sql", "003-client-access.sql", "004-client-space.sql", "005-client-security.sql", "006-admin-identities.sql", "007-opcao-b-funcionarios.sql", "009-mfa-challenge.sql", "011-audit-and-notifications.sql", "097-client-mfa-session.sql", "098-client-manual-verification.sql", "099-sec-staff-session-hardening.sql",
-  "100-l02-local-outbox.sql",
-  "101-l02-document-integrity.sql",
-  "139-l08-client-space-atomic-idempotency.sql"]) {
-      const sql = await readFile(path.join(projectRoot, "db/migrations", filename), "utf8");
+    // Ledger completo 001..N: a jornada canônica F03 atravessa RBAC (010),
+    // provisionamento de papéis (102), ciclo de vida/SLA (140) e a trilha de
+    // atendimento/aceite (158). Todas as migrações são idempotentes por
+    // construção; reaplicar em banco parcial é seguro.
+    const dir = path.join(projectRoot, "db", "migrations");
+    const filenames = (await readdir(dir)).filter(name => /^\d{3}-.*\.sql$/.test(name)).sort();
+    for (const filename of filenames) {
+      const sql = await readFile(path.join(dir, filename), "utf8");
       await pool.query(sql);
     }
   } finally {
@@ -195,8 +194,10 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     const headers = { Origin: origin };
     if (cookie) headers.Cookie = cookie;
     if (body !== undefined) headers["Content-Type"] = "application/json";
-    if (method === "POST" && ["/api/admin/documents", "/api/client/tickets"].includes(pathname)) {
-      headers["Idempotency-Key"] = idempotencyKey ?? randomUUID();
+    if (idempotencyKey !== undefined) {
+      headers["Idempotency-Key"] = idempotencyKey;
+    } else if (method === "POST" && ["/api/admin/documents", "/api/client/tickets"].includes(pathname)) {
+      headers["Idempotency-Key"] = randomUUID();
     }
     const response = await fetch(`${origin}${pathname}`, {
       method,
@@ -251,6 +252,27 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     adminCookie = staff.cookie;
     staffIdentityId = staff.id;
     assert.match(adminCookie, /^[^=]+=/);
+
+    // F03: o atendimento canônico de chamados exige concessão RBAC granular
+    // (client.tickets.*) nascida via HTTP real. O papel ti recebeu
+    // admin.permissions.grant global pelo gatilho da migração 102 no INSERT do
+    // perfil acima, então a própria identidade de atendimento se concede aqui.
+    for (const permission of ["client.tickets.read", "client.tickets.write"]) {
+      const granted = await api("/api/admin/permissions", {
+        method: "POST",
+        body: {
+          identityId: staffIdentityId,
+          permission,
+          scopeType: "organization",
+          reason: "Atendimento canônico da jornada de chamados (teste de integração).",
+        },
+        cookie: adminCookie,
+      });
+      // A sessão do usuário concedido é revogada pelo RBAC; reautentica antes
+      // de seguir, pelo fluxo real de login.
+      assert.ok([201, 409].includes(granted.status), JSON.stringify(granted.body));
+      adminCookie = await loginStaff(api, staff);
+    }
   });
 
   async function loginAs(email) {
@@ -693,16 +715,53 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     assert.equal(adminList.body.tickets.length, 1);
     assert.equal(adminList.body.tickets[0].opened_by_email, clientAEmail);
 
-    const patch = await api(`/api/admin/tickets/${ticketId}`, {
+    // A fila canônica F03 exige client.tickets.read e aceita os mesmos filtros.
+    const queue = await api(`/api/admin/client/l08/tickets?status=open&account=${accountA1}`, { cookie: adminCookie });
+    assert.equal(queue.status, 200);
+    assert.equal(queue.body.tickets.length, 1);
+    assert.equal(queue.body.tickets[0].opened_by_email, clientAEmail);
+    assert.deepEqual(queue.body.tickets[0].messages, []);
+
+    // A escrita legada (transição arbitrária sem escopo/idempotência) está aposentada.
+    const retired = await api(`/api/admin/tickets/${ticketId}`, {
       method: "PATCH",
-      body: { status: "in_progress", adminResponse: "Sim, é um cenário de teste. Acompanhamos por aqui." },
+      body: { status: "in_progress", adminResponse: "não deve persistir" },
       cookie: adminCookie,
     });
-    assert.equal(patch.status, 200);
+    assert.equal(retired.status, 410);
+    assert.deepEqual(retired.body, { error: "legacy_cli_ticket_write_retired", canonical_endpoint: "/api/admin/client/l08/tickets" });
+
+    const patch = await api("/api/admin/client/l08/tickets", {
+      method: "PATCH",
+      body: { id: ticketId, action: "assumir", message: "Sim, é um cenário de teste. Acompanhamos por aqui." },
+      cookie: adminCookie,
+      idempotencyKey: `ticket-assume-${runId}`,
+    });
+    assert.equal(patch.status, 200, JSON.stringify(patch.body));
+    assert.deepEqual(patch.body, {
+      ok: true,
+      ticketId,
+      previousStatus: "open",
+      status: "in_progress",
+      replayed: false,
+    });
+
+    // Replay idêntico da mesma intenção não duplica mensagem nem histórico.
+    const replay = await api("/api/admin/client/l08/tickets", {
+      method: "PATCH",
+      body: { id: ticketId, action: "assumir", message: "Sim, é um cenário de teste. Acompanhamos por aqui." },
+      cookie: adminCookie,
+      idempotencyKey: `ticket-assume-${runId}`,
+    });
+    assert.equal(replay.status, 200);
+    assert.deepEqual(replay.body, { ok: true, ticketId, status: "in_progress", replayed: true });
 
     const clientSees = await api(`/api/client/tickets?account=${accountA1}`, { cookie: cookieA });
     assert.equal(clientSees.body.tickets[0].status, "in_progress");
     assert.equal(clientSees.body.tickets[0].admin_response, "Sim, é um cenário de teste. Acompanhamos por aqui.");
+    assert.deepEqual(clientSees.body.tickets[0].messages.map(item => [item.kind, item.author_kind, item.message]), [
+      ["attendance", "staff", "Sim, é um cenário de teste. Acompanhamos por aqui."],
+    ]);
 
     const statusAudit = await pool.query(
       `SELECT previous_status, next_status, changed_by, changed_by_identity
@@ -715,13 +774,48 @@ test("client space enforces verified scoping end to end", testOptions, async t =
       { previous_status: "open", next_status: "in_progress", changed_by: "ti", changed_by_identity: staffIdentityId },
     ]);
 
-    const invalidStatus = await api(`/api/admin/tickets/${ticketId}`, {
+    // Ações fora da máquina de estados canônica são recusadas sem tocar o estado.
+    const invalidAction = await api("/api/admin/client/l08/tickets", {
       method: "PATCH",
-      body: { status: "em analise" },
+      body: { id: ticketId, action: "encerrar", message: "Ação fora da máquina de estados." },
       cookie: adminCookie,
+      idempotencyKey: `ticket-invalid-action-${runId}`,
     });
-    assert.equal(invalidStatus.status, 400);
-    assert.equal(invalidStatus.body.error, "ticket_status_invalid");
+    assert.equal(invalidAction.status, 400);
+    assert.equal(invalidAction.body.error, "invalid_ticket_action");
+
+    // O staff não pode resolver um chamado que sequer assumiu (transição open → resolved não existe).
+    const sibling = await api("/api/client/tickets", {
+      method: "POST",
+      body: {
+        accountId: accountA1,
+        category: "Outro assunto",
+        title: "Chamado ainda não assumido",
+        details: "Usado para provar que a máquina de estados exige o passo de atendimento.",
+      },
+      cookie: cookieA,
+      idempotencyKey: `ticket-open-sibling-${runId}`,
+    });
+    assert.equal(sibling.status, 201, JSON.stringify(sibling.body));
+    cleanupIds.push(sibling.body.ticketId);
+    const prematureResolve = await api("/api/admin/client/l08/tickets", {
+      method: "PATCH",
+      body: { id: sibling.body.ticketId, action: "resolver", message: "Ainda em atendimento inicial." },
+      cookie: adminCookie,
+      idempotencyKey: `ticket-resolve-open-${runId}`,
+    });
+    assert.equal(prematureResolve.status, 409);
+    assert.deepEqual(prematureResolve.body, { error: "ticket_transition_not_allowed", status: "open" });
+
+    // Mesmo eixo com outro conteúdo responde conflito, sem efeito colateral.
+    const divergent = await api("/api/admin/client/l08/tickets", {
+      method: "PATCH",
+      body: { id: ticketId, action: "assumir", message: "Conteúdo divergente sob a mesma chave." },
+      cookie: adminCookie,
+      idempotencyKey: `ticket-assume-${runId}`,
+    });
+    assert.equal(divergent.status, 409);
+    assert.deepEqual(divergent.body, { error: "idempotency_conflict" });
   });
 
   await t.test("account creation rolls back when its mandatory audit fails", async () => {
@@ -868,12 +962,13 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     assert.deepEqual(history.rows, [{ previous_status: null, next_status: "open" }]);
   });
 
-  await t.test("ticket status and history roll back together when audit fails", async () => {
+  await t.test("ticket resolution, acceptance and history roll back together when audits fail", async () => {
     const beforeHistory = await pool.query("SELECT count(*)::int AS count FROM client_ticket_status_audit WHERE ticket_id = $1", [ticketId]);
-    const failed = await withForcedAuditFailure("ticket_status", () => api(`/api/admin/tickets/${ticketId}`, {
+    const failed = await withForcedAuditFailure("ticket_resolve", () => api("/api/admin/client/l08/tickets", {
       method: "PATCH",
-      body: { status: "resolved", adminResponse: "Esta resposta não pode persistir." },
+      body: { id: ticketId, action: "resolver", message: "Esta resposta não pode persistir." },
       cookie: adminCookie,
+      idempotencyKey: `ticket-resolve-${runId}`,
     }));
     assert.equal(failed.status, 503);
     assert.deepEqual(failed.body, { error: "audit_unavailable" });
@@ -882,24 +977,119 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     assert.equal(persisted.rows[0].admin_response, "Sim, é um cenário de teste. Acompanhamos por aqui.");
     const afterHistory = await pool.query("SELECT count(*)::int AS count FROM client_ticket_status_audit WHERE ticket_id = $1", [ticketId]);
     assert.equal(afterHistory.rows[0].count, beforeHistory.rows[0].count);
+    const messagesAfterFailure = await pool.query("SELECT count(*)::int AS count FROM client_ticket_messages WHERE ticket_id = $1", [ticketId]);
+    assert.equal(messagesAfterFailure.rows[0].count, 1, "só a mensagem de atendimento pode existir após o rollback");
 
-    const retried = await api(`/api/admin/tickets/${ticketId}`, {
+    const retried = await api("/api/admin/client/l08/tickets", {
       method: "PATCH",
-      body: { status: "resolved", adminResponse: "Resposta persistida apenas no retry auditável." },
+      body: { id: ticketId, action: "resolver", message: "Resposta persistida apenas no retry auditável." },
       cookie: adminCookie,
+      idempotencyKey: `ticket-resolve-${runId}`,
     });
-    assert.equal(retried.status, 200);
+    assert.equal(retried.status, 200, JSON.stringify(retried.body));
+    assert.deepEqual(retried.body, { ok: true, ticketId, previousStatus: "in_progress", status: "resolved", replayed: false });
     const afterRetry = await pool.query(
-      `SELECT t.status, t.admin_response,
-              (SELECT count(*)::int FROM client_ticket_status_audit h WHERE h.ticket_id = t.id) AS history_count
+      `SELECT t.status, t.admin_response, t.resolved_at,
+              (SELECT count(*)::int FROM client_ticket_status_audit h WHERE h.ticket_id = t.id) AS history_count,
+              (SELECT count(*)::int FROM client_ticket_messages m WHERE m.ticket_id = t.id) AS message_count
        FROM client_tickets t WHERE t.id = $1`,
       [ticketId],
     );
-    assert.deepEqual(afterRetry.rows[0], {
-      status: "resolved",
-      admin_response: "Resposta persistida apenas no retry auditável.",
-      history_count: beforeHistory.rows[0].count + 1,
+    assert.equal(afterRetry.rows[0].status, "resolved");
+    assert.equal(afterRetry.rows[0].admin_response, "Resposta persistida apenas no retry auditável.");
+    assert.ok(afterRetry.rows[0].resolved_at, "resolução registra resolved_at");
+    assert.equal(afterRetry.rows[0].history_count, beforeHistory.rows[0].count + 1);
+    assert.equal(afterRetry.rows[0].message_count, 2, "atendimento + resolução na trilha canônica");
+
+    // O aceite é do cliente: staff autenticado não pode fechar o chamado.
+    const staffAccept = await api(`/api/client/tickets/${ticketId}/accept`, {
+      method: "PATCH",
+      body: {},
+      cookie: adminCookie,
+      idempotencyKey: `ticket-accept-staff-${runId}`,
     });
+    assert.equal(staffAccept.status, 401);
+    assert.deepEqual(staffAccept.body, { error: "client_session_required" });
+
+    // Cliente fora do escopo do chamado não pode aceitar.
+    const crossAccept = await api(`/api/client/tickets/${ticketId}/accept`, {
+      method: "PATCH",
+      body: {},
+      cookie: cookieB,
+      idempotencyKey: `ticket-accept-cross-${runId}`,
+    });
+    assert.equal(crossAccept.status, 403);
+    assert.deepEqual(crossAccept.body, { error: "forbidden" });
+
+    // Falha de auditoria também derruba o aceite por completo (estado + trilha).
+    const failedAccept = await withForcedAuditFailure("ticket_accept", () => api(`/api/client/tickets/${ticketId}/accept`, {
+      method: "PATCH",
+      body: { message: `Aceite auditável ${runId}: atendimento validado pelo cliente.` },
+      cookie: cookieA,
+      idempotencyKey: `ticket-accept-${runId}`,
+    }));
+    assert.equal(failedAccept.status, 503);
+    assert.deepEqual(failedAccept.body, { error: "audit_unavailable" });
+    const persistedAccept = await pool.query("SELECT status, closed_at FROM client_tickets WHERE id = $1", [ticketId]);
+    assert.equal(persistedAccept.rows[0].status, "resolved");
+    assert.equal(persistedAccept.rows[0].closed_at, null);
+
+    const accepted = await api(`/api/client/tickets/${ticketId}/accept`, {
+      method: "PATCH",
+      body: { message: `Aceite auditável ${runId}: atendimento validado pelo cliente.` },
+      cookie: cookieA,
+      idempotencyKey: `ticket-accept-${runId}`,
+    });
+    assert.equal(accepted.status, 200, JSON.stringify(accepted.body));
+    assert.deepEqual(accepted.body, { ok: true, ticketId, previousStatus: "resolved", status: "closed", replayed: false });
+
+    const acceptedReplay = await api(`/api/client/tickets/${ticketId}/accept`, {
+      method: "PATCH",
+      body: { message: `Aceite auditável ${runId}: atendimento validado pelo cliente.` },
+      cookie: cookieA,
+      idempotencyKey: `ticket-accept-${runId}`,
+    });
+    assert.equal(acceptedReplay.status, 200);
+    assert.deepEqual(acceptedReplay.body, { ok: true, ticketId, status: "closed", replayed: true });
+
+    const acceptHistory = await pool.query(
+      `SELECT previous_status, next_status, changed_by, changed_by_identity, reason, is_reopen
+       FROM client_ticket_status_audit WHERE ticket_id = $1 ORDER BY id`,
+      [ticketId],
+    );
+    assert.deepEqual(acceptHistory.rows.at(-1), {
+      previous_status: "resolved",
+      next_status: "closed",
+      changed_by: "client",
+      changed_by_identity: identityA,
+      reason: `Aceite auditável ${runId}: atendimento validado pelo cliente.`,
+      is_reopen: false,
+    });
+    const accessAudit = await pool.query(
+      "SELECT action, result FROM auth_access_audit WHERE actor_id = $1 AND action = 'ticket_accept' AND target = $2 ORDER BY created_at",
+      [identityA, ticketId],
+    );
+    assert.deepEqual(accessAudit.rows, [{ action: "ticket_accept", result: "allowed" }]);
+
+    // Chamado fechado é terminal: novo aceite com chave nova é recusado.
+    const closedAccept = await api(`/api/client/tickets/${ticketId}/accept`, {
+      method: "PATCH",
+      body: {},
+      cookie: cookieA,
+      idempotencyKey: `ticket-accept-again-${runId}`,
+    });
+    assert.equal(closedAccept.status, 409);
+    assert.deepEqual(closedAccept.body, { error: "ticket_accept_requires_resolved", status: "closed" });
+
+    // A fila canônica mostra a trilha completa (atendimento, resolução, aceite).
+    const closedQueue = await api(`/api/admin/client/l08/tickets?status=closed&account=${accountA1}`, { cookie: adminCookie });
+    assert.equal(closedQueue.status, 200);
+    assert.equal(closedQueue.body.tickets.length, 1);
+    assert.deepEqual(closedQueue.body.tickets[0].messages.map(item => [item.kind, item.author_kind]), [
+      ["attendance", "staff"],
+      ["resolution", "staff"],
+      ["acceptance", "client"],
+    ]);
   });
 
   await t.test("simultaneous ticket retries create one ticket, one initial history, and one audit", async () => {
@@ -1078,6 +1268,20 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     const rhAdminGrants = await api("/api/admin/grants", { cookie: rhStaff.cookie });
     assert.equal(rhAdminGrants.status, 403);
     assert.deepEqual(rhAdminGrants.body, { error: "forbidden" });
+
+    // Staff sem concessão client.tickets.* não lê a fila canônica nem atende.
+    const rhQueue = await api("/api/admin/client/l08/tickets", { cookie: rhStaff.cookie });
+    assert.equal(rhQueue.status, 403);
+    assert.deepEqual(rhQueue.body, { error: "permission_scope_denied" });
+
+    const rhAttend = await api("/api/admin/client/l08/tickets", {
+      method: "PATCH",
+      body: { id: ticketId, action: "assumir", message: "Tentativa de atendimento sem escopo." },
+      cookie: rhStaff.cookie,
+      idempotencyKey: `ticket-attend-rh-${runId}`,
+    });
+    assert.equal(rhAttend.status, 403);
+    assert.deepEqual(rhAttend.body, { error: "permission_scope_denied" });
   });
 
   await t.test("revoking the grant cuts access immediately and is idempotent", async () => {

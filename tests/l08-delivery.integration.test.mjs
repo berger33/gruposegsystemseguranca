@@ -25,6 +25,8 @@ test("L08 contract inventory keeps CLI-01..05 on one canonical legacy source", a
   const serverRoutes = [
     "/api/admin/invites", "/api/client/accounts", "/api/client/contracts", "/api/client/documents", "/api/client/tickets",
     "/api/admin/client-accounts", "/api/admin/grants", "/api/admin/contracts", "/api/admin/documents", "/api/admin/tickets",
+    // F03 jornada canônica cliente → chamado → atendimento → aceite.
+    "/api/admin/client/l08/tickets", "/accept",
   ];
   for (const route of authRoutes) assert.match(access, new RegExp(route.replaceAll("/", "\\/")));
   for (const route of serverRoutes) assert.match(server, new RegExp(route.replaceAll("/", "\\/")));
@@ -35,6 +37,8 @@ test("L08 contract inventory keeps CLI-01..05 on one canonical legacy source", a
   assert.match(space, /client_contracts/);
   assert.match(space, /client_documents/);
   assert.match(space, /client_tickets/);
+  assert.match(space, /client_ticket_messages/);
+  assert.match(space, /ticket_attend|ticket_resolve|ticket_accept/);
   assert.doesNotMatch(server, /TODO.*CLI-01/);
 });
 

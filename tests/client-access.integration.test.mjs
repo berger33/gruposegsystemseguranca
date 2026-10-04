@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, readdir, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -199,18 +199,15 @@ async function applyMigrations() {
   const pool = new Pool({ connectionString: databaseUrl, max: 1 });
   try {
     const ready = await pool.query(`SELECT
-      to_regclass('auth_mfa_challenges') IS NOT NULL
-      AND to_regclass('auth_staff_sessions') IS NOT NULL
-      AND EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema='public' AND table_name='client_tickets' AND column_name='idempotency_key'
-      ) AS ready`);
+      to_regclass('auth_permissions') IS NOT NULL
+      AND to_regclass('client_ticket_messages') IS NOT NULL AS ready`);
     if (ready.rows[0]?.ready) return;
-    for (const filename of ["001-site-visual.sql","002-public-leads.sql","003-client-access.sql","004-client-space.sql","005-client-security.sql","006-admin-identities.sql","007-opcao-b-funcionarios.sql", "009-mfa-challenge.sql", "011-audit-and-notifications.sql", "097-client-mfa-session.sql", "098-client-manual-verification.sql", "099-sec-staff-session-hardening.sql",
-  "100-l02-local-outbox.sql",
-  "101-l02-document-integrity.sql",
-  "139-l08-client-space-atomic-idempotency.sql"]) {
-      const sql = await readFile(path.join(projectRoot, "db/migrations", filename), "utf8");
+    // Ledger completo 001..N (migrações idempotentes): mantém esta suíte e a
+    // suíte do espaço do cliente no mesmo esquema canônico, sem subconjuntos.
+    const dir = path.join(projectRoot, "db", "migrations");
+    const filenames = (await readdir(dir)).filter(name => /^\d{3}-.*\.sql$/.test(name)).sort();
+    for (const filename of filenames) {
+      const sql = await readFile(path.join(dir, filename), "utf8");
       await pool.query(sql);
     }
   } finally {
