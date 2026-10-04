@@ -1,9 +1,33 @@
 # Continuidade Arena — 2026-10-04 (F01 cobertura + F03)
 
+## Incremento 4 — primeira jornada F03: lead até implantação
+
+- **Base vigente:** `origin/main` em `972e6563f5ea4888b62e88b8c126a925d79f6068` (merge da PR #125 sobre `7d0990a`). Branch fixa: `arena/01a1073d-gruposegsystemseguranca`.
+- **PR desta fatia:** **#126**, commit de implementação `c1a557f` (`feat(f03): prove lead to implantation journey`). A PR é pequena e ainda não deve ser integrada automaticamente.
+- **Escopo entregue localmente:** conversão lead→empresa/contato/oportunidade agora é transacional com auditoria; gate HTTP real percorre lead público, oportunidade, proposta com item e revisão, aceite server-side, contrato canônico e checklist de implantação. O contrato bloqueia antes do aceite; retries concorrentes convergem para um contrato, itens, implantação, dez passos e um audit de criação.
+- **Fronteiras de autorização e isolamento:** anônimo não converte/lê contrato, origem cruzada é recusada, comercial não cria contrato L05, e clientes fictícios A/B recebem somente sua própria conta por sessão individual. A UI autenticada carrega a implantação real; falha de listagem e lista vazia agora são estados visíveis, não silêncio.
+- **Fontes canônicas preservadas:** seed F03 existente foi reutilizado; nenhum estado de negócio foi inserido diretamente. SQL do gate só lê asserções e cria trigger temporário para provocar rollback de auditoria. Migrações `001–156` não mudaram; próxima livre confirmada: `157`.
+
+### Validação desta fatia
+
+- `npm ci`: já validado na #125; sem alteração de dependências.
+- `npm run typecheck`: passou.
+- `npm test`: **526/526**.
+- `npm run test:f03-lead-to-implementation:pg`: passou **1/1** em PostgreSQL 17 descartável + HTTP real + Chromium; seed `seg_demo_local` isolado, temporários removidos.
+- `npm run test:l04-delivery:pg`: passou **20/20** (regressão CRM/conversão/proposta/aceite).
+- `npm run test:l05-delivery:pg`: passou **1/1** (regressão contrato/implantação).
+- `npm run build`: passou com **94 páginas**; `git diff --check` e `node --check` passaram.
+- **Falha real corrigida:** a primeira execução do gate parou no guard do migrador (`qa_database_name_required: seg_qa_ prefix`) porque a massa canônica exige `seg_demo_local`. O runner foi corrigido para usar exclusivamente `seg_demo_local` em cluster loopback descartável, com a autorização do seed mantida e sem relaxar asserções; a repetição passou.
+
+### Limites ainda ativos
+
+F03 **não está concluída**. Esta PR entrega somente a primeira das quatro jornadas: funcionário→RH→retorno, cliente→chamado→aceite e contas→baixa→relatório permanecem pendentes. O aceite humano, Windows/EPERM, SMTP, assinatura qualificada, banco bancário, eSocial, hospedagem definitiva e integrações externas continuam fora da prova. A integração da #126 e checks publicados ainda precisam ser conferidos antes de qualquer merge.
+
+
 ## Incremento 3 — revisão da PR #124 e cobertura restante do AdminGate
 
 - **Base revisada:** `7d0990aaca47a8ea21b2380834289d2c73165b81` (merge da PR #123 no `main`).
-- **PR substituta:** **#125**, branch `arena/01a1073d-gruposegsystemseguranca`, commit de implementação `e2fa152`.
+- **PR substituta:** **#125**, branch `arena/01a1073d-gruposegsystemseguranca`, commit de implementação `e2fa152`, integrada em `origin/main` pelo merge `972e6563`.
 - A PR #124 (`cd189159`) foi revisada contra o main pós-#123: o run antigo `37183947261` falhou no `QA-HOM-008 persistent synthetic restart`, enquanto o run posterior `37183965345`, no mesmo HEAD, passou; todos os demais checks publicados para aquele HEAD também passaram. Como a PR estava `CONFLICTING`/`DIRTY` e a sessão não pode fazer push na branch-fonte antiga, ela foi comentada e fechada como `superseded`, sem descartar o escopo válido.
 - As 28 páginas administrativas restantes receberam `AdminGate` com papéis conferidos contra o mapa de `src/app/admin/AdminGate.tsx`. A matriz está protegida por `tests/admin-page-gates.test.mjs`. Não houve alteração de API, autorização no servidor, migração ou seed F03.
 - Exceções preservadas: `/admin/convite` continua deeplink público de aceite de convite; `/admin/verificacao-manual` continua com reautenticação própria para ação sensível. O gate é somente envelope de UI; cada API segue responsável por 401/403 e escopo no servidor.
@@ -60,16 +84,19 @@ Também pendem Windows/EPERM (F02), aceite humano e integrações externas. Não
 ## Prompt completo para a próxima sessão
 
 ```text
-Continue berger33/gruposegsystemseguranca a partir do main após a PR F03 da branch
-arena/01a105a3-gruposegsystemseguranca. Leia docs/CONTINUACAO-ARENA.md,
-docs/PLANO-CONCLUSAO-ARENA.md e docs/STATUS-ATUAL-CONSOLIDADO.md. Não refaça F00,
-F01 nem a massa sintética base de F03. Implemente somente a próxima fatia F03:
-lead → oportunidade → proposta revisada → contrato → implantação, usando APIs e
-fontes canônicas existentes e a demo isolada. Prove por HTTP real contra PostgreSQL
-17 descartável, com replay/idempotência, auditoria transacional, RBAC e erro visível;
-não insira diretamente estados que a API deve produzir. Migrações 001–156 são
-imutáveis; reconfirme a próxima livre. Dados apenas fictícios .invalid, sem segredos,
-SMTP ou serviços reais. Uma fatia por PR. Ao terminar atualize a continuidade,
-status e checklist com resultados reais e limites; não declare F03 concluída enquanto
-as outras três jornadas e o aceite humano permanecerem pendentes.
+Continue berger33/gruposegsystemseguranca na branch fixa
+arena/01a1073d-gruposegsystemseguranca, a partir de origin/main
+972e6563f5ea4888b62e88b8c126a925d79f6068. Leia os quatro documentos de
+continuidade/status/plano/checklist. A PR #126 é a primeira jornada F03 e não
+pode ser tratada como F03 concluída: confira seus checks antes de qualquer merge.
+Não refaça F00/F01 nem o seed F03. Implemente somente a próxima fatia F03
+(funcionário → solicitação → análise RH → retorno), usando APIs/fontes canônicas,
+HTTP real, PostgreSQL 17 descartável e a massa sintética já existente. Preserve
+RBAC server-side, PLAT-01, sessões individuais, isolamento A/B, auditoria
+transacional, idempotência/retry e UI honesta. Migrações 001–156 permanecem
+imutáveis; reconfirme que a próxima livre é 157. Dados só em .invalid; sem SMTP
+real, banco bancário, eSocial, assinatura externa, hospedagem definitiva ou IA
+externa. Uma fatia por PR pequena; registre qualquer falha real, corrija e repita.
+Atualize continuidade, status, plano e checklist com SHA base, branch, PR,
+commits, comandos, resultados e limites; não declare F03 concluída.
 ```

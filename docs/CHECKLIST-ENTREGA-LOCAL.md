@@ -1,8 +1,16 @@
 # Checklist da entrega local — 222 requisitos
 
+## Atualização 2026-10-04 — primeira jornada F03 na PR #126
+
+Base `origin/main` `972e6563f5ea4888b62e88b8c126a925d79f6068`, branch `arena/01a1073d-gruposegsystemseguranca`, implementação `c1a557f`, PR **#126**. A jornada lead→oportunidade→proposta revisada→contrato→implantação foi provada por `npm run test:f03-lead-to-implementation:pg` (**1/1**, PostgreSQL 17 descartável, HTTP real, Chromium e seed F03 existente). O gate cobre autorização server-side/deny-by-default, mesma origem, rollback quando a auditoria falha, retry concorrente sem duplicar contrato/itens/implantação/passos, bloqueio antes de aceite, clientes A/B isolados e UI com erro/vazio/checklist honesto. A conversão CRM-04 passou a compartilhar transação com seus audits; o detalhe/listagem L05 converge checklist e informa total.
+
+Comandos aprovados nesta fatia: `npm run typecheck`; `npm test` (**526/526**); `npm run test:f03-lead-to-implementation:pg` (**1/1**); `npm run test:l04-delivery:pg` (**20/20**); `npm run test:l05-delivery:pg` (**1/1**); `npm run build` (**94 páginas**); `git diff --check`; `node --check` nos scripts F03. A primeira tentativa do gate encontrou `qa_database_name_required: seg_qa_ prefix`; o runner foi corrigido para o nome canônico `seg_demo_local` em cluster loopback descartável e reexecutado sem reduzir asserções. Nenhuma migração foi criada ou alterada: 001–156 permanecem imutáveis e a próxima livre é 157.
+
+Limites: F03 continua em execução; funcionário→RH→retorno, cliente→chamado→aceite e contas→baixa→relatório, aceite humano, Windows/EPERM e integrações externas não estão entregues. Não houve SMTP real, banco bancário, eSocial, assinatura externa, hospedagem definitiva ou IA externa.
+
 ## Atualização 2026-10-04 — revisão da cobertura F01 e PR substituta #125
 
-Sobre `main` pós-#123 (`7d0990a`). A cobertura restante das páginas administrativas foi reaplicada na PR #125 (`e2fa152`): 28 páginas agora usam `AdminGate`, com matriz de papéis testada estaticamente em `tests/admin-page-gates.test.mjs`. `/admin/convite` e `/admin/verificacao-manual` permanecem nas exceções deliberadas. As APIs não foram alteradas e continuam autorizando no servidor; este incremento não promove nenhum requisito de jornada F03 nem substitui a validação HTTP/PG dos módulos. Validação: typecheck, 526/526 unitários, gate admin-entry 13/13 em PG17 + Chromium, build 94 páginas e diff check limpos. PR #124 foi fechada como conflitante/superseded após conferência dos checks antigo e posterior.
+Sobre `origin/main` pós-#125 (`972e6563`). A cobertura restante das páginas administrativas foi reaplicada na PR #125 (`e2fa152`) e integrada: 28 páginas agora usam `AdminGate`, com matriz de papéis testada estaticamente em `tests/admin-page-gates.test.mjs`. `/admin/convite` e `/admin/verificacao-manual` permanecem nas exceções deliberadas. As APIs não foram alteradas e continuam autorizando no servidor; este incremento anterior não promoveu nenhum requisito de jornada F03 nem substituiu a validação HTTP/PG dos módulos. Validação: typecheck, 526/526 unitários, gate admin-entry 13/13 em PG17 + Chromium, build 94 páginas e diff check limpos. PR #124 foi fechada como conflitante/superseded após conferência dos checks antigo e posterior.
 
 ## Atualização 2026-10-04 — F03 fundação da massa sintética isolada
 

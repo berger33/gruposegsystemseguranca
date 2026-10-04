@@ -1,7 +1,13 @@
-# Status atual consolidado — reconciliação F00 + F01 + fundação F03
+# Status atual consolidado — reconciliação F00 + F01 + primeira jornada F03
 
-Data: 2026-10-04. Base de trabalho: `main` pós-PR #123 `7d0990aaca47a8ea21b2380834289d2c73165b81`; a cobertura restante do F01 está na PR substituta #125 (`e2fa152`) até sua integração.
+Data: 2026-10-04. Base da fatia: `origin/main` em `972e6563f5ea4888b62e88b8c126a925d79f6068`; branch `arena/01a1073d-gruposegsystemseguranca`; PR #126, implementação `c1a557f`. A PR #125 (`e2fa152`) já foi integrada pelo merge acima.
 Método: [matriz declarada no checklist](CHECKLIST-ENTREGA-LOCAL.md) cruzada com código, telas, migrações 001–156, gates e PRs do GitHub. Auditoria de terreno: [docs/auditoria-2026-10-04/AUDITORIA.md](auditoria-2026-10-04/AUDITORIA.md).
+
+## Atualização da fatia F03 — PR #126
+
+A primeira jornada de negócio foi implementada sem nova migração: lead público → conversão transacional em empresa/contato/oportunidade → proposta com revisão e versão enviada → aceite server-side → contrato L05 e checklist de implantação. O gate `npm run test:f03-lead-to-implementation:pg` passou 1/1 em PostgreSQL 17 descartável, HTTP real e Chromium; incluiu bloqueio pré-aceite, retry concorrente sem duplicação, rollback por falha de auditoria, RBAC/origem e isolamento de clientes A/B. A UI retorna a implantação/checklist no detalhe, expõe erro de listagem e distingue lista vazia.
+
+A alteração de conversão CRM-04 passou `npm run test:l04-delivery:pg` (20/20), a fronteira L05 passou `npm run test:l05-delivery:pg` (1/1), e as validações gerais passaram: `npm run typecheck`, `npm test` (526/526), `npm run build` (94 páginas), `git diff --check`. A primeira execução do gate encontrou o guard de nome `seg_qa_` do migrador; o runner foi corrigido para o `seg_demo_local` canônico em cluster loopback descartável e repetido com todas as asserções. F03 permanece em execução: três jornadas, aceite humano e limites externos continuam pendentes.
 
 Este documento é o inventário único de trabalho exigido pela etapa F00 do [plano](auditoria-2026-10-04/02-PLANO-ARENA.md). Estados `pronto_local` vêm de validação automática anterior: não são aceite humano nem homologação Windows. "Teste vigente" aponta o gate que valida o requisito hoje, sem prometer cobertura total da jornada.
 
@@ -9,8 +15,8 @@ Este documento é o inventário único de trabalho exigido pela etapa F00 do [pl
 
 - 222 IDs transcrevidos 1:1 do checklist, sem renumerar.
 - Maioria `pronto_local` por gates automáticos; aceite humano formal pendente para RH/funcionário/clientes e jornadas integradas.
-- **F01 (entrada e navegação) foi integrada pela PR #122**: `/admin` hub, `/admin/entrar`, retorno seguro, menu por papel e logout revogável. A expansão do `AdminGate` às 28 páginas restantes está implementada na PR substituta #125 (`e2fa152`), ainda aguardando integração nesta fotografia; aceite humano permanece pendente.
-- **F03 iniciou pela fundação da massa sintética**: bootstrap transacional/idempotente da demo isolada com sete papéis staff (incluindo RH e Marcelo), clientes A/B com grants exclusivos, funcionário com autoatendimento próprio e dois contratos fictícios. O gate `test:demo-local:pg` prova replay sem rotação de senha, login A/B sem vazamento e login do funcionário. As quatro jornadas de negócio F03 continuam pendentes.
+- **F01 (entrada e navegação) foi integrada pela PR #122**: `/admin` hub, `/admin/entrar`, retorno seguro, menu por papel e logout revogável. A expansão do `AdminGate` às 28 páginas restantes foi integrada pela PR #125 (`e2fa152`), com aceite humano ainda pendente.
+- **F03 está em execução após a fundação da massa sintética**: além do bootstrap transacional/idempotente e do gate `test:demo-local:pg`, a PR #126 prova a primeira jornada lead→oportunidade→proposta revisada→contrato→implantação com HTTP/PG/Chromium. Três jornadas permanecem pendentes; F03 não está concluída.
 - EXT-06 estava `a_revalidar` na auditoria: a PR #101 (EXT-06 satisfação) **está mesclada no main** (migração 152 + gate 36/36 declarado); a alternativa #102 foi fechada sem merge na limpeza pós-F00. Resta aceite humano/Windows.
 - PLT-01 estava `a_revalidar`: a PR #118 (despacho à prova de rejeição) **está mesclada no main** com testes e workflow próprios.
 - EXT-08 a EXT-17 e AI-01 a AI-10: existem tabelas (086–087, 095–096) e handlers legados; **sem jornada UI→API→PG provada** — não contar como entregues.
@@ -20,7 +26,8 @@ Este documento é o inventário único de trabalho exigido pela etapa F00 do [pl
 
 | PR | Tema | Classificação | Razão |
 |---|---|---|---|
-| #125 | F01 — gate nas 28 páginas administrativas restantes | **substituta oficial, em validação** | reaplica o escopo válido da #124 sobre o main pós-#123; sem API/migração nova |
+| #126 | F03 — lead até implantação | **em validação nesta branch** | primeira jornada sobre `origin/main` `972e656`; implementação `c1a557f`, gate HTTP/PG/Chromium, sem migração nova |
+| #125 | F01 — gate nas 28 páginas administrativas restantes | **integrada** | reaplicou o escopo válido da #124 sobre o main pós-#123; sem API/migração nova; merge `972e656` |
 | #124 | F01 — gate nas páginas administrativas restantes | fechada como superseded | diff correto como envelope, mas base antiga e `CONFLICTING`/`DIRTY`; checks conferidos e trabalho preservado na #125 |
 | #121 | docs/auditoria-2026-10-04 (instruções Arena) | fechada sem merge próprio | conteúdo incorporado, reconciliado e integrado pela #122 |
 | #104–#117 (12 PRs) | EXT-07 compliance (alternativas) | superseded — não mesclar | main já contém EXT-07 completo: #103 (jornada 153), #113 (154), #115 (hardening 154+155), #118 (PLT-01), #119 (agendador 156) |
