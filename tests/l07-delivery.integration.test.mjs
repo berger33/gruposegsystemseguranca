@@ -1339,6 +1339,10 @@ test("L07 FIN-10 aditivo: Chromium declara política ausente, mostra falha de le
 
     await page.getByTestId(`fin10-history-toggle-${created.rows[0].id}`).click();
     await page.waitForSelector(`[data-testid="fin10-history-${created.rows[0].id}"]`);
+    // O painel nasce com "Carregando histórico…" até a leitura do servidor
+    // responder; ler o texto antes disso é corrida do teste, não ausência de
+    // dado. Esperar o fim do carregamento mantém as asserções intactas.
+    await page.waitForFunction(expenseId=>{const panel=document.querySelector(`[data-testid="fin10-history-${expenseId}"]`);return !!panel&&!(panel.textContent||"").includes("Carregando histórico");},created.rows[0].id);
     const historyText=await page.getByTestId(`fin10-history-${created.rows[0].id}`).textContent();
     assert.match(historyText||"",/R\$\s?2\.000,50/,"histórico mostra a alçada aplicada");
     assert.match(historyText||"",/conferido e aprovado/,"histórico mostra o motivo real");
