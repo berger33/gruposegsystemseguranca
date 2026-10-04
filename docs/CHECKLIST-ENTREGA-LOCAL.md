@@ -1,5 +1,9 @@
 # Checklist da entrega local — 222 requisitos
 
+## Atualização 2026-10-04 — revisão da cobertura F01 e PR substituta #125
+
+Sobre `main` pós-#123 (`7d0990a`). A cobertura restante das páginas administrativas foi reaplicada na PR #125 (`e2fa152`): 28 páginas agora usam `AdminGate`, com matriz de papéis testada estaticamente em `tests/admin-page-gates.test.mjs`. `/admin/convite` e `/admin/verificacao-manual` permanecem nas exceções deliberadas. As APIs não foram alteradas e continuam autorizando no servidor; este incremento não promove nenhum requisito de jornada F03 nem substitui a validação HTTP/PG dos módulos. Validação: typecheck, 526/526 unitários, gate admin-entry 13/13 em PG17 + Chromium, build 94 páginas e diff check limpos. PR #124 foi fechada como conflitante/superseded após conferência dos checks antigo e posterior.
+
 ## Atualização 2026-10-04 — F03 fundação da massa sintética isolada
 
 O bootstrap exclusivo de `demo:local:init` agora cria, em uma única transação, sete contas staff individuais (incluindo RH e Marcelo), clientes fictícios A/B com grants mutuamente exclusivos, um funcionário com identidade e permissão somente de autoatendimento próprio, duas contas e dois contratos fictícios. Senhas são aleatórias e exibidas apenas na primeira inicialização. O seed exige capacidade explícita do runner, banco `seg_demo_local`, instalação UUID correspondente e banco de negócio vazio; reexecução válida é no-op, sem duplicar registros nem rotacionar/reexibir credenciais; instalação divergente falha fechada. `npm run test:demo-local:pg` passou em PostgreSQL 17 descartável: replay, contagens/auditoria, login de A e B com isolamento, login/perfil próprio do funcionário, convite/revisão manual, persistência, backup frio e restauração isolada. Isto é somente a fundação de F03: as quatro jornadas de negócio ponta a ponta continuam pendentes; sem SMTP, banco bancário, eSocial ou assinatura real.

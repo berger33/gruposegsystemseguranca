@@ -1,6 +1,6 @@
-# Status atual consolidado — reconciliação F00
+# Status atual consolidado — reconciliação F00 + F01 + fundação F03
 
-Data: 2026-10-04. Base reconciliada: `main` `540faf6c5124fd243fc3e287527ff4f6983ce8f1` (merge da PR #120).
+Data: 2026-10-04. Base de trabalho: `main` pós-PR #123 `7d0990aaca47a8ea21b2380834289d2c73165b81`; a cobertura restante do F01 está na PR substituta #125 (`e2fa152`) até sua integração.
 Método: [matriz declarada no checklist](CHECKLIST-ENTREGA-LOCAL.md) cruzada com código, telas, migrações 001–156, gates e PRs do GitHub. Auditoria de terreno: [docs/auditoria-2026-10-04/AUDITORIA.md](auditoria-2026-10-04/AUDITORIA.md).
 
 Este documento é o inventário único de trabalho exigido pela etapa F00 do [plano](auditoria-2026-10-04/02-PLANO-ARENA.md). Estados `pronto_local` vêm de validação automática anterior: não são aceite humano nem homologação Windows. "Teste vigente" aponta o gate que valida o requisito hoje, sem prometer cobertura total da jornada.
@@ -9,7 +9,7 @@ Este documento é o inventário único de trabalho exigido pela etapa F00 do [pl
 
 - 222 IDs transcrevidos 1:1 do checklist, sem renumerar.
 - Maioria `pronto_local` por gates automáticos; aceite humano formal pendente para RH/funcionário/clientes e jornadas integradas.
-- **F01 (entrada e navegação) foi integrada pela PR #122**: `/admin` hub, `/admin/entrar`, retorno seguro, menu por papel e logout revogável. Aceite humano e expansão do gate às páginas não tocadas seguem pendentes.
+- **F01 (entrada e navegação) foi integrada pela PR #122**: `/admin` hub, `/admin/entrar`, retorno seguro, menu por papel e logout revogável. A expansão do `AdminGate` às 28 páginas restantes está implementada na PR substituta #125 (`e2fa152`), ainda aguardando integração nesta fotografia; aceite humano permanece pendente.
 - **F03 iniciou pela fundação da massa sintética**: bootstrap transacional/idempotente da demo isolada com sete papéis staff (incluindo RH e Marcelo), clientes A/B com grants exclusivos, funcionário com autoatendimento próprio e dois contratos fictícios. O gate `test:demo-local:pg` prova replay sem rotação de senha, login A/B sem vazamento e login do funcionário. As quatro jornadas de negócio F03 continuam pendentes.
 - EXT-06 estava `a_revalidar` na auditoria: a PR #101 (EXT-06 satisfação) **está mesclada no main** (migração 152 + gate 36/36 declarado); a alternativa #102 foi fechada sem merge na limpeza pós-F00. Resta aceite humano/Windows.
 - PLT-01 estava `a_revalidar`: a PR #118 (despacho à prova de rejeição) **está mesclada no main** com testes e workflow próprios.
@@ -20,13 +20,15 @@ Este documento é o inventário único de trabalho exigido pela etapa F00 do [pl
 
 | PR | Tema | Classificação | Razão |
 |---|---|---|---|
+| #125 | F01 — gate nas 28 páginas administrativas restantes | **substituta oficial, em validação** | reaplica o escopo válido da #124 sobre o main pós-#123; sem API/migração nova |
+| #124 | F01 — gate nas páginas administrativas restantes | fechada como superseded | diff correto como envelope, mas base antiga e `CONFLICTING`/`DIRTY`; checks conferidos e trabalho preservado na #125 |
 | #121 | docs/auditoria-2026-10-04 (instruções Arena) | fechada sem merge próprio | conteúdo incorporado, reconciliado e integrado pela #122 |
 | #104–#117 (12 PRs) | EXT-07 compliance (alternativas) | superseded — não mesclar | main já contém EXT-07 completo: #103 (jornada 153), #113 (154), #115 (hardening 154+155), #118 (PLT-01), #119 (agendador 156) |
 | #102 | EXT-06 satisfação/carteira | superseded — não mesclar | EXT-06 foi mesclada pela PR #101 (migração 152); gate ext06 36/36 declarado |
 | #79, #81, #82, #84, #86 | L08 CLI hardening (alternativas) | superseded — não mesclar | CLI-01..15 mesclados pelas PRs #78–#95; migração 139 e gates L08 presentes no main |
 | #47, #53, #59, #60, #62, #67, #70, #72, #75 | FIN-05/FIN-10/FIN-13/FIN-14..16 (alternativas) | superseded — não mesclar | FIN-01..16 mesclados pelas PRs #57–#77; matriz L07 fechada com gate 43/43 |
 
-Ação executada em 04/10/2026 após o merge da #122: as **27 alternativas superseded** listadas acima foram fechadas sem merge, cada grupo com comentário apontando a linha oficial; a #121 também foi fechada porque seu conteúdo documental já estava integrado pela #122. A contagem anterior de “26” era um erro aritmético documental: 12 + 1 + 5 + 9 = 27. Consulta posterior confirmou zero PR aberta. Nenhum commit dessas alternativas foi mesclado.
+Ação executada em 04/10/2026 após o merge da #122: as **27 alternativas superseded** listadas acima foram fechadas sem merge, cada grupo com comentário apontando a linha oficial; a #121 também foi fechada porque seu conteúdo documental já estava integrado pela #122. A contagem anterior de “26” era um erro aritmético documental: 12 + 1 + 5 + 9 = 27. A #124 foi revisada contra o main pós-#123, fechada como `superseded` por conflito e substituída pela #125; nenhum commit das alternativas antigas foi mesclado.
 
 ## Matriz reconciliada dos 222 requisitos
 
@@ -247,7 +249,7 @@ Legenda do estado confirmado: `pronto_local` = validação automática local ant
 | CLI-11 | satisfação pós-atendimento e periódica, plano de ação e risco de renovação baseado em f… | pronto_local (validação automática rápida; gate pesado e aceite humano pendentes) | pronto_local (validação automática rápida; gate pesado e aceite humano pendentes) | gate `test:l08-delivery:pg` com HTTP/PostgreSQL/Chromium reais adiado junto da bateria pesada; migração 142 ainda não aplicada em ambiente d | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | CLI-12 | renovação e comunicação contratual com registro, sem bloquear indiscriminadamente o por… | pronto_local (validação automática rápida; gate pesado e aceite humano pendentes) | pronto_local (validação automática rápida; gate pesado e aceite humano pendentes) | gate `test:l08-delivery:pg` com HTTP/PostgreSQL/Chromium reais adiado junto da bateria pesada; migração 143 ainda não aplicada em ambiente d | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | CLI-13 | modos convite, solicitação com aprovação e autocadastro configuráveis; vínculo verifica… | pronto_local (validação automática rápida; gate pesado e aceite humano pendentes) | pronto_local (validação automática rápida; gate pesado e aceite humano pendentes) | `test:l08-delivery:pg`, cascata L03..L08 e aplicação da migração 144 adiados; sem aceite humano novo; Windows pendente. | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
-| CLI-14 | segurança da conta com MFA opcional, gestão de sessões e troca de e-mail concluída; flu… | pronto_local (validação automática rápida; gate pesado e aceite humano pendentes) | pronto_local (validação automática rápida; gate pesado e aceite humano pendentes) | bateria pesada CLI-14, cascata L03..L08, aplicação destino, aceite e Windows pendentes; sem aceite humano novo. | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
+| CLI-14 | segurança da conta com MFA opcional, gestão de sessões e troca de e-mail concluída; flu… | pronto_local (validação automática md) |
 | CLI-15 | reclamação sobre colaborador tratada em canal restrito, com compartilhamento mínimo com… | pronto_local (validação automática rápida; bateria pesada e aceite humano pendentes) | pronto_local (validação automática rápida; bateria pesada e aceite humano pendentes) | bateria pesada específica de CLI-15 (HTTP/DB em PostgreSQL descartável dedicado), cascata L03..L08, aplicação da migração 146 em destino, ac | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 ### FIN — contexto comum do grupo
 
@@ -401,4 +403,6 @@ Legenda do estado confirmado: `pronto_local` = validação automática local ant
 2. A auditoria de 04/10 marcava EXT-06 `a_revalidar` e PLT-01 `a_revalidar`: ambas as PRs oficiais (#101, #118) estão mescladas com migração e gate próprios; os estados passam a `pronto_local` com aceite humano/Windows pendentes.
 3. O `ESTADO-EXECUCAO-LOCAL.md` declara migração seguinte livre 157 — confirmado: 156 arquivos em `db/migrations/`, última 156-ext07-scheduled-evaluation.
 4. Endereços `/admin` (404), `/admin/marcelo` (anônimo sem caminho de login) e rótulo "E-mail individual de TI" em login compartilhado são os achados F01 tratados nesta mesma sessão; ver CONTINUACAO-ARENA.md.
+5. `docs/auditoria-2026-10-04/` veio da branch docs/auditoria-arena-2026-10-04 (PR #121) sem alterar código do main.
+o` (anônimo sem caminho de login) e rótulo "E-mail individual de TI" em login compartilhado são os achados F01 tratados nesta mesma sessão; ver CONTINUACAO-ARENA.md.
 5. `docs/auditoria-2026-10-04/` veio da branch docs/auditoria-arena-2026-10-04 (PR #121) sem alterar código do main.
