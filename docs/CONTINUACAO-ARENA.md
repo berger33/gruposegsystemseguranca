@@ -1,4 +1,19 @@
-# Continuidade Arena — registro de sessão 2026-10-04 (F00 + F01)
+# Continuidade Arena — registro de sessão 2026-10-04 (F00 + F01 + cobertura F01)
+
+## Incremento 2 (mesma sessão lógica, continuada) — cobertura do gate central
+
+Decisão registrada abaixo executada: todas as páginas administrativas de módulo
+passaram a exigir `AdminGate` — comercial, carteira, leads, contratos (+`[id]`),
+financeiro, operacao, patrimonio, compliance, frota, terceiros, licitacoes,
+fornecedores, qualidade, satisfacao, crm, publicacao, tema, visual, ti,
+portal (+5 subpáginas), marcelo/assistente e rh/assistente. Papéis por página =
+os do mapa do menu (seção H deste bloco); nenhuma autorização de API foi
+alterada e nenhuma página cliente `use client` foi reescrita (envelope apenas).
+**Fora de propósito**: `/admin/convite` (deeplink público de aceite de convite
+staff — já redireciona a `/admin` no fim) e `/admin/verificacao-manual`
+(reautenticação própria de ação sensível TI). Validação deste incremento:
+typecheck limpo, unit 525/525, gate F01 rerun e build (resultados na PR #122
+e nos checks CI). O risco remanescente "páginas sem gate" fica encerrado.
 
 ## Identificação
 

@@ -1,8 +1,9 @@
 "use client";
 import RagWidget from "@/components/RagWidget";
 import AiBotWidget from "@/components/AiBotWidget";
+import AdminGate from "../../AdminGate";
 
-export default function MarceloAssistentePage(){
+function MarceloAssistentePageContent(){
   return (
     <main style={{ padding:24, maxWidth:900, margin:"0 auto", fontFamily:"system-ui, sans-serif" }}>
       <h1 style={{ fontSize:28 }}>Assistente Marcelo — acesso privado pendente</h1>
@@ -26,5 +27,14 @@ export default function MarceloAssistentePage(){
         <p>Configuração em /admin/ti seção AI RAG + bot modes — singleton_id=1 active_mode com_ia padrão beta, is_dev_mode true is_beta_mode true default_rag_key publico, histórico imutável ai_bot_config_history.</p>
       </section>
     </main>
+  );
+}
+
+// F01: assistente (prévia bloqueada) também exige sessão central do papel.
+export default function MarceloAssistentePage() {
+  return (
+    <AdminGate allowedRoles={["marcelo", "admin"]}>
+      <MarceloAssistentePageContent />
+    </AdminGate>
   );
 }

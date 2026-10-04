@@ -11,6 +11,7 @@ import CadenceClient from "./CadenceClient";
 import ContactManager from "./ContactManager";
 import UnitManager from "./UnitManager";
 import ImportDedupReview from "./ImportDedupReview";
+import AdminGate from "../AdminGate";
 
 type Company = { id: string; display_name: string; type: string; city: string; segment: string | null; status: string; responsible_name: string | null; };
 type Unit = { id: string; display_name: string };
@@ -24,7 +25,7 @@ type Opportunity = {
 };
 type ImportRow = { row_number: number; raw_data: any; mapped_data: any; status: string; errors: any[]; dedup_match: any; };
 
-export default function CrmPage() {
+function CrmPageContent() {
   const [selectedOpportunity, setSelectedOpportunity] = useState<string | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [opps, setOpps] = useState<Opportunity[]>([]);
@@ -417,5 +418,16 @@ export default function CrmPage() {
       <MyDelegatedTasks />
       <MyAgenda />
     </main>
+  );
+}
+
+// F01: sessão central obrigatória — anônimo vai ao login e retorna ao CRM.
+// Papéis espelham o comercial; as permissões finas (delegação, escopo por
+// responsável) seguem decididas em cada /api/crm/* no servidor.
+export default function CrmPage() {
+  return (
+    <AdminGate allowedRoles={["comercial", "marcelo", "admin", "ti"]}>
+      <CrmPageContent />
+    </AdminGate>
   );
 }

@@ -1,4 +1,5 @@
 import FornecedoresWorkspace from "./FornecedoresWorkspace";
+import AdminGate from "../AdminGate";
 
 export const metadata = {
   title: "Fornecedores | Grupo SEG System",
@@ -6,5 +7,9 @@ export const metadata = {
 };
 
 export default function FornecedoresPage() {
-  return <FornecedoresWorkspace />;
+  return (
+    <AdminGate allowedRoles={["marcelo", "admin", "ti"]}>
+      <FornecedoresWorkspace />
+    </AdminGate>
+  );
 }

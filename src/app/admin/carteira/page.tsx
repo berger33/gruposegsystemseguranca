@@ -1,6 +1,7 @@
 "use client";
+import AdminGate from "../AdminGate";
 import {useEffect,useState} from 'react';
-export default function Carteira(){
+function CarteiraContent(){
  const [data,setData]=useState<any>(null),[error,setError]=useState(''),[filter,setFilter]=useState('all'),[offset,setOffset]=useState(0),[source,setSource]=useState<any>(null),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[companies,setCompanies]=useState<any[]>([]);
  const [form,setForm]=useState({kind:'renovacao',title:'',next_action:'',next_action_date:'',target_company_id:''}),[key,setKey]=useState('');
  async function load(){const r=await fetch('/api/crm/portfolio?filter='+filter+'&offset='+offset);const b=await r.json();if(!r.ok)throw Error(b.error);setData(b);}
@@ -23,4 +24,13 @@ export default function Carteira(){
  <label>Data da próxima ação<input type="datetime-local" required value={form.next_action_date} onChange={e=>setForm({...form,next_action_date:e.target.value})}/></label>
  <button disabled={busy}>Registrar oportunidade</button><button type="button" onClick={()=>setSource(null)}>Cancelar</button></form>}
  </main>;
+}
+
+// F01: sessão central obrigatória — anônimo vai ao login e retorna aqui.
+export default function Carteira() {
+  return (
+    <AdminGate allowedRoles={["comercial", "marcelo", "admin", "ti"]}>
+      <CarteiraContent />
+    </AdminGate>
+  );
 }

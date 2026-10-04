@@ -4,8 +4,9 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, Bell, Check, CircleAlert, Mail, ShieldCheck, TriangleAlert } from "lucide-react";
 import styles from "./SecurityAlerts.module.css";
+import AdminGate from "../../AdminGate";
 
-export default function SecurityAlertsPreviewPage() {
+function SecurityAlertsPreviewPageContent() {
   const [showExample, setShowExample] = useState(false);
   const [alertStatus, setAlertStatus] = useState<"pending" | "reviewed" | "resolved">("pending");
   const [holdSubmitted, setHoldSubmitted] = useState(false);
@@ -111,5 +112,14 @@ export default function SecurityAlertsPreviewPage() {
         <footer className={styles.footer}><span>Sem persistência, envio de e-mail, dados pessoais ou log real.</span><Link href="/admin/portal">Voltar à configuração do portal</Link></footer>
       </section>
     </main>
+  );
+}
+
+// F01: acesso restrito a TI/admin; demais papéis recebem o 403 claro do gate.
+export default function SecurityAlertsPreviewPage() {
+  return (
+    <AdminGate allowedRoles={["ti", "admin"]}>
+      <SecurityAlertsPreviewPageContent />
+    </AdminGate>
   );
 }

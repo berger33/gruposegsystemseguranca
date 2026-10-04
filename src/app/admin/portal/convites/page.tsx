@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, CircleAlert, CircleCheck, Mail, ShieldCheck, UserRoundCheck } from "lucide-react";
 import styles from "./InvitationFlow.module.css";
+import AdminGate from "../../AdminGate";
 
 type Stage = "compose" | "email" | "acceptance";
 type SimulatedInviteStatus = "valid" | "expired" | "used" | "revoked";
@@ -21,7 +22,7 @@ const stages: Array<{ id: Stage; label: string }> = [
   { id: "acceptance", label: "Aceite e verificação" },
 ];
 
-export default function InvitationFlowPreviewPage() {
+function InvitationFlowPreviewPageContent() {
   const [stage, setStage] = useState<Stage>("compose");
   const [email, setEmail] = useState("");
   const [simulatedStatus, setSimulatedStatus] = useState<SimulatedInviteStatus>("valid");
@@ -144,5 +145,14 @@ export default function InvitationFlowPreviewPage() {
         <footer className={styles.footer}><span>Sem banco, conta, envio de e-mail ou link de acesso real.</span><Link href="/cliente">Ver página informativa do portal <ArrowRight size={14} /></Link></footer>
       </section>
     </main>
+  );
+}
+
+// F01: acesso restrito a TI/admin; demais papéis recebem o 403 claro do gate.
+export default function InvitationFlowPreviewPage() {
+  return (
+    <AdminGate allowedRoles={["ti", "admin"]}>
+      <InvitationFlowPreviewPageContent />
+    </AdminGate>
   );
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowUpRight, Check, CircleHelp, KeyRound, LockKeyhole, UserRoundPlus } from "lucide-react";
 import styles from "./PortalAccess.module.css";
+import AdminGate from "../AdminGate";
 
 type AccessMode = "invite" | "approval" | "self_service";
 
@@ -45,7 +46,7 @@ const modes: Array<{
   },
 ];
 
-export default function PortalAccessAdminPage() {
+function PortalAccessAdminPageContent() {
   const [selectedMode, setSelectedMode] = useState<AccessMode>("invite");
   const currentMode = modes.find(mode => mode.id === selectedMode) || modes[0];
 
@@ -113,5 +114,14 @@ export default function PortalAccessAdminPage() {
         </footer>
       </section>
     </main>
+  );
+}
+
+// F01: acesso restrito a TI/admin; demais papéis recebem o 403 claro do gate.
+export default function PortalAccessAdminPage() {
+  return (
+    <AdminGate allowedRoles={["ti", "admin"]}>
+      <PortalAccessAdminPageContent />
+    </AdminGate>
   );
 }

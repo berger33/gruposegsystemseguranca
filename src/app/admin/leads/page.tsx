@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { ArrowLeft, Check, LogOut, Mail, MessageCircle, RefreshCw, Shield, UserRound } from "lucide-react";
+import AdminGate from "../AdminGate";
 import OriginMetricsPanel from "./OriginMetricsPanel";
 import styles from "./LeadAdmin.module.css";
 
@@ -52,7 +53,7 @@ function explainApiError(code: string) {
   return "Não foi possível carregar os pedidos. Tente novamente mais tarde.";
 }
 
-export default function LeadAdminPage() {
+function LeadAdminContent() {
   const [role, setRole] = useState<AdminRole | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -281,5 +282,17 @@ export default function LeadAdminPage() {
         {error && <p className={styles.error} role="alert">{error}</p>}
       </section>
     </main>
+  );
+}
+
+// F01: gate central por fora — anônimo vai ao login canônico e retorna aqui.
+// O estado de sessão local continua lendo a mesma sessão staff; o formulário
+// local só apareceria se a sessão expirasse em pleno uso, momento em que o
+// gate central já teria redirecionado à entrada.
+export default function LeadAdminPage() {
+  return (
+    <AdminGate allowedRoles={["comercial", "marcelo", "admin", "ti"]}>
+      <LeadAdminContent />
+    </AdminGate>
   );
 }
