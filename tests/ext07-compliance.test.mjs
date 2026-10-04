@@ -1,5 +1,5 @@
 import test from 'node:test'; import assert from 'node:assert/strict'; import {readFile} from 'node:fs/promises';
-const sql=()=>readFile(new URL('../db/migrations/153-ext07-compliance-journey.sql',import.meta.url),'utf8');
+const sql=async()=>`${await readFile(new URL('../db/migrations/153-ext07-compliance-journey.sql',import.meta.url),'utf8')}\n${await readFile(new URL('../db/migrations/154-ext07-compliance-hardening.sql',import.meta.url),'utf8')}`;
 test('EXT-07 usa ext_compliance_documents como fonte canônica e preserva legado',async()=>{const s=await sql();assert.match(s,/origin TEXT NOT NULL DEFAULT 'registro_legado'/);assert.match(s,/ext07_canonica/);assert.doesNotMatch(s,/CREATE TABLE ext_compliance_documents/)});
 test('EXT-07 impõe documento privado, validade e tarefa idempotente',async()=>{const s=await sql();for(const x of ['is_private','expiry_date','ext_compliance_tasks','UNIQUE(document_id,validity_period,rule)','ext_compliance_events'])assert.match(s,new RegExp(x.replaceAll('(','\\(').replaceAll(')','\\)'),'i'));});
 test('EXT-07 histórico é imutável e conclusão exige responsável/resultado',async()=>{const s=await sql();assert.match(s,/compliance historical record is immutable/);assert.match(s,/task completion requires responsible and result/);});
