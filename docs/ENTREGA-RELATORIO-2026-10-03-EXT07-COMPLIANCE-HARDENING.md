@@ -1,6 +1,6 @@
 # Entrega EXT-07 — hardening de compliance corporativo
 
-Data local: 2026-10-04.
+Data local: 2026-10-03.
 
 ## Base confirmada
 
