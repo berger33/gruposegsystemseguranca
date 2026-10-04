@@ -5794,6 +5794,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/crm/hr/ext-compliance-documents"
   || pathname === "/api/hr/ext-compliance-documents"
   || pathname === "/api/ext/compliance-documents"
+  || pathname.startsWith("/api/ext/compliance/")
   || pathname === "/api/admin/hr/ext-knowledge-base"
   || pathname === "/api/crm/hr/ext-knowledge-base"
   || pathname === "/api/hr/ext-knowledge-base"
