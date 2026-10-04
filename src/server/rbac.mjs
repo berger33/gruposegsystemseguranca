@@ -35,6 +35,8 @@ export const KNOWN_PERMISSIONS = Object.freeze([
   "employees.compensation.read",
   "employees.compensation.write",
   "employees.self_service",
+  "finance.settlements.read",
+  "finance.settlements.write",
   "proposals.approve_discount",
   "documents.download",
   "payroll.export",

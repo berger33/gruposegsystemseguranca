@@ -8,6 +8,25 @@ function generateProtocol(prefix) {
 }
 
 export function createFinApi({ pool, auditLog, sameOrigin, requireSession, requireRole }) {
+  // F03 (migração 159): contas abertas pela rota canônica
+  // /api/admin/finance/l07/settlements ficam sob governança da máquina de
+  // estados canônica. Para elas, a baixa e a mudança de situação legadas
+  // respondem 410 — a rota legada permanece para as contas anteriores, mas
+  // não é mais caminho alternativo para contornar idempotência, escopo
+  // granular e auditoria transacional. Erro de banco bloqueia (fail-closed);
+  // ausência da tabela significa que nenhuma conta canônica existe.
+  async function canonicalGovernance(accountType, id) {
+    if (!id) return { governed: false };
+    const column = accountType === "pagar" ? "payable_id" : "receivable_id";
+    try {
+      const { rows } = await pool.query(`SELECT 1 FROM fin_canonical_accounts WHERE ${column} = $1 LIMIT 1`, [id]);
+      return { governed: rows.length > 0 };
+    } catch (error) {
+      if (error && error.code === "42P01") return { governed: false };
+      return { governed: true, unavailable: true };
+    }
+  }
+
   async function ensureAuth(req, res, roles) {
     const session = await requireSession(req);
     if (!session) { res.writeHead(401, { "Content-Type":"application/json" }); res.end(JSON.stringify({ error:"unauthorized" })); return null; }
@@ -172,6 +191,9 @@ export function createFinApi({ pool, auditLog, sameOrigin, requireSession, requi
       const { id, status, reason } = body;
       if (!id || !status) return json(res,400,{ error:"missing_fields" });
       if (!reason || String(reason).length <10 || String(reason).length>1000) return json(res,400,{ error:"reason_10_1000_required", note:"baixa auditada nunca apagar saldo por edição silenciosa" });
+      const governance = await canonicalGovernance('receber', id);
+      if (governance.unavailable) return json(res,503,{ error:"finance_governance_unavailable" });
+      if (governance.governed) return json(res,410,{ error:"legacy_fin01_status_write_retired", canonical_endpoint:"/api/admin/finance/l07/settlements" });
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
@@ -240,6 +262,11 @@ export function createFinApi({ pool, auditLog, sameOrigin, requireSession, requi
       if (!id) return json(res,400,{ error:"missing_id" });
       if (!reason || String(reason).length <10 || String(reason).length>1000) return json(res,400,{ error:"reason_10_1000_required" });
       if (approval_status && !['pendente','aprovado','rejeitado'].includes(approval_status)) return json(res,400,{ error:"invalid_approval" });
+      if (status) {
+        const governance = await canonicalGovernance('pagar', id);
+        if (governance.unavailable) return json(res,503,{ error:"finance_governance_unavailable" });
+        if (governance.governed) return json(res,410,{ error:"legacy_fin01_status_write_retired", canonical_endpoint:"/api/admin/finance/l07/settlements" });
+      }
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
@@ -296,6 +323,9 @@ export function createFinApi({ pool, auditLog, sameOrigin, requireSession, requi
     if (account_type==='receber' && !receivable_id) return json(res,400,{ error:"missing_receivable_id" });
     if (account_type==='pagar' && !payable_id) return json(res,400,{ error:"missing_payable_id" });
     if (is_estorno && !previous_payment_id) return json(res,400,{ error:"estorno_requires_previous" });
+    const governance = await canonicalGovernance(account_type, account_type === 'receber' ? receivable_id : payable_id);
+    if (governance.unavailable) return json(res,503,{ error:"finance_governance_unavailable" });
+    if (governance.governed) return json(res,410,{ error:"legacy_fin04_settlement_write_retired", canonical_endpoint:"/api/admin/finance/l07/settlements" });
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
