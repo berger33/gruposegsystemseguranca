@@ -19,6 +19,7 @@ import {
 import { createEmployeeSessionStore } from "./src/server/employee-session.mjs";
 import { createEmployeeApi } from "./src/server/employee-api.mjs";
 import { hasPermission } from "./src/server/rbac.mjs";
+import { dispatchGuarded, guardedRequestHandler, installProcessSafetyNet, DISPATCH_OUTCOME } from "./src/server/route-dispatch.mjs";
 import { createLocalOutbox, LOCAL_OUTBOX_LABEL, resolveDeliveryTarget } from "./src/server/local-outbox.mjs";
 import { createClientAccessApi } from "./src/server/client-access-api.mjs";
 import { createClientSpaceApi } from "./src/server/client-space-api.mjs";
@@ -2533,6 +2534,16 @@ async function routeApi(req, res) {
     return originalWriteHead(statusCode, ...args);
   };
   try {
+  // PLAT-01: o corpo do despacho precisa ser AGUARDADO. Antes deste guard,
+  // `return handler(req,res)` devolvia uma promise não aguardada: a rejeição
+  // escapava do `catch` abaixo, derrubava o processo (unhandledRejection sem
+  // listener) e o `finally` de observabilidade registrava 200/0ms/erro nulo.
+  const dispatch = await dispatchGuarded({
+    label: "routeApi",
+    res,
+    requestId,
+    onError: (error, context) => console.error(`[${requestId}] routeApi error`, context.message),
+    run: async () => {
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
   if (url.pathname === "/api/crm/commercial-versions") return commercialHistoryApi(req,res);
   if (url.pathname === "/api/crm/portfolio") return portfolioApi(req,res);
@@ -4452,11 +4463,22 @@ async function routeApi(req, res) {
     return aiRagApi.handleChunks(req, res);
   }
   return json(res, 404, { error: "not_found" });
+    },
+  });
+  // Falha de rota não escapa mais: vira desfecho estruturado e alimenta a
+  // observabilidade com status, duração e erro reais.
+  if (dispatch.error) {
+    routeError = dispatch.error;
+    if (dispatch.outcome === DISPATCH_OUTCOME.FAILED_CLOSED) statusForObs = 500;
+  }
+  return dispatch.value;
   } catch (e) {
+    // Alcançável apenas por falha do próprio guard (erro de programação).
     routeError = e;
     statusForObs = 500;
-    console.error(`[${requestId}] routeApi error`, e?.message);
-    try { return json(res, 500, { error: "internal_error", request_id: requestId }); } catch { res.statusCode = 500; res.end(); }
+    console.error(`[${requestId}] routeApi guard error`, e?.message);
+    try { if (!res.headersSent) return json(res, 500, { error: "internal_error", request_id: requestId }); } catch {}
+    try { if (!res.writableEnded && !res.destroyed) res.end(); } catch {}
   } finally {
     const duration = Date.now() - start;
     try {
@@ -5989,7 +6011,11 @@ const app = next({ dev, hostname, port, ...(dev ? { webpack: true } : {}) });
 const handle = app.getRequestHandler();
 await app.prepare();
 
-const server = createServer(async (req, res) => {
+// PLAT-01: segunda camada. `resolveRedirect` e o handler do Next também são
+// assíncronos; uma rejeição aqui não tem quem a capture e mata o processo.
+installProcessSafetyNet();
+
+const server = createServer(guardedRequestHandler(async (req, res) => {
   const pathname = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`).pathname;
   if (API_PATH_MATCH(pathname)) {
     await routeApi(req, res);
@@ -6010,7 +6036,10 @@ const server = createServer(async (req, res) => {
     return;
   }
   await handle(req, res);
-});
+}, {
+  label: "httpServer",
+  onError: (error, context) => console.error("[httpServer] request_failed", context.message),
+}));
 
 const upgradeHandler = app.getUpgradeHandler();
 server.on("upgrade", (req, socket, head) => upgradeHandler(req, socket, head));

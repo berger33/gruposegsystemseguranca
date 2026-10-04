@@ -1,0 +1,54 @@
+name: PLAT-01 dispatch hardening
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'server.mjs'
+      - 'src/server/route-dispatch.mjs'
+      - 'tests/route-dispatch.test.mjs'
+      - 'tests/route-dispatch-guard.test.mjs'
+      - 'tests/qa-evidence-report.test.mjs'
+      - 'scripts/qa-evidence-report.mjs'
+      - 'scripts/lib/pdf-report.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/plat01-dispatch.yml'
+concurrency:
+  group: plat01-dispatch-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  dispatch-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: npm }
+      - run: npm ci
+      - name: Conformidade estatica e ledger de migracoes
+        run: node scripts/qa-wave0-static.mjs
+      - name: Bateria leve com relatorio de evidencia em PDF
+        run: >-
+          node scripts/qa-evidence-report.mjs
+          --only=typecheck,focal-plat01,focal-ext07,unit,diff-check
+          --slug=ci-plat01-dispatch
+          --rotulo="PLAT-01 despacho HTTP - execucao de CI"
+      - name: Publicar relatorio de evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencia-plat01-dispatch
+          path: |
+            docs/evidencias/ci-plat01-dispatch.pdf
+            docs/evidencias/ci-plat01-dispatch.json
+            docs/evidencias/logs/
+          if-no-files-found: error
+          retention-days: 30

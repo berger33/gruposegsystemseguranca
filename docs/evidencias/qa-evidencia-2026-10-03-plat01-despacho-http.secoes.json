@@ -1,0 +1,85 @@
+[
+  {
+    "titulo": "3.1. Defeito corrigido — PLAT-01",
+    "paragrafos": [
+      "O despacho de API em server.mjs executava o padrão try { return handler(req, res) } catch. Em função assíncrona, devolver uma promise dentro de um try NÃO a aguarda: o catch associado nunca observa a rejeição. O achado estava registrado como pendência de plataforma na entrega anterior (EXT-07) e foi tratado nesta entrega.",
+      "A consequência não era apenas a ausência de resposta. A rejeição subia até o callback assíncrono de createServer, que ninguém aguarda, e virava unhandledRejection. Como o processo não registrava nenhum listener, o comportamento padrão do Node encerra o processo: uma única requisição com falha assíncrona derrubava o servidor inteiro."
+    ],
+    "itens": [
+      "Sem resposta ao cliente: a conexão ficava aberta até o timeout do navegador.",
+      "Queda do processo: indisponibilidade total a partir de uma requisição, sem necessidade de autenticação.",
+      "Observabilidade falseada: o bloco finally rodava antes do handler terminar e gravava status 200, duration_ms proximo de zero e error nulo para requisicoes que falharam."
+    ]
+  },
+  {
+    "titulo": "3.2. Reprodução controlada (probe) — antes e depois",
+    "paragrafos": [
+      "O probe replicou o padrão exato de routeApi em um servidor HTTP isolado, sem banco e sem dados reais, e foi apagado em seguida. A tabela compara o mesmo conjunto de rotas sintéticas sob o código anterior e sob o despacho endurecido."
+    ],
+    "tabela": {
+      "columns": [
+        { "header": "Rota sintética", "width": 0.26 },
+        { "header": "Antes da correção", "width": 0.37 },
+        { "header": "Depois da correção", "width": 0.37 }
+      ],
+      "rows": [
+        { "cells": ["/ok", "HTTP 200", "HTTP 200 (inalterado)"] },
+        { "cells": ["/sync-throw", "HTTP 500 fail-closed", "HTTP 500 fail-closed (inalterado)"] },
+        { "cells": ["/async-reject", "sem resposta; cliente abortou em 2503 ms; processo encerrado com exit 1", "HTTP 500 em 13 ms; processo vivo"] },
+        { "cells": ["/reject-apos-headers", "conexão pendurada 2505 ms; corpo truncado", "conexão encerrada em 13 ms; erro registrado"] },
+        { "cells": ["/lento-ok (120 ms)", "não aplicável", "HTTP 200 em 125 ms; requisição lenta legítima não é abortada"] },
+        { "cells": ["Ledger de observabilidade", "status 200, 0 ms, error nulo para as falhas", "status, duração e erro reais para cada falha"] }
+      ]
+    }
+  },
+  {
+    "titulo": "3.3. Correção aplicada",
+    "itens": [
+      "src/server/route-dispatch.mjs: módulo autocontido, sem banco, rede ou Next, com dispatchGuarded, guardedRequestHandler e installProcessSafetyNet.",
+      "server.mjs: o corpo de rotas de routeApi passou a ser executado por dispatchGuarded com await, preservando as 677 rotas existentes sem reescrita.",
+      "server.mjs: o callback de createServer foi embrulhado, protegendo também o handler do Next e a resolução de redirect.",
+      "Fail-closed: se nada foi escrito, responde 500 com corpo mínimo (error e request_id) sem vazar mensagem, stack, SQL ou nome de tabela; se a resposta já começou, encerra a conexão em vez de pendurar o cliente.",
+      "Rede de segurança de processo: unhandledRejection passa a ser registrado sem derrubar o servidor; uncaughtException é registrado e mantém a falha rápida, agora com evidência.",
+      "Observabilidade: o finally voltou a medir duração real e a registrar o erro e o status corretos."
+    ]
+  },
+  {
+    "titulo": "3.4. Prova negativa — a guarda detecta a regressão",
+    "paragrafos": [
+      "Uma guarda estática que nunca falha não protege nada. O await do despacho foi removido temporariamente de server.mjs e a suíte foi reexecutada: a guarda reprovou o arquivo mutado (1 falha). O arquivo foi restaurado e conferido por checksum SHA-256 antes de qualquer outra execução."
+    ],
+    "mono": [
+      "$ python3 - (mutação: 'const dispatch = await dispatchGuarded({' -> sem await)",
+      "mutação aplicada (await removido)",
+      "$ node --test tests/route-dispatch-guard.test.mjs",
+      "ok 1 - PLAT-01 server.mjs importa o despacho endurecido",
+      "not ok 2 - PLAT-01 routeApi aguarda o despacho antes de qualquer outra instrução",
+      "# pass 6",
+      "# fail 1",
+      "$ cp /tmp/server.mjs.intacto server.mjs && sha256sum -c /tmp/server.sha.antes",
+      "server.mjs: OK",
+      "$ node --test tests/route-dispatch-guard.test.mjs",
+      "# pass 7",
+      "# fail 0"
+    ],
+    "monoTitulo": "Execução da mutação e da restauração"
+  },
+  {
+    "titulo": "3.5. Fronteiras preservadas",
+    "itens": [
+      "Nenhuma migração nova: o ledger permanece em 001–155, intocado.",
+      "Nenhum contrato de API alterado: status, corpos e rotas existentes seguem iguais no caminho feliz.",
+      "src/app/admin/ti/ExtAdvancedClient.tsx e os handlers EXT-08 a EXT-12 não foram tocados.",
+      "Sem dados reais, SMTP real, armazenamento externo ou integração inventada; o probe usou apenas rotas sintéticas e foi removido.",
+      "Gates de banco continuam falhando, e não pulando, quando o PostgreSQL não está disponível."
+    ]
+  },
+  {
+    "titulo": "3.6. Pendências declaradas (não cobertas por esta entrega)",
+    "itens": [
+      "Execução agendada ou contínua da avaliação temporal do EXT-07: hoje POST /api/ext/compliance/evaluate segue sendo operação administrativa explícita.",
+      "Aplicação das migrações em banco de destino e validação em ambiente real do operador.",
+      "Aceite humano e validação em Windows permanecem fora do escopo executado."
+    ]
+  }
+]

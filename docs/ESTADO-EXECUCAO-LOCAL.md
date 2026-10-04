@@ -1,5 +1,15 @@
 # Estado da execução — entrega local integral
 
+## Estado vigente — PLAT-01 despacho HTTP à prova de rejeição assíncrona (2026-10-03)
+
+Base `main` `8c4d71a46215c0d775c4a7880a6e95bc01b9ea00` (merge da PR #115 / EXT-07 migração 155), branch `arena/01a104ae-gruposegsystemseguranca`, divergência inicial 0/0 e árvore limpa. **Nenhuma migração nova**: 001–155 intocadas, próxima livre segue 156.
+
+Executa a pendência de plataforma declarada no relatório da 155. `routeApi` despachava 677 handlers com `try { return handler(req,res) } catch`, que não aguarda a promise: a rejeição escapava do `catch`, a requisição ficava sem resposta, o `finally` registrava 200/0 ms/erro nulo e — por não existir listener de `unhandledRejection` em lugar nenhum do código — o processo era **encerrado pelo Node**. Probe sintético (apagado) mediu: `/async-reject` sem resposta com `exit 1` do processo, contra HTTP 500 em 13 ms depois da correção; `/reject-apos-headers` pendurado 2505 ms contra 13 ms.
+
+Correção em `src/server/route-dispatch.mjs` (módulo autocontido, sem banco/rede/Next): `dispatchGuarded` aguarda o corpo de rotas e devolve desfecho estruturado; 500 fail-closed com corpo mínimo que não vaza mensagem, stack, SQL ou tabela; resposta parcial é encerrada via `destroySoon`; **resposta íntegra que falha depois do `end` não tem o socket tocado** (destruí-lo truncaria bytes em buffer — há teste HTTP real com ~360 KB). O callback de `createServer` também foi embrulhado, protegendo `resolveRedirect` e o handler do Next, e `installProcessSafetyNet()` registra `unhandledRejection` sem derrubar o servidor, preservando a falha rápida em `uncaughtException`. Nenhum contrato de API mudou.
+
+Validação (bateria **integral**, consolidada em PDF e ledger JSON versionados): npm ci 0 vulnerabilidades; wave 0 5/5 (001–155); typecheck; focal PLAT-01 25/25; focal EXT-07 19/19; `npm test` 494/494 zero skip/todo; build 92 páginas com `/admin/compliance`; `test:migrations:pg` 155/155 ×2 + clone negativo rejeitado; gates HTTP/PG de regressão EXT-07 37/37, EXT-06 36/36, EXT-05 33/33 e EXT-04 28/28; `git diff --check` limpo. A guarda estática foi provada por mutação: removido o `await`, ela reprova; restaurado por checksum, volta a 7/7. Novo `npm run qa:evidence` e workflow `plat01-dispatch.yml`. Agendamento da avaliação temporal do EXT-07, aplicação em destino, aceite humano e Windows seguem pendentes. [Relatório](ENTREGA-RELATORIO-2026-10-03-PLAT01-DESPACHO-HTTP.md).
+
 ## Estado vigente — EXT-05 qualidade com gate HTTP/DB dedicado (2026-10-03)
 
 Base `main` `ba2202ff6655f425edf405afc42de7ce3786a2a0` (PR #99 MERGED), branch `arena/01a10335-gruposegsystemseguranca`, divergência inicial 0/0 e árvore limpa. Quinta fatia EXT: `/admin/qualidade`, `/api/ext/quality/*`, migração aditiva 151; 001–150 imutáveis, próxima livre 152.

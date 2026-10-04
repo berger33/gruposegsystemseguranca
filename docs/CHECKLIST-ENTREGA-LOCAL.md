@@ -1,5 +1,9 @@
 # Checklist da entrega local — 222 requisitos
 
+## Atualização 2026-10-03 — PLAT-01 despacho HTTP à prova de rejeição assíncrona
+
+Sobre `8c4d71a` (PR #115 MERGED): correção de plataforma sem migração nova. O despacho de `routeApi` não aguardava a promise do handler — rejeição assíncrona ficava sem resposta e **derrubava o processo**. Agora há `dispatchGuarded` com 500 fail-closed, guarda do callback de `createServer` e rede de segurança de processo. Focal 25/25 e guarda estática 7/7 (provada por mutação); suíte 494/494; bateria **integral** executada com evidência em PDF versionada (`docs/evidencias/qa-evidencia-2026-10-03-plat01-despacho-http.pdf`): wave 0 5/5, build 92, migrations 155/155 ×2 + negativo, gates EXT-07 37/37, EXT-06 36/36, EXT-05 33/33, EXT-04 28/28. Nenhum requisito CLI/EXT mudou de estado. Aceite humano e Windows seguem pendentes. Ver [relatório PLAT-01](ENTREGA-RELATORIO-2026-10-03-PLAT01-DESPACHO-HTTP.md).
+
 ## Atualização 2026-10-03 — EXT-04 fornecedores internos entregue localmente
 
 Quarta fatia EXT sobre `5abc199` (PR #98 MERGED): EXT-04 passa a `pronto_local` **somente como jornada interna de staff**, com `/admin/fornecedores`, `/api/ext/supplier/*`, migração 150, teste focal 42/42, suíte 424/424, build 89, migrations 150/150 e gate dedicado 28/28. Condição "se volume justificar": **SEM EVIDÊNCIA**; ator externo/login/sessão/grant/upload/aceite: **PENDENTE**, não simulado. CLI-01..15 e EXT-01..03 preservadas; EXT-05..17 pendentes. Bateria pesada, destino, aceite humano e Windows pendentes. Ver [relatório EXT-04](ENTREGA-RELATORIO-2026-10-03-EXT04-FORNECEDORES.md).

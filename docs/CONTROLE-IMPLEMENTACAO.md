@@ -1,5 +1,15 @@
 # Controle de implementação — SEG System
 
+## Atualização 2026-10-03 — PLAT-01 despacho HTTP endurecido
+
+- Base: PR #115 `MERGED`, merge `8c4d71a46215c0d775c4a7880a6e95bc01b9ea00`, divergência 0/0 e árvore limpa. Sem migração nova; 001–155 intocadas.
+- Defeito: `return handler(req,res)` dentro de `try` não aguarda a promise. Rejeição assíncrona ficava sem resposta, falseava a observabilidade (200/0 ms/erro nulo) e, sem listener de `unhandledRejection`, **derrubava o processo** — indisponibilidade total a partir de uma requisição não autenticada.
+- Correção: `src/server/route-dispatch.mjs` com `dispatchGuarded` (await + desfecho estruturado + 500 fail-closed sem vazamento), `guardedRequestHandler` no callback de `createServer` e `installProcessSafetyNet` (registra rejeição sem derrubar; mantém falha rápida em exceção não capturada). Resposta íntegra que falha depois do `end` não é truncada.
+- Testes: 25 focais (unitários + HTTP real, incluindo rajada de 25 falhas e corpo de 360 KB) e 7 de guarda estática sobre `server.mjs`, provada por mutação. Mais 12 testes do próprio artefato de evidência.
+- Validação integral: wave 0 5/5 (001–155), typecheck, focal 25/25 e 19/19, suíte 494/494, build 92, migrations 155/155 ×2 + negativo, gates EXT-07 37/37, EXT-06 36/36, EXT-05 33/33, EXT-04 28/28, diff limpo. Evidência em `docs/evidencias/qa-evidencia-2026-10-03-plat01-despacho-http.pdf` e ledger JSON.
+- Ferramenta nova: `npm run qa:evidence` (bateria declarada → PDF + ledger + logs, sem dependência nova) e workflow `plat01-dispatch.yml` publicando o PDF como artefato.
+- Pendências: agendamento da avaliação temporal do EXT-07, aplicação em destino, aceite humano e Windows.
+
 ## Atualização 2026-10-03 — EXT-05 qualidade canônica
 
 - Base: PR #99 `MERGED`, merge `ba2202ff6655f425edf405afc42de7ce3786a2a0`, divergência 0/0 e árvore limpa.
