@@ -115,6 +115,7 @@ import { createExtExpansionApi } from "./src/server/ext-expansion-api.mjs";
 import { createExtContinuityApi } from "./src/server/ext-continuity-api.mjs";
 import { createExtAnalyticsApi } from "./src/server/ext-analytics-api.mjs";
 import { createExtVisualApi } from "./src/server/ext-visual-api.mjs";
+import { createExtReportsApi } from "./src/server/ext-reports-api.mjs";
 import { parseSchedulerConfig, startExtComplianceScheduler } from "./src/server/ext-compliance-scheduler.mjs";
 import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
 import { createCommercialHistoryApi } from "./src/server/commercial-history-api.mjs";
@@ -2354,6 +2355,15 @@ const extVisualApi = createExtVisualApi({
   requireSession: readSession,
 });
 
+// EXT-13 / F09: relatório periódico canônico. Totais são contados de tabelas
+// internas reais por período; o envio é registro interno autorizado para
+// destinatários staff ativos — sem SMTP, arquivo ou fornecedor externo.
+const extReportsApi = createExtReportsApi({
+  pool: getPool(),
+  sameOrigin,
+  requireSession: readSession,
+});
+
 const extAdvancedApi = createExtAdvancedApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -4387,9 +4397,13 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/ext-visual-layouts" || url.pathname === "/api/crm/hr/ext-visual-layouts" || url.pathname === "/api/hr/ext-visual-layouts" || url.pathname === "/api/ext/visual-layouts") {
     return extVisualApi.handleLegacyLayouts(req, res);
   }
-  // EXT-13 relatório programado gerado apenas de dados reais escopo cliente autorizado sem dado inventado sem dado não autorizado
+  // EXT-13 / F09 relatório periódico canônico: definição, aprovação, geração
+  // contada de fontes internas e envio registrado (sem SMTP/fornecedor).
+  if (url.pathname.startsWith("/api/ext/reports/")) return extReportsApi.handle(req, res);
+  // Legado: GET permanece leitura autorizada e minimizada; qualquer escrita
+  // passa pelas guardas e recebe 410 sem alterar ext_periodic_reports.
   if (url.pathname === "/api/admin/hr/ext-periodic-reports" || url.pathname === "/api/crm/hr/ext-periodic-reports" || url.pathname === "/api/hr/ext-periodic-reports" || url.pathname === "/api/ext/periodic-reports") {
-    return extReportingApi.handlePeriodicReports(req, res);
+    return extReportsApi.handleLegacy(req, res);
   }
   // EXT-14 inteligência comercial justificativa obrigatória uso bloqueado sem aprovação humana
   if (url.pathname === "/api/admin/hr/ext-commercial-intelligence" || url.pathname === "/api/crm/hr/ext-commercial-intelligence" || url.pathname === "/api/hr/ext-commercial-intelligence" || url.pathname === "/api/ext/commercial-intelligence") {
@@ -5894,6 +5908,7 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/ext/continuity/")
   || pathname.startsWith("/api/ext/analytics/")
   || pathname.startsWith("/api/ext/visual/")
+  || pathname.startsWith("/api/ext/reports/")
   || pathname.startsWith("/api/ext/satisfaction/")
   || pathname === "/api/admin/hr/ext-bidding-documents"
   || pathname === "/api/crm/hr/ext-bidding-documents"

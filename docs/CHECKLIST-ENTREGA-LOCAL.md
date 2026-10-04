@@ -1668,10 +1668,10 @@ Editor visual avançado Aceite: Tokens/layouts versionados, preview e publicaç�
 
 ## EXT-13
 Relatório periódico Aceite: Consolidação de métricas e envio autorizado
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Handlers `/api/ext/*` para relatórios/logs; tabelas `ext_periodic_report*`/087; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
-- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
-- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
+- Estado: **pronto_local — gate dedicado 17/17** (jornada interna de staff; aceite humano e Windows pendentes)
+- Tela / API / dados / autorização: `/admin/relatorios` protegido por `AdminGate`; `/api/ext/reports/periodic` com detalhe, transição justificada, geração e envio registrado; tabelas `ext_periodic_reports` (origem canônica da migração 165) e `ext_report_events` append-only; grants `reports.read/write/review/send` consultados no servidor.
+- Integração e evidência: `npm run test:ext13-reports:pg` em PG17 descartável, migrações 001–165, servidor HTTP real e sessões staff reais; definições/aprovações/gerações/envios por HTTP; totais contados (`COUNT(*)`) de tabelas-fonte internas fixas por tipo e conferidos com o SQL, com dado-fonte comercial nascido pela rota pública real `/api/leads`; envio restrito a destinatários staff ativos; RBAC, same-origin, replay/conflito, concorrência, locks, auditoria/rollback/503, imutabilidade e legado 410 cobertos. Unitário focal 12/12; `npm test` 586/586; migrações 165/165; build 99 páginas.
+- Pendência / fronteira externa / aceite humano: o envio é registro interno autorizado e auditado — não há SMTP/notificação real, geração de arquivo, agenda automática (cron), fornecedor externo ou ator externo. Permanecem aceite humano, Windows/EPERM e banco de destino.
 
 ## EXT-14
 Inteligência comercial Aceite: Indicações, reativação e recomendações baseadas em histórico

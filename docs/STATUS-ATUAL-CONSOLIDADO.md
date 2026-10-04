@@ -1,6 +1,20 @@
-# Status atual consolidado — reconciliação F00 + F01 + F03 + F04 (EXT-08) + F05 (EXT-09) + F06 (EXT-10) + F07 (EXT-11) + F08 (EXT-12)
+# Status atual consolidado — reconciliação F00 + F01 + F03 + F04 (EXT-08) + F05 (EXT-09) + F06 (EXT-10) + F07 (EXT-11) + F08 (EXT-12) + F09 (EXT-13)
 
-## Atualização desta sessão — F08 / EXT-12 Editor visual avançado canônico
+## Atualização desta sessão — F09 / EXT-13 Relatório periódico canônico
+
+Base reconfirmada: PR #137 está `MERGED` no GitHub, com merge commit `fcc7cf4f8a7fbdface6efb565af708672a12413a`; `origin/main`, `main` local e a branch `arena/01a10929-gruposegsystemseguranca` partiram desse SHA, com checkout limpo e sem recriar PRs antigas (#126, #127, #129, #132, #133, #134, #136 e #137 permanecem integradas).
+
+Fatia escolhida: próxima EXT pendente, pois o requisito de escopo/isolamento por `client_account_id` da EXT-10 segue sem confirmação explícita. EXT-13 agora possui jornada canônica própria, sem contar a existência das tabelas/handlers legados da migração 087 como cobertura.
+
+A migração **165** é aditiva e preserva 001–164: adiciona origem canônica a `ext_periodic_reports`, novos estados (`em_revisao`, `aprovado`, `envio_registrado`), idempotência/fingerprint, campos de aprovação/geração/envio por identidade, eventos `ext_report_events` append-only, imutabilidade de `ext_periodic_report_logs`, permissões `reports.*` e ações de auditoria. O ledger vigente é **001–165**; próxima migração livre: **166**.
+
+API/UI: `/api/ext/reports/periodic` com definição, transição justificada, geração contada de fontes internas reais fixas por tipo e envio registrado restrito a destinatários staff ativos; `/admin/relatorios` protegido por `AdminGate`. Escritas legadas `/api/ext/periodic-reports` retornam 410 após guardas.
+
+**Resultado:** unitário EXT-13 **12/12**; gate `npm run test:ext13-reports:pg` **17/17** em PostgreSQL 17 descartável, migrações 001–165, HTTP real e sessões staff reais (o dado-fonte comercial nasceu pela rota pública real `/api/leads` e os totais conferiram com o SQL); Wave0 **5/5**; `npm run typecheck` OK; `npm test` **586/586**; `npm run test:migrations:pg` **165/165**; `npm run build` **99 páginas**; regressão EXT-12 **14/14**; `git diff --check` e `node --check` OK.
+
+**Limites:** o envio é registro interno autorizado e auditado — não há SMTP/notificação real, geração de arquivo, agenda automática, fornecedor externo, ator externo, aceite humano, Windows/EPERM ou aplicação no banco de destino.
+
+## Atualização anterior — F08 / EXT-12 Editor visual avançado canônico
 
 Base reconfirmada: PR #136 está `MERGED` no GitHub, com merge commit `e03c59141e614fbea31a9b6d9f05b24766177201`; `origin/main`, `main` local e a branch `arena/01a108ff-gruposegsystemseguranca` partiram desse SHA, com checkout limpo e sem recriar PRs antigas.
 
@@ -466,8 +480,8 @@ Legenda do estado confirmado: `pronto_local` = validação automática local ant
 | EXT-09 | Expansão/unidades | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-10 | Continuidade operacional | pronto_local (gate focal novo) | pronto_local — jornada interna staff provada em PG/HTTP/Chromium; gate 17/17 | Aceite humano, Windows/EPERM, banco de destino e escopo/isolamento por cliente ou ator externo permanecem pendentes; contatos são registros internos, não notificações | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-11 | Analytics/A-B | entregue_e_verificado_gate_local | entregue_e_verificado_gate_local (migração 163, API/UI canônicas, RBAC, auditoria, idempotência e gate 18/18) | aceite humano, Windows/EPERM e aplicação no banco de destino; sem tráfego externo ou significância alegada | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
-| EXT-12 | Editor visual avançado | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
-| EXT-13 | Relatório periódico | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
+| EXT-12 | Editor visual avançado | entregue_e_verificado_gate_local | entregue_e_verificado_gate_local (migração 164, API/UI canônicas, RBAC, auditoria, idempotência e gate 14/14; PR #137 integrada) | aceite humano, Windows/EPERM e banco de destino; publicação é registro interno, sem deploy externo/CDN/upload real | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
+| EXT-13 | Relatório periódico | entregue_e_verificado_gate_local | entregue_e_verificado_gate_local (migração 165, API/UI canônicas, totais contados de fontes internas, destinatários staff ativos e gate 17/17) | aceite humano, Windows/EPERM e banco de destino; envio é registro interno autorizado, sem SMTP/arquivo/agenda automática | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-14 | Inteligência comercial | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-15 | Apoio emergencial | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-16 | Central/vídeo | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |

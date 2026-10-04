@@ -57,6 +57,10 @@ export const KNOWN_PERMISSIONS = Object.freeze([
   "visual_editor.write",
   "visual_editor.review",
   "visual_editor.publish",
+  "reports.read",
+  "reports.write",
+  "reports.review",
+  "reports.send",
 ]);
 
 export function isValidPermission(p) {
