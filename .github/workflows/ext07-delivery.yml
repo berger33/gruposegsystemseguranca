@@ -6,12 +6,15 @@ on:
       - 'db/migrations/153-ext07-compliance-journey.sql'
       - 'db/migrations/154-ext07-compliance-hardening.sql'
       - 'db/migrations/155-ext07-compliance-hardening.sql'
+      - 'db/migrations/156-ext07-scheduled-evaluation.sql'
       - 'src/server/ext-compliance-api.mjs'
+      - 'src/server/ext-compliance-scheduler.mjs'
       - 'src/server/ext-advanced-api.mjs'
       - 'src/app/admin/compliance/**'
       - 'src/app/admin/ti/ExtAdvancedClient.tsx'
       - 'server.mjs'
       - 'tests/ext07-*.test.mjs'
+      - 'tests/ext-compliance-scheduler.test.mjs'
       - 'scripts/qa-ext07-compliance-postgres.mjs'
       - 'scripts/migrate-site-visual.mjs'
       - 'scripts/qa-wave0-static.mjs'
@@ -38,8 +41,8 @@ jobs:
         with: { node-version: '22', cache: npm }
       - run: npm ci
       - run: npm run typecheck
-      - run: node --test tests/ext07-compliance.test.mjs
-      - name: Ledger de migrações 001-155 em PostgreSQL descartável
+      - run: node --test tests/ext07-compliance.test.mjs tests/ext-compliance-scheduler.test.mjs
+      - name: Ledger de migrações 001-156 em PostgreSQL descartável
         run: npm run test:migrations:pg
       - name: Jornada EXT-07 (compliance) por HTTP real contra PostgreSQL real
         run: npm run test:ext07-compliance:pg

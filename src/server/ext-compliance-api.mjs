@@ -47,7 +47,134 @@ const text = (value, min, max) =>
 
 const isDate = (value) => ISO_DATE.test(String(value || ""));
 
-export function createExtComplianceApi({ pool, sameOrigin, requireSession }) {
+// Identidade staff ativa (admin/ti): regra compartilhada entre a jornada HTTP
+// (sessão) e a execução agendada (identidade declarada por ambiente).
+export async function isActiveStaffIdentity(client, id) {
+  if (!UUID.test(String(id || ""))) return false;
+  const query = await client.query(
+    `SELECT id FROM auth_identities
+      WHERE id=$1 AND kind='staff' AND status='active'
+        AND EXISTS (SELECT 1 FROM auth_staff_profiles p
+                     WHERE p.identity_id=auth_identities.id AND p.role IN ('admin','ti'))`,
+    [id],
+  );
+  return Boolean(query.rows[0]);
+}
+
+// Núcleo da avaliação temporal — compartilhado entre a rota HTTP explícita
+// (mutate/sessão staff) e a execução agendada (ext-compliance-scheduler.mjs).
+// Data-base é sempre CURRENT_DATE do servidor (relógio do cliente nunca é
+// aceito). Vencimento gera tarefa única por documento/período/regra na mesma
+// transação; sem responsável staff ativo, falha fechado.
+export async function runExpiryEvaluation(client, { actorIdentityId }) {
+
+  const today = (await client.query("SELECT CURRENT_DATE::text AS today")).rows[0].today;
+  const expired = (
+    await client.query(
+      `SELECT d.id, d.obligation_id, d.status::text AS status,
+              to_char(d.issue_date,'YYYY-MM-DD') AS issue_date,
+              to_char(d.effective_start_date,'YYYY-MM-DD') AS effective_start_date,
+              to_char(d.expiry_date,'YYYY-MM-DD') AS expiry_date,
+              o.responsible_identity
+         FROM ext_compliance_documents d
+         JOIN ext_compliance_obligations o ON o.id=d.obligation_id
+        WHERE d.origin='ext07_canonica' AND d.expiry_date IS NOT NULL
+          AND d.expiry_date <= CURRENT_DATE
+          AND d.status::text NOT IN ('cancelada','substituida')
+        ORDER BY d.expiry_date
+        FOR UPDATE OF d`,
+    )
+  ).rows;
+  let tasksCreated = 0;
+  let tasksExisting = 0;
+  let markedExpired = 0;
+  const failedClosed = [];
+  for (const doc of expired) {
+    if (!(await isActiveStaffIdentity(client, doc.responsible_identity))) {
+      // Fail-closed: sem responsável staff ativo não há tarefa nem mudança de estado.
+      failedClosed.push({ document_id: doc.id, reason: "responsible_staff_missing" });
+      continue;
+    }
+    const period = `${doc.issue_date || doc.effective_start_date}:${doc.expiry_date}`;
+    const task = (
+      await client.query(
+        `INSERT INTO ext_compliance_tasks
+           (obligation_id, document_id, validity_period, rule, evaluation_date, due_date, facts,
+            responsible_identity, created_by_identity)
+         VALUES ($1,$2,$3,$4,CURRENT_DATE,$5,$6,$7,$8)
+         ON CONFLICT (document_id, validity_period, rule) DO NOTHING
+         RETURNING id`,
+        [
+          doc.obligation_id, doc.id, period, EXPIRY_RULE, doc.expiry_date,
+          JSON.stringify({ expiry_date: doc.expiry_date, evaluation_date: today, source: "server_date" }),
+          doc.responsible_identity, actorIdentityId,
+        ],
+      )
+    ).rows[0];
+    if (task) tasksCreated += 1;
+    else tasksExisting += 1;
+    if (doc.status !== "vencida") {
+      await client.query(
+        "UPDATE ext_compliance_documents SET status='vencida', evaluation_date=CURRENT_DATE, updated_at=NOW() WHERE id=$1",
+        [doc.id],
+      );
+      markedExpired += 1;
+    }
+  }
+  // Aviso prévio dentro da antecedência declarada (sem tarefa: tarefa é do vencimento).
+  const expiringSoon = (
+    await client.query(
+      `UPDATE ext_compliance_documents d
+          SET status='a_vencer', updated_at=NOW()
+         FROM ext_compliance_obligations o
+        WHERE o.id=d.obligation_id AND d.origin='ext07_canonica'
+          AND d.status::text='vigente'
+          AND d.expiry_date > CURRENT_DATE
+          AND d.expiry_date - CURRENT_DATE <= o.renewal_lead_days
+        RETURNING d.id`,
+    )
+  ).rows.length;
+  // Estado da obrigação deriva do documento corrente (único por índice da 154).
+  const obligationsTouched = [...new Set(expired.map((doc) => doc.obligation_id))];
+  for (const obligationId of obligationsTouched) {
+    const current = (
+      await client.query(
+        `SELECT status::text AS status FROM ext_compliance_documents
+          WHERE obligation_id=$1 AND origin='ext07_canonica'
+            AND status::text IN ('vigente','a_vencer','em_renovacao')
+          ORDER BY version_no DESC LIMIT 1`,
+        [obligationId],
+      )
+    ).rows[0];
+    await client.query("UPDATE ext_compliance_obligations SET status=$2, updated_at=NOW() WHERE id=$1", [
+      obligationId,
+      current ? current.status : "vencida",
+    ]);
+  }
+  return {
+    body: {
+      source: "server_date",
+      evaluation_date: today,
+      rule: EXPIRY_RULE,
+      facts: {
+        documents_expired: expired.length,
+        documents_marked_vencida: markedExpired,
+        documents_marked_a_vencer: expiringSoon,
+        tasks_created: tasksCreated,
+        tasks_already_existing: tasksExisting,
+        failed_closed: failedClosed,
+      },
+      denominator: expired.length,
+      absence_is_not_zero: expired.length === 0,
+      note: "avaliação temporal explícita segue disponível; execução agendada contínua é opt-in por ambiente (EXT07_EVALUATE_INTERVAL_SECONDS com EXT07_EVALUATE_IDENTITY staff ativa)",
+    },
+    eventType: "expiry_evaluated",
+    auditAction: "ext07_expiry_evaluate",
+    target: actorIdentityId,
+  };
+}
+
+export function createExtComplianceApi({ pool, sameOrigin, requireSession, schedulerState = null }) {
   // Sessão staff real; anônimo recebe 401, papel autenticado não autorizado 403.
   async function staff(req, res) {
     const session = await requireSession(req);
@@ -61,18 +188,6 @@ export function createExtComplianceApi({ pool, sameOrigin, requireSession }) {
       return null;
     }
     return session;
-  }
-
-  async function activeStaffIdentity(client, id) {
-    if (!UUID.test(String(id || ""))) return false;
-    const query = await client.query(
-      `SELECT id FROM auth_identities
-        WHERE id=$1 AND kind='staff' AND status='active'
-          AND EXISTS (SELECT 1 FROM auth_staff_profiles p
-                       WHERE p.identity_id=auth_identities.id AND p.role IN ('admin','ti'))`,
-      [id],
-    );
-    return Boolean(query.rows[0]);
   }
 
   // Mutação canônica: BEGIN -> lock/revalidação -> replay idempotência ->
@@ -227,7 +342,7 @@ export function createExtComplianceApi({ pool, sameOrigin, requireSession }) {
       }
       // Estado, autoria e timestamps vêm do servidor; corpo não decide nada disso.
       const responsible = body.responsible_identity;
-      if (!(await activeStaffIdentity(client, responsible))) {
+      if (!(await isActiveStaffIdentity(client, responsible))) {
         return { deny: { status: 400, body: { error: "responsible_staff_required" } } };
       }
       const lead = Number.isInteger(body.renewal_lead_days) ? body.renewal_lead_days : 30;
@@ -273,7 +388,7 @@ export function createExtComplianceApi({ pool, sameOrigin, requireSession }) {
         await client.query("SELECT * FROM ext_compliance_obligations WHERE id=$1 FOR UPDATE", [body.obligation_id])
       ).rows[0];
       if (!obligation) return { deny: { status: 404, body: { error: "obligation_not_found" } } };
-      if (!(await activeStaffIdentity(client, obligation.responsible_identity))) {
+      if (!(await isActiveStaffIdentity(client, obligation.responsible_identity))) {
         return { deny: { status: 409, body: { error: "responsible_staff_missing" } } };
       }
       // Uma versão corrente por obrigação: nova referência exige renovação.
@@ -370,7 +485,7 @@ export function createExtComplianceApi({ pool, sameOrigin, requireSession }) {
         await client.query("SELECT * FROM ext_compliance_obligations WHERE id=$1 FOR UPDATE", [previous.obligation_id])
       ).rows[0];
       if (!obligation) return { deny: { status: 404, body: { error: "obligation_not_found" } } };
-      if (!(await activeStaffIdentity(client, obligation.responsible_identity))) {
+      if (!(await isActiveStaffIdentity(client, obligation.responsible_identity))) {
         return { deny: { status: 409, body: { error: "responsible_staff_missing" } } };
       }
       const today = (await client.query("SELECT CURRENT_DATE::text AS today")).rows[0].today;
@@ -426,115 +541,43 @@ export function createExtComplianceApi({ pool, sameOrigin, requireSession }) {
     });
   }
 
-  // Avaliação temporal: data-base é sempre CURRENT_DATE do servidor (relógio do
-  // cliente nunca é aceito). Vencimento gera tarefa única por documento/período/
-  // regra na mesma transação; sem responsável staff ativo, falha fechado.
+  // Avaliação temporal explícita (jornada staff): delega ao núcleo compartilhado
+  // com a execução agendada. Contrato HTTP inalterado.
   async function evaluate(req, res, session) {
-    return mutate(req, res, session, async (client) => {
-      const today = (await client.query("SELECT CURRENT_DATE::text AS today")).rows[0].today;
-      const expired = (
-        await client.query(
-          `SELECT d.id, d.obligation_id, d.status::text AS status,
-                  to_char(d.issue_date,'YYYY-MM-DD') AS issue_date,
-                  to_char(d.effective_start_date,'YYYY-MM-DD') AS effective_start_date,
-                  to_char(d.expiry_date,'YYYY-MM-DD') AS expiry_date,
-                  o.responsible_identity
-             FROM ext_compliance_documents d
-             JOIN ext_compliance_obligations o ON o.id=d.obligation_id
-            WHERE d.origin='ext07_canonica' AND d.expiry_date IS NOT NULL
-              AND d.expiry_date <= CURRENT_DATE
-              AND d.status::text NOT IN ('cancelada','substituida')
-            ORDER BY d.expiry_date
-            FOR UPDATE OF d`,
-        )
-      ).rows;
-      let tasksCreated = 0;
-      let tasksExisting = 0;
-      let markedExpired = 0;
-      const failedClosed = [];
-      for (const doc of expired) {
-        if (!(await activeStaffIdentity(client, doc.responsible_identity))) {
-          // Fail-closed: sem responsável staff ativo não há tarefa nem mudança de estado.
-          failedClosed.push({ document_id: doc.id, reason: "responsible_staff_missing" });
-          continue;
-        }
-        const period = `${doc.issue_date || doc.effective_start_date}:${doc.expiry_date}`;
-        const task = (
-          await client.query(
-            `INSERT INTO ext_compliance_tasks
-               (obligation_id, document_id, validity_period, rule, evaluation_date, due_date, facts,
-                responsible_identity, created_by_identity)
-             VALUES ($1,$2,$3,$4,CURRENT_DATE,$5,$6,$7,$8)
-             ON CONFLICT (document_id, validity_period, rule) DO NOTHING
-             RETURNING id`,
-            [
-              doc.obligation_id, doc.id, period, EXPIRY_RULE, doc.expiry_date,
-              JSON.stringify({ expiry_date: doc.expiry_date, evaluation_date: today, source: "server_date" }),
-              doc.responsible_identity, session.identityId,
-            ],
-          )
-        ).rows[0];
-        if (task) tasksCreated += 1;
-        else tasksExisting += 1;
-        if (doc.status !== "vencida") {
-          await client.query(
-            "UPDATE ext_compliance_documents SET status='vencida', evaluation_date=CURRENT_DATE, updated_at=NOW() WHERE id=$1",
-            [doc.id],
-          );
-          markedExpired += 1;
-        }
-      }
-      // Aviso prévio dentro da antecedência declarada (sem tarefa: tarefa é do vencimento).
-      const expiringSoon = (
-        await client.query(
-          `UPDATE ext_compliance_documents d
-              SET status='a_vencer', updated_at=NOW()
-             FROM ext_compliance_obligations o
-            WHERE o.id=d.obligation_id AND d.origin='ext07_canonica'
-              AND d.status::text='vigente'
-              AND d.expiry_date > CURRENT_DATE
-              AND d.expiry_date - CURRENT_DATE <= o.renewal_lead_days
-            RETURNING d.id`,
-        )
-      ).rows.length;
-      // Estado da obrigação deriva do documento corrente (único por índice da 154).
-      const obligationsTouched = [...new Set(expired.map((doc) => doc.obligation_id))];
-      for (const obligationId of obligationsTouched) {
-        const current = (
-          await client.query(
-            `SELECT status::text AS status FROM ext_compliance_documents
-              WHERE obligation_id=$1 AND origin='ext07_canonica'
-                AND status::text IN ('vigente','a_vencer','em_renovacao')
-              ORDER BY version_no DESC LIMIT 1`,
-            [obligationId],
-          )
-        ).rows[0];
-        await client.query("UPDATE ext_compliance_obligations SET status=$2, updated_at=NOW() WHERE id=$1", [
-          obligationId,
-          current ? current.status : "vencida",
-        ]);
-      }
-      return {
-        body: {
-          source: "server_date",
-          evaluation_date: today,
-          rule: EXPIRY_RULE,
-          facts: {
-            documents_expired: expired.length,
-            documents_marked_vencida: markedExpired,
-            documents_marked_a_vencer: expiringSoon,
-            tasks_created: tasksCreated,
-            tasks_already_existing: tasksExisting,
-            failed_closed: failedClosed,
-          },
-          denominator: expired.length,
-          absence_is_not_zero: expired.length === 0,
-          note: "avaliação temporal é operação administrativa explícita; execução agendada contínua é pendência documentada",
-        },
-        eventType: "expiry_evaluated",
-        auditAction: "ext07_expiry_evaluate",
-        target: session.identityId,
-      };
+    return mutate(req, res, session, (client) => runExpiryEvaluation(client, { actorIdentityId: session.identityId }));
+  }
+
+  // Observação da execução agendada: estado do processo + ledger de execuções.
+  // Leitura autorizada (admin/ti); ligar/desligar é decisão de ambiente, não de API.
+  async function listSchedule(req, res) {
+    const state = typeof schedulerState === "function" ? schedulerState() : {};
+    let actor = null;
+    if (state?.actorIdentity) {
+      const identity = (
+        await pool.query("SELECT id, display_name FROM auth_identities WHERE id=$1", [state.actorIdentity])
+      ).rows[0];
+      actor = identity
+        ? { id: identity.id, display_name: identity.display_name }
+        : { id: state.actorIdentity, display_name: null };
+    }
+    const runs = (
+      await pool.query(
+        `SELECT r.id, r.origem, r.status, to_char(r.evaluation_date,'YYYY-MM-DD') AS evaluation_date,
+                r.started_at, r.finished_at, r.interval_seconds, r.idempotency_key, r.facts, r.error,
+                r.actor_identity, i.display_name AS actor_display_name
+           FROM ext_compliance_evaluation_runs r
+           LEFT JOIN auth_identities i ON i.id=r.actor_identity
+          ORDER BY r.started_at DESC LIMIT 200`,
+      )
+    ).rows;
+    return json(res, 200, {
+      enabled: Boolean(state?.enabled),
+      interval_seconds: state?.intervalSeconds ?? null,
+      actor,
+      activation: "ambiente: EXT07_EVALUATE_INTERVAL_SECONDS com EXT07_EVALUATE_IDENTITY (staff admin/ti ativa)",
+      runs,
+      source: "ext_compliance_evaluation_runs",
+      note: "execução agendada é in-process e opt-in; cada execução registra uma linha (concluida ou falha); enabled reflete este processo do servidor",
     });
   }
 
@@ -566,7 +609,7 @@ export function createExtComplianceApi({ pool, sameOrigin, requireSession }) {
       if (action === "complete") {
         const result = text(body.result, 10, 2000);
         if (!result) return { deny: { status: 400, body: { error: "completion_result_required" } } };
-        if (!(await activeStaffIdentity(client, task.responsible_identity))) {
+        if (!(await isActiveStaffIdentity(client, task.responsible_identity))) {
           return { deny: { status: 409, body: { error: "completion_requires_responsible_and_result" } } };
         }
       }
@@ -611,6 +654,7 @@ export function createExtComplianceApi({ pool, sameOrigin, requireSession }) {
     if (req.method === "GET" && pathname === "/api/ext/compliance/documents") return listDocuments(req, res);
     if (req.method === "GET" && pathname === "/api/ext/compliance/obligations") return listObligations(req, res);
     if (req.method === "GET" && pathname === "/api/ext/compliance/tasks") return listTasks(req, res);
+    if (req.method === "GET" && pathname === "/api/ext/compliance/schedule") return listSchedule(req, res);
     if (req.method === "POST" && pathname === "/api/ext/compliance/obligations") return createObligation(req, res, session);
     if (req.method === "POST" && pathname === "/api/ext/compliance/documents") return createDocument(req, res, session);
     if (req.method === "POST" && pathname === "/api/ext/compliance/evaluate") return evaluate(req, res, session);

@@ -11,7 +11,7 @@ import pg from "pg";
 import {hashPassword} from "../src/lib/client-auth-core.mjs";
 const RUN=process.env.RUN_DATABASE_INTEGRATION==="1"&&process.env.DATABASE_URL,REQUIRE=process.env.QA_EXT07_REQUIRE_DB==="1",root=path.resolve(import.meta.dirname,"..");
 test("EXT-07 gate exige PostgreSQL real",()=>{if(REQUIRE)assert.ok(RUN)});
-let server,base,pool,ti,ti2,rh,cookieTi,cookieTi2,cookieRh,serverLogs="";const idem=t=>`ext07-${t}-${randomUUID()}`;const fetchWithTimeout=(url,init={})=>fetch(url,{...init,signal:AbortSignal.timeout(init.method==="POST"?120000:90000)});
+let server,base,pool,ti,ti2,rh,cookieTi,cookieTi2,cookieRh,serverLogs="";let schedulerServer=null,schedulerLogs="";const idem=t=>`ext07-${t}-${randomUUID()}`;const fetchWithTimeout=(url,init={})=>fetch(url,{...init,signal:AbortSignal.timeout(init.method==="POST"?120000:90000)});
 async function wait(){for(let i=0;i<240;i++){try{if([200,401].includes((await fetchWithTimeout(`${base}/api/admin/session`,{signal:undefined})).status))return}catch{}await new Promise(r=>setTimeout(r,400))}throw Error("server_did_not_start")}
 async function staff(role,tag){const id=randomUUID(),email=`ext07-${tag||role}-${id.slice(0,8)}@example.invalid`,password="Senha-Sintetica-9!";await pool.query(`INSERT INTO auth_identities(id,kind,email,display_name,status) VALUES($1,'staff',$2,$3,'active')`,[id,email,`QA EXT07 ${role}`]);await pool.query(`INSERT INTO auth_credentials(identity_id,password_hash) VALUES($1,$2)`,[id,await hashPassword(password)]);await pool.query(`INSERT INTO auth_staff_profiles(identity_id,role,assigned_by) VALUES($1,$2,'admin_system')`,[id,role]);return{id,email,password}}
 async function login(s){const r=await fetchWithTimeout(`${base}/api/admin/session`,{method:"POST",headers:{"content-type":"application/json",origin:base},body:JSON.stringify({email:s.email,password:s.password})});assert.equal(r.status,200);return r.headers.getSetCookie().find(x=>x.startsWith("seg_admin_session=")).split(";")[0]}
@@ -23,7 +23,7 @@ async function createObligation(over={},options={}){const r=await api("/api/ext/
 const docBody=over=>({title:"Referência sintética",description:"Descrição sintética da referência documental privada.",compliance_type:"licenca",issue_date:daysAgo(5),expiry_date:daysAhead(30),declared_reference:"REF-SINTETICA-0001",reference_source:"Órgão declarado sintético",...over});
 async function createDocument(obligationId,over={},options={}){const r=await api("/api/ext/compliance/documents",{method:"POST",body:{...docBody({obligation_id:obligationId,reference_type:"referencia_declarada"}),...over},...options});return r}
 before(async()=>{if(!RUN)return;pool=new pg.Pool({connectionString:process.env.DATABASE_URL,max:10});const port=3600+Math.floor(Math.random()*900);base=`http://127.0.0.1:${port}`;server=spawn(process.execPath,["server.mjs","--dev"],{cwd:root,env:{...process.env,PORT:String(port),BIND_HOST:"127.0.0.1",NODE_ENV:"development",NEXT_DIST_DIR:".next/integration-ext07",SITE_ADMIN_SESSION_SECRET:randomUUID().repeat(2),CLIENT_MFA_ENCRYPTION_KEY:randomBytes(32).toString("base64url"),SITE_ADMIN_LEGACY_TOKENS:"",OLLAMA_ENABLED:"false",MAIL_HOST:"",NEXT_TELEMETRY_DISABLED:"1"},stdio:["ignore","pipe","pipe"]});server.stdout.on("data",x=>serverLogs+=x);server.stderr.on("data",x=>serverLogs+=x);try{await wait()}catch(e){throw Error(`${e.message}\n${serverLogs.slice(-3000)}`)}ti=await staff("ti");ti2=await staff("ti","ti2");rh=await staff("rh");cookieTi=await login(ti);cookieTi2=await login(ti2);cookieRh=await login(rh)});
-after(async()=>{await pool?.end().catch(()=>{});if(server&&!server.killed){server.kill("SIGTERM");await new Promise(r=>setTimeout(r,300));server.kill("SIGKILL")}if(serverLogs.trim())console.error(`SERVER_LOGS_TAIL_BEGIN\n${serverLogs.slice(-5000)}\nSERVER_LOGS_TAIL_END`)});
+after(async()=>{if(schedulerServer&&!schedulerServer.killed){schedulerServer.kill("SIGTERM");await new Promise(r=>setTimeout(r,300));schedulerServer.kill("SIGKILL")}await pool?.end().catch(()=>{});if(server&&!server.killed){server.kill("SIGTERM");await new Promise(r=>setTimeout(r,300));server.kill("SIGKILL")}if(schedulerLogs.trim())console.error(`SCHED_SERVER_LOGS_TAIL_BEGIN\n${schedulerLogs.slice(-3000)}\nSCHED_SERVER_LOGS_TAIL_END`);if(serverLogs.trim())console.error(`SERVER_LOGS_TAIL_BEGIN\n${serverLogs.slice(-5000)}\nSERVER_LOGS_TAIL_END`)});
 const opt={skip:!RUN};
 
 test("EXT-07 cluster limpo não teve seed e ausência não é zero",opt,async()=>{
@@ -355,4 +355,121 @@ test("EXT-08..12 sem regressão: handlers legados respondem e ExtAdvancedClient 
   await access(path.join(root,"src/app/admin/ti/ExtAdvancedClient.tsx"));
   const tiPage=await fetch(`${base}/admin/ti`,{signal:AbortSignal.timeout(240000)});
   assert.equal(tiPage.status,200);
+});
+
+// ---------------------------------------------------------------------------
+// EXT-07 — execução agendada da avaliação temporal (migração 156).
+// Um SEGUNDO servidor real é bootado com o agendador ligado por ambiente
+// (intervalo curto para o gate) e identidade staff declarada (ti2). Nenhuma
+// chamada HTTP de avaliação é feita contra ele: o estado temporal muda porque
+// o processo avalia sozinho, e cada execução grava linha no ledger.
+// ---------------------------------------------------------------------------
+const waitFor=async(fn,{timeoutMs=30000,everyMs=250}={})=>{const deadline=Date.now()+timeoutMs;let last;while(Date.now()<deadline){last=await fn();if(last)return last;await new Promise(r=>setTimeout(r,everyMs))}return last};
+const dayKey=`agendada:${iso(today)}`;
+let schedExpiredDocId,schedSuspendedDocId;
+
+test("EXT-07 agendamento desligado por padrão; rota de observação exige staff autorizada",opt,async()=>{
+  const r=await api("/api/ext/compliance/schedule");
+  assert.equal(r.status,200);
+  assert.equal(r.body.enabled,false,"sem ambiente configurado o processo não agenda");
+  assert.equal(r.body.interval_seconds,null);
+  assert.equal(r.body.actor,null);
+  assert.deepEqual(r.body.runs,[]);
+  assert.equal(r.body.source,"ext_compliance_evaluation_runs");
+  assert.match(r.body.activation,/EXT07_EVALUATE_INTERVAL_SECONDS/);
+  assert.equal((await api("/api/ext/compliance/schedule",{cookie:null})).status,401);
+  assert.equal((await api("/api/ext/compliance/schedule",{cookie:cookieRh})).status,403);
+});
+
+test("EXT-07 agendamento avalia o estado temporal sozinho e registra a execução",opt,async()=>{
+  // Fixture criada pelo servidor principal ANTES do agendador existir:
+  // documento vencido ontem (sem tarefa) e corrente dentro da antecedência.
+  const obligation=await createObligation({title:"Obrigação agendada sintética"});
+  const expired=await createDocument(obligation.id,{issue_date:daysAgo(40),expiry_date:daysAgo(1),declared_reference:"REF-AGENDADA-VENCIDA"});
+  assert.equal(expired.status,201);
+  schedExpiredDocId=expired.body.document.id;
+  const lead=await createDocument(obligation.id,{issue_date:daysAgo(5),expiry_date:daysAhead(10),declared_reference:"REF-AGENDADA-ANTECEDENCIA"});
+  assert.equal(lead.status,201);
+  assert.equal((await pool.query(`SELECT count(*)::int n FROM ext_compliance_tasks WHERE document_id=$1`,[schedExpiredDocId])).rows[0].n,0,"antes do agendador não há tarefa");
+  const schedPort=3600+Math.floor(Math.random()*900);
+  const schedBase=`http://127.0.0.1:${schedPort}`;
+  schedulerServer=spawn(process.execPath,["server.mjs","--dev"],{cwd:root,env:{...process.env,PORT:String(schedPort),BIND_HOST:"127.0.0.1",NODE_ENV:"development",NEXT_DIST_DIR:".next/integration-ext07-sched",SITE_ADMIN_SESSION_SECRET:randomUUID().repeat(2),CLIENT_MFA_ENCRYPTION_KEY:randomBytes(32).toString("base64url"),SITE_ADMIN_LEGACY_TOKENS:"",OLLAMA_ENABLED:"false",MAIL_HOST:"",NEXT_TELEMETRY_DISABLED:"1",EXT07_EVALUATE_INTERVAL_SECONDS:"2",EXT07_EVALUATE_IDENTITY:ti2.id},stdio:["ignore","pipe","pipe"]});
+  schedulerServer.stdout.on("data",x=>schedulerLogs+=x);
+  schedulerServer.stderr.on("data",x=>schedulerLogs+=x);
+  for(let i=0;i<240;i++){try{if([200,401].includes((await fetch(`${schedBase}/api/admin/session`,{signal:AbortSignal.timeout(2000)})).status))break}catch{}await new Promise(r=>setTimeout(r,400))}
+  const done=await waitFor(async()=>{
+    const task=(await pool.query(`SELECT created_by_identity::text c FROM ext_compliance_tasks WHERE document_id=$1`,[schedExpiredDocId])).rows[0];
+    const leadStatus=(await pool.query(`SELECT status::text s FROM ext_compliance_documents WHERE id=$1`,[lead.body.document.id])).rows[0];
+    const obligationStatus=(await pool.query(`SELECT status::text s FROM ext_compliance_obligations WHERE id=$1`,[obligation.id])).rows[0];
+    const run=(await pool.query(`SELECT status::text s,facts FROM ext_compliance_evaluation_runs WHERE status='concluida' ORDER BY started_at DESC LIMIT 1`)).rows[0];
+    return task&&leadStatus?.s==="a_vencer"&&obligationStatus?.s==="a_vencer"&&run?{task,run}:null;
+  });
+  assert.ok(done,`agendador não avaliou sozinho\n${schedulerLogs.slice(-2000)}`);
+  assert.equal(done.task.c,ti2.id,"tarefa criada em nome da identidade declarada");
+  assert.equal(done.run.s,"concluida");
+  assert.equal(done.run.facts.trigger,"agendada");
+  const event=(await pool.query(`SELECT payload,created_by_identity::text c FROM ext_compliance_events WHERE idempotency_key=$1`,[dayKey])).rows[0];
+  assert.ok(event,"evento do dia gravado pelo agendador");
+  assert.equal(event.c,ti2.id);
+  assert.equal(event.payload.trigger,"agendada");
+  assert.equal(event.payload.source,"server_date");
+});
+
+test("EXT-07 agendamento repetido não duplica tarefa nem evento do dia",opt,async()=>{
+  const runs=await waitFor(async()=>{
+    const n=(await pool.query(`SELECT count(*)::int n FROM ext_compliance_evaluation_runs WHERE status='concluida' AND idempotency_key=$1`,[dayKey])).rows[0].n;
+    return n>=2?n:null;
+  });
+  assert.ok(runs>=2,`esperadas >=2 execuções concluidas, obtidas ${runs ?? 0}\n${schedulerLogs.slice(-2000)}`);
+  assert.equal((await pool.query(`SELECT count(*)::int n FROM ext_compliance_events WHERE idempotency_key=$1`,[dayKey])).rows[0].n,1,"um evento por dia/ator");
+  assert.equal((await pool.query(`SELECT count(*)::int n FROM ext_compliance_tasks WHERE document_id=$1`,[schedExpiredDocId])).rows[0].n,1,"tarefa única por documento/período/regra");
+});
+
+test("EXT-07 agendamento falha fechado com identidade suspensa e zero mutação",opt,async()=>{
+  await pool.query(`UPDATE auth_identities SET status='suspended' WHERE id=$1`,[ti2.id]);
+  try{
+    // Primeiro provar que os ticks passaram a falhar fechado...
+    const failed=await waitFor(async()=>{
+      const run=(await pool.query(`SELECT error FROM ext_compliance_evaluation_runs WHERE status='falha' AND error LIKE '%staff admin/ti ativa%' ORDER BY started_at DESC LIMIT 1`)).rows[0];
+      return run||null;
+    });
+    assert.ok(failed,`run falha esperada com identidade suspensa\n${schedulerLogs.slice(-2000)}`);
+    // ...e só então criar o documento que NÃO pode ser tocado.
+    const obligation=await createObligation({title:"Obrigação suspensão sintética"});
+    const expired=await createDocument(obligation.id,{issue_date:daysAgo(40),expiry_date:daysAgo(1),declared_reference:"REF-AGENDADA-SUSPENSA"});
+    assert.equal(expired.status,201);
+    schedSuspendedDocId=expired.body.document.id;
+    await waitFor(async()=>{
+      const n=(await pool.query(`SELECT count(*)::int n FROM ext_compliance_evaluation_runs WHERE status='falha' AND started_at > (SELECT max(started_at) FROM ext_compliance_evaluation_runs WHERE status='concluida')`)).rows[0].n;
+      return n>=1?n:null;
+    });
+    await new Promise(r=>setTimeout(r,2500)); // pelo menos um tick completo após a criação
+    assert.equal((await pool.query(`SELECT count(*)::int n FROM ext_compliance_tasks WHERE document_id=$1`,[schedSuspendedDocId])).rows[0].n,0,"sem mutação com identidade suspensa");
+    assert.equal((await pool.query(`SELECT count(*)::int n FROM ext_compliance_events WHERE idempotency_key=$1`,[dayKey])).rows[0].n,1,"nenhum evento novo");
+  }finally{
+    await pool.query(`UPDATE auth_identities SET status='active' WHERE id=$1`,[ti2.id]);
+  }
+});
+
+test("EXT-07 agendamento retoma sozinho após a identidade ser reativada",opt,async()=>{
+  assert.ok(schedSuspendedDocId,"cenário anterior deve ter deixado o documento pendente");
+  const done=await waitFor(async()=>{
+    const row=(await pool.query(`SELECT count(*)::int n,min(created_by_identity::text) c FROM ext_compliance_tasks WHERE document_id=$1`,[schedSuspendedDocId])).rows[0];
+    return row.n>=1?row:null;
+  });
+  assert.ok(done,`tarefa pendente deveria surgir após retomada\n${schedulerLogs.slice(-2000)}`);
+  assert.equal(done.c,ti2.id,"autoria continua sendo a identidade declarada");
+});
+
+test("EXT-07 ledger de execuções é append-only e observável pela rota",opt,async()=>{
+  const run=(await pool.query(`SELECT id FROM ext_compliance_evaluation_runs ORDER BY started_at DESC LIMIT 1`)).rows[0];
+  await assert.rejects(pool.query(`UPDATE ext_compliance_evaluation_runs SET error='x' WHERE id=$1`,[run.id]),/compliance evaluation run is immutable/);
+  await assert.rejects(pool.query(`DELETE FROM ext_compliance_evaluation_runs WHERE id=$1`,[run.id]),/compliance evaluation run is immutable/);
+  const r=await api("/api/ext/compliance/schedule");
+  assert.equal(r.status,200);
+  assert.equal(r.body.enabled,false,"o servidor principal não tem agendador; o ledger é do banco");
+  assert.ok(r.body.runs.length>=2,"execuções visíveis para staff autorizada");
+  assert.ok(r.body.runs.every(x=>x.origem==="agendada"));
+  assert.ok(r.body.runs.some(x=>x.status==="concluida"),"há execuções concluidas (inclusive sem efeito)");
+  assert.ok(r.body.runs.some(x=>x.status==="falha"&&String(x.error).includes("staff admin/ti")),"a falha fechada está registrada com a causa");
 });

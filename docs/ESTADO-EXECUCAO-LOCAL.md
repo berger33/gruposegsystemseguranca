@@ -1,5 +1,13 @@
 # Estado da execução — entrega local integral
 
+## Estado vigente — EXT-07 execução agendada da avaliação temporal (2026-10-04)
+
+Base `main` `150052e7a391a32a447341089ce3451e62a3477e` (merge da PR #118 / PLAT-01), branch `arena/01a104d5-gruposegsystemseguranca`, divergência inicial 0/0 e árvore limpa. **Migração 156** (`ext_compliance_evaluation_runs`, aditiva, append-only por trigger): 001–155 intocadas, próxima livre **157**.
+
+Executa a pendência declarada desde a 155. Probe em cluster descartável (apagado) mediu o antes: estado idêntico após 12 s com servidor de pé — 0 tarefas para o vencido, antecedência não marcada, obrigação pendente; o `POST /evaluate` explícito era o único caminho. Agora o servidor avalia sozinho: agendador in-process **opt-in por ambiente** (`EXT07_EVALUATE_INTERVAL_SECONDS` + `EXT07_EVALUATE_IDENTITY` staff admin/ti), primeiro tick imediato, tick sob `dispatchGuarded` (nenhuma rejeição escapa), sobreposição bloqueada em processo e por `pg_try_advisory_xact_lock`. O núcleo `runExpiryEvaluation` foi extraído por dedent programático do corpo da rota (mesmo código para HTTP e agendador; nenhum contrato alterado). Identidade declarada é revalidada a cada tick: suspensa, a execução falha fechado (run `falha`, zero mutação) e retoma sozinha quando reativada. Evento `expiry_evaluated` uma vez por dia/ator (chave `agendada:YYYY-MM-DD`); falha de `audit_log` reverte a execução. Sem `DATABASE_URL` o agendador recusa ligar (PGlite beta não tem o schema). Nova rota de observação `GET /api/ext/compliance/schedule` (staff autorizada): estado do processo + ledger de execuções.
+
+Validação (bateria integral, evidência versionada): 14/14 passos, **718 asserções TAP, zero fail/skip/todo**; wave 0 5/5 (001–156); typecheck; focal PLAT-01 25/25, focal EXT-07 19/19, **focal agendamento 20/20**; `npm test` 514/514; build 92 páginas com `/admin/compliance`; migrations 156/156 ×2 + clone negativo; gate EXT-07 **43/43** (6 cenários novos do agendador; MINIMUM_CASES 35→41); vizinhos EXT-06 36/36, EXT-05 33/33, EXT-04 28/28; `git diff --check` limpo. Guardas provadas por mutação (agendador antes do safety net; nota regredida; tick sem guard) — todas reprovaram, restauração conferida por checksum. Workflow `ext07-delivery.yml` atualizado. Aplicação em destino, aceite humano e Windows seguem pendentes. [Relatório](ENTREGA-RELATORIO-2026-10-04-EXT07-AGENDAMENTO-AVALIACAO-TEMPORAL.md).
+
 ## Estado vigente — PLAT-01 despacho HTTP à prova de rejeição assíncrona (2026-10-03)
 
 Base `main` `8c4d71a46215c0d775c4a7880a6e95bc01b9ea00` (merge da PR #115 / EXT-07 migração 155), branch `arena/01a104ae-gruposegsystemseguranca`, divergência inicial 0/0 e árvore limpa. **Nenhuma migração nova**: 001–155 intocadas, próxima livre segue 156.
