@@ -38,6 +38,10 @@ export const KNOWN_PERMISSIONS = Object.freeze([
   "proposals.approve_discount",
   "documents.download",
   "payroll.export",
+  "financeiro.receivables.read",
+  "financeiro.receivables.write",
+  "financeiro.reports.read",
+  "financeiro.reports.generate",
 ]);
 
 export function isValidPermission(p) {
