@@ -1475,10 +1475,10 @@ Satisfação/carteira Aceite: Pesquisas, CSAT/NPS quando adequado, histórico e 
 
 ## EXT-07
 Compliance corporativo Aceite: Licenças/certidões/seguros e obrigações aplicáveis com responsável e validade
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Handlers `/api/ext/*` para compliance; tabelas `ext_compliance_documents`/086; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
-- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
-- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
+- Estado: entregue_e_verificado_gate_local (2026-10-03, hardening 155 sobre a 153 e a 154 do main; base PR #103 + PR #113)
+- Tela / API / dados / autorização: `/admin/compliance` com obrigações, referências privadas, renovação versionada e tarefas; `/api/ext/compliance/{obligations,documents,evaluate,tasks}` com 401 anônimo, 403 papel não autorizado, same-origin em mutações, Idempotency-Key obrigatória e replay/409 divergente; fonte canônica `ext_compliance_documents` (153/154/155) e tarefa em `ext_compliance_tasks`; escritores legados aposentados com 410 após os guardas.
+- Integração e evidência (teste, resultado, commit): gate `npm run test:ext07-compliance:pg` — PostgreSQL 17 descartável, migrações 001–155, servidor HTTP real, sessão staff real, **37/37 casos, 0 fail/skip/todo**; migrações 155/155 com replay e clone negativo; EXT-04 28/28, EXT-05 33/33, EXT-06 36/36; `npm test` 457/457; build 92 páginas incluindo `/admin/compliance`.
+- Pendência / fronteira externa / aceite humano: aplicação em banco de destino e execução agendada da avaliação temporal permanecem pendentes; referência documental é declarada (sem upload/bytes/checksum/malware scan/download); nenhum ator externo ou aceite humano inventado.
 
 ## EXT-08
 Base de conhecimento Aceite: Procedimentos versionados, busca, acesso e ciência

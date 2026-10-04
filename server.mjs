@@ -5769,6 +5769,9 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/ext/bidding/")
   || pathname.startsWith("/api/ext/supplier/")
   || pathname.startsWith("/api/ext/quality/")
+  // EXT-07: rota canônica de compliance precisa estar na borda API; sem isto o
+  // Next devolve 404 HTML e a jornada inteira fica inalcançável (probe 2026-10-03).
+  || pathname.startsWith("/api/ext/compliance/")
   || pathname.startsWith("/api/ext/satisfaction/")
   || pathname === "/api/admin/hr/ext-bidding-documents"
   || pathname === "/api/crm/hr/ext-bidding-documents"
