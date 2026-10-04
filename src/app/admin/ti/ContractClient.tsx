@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 
 type Contract = {
   id: string;
-  proposal_id: string;
-  proposal_version: number;
+  proposal_id: string | null;
+  proposal_version: number | null;
   company_id: string | null;
   title: string;
   status: string;
@@ -33,13 +33,18 @@ export default function ContractClient() {
   const [docForm, setDocForm] = useState({ title: "", category: "", file_url: "" });
 
   async function load() {
-    const q = new URLSearchParams();
-    if (proposalId) q.set("proposalId", proposalId);
-    q.set("limit", "100");
-    const r = await fetch(`/api/crm/contracts?${q.toString()}`);
-    const j = await r.json();
-    if (r.ok) { setContracts(j.contracts || []); setTotal(j.total || 0); }
-    else setMsg(`Erro listar: ${j.error}`);
+    setMsg("");
+    try {
+      const q = new URLSearchParams();
+      if (proposalId) q.set("proposalId", proposalId);
+      q.set("limit", "100");
+      const r = await fetch(`/api/crm/contracts?${q.toString()}`);
+      const j = await r.json().catch(() => ({}));
+      if (r.ok) { setContracts(j.contracts || []); setTotal(j.total || 0); }
+      else setMsg(`Erro listar: ${j.error || `HTTP ${r.status}`}`);
+    } catch {
+      setMsg("Erro listar: não foi possível consultar contratos agora.");
+    }
   }
 
   useEffect(() => { load(); }, []);
@@ -86,7 +91,7 @@ export default function ContractClient() {
   }
 
   async function retryCreate(contract: Contract) {
-    setForm({ proposal_id: contract.proposal_id, proposal_version: String(contract.proposal_version) });
+    setForm({ proposal_id: contract.proposal_id || "", proposal_version: contract.proposal_version == null ? "" : String(contract.proposal_version) });
     setTimeout(() => createFromProposal(), 100);
   }
 
@@ -154,11 +159,15 @@ export default function ContractClient() {
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
         <thead><tr><th>id</th><th>empresa</th><th>proposta v</th><th>título</th><th>status</th><th>origem</th><th>responsável</th><th>vigência</th><th>preço</th><th>ações</th></tr></thead>
         <tbody>
-          {contracts.map(c => (
+          {contracts.length === 0 ? (
+            <tr><td colSpan={10} style={{ padding: 12, textAlign: "center", color: "#667085" }}>
+              {msg ? "Não foi possível carregar contratos; veja a mensagem acima." : "Nenhum contrato disponível para esta identidade."}
+            </td></tr>
+          ) : contracts.map(c => (
             <tr key={c.id}>
               <td>{c.id.slice(0,8)}</td>
               <td>{c.company_id ? c.company_id.slice(0,8) : "-"}</td>
-              <td>{c.proposal_id.slice(0,8)} v{c.proposal_version}</td>
+              <td>{c.proposal_id ? `${c.proposal_id.slice(0,8)} v${c.proposal_version ?? "-"}` : "Sem proposta"}</td>
               <td>{c.title}</td>
               <td>{c.status}</td>
               <td>{c.origin} {c.origin_details ? `(${c.origin_details.slice(0,30)})` : ""}</td>

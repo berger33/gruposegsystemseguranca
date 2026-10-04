@@ -1212,41 +1212,46 @@ export function createCrmApi(ctx) {
     if (companyId && !isValidUuid(companyId)) return ctx.json(res, 400, { error: "invalid_company_id" });
     if (createCompany && !companyName) return ctx.json(res, 400, { error: "invalid_company_name" });
 
+    // CRM-04/F03: conversion, company/contact/opportunity history and the
+    // durable audit rows share one transaction. A failed audit must not leave a
+    // company or opportunity that the next retry could accidentally reuse.
+    const client = await db.connect();
     try {
-      const leadRes = await db.query("SELECT * FROM public_leads WHERE id = $1", [leadId]);
+      await client.query("BEGIN");
+      const leadRes = await client.query("SELECT * FROM public_leads WHERE id = $1 FOR UPDATE", [leadId]);
       const lead = leadRes.rows[0];
-      if (!lead) return ctx.json(res, 404, { error: "lead_not_found" });
+      if (!lead) { await client.query("ROLLBACK"); return ctx.json(res, 404, { error: "lead_not_found" }); }
 
-      const existingOpp = await db.query("SELECT id FROM crm_opportunities WHERE public_lead_id = $1", [leadId]);
+      const existingOpp = await client.query("SELECT id FROM crm_opportunities WHERE public_lead_id = $1", [leadId]);
       if (existingOpp.rows[0]) {
+        await client.query("COMMIT");
         return ctx.json(res, 200, { opportunityId: existingOpp.rows[0].id, dedup: true, message: "Lead já convertido anteriormente, histórico preservado" });
       }
 
       let finalCompanyId = companyId;
-
       if (createCompany) {
-        const dupCheck = await db.query("SELECT id FROM crm_companies WHERE display_name ILIKE $1 OR document_ref = $2", [companyName, lead.phone]);
+        const dupCheck = await client.query("SELECT id FROM crm_companies WHERE display_name ILIKE $1 OR document_ref = $2", [companyName, lead.phone]);
         if (dupCheck.rows[0]) {
           finalCompanyId = dupCheck.rows[0].id;
         } else {
           finalCompanyId = crypto.randomUUID();
-          await db.query(
+          await client.query(
             `INSERT INTO crm_companies (id, display_name, city, type, origin, campaign, created_by, created_by_id)
              VALUES ($1,$2,$3,'prospect',$4,$5,$6,$7)`,
             [finalCompanyId, companyName, lead.city, lead.origin, lead.campaign, session.role, session.identityId]
           );
-          await audit(db, { action: "crm_company_create", target: finalCompanyId, result: "allowed", actorKind: session.role, actorId: session.identityId });
+          await audit(client, { action: "crm_company_create", target: finalCompanyId, result: "allowed", actorKind: session.role, actorId: session.identityId });
         }
       }
 
       let contactId = null;
       if (lead.email || lead.phone) {
-        const contactCheck = await db.query("SELECT id FROM crm_contacts WHERE company_id = $1 AND (email = $2 OR phone = $3)", [finalCompanyId, lead.email, lead.phone]);
+        const contactCheck = await client.query("SELECT id FROM crm_contacts WHERE company_id = $1 AND (email = $2 OR phone = $3)", [finalCompanyId, lead.email, lead.phone]);
         if (contactCheck.rows[0]) {
           contactId = contactCheck.rows[0].id;
         } else {
           contactId = crypto.randomUUID();
-          await db.query(
+          await client.query(
             `INSERT INTO crm_contacts (id, company_id, display_name, email, phone, origin, is_primary, created_by_id)
              VALUES ($1,$2,$3,$4,$5,$6,true,$7)`,
             [contactId, finalCompanyId, lead.name, lead.email, lead.phone, lead.origin || lead.channel, session.identityId]
@@ -1256,28 +1261,28 @@ export function createCrmApi(ctx) {
 
       const oppId = crypto.randomUUID();
       const title = `Oportunidade - ${lead.name} - ${lead.services[0] || "Serviços gerais"}`;
-      // CRM-05: quem converte é o responsável desde o início — antes a conversão
-      // deixava responsible_id nulo e só o fallback "criador enquanto sem
-      // responsável" segurava a borda de propriedade.
-      const responsibleName = await displayForIdentity(db, session.identityId);
-      await db.query(
+      const responsibleName = await displayForIdentity(client, session.identityId);
+      await client.query(
         `INSERT INTO crm_opportunities (id, company_id, contact_id, title, service_name, need_description, responsible_id, responsible_name, origin, campaign, public_lead_id, created_by_id, stage, next_action, next_action_date)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'novo',$13,NOW() + INTERVAL '2 days')`,
         [oppId, finalCompanyId, contactId, title, lead.services[0] || null, lead.details, session.identityId, responsibleName, lead.origin, lead.campaign, leadId, session.identityId, `Qualificar lead ${leadId.slice(0,8)} - ${lead.city}`]
       );
 
-      await db.query(
+      await client.query(
         `INSERT INTO crm_opportunity_stages (id, opportunity_id, previous_stage, next_stage, changed_by_id, changed_by_role, reason) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
         [crypto.randomUUID(), oppId, null, "novo", session.identityId, session.role, `Conversão do lead ${leadId} preservando histórico`]
       );
 
-      await audit(db, { action: "crm_lead_convert", target: `${leadId}->${oppId}`, result: "allowed", actorKind: session.role, actorId: session.identityId });
-      await audit(db, { action: "crm_opportunity_create", target: oppId, result: "allowed", actorKind: session.role, actorId: session.identityId });
-
+      await audit(client, { action: "crm_lead_convert", target: `${leadId}->${oppId}`, result: "allowed", actorKind: session.role, actorId: session.identityId });
+      await audit(client, { action: "crm_opportunity_create", target: oppId, result: "allowed", actorKind: session.role, actorId: session.identityId });
+      await client.query("COMMIT");
       return ctx.json(res, 201, { opportunityId: oppId, companyId: finalCompanyId, contactId, converted: true });
     } catch (e) {
+      await client.query("ROLLBACK").catch(() => {});
       console.error("crm lead convert failed", e?.message);
       return ctx.json(res, 503, { error: "convert_failed" });
+    } finally {
+      client.release();
     }
   }
 
