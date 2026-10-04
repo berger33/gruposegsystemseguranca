@@ -2,7 +2,7 @@
 
 ## Atualização corrente — F03 contas → baixa → relatório
 
-- Base `a0815cfcfd7df17f30dce2e99ab744a36c3f341a`, branch `arena/01a10845-gruposegsystemseguranca`, implementação `23910567a2a329dc4f46c4aae6cf740c9d4888aa`, PR [#132](https://github.com/berger33/gruposegsystemseguranca/pull/132); documentação `8e7d84230fded1fcac9a256f5d1752e402f49b5a`. Migração 159 aditiva; próxima livre 160.
+- Base `a0815cfcfd7df17f30dce2e99ab744a36c3f341a`, branch `arena/01a10845-gruposegsystemseguranca`, implementação `23910567a2a329dc4f46c4aae6cf740c9d4888aa`, PR [#132](https://github.com/berger33/gruposegsystemseguranca/pull/132) **integrada pelo merge normal `b63a51e6e2af200b0ac93370dbe629f631dec718` após 14/14 checks publicados verdes**; documentação `8e7d84230fded1fcac9a256f5d1752e402f49b5a`. Migração 159 aditiva; próxima livre 160.
 - Entregue o quarto fluxo automatizado sobre fontes FIN-01..04: leitura e baixa por conta com `financeiro.*` fail-closed, transição estrita, idempotência, locks, transação, histórico/auditoria e relatório interno imutável. Escrita dos aliases HR retorna 410; sem simular banco/SMTP/entrega.
 - Provas: gate focal 1/1; Wave0 5/5; typecheck; unitários 526/526; L07 43/43; L08 51/51; client-space 22/22; client-access 27/27; F03 #126/#127/#129 1/1; demo-local OK.
 - Próximo passo: revisão/aceite humano e prova Windows/EPERM. **Não marcar F03 concluída antes desses dois gates.** Depois, seguir EXT-08/F04 em fatia separada.
