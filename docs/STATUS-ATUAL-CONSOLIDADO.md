@@ -1,5 +1,19 @@
 # Status atual consolidado — reconciliação F00 + F01 + jornadas F03
 
+## Atualização F03 — contas → baixa → relatório (quarta e última jornada)
+
+**Base confirmada:** `origin/main` `a0815cfcfd7df17f30dce2e99ab744a36c3f341a` (merge da PR #129, conferido por `git fetch origin main`); **branch fixa:** `arena/01a1081d-gruposegsystemseguranca`; **commits:** `eb2264c` (documental absorvido) e `b30095f` (implementação), mais a documentação desta seção; **PR:** [#130](https://github.com/berger33/gruposegsystemseguranca/pull/130). #126, #127 e #129 permanecem integradas e não devem ser recriadas nem remescladas.
+
+A migração aditiva **159** (`159-f03-receivable-settlement-report.sql`) adiciona chave/impressão de idempotência canônica a `fin_accounts_receivable`, cria a trilha append-only `fin_receivable_settlements` (valor, status e pago anterior/posterior, método, autor, motivo 10–1000, chave única por conta) e o recibo imutável `fin_receivable_report_emissions` (protocolo `REL-FIN-AAAAMMDD-XXXX`, competência, escopo de contas, totais com `total_open = total_receivable - total_settled`, `payload_sha256`), com triggers que recusam UPDATE/DELETE nas duas trilhas e ampliação do CHECK de `auth_access_audit` (`receivable_open`, `receivable_settle`, `receivable_report_emit`); 001–158 imutáveis. Manifesto PG, Wave 0, asserção EXT-07 e relatório de evidência passam ao ledger **001–159** (próxima livre: 160).
+
+A rota canônica `GET|POST|PATCH /api/admin/finance/l07/receivables` e `GET|POST /api/admin/finance/l07/receivables/report` exige mesma origem, sessão individual e `hasPermission()` server-side (`finance.receivables.read|write|settle`, `finance.reports.read`) com recorte real por conta — o rótulo `financeiro` sozinho recebe 403. Cada escrita usa `Idempotency-Key`, `pg_advisory_xact_lock`, `FOR UPDATE` e `UPDATE ... WHERE status`, com replay 200, divergência 409, baixa acima do saldo 409 (`remainingCents`) e pagamento/histórico/trilha/auditoria na mesma transação; falha de auditoria devolve 503 `audit_unavailable` com rollback total. A escrita legada `PATCH /api/fin/receivables` responde **410** `legacy_fin_receivable_status_write_retired` após as guardas de sessão, impedindo quitar conta sem pagamento, escopo, idempotência ou trilha.
+
+**Evidência atual:** `npm run test:f03-contas-baixa-relatorio:pg` (**1/1**, PG17 descartável + HTTP + Chromium + seed `seg_demo_local`), `node scripts/qa-wave0-static.mjs` (**5/5**, 001–159), `npm run typecheck`, `npm test` (**526/526**), `npm run test:migrations:pg` (159/159 checksums, 565 tabelas), `npm run test:l07-delivery:pg` (**43/43**), `npm run test:l08-delivery:pg` (**51/51**), client-space (**22/22**), `npm run test:client-access:pg` (**27/27**), gates F03 das PRs #126/#127/#129 (**1/1** cada), `npm run test:demo-local:pg` (OK), `git diff --check` e `node --check`.
+
+**Falhas reais e correção, sem enfraquecer asserções:** a espera por `[data-testid="f03fin-list"]` era inútil (um `<ul>` vazio nunca fica visível no Playwright) e foi trocada pela espera da resposta HTTP da competência; a UI revelou um defeito real — sem ticket de ordem, a resposta atrasada da competência padrão sobrescrevia a lista correta e mostrava vazio divergente do banco, corrigido com `readOrder` em `ReceivableJourneyWorkspace.tsx`; a 16ª aba financeira estourava o viewport e criava rolagem horizontal, corrigida com `flexWrap:"wrap"` em vez de relaxar a asserção.
+
+Com esta fatia, **as quatro jornadas de F03 estão provadas localmente**, mas F03 **não está concluída**: aceite humano por papel e homologação Windows/EPERM continuam pendentes. Sem dados reais, segredos em git/logs, SMTP, banco bancário, eSocial, assinatura externa, hosting permanente ou IA externa.
+
 ## Atualização F03 — cliente → chamado → atendimento → aceite
 
 **Base confirmada:** `origin/main` `a459e07d42a855f93af4d76d047b49f3ff5e204e` (merge da PR #127, conferido por `git fetch origin main`); **branch fixa:** `arena/01a107a9-gruposegsystemseguranca`; **commits:** `3c7e9ab1da469b94d7cf383491f9240df30a8b6e` (implementação) e documentação desta seção; **PR:** [#129](https://github.com/berger33/gruposegsystemseguranca/pull/129), **integrada pelo merge normal `a0815cfcfd7df17f30dce2e99ab744a36c3f341a`** (14 checks publicados verdes antes do merge). #126, #127 e #129 estão integradas e não devem ser recriadas nem remescladas.
@@ -53,7 +67,10 @@ Este documento é o inventário único de trabalho exigido pela etapa F00 do [pl
 
 | PR | Tema | Classificação | Razão |
 |---|---|---|---|
-| #126 | F03 — lead até implantação | **em validação nesta branch** | primeira jornada sobre `origin/main` `972e656`; implementação `c1a557f`, gate HTTP/PG/Chromium, sem migração nova |
+| #130 | F03 — contas → baixa → relatório (última jornada) | **em validação nesta branch** | quarta jornada sobre `origin/main` `a0815cf`; implementação `b30095f` + documental absorvido `eb2264c`; migração aditiva 159, rota canônica financeira, 410 do legado e gate HTTP/PG/Chromium |
+| #129 | F03 — cliente → chamado → atendimento → aceite | **integrada** | merge `a0815cf`; migração 158, fila canônica CLI e 410 da escrita legada |
+| #127 | F03 — funcionário → solicitação → RH → retorno | **integrada** | merge `a459e07`; migração 157 e 410 da escrita EMP-12 legada |
+| #126 | F03 — lead até implantação | **integrada** | primeira jornada sobre `origin/main` `972e656`; implementação `c1a557f`, gate HTTP/PG/Chromium, sem migração nova; merge `7a41837` |
 | #125 | F01 — gate nas 28 páginas administrativas restantes | **integrada** | reaplicou o escopo válido da #124 sobre o main pós-#123; sem API/migração nova; merge `972e656` |
 | #124 | F01 — gate nas páginas administrativas restantes | fechada como superseded | diff correto como envelope, mas base antiga e `CONFLICTING`/`DIRTY`; checks conferidos e trabalho preservado na #125 |
 | #121 | docs/auditoria-2026-10-04 (instruções Arena) | fechada sem merge próprio | conteúdo incorporado, reconciliado e integrado pela #122 |
