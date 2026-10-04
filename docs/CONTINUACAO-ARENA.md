@@ -1,3 +1,18 @@
+# Continuidade Arena — 2026-10-04 (F06 / EXT-10 — validação PostgreSQL)
+
+## Incremento 12 — prova focal da continuidade canônica
+
+- Reconciliação desta sessão: `gh pr view 135` confirmou PR **MERGED** com merge commit real `cf3a1f4c580f44b92969a61548eec8d304e9c005`; o commit tem como pais o ponto anterior `58e213a11ccae35fc2f21002c9e1dda6b87bc333` e `9396d03f0ff1cc7064ed3675525f2387d0718a4c`. `origin/main`, `main` local e a branch fixa apontam para `cf3a1f4c580f44b92969a61548eec8d304e9c005`; o checkout iniciou sem alterações locais inesperadas.
+- Entrega desta fatia: commit de implementação `6d6ad1389c2554fbd5586081342f3dd5150ba294`, branch publicada e PR **#136** aberta para revisão: https://github.com/berger33/gruposegsystemseguranca/pull/136. Nenhum merge automático foi feito.
+- PRs #126, #127, #129, #132, #133 e #134 estão `MERGED` no GitHub e não foram recriadas, reabertas ou remescladas.
+- Branch de trabalho: `arena/01a108ea-gruposegsystemseguranca`. O ledger vigente é **001–163**, todos imutáveis nesta sessão; a próxima migração livre é **164**. Não foram aplicadas migrações no computador do operador e não foi criada a 164.
+- Implementação revisada: `db/migrations/162-ext10-continuity-canonical-journey.sql`, `src/server/ext-continuity-api.mjs`, dispatcher em `server.mjs` e UI `/admin/continuidade`. A correção desta fatia é somente na API: transições `arquivado`/`rascunho` usam a ação de auditoria já permitida `continuity_plan_update`, pois a migração 162 não adiciona ações dinâmicas para esses dois estados. A migração 162 não foi alterada.
+- Bateria criada: `tests/ext10-continuity.integration.test.mjs` e `scripts/qa-ext10-continuity-postgres.mjs`; estados materiais nascem por HTTP. SQL do gate prepara apenas cluster, identidades staff fictícias, credenciais, grants e controles de falha. O gate usa PostgreSQL 17 descartável, servidor HTTP real, três sessões staff fictícias, Chromium real, concorrência e reinício do servidor.
+- Cobertura comprovada: RBAC fail-closed, same-origin, sessões/autoria distintas, post IDs e contatos internos, máquina de estados, replay/conflito SHA-256, advisory lock, `FOR UPDATE`, concorrência, eventos append-only, auditoria transacional com rollback/503, legado 410, UI protegida e persistência após reinício. Acionamentos e exercícios são registros internos; não há SMTP, telefonia, gateway ou fornecedor externo.
+- Evidência: `npm run test:ext10-continuity:pg` **17/17**, sem skip/todo/fail; migrações 001–163 foram aplicadas no cluster descartável. `tests/ext10-continuity.test.mjs` **9/9**, `npm test` **564/564**, `npm run typecheck`, `npm run build` (**98 páginas**), `npm run test:migrations:pg` (**163/163**), `git diff --check` e `node --check` passaram. `npm ci` reparou as dependências do embedded PostgreSQL; o gate não usou banco remoto.
+- Limites honestos: isto prova a jornada interna de staff, não aceite humano, Windows/EPERM, banco de destino, contatos realmente notificados, ator externo, cliente autenticado ou isolamento por `client_account_id`. A tabela base tem referência de cliente, mas a API canônica exercitada nesta fatia recebe `post_id` e não implementa um portal/escopo de cliente; isso permanece pendente e não foi contado como cobertura.
+- Próximo passo concreto: manter a entrega pequena em PR separada para esta validação/correção, sem merge automático; depois tratar a próxima lacuna priorizada somente após revisão, mantendo a migração livre 164 reservada.
+
 # Continuidade Arena — 2026-10-04 (F07 / EXT-11)
 
 ## Incremento 11 — EXT-11 / F07 Analytics e experimentos A/B controlados
@@ -9,13 +24,12 @@
 - Escrita legada `/api/ext/analytics-experiments` recebe HTTP 410 após as guardas; não há tráfego, conversão, vencedor, significância estatística, integração externa ou dado inventado. A UI `/admin/analytics` usa `AdminGate` e informa quando faltam dados.
 - Evidência: `npm ci` reparou as dependências e disponibilizou `libpq.so.5` no pacote embedded; Wave0 5/5, `npm run typecheck` OK, `npm test` 555/555, `npm run build` 98 páginas, unitário EXT-11 10/10, `npm run test:ext11-analytics:pg` 18/18, `npm run test:migrations:pg` 163/163 e `npm run test:ext07-compliance:pg` 43/43 passaram; `git diff --check`/`node --check` verdes. Os gates PG usaram clusters descartáveis, HTTP real e sessões staff reais. Aceite humano e Windows/EPERM seguem fora do gate técnico.
 
-## Incremento 10 — Continuidade de Negócios e Contingência
+## Incremento 10 — Continuidade de Negócios e Contingência (histórico da implementação)
 
-- Base: `origin/main` `7c30993352a306d8dd8767d8599b037954d124f7`; branch fixa `arena/01a108ab-gruposegsystemseguranca`. PRs #126, #127, #129, #132 e #133 permanecem integradas e não foram recriadas.
-- Migração aditiva **162** (`162-ext10-continuity-canonical-journey.sql`): eventos imutáveis, fingerprint SHA-256, idempotência por titular, permissões `continuity.read/write/activate` e ações de auditoria. 001–161 preservadas; próxima livre 163.
-- API canônica: `GET/POST /api/ext/continuity/plans`, detalhe, `POST /plans/:id/transition` e `POST /plans/:id/exercises`. Mutação HTTP real, same-origin, RBAC fail-closed, advisory lock + `FOR UPDATE`, auditoria transacional com 503/rollback. Acionamento é registro interno honesto; não há SMTP, telefonia ou gateway externo.
-- UI protegida por AdminGate em `/admin/continuidade`, com planos, responsáveis, passos de contingência/recuperação e trilha de simulados.
-- Validação prevista/executada nesta fatia: Wave0 5/5, typecheck, unitários, gate PG17 descartável EXT-10, migrações 162/162 e regressões canônicas. Aceite humano e Windows/EPERM continuam pendentes.
+- Base histórica: `origin/main` `7c30993352a306d8dd8767d8599b037954d124f7`; branch anterior `arena/01a108ab-gruposegsystemseguranca`. A validação final desta fatia está registrada no Incremento 12 sobre o main atualizado e não recria nenhuma PR anterior.
+- Migração aditiva **162** (`162-ext10-continuity-canonical-journey.sql`) preservada: eventos imutáveis, fingerprint SHA-256, idempotência por titular, permissões `continuity.read/write/activate` e ações de auditoria. O ledger vigente agora é 001–163; a próxima livre é 164.
+- API canônica e UI permanecem as descritas: planos, detalhe, transição e exercícios em `/api/ext/continuity/*`, com `/admin/continuidade` protegido por `AdminGate`. Acionamento é registro interno; não há SMTP, telefonia ou gateway externo.
+- A execução real do gate, inclusive Chromium e reinício, ocorreu posteriormente e está descrita no Incremento 12; aceite humano, Windows/EPERM, cliente/ator externo e banco de destino continuam pendentes.
 
 # Continuidade Arena — 2026-10-04 (F01 cobertura + F03 + F04 / EXT-08 + F05 / EXT-09)
 
