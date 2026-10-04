@@ -9,8 +9,19 @@ export function createExtAdvancedApi({ pool, auditLog, sameOrigin, requireSessio
     const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
-      const { rows } = await pool.query(`SELECT * FROM ext_compliance_documents ORDER BY expiry_date ASC LIMIT 200`);
-      return json(res,200,{items:rows, note:'vencimento gera tarefa e documento privado'});
+      // Leitura legada autorizada com projeção minimizada: sem storage_key,
+      // sem URL privada e sem número documental completo. O alias `items` é
+      // preservado para o cliente legado.
+      const { rows } = await pool.query(`SELECT id, protocol, title, compliance_type, status,
+          obligation_id, origin, issue_date, expiry_date, version_no, is_private, created_at,
+          CASE WHEN document_number IS NULL THEN NULL
+               WHEN char_length(document_number) <= 4 THEN '***'
+               ELSE '***' || right(document_number, 4) END AS document_number_masked
+        FROM ext_compliance_documents ORDER BY expiry_date ASC LIMIT 200`);
+      return json(res,200,{items:rows, projection:'minimizada',
+        canonical:'/api/ext/compliance/*',
+        file_boundary:'referencia_declarada_nao_arquivo_verificado',
+        note:'vencimento gera tarefa e documento privado'});
     }
     if(req.method==='POST'){
       const b=await readJson(req);

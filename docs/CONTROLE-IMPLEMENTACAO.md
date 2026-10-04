@@ -778,3 +778,7 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 
 ## EXT-07 — Compliance (migração 153)
 A fonte canônica é `ext_compliance_documents`, endurecida aditivamente; registros 086 permanecem `registro_legado`. A obrigação aplicável vive em `ext_compliance_obligations` e a tarefa não reutiliza CRM/RH: `ext_compliance_tasks` impõe vínculo, regra, fatos, responsável e unicidade. Eventos e idempotência são transacionais com `audit_log`; falha de auditoria retorna 503 e faz rollback. Referência é privada e declarada, não arquivo verificado.
+
+## EXT-07 — Compliance, endurecimento (migração 154)
+Estado: implementado e verificado por HTTP e PostgreSQL reais (`npm run test:ext07-compliance:pg`, 18 casos focais e 71 casos de jornada, 0 fail/skip/todo).
+A 153 entregou a API sem registrá-la em `API_PATH_MATCH`: o prefixo `/api/ext/compliance/` caía no Next e devolvia 404 HTML, de modo que nenhuma rota canônica existia em execução. A 154 (aditiva, sem alterar 001–153) corrige a unicidade de versão atual da 153 — que, ao filtrar `replacement_of IS NULL`, tornava a renovação impossível —, adiciona `superseded_by`/`superseded_at`/`version_root`/`renewal_justification`, bloqueia ciclo e autorreferência, recusa `vigente` com validade vencida, impede rebaixar privacidade, veda `storage_key`/`file_url`/`file_name` em linha canônica, exige responsável e fatos na tarefa e registra a rota de origem da chave de idempotência. Pendência explícita: não há execução agendada contínua; o monitoramento depende da avaliação administrativa.

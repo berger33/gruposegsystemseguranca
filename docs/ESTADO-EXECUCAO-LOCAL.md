@@ -1243,3 +1243,10 @@ Implementada na migração 152 sobre a fonte CLI-11, sem seed e sem copiar `ext_
 
 ## EXT-07 (2026-10-03)
 A base da sessão é o merge da PR #101 (`efc74bacb7a23314db1d267d91438519dc342a8c`), sem divergência inicial. A implementação aditiva 153 preserva linhas 086 como `registro_legado`; a comprovação documental é referência privada declarada, sem bytes/arquivo verificado. Gate dedicado EXT-07 foi criado; validação PostgreSQL completa e aplicação em destino permanecem pendentes quando o ambiente não fornece o cluster descartável.
+
+## EXT-07 — endurecimento (2026-10-04)
+A base da sessão é o merge da PR #103 (`eff0bbddb5d5681d2612010e4349cfb9ff61234b`), confirmado por execução, com `HEAD` igual a `origin/main`, divergência 0/0 e árvore limpa; última migração real na base: 153. O probe em cluster descartável, antes de qualquer edição, reproduziu a lacuna decisiva: a API canônica da 153 nunca foi roteada — `API_PATH_MATCH` não incluía `/api/ext/compliance/`, de modo que todas as rotas respondiam 404 HTML do Next e nada da jornada existia em execução. A 154 é aditiva e corrige também a unicidade de versão atual da 153, que impedia renovação.
+
+Resultados locais desta sessão: `node scripts/qa-wave0-static.mjs` 5/5 com 001–154; `npm run typecheck` sem erro; `node --test tests/ext07-compliance.test.mjs` 18/18; `npm test` 456/456; `npm run build` com 92 páginas e `/admin/compliance` presente; `npm run test:migrations:pg` com 154/154 checksums em duas passagens, rejeição de clone adulterado e restauração; `npm run test:ext07-compliance:pg` com 71 casos aprovados (mínimo exigido 50) e 0 fail/skip/todo; `npm run test:ext06-satisfaction:pg` 36/36; `npm run test:ext05-quality:pg` 33/33; `npm run test:staff-auth:pg` 21/21.
+
+Pendências declaradas: não há execução agendada contínua de vencimentos; a avaliação temporal é administrativa e explícita. Não houve aplicação em ambiente de destino, homologação Windows nem aceite humano. Permanece o defeito pré-existente de EXT-10 em `/api/ext/continuity-plans`, fora do escopo desta entrega.

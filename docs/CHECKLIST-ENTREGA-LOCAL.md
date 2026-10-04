@@ -1701,3 +1701,19 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 - [x] Tarefa canônica definida: `ext_compliance_tasks`, com unicidade por documento/período/regra.
 - [x] Critério estrutural: documento privado e avaliação temporal idempotente.
 - [ ] Gate PostgreSQL real e homologação permanecem pendentes até execução do ambiente dedicado.
+
+### EXT-07 — endurecimento, sessão 2026-10-04 (migração 154)
+- [x] Base confirmada por execução: PR #103 `MERGED`, merge `eff0bbddb5d5681d2612010e4349cfb9ff61234b`, feature `3cf218d949e3ce04fe49e82ce2dcd1ca6b874584`, árvore limpa, divergência 0/0.
+- [x] Lacuna crítica reproduzida antes de editar: `/api/ext/compliance/*` respondia 404 HTML do Next porque o prefixo não estava em `API_PATH_MATCH`; a API da 153 era código morto.
+- [x] Gate probatório real: PostgreSQL 17 descartável, migrações 001–154, servidor HTTP real, sessão staff real, fixtures `.invalid`; 71 casos aprovados, mínimo exigido 50, 0 fail/skip/todo.
+- [x] 401 versus 403, same-origin apenas em mutação, JSON inválido 400, corpo grande 413, UUID inválido 400 — provados por HTTP.
+- [x] Autoria da sessão, IDs/estado/datas forjados ignorados, responsável staff canônico ativo exigido.
+- [x] Validade: vencimento anterior à emissão e ao início recusados; `vigente` com validade vencida recusado por API e por PostgreSQL; relógio do cliente recusado.
+- [x] Privacidade: `is_private` estrutural, listagem minimizada sem `storage_key`/URL/número completo, detalhe por allowlist, leitor legado também minimizado, nenhuma rota pública.
+- [x] Renovação cria nova versão com vínculo, justificativa e histórico preservado; documento substituído não é renovado de novo; uma única versão atual por obrigação.
+- [x] Tarefa: única por documento/período/regra, com regra, data-base e fatos; fail-closed sem responsável; conclusão exige resultado; cancelamento exige justificativa; terminal não reabre.
+- [x] Falha de `audit_log` faz rollback com 503, sem resíduo e sem consumir a chave de idempotência.
+- [x] Não regressão EXT-08..12 e EXT-06 verificadas.
+- [ ] Execução agendada contínua de vencimentos permanece não implementada: o monitoramento depende da avaliação administrativa explícita.
+- [ ] Defeito pré-existente fora do escopo: `/api/ext/continuity-plans` (EXT-10) consulta `ca.name` em `client_accounts`, que declara `display_name`; já falhava em `origin/main` e não foi corrigido aqui.
+- [ ] Homologação Windows e aceite humano não foram executados e não são declarados.

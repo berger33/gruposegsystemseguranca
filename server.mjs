@@ -5790,6 +5790,9 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/crm/hr/ext-satisfaction-surveys"
   || pathname === "/api/hr/ext-satisfaction-surveys"
   || pathname === "/api/ext/satisfaction-surveys"
+  // EXT-07 canônica: o prefixo precisa ser roteado para o handler Node,
+  // caso contrário /api/ext/compliance/* cai no Next e responde 404 HTML.
+  || pathname.startsWith("/api/ext/compliance/")
   || pathname === "/api/admin/hr/ext-compliance-documents"
   || pathname === "/api/crm/hr/ext-compliance-documents"
   || pathname === "/api/hr/ext-compliance-documents"
