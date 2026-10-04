@@ -2,12 +2,13 @@
 // QA-HOM-008/009: isolated persistent preview and cold snapshot integration.
 // Creates exclusively owned mkdtemp paths, removes ONLY those paths after stop.
 import { spawn } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { chmod, mkdtemp, readFile, readdir, rm, rmdir, stat } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import pg from 'pg';
+import { seedFreshDemo } from './local-demo-seed.mjs';
 
 if (process.argv.length !== 2 || ['DATABASE_URL','DATABASE_MIGRATION_URL','CLIENT_DOCS_DIR','MAIL_HOST','SEG_DEMO_TEST_DIR'].some(k => process.env[k])) {
   console.error('QA-HOM-008_REFUSED: no operator database, documents, SMTP or alternate data dir allowed'); process.exit(2);
@@ -88,22 +89,67 @@ try {
   }
   const url = `postgresql://seg_demo:${encodeURIComponent(cfg.pgPassword)}@127.0.0.1:${cfg.pgPort}/seg_demo_local`;
   pool = new pg.Pool({ connectionString: url, max: 2 });
+  // The seeder refuses missing capability and another installation before replay.
+  await seedFreshDemo(pool, cfg.installationId).then(
+    () => { throw new Error('demo_seed_missing_capability_accepted'); },
+    error => { if (!String(error.message).includes('authorization_refused')) throw error; },
+  );
+  await seedFreshDemo(pool, randomUUID(), {
+    mode: 'isolated-local-demo', databaseName: 'seg_demo_local',
+  }).then(
+    () => { throw new Error('demo_seed_wrong_installation_accepted'); },
+    error => { if (!String(error.message).includes('marker_mismatch')) throw error; },
+  );
+  // Replay F03 must not rotate credentials or duplicate any business row.
+  const replay = await seedFreshDemo(pool, cfg.installationId, {
+    mode: 'isolated-local-demo', databaseName: 'seg_demo_local',
+  });
+  if (!replay.replay || replay.credentials.length !== 0) throw new Error('demo_seed_replay_not_noop');
   const { rows:[before] } = await pool.query(`SELECT
     (SELECT count(*)::int FROM __migrations) AS migrations,
     (SELECT count(*)::int FROM auth_identities WHERE kind='staff') AS staff,
     (SELECT count(*)::int FROM auth_identities WHERE kind='client') AS clients,
+    (SELECT count(*)::int FROM auth_identities WHERE kind='employee') AS employee_identities,
     (SELECT count(*)::int FROM client_accounts) AS accounts,
-    (SELECT count(*)::int FROM client_contracts) AS contracts`);
+    (SELECT count(*)::int FROM client_contracts) AS contracts,
+    (SELECT count(*)::int FROM client_access_grants WHERE revoked_at IS NULL) AS grants,
+    (SELECT count(*)::int FROM hr_employees) AS employees,
+    (SELECT count(*)::int FROM auth_employee_access) AS employee_access,
+    (SELECT count(*)::int FROM auth_permissions WHERE permission='employees.self_service' AND revoked_at IS NULL) AS employee_permissions,
+    (SELECT count(*)::int FROM audit_log WHERE action='demo_f03_seed') AS seed_audit`);
   // A contagem de migrações vem do disco: fixá-la como literal só cria um
-  // segundo lugar para esquecer de atualizar (aconteceu em 099 e 100).
-  // As demais contagens são a semente da demo e continuam explícitas.
+  // segundo lugar para esquecer de atualizar. As demais contagens descrevem
+  // explicitamente a massa sintética F03 e também provam replay sem duplicação.
   const expectedMigrations = (await readdir(path.join(root,'db/migrations'))).filter(f => /^\d{3}-.*\.sql$/.test(f)).length;
-  if (JSON.stringify(before) !== JSON.stringify({ migrations:expectedMigrations,staff:3,clients:0,accounts:2,contracts:1 })) {
-    throw new Error(`demo_seed_counts_mismatch: ${JSON.stringify(before)} != ${JSON.stringify({ migrations:expectedMigrations,staff:3,clients:0,accounts:2,contracts:1 })}`);
+  const expectedSeed = { migrations:expectedMigrations,staff:7,clients:2,employee_identities:1,
+    accounts:2,contracts:2,grants:2,employees:1,employee_access:1,employee_permissions:1,seed_audit:1 };
+  if (JSON.stringify(before) !== JSON.stringify(expectedSeed)) {
+    throw new Error(`demo_seed_counts_mismatch: ${JSON.stringify(before)} != ${JSON.stringify(expectedSeed)}`);
   }
+  console.log('F03_SEED_REPLAY: no-op; credentials unchanged; 7 staff, clients A/B and employee isolated');
   expect(await request('/api/client/accounts'), 401, 'ANON_DENIED');
   const tiLogin = await request('/api/admin/session', { email:ti[1], password:ti[2] });
   expect(tiLogin, 200, 'TI_INDIVIDUAL_LOGIN');
+  const seededA = firstLog.match(/CLIENTE_A: (\S+) \/ (\S+)/);
+  const seededB = firstLog.match(/CLIENTE_B: (\S+) \/ (\S+)/);
+  const seededEmployee = firstLog.match(/FUNCIONARIO: (\S+) \/ (\S+)/);
+  if (!seededA || !seededB || !seededEmployee) throw new Error('demo_f03_credentials_missing');
+  const loginA = await request('/api/auth/login', { email:seededA[1], password:seededA[2] });
+  const loginB = await request('/api/auth/login', { email:seededB[1], password:seededB[2] });
+  expect(loginA, 200, 'F03_CLIENT_A_LOGIN'); expect(loginB, 200, 'F03_CLIENT_B_LOGIN');
+  const visibleA = await request('/api/client/accounts', undefined, loginA.cookie);
+  const visibleB = await request('/api/client/accounts', undefined, loginB.cookie);
+  expect(visibleA, 200, 'F03_CLIENT_A_SCOPE'); expect(visibleB, 200, 'F03_CLIENT_B_SCOPE');
+  if (visibleA.data.accounts?.length !== 1 || !visibleA.data.accounts[0].display_name.includes('Empresa A') ||
+      visibleB.data.accounts?.length !== 1 || !visibleB.data.accounts[0].display_name.includes('Empresa B') ||
+      visibleA.data.accounts[0].id === visibleB.data.accounts[0].id) throw new Error('demo_f03_client_scope_leak');
+  const employeeLogin = await request('/api/employee/session', {
+    email:seededEmployee[1], password:seededEmployee[2],
+  });
+  expect(employeeLogin, 200, 'F03_EMPLOYEE_LOGIN');
+  const employeeMe = await request('/api/employee/me', undefined, employeeLogin.cookie);
+  expect(employeeMe, 200, 'F03_EMPLOYEE_OWN_PROFILE');
+  if (employeeMe.data.employee?.display_name !== 'Funcionário Fictício F03') throw new Error('demo_f03_employee_scope_mismatch');
   const realDomain = await request('/api/admin/invites', { email:'pessoa@empresa.com.br' }, tiLogin.cookie);
   expect(realDomain, 400, 'REAL_ADDRESS_REFUSED');
   if (realDomain.data.error !== 'demo_synthetic_address_required' || realDomain.data.inviteUrl) {
@@ -205,7 +251,7 @@ try {
     (SELECT count(*)::int FROM auth_identities WHERE kind='staff') AS staff,
     (SELECT count(*)::int FROM client_manual_verifications WHERE identity_id=$1) AS reviews,
     (SELECT count(*)::int FROM seg_demo_bootstrap WHERE installation_id=$2) AS marker`,[identity.id,cfg.installationId]);
-  if (JSON.stringify(after) !== JSON.stringify({ mutated:1,grants:1,staff:3,reviews:1,marker:1 })) throw new Error('demo_restart_lost_data');
+  if (JSON.stringify(after) !== JSON.stringify({ mutated:1,grants:1,staff:7,reviews:1,marker:1 })) throw new Error('demo_restart_lost_data');
   expect(await request('/api/client/accounts', undefined, clientLogin.cookie), 200, 'CLIENT_SESSION_AFTER_RESTART');
   console.log('QA-HOM-008_RESTART: synthetic data, scope, review and stable session secret persisted; no credential replay');
   await pool.end(); pool = undefined; await stop();

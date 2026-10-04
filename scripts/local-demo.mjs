@@ -15,7 +15,7 @@ const action = process.argv[2];
 const qa = process.env.SEG_DEMO_TEST_MODE === '1';
 const forbidden = ['DATABASE_URL','DATABASE_MIGRATION_URL','ALLOW_REMOTE_MIGRATIONS','QA_PGLITE_ONLY',
   'CLIENT_DOCS_DIR','PGLITE_DATA_DIR','PGHOST','PGSERVICE','MAIL_HOST','MAIL_USER','MAIL_PASSWORD',
-  'SITE_ADMIN_SESSION_SECRET','SITE_ADMIN_TOKEN_TI','SITE_ADMIN_TOKEN_MARCELO','CLIENT_MFA_ENCRYPTION_KEY',
+  'SITE_ADMIN_SESSION_SECRET','EMPLOYEE_SESSION_SECRET','SITE_ADMIN_TOKEN_TI','SITE_ADMIN_TOKEN_MARCELO','CLIENT_MFA_ENCRYPTION_KEY',
   'OLLAMA_HOST','PUBLIC_BASE_URL','TRUST_PROXY'];
 const base = process.platform === 'win32'
   ? process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'GrupoSEG')
@@ -28,7 +28,7 @@ let engine, pool, web, lockFile, lockOwned = false, stopping = false;
 function fail(code) { throw new Error(code); }
 function redact(message, config) {
   let text = String(message);
-  for (const secret of [config?.pgPassword, config?.sessionSecret, config?.mfaKey]) {
+  for (const secret of [config?.pgPassword, config?.sessionSecret, config?.employeeSessionSecret, config?.mfaKey]) {
     if (secret) text = text.replaceAll(secret, '[redacted]');
   }
   return text.slice(0, 450);
@@ -89,6 +89,7 @@ async function initialiseDirectory() {
     format: 'seg-local-demo-v1', installationId: randomUUID(), pgPort: await freePort(),
     pgPassword: randomBytes(32).toString('base64url'),
     sessionSecret: randomBytes(32).toString('base64url'),
+    employeeSessionSecret: randomBytes(32).toString('base64url'),
     mfaKey: randomBytes(32).toString('base64url'),
   };
   await writeFile(path.join(demoDir, 'config.json'), JSON.stringify(config), { flag: 'wx', mode: 0o600 });
@@ -105,7 +106,8 @@ async function loadDirectory() {
   const cfg = JSON.parse(await readFile(configPath, 'utf8'));
   if (cfg.format !== 'seg-local-demo-v1' || !uuid(cfg.installationId) ||
       !Number.isInteger(cfg.pgPort) || cfg.pgPort < 1024 || cfg.pgPort > 65535 ||
-      [cfg.pgPassword,cfg.sessionSecret,cfg.mfaKey].some(v => typeof v !== 'string' || v.length < 32)) {
+      [cfg.pgPassword,cfg.sessionSecret,cfg.employeeSessionSecret,cfg.mfaKey]
+        .some(v => typeof v !== 'string' || v.length < 32)) {
     fail('demo_config_invalid');
   }
   for (const folder of ['pgdata', 'documents']) {
@@ -132,6 +134,7 @@ function environment(cfg) {
     PUBLIC_BASE_URL: `http://127.0.0.1:${webPort}`, NODE_ENV: 'development',
     NEXT_TELEMETRY_DISABLED: '1', NEXT_PUBLIC_ALLOW_INDEX: 'false', NEXT_PUBLIC_ENV: 'beta',
     QA_HOMOLOGATION_MODE: 'true', SEG_LOCAL_DEMO_ONLY: 'true', SITE_ADMIN_SESSION_SECRET: cfg.sessionSecret,
+    EMPLOYEE_SESSION_SECRET: cfg.employeeSessionSecret,
     SITE_ADMIN_TOKEN_TI: '', SITE_ADMIN_TOKEN_MARCELO: '', CLIENT_MFA_ENCRYPTION_KEY: cfg.mfaKey,
     OLLAMA_ENABLED: 'false', MAIL_HOST: '', CLIENT_DOCS_DIR: path.join(demoDir, 'documents'),
     NEXT_DISABLE_HTTPS: 'true', TRUST_PROXY: 'false' };
@@ -219,7 +222,10 @@ try {
   if (action === '--init') {
     const migrator = childProcess(['scripts/migrate-site-visual.mjs'], { ...env, QA_MIGRATION_ONLY: '' }, config);
     if (await exitOf(migrator) !== 0) fail('demo_migrations_failed_no_automatic_repair');
-    staff = await seedFreshDemo(pool, config.installationId);
+    const seeded = await seedFreshDemo(pool, config.installationId, {
+      mode: 'isolated-local-demo', databaseName,
+    });
+    staff = seeded.credentials;
   }
   await ledgerIsCurrent(pool, config.installationId);
   web = childProcess(['server.mjs','--dev'], env, config);
