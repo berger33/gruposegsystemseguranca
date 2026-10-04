@@ -48,6 +48,7 @@
     "test:l03-delivery:pg": "node scripts/qa-l03-delivery-postgres.mjs",
     "test:l04-delivery:pg": "node scripts/qa-l04-delivery-postgres.mjs",
     "test:l05-delivery:pg": "node scripts/qa-l05-delivery-postgres.mjs",
+    "test:f03-lead-to-implementation:pg": "node scripts/qa-f03-lead-to-implementation-postgres.mjs",
     "test:l06-delivery:pg": "node scripts/qa-l06-delivery-postgres.mjs",
     "test:l07-delivery:pg": "node scripts/qa-l07-delivery-postgres.mjs",
     "test:l08-delivery:pg": "node scripts/qa-l08-delivery-postgres.mjs",

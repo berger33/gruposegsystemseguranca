@@ -144,7 +144,14 @@ export function createContractL05Api({ json, readJson, sameOrigin, getPool, read
     const snapshot = await db.query("SELECT id FROM crm_proposal_versions WHERE proposal_id=$1 AND version=$2", [proposalId, version]);
     if (!snapshot.rows[0]) return { status: 409, error: "proposal_version_not_preserved" };
     const previous = await db.query("SELECT * FROM crm_contracts WHERE proposal_id=$1 AND proposal_version=$2", [proposalId, version]);
-    if (previous.rows[0]) return { status: 200, contract: previous.rows[0], created: false };
+    if (previous.rows[0]) {
+      // Acceptance paths from the legacy proposal/delivery modules may have
+      // already created the minimum contract row. Re-entering the canonical
+      // L05 boundary must still converge the implantation checklist without
+      // creating a second implantation, steps or financial effect.
+      await seedImplantation(db, previous.rows[0], actor);
+      return { status: 200, contract: previous.rows[0], created: false };
+    }
     const id = randomUUID();
     let contract;
     try {
@@ -188,7 +195,7 @@ export function createContractL05Api({ json, readJson, sameOrigin, getPool, read
     const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
     try {
       const rows = await getPool().query(`SELECT c.*, co.display_name AS company_name FROM crm_contracts c LEFT JOIN crm_companies co ON co.id=c.company_id ${where} ORDER BY c.created_at DESC LIMIT 100`, values);
-      return json(res, 200, { contracts: rows.rows });
+      return json(res, 200, { contracts: rows.rows, total: rows.rowCount });
     } catch { return unavailable(res); }
   }
   async function detail(req, res, actor, id) {
@@ -196,14 +203,19 @@ export function createContractL05Api({ json, readJson, sameOrigin, getPool, read
       const db = getPool();
       const contract = await contractForRead(db, id, actor);
       if (!contract) return json(res, 404, { error: "contract_not_found" });
-      const [items, units, responsibles, portal, docs] = await Promise.all([
+      const [items, units, responsibles, portal, docs, implantations] = await Promise.all([
         db.query("SELECT * FROM crm_contract_items WHERE contract_id=$1 ORDER BY created_at", [id]),
         db.query("SELECT cu.*,u.display_name,u.city FROM crm_contract_units cu JOIN crm_company_units u ON u.id=cu.unit_id WHERE cu.contract_id=$1", [id]),
         db.query("SELECT * FROM crm_contract_responsibles WHERE contract_id=$1 ORDER BY is_primary DESC,created_at", [id]),
         db.query("SELECT * FROM crm_contract_portal_links WHERE contract_id=$1", [id]),
         db.query("SELECT d.id,d.category,d.linked_at,cd.id AS client_document_id,cd.title,cd.category AS document_category FROM crm_contract_private_documents d JOIN client_documents cd ON cd.id=d.client_document_id WHERE d.contract_id=$1 ORDER BY d.linked_at DESC", [id]),
+        db.query("SELECT * FROM crm_contract_implantations WHERE contract_id=$1", [id]),
       ]);
-      return json(res, 200, { contract, items: items.rows, units: units.rows, responsibles: responsibles.rows, portal_link: portal.rows[0] || null, documents: docs.rows });
+      const implantation = implantations.rows[0] || null;
+      const steps = implantation
+        ? await db.query("SELECT * FROM crm_implantation_steps WHERE contract_id=$1 ORDER BY created_at,step_id", [id])
+        : { rows: [] };
+      return json(res, 200, { contract, items: items.rows, units: units.rows, responsibles: responsibles.rows, portal_link: portal.rows[0] || null, documents: docs.rows, implantation: implantation ? { ...implantation, checklist: steps.rows } : null });
     } catch { return unavailable(res); }
   }
 
