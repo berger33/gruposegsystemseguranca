@@ -29,10 +29,13 @@ import {
   validateScopeNote,
   validateTicketInput,
   validateTicketReopenReason,
+  validateTicketServiceNote,
   validateVisitInput,
   validateVisitReschedule,
   validateReportInput,
   validateReportNote,
+  isTicketServiceTransitionAllowed,
+  isTicketServiceReopen,
 } from "../lib/client-space-core.mjs";
 import { PUBLIC_SERVICES } from "../lib/service-catalog.mjs";
 
@@ -252,16 +255,26 @@ export function createClientSpaceApi(ctx) {
 
   const LEGACY_TICKET_STATUSES = new Set(["open", "in_progress", "resolved", "closed"]);
 
-  async function clientTicketLifecycleReady(db) {
+  // F03 — três camadas reais de esquema convivem neste repositório:
+  //   legacy     = somente 001–139 (portal CLI-01..05): comportamento preservado;
+  //   canonical  = 140 + 158 aplicados: máquina de estados e idempotência;
+  //   incomplete = 140 sem 158: recusa fechada, nunca silenciosamente relaxada.
+  async function ticketServiceSchemaTier(db) {
     const result = await db.query(
       `SELECT
+         (EXISTS (
+            SELECT 1 FROM information_schema.columns
+             WHERE table_schema = 'public' AND table_name = 'client_tickets' AND column_name = 'reopen_count'
+          ) AND to_regclass('public.client_ticket_sla_pauses') IS NOT NULL) AS lifecycle,
          EXISTS (
            SELECT 1 FROM information_schema.columns
-            WHERE table_schema = 'public' AND table_name = 'client_tickets' AND column_name = 'reopen_count'
-         )
-         AND to_regclass('public.client_ticket_sla_pauses') IS NOT NULL AS ready`,
+            WHERE table_schema = 'public' AND table_name = 'client_ticket_status_audit'
+              AND column_name = 'idempotency_key'
+         ) AS idempotency`,
     );
-    return Boolean(result.rows[0]?.ready);
+    const row = result.rows[0] || {};
+    if (!row.lifecycle) return "legacy";
+    return row.idempotency ? "canonical" : "incomplete";
   }
 
   async function ensureAccountExists(db, res, accountId) {
@@ -824,12 +837,14 @@ export function createClientSpaceApi(ctx) {
       if (!(await requireAccountScope(db, { req, res, session, accountId, action: "report_list" }))) return;
       try {
         const result = await db.query(
-          `SELECT id, client_account_id, contract_id, visit_id, report_type, title, summary,
-                  period_start, period_end, status, review_notes, reviewed_at, approved_at,
-                  sent_at, acknowledged_at, acknowledgement_note, created_at, updated_at
-             FROM client_reports
-            WHERE client_account_id = $1 AND status IN ('approved','sent','acknowledged')
-            ORDER BY COALESCE(period_end, created_at::date) DESC, created_at DESC LIMIT 100`,
+          `SELECT r.id, r.client_account_id, r.contract_id, r.visit_id, r.ticket_id, r.report_type, r.title, r.summary,
+                  r.period_start, r.period_end, r.status, r.review_notes, r.reviewed_at, r.approved_at,
+                  r.sent_at, r.acknowledged_at, r.acknowledgement_note, r.created_at, r.updated_at,
+                  t.title AS ticket_title, t.status AS ticket_status
+             FROM client_reports r
+             LEFT JOIN client_tickets t ON t.id = r.ticket_id AND t.client_account_id = r.client_account_id
+            WHERE r.client_account_id = $1 AND r.status IN ('approved','sent','acknowledged')
+            ORDER BY COALESCE(r.period_end, r.created_at::date) DESC, r.created_at DESC LIMIT 100`,
           [accountId],
         );
         await audit(db, { actorKind: "client", actorId: session.identityId, action: "report_list", target: accountId, result: "allowed" });
@@ -868,7 +883,7 @@ export function createClientSpaceApi(ctx) {
     try {
       client = await db.connect();
       await client.query("BEGIN");
-      const locked = await client.query("SELECT status FROM client_reports WHERE id = $1 FOR UPDATE", [reportId]);
+      const locked = await client.query("SELECT status, report_type, ticket_id FROM client_reports WHERE id = $1 FOR UPDATE", [reportId]);
       const previousStatus = locked.rows[0]?.status;
       if (!previousStatus) {
         await client.query("ROLLBACK");
@@ -879,6 +894,21 @@ export function createClientSpaceApi(ctx) {
         return previousStatus === "acknowledged"
           ? ctx.json(res, 200, { reportId, status: "acknowledged", replayed: true })
           : ctx.json(res, 403, { error: "report_not_published" });
+      }
+      // F03 — o aceite de um relatório de aceite encerra o chamado de origem
+      // na MESMA transação. Se o chamado saiu de "resolvido" (reabertura do
+      // cliente, por exemplo), o aceite é recusado em vez de encerrar algo
+      // que voltou a estar em aberto.
+      const linkedTicketId = locked.rows[0].report_type === "acceptance" ? locked.rows[0].ticket_id : null;
+      let ticketClosure = null;
+      if (linkedTicketId) {
+        const ticket = await client.query("SELECT status FROM client_tickets WHERE id = $1 FOR UPDATE", [linkedTicketId]);
+        const ticketStatus = ticket.rows[0]?.status;
+        if (ticketStatus !== "resolved") {
+          await client.query("ROLLBACK");
+          return ctx.json(res, 409, { error: "ticket_not_resolved_for_acceptance", status: ticketStatus ?? null });
+        }
+        ticketClosure = { ticketId: linkedTicketId, previousStatus: ticketStatus, status: "closed" };
       }
       await client.query(
         `UPDATE client_reports
@@ -893,9 +923,24 @@ export function createClientSpaceApi(ctx) {
          VALUES ($1,$2,'acknowledged','client',$3,$4)`,
         [reportId, previousStatus, session.identityId, note.value],
       );
+      if (ticketClosure) {
+        await client.query(
+          `UPDATE client_tickets
+              SET status = 'closed', closed_at = NOW(), updated_at = NOW()
+            WHERE id = $1`,
+          [ticketClosure.ticketId],
+        );
+        await client.query(
+          `INSERT INTO client_ticket_status_audit
+             (ticket_id, previous_status, next_status, changed_by, changed_by_identity, reason)
+           VALUES ($1,'resolved','closed','client',$2,$3)`,
+          [ticketClosure.ticketId, session.identityId, note.value || "Aceite do relatório registrado pelo cliente"],
+        );
+        await audit(client, { actorKind: "client", actorId: session.identityId, action: "ticket_status", target: ticketClosure.ticketId, result: "allowed" });
+      }
       await audit(client, { actorKind: "client", actorId: session.identityId, action: "report_acknowledge", target: reportId, result: "allowed" });
       await client.query("COMMIT");
-      return ctx.json(res, 200, { reportId, previousStatus, status: "acknowledged", replayed: false });
+      return ctx.json(res, 200, { reportId, previousStatus, status: "acknowledged", replayed: false, ticket: ticketClosure });
     } catch (error) {
       await rollback(client);
       return databaseFailure(res, error, "Could not acknowledge the client report.");
@@ -1428,13 +1473,19 @@ export function createClientSpaceApi(ctx) {
     const reasonText = typeof body?.reason === "string" ? body.reason.trim() : "";
     const reopenReason = validateTicketReopenReason(body?.reopenReason || body?.reason);
     const db = ctx.getPool();
-    let lifecycleReady;
+    let schemaTier;
     try {
-      lifecycleReady = await clientTicketLifecycleReady(db);
+      schemaTier = await ticketServiceSchemaTier(db);
     } catch (error) {
       return databaseFailure(res, error, "Could not verify the client ticket lifecycle schema.");
     }
-    if (!lifecycleReady) {
+    if (schemaTier === "incomplete") return ctx.json(res, 503, { error: "migration_required" });
+    if (schemaTier === "canonical") {
+      return serviceTicketTransition(req, res, {
+        db, session, ticketId, status, body, reasonText, responseText,
+      });
+    }
+    if (schemaTier === "legacy") {
       if (!LEGACY_TICKET_STATUSES.has(status)) return ctx.json(res, 503, { error: "migration_required" });
       let legacyClient;
       try {
@@ -1468,6 +1519,23 @@ export function createClientSpaceApi(ctx) {
         legacyClient?.release();
       }
     }
+    return ctx.json(res, 503, { error: "migration_required" });
+  }
+
+  // F03 — atendimento canônico do chamado pela equipe.
+  // Deny-by-default já foi aplicado pelo chamador (sessão individual marcelo/ti
+  // e mesma origem). Aqui cada comando precisa de chave de idempotência, só
+  // pode seguir a máquina de estados declarada e sempre devolve uma mensagem
+  // ao cliente. "closed" nunca é aceito: encerrar é ato do cliente no aceite.
+  async function serviceTicketTransition(req, res, { db, session, ticketId, status, body, reasonText, responseText }) {
+    const requestKey = idempotencyKey(req);
+    if (!requestKey) return ctx.json(res, 400, { error: "idempotency_key_required_or_invalid" });
+    const note = validateTicketServiceNote(responseText || body?.serviceNote);
+    if (note.error) return ctx.json(res, 400, { error: note.error });
+    if (status === "closed") return ctx.json(res, 409, { error: "ticket_close_requires_client_acceptance" });
+    const reopenReason = validateTicketReopenReason(body?.reopenReason || body?.reason || note.value);
+    const requestFingerprint = fingerprint({ ticketId, status, note: note.value, reason: reasonText || null });
+
     let client;
     try {
       client = await db.connect();
@@ -1478,7 +1546,34 @@ export function createClientSpaceApi(ctx) {
         return ctx.json(res, 404, { error: "ticket_not_found" });
       }
       const previousStatus = current.rows[0].status;
-      const isReopen = ["resolved", "closed"].includes(previousStatus) && ["open", "in_progress"].includes(status);
+
+      // O replay é resolvido depois do lock: retries concorrentes do mesmo
+      // comando convergem para uma única transição materializada.
+      const replay = await client.query(
+        `SELECT previous_status, next_status, is_reopen, request_fingerprint
+           FROM client_ticket_status_audit
+          WHERE ticket_id = $1 AND idempotency_key = $2`,
+        [ticketId, requestKey],
+      );
+      if (replay.rows[0]) {
+        await client.query("ROLLBACK");
+        if (replay.rows[0].request_fingerprint !== requestFingerprint) {
+          return ctx.json(res, 409, { error: "idempotency_conflict" });
+        }
+        return ctx.json(res, 200, {
+          ticketId,
+          previousStatus: replay.rows[0].previous_status,
+          status: replay.rows[0].next_status,
+          isReopen: replay.rows[0].is_reopen === true,
+          replayed: true,
+        });
+      }
+
+      if (!isTicketServiceTransitionAllowed(previousStatus, status)) {
+        await client.query("ROLLBACK");
+        return ctx.json(res, 409, { error: "ticket_transition_not_allowed", previousStatus, status });
+      }
+      const isReopen = isTicketServiceReopen(previousStatus, status);
       if (isReopen && reopenReason.error) {
         await client.query("ROLLBACK");
         return ctx.json(res, 400, { error: reopenReason.error });
@@ -1490,7 +1585,7 @@ export function createClientSpaceApi(ctx) {
           actorKind: roleActor(session),
           actorId: session.identityId,
           reason: "waiting_client",
-          notes: reasonText || responseText || "Aguardando retorno do cliente",
+          notes: reasonText || note.value,
         });
       }
       if (previousStatus === "waiting_client" && status !== "waiting_client") {
@@ -1503,32 +1598,46 @@ export function createClientSpaceApi(ctx) {
       await client.query(
         `UPDATE client_tickets
             SET status = $2,
-                admin_response = COALESCE(NULLIF($3, ''), admin_response),
+                admin_response = $3,
                 reopen_count = CASE WHEN $4 THEN reopen_count + 1 ELSE reopen_count END,
                 last_reopen_reason = CASE WHEN $4 THEN $5 ELSE last_reopen_reason END,
-                resolved_at = CASE WHEN $2 = 'resolved' THEN NOW()
-                                   WHEN $2 IN ('open','in_progress','waiting_client') THEN NULL
-                                   ELSE resolved_at END,
-                closed_at = CASE WHEN $2 = 'closed' THEN NOW()
-                                 WHEN $2 IN ('open','in_progress','waiting_client','resolved') THEN NULL
-                                 ELSE closed_at END,
+                resolved_at = CASE WHEN $2 = 'resolved' THEN NOW() ELSE NULL END,
+                closed_at = NULL,
                 updated_at = NOW()
           WHERE id = $1`,
-        [ticketId, status, responseText, isReopen, isReopen ? reopenReason.value : null],
+        [ticketId, status, note.value, isReopen, isReopen ? reopenReason.value : null],
       );
-      if (previousStatus !== status) {
-        await client.query(
-          `INSERT INTO client_ticket_status_audit
-             (ticket_id, previous_status, next_status, changed_by, changed_by_identity, reason, is_reopen, sla_pause_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-          [ticketId, previousStatus, status, roleActor(session), session.identityId, isReopen ? reopenReason.value : (reasonText || null), isReopen, slaPauseId],
-        );
-      }
+      await client.query(
+        `INSERT INTO client_ticket_status_audit
+           (ticket_id, previous_status, next_status, changed_by, changed_by_identity, reason, is_reopen, sla_pause_id,
+            idempotency_key, request_fingerprint)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        [ticketId, previousStatus, status, roleActor(session), session.identityId,
+          isReopen ? reopenReason.value : (reasonText || note.value), isReopen, slaPauseId,
+          requestKey, requestFingerprint],
+      );
       await audit(client, { actorKind: roleActor(session), actorId: session.identityId, action: isReopen ? "ticket_reopen" : "ticket_status", target: ticketId, result: "allowed" });
       await client.query("COMMIT");
-      return ctx.json(res, 200, { ticketId, previousStatus, status, isReopen });
+      return ctx.json(res, 200, { ticketId, previousStatus, status, isReopen, replayed: false });
     } catch (error) {
-      if (client) await client.query("ROLLBACK").catch(() => {});
+      await rollback(client);
+      if (error && typeof error === "object" && error.code === "23505") {
+        const prior = await db.query(
+          `SELECT previous_status, next_status, is_reopen, request_fingerprint
+             FROM client_ticket_status_audit WHERE ticket_id = $1 AND idempotency_key = $2`,
+          [ticketId, requestKey],
+        ).catch(() => ({ rows: [] }));
+        if (prior.rows[0]) {
+          if (prior.rows[0].request_fingerprint !== requestFingerprint) return ctx.json(res, 409, { error: "idempotency_conflict" });
+          return ctx.json(res, 200, {
+            ticketId,
+            previousStatus: prior.rows[0].previous_status,
+            status: prior.rows[0].next_status,
+            isReopen: prior.rows[0].is_reopen === true,
+            replayed: true,
+          });
+        }
+      }
       return databaseFailure(res, error, "Could not update the client ticket.");
     } finally {
       client?.release();
@@ -1706,11 +1815,13 @@ export function createClientSpaceApi(ctx) {
       const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
       try {
         const result = await db.query(
-          `SELECT r.*, a.display_name AS account_name, c.title AS contract_title, v.title AS visit_title
+          `SELECT r.*, a.display_name AS account_name, c.title AS contract_title, v.title AS visit_title,
+                  t.title AS ticket_title, t.status AS ticket_status
              FROM client_reports r
              JOIN client_accounts a ON a.id = r.client_account_id
              LEFT JOIN client_contracts c ON c.id = r.contract_id
              LEFT JOIN client_visits v ON v.id = r.visit_id
+             LEFT JOIN client_tickets t ON t.id = r.ticket_id
              ${where}
             ORDER BY r.created_at DESC LIMIT 200`,
           values,
@@ -1728,6 +1839,7 @@ export function createClientSpaceApi(ctx) {
         accountId: body?.accountId,
         contractId: body?.contractId,
         visitId: body?.visitId,
+        ticketId: body?.ticketId,
         reportType: body?.reportType,
         title: body?.title,
         summary: body?.summary,
@@ -1738,19 +1850,47 @@ export function createClientSpaceApi(ctx) {
       if (!UUID_PATTERN.test(input.value.accountId)) return ctx.json(res, 400, { error: "invalid_account_id" });
       const contract = optionalUuid(input.value.contractId); if (contract.error) return ctx.json(res, 400, { error: "invalid_contract_id" });
       const visit = optionalUuid(input.value.visitId); if (visit.error) return ctx.json(res, 400, { error: "invalid_visit_id" });
+      const ticket = optionalUuid(input.value.ticketId); if (ticket.error) return ctx.json(res, 400, { error: "invalid_ticket_id" });
+      // F03: o relatório de aceite existe para encerrar um chamado atendido.
+      if (ticket.value && input.value.reportType !== "acceptance") return ctx.json(res, 400, { error: "ticket_requires_acceptance_report" });
+      const requestKey = idempotencyKey(req);
+      if (ticket.value && !requestKey) return ctx.json(res, 400, { error: "idempotency_key_required_or_invalid" });
       if (!(await ensureAccountExists(db, res, input.value.accountId))) return;
-      if (!(await validateClientRefs(db, res, { accountId: input.value.accountId, contractId: contract.value, visitId: visit.value }))) return;
+      if (!(await validateClientRefs(db, res, { accountId: input.value.accountId, contractId: contract.value, visitId: visit.value, ticketId: ticket.value }))) return;
+      const requestFingerprint = requestKey ? fingerprint({ ...input.value, ticketId: ticket.value }) : null;
       let client;
       try {
         client = await db.connect();
         await client.query("BEGIN");
+        if (requestKey) {
+          const prior = await client.query(
+            "SELECT * FROM client_reports WHERE created_by_identity = $1 AND idempotency_key = $2",
+            [session.identityId, requestKey],
+          );
+          if (prior.rows[0]) {
+            await client.query("ROLLBACK");
+            if (prior.rows[0].request_fingerprint !== requestFingerprint) return ctx.json(res, 409, { error: "idempotency_conflict" });
+            return ctx.json(res, 200, { report: prior.rows[0], replayed: true });
+          }
+        }
+        if (ticket.value) {
+          // O aceite só pode ser publicado sobre um chamado efetivamente
+          // atendido; nada de pular o atendimento para "encerrar" o chamado.
+          const ticketRow = await client.query("SELECT status FROM client_tickets WHERE id = $1 FOR UPDATE", [ticket.value]);
+          if (ticketRow.rows[0]?.status !== "resolved") {
+            await client.query("ROLLBACK");
+            return ctx.json(res, 409, { error: "ticket_not_resolved_for_acceptance", status: ticketRow.rows[0]?.status ?? null });
+          }
+        }
         const inserted = await client.query(
           `INSERT INTO client_reports
-             (client_account_id, contract_id, visit_id, report_type, title, summary, period_start, period_end, created_by, created_by_identity)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+             (client_account_id, contract_id, visit_id, ticket_id, report_type, title, summary, period_start, period_end,
+              created_by, created_by_identity, idempotency_key, request_fingerprint)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
            RETURNING *`,
-          [input.value.accountId, contract.value, visit.value, input.value.reportType, input.value.title,
-           input.value.summary, input.value.periodStart, input.value.periodEnd, roleActor(session), session.identityId],
+          [input.value.accountId, contract.value, visit.value, ticket.value, input.value.reportType, input.value.title,
+           input.value.summary, input.value.periodStart, input.value.periodEnd, roleActor(session), session.identityId,
+           requestKey, requestFingerprint],
         );
         await client.query(
           `INSERT INTO client_report_status_audit
@@ -1763,6 +1903,19 @@ export function createClientSpaceApi(ctx) {
         return ctx.json(res, 201, { report: inserted.rows[0] });
       } catch (error) {
         await rollback(client);
+        if (error && typeof error === "object" && error.code === "23505") {
+          if (requestKey) {
+            const prior = await db.query(
+              "SELECT * FROM client_reports WHERE created_by_identity = $1 AND idempotency_key = $2",
+              [session.identityId, requestKey],
+            ).catch(() => ({ rows: [] }));
+            if (prior.rows[0]) {
+              if (prior.rows[0].request_fingerprint !== requestFingerprint) return ctx.json(res, 409, { error: "idempotency_conflict" });
+              return ctx.json(res, 200, { report: prior.rows[0], replayed: true });
+            }
+          }
+          if (ticket.value) return ctx.json(res, 409, { error: "ticket_acceptance_already_pending" });
+        }
         return databaseFailure(res, error, "Could not create the client report.");
       } finally {
         client?.release();

@@ -11,6 +11,9 @@ type ReportType = "execution" | "measurement" | "acceptance" | "other";
 
 type Report = {
   id: string;
+  ticket_id: string | null;
+  ticket_title: string | null;
+  ticket_status: string | null;
   report_type: ReportType;
   title: string;
   summary: string;
@@ -44,6 +47,8 @@ const actionErrors: Record<string, string> = {
   report_not_published: "Este relatório ainda não foi publicado para aceite.",
   report_acknowledgement_too_short: "A observação deve ter pelo menos 3 caracteres ou ficar vazia.",
   report_acknowledgement_too_long: "Observação muito longa (máx. 500 caracteres).",
+  ticket_not_resolved_for_acceptance:
+    "O chamado vinculado voltou a ficar em aberto. Nada foi aceito; acompanhe o atendimento e tente novamente quando ele estiver resolvido.",
 };
 
 export default function ClientReportsPage() {
@@ -90,7 +95,11 @@ export default function ClientReportsPage() {
         return;
       }
       setState("success");
-      setMessage("Aceite/ciência registrado no histórico do relatório.");
+      setMessage(
+        report.ticket_id
+          ? "Aceite registrado no histórico do relatório e o chamado vinculado foi encerrado."
+          : "Aceite/ciência registrado no histórico do relatório.",
+      );
       if (activeAccount) loadReports(activeAccount.id);
     } catch {
       setState("error");
@@ -136,6 +145,8 @@ export default function ClientReportsPage() {
       <h2 id="reports-title" className={appStyles.sectionTitle}>Relatórios publicados</h2>
       <p className={appStyles.sectionHint}>
         Relatórios revisados e aprovados pela equipe. Rascunhos ou relatórios rejeitados não são exibidos neste portal.
+        Quando o relatório for de <strong>aceite</strong> e estiver vinculado a um chamado, registrar o aceite aqui é o
+        que encerra aquele chamado — nada é encerrado sem este passo seu.
       </p>
       {message ? (
         <p className={`${styles.message} ${state === "success" ? styles.messageSuccess : styles.messageError}`} role="status">
@@ -173,6 +184,12 @@ export default function ClientReportsPage() {
                 </div>
                 <span className={`${appStyles.chip} ${status.chip}`}>{status.text}</span>
                 <p className={appStyles.listItemDetail}>{report.summary}</p>
+                {report.ticket_id ? (
+                  <p className={appStyles.listItemMeta}>
+                    Chamado vinculado: {report.ticket_title ?? "chamado do seu cadastro"}
+                    {report.status === "acknowledged" ? " · encerrado pelo seu aceite" : " · será encerrado quando você aceitar"}
+                  </p>
+                ) : null}
                 {report.review_notes ? (
                   <div className={appStyles.responseBox}>
                     <strong>Revisão da equipe</strong>

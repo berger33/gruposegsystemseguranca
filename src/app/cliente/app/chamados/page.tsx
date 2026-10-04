@@ -263,7 +263,9 @@ export default function ClientTicketsPage() {
           Seus chamados
         </h2>
         <p className={appStyles.sectionHint}>
-          Histórico de solicitações deste cadastro, na ordem da mais recente para a mais antiga.
+          Histórico de solicitações deste cadastro, na ordem da mais recente para a mais antiga. Um chamado
+          resolvido só passa a <em>Encerrado</em> depois que você registra o aceite do relatório correspondente
+          na aba Relatórios; a equipe não encerra chamados por conta própria.
         </p>
         {!activeAccount || activeAccount.status !== "active" ? null : loadError ? (
           <p className={`${styles.message} ${styles.messageError}`} role="alert">
@@ -304,6 +306,21 @@ export default function ClientTicketsPage() {
                     <div className={appStyles.responseBox}>
                       <strong>Resposta da equipe</strong>
                       {ticket.admin_response}
+                    </div>
+                  ) : null}
+                  {ticket.status === "resolved" ? (
+                    <div className={appStyles.responseBox}>
+                      <strong>Aguardando seu aceite</strong>
+                      A equipe concluiu o atendimento. O chamado é encerrado quando você registrar o aceite do
+                      relatório vinculado, na aba Relatórios.
+                    </div>
+                  ) : null}
+                  {ticket.status === "closed" ? (
+                    <div className={appStyles.responseBox}>
+                      <strong>Encerrado pelo seu aceite</strong>
+                      {ticket.closed_at
+                        ? `Registrado em ${new Date(ticket.closed_at).toLocaleString("pt-BR")}.`
+                        : "Registrado no histórico auditado deste chamado."}
                     </div>
                   ) : null}
                   {ticket.sla_paused_at ? (

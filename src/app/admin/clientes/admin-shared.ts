@@ -89,6 +89,14 @@ const apiErrors: Record<string, string> = {
   invalid_grant_id: "Vínculo inválido. Recarregue a página.",
   identity_disabled: "Esta identidade de acesso está desabilitada e não pode receber vínculos.",
   ticket_response_too_long: "Resposta muito longa (máx. 500 caracteres).",
+  ticket_service_note_required: "Escreva a resposta ao cliente (mín. 5 caracteres) para registrar este passo do atendimento.",
+  ticket_service_note_invalid: "A resposta contém caracteres não permitidos.",
+  ticket_transition_not_allowed: "Este passo não é permitido a partir da situação atual do chamado.",
+  ticket_close_requires_client_acceptance: "Encerrar é ato do cliente: publique o relatório de aceite e aguarde o aceite no portal.",
+  ticket_not_resolved_for_acceptance: "O aceite só pode ser publicado sobre um chamado resolvido.",
+  ticket_acceptance_already_pending: "Já existe um relatório de aceite em aberto para este chamado.",
+  ticket_requires_acceptance_report: "Para vincular um chamado, o tipo do relatório precisa ser “Aceite”.",
+  invalid_ticket_id: "Chamado inválido. Recarregue a página.",
   ticket_reopen_reason_required: "Informe um motivo de reabertura com pelo menos 10 caracteres.",
   ticket_reopen_reason_too_long: "Motivo de reabertura muito longo (máx. 500 caracteres).",
   ticket_reopen_only_resolved_or_closed: "Somente chamados resolvidos ou encerrados podem ser reabertos.",
@@ -153,10 +161,25 @@ export async function callApi(path: string, init: RequestInit = {}) {
   return payload;
 }
 
-export function jsonInit(method: string, body: unknown): RequestInit {
+export function jsonInit(method: string, body: unknown, idempotencyKey?: string): RequestInit {
   return {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
+    },
     body: JSON.stringify(body),
   };
+}
+
+// Retry do MESMO comando reaproveita a chave; mudar o conteúdo gera uma nova,
+// para que o servidor possa distinguir repetição de comando divergente.
+export function stableIdempotencyKey(
+  slot: { current: { fingerprint: string; key: string } | null },
+  fingerprintValue: string,
+) {
+  if (!slot.current || slot.current.fingerprint !== fingerprintValue) {
+    slot.current = { fingerprint: fingerprintValue, key: crypto.randomUUID() };
+  }
+  return slot.current.key;
 }

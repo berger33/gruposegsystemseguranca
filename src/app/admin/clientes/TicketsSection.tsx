@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { RefreshCw, Save } from "lucide-react";
-import { callApi, jsonInit, ticketStatusLabel, type AdminAccount } from "./admin-shared";
+import { callApi, jsonInit, stableIdempotencyKey, ticketStatusLabel, type AdminAccount } from "./admin-shared";
 import styles from "./AdminClientes.module.css";
 
 type AdminTicket = {
@@ -28,6 +28,16 @@ type AdminTicket = {
 
 const TICKET_STATUSES: AdminTicket["status"][] = ["open", "in_progress", "waiting_client", "resolved", "closed"];
 
+// Espelha TICKET_SERVICE_TRANSITIONS do servidor. A tela não decide nada: o
+// servidor recusa qualquer passo fora desta máquina, mesmo que a UI mude.
+const SERVICE_TRANSITIONS: Record<AdminTicket["status"], AdminTicket["status"][]> = {
+  open: ["in_progress"],
+  in_progress: ["waiting_client", "resolved"],
+  waiting_client: ["in_progress"],
+  resolved: ["open", "in_progress"],
+  closed: ["open", "in_progress"],
+};
+
 export default function TicketsSection({ accounts }: { accounts: AdminAccount[] | null }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [accountFilter, setAccountFilter] = useState("");
@@ -36,6 +46,7 @@ export default function TicketsSection({ accounts }: { accounts: AdminAccount[] 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const retrySlot = useRef<{ fingerprint: string; key: string } | null>(null);
 
   const reload = useCallback(async () => {
     setError("");
@@ -56,7 +67,7 @@ export default function TicketsSection({ accounts }: { accounts: AdminAccount[] 
   }, [reload]);
 
   const getEdit = (ticket: AdminTicket) =>
-    editing[ticket.id] ?? { status: ticket.status, response: ticket.admin_response ?? "", reason: "" };
+    editing[ticket.id] ?? { status: SERVICE_TRANSITIONS[ticket.status][0] ?? ticket.status, response: "", reason: "" };
 
   const setEdit = (ticket: AdminTicket, partial: Partial<{ status: AdminTicket["status"]; response: string; reason: string }>) =>
     setEditing(current => ({ ...current, [ticket.id]: { ...getEdit(ticket), ...partial } }));
@@ -66,16 +77,16 @@ export default function TicketsSection({ accounts }: { accounts: AdminAccount[] 
     setError("");
     setNotice("");
     const draft = getEdit(ticket);
+    const payload = {
+      status: draft.status,
+      adminResponse: draft.response,
+      reason: draft.reason,
+      reopenReason: draft.reason,
+    };
+    const key = stableIdempotencyKey(retrySlot, JSON.stringify({ ticket: ticket.id, ...payload }));
     try {
-      await callApi(
-        `/api/admin/tickets/${ticket.id}`,
-        jsonInit("PATCH", {
-          status: draft.status,
-          adminResponse: draft.response,
-          reason: draft.reason,
-          reopenReason: draft.reason,
-        }),
-      );
+      await callApi(`/api/admin/tickets/${ticket.id}`, jsonInit("PATCH", payload, key));
+      retrySlot.current = null;
       setNotice(`Chamado “${ticket.title}” atualizado para “${ticketStatusLabel[draft.status]}”.`);
       setEditing(current => {
         const next = { ...current };
@@ -96,6 +107,10 @@ export default function TicketsSection({ accounts }: { accounts: AdminAccount[] 
       <p className={styles.hint}>
         Atendimento interno complementar. Toda mudança de situação fica registrada em auditoria com quem
         alterou, quando, e de qual situação para qual; a resposta fica visível para o cliente no portal.
+        O avanço segue passos fixos (aberto → em atendimento → aguardando cliente/resolvido) e cada passo
+        exige uma resposta ao cliente de pelo menos 5 caracteres. <strong>Encerrar não é um passo da equipe</strong>:
+        o chamado resolvido só é encerrado quando o cliente registra o aceite do relatório de aceite
+        vinculado, no portal dele. Nenhum e-mail é enviado por esta tela.
       </p>
 
       <div className={`${styles.formRow} ${styles.two}`} style={{ marginBottom: 16 }}>
@@ -143,7 +158,8 @@ export default function TicketsSection({ accounts }: { accounts: AdminAccount[] 
         <ul className={styles.list}>
           {tickets.map(ticket => {
             const draft = getEdit(ticket);
-            const dirty = draft.status !== ticket.status || draft.response !== (ticket.admin_response ?? "");
+            const allowedNext = SERVICE_TRANSITIONS[ticket.status];
+            const dirty = allowedNext.includes(draft.status) && draft.response.trim().length >= 5;
             const chip =
               ticket.status === "open"
                 ? styles.chipOpen
@@ -173,10 +189,10 @@ export default function TicketsSection({ accounts }: { accounts: AdminAccount[] 
                     value={draft.status}
                     disabled={busy}
                     onChange={event => setEdit(ticket, { status: event.target.value as AdminTicket["status"] })}
-                    aria-label={`Nova situação do chamado ${ticket.title}`}
+                    aria-label={`Próximo passo do chamado ${ticket.title}`}
                     style={{ flex: "0 1 170px" }}
                   >
-                    {TICKET_STATUSES.map(status => (
+                    {allowedNext.map(status => (
                       <option key={status} value={status}>
                         {ticketStatusLabel[status]}
                       </option>
@@ -187,7 +203,7 @@ export default function TicketsSection({ accounts }: { accounts: AdminAccount[] 
                     maxLength={500}
                     disabled={busy}
                     onChange={event => setEdit(ticket, { response: event.target.value })}
-                    placeholder="Resposta para o cliente (opcional, máx. 500 caracteres)"
+                    placeholder="Resposta para o cliente (obrigatória, mín. 5 e máx. 500 caracteres)"
                     aria-label={`Resposta do chamado ${ticket.title}`}
                   />
                   <textarea
@@ -206,6 +222,18 @@ export default function TicketsSection({ accounts }: { accounts: AdminAccount[] 
                   {ticket.reopen_count ? (
                     <p className={styles.listItemDetail}>
                       Reaberturas: {ticket.reopen_count}{ticket.last_reopen_reason ? ` · último motivo: ${ticket.last_reopen_reason}` : ""}
+                    </p>
+                  ) : null}
+                  {ticket.status === "resolved" ? (
+                    <p className={styles.listItemDetail} style={{ background: "#eef7ee", padding: "8px 10px", borderRadius: 8 }}>
+                      Resolvido em {ticket.resolved_at ? new Date(ticket.resolved_at).toLocaleString("pt-BR") : "—"}. Publique o
+                      relatório de <strong>aceite</strong> vinculado a este chamado na seção de relatórios; o encerramento ocorre
+                      quando o cliente registrar o aceite.
+                    </p>
+                  ) : null}
+                  {ticket.status === "closed" ? (
+                    <p className={styles.listItemDetail} style={{ background: "#eef7ee", padding: "8px 10px", borderRadius: 8 }}>
+                      Encerrado em {ticket.closed_at ? new Date(ticket.closed_at).toLocaleString("pt-BR") : "—"} pelo aceite do cliente.
                     </p>
                   ) : null}
                   <button type="button" className={styles.submit} disabled={busy || !dirty} onClick={() => void save(ticket)} style={{ padding: "9px 14px" }}>

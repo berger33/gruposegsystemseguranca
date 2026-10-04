@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { FileCheck2, RefreshCw, Save } from "lucide-react";
 import {
   callApi,
   jsonInit,
+  stableIdempotencyKey,
   reportStatusLabel,
   reportTypeLabel,
+  ticketStatusLabel,
   type AdminAccount,
 } from "./admin-shared";
 import styles from "./AdminClientes.module.css";
@@ -20,6 +22,9 @@ type AdminReport = {
   account_name: string;
   contract_title: string | null;
   visit_title: string | null;
+  ticket_id: string | null;
+  ticket_title: string | null;
+  ticket_status: string | null;
   report_type: ReportType;
   title: string;
   summary: string;
@@ -40,6 +45,8 @@ const REPORT_STATUSES: ReportStatus[] = ["draft", "in_review", "approved", "reje
 const EDITABLE_REPORT_STATUSES: Exclude<ReportStatus, "acknowledged">[] = ["draft", "in_review", "approved", "rejected", "sent"];
 const REPORT_TYPES: ReportType[] = ["execution", "measurement", "acceptance", "other"];
 
+type ResolvedTicket = { id: string; client_account_id: string; title: string; account_name: string };
+
 export default function ReportsSection({ accounts }: { accounts: AdminAccount[] | null }) {
   const [accountFilter, setAccountFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -47,15 +54,18 @@ export default function ReportsSection({ accounts }: { accounts: AdminAccount[] 
   const [form, setForm] = useState({
     accountId: "",
     reportType: "execution" as ReportType,
+    ticketId: "",
     title: "",
     summary: "",
     periodStart: "",
     periodEnd: "",
   });
+  const [resolvedTickets, setResolvedTickets] = useState<ResolvedTicket[] | null>(null);
   const [editing, setEditing] = useState<Record<string, { status: Exclude<ReportStatus, "acknowledged">; reviewNotes: string }>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const createSlot = useRef<{ fingerprint: string; key: string } | null>(null);
 
   const reload = useCallback(async () => {
     setError("");
@@ -71,20 +81,40 @@ export default function ReportsSection({ accounts }: { accounts: AdminAccount[] 
     }
   }, [accountFilter, statusFilter]);
 
+  // Só chamados já resolvidos podem receber um relatório de aceite; a lista é
+  // carregada do servidor, que é quem decide o recorte.
+  const loadResolvedTickets = useCallback(async () => {
+    try {
+      const data = await callApi("/api/admin/tickets?status=resolved");
+      setResolvedTickets((data.tickets as ResolvedTicket[]) ?? []);
+    } catch {
+      setResolvedTickets([]);
+    }
+  }, []);
+
   useEffect(() => {
     void reload();
-  }, [reload]);
+    void loadResolvedTickets();
+  }, [reload, loadResolvedTickets]);
 
   async function createReport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError("");
     setNotice("");
+    const payload = { ...form, ticketId: form.reportType === "acceptance" ? form.ticketId : "" };
+    const key = stableIdempotencyKey(createSlot, JSON.stringify(payload));
     try {
-      await callApi("/api/admin/client-reports", jsonInit("POST", form));
-      setNotice("Relatório criado como rascunho. Revise antes de publicar ao cliente.");
-      setForm(current => ({ ...current, title: "", summary: "", periodStart: "", periodEnd: "" }));
+      await callApi("/api/admin/client-reports", jsonInit("POST", payload, key));
+      createSlot.current = null;
+      setNotice(
+        payload.ticketId
+          ? "Relatório de aceite criado como rascunho e vinculado ao chamado. Revise, aprove e envie para o cliente poder aceitar."
+          : "Relatório criado como rascunho. Revise antes de publicar ao cliente.",
+      );
+      setForm(current => ({ ...current, ticketId: "", title: "", summary: "", periodStart: "", periodEnd: "" }));
       await reload();
+      await loadResolvedTickets();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Não foi possível criar o relatório.");
     } finally {
@@ -133,6 +163,9 @@ export default function ReportsSection({ accounts }: { accounts: AdminAccount[] 
       <p className={styles.hint}>
         CLI-08 promovido para fluxo real: rascunho, revisão registrada, aprovação, envio ao portal
         e aceite/ciência do cliente autenticado. Rascunhos e rejeitados não aparecem para o cliente.
+        Um relatório do tipo <strong>Aceite</strong> pode ser vinculado a um chamado já resolvido: quando o
+        cliente registrar o aceite dele no portal, o chamado é encerrado na mesma transação. Nada é
+        enviado por e-mail — a publicação acontece dentro do portal do cliente.
       </p>
 
       <form className={styles.formGrid} onSubmit={createReport} noValidate>
@@ -155,6 +188,21 @@ export default function ReportsSection({ accounts }: { accounts: AdminAccount[] 
             <input id="report-period-start" type="date" value={form.periodStart} onChange={event => setForm({ ...form, periodStart: event.target.value })} />
           </div>
         </div>
+        {form.reportType === "acceptance" ? (
+          <div className={styles.field}>
+            <label htmlFor="report-ticket">Chamado resolvido a encerrar pelo aceite (opcional)</label>
+            <select id="report-ticket" value={form.ticketId} onChange={event => setForm({ ...form, ticketId: event.target.value })}>
+              <option value="">Sem vínculo com chamado</option>
+              {(resolvedTickets ?? [])
+                .filter(ticket => !form.accountId || ticket.client_account_id === form.accountId)
+                .map(ticket => (
+                  <option key={ticket.id} value={ticket.id}>
+                    {ticket.title} · {ticket.account_name}
+                  </option>
+                ))}
+            </select>
+          </div>
+        ) : null}
         <div className={`${styles.formRow} ${styles.two}`}>
           <div className={styles.field}>
             <label htmlFor="report-title">Título</label>
@@ -224,6 +272,12 @@ export default function ReportsSection({ accounts }: { accounts: AdminAccount[] 
                   {reportStatusLabel[report.status]}
                 </span>
                 <p className={styles.listItemDetail}>{report.summary}</p>
+                {report.ticket_id ? (
+                  <p className={styles.listItemDetail}>
+                    Chamado vinculado: {report.ticket_title ?? report.ticket_id}
+                    {report.ticket_status ? ` · ${ticketStatusLabel[report.ticket_status] ?? report.ticket_status}` : ""}
+                  </p>
+                ) : null}
                 {report.review_notes ? <p className={styles.listItemDetail}>Revisão: {report.review_notes}</p> : null}
                 {report.acknowledged_at ? <p className={styles.listItemDetail}>Cliente deu ciência em {new Date(report.acknowledged_at).toLocaleString("pt-BR")}{report.acknowledgement_note ? ` · ${report.acknowledgement_note}` : ""}</p> : null}
                 <div className={styles.inlineForm}>

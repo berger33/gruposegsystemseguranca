@@ -6,6 +6,18 @@ export const ACCOUNT_STATUSES = Object.freeze(["active", "suspended", "closed"])
 export const CONTRACT_STATUSES = Object.freeze(["planned", "active", "suspended", "ended"]);
 export const TICKET_STATUSES = Object.freeze(["open", "in_progress", "waiting_client", "resolved", "closed"]);
 export const TICKET_REOPEN_TARGETS = Object.freeze(["open", "in_progress"]);
+
+// F03 — jornada cliente -> chamado -> atendimento -> aceite.
+// Transições que a EQUIPE pode comandar sobre um chamado. "closed" não aparece
+// em nenhum destino: o encerramento nasce do aceite do cliente sobre o
+// relatório de aceite vinculado, nunca de uma decisão unilateral da equipe.
+export const TICKET_SERVICE_TRANSITIONS = Object.freeze({
+  open: Object.freeze(["in_progress"]),
+  in_progress: Object.freeze(["waiting_client", "resolved"]),
+  waiting_client: Object.freeze(["in_progress"]),
+  resolved: Object.freeze(["open", "in_progress"]),
+  closed: Object.freeze(["open", "in_progress"]),
+});
 export const SLA_PAUSE_REASONS = Object.freeze(["waiting_client", "third_party", "maintenance_window", "other"]);
 
 export const VISIT_TYPES = Object.freeze(["technical", "maintenance", "inspection", "meeting", "other"]);
@@ -37,6 +49,7 @@ export const TEXT_LIMITS = Object.freeze({
   ticketTitle: 120,
   ticketDetails: 500,
   ticketResponse: 500,
+  ticketServiceNoteMin: 5,
   ticketReopenReasonMin: 10,
   ticketReopenReason: 500,
   ticketSlaPauseNotes: 500,
@@ -192,6 +205,27 @@ export function validateTicketReopenReason(candidate) {
   return { value: reason };
 }
 
+// A equipe só avança o chamado pelos passos declarados acima; o mesmo estado
+// repetido não é "transição" e precisa ser resolvido como replay idempotente.
+export function isTicketServiceTransitionAllowed(previous, next) {
+  if (!TICKET_STATUSES.includes(previous) || !TICKET_STATUSES.includes(next)) return false;
+  return (TICKET_SERVICE_TRANSITIONS[previous] || []).includes(next);
+}
+
+export function isTicketServiceReopen(previous, next) {
+  return ["resolved", "closed"].includes(previous) && TICKET_REOPEN_TARGETS.includes(next);
+}
+
+// Cada passo de atendimento devolve algo ao cliente: a mensagem é obrigatória
+// e tem mínimo explícito, como na devolutiva do RH (F03 fatia anterior).
+export function validateTicketServiceNote(candidate) {
+  const note = trimToString(candidate);
+  if (note.length < TEXT_LIMITS.ticketServiceNoteMin) return { error: "ticket_service_note_required" };
+  if (note.length > TEXT_LIMITS.ticketResponse) return { error: "ticket_response_too_long" };
+  if (hasControlOrAngles(note)) return { error: "ticket_service_note_invalid" };
+  return { value: note };
+}
+
 export function validateVisitInput({ accountId, contractId, ticketId, visitType, title, details, scheduledAt, responsibleName, location } = {}) {
   const type = trimToString(visitType) || "technical";
   if (!VISIT_TYPES.includes(type)) return { error: "visit_type_invalid" };
@@ -231,7 +265,7 @@ export function validateVisitReschedule({ rescheduledTo, reason } = {}) {
   return { value: { rescheduledTo: scheduledAt, reason: text } };
 }
 
-export function validateReportInput({ accountId, contractId, visitId, reportType, title, summary, periodStart, periodEnd } = {}) {
+export function validateReportInput({ accountId, contractId, visitId, ticketId, reportType, title, summary, periodStart, periodEnd } = {}) {
   const type = trimToString(reportType) || "execution";
   if (!REPORT_TYPES.includes(type)) return { error: "report_type_invalid" };
   const name = trimToString(title);
@@ -251,6 +285,7 @@ export function validateReportInput({ accountId, contractId, visitId, reportType
       accountId: trimToString(accountId),
       contractId: trimToString(contractId) || null,
       visitId: trimToString(visitId) || null,
+      ticketId: trimToString(ticketId) || null,
       reportType: type,
       title: name,
       summary: body,

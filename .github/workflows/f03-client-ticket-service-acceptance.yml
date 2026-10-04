@@ -1,0 +1,48 @@
+name: F03 cliente -> chamado -> atendimento -> aceite
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'db/migrations/158-f03-client-ticket-service-acceptance.sql'
+      - 'src/server/client-space-api.mjs'
+      - 'src/lib/client-space-core.mjs'
+      - 'src/app/admin/clientes/**'
+      - 'src/app/cliente/app/chamados/**'
+      - 'src/app/cliente/app/relatorios/**'
+      - 'server.mjs'
+      - 'tests/f03-client-ticket-service-acceptance*.mjs'
+      - 'tests/ext-compliance-scheduler.test.mjs'
+      - 'scripts/qa-f03-client-ticket-service-acceptance-postgres.mjs'
+      - 'scripts/migrate-site-visual.mjs'
+      - 'scripts/qa-wave0-static.mjs'
+      - 'package*.json'
+      - '.github/workflows/f03-client-ticket-service-acceptance.yml'
+concurrency:
+  group: f03-client-ticket-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  client-ticket-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Invariantes estáticas e manifesto de migrações
+        run: node scripts/qa-wave0-static.mjs
+      - name: Testes unitários da fatia (máquina de estados e recusas)
+        run: node --test tests/f03-client-ticket-service-acceptance.test.mjs tests/client-space-core.test.mjs tests/ext-compliance-scheduler.test.mjs
+      - name: Ledger de migrações 001-158 em PostgreSQL descartável
+        run: npm run test:migrations:pg
+      - name: Jornada F03 (cliente, atendimento e aceite) por HTTP real e Chromium
+        run: npm run test:f03-client-ticket-service-acceptance:pg
