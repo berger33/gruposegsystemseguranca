@@ -1,6 +1,6 @@
 # Status atual consolidado — reconciliação F00 + F01 + primeira jornada F03
 
-Data: 2026-10-04. Base da fatia: `origin/main` em `972e6563f5ea4888b62e88b8c126a925d79f6068`; branch `arena/01a1073d-gruposegsystemseguranca`; PR #126, implementação `c1a557f`. A PR #125 (`e2fa152`) já foi integrada pelo merge acima.
+Data: 2026-10-04. Base da fatia: `origin/main` em `972e6563f5ea4888b62e88b8c126a925d79f6068`; branch `arena/01a1073d-gruposegsystemseguranca`; PR #126, commits `c1a557f`/`e45e41b`. Todos os checks publicados da #126 passaram; a PR #125 (`e2fa152`) já foi integrada pelo merge acima.
 Método: [matriz declarada no checklist](CHECKLIST-ENTREGA-LOCAL.md) cruzada com código, telas, migrações 001–156, gates e PRs do GitHub. Auditoria de terreno: [docs/auditoria-2026-10-04/AUDITORIA.md](auditoria-2026-10-04/AUDITORIA.md).
 
 ## Atualização da fatia F03 — PR #126
