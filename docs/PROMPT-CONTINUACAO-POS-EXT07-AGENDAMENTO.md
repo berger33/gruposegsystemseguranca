@@ -13,7 +13,7 @@ Camadas já mescladas no main:
 - PR #113 (merge `cda0c18`): migração 154 — constraints NOT VALID.
 - PR #115 (merge `8c4d71a`, head `bd96d3f`): migração 155 + API canônica EXT-07 + gate HTTP real.
 - PR #118 (merge `150052e`, head `f306dc6`): PLAT-01, despacho HTTP endurecido (`src/server/route-dispatch.mjs`).
-- **Esta entrega** (PR da branch `arena/01a104d5-gruposegsystemseguranca`): EXT-07 **execução agendada** da avaliação temporal — migração 156 + agendador in-process opt-in.
+- **PR #119** (branch `arena/01a104d5-gruposegsystemseguranca`): EXT-07 **execução agendada** da avaliação temporal — migração 156 + agendador in-process opt-in.
 
 ## O que esta entrega entrega (não refazer)
 
@@ -37,7 +37,7 @@ Camadas já mescladas no main:
 
 ## Passo zero da nova sessão (antes de qualquer trabalho)
 
-1. `git fetch origin main`; confirmar que o main contém o merge desta PR (`gh pr view <n>` ou `git log origin/main`).
+1. `git fetch origin main`; confirmar que o main contém o merge da PR #119 (`gh pr view 119` ou `git log origin/main`).
 2. Conferir HEAD = origin/main = merge-base; árvore limpa; **156 migrações; próxima livre: 157**.
 3. **Perguntar ao usuário qual é a tarefa antes de implementar qualquer coisa.**
 
