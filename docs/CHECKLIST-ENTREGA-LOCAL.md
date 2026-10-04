@@ -2,7 +2,7 @@
 
 ## Atualização 2026-10-04 — F03 contas → baixa → relatório
 
-**Base:** `a0815cfcfd7df17f30dce2e99ab744a36c3f341a`; **branch:** `arena/01a10845-gruposegsystemseguranca`; **commit de implementação:** `23910567a2a329dc4f46c4aae6cf740c9d4888aa`; PR a abrir após documentação. Commit anterior `a118f86` absorvido como `60d8764`.
+**Base:** `a0815cfcfd7df17f30dce2e99ab744a36c3f341a`; **branch:** `arena/01a10845-gruposegsystemseguranca`; **commit de implementação:** `23910567a2a329dc4f46c4aae6cf740c9d4888aa`; PR [#132](https://github.com/berger33/gruposegsystemseguranca/pull/132); documentação `8e7d84230fded1fcac9a256f5d1752e402f49b5a`. Commit anterior `a118f86` absorvido como `60d8764`.
 
 - [x] Migração 159 aditiva; 001–158 imutáveis; manifesto/Wave0/evidências atualizados; próxima 160.
 - [x] Fonte canônica FIN preservada; estados da prova criados por HTTP, nunca SQL direto.
