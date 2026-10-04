@@ -1,8 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
-import Link from "next/link";
-import { ArrowLeft, LogOut, ShieldCheck } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import AccountsSection from "./AccountsSection";
 import GrantsSection from "./GrantsSection";
 import ContractsSection from "./ContractsSection";
@@ -11,26 +9,19 @@ import TicketsSection from "./TicketsSection";
 import VisitsSection from "./VisitsSection";
 import ReportsSection from "./ReportsSection";
 import InvitesSection from "./InvitesSection";
-import { callApi, jsonInit, type AdminAccount } from "./admin-shared";
+import AdminGate from "../AdminGate";
+import { callApi, type AdminAccount } from "./admin-shared";
 import styles from "./AdminClientes.module.css";
 
-type AdminRole = "marcelo" | "ti";
-
-const roleNames: Record<AdminRole, string> = { marcelo: "Marcelo · administração", ti: "TI · sistema" };
-
 // Painel operacional da etapa 2: gestão dos cadastros centrais, vínculos (grants),
-// contratos, documentos e chamados. Gate reutilizado do painel de pedidos (leads):
-// token de ambiente, cookie HttpOnly curto e sessão administrativa distinta do portal do cliente.
-export default function ClientAdminPage() {
-  const [role, setRole] = useState<AdminRole | null>(null);
-  const [token, setToken] = useState("");
-  const [loginMode, setLoginMode] = useState<"individual" | "legacy">("individual");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+// contratos, documentos e chamados. F01: o formulário de login local (com o
+// rótulo equivocado "E-mail individual de TI" e a aba permanente de chave
+// legada) deu lugar ao gate central: anônimo vai a /admin/entrar com retorno,
+// conta individual é o padrão e a chave legada só é oferecida quando habilitada
+// no servidor. Papéis desta área continuam marcelo|ti, exatamente como a API
+// /api/admin/client-* impõe no servidor.
+function ClientAdminWorkspace({ role }: { role: string }) {
   const [accounts, setAccounts] = useState<AdminAccount[] | null>(null);
-  const [checking, setChecking] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [gateError, setGateError] = useState("");
 
   const loadAccounts = useCallback(async () => {
     try {
@@ -41,164 +32,41 @@ export default function ClientAdminPage() {
     }
   }, []);
 
-  const checkSession = useCallback(async () => {
-    try {
-      const response = await fetch("/api/admin/session", { cache: "no-store" });
-      const data = await response.json().catch(() => ({}));
-      if (response.ok && (data.role === "marcelo" || data.role === "ti")) {
-        setRole(data.role);
-        void loadAccounts();
-      } else {
-        setRole(null);
-      }
-    } catch {
-      setRole(null);
-    } finally {
-      setChecking(false);
-    }
+  // Carregamento inicial após o gate autorizar a sessão.
+  useEffect(() => {
+    void loadAccounts();
   }, [loadAccounts]);
 
-  useEffect(() => {
-    void checkSession();
-  }, [checkSession]);
-
-  async function login(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setBusy(true);
-    setGateError("");
-    try {
-      const response = await fetch("/api/admin/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(loginMode === "individual" ? { email, password } : { token }),
-      });
-      const data = await response.json().catch(() => ({}));
-      setPassword("");
-      if (!response.ok) {
-        if (data.error === "admin_auth_not_configured") {
-          throw new Error("A autenticação administrativa ainda não está configurada no servidor.");
-        }
-        if (data.error === "too_many_attempts") throw new Error("Muitas tentativas. Aguarde antes de tentar novamente.");
-        throw new Error(loginMode === "individual" ? "Conta individual ou senha inválida." : "Chave administrativa inválida ou indisponível.");
-      }
-      setRole(data.role);
-      setToken("");
-      void loadAccounts();
-    } catch (cause) {
-      setGateError(cause instanceof Error ? cause.message : "Falha ao autenticar.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function logout() {
-    try {
-      await callApi("/api/admin/session", jsonInit("DELETE", {}));
-    } catch {
-      /* Mesmo com falha, a sessão expira sozinha em 8 horas. */
-    }
-    setRole(null);
-  }
-
-  if (checking) {
-    return (
-      <main className={styles.page}>
-        <div className={styles.loadingWrap}>
-          <span className={styles.spinner} aria-hidden="true" />
-          Verificando sessão administrativa…
-        </div>
-      </main>
-    );
-  }
-
   return (
-    <main className={styles.page}>
-      <div className={styles.container}>
-        <header className={styles.topbar}>
-          <Link href="/" className={styles.brand}>
-            <span className={styles.brandMark}>SEG</span>
-            <span>
-              <small>Grupo</small>
-              <strong>SEG System</strong>
-            </span>
-          </Link>
-          <Link href="/" className={styles.ghostButton}>
-            <ArrowLeft size={13} aria-hidden="true" />
-            Voltar ao site
-          </Link>
-          {role ? (
-            <>
-              <span className={styles.roleChip}>
-                <ShieldCheck size={13} aria-hidden="true" />
-                {roleNames[role]}
-              </span>
-              {role === 'ti' ? <Link href="/admin/verificacao-manual" className={styles.ghostButton}>Verificação manual</Link> : null}
-              <button type="button" className={styles.ghostButton} onClick={logout}>
-                <LogOut size={13} aria-hidden="true" />
-                Sair
-              </button>
-            </>
-          ) : null}
-        </header>
-
-        {!role ? (
-          <section className={styles.card} aria-labelledby="gate-title">
-            <h1 id="gate-title">Administração de clientes</h1>
-            <p className={styles.hint}>
-              Prefira conta individual de TI. A sessão administrativa expira em 8 horas,
-              usa cookie HttpOnly e é separada do portal do cliente. No demo local não há chave legada.
-            </p>
-            <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
-              <button type="button" onClick={() => setLoginMode("individual")}>Conta individual</button>
-              <button type="button" onClick={() => setLoginMode("legacy")}>Chave legada (outros ambientes)</button>
-            </div>
-            <form className={styles.formGrid} onSubmit={login} noValidate>
-              {loginMode === "individual" ? <>
-                <div className={styles.field}>
-                  <label htmlFor="admin-email">E-mail individual de TI</label>
-                  <input id="admin-email" type="email" value={email} onChange={event => setEmail(event.target.value)} required autoComplete="username" />
-                </div>
-                <div className={styles.field}>
-                  <label htmlFor="admin-password">Senha individual</label>
-                  <input id="admin-password" type="password" value={password} onChange={event => setPassword(event.target.value)} required autoComplete="current-password" />
-                </div>
-              </> : <div className={styles.field}>
-                <label htmlFor="admin-token">Chave administrativa legada</label>
-                <input id="admin-token" type="password" minLength={32} value={token}
-                  onChange={event => setToken(event.target.value)} autoComplete="off" required />
-              </div>}
-              <button className={styles.submit} type="submit" disabled={busy || (loginMode === "individual" ? !email || !password : token.trim().length < 32)}>
-                {busy ? "Verificando…" : "Entrar"}
-              </button>
-            </form>
-            {gateError ? (
-              <p className={`${styles.message} ${styles.messageError}`} role="alert">
-                {gateError}
-              </p>
-            ) : null}
-          </section>
-        ) : (
-          <>
-            <section className={styles.card} aria-labelledby="intro-title" style={{ paddingBottom: 14 }}>
-              <h1 id="intro-title">Administração de clientes</h1>
-              <p className={styles.hint}>
-                Fluxo em ordem: <strong>1</strong> crie/verifique o cadastro central → <strong>2</strong> emita o
-                vínculo com a identidade de acesso (com motivo) → <strong>3</strong> registre contratos →{" "}
-                <strong>4</strong> publique documentos → <strong>5</strong> acompanhe os chamados → <strong>6</strong> agende visitas →{" "}
-                <strong>7</strong> publique relatórios revisados. Cada operação relevante vai para a trilha de auditoria sem conter dados sensíveis.
-              </p>
-            </section>
-            {role === 'ti' ? <InvitesSection /> : null}
-            <AccountsSection accounts={accounts} reloadAccounts={loadAccounts} />
-            <GrantsSection accounts={accounts} />
-            <ContractsSection accounts={accounts} />
-            <DocumentsSection accounts={accounts} />
-            <TicketsSection accounts={accounts} />
-            <VisitsSection accounts={accounts} />
-            <ReportsSection accounts={accounts} />
-          </>
-        )}
+    <section aria-labelledby="intro-title">
+      <div className={styles.card} id="clientes-intro">
+        <h1 id="intro-title" style={{ marginTop: 0 }}>
+          Administração de clientes
+        </h1>
+        <p className={styles.hint}>
+          Fluxo em ordem: <strong>1</strong> crie/verifique o cadastro central → <strong>2</strong> emita o vínculo
+          com a identidade de acesso (com motivo) → <strong>3</strong> registre contratos → <strong>4</strong>{" "}
+          publique documentos → <strong>5</strong> acompanhe os chamados → <strong>6</strong> agende visitas →{" "}
+          <strong>7</strong> publique relatórios revisados. Cada operação relevante vai para a trilha de auditoria
+          sem conter dados sensíveis.
+        </p>
       </div>
-    </main>
+      {role === "ti" ? <InvitesSection /> : null}
+      <AccountsSection accounts={accounts} reloadAccounts={loadAccounts} />
+      <GrantsSection accounts={accounts} />
+      <ContractsSection accounts={accounts} />
+      <DocumentsSection accounts={accounts} />
+      <TicketsSection accounts={accounts} />
+      <VisitsSection accounts={accounts} />
+      <ReportsSection accounts={accounts} />
+    </section>
+  );
+}
+
+export default function ClientAdminPage() {
+  return (
+    <AdminGate allowedRoles={["marcelo", "ti"]}>
+      {(session) => <ClientAdminWorkspace key={session.identityId ?? session.role} role={session.role} />}
+    </AdminGate>
   );
 }

@@ -1,0 +1,61 @@
+"use client";
+
+// F01 — hub inicial de /admin: depois do gate, lista somente os módulos do
+// papel da sessão. Cada módulo continua protegido pela própria API; o hub é
+// navegação, não concessão de acesso.
+
+import Link from "next/link";
+import AdminGate, { modulesForRole } from "./AdminGate";
+import { roleLabel } from "../../lib/admin-entry.mjs";
+import styles from "./AdminChrome.module.css";
+
+const MODULE_DESCRIPTIONS: Record<string, string> = {
+  "/admin/marcelo": "Indicadores, aprovações, metas, relatórios e configurações da administração.",
+  "/admin/funcionarios": "Cadastro, admissão, documentos, ausências, benefícios e demais rotinas de RH.",
+  "/admin/crm": "Unidades, contatos, oportunidades, agenda, tarefas e cadências comerciais.",
+  "/admin/carteira": "Grupos e unidades da carteira com renovações e próximas ações.",
+  "/admin/leads": "Pedidos vindos do site público e métricas de origem.",
+  "/admin/contratos": "Contratos canônicos, implantação, aditivos, alertas e encerramento.",
+  "/admin/financeiro": "Contas, conciliação, cobrança, orçamento, exportações e fechamento.",
+  "/admin/operacao": "Postos, alocações, coberturas, turnos, ocorrências e checklists.",
+  "/admin/patrimonio": "Estoque, ativos, inventário, ordens de serviço e manutenção.",
+  "/admin/clientes": "Cadastros centrais, vínculos, contratos, documentos e chamados do portal.",
+  "/admin/compliance": "Obrigações legais, documentos, tarefas e execuções programadas.",
+  "/admin/frota": "Veículos, responsáveis, abastecimento, manutenção e documentos.",
+  "/admin/terceiros": "Terceiros com janelas de acesso autorizadas e revogadas.",
+  "/admin/licitacoes": "Editais, propostas versionadas, resultados e alertas.",
+  "/admin/fornecedores": "Fornecedores, cotações, decisões e pedidos (jornada interna).",
+  "/admin/qualidade": "Não conformidades, causas, ações, verificações e reincidências.",
+  "/admin/satisfacao": "Pesquisas, respostas e planos de ação da carteira.",
+  "/admin/portal": "Convites, autocadastro, solicitações de acesso e alertas de segurança.",
+  "/admin/ti": "Camada técnica (protótipo descritivo; consoles operados por gates dedicados).",
+};
+
+export default function AdminHub() {
+  return (
+    <AdminGate>
+      {(session) => (
+        <section className={styles.card} data-admin-hub="true">
+          <h1>Área administrativa</h1>
+          <p className={styles.hint}>
+            Sessão ativa como <strong>{roleLabel(session.role)}</strong>. Os módulos abaixo são os previstos para o
+            seu papel; cada área confirma a permissão novamente no servidor antes de qualquer leitura ou escrita.
+          </p>
+          <div className={styles.hubGrid}>
+            {modulesForRole(session.role).map((mod) => (
+              <Link key={mod.href} href={mod.href} className={styles.hubCard}>
+                <strong>{mod.label}</strong>
+                <span>{MODULE_DESCRIPTIONS[mod.href] || "Módulo administrativo."}</span>
+              </Link>
+            ))}
+          </div>
+          {modulesForRole(session.role).length === 0 ? (
+            <p className={styles.hint}>
+              Nenhum módulo previsto para este papel. Se precisa de acesso operacional, fale com o TI.
+            </p>
+          ) : null}
+        </section>
+      )}
+    </AdminGate>
+  );
+}

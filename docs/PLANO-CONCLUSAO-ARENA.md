@@ -1,0 +1,39 @@
+# Plano de conclusão (Arena) — lista única de trabalho
+
+Data: 2026-10-04. Base: `main` `540faf6c5124fd243fc3e287527ff4f6983ce8f1`. Deriva de [docs/auditoria-2026-10-04/02-PLANO-ARENA.md](auditoria-2026-10-04/02-PLANO-ARENA.md) já reconciliado em [STATUS-ATUAL-CONSOLIDADO.md](STATUS-ATUAL-CONSOLIDADO.md). Este é o plano operacional vigente entre sessões; cada sessão atualiza a coluna "situação" e [CONTINUACAO-ARENA.md](CONTINUACAO-ARENA.md).
+
+## Regras permanentes
+
+1. Uma fatia de implementação por PR; PR pequeno revisável; nunca mesclar PRs alternativas antigas.
+2. Migrações 001–156 são imutáveis; próxima livre no main vigente: **157** (reconfirmar antes de cada fatia).
+3. Autorização no servidor em toda API; nunca apenas ocultação no menu. Fail-closed em erro de banco/permissão.
+4. Preservar PLAT-01 (despacho à prova de rejeição), credenciais individuais, isolamento entre clientes, auditoria transacional e idempotência.
+5. Evidência real por fatia: comando + resultado + SHA + limite da prova. Banco sempre descartável (embedded-postgres de teste ou Compose exclusivo do operador). Sem segredos em git/logs.
+6. SMTP real e hospedagem definitiva fora do escopo; não declará-los como entregues.
+7. Não contar tabela/API/tela incompleta ou fallback de IA como funcionalidade concluída.
+
+## Sequência e dependências
+
+| Etapa | Escopo | Dependência | Situação |
+|---|---|---|---|
+| F00 | Reconciliação dos 222 IDs + classificação dos PRs abertos | — | **concluída nesta sessão**: STATUS-ATUAL-CONSOLIDADO.md + PRs classificados (26 superseded, #121 fonte) |
+| F01 | Entrada e navegação por papel: `/admin` hub, `/admin/entrar` login central, redirecionamento seguro com retorno, rótulo papel-neutro, menu por papel, 401/403/500 compreensíveis | F00 | **em implementação nesta sessão** |
+| F02 | Windows/EPERM symlink, isolamento QA×ambiente, scripts start/stop/status, backup/restauração em instância separada | F01 | pendente — requer Windows do operador para aceite |
+| F03 | Massa de demonstração e jornadas de negócio ponta a ponta (lead→recebimento, funcionário→RH, cliente→chamado, contas→baixa) | F01 | pendente |
+| F04–F13 | EXT-08 conhecimento, EXT-09 expansão, EXT-10 continuidade, EXT-11 analytics, EXT-12 visual, EXT-13 relatórios, EXT-14 inteligência comercial, EXT-15 emergencial, EXT-16 central/vídeo (projeto separado), EXT-17 biometria (projeto separado) — um requisito por PR | F01 | pendentes; tabelas 086–087 existem sem jornada provada |
+| F14 | IA/RAG real: AI-06 recuperação autorizada + AI-09 curadoria primeiro; depois AI-01..05, 07, 08, 10. Fallback não é inferência. | F03 (massa e escopos) | pendente; OLLAMA_ENABLED=false hoje = fallback |
+| F15 | Fronteiras parciais: portal externo fornecedor, upload real, recuperação de conta sem SMTP, jobs vs reinício, notificações internas, isolamento A/B, EXT-07 obrigação vencida | F04+ | pendente |
+| F16 | Aceite final: matriz de aceite 03-ACEITE.md, humano de Marcelo/Andreia/funcionário, relatório de riscos, runbook Windows | todas | pendente |
+
+## Trabalho imediato após F01 (ordem)
+
+1. **Fechar as 26 PRs superseded** com comentário de reconciliação (F00 já classificou) — ação de repositório, sem merge.
+2. **F03 — massa de demonstração idempotente** (empresa A/B, RH, Marcelo, funcionário, contratos), gate de seed em PG descartável.
+3. **EXT-08 (F04)** — primeira fatia EXT pendente.
+4. Rodada dedicada: obrigação vencida do EXT-07 criando tarefa (pendência declarada no aceite técnico).
+
+## Estados que NÃO permitem declaração de conclusão
+
+- Qualquer EXT-08..17 ou AI-01..10 sem jornada UI→API→PG provada e RBAC testado.
+- Aceite humano não registrado por papel (Marcelo/Andreia/funcionário/clientes A e B).
+- Windows sem os três casos de symlink exercitados (EPERM) e backup/restauração ensaiados.

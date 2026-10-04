@@ -1,0 +1,38 @@
+name: F01 admin entry delivery
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'server.mjs'
+      - 'next.config.*'
+      - 'tests/admin-entry*'
+      - 'tests/helpers/staff-login.mjs'
+      - 'scripts/qa-admin-entry-postgres.mjs'
+      - 'scripts/migrate-site-visual.mjs'
+      - 'db/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/admin-entry-delivery.yml'
+concurrency:
+  group: admin-entry-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  admin-entry-postgres-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run test:admin-entry:pg

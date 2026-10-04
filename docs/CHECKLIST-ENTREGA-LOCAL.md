@@ -1,5 +1,9 @@
 # Checklist da entrega local — 222 requisitos
 
+## Atualização 2026-10-04 — F01 entrada e navegação central de staff entregue localmente
+
+`/admin` deixou de ser 404 (hub por papel) e `/admin/entrar` é a entrada canônica: conta individual padrão com rótulo papel-neutro ("E-mail da conta individual"), chave legada só é oferecida quando habilitada no servidor (`GET /api/admin/session/options`), MFA integrado no mesmo fluxo. Anônimo em página protegida é levado ao login com retorno ao destino (`next` sanitizado: somente caminhos internos de `/admin`, nunca domínio externo); menu por papel e saída visível no chrome compartilhado. RBAC do servidor intocado: RH segue recebendo 403 real em `/api/adm/panel/*` (nada foi concedido à força para consertar navegação). Provas: gate dedicado `npm run test:admin-entry:pg` **13/13** (PostgreSQL 17 descartável + Chromium real: anônimo→login→retorno, RH sem painel administrativo, `next` externo recusado, senha errada com erro compreensível, logout com revogação), unit `tests/admin-entry.test.mjs` 11/11, regressão `test:staff-auth:pg` 21/21, suíte 525/525, build com `/admin` e `/admin/entrar`. Workflow `admin-entry-delivery.yml`. Aceite humano (Marcelo/Andreia) e Windows seguem pendentes. Detalhes: [docs/CONTINUACAO-ARENA.md](CONTINUACAO-ARENA.md).
+
 ## Atualização 2026-10-03 — PLAT-01 despacho HTTP à prova de rejeição assíncrona
 
 Sobre `8c4d71a` (PR #115 MERGED): correção de plataforma sem migração nova. O despacho de `routeApi` não aguardava a promise do handler — rejeição assíncrona ficava sem resposta e **derrubava o processo**. Agora há `dispatchGuarded` com 500 fail-closed, guarda do callback de `createServer` e rede de segurança de processo. Focal 25/25 e guarda estática 7/7 (provada por mutação); suíte 494/494; bateria **integral** executada com evidência em PDF versionada (`docs/evidencias/qa-evidencia-2026-10-03-plat01-despacho-http.pdf`): wave 0 5/5, build 92, migrations 155/155 ×2 + negativo, gates EXT-07 37/37, EXT-06 36/36, EXT-05 33/33, EXT-04 28/28. Nenhum requisito CLI/EXT mudou de estado. Aceite humano e Windows seguem pendentes. Ver [relatório PLAT-01](ENTREGA-RELATORIO-2026-10-03-PLAT01-DESPACHO-HTTP.md).
@@ -54,10 +58,10 @@ Associar documentos a conta/unidade/contrato/classificação e aplicar autoriza�
 
 ## SEC-04
 Login individual de staff, papéis, convites e revogação Aceite: Andreia acessa RH; funcionário não acessa RH geral; auditoria identifica pessoa
-- Estado: em_execucao (autenticação e revogação prontas; navegação por papel ausente)
-- Tela / API / dados / autorização: `POST /api/admin/session` (e-mail/senha) e `GET /api/admin/session`; tabelas auth_identities, auth_credentials, auth_staff_profiles, auth_staff_sessions; papel vem do banco.
-- Integração e evidência (teste, resultado, commit): `npm run test:staff-auth:pg` cenários 1-10: sem perfil 403, pending_email 401, suspensão/rebaixamento/epoch derrubam sessão, auditoria com identityId — commit 6b117f0.
-- Pendência / fronteira externa / aceite humano: NÃO atende ainda o aceite completo: "Andreia acessa RH" exige tela de RH acessível, e os 82 componentes administrativos continuam órfãos (ver L00-9). Papéis atuais: admin|ti|rh|marcelo; supervisor/comercial/financeiro não unificados. Convites de staff não revalidados. Aceite humano pendente.
+- Estado: em_execucao (autenticação, revogação e navegação central por papel prontas em validação automática; aceite humano pendente)
+- Tela / API / dados / autorização: `/admin/entrar` (login central), `/admin` (hub por papel), `POST /api/admin/session` (e-mail/senha), `GET /api/admin/session`, `GET /api/admin/session/options`; tabelas auth_identities, auth_credentials, auth_staff_profiles, auth_staff_sessions; papel vem do banco.
+- Integração e evidência (teste, resultado, commit): `npm run test:staff-auth:pg` cenários 1-10 (sem perfil 403, pending_email 401, suspensão/rebaixamento/epoch derrubam sessão, auditoria com identityId — commit 6b117f0); F01 2026-10-04: gate `test:admin-entry:pg` 13/13 + `tests/admin-entry.test.mjs` 11/11 (entrada, redireciono seguro, menu por papel, revogação).
+- Pendência / fronteira externa / aceite humano: "Andreia acessa RH" agora tem tela acessível com papel rh (gate browser), mas os 82 componentes administrativos de /admin/ti continuam órfãos (ver L00-9); papéis supervisor/comercial/financeiro mapeados no redireciono, jornadas próprias por módulo seguem nos lotes; convites de staff não revalidados; aceite humano pendente.
 
 ## SEC-05
 Substituir tokens compartilhados por autenticação individual com migração controlada Aceite: Credenciais legadas desligadas após contas válidas; recuperação administrativa documentada
