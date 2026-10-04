@@ -4,7 +4,8 @@ on:
     branches: [main]
     paths:
       - 'db/migrations/153-ext07-compliance-journey.sql'
-      - 'db/migrations/154-ext07-compliance-hardening.sql','db/migrations/155-ext07-compliance-hardening.sql'
+      - 'db/migrations/154-ext07-compliance-hardening.sql'
+      - 'db/migrations/155-ext07-compliance-hardening.sql'
       - 'src/server/ext-compliance-api.mjs'
       - 'src/server/ext-advanced-api.mjs'
       - 'src/app/admin/compliance/**'
