@@ -1,5 +1,11 @@
 # Status atual consolidado — reconciliação F00 + F01 + jornadas F03
 
+## Atualização F03 — contas → baixa → relatório
+
+**Base:** `a0815cfcfd7df17f30dce2e99ab744a36c3f341a`; **branch:** `arena/01a10845-gruposegsystemseguranca`; **implementação:** `23910567a2a329dc4f46c4aae6cf740c9d4888aa`; PR a abrir. O ledger passa a **001–159** (001–158 imutáveis; próxima 160). A jornada usa as fontes financeiras existentes, adiciona idempotência à baixa e snapshot interno imutável, exige `financeiro.receivables.read/write` e `financeiro.reports.read/generate` com escopo por conta e fecha os aliases HR de escrita com 410. A UI financeira opera a baixa canônica e explicita que não integra banco, gateway, SMTP nem entrega externa.
+
+Gate `test:f03-contas-baixa-relatorio:pg` **1/1**, com HTTP/PG17/Chromium, isolamento A/B, concorrência, replay/conflito e rollback de auditoria. Regressões verdes: Wave0 5/5, typecheck, 526/526 unitários, L07 43/43, L08 51/51, client-space 22/22, client-access 27/27, três gates F03 anteriores 1/1 e demo-local. Falhas reais: roteamento ausente (404), inferência inconsistente de `$3`, colisão ambiental de servidores Next em execução paralela e concessão explícita ausente no papel financeiro legado; todas corrigidas/repetidas sem reduzir asserções. **F03 segue pendente de aceite humano e Windows/EPERM.**
+
 ## Atualização F03 — cliente → chamado → atendimento → aceite
 
 **Base confirmada:** `origin/main` `a459e07d42a855f93af4d76d047b49f3ff5e204e` (merge da PR #127, conferido por `git fetch origin main`); **branch fixa:** `arena/01a107a9-gruposegsystemseguranca`; **commits:** `3c7e9ab1da469b94d7cf383491f9240df30a8b6e` (implementação) e documentação desta seção; **PR:** [#129](https://github.com/berger33/gruposegsystemseguranca/pull/129), **integrada pelo merge normal `a0815cfcfd7df17f30dce2e99ab744a36c3f341a`** (14 checks publicados verdes antes do merge). #126, #127 e #129 estão integradas e não devem ser recriadas nem remescladas.

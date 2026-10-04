@@ -1,5 +1,17 @@
 # Continuidade Arena — 2026-10-04 (F01 cobertura + F03)
 
+## Incremento 7 — F03 contas → baixa → relatório
+
+- **Base confirmada:** `origin/main` `a0815cfcfd7df17f30dce2e99ab744a36c3f341a` (merge da PR #129); **branch fixa:** `arena/01a10845-gruposegsystemseguranca`; **implementação:** `23910567a2a329dc4f46c4aae6cf740c9d4888aa`; PR pequena a abrir após este registro. O commit documental pendente da sessão anterior foi absorvido como `60d8764`; #126/#127/#129 não foram recriadas.
+- **Fonte canônica preservada:** `fin_accounts_receivable`, `fin_payments` e `fin_payment_history`. A migração aditiva `159-f03-receivable-settlement-report.sql` acrescenta chave/fingerprint de idempotência à baixa, snapshots imutáveis `fin_f03_reports` e concessões explícitas `financeiro.*`; **001–158 imutáveis**, próxima livre 160.
+- **API/UI:** fila escopada `GET /api/admin/finance/f03/receivables`; baixa manual `POST .../:id/settlements`; snapshots `GET/POST /api/admin/finance/f03/reports`. Sessão individual, mesma origem, permissão fail-closed por conta, advisory lock + `FOR UPDATE`, máquina `pendente|vencido|parcial → parcial|recebido`, auditoria e histórico na mesma transação. Aliases antigos de escrita `/api/*/hr/fin-payments` retornam 410; `/api/fin/payments` permanece para compatibilidade FIN-04 já coberta pelo L07. A tela declara ausência de banco, gateway, baixa automática, SMTP e envio externo.
+- **Gate dedicado:** `npm run test:f03-contas-baixa-relatorio:pg` **1/1** (PG17 descartável `seg_demo_local`, estados criados por HTTP, A/B, concorrência 5×/4×, conflito de chave, rollback sem auditoria e Chromium). Regressões: Wave 0 **5/5**, typecheck OK, `npm test` **526/526**, L07 **43/43**, L08 **51/51**, client-space **22/22**, client-access **27/27**, F03 lead/funcionário/chamado **1/1** cada e demo-local OK.
+- **Falhas reais corrigidas:** a primeira execução não alcançou as rotas por ausência do prefixo no `API_PATH_MATCH` (404); depois, o `UPDATE` reutilizou `$3` como enum e texto e o PostgreSQL recusou com `inconsistent types deduced for parameter $3` (casts explícitos). A primeira rodada paralela de regressões saturou/colidiu servidores Next e gerou timeouts/locks ambientais; as suítes foram repetidas serialmente, sem alteração ou enfraquecimento de asserções. O primeiro L07 após a troca canônica falhou porque o papel financeiro legado não tinha concessão explícita; a migração passou a provisionar/revogar o conjunto padrão em `auth_permissions`, sem bypass de papel, e L07 repetiu **43/43**.
+
+### Limites
+
+As quatro jornadas automatizadas F03 estão provadas, mas **F03 não está concluída**: ainda faltam aceite humano e Windows/EPERM. Sem dados reais, banco/PSP, SMTP, eSocial, assinatura externa, hosting permanente ou IA externa.
+
 ## Incremento 6 — F03 cliente → chamado → atendimento → aceite
 
 - **Base confirmada:** `origin/main` `a459e07d42a855f93af4d76d047b49f3ff5e204e` (merge normal da PR #127, conferido por `git fetch origin main`); **branch fixa:** `arena/01a107a9-gruposegsystemseguranca`; **commits desta fatia:** `3c7e9ab1da469b94d7cf383491f9240df30a8b6e` (implementação) e `7bf821eabba64b3880698d83b7a0fae3c5001594` (documentação/continuidade); **PR:** [#129](https://github.com/berger33/gruposegsystemseguranca/pull/129), **integrada pelo merge normal `a0815cfcfd7df17f30dce2e99ab744a36c3f341a`** — não recriar/reabrir/remesclar #126, #127 nem #129.

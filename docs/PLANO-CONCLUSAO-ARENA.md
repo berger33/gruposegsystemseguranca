@@ -1,5 +1,12 @@
 # Plano de conclusão (Arena) — lista única de trabalho
 
+## Atualização corrente — F03 contas → baixa → relatório
+
+- Base `a0815cfcfd7df17f30dce2e99ab744a36c3f341a`, branch `arena/01a10845-gruposegsystemseguranca`, implementação `23910567a2a329dc4f46c4aae6cf740c9d4888aa`, PR a abrir. Migração 159 aditiva; próxima livre 160.
+- Entregue o quarto fluxo automatizado sobre fontes FIN-01..04: leitura e baixa por conta com `financeiro.*` fail-closed, transição estrita, idempotência, locks, transação, histórico/auditoria e relatório interno imutável. Escrita dos aliases HR retorna 410; sem simular banco/SMTP/entrega.
+- Provas: gate focal 1/1; Wave0 5/5; typecheck; unitários 526/526; L07 43/43; L08 51/51; client-space 22/22; client-access 27/27; F03 #126/#127/#129 1/1; demo-local OK.
+- Próximo passo: revisão/aceite humano e prova Windows/EPERM. **Não marcar F03 concluída antes desses dois gates.** Depois, seguir EXT-08/F04 em fatia separada.
+
 ## Atualização corrente — F03 cliente → chamado → atendimento → aceite
 
 - **Base:** `origin/main` `a459e07d42a855f93af4d76d047b49f3ff5e204e` (PR #127 já integrada); **branch fixa:** `arena/01a107a9-gruposegsystemseguranca`; **commits:** `3c7e9ab1da469b94d7cf383491f9240df30a8b6e` (implementação) + `7bf821eabba64b3880698d83b7a0fae3c5001594` (documentação); **PR:** [#129](https://github.com/berger33/gruposegsystemseguranca/pull/129), **integrada em `origin/main` pelo merge `a0815cfcfd7df17f30dce2e99ab744a36c3f341a`**. Não recriar/reabrir/remesclar #126, #127 nem #129.
