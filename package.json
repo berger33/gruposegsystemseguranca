@@ -59,7 +59,8 @@
     "test:ext06-satisfaction:pg": "node scripts/qa-ext06-satisfaction-postgres.mjs",
     "test:ext07-compliance:pg": "node scripts/qa-ext07-compliance-postgres.mjs",
     "qa:evidence": "node scripts/qa-evidence-report.mjs",
-    "test:admin-entry:pg": "node scripts/qa-admin-entry-postgres.mjs"
+    "test:admin-entry:pg": "node scripts/qa-admin-entry-postgres.mjs",
+    "test:f03-employee-request-rh-return:pg": "node scripts/qa-f03-employee-request-rh-return-postgres.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",

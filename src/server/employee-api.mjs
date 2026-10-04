@@ -34,6 +34,10 @@ function canonicalJson(value) {
   }
   return JSON.stringify(value);
 }
+function readIdempotencyKey(req) {
+  const key = String(req.headers['idempotency-key'] || '').trim();
+  return /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(key) ? key : null;
+}
 
 export function createEmployeeApi(ctx) {
   const db = () => ctx.getPool();
@@ -293,7 +297,10 @@ export function createEmployeeApi(ctx) {
         db().query(`SELECT id,protocol,category,severity,title,occurred_at,location,status FROM emp_occurrences WHERE employee_id=$1 ORDER BY occurred_at DESC LIMIT 30`, [id]),
         db().query(`SELECT p.id,p.post_location,p.title,p.version,p.content,p.category,EXISTS(SELECT 1 FROM emp_procedure_acknowledgments a WHERE a.procedure_id=p.id AND a.employee_id=$1) AS acknowledged FROM emp_post_procedures p WHERE p.status='publicado' AND p.is_active=TRUE AND (p.post_location='Geral' OR p.post_location IN (SELECT location FROM emp_shift_assignments WHERE employee_id=$1)) ORDER BY p.title LIMIT 50`, [id]),
         db().query(`SELECT id,document_kind,category,title,competence,version,status,source_label,source_authorized,original_filename,content_type,size_bytes,created_at,published_at FROM employee_private_documents WHERE employee_id=$1 AND (uploaded_by_kind='employee' OR status='published') ORDER BY created_at DESC LIMIT 50`, [id]),
-        db().query(`SELECT id,protocol,request_type,category,title,status,due_date,response_deadline,created_at FROM emp_self_requests WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 40`, [id]),
+        db().query(`SELECT r.id,r.protocol,r.request_type,r.category,r.title,r.description,r.status,r.due_date,r.response_deadline,r.rejection_reason,r.notes,r.responded_at,r.created_at,
+          COALESCE((SELECT jsonb_agg(jsonb_build_object('status',f.status,'message',f.message,'created_at',f.created_at) ORDER BY f.created_at ASC)
+            FROM emp_self_request_followups f WHERE f.request_id=r.id), '[]'::jsonb) AS followups
+          FROM emp_self_requests r WHERE r.employee_id=$1 ORDER BY r.created_at DESC LIMIT 40`, [id]),
         db().query(`SELECT id,protocol,request_type,size,quantity,status,created_at FROM emp_uniform_self_requests WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 30`, [id]),
         db().query(`SELECT d.id,d.delivery_date,d.quantity,d.size,d.status,d.receipt_signed,c.name AS item_name,c.type AS item_type,c.is_epi,COALESCE(r.receipt_signed,FALSE) AS employee_confirmed,r.signed_at FROM hr_uniform_deliveries d LEFT JOIN hr_uniform_catalog c ON c.id=d.uniform_id LEFT JOIN emp_uniform_receipt_confirmations r ON r.delivery_id=d.id AND r.employee_id=d.employee_id WHERE d.employee_id=$1 ORDER BY d.delivery_date DESC LIMIT 30`, [id]),
         db().query(`SELECT ce.id,ce.enrollment_date,ce.completion_date,ce.status,ce.expiry_date,tc.name AS training_name FROM emp_course_enrollments ce LEFT JOIN hr_training_catalog tc ON tc.id=ce.training_id WHERE ce.employee_id=$1 ORDER BY ce.enrollment_date DESC LIMIT 30`, [id]),
@@ -489,14 +496,42 @@ export function createEmployeeApi(ctx) {
     if (action === 'request') {
       const requestType = SELF_REQUEST_TYPES.has(data?.requestType) ? data.requestType : 'outro';
       const title = clean(data?.title, 200), description = clean(data?.description, 4000);
+      const idempotencyKey = readIdempotencyKey(req);
+      if (!idempotencyKey) return ctx.json(res, 400, { error: 'idempotency_key_required' });
       if (title.length < 5 || description.length < 10) return ctx.json(res, 400, { error: 'request_fields_required' });
-      const { rows: created } = await db().query(
-        `INSERT INTO emp_self_requests(protocol,employee_id,request_type,category,title,description,is_restricted,created_by,created_by_id)
-         VALUES ($1,$2,$3,$3,$4,$5,$6,$7,$7) RETURNING id,protocol,employee_id,request_type,status`,
-        [protocol('SOL'), employeeId, requestType, title, description, ['afastamento','reembolso'].includes(requestType), actor],
-      );
-      await audit('emp_self_request_create', actor, created[0].id);
-      return ctx.json(res, 201, { request: created[0] });
+      const requestFingerprint = sha256(canonicalJson({ requestType, title, description }));
+      const client = await db().connect();
+      try {
+        await client.query('BEGIN');
+        await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`employee-request:${employeeId}:${idempotencyKey}`]);
+        const { rows: replay } = await client.query(
+          `SELECT id,protocol,employee_id,request_type,status,request_fingerprint
+             FROM emp_self_requests
+            WHERE employee_id=$1 AND idempotency_key=$2 FOR UPDATE`,
+          [employeeId, idempotencyKey],
+        );
+        if (replay[0]) {
+          if (replay[0].request_fingerprint !== requestFingerprint) {
+            await client.query('ROLLBACK');
+            return ctx.json(res, 409, { error: 'idempotency_key_reused' });
+          }
+          await client.query('COMMIT');
+          return ctx.json(res, 200, { request: replay[0], replayed: true });
+        }
+        const { rows: created } = await client.query(
+          `INSERT INTO emp_self_requests(protocol,employee_id,request_type,category,title,description,is_restricted,created_by,created_by_id,idempotency_key,request_fingerprint)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$8,$9,$10)
+           RETURNING id,protocol,employee_id,request_type,status,request_fingerprint`,
+          [protocol('SOL'), employeeId, requestType, requestType, title, description, ['afastamento','reembolso'].includes(requestType), actor, idempotencyKey, requestFingerprint],
+        );
+        await audit('emp_self_request_create', actor, created[0].id, { employeeId, requestType }, client);
+        await client.query('COMMIT');
+        return ctx.json(res, 201, { request: created[0], replayed: false });
+      } catch (error) {
+        await client.query('ROLLBACK').catch(() => {});
+        console.error('Employee request create failed.', error?.message);
+        return ctx.json(res, 503, { error: 'employee_request_unavailable' });
+      } finally { client.release(); }
     }
     if (action === 'uniform') {
       const requestType = ['entrega','substituicao','devolucao','outro'].includes(data?.requestType) ? data.requestType : 'outro';
@@ -783,6 +818,114 @@ export function createEmployeeApi(ctx) {
     } finally { client.release(); }
   }
 
+  async function handleHrSelfRequests(req, res) {
+    if (req.method === 'GET') {
+      const staff = await hr(req, res, 'employees.read'); if (!staff) return;
+      const requestedStatus = new URL(req.url, 'http://localhost').searchParams.get('status');
+      const validStatuses = new Set(['solicitado','em_analise','aprovado','rejeitado','cancelado','concluido','pendente','encerrado']);
+      if (requestedStatus && !validStatuses.has(requestedStatus)) return ctx.json(res, 400, { error: 'invalid_status' });
+      const { rows: requests } = await db().query(
+        `SELECT r.id,r.protocol,r.employee_id,r.request_type,r.category,r.title,r.description,r.status,r.due_date,r.response_deadline,
+                r.is_restricted,r.rejection_reason,r.notes,r.responded_at,r.created_at,r.updated_at,
+                e.display_name AS employee_name,e.matricula,
+                COALESCE((SELECT jsonb_agg(jsonb_build_object('status',f.status,'message',f.message,'created_at',f.created_at) ORDER BY f.created_at ASC)
+                  FROM emp_self_request_followups f WHERE f.request_id=r.id), '[]'::jsonb) AS followups
+           FROM emp_self_requests r
+           JOIN hr_employees e ON e.id=r.employee_id
+          WHERE ($2::text IS NULL OR r.status=$2::text::emp_self_request_status)
+            AND EXISTS (
+              SELECT 1 FROM auth_permissions p
+               WHERE p.identity_id=$1 AND p.permission='employees.read' AND p.revoked_at IS NULL
+                 AND (p.scope_type IN ('global','organization')
+                   OR (p.scope_type='unit' AND p.scope_id=e.unit_id)
+                   OR (p.scope_type='contract' AND p.scope_id=e.contract_id)
+                   OR (p.scope_type='own' AND e.identity_id=$1))
+            )
+          ORDER BY r.created_at DESC LIMIT 200`,
+        [staff.identityId, requestedStatus],
+      );
+      return ctx.json(res, 200, { requests, scope: 'permissões ativas de employees.read' }, { 'Cache-Control': 'private, no-store' });
+    }
+    if (req.method !== 'PATCH') return ctx.json(res, 405, { error: 'method_not_allowed' }, { Allow: 'GET, PATCH' });
+    if (!ctx.sameOrigin(req)) return ctx.json(res, 403, { error: 'same_origin_required' });
+    let data;
+    try { data = await body(req); } catch (error) { return ctx.json(res, error.httpStatus || 400, { error: 'invalid_request' }); }
+    const requestId = String(data?.id || '');
+    const action = String(data?.action || '').toLowerCase();
+    const message = clean(data?.message, 1000);
+    const idempotencyKey = readIdempotencyKey(req);
+    if (!isUuid(requestId)) return ctx.json(res, 400, { error: 'invalid_request_id' });
+    if (!['em_analise','aprovar','rejeitar'].includes(action)) return ctx.json(res, 400, { error: 'invalid_review_action' });
+    if (message.length < 5) return ctx.json(res, 400, { error: 'review_message_required' });
+    if (!idempotencyKey) return ctx.json(res, 400, { error: 'idempotency_key_required' });
+
+    const staffSession = await ctx.readStaffSession(req);
+    if (!staffSession) return ctx.json(res, 401, { error: 'admin_session_required' });
+    const { rows: targetRows } = await db().query('SELECT employee_id FROM emp_self_requests WHERE id=$1', [requestId]);
+    if (!targetRows[0]) return ctx.json(res, 404, { error: 'request_not_found' });
+    const staff = await hr(req, res, 'employees.write', targetRows[0].employee_id); if (!staff) return;
+
+    const requestFingerprint = sha256(canonicalJson({ action, message }));
+    const nextStatus = action === 'em_analise' ? 'em_analise' : action === 'aprovar' ? 'aprovado' : 'rejeitado';
+    const client = await db().connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`employee-request-review:${requestId}:${idempotencyKey}`]);
+      const { rows: locked } = await client.query(
+        `SELECT id,employee_id,status FROM emp_self_requests WHERE id=$1 FOR UPDATE`, [requestId],
+      );
+      if (!locked[0]) { await client.query('ROLLBACK'); return ctx.json(res, 404, { error: 'request_not_found' }); }
+      const { rows: replay } = await client.query(
+        `SELECT request_fingerprint FROM emp_self_request_followups
+          WHERE request_id=$1 AND idempotency_key=$2 FOR UPDATE`,
+        [requestId, idempotencyKey],
+      );
+      if (replay[0]) {
+        if (replay[0].request_fingerprint !== requestFingerprint) {
+          await client.query('ROLLBACK');
+          return ctx.json(res, 409, { error: 'idempotency_key_reused' });
+        }
+        const { rows: current } = await client.query(
+          `SELECT id,protocol,employee_id,request_type,status,notes,rejection_reason,responded_at FROM emp_self_requests WHERE id=$1`, [requestId],
+        );
+        await client.query('COMMIT');
+        return ctx.json(res, 200, { request: current[0], replayed: true });
+      }
+      const transitionAllowed = (locked[0].status === 'solicitado' && nextStatus === 'em_analise')
+        || (locked[0].status === 'em_analise' && ['aprovado','rejeitado'].includes(nextStatus));
+      if (!transitionAllowed) {
+        await client.query('ROLLBACK');
+        return ctx.json(res, 409, { error: 'review_transition_not_allowed' });
+      }
+      const reviewerName = clean(staff.displayName, 200) || 'RH';
+      const { rows: updated } = await client.query(
+        `UPDATE emp_self_requests
+            SET status=$2::text::emp_self_request_status,responsible_id=COALESCE(responsible_id,$3),responsible_name=COALESCE(responsible_name,$4),
+                approved_by=CASE WHEN $2::text='aprovado' THEN $3 ELSE approved_by END,
+                approved_by_id=CASE WHEN $2::text='aprovado' THEN $3 ELSE approved_by_id END,
+                approved_at=CASE WHEN $2::text='aprovado' THEN NOW() ELSE approved_at END,
+                rejection_reason=CASE WHEN $2::text='rejeitado' THEN $5 ELSE rejection_reason END,
+                notes=$5,responded_at=CASE WHEN $2::text IN ('aprovado','rejeitado') THEN NOW() ELSE responded_at END,
+                updated_at=NOW()
+          WHERE id=$1
+          RETURNING id,protocol,employee_id,request_type,status,notes,rejection_reason,responded_at`,
+        [requestId, nextStatus, staff.identityId, reviewerName, message],
+      );
+      await client.query(
+        `INSERT INTO emp_self_request_followups(request_id,message,status,created_by,created_by_id,created_by_name,idempotency_key,request_fingerprint)
+         VALUES ($1,$2,$3,$4,$4,$5,$6,$7)`,
+        [requestId, message, nextStatus, staff.identityId, reviewerName, idempotencyKey, requestFingerprint],
+      );
+      await audit('emp_self_request_review', staff.identityId, requestId, { employeeId: locked[0].employee_id, status: nextStatus }, client);
+      await client.query('COMMIT');
+      return ctx.json(res, 200, { request: updated[0], replayed: false });
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      console.error('Employee request review failed.', error?.message);
+      return ctx.json(res, 503, { error: 'employee_request_review_unavailable' });
+    } finally { client.release(); }
+  }
+
   async function handleHrOverview(req, res) {
     if (req.method !== 'GET') return ctx.json(res, 405, { error: 'method_not_allowed' }, { Allow: 'GET' });
     const staff = await hr(req, res, 'employees.read'); if (!staff) return;
@@ -823,6 +966,7 @@ export function createEmployeeApi(ctx) {
       const access = url.pathname.match(/^\/api\/admin\/hr\/employees\/([0-9a-f-]{36})\/access$/i);
       if (access) return handleProvisionAccess(req, res, access[1]);
       if (url.pathname === '/api/admin/hr/l03/overview') return handleHrOverview(req, res);
+      if (url.pathname === '/api/admin/hr/l03/self-requests') return handleHrSelfRequests(req, res);
       if (url.pathname === '/api/admin/hr/l03/documents') return handleHrDocuments(req, res);
       const hrDownload = url.pathname.match(/^\/api\/admin\/hr\/l03\/documents\/([0-9a-f-]{36})\/download$/i);
       if (hrDownload) return sendPrivateDocument(req, res, hrDownload[1], true);
