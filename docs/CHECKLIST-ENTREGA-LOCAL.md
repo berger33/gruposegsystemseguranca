@@ -1,3 +1,21 @@
+## Atualização 2026-10-04 — F08 / EXT-12 Editor visual avançado canônico
+
+**Base:** PR #136 integrada em `e03c59141e614fbea31a9b6d9f05b24766177201`; branch fixa desta sessão `arena/01a108ff-gruposegsystemseguranca`; PRs #126, #127, #129, #132, #133, #134 e #136 não foram recriadas nem remescladas.
+
+- [x] Migração 164 aditiva; 001–163 imutáveis; próxima livre 165; tabelas 086 preservadas como legado e sem escrita canônica retroativa.
+- [x] Tokens e layouts canônicos com `origin='ext12_canonica'`, versão, revisão, aprovação, prévia interna e publicação auditada.
+- [x] `ext_visual_editor_events` e `ext_editor_history` append-only com triggers de imutabilidade, idempotency key e fingerprint SHA-256.
+- [x] Permissões explícitas `visual_editor.read`, `visual_editor.write`, `visual_editor.review`, `visual_editor.publish` fail-closed; sessões individuais e same-origin em mutações.
+- [x] Advisory lock + `FOR UPDATE`, replay/conflito por Idempotency-Key e auditoria atômica em `auth_access_audit` com rollback e HTTP 503 em indisponibilidade.
+- [x] Rotas canônicas `/api/ext/visual/tokens` e `/api/ext/visual/layouts`; escritas legadas `/api/ext/visual-tokens` e `/api/ext/visual-layouts` aposentadas com HTTP 410 após guardas.
+- [x] UI `/admin/visual` protegida por `AdminGate`, declarando prévia interna, sem publicação automática do site público e sem uso de handlers legados como cobertura.
+- [x] Unitário focal `tests/ext12-visual.test.mjs`: **10/10**.
+- [x] Gate focal `npm run test:ext12-visual:pg`: **14/14**, PostgreSQL 17 descartável, migrações 001–164, servidor HTTP real e sessões staff reais; sem INSERT SQL de token/layout.
+- [x] `node scripts/qa-wave0-static.mjs` **5/5**, `npm run typecheck`, `npm test` **574/574**, `npm run build` (**98 páginas**), `npm run test:migrations:pg` **164/164**, `git diff --check` e `node --check`.
+- [ ] Aceite humano.
+- [ ] Windows/EPERM e aplicação no banco de destino.
+- [ ] Deploy/publicação externa real, CDN, upload/armazenamento real de arquivos ou fornecedor externo.
+
 ## Atualização 2026-10-04 — F07 / EXT-11 Analytics e experimentos A/B controlados
 
 **Base:** merge `58e213a11ccae35fc2f21002c9e1dda6b87bc333`; branch `arena/01a108c7-gruposegsystemseguranca`; PRs #126, #127, #129, #132, #133 e #134 não foram recriadas nem remescladas.
@@ -1643,10 +1661,10 @@ Analytics/A-B Aceite: Hipótese, variantes aprovadas, métrica e privacidade
 
 ## EXT-12
 Editor visual avançado Aceite: Tokens/layouts versionados, preview e publicação
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Handlers `/api/ext/*` para tokens/layouts/histórico; tabelas `ext_visual_*`/086; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
-- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
-- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
+- Estado: **pronto_local — gate dedicado 14/14** (jornada interna de staff; aceite humano e Windows pendentes)
+- Tela / API / dados / autorização: `/admin/visual` protegido por `AdminGate`; `/api/ext/visual/tokens` e `/api/ext/visual/layouts` com detalhe, revisão, transição, prévia e publicação; tabelas `ext_visual_tokens`, `ext_visual_layouts`, `ext_visual_editor_events` e `ext_editor_history`; grants `visual_editor.read/write/review/publish` consultados no servidor.
+- Integração e evidência: `npm run test:ext12-visual:pg` em PG17 descartável, migrações 001–164, servidor HTTP real e sessões staff reais; tokens/layouts/prévias/publicações por HTTP; RBAC, same-origin, replay/conflito, concorrência, locks, auditoria/rollback/503, imutabilidade e legado 410 cobertos. Unitário focal 10/10; `npm test` 574/574; migrações 164/164.
+- Pendência / fronteira externa / aceite humano: publicação é registro interno versionado/auditado; não há deploy externo do site, CDN, upload/armazenamento real de arquivos ou fornecedor externo. Permanecem aceite humano, Windows/EPERM e banco de destino.
 
 ## EXT-13
 Relatório periódico Aceite: Consolidação de métricas e envio autorizado

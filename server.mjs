@@ -114,6 +114,7 @@ import { createExtKnowledgeApi } from "./src/server/ext-knowledge-api.mjs";
 import { createExtExpansionApi } from "./src/server/ext-expansion-api.mjs";
 import { createExtContinuityApi } from "./src/server/ext-continuity-api.mjs";
 import { createExtAnalyticsApi } from "./src/server/ext-analytics-api.mjs";
+import { createExtVisualApi } from "./src/server/ext-visual-api.mjs";
 import { parseSchedulerConfig, startExtComplianceScheduler } from "./src/server/ext-compliance-scheduler.mjs";
 import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
 import { createCommercialHistoryApi } from "./src/server/commercial-history-api.mjs";
@@ -2344,6 +2345,15 @@ const extAnalyticsApi = createExtAnalyticsApi({
   requireSession: readSession,
 });
 
+// EXT-12 / F08: editor visual canônico com tokens/layouts versionados,
+// prévia interna e publicação auditada. As rotas legadas só leem legado e
+// recusam escrita com 410 após as guardas.
+const extVisualApi = createExtVisualApi({
+  pool: getPool(),
+  sameOrigin,
+  requireSession: readSession,
+});
+
 const extAdvancedApi = createExtAdvancedApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -4368,12 +4378,14 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/ext-analytics-experiments" || url.pathname === "/api/crm/hr/ext-analytics-experiments" || url.pathname === "/api/hr/ext-analytics-experiments" || url.pathname === "/api/ext/analytics-experiments") {
     return extAnalyticsApi.handleLegacy(req, res);
   }
-  // EXT-12 editor visual avançado permissão real recarga consistente e rollback
+  // EXT-12 / F08 editor visual canônico: tokens/layouts versionados,
+  // prévia interna e publicação auditada.
+  if (url.pathname.startsWith("/api/ext/visual/")) return extVisualApi.handle(req, res);
   if (url.pathname === "/api/admin/hr/ext-visual-tokens" || url.pathname === "/api/crm/hr/ext-visual-tokens" || url.pathname === "/api/hr/ext-visual-tokens" || url.pathname === "/api/ext/visual-tokens") {
-    return extAdvancedApi.handleVisualTokens(req, res);
+    return extVisualApi.handleLegacyTokens(req, res);
   }
   if (url.pathname === "/api/admin/hr/ext-visual-layouts" || url.pathname === "/api/crm/hr/ext-visual-layouts" || url.pathname === "/api/hr/ext-visual-layouts" || url.pathname === "/api/ext/visual-layouts") {
-    return extAdvancedApi.handleVisualLayouts(req, res);
+    return extVisualApi.handleLegacyLayouts(req, res);
   }
   // EXT-13 relatório programado gerado apenas de dados reais escopo cliente autorizado sem dado inventado sem dado não autorizado
   if (url.pathname === "/api/admin/hr/ext-periodic-reports" || url.pathname === "/api/crm/hr/ext-periodic-reports" || url.pathname === "/api/hr/ext-periodic-reports" || url.pathname === "/api/ext/periodic-reports") {
@@ -5881,6 +5893,7 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/ext/expansion/")
   || pathname.startsWith("/api/ext/continuity/")
   || pathname.startsWith("/api/ext/analytics/")
+  || pathname.startsWith("/api/ext/visual/")
   || pathname.startsWith("/api/ext/satisfaction/")
   || pathname === "/api/admin/hr/ext-bidding-documents"
   || pathname === "/api/crm/hr/ext-bidding-documents"

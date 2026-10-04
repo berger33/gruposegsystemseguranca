@@ -1,10 +1,24 @@
-# Status atual consolidado — reconciliação F00 + F01 + F03 + F04 (EXT-08) + F05 (EXT-09) + F06 (EXT-10) + F07 (EXT-11)
+# Status atual consolidado — reconciliação F00 + F01 + F03 + F04 (EXT-08) + F05 (EXT-09) + F06 (EXT-10) + F07 (EXT-11) + F08 (EXT-12)
 
-## Atualização desta sessão — F06 / EXT-10 Continuidade validada em PostgreSQL
+## Atualização desta sessão — F08 / EXT-12 Editor visual avançado canônico
 
-Base confirmada no GitHub e no checkout: PR #135 está `MERGED` com o merge commit real `cf3a1f4c580f44b92969a61548eec8d304e9c005`, que integra `58e213a11ccae35fc2f21002c9e1dda6b87bc333` e `9396d03f0ff1cc7064ed3675525f2387d0718a4c`. `origin/main`, `main` local e `arena/01a108ea-gruposegsystemseguranca` estão nesse SHA. O checkout iniciou limpo. #126, #127, #129, #132, #133 e #134 permanecem mescladas e não devem ser recriadas, reabertas ou remescladas.
+Base reconfirmada: PR #136 está `MERGED` no GitHub, com merge commit `e03c59141e614fbea31a9b6d9f05b24766177201`; `origin/main`, `main` local e a branch `arena/01a108ff-gruposegsystemseguranca` partiram desse SHA, com checkout limpo e sem recriar PRs antigas.
 
-Entrega desta fatia: implementação no commit `6d6ad1389c2554fbd5586081342f3dd5150ba294`, PR #136 aberta para revisão. Não houve merge automático.
+Fatia escolhida: próxima EXT pendente, pois o requisito de escopo/isolamento por `client_account_id` da EXT-10 não foi confirmado para esta rodada. EXT-12 agora possui jornada canônica própria, sem contar a existência das tabelas/handlers legados da migração 086 como cobertura.
+
+A migração **164** é aditiva e preserva 001–163: adiciona origem canônica a `ext_visual_tokens`/`ext_visual_layouts`, idempotência/fingerprint, campos de aprovação/publicação, vínculo opcional de layout com token, índices de versão publicada única, permissões `visual_editor.*`, ações de auditoria e eventos `ext_visual_editor_events` append-only. O ledger vigente é **001–164**; próxima migração livre: **165**.
+
+API/UI: `/api/ext/visual/tokens` e `/api/ext/visual/layouts` com criação, revisão, transição, prévia e publicação; `/admin/visual` protegido por `AdminGate`. Escritas legadas `/api/ext/visual-tokens` e `/api/ext/visual-layouts` retornam 410 após guardas.
+
+**Resultado:** unitário EXT-12 **10/10**; gate `npm run test:ext12-visual:pg` **14/14** em PostgreSQL 17 descartável, migrações 001–164, HTTP real e sessões staff reais; Wave0 **5/5**; `npm run typecheck` OK; `npm test` **574/574**; `npm run test:migrations:pg` **164/164**; `npm run build` **98 páginas**; `git diff --check` e `node --check` OK.
+
+**Limites:** publicação é registro interno versionado/auditado; não há deploy externo, CDN, upload/armazenamento de arquivos, fornecedor, aceite humano, Windows/EPERM ou aplicação no banco de destino.
+
+## Reconciliação pós-PR #136 — F06 / EXT-10 Continuidade validada em PostgreSQL
+
+Base da sessão anterior: PR #135 `MERGED` no merge commit `cf3a1f4c580f44b92969a61548eec8d304e9c005`; a sessão atual já reconfirmou que a PR #136 também está `MERGED` em `e03c59141e614fbea31a9b6d9f05b24766177201`. #126, #127, #129, #132, #133, #134 e #136 permanecem integradas e não devem ser recriadas, reabertas ou remescladas.
+
+Entrega daquela fatia: implementação no commit `6d6ad1389c2554fbd5586081342f3dd5150ba294`; PR #136 integrada por merge commit, sem squash. Não recriar nem reabrir.
 
 O ledger é **001–163** e 001–163 permanecem imutáveis; a próxima migração livre é **164**. Nenhuma migração foi aplicada em banco do operador e nenhuma 164 foi criada.
 

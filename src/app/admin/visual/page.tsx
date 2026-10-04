@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import AdminGate from "../AdminGate";
-import VisualAdmin from "@/components/VisualAdmin";
+import VisualEditorWorkspace from "./VisualEditorWorkspace";
 
 export const metadata: Metadata = {
-  title: "Aparência do site — Administração de demonstração | Grupo SEG System",
-  description: "Prévia local da seleção dos dez layouts do site público.",
+  title: "Editor visual avançado — Administração | Grupo SEG System",
+  description: "Tokens e layouts versionados com prévia interna e publicação auditada.",
   robots: { index: false, follow: false },
 };
 
 export default function VisualAdminPage() {
   return (
     <AdminGate allowedRoles={["ti", "admin"]}>
-      <VisualAdmin />
+      <VisualEditorWorkspace />
     </AdminGate>
   );
 }

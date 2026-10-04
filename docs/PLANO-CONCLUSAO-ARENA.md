@@ -1,4 +1,15 @@
-## Atualização corrente — EXT-11 / F07 Analytics e experimentos A/B controlados
+## Atualização corrente — EXT-12 / F08 Editor visual avançado canônico
+
+- Base confirmada: PR #136 `MERGED` no merge commit `e03c59141e614fbea31a9b6d9f05b24766177201`; `origin/main`, `main` local e a branch fixa desta sessão `arena/01a108ff-gruposegsystemseguranca` partiram desse SHA com checkout limpo. PRs #126, #127, #129, #132, #133, #134 e #136 já integradas e intocadas.
+- Fatia escolhida: próxima EXT pendente. O isolamento por `client_account_id` da EXT-10 segue pendente por falta de confirmação explícita como requisito desta rodada.
+- Migração aditiva `164-ext12-visual-editor-canonical-journey.sql`; 001–163 imutáveis; próxima livre: **165**.
+- Entregue: tokens e layouts canônicos com versionamento, revisão, transição, aprovação, prévia interna e publicação auditada; eventos `ext_visual_editor_events` e `ext_editor_history` append-only; índice de versão publicada única por chave.
+- Rotas: `/api/ext/visual/tokens`, `/:id`, `/:id/revisions`, `/:id/transition`, `/:id/publish`; `/api/ext/visual/layouts`, `/:id`, `/:id/revisions`, `/:id/transition`, `/:id/preview`, `/:id/publish`. Escritas legadas `/api/ext/visual-tokens` e `/api/ext/visual-layouts` retornam 410 depois dos guards. UI `/admin/visual` protegida por `AdminGate`.
+- Garantias provadas no gate: RBAC granular server-side fail-closed (`visual_editor.*`), sessões individuais, same-origin, Idempotency-Key com SHA-256 replay/conflito, advisory lock + `FOR UPDATE`, auditoria transacional 503/rollback, imutabilidade de eventos/histórico, publicação exigindo aprovação e prévia.
+- Provas: `npm ci`; Wave0 5/5; unitário EXT-12 10/10; `npm run test:ext12-visual:pg` 14/14; `npm run typecheck` OK; `npm test` 574/574; `npm run test:migrations:pg` 164/164; `npm run build` com 98 páginas; `git diff --check` e `node --check` OK.
+- Pendências: aceite humano do operador, Windows/EPERM e validação de banco de destino continuam pendentes; publicação EXT-12 é registro interno, sem deploy externo, CDN, fornecedor ou upload real de arquivo.
+
+## Atualização anterior — EXT-11 / F07 Analytics e experimentos A/B controlados
 
 - Base confirmada: merge `58e213a11ccae35fc2f21002c9e1dda6b87bc333`; branch Arena fixa `arena/01a108c7-gruposegsystemseguranca`; PRs #126, #127, #129, #132, #133 e #134 já integradas e intocadas.
 - Migração aditiva `163-ext11-analytics-canonical-journey.sql`; 001–162 imutáveis; próxima livre: **164**.
@@ -16,7 +27,7 @@ A implementação foi concluída na fatia anterior; a prova focal e a reconcilia
 
 ## Atualização corrente — EXT-10 / F06 Continuidade validada
 
-- Base da sessão: merge real da PR #135 `cf3a1f4c580f44b92969a61548eec8d304e9c005`, com pais `58e213a11ccae35fc2f21002c9e1dda6b87bc333` e `9396d03f0ff1cc7064ed3675525f2387d0718a4c`; branch fixa `arena/01a108ea-gruposegsystemseguranca`. `main` local e `origin/main` estão alinhados. PRs #126, #127, #129, #132, #133 e #134 estão integradas e não devem voltar ao fluxo.
+- Base daquela sessão: merge real da PR #135 `cf3a1f4c580f44b92969a61548eec8d304e9c005`, com pais `58e213a11ccae35fc2f21002c9e1dda6b87bc333` e `9396d03f0ff1cc7064ed3675525f2387d0718a4c`; a sessão atual reconfirmou a PR #136 integrada em `e03c59141e614fbea31a9b6d9f05b24766177201`. PRs #126, #127, #129, #132, #133, #134 e #136 estão integradas e não devem voltar ao fluxo.
 - Ledger **001–163** preservado e imutável nesta fatia; próxima migração livre **164**. A migração 162 não foi alterada e a 164 não é necessária.
 - F06 cobre a jornada interna de planos por posto, contatos declarados, procedimentos de contingência/recuperação, transições e exercícios simulados. A API canônica é `/api/ext/continuity/plans`, detalhe, `/transition` e `/exercises`; a UI é `/admin/continuidade`. Escritas legadas retornam 410.
 - Guardas provadas: RBAC server-side fail-closed, same-origin, sessões individuais, idempotência SHA-256/replay/conflito, advisory lock, `FOR UPDATE`, máquina de estados, auditoria atômica com rollback/503, eventos imutáveis e reinício do servidor. Planos/exercícios foram criados por HTTP; SQL do gate só preparou identidades/grants/controles.
@@ -74,7 +85,7 @@ Data: 2026-10-04. Base vigente desta fatia: `origin/main` `972e6563f5ea4888b62e8
 ## Regras permanentes
 
 1. Uma fatia de implementação por PR; PR pequeno revisável; nunca mesclar PRs alternativas antigas.
-2. Migrações 001–158 são imutáveis; próxima livre no main vigente: **159** (reconfirmar antes de cada fatia).
+2. Migrações 001–164 são imutáveis; próxima livre no main vigente: **165** (reconfirmar antes de cada fatia).
 3. Autorização no servidor em toda API; nunca apenas ocultação no menu. Fail-closed em erro de banco/permissão.
 4. Preservar PLAT-01 (despacho à prova de rejeição), credenciais individuais, isolamento entre clientes, auditoria transacional e idempotência.
 5. Evidência real por fatia: comando + resultado + SHA + limite da prova. Banco sempre descartável (embedded-postgres de teste ou Compose exclusivo do operador). Sem segredos em git/logs.
