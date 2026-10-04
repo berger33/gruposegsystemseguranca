@@ -1,0 +1,497 @@
+%PDF-1.4
+%âãÏÓ
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [7 0 R 9 0 R 11 0 R 13 0 R 15 0 R 17 0 R] /Count 6 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Title (Relatório de evidência de QA — Bateria de validação) /Author (Grupo SEG System Segurança — Engenharia) /Subject (Execução de bateria de validação com resultado verificável) /Producer (gruposegsystemseguranca qa-evidence) /CreationDate (D:20261004202357Z) >>
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 8 0 R >>
+endobj
+8 0 obj
+<< /Length 2310 >>
+stream
+0.060 0.200 0.360 rg 0.00 612.00 595.00 230.00 re f
+BT 1.000 1.000 1.000 rg /F2 10 Tf 1 0 0 1 48.00 772.00 Tm (CONTROLE DE QUALIDADE — EVIDÊNCIA DE EXECUÇÃO) Tj ET
+BT 1.000 1.000 1.000 rg /F2 23 Tf 1 0 0 1 48.00 732.00 Tm (Relatório de evidência de QA) Tj ET
+BT 0.850 0.890 0.930 rg /F1 11 Tf 1 0 0 1 48.00 704.00 Tm (Bateria de validação) Tj ET
+BT 0.420 0.460 0.520 rg /F2 10 Tf 1 0 0 1 48.00 572.00 Tm (Gerado em) Tj ET
+BT 0.100 0.130 0.180 rg /F1 10 Tf 1 0 0 1 198.00 572.00 Tm (2026-10-04 20:23:57 UTC) Tj ET
+BT 0.420 0.460 0.520 rg /F2 10 Tf 1 0 0 1 48.00 556.60 Tm (Repositório) Tj ET
+BT 0.100 0.130 0.180 rg /F1 10 Tf 1 0 0 1 198.00 556.60 Tm (berger33/gruposegsystemseguranca) Tj ET
+BT 0.420 0.460 0.520 rg /F2 10 Tf 1 0 0 1 48.00 541.20 Tm (Branch) Tj ET
+BT 0.100 0.130 0.180 rg /F1 10 Tf 1 0 0 1 198.00 541.20 Tm (arena/01a1085d-gruposegsystemseguranca) Tj ET
+BT 0.420 0.460 0.520 rg /F2 10 Tf 1 0 0 1 48.00 525.80 Tm (Commit) Tj ET
+BT 0.100 0.130 0.180 rg /F1 10 Tf 1 0 0 1 198.00 525.80 Tm (b63a51e6e2af200b0ac93370dbe629f631dec718) Tj ET
+BT 0.420 0.460 0.520 rg /F2 10 Tf 1 0 0 1 48.00 510.40 Tm (Árvore de trabalho) Tj ET
+BT 0.100 0.130 0.180 rg /F1 10 Tf 1 0 0 1 198.00 510.40 Tm (29 arquivo\(s\) modificado\(s\)) Tj ET
+BT 0.420 0.460 0.520 rg /F2 10 Tf 1 0 0 1 48.00 495.00 Tm (Runtime) Tj ET
+BT 0.100 0.130 0.180 rg /F1 10 Tf 1 0 0 1 198.00 495.00 Tm (Node v22.22.3 — linux x64) Tj ET
+BT 0.420 0.460 0.520 rg /F2 10 Tf 1 0 0 1 48.00 479.60 Tm (Passos executados) Tj ET
+BT 0.100 0.130 0.180 rg /F1 10 Tf 1 0 0 1 198.00 479.60 Tm (8) Tj ET
+BT 0.420 0.460 0.520 rg /F2 10 Tf 1 0 0 1 48.00 464.20 Tm (Duração total) Tj ET
+BT 0.100 0.130 0.180 rg /F1 10 Tf 1 0 0 1 198.00 464.20 Tm (36.1 s) Tj ET
+BT 0.420 0.460 0.520 rg /F1 9 Tf 1 0 0 1 48.00 432.80 Tm (Cada resultado deste relatório provém do código de saída e da saída padrão do comando efetivamente executado na) Tj ET
+BT 0.420 0.460 0.520 rg /F1 9 Tf 1 0 0 1 48.00 419.60 Tm (máquina indicada. Nenhum valor é transcrito manualmente. Os logs integrais acompanham o ledger JSON de mesmo nome.) Tj ET
+0.800 0.830 0.870 RG 0.6 w 48 48 m 547 48 l S
+BT 0.420 0.460 0.520 rg /F1 7.5 Tf 1 0 0 1 48 34 Tm (Evidência de QA — Bateria de validação — commit b63a51e6e2af) Tj ET
+BT 0.420 0.460 0.520 rg /F1 7.5 Tf 1 0 0 1 500.72 34 Tm (Página 1 de 6) Tj ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 10 0 R >>
+endobj
+10 0 obj
+<< /Length 7110 >>
+stream
+0.060 0.200 0.360 rg 42.00 780.00 3.00 15.00 re f
+BT 0.060 0.200 0.360 rg /F2 14 Tf 1 0 0 1 52.00 786.00 Tm (1. Resultado consolidado) Tj ET
+0.070 0.450 0.310 rg 48.00 741.00 499.00 30.00 re f
+BT 1.000 1.000 1.000 rg /F2 10 Tf 1 0 0 1 58.00 761.00 Tm (BATERIA APROVADA — nenhum passo falhou) Tj ET
+BT 1.000 1.000 1.000 rg /F2 13 Tf 1 0 0 1 518.93 760.00 Tm (8/8) Tj ET
+BT 0.420 0.460 0.520 rg /F2 10 Tf 1 0 0 1 48.00 721.00 Tm (Passos aprovados) Tj ET
+BT 0.070 0.450 0.310 rg /F1 10 Tf 1 0 0 1 248.00 721.00 Tm (8) Tj ET
+BT 0.420 0.460 0.520 rg /F2 10 Tf 1 0 0 1 48.00 705.60 Tm (Passos reprovados) Tj ET
+BT 0.100 0.130 0.180 rg /F1 10 Tf 1 0 0 1 248.00 705.60 Tm (0) Tj ET
+BT 0.420 0.460 0.520 rg /F2 10 Tf 1 0 0 1 48.00 690.20 Tm (Asserções de teste agregadas) Tj ET
+BT 0.100 0.130 0.180 rg /F1 10 Tf 1 0 0 1 248.00 690.20 Tm (608 executadas — 608 aprovadas, 0 reprovadas) Tj ET
+BT 0.420 0.460 0.520 rg /F2 10 Tf 1 0 0 1 48.00 674.80 Tm (Skip / todo / cancelados) Tj ET
+BT 0.070 0.450 0.310 rg /F1 10 Tf 1 0 0 1 248.00 674.80 Tm (0 / 0 / 0) Tj ET
+BT 0.420 0.460 0.520 rg /F2 10 Tf 1 0 0 1 48.00 659.40 Tm (Duração total) Tj ET
+BT 0.100 0.130 0.180 rg /F1 10 Tf 1 0 0 1 248.00 659.40 Tm (36.1 s) Tj ET
+BT 0.100 0.130 0.180 rg /F2 11 Tf 1 0 0 1 48.00 638.00 Tm (Quadro geral) Tj ET
+0.060 0.200 0.360 rg 48.00 611.00 499.00 19.00 re f
+BT 1.000 1.000 1.000 rg /F2 9 Tf 1 0 0 1 53.00 620.00 Tm (#) Tj ET
+BT 1.000 1.000 1.000 rg /F2 9 Tf 1 0 0 1 77.95 620.00 Tm (Passo) Tj ET
+BT 1.000 1.000 1.000 rg /F2 9 Tf 1 0 0 1 277.55 620.00 Tm (Categoria) Tj ET
+BT 1.000 1.000 1.000 rg /F2 9 Tf 1 0 0 1 337.43 620.00 Tm (Asserções) Tj ET
+BT 1.000 1.000 1.000 rg /F2 9 Tf 1 0 0 1 407.29 620.00 Tm (Duração) Tj ET
+BT 1.000 1.000 1.000 rg /F2 9 Tf 1 0 0 1 467.17 620.00 Tm (Resultado) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 53.00 601.00 Tm (1) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 77.95 601.00 Tm (Wave 0 — conformidade estática e ledger de) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 77.95 589.00 Tm (migrações) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 277.55 601.00 Tm (Estático) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 337.43 601.00 Tm (—) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 407.29 601.00 Tm (0.0 s) Tj ET
+BT 0.070 0.450 0.310 rg /F2 9 Tf 1 0 0 1 467.17 601.00 Tm (APROVADO) Tj ET
+0.800 0.830 0.870 RG 0.6 w 48.00 578.00 m 547.00 578.00 l S
+0.950 0.960 0.975 rg 48.00 561.00 499.00 19.00 re f
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 53.00 570.00 Tm (2) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 77.95 570.00 Tm (Verificação de tipos \(tsc --noEmit\)) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 277.55 570.00 Tm (Estático) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 337.43 570.00 Tm (—) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 407.29 570.00 Tm (28.4 s) Tj ET
+BT 0.070 0.450 0.310 rg /F2 9 Tf 1 0 0 1 467.17 570.00 Tm (APROVADO) Tj ET
+0.800 0.830 0.870 RG 0.6 w 48.00 559.00 m 547.00 559.00 l S
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 53.00 551.00 Tm (3) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 77.95 551.00 Tm (Focal PLAT-01 — despacho HTTP à prova de) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 77.95 539.00 Tm (rejeição) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 277.55 551.00 Tm (Focal) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 337.43 551.00 Tm (25/25) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 407.29 551.00 Tm (0.5 s) Tj ET
+BT 0.070 0.450 0.310 rg /F2 9 Tf 1 0 0 1 467.17 551.00 Tm (APROVADO) Tj ET
+0.800 0.830 0.870 RG 0.6 w 48.00 528.00 m 547.00 528.00 l S
+0.950 0.960 0.975 rg 48.00 499.00 499.00 31.00 re f
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 53.00 520.00 Tm (4) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 77.95 520.00 Tm (Focal EXT-07 — jornada canônica de) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 77.95 508.00 Tm (compliance) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 277.55 520.00 Tm (Focal) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 337.43 520.00 Tm (19/19) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 407.29 520.00 Tm (0.1 s) Tj ET
+BT 0.070 0.450 0.310 rg /F2 9 Tf 1 0 0 1 467.17 520.00 Tm (APROVADO) Tj ET
+0.800 0.830 0.870 RG 0.6 w 48.00 497.00 m 547.00 497.00 l S
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 53.00 489.00 Tm (5) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 77.95 489.00 Tm (Focal EXT-08 — base de conhecimento e POPs) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 77.95 477.00 Tm (canônicos) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 277.55 489.00 Tm (Focal) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 337.43 489.00 Tm (10/10) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 407.29 489.00 Tm (0.1 s) Tj ET
+BT 0.070 0.450 0.310 rg /F2 9 Tf 1 0 0 1 467.17 489.00 Tm (APROVADO) Tj ET
+0.800 0.830 0.870 RG 0.6 w 48.00 466.00 m 547.00 466.00 l S
+0.950 0.960 0.975 rg 48.00 437.00 499.00 31.00 re f
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 53.00 458.00 Tm (6) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 77.95 458.00 Tm (Focal EXT-09 — expansão, dimensionamento e) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 77.95 446.00 Tm (cenários financeiros) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 277.55 458.00 Tm (Focal) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 337.43 458.00 Tm (9/9) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 407.29 458.00 Tm (0.1 s) Tj ET
+BT 0.070 0.450 0.310 rg /F2 9 Tf 1 0 0 1 467.17 458.00 Tm (APROVADO) Tj ET
+0.800 0.830 0.870 RG 0.6 w 48.00 435.00 m 547.00 435.00 l S
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 53.00 427.00 Tm (7) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 77.95 427.00 Tm (Suíte unitária integral \(npm test\)) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 277.55 427.00 Tm (Regressão) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 337.43 427.00 Tm (545/545) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 407.29 427.00 Tm (6.7 s) Tj ET
+BT 0.070 0.450 0.310 rg /F2 9 Tf 1 0 0 1 467.17 427.00 Tm (APROVADO) Tj ET
+0.800 0.830 0.870 RG 0.6 w 48.00 416.00 m 547.00 416.00 l S
+0.950 0.960 0.975 rg 48.00 399.00 499.00 19.00 re f
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 53.00 408.00 Tm (8) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 77.95 408.00 Tm (Higiene de diff \(git diff --check\)) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 277.55 408.00 Tm (Estático) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 337.43 408.00 Tm (—) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9 Tf 1 0 0 1 407.29 408.00 Tm (0.0 s) Tj ET
+BT 0.070 0.450 0.310 rg /F2 9 Tf 1 0 0 1 467.17 408.00 Tm (APROVADO) Tj ET
+0.800 0.830 0.870 RG 0.6 w 48.00 397.00 m 547.00 397.00 l S
+BT 0.420 0.460 0.520 rg /F1 9 Tf 1 0 0 1 48.00 379.00 Tm (Critério de aprovação por passo: código de saída 0. Para passos sob node:test, exige-se ainda zero falha, zero skip, zero) Tj ET
+BT 0.420 0.460 0.520 rg /F1 9 Tf 1 0 0 1 48.00 365.80 Tm (todo e zero cancelado — o gate não reduz asserção para passar.) Tj ET
+0.800 0.830 0.870 RG 0.6 w 48 48 m 547 48 l S
+BT 0.420 0.460 0.520 rg /F1 7.5 Tf 1 0 0 1 48 34 Tm (Evidência de QA — Bateria de validação — commit b63a51e6e2af) Tj ET
+BT 0.420 0.460 0.520 rg /F1 7.5 Tf 1 0 0 1 500.72 34 Tm (Página 2 de 6) Tj ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 12 0 R >>
+endobj
+12 0 obj
+<< /Length 7388 >>
+stream
+0.060 0.200 0.360 rg 42.00 780.00 3.00 15.00 re f
+BT 0.060 0.200 0.360 rg /F2 14 Tf 1 0 0 1 52.00 786.00 Tm (2. Evidência detalhada por passo) Tj ET
+BT 0.420 0.460 0.520 rg /F1 9.5 Tf 1 0 0 1 48.00 761.00 Tm (Cada bloco traz o comando exato, o objetivo da verificação, o desfecho e um recorte fiel da saída. Os recortes) Tj ET
+BT 0.420 0.460 0.520 rg /F1 9.5 Tf 1 0 0 1 48.00 747.30 Tm (preservam as linhas de resumo e as linhas de falha; quando há corte, o volume omitido é informado e o log integral) Tj ET
+BT 0.420 0.460 0.520 rg /F1 9.5 Tf 1 0 0 1 48.00 733.60 Tm (permanece disponível.) Tj ET
+BT 0.060 0.200 0.360 rg /F2 11 Tf 1 0 0 1 48.00 715.90 Tm (1. Wave 0 — conformidade estática e ledger de migrações) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 697.90 Tm (Comando) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 697.90 Tm (node scripts/qa-wave0-static.mjs) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 683.00 Tm (Categoria / peso) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 683.00 Tm (Estático — leve) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 668.10 Tm (Objetivo) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 668.10 Tm (Verificar o inventário de migrações 001–161, manifesto e invariantes estáticas do projeto.) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 653.20 Tm (Código de saída) Tj ET
+BT 0.070 0.450 0.310 rg /F1 9.5 Tf 1 0 0 1 168.00 653.20 Tm (0) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 638.30 Tm (Duração) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 638.30 Tm (0.0 s) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 623.40 Tm (Desfecho) Tj ET
+BT 0.070 0.450 0.310 rg /F1 9.5 Tf 1 0 0 1 168.00 623.40 Tm (APROVADO) Tj ET
+BT 0.420 0.460 0.520 rg /F2 11 Tf 1 0 0 1 48.00 602.50 Tm (Recorte da saída) Tj ET
+0.950 0.960 0.975 rg 48.00 527.50 499.00 66.80 re f
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 582.50 Tm (OK PLT-SMK-001: Imports relativos estáticos de server.mjs) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 572.70 Tm (OK PLT-SMK-001: Dependências runtime declaradas em manifest e lockfile) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 562.90 Tm (OK PLT-MIG-001: Migrações SQL 001–161 contínuas e únicas) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 553.10 Tm (OK PLT-MIG-001: Migrações 001–161 registradas no migrador PG) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 543.30 Tm (OK PLT-CI-001: CI com install/test/typecheck/build sem bypass) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 533.50 Tm (RESUMO: 5/5 verificações estáticas OK; 0 imports ausentes; 0 migrações ausentes.) Tj ET
+0.800 0.830 0.870 RG 0.6 w 48.00 513.70 m 547.00 513.70 l S
+BT 0.060 0.200 0.360 rg /F2 11 Tf 1 0 0 1 48.00 499.70 Tm (2. Verificação de tipos \(tsc --noEmit\)) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 481.70 Tm (Comando) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 481.70 Tm (npm run typecheck) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 466.80 Tm (Categoria / peso) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 466.80 Tm (Estático — leve) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 451.90 Tm (Objetivo) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 451.90 Tm (Garantir que a árvore TypeScript compila sem erro após a alteração.) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 437.00 Tm (Código de saída) Tj ET
+BT 0.070 0.450 0.310 rg /F1 9.5 Tf 1 0 0 1 168.00 437.00 Tm (0) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 422.10 Tm (Duração) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 422.10 Tm (28.4 s) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 407.20 Tm (Desfecho) Tj ET
+BT 0.070 0.450 0.310 rg /F1 9.5 Tf 1 0 0 1 168.00 407.20 Tm (APROVADO) Tj ET
+BT 0.420 0.460 0.520 rg /F2 11 Tf 1 0 0 1 48.00 386.30 Tm (Recorte da saída) Tj ET
+0.950 0.960 0.975 rg 48.00 350.50 499.00 27.60 re f
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 366.30 Tm (> grupo-seg-system@0.1.0 typecheck) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 356.50 Tm (> tsc --noEmit) Tj ET
+0.800 0.830 0.870 RG 0.6 w 48.00 336.70 m 547.00 336.70 l S
+BT 0.060 0.200 0.360 rg /F2 11 Tf 1 0 0 1 48.00 322.70 Tm (3. Focal PLAT-01 — despacho HTTP à prova de rejeição) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 304.70 Tm (Comando) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 304.70 Tm (node --test tests/route-dispatch.test.mjs tests/route-dispatch-guard.test.mjs) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 289.80 Tm (Categoria / peso) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 289.80 Tm (Focal — leve) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 274.90 Tm (Objetivo) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 274.90 Tm (Cobrir o defeito corrigido: rejeição assíncrona, fail-closed, término de conexão, rede de) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 262.00 Tm (segurança e guarda estática.) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 247.10 Tm (Código de saída) Tj ET
+BT 0.070 0.450 0.310 rg /F1 9.5 Tf 1 0 0 1 168.00 247.10 Tm (0) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 232.20 Tm (Duração) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 232.20 Tm (0.5 s) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 217.30 Tm (Resumo TAP) Tj ET
+BT 0.070 0.450 0.310 rg /F1 9.5 Tf 1 0 0 1 168.00 217.30 Tm (25 testes — 25 ok, 0 falhas, 0 skip, 0 todo) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 202.40 Tm (Desfecho) Tj ET
+BT 0.070 0.450 0.310 rg /F1 9.5 Tf 1 0 0 1 168.00 202.40 Tm (APROVADO) Tj ET
+BT 0.420 0.460 0.520 rg /F2 11 Tf 1 0 0 1 48.00 181.50 Tm (Recorte da saída) Tj ET
+0.950 0.960 0.975 rg 48.00 67.30 499.00 106.00 re f
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 161.50 Tm (TAP version 13) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 151.70 Tm (ok 1 - PLAT-01 server.mjs importa o despacho endurecido) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 141.90 Tm (ok 2 - PLAT-01 routeApi aguarda o despacho antes de qualquer outra instrução) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 132.10 Tm (ok 3 - PLAT-01 nenhum handler de rota é devolvido sem passar pelo guard) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 122.30 Tm (ok 4 - PLAT-01 routeApi ainda registra observabilidade com erro e duração reais) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 112.50 Tm (ok 5 - PLAT-01 o callback do servidor HTTP está protegido e não é async solto) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 102.70 Tm (ok 6 - PLAT-01 a rede de segurança de processo é instalada antes de servir) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 92.90 Tm (ok 7 - PLAT-01 o módulo de despacho não depende de banco, rede ou Next) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 83.10 Tm (ok 8 - PLAT-01 caminho feliz: valor devolvido e desfecho ok) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 73.30 Tm (ok 9 - PLAT-01 exceção síncrona vira 500 fail-closed) Tj ET
+0.800 0.830 0.870 RG 0.6 w 48 48 m 547 48 l S
+BT 0.420 0.460 0.520 rg /F1 7.5 Tf 1 0 0 1 48 34 Tm (Evidência de QA — Bateria de validação — commit b63a51e6e2af) Tj ET
+BT 0.420 0.460 0.520 rg /F1 7.5 Tf 1 0 0 1 500.72 34 Tm (Página 3 de 6) Tj ET
+endstream
+endobj
+13 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 14 0 R >>
+endobj
+14 0 obj
+<< /Length 8104 >>
+stream
+0.950 0.960 0.975 rg 48.00 621.20 499.00 174.60 re f
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 784.00 Tm (ok 10 - PLAT-01 rejeição assíncrona vira 500 fail-closed \(o defeito original\)) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 774.20 Tm (ok 11 - PLAT-01 o corpo de falha não vaza mensagem, stack, SQL nem tabela) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 764.40 Tm (ok 12 - PLAT-01 falha não relança: o chamador nunca recebe exceção) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 754.60 Tm (... \(7 linhas omitidas; log integral em docs/evidencias/logs/\) ...) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 744.80 Tm (ok 20 - PLAT-01 servidor HTTP real: falha assíncrona responde 500 sem pendurar e sem matar o processo) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 735.00 Tm (ok 21 - PLAT-01 servidor HTTP real: resposta íntegra não é truncada quando o handler falha depois do end) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 725.20 Tm (ok 22 - PLAT-01 servidor HTTP real: rajada de falhas não degrada nem derruba) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 715.40 Tm (ok 23 - PLAT-01 rede de segurança: unhandledRejection registra e mantém o processo vivo) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 705.60 Tm (ok 24 - PLAT-01 rede de segurança: uncaughtException registra e preserva falha rápida) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 695.80 Tm (ok 25 - PLAT-01 rede de segurança é idempotente) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 686.00 Tm (# tests 25) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 676.20 Tm (# pass 25) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 666.40 Tm (# fail 0) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 656.60 Tm (# cancelled 0) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 646.80 Tm (# skipped 0) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 637.00 Tm (# todo 0) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 627.20 Tm (# duration_ms 468.600852) Tj ET
+0.800 0.830 0.870 RG 0.6 w 48.00 607.40 m 547.00 607.40 l S
+BT 0.060 0.200 0.360 rg /F2 11 Tf 1 0 0 1 48.00 593.40 Tm (4. Focal EXT-07 — jornada canônica de compliance) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 575.40 Tm (Comando) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 575.40 Tm (node --test tests/ext07-compliance.test.mjs) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 560.50 Tm (Categoria / peso) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 560.50 Tm (Focal — leve) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 545.60 Tm (Objetivo) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 545.60 Tm (Confirmar que a camada EXT-07 entregue anteriormente segue íntegra.) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 530.70 Tm (Código de saída) Tj ET
+BT 0.070 0.450 0.310 rg /F1 9.5 Tf 1 0 0 1 168.00 530.70 Tm (0) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 515.80 Tm (Duração) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 515.80 Tm (0.1 s) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 500.90 Tm (Resumo TAP) Tj ET
+BT 0.070 0.450 0.310 rg /F1 9.5 Tf 1 0 0 1 168.00 500.90 Tm (19 testes — 19 ok, 0 falhas, 0 skip, 0 todo) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 486.00 Tm (Desfecho) Tj ET
+BT 0.070 0.450 0.310 rg /F1 9.5 Tf 1 0 0 1 168.00 486.00 Tm (APROVADO) Tj ET
+BT 0.420 0.460 0.520 rg /F2 11 Tf 1 0 0 1 48.00 465.10 Tm (Recorte da saída) Tj ET
+0.950 0.960 0.975 rg 48.00 174.50 499.00 282.40 re f
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 445.10 Tm (TAP version 13) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 435.30 Tm (ok 1 - EXT-07 usa ext_compliance_documents como fonte canônica e preserva legado) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 425.50 Tm (ok 2 - EXT-07 impõe documento privado, validade e tarefa idempotente) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 415.70 Tm (ok 3 - EXT-07 histórico é imutável e conclusão exige responsável/resultado) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 405.90 Tm (ok 4 - EXT-07 154 \(main\) preserva constraints compatíveis; 155 corrige as incompatíveis sem reescrever) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 396.10 Tm (001–154) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 386.30 Tm (ok 5 - EXT-07 API usa regex de data correta e não aceita relógio do cliente) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 376.50 Tm (ok 6 - EXT-07 anônimo recebe 401 sem tocar o banco) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 366.70 Tm (ok 7 - EXT-07 papel autenticado não autorizado recebe 403 sem tocar o banco) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 356.90 Tm (ok 8 - EXT-07 mutação cross-origin é recusada antes da chave e do corpo) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 347.10 Tm (ok 9 - EXT-07 mutação exige Idempotency-Key) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 337.30 Tm (ok 10 - EXT-07 JSON inválido retorna 400 e corpo grande 413) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 327.50 Tm (ok 11 - EXT-07 criação de obrigação deriva autoria/estado e exige responsável staff) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 317.70 Tm (ok 12 - EXT-07 UUID inválido retorna 400 em documento, detalhe e tarefa) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 307.90 Tm (... \(1 linhas omitidas; log integral em docs/evidencias/logs/\) ...) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 298.10 Tm (ok 14 - EXT-07 avaliação usa CURRENT_DATE do servidor e ignora data do cliente) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 288.30 Tm (ok 15 - EXT-07 transições de tarefa exigem resultado/justificativa e respeitam terminais) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 278.50 Tm (ok 16 - EXT-07 renovação cria novo registro e marca o anterior como substituído) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 268.70 Tm (ok 17 - EXT-07 replay idempotente devolve 200 e chave divergente 409) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 258.90 Tm (ok 18 - EXT-07 falha de audit_log responde 503 com rollback e sem evento) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 249.10 Tm (ok 19 - EXT-07 listagens usam projeção minimizada sem storage_key, URL privada ou referência) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 239.30 Tm (# tests 19) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 229.50 Tm (# pass 19) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 219.70 Tm (# fail 0) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 209.90 Tm (# cancelled 0) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 200.10 Tm (# skipped 0) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 190.30 Tm (# todo 0) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 180.50 Tm (# duration_ms 100.011826) Tj ET
+0.800 0.830 0.870 RG 0.6 w 48.00 160.70 m 547.00 160.70 l S
+BT 0.060 0.200 0.360 rg /F2 11 Tf 1 0 0 1 48.00 146.70 Tm (5. Focal EXT-08 — base de conhecimento e POPs canônicos) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 128.70 Tm (Comando) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 128.70 Tm (node --test tests/ext08-knowledge.test.mjs) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 113.80 Tm (Categoria / peso) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 113.80 Tm (Focal — leve) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 98.90 Tm (Objetivo) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 98.90 Tm (Cobrir procedimentos operacionais: criação v1, transições, publicação, ciências,) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 86.00 Tm (idempotência e rollback atômico.) Tj ET
+0.800 0.830 0.870 RG 0.6 w 48 48 m 547 48 l S
+BT 0.420 0.460 0.520 rg /F1 7.5 Tf 1 0 0 1 48 34 Tm (Evidência de QA — Bateria de validação — commit b63a51e6e2af) Tj ET
+BT 0.420 0.460 0.520 rg /F1 7.5 Tf 1 0 0 1 500.72 34 Tm (Página 4 de 6) Tj ET
+endstream
+endobj
+15 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 16 0 R >>
+endobj
+16 0 obj
+<< /Length 7540 >>
+stream
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 786.00 Tm (Código de saída) Tj ET
+BT 0.070 0.450 0.310 rg /F1 9.5 Tf 1 0 0 1 168.00 786.00 Tm (0) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 771.10 Tm (Duração) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 771.10 Tm (0.1 s) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 756.20 Tm (Resumo TAP) Tj ET
+BT 0.070 0.450 0.310 rg /F1 9.5 Tf 1 0 0 1 168.00 756.20 Tm (10 testes — 10 ok, 0 falhas, 0 skip, 0 todo) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 741.30 Tm (Desfecho) Tj ET
+BT 0.070 0.450 0.310 rg /F1 9.5 Tf 1 0 0 1 168.00 741.30 Tm (APROVADO) Tj ET
+BT 0.420 0.460 0.520 rg /F2 11 Tf 1 0 0 1 48.00 720.40 Tm (Recorte da saída) Tj ET
+0.950 0.960 0.975 rg 48.00 527.80 499.00 184.40 re f
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 700.40 Tm (TAP version 13) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 690.60 Tm (ok 1 - EXT-08 migração 160 é aditiva, preserva 001–159 e define eventos de idempotência) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 680.80 Tm (ok 2 - EXT-08 criação valida slug, título, conteúdo mínimo \(50 chars\) e categoria) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 671.00 Tm (ok 3 - EXT-08 criação válida inicia em status rascunho, versão 1 e registra evento) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 661.20 Tm (ok 4 - EXT-08 transições de status respeitam máquina de estados estrita) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 651.40 Tm (ok 5 - EXT-08 arquivamento exige motivo formal com ao menos 5 caracteres) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 641.60 Tm (ok 6 - EXT-08 edição de artigo publicado cria nova versão imutável) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 631.80 Tm (ok 7 - EXT-08 ciência exige artigo publicado e registra versão específica) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 622.00 Tm (ok 8 - EXT-08 replay de idempotência retorna 200 e payload divergente 409) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 612.20 Tm (ok 9 - EXT-08 falha de audit_log aborta transação e responde 503 audit_unavailable) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 602.40 Tm (ok 10 - EXT-08 rota legada aposenta escrita com HTTP 410) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 592.60 Tm (# tests 10) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 582.80 Tm (# pass 10) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 573.00 Tm (# fail 0) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 563.20 Tm (# cancelled 0) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 553.40 Tm (# skipped 0) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 543.60 Tm (# todo 0) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 533.80 Tm (# duration_ms 89.401957) Tj ET
+0.800 0.830 0.870 RG 0.6 w 48.00 514.00 m 547.00 514.00 l S
+BT 0.060 0.200 0.360 rg /F2 11 Tf 1 0 0 1 48.00 500.00 Tm (6. Focal EXT-09 — expansão, dimensionamento e cenários financeiros) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 482.00 Tm (Comando) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 482.00 Tm (node --test tests/ext09-expansion.test.mjs) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 467.10 Tm (Categoria / peso) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 467.10 Tm (Focal — leve) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 452.20 Tm (Objetivo) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 452.20 Tm (Cobrir planejamento de expansão: criação de planos, cenários financeiros A/B, cálculo de) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 439.30 Tm (margem, transições e rollback atômico.) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 424.40 Tm (Código de saída) Tj ET
+BT 0.070 0.450 0.310 rg /F1 9.5 Tf 1 0 0 1 168.00 424.40 Tm (0) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 409.50 Tm (Duração) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 409.50 Tm (0.1 s) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 394.60 Tm (Resumo TAP) Tj ET
+BT 0.070 0.450 0.310 rg /F1 9.5 Tf 1 0 0 1 168.00 394.60 Tm (9 testes — 9 ok, 0 falhas, 0 skip, 0 todo) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 379.70 Tm (Desfecho) Tj ET
+BT 0.070 0.450 0.310 rg /F1 9.5 Tf 1 0 0 1 168.00 379.70 Tm (APROVADO) Tj ET
+BT 0.420 0.460 0.520 rg /F2 11 Tf 1 0 0 1 48.00 358.80 Tm (Recorte da saída) Tj ET
+0.950 0.960 0.975 rg 48.00 176.00 499.00 174.60 re f
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 338.80 Tm (TAP version 13) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 329.00 Tm (ok 1 - EXT-09 migração 161 é aditiva, preserva 001–160 e define tabela de eventos) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 319.20 Tm (ok 2 - EXT-09 criação valida título, descrição, premissas e localidade alvo) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 309.40 Tm (ok 3 - EXT-09 criação válida inicia como rascunho com protocolo EXP-EXT e estimativa declarada) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 299.60 Tm (ok 4 - EXT-09 transição de status segue máquina de estados e exige aprovação restrita) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 289.80 Tm (ok 5 - EXT-09 rejeição ou cancelamento exige justificativa formal) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 280.00 Tm (ok 6 - EXT-09 cenário financeiro exige premissas e rejeita duplicidade de nome) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 270.20 Tm (ok 7 - EXT-09 replay de idempotência retorna 200 e payload divergente 409) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 260.40 Tm (ok 8 - EXT-09 falha de audit_log provoca rollback e devolve 503 audit_unavailable) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 250.60 Tm (ok 9 - EXT-09 rota legada aposenta escrita com HTTP 410) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 240.80 Tm (# tests 9) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 231.00 Tm (# pass 9) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 221.20 Tm (# fail 0) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 211.40 Tm (# cancelled 0) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 201.60 Tm (# skipped 0) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 191.80 Tm (# todo 0) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 182.00 Tm (# duration_ms 78.757489) Tj ET
+0.800 0.830 0.870 RG 0.6 w 48.00 162.20 m 547.00 162.20 l S
+BT 0.060 0.200 0.360 rg /F2 11 Tf 1 0 0 1 48.00 148.20 Tm (7. Suíte unitária integral \(npm test\)) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 130.20 Tm (Comando) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 130.20 Tm (npm test) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 115.30 Tm (Categoria / peso) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 115.30 Tm (Regressão — leve) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 100.40 Tm (Objetivo) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 100.40 Tm (Executar toda a suíte unitária do projeto, sem skip, todo ou falha.) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 85.50 Tm (Código de saída) Tj ET
+BT 0.070 0.450 0.310 rg /F1 9.5 Tf 1 0 0 1 168.00 85.50 Tm (0) Tj ET
+0.800 0.830 0.870 RG 0.6 w 48 48 m 547 48 l S
+BT 0.420 0.460 0.520 rg /F1 7.5 Tf 1 0 0 1 48 34 Tm (Evidência de QA — Bateria de validação — commit b63a51e6e2af) Tj ET
+BT 0.420 0.460 0.520 rg /F1 7.5 Tf 1 0 0 1 500.72 34 Tm (Página 5 de 6) Tj ET
+endstream
+endobj
+17 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 18 0 R >>
+endobj
+18 0 obj
+<< /Length 5510 >>
+stream
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 786.00 Tm (Duração) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 786.00 Tm (6.7 s) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 771.10 Tm (Resumo TAP) Tj ET
+BT 0.070 0.450 0.310 rg /F1 9.5 Tf 1 0 0 1 168.00 771.10 Tm (545 testes — 545 ok, 0 falhas, 0 skip, 0 todo) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 756.20 Tm (Desfecho) Tj ET
+BT 0.070 0.450 0.310 rg /F1 9.5 Tf 1 0 0 1 168.00 756.20 Tm (APROVADO) Tj ET
+BT 0.420 0.460 0.520 rg /F2 11 Tf 1 0 0 1 48.00 735.30 Tm (Recorte da saída) Tj ET
+0.950 0.960 0.975 rg 48.00 454.50 499.00 272.60 re f
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 715.30 Tm (TAP version 13) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 705.50 Tm (ok 1 - próximo interno válido é preservado) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 695.70 Tm (ok 2 - próximo com URL absoluta, host ou esquema cai no fallback) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 685.90 Tm (ok 3 - próximo fora do namespace /admin cai no fallback) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 676.10 Tm (ok 4 - próximo com controle, barra invertida ou tamanho abusivo cai no fallback) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 666.30 Tm (ok 5 - próximo apontando para a própria entrada não gera loop) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 656.50 Tm (ok 6 - tipos não-string e nulos caem no fallback) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 646.70 Tm (ok 7 - home por papel cobre exatamente os STAFF_ROLES do servidor) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 636.90 Tm (ok 8 - papel desconhecido ou vazio vai para o hub geral sem quebrar) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 627.10 Tm (ok 9 - destino pós-login: next válido vence; inválido cai na home do papel) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 617.30 Tm (ok 10 - chave legada só é oferecida com a flag literal true E token de tamanho mínimo) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 607.50 Tm (ok 11 - mensagens de erro são compreensíveis e não vazam internos) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 597.70 Tm (ok 12 - todas as páginas administrativas têm gate e papéis revisados) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 587.90 Tm (... \(509 linhas omitidas; log integral em docs/evidencias/logs/\) ...) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 578.10 Tm (ok 522 - sessão sem MFA vive menos que sessão com MFA) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 568.30 Tm (ok 523 - isUuid rejeita entradas não canônicas) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 558.50 Tm (ok 524 - toda chamada a função de sessão é aguardada \(sem bypass por Promise truthy\)) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 548.70 Tm (ok 525 - todo wrapper que devolve sessão é declarado async) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 538.90 Tm (ok 526 - readSession do server.mjs valida no servidor, não apenas a assinatura) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 529.10 Tm (ok 527 - o fallback de papel para admin foi removido do login de staff) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 519.30 Tm (# tests 545) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 509.50 Tm (# pass 545) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 499.70 Tm (# fail 0) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 489.90 Tm (# cancelled 0) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 480.10 Tm (# skipped 0) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 470.30 Tm (# todo 0) Tj ET
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 460.50 Tm (# duration_ms 6443.110681) Tj ET
+0.800 0.830 0.870 RG 0.6 w 48.00 440.70 m 547.00 440.70 l S
+BT 0.060 0.200 0.360 rg /F2 11 Tf 1 0 0 1 48.00 426.70 Tm (8. Higiene de diff \(git diff --check\)) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 408.70 Tm (Comando) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 408.70 Tm (git diff --check) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 393.80 Tm (Categoria / peso) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 393.80 Tm (Estático — leve) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 378.90 Tm (Objetivo) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 378.90 Tm (Nenhum espaço em branco residual ou marcador de conflito.) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 364.00 Tm (Código de saída) Tj ET
+BT 0.070 0.450 0.310 rg /F1 9.5 Tf 1 0 0 1 168.00 364.00 Tm (0) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 349.10 Tm (Duração) Tj ET
+BT 0.100 0.130 0.180 rg /F1 9.5 Tf 1 0 0 1 168.00 349.10 Tm (0.0 s) Tj ET
+BT 0.420 0.460 0.520 rg /F2 9.5 Tf 1 0 0 1 48.00 334.20 Tm (Desfecho) Tj ET
+BT 0.070 0.450 0.310 rg /F1 9.5 Tf 1 0 0 1 168.00 334.20 Tm (APROVADO) Tj ET
+BT 0.420 0.460 0.520 rg /F2 11 Tf 1 0 0 1 48.00 313.30 Tm (Recorte da saída) Tj ET
+0.950 0.960 0.975 rg 48.00 287.30 499.00 17.80 re f
+BT 0.100 0.130 0.180 rg /F3 7.4 Tf 1 0 0 1 54.00 293.30 Tm (\(sem saída — o comando é silencioso quando aprova\)) Tj ET
+0.800 0.830 0.870 RG 0.6 w 48.00 273.50 m 547.00 273.50 l S
+0.800 0.830 0.870 RG 0.6 w 48 48 m 547 48 l S
+BT 0.420 0.460 0.520 rg /F1 7.5 Tf 1 0 0 1 48 34 Tm (Evidência de QA — Bateria de validação — commit b63a51e6e2af) Tj ET
+BT 0.420 0.460 0.520 rg /F1 7.5 Tf 1 0 0 1 500.72 34 Tm (Página 6 de 6) Tj ET
+endstream
+endobj
+xref
+0 19
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000155 00000 n 
+0000000252 00000 n 
+0000000354 00000 n 
+0000000449 00000 n 
+0000000733 00000 n 
+0000000879 00000 n 
+0000003241 00000 n 
+0000003388 00000 n 
+0000010551 00000 n 
+0000010699 00000 n 
+0000018140 00000 n 
+0000018288 00000 n 
+0000026445 00000 n 
+0000026593 00000 n 
+0000034186 00000 n 
+0000034334 00000 n 
+trailer
+<< /Size 19 /Root 1 0 R /Info 6 0 R >>
+startxref
+39897
+%%EOF

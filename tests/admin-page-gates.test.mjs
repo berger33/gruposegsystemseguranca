@@ -14,6 +14,8 @@ const protectedPages = new Map([
   ["src/app/admin/carteira/page.tsx", ["comercial", "marcelo", "admin", "ti"]],
   ["src/app/admin/comercial/page.tsx", ["comercial", "marcelo", "admin", "ti"]],
   ["src/app/admin/compliance/page.tsx", ["marcelo", "admin", "ti"]],
+  ["src/app/admin/conhecimento/page.tsx", ["marcelo", "admin", "ti"]],
+  ["src/app/admin/expansao/page.tsx", ["comercial", "financeiro", "marcelo", "admin", "ti"]],
   ["src/app/admin/contratos/page.tsx", ["marcelo", "admin", "comercial"]],
   ["src/app/admin/contratos/[id]/page.tsx", ["marcelo", "admin", "comercial"]],
   ["src/app/admin/crm/page.tsx", ["comercial", "marcelo", "admin", "ti"]],

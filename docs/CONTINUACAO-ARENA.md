@@ -1,4 +1,75 @@
-# Continuidade Arena — 2026-10-04 (F01 cobertura + F03)
+# Continuidade Arena — 2026-10-04 (F01 cobertura + F03 + F04 / EXT-08 + F05 / EXT-09)
+
+## Incremento 9 — F05: Expansão e Novas Unidades — Planejamento, Capacidade e Cenários Financeiros (EXT-09)
+
+- **Base confirmada:** `origin/main` `b63a51e6e2af200b0ac93370dbe629f631dec718`; **branch fixa:** `arena/01a1085d-gruposegsystemseguranca`.
+- **Fonte canônica preservada:** `ext_expansion_plans`, `ext_expansion_scenarios` e eventos transacionais `ext_expansion_events`.
+- **Migração aditiva:** `161-ext09-expansion-canonical-journey.sql` acrescenta controle canônico de ciclo de vida de planos de expansão (`rascunho -> em_analise -> aprovado -> em_execucao -> concluido` ou `rejeitado` / `cancelado`), dimensionamento de capacidade (postos/vigilantes), cenários financeiros A/B com cálculo de margem projetada, justificativa formal obrigatória em cancelamentos/rejeições, tabela de eventos de expansão imutáveis com fingerprint SHA-256 e ampliação de ações de auditoria em `auth_access_audit_action_check`. **Migrações 001–160 imutáveis**, próxima livre 162.
+- **API e Rotas:**
+  - `GET /api/ext/expansion/plans`: listagem e busca com filtros de `status`, `target_location`, `q`, contagem de cenários e margem estimada calculada.
+  - `POST /api/ext/expansion/plans`: criação de plano de expansão com título, localidade alvo, capacidade estimada (postos), custos e receitas declaradas; protocolo canônico automático `EXP-EXT-YYYYMMDD-XXXX`; status inicial `rascunho`; flag `is_estimate: true` e nota explicativa honesta; exige permissão `expansion.write` (`comercial`, `financeiro`, `marcelo`, `admin`, `ti`).
+  - `GET /api/ext/expansion/plans/:id`: detalhe com metadados do plano, cenários vinculados e trilha de eventos.
+  - `PATCH /api/ext/expansion/plans/:id`: atualização de plano em status `rascunho`.
+  - `POST /api/ext/expansion/plans/:id/transition`: máquina de estados controlada (`rascunho -> em_analise -> aprovado -> em_execucao -> concluido`, `rejeitado`, `cancelado`). `aprovado` exige permissão `expansion.approve` (`financeiro`, `marcelo`, `admin`); `cancelado` e `rejeitado` exigem justificativa formal (mínimo 5 caracteres).
+  - `POST /api/ext/expansion/plans/:id/scenarios`: criação de cenários financeiros (A/B, Conservador/Otimista/Pessimista) com cálculo automático de `projected_margin_cents = projected_revenue_cents - projected_cost_cents`, rejeição de duplicidade de nome e gravação atômica em eventos.
+  - `DELETE /api/ext/expansion/scenarios/:id`: exclusão de cenários financeiros com lock no plano.
+  - Rotas legadas: `GET /api/ext/expansion-plans` mantida para leitura compatível minimizada; rotas legadas de escrita respondem HTTP **410** `legacy_expansion_writer_retired`.
+- **Garantias Técnicas:**
+  - Autorização server-side fail-closed com `hasPermission()` e sessões individuais.
+  - Verificação de mesma origem (`sameOrigin`) em todas as mutações (`POST`/`PATCH`/`DELETE`).
+  - Idempotência com chave obrigatória `Idempotency-Key` e verificação de fingerprint SHA-256 (replay idêntico retorna 200, divergente 409).
+  - Bloqueios concorrentes com locks PostgreSQL (`advisory lock` + `FOR UPDATE`).
+  - Auditoria atômica transacional em `auth_access_audit` / `audit_log`; em caso de indisponibilidade de auditoria, toda a transação sofre rollback e retorna **503** `audit_unavailable`.
+- **UI / Telas:**
+  - Nova tela `/admin/expansao` protegida por `AdminGate` para papéis `['comercial', 'financeiro', 'marcelo', 'admin', 'ti']`.
+  - Componente `ExpansionWorkspace.tsx` com filtros de plano, simulador de cenários A/B, transições de status guiadas, eventos históricos e avisos claros de que projeções financeiras são meras estimativas e não constituem garantia de resultado ou faturamento futuro.
+- **Validação e Provas:**
+  - `node scripts/qa-wave0-static.mjs`: **5/5** verificações estáticas OK (migrações 001–161 registradas nos 4 pontos de verificação).
+  - `npm test`: **545/545** testes unitários aprovados (incluindo `tests/ext09-expansion.test.mjs` com 9/9 casos).
+  - `npm run typecheck`: OK (0 erros de tipagem).
+  - `npm run test:ext09-expansion:pg`: **16/16** testes end-to-end aprovados em PostgreSQL 17 descartável, servidor HTTP real e sessões staff reais.
+  - `npm run test:ext08-knowledge:pg`: **15/15** casos aprovados.
+  - `npm run test:ext07-compliance:pg`: **43/43** casos aprovados.
+  - `npm run test:f03-contas-baixa-relatorio:pg`: **1/1** aprovado.
+  - `npm run test:f03-client-ticket-acceptance:pg`: **1/1** aprovado.
+  - `npm run test:f03-employee-request-rh-return:pg`: **1/1** aprovado.
+  - `npm run test:l08-delivery:pg`: **51/51** casos aprovados.
+  - `npm run test:migrations:pg`: **161/161** checksums verificados e idempotência de migrações provada.
+- **Limites:** Sem integração bancária fictícia, sem SMTP externo, sem inteligência artificial simulada, projeções expressamente declaradas como estimativas de planejamento. Aceite humano formal do operador e validação Windows/EPERM permanecem pendentes.
+
+## Incremento 8 — F04: Base de Conhecimento e Procedimentos Operacionais Canônicos (EXT-08)
+
+- **Base confirmada:** `origin/main` `b63a51e6e2af200b0ac93370dbe629f631dec718`; **branch fixa:** `arena/01a1085d-gruposegsystemseguranca`.
+- **Fonte canônica preservada:** `ext_knowledge_base`, `ext_knowledge_base_history`, `ext_knowledge_acknowledgments` e eventos transacionais `ext_knowledge_events`.
+- **Migração aditiva:** `160-ext08-knowledge-canonical-journey.sql` acrescenta controle canônico de ciclo de vida (`rascunho -> em_revisao -> aprovado -> publicado -> arquivado`), versionamento estrito (edição de artigo publicado cria automaticamente nova versão imutável em status rascunho e arquiva a anterior ao publicar), registro de ciência formal vinculado a cada versão específica, chaves de idempotência e tabela de eventos imutáveis com fingerprinting de requisição. **Migrações 001–159 imutáveis**, próxima livre 161.
+- **API e Rotas:**
+  - `GET /api/ext/knowledge/articles`: listagem/busca com filtros de categoria, status, texto `q` e tag; isolamento de rascunhos para não-editores e checagem de `access_roles`.
+  - `POST /api/ext/knowledge/articles`: criação de POP/artigo com título, slug único, conteúdo mínimo (50 caracteres), categoria e tags; inicia em status `rascunho` e versão 1; exige permissão `knowledge.write`.
+  - `GET /api/ext/knowledge/articles/:id`: detalhe do artigo com contagem de ciências, booleano `user_acknowledged` do titular e histórico completo de versões.
+  - `PATCH /api/ext/knowledge/articles/:id`: edição do artigo. Em artigos publicados/arquivados, cria nova versão versionada (`isNewVersion: true`, `version + 1`) em rascunho com isolamento.
+  - `POST /api/ext/knowledge/articles/:id/transition`: transição controlada de status. `publicado` exige permissão `knowledge.publish` (admin/marcelo); `arquivado` exige motivo formal (`reason`).
+  - `POST /api/ext/knowledge/articles/:id/acknowledge`: registro de ciência formal com permissão `knowledge.acknowledge`, idempotência e vínculo à versão exata.
+  - `GET /api/ext/knowledge/articles/:id/acknowledgments`: auditoria de colaboradores que registraram ciência no procedimento.
+  - Rota legada: `GET /api/ext/knowledge-base` mantida para leitura compatível minimizada; `POST /api/ext/knowledge-base` aposentada com HTTP **410** `legacy_knowledge_writer_retired`.
+- **Garantias Técnicas:**
+  - Autorização server-side fail-closed com `hasPermission()` e sessões individuais.
+  - Verificação de mesma origem (`sameOrigin`) em todas as mutações (`POST`/`PATCH`).
+  - Idempotência com chave obrigatória `Idempotency-Key` e verificação de fingerprint SHA-256 (replay idêntico retorna 200, divergente 409).
+  - Bloqueios concorrentes com locks PostgreSQL (`advisory lock` + `FOR UPDATE`).
+  - Auditoria atômica transacional em `auth_access_audit` / `audit_log`; em caso de indisponibilidade de auditoria, toda a transação sofre rollback e retorna **503** `audit_unavailable`.
+- **UI / Telas:**
+  - Nova tela `/admin/conhecimento` protegida por `AdminGate` para papéis `['marcelo', 'admin', 'ti', 'rh', 'supervisor', 'comercial']`.
+  - Componente `KnowledgeWorkspace.tsx` com busca por texto, filtro por categoria, criação de POP, visualização de histórico de revisões, máquina de transição de estados, indicador honesto de ciência formal e avisos claros de que não há IA externa nem integrações de terceiros simuladas.
+- **Validação e Provas:**
+  - `node scripts/qa-wave0-static.mjs`: **5/5** verificações estáticas OK (migrações 001–160 registradas nos 4 pontos de verificação).
+  - `npm test`: **536/536** testes unitários aprovados (incluindo `tests/ext08-knowledge.test.mjs` com 10/10 casos).
+  - `npm run typecheck`: OK (0 erros de tipagem).
+  - `npm run test:ext08-knowledge:pg`: **15/15** testes end-to-end aprovados em PostgreSQL 17 descartável, servidor HTTP real e sessões staff reais.
+  - `npm run test:ext07-compliance:pg`: **43/43** casos aprovados.
+  - `npm run test:f03-contas-baixa-relatorio:pg`: **1/1** aprovado.
+  - `npm run test:l08-delivery:pg`: **51/51** casos aprovados.
+  - `npm run qa:evidence`: **14/14** passos aprovados.
+- **Limites:** Sem geração por IA externa, sem sincronização externa de terceiros, sem dados reais de produção. Aceite humano formal do operador e validação Windows/EPERM permanecem pendentes.
 
 ## Incremento 7 — F03 contas → baixa → relatório
 

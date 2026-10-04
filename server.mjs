@@ -110,6 +110,8 @@ import { createExtQualityApi } from "./src/server/ext-quality-api.mjs";
 import { createExtSatisfactionApi } from "./src/server/ext-satisfaction-api.mjs";
 import { createExtAdvancedApi } from "./src/server/ext-advanced-api.mjs";
 import { createExtComplianceApi } from "./src/server/ext-compliance-api.mjs";
+import { createExtKnowledgeApi } from "./src/server/ext-knowledge-api.mjs";
+import { createExtExpansionApi } from "./src/server/ext-expansion-api.mjs";
 import { parseSchedulerConfig, startExtComplianceScheduler } from "./src/server/ext-compliance-scheduler.mjs";
 import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
 import { createCommercialHistoryApi } from "./src/server/commercial-history-api.mjs";
@@ -2316,6 +2318,20 @@ const extComplianceSchedulerState = () =>
     : { enabled: false, running: false, intervalSeconds: null, actorIdentity: null, lastTickAt: null, lastOutcome: null };
 const extComplianceApi = createExtComplianceApi({ pool: getPool(), sameOrigin, requireSession: readSession, schedulerState: extComplianceSchedulerState });
 
+// EXT-08: base de conhecimento e procedimentos operacionais canônicos.
+const extKnowledgeApi = createExtKnowledgeApi({
+  pool: getPool(),
+  sameOrigin,
+  requireSession: readSession,
+});
+
+// EXT-09: planejamento de expansão, capacidade e cenários financeiros.
+const extExpansionApi = createExtExpansionApi({
+  pool: getPool(),
+  sameOrigin,
+  requireSession: readSession,
+});
+
 const extAdvancedApi = createExtAdvancedApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -4307,16 +4323,18 @@ async function routeApi(req, res) {
     if (req.method !== "GET") { if (!sameOrigin(req)) return json(res,403,{error:"forbidden"}); return json(res,410,{error:"legacy_writer_retired",canonical:"/api/ext/compliance/*"}); }
     return extAdvancedApi.handleComplianceDocuments(req, res);
   }
-  // EXT-08 base conhecimento procedimentos versionados busca acesso ciência usuário encontra apenas conteúdo de seu escopo
+  // EXT-08 base de conhecimento procedimentos versionados busca acesso ciência
+  if (url.pathname.startsWith("/api/ext/knowledge/")) return extKnowledgeApi.handle(req, res);
   if (url.pathname === "/api/admin/hr/ext-knowledge-base" || url.pathname === "/api/crm/hr/ext-knowledge-base" || url.pathname === "/api/hr/ext-knowledge-base" || url.pathname === "/api/ext/knowledge-base") {
-    return extAdvancedApi.handleKnowledgeBase(req, res);
+    return extKnowledgeApi.handleLegacy(req, res);
   }
   // EXT-09 expansão premissas e fonte visíveis sem projeção vendida como certeza
+  if (url.pathname.startsWith("/api/ext/expansion/")) return extExpansionApi.handle(req, res);
   if (url.pathname === "/api/admin/hr/ext-expansion-plans" || url.pathname === "/api/crm/hr/ext-expansion-plans" || url.pathname === "/api/hr/ext-expansion-plans" || url.pathname === "/api/ext/expansion-plans") {
-    return extAdvancedApi.handleExpansionPlans(req, res);
+    return extExpansionApi.handleLegacyPlans(req, res);
   }
   if (url.pathname === "/api/admin/hr/ext-expansion-scenarios" || url.pathname === "/api/crm/hr/ext-expansion-scenarios" || url.pathname === "/api/hr/ext-expansion-scenarios" || url.pathname === "/api/ext/expansion-scenarios") {
-    return extAdvancedApi.handleExpansionScenarios(req, res);
+    return extExpansionApi.handleLegacyScenarios(req, res);
   }
   // EXT-10 continuidade operacional simulado documentado com responsáveis
   if (url.pathname === "/api/admin/hr/ext-continuity-plans" || url.pathname === "/api/crm/hr/ext-continuity-plans" || url.pathname === "/api/hr/ext-continuity-plans" || url.pathname === "/api/ext/continuity-plans") {
@@ -5835,6 +5853,8 @@ const API_PATH_MATCH = pathname =>
   // EXT-07: rota canônica de compliance precisa estar na borda API; sem isto o
   // Next devolve 404 HTML e a jornada inteira fica inalcançável (probe 2026-10-03).
   || pathname.startsWith("/api/ext/compliance/")
+  || pathname.startsWith("/api/ext/knowledge/")
+  || pathname.startsWith("/api/ext/expansion/")
   || pathname.startsWith("/api/ext/satisfaction/")
   || pathname === "/api/admin/hr/ext-bidding-documents"
   || pathname === "/api/crm/hr/ext-bidding-documents"

@@ -1,5 +1,27 @@
 # Plano de conclusão (Arena) — lista única de trabalho
 
+## Atualização corrente — EXT-09 / F05 Expansão, Dimensionamento e Cenários Financeiros
+
+- Base `b63a51e6e2af200b0ac93370dbe629f631dec718`, branch `arena/01a1085d-gruposegsystemseguranca`.
+- Migração aditiva `161-ext09-expansion-canonical-journey.sql` acrescenta controle canônico de ciclo de vida (`rascunho -> em_analise -> aprovado -> em_execucao -> concluido` ou `rejeitado` / `cancelado`), dimensionamento de capacidade (postos), cenários financeiros A/B com margem projetada, justificativa obrigatória para cancelamento/rejeição, tabela imutável `ext_expansion_events` com fingerprint SHA-256 e ampliação de ações em `auth_access_audit_action_check`. Migrações 001–160 imutáveis; **próxima livre: 162**.
+- API e UI canônicas: rotas `/api/ext/expansion/plans` e sub-rotas `/scenarios` e `/transition` + UI protegida em `/admin/expansao` com `ExpansionWorkspace.tsx`. Legado `/api/ext/expansion-plans` com escrita aposentada em HTTP 410.
+- Provas completas:
+  - Gate dedicado: `npm run test:ext09-expansion:pg` **16/16** aprovados em PostgreSQL 17 descartável.
+  - Testes unitários focais: `tests/ext09-expansion.test.mjs` **9/9** aprovados (`npm test` total: **545/545**).
+  - Wave 0 estático: **5/5**; `npm run typecheck`: OK; `npm run test:migrations:pg`: **161/161**; EXT-08 **15/15**; EXT-07 **43/43**; F03 **1/1** cada.
+- Próximo passo: seguir sequência planejada para EXT-10 / F06 (continuidade de negócios e contingência) ou próximo incremento do roadmap.
+
+## Atualização — EXT-08 / F04 Base de Conhecimento e Procedimentos Operacionais
+
+- Base `b63a51e6e2af200b0ac93370dbe629f631dec718`, branch `arena/01a1085d-gruposegsystemseguranca`.
+- Migração aditiva `160-ext08-knowledge-canonical-journey.sql` acrescenta ciclo de vida canônico (`rascunho -> em_revisao -> aprovado -> publicado -> arquivado`), versionamento imutável com isolamento de rascunhos, registro de ciência formal por colaborador e versão, chaves de idempotência e tabela de eventos imutáveis com fingerprint SHA-256. Migrações 001–159 imutáveis; **próxima livre: 161**.
+- API e UI canônicas: rotas `/api/ext/knowledge/articles` (listagem/busca, criação, detalhe, edição com nova versão, transição e ciência) + UI protegida em `/admin/conhecimento` com `KnowledgeWorkspace.tsx`. Legado `/api/ext/knowledge-base` com escrita aposentada em HTTP 410.
+- Provas completas:
+  - Gate dedicado: `npm run test:ext08-knowledge:pg` **15/15** aprovados em PostgreSQL 17 descartável.
+  - Testes unitários focais: `tests/ext08-knowledge.test.mjs` **10/10** aprovados (`npm test` total: **536/536**).
+  - Wave 0 estático: **5/5**; `npm run typecheck`: OK; `npm run qa:evidence`: **14/14**; L07 **43/43**; L08 **51/51**; EXT-07 **43/43**.
+- Próximo passo: seguir sequência planejada para EXT-09 / F05 (expansão e novas unidades) ou rodada de pendências específicas.
+
 ## Atualização corrente — F03 contas → baixa → relatório
 
 - Base `a0815cfcfd7df17f30dce2e99ab744a36c3f341a`, branch `arena/01a10845-gruposegsystemseguranca`, implementação `23910567a2a329dc4f46c4aae6cf740c9d4888aa`, PR [#132](https://github.com/berger33/gruposegsystemseguranca/pull/132); documentação `8e7d84230fded1fcac9a256f5d1752e402f49b5a`. Migração 159 aditiva; próxima livre 160.
@@ -43,7 +65,8 @@ Data: 2026-10-04. Base vigente desta fatia: `origin/main` `972e6563f5ea4888b62e8
 | F01 | Entrada e navegação por papel: `/admin` hub, `/admin/entrar` login central, redirecionamento seguro com retorno, rótulo papel-neutro, menu por papel, 401/403/500 compreensíveis | F00 | **integrada pela PR #125 (`e2fa152`), merge `972e656`**; aceite humano pendente |
 | F02 | Windows/EPERM symlink, isolamento QA×ambiente, scripts start/stop/status, backup/restauração em instância separada | F01 | pendente — requer Windows do operador para aceite |
 | F03 | Massa de demonstração e jornadas de negócio ponta a ponta (lead→recebimento, funcionário→RH, cliente→chamado, contas→baixa) | F01 | **em execução**: fundação + três jornadas provadas (lead→contrato→implantação #126 `c1a557f`, gate 1/1; funcionário→solicitação→hora→retorno #127 `d0f1cde`, gate 1/1; cliente→chamado→atendimento→aceite #129 `3c7e9ab1`, gate 1/1); falta contas→baixa→relatório |
-| F04–F13 | EXT-08 conhecimento, EXT-09 expansão, EXT-10 continuidade, EXT-11 analytics, EXT-12 visual, EXT-13 relatórios, EXT-14 inteligência comercial, EXT-15 emergencial, EXT-16 central/vídeo (projeto separado), EXT-17 biometria (projeto separado) — um requisito por PR | F01 | pendentes; tabelas 086–087 existem sem jornada provada |
+| F04 | EXT-08 conhecimento: base de procedimentos versionados, ciência formal, máquina de estados e busca | F01 | **entregue localmente**: migração 160, API canônica, `/admin/conhecimento`, gate `test:ext08-knowledge:pg` 15/15; aceite humano pendente |
+| F05–F13 | EXT-09 expansão, EXT-10 continuidade, EXT-11 analytics, EXT-12 visual, EXT-13 relatórios, EXT-14 inteligência comercial, EXT-15 emergencial, EXT-16 central/vídeo (projeto separado), EXT-17 biometria (projeto separado) — um requisito por PR | F01 | pendentes; tabelas 086–087 existem sem jornada provada |
 | F14 | IA/RAG real: AI-06 recuperação autorizada + AI-09 curadoria primeiro; depois AI-01..05, 07, 08, 10. Fallback não é inferência. | F03 (massa e escopos) | pendente; OLLAMA_ENABLED=false hoje = fallback |
 | F15 | Fronteiras parciais: portal externo fornecedor, upload real, recuperação de conta sem SMTP, jobs vs reinício, notificações internas, isolamento A/B, EXT-07 obrigação vencida | F04+ | pendente |
 | F16 | Aceite final: matriz de aceite 03-ACEITE.md, humano de Marcelo/Andreia/funcionário, relatório de riscos, runbook Windows | todas | pendente |
