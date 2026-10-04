@@ -35,7 +35,11 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/integration-l06/types/**/*.ts",
-    ".next/integration-l06/dev/types/**/*.ts"
+    ".next/integration-l06/dev/types/**/*.ts",
+    ".next/integration-ext07/types/**/*.ts",
+    ".next/integration-ext07/dev/types/**/*.ts",
+    ".next/integration-ext07-sched/types/**/*.ts",
+    ".next/integration-ext07-sched/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"
