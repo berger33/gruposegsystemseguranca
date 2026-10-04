@@ -12,6 +12,7 @@ import next from "next";
 import pg from "pg";
 import nodemailer from "nodemailer";
 import { validateLeadInput } from "./src/lib/public-lead-validation.mjs";
+import { legacyLoginEnabled } from "./src/lib/admin-entry.mjs";
 import { decryptMfaSecret, verifyMfaCode, hashRecoveryCode, mfaKey } from "./src/lib/client-mfa.mjs";
 import {
   createStaffSessionStore, evaluateStaffLogin, evaluateLegacyTokenPolicy, isUuid,
@@ -863,6 +864,18 @@ async function handleSiteVisual(req, res, url) {
   } finally {
     client?.release();
   }
+}
+
+// F01: opções públicas do login central de staff. Responde sem tocar no banco
+// e sem expor segredos: apenas se o login individual está disponível (sempre)
+// e se a UI pode oferecer a aba de chave legada (mesma política do servidor;
+// a aceitação do token continua fail-closed a cada tentativa de login).
+async function handleAdminSessionOptions(req, res) {
+  if (req.method !== "GET") return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
+  return json(res, 200, {
+    individual: true,
+    legacyTokens: legacyLoginEnabled(process.env),
+  });
 }
 
 async function handleAdminSession(req, res) {
@@ -2565,6 +2578,7 @@ async function routeApi(req, res) {
   }
   if (url.pathname === "/api/site-visual") return handleSiteVisual(req, res, url);
   if (url.pathname === "/api/leads") return handleCreateLead(req, res);
+  if (url.pathname === "/api/admin/session/options") return handleAdminSessionOptions(req, res);
   if (url.pathname === "/api/admin/session") return handleAdminSession(req, res);
   if (url.pathname === "/api/admin/session/mfa") return handleAdminMfaComplete(req, res);
   // L03 — fronteira própria do funcionário. Estes caminhos nunca reutilizam a
@@ -4517,6 +4531,7 @@ async function routeApi(req, res) {
 const API_PATH_MATCH = pathname =>
   pathname === "/api/site-visual"
   || pathname === "/api/leads"
+  || pathname === "/api/admin/session/options"
   || pathname === "/api/admin/session"
   || pathname === "/api/admin/session/mfa"
   || pathname.startsWith("/api/employee/")
