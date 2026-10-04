@@ -1,5 +1,19 @@
 # Status atual consolidado — reconciliação F00 + F01 + F03 + F04 (EXT-08) + F05 (EXT-09) + F06 (EXT-10) + F07 (EXT-11)
 
+## Atualização desta sessão — F06 / EXT-10 Continuidade validada em PostgreSQL
+
+Base confirmada no GitHub e no checkout: PR #135 está `MERGED` com o merge commit real `cf3a1f4c580f44b92969a61548eec8d304e9c005`, que integra `58e213a11ccae35fc2f21002c9e1dda6b87bc333` e `9396d03f0ff1cc7064ed3675525f2387d0718a4c`. `origin/main`, `main` local e `arena/01a108ea-gruposegsystemseguranca` estão nesse SHA. O checkout iniciou limpo. #126, #127, #129, #132, #133 e #134 permanecem mescladas e não devem ser recriadas, reabertas ou remescladas.
+
+O ledger é **001–163** e 001–163 permanecem imutáveis; a próxima migração livre é **164**. Nenhuma migração foi aplicada em banco do operador e nenhuma 164 foi criada.
+
+A implementação existente da migração 162, API, dispatcher e UI foi validada com uma bateria nova (`scripts/qa-ext10-continuity-postgres.mjs` + `tests/ext10-continuity.integration.test.mjs`). O gate aplicou 001–163 em PostgreSQL 17 descartável e executou servidor HTTP real, sessões staff fictícias distintas e Chromium real. Os planos, transições e exercícios foram criados exclusivamente por HTTP; SQL preparou somente identidades, credenciais, grants e controles de teste.
+
+**Resultado:** `npm run test:ext10-continuity:pg` passou **17/17**, sem skip/todo/fail. Foram exercitados RBAC fail-closed, same-origin, autoria por sessão, máquina de estados, replay/conflito, concorrência com advisory lock e `FOR UPDATE`, eventos imutáveis, rollback transacional e `503 audit_unavailable`, escrita legada 410, UI `/admin/continuidade` protegida por `AdminGate` e persistência após reinício. A auditoria detectou que `arquivado`/`rascunho` não tinham ação dinâmica permitida pelo check da migração 162; a API passou a auditar esses estados com `continuity_plan_update`, sem alterar a migração 162.
+
+**Estado confirmado:** jornada interna de staff pronta para validação local. Ainda não é aceite humano nem homologação final. O gate não cobre portal/ator externo, cliente autenticado, isolamento por `client_account_id`, notificação real de contatos, Windows/EPERM, aplicação no banco de destino ou qualquer fornecedor externo. Não há SMTP, telefonia, gateway ou acionamento externo.
+
+**Regressões desta sessão:** `tests/ext10-continuity.test.mjs` **9/9**, `npm test` **564/564**, `npm run typecheck`, `npm run build` **98 páginas**, `npm run test:migrations:pg` **163/163**, `git diff --check` e `node --check` OK. Nenhum banco remoto foi utilizado.
+
 ## Atualização F07 — EXT-11 Analytics e experimentos A/B controlados
 
 Base da sessão: merge commit `58e213a11ccae35fc2f21002c9e1dda6b87bc333`, branch `arena/01a108c7-gruposegsystemseguranca`. PRs #126, #127, #129, #132, #133 e #134 permanecem integradas sem recriação ou remesclagem.
@@ -12,7 +26,7 @@ O sistema não realiza A/B externo, não inventa tráfego/conversões/resultados
 
 ## Atualização F06 — Continuidade de Negócios e Contingência
 
-Migração 162 aditiva, API canônica e tela `/admin/continuidade` entregues nesta branch. A jornada registra planos, transições, acionamentos internos e simulados com RBAC, idempotência, locks e auditoria atômica. Sem notificações externas simuladas. Ledger histórico: 001–162; a 163 foi consumida pelo F07.
+A migração 162 é aditiva e permanece imutável. A API canônica e a tela `/admin/continuidade` foram validadas no gate dedicado **17/17** com ledger 001–163, PG17 descartável, HTTP, Chromium e sessões staff fictícias. A jornada registra planos, transições, acionamentos internos e simulados com RBAC, idempotência, locks, `FOR UPDATE` e auditoria atômica. Não há notificações externas simuladas. O escopo por cliente autenticado/`client_account_id`, ator externo, Windows, banco de destino e aceite humano continua pendente.
 
 ## Atualização F05 — Expansão e Novas Unidades (EXT-09)
 
@@ -434,7 +448,7 @@ Legenda do estado confirmado: `pronto_local` = validação automática local ant
 | EXT-07 | Compliance corporativo | entregue_e_verificado_gate_local (2026-10-03, hardening 155 sobre a 153 e a 154 do main; base PR #103 + PR #113; 2026-10-04, execução agendada da avaliação temporal — migração 156 + agendador in-process opt-in por ambiente) | entregue_e_verificado_gate_local (2026-10-03, hardening 155 sobre a 153 e a 154 do main; base PR #103 + PR #113; 2026-10-04, execução agendada da avaliação temporal — migração 156 + agendador in-process opt-in por ambiente) | aplicação em banco de destino — decisões operacionais tomadas (2026-10-04: intervalo 3600 s + identidade declarada TI), fluxo ensaiado ponta | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-08 | Base de conhecimento | pronto_local (jornada interna de staff com versionamento, ciência formal, rollback atômico e gate HTTP/DB/UI dedicado; aceite humano e Windows pendentes) | pronto_local (jornada interna de staff com versionamento, ciência formal, rollback atômico e gate HTTP/DB/UI dedicado; aceite humano e Windows pendentes) | Aceite humano do operador e validação Windows/EPERM pendentes. Não há IA externa nem integrações de terceiros. | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-09 | Expansão/unidades | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
-| EXT-10 | Continuidade operacional | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
+| EXT-10 | Continuidade operacional | pronto_local (gate focal novo) | pronto_local — jornada interna staff provada em PG/HTTP/Chromium; gate 17/17 | Aceite humano, Windows/EPERM, banco de destino e escopo/isolamento por cliente ou ator externo permanecem pendentes; contatos são registros internos, não notificações | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-11 | Analytics/A-B | entregue_e_verificado_gate_local | entregue_e_verificado_gate_local (migração 163, API/UI canônicas, RBAC, auditoria, idempotência e gate 18/18) | aceite humano, Windows/EPERM e aplicação no banco de destino; sem tráfego externo ou significância alegada | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-12 | Editor visual avançado | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-13 | Relatório periódico | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |

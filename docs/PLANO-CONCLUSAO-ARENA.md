@@ -8,11 +8,21 @@
 - Provas: `npm ci`; Wave0 5/5; typecheck OK; `npm test` 555/555; `npm run build` com 98 páginas; `npm run test:migrations:pg` 163/163; unitário focal EXT-11 10/10; `npm run test:ext11-analytics:pg` 18/18 e `npm run test:ext07-compliance:pg` 43/43 em PG17 descartável + servidor HTTP + sessões staff reais; `git diff --check`/`node --check` OK. O primeiro bloqueio ambiental de `libpq.so.5` foi reparado somente instalando as dependências do lockfile; nenhum banco remoto foi usado.
 - Pendências: aceite humano do operador, Windows/EPERM e validação de banco de destino continuam pendentes; a conclusão não significa ativação de tráfego A/B ou integração externa.
 
-## Atualização corrente — EXT-10 / F06 Continuidade
+## Atualização corrente — EXT-10 / F06 Continuidade (registro anterior)
 
-Implementar e provar planos de contingência, acionamento interno, simulados e recuperação pela API canônica; manter aceites humano e Windows como pendências.
+A implementação foi concluída na fatia anterior; a prova focal e a reconciliação desta sessão estão na seção validada abaixo. Aceites humano, Windows/EPERM e limites externos continuam pendentes.
 
 # Plano de conclusão (Arena) — lista única de trabalho
+
+## Atualização corrente — EXT-10 / F06 Continuidade validada
+
+- Base da sessão: merge real da PR #135 `cf3a1f4c580f44b92969a61548eec8d304e9c005`, com pais `58e213a11ccae35fc2f21002c9e1dda6b87bc333` e `9396d03f0ff1cc7064ed3675525f2387d0718a4c`; branch fixa `arena/01a108ea-gruposegsystemseguranca`. `main` local e `origin/main` estão alinhados. PRs #126, #127, #129, #132, #133 e #134 estão integradas e não devem voltar ao fluxo.
+- Ledger **001–163** preservado e imutável nesta fatia; próxima migração livre **164**. A migração 162 não foi alterada e a 164 não é necessária.
+- F06 cobre a jornada interna de planos por posto, contatos declarados, procedimentos de contingência/recuperação, transições e exercícios simulados. A API canônica é `/api/ext/continuity/plans`, detalhe, `/transition` e `/exercises`; a UI é `/admin/continuidade`. Escritas legadas retornam 410.
+- Guardas provadas: RBAC server-side fail-closed, same-origin, sessões individuais, idempotência SHA-256/replay/conflito, advisory lock, `FOR UPDATE`, máquina de estados, auditoria atômica com rollback/503, eventos imutáveis e reinício do servidor. Planos/exercícios foram criados por HTTP; SQL do gate só preparou identidades/grants/controles.
+- Gate: `npm run test:ext10-continuity:pg` **17/17**, PG17 descartável, 001–163, servidor HTTP, Chromium e fixtures inteiramente fictícios. Unitário `tests/ext10-continuity.test.mjs` **9/9**; regressões: `npm test` **564/564**, typecheck, build **98 páginas**, migrações **163/163**, `git diff --check` e `node --check`.
+- Correção encontrada pelo PostgreSQL: estados `arquivado` e reabertura para `rascunho` não possuem ações específicas no check histórico de auditoria da 162; a API usa `continuity_plan_update` nesses casos. Nenhuma migração histórica foi modificada.
+- Não contar como entregue: cliente autenticado/escopo por `client_account_id`, ator externo, contato realmente notificado, SMTP/telefonia/gateway/fornecedor, Windows/EPERM, banco de destino e aceite humano. A próxima etapa deve escolher uma lacuna funcional explícita; não criar a migração 164 por conveniência.
 
 ## Atualização corrente — EXT-09 / F05 Expansão, Dimensionamento e Cenários Financeiros
 
@@ -80,7 +90,7 @@ Data: 2026-10-04. Base vigente desta fatia: `origin/main` `972e6563f5ea4888b62e8
 | F02 | Windows/EPERM symlink, isolamento QA×ambiente, scripts start/stop/status, backup/restauração em instância separada | F01 | pendente — requer Windows do operador para aceite |
 | F03 | Massa de demonstração e jornadas de negócio ponta a ponta (lead→recebimento, funcionário→RH, cliente→chamado, contas→baixa) | F01 | **em execução**: fundação + três jornadas provadas (lead→contrato→implantação #126 `c1a557f`, gate 1/1; funcionário→solicitação→hora→retorno #127 `d0f1cde`, gate 1/1; cliente→chamado→atendimento→aceite #129 `3c7e9ab1`, gate 1/1); falta contas→baixa→relatório |
 | F04 | EXT-08 conhecimento: base de procedimentos versionados, ciência formal, máquina de estados e busca | F01 | **entregue localmente**: migração 160, API canônica, `/admin/conhecimento`, gate `test:ext08-knowledge:pg` 15/15; aceite humano pendente |
-| F05–F13 | EXT-09 expansão, EXT-10 continuidade, EXT-11 analytics, EXT-12 visual, EXT-13 relatórios, EXT-14 inteligência comercial, EXT-15 emergencial, EXT-16 central/vídeo (projeto separado), EXT-17 biometria (projeto separado) — um requisito por PR | F01 | F05/F06/F07 entregues localmente nas fatias 161/162/163; EXT-12–17 permanecem pendentes; tabelas 086–087 não são, por si, jornada entregue |
+| F05–F13 | EXT-09 expansão, EXT-10 continuidade, EXT-11 analytics, EXT-12 visual, EXT-13 relatórios, EXT-14 inteligência comercial, EXT-15 emergencial, EXT-16 central/vídeo (projeto separado), EXT-17 biometria (projeto separado) — um requisito por PR | F01 | F05/F06/F07 têm implementação e gates locais nas fatias 161/162/163; EXT-10 está provada somente na jornada interna de staff e ainda não tem escopo/isolamento de cliente ou ator externo; EXT-12–17 permanecem pendentes; tabelas 086–087 não são, por si, jornada entregue |
 | F14 | IA/RAG real: AI-06 recuperação autorizada + AI-09 curadoria primeiro; depois AI-01..05, 07, 08, 10. Fallback não é inferência. | F03 (massa e escopos) | pendente; OLLAMA_ENABLED=false hoje = fallback |
 | F15 | Fronteiras parciais: portal externo fornecedor, upload real, recuperação de conta sem SMTP, jobs vs reinício, notificações internas, isolamento A/B, EXT-07 obrigação vencida | F04+ | pendente |
 | F16 | Aceite final: matriz de aceite 03-ACEITE.md, humano de Marcelo/Andreia/funcionário, relatório de riscos, runbook Windows | todas | pendente |

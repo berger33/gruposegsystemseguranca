@@ -17,12 +17,17 @@
 - [ ] Aceite humano.
 - [ ] Windows/EPERM e aplicação no banco de destino.
 
-## Atualização 2026-10-04 — F06 / EXT-10 Continuidade
+## Atualização 2026-10-04 — F06 / EXT-10 Continuidade validada
 
-- [x] Migração 162 aditiva; 001–161 imutáveis; próxima livre 163.
-- [x] API canônica de planos, transições e simulados com RBAC, same-origin, idempotência, locks e auditoria fail-closed.
-- [x] UI `/admin/continuidade` protegida por AdminGate e sem promessa de acionamento externo.
-- [ ] Gate focal PG17/HTTP real EXT-10 e migrações 162/162: implementação preparada; execução bloqueada neste ambiente pela ausência de `libpq.so.5` no binário embedded-postgres.
+**Base:** merge da PR #135 `cf3a1f4c580f44b92969a61548eec8d304e9c005`; branch fixa `arena/01a108ea-gruposegsystemseguranca`; PRs #126, #127, #129, #132, #133 e #134 permanecem integradas e não foram recriadas.
+
+- [x] Migração 162 aditiva preservada; 001–163 do ledger aplicadas no gate e imutáveis nesta sessão; próxima livre 164; nenhuma migração foi aplicada no banco do operador.
+- [x] API canônica de planos, transições e exercícios com RBAC fail-closed, same-origin, idempotência SHA-256, replay/conflito, advisory lock, `FOR UPDATE` e auditoria fail-closed.
+- [x] UI `/admin/continuidade` protegida por `AdminGate`, exercitada por Chromium real, com declaração explícita de que não envia alertas externos.
+- [x] Gate focal `npm run test:ext10-continuity:pg`: **17/17**, sem skip/todo/fail; PG17 descartável, servidor HTTP real, sessões staff fictícias, SQL somente para identidades/grants/controles, planos/transições/exercícios por HTTP e prova de reinício.
+- [x] Unitário focal `tests/ext10-continuity.test.mjs`: **9/9**; regressões `npm test` **564/564**, typecheck, build **98 páginas**, migrações **163/163**, `git diff --check` e `node --check`.
+- [x] Correção restrita à API: `arquivado`/`rascunho` usam `continuity_plan_update`, ação já permitida pelo check da 162; a migração 162 não foi alterada.
+- [ ] Escopo/isolamento por cliente autenticado, ator externo, notificação real dos contatos, Windows/EPERM, banco de destino e aceite humano.
 
 # Checklist da entrega local — 222 requisitos
 
@@ -1623,11 +1628,11 @@ Expansão/unidades Aceite: Planejamento de filial/contrato, capacidade e cenári
 - Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
 
 ## EXT-10
-Continuidade operacional Aceite: Contingência por posto/cliente, contatos, exercícios e recuperação
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Handlers `/api/ext/*` para continuidade/exercícios; tabelas `ext_continuity_*`/086; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
-- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
-- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
+Continuidade operacional — Aceite: contingência por posto/cliente, contatos, exercícios e recuperação
+- Estado: **pronto_local — gate dedicado 17/17** (jornada interna de staff; aceite humano e Windows pendentes)
+- Tela / API / dados / autorização: `/admin/continuidade` protegido por `AdminGate`; `/api/ext/continuity/plans`, detalhe, `/transition` e `/exercises`; tabelas `ext_continuity_plans`, `ext_continuity_exercises` e `ext_continuity_events`; grants `continuity.read/write/activate` consultados no servidor.
+- Integração e evidência: `npm run test:ext10-continuity:pg` em PG17 descartável, migrações 001–163, servidor HTTP e Chromium reais; sessões staff fictícias; planos/transições/exercícios por HTTP; RBAC, same-origin, replay/conflito, concorrência, locks, auditoria/rollback/503, imutabilidade, legado 410 e reinício cobertos.
+- Pendência / fronteira externa / aceite humano: não há portal/ator externo, cliente autenticado ou isolamento por `client_account_id`; contatos e acionamentos são registros internos e não são enviados. Permanecem aceite humano, Windows/EPERM, banco de destino e qualquer integração SMTP/telefonia/gateway/fornecedor. Ver `PLANO-CONCLUSAO-ARENA.md`.
 
 ## EXT-11
 Analytics/A-B Aceite: Hipótese, variantes aprovadas, métrica e privacidade
