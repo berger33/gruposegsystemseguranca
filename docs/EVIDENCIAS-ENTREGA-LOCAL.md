@@ -1,5 +1,27 @@
 # Evidências — entrega local integral
 
+## Evidência vigente — PLAT-01 despacho HTTP (2026-10-03)
+
+Base `8c4d71a46215c0d775c4a7880a6e95bc01b9ea00` (PR #115 MERGED), branch da sessão e `origin/main` 0/0, árvore limpa. Probe temporário em servidor HTTP isolado reproduziu o defeito: rejeição assíncrona sem resposta (cliente abortou em 2503 ms) e **processo encerrado com `exit 1`**; observabilidade registrando 200/0 ms/erro nulo. O probe foi apagado e só usou rotas sintéticas.
+
+Entrega: `src/server/route-dispatch.mjs`; `routeApi` e o callback de `createServer` guardados; rede de segurança de processo; nenhuma migração, rota ou contrato alterado.
+
+| Prova | Resultado |
+|---|---|
+| npm ci | 0 vulnerabilidades |
+| Wave 0 | 5/5, 001–155 |
+| typecheck | OK |
+| Focal PLAT-01 (unit + HTTP real) | **25/25** |
+| Focal EXT-07 | 19/19 |
+| npm test | **494/494**, zero skip/todo |
+| build | 92 páginas; `/admin/compliance` |
+| migrations PG | 155/155 ×2; clone negativo rejeitado |
+| gate EXT-07 HTTP/PG | 37/37 |
+| gate EXT-06 / EXT-05 / EXT-04 | 36/36 · 33/33 · 28/28 |
+| git diff --check | limpo |
+
+A guarda estática foi validada por mutação (removido o `await`, ela reprova; restaurada por checksum, 7/7). Bateria **integral** executada e consolidada em [PDF](evidencias/qa-evidencia-2026-10-03-plat01-despacho-http.pdf) + ledger JSON gerados por `npm run qa:evidence`. Agendamento da avaliação temporal do EXT-07, destino, aceite humano e Windows seguem pendentes. [Relatório](ENTREGA-RELATORIO-2026-10-03-PLAT01-DESPACHO-HTTP.md).
+
 ## Evidência vigente — EXT-05 qualidade (2026-10-03)
 
 Base `ba2202ff6655f425edf405afc42de7ce3786a2a0`, PR #99 MERGED, branch da sessão e `origin/main` 0/0, árvore limpa. Probe temporário contra a base 001–150 + HTTP real: 9/9 lacunas reproduzidas (404 canônico/UI; 401 indevido para rh; duplicação; salto/fechamento/contador forjado; evidência texto livre; audit_log sem rollback; sem históricos; zero seed). O probe foi apagado e só usou sintéticos `.invalid`.
