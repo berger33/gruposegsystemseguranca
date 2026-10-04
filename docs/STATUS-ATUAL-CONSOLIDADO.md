@@ -9,23 +9,24 @@ Este documento é o inventário único de trabalho exigido pela etapa F00 do [pl
 
 - 222 IDs transcrevidos 1:1 do checklist, sem renumerar.
 - Maioria `pronto_local` por gates automáticos; aceite humano formal pendente para RH/funcionário/clientes e jornadas integradas.
-- **F01 (entrada e navegação) era a primeira pendência de implementação**: `/admin` 404, anônimo em `/admin/marcelo` sem oferta de login, rótulo de TI no login compartilhado. Estado após esta sessão: ver seção SEC-04 e [CONTINUACAO-ARENA.md](CONTINUACAO-ARENA.md).
-- EXT-06 estava `a_revalidar` na auditoria: a PR #101 (EXT-06 satisfação) **está mesclada no main** (migração 152 + gate 36/36 declarado); a PR alternativa #102 segue aberta e deve ser fechada como superseded. Resta aceite humano/Windows.
+- **F01 (entrada e navegação) foi integrada pela PR #122**: `/admin` hub, `/admin/entrar`, retorno seguro, menu por papel e logout revogável. Aceite humano e expansão do gate às páginas não tocadas seguem pendentes.
+- **F03 iniciou pela fundação da massa sintética**: bootstrap transacional/idempotente da demo isolada com sete papéis staff (incluindo RH e Marcelo), clientes A/B com grants exclusivos, funcionário com autoatendimento próprio e dois contratos fictícios. O gate `test:demo-local:pg` prova replay sem rotação de senha, login A/B sem vazamento e login do funcionário. As quatro jornadas de negócio F03 continuam pendentes.
+- EXT-06 estava `a_revalidar` na auditoria: a PR #101 (EXT-06 satisfação) **está mesclada no main** (migração 152 + gate 36/36 declarado); a alternativa #102 foi fechada sem merge na limpeza pós-F00. Resta aceite humano/Windows.
 - PLT-01 estava `a_revalidar`: a PR #118 (despacho à prova de rejeição) **está mesclada no main** com testes e workflow próprios.
 - EXT-08 a EXT-17 e AI-01 a AI-10: existem tabelas (086–087, 095–096) e handlers legados; **sem jornada UI→API→PG provada** — não contar como entregues.
 - Os 82 componentes `src/app/admin/ti/*Client.tsx` seguem órfãos (L00): protótipo descritivo em `/admin/ti`, sem prova de gate. Nenhum é promovido por existência.
 
-## PRs abertos no GitHub (28) — classificação sem merge automático
+## PRs reconciliados no GitHub — limpeza concluída após a PR #122
 
 | PR | Tema | Classificação | Razão |
 |---|---|---|---|
-| #121 | docs/auditoria-2026-10-04 (instruções Arena) | manter até integrar a pasta | fonte das instruções desta sessão; a pasta está sendo levada ao main pela linha de trabalho F00/F01; depois fechar como superseded |
+| #121 | docs/auditoria-2026-10-04 (instruções Arena) | fechada sem merge próprio | conteúdo incorporado, reconciliado e integrado pela #122 |
 | #104–#117 (12 PRs) | EXT-07 compliance (alternativas) | superseded — não mesclar | main já contém EXT-07 completo: #103 (jornada 153), #113 (154), #115 (hardening 154+155), #118 (PLT-01), #119 (agendador 156) |
 | #102 | EXT-06 satisfação/carteira | superseded — não mesclar | EXT-06 foi mesclada pela PR #101 (migração 152); gate ext06 36/36 declarado |
 | #79, #81, #82, #84, #86 | L08 CLI hardening (alternativas) | superseded — não mesclar | CLI-01..15 mesclados pelas PRs #78–#95; migração 139 e gates L08 presentes no main |
 | #47, #53, #59, #60, #62, #67, #70, #72, #75 | FIN-05/FIN-10/FIN-13/FIN-14..16 (alternativas) | superseded — não mesclar | FIN-01..16 mesclados pelas PRs #57–#77; matriz L07 fechada com gate 43/43 |
 
-Ação recomendada (não executada nesta sessão): fechar as 26 PRs superseded com comentário apontando a PR oficial mesclada e esta reconciliação. Nenhuma dessas PRs foi mesclada aqui.
+Ação executada em 04/10/2026 após o merge da #122: as **27 alternativas superseded** listadas acima foram fechadas sem merge, cada grupo com comentário apontando a linha oficial; a #121 também foi fechada porque seu conteúdo documental já estava integrado pela #122. A contagem anterior de “26” era um erro aritmético documental: 12 + 1 + 5 + 9 = 27. Consulta posterior confirmou zero PR aberta. Nenhum commit dessas alternativas foi mesclado.
 
 ## Matriz reconciliada dos 222 requisitos
 

@@ -1,88 +1,63 @@
-# Continuidade Arena — registro de sessão 2026-10-04 (F00 + F01)
+# Continuidade Arena — 2026-10-04 (F03, fundação da massa sintética)
 
 ## Identificação
 
-- SHA base: `540faf6c5124fd243fc3e287527ff4f6983ce8f1` (main, merge da PR #120).
-- Branch de trabalho: `arena/01a1056f-gruposegsystemseguranca`.
-- Escopo da sessão: F00 (reconciliação) + F01 (entrada e navegação central de staff), conforme [prompt master](auditoria-2026-10-04/04-PROMPT-MASTER-ARENA.md).
-- Migrações: **nenhuma nova** — 001–156 intocadas; próxima livre no main vigente: 157.
+- Base: `b61691fb95aa68d1a43e5f3b5cf43131de2c397c` (main, merge da PR #122/F00+F01).
+- Branch: `arena/01a105a3-gruposegsystemseguranca`.
+- PR: **#123** — `feat(f03): massa sintética idempotente e isolada`.
+- Commit de implementação: `0fc7048` (o commit documental final apenas registra a PR).
+- Escopo desta fatia: limpeza pós-F00 no GitHub + fundação idempotente da massa F03.
+- Migrações: nenhuma; 001–156 permanecem imutáveis e a próxima livre continua 157 (reconfirmar no próximo main).
 
-## O que foi implementado
+## Ações de repositório
 
-### F00 — reconciliação (documental)
+Após integrar a #122, foram fechadas **sem merge** as 27 alternativas superseded classificadas no F00: #104–#112, #114, #116, #117; #102; #79, #81, #82, #84, #86; #47, #53, #59, #60, #62, #67, #70, #72, #75. A #121 também foi fechada porque seu conteúdo documental já foi incorporado pela #122. Cada grupo recebeu comentário apontando a linha oficial. Consulta posterior: zero PR aberta. A documentação anterior dizia “26 superseded”; a soma correta é 12 + 1 + 5 + 9 = 27.
 
-- `docs/STATUS-ATUAL-CONSOLIDADO.md`: os 222 IDs transcrevidos 1:1 do checklist cruzados com código (tela, API, tabela canônica, papéis, teste vigente, estado, pendência), sumário executivo, classificação dos 28 PRs abertos e divergências históricas resolvidas.
-- `docs/PLANO-CONCLUSAO-ARENA.md`: lista única de trabalho F00→F16 com ordem, dependências e regras permanentes.
-- Pasta `docs/auditoria-2026-10-04/` (PR #121) trazida para a linha de trabalho sem alterar código do main.
-- Classificação de PRs abertos (sem nenhum merge/close nesta sessão): #121 = fonte de instruções; **superseded**: #104–#117 (EXT-07 → coberto por #103/#113/#115/#118/#119), #102 (EXT-06 → mesclado em #101), #79/#81/#82/#84/#86 (L08 → #78–#95), #47/#53/#59/#60/#62/#67/#70/#72/#75 (FIN → #57–#77). Recomendação registrada no STATUS: fechar com comentário de reconciliação, a cargo do proprietário.
+## Implementação F03 desta fatia
 
-### F01 — entrada e navegação central de staff (código)
+- `scripts/local-demo-seed.mjs`: seed transacional exclusivo do demo isolado, com lock advisory e marcador versionado. Primeira execução só aceita `seg_demo_local`, capacidade explícita do runner, UUID de instalação e banco de negócio vazio. Replay com o mesmo marcador é no-op; marcador/instalação divergente falha fechado. Falha reverte marcador e dados juntos.
+- Massa exclusivamente fictícia (`@example.invalid`): sete papéis staff individuais (`ti`, `rh`, `admin`, `marcelo`, `comercial`, `financeiro`, `supervisor`), clientes A/B, identidade de funcionário, duas contas, dois contratos, grants A/B exclusivos, cadastro laboral e permissão `employees.self_service` com escopo `own`.
+- Todas as senhas são geradas por CSPRNG, armazenadas somente como hash e impressas uma única vez na primeira inicialização. Replay e restart não rotacionam nem reimprimem.
+- `scripts/local-demo.mjs`: segredo separado e persistente para sessão do funcionário, recusando injeção pelo ambiente do operador; credenciais retornadas pelo seed novo.
+- `scripts/qa-local-demo-persistent.mjs`: prova recusa sem capacidade, instalação divergente, replay sem duplicação, contagens e auditoria; login real de clientes A/B com visibilidade de uma única empresa cada; login e leitura do perfil próprio do funcionário; preservação das provas anteriores de convite, revisão manual, restart, cópia fria e restauração isolada.
 
-Achados da auditoria atacados um a um:
+## Validação real
 
-| Achado | Correção |
-|---|---|
-| `/admin` retornava 404 | Nova página-hub `src/app/admin/page.tsx` + `AdminHub.tsx`: gate de sessão e cartões apenas dos módulos do papel |
-| `/admin/marcelo` anônimo mostrava estrutura e erros sem login | `AdminGate` (`src/app/admin/AdminGate.tsx`): 401 → redireciona a `/admin/entrar?next=<destino atual>`; papel indevido → estado 403 claro que declara o papel da sessão; falha de rede → erro com "Tentar novamente" |
-| Login funcional ficava embutido em `/admin/clientes` | Login central novo `src/app/admin/entrar/` (e-mail/senha individuais, passo MFA no mesmo fluxo, redireciono pós-login por papel) |
-| Rótulo "E-mail individual de TI" no login compartilhado | Rótulo papel-neutro "E-mail da conta individual"; aba de chave legada só aparece quando o servidor informa habilitação (`GET /api/admin/session/options`, endpoint novo em `server.mjs`); caso contrário, nota "chave legada está desativada" |
-| Navegação por papel ausente | `AdminChrome`: menu filtrado por papel (19 módulos), chip de papel com nome humano, botão Sair sempre visível (DELETE revoga no servidor e devolve à entrada) |
-| Redirecionamento pós-login | `resolvePostLoginTarget`/`sanitizeAdminNext` em `src/lib/admin-entry.mjs`: aceita somente caminhos internos de `/admin` (query/hash permitidos), recusa URL absoluta, `//host`, barras invertidas, controles, `/admin/entrar` (anti-loop) e `/administrador` (vizinho fora do namespace — capturado em teste) |
+Ambiente: sandbox Linux, Node 22, PostgreSQL 17.9 embedded descartável, sem banco/SMTP/segredos do operador.
 
-Arquivos principais: `src/lib/admin-entry.mjs` (+`admin-entry.d.mts`), `server.mjs` (rota `/api/admin/session/options` — aditiva, nenhum contrato existente alterado), `src/app/admin/{page,AdminGate,AdminHub,AdminChrome.module.css,entrar/*}.tsx`, `src/app/admin/marcelo/page.tsx`, `src/app/admin/clientes/page.tsx` (gate local duplicado removido), `src/app/admin/funcionarios/page.tsx`.
+- `npm ci`: sucesso; 82 pacotes, 0 vulnerabilidades.
+- `npm run typecheck`: sucesso.
+- `npm test`: **525/525**, 0 falhas e 0 skips.
+- `npm run test:demo-local:pg`: sucesso; replay no-op; A/B isolados; funcionário próprio; convite/revisão/grant; backup a quente recusado; cópia fria, verificação e restauração separada; restart persistente; temporários removidos.
+- `npm run build`: sucesso; 94 páginas geradas.
+- `git diff --check` e `node --check` nos três scripts: sucesso.
 
-**O que NÃO mudou de propósito:** autorização no servidor (readSession/requireRole, RBAC do painel ADM, permissões finas de RH), migrações, `/admin/verificacao-manual` (reautenticação de ação sensível), portals de cliente/funcionário (sessões separadas). RH **não** recebeu acesso à administração — prova: `/api/adm/panel/indicators` com cookie de RH responde 403.
+A primeira tentativa de `typecheck` ocorreu antes de `npm ci` e falhou com `tsc: not found`; a primeira suíte unitária nesse mesmo estado incompleto falhou 13 casos por dependências ausentes. Após `npm ci`, ambas passaram integralmente. O gate F03 também encontrou `EMPLOYEE_SESSION_SECRET_NOT_CONFIGURED` ao exercitar pela primeira vez a conta do funcionário; a configuração isolada ganhou segredo próprio e o gate passou na repetição, sem relaxar asserção.
 
-## Testes executados e resultados reais
+## Limites e pendências
 
-| Comando | Resultado | Ambiente |
-|---|---|---|
-| `npm ci` | 0 erros | sandbox Linux Node 22.22.3 |
-| `npm run typecheck` | limpo | idem |
-| `npm test` (unit) | **525/525** pass, 0 skip (514 anteriores + 11 novos `tests/admin-entry.test.mjs`) | idem |
-| `npm run test:admin-entry:pg` | **13/13** pass — HTTP real contra PostgreSQL 17.9 descartável (embedded, cluster apagado no finally) + Chromium 153 real | idem |
-| `npm run test:staff-auth:pg` (regressão L01) | **21/21** pass | idem |
-| `npm run build` | sucesso; `/admin` e `/admin/entrar` geradas no bundle (HTML contém os marcadores) | idem |
-| `git diff --check` | limpo | idem |
+Esta fatia entrega a **fundação da massa**, não conclui F03. Continuam pendentes, uma jornada por fatia:
 
-Cobertura do gate F01 (`tests/admin-entry.integration.test.mjs`): `/admin` não-404; `/admin/entrar` servido; `options` com legado oculto; 401 anônimo preservado; login marcelo/rh/supervisor com papel correto e identityId; senha inválida 401 sem detalhe; conta suspensa 401 `identity_not_active`; RBAC painel (marcelo 200, rh 403); logout revoga cookie reutilizado (401); browser: anônimo → login com `next=%2Fadmin%2Fmarcelo` → volta ao painel com rótulo e chip corretos e aba legada desabilitada; RH entra em `/admin/funcionarios`, menu sem painel administrativo, URL direta cai no 403 declarativo; `next=https://…` recusado (cai na home do papel, nunca fora do domínio); senha errada mostra "E-mail ou senha não conferem." sem sair da entrada; logout pelo chrome devolve à entrada e sessão sai 401.
+1. lead → oportunidade → proposta revisada → contrato → implantação;
+2. funcionário → solicitação → análise RH → retorno;
+3. cliente → chamado → atendimento → aceite;
+4. contas a pagar/receber → baixa → relatório.
 
-**Limites honestos da prova:** execução em Linux; `embedded-postgres` (não Docker SEPARADO como no operador); jornada de browser cobre anônimo→login→retorno, mas não cobre MFA ponta a ponta com autenticador real nem a aba de chave legada habilitada (estado habilitado tem prova unitária; a tentativa legada real está coberta por `test:staff-auth:pg`); nenhuma jornada funcional de RH foi reexercida além do gate (permissões finas `employees.*` seguem nos gates de origem); Windows EPERM/symlink segue para F02.
-
-## Pendências e próximos passos (ordem)
-
-1. Revisão/merge desta PR e fechamento (sem merge) das 26 PRs superseded com comentário apontando esta reconciliação — ação do proprietário.
-2. F03 — massa de demonstração idempotente (empresa/cliente A e B, equipe/funcionário, conta RH, Marcelo, contratos) com gate em PG descartável. Precisa das contas já provisionáveis no banco do operador; login central F01 já as recebe.
-3. F04 = EXT-08 (conhecimento) ou pendência declarada do aceite: obrigação vencida do EXT-07 produzindo tarefa por vencimento (gate EXT-07 existe; cenário de vencimento real pendente).
-4. F02 — Windows/EPERM symlink + scripts operação + backup/restauração em instância separada (na máquina do operador).
+Também pendem Windows/EPERM (F02), aceite humano e integrações externas. Não há SMTP real, banco bancário, eSocial, assinatura, dados reais ou hospedagem definitiva. O seed vale para instalações novas da demo isolada; marcador legado não é atualizado silenciosamente para evitar criar/reexibir credenciais numa instalação em uso.
 
 ## Prompt completo para a próxima sessão
 
 ```text
-Continue o projeto berger33/gruposegsystemseguranca usando exclusivamente o GitHub.
-Branch da sessão anterior: conforme a linha arena/* vigente; PR anterior referência:
-"feat(f01): entrada e navegação central de staff" (login central /admin/entrar, hub
-/admin, AdminGate, opções de login) — NÃO refazer. Leia nesta ordem:
-1. Leia docs/CONTINUACAO-ARENA.md (último registro), docs/STATUS-ATUAL-CONSOLIDADO.md,
-   docs/PLANO-CONCLUSAO-ARENA.md e docs/auditoria-2026-10-04/ (README, AUDITORIA,
-   02-PLANO-ARENA, 03-ACEITE, 04-PROMPT-MASTER) — já integradas ao main; se ainda não
-   estiverem, obtenha da branch docs/auditoria-arena-2026-10-04.
-2. Execute a próxima fatia pendente da lista única: F03 (massa de demonstração
-   idempotente) ou EXT-08 (F04), conforme o main vigente. Uma fatia por PR, PR pequeno.
-3. Regras: migrações 001–156 imutáveis (reserve a próxima livre no main vigente);
-   autorização no servidor em toda API; fail-closed; auditoria transacional;
-   idempotência; PLAT-01 preservado; banco descartável (embedded-postgres ou Compose
-   exclusivo); dados fictícios (.invalid); sem segredos em git/logs; SMTP real e
-   hospedagem fora do escopo.
-4. Ao terminar: atualize docs/CONTINUACAO-ARENA.md (SHA/branch/PR, arquivos, testes,
-   limites), docs/STATUS-ATUAL-CONSOLIDADO.md e o checklist apenas com evidência;
-   entregue o prompt da próxima sessão. Não declare o sistema concluído enquanto
-   houver requisitos pendentes; fallback de IA não conta como LLM real.
+Continue berger33/gruposegsystemseguranca a partir do main após a PR F03 da branch
+arena/01a105a3-gruposegsystemseguranca. Leia docs/CONTINUACAO-ARENA.md,
+docs/PLANO-CONCLUSAO-ARENA.md e docs/STATUS-ATUAL-CONSOLIDADO.md. Não refaça F00,
+F01 nem a massa sintética base de F03. Implemente somente a próxima fatia F03:
+lead → oportunidade → proposta revisada → contrato → implantação, usando APIs e
+fontes canônicas existentes e a demo isolada. Prove por HTTP real contra PostgreSQL
+17 descartável, com replay/idempotência, auditoria transacional, RBAC e erro visível;
+não insira diretamente estados que a API deve produzir. Migrações 001–156 são
+imutáveis; reconfirme a próxima livre. Dados apenas fictícios .invalid, sem segredos,
+SMTP ou serviços reais. Uma fatia por PR. Ao terminar atualize a continuidade,
+status e checklist com resultados reais e limites; não declare F03 concluída enquanto
+as outras três jornadas e o aceite humano permanecerem pendentes.
 ```
-
-## Decisões e riscos registrados
-
-- Menu por papel é navegação, não autorização: documentado em `AdminGate.tsx` e no hub; toda API decide acesso no servidor (nenhum handler alterado nesta fatia).
-- `/admin/clientes` perdeu o formulário embutido: quem usava a aba "chave legada" ali passa pelo login central, que só a oferece habilitada — comportamento desejado pelo F01.
-- `GET /api/admin/session/options` é público por necessidade de UI e responde sem banco; não revela segredos, contagem de staff nem disponibilidade de MFA. Aceitação do token legado continua fail-closed no POST (`evaluateLegacyTokenPolicy`).
-- Risco remanescente: páginas administrativas *não tocadas* por esta fatia (comercial, contratos, financeiro, operação, etc.) continuam sem o gate central — propositalmente, para manter a PR pequena; anônimo nelas segue vendo erros de API em vez do fluxo de login. Expansão gradual sugerida na sequência (ou na F03).
