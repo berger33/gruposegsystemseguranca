@@ -90,6 +90,7 @@ import { createCliApi } from "./src/server/cli-api.mjs";
 import { createCliAdvancedApi } from "./src/server/cli-advanced-api.mjs";
 import { createCliFinanceApi } from "./src/server/cli-finance-api.mjs";
 import { createFinApi } from "./src/server/fin-api.mjs";
+import { createFinReceivableJourneyApi } from "./src/server/fin-receivable-journey-api.mjs";
 import { createFinAdvancedApi } from "./src/server/fin-advanced-api.mjs";
 import { createFinManagementApi } from "./src/server/fin-management-api.mjs";
 import { createFinBudgetApi } from "./src/server/fin-budget-api.mjs";
@@ -2107,6 +2108,16 @@ const finApi = createFinApi({
   },
 });
 
+// F03 · conta a receber → baixa → relatório. Rota canônica com autorização
+// granular (finance.*) verificada no servidor, idempotência e transação única.
+const finReceivableJourneyApi = createFinReceivableJourneyApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
 const finAdvancedApi = createFinAdvancedApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta, client }) => {
@@ -2685,6 +2696,8 @@ async function routeApi(req, res) {
   const ticketMatch = url.pathname.match(/^\/api\/admin\/tickets\/([0-9a-f-]{36})$/i);
   if (ticketMatch) return clientSpaceApi.handleAdminTicketUpdate(req, res, ticketMatch[1]);
   if (url.pathname === "/api/admin/client/l08/tickets") return clientSpaceApi.handleAdminClientTicketFlow(req, res, url);
+  if (url.pathname === "/api/admin/finance/l07/receivables/report") return finReceivableJourneyApi.handleReceivableReport(req, res, url);
+  if (url.pathname === "/api/admin/finance/l07/receivables") return finReceivableJourneyApi.handleReceivables(req, res, url);
   if (url.pathname === "/api/admin/client-visits") return clientSpaceApi.handleAdminVisits(req, res, url);
   const adminVisitMatch = url.pathname.match(/^\/api\/admin\/client-visits\/([0-9a-f-]{36})$/i);
   if (adminVisitMatch) return clientSpaceApi.handleAdminVisitUpdate(req, res, adminVisitMatch[1]);
@@ -4559,6 +4572,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/admin/tickets"
   || pathname.startsWith("/api/admin/tickets/")
   || pathname.startsWith("/api/admin/client/")
+  || pathname.startsWith("/api/admin/finance/")
   || pathname === "/api/admin/client-visits"
   || pathname.startsWith("/api/admin/client-visits/")
   || pathname === "/api/admin/client-reports"

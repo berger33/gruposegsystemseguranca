@@ -76,7 +76,11 @@ export default function FinClient() {
   }
   const [statusForm, setStatusForm] = useState({ id:"", status:"aprovado", approval_status:"aprovado", reason:"Baixa auditada motivo obrigatório 10..1000" });
   async function updateStatus() {
-    try { if(statusForm.id.startsWith("REC") || receivables.find(r=>r.id===statusForm.id)) { await api("/api/hr/fin-receivables","PATCH",{ id:statusForm.id, status:statusForm.status, reason:statusForm.reason }); } else { await api("/api/hr/fin-payables","PATCH",{ id:statusForm.id, status:statusForm.status, approval_status:statusForm.approval_status, reason:statusForm.reason }); } setMsg("Status atualizado baixa auditada"); loadAll(); } catch(e:any){ setMsg("Erro status: "+e.message); }
+    // A situação de uma conta a receber nasce da baixa canônica (F03): esta
+    // tela não altera mais estado de recebível por atalho. Contas a pagar
+    // continuam no fluxo legado de aprovação com motivo.
+    if(statusForm.id.startsWith("REC") || receivables.find(r=>r.id===statusForm.id)) { setMsg("Conta a receber: a situação muda apenas pela baixa canônica em Financeiro › Contas · baixa · relatório (PATCH /api/admin/finance/l07/receivables)."); return; }
+    try { await api("/api/hr/fin-payables","PATCH",{ id:statusForm.id, status:statusForm.status, approval_status:statusForm.approval_status, reason:statusForm.reason }); setMsg("Status atualizado baixa auditada"); loadAll(); } catch(e:any){ setMsg("Erro status: "+e.message); }
   }
 
   return (
@@ -172,9 +176,10 @@ export default function FinClient() {
         <button onClick={createPayment}>Criar Pagamento Baixa Auditada Nunca Apagar Saldo Silenciosa</button>
       </div>
 
-      <h3>Status e Aprovação com Motivo Auditado</h3>
+      <h3>Status e Aprovação com Motivo Auditado (contas a pagar)</h3>
+      <p>A situação de contas a <strong>receber</strong> não é editada aqui: ela decorre da baixa canônica em Financeiro › Contas · baixa · relatório, com escopo, idempotência e trilha.</p>
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-        <input placeholder="id receber/pagar" value={statusForm.id} onChange={e=>setStatusForm({...statusForm, id:e.target.value})} style={{ width:200 }} />
+        <input placeholder="id da conta a pagar" value={statusForm.id} onChange={e=>setStatusForm({...statusForm, id:e.target.value})} style={{ width:200 }} />
         <select value={statusForm.status} onChange={e=>setStatusForm({...statusForm, status:e.target.value})}><option value="pendente">pendente</option><option value="aprovado">aprovado</option><option value="pago">pago</option><option value="recebido">recebido</option><option value="cancelado">cancelado</option><option value="renegociado">renegociado</option><option value="estornado">estornado</option></select>
         <select value={statusForm.approval_status} onChange={e=>setStatusForm({...statusForm, approval_status:e.target.value})}><option value="pendente">pendente aprovação</option><option value="aprovado">aprovado</option><option value="rejeitado">rejeitado</option></select>
         <input placeholder="reason 10..1000 obrigatório" value={statusForm.reason} onChange={e=>setStatusForm({...statusForm, reason:e.target.value})} style={{ width:250 }} />

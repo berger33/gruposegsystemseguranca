@@ -24,6 +24,13 @@ export const KNOWN_PERMISSIONS = Object.freeze([
   "client.tickets.write",
   "client.grants.issue",
   "client.grants.revoke",
+  // F03 · conta a receber → baixa → relatório (migração 159). A autoridade
+  // financeira é granular e por conta: ler a fila, abrir a conta, dar a baixa
+  // e emitir o relatório são concessões distintas, nunca um rótulo de papel.
+  "finance.receivables.read",
+  "finance.receivables.write",
+  "finance.receivables.settle",
+  "finance.reports.read",
   "leads.read",
   "leads.write",
   "site.visual.read",

@@ -168,27 +168,18 @@ export function createFinApi({ pool, auditLog, sameOrigin, requireSession, requi
       } finally { client.release(); }
     }
     if (req.method === "PATCH") {
-      let body={}; try { const chunks=[]; for await (const c of req) chunks.push(c); body=JSON.parse(Buffer.concat(chunks).toString()||"{}"); } catch {}
-      const { id, status, reason } = body;
-      if (!id || !status) return json(res,400,{ error:"missing_fields" });
-      if (!reason || String(reason).length <10 || String(reason).length>1000) return json(res,400,{ error:"reason_10_1000_required", note:"baixa auditada nunca apagar saldo por edição silenciosa" });
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        const cur = await client.query(`SELECT * FROM fin_accounts_receivable WHERE id=$1 FOR UPDATE`, [id]);
-        if (cur.rows.length===0) { await client.query('ROLLBACK'); return json(res,404,{ error:"not_found" }); }
-        const prev = cur.rows[0];
-        await client.query(`UPDATE fin_accounts_receivable SET status=$2, paid_at=CASE WHEN $2 IN ('pago','recebido') THEN NOW() WHEN $2='cancelado' THEN canceled_at ELSE paid_at END, canceled_at=CASE WHEN $2='cancelado' THEN NOW() ELSE canceled_at END WHERE id=$1`, [id, status]);
-        await client.query(`INSERT INTO fin_payment_history (account_type, receivable_id, previous_status, next_status, previous_paid_cents, next_paid_cents, changed_by_identity, reason, is_cancelamento) VALUES ('receber',$1,$2,$3,$4,$5,$6,$7,$8)`, [id, prev.status, status, prev.amount_paid_cents, prev.amount_paid_cents, session.identityId||null, reason, status==='cancelado']);
-        await auditLog({ action:"fin_receivable_status", actor: session.identityId||"unknown", target: id, meta:{ previous: prev.status, next: status, reason }, client });
-        const { rows } = await client.query(`SELECT * FROM fin_accounts_receivable WHERE id=$1`, [id]);
-        await client.query('COMMIT');
-        return json(res,200,{ receivable: rows[0] });
-      } catch(e) {
-        try { await client.query('ROLLBACK'); } catch {}
-        if (e?.code === '42P01') return json(res,503,{ error:"audit_unavailable" });
-        return json(res,500,{ error:"internal", detail:e.message });
-      } finally { client.release(); }
+      // F03 (jornada conta → baixa → relatório): esta escrita legada movia a
+      // situação da conta a receber para qualquer valor — inclusive 'recebido'
+      // — sem pagamento, sem escopo granular por conta, sem idempotência e sem
+      // a trilha de baixa. A escrita canônica é a máquina estrita de
+      // PATCH /api/admin/finance/l07/receivables, que exige
+      // finance.receivables.settle e grava pagamento, histórico, trilha e
+      // auditoria na mesma transação. A leitura e a criação legadas (L07)
+      // permanecem compatíveis; apenas este atalho de estado foi aposentado.
+      return json(res,410,{
+        error:"legacy_fin_receivable_status_write_retired",
+        canonical_endpoint:"/api/admin/finance/l07/receivables",
+      });
     }
     return json(res,405,{ error:"method_not_allowed" });
   }

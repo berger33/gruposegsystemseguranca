@@ -61,7 +61,8 @@
     "qa:evidence": "node scripts/qa-evidence-report.mjs",
     "test:admin-entry:pg": "node scripts/qa-admin-entry-postgres.mjs",
     "test:f03-employee-request-rh-return:pg": "node scripts/qa-f03-employee-request-rh-return-postgres.mjs",
-    "test:f03-client-ticket-acceptance:pg": "node scripts/qa-f03-client-ticket-acceptance-postgres.mjs"
+    "test:f03-client-ticket-acceptance:pg": "node scripts/qa-f03-client-ticket-acceptance-postgres.mjs",
+    "test:f03-contas-baixa-relatorio:pg": "node scripts/qa-f03-receivable-settlement-report-postgres.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",
