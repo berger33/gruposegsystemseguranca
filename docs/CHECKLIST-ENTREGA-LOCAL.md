@@ -1,5 +1,18 @@
 # Checklist da entrega local — 222 requisitos
 
+## Atualização 2026-10-04 — F03 funcionário → solicitação → análise RH → retorno
+
+**Base:** `origin/main` `7a41837385985e2321fc86f8b461f133d7c01423` (a PR #126 foi conferida e já está integrada); **branch fixa:** `arena/01a10761-gruposegsystemseguranca`; **commit de implementação:** `d0f1cdebfb5fecac2fc7bb639b554faf1724a7b7`. A PR desta segunda jornada ainda será aberta desta branch, sem recriar #126.
+
+Entregue localmente: migração aditiva `157-f03-employee-request-rh-return.sql` (somente idempotência/replay; 001–156 imutáveis), criação canônica no portal próprio com chave de idempotência, fila RH com `employees.read`/`employees.write` e escopo real, transições estritas `solicitado → em_analise → aprovado|rejeitado`, resposta obrigatória de 5+ caracteres, follow-up/auditoria na mesma transação e retorno visível somente ao titular. A aba RH usa a rota canônica e afirma corretamente que não envia SMTP. A escrita da rota EMP-12 legada e de seus follow-ups agora retorna 410 `legacy_emp12_write_retired`, impedindo atalhos sem escopo, transação e idempotência.
+
+**Comandos/resultados:** `npm ci` (82 pacotes, 0 vulnerabilidades); `node scripts/qa-wave0-static.mjs` (**5/5**, manifesto 001–157); `npm run typecheck` (OK); `npm test` (**526/526**, 0 falhas); `npm run test:f03-employee-request-rh-return:pg` (**1/1**, PostgreSQL 17 descartável + HTTP real + Chromium); `git diff --check` e `node --check` (OK). O gate valida anônimo/origem/papel negados, proprietário forjado ignorado, concorrência/replay/conflito de criação/revisão, máquina de estados, rollback de `audit_log` e retry, bloqueio do legado, isolamento A/B, retorno próprio e UI desktop/mobile sem console/page/5xx.
+
+**Falhas reais e correção:** a primeira tentativa recusou o manifesto ainda 001–156; 157 foi registrado nos quatro pontos sem remover a guarda. O PG17 revelou placeholder compartilhado entre enum/texto, corrigido com parâmetro separado/casts explícitos. O Chromium revelou seletor ambíguo, limitação `--single-process` e corrida do refresh RH; foram corrigidos com seletor textarea, navegadores por papel e espera da confirmação, mantendo as asserções.
+
+**Limites:** F03 não está concluída. Permanecem cliente→chamado→aceite, contas→baixa→relatório, aceite humano e Windows/EPERM. Não foram usados dados reais, SMTP, banco bancário, eSocial, assinatura externa, hosting permanente ou IA externa.
+
+
 ## Atualização 2026-10-04 — primeira jornada F03 na PR #126
 
 Base `origin/main` `972e6563f5ea4888b62e88b8c126a925d79f6068`, branch `arena/01a1073d-gruposegsystemseguranca`, commits `c1a557f` (implementação) e `e45e41b` (documentação), PR **#126**; todos os checks publicados da PR passaram. A jornada lead→oportunidade→proposta revisada→contrato→implantação foi provada por `npm run test:f03-lead-to-implementation:pg` (**1/1**, PostgreSQL 17 descartável, HTTP real, Chromium e seed F03 existente). O gate cobre autorização server-side/deny-by-default, mesma origem, rollback quando a auditoria falha, retry concorrente sem duplicar contrato/itens/implantação/passos, bloqueio antes de aceite, clientes A/B isolados e UI com erro/vazio/checklist honesto. A conversão CRM-04 passou a compartilhar transação com seus audits; o detalhe/listagem L05 converge checklist e informa total.

@@ -1,5 +1,20 @@
 # Status atual consolidado — reconciliação F00 + F01 + primeira jornada F03
 
+## Atualização F03 — funcionário → solicitação → análise RH → retorno
+
+**Base confirmada:** `origin/main` `7a41837385985e2321fc86f8b461f133d7c01423` (PR #126 já integrada normalmente); **branch fixa:** `arena/01a10761-gruposegsystemseguranca`; **commit de implementação:** `d0f1cdebfb5fecac2fc7bb639b554faf1724a7b7`. A PR desta nova fatia ainda será aberta a partir da branch fixa, portanto #126 não deve ser recriada nem mesclada de novo.
+
+A migração aditiva **157** introduz chave/impressão de idempotência e índices únicos parciais para `emp_self_requests` e `emp_self_request_followups`; 001–156 não foram alteradas. O manifesto PG, Wave 0, a asserção EXT-07 e o relatório de evidência foram atualizados para o ledger 001–157. A API canônica vincula criação ao funcionário da sessão, exige mesma origem e `Idempotency-Key`, e usa lock/transaction/auditoria em conjunto. A fila RH requer as permissões reais `employees.read`/`employees.write` com escopo e permite somente `solicitado → em_analise → aprovado|rejeitado` com mensagem explícita. O portal exibe somente a solicitação do titular e seus retornos; `RhWorkspace` usa essa fila canônica e declara corretamente que não há SMTP.
+
+O caminho EMP-12 legado foi inspecionado: permitia escrita sem a máquina de estados, escopo granular, idempotência ou auditoria transacional. Suas mutações foram aposentadas com 410 `legacy_emp12_write_retired` (inclusive follow-up mutável), deixando leitura de compatibilidade; o gate prova a recusa e a ausência de mudança no registro.
+
+**Evidência atual:** `npm ci` (82 pacotes/0 vulnerabilidades), `node scripts/qa-wave0-static.mjs` (5/5), `npm run typecheck`, `npm test` (**526/526**) e `npm run test:f03-employee-request-rh-return:pg` (**1/1**, PG17 descartável + HTTP + Chromium) passaram; `git diff --check` e `node --check` também passaram. O gate cobre negações, A/B, concorrência/replay/conflito, rollback por auditoria, retry e UI de funcionário/RH/funcionário com monitoramento de console/page/5xx e overflow móvel.
+
+**Falhas encontradas/reparadas, sem reduzir prova:** o primeiro run falhou no guard de manifesto 001–156; a solução foi registrar 157 em todos os pontos, não ignorar o guard. O banco real expôs conflito de inferência enum/texto nos placeholders da criação/fila/revisão; foram separados/castados explicitamente. O Chromium expôs seletor de `meta[name=description]`, limitação `--single-process` entre contextos e corrida do refresh do RH; o teste agora usa seletor de textarea, processos de navegador isolados por papel e espera a confirmação antes da segunda mensagem.
+
+F03 permanece **em execução**: esta é a segunda jornada após a #126; cliente→chamado→aceite, contas→baixa→relatório, aceite humano e Windows/EPERM continuam pendentes. Sem SMTP, banco bancário, eSocial, assinatura externa, dados reais, hosting ou IA externa.
+
+
 Data: 2026-10-04. Base da fatia: `origin/main` em `972e6563f5ea4888b62e88b8c126a925d79f6068`; branch `arena/01a1073d-gruposegsystemseguranca`; PR #126, commits `c1a557f`/`e45e41b`. Todos os checks publicados da #126 passaram; a PR #125 (`e2fa152`) já foi integrada pelo merge acima.
 Método: [matriz declarada no checklist](CHECKLIST-ENTREGA-LOCAL.md) cruzada com código, telas, migrações 001–156, gates e PRs do GitHub. Auditoria de terreno: [docs/auditoria-2026-10-04/AUDITORIA.md](auditoria-2026-10-04/AUDITORIA.md).
 
