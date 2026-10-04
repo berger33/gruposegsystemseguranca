@@ -2,7 +2,7 @@
 
 ## Atualização F03 — cliente → chamado → atendimento → aceite
 
-**Base confirmada:** `origin/main` `a459e07d42a855f93af4d76d047b49f3ff5e204e` — merge da PR [#127](https://github.com/berger33/gruposegsystemseguranca/pull/127), verificado por `gh pr view 127` (MERGED) e `git fetch origin main`; a PR [#126](https://github.com/berger33/gruposegsystemseguranca/pull/126) já estava integrada em `7a41837`. **Nenhuma das duas pode ser recriada, reaberta ou remesclada.** **Branch fixa:** `arena/01a10789-gruposegsystemseguranca`; **commit de implementação:** `7b81141`; **PR:** aberta desta branch.
+**Base confirmada:** `origin/main` `a459e07d42a855f93af4d76d047b49f3ff5e204e` — merge da PR [#127](https://github.com/berger33/gruposegsystemseguranca/pull/127), verificado por `gh pr view 127` (MERGED) e `git fetch origin main`; a PR [#126](https://github.com/berger33/gruposegsystemseguranca/pull/126) já estava integrada em `7a41837`. **Nenhuma das duas pode ser recriada, reaberta ou remesclada.** **Branch fixa:** `arena/01a10789-gruposegsystemseguranca`; **commit de implementação:** `7b81141`; **PR:** [#128](https://github.com/berger33/gruposegsystemseguranca/pull/128).
 
 A migração aditiva **158** dá origem rastreável ao aceite: `client_reports.ticket_id` (FK para `client_tickets`), chave/impressão de idempotência em `client_reports` e em `client_ticket_status_audit`, índice parcial garantindo **um único aceite pendente por chamado** e índices únicos parciais para os retries. `001–157` não foram tocadas; manifesto PG, Wave 0, asserção EXT-07 e relatório de evidência passaram a declarar `001–158`.
 
@@ -58,6 +58,7 @@ Este documento é o inventário único de trabalho exigido pela etapa F00 do [pl
 
 | PR | Tema | Classificação | Razão |
 |---|---|---|---|
+| #128 | F03 — cliente → chamado → atendimento → aceite | **em validação nesta branch** | terceira jornada sobre `a459e07`; implementação `7b81141`, migração 158, gate HTTP/PG/Chromium 1/1 |
 | #127 | F03 — funcionário → solicitação → RH → retorno | **integrada** | segunda jornada; migração 157; merge `a459e07` confirmado por `gh pr view 127` |
 | #126 | F03 — lead até implantação | **integrada** | primeira jornada sobre `origin/main` `972e656`; implementação `c1a557f`, gate HTTP/PG/Chromium, sem migração nova; merge `7a41837` |
 | #125 | F01 — gate nas 28 páginas administrativas restantes | **integrada** | reaplicou o escopo válido da #124 sobre o main pós-#123; sem API/migração nova; merge `972e656` |

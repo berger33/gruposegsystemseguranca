@@ -2,7 +2,7 @@
 
 ## Atualização corrente — F03 cliente → chamado → atendimento → aceite
 
-- **Base:** `origin/main` `a459e07d42a855f93af4d76d047b49f3ff5e204e` (merge da PR #127; a #126 já estava em `7a41837`); **branch fixa:** `arena/01a10789-gruposegsystemseguranca`; **commit de implementação:** `7b81141`; **PR:** aberta desta branch. Não recriar #126 nem #127.
+- **Base:** `origin/main` `a459e07d42a855f93af4d76d047b49f3ff5e204e` (merge da PR #127; a #126 já estava em `7a41837`); **branch fixa:** `arena/01a10789-gruposegsystemseguranca`; **commit de implementação:** `7b81141`; **PR:** [#128](https://github.com/berger33/gruposegsystemseguranca/pull/128). Não recriar #126 nem #127.
 - A terceira jornada F03 foi validada localmente por `npm run test:f03-client-ticket-service-acceptance:pg` (**1/1**, PostgreSQL 17 descartável, HTTP real e Chromium), além de Wave 0 5/5, `npm run typecheck`, `npm test` **536/536**, `npm run test:l08-delivery:pg` **51/51**, `npm run test:migrations:pg` (ledger 158/158) e `npm run build`. A vaga livre **158** foi consumida aditivamente; 001–157 continuam imutáveis.
 - Regra de negócio consolidada: a equipe atende por uma máquina de estados explícita e **nunca encerra** o chamado; o encerramento nasce do aceite do cliente, na mesma transação, com trilha atribuída a `client`. Esquema parcialmente migrado responde 503 em vez de fingir suporte.
 - Falhas reais registradas e corrigidas: placeholder reutilizado para TEXT e UUID no gate (`operator does not exist: uuid = text`) e teste unitário novo ausente da lista explícita de `test:unit`. As provas foram repetidas sem enfraquecer asserções.
