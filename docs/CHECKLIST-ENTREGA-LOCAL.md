@@ -2,7 +2,7 @@
 
 ## Atualização 2026-10-04 — F03 funcionário → solicitação → análise RH → retorno
 
-**Base:** `origin/main` `7a41837385985e2321fc86f8b461f133d7c01423` (a PR #126 foi conferida e já está integrada); **branch fixa:** `arena/01a10761-gruposegsystemseguranca`; **commit de implementação:** `d0f1cdebfb5fecac2fc7bb639b554faf1724a7b7`. A PR desta segunda jornada ainda será aberta desta branch, sem recriar #126.
+**Base:** `origin/main` `7a41837385985e2321fc86f8b461f133d7c01423` (a PR #126 foi conferida e já está integrada); **branch fixa:** `arena/01a10761-gruposegsystemseguranca`; **commits:** `d0f1cdebfb5fecac2fc7bb639b554faf1724a7b7` (implementação) e `fcddf69` (evidência/documentação); **PR:** [#127](https://github.com/berger33/gruposegsystemseguranca/pull/127). Não recriar #126.
 
 Entregue localmente: migração aditiva `157-f03-employee-request-rh-return.sql` (somente idempotência/replay; 001–156 imutáveis), criação canônica no portal próprio com chave de idempotência, fila RH com `employees.read`/`employees.write` e escopo real, transições estritas `solicitado → em_analise → aprovado|rejeitado`, resposta obrigatória de 5+ caracteres, follow-up/auditoria na mesma transação e retorno visível somente ao titular. A aba RH usa a rota canônica e afirma corretamente que não envia SMTP. A escrita da rota EMP-12 legada e de seus follow-ups agora retorna 410 `legacy_emp12_write_retired`, impedindo atalhos sem escopo, transação e idempotência.
 

@@ -2,7 +2,7 @@
 
 ## Atualização F03 — funcionário → solicitação → análise RH → retorno
 
-**Base confirmada:** `origin/main` `7a41837385985e2321fc86f8b461f133d7c01423` (PR #126 já integrada normalmente); **branch fixa:** `arena/01a10761-gruposegsystemseguranca`; **commit de implementação:** `d0f1cdebfb5fecac2fc7bb639b554faf1724a7b7`. A PR desta nova fatia ainda será aberta a partir da branch fixa, portanto #126 não deve ser recriada nem mesclada de novo.
+**Base confirmada:** `origin/main` `7a41837385985e2321fc86f8b461f133d7c01423` (PR #126 já integrada normalmente); **branch fixa:** `arena/01a10761-gruposegsystemseguranca`; **commits:** `d0f1cdebfb5fecac2fc7bb639b554faf1724a7b7` (implementação) e `fcddf69` (evidência/documentação); **PR:** [#127](https://github.com/berger33/gruposegsystemseguranca/pull/127). Portanto #126 não deve ser recriada nem mesclada de novo.
 
 A migração aditiva **157** introduz chave/impressão de idempotência e índices únicos parciais para `emp_self_requests` e `emp_self_request_followups`; 001–156 não foram alteradas. O manifesto PG, Wave 0, a asserção EXT-07 e o relatório de evidência foram atualizados para o ledger 001–157. A API canônica vincula criação ao funcionário da sessão, exige mesma origem e `Idempotency-Key`, e usa lock/transaction/auditoria em conjunto. A fila RH requer as permissões reais `employees.read`/`employees.write` com escopo e permite somente `solicitado → em_analise → aprovado|rejeitado` com mensagem explícita. O portal exibe somente a solicitação do titular e seus retornos; `RhWorkspace` usa essa fila canônica e declara corretamente que não há SMTP.
 
