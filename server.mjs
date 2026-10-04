@@ -90,6 +90,7 @@ import { createCliApi } from "./src/server/cli-api.mjs";
 import { createCliAdvancedApi } from "./src/server/cli-advanced-api.mjs";
 import { createCliFinanceApi } from "./src/server/cli-finance-api.mjs";
 import { createFinApi } from "./src/server/fin-api.mjs";
+import { createF03FinanceApi } from "./src/server/f03-finance-api.mjs";
 import { createFinAdvancedApi } from "./src/server/fin-advanced-api.mjs";
 import { createFinManagementApi } from "./src/server/fin-management-api.mjs";
 import { createFinBudgetApi } from "./src/server/fin-budget-api.mjs";
@@ -2091,6 +2092,14 @@ const cliFinanceApi = createCliFinanceApi({
   },
 });
 
+const f03FinanceApi = createF03FinanceApi({
+  json,
+  readJson,
+  sameOrigin,
+  getPool,
+  readAdminSession: readSession,
+});
+
 const finApi = createFinApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta, client }) => {
@@ -2699,6 +2708,7 @@ async function routeApi(req, res) {
     const permMatch = url.pathname.match(/^\/api\/admin\/permissions\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
   if (permMatch) return adminRbacApi.handleRevokePermission(req, res, permMatch[1]);
   if (url.pathname === "/api/admin/access-reviews") return adminRbacApi.handleAccessReviews(req, res, url);
+  if (url.pathname.startsWith("/api/admin/finance/f03/")) return f03FinanceApi.handle(req, res, url);
   if (url.pathname === "/api/admin/audit") return adminAuditApi.handleAuditList(req, res, url);
   if (url.pathname === "/api/admin/audit/export") return adminAuditApi.handleAuditExport(req, res);
   if (url.pathname === "/api/admin/notifications") {
@@ -3815,7 +3825,11 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/fin-payables" || url.pathname === "/api/crm/hr/fin-payables" || url.pathname === "/api/hr/fin-payables" || url.pathname === "/api/fin/payables") {
     return finApi.handlePayables(req, res);
   }
-  if (url.pathname === "/api/admin/hr/fin-payments" || url.pathname === "/api/crm/hr/fin-payments" || url.pathname === "/api/hr/fin-payments" || url.pathname === "/api/fin/payments") {
+  if (url.pathname === "/api/admin/hr/fin-payments" || url.pathname === "/api/crm/hr/fin-payments" || url.pathname === "/api/hr/fin-payments") {
+    if (req.method === "POST") return json(res, 410, { error: "legacy_finance_settlement_write_retired", canonical_endpoint: "/api/admin/finance/f03/receivables/:id/settlements" });
+    return finApi.handlePayments(req, res);
+  }
+  if (url.pathname === "/api/fin/payments") {
     return finApi.handlePayments(req, res);
   }
   if (url.pathname === "/api/admin/hr/fin-payment-history" || url.pathname === "/api/crm/hr/fin-payment-history" || url.pathname === "/api/hr/fin-payment-history" || url.pathname === "/api/fin/payment-history") {
@@ -4566,6 +4580,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/admin/permissions"
   || pathname.startsWith("/api/admin/permissions/")
   || pathname === "/api/admin/access-reviews"
+  || pathname.startsWith("/api/admin/finance/f03/")
   || pathname === "/api/admin/audit"
   || pathname === "/api/admin/audit/export"
   || pathname === "/api/admin/notifications"

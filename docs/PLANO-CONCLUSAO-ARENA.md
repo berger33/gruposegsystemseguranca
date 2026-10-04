@@ -1,8 +1,15 @@
 # Plano de conclusão (Arena) — lista única de trabalho
 
+## Atualização corrente — F03 contas → baixa → relatório
+
+- Base `a0815cfcfd7df17f30dce2e99ab744a36c3f341a`, branch `arena/01a10845-gruposegsystemseguranca`, implementação `23910567a2a329dc4f46c4aae6cf740c9d4888aa`, PR [#132](https://github.com/berger33/gruposegsystemseguranca/pull/132); documentação `8e7d84230fded1fcac9a256f5d1752e402f49b5a`. Migração 159 aditiva; próxima livre 160.
+- Entregue o quarto fluxo automatizado sobre fontes FIN-01..04: leitura e baixa por conta com `financeiro.*` fail-closed, transição estrita, idempotência, locks, transação, histórico/auditoria e relatório interno imutável. Escrita dos aliases HR retorna 410; sem simular banco/SMTP/entrega.
+- Provas: gate focal 1/1; Wave0 5/5; typecheck; unitários 526/526; L07 43/43; L08 51/51; client-space 22/22; client-access 27/27; F03 #126/#127/#129 1/1; demo-local OK.
+- Próximo passo: revisão/aceite humano e prova Windows/EPERM. **Não marcar F03 concluída antes desses dois gates.** Depois, seguir EXT-08/F04 em fatia separada.
+
 ## Atualização corrente — F03 cliente → chamado → atendimento → aceite
 
-- **Base:** `origin/main` `a459e07d42a855f93af4d76d047b49f3ff5e204e` (PR #127 já integrada); **branch fixa:** `arena/01a107a9-gruposegsystemseguranca`; **commits:** `3c7e9ab1da469b94d7cf383491f9240df30a8b6e` (implementação) + documentação desta seção; **PR:** [#129](https://github.com/berger33/gruposegsystemseguranca/pull/129). Não recriar/remesclar #126 e #127.
+- **Base:** `origin/main` `a459e07d42a855f93af4d76d047b49f3ff5e204e` (PR #127 já integrada); **branch fixa:** `arena/01a107a9-gruposegsystemseguranca`; **commits:** `3c7e9ab1da469b94d7cf383491f9240df30a8b6e` (implementação) + `7bf821eabba64b3880698d83b7a0fae3c5001594` (documentação); **PR:** [#129](https://github.com/berger33/gruposegsystemseguranca/pull/129), **integrada em `origin/main` pelo merge `a0815cfcfd7df17f30dce2e99ab744a36c3f341a`**. Não recriar/reabrir/remesclar #126, #127 nem #129.
 - A jornada cliente→chamado→atendimento→aceite foi validada por `npm run test:f03-client-ticket-acceptance:pg` (**1/1**, PostgreSQL 17 descartável, HTTP e Chromium), Wave 0 5/5, typecheck, `npm test` 526/526 e regressões (`test:l08-delivery:pg` **51/51**, client-space **22/22**, `test:client-access:pg` **27/27**, gates F03 #126/#127 **1/1**, `test:demo-local:pg`). A migração livre 158 foi consumida additivamente; 001–157 imutáveis; **próxima livre: 159**.
 - A prova preserva autorização fail-closed e mesma origem, sessões individuais, A/B, auditabilidade transacional, idempotência/retry e transações atômicas com trilha de mensagens; a escrita CLI-05 legada fechou com 410 `legacy_cli_ticket_write_retired`; a UI administrativa e o portal expõem a trilha e somente ações legais da máquina de estados. Falhas reais (helper de chave de idempotência, asserção de chamado prematuro, ordenação da trilha, health timeout ambiental) foram corrigidas e a execução repetida sem remover asserções.
 - **Limites:** F03 ainda não está concluída — falta contas→baixa→relatório, além do aceite humano e Windows/EPERM; SMTP, banco, eSocial, assinatura, hosting e IA externos continuam fora.
@@ -44,7 +51,7 @@ Data: 2026-10-04. Base vigente desta fatia: `origin/main` `972e6563f5ea4888b62e8
 ## Trabalho imediato após F01 (ordem)
 
 1. ~~Fechar PRs superseded~~ — **concluído em 04/10/2026**: 27 alternativas fechadas sem merge + #121 fechada após integração documental pela #122; a #124 foi revisada, fechada como superseded e reaplicada na PR #125 sobre o main pós-#123.
-2. **F03 — concluir as jornadas sobre a massa idempotente já criada**: lead→contrato→implantação (PR #126), funcionário→solicitação→RH→retorno (PR #127) e cliente→chamado→atendimento→aceite (PR #129) foram provadas; resta contas→baixa→relatório. Uma jornada por fatia revisável, sem duplicar fontes canônicas.
+2. **F03 — concluir as jornadas sobre a massa idempotente já criada**: lead→contrato→implantação (PR #126), funcionário→solicitação→RH→retorno (PR #127) e cliente→chamado→atendimento→aceite (PR #129) foram provadas; resta contas→baixa→relatório (próxima fatia). Uma jornada por fatia revisável, sem duplicar fontes canônicas.
 3. **EXT-08 (F04)** — primeira fatia EXT pendente.
 4. Rodada dedicada: obrigação vencida do EXT-07 criando tarefa (pendência declarada no aceite técnico).
 

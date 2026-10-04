@@ -1,8 +1,25 @@
 # Checklist da entrega local — 222 requisitos
 
+## Atualização 2026-10-04 — F03 contas → baixa → relatório
+
+**Base:** `a0815cfcfd7df17f30dce2e99ab744a36c3f341a`; **branch:** `arena/01a10845-gruposegsystemseguranca`; **commit de implementação:** `23910567a2a329dc4f46c4aae6cf740c9d4888aa`; PR [#132](https://github.com/berger33/gruposegsystemseguranca/pull/132); documentação `8e7d84230fded1fcac9a256f5d1752e402f49b5a`. Commit anterior `a118f86` absorvido como `60d8764`.
+
+- [x] Migração 159 aditiva; 001–158 imutáveis; manifesto/Wave0/evidências atualizados; próxima 160.
+- [x] Fonte canônica FIN preservada; estados da prova criados por HTTP, nunca SQL direto.
+- [x] `financeiro.*` fail-closed por conta; A/B, sessões individuais e mesma origem.
+- [x] Baixa manual com transição estrita, advisory lock, `FOR UPDATE`, idempotência, histórico e auditoria atômicos.
+- [x] Relatório snapshot limitado e imutável; sem banco, PSP, baixa automática, SMTP ou envio externo.
+- [x] Legado HR de escrita responde 410; UI usa a baixa canônica.
+- [x] Gate focal 1/1; regressões: Wave0 5/5, typecheck, npm test 526/526, L07 43/43, L08 51/51, client-space 22/22, client-access 27/27, gates F03 anteriores 1/1 e demo-local OK.
+- [x] `git diff --check` e `node --check` verdes.
+- [ ] Aceite humano.
+- [ ] Windows/EPERM.
+
+Falhas reais registradas: prefixo ausente no dispatcher (404), parâmetro PostgreSQL `$3` com tipos inconsistentes, concorrência ambiental de vários servidores Next e ausência de grant explícito no papel financeiro legado. Correções aplicadas e provas repetidas serialmente sem enfraquecer asserções. **F03 não concluída enquanto os dois itens finais estiverem abertos.**
+
 ## Atualização 2026-10-04 — F03 cliente → chamado → atendimento → aceite
 
-**Base:** `origin/main` `a459e07d42a855f93af4d76d047b49f3ff5e204e` (PR #127 conferida e integrada); **branch fixa:** `arena/01a107a9-gruposegsystemseguranca`; **commits:** `3c7e9ab1da469b94d7cf383491f9240df30a8b6e` (implementação) e documentação desta seção; **PR:** [#129](https://github.com/berger33/gruposegsystemseguranca/pull/129). Não recriar/remesclar #126 e #127.
+**Base:** `origin/main` `a459e07d42a855f93af4d76d047b49f3ff5e204e` (PR #127 conferida e integrada); **branch fixa:** `arena/01a107a9-gruposegsystemseguranca`; **commits:** `3c7e9ab1da469b94d7cf383491f9240df30a8b6e` (implementação) e documentação desta seção; **PR:** [#129](https://github.com/berger33/gruposegsystemseguranca/pull/129), **integrada pelo merge `a0815cfcfd7df17f30dce2e99ab744a36c3f341a`** (14 checks publicados verdes antes do merge). Não recriar/reabrir/remesclar #126, #127 nem #129.
 
 Entregue localmente: migração aditiva `158-f03-client-ticket-acceptance.sql` (`client_ticket_messages` + checks/auditorias; 001–157 imutáveis), fila canônica staff `GET /api/admin/client/l08/tickets` com `client.tickets.read` fail-closed e recorte pelas concessões, transições estritas `open|waiting_client → in_progress → resolved` com `client.tickets.write` por conta e devolutiva 5–1000 caracteres na mesma transação (lock + `UPDATE ... WHERE status` + trilha + `auth_access_audit`), aceite do cliente `PATCH /api/client/tickets/:id/accept` (`resolved → closed`, `closed_at`, chave própria), SLA de `waiting_client` legados retomado transacionalmente. Escrita CLI-05 legada (`PATCH /api/admin/tickets/:id` e afins) retorna 410 `legacy_cli_ticket_write_retired` após as guardas de sessão. UI `/admin/clientes` reescrita sobre a fila canônica; portal `/cliente/app/chamados` mostra trilha e aceite com chave por tentativa.
 
