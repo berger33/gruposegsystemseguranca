@@ -1,4 +1,16 @@
-# Status atual consolidado — reconciliação F00 + F01 + jornadas F03
+# Status atual consolidado — reconciliação F00 + F01 + F03 + F04 (EXT-08) + F05 (EXT-09)
+
+## Atualização F05 — Expansão e Novas Unidades (EXT-09)
+
+**Base:** `b63a51e6e2af200b0ac93370dbe629f631dec718`; **branch fixa:** `arena/01a1085d-gruposegsystemseguranca`. O ledger de migrações passa a **001–161** (001–160 imutáveis; próxima livre: 162). A jornada usa a base canônica `ext_expansion_plans` e `ext_expansion_scenarios` com `ext_expansion_events`, adiciona permissões explícitas `expansion.read`, `expansion.write` e `expansion.approve`, valida máquina de transições, cenários A/B, locks concorrentes, auditoria transacional e tela honesta com declaração explícita de estimativas financeiras.
+
+Gate dedicado: `npm run test:ext09-expansion:pg` **16/16** aprovado em PostgreSQL 17 descartável. Regressões verdes: Wave0 5/5, typecheck OK, `npm test` 545/545 unitários, `test:ext08-knowledge:pg` 15/15, `test:ext07-compliance:pg` 43/43, `test:f03-contas-baixa-relatorio:pg` 1/1, `test:f03-client-ticket-acceptance:pg` 1/1, `test:f03-employee-request-rh-return:pg` 1/1, `test:l08-delivery:pg` 51/51, `test:migrations:pg` 161/161.
+
+## Atualização F04 — Base de Conhecimento e POPs (EXT-08)
+
+**Base:** `b63a51e6e2af200b0ac93370dbe629f631dec718`; **branch fixa:** `arena/01a1085d-gruposegsystemseguranca`. O ledger de migrações passa a **001–160** (001–159 imutáveis; próxima livre: 161). A jornada usa a base canônica `ext_knowledge_base`, `ext_knowledge_base_history` e `ext_knowledge_acknowledgments` com `ext_knowledge_events`, adiciona permissões explícitas `knowledge.*`, versionamento imutável de procedimentos, transições de status, registro de ciência formal e tela administrativa honesta.
+
+Gate dedicado: `npm run test:ext08-knowledge:pg` **15/15** aprovado em PostgreSQL 17 descartável.
 
 ## Atualização F03 — contas → baixa → relatório
 
@@ -52,7 +64,7 @@ Este documento é o inventário único de trabalho exigido pela etapa F00 do [pl
 - **F03 está em execução após a fundação da massa sintética**: além do bootstrap transacional/idempotente e do gate `test:demo-local:pg`, a PR #126 prova a primeira jornada lead→oportunidade→proposta revisada→contrato→implantação com HTTP/PG/Chromium. Três jornadas permanecem pendentes; F03 não está concluída.
 - EXT-06 estava `a_revalidar` na auditoria: a PR #101 (EXT-06 satisfação) **está mesclada no main** (migração 152 + gate 36/36 declarado); a alternativa #102 foi fechada sem merge na limpeza pós-F00. Resta aceite humano/Windows.
 - PLT-01 estava `a_revalidar`: a PR #118 (despacho à prova de rejeição) **está mesclada no main** com testes e workflow próprios.
-- EXT-08 a EXT-17 e AI-01 a AI-10: existem tabelas (086–087, 095–096) e handlers legados; **sem jornada UI→API→PG provada** — não contar como entregues.
+- EXT-08 entregue e provado localmente (migração 160 + gate dedicado 15/15 + UI `/admin/conhecimento`). EXT-09 a EXT-17 e AI-01 a AI-10: existem tabelas (086–087, 095–096) e handlers legados; **sem jornada UI→API→PG provada** — não contar como entregues.
 - Os 82 componentes `src/app/admin/ti/*Client.tsx` seguem órfãos (L00): protótipo descritivo em `/admin/ti`, sem prova de gate. Nenhum é promovido por existência.
 
 ## PRs reconciliados no GitHub — limpeza concluída após a PR #122
@@ -406,7 +418,7 @@ Legenda do estado confirmado: `pronto_local` = validação automática local ant
 | EXT-05 | Qualidade | pronto_local (jornada interna de staff + gate HTTP/PostgreSQL dedicado; destino, aceite humano e Windows pendentes). | pronto_local (jornada interna de staff + gate HTTP/PostgreSQL dedicado; destino, aceite humano e Windows pendentes). | jornada exclusivamente interna, sem ator externo exigido ou inventado. Evidência é referência declarada, não upload/arquivo verificado/armaz | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-06 | Satisfação/carteira | a_revalidar | a_revalidar — PR alternativa #102 aberta; mesclada oficialmente pela PR #101 (migração 152); gate ext06 36/36 declarado | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-07 | Compliance corporativo | entregue_e_verificado_gate_local (2026-10-03, hardening 155 sobre a 153 e a 154 do main; base PR #103 + PR #113; 2026-10-04, execução agendada da avaliação temporal — migração 156 + agendador in-process opt-in por ambiente) | entregue_e_verificado_gate_local (2026-10-03, hardening 155 sobre a 153 e a 154 do main; base PR #103 + PR #113; 2026-10-04, execução agendada da avaliação temporal — migração 156 + agendador in-process opt-in por ambiente) | aplicação em banco de destino — decisões operacionais tomadas (2026-10-04: intervalo 3600 s + identidade declarada TI), fluxo ensaiado ponta | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
-| EXT-08 | Base de conhecimento | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
+| EXT-08 | Base de conhecimento | pronto_local (jornada interna de staff com versionamento, ciência formal, rollback atômico e gate HTTP/DB/UI dedicado; aceite humano e Windows pendentes) | pronto_local (jornada interna de staff com versionamento, ciência formal, rollback atômico e gate HTTP/DB/UI dedicado; aceite humano e Windows pendentes) | Aceite humano do operador e validação Windows/EPERM pendentes. Não há IA externa nem integrações de terceiros. | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-09 | Expansão/unidades | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-10 | Continuidade operacional | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-11 | Analytics/A-B | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |

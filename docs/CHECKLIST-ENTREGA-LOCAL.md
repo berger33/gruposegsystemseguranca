@@ -1,5 +1,41 @@
 # Checklist da entrega local — 222 requisitos
 
+## Atualização 2026-10-04 — F05 / EXT-09: Expansão, Dimensionamento e Cenários Financeiros
+
+**Base:** `b63a51e6e2af200b0ac93370dbe629f631dec718`; **branch fixa:** `arena/01a1085d-gruposegsystemseguranca`.
+
+- [x] Migração 161 aditiva; 001–160 imutáveis; manifesto/Wave0/evidências atualizados; próxima 162.
+- [x] Fonte canônica de expansão (`ext_expansion_plans`, `ext_expansion_scenarios`, `ext_expansion_events`) preservada; estados criados exclusivamente por HTTP.
+- [x] Permissões explícitas `expansion.read`, `expansion.write`, `expansion.approve` fail-closed; sessões individuais e mesma origem.
+- [x] Dimensionamento de capacidade (postos de serviço) e cenários financeiros simulados A/B (Conservador, Otimista, etc.) com cálculo automático de margem projetada.
+- [x] Máquina de estados controlada (`rascunho -> em_analise -> aprovado -> em_execucao -> concluido` ou `rejeitado` / `cancelado` com justificativa obrigatória).
+- [x] Advisory lock + `FOR UPDATE`, idempotência com fingerprint SHA-256 e auditoria atômica transacional em `auth_access_audit` (com rollback e 503 sob indisponibilidade).
+- [x] Rotas legadas de escrita aposentadas com HTTP 410.
+- [x] UI honesta `/admin/expansao` com aviso explícito de que projeções são meras estimativas declaradas e não constituem garantia de faturamento ou resultado.
+- [x] Gate focal: `npm run test:ext09-expansion:pg` **16/16** aprovado em PostgreSQL 17 descartável.
+- [x] Regressões: Wave0 5/5, typecheck, npm test 545/545, EXT-08 15/15, EXT-07 43/43, F03 gates 1/1, L08 51/51, migrações 161/161.
+- [x] `git diff --check` e `node --check` verdes.
+- [ ] Aceite humano.
+- [ ] Windows/EPERM.
+
+## Atualização 2026-10-04 — F04 / EXT-08: Base de Conhecimento e POPs Canônicos
+
+**Base:** `b63a51e6e2af200b0ac93370dbe629f631dec718`; **branch fixa:** `arena/01a1085d-gruposegsystemseguranca`.
+
+- [x] Migração 160 aditiva; 001–159 imutáveis; manifesto/Wave0/evidências atualizados; próxima 161.
+- [x] Fonte canônica de base de conhecimento (`ext_knowledge_base`, `ext_knowledge_base_history`, `ext_knowledge_acknowledgments`, `ext_knowledge_events`) preservada; estados criados por HTTP.
+- [x] Permissões explícitas `knowledge.read`, `knowledge.write`, `knowledge.publish`, `knowledge.acknowledge` fail-closed; sessões individuais e mesma origem.
+- [x] Versionamento estrito e imutável de procedimentos; edição de artigo publicado gera automaticamente nova versão rascunho com isolamento.
+- [x] Registro formal de ciência por colaborador vinculado à versão exata do procedimento.
+- [x] Advisory lock + `FOR UPDATE`, idempotência com fingerprint SHA-256 e auditoria atômica transacional.
+- [x] Rota legada de escrita aposentada com HTTP 410.
+- [x] UI honesta `/admin/conhecimento` protegida por `AdminGate` sem alegações de IA externa.
+- [x] Gate focal: `npm run test:ext08-knowledge:pg` **15/15** aprovado em PostgreSQL 17 descartável.
+- [x] Regressões: Wave0 5/5, typecheck, npm test 536/536, EXT-07 43/43, F03 gates 1/1, L08 51/51.
+- [x] `git diff --check` e `node --check` verdes.
+- [ ] Aceite humano.
+- [ ] Windows/EPERM.
+
 ## Atualização 2026-10-04 — F03 contas → baixa → relatório
 
 **Base:** `a0815cfcfd7df17f30dce2e99ab744a36c3f341a`; **branch:** `arena/01a10845-gruposegsystemseguranca`; **commit de implementação:** `23910567a2a329dc4f46c4aae6cf740c9d4888aa`; PR [#132](https://github.com/berger33/gruposegsystemseguranca/pull/132); documentação `8e7d84230fded1fcac9a256f5d1752e402f49b5a`. Commit anterior `a118f86` absorvido como `60d8764`.
@@ -1548,10 +1584,10 @@ Compliance corporativo Aceite: Licenças/certidões/seguros e obrigações aplic
 
 ## EXT-08
 Base de conhecimento Aceite: Procedimentos versionados, busca, acesso e ciência
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Handlers `/api/ext/*` para conhecimento/histórico/ciência; tabelas `ext_knowledge_*`/086; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
-- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
-- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
+- Estado: entregue_e_verificado_gate_local (2026-10-04, migração aditiva 160 + rotas canônicas `/api/ext/knowledge/*` + UI `/admin/conhecimento`)
+- Tela / API / dados / autorização: `/admin/conhecimento` protegido por `AdminGate` para papéis de gestão e operação; API canônica `/api/ext/knowledge/articles` para listagem/busca textual, criação (mínimo 50 chars, slug único), detalhe com histórico de versões, atualização com versionamento imutável (`isNewVersion: true`), transição de estados (`rascunho -> em_revisao -> aprovado -> publicado -> arquivado`) e ciência formal individual por colaborador e versão; rota legada `/api/ext/knowledge-base` aposentada para escrita (HTTP 410); fail-closed server-side com `hasPermission()`, `sameOrigin` obrigatório nas mutações, idempotência com hash SHA-256 e rollback atômico com 503 `audit_unavailable` se o log de auditoria falhar.
+- Integração e evidência (teste, resultado, commit): gate dedicado `npm run test:ext08-knowledge:pg` — PostgreSQL 17 descartável, migrações 001–160, servidor HTTP real e sessões staff reais, **15/15 casos aprovados, 0 fail/skip/todo**; testes unitários focais `tests/ext08-knowledge.test.mjs` **10/10** (`npm test` **536/536**); `node scripts/qa-wave0-static.mjs` **5/5**; `npm run typecheck` OK; `npm run qa:evidence` **14/14**.
+- Pendência / fronteira externa / aceite humano: Aceite humano formal do operador e validação Windows/EPERM permanecem pendentes. Sem IA externa e sem dados de terceiros.
 
 ## EXT-09
 Expansão/unidades Aceite: Planejamento de filial/contrato, capacidade e cenários financeiros
