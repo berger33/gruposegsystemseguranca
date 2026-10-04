@@ -109,6 +109,11 @@ export function createEmpSelfApi({ pool, auditLog, sameOrigin, requireSession, r
   // EMP-12 férias/afastamentos/benefícios/reembolsos
   async function handleSelfRequests(req,res){
     const sess=await checkAuth(req,res); if(!sess) return;
+    // Esta superfície antiga não participa da jornada canônica F03. Suas
+    // mutações permitiam criar ou decidir EMP-12 sem escopo granular,
+    // transação conjunta de auditoria, retorno obrigatório ou idempotência.
+    // Mantemos a leitura legada por compatibilidade, mas fechamos toda escrita.
+    if(req.method!=='GET') return json(res,410,{error:'legacy_emp12_write_retired',canonical_endpoint:'/api/admin/hr/l03/self-requests'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
       const employee_id=url.searchParams.get('employee_id'); const request_type=url.searchParams.get('request_type'); const category=url.searchParams.get('category'); const status=url.searchParams.get('status');
@@ -159,6 +164,9 @@ export function createEmpSelfApi({ pool, auditLog, sameOrigin, requireSession, r
 
   async function handleSelfRequestFollowups(req,res){
     const sess=await checkAuth(req,res); if(!sess) return;
+    // O follow-up legado também poderia alterar status fora da máquina de
+    // estados F03; somente a leitura de compatibilidade permanece exposta.
+    if(req.method!=='GET') return json(res,410,{error:'legacy_emp12_write_retired',canonical_endpoint:'/api/admin/hr/l03/self-requests'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
       const request_id=url.searchParams.get('request_id');

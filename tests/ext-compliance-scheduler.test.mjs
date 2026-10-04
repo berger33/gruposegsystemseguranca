@@ -70,13 +70,14 @@ test("EXT-07 migração 156 cria ledger de execuções agendadas sem tocar 001�
   assert.doesNotMatch(migration, /ALTER TABLE ext_compliance_(documents|obligations|tasks|events)/);
 });
 
-test("EXT-07 migração 156 está registrada nos quatro pontos do manifesto", async () => {
+test("Migrações 156 preservada e 157 registrada nos quatro pontos do manifesto", async () => {
   const migrator = await readRepo("scripts/migrate-site-visual.mjs");
   assert.match(migrator, /'156-ext07-scheduled-evaluation\.sql'/);
-  assert.match(migrator, /files\.length !== 156/);
-  assert.match(migrator, /001–156/);
+  assert.match(migrator, /'157-f03-employee-request-rh-return\.sql'/);
+  assert.match(migrator, /files\.length !== 157/);
+  assert.match(migrator, /001–157/);
   const wave0 = await readRepo("scripts/qa-wave0-static.mjs");
-  assert.match(wave0, /const latestMigration = 156;/);
+  assert.match(wave0, /const latestMigration = 157;/);
 });
 
 // ---------------------------------------------------------------------------
