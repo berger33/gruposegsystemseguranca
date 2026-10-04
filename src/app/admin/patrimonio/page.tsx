@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import PatrimonioWorkspace from "./PatrimonioWorkspace";
+import AdminGate from "../AdminGate";
 
 export const metadata: Metadata = {
   title: "Patrimônio & Almoxarifado | SEG System",
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function PatrimonioPage() {
-  return <PatrimonioWorkspace />;
+  return (
+    <AdminGate allowedRoles={["supervisor", "marcelo", "admin", "ti"]}>
+      <PatrimonioWorkspace />
+    </AdminGate>
+  );
 }

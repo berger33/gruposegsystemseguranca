@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import OperacaoWorkspace from "./OperacaoWorkspace";
+import AdminGate from "../AdminGate";
 
 export const metadata: Metadata = {
   title: "Operação | SEG System",
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function OperacaoPage() {
-  return <OperacaoWorkspace />;
+  return (
+    <AdminGate allowedRoles={["supervisor", "marcelo", "admin", "ti"]}>
+      <OperacaoWorkspace />
+    </AdminGate>
+  );
 }

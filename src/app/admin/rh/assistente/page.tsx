@@ -1,8 +1,9 @@
 "use client";
 import RagWidget from "@/components/RagWidget";
 import AiBotWidget from "@/components/AiBotWidget";
+import AdminGate from "../../AdminGate";
 
-export default function RhAssistentePage(){
+function RhAssistentePageContent(){
   return (
     <main style={{ padding:24, maxWidth:900, margin:"0 auto", fontFamily:"system-ui, sans-serif" }}>
       <h1 style={{ fontSize:28 }}>Assistente RH — acesso privado pendente</h1>
@@ -16,5 +17,14 @@ export default function RhAssistentePage(){
         <strong>Critérios pendentes (não homologados):</strong> RAG RH apenas área pertinente RH, sem dados cliente PII, sem diagnóstico médico exposto, modelo qwen3:1.7b Ollama host http://localhost:11434 queue 100, fila garante todo mundo atendido, guardrails sem invenção preço/cobertura/licença/prazo, protocolo RAG-RH-YYYYMMDD-XXXX, BOT-RH-YYYYMMDD-XXXX.
       </section>
     </main>
+  );
+}
+
+// F01: prévia bloqueada; acesso restrito a RH/admin conforme o escopo do módulo.
+export default function RhAssistentePage() {
+  return (
+    <AdminGate allowedRoles={["rh", "admin"]}>
+      <RhAssistentePageContent />
+    </AdminGate>
   );
 }

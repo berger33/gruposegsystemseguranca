@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import TerceirosWorkspace from "./TerceirosWorkspace";
+import AdminGate from "../AdminGate";
 
 export const metadata: Metadata = {
   title: "Terceiros | SEG System",
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function TerceirosPage() {
-  return <TerceirosWorkspace />;
+  return (
+    <AdminGate allowedRoles={["marcelo", "admin", "ti"]}>
+      <TerceirosWorkspace />
+    </AdminGate>
+  );
 }

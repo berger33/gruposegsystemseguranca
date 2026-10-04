@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import ContractWorkspace from "./ContractWorkspace";
+import AdminGate from "../AdminGate";
 
 export const metadata: Metadata = {
   title: "Contratos | SEG System",
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function ContractsPage() {
-  return <ContractWorkspace />;
+  return (
+    <AdminGate allowedRoles={["marcelo", "admin", "comercial"]}>
+      <ContractWorkspace />
+    </AdminGate>
+  );
 }

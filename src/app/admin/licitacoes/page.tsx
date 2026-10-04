@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import LicitacoesWorkspace from "./LicitacoesWorkspace";
+import AdminGate from "../AdminGate";
 
 export const metadata: Metadata = {
   title: "Licitações | SEG System",
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function LicitacoesPage() {
-  return <LicitacoesWorkspace />;
+  return (
+    <AdminGate allowedRoles={["marcelo", "admin", "ti"]}>
+      <LicitacoesWorkspace />
+    </AdminGate>
+  );
 }
