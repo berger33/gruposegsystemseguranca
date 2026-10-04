@@ -1475,10 +1475,10 @@ Satisfação/carteira Aceite: Pesquisas, CSAT/NPS quando adequado, histórico e 
 
 ## EXT-07
 Compliance corporativo Aceite: Licenças/certidões/seguros e obrigações aplicáveis com responsável e validade
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Handlers `/api/ext/*` para compliance; tabelas `ext_compliance_documents`/086; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
-- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
-- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
+- Estado: implementado e validado por gate PostgreSQL real (ver seção "EXT-07 — endurecimento" abaixo); aceite humano e homologação de produção continuam pendentes.
+- Tela / API / dados / autorização: `/admin/compliance` real (não mais apenas componente órfão de `/admin/ti`) + `/api/ext/compliance/*` canônico; legado `/api/ext/compliance-documents`/086 preservado em leitura, `410` em escrita.
+- Integração e evidência (teste, resultado, commit): `npm run test:ext07-compliance:pg` — 47/47 casos por HTTP real contra PostgreSQL 17 descartável; existência de tabela/rota deixou de ser a única prova.
+- Pendência / fronteira externa / aceite humano: aceite humano, ator externo real e homologação de produção não realizados nem presumidos.
 
 ## EXT-08
 Base de conhecimento Aceite: Procedimentos versionados, busca, acesso e ciência
@@ -1701,3 +1701,11 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 - [x] Tarefa canônica definida: `ext_compliance_tasks`, com unicidade por documento/período/regra.
 - [x] Critério estrutural: documento privado e avaliação temporal idempotente.
 - [ ] Gate PostgreSQL real e homologação permanecem pendentes até execução do ambiente dedicado.
+
+### EXT-07 — endurecimento, evidência da sessão de continuação 2026-10-03 (migração 154)
+- [x] Gate `npm run test:ext07-compliance:pg` executado de ponta a ponta contra PostgreSQL 17 descartável: 47/47 casos aprovados, duas sondas SQL independentes (pré-suíte sem seed; pós-suíte só `.invalid`).
+- [x] Bug crítico herdado da PR #103 encontrado e corrigido: `/api/ext/compliance/` nunca estava no allowlist `API_PATH_MATCH` de `server.mjs`; toda requisição real caía em 404 do Next.js antes de alcançar o handler. Só apareceu ao rodar HTTP real — testes com pool simulado e build não detectam isso.
+- [x] Corrigidos também: cast de enum incompatível em predicado de índice (IMMUTABLE exigido), ordem de escrita da renovação (409 falso por sequência invertida), estado do documento sempre pela data do servidor (criação e renovação).
+- [x] Regressão sem falhas: `test:migrations:pg`, `test:ext02-third-parties:pg`, `test:ext03-biddings:pg`, `test:ext04-suppliers:pg`, `test:ext05-quality:pg`, `test:ext06-satisfaction:pg`, `npm test` (450/450), `npm run typecheck`, `npm run build` (lista `/admin/compliance`).
+- [ ] Aceite humano, ator externo real e homologação de produção — não realizados nem presumidos.
+- [ ] Probe de pré-implementação descartável (27 cenários) exigido pela diretriz de sessão não foi executado como etapa isolada e documentada nesta sessão de continuação; a evidência de correção vem da execução real do gate e dos testes de regressão listados acima, não de um probe prévio separado. Ver relatório para o detalhe honesto desta lacuna.

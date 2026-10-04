@@ -778,3 +778,16 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 
 ## EXT-07 — Compliance (migração 153)
 A fonte canônica é `ext_compliance_documents`, endurecida aditivamente; registros 086 permanecem `registro_legado`. A obrigação aplicável vive em `ext_compliance_obligations` e a tarefa não reutiliza CRM/RH: `ext_compliance_tasks` impõe vínculo, regra, fatos, responsável e unicidade. Eventos e idempotência são transacionais com `audit_log`; falha de auditoria retorna 503 e faz rollback. Referência é privada e declarada, não arquivo verificado.
+
+## EXT-07 — endurecimento (migração 154, sessão de continuação 2026-10-03)
+| Item | Estado | Evidência |
+| --- | --- | --- |
+| Roteamento HTTP real | Corrigido | `/api/ext/compliance/` ausente do allowlist `API_PATH_MATCH` em `server.mjs` — bug herdado da PR #103, só visível em execução HTTP real; toda requisição caía em 404 do Next.js antes do handler |
+| Índice de versão corrente | Corrigido | comparação enum vs. literal sem `::text` (cast de enum é STABLE, rejeitado em predicado de índice IMMUTABLE) |
+| Renovação de documento | Corrigido | ordem de escrita invertida causava 409 falso; linha antiga agora é marcada `superseded_at` antes do INSERT da nova versão |
+| Estado documento × data servidor | Corrigido | criação/renovação agora derivam `vigente`/`vencida` de `CURRENT_DATE` do servidor com cast explícito para o enum, nunca do cliente |
+| Avaliação de vencimento | Corrigido | passou a cobrir documentos que já nasceram `vencida` (criados retroativamente), não só os que transicionam no momento da chamada |
+| Gate dedicado | Implementado e executado | `npm run test:ext07-compliance:pg`: PostgreSQL 17 descartável, migrações 001-154, 47/47 casos por HTTP real, duas sondas SQL independentes |
+| Regressão | Verificada | `test:migrations:pg`, `test:ext02..06-*:pg`, `npm test` (450/450), `npm run typecheck`, `npm run build` (`/admin/compliance` listado) sem falhas |
+| Probe de pré-implementação descartável (27 cenários) | Não executado nesta sessão | a correção foi validada pela execução real do gate e da regressão listada acima, não por um probe prévio isolado; ver relatório dedicado |
+| Aceite humano / ator externo real / homologação produção | Pendente | não realizado nem presumido |
