@@ -1,0 +1,61 @@
+[
+  {
+    "titulo": "3.1. Pendência declarada e probe do estado anterior",
+    "paragrafos": [
+      "A avaliação temporal do EXT-07 era, até o main anterior, operação administrativa explícita: nada mudava o estado temporal sem um humano chamar POST /api/ext/compliance/evaluate. A própria resposta da rota declarava a pendência. Antes de escrever qualquer linha, um probe em cluster PostgreSQL 17 descartável (migrações 001–155, servidor real, fixture sintética) mediu o comportamento: obrigação com antecedência de 30 dias, documento vencido na véspera e documento corrente a 10 dias do vencimento.",
+      "O probe aguardou 12 segundos com o servidor de pé e comparou o estado do banco no instante inicial e final: idêntico. Nenhuma tarefa para o documento vencido, antecedência não marcada, obrigação pendente, nenhum evento novo. O único caminho para atualizar o estado era a operação explícita — confirmado executando-a ao final do probe. O script do probe foi apagado em seguida (regra da casa)."
+    ],
+    "tabela": {
+      "columns": [
+        { "header": "Medida do probe (antes)", "width": 0.42 },
+        { "header": "Resultado", "width": 0.58 }
+      ],
+      "rows": [
+        { "cells": [ "Estado após 12 s com servidor de pé", "Idêntico ao instante inicial: 0 tarefas para o vencido, corrente 'vigente', obrigação 'pendente', 0 eventos novos" ] },
+        { "cells": [ "Timer/agendador no processo", "Inexistente — nenhum mecanismo avalia o estado temporal sozinho" ] },
+        { "cells": [ "POST /evaluate explícito", "Cria a tarefa, marca 'a_vencer' e deriva a obrigação — único caminho disponível" ] },
+        { "cells": [ "Nota da própria API", "\"avaliação temporal é operação administrativa explícita; execução agendada contínua é pendência documentada\"" ] }
+      ]
+    }
+  },
+  {
+    "titulo": "3.2. O que a entrega faz",
+    "paragrafos": [
+      "O agendador roda no próprio processo do servidor (server.mjs) como opt-in por ambiente: EXT07_EVALUATE_INTERVAL_SECONDS (inteiro >= 1) liga a cadência e EXT07_EVALUATE_IDENTITY declara a identidade staff (admin/ti) em cujo nome a automação age. Sem intervalo válido, nada roda. Sem DATABASE_URL, o agendador recusa ligar: o modo PGlite beta não possui o schema EXT-07.",
+      "Cada tick executa o MESMO núcleo da rota explícita (runExpiryEvaluation, extraído de ext-compliance-api.mjs sem alterar contrato HTTP): data-base sempre CURRENT_DATE do servidor, tarefa única por documento/período/regra, fail-closed sem responsável staff ativo. O tick roda sob dispatchGuarded (PLAT-01): nenhuma rejeição escapa para o timer e o processo nunca cai por causa do agendamento. A sobreposição é bloqueada em processo (flag) e entre instâncias (pg_try_advisory_xact_lock).",
+      "A migração 156 cria o ledger ext_compliance_evaluation_runs: uma linha por execução que de fato rodou — 'concluida' (inclusive sem efeito: ausência de efeito não é ausência de execução) ou 'falha' com a causa registrada. O ledger é append-only por trigger. O evento 'expiry_evaluated' em ext_compliance_events é gravado uma vez por dia/ator com chave determinística 'agendada:YYYY-MM-DD'; ticks seguintes no mesmo dia não duplicam o evento. A auditoria segue a mesma disciplina do HTTP: falha de audit_log reverte a execução inteira.",
+      "A observação é exposta a staff autorizada (admin/ti) em GET /api/ext/compliance/schedule: estado do agendador deste processo (enabled, intervalo, identidade declarada) e o ledger de execuções — inclusive para um processo sem agendador ligado, porque o ledger é do banco."
+    ],
+    "itens": [
+      "Opt-in por ambiente; padrão desligado; valor inválido não liga nada.",
+      "Identidade declarada é revalidada a cada tick: suspensa ou desativada, a execução falha fechado com zero mutação e a falha fica registrada.",
+      "Retomada é automática: reativada a identidade, o próximo tick cria as tarefas pendentes.",
+      "Migração 156 aditiva: sem seed, sem UPDATE retroativo, 001–155 intocadas.",
+      "Nenhum contrato de API alterado; a rota explícita POST /evaluate segue disponível e agora delega ao mesmo núcleo."
+    ]
+  },
+  {
+    "titulo": "3.3. Prova negativa por mutação",
+    "paragrafos": [
+      "Guarda sem prova negativa é decoração. Três mutações foram aplicadas, cada uma confirmada reprovando a suíte, e revertidas por restauração conferida com sha256sum -c."
+    ],
+    "tabela": {
+      "columns": [
+        { "header": "Mutação aplicada", "width": 0.44 },
+        { "header": "Teste que reprovou", "width": 0.56 }
+      ],
+      "rows": [
+        { "cells": [ "Agendador ligado ANTES da rede de segurança de processo", "\"server.mjs liga o agendador somente depois da rede de segurança\" (ordem invertida detectada)" ] },
+        { "cells": [ "Nota da API regredida para \"pendência documentada\"", "\"agendador usa o MESMO núcleo da rota explícita e nunca relança\" (nota prometendo pendência entregue)" ] },
+        { "cells": [ "Tick disparado sem dispatchGuarded (rejeição escapa para o timer)", "Dois testes: guarda estática do guard e teste de sobreposição (formato do desfecho mudou)" ] }
+      ]
+    }
+  },
+  {
+    "titulo": "3.4. Fronteiras deliberadas desta entrega",
+    "paragrafos": [
+      "A execução agendada não é ator externo, integração regulatória, SMTP nem armazenamento externo: é um timer local que age em nome de uma identidade staff real declarada pelo operador. Nenhuma identidade sintética foi criada e nenhum NOT NULL foi relaxado — toda tarefa e evento continua tendo autor registrado. A fronteira documental do EXT-07 permanece: referência declarada e privada, sem upload, bytes, checksum, malware scan ou download; aplicabilidade é declaração interna, não validação jurídica.",
+      "A bateria integral foi executada como evidência; os passos estritamente necessários a esta entrega são wave0, typecheck, focais, unit, migrations-pg e ext07-pg. Os gates EXT-06/05/04 e o build correram como regressão de vizinhança (server.mjs mudou de forma aditiva), não como exigência da entrega."
+    ]
+  }
+]

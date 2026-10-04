@@ -30,7 +30,7 @@ const run = (cmd, args, env, capture = false) => new Promise((resolve, reject) =
   }
   child.once("error", reject); child.once("exit", code => resolve({ code: code ?? 1, output }));
 });
-const MINIMUM_CASES = 35;
+const MINIMUM_CASES = 41;
 function auditTap(output) {
   const number = label => { const match = output.match(new RegExp(`^# ${label} (\\d+)$`, "m")); return match ? Number(match[1]) : null; };
   const pass = number("pass"), fail = number("fail"), skipped = number("skipped"), todo = number("todo"), problems = [];

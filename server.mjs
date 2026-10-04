@@ -108,6 +108,7 @@ import { createExtQualityApi } from "./src/server/ext-quality-api.mjs";
 import { createExtSatisfactionApi } from "./src/server/ext-satisfaction-api.mjs";
 import { createExtAdvancedApi } from "./src/server/ext-advanced-api.mjs";
 import { createExtComplianceApi } from "./src/server/ext-compliance-api.mjs";
+import { parseSchedulerConfig, startExtComplianceScheduler } from "./src/server/ext-compliance-scheduler.mjs";
 import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
 import { createCommercialHistoryApi } from "./src/server/commercial-history-api.mjs";
 import { createPortfolioApi } from "./src/server/portfolio-api.mjs";
@@ -2285,7 +2286,13 @@ const extSatisfactionApi = createExtSatisfactionApi({
   requireClientSession: clientAccessApi.readClientSession,
 });
 
-const extComplianceApi = createExtComplianceApi({ pool: getPool(), sameOrigin, requireSession: readSession });
+let extComplianceSchedulerHandle = null;
+// Estado do agendador para GET /api/ext/compliance/schedule (reflete ESTE processo).
+const extComplianceSchedulerState = () =>
+  extComplianceSchedulerHandle
+    ? extComplianceSchedulerHandle.state()
+    : { enabled: false, running: false, intervalSeconds: null, actorIdentity: null, lastTickAt: null, lastOutcome: null };
+const extComplianceApi = createExtComplianceApi({ pool: getPool(), sameOrigin, requireSession: readSession, schedulerState: extComplianceSchedulerState });
 
 const extAdvancedApi = createExtAdvancedApi({
   pool: getPool(),
@@ -6046,3 +6053,28 @@ server.on("upgrade", (req, socket, head) => upgradeHandler(req, socket, head));
 server.listen(port, hostname, () => {
   console.log(`Grupo SEG System ${dev ? "dev" : "server"} listening on http://${hostname}:${port}`);
 });
+
+// EXT-07: execução agendada da avaliação temporal — opt-in por ambiente
+// (EXT07_EVALUATE_INTERVAL_SECONDS + EXT07_EVALUATE_IDENTITY). Exige
+// PostgreSQL real (PGlite beta não possui o schema EXT-07) e uma identidade
+// staff declarada em cujo nome a automação age; cada execução registra uma
+// linha em ext_compliance_evaluation_runs (migração 156). O primeiro tick é
+// imediato e nenhuma rejeição escapa para o timer (dispatchGuarded).
+const ext07SchedulerConfig = parseSchedulerConfig(process.env);
+if (ext07SchedulerConfig.intervalSeconds) {
+  if (!process.env.DATABASE_URL) {
+    console.error("[ext07-scheduler] desativado: requer DATABASE_URL (o modo PGlite beta não possui o schema EXT-07)");
+  } else if (!ext07SchedulerConfig.actorIdentity) {
+    console.error("[ext07-scheduler] desativado: EXT07_EVALUATE_IDENTITY deve ser o UUID de uma identidade staff ativa (admin/ti)");
+  } else {
+    extComplianceSchedulerHandle = startExtComplianceScheduler({
+      getPool,
+      intervalSeconds: ext07SchedulerConfig.intervalSeconds,
+      actorIdentity: ext07SchedulerConfig.actorIdentity,
+      logger: console,
+    });
+    console.log(
+      `[ext07-scheduler] ativado: avaliação temporal a cada ${ext07SchedulerConfig.intervalSeconds}s; execuções registradas em ext_compliance_evaluation_runs`,
+    );
+  }
+}

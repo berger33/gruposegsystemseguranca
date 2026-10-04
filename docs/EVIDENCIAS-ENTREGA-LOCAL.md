@@ -1,5 +1,28 @@
 # Evidências — entrega local integral
 
+## Evidência vigente — EXT-07 execução agendada da avaliação temporal (2026-10-04)
+
+Base `150052e7a391a32a447341089ce3451e62a3477e` (PR #118 MERGED), branch `arena/01a104d5-gruposegsystemseguranca`, árvore limpa. Probe temporário em cluster PostgreSQL 17 descartável (migrações 001–155, servidor real) mediu o antes: **estado idêntico após 12 s** — 0 tarefas para o documento vencido, corrente dentro da antecedência sem marcação, obrigação pendente, 0 eventos novos; o `POST /evaluate` explícito era o único caminho. Script do probe apagado.
+
+Entrega: migração 156 (`ext_compliance_evaluation_runs`, append-only), `src/server/ext-compliance-scheduler.mjs`, núcleo `runExpiryEvaluation` compartilhado com a rota HTTP (extração sem reescrita), boot em `server.mjs` após a rede de segurança, rota `GET /api/ext/compliance/schedule`.
+
+| Prova | Resultado |
+|---|---|
+| Bateria de evidência | **14/14 passos aprovados**, 718 asserções TAP, **0 fail/skip/todo/cancelled** |
+| Wave 0 | 5/5, migrações 001–156 contínuas e registradas |
+| Focal agendamento | 20/20 (fake pool + guardas estáticas) |
+| Focal PLAT-01 / EXT-07 | 25/25 e 19/19 (regressão) |
+| `npm test` | 514/514, zero skip/todo |
+| Gate EXT-07 (PG descartável, HTTP real) | **43/43** (37 anteriores + 6 do agendador), zero skip |
+| Migrações | 156/156 ×2 + clone negativo rejeitado (562 tabelas) |
+| Vizinhança | EXT-06 36/36, EXT-05 33/33, EXT-04 28/28 |
+| Build / typecheck / diff | 92 páginas com `/admin/compliance`; 0 erros; `git diff --check` limpo |
+| Mutação (prova negativa) | 3 mutações (ordem do safety net, nota regredida, tick sem guard) — todas reprovaram; restauração por `sha256sum -c` |
+
+Cenários novos no gate EXT-07: agendamento desligado por padrão e rota de observação com 401/403; avaliação sozinha criando tarefa atribuída à identidade declarada, marcando antecedência, derivando obrigação e gravando run `concluida` + evento do dia; ticks repetidos sem duplicar tarefa nem evento; identidade suspensa → run `falha` com a causa e **zero mutação**; retomada automática após reativação; ledger append-only rejeitando `UPDATE`/`DELETE` no banco.
+
+Artefatos: `docs/evidencias/qa-evidencia-2026-10-04-ext07-agendamento.pdf` (11 páginas), ledger `.json` (contexto de commit/branch) e seções narrativas `.secoes.json`. [Relatório](ENTREGA-RELATORIO-2026-10-04-EXT07-AGENDAMENTO-AVALIACAO-TEMPORAL.md).
+
 ## Evidência vigente — PLAT-01 despacho HTTP (2026-10-03)
 
 Base `8c4d71a46215c0d775c4a7880a6e95bc01b9ea00` (PR #115 MERGED), branch da sessão e `origin/main` 0/0, árvore limpa. Probe temporário em servidor HTTP isolado reproduziu o defeito: rejeição assíncrona sem resposta (cliente abortou em 2503 ms) e **processo encerrado com `exit 1`**; observabilidade registrando 200/0 ms/erro nulo. O probe foi apagado e só usou rotas sintéticas.

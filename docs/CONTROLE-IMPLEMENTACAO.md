@@ -1,5 +1,14 @@
 # Controle de implementação — SEG System
 
+## Atualização 2026-10-04 — EXT-07 execução agendada da avaliação temporal
+
+- Base: PR #118 `MERGED`, merge `150052e7a391a32a447341089ce3451e62a3477e`, divergência 0/0 e árvore limpa. Migração **156** aditiva (`ext_compliance_evaluation_runs`, append-only); 001–155 intocadas; próxima livre 157.
+- Entrega: agendador in-process opt-in por ambiente (`EXT07_EVALUATE_INTERVAL_SECONDS` + `EXT07_EVALUATE_IDENTITY` staff admin/ti) executando o MESMO núcleo da rota explícita (`runExpiryEvaluation`, extraído sem reescrita lógica). Tick sob `dispatchGuarded`; lock consultivo anti-sobreposição; identidade revalidada por tick (fail-closed com run `falha` e zero mutação; retomada automática); evento do dia com chave determinística; falha de `audit_log` reverte. Sem `DATABASE_URL` não liga (PGlite beta sem schema EXT-07). Rota de observação `GET /api/ext/compliance/schedule`.
+- Decisões do proprietário registradas: mecanismo timer in-process opt-in por env; ator = identidade staff real declarada; ledger = tabela nova de runs + evento por dia.
+- Testes: 20 focais do agendador (fake pool + guardas estáticas, provadas por mutação A/B/C) e 6 cenários novos no gate EXT-07 contra PG descartável (43/43, zero skip; MINIMUM_CASES 35→41).
+- Validação: 14/14 passos e 718 asserções TAP zero fail/skip/todo; wave0 001–156; typecheck; `npm test` 514/514; build 92; migrations 156/156 ×2 + clone negativo; EXT-06 36/36, EXT-05 33/33, EXT-04 28/28; diff limpo. Evidência `docs/evidencias/qa-evidencia-2026-10-04-ext07-agendamento.{pdf,json}`.
+- Pendências: aplicação em destino (incluindo decidir intervalo e identidade declarada), aceite humano e Windows.
+
 ## Atualização 2026-10-03 — PLAT-01 despacho HTTP endurecido
 
 - Base: PR #115 `MERGED`, merge `8c4d71a46215c0d775c4a7880a6e95bc01b9ea00`, divergência 0/0 e árvore limpa. Sem migração nova; 001–155 intocadas.

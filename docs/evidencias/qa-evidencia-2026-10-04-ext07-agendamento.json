@@ -1,0 +1,670 @@
+{
+  "slug": "qa-evidencia-2026-10-04-ext07-agendamento",
+  "rotulo": "EXT-07 — execução agendada da avaliação temporal",
+  "gerado_em": "2026-10-04T03:26:09.037Z",
+  "contexto": {
+    "commit": "150052e7a391a32a447341089ce3451e62a3477e",
+    "branch": "arena/01a104d5-gruposegsystemseguranca",
+    "arquivos_modificados": 14,
+    "node": "v22.22.3",
+    "plataforma": "linux x64"
+  },
+  "resumo": {
+    "total": 14,
+    "sucessos": 14,
+    "falhas": 0,
+    "duracao_total_ms": 130918,
+    "tap_total": 718,
+    "tap_pass": 718,
+    "tap_fail": 0,
+    "tap_skip": 0,
+    "tap_todo": 0,
+    "tap_cancelled": 0
+  },
+  "passos": [
+    {
+      "id": "npm-ci",
+      "titulo": "Instalação determinística de dependências",
+      "categoria": "Base",
+      "comando": "npm ci",
+      "objetivo": "Reinstalar a partir do package-lock e confirmar ausência de vulnerabilidades reportadas.",
+      "peso": "leve",
+      "exit_code": 0,
+      "signal": null,
+      "duracao_ms": 9140,
+      "tap": null,
+      "aprovado": true,
+      "destaques": [
+        "added 82 packages, and audited 83 packages in 9s",
+        "found 0 vulnerabilities"
+      ],
+      "log": "logs/npm-ci.log",
+      "bytes_saida": 141
+    },
+    {
+      "id": "wave0",
+      "titulo": "Wave 0 — conformidade estática e ledger de migrações",
+      "categoria": "Estático",
+      "comando": "node scripts/qa-wave0-static.mjs",
+      "objetivo": "Verificar o inventário de migrações 001–156, manifesto e invariantes estáticas do projeto.",
+      "peso": "leve",
+      "exit_code": 0,
+      "signal": null,
+      "duracao_ms": 39,
+      "tap": null,
+      "aprovado": true,
+      "destaques": [
+        "OK PLT-SMK-001: Imports relativos estáticos de server.mjs",
+        "OK PLT-SMK-001: Dependências runtime declaradas em manifest e lockfile",
+        "OK PLT-MIG-001: Migrações SQL 001–156 contínuas e únicas",
+        "OK PLT-MIG-001: Migrações 001–156 registradas no migrador PG",
+        "OK PLT-CI-001: CI com install/test/typecheck/build sem bypass",
+        "RESUMO: 5/5 verificações estáticas OK; 0 imports ausentes; 0 migrações ausentes."
+      ],
+      "log": "logs/wave0.log",
+      "bytes_saida": 407
+    },
+    {
+      "id": "typecheck",
+      "titulo": "Verificação de tipos (tsc --noEmit)",
+      "categoria": "Estático",
+      "comando": "npm run typecheck",
+      "objetivo": "Garantir que a árvore TypeScript compila sem erro após a alteração.",
+      "peso": "leve",
+      "exit_code": 0,
+      "signal": null,
+      "duracao_ms": 25659,
+      "tap": null,
+      "aprovado": true,
+      "destaques": [
+        "> grupo-seg-system@0.1.0 typecheck",
+        "> tsc --noEmit"
+      ],
+      "log": "logs/typecheck.log",
+      "bytes_saida": 52
+    },
+    {
+      "id": "focal-plat01",
+      "titulo": "Focal PLAT-01 — despacho HTTP à prova de rejeição",
+      "categoria": "Focal",
+      "comando": "node --test tests/route-dispatch.test.mjs tests/route-dispatch-guard.test.mjs",
+      "objetivo": "Cobrir o defeito corrigido: rejeição assíncrona, fail-closed, término de conexão, rede de segurança e guarda estática.",
+      "peso": "leve",
+      "exigeTap": true,
+      "exit_code": 0,
+      "signal": null,
+      "duracao_ms": 461,
+      "tap": {
+        "tests": 25,
+        "pass": 25,
+        "fail": 0,
+        "skipped": 0,
+        "todo": 0,
+        "cancelled": 0
+      },
+      "aprovado": true,
+      "destaques": [
+        "TAP version 13",
+        "ok 1 - PLAT-01 server.mjs importa o despacho endurecido",
+        "ok 2 - PLAT-01 routeApi aguarda o despacho antes de qualquer outra instrução",
+        "ok 3 - PLAT-01 nenhum handler de rota é devolvido sem passar pelo guard",
+        "ok 4 - PLAT-01 routeApi ainda registra observabilidade com erro e duração reais",
+        "ok 5 - PLAT-01 o callback do servidor HTTP está protegido e não é async solto",
+        "ok 6 - PLAT-01 a rede de segurança de processo é instalada antes de servir",
+        "ok 7 - PLAT-01 o módulo de despacho não depende de banco, rede ou Next",
+        "ok 8 - PLAT-01 caminho feliz: valor devolvido e desfecho ok",
+        "ok 9 - PLAT-01 exceção síncrona vira 500 fail-closed",
+        "ok 10 - PLAT-01 rejeição assíncrona vira 500 fail-closed (o defeito original)",
+        "ok 11 - PLAT-01 o corpo de falha não vaza mensagem, stack, SQL nem tabela",
+        "ok 12 - PLAT-01 falha não relança: o chamador nunca recebe exceção",
+        "... (7 linhas omitidas; log integral em docs/evidencias/logs/) ...",
+        "ok 20 - PLAT-01 servidor HTTP real: falha assíncrona responde 500 sem pendurar e sem matar o processo",
+        "ok 21 - PLAT-01 servidor HTTP real: resposta íntegra não é truncada quando o handler falha depois do end",
+        "ok 22 - PLAT-01 servidor HTTP real: rajada de falhas não degrada nem derruba",
+        "ok 23 - PLAT-01 rede de segurança: unhandledRejection registra e mantém o processo vivo",
+        "ok 24 - PLAT-01 rede de segurança: uncaughtException registra e preserva falha rápida",
+        "ok 25 - PLAT-01 rede de segurança é idempotente",
+        "# tests 25",
+        "# pass 25",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 425.969755"
+      ],
+      "log": "logs/focal-plat01.log",
+      "bytes_saida": 5282
+    },
+    {
+      "id": "focal-ext07",
+      "titulo": "Focal EXT-07 — jornada canônica de compliance",
+      "categoria": "Focal",
+      "comando": "node --test tests/ext07-compliance.test.mjs",
+      "objetivo": "Confirmar que a camada EXT-07 entregue anteriormente segue íntegra.",
+      "peso": "leve",
+      "exigeTap": true,
+      "exit_code": 0,
+      "signal": null,
+      "duracao_ms": 139,
+      "tap": {
+        "tests": 19,
+        "pass": 19,
+        "fail": 0,
+        "skipped": 0,
+        "todo": 0,
+        "cancelled": 0
+      },
+      "aprovado": true,
+      "destaques": [
+        "TAP version 13",
+        "ok 1 - EXT-07 usa ext_compliance_documents como fonte canônica e preserva legado",
+        "ok 2 - EXT-07 impõe documento privado, validade e tarefa idempotente",
+        "ok 3 - EXT-07 histórico é imutável e conclusão exige responsável/resultado",
+        "ok 4 - EXT-07 154 (main) preserva constraints compatíveis; 155 corrige as incompatíveis sem reescrever 001–154",
+        "ok 5 - EXT-07 API usa regex de data correta e não aceita relógio do cliente",
+        "ok 6 - EXT-07 anônimo recebe 401 sem tocar o banco",
+        "ok 7 - EXT-07 papel autenticado não autorizado recebe 403 sem tocar o banco",
+        "ok 8 - EXT-07 mutação cross-origin é recusada antes da chave e do corpo",
+        "ok 9 - EXT-07 mutação exige Idempotency-Key",
+        "ok 10 - EXT-07 JSON inválido retorna 400 e corpo grande 413",
+        "ok 11 - EXT-07 criação de obrigação deriva autoria/estado e exige responsável staff",
+        "ok 12 - EXT-07 UUID inválido retorna 400 em documento, detalhe e tarefa",
+        "... (1 linhas omitidas; log integral em docs/evidencias/logs/) ...",
+        "ok 14 - EXT-07 avaliação usa CURRENT_DATE do servidor e ignora data do cliente",
+        "ok 15 - EXT-07 transições de tarefa exigem resultado/justificativa e respeitam terminais",
+        "ok 16 - EXT-07 renovação cria novo registro e marca o anterior como substituído",
+        "ok 17 - EXT-07 replay idempotente devolve 200 e chave divergente 409",
+        "ok 18 - EXT-07 falha de audit_log responde 503 com rollback e sem evento",
+        "ok 19 - EXT-07 listagens usam projeção minimizada sem storage_key, URL privada ou referência",
+        "# tests 19",
+        "# pass 19",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 103.471126"
+      ],
+      "log": "logs/focal-ext07.log",
+      "bytes_saida": 4115
+    },
+    {
+      "id": "focal-ext07-agendamento",
+      "titulo": "Focal EXT-07 — execução agendada da avaliação temporal",
+      "categoria": "Focal",
+      "comando": "node --test tests/ext-compliance-scheduler.test.mjs",
+      "objetivo": "Cobrir o agendador: opt-in por ambiente, tick fail-closed, ledger de execuções, prova por mutação e guardas estáticas.",
+      "peso": "leve",
+      "exigeTap": true,
+      "exit_code": 0,
+      "signal": null,
+      "duracao_ms": 136,
+      "tap": {
+        "tests": 20,
+        "pass": 20,
+        "fail": 0,
+        "skipped": 0,
+        "todo": 0,
+        "cancelled": 0
+      },
+      "aprovado": true,
+      "destaques": [
+        "TAP version 13",
+        "ok 1 - EXT-07 agendador sem ambiente configurado permanece desligado",
+        "ok 2 - EXT-07 agendador recusa intervalo inválido e aceita inteiro >= 1",
+        "ok 3 - EXT-07 agendador exige identidade UUID bem-formada declarada por ambiente",
+        "ok 4 - EXT-07 migração 156 cria ledger de execuções agendadas sem tocar 001–155",
+        "ok 5 - EXT-07 migração 156 está registrada nos quatro pontos do manifesto",
+        "ok 6 - EXT-07 tick completo: lock, identidade, núcleo, evento do dia, auditoria e run concluida",
+        "ok 7 - EXT-07 segundo tick no mesmo dia executa o trabalho e não duplica o evento",
+        "ok 8 - EXT-07 identidade declarada inválida: falha fechada com run 'falha' e zero mutação",
+        "ok 9 - EXT-07 lock concorrente: tick é pulado sem gravar run",
+        "ok 10 - EXT-07 falha de auditoria reverte a execução e grava run 'falha'",
+        "ok 11 - EXT-07 falha do núcleo reverte e grava run 'falha' com reason evaluation_failed",
+        "ok 12 - EXT-07 ator malformado em chamada direta falha fechado sem tocar o banco",
+        "... (2 linhas omitidas; log integral em docs/evidencias/logs/) ...",
+        "ok 15 - EXT-07 tick sobreposto no processo é ignorado enquanto o anterior executa",
+        "ok 16 - EXT-07 start recusa argumentos inválidos (erro de programação, não de execução)",
+        "ok 17 - EXT-07 server.mjs liga o agendador somente depois da rede de segurança",
+        "ok 18 - EXT-07 agendador usa o MESMO núcleo da rota explícita e nunca relança para o timer",
+        "ok 19 - EXT-07 rota de observação GET /api/ext/compliance/schedule exige staff autorizada",
+        "ok 20 - EXT-07 rota de observação sem agendador no processo declara enabled false e mantém o ledger",
+        "# tests 20",
+        "# pass 20",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 96.422328"
+      ],
+      "log": "logs/focal-ext07-agendamento.log",
+      "bytes_saida": 4778
+    },
+    {
+      "id": "unit",
+      "titulo": "Suíte unitária integral (npm test)",
+      "categoria": "Regressão",
+      "comando": "npm test",
+      "objetivo": "Executar toda a suíte unitária do projeto, sem skip, todo ou falha.",
+      "peso": "leve",
+      "exigeTap": true,
+      "exit_code": 0,
+      "signal": null,
+      "duracao_ms": 5991,
+      "tap": {
+        "tests": 514,
+        "pass": 514,
+        "fail": 0,
+        "skipped": 0,
+        "todo": 0,
+        "cancelled": 0
+      },
+      "aprovado": true,
+      "destaques": [
+        "TAP version 13",
+        "ok 1 - records a same-status request as an invalid transition",
+        "ok 2 - allows a requested status that differs from the current status",
+        "ok 3 - notifies only when a retained permission becomes usable after reactivation",
+        "ok 4 - keeps the approved manual reason and failed-attempt categories",
+        "ok 5 - RAG-SEG-001 /api/ai/rag: listagem pública de consultas nunca divulga histórico",
+        "ok 6 - RAG-SEG-001 /api/ai/rag: público não consulta cliente",
+        "ok 7 - RAG-SEG-001 /api/ai/rag: público não consulta rh",
+        "ok 8 - RAG-SEG-001 /api/ai/rag: público não consulta marcelo",
+        "ok 9 - RAG-SEG-001 /api/public/ai/rag: listagem pública de consultas nunca divulga histórico",
+        "ok 10 - RAG-SEG-001 /api/public/ai/rag: público não consulta cliente",
+        "ok 11 - RAG-SEG-001 /api/public/ai/rag: público não consulta rh",
+        "ok 12 - RAG-SEG-001 /api/public/ai/rag: público não consulta marcelo",
+        "... (478 linhas omitidas; log integral em docs/evidencias/logs/) ...",
+        "ok 491 - sessão sem MFA vive menos que sessão com MFA",
+        "ok 492 - isUuid rejeita entradas não canônicas",
+        "ok 493 - toda chamada a função de sessão é aguardada (sem bypass por Promise truthy)",
+        "ok 494 - todo wrapper que devolve sessão é declarado async",
+        "ok 495 - readSession do server.mjs valida no servidor, não apenas a assinatura",
+        "ok 496 - o fallback de papel para admin foi removido do login de staff",
+        "# tests 514",
+        "# pass 514",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 5723.264045"
+      ],
+      "log": "logs/unit.log",
+      "bytes_saida": 109499
+    },
+    {
+      "id": "build",
+      "titulo": "Build de produção (next build)",
+      "categoria": "Regressão",
+      "comando": "npm run build",
+      "objetivo": "Compilar a aplicação e confirmar a geração das páginas, incluindo /admin/compliance.",
+      "peso": "medio",
+      "exit_code": 0,
+      "signal": null,
+      "duracao_ms": 6261,
+      "tap": null,
+      "aprovado": true,
+      "destaques": [
+        "✓ Running next.config.ts took 42ms",
+        "✓ Compiled successfully in 301ms",
+        "✓ Generating static pages using 1 worker (92/92) in 1629ms",
+        "Route (app)",
+        "○  (Static)   prerendered as static content",
+        "●  (SSG)      prerendered as static HTML (uses generateStaticParams)"
+      ],
+      "log": "logs/build.log",
+      "bytes_saida": 3258
+    },
+    {
+      "id": "migrations-pg",
+      "titulo": "Ledger de migrações 001–156 em PostgreSQL descartável",
+      "categoria": "Banco",
+      "comando": "npm run test:migrations:pg",
+      "objetivo": "Aplicar todas as migrações em cluster efêmero, repetir para provar idempotência e rejeitar checksum divergente.",
+      "peso": "pesado",
+      "exit_code": 0,
+      "signal": null,
+      "duracao_ms": 6349,
+      "tap": null,
+      "aprovado": true,
+      "destaques": [
+        "Migration ledger verified: 001–156 (PostgreSQL only)",
+        "Migration ledger verified: 001–156 (PostgreSQL only)",
+        "Migration failed: migration_checksum_mismatch: 006-admin-identities.sql"
+      ],
+      "log": "logs/migrations-pg.log",
+      "bytes_saida": 17899
+    },
+    {
+      "id": "ext07-pg",
+      "titulo": "Gate EXT-07 — jornada por HTTP real contra PostgreSQL real",
+      "categoria": "Banco",
+      "comando": "npm run test:ext07-compliance:pg",
+      "objetivo": "Subir servidor HTTP real, sessão staff real e percorrer a jornada de compliance ponta a ponta.",
+      "peso": "pesado",
+      "exigeTap": true,
+      "exit_code": 0,
+      "signal": null,
+      "duracao_ms": 27739,
+      "tap": {
+        "tests": 43,
+        "pass": 43,
+        "fail": 0,
+        "skipped": 0,
+        "todo": 0,
+        "cancelled": 0
+      },
+      "aprovado": true,
+      "destaques": [
+        "Migration ledger verified: 001–156 (PostgreSQL only)",
+        "TAP version 13",
+        "ok 1 - EXT-07 gate exige PostgreSQL real",
+        "ok 2 - EXT-07 cluster limpo não teve seed e ausência não é zero",
+        "ok 3 - EXT-07 HTTP anônimo 401 em todas as rotas canônicas",
+        "ok 4 - EXT-07 HTTP papel staff não autorizado 403 distinto de 401",
+        "ok 5 - EXT-07 HTTP same-origin apenas em mutações",
+        "ok 6 - EXT-07 HTTP Idempotency-Key obrigatória nas mutações",
+        "ok 7 - EXT-07 HTTP JSON inválido 400 e corpo grande 413",
+        "ok 8 - EXT-07 HTTP UUID inválido 400 (documento, detalhe, renovação, tarefa)",
+        "ok 9 - EXT-07 UI /admin/compliance responde",
+        "ok 10 - EXT-07 não existe rota pública de compliance",
+        "ok 11 - EXT-07 obrigação exige campos declarativos completos",
+        "... (26 linhas omitidas; log integral em docs/evidencias/logs/) ...",
+        "ok 38 - EXT-07 agendamento desligado por padrão; rota de observação exige staff autorizada",
+        "ok 39 - EXT-07 agendamento avalia o estado temporal sozinho e registra a execução",
+        "ok 40 - EXT-07 agendamento repetido não duplica tarefa nem evento do dia",
+        "ok 41 - EXT-07 agendamento falha fechado com identidade suspensa e zero mutação",
+        "ok 42 - EXT-07 agendamento retoma sozinho após a identidade ser reativada",
+        "ok 43 - EXT-07 ledger de execuções é append-only e observável pela rota",
+        "# tests 43",
+        "# pass 43",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 22731.815209"
+      ],
+      "log": "logs/ext07-pg.log",
+      "bytes_saida": 18625
+    },
+    {
+      "id": "ext06-pg",
+      "titulo": "Gate EXT-06 — satisfação (regressão de vizinhança)",
+      "categoria": "Banco",
+      "comando": "npm run test:ext06-satisfaction:pg",
+      "objetivo": "Provar que o endurecimento do despacho não alterou jornadas HTTP já entregues.",
+      "peso": "pesado",
+      "exigeTap": true,
+      "exit_code": 0,
+      "signal": null,
+      "duracao_ms": 17515,
+      "tap": {
+        "tests": 36,
+        "pass": 36,
+        "fail": 0,
+        "skipped": 0,
+        "todo": 0,
+        "cancelled": 0
+      },
+      "aprovado": true,
+      "destaques": [
+        "Migration ledger verified: 001–156 (PostgreSQL only)",
+        "TAP version 13",
+        "ok 1 - EXT-06 gate exige PostgreSQL real",
+        "ok 2 - EXT-06 HTTP staff anônimo 401",
+        "ok 3 - EXT-06 HTTP staff papel negado 403",
+        "ok 4 - EXT-06 HTTP cliente anônimo 401",
+        "ok 5 - EXT-06 HTTP cliente sem grant 403 sem pesquisa",
+        "ok 6 - EXT-06 HTTP same-origin",
+        "ok 7 - EXT-06 HTTP chave obrigatória",
+        "ok 8 - EXT-06 HTTP JSON inválido",
+        "ok 9 - EXT-06 HTTP corpo grande",
+        "ok 10 - EXT-06 HTTP vínculo/UUID forjado recusado",
+        "ok 11 - EXT-06 HTTP destinatário sem grant recusado",
+        "... (19 linhas omitidas; log integral em docs/evidencias/logs/) ...",
+        "ok 31 - EXT-06 projeção cliente não expõe funcionário/fatos/risco/tarefa",
+        "ok 32 - EXT-06 agregado distingue ausência de zero e declara fonte",
+        "ok 33 - EXT-06 banco recusa sobrescrita da resposta",
+        "ok 34 - EXT-06 evento imutável",
+        "ok 35 - EXT-06 legado items/401/403/410",
+        "ok 36 - EXT-06 falha audit_log causa 503 e rollback",
+        "# tests 36",
+        "# pass 36",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 12565.031213"
+      ],
+      "log": "logs/ext06-pg.log",
+      "bytes_saida": 13476
+    },
+    {
+      "id": "ext05-pg",
+      "titulo": "Gate EXT-05 — qualidade (regressão de vizinhança)",
+      "categoria": "Banco",
+      "comando": "npm run test:ext05-quality:pg",
+      "objetivo": "Regressão de jornada HTTP real independente do EXT-07.",
+      "peso": "pesado",
+      "exigeTap": true,
+      "exit_code": 0,
+      "signal": null,
+      "duracao_ms": 16292,
+      "tap": {
+        "tests": 33,
+        "pass": 33,
+        "fail": 0,
+        "skipped": 0,
+        "todo": 0,
+        "cancelled": 0
+      },
+      "aprovado": true,
+      "destaques": [
+        "Migration ledger verified: 001–156 (PostgreSQL only)",
+        "TAP version 13",
+        "ok 1 - EXT-05 gate exige banco real e não aceita skip silencioso",
+        "ok 2 - EXT-05 HTTP: anônimo recebe 401",
+        "ok 3 - EXT-05 HTTP: papel não autorizado recebe 403",
+        "ok 4 - EXT-05 HTTP: mutação cross-origin recebe 403",
+        "ok 5 - EXT-05 HTTP: idempotency key é obrigatória",
+        "ok 6 - EXT-05 UI: /admin/qualidade é rota real",
+        "ok 7 - EXT-05 DB: cluster limpo não recebeu seed operacional",
+        "ok 8 - EXT-05 HTTP: lista declara vazio/fonte/fronteira sem inventar upload",
+        "ok 9 - EXT-05 HTTP+DB: criação deriva autoria e ignora autoria/contador forjados",
+        "ok 10 - EXT-05 HTTP: UUID inválido na URL é recusado",
+        "ok 11 - EXT-05 HTTP+DB: retry idêntico não duplica",
+        "... (16 linhas omitidas; log integral em docs/evidencias/logs/) ...",
+        "ok 28 - EXT-05 DB: reabertura silenciosa é recusada",
+        "ok 29 - EXT-05 HTTP+DB: reincidência é fato explícito e contador derivado",
+        "ok 30 - EXT-05 DB: evento é imutável",
+        "ok 31 - EXT-05 legado: items, 401, 403 e 410 após guardas",
+        "ok 32 - EXT-05 legado ações: items e mutação 410",
+        "ok 33 - EXT-05 HTTP+DB: falha audit_log devolve 503 e rollback total",
+        "# tests 33",
+        "# pass 33",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 11475.006514"
+      ],
+      "log": "logs/ext05-pg.log",
+      "bytes_saida": 14212
+    },
+    {
+      "id": "ext04-pg",
+      "titulo": "Gate EXT-04 — fornecedores (regressão de vizinhança)",
+      "categoria": "Banco",
+      "comando": "npm run test:ext04-suppliers:pg",
+      "objetivo": "Regressão de jornada HTTP real independente do EXT-07.",
+      "peso": "pesado",
+      "exigeTap": true,
+      "exit_code": 0,
+      "signal": null,
+      "duracao_ms": 15174,
+      "tap": {
+        "tests": 28,
+        "pass": 28,
+        "fail": 0,
+        "skipped": 0,
+        "todo": 0,
+        "cancelled": 0
+      },
+      "aprovado": true,
+      "destaques": [
+        "Migration ledger verified: 001–156 (PostgreSQL only)",
+        "TAP version 13",
+        "ok 1 - EXT-04 gate: banco real presente — skip silencioso é proibido",
+        "ok 2 - EXT-04 HTTP: anônimo recebe 401",
+        "ok 3 - EXT-04 HTTP: papel rh recebe 403 distinto",
+        "ok 4 - EXT-04 HTTP: mutação exige same-origin",
+        "ok 5 - EXT-04 HTTP: mutação exige chave de idempotência",
+        "ok 6 - EXT-04 UI: /admin/fornecedores é rota real",
+        "ok 7 - EXT-04 HTTP: API declara sem evidência de volume e ator externo pendente",
+        "ok 8 - EXT-04 HTTP+DB: criação ignora IDs/autoria/total forjados no corpo",
+        "ok 9 - EXT-04 HTTP: produto precisa estar canonicamente ligado ao fornecedor da URL",
+        "ok 10 - EXT-04 HTTP+DB: retry idêntico não duplica e chave divergente dá 409",
+        "ok 11 - EXT-04 HTTP: máquina recusa salto de rascunho para análise",
+        "... (11 linhas omitidas; log integral em docs/evidencias/logs/) ...",
+        "ok 23 - EXT-04 HTTP+DB: pedido deriva todos os vínculos/valores da cotação",
+        "ok 24 - EXT-04 HTTP+DB: pedido fechado não reabre nem pela API nem pelo banco",
+        "ok 25 - EXT-04 HTTP: prazo de pedido ausente e vencido são declarados com fonte/data-base",
+        "ok 26 - EXT-04 HTTP: legado lê com alias items e mutação autenticada retorna 410",
+        "ok 27 - EXT-04 DB: eventos são imutáveis",
+        "ok 28 - EXT-04 HTTP+DB: falha de auditoria devolve 503 e reverte negócio+evento",
+        "# tests 28",
+        "# pass 28",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 10495.000291"
+      ],
+      "log": "logs/ext04-pg.log",
+      "bytes_saida": 13488
+    },
+    {
+      "id": "diff-check",
+      "titulo": "Higiene de diff (git diff --check)",
+      "categoria": "Estático",
+      "comando": "git diff --check",
+      "objetivo": "Nenhum espaço em branco residual ou marcador de conflito.",
+      "peso": "leve",
+      "exit_code": 0,
+      "signal": null,
+      "duracao_ms": 23,
+      "tap": null,
+      "aprovado": true,
+      "destaques": [],
+      "log": "logs/diff-check.log",
+      "bytes_saida": 0
+    }
+  ],
+  "secoes": [
+    {
+      "titulo": "3.1. Pendência declarada e probe do estado anterior",
+      "paragrafos": [
+        "A avaliação temporal do EXT-07 era, até o main anterior, operação administrativa explícita: nada mudava o estado temporal sem um humano chamar POST /api/ext/compliance/evaluate. A própria resposta da rota declarava a pendência. Antes de escrever qualquer linha, um probe em cluster PostgreSQL 17 descartável (migrações 001–155, servidor real, fixture sintética) mediu o comportamento: obrigação com antecedência de 30 dias, documento vencido na véspera e documento corrente a 10 dias do vencimento.",
+        "O probe aguardou 12 segundos com o servidor de pé e comparou o estado do banco no instante inicial e final: idêntico. Nenhuma tarefa para o documento vencido, antecedência não marcada, obrigação pendente, nenhum evento novo. O único caminho para atualizar o estado era a operação explícita — confirmado executando-a ao final do probe. O script do probe foi apagado em seguida (regra da casa)."
+      ],
+      "tabela": {
+        "columns": [
+          {
+            "header": "Medida do probe (antes)",
+            "width": 0.42
+          },
+          {
+            "header": "Resultado",
+            "width": 0.58
+          }
+        ],
+        "rows": [
+          {
+            "cells": [
+              "Estado após 12 s com servidor de pé",
+              "Idêntico ao instante inicial: 0 tarefas para o vencido, corrente 'vigente', obrigação 'pendente', 0 eventos novos"
+            ]
+          },
+          {
+            "cells": [
+              "Timer/agendador no processo",
+              "Inexistente — nenhum mecanismo avalia o estado temporal sozinho"
+            ]
+          },
+          {
+            "cells": [
+              "POST /evaluate explícito",
+              "Cria a tarefa, marca 'a_vencer' e deriva a obrigação — único caminho disponível"
+            ]
+          },
+          {
+            "cells": [
+              "Nota da própria API",
+              "\"avaliação temporal é operação administrativa explícita; execução agendada contínua é pendência documentada\""
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "titulo": "3.2. O que a entrega faz",
+      "paragrafos": [
+        "O agendador roda no próprio processo do servidor (server.mjs) como opt-in por ambiente: EXT07_EVALUATE_INTERVAL_SECONDS (inteiro >= 1) liga a cadência e EXT07_EVALUATE_IDENTITY declara a identidade staff (admin/ti) em cujo nome a automação age. Sem intervalo válido, nada roda. Sem DATABASE_URL, o agendador recusa ligar: o modo PGlite beta não possui o schema EXT-07.",
+        "Cada tick executa o MESMO núcleo da rota explícita (runExpiryEvaluation, extraído de ext-compliance-api.mjs sem alterar contrato HTTP): data-base sempre CURRENT_DATE do servidor, tarefa única por documento/período/regra, fail-closed sem responsável staff ativo. O tick roda sob dispatchGuarded (PLAT-01): nenhuma rejeição escapa para o timer e o processo nunca cai por causa do agendamento. A sobreposição é bloqueada em processo (flag) e entre instâncias (pg_try_advisory_xact_lock).",
+        "A migração 156 cria o ledger ext_compliance_evaluation_runs: uma linha por execução que de fato rodou — 'concluida' (inclusive sem efeito: ausência de efeito não é ausência de execução) ou 'falha' com a causa registrada. O ledger é append-only por trigger. O evento 'expiry_evaluated' em ext_compliance_events é gravado uma vez por dia/ator com chave determinística 'agendada:YYYY-MM-DD'; ticks seguintes no mesmo dia não duplicam o evento. A auditoria segue a mesma disciplina do HTTP: falha de audit_log reverte a execução inteira.",
+        "A observação é exposta a staff autorizada (admin/ti) em GET /api/ext/compliance/schedule: estado do agendador deste processo (enabled, intervalo, identidade declarada) e o ledger de execuções — inclusive para um processo sem agendador ligado, porque o ledger é do banco."
+      ],
+      "itens": [
+        "Opt-in por ambiente; padrão desligado; valor inválido não liga nada.",
+        "Identidade declarada é revalidada a cada tick: suspensa ou desativada, a execução falha fechado com zero mutação e a falha fica registrada.",
+        "Retomada é automática: reativada a identidade, o próximo tick cria as tarefas pendentes.",
+        "Migração 156 aditiva: sem seed, sem UPDATE retroativo, 001–155 intocadas.",
+        "Nenhum contrato de API alterado; a rota explícita POST /evaluate segue disponível e agora delega ao mesmo núcleo."
+      ]
+    },
+    {
+      "titulo": "3.3. Prova negativa por mutação",
+      "paragrafos": [
+        "Guarda sem prova negativa é decoração. Três mutações foram aplicadas, cada uma confirmada reprovando a suíte, e revertidas por restauração conferida com sha256sum -c."
+      ],
+      "tabela": {
+        "columns": [
+          {
+            "header": "Mutação aplicada",
+            "width": 0.44
+          },
+          {
+            "header": "Teste que reprovou",
+            "width": 0.56
+          }
+        ],
+        "rows": [
+          {
+            "cells": [
+              "Agendador ligado ANTES da rede de segurança de processo",
+              "\"server.mjs liga o agendador somente depois da rede de segurança\" (ordem invertida detectada)"
+            ]
+          },
+          {
+            "cells": [
+              "Nota da API regredida para \"pendência documentada\"",
+              "\"agendador usa o MESMO núcleo da rota explícita e nunca relança\" (nota prometendo pendência entregue)"
+            ]
+          },
+          {
+            "cells": [
+              "Tick disparado sem dispatchGuarded (rejeição escapa para o timer)",
+              "Dois testes: guarda estática do guard e teste de sobreposição (formato do desfecho mudou)"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "titulo": "3.4. Fronteiras deliberadas desta entrega",
+      "paragrafos": [
+        "A execução agendada não é ator externo, integração regulatória, SMTP nem armazenamento externo: é um timer local que age em nome de uma identidade staff real declarada pelo operador. Nenhuma identidade sintética foi criada e nenhum NOT NULL foi relaxado — toda tarefa e evento continua tendo autor registrado. A fronteira documental do EXT-07 permanece: referência declarada e privada, sem upload, bytes, checksum, malware scan ou download; aplicabilidade é declaração interna, não validação jurídica.",
+        "A bateria integral foi executada como evidência; os passos estritamente necessários a esta entrega são wave0, typecheck, focais, unit, migrations-pg e ext07-pg. Os gates EXT-06/05/04 e o build correram como regressão de vizinhança (server.mjs mudou de forma aditiva), não como exigência da entrega."
+      ]
+    }
+  ]
+}
