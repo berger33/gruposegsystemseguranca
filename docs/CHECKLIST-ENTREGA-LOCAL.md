@@ -1,3 +1,10 @@
+## Atualização 2026-10-04 — F06 / EXT-10 Continuidade
+
+- [x] Migração 162 aditiva; 001–161 imutáveis; próxima livre 163.
+- [x] API canônica de planos, transições e simulados com RBAC, same-origin, idempotência, locks e auditoria fail-closed.
+- [x] UI `/admin/continuidade` protegida por AdminGate e sem promessa de acionamento externo.
+- [ ] Gate focal PG17/HTTP real EXT-10 e migrações 162/162: implementação preparada; execução bloqueada neste ambiente pela ausência de `libpq.so.5` no binário embedded-postgres.
+
 # Checklist da entrega local — 222 requisitos
 
 ## Atualização 2026-10-04 — F05 / EXT-09: Expansão, Dimensionamento e Cenários Financeiros

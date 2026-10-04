@@ -1,4 +1,8 @@
-# Status atual consolidado — reconciliação F00 + F01 + F03 + F04 (EXT-08) + F05 (EXT-09)
+# Status atual consolidado — reconciliação F00 + F01 + F03 + F04 (EXT-08) + F05 (EXT-09) + F06 (EXT-10)
+
+## Atualização F06 — Continuidade de Negócios e Contingência
+
+Migração 162 aditiva, API canônica e tela `/admin/continuidade` entregues nesta branch. A jornada registra planos, transições, acionamentos internos e simulados com RBAC, idempotência, locks e auditoria atômica. Sem notificações externas simuladas. Ledger: 001–162; próxima 163. O gate PG17 focal ainda depende da biblioteca `libpq.so.5` disponível no ambiente.
 
 ## Atualização F05 — Expansão e Novas Unidades (EXT-09)
 
