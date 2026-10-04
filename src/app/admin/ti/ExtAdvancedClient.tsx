@@ -65,7 +65,7 @@ export default function ExtAdvancedClient() {
         <input placeholder="file_name" value={compForm.file_name} onChange={e=>setCompForm({...compForm, file_name:e.target.value})} />
         <input placeholder="file_url" value={compForm.file_url} onChange={e=>setCompForm({...compForm, file_url:e.target.value})} />
         <input placeholder="storage_key UNIQUE" value={compForm.storage_key} onChange={e=>setCompForm({...compForm, storage_key:e.target.value})} />
-        <button onClick={async()=>{ try{ await post("/api/ext/compliance-documents", compForm); setMsg("compliance criado vencimento gera tarefa privado"); load(); } catch(e:any){ setMsg(e.message); } }}>Criar compliance</button>
+        <button onClick={()=>setMsg("Escrita legada aposentada (410): a jornada canônica de compliance está em /admin/compliance e /api/ext/compliance/*")}>Criar compliance</button>
       </div>
       <ul>{compliance.map((c:any)=><li key={c.id}>{c.protocol} {c.title} tipo:{c.compliance_type} status:{c.status} emissor:{c.issuer} val:{c.expiry_date}</li>)}</ul>
 

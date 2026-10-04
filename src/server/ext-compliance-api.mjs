@@ -1,19 +1,627 @@
+// EXT-07 — compliance corporativo canônico (jornada interna de staff).
+// Fonte canônica: ext_compliance_documents (endurecida por 153/154).
+// Fonte da tarefa: ext_compliance_tasks (dedicada, fail-closed por responsável).
+// Fronteira documental: referência declarada; NÃO é arquivo, upload, checksum,
+// malware scan, armazenamento verificado ou download.
 import { createHash, randomUUID } from "node:crypto";
-const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const json=(res,status,body)=>{res.writeHead(status,{"content-type":"application/json"});res.end(JSON.stringify(body));};
-const fingerprint=(value)=>createHash("sha256").update(JSON.stringify(value,Object.keys(value).sort())).digest("hex");
-async function body(req){let n=0;const chunks=[];for await(const c of req){n+=c.length;if(n>128*1024)throw Object.assign(new Error("body_too_large"),{status:413});chunks.push(c);}if(!chunks.length)return {};let x;try{x=JSON.parse(Buffer.concat(chunks).toString("utf8"));}catch{throw Object.assign(new Error("invalid_json"),{status:400});}if(!x||Array.isArray(x)||typeof x!=="object")throw Object.assign(new Error("object_required"),{status:400});return x;}
-const text=(v,min,max)=>typeof v==="string"&&v.trim().length>=min&&v.trim().length<=max?v.trim():null;
-export function createExtComplianceApi({pool,sameOrigin,requireSession}){
- async function staff(req,res){const s=await requireSession(req);if(!s)return null;const role=String(s.role||s.userRole||"").toLowerCase();if(!["admin","ti"].includes(role))return json(res,403,{error:"forbidden"});return s;}
- async function activeIdentity(c,id){if(!UUID.test(String(id||"")))return false;const q=await c.query("SELECT id FROM auth_identities WHERE id=$1 AND kind='staff' AND status='active' AND EXISTS (SELECT 1 FROM auth_staff_profiles p WHERE p.identity_id=auth_identities.id AND p.role IN ('admin','ti'))",[id]);return Boolean(q.rows[0]);}
- async function mutate(req,res,s,work){if(!sameOrigin(req))return json(res,403,{error:"forbidden"});const key=String(req.headers["idempotency-key"]||"").trim();if(key.length<8||key.length>200)return json(res,400,{error:"idempotency_key_required"});let b;try{b=await body(req);}catch(e){return json(res,e.status||400,{error:e.message});}const fp=fingerprint(b);let c;try{c=await pool.connect();await c.query("BEGIN");await c.query("SELECT pg_advisory_xact_lock(hashtext($1))",[`ext07:${s.identityId}:${key}`]);const prior=(await c.query("SELECT * FROM ext_compliance_events WHERE created_by_identity=$1 AND idempotency_key=$2",[s.identityId,key])).rows[0];if(prior){if(prior.request_fingerprint!==fp){await c.query("ROLLBACK");return json(res,409,{error:"idempotency_key_reused"});}await c.query("COMMIT");return json(res,200,{...prior.payload,replayed:true});}const out=await work(c,b);if(out.deny){await c.query("ROLLBACK");return json(res,out.deny.status,out.deny.body);}await c.query("INSERT INTO ext_compliance_events(obligation_id,document_id,task_id,event_type,payload,idempotency_key,request_fingerprint,created_by_identity) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",[out.obligationId||null,out.documentId||null,out.taskId||null,out.eventType,JSON.stringify(out.body),key,fp,s.identityId]);try{await c.query("INSERT INTO audit_log(action,actor,target,meta) VALUES($1,$2,$3,$4)",[out.auditAction,s.identityId,out.target,JSON.stringify(out.auditMeta||{})]);}catch{await c.query("ROLLBACK");return json(res,503,{error:"audit_unavailable"});}await c.query("COMMIT");return json(res,out.status||200,out.body);}catch(e){await c?.query("ROLLBACK").catch(()=>{});console.error("EXT-07 mutation failed",e.message);return json(res,e.code==="23505"?409:503,{error:e.code==="23505"?"conflict":"compliance_journey_unavailable"});}finally{c?.release();}}
- async function list(req,res,s){const q=await pool.query(`SELECT id,protocol,title,description,compliance_type,status,obligation_id,origin,effective_start_date,issue_date,expiry_date,reference_type,created_at,updated_at FROM ext_compliance_documents WHERE origin='ext07_canonica' ORDER BY expiry_date NULLS LAST LIMIT 200`);return json(res,200,{items:q.rows,source:"ext07_canonica",file_boundary:"referencia_declarada_nao_arquivo_verificado"});}
- async function obligations(req,res,s){const q=await pool.query(`SELECT o.id,o.obligation_type,o.title,o.description,o.declared_source,o.applicability_scope,o.applicability_justification,o.validity_rule,o.renewal_lead_days,o.criticality,o.status,o.responsible_identity,i.display_name responsible_name FROM ext_compliance_obligations o JOIN auth_identities i ON i.id=o.responsible_identity ORDER BY o.created_at DESC LIMIT 200`);return json(res,200,{items:q.rows,source:"ext07_canonica",period:null,denominator:q.rows.length,absence_is_not_zero:q.rows.length===0});}
- async function createObligation(req,res,s){return mutate(req,res,s,async(c,b)=>{const title=text(b.title,5,200),description=text(b.description,10,2000),source=text(b.declared_source,5,1000),scope=text(b.applicability_scope,3,500),just=text(b.applicability_justification,10,2000),rule=text(b.validity_rule,5,500);if(!title||!description||!source||!scope||!just||!rule)return{deny:{status:400,body:{error:"invalid_obligation"}}};const rid=b.responsible_identity;if(!(await activeIdentity(c,rid)))return{deny:{status:400,body:{error:"responsible_staff_required"}}};const r=(await c.query(`INSERT INTO ext_compliance_obligations(obligation_type,title,description,declared_source,applicability_scope,applicability_justification,validity_rule,renewal_lead_days,criticality,responsible_identity,created_by_identity) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,[text(b.obligation_type,3,100),title,description,source,scope,just,rule,Number.isInteger(b.renewal_lead_days)?b.renewal_lead_days:30,["baixa","media","alta","critica"].includes(b.criticality)?b.criticality:"media",rid,s.identityId])).rows[0];return{status:201,body:{obligation:r},obligationId:r.id,eventType:"obligation_created",auditAction:"ext07_obligation_create",target:r.id};});}
- async function createDocument(req,res,s){return mutate(req,res,s,async(c,b)=>{if(!UUID.test(String(b.obligation_id||"")))return{deny:{status:400,body:{error:"invalid_obligation"}}};const o=(await c.query("SELECT * FROM ext_compliance_obligations WHERE id=$1 FOR UPDATE",[b.obligation_id])).rows[0];if(!o)return{deny:{status:404,body:{error:"obligation_not_found"}}};if(!(await activeIdentity(c,o.responsible_identity)))return{deny:{status:409,body:{error:"responsible_staff_missing"}}};const issue=b.issue_date||null,expiry=b.expiry_date||null;if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(String(issue))||!/^\\d{4}-\\d{2}-\\d{2}$/.test(String(expiry))||expiry<issue)return{deny:{status:400,body:{error:"invalid_validity"}}};const ref=text(b.declared_reference,3,1000),rtype=text(b.reference_type,3,100);if(!ref||!rtype)return{deny:{status:400,body:{error:"private_reference_required"}}};const protocol=`COMP-EXT-${new Date().toISOString().slice(0,10).replaceAll("-","")}-${randomUUID().slice(0,4).toUpperCase()}`;const r=(await c.query(`INSERT INTO ext_compliance_documents(protocol,title,description,compliance_type,status,document_number,issuer,responsible_name,responsible_identity,issue_date,effective_start_date,expiry_date,validity_rule,evaluation_date,reference_type,declared_reference,reference_source,is_private,created_by_identity,obligation_id,origin) VALUES($1,$2,$3,$4,'vigente',$5,$6,$7,$8,$9,$10,$11,$12,CURRENT_DATE,$13,$14,$15,true,$8,$16,'ext07_canonica') RETURNING id,protocol,title,status,obligation_id,origin,issue_date,effective_start_date,expiry_date,reference_type,is_private`,[protocol,text(b.title,5,200),text(b.description,10,2000),b.compliance_type||"outro",text(b.document_number,3,200),text(b.issuer,3,200),o.responsible_identity,o.responsible_identity,issue,b.effective_start_date||issue,expiry,o.validity_rule,rtype,ref,text(b.reference_source,3,500),o.id])).rows[0];return{status:201,body:{document:r,message:"referência privada registrada; não representa arquivo armazenado ou verificado"},obligationId:o.id,documentId:r.id,eventType:"document_created",auditAction:"ext07_document_create",target:r.id};});}
- async function evaluate(req,res,s){return mutate(req,res,s,async(c,b)=>{const date=/^\\d{4}-\\d{2}-\\d{2}$/.test(String(b.evaluation_date||""))?b.evaluation_date:new Date().toISOString().slice(0,10);const docs=(await c.query(`SELECT d.*,o.renewal_lead_days,o.responsible_identity FROM ext_compliance_documents d JOIN ext_compliance_obligations o ON o.id=d.obligation_id WHERE d.origin='ext07_canonica' AND d.expiry_date IS NOT NULL AND d.expiry_date <= $1::date FOR UPDATE`,[date])).rows;let created=0;for(const d of docs){const due=d.expiry_date;const period=`${d.issue_date||d.effective_start_date}:${d.expiry_date}`;const rule=`expiry_at_or_before_evaluation_date`;const task=(await c.query(`INSERT INTO ext_compliance_tasks(obligation_id,document_id,validity_period,rule,evaluation_date,due_date,facts,responsible_identity,created_by_identity) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(document_id,validity_period,rule) DO NOTHING RETURNING *`,[d.obligation_id,d.id,period,rule,date,due,JSON.stringify({expiry_date:d.expiry_date,evaluation_date:date,source:"server_date"}),d.responsible_identity,s.identityId])).rows[0];if(task)created++;await c.query("UPDATE ext_compliance_documents SET status='vencida',evaluation_date=$2 WHERE id=$1",[d.id,date]);}return{body:{evaluated:docs.length,tasks_created:created,evaluation_date:date,rule:"expiry_at_or_before_evaluation_date",source:"server_date"},eventType:"expiry_evaluated",auditAction:"ext07_expiry_evaluate",target:s.identityId};});}
- async function taskTransition(req,res,s,id,action){return mutate(req,res,s,async(c,b)=>{if(!UUID.test(id))return{deny:{status:400,body:{error:"invalid_task"}}};const t=(await c.query("SELECT * FROM ext_compliance_tasks WHERE id=$1 FOR UPDATE",[id])).rows[0];if(!t)return{deny:{status:404,body:{error:"task_not_found"}}};if(action==="start"&&t.status!=="aberta")return{deny:{status:409,body:{error:"invalid_transition"}}};if(action==="complete"&&(!text(b.result,10,2000)||!(await activeIdentity(c,t.responsible_identity))) )return{deny:{status:409,body:{error:"completion_requires_responsible_and_result"}}};if(action==="cancel"&&!text(b.justification,10,1000))return{deny:{status:400,body:{error:"cancellation_justification_required"}}};const next=action==="start"?"em_andamento":action==="complete"?"concluida":"cancelada";const r=(await c.query(`UPDATE ext_compliance_tasks SET status=$2,responsible_identity=COALESCE(responsible_identity,$3),completion_result=$4,cancellation_justification=$5,started_at=CASE WHEN $2='em_andamento' THEN NOW() ELSE started_at END,completed_at=CASE WHEN $2='concluida' THEN NOW() ELSE completed_at END,cancelled_at=CASE WHEN $2='cancelada' THEN NOW() ELSE cancelled_at END WHERE id=$1 RETURNING *`,[id,next,s.identityId,b.result||null,b.justification||null])).rows[0];return{body:{task:r},taskId:id,eventType:`task_${action}`,auditAction:`ext07_task_${action}`,target:id};});}
- async function handle(req,res){const s=await staff(req,res);if(!s)return;const p=new URL(req.url,"http://localhost").pathname;if(req.method!=="GET"&&!sameOrigin(req))return json(res,403,{error:"forbidden"});if(req.method==="GET"&&p==="/api/ext/compliance/documents")return list(req,res,s);if(req.method==="GET"&&p==="/api/ext/compliance/obligations")return obligations(req,res,s);if(req.method==="POST"&&p==="/api/ext/compliance/obligations")return createObligation(req,res,s);if(req.method==="POST"&&p==="/api/ext/compliance/documents")return createDocument(req,res,s);if(req.method==="POST"&&p==="/api/ext/compliance/evaluate")return evaluate(req,res,s);const m=p.match(/^\/api\/ext\/compliance\/tasks\/([0-9a-f-]{36})\/(start|complete|cancel)$/i);if(req.method==="POST"&&m)return taskTransition(req,res,s,m[1],m[2]);return json(res,405,{error:"method_not_allowed"});}
- return {handle};
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/; // regex correta: a 153 usava \\d e nunca casava
+const REFERENCE_TYPES = ["referencia_declarada", "numero_declarado", "registro_publico_declarado", "outro_declarado"];
+const CRITICALITIES = ["baixa", "media", "alta", "critica"];
+const CURRENT_DOC_STATUSES = ["vigente", "a_vencer", "em_renovacao"];
+const EXPIRY_RULE = "expiry_at_or_before_evaluation_date";
+const MAX_BODY_BYTES = 128 * 1024;
+
+const json = (res, status, body) => {
+  res.writeHead(status, { "content-type": "application/json" });
+  res.end(JSON.stringify(body));
+};
+
+const fingerprint = (value) =>
+  createHash("sha256").update(JSON.stringify(value, Object.keys(value).sort())).digest("hex");
+
+async function readBody(req) {
+  let size = 0;
+  const chunks = [];
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > MAX_BODY_BYTES) throw Object.assign(new Error("body_too_large"), { status: 413 });
+    chunks.push(chunk);
+  }
+  if (!chunks.length) return {};
+  let parsed;
+  try {
+    parsed = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    throw Object.assign(new Error("invalid_json"), { status: 400 });
+  }
+  if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") {
+    throw Object.assign(new Error("object_required"), { status: 400 });
+  }
+  return parsed;
+}
+
+const text = (value, min, max) =>
+  typeof value === "string" && value.trim().length >= min && value.trim().length <= max ? value.trim() : null;
+
+const isDate = (value) => ISO_DATE.test(String(value || ""));
+
+export function createExtComplianceApi({ pool, sameOrigin, requireSession }) {
+  // Sessão staff real; anônimo recebe 401, papel autenticado não autorizado 403.
+  async function staff(req, res) {
+    const session = await requireSession(req);
+    if (!session) {
+      json(res, 401, { error: "unauthorized" });
+      return null;
+    }
+    const role = String(session.role || session.userRole || "").toLowerCase();
+    if (!["admin", "ti"].includes(role)) {
+      json(res, 403, { error: "forbidden" });
+      return null;
+    }
+    return session;
+  }
+
+  async function activeStaffIdentity(client, id) {
+    if (!UUID.test(String(id || ""))) return false;
+    const query = await client.query(
+      `SELECT id FROM auth_identities
+        WHERE id=$1 AND kind='staff' AND status='active'
+          AND EXISTS (SELECT 1 FROM auth_staff_profiles p
+                       WHERE p.identity_id=auth_identities.id AND p.role IN ('admin','ti'))`,
+      [id],
+    );
+    return Boolean(query.rows[0]);
+  }
+
+  // Mutação canônica: BEGIN -> lock/revalidação -> replay idempotência ->
+  // escrita -> tarefa -> evento imutável -> audit_log -> COMMIT.
+  // Falha de audit_log faz rollback e responde 503 (helper tolerante não é usado).
+  async function mutate(req, res, session, work) {
+    if (!sameOrigin(req)) return json(res, 403, { error: "forbidden" });
+    const key = String(req.headers["idempotency-key"] || "").trim();
+    if (key.length < 8 || key.length > 200) return json(res, 400, { error: "idempotency_key_required" });
+    let body;
+    try {
+      body = await readBody(req);
+    } catch (error) {
+      return json(res, error.status || 400, { error: error.message });
+    }
+    const requestFingerprint = fingerprint(body);
+    let client;
+    try {
+      client = await pool.connect();
+      await client.query("BEGIN");
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`ext07:${session.identityId}:${key}`]);
+      const prior = (
+        await client.query(
+          "SELECT * FROM ext_compliance_events WHERE created_by_identity=$1 AND idempotency_key=$2",
+          [session.identityId, key],
+        )
+      ).rows[0];
+      if (prior) {
+        if (prior.request_fingerprint !== requestFingerprint) {
+          await client.query("ROLLBACK");
+          return json(res, 409, { error: "idempotency_key_reused" });
+        }
+        await client.query("COMMIT");
+        return json(res, 200, { ...prior.payload, replayed: true });
+      }
+      const outcome = await work(client, body);
+      if (outcome.deny) {
+        await client.query("ROLLBACK");
+        return json(res, outcome.deny.status, outcome.deny.body);
+      }
+      await client.query(
+        `INSERT INTO ext_compliance_events
+           (obligation_id, document_id, task_id, event_type, payload, idempotency_key, request_fingerprint, created_by_identity)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [
+          outcome.obligationId || null,
+          outcome.documentId || null,
+          outcome.taskId || null,
+          outcome.eventType,
+          JSON.stringify(outcome.body),
+          key,
+          requestFingerprint,
+          session.identityId,
+        ],
+      );
+      try {
+        await client.query("INSERT INTO audit_log(action,actor,target,meta) VALUES ($1,$2,$3,$4)", [
+          outcome.auditAction,
+          session.identityId,
+          outcome.target,
+          JSON.stringify(outcome.auditMeta || {}),
+        ]);
+      } catch {
+        await client.query("ROLLBACK");
+        return json(res, 503, { error: "audit_unavailable" });
+      }
+      await client.query("COMMIT");
+      return json(res, outcome.status || 200, outcome.body);
+    } catch (error) {
+      await client?.query("ROLLBACK").catch(() => {});
+      const message = String(error?.message || "");
+      if (error?.code === "23505") return json(res, 409, { error: "conflict" });
+      if (/compliance (task|document|historical)|canonical compliance|task (completion|cancellation)/i.test(message)) {
+        return json(res, 409, { error: "invalid_transition", detail: message.slice(0, 120) });
+      }
+      console.error("EXT-07 mutation failed", message);
+      return json(res, 503, { error: "compliance_journey_unavailable" });
+    } finally {
+      client?.release();
+    }
+  }
+
+  const DOC_LIST_COLUMNS = `d.id, d.protocol, d.title, d.description, d.compliance_type::text AS compliance_type,
+    d.status::text AS status, d.obligation_id, d.origin, d.is_private, d.version_no, d.replacement_of,
+    to_char(d.effective_start_date,'YYYY-MM-DD') AS effective_start_date,
+    to_char(d.issue_date,'YYYY-MM-DD') AS issue_date,
+    to_char(d.expiry_date,'YYYY-MM-DD') AS expiry_date,
+    d.reference_type, d.created_at, d.updated_at`;
+
+  async function listDocuments(req, res) {
+    const query = await pool.query(
+      `SELECT ${DOC_LIST_COLUMNS}
+         FROM ext_compliance_documents d
+        WHERE d.origin='ext07_canonica'
+        ORDER BY d.expiry_date NULLS LAST, d.created_at DESC LIMIT 200`,
+    );
+    return json(res, 200, {
+      items: query.rows,
+      source: "ext_compliance_documents",
+      file_boundary: "referencia_declarada_nao_arquivo_verificado",
+    });
+  }
+
+  async function documentDetail(req, res, id) {
+    if (!UUID.test(String(id || ""))) return json(res, 400, { error: "invalid_document" });
+    const row = (
+      await pool.query(
+        `SELECT ${DOC_LIST_COLUMNS}, d.document_number, d.declared_reference, d.reference_source,
+                d.responsible_identity, d.cancellation_justification, d.validity_rule,
+                to_char(d.evaluation_date,'YYYY-MM-DD') AS evaluation_date
+           FROM ext_compliance_documents d
+          WHERE d.id=$1 AND d.origin='ext07_canonica'`,
+        [id],
+      )
+    ).rows[0];
+    if (!row) return json(res, 404, { error: "document_not_found" });
+    return json(res, 200, {
+      document: row,
+      source: "ext_compliance_documents",
+      file_boundary: "referencia_declarada_nao_arquivo_verificado",
+    });
+  }
+
+  async function listObligations(req, res) {
+    const query = await pool.query(
+      `SELECT o.id, o.obligation_type, o.title, o.description, o.declared_source, o.applicability_scope,
+              o.applicability_justification, o.validity_rule, o.renewal_lead_days, o.criticality,
+              o.status::text AS status, o.responsible_identity, i.display_name AS responsible_name, o.created_at
+         FROM ext_compliance_obligations o
+         JOIN auth_identities i ON i.id=o.responsible_identity
+        ORDER BY o.created_at DESC LIMIT 200`,
+    );
+    return json(res, 200, {
+      items: query.rows,
+      source: "ext_compliance_obligations",
+      denominator: query.rows.length,
+      absence_is_not_zero: query.rows.length === 0,
+    });
+  }
+
+  async function createObligation(req, res, session) {
+    return mutate(req, res, session, async (client, body) => {
+      const obligationType = text(body.obligation_type, 3, 100);
+      const title = text(body.title, 5, 200);
+      const description = text(body.description, 10, 2000);
+      const declaredSource = text(body.declared_source, 5, 1000);
+      const scope = text(body.applicability_scope, 3, 500);
+      const justification = text(body.applicability_justification, 10, 2000);
+      const validityRule = text(body.validity_rule, 5, 500);
+      if (!obligationType || !title || !description || !declaredSource || !scope || !justification || !validityRule) {
+        return { deny: { status: 400, body: { error: "invalid_obligation" } } };
+      }
+      // Estado, autoria e timestamps vêm do servidor; corpo não decide nada disso.
+      const responsible = body.responsible_identity;
+      if (!(await activeStaffIdentity(client, responsible))) {
+        return { deny: { status: 400, body: { error: "responsible_staff_required" } } };
+      }
+      const lead = Number.isInteger(body.renewal_lead_days) ? body.renewal_lead_days : 30;
+      const criticality = CRITICALITIES.includes(body.criticality) ? body.criticality : "media";
+      const row = (
+        await client.query(
+          `INSERT INTO ext_compliance_obligations
+             (obligation_type, title, description, declared_source, applicability_scope,
+              applicability_justification, validity_rule, renewal_lead_days, criticality,
+              responsible_identity, created_by_identity)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+          [obligationType, title, description, declaredSource, scope, justification, validityRule, lead, criticality, responsible, session.identityId],
+        )
+      ).rows[0];
+      return {
+        status: 201,
+        body: { obligation: row, message: "obrigação declarada; não é validação jurídica nem confirmação por órgão público" },
+        obligationId: row.id,
+        eventType: "obligation_created",
+        auditAction: "ext07_obligation_create",
+        target: row.id,
+      };
+    });
+  }
+
+  // Datas coerentes: emissão não futura, vencimento >= emissão, vigência dentro do período.
+  // O estado é derivado do relógio do servidor, nunca do corpo.
+  function validateDocumentDates({ issue, expiry, effectiveStart, today, requireCurrentValidity }) {
+    if (!isDate(issue) || !isDate(expiry)) return { error: "invalid_validity" };
+    if (issue > today) return { error: "issue_date_in_future" };
+    if (expiry < issue) return { error: "invalid_validity" };
+    if (effectiveStart !== undefined && effectiveStart !== null) {
+      if (!isDate(effectiveStart) || effectiveStart < issue || effectiveStart > expiry) return { error: "invalid_validity" };
+    }
+    if (requireCurrentValidity && expiry < today) return { error: "renewal_requires_current_validity" };
+    return { status: expiry < today ? "vencida" : "vigente" };
+  }
+
+  async function createDocument(req, res, session) {
+    return mutate(req, res, session, async (client, body) => {
+      if (!UUID.test(String(body.obligation_id || ""))) return { deny: { status: 400, body: { error: "invalid_obligation" } } };
+      const obligation = (
+        await client.query("SELECT * FROM ext_compliance_obligations WHERE id=$1 FOR UPDATE", [body.obligation_id])
+      ).rows[0];
+      if (!obligation) return { deny: { status: 404, body: { error: "obligation_not_found" } } };
+      if (!(await activeStaffIdentity(client, obligation.responsible_identity))) {
+        return { deny: { status: 409, body: { error: "responsible_staff_missing" } } };
+      }
+      // Uma versão corrente por obrigação: nova referência exige renovação.
+      const current = (
+        await client.query(
+          `SELECT id FROM ext_compliance_documents
+            WHERE obligation_id=$1 AND origin='ext07_canonica'
+              AND status::text IN ('vigente','a_vencer','em_renovacao')`,
+          [obligation.id],
+        )
+      ).rows[0];
+      if (current) return { deny: { status: 409, body: { error: "current_document_exists", hint: "renove o documento atual" } } };
+      const today = (await client.query("SELECT CURRENT_DATE::text AS today")).rows[0].today;
+      const issue = body.issue_date;
+      const expiry = body.expiry_date;
+      const effectiveStart = body.effective_start_date ?? issue;
+      const dates = validateDocumentDates({ issue, expiry, effectiveStart, today, requireCurrentValidity: false });
+      if (dates.error) return { deny: { status: 400, body: { error: dates.error } } };
+      const referenceType = REFERENCE_TYPES.includes(body.reference_type) ? body.reference_type : null;
+      const declaredReference = text(body.declared_reference, 3, 1000);
+      if (!referenceType || !declaredReference) {
+        return { deny: { status: 400, body: { error: "private_reference_required" } } };
+      }
+      const title = text(body.title, 5, 200);
+      const description = text(body.description, 10, 2000);
+      if (!title || !description) return { deny: { status: 400, body: { error: "invalid_document" } } };
+      const documentNumber = text(body.document_number, 3, 200);
+      const referenceSource = text(body.reference_source, 3, 500);
+      const protocol = `COMP-EXT-${today.replaceAll("-", "")}-${randomUUID().slice(0, 4).toUpperCase()}`;
+      let row;
+      try {
+        row = (
+          await client.query(
+            `INSERT INTO ext_compliance_documents
+               (protocol, title, description, compliance_type, status, document_number, issuer,
+                responsible_identity, issue_date, effective_start_date, expiry_date, validity_rule,
+                evaluation_date, reference_type, declared_reference, reference_source, is_private,
+                created_by_identity, obligation_id, origin)
+             VALUES ($1,$2,$3,$4,$5::ext_compliance_status,$6,$7,$8,$9,$10,$11,$12,CURRENT_DATE,$13,$14,$15,true,$16,$17,'ext07_canonica')
+             RETURNING id, protocol, title, status::text AS status, obligation_id, origin, version_no, replacement_of,
+                       to_char(issue_date,'YYYY-MM-DD') AS issue_date,
+                       to_char(effective_start_date,'YYYY-MM-DD') AS effective_start_date,
+                       to_char(expiry_date,'YYYY-MM-DD') AS expiry_date,
+                       reference_type, is_private`,
+            [
+              protocol, title, description,
+              ["licenca", "certidao", "seguro", "alvara", "outro"].includes(body.compliance_type) ? body.compliance_type : "outro",
+              dates.status, documentNumber, text(body.issuer, 3, 200), obligation.responsible_identity,
+              issue, effectiveStart, expiry, obligation.validity_rule, referenceType, declaredReference,
+              referenceSource, session.identityId, obligation.id,
+            ],
+          )
+        ).rows[0];
+      } catch (error) {
+        if (error?.code === "23505" && String(error?.constraint || "").includes("current_document_unique")) {
+          return { deny: { status: 409, body: { error: "current_document_exists", hint: "renove o documento atual" } } };
+        }
+        throw error;
+      }
+      return {
+        status: 201,
+        body: {
+          document: row,
+          message: "referência privada registrada; não representa arquivo armazenado, bytes, checksum, malware scan ou download",
+        },
+        obligationId: obligation.id,
+        documentId: row.id,
+        eventType: "document_created",
+        auditAction: "ext07_document_create",
+        target: row.id,
+      };
+    });
+  }
+
+  // Renovação: novo registro com vínculo explícito ao anterior; o anterior vira
+  // 'substituida' (terminal) e nunca é sobrescrito. Sem ciclo: só documento
+  // corrente não terminal pode ser renovado, e cada renovação o torna terminal.
+  async function renewDocument(req, res, session, id) {
+    return mutate(req, res, session, async (client, body) => {
+      if (!UUID.test(String(id || ""))) return { deny: { status: 400, body: { error: "invalid_document" } } };
+      const previous = (
+        await client.query("SELECT * FROM ext_compliance_documents WHERE id=$1 FOR UPDATE", [id])
+      ).rows[0];
+      if (!previous) return { deny: { status: 404, body: { error: "document_not_found" } } };
+      if (previous.origin !== "ext07_canonica") {
+        return { deny: { status: 409, body: { error: "legacy_document_not_renewable" } } };
+      }
+      if (!CURRENT_DOC_STATUSES.concat(["vencida"]).includes(String(previous.status))) {
+        return { deny: { status: 409, body: { error: "terminal_document_not_renewable" } } };
+      }
+      const justification = text(body.justification, 10, 2000);
+      if (!justification) return { deny: { status: 400, body: { error: "renewal_justification_required" } } };
+      const obligation = (
+        await client.query("SELECT * FROM ext_compliance_obligations WHERE id=$1 FOR UPDATE", [previous.obligation_id])
+      ).rows[0];
+      if (!obligation) return { deny: { status: 404, body: { error: "obligation_not_found" } } };
+      if (!(await activeStaffIdentity(client, obligation.responsible_identity))) {
+        return { deny: { status: 409, body: { error: "responsible_staff_missing" } } };
+      }
+      const today = (await client.query("SELECT CURRENT_DATE::text AS today")).rows[0].today;
+      const issue = body.issue_date;
+      const expiry = body.expiry_date;
+      const effectiveStart = body.effective_start_date ?? issue;
+      const dates = validateDocumentDates({ issue, expiry, effectiveStart, today, requireCurrentValidity: true });
+      if (dates.error) return { deny: { status: 400, body: { error: dates.error } } };
+      const referenceType = REFERENCE_TYPES.includes(body.reference_type) ? body.reference_type : previous.reference_type;
+      const declaredReference = text(body.declared_reference, 3, 1000);
+      if (!declaredReference) return { deny: { status: 400, body: { error: "private_reference_required" } } };
+      const referenceSource = text(body.reference_source, 3, 500) ?? previous.reference_source;
+      const protocol = `COMP-EXT-${today.replaceAll("-", "")}-${randomUUID().slice(0, 4).toUpperCase()}`;
+      await client.query("UPDATE ext_compliance_documents SET status='substituida', updated_at=NOW() WHERE id=$1", [previous.id]);
+      const row = (
+        await client.query(
+          `INSERT INTO ext_compliance_documents
+             (protocol, title, description, compliance_type, status, document_number, issuer,
+              responsible_identity, issue_date, effective_start_date, expiry_date, validity_rule,
+              reference_type, declared_reference, reference_source, is_private, created_by_identity,
+              obligation_id, origin, replacement_of, version_no)
+           VALUES ($1,$2,$3,$4,'vigente',$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,true,$15,$16,'ext07_canonica',$17,$18)
+           RETURNING id, protocol, title, status::text AS status, obligation_id, origin, version_no, replacement_of,
+                     to_char(issue_date,'YYYY-MM-DD') AS issue_date,
+                     to_char(effective_start_date,'YYYY-MM-DD') AS effective_start_date,
+                     to_char(expiry_date,'YYYY-MM-DD') AS expiry_date,
+                     reference_type, is_private`,
+          [
+            protocol, text(body.title, 5, 200) ?? previous.title,
+            text(body.description, 10, 2000) ?? previous.description,
+            String(previous.compliance_type), text(body.document_number, 3, 200) ?? previous.document_number,
+            text(body.issuer, 3, 200) ?? previous.issuer, obligation.responsible_identity,
+            issue, effectiveStart, expiry, obligation.validity_rule, referenceType, declaredReference,
+            referenceSource, session.identityId, obligation.id, previous.id, previous.version_no + 1,
+          ],
+        )
+      ).rows[0];
+      return {
+        status: 201,
+        body: {
+          document: row,
+          previous: { id: previous.id, status: "substituida", version_no: previous.version_no },
+          justification,
+          message: "renovação criada como novo registro; o anterior é histórico imutável",
+        },
+        obligationId: obligation.id,
+        documentId: row.id,
+        eventType: "document_renewed",
+        auditAction: "ext07_document_renew",
+        target: row.id,
+        auditMeta: { previous_document_id: previous.id, version_no: row.version_no },
+      };
+    });
+  }
+
+  // Avaliação temporal: data-base é sempre CURRENT_DATE do servidor (relógio do
+  // cliente nunca é aceito). Vencimento gera tarefa única por documento/período/
+  // regra na mesma transação; sem responsável staff ativo, falha fechado.
+  async function evaluate(req, res, session) {
+    return mutate(req, res, session, async (client) => {
+      const today = (await client.query("SELECT CURRENT_DATE::text AS today")).rows[0].today;
+      const expired = (
+        await client.query(
+          `SELECT d.id, d.obligation_id, d.status::text AS status,
+                  to_char(d.issue_date,'YYYY-MM-DD') AS issue_date,
+                  to_char(d.effective_start_date,'YYYY-MM-DD') AS effective_start_date,
+                  to_char(d.expiry_date,'YYYY-MM-DD') AS expiry_date,
+                  o.responsible_identity
+             FROM ext_compliance_documents d
+             JOIN ext_compliance_obligations o ON o.id=d.obligation_id
+            WHERE d.origin='ext07_canonica' AND d.expiry_date IS NOT NULL
+              AND d.expiry_date <= CURRENT_DATE
+              AND d.status::text NOT IN ('cancelada','substituida')
+            ORDER BY d.expiry_date
+            FOR UPDATE OF d`,
+        )
+      ).rows;
+      let tasksCreated = 0;
+      let tasksExisting = 0;
+      let markedExpired = 0;
+      const failedClosed = [];
+      for (const doc of expired) {
+        if (!(await activeStaffIdentity(client, doc.responsible_identity))) {
+          // Fail-closed: sem responsável staff ativo não há tarefa nem mudança de estado.
+          failedClosed.push({ document_id: doc.id, reason: "responsible_staff_missing" });
+          continue;
+        }
+        const period = `${doc.issue_date || doc.effective_start_date}:${doc.expiry_date}`;
+        const task = (
+          await client.query(
+            `INSERT INTO ext_compliance_tasks
+               (obligation_id, document_id, validity_period, rule, evaluation_date, due_date, facts,
+                responsible_identity, created_by_identity)
+             VALUES ($1,$2,$3,$4,CURRENT_DATE,$5,$6,$7,$8)
+             ON CONFLICT (document_id, validity_period, rule) DO NOTHING
+             RETURNING id`,
+            [
+              doc.obligation_id, doc.id, period, EXPIRY_RULE, doc.expiry_date,
+              JSON.stringify({ expiry_date: doc.expiry_date, evaluation_date: today, source: "server_date" }),
+              doc.responsible_identity, session.identityId,
+            ],
+          )
+        ).rows[0];
+        if (task) tasksCreated += 1;
+        else tasksExisting += 1;
+        if (doc.status !== "vencida") {
+          await client.query(
+            "UPDATE ext_compliance_documents SET status='vencida', evaluation_date=CURRENT_DATE, updated_at=NOW() WHERE id=$1",
+            [doc.id],
+          );
+          markedExpired += 1;
+        }
+      }
+      // Aviso prévio dentro da antecedência declarada (sem tarefa: tarefa é do vencimento).
+      const expiringSoon = (
+        await client.query(
+          `UPDATE ext_compliance_documents d
+              SET status='a_vencer', updated_at=NOW()
+             FROM ext_compliance_obligations o
+            WHERE o.id=d.obligation_id AND d.origin='ext07_canonica'
+              AND d.status::text='vigente'
+              AND d.expiry_date > CURRENT_DATE
+              AND d.expiry_date - CURRENT_DATE <= o.renewal_lead_days
+            RETURNING d.id`,
+        )
+      ).rows.length;
+      // Estado da obrigação deriva do documento corrente (único por índice da 154).
+      const obligationsTouched = [...new Set(expired.map((doc) => doc.obligation_id))];
+      for (const obligationId of obligationsTouched) {
+        const current = (
+          await client.query(
+            `SELECT status::text AS status FROM ext_compliance_documents
+              WHERE obligation_id=$1 AND origin='ext07_canonica'
+                AND status::text IN ('vigente','a_vencer','em_renovacao')
+              ORDER BY version_no DESC LIMIT 1`,
+            [obligationId],
+          )
+        ).rows[0];
+        await client.query("UPDATE ext_compliance_obligations SET status=$2, updated_at=NOW() WHERE id=$1", [
+          obligationId,
+          current ? current.status : "vencida",
+        ]);
+      }
+      return {
+        body: {
+          source: "server_date",
+          evaluation_date: today,
+          rule: EXPIRY_RULE,
+          facts: {
+            documents_expired: expired.length,
+            documents_marked_vencida: markedExpired,
+            documents_marked_a_vencer: expiringSoon,
+            tasks_created: tasksCreated,
+            tasks_already_existing: tasksExisting,
+            failed_closed: failedClosed,
+          },
+          denominator: expired.length,
+          absence_is_not_zero: expired.length === 0,
+          note: "avaliação temporal é operação administrativa explícita; execução agendada contínua é pendência documentada",
+        },
+        eventType: "expiry_evaluated",
+        auditAction: "ext07_expiry_evaluate",
+        target: session.identityId,
+      };
+    });
+  }
+
+  async function listTasks(req, res) {
+    const query = await pool.query(
+      `SELECT t.id, t.obligation_id, t.document_id, t.validity_period, t.rule,
+              to_char(t.evaluation_date,'YYYY-MM-DD') AS evaluation_date,
+              to_char(t.due_date,'YYYY-MM-DD') AS due_date,
+              t.status::text AS status, t.responsible_identity, t.completion_result,
+              t.cancellation_justification, t.created_at, t.started_at, t.completed_at, t.cancelled_at
+         FROM ext_compliance_tasks t
+        ORDER BY t.due_date, t.created_at LIMIT 200`,
+    );
+    return json(res, 200, { items: query.rows, source: "ext_compliance_tasks", rule: EXPIRY_RULE });
+  }
+
+  async function taskTransition(req, res, session, id, action) {
+    return mutate(req, res, session, async (client, body) => {
+      if (!UUID.test(String(id || ""))) return { deny: { status: 400, body: { error: "invalid_task" } } };
+      const task = (await client.query("SELECT * FROM ext_compliance_tasks WHERE id=$1 FOR UPDATE", [id])).rows[0];
+      if (!task) return { deny: { status: 404, body: { error: "task_not_found" } } };
+      const status = String(task.status);
+      if (["concluida", "cancelada"].includes(status)) {
+        return { deny: { status: 409, body: { error: "invalid_transition", detail: "terminal_task" } } };
+      }
+      if (action === "start" && status !== "aberta") {
+        return { deny: { status: 409, body: { error: "invalid_transition" } } };
+      }
+      if (action === "complete") {
+        const result = text(body.result, 10, 2000);
+        if (!result) return { deny: { status: 400, body: { error: "completion_result_required" } } };
+        if (!(await activeStaffIdentity(client, task.responsible_identity))) {
+          return { deny: { status: 409, body: { error: "completion_requires_responsible_and_result" } } };
+        }
+      }
+      if (action === "cancel") {
+        const justification = text(body.justification, 10, 1000);
+        if (!justification) return { deny: { status: 400, body: { error: "cancellation_justification_required" } } };
+      }
+      const next = action === "start" ? "em_andamento" : action === "complete" ? "concluida" : "cancelada";
+      const row = (
+        await client.query(
+          `UPDATE ext_compliance_tasks
+              SET status=$2,
+                  completion_result=COALESCE($3, completion_result),
+                  cancellation_justification=COALESCE($4, cancellation_justification),
+                  started_at=CASE WHEN $2='em_andamento' THEN NOW() ELSE started_at END,
+                  completed_at=CASE WHEN $2='concluida' THEN NOW() ELSE completed_at END,
+                  cancelled_at=CASE WHEN $2='cancelada' THEN NOW() ELSE cancelled_at END
+            WHERE id=$1
+            RETURNING id, obligation_id, document_id, validity_period, rule,
+                      to_char(evaluation_date,'YYYY-MM-DD') AS evaluation_date,
+                      to_char(due_date,'YYYY-MM-DD') AS due_date,
+                      status::text AS status, responsible_identity, completion_result,
+                      cancellation_justification, created_at, started_at, completed_at, cancelled_at`,
+          [id, next, body.result || null, body.justification || null],
+        )
+      ).rows[0];
+      return {
+        body: { task: row },
+        taskId: id,
+        eventType: `task_${action}`,
+        auditAction: `ext07_task_${action}`,
+        target: id,
+      };
+    });
+  }
+
+  async function handle(req, res) {
+    const session = await staff(req, res);
+    if (!session) return;
+    const pathname = new URL(req.url, "http://localhost").pathname;
+    if (req.method !== "GET" && !sameOrigin(req)) return json(res, 403, { error: "forbidden" });
+    if (req.method === "GET" && pathname === "/api/ext/compliance/documents") return listDocuments(req, res);
+    if (req.method === "GET" && pathname === "/api/ext/compliance/obligations") return listObligations(req, res);
+    if (req.method === "GET" && pathname === "/api/ext/compliance/tasks") return listTasks(req, res);
+    if (req.method === "POST" && pathname === "/api/ext/compliance/obligations") return createObligation(req, res, session);
+    if (req.method === "POST" && pathname === "/api/ext/compliance/documents") return createDocument(req, res, session);
+    if (req.method === "POST" && pathname === "/api/ext/compliance/evaluate") return evaluate(req, res, session);
+    const detail = pathname.match(/^\/api\/ext\/compliance\/documents\/([^/]+)$/);
+    if (req.method === "GET" && detail) return documentDetail(req, res, detail[1]);
+    const renew = pathname.match(/^\/api\/ext\/compliance\/documents\/([^/]+)\/renew$/);
+    if (req.method === "POST" && renew) return renewDocument(req, res, session, renew[1]);
+    const transition = pathname.match(/^\/api\/ext\/compliance\/tasks\/([^/]+)\/(start|complete|cancel)$/);
+    if (req.method === "POST" && transition) return taskTransition(req, res, session, transition[1], transition[2]);
+    return json(res, 405, { error: "method_not_allowed" });
+  }
+
+  return { handle };
 }
