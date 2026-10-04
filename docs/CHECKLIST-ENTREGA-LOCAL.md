@@ -1,3 +1,22 @@
+## Atualização 2026-10-04 — F07 / EXT-11 Analytics e experimentos A/B controlados
+
+**Base:** merge `58e213a11ccae35fc2f21002c9e1dda6b87bc333`; branch `arena/01a108c7-gruposegsystemseguranca`; PRs #126, #127, #129, #132, #133 e #134 não foram recriadas nem remescladas.
+
+- [x] Migração 163 aditiva; 001–162 imutáveis; próxima livre 164; tabela 086 preservada como legado e sem escrita canônica retroativa.
+- [x] Hipótese explícita, variantes A/B, métrica, privacidade/minimização e estados `rascunho`, `em_execucao`, `concluido`, `cancelado`, `arquivado`.
+- [x] Aprovação humana separada antes da execução; reversão/cancelamento controlados; observações só de origem operacional interna declarada, sem `winner`, significância ou resultados inventados.
+- [x] `ext_analytics_experiment_events` e `ext_analytics_observations` append-only com triggers de imutabilidade e origem/fingerprint registrados.
+- [x] Rotas canônicas e dispatcher/API_PATH_MATCH registrados: listagem, criação, detalhe, aprovação, transição e observações; escrita legada retorna 410 após autenticação/RBAC/same-origin.
+- [x] RBAC granular server-side fail-closed, sessões individuais, same-origin em mutações, Idempotency-Key com SHA-256 replay/conflito, advisory lock + `FOR UPDATE`.
+- [x] Auditoria atômica em `auth_access_audit`; falha injetada provoca rollback total e HTTP 503 `audit_unavailable`.
+- [x] UI `/admin/analytics` protegida por `AdminGate`, com mensagem explícita quando os dados são insuficientes e sem promessa de tráfego, conversões, fornecedor ou integração externa.
+- [x] Teste unitário focal `tests/ext11-analytics.test.mjs`: **10/10**.
+- [x] Gate focal `npm run test:ext11-analytics:pg`: **18/18**, PostgreSQL 17 descartável, migrações 001–163, servidor HTTP real e sessões staff reais; sem INSERT SQL de experimento/observação.
+- [x] Ambiente: `npm ci` reparou dependências e disponibilizou `libpq.so.5` no pacote embedded; banco remoto não utilizado.
+- [x] `node scripts/qa-wave0-static.mjs` **5/5**, `npm run typecheck`, `npm test` **555/555**, `npm run build` (**98 páginas**), `npm run test:migrations:pg` **163/163**, `git diff --check` e `node --check`.
+- [ ] Aceite humano.
+- [ ] Windows/EPERM e aplicação no banco de destino.
+
 ## Atualização 2026-10-04 — F06 / EXT-10 Continuidade
 
 - [x] Migração 162 aditiva; 001–161 imutáveis; próxima livre 163.
@@ -1612,10 +1631,10 @@ Continuidade operacional Aceite: Contingência por posto/cliente, contatos, exer
 
 ## EXT-11
 Analytics/A-B Aceite: Hipótese, variantes aprovadas, métrica e privacidade
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Handlers `/api/ext/*` para experimentos; tabelas `ext_analytics_experiments`/086; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
-- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
-- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
+- Estado: entregue_e_verificado_gate_local (2026-10-04, migração 163 + API/UI canônicas + gate PG17/HTTP)
+- Tela / API / dados / autorização: `/admin/analytics` protegido por `AdminGate`; `/api/ext/analytics/experiments` e sub-rotas de aprovação, transição e observações reais; `ext_analytics_experiments` preservada com `origin`, eventos e observações append-only; grants `analytics.read/write/approve/execute` consultados no servidor. Escrita `/api/ext/analytics-experiments` responde 410 após as guardas.
+- Integração e evidência (teste, resultado, commit): unitário focal 10/10; gate `npm run test:ext11-analytics:pg` 18/18 sem skip/todo/fail, PostgreSQL 17 descartável, 001–163, HTTP real e sessões staff reais; replay/conflito, concorrência, transição sem aprovação, fonte sintética, rollback de auditoria, imutabilidade e legado 410 cobertos.
+- Pendência / fronteira externa / aceite humano: aceite humano formal, Windows/EPERM e aplicação no banco de destino continuam pendentes. Não há tráfego A/B externo, significância, vencedor, SMTP, fornecedor ou dado inventado. Ver `AUDITORIA-TERRENO-L08.md`.
 
 ## EXT-12
 Editor visual avançado Aceite: Tokens/layouts versionados, preview e publicação

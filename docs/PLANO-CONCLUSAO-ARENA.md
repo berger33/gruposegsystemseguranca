@@ -1,3 +1,13 @@
+## Atualização corrente — EXT-11 / F07 Analytics e experimentos A/B controlados
+
+- Base confirmada: merge `58e213a11ccae35fc2f21002c9e1dda6b87bc333`; branch Arena fixa `arena/01a108c7-gruposegsystemseguranca`; PRs #126, #127, #129, #132, #133 e #134 já integradas e intocadas.
+- Migração aditiva `163-ext11-analytics-canonical-journey.sql`; 001–162 imutáveis; próxima livre: **164**.
+- Entregue: hipóteses, variantes A/B, métrica declarada, minimização e estados `rascunho/em_execucao/concluido/cancelado/arquivado`; aprovação humana, reversão/cancelamento, observações agregadas de fonte operacional interna e trilha append-only.
+- Rotas: `/api/ext/analytics/experiments`, `/:id`, `/:id/approve`, `/:id/transition` e `/:id/observations`; escrita legada `/api/ext/analytics-experiments` responde 410 depois dos guards. UI `/admin/analytics` protegida por `AdminGate`.
+- Garantias provadas no gate: RBAC server-side fail-closed e grants `analytics.*`, sessões individuais, same-origin, Idempotency-Key com SHA-256 replay/conflito, advisory lock + `FOR UPDATE`, auditoria transacional 503/rollback e imutabilidade de eventos/observações. Sem dado inventado, teste externo ou significância alegada.
+- Provas: `npm ci`; Wave0 5/5; typecheck OK; `npm test` 555/555; `npm run build` com 98 páginas; `npm run test:migrations:pg` 163/163; unitário focal EXT-11 10/10; `npm run test:ext11-analytics:pg` 18/18 e `npm run test:ext07-compliance:pg` 43/43 em PG17 descartável + servidor HTTP + sessões staff reais; `git diff --check`/`node --check` OK. O primeiro bloqueio ambiental de `libpq.so.5` foi reparado somente instalando as dependências do lockfile; nenhum banco remoto foi usado.
+- Pendências: aceite humano do operador, Windows/EPERM e validação de banco de destino continuam pendentes; a conclusão não significa ativação de tráfego A/B ou integração externa.
+
 ## Atualização corrente — EXT-10 / F06 Continuidade
 
 Implementar e provar planos de contingência, acionamento interno, simulados e recuperação pela API canônica; manter aceites humano e Windows como pendências.
@@ -70,7 +80,7 @@ Data: 2026-10-04. Base vigente desta fatia: `origin/main` `972e6563f5ea4888b62e8
 | F02 | Windows/EPERM symlink, isolamento QA×ambiente, scripts start/stop/status, backup/restauração em instância separada | F01 | pendente — requer Windows do operador para aceite |
 | F03 | Massa de demonstração e jornadas de negócio ponta a ponta (lead→recebimento, funcionário→RH, cliente→chamado, contas→baixa) | F01 | **em execução**: fundação + três jornadas provadas (lead→contrato→implantação #126 `c1a557f`, gate 1/1; funcionário→solicitação→hora→retorno #127 `d0f1cde`, gate 1/1; cliente→chamado→atendimento→aceite #129 `3c7e9ab1`, gate 1/1); falta contas→baixa→relatório |
 | F04 | EXT-08 conhecimento: base de procedimentos versionados, ciência formal, máquina de estados e busca | F01 | **entregue localmente**: migração 160, API canônica, `/admin/conhecimento`, gate `test:ext08-knowledge:pg` 15/15; aceite humano pendente |
-| F05–F13 | EXT-09 expansão, EXT-10 continuidade, EXT-11 analytics, EXT-12 visual, EXT-13 relatórios, EXT-14 inteligência comercial, EXT-15 emergencial, EXT-16 central/vídeo (projeto separado), EXT-17 biometria (projeto separado) — um requisito por PR | F01 | pendentes; tabelas 086–087 existem sem jornada provada |
+| F05–F13 | EXT-09 expansão, EXT-10 continuidade, EXT-11 analytics, EXT-12 visual, EXT-13 relatórios, EXT-14 inteligência comercial, EXT-15 emergencial, EXT-16 central/vídeo (projeto separado), EXT-17 biometria (projeto separado) — um requisito por PR | F01 | F05/F06/F07 entregues localmente nas fatias 161/162/163; EXT-12–17 permanecem pendentes; tabelas 086–087 não são, por si, jornada entregue |
 | F14 | IA/RAG real: AI-06 recuperação autorizada + AI-09 curadoria primeiro; depois AI-01..05, 07, 08, 10. Fallback não é inferência. | F03 (massa e escopos) | pendente; OLLAMA_ENABLED=false hoje = fallback |
 | F15 | Fronteiras parciais: portal externo fornecedor, upload real, recuperação de conta sem SMTP, jobs vs reinício, notificações internas, isolamento A/B, EXT-07 obrigação vencida | F04+ | pendente |
 | F16 | Aceite final: matriz de aceite 03-ACEITE.md, humano de Marcelo/Andreia/funcionário, relatório de riscos, runbook Windows | todas | pendente |

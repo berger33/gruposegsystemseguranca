@@ -113,6 +113,7 @@ import { createExtComplianceApi } from "./src/server/ext-compliance-api.mjs";
 import { createExtKnowledgeApi } from "./src/server/ext-knowledge-api.mjs";
 import { createExtExpansionApi } from "./src/server/ext-expansion-api.mjs";
 import { createExtContinuityApi } from "./src/server/ext-continuity-api.mjs";
+import { createExtAnalyticsApi } from "./src/server/ext-analytics-api.mjs";
 import { parseSchedulerConfig, startExtComplianceScheduler } from "./src/server/ext-compliance-scheduler.mjs";
 import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
 import { createCommercialHistoryApi } from "./src/server/commercial-history-api.mjs";
@@ -2335,6 +2336,14 @@ const extExpansionApi = createExtExpansionApi({
 
 const extContinuityApi = createExtContinuityApi({ pool: getPool(), sameOrigin, requireSession: readSession });
 
+// EXT-11 / F07: analytics canônica. Escritas aceitam somente observações
+// agregadas de origem operacional interna, sem tráfego ou fornecedor externo.
+const extAnalyticsApi = createExtAnalyticsApi({
+  pool: getPool(),
+  sameOrigin,
+  requireSession: readSession,
+});
+
 const extAdvancedApi = createExtAdvancedApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -4351,9 +4360,13 @@ async function routeApi(req, res) {
   }
   // EXT-10 continuidade canônica: planos, acionamentos internos, simulados e recuperação.
   if (url.pathname.startsWith("/api/ext/continuity/")) return extContinuityApi.handle(req, res);
-  // EXT-11 analytics A/B experimento reversível resultado sem dados inventados
+  // EXT-11 / F07 analytics canônica: hipótese, variantes, métrica,
+  // aprovação humana, observações reais e trilha imutável.
+  if (url.pathname.startsWith("/api/ext/analytics/")) return extAnalyticsApi.handle(req, res);
+  // Legado: GET permanece leitura autorizada e minimizada; qualquer escrita
+  // passa pelas guardas e recebe 410 sem alterar ext_analytics_experiments.
   if (url.pathname === "/api/admin/hr/ext-analytics-experiments" || url.pathname === "/api/crm/hr/ext-analytics-experiments" || url.pathname === "/api/hr/ext-analytics-experiments" || url.pathname === "/api/ext/analytics-experiments") {
-    return extAdvancedApi.handleAnalyticsExperiments(req, res);
+    return extAnalyticsApi.handleLegacy(req, res);
   }
   // EXT-12 editor visual avançado permissão real recarga consistente e rollback
   if (url.pathname === "/api/admin/hr/ext-visual-tokens" || url.pathname === "/api/crm/hr/ext-visual-tokens" || url.pathname === "/api/hr/ext-visual-tokens" || url.pathname === "/api/ext/visual-tokens") {
@@ -5867,6 +5880,7 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/ext/knowledge/")
   || pathname.startsWith("/api/ext/expansion/")
   || pathname.startsWith("/api/ext/continuity/")
+  || pathname.startsWith("/api/ext/analytics/")
   || pathname.startsWith("/api/ext/satisfaction/")
   || pathname === "/api/admin/hr/ext-bidding-documents"
   || pathname === "/api/crm/hr/ext-bidding-documents"
