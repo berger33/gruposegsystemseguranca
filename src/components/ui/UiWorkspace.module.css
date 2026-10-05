@@ -121,3 +121,45 @@
   .tabs { flex-direction: column; }
   .tab, .tabActive { width: 100%; text-align: left; }
 }
+
+/* UX-04: classes generalizadas depois de usadas em duas telas reais
+   (comercial/carteira em UX-03B e RH em UX-04), conforme o plano mestre:
+   "implementar conforme uso em duas telas reais, depois generalizar".
+   Nenhuma regra aqui altera dado, permissão, payload ou API. */
+
+.layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 16px; align-items: start; }
+.full { grid-column: 1 / -1; }
+
+/* Indicadores. Números tabulares para comparação vertical honesta.
+   Estes blocos só são renderizados quando a leitura REALMENTE terminou:
+   nunca servem para mostrar zero enquanto carrega ou quando falha. */
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap: 12px; margin-top: 12px; padding: 0; list-style: none; }
+.metric { border: 1px solid var(--ux-color-border); border-radius: var(--ux-radius-sm); padding: 14px; background: var(--ux-color-surface); }
+.metricValue { display: block; font-size: 1.75rem; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--ux-color-brand); }
+.metricLabel { display: block; margin-top: 4px; font-size: .8125rem; color: var(--ux-color-muted); line-height: 1.4; }
+
+/* Tabela: o contêiner rolável precisa de position:relative, senão o texto
+   exclusivo de leitor de tela (position:absolute) escapa e cria rolagem
+   horizontal no documento inteiro — regressão já apanhada em UX-03B. */
+.tableWrap { position: relative; overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+.table caption { text-align: left; padding: 0 0 8px; color: var(--ux-color-muted); font-size: .8125rem; }
+.table th, .table td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--ux-color-border); vertical-align: top; }
+.table th { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--ux-color-muted); }
+
+.notice { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--ux-color-border); border-left-width: 4px; border-left-color: var(--ux-color-brand); border-radius: var(--ux-radius-sm); line-height: 1.5; }
+.noticeError { border-left-color: #a4262c; }
+
+/* Credencial temporária: exibição única, nunca persistida na tela. */
+.credential { margin-top: 12px; padding: 14px; border: 2px dashed #8a5a00; border-radius: var(--ux-radius-sm); }
+.credential code { display: block; margin: 8px 0; padding: 10px; border-radius: var(--ux-radius-sm); background: #1b1b1b; color: #fff; overflow-wrap: anywhere; }
+
+.badgeRow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+/* Área legada embutida: declarada como tal, com contenção visual mínima
+   para não transbordar. O conteúdo e as chamadas de API não são alterados. */
+.legacy { min-width: 0; overflow-x: auto; }
+.legacy :global(table) { width: 100%; border-collapse: collapse; }
+.legacy :global(th), .legacy :global(td) { padding: 7px; border-bottom: 1px solid var(--ux-color-border); text-align: left; }
+.legacy :global(input), .legacy :global(select), .legacy :global(textarea) { max-width: 100%; }
+.legacy :global(pre), .legacy :global(a) { max-width: 100%; overflow-wrap: anywhere; }
