@@ -1,6 +1,20 @@
-# Status atual consolidado — reconciliação F00 + F01 + F03 + F04 (EXT-08) + F05 (EXT-09) + F06 (EXT-10) + F07 (EXT-11) + F08 (EXT-12) + F09 (EXT-13)
+# Status atual consolidado — reconciliação F00 + F01 + F03 + F04 (EXT-08) + F05 (EXT-09) + F06 (EXT-10) + F07 (EXT-11) + F08 (EXT-12) + F09 (EXT-13) + F10 (EXT-14)
 
-## Atualização desta sessão — F09 / EXT-13 Relatório periódico canônico
+## Atualização desta sessão — F10 / EXT-14 Inteligência comercial canônica
+
+Base reconfirmada: PR #137 está `MERGED` no GitHub (merge commit `fcc7cf4f8a7fbdface6efb565af708672a12413a`) e a PR #138 (EXT-13) também foi encontrada `MERGED` (merge commit `db90055f38a7f36f66d84e7bbae0e9dff554246d`); `origin/main` e a branch `arena/01a1094f-gruposegsystemseguranca` partiram desse SHA, com checkout limpo e sem recriar PRs antigas (#126, #127, #129, #132, #133, #134, #136, #137 e #138 permanecem integradas).
+
+Fatia escolhida: próxima EXT pendente (EXT-14 Inteligência comercial), pois a EXT-13 já foi entregue pela PR #138 e o requisito de escopo/isolamento por `client_account_id` da EXT-10 segue sem confirmação explícita. EXT-14 agora possui jornada canônica própria, sem contar a existência das tabelas/handlers legados da migração 087 como cobertura.
+
+A migração **166** é aditiva e preserva 001–165: adiciona origem canônica a `ext_commercial_intelligence`, novos estados (`contato_registrado`, `arquivada`), idempotência/fingerprint, janela de histórico declarada, evidência contada com fingerprint e identidade, nota de decisão, campos de contato registrado por identidade, eventos `ext_intel_events` append-only, permissões `intel.*` e ações de auditoria. O ledger vigente é **001–166**; próxima migração livre: **167**.
+
+API/UI: `/api/ext/intel/suggestions` com detalhe, transição justificada (aprovação humana exige evidência contada anterior), construção de evidência (`COUNT(*)`) de tabelas-fonte internas reais fixas por tipo e contato registrado internamente somente após aprovação; `/admin/inteligencia` protegido por `AdminGate`. Escritas legadas `/api/ext/commercial-intelligence` retornam 410 após guardas.
+
+**Resultado:** unitário EXT-14 **13/13**; gate `npm run test:ext14-intel:pg` **17/17** em PostgreSQL 17 descartável, migrações 001–166, HTTP real e sessões staff reais (o dado-fonte comercial nasceu pela rota pública real `/api/leads` e a evidência conferiu com o SQL); Wave0 **5/5**; `npm run typecheck` OK; `npm test` **599/599**; `npm run test:migrations:pg` **166/166**; `npm run build` **100 páginas**; regressão EXT-13 **17/17**; `git diff --check` e `node --check` OK.
+
+Limites honestos: não há aceite humano, Windows/EPERM, banco de destino, contato externo real (e-mail/telefone/mensagem), integração com fornecedor ou ator externo. O contato EXT-14 é registro interno autorizado e auditado, não um disparo de mensagem; nenhuma recomendação é inventada sem histórico contado.
+
+## Atualização anterior — F09 / EXT-13 Relatório periódico canônico
 
 Base reconfirmada: PR #137 está `MERGED` no GitHub, com merge commit `fcc7cf4f8a7fbdface6efb565af708672a12413a`; `origin/main`, `main` local e a branch `arena/01a10929-gruposegsystemseguranca` partiram desse SHA, com checkout limpo e sem recriar PRs antigas (#126, #127, #129, #132, #133, #134, #136 e #137 permanecem integradas).
 
@@ -482,7 +496,7 @@ Legenda do estado confirmado: `pronto_local` = validação automática local ant
 | EXT-11 | Analytics/A-B | entregue_e_verificado_gate_local | entregue_e_verificado_gate_local (migração 163, API/UI canônicas, RBAC, auditoria, idempotência e gate 18/18) | aceite humano, Windows/EPERM e aplicação no banco de destino; sem tráfego externo ou significância alegada | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-12 | Editor visual avançado | entregue_e_verificado_gate_local | entregue_e_verificado_gate_local (migração 164, API/UI canônicas, RBAC, auditoria, idempotência e gate 14/14; PR #137 integrada) | aceite humano, Windows/EPERM e banco de destino; publicação é registro interno, sem deploy externo/CDN/upload real | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-13 | Relatório periódico | entregue_e_verificado_gate_local | entregue_e_verificado_gate_local (migração 165, API/UI canônicas, totais contados de fontes internas, destinatários staff ativos e gate 17/17) | aceite humano, Windows/EPERM e banco de destino; envio é registro interno autorizado, sem SMTP/arquivo/agenda automática | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
-| EXT-14 | Inteligência comercial | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
+| EXT-14 | Inteligência comercial | entregue_e_verificado_gate_local | entregue_e_verificado_gate_local (migração 166, API/UI canônicas, evidência contada do histórico interno, aprovação humana obrigatória antes do contato e gate 17/17) | aceite humano, Windows/EPERM e banco de destino; contato é registro interno autorizado, sem e-mail/telefone/mensagem externa | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-15 | Apoio emergencial | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-16 | Central/vídeo | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-17 | Biometria/reconhecimento | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |

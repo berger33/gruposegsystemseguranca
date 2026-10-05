@@ -1,4 +1,15 @@
-## Atualização corrente — EXT-13 / F09 Relatório periódico canônico
+## Atualização corrente — EXT-14 / F10 Inteligência comercial canônica
+
+- Base confirmada: PR #137 `MERGED` no merge commit `fcc7cf4f8a7fbdface6efb565af708672a12413a` e PR #138 (EXT-13) já encontrada `MERGED` no merge commit `db90055f38a7f36f66d84e7bbae0e9dff554246d`; `origin/main` e a branch fixa desta sessão `arena/01a1094f-gruposegsystemseguranca` partiram desse SHA com checkout limpo. PRs #126, #127, #129, #132, #133, #134, #136, #137 e #138 já integradas e intocadas.
+- Fatia escolhida: próxima EXT pendente (EXT-14), pois a EXT-13 já foi entregue pela PR #138 e o isolamento por `client_account_id` da EXT-10 segue pendente por falta de confirmação explícita como requisito desta rodada.
+- Migração aditiva `166-ext14-intel-canonical-journey.sql`; 001–165 imutáveis; próxima livre: **167**.
+- Entregue: sugestões comerciais canônicas (indicação, reativação, upsell, cross-sell, risco, oportunidade) com justificativa obrigatória, janela de histórico declarada, evidência contada (`COUNT(*)`) de tabelas-fonte internas reais fixas por tipo com fingerprint, aprovação humana justificada que exige evidência anterior e contato **registrado internamente** somente após aprovação; eventos `ext_intel_events` append-only; tipo `outro` recusado por não ter fonte confirmada.
+- Rotas: `/api/ext/intel/suggestions`, `/:id`, `/:id/transition`, `/:id/evidence`, `/:id/contact`; escrita legada `/api/ext/commercial-intelligence` responde 410 depois dos guards. UI `/admin/inteligencia` protegida por `AdminGate`.
+- Garantias provadas no gate: RBAC granular server-side fail-closed (`intel.*`), sessões individuais, same-origin, Idempotency-Key com SHA-256 replay/conflito, advisory lock + `FOR UPDATE`, concorrência, auditoria transacional 503/rollback, imutabilidade de eventos, aprovação exigindo evidência e contato exigindo aprovação humana. Evidência conferida contra o SQL, com dado-fonte comercial nascido pela rota pública real `/api/leads`.
+- Provas: `npm ci`; Wave0 5/5; unitário EXT-14 13/13; `npm run test:ext14-intel:pg` 17/17; `npm run typecheck` OK; `npm test` 599/599; `npm run test:migrations:pg` 166/166; `npm run build` com 100 páginas; regressão EXT-13 17/17; `git diff --check` e `node --check` OK.
+- Pendências: aceite humano do operador, Windows/EPERM e validação de banco de destino continuam pendentes; o contato EXT-14 é registro interno autorizado — nenhum e-mail, telefonema ou mensagem externa é disparado e nenhuma recomendação é inventada sem histórico contado.
+
+## Atualização anterior — EXT-13 / F09 Relatório periódico canônico
 
 - Base confirmada: PR #137 `MERGED` no merge commit `fcc7cf4f8a7fbdface6efb565af708672a12413a`; `origin/main`, `main` local e a branch fixa desta sessão `arena/01a10929-gruposegsystemseguranca` partiram desse SHA com checkout limpo. PRs #126, #127, #129, #132, #133, #134, #136 e #137 já integradas e intocadas.
 - Fatia escolhida: próxima EXT pendente. O isolamento por `client_account_id` da EXT-10 segue pendente por falta de confirmação explícita como requisito desta rodada.
@@ -96,7 +107,7 @@ Data: 2026-10-04. Base vigente desta fatia: `origin/main` `972e6563f5ea4888b62e8
 ## Regras permanentes
 
 1. Uma fatia de implementação por PR; PR pequeno revisável; nunca mesclar PRs alternativas antigas.
-2. Migrações 001–164 são imutáveis; próxima livre no main vigente: **165** (reconfirmar antes de cada fatia).
+2. Migrações 001–166 são imutáveis; próxima livre no main vigente: **167** (reconfirmar antes de cada fatia).
 3. Autorização no servidor em toda API; nunca apenas ocultação no menu. Fail-closed em erro de banco/permissão.
 4. Preservar PLAT-01 (despacho à prova de rejeição), credenciais individuais, isolamento entre clientes, auditoria transacional e idempotência.
 5. Evidência real por fatia: comando + resultado + SHA + limite da prova. Banco sempre descartável (embedded-postgres de teste ou Compose exclusivo do operador). Sem segredos em git/logs.
@@ -112,7 +123,7 @@ Data: 2026-10-04. Base vigente desta fatia: `origin/main` `972e6563f5ea4888b62e8
 | F02 | Windows/EPERM symlink, isolamento QA×ambiente, scripts start/stop/status, backup/restauração em instância separada | F01 | pendente — requer Windows do operador para aceite |
 | F03 | Massa de demonstração e jornadas de negócio ponta a ponta (lead→recebimento, funcionário→RH, cliente→chamado, contas→baixa) | F01 | **em execução**: fundação + três jornadas provadas (lead→contrato→implantação #126 `c1a557f`, gate 1/1; funcionário→solicitação→hora→retorno #127 `d0f1cde`, gate 1/1; cliente→chamado→atendimento→aceite #129 `3c7e9ab1`, gate 1/1); falta contas→baixa→relatório |
 | F04 | EXT-08 conhecimento: base de procedimentos versionados, ciência formal, máquina de estados e busca | F01 | **entregue localmente**: migração 160, API canônica, `/admin/conhecimento`, gate `test:ext08-knowledge:pg` 15/15; aceite humano pendente |
-| F05–F13 | EXT-09 expansão, EXT-10 continuidade, EXT-11 analytics, EXT-12 visual, EXT-13 relatórios, EXT-14 inteligência comercial, EXT-15 emergencial, EXT-16 central/vídeo (projeto separado), EXT-17 biometria (projeto separado) — um requisito por PR | F01 | F05/F06/F07/F08/F09 têm implementação e gates locais nas fatias 161/162/163/164/165; EXT-10 está provada somente na jornada interna de staff e ainda não tem escopo/isolamento de cliente ou ator externo; EXT-14–17 permanecem pendentes; tabelas 086–087 não são, por si, jornada entregue |
+| F05–F13 | EXT-09 expansão, EXT-10 continuidade, EXT-11 analytics, EXT-12 visual, EXT-13 relatórios, EXT-14 inteligência comercial, EXT-15 emergencial, EXT-16 central/vídeo (projeto separado), EXT-17 biometria (projeto separado) — um requisito por PR | F01 | F05/F06/F07/F08/F09/F10 têm implementação e gates locais nas fatias 161/162/163/164/165/166; EXT-10 está provada somente na jornada interna de staff e ainda não tem escopo/isolamento de cliente ou ator externo; EXT-15–17 permanecem pendentes; tabelas 086–087 não são, por si, jornada entregue |
 | F14 | IA/RAG real: AI-06 recuperação autorizada + AI-09 curadoria primeiro; depois AI-01..05, 07, 08, 10. Fallback não é inferência. | F03 (massa e escopos) | pendente; OLLAMA_ENABLED=false hoje = fallback |
 | F15 | Fronteiras parciais: portal externo fornecedor, upload real, recuperação de conta sem SMTP, jobs vs reinício, notificações internas, isolamento A/B, EXT-07 obrigação vencida | F04+ | pendente |
 | F16 | Aceite final: matriz de aceite 03-ACEITE.md, humano de Marcelo/Andreia/funcionário, relatório de riscos, runbook Windows | todas | pendente |
