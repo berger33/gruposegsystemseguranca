@@ -44,6 +44,9 @@ try {
   directory = await mkdtemp(path.join(tmpdir(), 'seg-qa-ai01-pg-'));
   password = randomBytes(24).toString('hex');
   postgres = new EmbeddedPostgres({ databaseDir: path.join(directory, 'data'), port: pgPort, user: 'seg_qa', password, persistent: false,
+    // Windows herda WIN1252 do sistema se o cluster não explicitar locale/encoding.
+    // O ledger contém Unicode legítimo; o gate deve reproduzir o contrato UTF-8.
+    initdbFlags: ['--encoding=UTF8', '--locale=C'],
     postgresFlags: ['-c', 'listen_addresses=127.0.0.1'], onLog: () => {}, onError: error => console.error('AI01_PG_ERROR', safeError(error).slice(0, 300)) });
   await postgres.initialise(); await postgres.start(); await postgres.createDatabase('seg_qa_ai01');
   const databaseUrl = `postgresql://seg_qa:${password}@127.0.0.1:${pgPort}/seg_qa_ai01`;
