@@ -52,8 +52,10 @@ try {
   const databaseUrl = `postgresql://seg_qa:${password}@127.0.0.1:${pgPort}/seg_qa_ai01`;
   const migrated = await run(process.execPath, ['scripts/migrate-site-visual.mjs'], { DATABASE_MIGRATION_URL: databaseUrl, DATABASE_URL: '', QA_MIGRATION_ONLY: 'true' });
   if (migrated.code) throw new Error(`migrations_failed_exit_${migrated.code}`);
-  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  const built = await run(npmCommand, ['run', 'build'], { DATABASE_URL: '', DATABASE_MIGRATION_URL: '', NEXT_TELEMETRY_DISABLED: '1' });
+  // Evita spawn de npm.cmd, que pode retornar EINVAL no Windows/Node 22.
+  // O mesmo CLI oficial usado por `next build` é iniciado pelo node corrente.
+  const nextCli = path.join(root, 'node_modules', 'next', 'dist', 'bin', 'next');
+  const built = await run(process.execPath, [nextCli, 'build'], { DATABASE_URL: '', DATABASE_MIGRATION_URL: '', NEXT_TELEMETRY_DISABLED: '1' });
   if (built.code) throw new Error(`build_failed_exit_${built.code}`);
   const token = `qa-ai01-ti-${randomBytes(24).toString('hex')}`;
   const executed = await run(process.execPath, ['--test', '--test-concurrency=1', 'tests/ai01-public-rag.integration.test.mjs'], {
