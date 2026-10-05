@@ -14,6 +14,9 @@
 //  * a confirmação só aparece depois que o servidor persistiu a operação.
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import UiState from "../../../components/ui/UiState";
+import { describeFinError, finErrorFootnote } from "../../../lib/fin-vocabulary.mjs";
+import type { FinErrorDescriptor } from "../../../lib/fin-vocabulary.mjs";
 
 type Budget = {
   id: string;
@@ -82,14 +85,31 @@ const MARGIN_BASIS_LABEL: Record<string, string> = {
   dados_incompletos: "base insuficiente: falta receita ou custo (valores conhecidos preservados)",
 };
 
+// UX-07B: o erro carrega código e status, e é descrito pelo vocabulário da
+// família. O código canônico continua visível — no rodapé, entre parênteses.
 async function api(path: string, init?: RequestInit) {
-  const response = await fetch(path, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
-  });
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      ...init,
+      headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
+    });
+  } catch {
+    throw describeFinError(null, 0);
+  }
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(String(data.error || `Erro ${response.status}`));
+  if (!response.ok) throw describeFinError(typeof data?.error === "string" ? data.error : null, response.status);
   return data;
+}
+function finFailure(cause: unknown): FinErrorDescriptor {
+  return cause && typeof cause === "object" && typeof (cause as FinErrorDescriptor).kind === "string"
+    ? (cause as FinErrorDescriptor)
+    : describeFinError(null, 0);
+}
+/** Frase de leitura indisponível, sem transformar falha em ausência. */
+function leituraFalhou(o_que: string, cause: unknown): string {
+  const d = finFailure(cause);
+  return `Não foi possível ler ${o_que}. ${d.title}: ${d.detail} ${finErrorFootnote(d)}`;
 }
 
 export default function BudgetWorkspace() {
@@ -131,7 +151,7 @@ export default function BudgetWorkspace() {
       setBudgetsError("");
       return true;
     } catch (error) {
-      setBudgetsError(`Não foi possível ler os orçamentos (${error instanceof Error ? error.message : "falha desconhecida"}). A lista abaixo pode estar incompleta; tente novamente.`);
+      setBudgetsError(`${leituraFalhou("os orçamentos", error)} A lista abaixo pode estar incompleta — isto NÃO significa que não existam orçamentos.`);
       return false;
     }
   }, []);
@@ -142,7 +162,7 @@ export default function BudgetWorkspace() {
       setScenarios(data.scenarios || []);
       setScenariosError("");
     } catch (error) {
-      setScenariosError(`Não foi possível ler os cenários (${error instanceof Error ? error.message : "falha desconhecida"}).`);
+      setScenariosError(leituraFalhou("os cenários", error));
     }
   }, []);
 
@@ -153,7 +173,7 @@ export default function BudgetWorkspace() {
       setHistory(data.history || []);
       setHistoryError("");
     } catch (error) {
-      setHistoryError(`Não foi possível ler o histórico (${error instanceof Error ? error.message : "falha desconhecida"}).`);
+      setHistoryError(leituraFalhou("o histórico", error));
     }
   }, []);
 
@@ -204,7 +224,7 @@ export default function BudgetWorkspace() {
       setSelectedId(data.budget.id);
       await load();
     } catch (error) {
-      setMsg(`Falha ao criar orçamento: ${error instanceof Error ? error.message : "erro desconhecido"}`);
+      setMsg(`Falha ao criar orçamento. ${finFailure(error).title}: ${finFailure(error).detail} ${finErrorFootnote(finFailure(error))}`);
     } finally {
       setBusy(false);
     }
@@ -224,7 +244,7 @@ export default function BudgetWorkspace() {
       await load();
       await loadHistory(selected.id);
     } catch (error) {
-      setMsg(`Falha ao registrar ${label.toLowerCase()}: ${error instanceof Error ? error.message : "erro desconhecido"}`);
+      setMsg(`Falha ao registrar ${label.toLowerCase()}. ${finFailure(error).title}: ${finFailure(error).detail} ${finErrorFootnote(finFailure(error))}`);
     } finally {
       setBusy(false);
     }
@@ -251,7 +271,7 @@ export default function BudgetWorkspace() {
       await load();
       await loadHistory(selected.id);
     } catch (error) {
-      setMsg(`Falha ao revisar: ${error instanceof Error ? error.message : "erro desconhecido"}`);
+      setMsg(`Falha ao revisar. ${finFailure(error).title}: ${finFailure(error).detail} ${finErrorFootnote(finFailure(error))}`);
     } finally {
       setBusy(false);
     }
@@ -279,7 +299,7 @@ export default function BudgetWorkspace() {
       setScenario({ scenario_type: "base", title: "", premises: "", projected_revenue_cents: "", projected_cost_cents: "" });
       await loadScenarios();
     } catch (error) {
-      setMsg(`Falha ao criar cenário: ${error instanceof Error ? error.message : "erro desconhecido"}`);
+      setMsg(`Falha ao criar cenário. ${finFailure(error).title}: ${finFailure(error).detail} ${finErrorFootnote(finFailure(error))}`);
     } finally {
       setBusy(false);
     }
@@ -293,11 +313,17 @@ export default function BudgetWorkspace() {
       </p>
 
       {budgetsError && (
-        <p role="alert" data-testid="fin13-budgets-error">
-          {budgetsError} <button type="button" data-testid="fin13-budgets-retry" onClick={() => load()}>Tentar novamente</button>
-        </p>
+        <div data-testid="fin13-budgets-error">
+          <UiState variant="error" title="Não foi possível ler os orçamentos" detail={budgetsError}>
+            <button type="button" data-testid="fin13-budgets-retry" onClick={() => load()}>Tentar novamente</button>
+          </UiState>
+        </div>
       )}
-      {scenariosError && <p role="alert" data-testid="fin13-scenarios-error">{scenariosError}</p>}
+      {scenariosError && (
+        <div data-testid="fin13-scenarios-error">
+          <UiState variant="error" title="Não foi possível ler os cenários" detail={scenariosError} />
+        </div>
+      )}
 
       <form data-testid="fin13-budget-form" onSubmit={submitBudget} style={{ display: "grid", gap: 8, marginBottom: 16 }}>
         <h3>Criar orçamento ORC-FIN</h3>
@@ -378,7 +404,11 @@ export default function BudgetWorkspace() {
       {msg && <p role="status" data-testid="fin13-notice">{msg}</p>}
 
       <h3>Histórico do orçamento selecionado</h3>
-      {historyError && <p role="alert" data-testid="fin13-history-error">{historyError}</p>}
+      {historyError && (
+        <div data-testid="fin13-history-error">
+          <UiState variant="error" title="Não foi possível ler o histórico" detail={historyError} />
+        </div>
+      )}
       <ul data-testid="fin13-history-list">
         {!historyError && history.length === 0 && <li data-testid="fin13-history-empty">Nenhum evento carregado. Selecione um orçamento e use “Ver histórico”.</li>}
         {history.map(entry => (
@@ -393,7 +423,7 @@ export default function BudgetWorkspace() {
         {budgets.length === 0
           ? (budgetsError
             ? <li data-testid="fin13-budget-unavailable">Lista indisponível por falha de leitura — não confundir com ausência de orçamentos.</li>
-            : <li data-testid="fin13-budget-empty">Nenhum orçamento encontrado.</li>)
+            : <li data-testid="fin13-budget-empty">Nenhum orçamento encontrado. A leitura foi concluída com sucesso: não há orçamento registrado.</li>)
           : visibleBudgets.map(budget => (
             <li data-testid={`fin13-budget-row-${budget.id}`} key={budget.id}>
               {budget.protocol} · {budget.title} · {budget.status} · v{String(budget.version)} · receita {brl(budget.total_revenue_cents)} · margem {percent(budget.total_margin_percent) ?? "ausente"} · estimativa:{String(budget.is_estimate)} · {budget.estimate_note}
@@ -406,7 +436,7 @@ export default function BudgetWorkspace() {
         {selectedScenarios.length === 0
           ? (scenariosError
             ? <li data-testid="fin13-scenario-unavailable">Cenários indisponíveis por falha de leitura.</li>
-            : <li data-testid="fin13-scenario-empty">Nenhum cenário para o orçamento selecionado.</li>)
+            : <li data-testid="fin13-scenario-empty">Nenhum cenário para o orçamento selecionado. A leitura foi concluída com sucesso.</li>)
           : selectedScenarios.map(item => (
             <li data-testid={`fin13-scenario-row-${item.id}`} key={item.id}>
               {item.scenario_type} · {item.title} · receita {brl(item.projected_revenue_cents)} · custo {brl(item.projected_cost_cents)} · margem {brl(item.projected_margin_cents)} · {percent(item.computed_margin_percent) ?? "percentual ausente"} · {MARGIN_BASIS_LABEL[item.margin_basis || ""] || "base não classificada"} · origem do percentual: {item.margin_source || "não classificada"} · estimativa:{String(item.is_estimate)}

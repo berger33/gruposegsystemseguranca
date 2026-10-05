@@ -1,6 +1,14 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import UiState from "../../../components/ui/UiState";
+import {
+  conciliationStatusLabel,
+  describeFinError,
+  finErrorFootnote,
+  finErrorVariant,
+} from "../../../lib/fin-vocabulary.mjs";
+import type { FinErrorDescriptor } from "../../../lib/fin-vocabulary.mjs";
 
 type Statement = {
   id: string;
@@ -36,14 +44,26 @@ type Conciliation = {
 const money = (value: number | string | null | undefined) =>
   value == null ? "Dado ausente" : `R$ ${(Number(value) / 100).toFixed(2).replace(".", ",")}`;
 
+// UX-07B: o erro carrega código e status; a frase vem do vocabulário da
+// família e o código canônico fica no rodapé, entre parênteses.
 async function request(path: string, init?: RequestInit) {
-  const response = await fetch(path, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
-  });
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      ...init,
+      headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
+    });
+  } catch {
+    throw describeFinError(null, 0);
+  }
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || data.detail || `Erro ${response.status}`);
+  if (!response.ok) throw describeFinError(typeof data?.error === "string" ? data.error : null, response.status);
   return data;
+}
+function finFailure(cause: unknown): FinErrorDescriptor {
+  return cause && typeof cause === "object" && typeof (cause as FinErrorDescriptor).kind === "string"
+    ? (cause as FinErrorDescriptor)
+    : describeFinError(null, 0);
 }
 
 export default function BankReconciliationWorkspace() {
@@ -53,7 +73,8 @@ export default function BankReconciliationWorkspace() {
   const [payables, setPayables] = useState<Account[]>([]);
   const [conciliations, setConciliations] = useState<Conciliation[]>([]);
   const [notice, setNotice] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState<FinErrorDescriptor|null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   const [statementForm, setStatementForm] = useState({
     source: "extrato",
@@ -84,12 +105,12 @@ export default function BankReconciliationWorkspace() {
   });
 
   const run = async (operation: () => Promise<void>) => {
-    setError("");
+    setError(null);
     setNotice("");
     try {
       await operation();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Falha inesperada");
+      setError(finFailure(cause));
     }
   };
 
@@ -106,6 +127,7 @@ export default function BankReconciliationWorkspace() {
     setReceivables(receivableData.receivables || []);
     setPayables(payableData.payables || []);
     setConciliations(conciliationData.conciliations || []);
+    setLoaded(true);
   }
 
   useEffect(() => {
@@ -186,7 +208,15 @@ export default function BankReconciliationWorkspace() {
           gateway ou arquivo de produção.
         </p>
       </header>
-      {error && <p role="alert" data-testid="fin05-error">{error}</p>}
+      {error && (
+        <div data-testid="fin05-error">
+          <UiState
+            variant={finErrorVariant(error)}
+            title={error.title}
+            detail={`${error.detail} ${finErrorFootnote(error)}`}
+          />
+        </div>
+      )}
       {notice && <p role="status" data-testid="fin05-notice">{notice}</p>}
 
       <form data-testid="fin05-statement-form" onSubmit={createStatement} style={{ display: "grid", gap: 8 }}>
@@ -204,7 +234,7 @@ export default function BankReconciliationWorkspace() {
       <div>
         <h3>Extratos importados</h3>
         <ul data-testid="fin05-statements">
-          {statements.length === 0 ? <li>Nenhum extrato sintético.</li> : statements.map(statement => (
+          {statements.length === 0 ? <li>{loaded ? "Nenhum extrato sintético importado. A leitura foi concluída com sucesso." : "Extratos ainda não lidos."}</li> : statements.map(statement => (
             <li key={statement.id}>{statement.protocol} · {statement.source} · {statement.file_name} · {statement.total_transactions} transações · {money(statement.total_amount_cents)}</li>
           ))}
         </ul>
@@ -225,7 +255,7 @@ export default function BankReconciliationWorkspace() {
       <div>
         <h3>Transações do extrato</h3>
         <ul data-testid="fin05-transactions">
-          {transactions.length === 0 ? <li>Nenhuma transação sintética.</li> : transactions.map(transaction => (
+          {transactions.length === 0 ? <li>{loaded ? "Nenhuma transação sintética registrada. A leitura foi concluída com sucesso." : "Transações ainda não lidas."}</li> : transactions.map(transaction => (
             <li key={transaction.id}>{transaction.bank_ref} · {transaction.transaction_date} · {transaction.description} · {money(transaction.amount_cents)} · {transaction.is_conciliated ? "conciliada" : "pendente"}</li>
           ))}
         </ul>
@@ -253,9 +283,9 @@ export default function BankReconciliationWorkspace() {
       <div>
         <h3>Sugestões e confirmações</h3>
         <ul data-testid="fin05-conciliations">
-          {conciliations.length === 0 ? <li>Nenhuma sugestão.</li> : conciliations.map(conciliation => (
+          {conciliations.length === 0 ? <li>{loaded ? "Nenhuma sugestão de conciliação. A leitura foi concluída com sucesso — ausência de sugestão não é prova de extrato conciliado." : "Sugestões ainda não lidas."}</li> : conciliations.map(conciliation => (
             <li data-testid={`fin05-conciliation-${conciliation.id}`} key={conciliation.id}>
-              {conciliation.status} · conta {conciliation.receivable_id || conciliation.payable_id} · banco {conciliation.bank_transaction_id} · {money(conciliation.amount_matched_cents)} · {conciliation.suggestion_reason}
+              {conciliationStatusLabel(conciliation.status)} <small>(status {conciliation.status})</small> · conta {conciliation.receivable_id || conciliation.payable_id} · banco {conciliation.bank_transaction_id} · {money(conciliation.amount_matched_cents)} · {conciliation.suggestion_reason}
               {conciliation.status === "sugerida" && <button type="button" onClick={() => setConfirmationForm({ ...confirmationForm, id: conciliation.id, status: "conciliada" })}>Selecionar para confirmar</button>}
             </li>
           ))}

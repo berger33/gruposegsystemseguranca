@@ -65,6 +65,14 @@ const STAGES = {
       { route: '/admin/operacao', role: 'ti', slug: 'operacao', waitFor: 'Superfície canônica de operação' },
     ],
   },
+  'ux-07b': {
+    outputDir: 'docs/ux-07b-evidencias',
+    targets: [
+      // Subtítulo do cabeçalho: texto exclusivo do corpo, que não existe em
+      // nenhum item de menu (visível ou oculto a 390px).
+      { route: '/admin/financeiro', role: 'ti', slug: 'financeiro', waitFor: 'Contas, recorrência e pagamentos com auditoria transacional.' },
+    ],
+  },
   'ux-08': {
     outputDir: 'docs/ux-08-evidencias',
     targets: [
