@@ -8,6 +8,8 @@
 
 **UX-02:** [navegação administrativa por grupos e por papel](docs/UX-02-NAVEGACAO-2026-10-05.md), com busca de destinos permitidos, breadcrumb e menu móvel; UX-03 seguirá no CRM/comercial.
 
+**UX-03A:** [legibilidade e tarefas do CRM](docs/UX-03A-CRM-2026-10-05.md), com superfície clara e resultados responsivos. Detalhes, estados de leitura, comercial e carteira seguem pendentes na UX-03B.
+
 ## Continuação atual: EXT-05 — qualidade entregue localmente
 
 Base confirmada: PR #99 `MERGED`, merge commit `ba2202ff6655f425edf405afc42de7ce3786a2a0`, head EXT-04 `0c3a560d9ff1d4622a58e3fd306fb35bd4b26e6a`; após fetch, branch da sessão e `origin/main` em divergência **0/0**, árvore limpa. A migração aditiva 151 promove EXT-05 sem alterar 001–150.
