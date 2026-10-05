@@ -2795,7 +2795,7 @@ test('CRM-01..04: revalidação campo a campo de cadastro, contato, CSV e conver
       page.goto(`${baseUrl}/admin/crm`, { waitUntil: 'domcontentloaded' }),
     ]);
     assert.equal(listResponse.status(), 200);
-    await page.getByRole('heading', { name: /CRM — Empresas/ }).waitFor();
+    await page.getByRole('heading', { name: 'Empresas e oportunidades', exact: true }).waitFor();
     await assertNoHorizontalScroll(page, 'CRM-01..04');
     await context.close();
   } finally { await browser.close(); }
@@ -3289,7 +3289,7 @@ test('CRM-03: revisão dedicada de deduplicação — decisão explícita, persi
     await page.getByPlaceholder(/display_name,document_ref,city,segment,type/).fill(uiCsv);
     const [previewResponse] = await Promise.all([
       page.waitForResponse(response => response.url().endsWith('/api/crm/imports/preview') && response.request().method() === 'POST'),
-      page.getByRole('button', { name: /Prévia \(CRM-03\)/ }).click(),
+      page.getByRole('button', { name: 'Revisar prévia', exact: true }).click(),
     ]);
     assert.equal(previewResponse.status(), 201);
 
