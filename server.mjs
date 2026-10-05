@@ -1006,9 +1006,18 @@ async function handleAdminSession(req, res) {
   // que existir a primeira identidade de staff provisionada. Nunca emitem
   // sessão anônima: o bootstrap cria/usa uma identidade individual auditável.
   const token = String(body?.token || "");
+  // Gate AI-01: bootstrap sintético exclusivo de processo local descartável.
+  // Não habilita token alternativo em produção: exige flag focal, bind loopback
+  // e PostgreSQL loopback. O valor continua chegando apenas por ambiente e
+  // nunca é escrito em log ou no repositório.
+  const ai01GateToken = process.env.RUN_AI01_REAL === "1"
+    && hostname === "127.0.0.1"
+    && /^postgres(?:ql)?:\/\/[^@/]+@127\.0\.0\.1:\d+\//.test(String(process.env.DATABASE_URL || ""))
+    ? process.env.AI01_ADMIN_TOKEN
+    : undefined;
   const credentials = [
     ["marcelo", process.env.SITE_ADMIN_TOKEN_MARCELO],
-    ["ti", process.env.SITE_ADMIN_TOKEN_TI],
+    ["ti", process.env.SITE_ADMIN_TOKEN_TI || ai01GateToken],
   ];
   const tokensConfigured = credentials.some(([, value]) => value && value.length >= 32);
 

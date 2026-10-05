@@ -27,7 +27,7 @@ npm ci
 npm run test:ai01:pg
 ```
 
-O gate recusa `DATABASE_URL`, cria PostgreSQL 17 descartável em UTF-8, aplica 001–172, executa o build de produção, inicia HTTP real e exige o endpoint Ollama real. Ele cria e publica corpus sintético pela API canônica e verifica:
+O gate recusa `DATABASE_URL`, cria PostgreSQL 17 descartável em UTF-8, aplica 001–172, executa o build de produção, inicia HTTP real em loopback e exige o endpoint Ollama real. O bootstrap administrativo sintético só é aceito com `RUN_AI01_REAL=1` e aplicação/banco em `127.0.0.1`; não existe em execução normal. O gate cria e publica corpus sintético pela API canônica e verifica:
 
 - modelo e tokens retornados pelo Ollama;
 - fontes recuperadas na resposta;
