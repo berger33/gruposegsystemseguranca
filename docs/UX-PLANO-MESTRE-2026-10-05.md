@@ -6,7 +6,7 @@
 
 | Evidência no repositório | Consequência para a pessoa usuária | Prioridade |
 |---|---|---|
-| `src/app/admin/AdminGate.tsx`: 27 destinos planos na navegação superior, exibidos conforme papel; `AdminHub.tsx`: grade que repete esses destinos | Marcelo/admin/TI precisam varrer uma lista longa e misturada; tarefas afins não aparecem como grupo | P0 |
+| `src/app/admin/AdminGate.tsx`: 26 destinos planos no catálogo de navegação, exibidos conforme papel; `AdminHub.tsx`: grade que repete os destinos permitidos | Marcelo/admin/TI precisam varrer uma lista longa e misturada; tarefas afins não aparecem como grupo | P0 |
 | `src/app/admin/AdminChrome.module.css`: contêiner de 1080 px, navegação que quebra linhas, rótulos de 12,5 px | Pouca área útil e localização difícil em telas largas e estreitas | P0 |
 | `src/app/admin/crm/page.tsx`: criação, importação, funil, busca e tabelas numa página; títulos exibem códigos CRM-xx | Carga cognitiva alta; conceitos internos substituem linguagem de negócio | P0 |
 | `src/app/admin/funcionarios/RhWorkspace.tsx`: várias frentes de RH e processos legados densos, parte em JSX compacto | Fluxos sensíveis pouco guiados; difícil reconhecer etapa e resultado | P0 |

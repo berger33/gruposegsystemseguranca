@@ -2,6 +2,8 @@
 
 > **Estado de referência (05/10/2026):** `main` inclui o RAG local por área e as migrações 001–174. Os blocos “Continuação atual” abaixo são registros históricos de etapas anteriores e não devem ser lidos como o HEAD vigente. Para evolução visual, leia o [plano mestre de UX](docs/UX-PLANO-MESTRE-2026-10-05.md) e o [prompt de execução em etapas para o Arena](docs/ARENA-PROMPT-UX-ETAPAS-2026-10-05.md). A configuração e os limites reais do RAG estão em [RAG local por área](docs/AI-RAG-LOCAL-2026-10-05.md). Verifique o SHA e o ledger novamente antes de implementar.
 
+**UX-00:** [auditoria e linha de base visual](docs/UX-00-AUDITORIA-BASELINE-2026-10-05.md), [inventário completo das 98 páginas](docs/UX-00-INVENTARIO-ROTAS.csv). São evidências de navegação e código, não homologação de todas as jornadas.
+
 ## Continuação atual: EXT-05 — qualidade entregue localmente
 
 Base confirmada: PR #99 `MERGED`, merge commit `ba2202ff6655f425edf405afc42de7ce3786a2a0`, head EXT-04 `0c3a560d9ff1d4622a58e3fd306fb35bd4b26e6a`; após fetch, branch da sessão e `origin/main` em divergência **0/0**, árvore limpa. A migração aditiva 151 promove EXT-05 sem alterar 001–150.
