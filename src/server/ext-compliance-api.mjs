@@ -230,12 +230,13 @@ export function createExtComplianceApi({ pool, sameOrigin, requireSession, sched
       }
       await client.query(
         `INSERT INTO ext_compliance_events
-           (obligation_id, document_id, task_id, event_type, payload, idempotency_key, request_fingerprint, created_by_identity)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+           (obligation_id, document_id, task_id, action_plan_id, event_type, payload, idempotency_key, request_fingerprint, created_by_identity)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
         [
           outcome.obligationId || null,
           outcome.documentId || null,
           outcome.taskId || null,
+          outcome.actionPlanId || null,
           outcome.eventType,
           JSON.stringify(outcome.body),
           key,
@@ -260,7 +261,7 @@ export function createExtComplianceApi({ pool, sameOrigin, requireSession, sched
       await client?.query("ROLLBACK").catch(() => {});
       const message = String(error?.message || "");
       if (error?.code === "23505") return json(res, 409, { error: "conflict" });
-      if (/compliance (task|document|historical)|canonical compliance|task (completion|cancellation)/i.test(message)) {
+      if (/compliance (task|document|historical|action plan)|canonical compliance|task (completion|cancellation)|action plan (completion|cancellation)/i.test(message)) {
         return json(res, 409, { error: "invalid_transition", detail: message.slice(0, 120) });
       }
       console.error("EXT-07 mutation failed", message);
@@ -646,6 +647,244 @@ export function createExtComplianceApi({ pool, sameOrigin, requireSession, sched
     });
   }
 
+  async function listActionPlans(req, res) {
+    const url = new URL(req.url, "http://localhost");
+    const obligationId = url.searchParams.get("obligation_id");
+    const status = url.searchParams.get("status");
+    const planType = url.searchParams.get("plan_type");
+
+    let sql = `SELECT p.id, p.obligation_id, p.document_id, p.task_id, p.plan_type,
+                      p.title, p.description, p.root_cause, p.status,
+                      to_char(p.due_date, 'YYYY-MM-DD') AS due_date,
+                      p.responsible_identity, i.display_name AS responsible_name,
+                      p.completion_result, p.cancellation_justification,
+                      p.started_at, p.completed_at, p.cancelled_at, p.created_at, p.updated_at,
+                      o.title AS obligation_title
+                 FROM ext_compliance_action_plans p
+                 JOIN ext_compliance_obligations o ON o.id=p.obligation_id
+                 JOIN auth_identities i ON i.id=p.responsible_identity`;
+    const where = [];
+    const params = [];
+    if (obligationId && UUID.test(obligationId)) {
+      params.push(obligationId);
+      where.push(`p.obligation_id = $${params.length}`);
+    }
+    if (status && ["aberto", "em_andamento", "concluido", "cancelado"].includes(status)) {
+      params.push(status);
+      where.push(`p.status = $${params.length}`);
+    }
+    if (planType && ["corretivo", "preventivo"].includes(planType)) {
+      params.push(planType);
+      where.push(`p.plan_type = $${params.length}`);
+    }
+    if (where.length) {
+      sql += ` WHERE ${where.join(" AND ")}`;
+    }
+    sql += ` ORDER BY p.due_date ASC, p.created_at DESC LIMIT 200`;
+
+    const query = await pool.query(sql, params);
+    return json(res, 200, {
+      items: query.rows,
+      source: "ext_compliance_action_plans",
+      denominator: query.rows.length,
+      absence_is_not_zero: query.rows.length === 0,
+      note: "planos de ação corretivos e preventivos são controles internos auditados; não representam parecer jurídico",
+    });
+  }
+
+  async function actionPlanDetail(req, res, id) {
+    if (!UUID.test(String(id || ""))) return json(res, 400, { error: "invalid_action_plan" });
+    const row = (
+      await pool.query(
+        `SELECT p.id, p.obligation_id, p.document_id, p.task_id, p.plan_type,
+                p.title, p.description, p.root_cause, p.status,
+                to_char(p.due_date, 'YYYY-MM-DD') AS due_date,
+                p.responsible_identity, i.display_name AS responsible_name,
+                p.created_by_identity, c.display_name AS created_by_name,
+                p.completion_result, p.cancellation_justification,
+                p.started_at, p.completed_at, p.cancelled_at, p.created_at, p.updated_at,
+                o.title AS obligation_title
+           FROM ext_compliance_action_plans p
+           JOIN ext_compliance_obligations o ON o.id=p.obligation_id
+           JOIN auth_identities i ON i.id=p.responsible_identity
+           JOIN auth_identities c ON c.id=p.created_by_identity
+          WHERE p.id=$1`,
+        [id],
+      )
+    ).rows[0];
+    if (!row) return json(res, 404, { error: "action_plan_not_found" });
+
+    const events = await pool.query(
+      `SELECT e.id, e.event_type, e.payload, e.created_at, e.created_by_identity,
+              i.display_name AS created_by_name
+         FROM ext_compliance_events e
+         LEFT JOIN auth_identities i ON i.id=e.created_by_identity
+        WHERE e.action_plan_id=$1
+        ORDER BY e.created_at ASC`,
+      [id],
+    );
+
+    return json(res, 200, {
+      action_plan: row,
+      events: events.rows,
+      source: "ext_compliance_action_plans",
+    });
+  }
+
+  async function createActionPlan(req, res, session) {
+    return mutate(req, res, session, async (client, body) => {
+      if (!UUID.test(String(body.obligation_id || ""))) {
+        return { deny: { status: 400, body: { error: "invalid_obligation" } } };
+      }
+      const obligation = (
+        await client.query("SELECT * FROM ext_compliance_obligations WHERE id=$1 FOR UPDATE", [body.obligation_id])
+      ).rows[0];
+      if (!obligation) return { deny: { status: 404, body: { error: "obligation_not_found" } } };
+
+      let documentId = null;
+      if (body.document_id) {
+        if (!UUID.test(String(body.document_id))) {
+          return { deny: { status: 400, body: { error: "invalid_document" } } };
+        }
+        const doc = (
+          await client.query(
+            "SELECT id, obligation_id, status::text AS status FROM ext_compliance_documents WHERE id=$1 AND origin='ext07_canonica'",
+            [body.document_id],
+          )
+        ).rows[0];
+        if (!doc || doc.obligation_id !== obligation.id) {
+          return { deny: { status: 404, body: { error: "document_not_found" } } };
+        }
+        documentId = doc.id;
+      }
+
+      let taskId = null;
+      if (body.task_id) {
+        if (!UUID.test(String(body.task_id))) {
+          return { deny: { status: 400, body: { error: "invalid_task" } } };
+        }
+        const task = (
+          await client.query("SELECT id, obligation_id FROM ext_compliance_tasks WHERE id=$1", [body.task_id])
+        ).rows[0];
+        if (!task || task.obligation_id !== obligation.id) {
+          return { deny: { status: 404, body: { error: "task_not_found" } } };
+        }
+        taskId = task.id;
+      }
+
+      const planType = body.plan_type === "corretivo" || body.plan_type === "preventivo" ? body.plan_type : null;
+      if (!planType) {
+        return { deny: { status: 400, body: { error: "invalid_plan_type", hint: "use 'corretivo' ou 'preventivo'" } } };
+      }
+
+      const title = text(body.title, 5, 200);
+      const description = text(body.description, 10, 2000);
+      const rootCause = body.root_cause !== undefined && body.root_cause !== null && String(body.root_cause).trim() !== ""
+        ? text(body.root_cause, 5, 2000)
+        : null;
+      if (body.root_cause && String(body.root_cause).trim() !== "" && !rootCause) {
+        return { deny: { status: 400, body: { error: "invalid_root_cause" } } };
+      }
+      if (!title || !description) {
+        return { deny: { status: 400, body: { error: "invalid_action_plan" } } };
+      }
+
+      if (!isDate(body.due_date)) {
+        return { deny: { status: 400, body: { error: "invalid_due_date" } } };
+      }
+
+      const responsible = body.responsible_identity || obligation.responsible_identity;
+      if (!(await isActiveStaffIdentity(client, responsible))) {
+        return { deny: { status: 400, body: { error: "responsible_staff_required" } } };
+      }
+
+      const row = (
+        await client.query(
+          `INSERT INTO ext_compliance_action_plans
+             (obligation_id, document_id, task_id, plan_type, title, description, root_cause,
+              due_date, responsible_identity, created_by_identity)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+           RETURNING id, obligation_id, document_id, task_id, plan_type, title, description, root_cause,
+                     status, to_char(due_date,'YYYY-MM-DD') AS due_date, responsible_identity,
+                     created_by_identity, created_at, updated_at`,
+          [obligation.id, documentId, taskId, planType, title, description, rootCause, body.due_date, responsible, session.identityId],
+        )
+      ).rows[0];
+
+      return {
+        status: 201,
+        body: {
+          action_plan: row,
+          message: "plano de ação preventivo/corretivo registrado; controle interno auditado de conformidade",
+        },
+        obligationId: obligation.id,
+        documentId: documentId,
+        taskId: taskId,
+        actionPlanId: row.id,
+        eventType: "action_plan_created",
+        auditAction: "ext07_action_plan_create",
+        target: row.id,
+        auditMeta: { plan_type: planType, obligation_id: obligation.id },
+      };
+    });
+  }
+
+  async function actionPlanTransition(req, res, session, id, action) {
+    return mutate(req, res, session, async (client, body) => {
+      if (!UUID.test(String(id || ""))) return { deny: { status: 400, body: { error: "invalid_action_plan" } } };
+      const plan = (
+        await client.query("SELECT * FROM ext_compliance_action_plans WHERE id=$1 FOR UPDATE", [id])
+      ).rows[0];
+      if (!plan) return { deny: { status: 404, body: { error: "action_plan_not_found" } } };
+      const status = String(plan.status);
+      if (["concluido", "cancelado"].includes(status)) {
+        return { deny: { status: 409, body: { error: "invalid_transition", detail: "terminal_action_plan" } } };
+      }
+      if (action === "start" && status !== "aberto") {
+        return { deny: { status: 409, body: { error: "invalid_transition" } } };
+      }
+      if (action === "complete") {
+        const result = text(body.result, 10, 2000);
+        if (!result) return { deny: { status: 400, body: { error: "completion_result_required" } } };
+        if (!(await isActiveStaffIdentity(client, plan.responsible_identity))) {
+          return { deny: { status: 409, body: { error: "completion_requires_responsible_and_result" } } };
+        }
+      }
+      if (action === "cancel") {
+        const justification = text(body.justification, 10, 1000);
+        if (!justification) return { deny: { status: 400, body: { error: "cancellation_justification_required" } } };
+      }
+      const next = action === "start" ? "em_andamento" : action === "complete" ? "concluido" : "cancelado";
+      const row = (
+        await client.query(
+          `UPDATE ext_compliance_action_plans
+              SET status=$2,
+                  completion_result=COALESCE($3, completion_result),
+                  cancellation_justification=COALESCE($4, cancellation_justification),
+                  started_at=CASE WHEN $2='em_andamento' THEN NOW() ELSE started_at END,
+                  completed_at=CASE WHEN $2='concluido' THEN NOW() ELSE completed_at END,
+                  cancelled_at=CASE WHEN $2='cancelado' THEN NOW() ELSE cancelled_at END
+            WHERE id=$1
+            RETURNING id, obligation_id, document_id, task_id, plan_type, title, description, root_cause,
+                      status, to_char(due_date,'YYYY-MM-DD') AS due_date, responsible_identity,
+                      completion_result, cancellation_justification,
+                      created_at, started_at, completed_at, cancelled_at, updated_at`,
+          [id, next, body.result || null, body.justification || null],
+        )
+      ).rows[0];
+      return {
+        body: { action_plan: row },
+        obligationId: plan.obligation_id,
+        documentId: plan.document_id,
+        taskId: plan.task_id,
+        actionPlanId: id,
+        eventType: `action_plan_${action}`,
+        auditAction: `ext07_action_plan_${action}`,
+        target: id,
+      };
+    });
+  }
+
   async function handle(req, res) {
     const session = await staff(req, res);
     if (!session) return;
@@ -654,16 +893,22 @@ export function createExtComplianceApi({ pool, sameOrigin, requireSession, sched
     if (req.method === "GET" && pathname === "/api/ext/compliance/documents") return listDocuments(req, res);
     if (req.method === "GET" && pathname === "/api/ext/compliance/obligations") return listObligations(req, res);
     if (req.method === "GET" && pathname === "/api/ext/compliance/tasks") return listTasks(req, res);
+    if (req.method === "GET" && pathname === "/api/ext/compliance/action-plans") return listActionPlans(req, res);
     if (req.method === "GET" && pathname === "/api/ext/compliance/schedule") return listSchedule(req, res);
     if (req.method === "POST" && pathname === "/api/ext/compliance/obligations") return createObligation(req, res, session);
     if (req.method === "POST" && pathname === "/api/ext/compliance/documents") return createDocument(req, res, session);
+    if (req.method === "POST" && pathname === "/api/ext/compliance/action-plans") return createActionPlan(req, res, session);
     if (req.method === "POST" && pathname === "/api/ext/compliance/evaluate") return evaluate(req, res, session);
     const detail = pathname.match(/^\/api\/ext\/compliance\/documents\/([^/]+)$/);
     if (req.method === "GET" && detail) return documentDetail(req, res, detail[1]);
+    const planDetail = pathname.match(/^\/api\/ext\/compliance\/action-plans\/([^/]+)$/);
+    if (req.method === "GET" && planDetail) return actionPlanDetail(req, res, planDetail[1]);
     const renew = pathname.match(/^\/api\/ext\/compliance\/documents\/([^/]+)\/renew$/);
     if (req.method === "POST" && renew) return renewDocument(req, res, session, renew[1]);
     const transition = pathname.match(/^\/api\/ext\/compliance\/tasks\/([^/]+)\/(start|complete|cancel)$/);
     if (req.method === "POST" && transition) return taskTransition(req, res, session, transition[1], transition[2]);
+    const planTransition = pathname.match(/^\/api\/ext\/compliance\/action-plans\/([^/]+)\/(start|complete|cancel)$/);
+    if (req.method === "POST" && planTransition) return actionPlanTransition(req, res, session, planTransition[1], planTransition[2]);
     return json(res, 405, { error: "method_not_allowed" });
   }
 

@@ -1,3 +1,17 @@
+## Atualização corrente — F15 / EXT-07 Planos de Ação de Compliance (Opção 1)
+
+- **Base:** `b26f93cb1262777827a46edc823e8fccd1c1e70e`, branch `arena/01a109c0-gruposegsystemseguranca`.
+- **Fatia entregue:** F15 / EXT-07: Planos de ação preventivos e corretivos de compliance para obrigações vencidas.
+- **Migração aditiva:** `168-ext07-compliance-action-plans.sql`; 001–167 imutáveis; próxima livre: **169**.
+- **Entregue:** tabela `ext_compliance_action_plans`, triggers de bloqueio de estados terminais, `action_plan_id` em `ext_compliance_events`, rotas canônicas `/api/ext/compliance/action-plans` e UI honesta em `/admin/compliance`.
+- **Provas:** `npm run test:ext07-compliance:pg` **50/50**; unitários EXT-07 **22/22**; `npm test` **617/617**; migrações **168/168**; build **101 páginas**; regressões EXT-15 **18/18** e EXT-10 **22/22**.
+
+## Reconciliação da sessão Arena — Início sobre PR #141 integrada (2026-10-05)
+
+- Base confirmada: PR #141 `MERGED` em `b26f93cb1262777827a46edc823e8fccd1c1e70e`; branch fixa `arena/01a109c0-gruposegsystemseguranca` alinhada a `origin/main` com checkout limpo.
+- Nenhuma PR paralela aberta. Ledger: 001–167 imutáveis; próxima livre: **168**.
+- Wave0 5/5, typecheck OK, 614/614 testes unitários verdes.
+
 ## Atualização corrente — EXT-10 isolamento por client_account_id (F06, requisito confirmado)
 
 - Base confirmada: PR #140 `MERGED` em `d393f076875b3fa2513a42d01dd856f2c7300729`; branch fixa `arena/01a10988-gruposegsystemseguranca` partiu desse SHA com checkout limpo. #128, #130 e #131 fechadas sem merge como `superseded` com autorização do operador.

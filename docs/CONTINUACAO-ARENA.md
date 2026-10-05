@@ -1,3 +1,49 @@
+## Atualização corrente — F15 / EXT-07 Planos de Ação Corretivos e Preventivos de Compliance (Opção 1)
+
+- **Base e branch:** `origin/main` confirmado em `b26f93cb1262777827a46edc823e8fccd1c1e70e` (merge commit da PR #141). Branch exclusiva desta sessão: `arena/01a109c0-gruposegsystemseguranca`.
+- **Fatia escolhida:** Opção 1 — F15 / EXT-07: Obrigação de conformidade vencida gerando plano de ação preventivo/corretivo canônico, fechando a pendência formal de compliance.
+- **Migração aditiva 168 (`168-ext07-compliance-action-plans.sql`):**
+  - Preserva 001–167 imutáveis; próxima livre passa a ser **169**.
+  - Cria tabela `ext_compliance_action_plans` com campos de obrigação (`obligation_id`), documento (`document_id`), tarefa (`task_id`), tipo (`plan_type`: `corretivo`/`preventivo`), título, descrição, causa raiz (`root_cause`), prazo (`due_date`), responsável staff ativo (`responsible_identity`), criador (`created_by_identity`), resultado de conclusão (`completion_result`) e justificativa de cancelamento (`cancellation_justification`).
+  - Triggers `ext_compliance_action_plan_guard` para `INSERT`, `UPDATE` e `DELETE`: garante que nasce `aberto`, exige responsável staff ativo, bloqueia mutações em estados terminais (`concluido`, `cancelado`), impede deleção física e exige resultado (mínimo 10 caracteres) na conclusão e justificativa (mínimo 10 caracteres) no cancelamento.
+  - Vínculo `action_plan_id` em `ext_compliance_events` (append-only e imutável).
+  - Ampliação dinâmica de `auth_access_audit_action_check` com `ext07_action_plan_create`, `ext07_action_plan_start`, `ext07_action_plan_complete`, `ext07_action_plan_cancel`.
+- **API canônica (`src/server/ext-compliance-api.mjs`):**
+  - `GET /api/ext/compliance/action-plans`: listagem com filtros por `obligation_id`, `status` e `plan_type`.
+  - `GET /api/ext/compliance/action-plans/:id`: detalhe do plano com trilha de eventos associada.
+  - `POST /api/ext/compliance/action-plans`: criação transacional de plano corretivo/preventivo com `Idempotency-Key`, fingerprint SHA-256, lock e auditoria atômica em `audit_log`.
+  - `POST /api/ext/compliance/action-plans/:id/(start|complete|cancel)`: máquina de estados com preenchimento de `started_at`, `completed_at` (exigindo resultado) e `cancelled_at` (exigindo justificativa).
+- **UI (`src/app/admin/compliance/ComplianceWorkspace.tsx`):**
+  - Seção de Planos de Ação (Preventivos / Corretivos) de Compliance com criação, listagem de pendências e ações de transição integradas com inputs de resultado e justificativa.
+  - Declaração explícita de controle interno de staff; sem parecer jurídico ou laudo regulatório externo fictício.
+- **Evidências locais:**
+  - `node scripts/qa-wave0-static.mjs`: **5/5** verificações estáticas OK (001–168).
+  - `tests/ext07-compliance.test.mjs`: **22/22** testes unitários aprovados.
+  - `npm run test:ext07-compliance:pg`: **50/50** aprovados em PostgreSQL 17 descartável com HTTP real, agendador e sessões staff reais.
+  - `npm test`: **617/617** testes unitários aprovados.
+  - `npm run test:migrations:pg`: **168/168** aplicadas duas vezes com controle de checksum.
+  - `npm run build`: **101 páginas** compiladas com sucesso.
+  - Regressões de vizinhança: EXT-15 **18/18**, EXT-10 **22/22**.
+  - `git diff --check` e `node --check`: OK.
+- **Limites honestos:** plano de ação de compliance é controle interno de equipe auditado; não constitui validação jurídica externa, upload/antivírus de arquivos nem auditoria regulatória terceirizada.
+
+## Reconciliação da sessão Arena — Início sobre PR #141 integrada (2026-10-05)
+
+- **Base e branch:** `origin/main` confirmado em `b26f93cb1262777827a46edc823e8fccd1c1e70e` (merge commit da PR #141, integrada em `2026-10-05T01:47:39Z`). A branch exclusiva desta sessão Arena é `arena/01a109c0-gruposegsystemseguranca`, partindo diretamente deste SHA com checkout limpo.
+- **Auditoria de PRs e Ledger:**
+  - Nenhuma PR aberta no repositório (`gh pr list --state open` vazio).
+  - PRs integradas e intocadas: #126, #127, #129, #132, #133, #134, #135, #136, #137, #138, #139, #140 e #141.
+  - PRs fechadas sem merge como superseded: #128, #130, #131.
+  - Ledger de migrações vigente: **001–167** (imutáveis).
+  - Próxima migração livre: **168** (não criada antecipadamente).
+- **Validações estáticas e unitárias locais:**
+  - `npm ci` executado com sucesso no ambiente sandbox.
+  - `node scripts/qa-wave0-static.mjs`: **5/5** verificações estáticas OK.
+  - `npm run typecheck`: OK (zero erros de tipagem).
+  - `npm test`: **614/614** testes unitários aprovados.
+  - `git diff --check` e `node --check`: OK.
+- **Status para a nova fatia:** repositório alinhado e pronto para a seleção da próxima fatia funcional pequena e canônica, sujeita à confirmação do operador.
+
 ## Atualização corrente — EXT-10 isolamento por client_account_id (F06, requisito confirmado)
 
 - Reconciliação da nova sessão: `gh pr view 140` confirmou a PR **MERGED** em `2026-10-05T00:40:43Z`, com merge commit real `d393f076875b3fa2513a42d01dd856f2c7300729`; `origin/main` confirmado nesse SHA e a branch fixa desta sessão `arena/01a10988-gruposegsystemseguranca` partiu dele com checkout limpo (sem necessidade de `--deepen`). PRs #126, #127, #129, #132, #133, #134, #136, #137, #138, #139 e #140 permanecem integradas e intocadas. Nenhuma sessão paralela avançou o ledger (001–167) ou a próxima fatia. Com autorização explícita do operador, as alternativas antigas ainda abertas #128, #130 e #131 (escopos F03 já entregues pelas PRs #129 e #132) foram fechadas sem merge como `superseded`, com comentário apontando a linha oficial.

@@ -70,7 +70,7 @@ test("EXT-07 migração 156 cria ledger de execuções agendadas sem tocar 001�
   assert.doesNotMatch(migration, /ALTER TABLE ext_compliance_(documents|obligations|tasks|events)/);
 });
 
-test("Migrações 156–167 preservadas e 167 registrada nos pontos do manifesto", async () => {
+test("Migrações 156–168 preservadas e 168 registrada nos pontos do manifesto", async () => {
   const migrator = await readRepo("scripts/migrate-site-visual.mjs");
   assert.match(migrator, /'156-ext07-scheduled-evaluation\.sql'/);
   assert.match(migrator, /'157-f03-employee-request-rh-return\.sql'/);
@@ -84,10 +84,11 @@ test("Migrações 156–167 preservadas e 167 registrada nos pontos do manifesto
   assert.match(migrator, /'165-ext13-reports-canonical-journey\.sql'/);
   assert.match(migrator, /'166-ext14-intel-canonical-journey\.sql'/);
   assert.match(migrator, /'167-ext15-emergency-canonical-journey\.sql'/);
-  assert.match(migrator, /files\.length !== 167/);
-  assert.match(migrator, /001–167/);
+  assert.match(migrator, /'168-ext07-compliance-action-plans\.sql'/);
+  assert.match(migrator, /files\.length !== 168/);
+  assert.match(migrator, /001–168/);
   const wave0 = await readRepo("scripts/qa-wave0-static.mjs");
-  assert.match(wave0, /const latestMigration = 167;/);
+  assert.match(wave0, /const latestMigration = 168;/);
 });
 
 // ---------------------------------------------------------------------------

@@ -1,3 +1,19 @@
+## Atualização corrente — F15 / EXT-07 Planos de Ação Corretivos e Preventivos de Compliance (Opção 1)
+
+- **Base:** `origin/main` confirmado em `b26f93cb1262777827a46edc823e8fccd1c1e70e`. Branch fixa: `arena/01a109c0-gruposegsystemseguranca`.
+- **Fatia entregue:** Opção 1 — F15 / EXT-07: Planos de ação preventivos e corretivos de compliance para obrigações vencidas e riscos de conformidade.
+- **Migração aditiva 168 (`168-ext07-compliance-action-plans.sql`):** 001–167 imutáveis; próxima livre passa a ser **169**. Cria tabela `ext_compliance_action_plans`, triggers de integridade e imutabilidade terminal, vínculo em `ext_compliance_events` e ações de auditoria.
+- **API e UI:** `/api/ext/compliance/action-plans` (listagem, detalhe, criação e transições `start`, `complete`, `cancel`) e UI atualizada em `/admin/compliance`.
+- **Evidências:** Gate PostgreSQL `npm run test:ext07-compliance:pg` **50/50** (mínimo elevado para 47); unitários EXT-07 **22/22**; `npm test` **617/617**; migrações **168/168**; build **101 páginas**; regressões EXT-15 **18/18** e EXT-10 **22/22** verdes.
+- **Limites honestos:** controle interno auditado de staff; não representa parecer jurídico nem auditoria externa terceirizada.
+
+## Reconciliação da sessão Arena — Início sobre PR #141 integrada (2026-10-05)
+
+- **Base confirmada:** PR #141 `MERGED` em `2026-10-05T01:47:39Z`, com merge commit real `b26f93cb1262777827a46edc823e8fccd1c1e70e`. `origin/main` confirmado nesse SHA. Branch fixa desta sessão: `arena/01a109c0-gruposegsystemseguranca`, com checkout limpo e sem PRs paralelas abertas.
+- **Histórico de PRs:** #126–#141 integradas; #128, #130, #131 fechadas sem merge como `superseded`.
+- **Ledger:** 001–167 imutáveis; próxima livre: **168**.
+- **Sanidade inicial:** Wave0 5/5, typecheck OK, 614/614 unitários verdes.
+
 ## Atualização corrente — EXT-10 isolamento por client_account_id (F06, requisito confirmado)
 
 - Reconciliação: PR #140 `MERGED` em `2026-10-05T00:40:43Z`, merge commit real `d393f076875b3fa2513a42d01dd856f2c7300729`; `origin/main` nesse SHA; branch fixa `arena/01a10988-gruposegsystemseguranca` com checkout limpo. PRs #126–#140 integradas e intocadas; com autorização do operador, #128, #130 e #131 foram fechadas sem merge como `superseded` (escopos já entregues pelas PRs #129 e #132).

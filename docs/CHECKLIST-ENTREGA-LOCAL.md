@@ -1,3 +1,26 @@
+## Atualização corrente — F15 / EXT-07 Planos de Ação de Compliance (Opção 1)
+
+**Base:** `b26f93cb1262777827a46edc823e8fccd1c1e70e`; branch fixa `arena/01a109c0-gruposegsystemseguranca`.
+
+- [x] Migração 168 aditiva (`168-ext07-compliance-action-plans.sql`); 001–167 imutáveis; próxima livre: 169.
+- [x] Tabela `ext_compliance_action_plans` com ciclo de vida `aberto` -> `em_andamento` -> `concluido` / `cancelado`.
+- [x] Triggers `ext_compliance_action_plan_guard` impedindo mutação em terminais, deleção e exigindo resultado na conclusão e justificativa no cancelamento.
+- [x] Eventos append-only com `action_plan_id` em `ext_compliance_events` e auditoria atômica transacional.
+- [x] Rotas `/api/ext/compliance/action-plans`, detalhe e transições (`start`, `complete`, `cancel`) com RBAC `admin`/`ti` fail-closed, same-origin e Idempotency-Key.
+- [x] UI honesta `/admin/compliance` atualizada com seção de planos de ação, listagem e botões de transição com inputs.
+- [x] Testes unitários focais EXT-07: **22/22**.
+- [x] Gate PostgreSQL descartável `npm run test:ext07-compliance:pg`: **50/50** (mínimo 47).
+- [x] `npm test` **617/617**; typecheck OK; build **101 páginas**; migrações **168/168**; regressões EXT-15 **18/18** e EXT-10 **22/22**.
+- [ ] Aceite humano.
+- [ ] Windows/EPERM e aplicação no banco de destino.
+
+## Reconciliação da sessão Arena — Início sobre PR #141 integrada (2026-10-05)
+
+- [x] PR #141 `MERGED` em `b26f93cb1262777827a46edc823e8fccd1c1e70e`.
+- [x] Branch fixa `arena/01a109c0-gruposegsystemseguranca` alinhada a `origin/main` (`b26f93c`), com checkout limpo e sem PRs paralelas.
+- [x] Ledger 001–167 imutáveis; próxima migração livre: 168.
+- [x] Verificação Wave0 (5/5), typecheck e 614/614 unitários verdes.
+
 ## Atualização corrente — EXT-10 isolamento por client_account_id (F06, requisito confirmado)
 
 **Base:** PR #140 `MERGED` em `d393f076875b3fa2513a42d01dd856f2c7300729`; branch fixa desta sessão `arena/01a10988-gruposegsystemseguranca`; PRs #126–#140 intocadas; #128, #130 e #131 fechadas sem merge como `superseded` com autorização do operador.

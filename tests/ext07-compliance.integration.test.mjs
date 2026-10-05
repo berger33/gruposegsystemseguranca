@@ -473,3 +473,168 @@ test("EXT-07 ledger de execuções é append-only e observável pela rota",opt,a
   assert.ok(r.body.runs.some(x=>x.status==="concluida"),"há execuções concluidas (inclusive sem efeito)");
   assert.ok(r.body.runs.some(x=>x.status==="falha"&&String(x.error).includes("staff admin/ti")),"a falha fechada está registrada com a causa");
 });
+
+// ---------------------------------------------------------------------------
+// F15 / EXT-07: Planos de Ação Preventivos e Corretivos de Compliance (migração 168)
+// ---------------------------------------------------------------------------
+let planCorretivoId, planPreventivoId;
+
+test("EXT-07 planos de ação: listagem inicial vazia e autorização fail-closed",opt,async()=>{
+  const list=await api("/api/ext/compliance/action-plans");
+  assert.equal(list.status,200);
+  assert.ok(Array.isArray(list.body.items));
+  assert.equal((await api("/api/ext/compliance/action-plans",{cookie:null})).status,401);
+  assert.equal((await api("/api/ext/compliance/action-plans",{cookie:cookieRh})).status,403);
+});
+
+test("EXT-07 planos de ação: criação de plano corretivo para obrigação vencida",opt,async()=>{
+  const key=idem("plan-corretivo");
+  const r=await api("/api/ext/compliance/action-plans",{
+    method:"POST",
+    key,
+    body:{
+      obligation_id:obligationB.id,
+      plan_type:"corretivo",
+      title:"Plano corretivo para regularização de certidão",
+      description:"Auditoria interna de documentos e emissão de nova certidão negativa.",
+      root_cause:"Vencimento de prazo regulatório sem renovação tempestiva.",
+      due_date:daysAhead(15),
+      responsible_identity:ti.id,
+    },
+  });
+  assert.equal(r.status,201,r.text);
+  assert.equal(r.body.action_plan.plan_type,"corretivo");
+  assert.equal(r.body.action_plan.status,"aberto");
+  assert.equal(r.body.action_plan.due_date,daysAhead(15));
+  planCorretivoId=r.body.action_plan.id;
+
+  // Replay idempotente deve devolver 200 idêntico
+  const replay=await api("/api/ext/compliance/action-plans",{
+    method:"POST",
+    key,
+    body:{
+      obligation_id:obligationB.id,
+      plan_type:"corretivo",
+      title:"Plano corretivo para regularização de certidão",
+      description:"Auditoria interna de documentos e emissão de nova certidão negativa.",
+      root_cause:"Vencimento de prazo regulatório sem renovação tempestiva.",
+      due_date:daysAhead(15),
+      responsible_identity:ti.id,
+    },
+  });
+  assert.equal(replay.status,200);
+  assert.equal(replay.body.replayed,true);
+
+  // Detalhe via API
+  const detail=await api(`/api/ext/compliance/action-plans/${planCorretivoId}`);
+  assert.equal(detail.status,200);
+  assert.equal(detail.body.action_plan.id,planCorretivoId);
+  assert.ok(Array.isArray(detail.body.events));
+  assert.equal(detail.body.events[0].event_type,"action_plan_created");
+});
+
+test("EXT-07 planos de ação: criação de plano preventivo para obrigação vigente",opt,async()=>{
+  const r=await api("/api/ext/compliance/action-plans",{
+    method:"POST",
+    body:{
+      obligation_id:obligationA.id,
+      plan_type:"preventivo",
+      title:"Plano preventivo de monitoramento antecipado",
+      description:"Revisão antecipada de licenças antes do prazo crítico de renovação.",
+      root_cause:"Identificação de risco de sobrecarga do órgão emissor.",
+      due_date:daysAhead(30),
+      responsible_identity:ti.id,
+    },
+  });
+  assert.equal(r.status,201,r.text);
+  assert.equal(r.body.action_plan.plan_type,"preventivo");
+  assert.equal(r.body.action_plan.status,"aberto");
+  planPreventivoId=r.body.action_plan.id;
+});
+
+test("EXT-07 planos de ação: ciclo completo aberto -> em_andamento -> concluido com resultado",opt,async()=>{
+  // 1. Iniciar plano
+  const start=await api(`/api/ext/compliance/action-plans/${planCorretivoId}/start`,{
+    method:"POST",
+    body:{},
+  });
+  assert.equal(start.status,200,start.text);
+  assert.equal(start.body.action_plan.status,"em_andamento");
+  assert.ok(start.body.action_plan.started_at);
+
+  // 2. Tentar concluir sem resultado deve falhar
+  const badComplete=await api(`/api/ext/compliance/action-plans/${planCorretivoId}/complete`,{
+    method:"POST",
+    body:{result:"curto"},
+  });
+  assert.equal(badComplete.status,400);
+
+  // 3. Concluir com resultado formal
+  const complete=await api(`/api/ext/compliance/action-plans/${planCorretivoId}/complete`,{
+    method:"POST",
+    body:{result:"Auditoria concluída e nova certidão protocolada junto ao órgão responsável."},
+  });
+  assert.equal(complete.status,200,complete.text);
+  assert.equal(complete.body.action_plan.status,"concluido");
+  assert.ok(complete.body.action_plan.completed_at);
+  assert.equal(complete.body.action_plan.completion_result,"Auditoria concluída e nova certidão protocolada junto ao órgão responsável.");
+});
+
+test("EXT-07 planos de ação: ciclo aberto -> cancelado com justificativa",opt,async()=>{
+  // Tentar cancelar sem justificativa deve falhar
+  const badCancel=await api(`/api/ext/compliance/action-plans/${planPreventivoId}/cancel`,{
+    method:"POST",
+    body:{justification:"curto"},
+  });
+  assert.equal(badCancel.status,400);
+
+  // Cancelar com justificativa válida
+  const cancel=await api(`/api/ext/compliance/action-plans/${planPreventivoId}/cancel`,{
+    method:"POST",
+    body:{justification:"Plano cancelado devido à substituição do procedimento por rotina automatizada."},
+  });
+  assert.equal(cancel.status,200,cancel.text);
+  assert.equal(cancel.body.action_plan.status,"cancelado");
+  assert.ok(cancel.body.action_plan.cancelled_at);
+  assert.equal(cancel.body.action_plan.cancellation_justification,"Plano cancelado devido à substituição do procedimento por rotina automatizada.");
+});
+
+test("EXT-07 planos de ação: planos terminais são imutáveis e rejeitam transição e exclusão",opt,async()=>{
+  // Tentar iniciar plano já concluído deve retornar 409
+  const reStart=await api(`/api/ext/compliance/action-plans/${planCorretivoId}/start`,{
+    method:"POST",
+    body:{},
+  });
+  assert.equal(reStart.status,409);
+
+  // Tentar concluir plano já cancelado deve retornar 409
+  const reComplete=await api(`/api/ext/compliance/action-plans/${planPreventivoId}/complete`,{
+    method:"POST",
+    body:{result:"Tentativa de conclusão em plano cancelado."},
+  });
+  assert.equal(reComplete.status,409);
+
+  // Trigger de banco recusa mutação direta em plano concluído
+  await assert.rejects(
+    pool.query(`UPDATE ext_compliance_action_plans SET status='aberto' WHERE id=$1`,[planCorretivoId]),
+    /terminal compliance action plan is immutable/
+  );
+
+  // Trigger de banco recusa exclusão
+  await assert.rejects(
+    pool.query(`DELETE FROM ext_compliance_action_plans WHERE id=$1`,[planCorretivoId]),
+    /compliance action plans cannot be deleted|violates foreign key constraint/
+  );
+});
+
+test("EXT-07 planos de ação: eventos imutáveis e registro em audit_log",opt,async()=>{
+  const events=(await pool.query(`SELECT event_type FROM ext_compliance_events WHERE action_plan_id=$1 ORDER BY created_at ASC`,[planCorretivoId])).rows;
+  assert.ok(events.length>=3);
+  assert.equal(events[0].event_type,"action_plan_created");
+  assert.equal(events[1].event_type,"action_plan_start");
+  assert.equal(events[2].event_type,"action_plan_complete");
+
+  const audit=(await pool.query(`SELECT action FROM audit_log WHERE target=$1 ORDER BY created_at ASC`,[planCorretivoId])).rows;
+  assert.ok(audit.some(a=>a.action==="ext07_action_plan_create"));
+  assert.ok(audit.some(a=>a.action==="ext07_action_plan_complete"));
+});
