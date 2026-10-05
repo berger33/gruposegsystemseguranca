@@ -85,10 +85,10 @@ test("Migrações 156–168 preservadas e 168 registrada nos pontos do manifesto
   assert.match(migrator, /'166-ext14-intel-canonical-journey\.sql'/);
   assert.match(migrator, /'167-ext15-emergency-canonical-journey\.sql'/);
   assert.match(migrator, /'168-ext07-compliance-action-plans\.sql'/);
-  assert.match(migrator, /files\.length !== 168/);
-  assert.match(migrator, /001–168/);
+  assert.match(migrator, /files\.length !== 170/);
+  assert.match(migrator, /001–170/);
   const wave0 = await readRepo("scripts/qa-wave0-static.mjs");
-  assert.match(wave0, /const latestMigration = 168;/);
+  assert.match(wave0, /const latestMigration = 170;/);
 });
 
 // ---------------------------------------------------------------------------

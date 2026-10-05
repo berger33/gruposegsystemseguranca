@@ -6,7 +6,7 @@ import test, { before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -594,4 +594,219 @@ test("EXT-10 escrita escopada cria na própria conta e falha fechada fora dela e
     body: { status: "aprovado" },
   });
   assert.equal(activate.status, 403);
+});
+
+// --- F06: leitura do plano publicado pelo cliente vinculado (migração 169) ---
+// SQL prepara apenas identidades de cliente, vínculo e sessão sintética; publicação e
+// leitura acontecem exclusivamente por HTTP canônico.
+
+let clientA;
+let clientB;
+let cookieClientA;
+let cookieClientB;
+
+async function createPortalClient(tag, accountId) {
+  const id = uuid();
+  const token = randomBytes(32).toString("hex");
+  await pool.query(
+    `INSERT INTO auth_identities (id, kind, email, display_name, status, verification_method, verified_at)
+     VALUES ($1,'client',$2,$3,'active','email_link',NOW())`,
+    [id, `ext10-portal-${tag}-${id.slice(0, 8)}@example.invalid`, `QA EXT10 cliente ${tag}`],
+  );
+  await pool.query(
+    `INSERT INTO client_access_grants (id, identity_id, client_account_id, reason, granted_by)
+     VALUES ($1,$2,$3,'QA EXT10 vínculo sintético do portal','ti')`,
+    [uuid(), id, accountId],
+  );
+  await pool.query(
+    `INSERT INTO auth_sessions (id, identity_id, token_hash, expires_at) VALUES ($1,$2,$3,NOW() + INTERVAL '1 hour')`,
+    [uuid(), id, createHash("sha256").update(token).digest("hex")],
+  );
+  return { id, accountId, cookie: `seg_client_session=${token}` };
+}
+
+test("EXT-10 portal: clientes vinculados sintéticos das contas A e B", opt, async () => {
+  clientA = await createPortalClient("a", accountA);
+  clientB = await createPortalClient("b", accountB);
+  cookieClientA = clientA.cookie;
+  cookieClientB = clientB.cookie;
+  const active = (await pool.query(
+    `SELECT count(*)::int AS n FROM client_access_grants WHERE identity_id = ANY($1::uuid[]) AND revoked_at IS NULL`,
+    [[clientA.id, clientB.id]],
+  )).rows[0].n;
+  assert.equal(active, 2);
+});
+
+test("EXT-10 portal: anônimo e cliente sem vínculo não alcançam planos da conta", opt, async () => {
+  const anonymous = await api(`/api/client/continuity/plans?account=${accountA}`, { cookie: null });
+  assert.equal(anonymous.status, 401);
+  assert.equal(anonymous.body.error, "client_session_required");
+  const crossAccount = await api(`/api/client/continuity/plans?account=${accountA}`, { cookie: cookieClientB });
+  assert.equal(crossAccount.status, 403);
+  assert.equal(crossAccount.body.error, "forbidden");
+  const denied = (await pool.query(
+    `SELECT count(*)::int AS n FROM auth_access_audit WHERE actor_kind='client' AND actor_id=$1 AND action='continuity_plan_client_list' AND result='denied'`,
+    [clientB.id],
+  )).rows[0].n;
+  assert.ok(denied >= 1, "negativa do portal precisa ficar auditada");
+});
+
+test("EXT-10 portal: nada é publicado por padrão e plano não publicado responde 404", opt, async () => {
+  const empty = await api(`/api/client/continuity/plans?account=${accountA}`, { cookie: cookieClientA });
+  assert.equal(empty.status, 200);
+  assert.deepEqual(empty.body.plans, []);
+  const hidden = await api(`/api/client/continuity/plans/${planAccountA.id}`, { cookie: cookieClientA });
+  assert.equal(hidden.status, 404);
+  assert.equal(hidden.body.error, "plan_not_found");
+  assert.equal(
+    (await pool.query(`SELECT count(*)::int AS n FROM ext_continuity_plans WHERE client_visible IS TRUE`)).rows[0].n,
+    0,
+  );
+});
+
+test("EXT-10 portal: publicação exige conta, estado publicável e justificativa", opt, async () => {
+  const draftState = (await pool.query(`SELECT status FROM ext_continuity_plans WHERE id=$1`, [planAccountA.id])).rows[0].status;
+  assert.equal(draftState, "rascunho");
+  const noNote = await api(`/api/ext/continuity/plans/${planAccountA.id}/client-visibility`, {
+    method: "POST",
+    body: { visible: true },
+  });
+  assert.equal(noNote.status, 400);
+  assert.equal(noNote.body.error, "visibility_note_required");
+  const notPublishable = await api(`/api/ext/continuity/plans/${planAccountA.id}/client-visibility`, {
+    method: "POST",
+    body: { visible: true, note: "Tentativa de publicar um plano ainda em rascunho." },
+  });
+  assert.equal(notPublishable.status, 409);
+  assert.equal(notPublishable.body.error, "plan_not_publishable");
+  const noAccount = await api(`/api/ext/continuity/plans/${planA.id}/client-visibility`, {
+    method: "POST",
+    body: { visible: true, note: "Plano sem conta de cliente não pode ser publicado." },
+  });
+  assert.equal(noAccount.status, 409);
+  assert.equal(noAccount.body.error, "client_account_required");
+  const anonymous = await api(`/api/ext/continuity/plans/${planAccountA.id}/client-visibility`, {
+    method: "POST",
+    cookie: null,
+    body: { visible: true, note: "Anônimo jamais publica plano ao cliente." },
+  });
+  assert.equal(anonymous.status, 401);
+  assert.equal(
+    (await pool.query(`SELECT count(*)::int AS n FROM ext_continuity_plans WHERE client_visible IS TRUE`)).rows[0].n,
+    0,
+  );
+});
+
+test("EXT-10 portal: plano aprovado e publicado aparece apenas para o cliente da própria conta", opt, async () => {
+  const approved = await api(`/api/ext/continuity/plans/${planAccountA.id}/transition`, {
+    method: "POST",
+    body: { status: "aprovado" },
+  });
+  assert.equal(approved.status, 200);
+  const published = await api(`/api/ext/continuity/plans/${planAccountA.id}/client-visibility`, {
+    method: "POST",
+    body: { visible: true, note: "Publicado para o cliente vinculado conferir o procedimento do posto." },
+  });
+  assert.equal(published.status, 200);
+  assert.equal(published.body.plan.client_visible, true);
+  assert.equal(published.body.plan.client_visibility_set_by, admin.id);
+
+  const listed = await api(`/api/client/continuity/plans?account=${accountA}`, { cookie: cookieClientA });
+  assert.equal(listed.status, 200);
+  assert.equal(listed.body.plans.length, 1);
+  assert.equal(listed.body.plans[0].id, planAccountA.id);
+  assert.equal(listed.body.plans[0].contacts, undefined, "contatos internos não podem ser expostos ao cliente");
+  assert.equal(listed.body.plans[0].justification, undefined);
+  assert.equal(listed.body.plans[0].created_by_identity, undefined);
+
+  const detail = await api(`/api/client/continuity/plans/${planAccountA.id}`, { cookie: cookieClientA });
+  assert.equal(detail.status, 200);
+  assert.equal(detail.body.plan.protocol, planAccountA.protocol);
+  assert.equal(detail.body.plan.client_account_id, undefined);
+  assert.equal(detail.body.events, undefined, "trilha de eventos permanece interna");
+  for (const exercise of detail.body.exercises) assert.equal(exercise.result, undefined);
+
+  const otherClient = await api(`/api/client/continuity/plans/${planAccountA.id}`, { cookie: cookieClientB });
+  assert.equal(otherClient.status, 403);
+  const otherList = await api(`/api/client/continuity/plans?account=${accountB}`, { cookie: cookieClientB });
+  assert.equal(otherList.status, 200);
+  assert.deepEqual(otherList.body.plans, []);
+
+  const read = (await pool.query(
+    `SELECT count(*)::int AS n FROM auth_access_audit WHERE actor_kind='client' AND actor_id=$1 AND action IN ('continuity_plan_client_list','continuity_plan_client_detail') AND result='allowed'`,
+    [clientA.id],
+  )).rows[0].n;
+  assert.ok(read >= 2, "cada leitura do cliente precisa ficar auditada");
+});
+
+test("EXT-10 portal é somente leitura: o cliente não transiciona, não exercita e não publica", opt, async () => {
+  for (const method of ["POST", "PATCH", "DELETE"]) {
+    const attempt = await api(`/api/client/continuity/plans/${planAccountA.id}`, { method, cookie: cookieClientA, body: { status: "arquivado" } });
+    assert.equal(attempt.status, 405);
+  }
+  const staffRoute = await api(`/api/ext/continuity/plans/${planAccountA.id}/transition`, {
+    method: "POST",
+    cookie: cookieClientA,
+    body: { status: "arquivado" },
+  });
+  assert.equal(staffRoute.status, 401, "sessão de cliente não vale como sessão staff");
+  const selfPublish = await api(`/api/ext/continuity/plans/${planAccountA.id}/client-visibility`, {
+    method: "POST",
+    cookie: cookieClientA,
+    body: { visible: false },
+  });
+  assert.equal(selfPublish.status, 401);
+  assert.equal(
+    (await pool.query(`SELECT status FROM ext_continuity_plans WHERE id=$1`, [planAccountA.id])).rows[0].status,
+    "aprovado",
+  );
+});
+
+test("EXT-10 portal: publicação é retirada pela equipe e automaticamente fora do estado publicável", opt, async () => {
+  const removed = await api(`/api/ext/continuity/plans/${planAccountA.id}/client-visibility`, {
+    method: "POST",
+    body: { visible: false },
+  });
+  assert.equal(removed.status, 200);
+  assert.equal(removed.body.plan.client_visible, false);
+  assert.equal(removed.body.plan.client_visibility_set_by, null);
+  const afterRemoval = await api(`/api/client/continuity/plans?account=${accountA}`, { cookie: cookieClientA });
+  assert.deepEqual(afterRemoval.body.plans, []);
+
+  const republished = await api(`/api/ext/continuity/plans/${planAccountA.id}/client-visibility`, {
+    method: "POST",
+    body: { visible: true, note: "Republicado para conferência do cliente antes do simulado." },
+  });
+  assert.equal(republished.status, 200);
+  const archived = await api(`/api/ext/continuity/plans/${planAccountA.id}/transition`, {
+    method: "POST",
+    body: { status: "arquivado", justification: "Plano arquivado durante o gate de continuidade." },
+  });
+  assert.equal(archived.status, 200);
+  assert.equal(archived.body.plan.client_visible, false, "o banco retira a publicação ao sair do estado publicável");
+  const afterArchive = await api(`/api/client/continuity/plans?account=${accountA}`, { cookie: cookieClientA });
+  assert.deepEqual(afterArchive.body.plans, []);
+  const detailAfterArchive = await api(`/api/client/continuity/plans/${planAccountA.id}`, { cookie: cookieClientA });
+  assert.equal(detailAfterArchive.status, 404);
+});
+
+test("EXT-10 portal: vínculo revogado perde o acesso imediatamente", opt, async () => {
+  await pool.query(
+    `UPDATE client_access_grants SET revoked_at = NOW(), revoked_by='ti', revoke_reason='QA EXT10 revogação sintética' WHERE identity_id=$1 AND revoked_at IS NULL`,
+    [clientA.id],
+  );
+  const listed = await api(`/api/client/continuity/plans?account=${accountA}`, { cookie: cookieClientA });
+  assert.equal(listed.status, 403);
+  assert.equal(listed.body.error, "forbidden");
+});
+
+test("EXT-10 portal: publicação direta por SQL fora do estado publicável é recusada pelo banco", opt, async () => {
+  await assert.rejects(() => pool.query(
+    `UPDATE ext_continuity_plans SET client_visible = TRUE, client_visibility_note='Tentativa direta por SQL sem estado publicável.', client_visibility_set_by=$2 WHERE id=$1`,
+    [planAccountA.id, admin.id],
+  ));
+  await assert.rejects(() => pool.query(
+    `UPDATE ext_continuity_plans SET client_visible = TRUE, client_visibility_note='Plano sem conta não pode ser publicado.', client_visibility_set_by=$2 WHERE id=$1`,
+    [planA.id, admin.id],
+  ));
 });

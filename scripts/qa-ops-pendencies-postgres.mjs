@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// EXT-10 / F06 — gate focal autoauditável (inclui isolamento por client_account_id).
-// PostgreSQL 17 descartável, ledger 001–169, servidor HTTP real, navegador real
-// e sessões staff fictícias. Não usa banco remoto e não cria negócio por SQL.
+// F15 — gate focal autoauditável da caixa interna de pendências.
+// PostgreSQL 17 descartável, ledger 001–170, servidor HTTP real e sessões staff
+// fictícias. Não usa banco remoto e não cria negócio por SQL.
 
 import EmbeddedPostgres from "embedded-postgres";
 import { spawn } from "node:child_process";
@@ -49,12 +49,12 @@ const auditTap = (output) => {
   if (fail) problems.push(`${fail} falha(s)`);
   if (skipped) problems.push(`${skipped} caso(s) pulado(s)`);
   if (todo) problems.push(`${todo} caso(s) todo`);
-  if (pass !== null && pass < 31) problems.push(`apenas ${pass} casos aprovados; mínimo 31`);
+  if (pass !== null && pass < 17) problems.push(`apenas ${pass} casos aprovados; mínimo 17`);
   return { pass, fail, skipped, todo, problems };
 };
 
 const port = await freePort();
-const directory = await mkdtemp(path.join(tmpdir(), "seg-qa-ext10-pg-"));
+const directory = await mkdtemp(path.join(tmpdir(), "seg-qa-pendency-pg-"));
 const password = randomBytes(24).toString("hex");
 const postgres = new EmbeddedPostgres({
   databaseDir: path.join(directory, "data"),
@@ -71,7 +71,7 @@ let exitCode = 1;
 try {
   await postgres.initialise();
   await postgres.start();
-  const database = "seg_qa_ext10";
+  const database = "seg_qa_pendency";
   await postgres.createDatabase(database);
   const url = `postgresql://seg_qa:${password}@127.0.0.1:${port}/${database}`;
   console.log(`QA_PG_READY: PostgreSQL 17 descartável em 127.0.0.1:${port}/${database}; segredo omitido.`);
@@ -83,9 +83,9 @@ try {
   });
   if (migrated.code !== 0) throw new Error(`migrations_failed_exit_${migrated.code}`);
 
-  const executed = await run(process.execPath, ["--test", "--test-concurrency=1", "tests/ext10-continuity.integration.test.mjs"], {
+  const executed = await run(process.execPath, ["--test", "--test-concurrency=1", "tests/ops-pendencies.integration.test.mjs"], {
     RUN_DATABASE_INTEGRATION: "1",
-    QA_EXT10_REQUIRE_DB: "1",
+    QA_PENDENCY_REQUIRE_DB: "1",
     DATABASE_URL: url,
     DATABASE_MIGRATION_URL: "",
     RUN_DATABASE_INTEGRATION_REMOTE: "",
@@ -98,18 +98,18 @@ try {
   });
   exitCode = executed.code;
   const summary = auditTap(executed.output);
-  console.log(`EXT10_TAP_SUMMARY: pass=${summary.pass} fail=${summary.fail} skipped=${summary.skipped} todo=${summary.todo} minimo_exigido=31`);
+  console.log(`PENDENCY_TAP_SUMMARY: pass=${summary.pass} fail=${summary.fail} skipped=${summary.skipped} todo=${summary.todo} minimo_exigido=17`);
   if (summary.problems.length) {
-    console.error(`EXT10_GATE_REJECTED: ${summary.problems.join("; ")}`);
+    console.error(`PENDENCY_GATE_REJECTED: ${summary.problems.join("; ")}`);
     exitCode = 1;
   }
-  console.log(`EXT10_CONTINUITY_TEST_EXIT: ${exitCode}`);
+  console.log(`PENDENCY_TEST_EXIT: ${exitCode}`);
 } catch (error) {
   console.error("QA_PG_FAILED", String(error?.message || error).replaceAll(password, "[redacted]").slice(0, 700));
   exitCode = 1;
 } finally {
   await postgres.stop().catch(() => {});
   await rm(directory, { recursive: true, force: true }).catch(() => {});
-  console.log("QA_EXT10_PG_TEMP_CLEANED: true");
+  console.log("QA_PENDENCY_PG_TEMP_CLEANED: true");
 }
 process.exit(exitCode);

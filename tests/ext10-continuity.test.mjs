@@ -204,3 +204,170 @@ test("EXT-10 UI declara gate de autorização e fronteira interna", async () => 
   assert.match(workspace, /client_account_id/);
   assert.match(workspace, /escopo por conta de cliente/);
 });
+
+// ---- F06: leitura do plano publicado pelo cliente vinculado (migração 169) ----
+
+const clientIdentity = "44444444-4444-4444-8444-444444444444";
+const accountA = "55555555-5555-4555-8555-555555555555";
+
+function clientPool({ grant = true, unitAccount = null, unitMatches = true, plan = null, audit = true } = {}) {
+  const statements = [];
+  return {
+    statements,
+    async query(text, params = []) {
+      statements.push({ text, params });
+      if (text.includes("FROM client_access_grants")) return { rows: grant ? [{ id: "grant-1", unit_account_id: unitAccount }] : [] };
+      if (text.includes("FROM client_accounts WHERE id=$1 AND (id=$2")) return { rows: unitMatches ? [{ id: params[0] }] : [] };
+      if (text.includes("FROM ext_continuity_plans p WHERE p.id=$1")) return { rows: plan ? [plan] : [] };
+      if (text.includes("FROM ext_continuity_plans p WHERE p.client_account_id=$1")) return { rows: plan ? [plan] : [] };
+      if (text.includes("FROM ext_continuity_exercises")) return { rows: [{ exercise_date: "2026-09-01", next_due: "2027-03-01" }] };
+      if (text.includes("auth_access_audit")) {
+        if (!audit) throw new Error("audit offline");
+        return { rows: [] };
+      }
+      return { rows: [] };
+    },
+    async connect() { throw new Error("client portal must not open write transactions"); },
+  };
+}
+
+const clientSession = async () => ({ identityId: clientIdentity });
+const clientReq = (url) => req({ method: "GET", url });
+const publishedPlan = {
+  id: plan,
+  protocol: "CONT-EXT-20261004-A1B2",
+  title: "Plano publicado",
+  description: "Descrição publicada para o cliente.",
+  status: "aprovado",
+  client_account_id: accountA,
+  contingency_steps: [],
+  recovery_steps: [],
+  client_visibility_note: "Publicado a pedido do cliente vinculado.",
+};
+
+test("EXT-10 migração 169 é aditiva, fail-closed na publicação e amplia auditoria do portal", async () => {
+  const migration = await readFile(path.join(root, "db/migrations/169-ext10-continuity-client-portal.sql"), "utf8");
+  assert.doesNotMatch(migration, /DROP TABLE|DROP COLUMN/);
+  assert.match(migration, /client_visible BOOLEAN NOT NULL DEFAULT FALSE/);
+  assert.match(migration, /ext_continuity_client_visibility_guard/);
+  assert.match(migration, /cannot be published to a client/);
+  assert.match(migration, /not in a publishable state for the client/);
+  for (const action of ["continuity_plan_client_publish", "continuity_plan_client_unpublish", "continuity_plan_client_list", "continuity_plan_client_detail"]) {
+    assert.match(migration, new RegExp(action));
+  }
+});
+
+test("EXT-10 cliente sem sessão não alcança a leitura e não consulta o banco", async () => {
+  const pool = clientPool();
+  const api = createExtContinuityApi({ pool, sameOrigin, requireSession: session, readClientSession: async () => null });
+  const res = response();
+  await api.handleClient(clientReq(`/api/client/continuity/plans?account=${accountA}`), res);
+  assert.equal(res.statusCode, 401);
+  assert.equal(res.json().error, "client_session_required");
+  assert.equal(pool.statements.length, 0);
+});
+
+test("EXT-10 portal do cliente recusa qualquer método de escrita", async () => {
+  const pool = clientPool({ plan: publishedPlan });
+  const api = createExtContinuityApi({ pool, sameOrigin, requireSession: session, readClientSession: clientSession });
+  for (const method of ["POST", "PATCH", "DELETE"]) {
+    const res = response();
+    await api.handleClient(req({ method, url: `/api/client/continuity/plans/${plan}` }), res);
+    assert.equal(res.statusCode, 405);
+  }
+  assert.equal(pool.statements.length, 0);
+});
+
+test("EXT-10 cliente sem vínculo ativo recebe 403 e a negativa fica auditada", async () => {
+  const pool = clientPool({ grant: false });
+  const api = createExtContinuityApi({ pool, sameOrigin, requireSession: session, readClientSession: clientSession });
+  const res = response();
+  await api.handleClient(clientReq(`/api/client/continuity/plans?account=${accountA}`), res);
+  assert.equal(res.statusCode, 403);
+  assert.equal(res.json().error, "forbidden");
+  const auditRow = pool.statements.find(({ text }) => text.includes("auth_access_audit"));
+  assert.ok(auditRow);
+  assert.ok(auditRow.params.includes("authorization_denied"));
+  assert.ok(!pool.statements.some(({ text }) => text.includes("FROM ext_continuity_plans")));
+});
+
+test("EXT-10 vínculo restrito a outra unidade não alcança os planos da conta", async () => {
+  const pool = clientPool({ unitAccount: "66666666-6666-4666-8666-666666666666", unitMatches: false });
+  const api = createExtContinuityApi({ pool, sameOrigin, requireSession: session, readClientSession: clientSession });
+  const res = response();
+  await api.handleClient(clientReq(`/api/client/continuity/plans?account=${accountA}`), res);
+  assert.equal(res.statusCode, 403);
+  assert.ok(!pool.statements.some(({ text }) => text.includes("FROM ext_continuity_plans")));
+});
+
+test("EXT-10 listagem do cliente filtra conta, publicação e estados publicáveis", async () => {
+  const pool = clientPool({ plan: publishedPlan });
+  const api = createExtContinuityApi({ pool, sameOrigin, requireSession: session, readClientSession: clientSession });
+  const res = response();
+  await api.handleClient(clientReq(`/api/client/continuity/plans?account=${accountA}`), res);
+  assert.equal(res.statusCode, 200);
+  const listed = pool.statements.find(({ text }) => text.includes("FROM ext_continuity_plans p WHERE p.client_account_id=$1"));
+  assert.ok(listed);
+  assert.match(listed.text, /p\.client_visible IS TRUE/);
+  assert.match(listed.text, /p\.status=ANY/);
+  assert.deepEqual(listed.params[1], ["aprovado", "em_teste", "testado"]);
+  assert.ok(pool.statements.some(({ params }) => params.includes("continuity_plan_client_list")));
+});
+
+test("EXT-10 projeção do cliente não expõe contatos, justificativa interna nem trilha", async () => {
+  const pool = clientPool({ plan: publishedPlan });
+  const api = createExtContinuityApi({ pool, sameOrigin, requireSession: session, readClientSession: clientSession });
+  const res = response();
+  await api.handleClient(clientReq(`/api/client/continuity/plans/${plan}`), res);
+  assert.equal(res.statusCode, 200);
+  const payload = res.json();
+  assert.equal(payload.plan.client_account_id, undefined);
+  assert.equal(payload.events, undefined);
+  for (const row of payload.exercises) assert.equal(row.result, undefined);
+  const source = await readFile(path.join(root, "src/server/ext-continuity-api.mjs"), "utf8");
+  assert.doesNotMatch(source, /CLIENT_PLAN_FIELDS = "[^"]*p\.contacts/);
+  assert.doesNotMatch(source, /CLIENT_PLAN_FIELDS = "[^"]*p\.justification/);
+});
+
+test("EXT-10 plano de outra conta e plano não publicado respondem o mesmo 404", async () => {
+  const api = (plan) => createExtContinuityApi({ pool: clientPool({ plan }), sameOrigin, requireSession: session, readClientSession: clientSession });
+  const unpublished = response();
+  await api(null).handleClient(clientReq(`/api/client/continuity/plans/${plan}`), unpublished);
+  const draft = response();
+  await api({ ...publishedPlan, status: "rascunho" }).handleClient(clientReq(`/api/client/continuity/plans/${plan}`), draft);
+  assert.equal(unpublished.statusCode, 404);
+  assert.equal(draft.statusCode, 404);
+  assert.deepEqual(unpublished.json(), draft.json());
+});
+
+test("EXT-10 falha de auditoria na leitura do cliente é fail-closed (503)", async () => {
+  const pool = clientPool({ plan: publishedPlan, audit: false });
+  const api = createExtContinuityApi({ pool, sameOrigin, requireSession: session, readClientSession: clientSession });
+  const res = response();
+  await api.handleClient(clientReq(`/api/client/continuity/plans?account=${accountA}`), res);
+  assert.equal(res.statusCode, 503);
+  assert.equal(res.json().error, "audit_unavailable");
+});
+
+test("EXT-10 publicação por staff exige justificativa e estado publicável", async () => {
+  const source = await readFile(path.join(root, "src/server/ext-continuity-api.mjs"), "utf8");
+  assert.match(source, /visibility_note_required/);
+  assert.match(source, /plan_not_publishable/);
+  assert.match(source, /client_account_required/);
+  assert.match(source, /continuity_plan_client_publish/);
+  const dispatcher = await readFile(path.join(root, "server.mjs"), "utf8");
+  assert.match(dispatcher, /extContinuityApi\.handleClient\(req, res\)/);
+  assert.match(dispatcher, /\/api\/client\/continuity\/plans/);
+});
+
+test("EXT-10 portal do cliente declara leitura e ausência de acionamento externo", async () => {
+  const page = await readFile(path.join(root, "src/app/cliente/app/continuidade/page.tsx"), "utf8");
+  assert.match(page, /\/api\/client\/continuity\/plans/);
+  assert.match(page, /Somente leitura/);
+  assert.match(page, /não envia alerta/);
+  const nav = await readFile(path.join(root, "src/app/cliente/app/ClientAppNavigation.tsx"), "utf8");
+  assert.match(nav, /\/cliente\/app\/continuidade/);
+  const workspace = await readFile(path.join(root, "src/app/admin/continuidade/ContinuityWorkspace.tsx"), "utf8");
+  assert.match(workspace, /client-visibility/);
+  assert.match(workspace, /somente leitura/);
+});

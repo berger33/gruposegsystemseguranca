@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BriefcaseBusiness, CalendarClock, CirclePlus, ClipboardCheck, FileText, Headphones, LayoutDashboard, LogOut, RefreshCw, ShieldAlert, ShieldCheck, Receipt, Star } from "lucide-react";
+import { BriefcaseBusiness, CalendarClock, CirclePlus, ClipboardCheck, FileText, Headphones, LayoutDashboard, LifeBuoy, LogOut, RefreshCw, ShieldAlert, ShieldCheck, Receipt, Star } from "lucide-react";
 import { useClientSpace } from "./ClientSpaceProvider";
 import styles from "./ClientApp.module.css";
 
@@ -14,6 +14,7 @@ const destinations = [
   { href: "/cliente/app/agenda", label: "Agenda", icon: CalendarClock },
   { href: "/cliente/app/relatorios", label: "Relatórios", icon: ClipboardCheck },
   { href: "/cliente/app/cobrancas", label: "Cobranças", icon: Receipt },
+  { href: "/cliente/app/continuidade", label: "Continuidade", icon: LifeBuoy },
   { href: "/cliente/app/solicitacoes", label: "Serviço adicional", icon: CirclePlus },
   { href: "/cliente/app/satisfacao", label: "Satisfação", icon: Star },
   { href: "/cliente/app/renovacao", label: "Renovação", icon: RefreshCw },
