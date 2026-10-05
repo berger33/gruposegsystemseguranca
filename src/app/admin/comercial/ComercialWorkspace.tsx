@@ -1,4 +1,10 @@
 "use client";
+
+// UX-03B — comercial: vistoria → orçamento → preço → proposta → contrato.
+// A tela passou a usar a moldura administrativa compartilhada (antes abria um
+// segundo `main` com fundo próprio dentro do chrome do /admin). Nenhum cliente
+// de API, payload, alçada ou regra de idempotência foi alterado aqui.
+
 import { useState } from "react";
 import CommercialHistory from "./CommercialHistory";
 import CatalogClient from "../ti/CatalogClient";
@@ -17,6 +23,10 @@ import ReportClient from "../ti/ReportClient";
 import CommissionClient from "../ti/CommissionClient";
 import CommercialLibraryClient from "../ti/CommercialLibraryClient";
 import PartnershipClient from "../ti/PartnershipClient";
+import UiWorkspace from "../../../components/ui/UiWorkspace";
+import UiPanel from "../../../components/ui/UiPanel";
+import ui from "../../../components/ui/UiWorkspace.module.css";
+import styles from "./Comercial.module.css";
 
 type View =
   | "vistoria"
@@ -28,113 +38,108 @@ type View =
   | "relatorios"
   | "biblioteca";
 
-const TABS: [View, string][] = [
-  ["vistoria", "Vistoria"],
-  ["orcamentos", "Orçamentos (MO/técnico/custos)"],
-  ["precos", "Preço & descontos"],
-  ["propostas", "Propostas & envio"],
-  ["contratos", "Contrato (idempotência)"],
-  ["catalogo", "Catálogo & equipamentos"],
-  ["relatorios", "Relatórios & comissões"],
-  ["biblioteca", "Biblioteca & parcerias"],
+/** Etapa, rótulo e a pergunta que a pessoa responde naquela etapa. */
+const TABS: { id: View; label: string; step: string; question: string }[] = [
+  { id: "vistoria", label: "Vistoria", step: "Etapa 1", question: "O que foi levantado no local e o que ainda falta registrar?" },
+  { id: "orcamentos", label: "Orçamentos (MO/técnico/custos)", step: "Etapa 2", question: "Quanto custa executar: mão de obra, técnico e parâmetros de custo." },
+  { id: "precos", label: "Preço & descontos", step: "Etapa 3", question: "Qual cenário de preço e qual desconto está autorizado?" },
+  { id: "propostas", label: "Propostas & envio", step: "Etapa 4", question: "O que foi proposto, como foi enviado e qual o aceite?" },
+  { id: "contratos", label: "Contrato (idempotência)", step: "Etapa 5", question: "O aceite gerou contrato/implantação sem duplicar?" },
+  { id: "catalogo", label: "Catálogo & equipamentos", step: "Apoio", question: "Quais serviços e equipamentos estão disponíveis para compor." },
+  { id: "relatorios", label: "Relatórios & comissões", step: "Acompanhamento", question: "Como está o resultado comercial e a comissão apurada?" },
+  { id: "biblioteca", label: "Biblioteca & parcerias", step: "Apoio", question: "Quais materiais aprovados e parcerias posso usar." },
 ];
-
-const card: React.CSSProperties = { border: "1px solid #dce4ee", borderRadius: 10, background: "#fff" };
 
 export default function ComercialWorkspace() {
   const [view, setView] = useState<View>("vistoria");
+  const current = TABS.find(tab => tab.id === view)!;
 
   return (
-    <main style={{ minHeight: "100vh", background: "#f3f6fa", fontFamily: "system-ui, sans-serif", color: "#17253b" }}>
-      <header style={{ padding: "20px 24px", background: "#fff", borderBottom: "1px solid #dce4ee", display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center", justifyContent: "space-between" }}>
-        <div>
-          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.1em", color: "#42699f", textTransform: "uppercase" }}>SEG System · Comercial</span>
-          <h1 style={{ margin: "6px 0 4px", fontSize: 28 }}>Vistoria, orçamento, proposta e contrato</h1>
-          <p style={{ margin: 0, fontSize: 13, color: "#6b7b90" }}>
-            Fluxo do lead qualificado até o aceite. Empresas, contatos e funil ficam em{" "}
-            <a href="/admin/crm">Empresas &amp; funil (CRM)</a>; a fila pública em{" "}
-            <a href="/admin/leads">Pedidos recebidos</a>. <a href="/admin/carteira">Carteira e próximos contatos</a> · <a href="/admin/publicacao">Publicação do site</a>.
-          </p>
-        </div>
-      </header>
-
-      <nav aria-label="Áreas comerciais" style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "16px 24px 0" }}>
-        {TABS.map(([id, label]) => (
+    <UiWorkspace
+      title="Vistoria, orçamento, proposta e contrato"
+      intro={
+        <>
+          Fluxo do lead qualificado até o aceite, em etapas. Empresas, contatos e funil ficam em{" "}
+          <a href="/admin/crm">Empresas e oportunidades</a>; a fila pública em{" "}
+          <a href="/admin/leads">Pedidos recebidos</a>; a continuidade do relacionamento em{" "}
+          <a href="/admin/carteira">Carteira e próximos contatos</a>.
+        </>
+      }
+    >
+      <nav aria-label="Etapas comerciais" className={styles.tabs}>
+        {TABS.map(tab => (
           <button
-            key={id}
-            onClick={() => setView(id)}
-            aria-pressed={view === id}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 8,
-              border: view === id ? "2px solid #0b5fff" : "1px solid #ccd7e4",
-              background: view === id ? "#eff6ff" : "#fff",
-              color: "#17253b",
-              cursor: "pointer",
-              fontSize: 13,
-              fontWeight: 600,
-            }}
+            key={tab.id}
+            type="button"
+            onClick={() => setView(tab.id)}
+            aria-pressed={view === tab.id}
+            aria-current={view === tab.id ? "step" : undefined}
+            className={styles.tab}
           >
-            {label}
+            <span className={styles.tabStep}>{tab.step}</span>
+            {tab.label}
           </button>
         ))}
       </nav>
 
-      <div style={{ padding: 24, display: "grid", gap: 16 }}>
-        {view === "vistoria" && (
-          <section style={card}><InspectionClient /></section>
-        )}
-        {view === "orcamentos" && (
-          <>
-            <section style={card}><TechnicalBudgetClient /></section>
-            <section style={card}><LaborBudgetClient /></section>
-            <section style={card}><CostParameterClient /></section>
-          </>
-        )}
-        {view === "precos" && (
-          <>
-            <section style={card}><PriceScenarioClient /></section>
-            <section style={card}><DiscountClient /></section>
-          </>
-        )}
-        {view === "propostas" && (
-          <>
-            <section style={card}><ProposalClient /></section>
-            <section style={card}><ProposalDeliveryClient /></section>
-            <section style={card}><ProposalAcceptanceClient /></section>
-          </>
-        )}
-        {view === "contratos" && (
-          <section style={card}>
-            <div style={{ padding: 16 }}>
-              <p style={{ fontSize: 12, color: "#6b7b90" }}>
-                CRM-23 exige apenas a prova de que o aceite cria a entidade mínima de contrato/implantação de forma
-                idempotente — o domínio completo de contratos e implantação pertence ao L05. Esta tela consulta o que
-                já foi criado automaticamente pelo aceite da proposta, sem expandir o escopo aqui.
+      <UiPanel
+        id="comercial-etapa"
+        eyebrow={`${current.step} de ${TABS.length} áreas`}
+        title={current.label}
+        description={current.question}
+      >
+        <div className={styles.stack}>
+          {view === "vistoria" && <section className={styles.block}><InspectionClient /></section>}
+          {view === "orcamentos" && (
+            <>
+              <section className={styles.block}><TechnicalBudgetClient /></section>
+              <section className={styles.block}><LaborBudgetClient /></section>
+              <section className={styles.block}><CostParameterClient /></section>
+            </>
+          )}
+          {view === "precos" && (
+            <>
+              <section className={styles.block}><PriceScenarioClient /></section>
+              <section className={styles.block}><DiscountClient /></section>
+            </>
+          )}
+          {view === "propostas" && (
+            <>
+              <section className={styles.block}><ProposalClient /></section>
+              <section className={styles.block}><ProposalDeliveryClient /></section>
+              <section className={styles.block}><ProposalAcceptanceClient /></section>
+            </>
+          )}
+          {view === "contratos" && (
+            <section className={styles.block}>
+              <p className={ui.fieldHint}>
+                Esta tela mostra apenas o contrato/implantação mínimo criado automaticamente pelo aceite da proposta,
+                de forma idempotente. O domínio completo de contratos e implantação vive em{" "}
+                <a href="/admin/contratos">Contratos</a> e não é ampliado aqui.
               </p>
-            </div>
-            <ContractClient />
-          </section>
-        )}
-        {view === "catalogo" && (
-          <>
-            <section style={card}><CatalogClient /></section>
-            <section style={card}><EquipmentClient /></section>
-          </>
-        )}
-        {view === "relatorios" && (
-          <>
-            <section style={card}><ReportClient /></section>
-            <section style={card}><CommissionClient /><CommercialHistory /></section>
-          </>
-        )}
-        {view === "biblioteca" && (
-          <>
-            <section style={card}><CommercialLibraryClient /></section>
-            <section style={card}><PartnershipClient /></section>
-          </>
-        )}
-      </div>
-    </main>
+              <ContractClient />
+            </section>
+          )}
+          {view === "catalogo" && (
+            <>
+              <section className={styles.block}><CatalogClient /></section>
+              <section className={styles.block}><EquipmentClient /></section>
+            </>
+          )}
+          {view === "relatorios" && (
+            <>
+              <section className={styles.block}><ReportClient /></section>
+              <section className={styles.block}><CommissionClient /><CommercialHistory /></section>
+            </>
+          )}
+          {view === "biblioteca" && (
+            <>
+              <section className={styles.block}><CommercialLibraryClient /></section>
+              <section className={styles.block}><PartnershipClient /></section>
+            </>
+          )}
+        </div>
+      </UiPanel>
+    </UiWorkspace>
   );
 }

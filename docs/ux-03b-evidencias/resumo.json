@@ -1,0 +1,108 @@
+{
+  "stage": "ux-03b",
+  "generatedBy": "scripts/ux-evidence-capture.mjs",
+  "entries": [
+    {
+      "stage": "ux-03b",
+      "route": "/admin/crm",
+      "role": "comercial",
+      "viewport": "1440x900",
+      "screenshot": "docs/ux-03b-evidencias/desktop-crm.png",
+      "firstFocus": {
+        "tag": "a",
+        "text": "SEGGrupoSEG System",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-03b",
+      "route": "/admin/crm",
+      "role": "comercial",
+      "viewport": "390x844",
+      "screenshot": "docs/ux-03b-evidencias/mobile-crm.png",
+      "firstFocus": {
+        "tag": "a",
+        "text": "SEGGrupoSEG System",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-03b",
+      "route": "/admin/carteira",
+      "role": "comercial",
+      "viewport": "1440x900",
+      "screenshot": "docs/ux-03b-evidencias/desktop-carteira.png",
+      "firstFocus": {
+        "tag": "a",
+        "text": "SEGGrupoSEG System",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-03b",
+      "route": "/admin/carteira",
+      "role": "comercial",
+      "viewport": "390x844",
+      "screenshot": "docs/ux-03b-evidencias/mobile-carteira.png",
+      "firstFocus": {
+        "tag": "a",
+        "text": "SEGGrupoSEG System",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-03b",
+      "route": "/admin/comercial",
+      "role": "comercial",
+      "viewport": "1440x900",
+      "screenshot": "docs/ux-03b-evidencias/desktop-comercial.png",
+      "firstFocus": {
+        "tag": "a",
+        "text": "SEGGrupoSEG System",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-03b",
+      "route": "/admin/comercial",
+      "role": "comercial",
+      "viewport": "390x844",
+      "screenshot": "docs/ux-03b-evidencias/mobile-comercial.png",
+      "firstFocus": {
+        "tag": "a",
+        "text": "SEGGrupoSEG System",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    }
+  ]
+}

@@ -1,57 +1,122 @@
-.workspace {
-  padding: 24px;
-  min-width: 0;
-  border-radius: var(--ux-radius-md);
-  background: var(--ux-color-surface);
-  color: var(--ux-color-text);
-  font-family: system-ui, sans-serif;
-  overflow-wrap: anywhere;
+/* UX-03B — peças específicas do CRM. A superfície, os controles e a barra de
+   filtros vêm de UiWorkspace.module.css; aqui ficam funil, cartões de
+   oportunidade e a região de detalhe. Nada aqui altera API ou permissão. */
+
+.results {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: var(--ux-space-4);
+  align-items: start;
 }
-.workspace h1 { font-size: clamp(24px, 3vw, 34px); line-height: 1.2; margin: 0 0 12px; }
-.workspace h2 { color: var(--ux-color-text); }
-.workspace p { line-height: 1.6; }
-.workspace input, .workspace select, .workspace textarea {
-  box-sizing: border-box;
-  max-width: 100%;
-  min-height: 44px;
-  border: 1px solid var(--ux-color-border);
-  border-radius: 6px;
-  color: var(--ux-color-text);
-  background: var(--ux-color-surface);
-}
-.workspace button { min-height: 44px; cursor: pointer; }
-.workspace button:disabled { cursor: default; }
-.workspace :is(button, input, select, textarea, a):focus-visible {
-  outline: 3px solid var(--ux-color-focus);
-  outline-offset: 3px;
-}
-.workspace section { scroll-margin-top: 20px; min-width: 0; }
-.workspace form { min-width: 0; }
-.workspace label { color: var(--ux-color-text); }
-.workspace th, .workspace td { padding: 8px; text-align: left; }
-.workspace table { min-width: 540px; overflow-wrap: normal; }
-.taskNav { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0; }
-.taskNav a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 8px 14px;
-  box-sizing: border-box;
+.results > div { min-width: 0; }
+@media (max-width: 1100px) { .results { grid-template-columns: minmax(0, 1fr); } }
+
+.viewSwitch { display: flex; flex-wrap: wrap; gap: var(--ux-space-2); align-items: center; }
+
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr));
+  gap: var(--ux-space-3);
+  max-height: 560px;
+  overflow: auto;
+  padding: var(--ux-space-2);
   border: 1px solid var(--ux-color-border);
   border-radius: var(--ux-radius-sm);
-  color: var(--ux-color-brand);
-  text-decoration: none;
-  font-weight: 600;
+  background: var(--ux-color-canvas);
 }
-.taskNav a:hover { background: var(--ux-color-canvas); }
-.results { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; margin-top: 16px; }
-.results > div { min-width: 0; }
-.workspace .kanban { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 8px; max-height: 500px; overflow: auto; border: 1px solid var(--ux-color-border); padding: 8px; }
-@media (max-width: 1100px) { .results { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 600px) {
-  .workspace { padding: 12px; }
-  .workspace form { flex-wrap: wrap; }
-  .workspace form > label { width: 100%; }
-  .workspace form :is(input, select) { min-width: 0 !important; width: 100% !important; }
-  .workspace form > button { flex: 1 1 auto; }
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ux-space-2);
+  padding: var(--ux-space-2);
+  border: 1px solid var(--ux-color-border);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-surface);
+  min-width: 0;
 }
+.columnTitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  color: var(--ux-color-text);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ux-space-2);
+}
+.columnTitle span { color: var(--ux-color-muted); font-variant-numeric: tabular-nums; }
+.columnEmpty { margin: 0; font-size: 0.75rem; color: var(--ux-color-muted); }
+
+.oppCard {
+  display: grid;
+  gap: var(--ux-space-2);
+  padding: var(--ux-space-3);
+  border: 1px solid var(--ux-color-border);
+  border-left: 4px solid var(--ux-color-brand);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-surface);
+  min-width: 0;
+}
+.oppCard[data-outcome='ganho'] { border-left-color: #3f9a62; }
+.oppCard[data-outcome='perdido'] { border-left-color: var(--ux-color-error); }
+.oppCard[data-selected='true'] { outline: 2px solid var(--ux-color-brand); outline-offset: 2px; }
+.oppTitle { margin: 0; font-size: 0.9375rem; line-height: 1.35; }
+.badges { display: flex; flex-wrap: wrap; gap: var(--ux-space-1); margin: 0; }
+.facts { display: grid; gap: var(--ux-space-1); margin: 0; font-size: 0.8125rem; }
+.fact { display: grid; grid-template-columns: minmax(84px, auto) minmax(0, 1fr); gap: var(--ux-space-2); }
+.facts dt { color: var(--ux-color-muted); }
+.facts dd { margin: 0; color: var(--ux-color-text); overflow-wrap: anywhere; }
+.outcome { margin: 0; font-size: 0.75rem; color: var(--ux-color-muted); }
+
+.detail { border-left: 4px solid var(--ux-color-brand); }
+.detailHeading:focus-visible { outline: 3px solid var(--ux-color-focus); outline-offset: 3px; }
+.detailParts { display: grid; gap: var(--ux-space-4); }
+
+.importSteps {
+  display: grid;
+  gap: var(--ux-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: import-step;
+}
+.importStep {
+  padding: var(--ux-space-3) var(--ux-space-3) var(--ux-space-3) var(--ux-space-4);
+  border: 1px solid var(--ux-color-border);
+  border-left: 4px solid var(--ux-color-border);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-surface);
+  min-width: 0;
+}
+.importStep[data-state='atual'] { border-left-color: var(--ux-color-brand); background: #f7fbff; }
+.importStep[data-state='concluida'] { border-left-color: #3f9a62; }
+.importStepTitle {
+  margin: 0 0 var(--ux-space-2);
+  font-size: 0.9375rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ux-space-2);
+  align-items: baseline;
+}
+.importStepState { font-size: 0.75rem; font-weight: 700; color: var(--ux-color-muted); }
+.importControls { display: flex; flex-wrap: wrap; gap: var(--ux-space-3); align-items: flex-end; }
+.importControls > * { flex: 1 1 240px; min-width: 0; }
+.importSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ux-space-3);
+  margin: 0 0 var(--ux-space-3);
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+}
+.importSummary li {
+  padding: var(--ux-space-2) var(--ux-space-3);
+  border: 1px solid var(--ux-color-border);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-canvas);
+}
+.importSummary strong { display: block; font-size: 1.125rem; font-variant-numeric: tabular-nums; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.75rem; white-space: pre-wrap; }
+.rowValid { background: #f2fbf5; }
+.rowDuplicate { background: #fffaeb; }
+.rowInvalid { background: #fdf3f3; }

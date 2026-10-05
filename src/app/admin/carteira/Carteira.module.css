@@ -1,0 +1,28 @@
+/* UX-03B — cartões da carteira comercial. */
+
+.cardList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: var(--ux-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.card {
+  display: grid;
+  gap: var(--ux-space-2);
+  height: 100%;
+  padding: var(--ux-space-4);
+  border: 1px solid var(--ux-color-border);
+  border-left: 4px solid var(--ux-color-brand);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-surface);
+  min-width: 0;
+}
+.cardTitle { margin: 0; font-size: 1rem; line-height: 1.35; overflow-wrap: anywhere; }
+.badges { display: flex; flex-wrap: wrap; gap: var(--ux-space-1); margin: 0; }
+.facts { display: grid; gap: var(--ux-space-1); margin: 0; font-size: 0.875rem; }
+.fact { display: grid; grid-template-columns: minmax(84px, auto) minmax(0, 1fr); gap: var(--ux-space-2); }
+.facts dt { color: var(--ux-color-muted); }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.actionList { margin: 0; padding-left: var(--ux-space-4); display: grid; gap: var(--ux-space-1); font-size: 0.875rem; }

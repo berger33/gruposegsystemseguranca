@@ -2103,22 +2103,35 @@ test('CRM-07/05/06: campo a campo de oportunidades, funil com reabertura auditad
     ]);
     assert.equal(createResponse.status(), 201);
 
-    // Kanban exibe os campos de CRM-05 no cartão.
+    // Kanban exibe os campos de CRM-05 no cartão. UX-03B trocou a linha única
+    // de texto por uma ficha com rótulo por campo: as asserções de negócio são
+    // as mesmas (serviço, prioridade, valor, responsável, unidade, previsão e
+    // origem continuam visíveis), só os seletores acompanham a nova cópia.
     const card = page.getByRole('article').filter({ hasText: uiTitle });
     await card.waitFor();
-    await card.getByText('Serviço: Alarme monitorado | Prioridade: alta | Valor: 8900.50', { exact: true }).waitFor();
-    await card.getByText('Responsável: QA Staff comercial | Unidade: Unidade Matriz Alphaville | Previsão: 2026-11-30', { exact: true }).waitFor();
-    await card.getByText('Origem: indicacao').waitFor();
+    const readField = async (scope, field) =>
+      (await scope.locator(`[data-field="${field}"]`).innerText()).replace(/\u00a0/g, ' ').trim();
+    assert.equal(await readField(card, 'service_name'), 'Alarme monitorado');
+    assert.match(await readField(card, 'estimated_value'), /^R\$ 8\.900,50$/);
+    assert.equal(await readField(card, 'responsible_name'), 'QA Staff comercial');
+    assert.equal(await readField(card, 'unit_name'), 'Unidade Matriz Alphaville');
+    assert.equal(await readField(card, 'forecast_date'), '30/11/2026');
+    assert.equal(await readField(card, 'origin'), 'indicacao');
+    await card.getByText('Etapa: Novo', { exact: true }).waitFor();
+    await card.getByText('Prioridade: Alta', { exact: true }).waitFor();
 
     // Tabela com todas as colunas do requisito.
     await page.getByRole('button', { name: 'Ver em tabela', exact: true }).click();
     const row = page.getByRole('row').filter({ hasText: uiTitle });
     await row.waitFor();
-    await row.getByText('Alarme monitorado', { exact: true }).waitFor();
-    await row.getByText('QA Staff comercial', { exact: true }).waitFor();
-    await row.getByText('Unidade Matriz Alphaville', { exact: true }).waitFor();
-    await row.getByText('2026-11-30', { exact: true }).waitFor();
-    await row.getByText('indicacao', { exact: true }).waitFor();
+    assert.equal(await readField(row, 'service_name'), 'Alarme monitorado');
+    assert.equal(await readField(row, 'responsible_name'), 'QA Staff comercial');
+    assert.equal(await readField(row, 'unit_name'), 'Unidade Matriz Alphaville');
+    assert.equal(await readField(row, 'forecast_date'), '30/11/2026');
+    assert.equal(await readField(row, 'origin'), 'indicacao');
+    assert.equal(await readField(row, 'stage'), 'Novo');
+    assert.equal(await readField(row, 'priority'), 'Alta');
+    assert.match(await readField(row, 'estimated_value'), /^R\$ 8\.900,50$/);
     await assertNoHorizontalScroll(page, 'tabela de oportunidades');
 
     // Painel de detalhe: manutenção de campos e funil com motivos exigidos.

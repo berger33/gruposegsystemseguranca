@@ -1,0 +1,46 @@
+/* UX-03B — navegação por etapas do comercial. */
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ux-space-2);
+  margin-top: var(--ux-space-4);
+}
+.tab {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+  text-align: left;
+  min-height: 52px;
+  padding: var(--ux-space-2) var(--ux-space-4);
+  border: 1px solid var(--ux-color-border);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-surface);
+  color: var(--ux-color-text);
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+.tab:hover { background: var(--ux-color-canvas); border-color: var(--ux-color-brand); }
+.tab[aria-pressed='true'] {
+  border-color: var(--ux-color-brand);
+  border-bottom-width: 4px;
+  background: #eef5fd;
+  color: #0f3f70;
+}
+.tabStep {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ux-color-muted);
+}
+.tab[aria-pressed='true'] .tabStep { color: var(--ux-color-brand); }
+
+.stack { display: grid; gap: var(--ux-space-4); min-width: 0; }
+.block {
+  border: 1px solid var(--ux-color-border);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-surface);
+  min-width: 0;
+  overflow-x: auto;
+}
