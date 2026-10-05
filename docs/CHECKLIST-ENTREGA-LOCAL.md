@@ -1,4 +1,21 @@
-## Atualização corrente — EXT-15 / F11 Apoio emergencial canônico
+## Atualização corrente — EXT-10 isolamento por client_account_id (F06, requisito confirmado)
+
+**Base:** PR #140 `MERGED` em `d393f076875b3fa2513a42d01dd856f2c7300729`; branch fixa desta sessão `arena/01a10988-gruposegsystemseguranca`; PRs #126–#140 intocadas; #128, #130 e #131 fechadas sem merge como `superseded` com autorização do operador.
+
+- [x] Requisito de escopo/isolamento por `client_account_id` da EXT-10 confirmado explicitamente pelo operador nesta sessão.
+- [x] Sem migração nova: 001–167 imutáveis; próxima livre continua 168 (coluna da 086 e grants escopados da infraestrutura RBAC reutilizados; nenhuma necessidade funcional de DDL).
+- [x] Listagem escopada por `EXISTS` sobre `auth_permissions`: grant `global`/`organization` vê tudo; grant de escopo `account` vê somente planos da própria conta; plano sem conta exige grant global/organization.
+- [x] Criação com `client_account_id` opcional: 400 `invalid_client_account_id` malformado; 409 `client_account_not_found` dentro da transação; 403 `forbidden_account_scope` fail-closed, inclusive para plano sem conta com grant apenas de conta.
+- [x] Detalhe, transição e exercício re-checam o escopo pelo plano e respondem 404 `plan_not_found` fora do escopo, sem vazar existência de plano de outra conta; guarda de permissão continua 403 fail-closed sem qualquer grant ativo.
+- [x] UI `/admin/continuidade` com campo opcional de conta, conta vinculada exibida e escopo por conta declarado; sem alerta externo e sem fornecedor.
+- [x] Unitário focal `tests/ext10-continuity.test.mjs`: **13/13**.
+- [x] Gate focal `npm run test:ext10-continuity:pg`: **22/22** na primeira execução (mínimo elevado de 17 para 22); PostgreSQL 17 descartável, migrações 001–167, servidor HTTP real, Chromium, sessões staff reais, contas fictícias A/B e staff com grant restrito à conta A.
+- [x] `node scripts/qa-wave0-static.mjs` **5/5**, `npm run typecheck`, `npm test` **614/614**, `npm run build` (**101 páginas**), `npm run test:migrations:pg` **167/167**, `git diff --check` e `node --check`.
+- [ ] Aceite humano.
+- [ ] Windows/EPERM e aplicação no banco de destino.
+- [ ] Ator externo/cliente autenticado na EXT-10, portal de cliente para planos, notificação externa ou fornecedor.
+
+## Atualização anterior — EXT-15 / F11 Apoio emergencial canônico
 
 - Base confirmada: PR #139 `MERGED` em `53492d681bfffd5bc8aaa85bf51de6d1dad10a5b`; `origin/main` e a branch fixa `arena/01a10969-gruposegsystemseguranca` iniciaram nesse SHA, com checkout limpo. PRs #126, #127, #129, #132, #133, #134, #136, #137, #138 e #139 permanecem integradas e intocadas.
 - Fatia escolhida: EXT-15, sem contar tabelas ou handlers legados da migração 087 como cobertura. Migração aditiva `167-ext15-emergency-canonical-journey.sql`; 001–166 imutáveis; próxima livre: **168**.
