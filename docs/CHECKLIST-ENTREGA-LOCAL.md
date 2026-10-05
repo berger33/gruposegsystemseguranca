@@ -1675,10 +1675,10 @@ Relatório periódico Aceite: Consolidação de métricas e envio autorizado
 
 ## EXT-14
 Inteligência comercial Aceite: Indicações, reativação e recomendações baseadas em histórico
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Handlers `/api/ext/*` para inteligência comercial; tabelas `ext_commercial_intelligence`/087; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
-- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
-- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
+- Estado: **pronto_local — gate dedicado 17/17** (jornada interna de staff; aceite humano e Windows pendentes)
+- Tela / API / dados / autorização: `/admin/inteligencia` protegido por `AdminGate`; `/api/ext/intel/suggestions` com detalhe, transição justificada, construção de evidência e contato registrado; tabela `ext_commercial_intelligence` (origem canônica da migração 166) e `ext_intel_events` append-only; grants `intel.read/write/review/contact` consultados no servidor.
+- Integração e evidência: `npm run test:ext14-intel:pg` em PG17 descartável, migrações 001–166, servidor HTTP real e sessões staff reais; sugestões/evidências/aprovações/contatos por HTTP; evidência contada (`COUNT(*)`) de tabelas-fonte internas fixas por tipo e conferida com o SQL, com dado-fonte comercial nascido pela rota pública real `/api/leads`; aprovação humana exige evidência anterior e o contato exige aprovação; RBAC, same-origin, replay/conflito, concorrência, locks, auditoria/rollback/503, imutabilidade e legado 410 cobertos. Unitário focal 13/13; `npm test` 599/599; migrações 166/166; build 100 páginas.
+- Pendência / fronteira externa / aceite humano: o contato é registro interno autorizado e auditado — não há e-mail, telefonema, mensagem externa, fornecedor externo ou ator externo; tipo `outro` é recusado por não ter fonte confirmada. Permanecem aceite humano, Windows/EPERM e banco de destino.
 
 ## EXT-15
 Apoio emergencial Aceite: Canal, destinatário, disponibilidade e escalonamento definidos

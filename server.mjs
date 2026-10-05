@@ -116,6 +116,7 @@ import { createExtContinuityApi } from "./src/server/ext-continuity-api.mjs";
 import { createExtAnalyticsApi } from "./src/server/ext-analytics-api.mjs";
 import { createExtVisualApi } from "./src/server/ext-visual-api.mjs";
 import { createExtReportsApi } from "./src/server/ext-reports-api.mjs";
+import { createExtIntelApi } from "./src/server/ext-intel-api.mjs";
 import { parseSchedulerConfig, startExtComplianceScheduler } from "./src/server/ext-compliance-scheduler.mjs";
 import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
 import { createCommercialHistoryApi } from "./src/server/commercial-history-api.mjs";
@@ -2364,6 +2365,15 @@ const extReportsApi = createExtReportsApi({
   requireSession: readSession,
 });
 
+// EXT-14 / F10: inteligência comercial canônica. Sugestões são explicadas com
+// evidência contada de tabelas internas reais; o contato exige aprovação
+// humana anterior e é registro interno autorizado — nenhuma mensagem externa.
+const extIntelApi = createExtIntelApi({
+  pool: getPool(),
+  sameOrigin,
+  requireSession: readSession,
+});
+
 const extAdvancedApi = createExtAdvancedApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -4405,9 +4415,14 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/ext-periodic-reports" || url.pathname === "/api/crm/hr/ext-periodic-reports" || url.pathname === "/api/hr/ext-periodic-reports" || url.pathname === "/api/ext/periodic-reports") {
     return extReportsApi.handleLegacy(req, res);
   }
-  // EXT-14 inteligência comercial justificativa obrigatória uso bloqueado sem aprovação humana
+  // EXT-14 / F10 inteligência comercial canônica: sugestão explicada com
+  // evidência contada do histórico interno e contato registrado somente após
+  // aprovação humana (registro interno, sem mensagem externa).
+  if (url.pathname.startsWith("/api/ext/intel/")) return extIntelApi.handle(req, res);
+  // Legado: GET permanece leitura autorizada e minimizada; qualquer escrita
+  // passa pelas guardas e recebe 410 sem alterar ext_commercial_intelligence.
   if (url.pathname === "/api/admin/hr/ext-commercial-intelligence" || url.pathname === "/api/crm/hr/ext-commercial-intelligence" || url.pathname === "/api/hr/ext-commercial-intelligence" || url.pathname === "/api/ext/commercial-intelligence") {
-    return extReportingApi.handleCommercialIntelligence(req, res);
+    return extIntelApi.handleLegacy(req, res);
   }
   // EXT-15 emergencial apoio testar recebimento e atendimento antes disponibilizar
   if (url.pathname === "/api/admin/hr/ext-emergency-channels" || url.pathname === "/api/crm/hr/ext-emergency-channels" || url.pathname === "/api/hr/ext-emergency-channels" || url.pathname === "/api/ext/emergency-channels") {
@@ -5909,6 +5924,7 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/ext/analytics/")
   || pathname.startsWith("/api/ext/visual/")
   || pathname.startsWith("/api/ext/reports/")
+  || pathname.startsWith("/api/ext/intel/")
   || pathname.startsWith("/api/ext/satisfaction/")
   || pathname === "/api/admin/hr/ext-bidding-documents"
   || pathname === "/api/crm/hr/ext-bidding-documents"
