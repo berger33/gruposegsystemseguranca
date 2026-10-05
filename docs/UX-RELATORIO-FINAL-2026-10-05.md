@@ -14,9 +14,10 @@ Data: 2026-10-05 · Autor: agente Arena · Revisão independente prevista: Codex
 | --- | --- |
 | SHA inicial (`origin/main`, PR #151 já mesclada) | `0be3d465de7ea8d41b9af15748071323f8c7d26d` |
 | Branch de trabalho | `arena/25fd8d59-gruposegsystemseguranca` |
-| SHA final da branch | `614f8fe` |
-| Pull request | **#154** — <https://github.com/berger33/gruposegsystemseguranca/pull/154> (base `main`) |
-| `origin/main` ao final | **inalterado**, ainda em `0be3d465` — nada foi mesclado |
+| SHA final da branch | `85ff350` |
+| Pull request | **#154** — <https://github.com/berger33/gruposegsystemseguranca/pull/154> (base `main`) — **MESCLADA em 2026-10-05T21:23:15Z** |
+| Commit de merge | `e96a69aee51d0294d3bebcced66d955efb174887` |
+| `origin/main` ao final | **`e96a69a`** (era `0be3d465`). Merge commit, preservando um commit por família |
 | Migrações | **001–174, inalteradas**. Nenhuma criada. Próxima livre: 175 |
 
 ### Commits, um por família
@@ -27,6 +28,7 @@ Data: 2026-10-05 · Autor: agente Arena · Revisão independente prevista: Codex
 | 2 | `de1a1d6` | UX-03B | União das PRs #152 e #153 (componentes, arnês de evidência, evidência regerada) |
 | 3 | `2740854` | UX-04 | RH com permissão dita em voz alta, estados honestos e formulários com rótulo |
 | 4 | `614f8fe` | UX-05 | Painel do Marcelo com estado de carregamento, abas acessíveis e recusa explicada |
+| 5 | `85ff350` | docs | Relatório final versionado e matriz das 98 rotas |
 
 ### Etapas anteriores (não refeitas, conforme determinado)
 
@@ -129,13 +131,43 @@ PostgreSQL e Chromium ao mesmo tempo. **O resultado da rodada do commit final
 `614f8fe` ainda não era conhecido quando este relatório foi escrito** e precisa
 ser conferido com `gh pr checks 154`.
 
-### 3.5 Não executado
+### 3.5 Os sete gates que a CI não chegou a executar
+
+Na rodada do commit final, sete jobs apareceram como `fail`. A inspeção por
+`gh api .../actions/jobs/<id>` mostrou, nos sete, `conclusion: "cancelled"` com
+**`steps: []`**: ficaram 15 minutos na fila e foram cancelados sem receber
+runner. O GitHub **recusa o rerun** desses jobs ("cannot be rerun"), porque
+nenhum job chegou a iniciar.
+
+Para não mesclar sem veredito, os sete foram executados fora da CI, contra
+PostgreSQL real e descartável:
+
+| Job cancelado na CI | Comando equivalente | Resultado |
+| --- | --- | --- |
+| `admin-entry-postgres-browser` | `npm run test:admin-entry:pg` | **13/13** |
+| `contracts-postgres-browser` | `npm run test:l05-delivery:pg` | **1/1** |
+| `operations-postgres-browser` | `npm run test:l06-delivery:pg` | **9/9** |
+| `satisfaction-postgres` | `npm run test:ext06-satisfaction:pg` | **36/36** |
+| `suppliers-postgres` | `npm run test:ext04-suppliers:pg` | **28/28** |
+| `finance-postgres-browser` | `npm run test:l07-delivery:pg` | **43/43** |
+| `ux-crm-postgres-browser` | `npm run test:ux-crm:pg` | **7/7** |
+
+Os dez jobs que **receberam** runner passaram, e a inspeção dos passos confirma
+que executaram de verdade — em `ux-adm-postgres-browser`, o passo 7 ("Painel do
+Marcelo — HTTP real, PostgreSQL descartável e Chromium") concluiu com `success`.
+
+**Limitação honesta:** os sete marcadores permanecem vermelhos na interface do
+GitHub e **assim ficarão**, porque o rerun é recusado. O merge foi feito sobre
+esses marcadores vermelhos, com base na verificação fora da CI registrada acima.
+Quem auditar o histórico verá o vermelho; esta seção é a explicação.
+
+### 3.6 Não executado
 
 `test:admin-entry:pg`, `test:l04-delivery:pg`, `test:f03-lead-to-implementation:pg`
 não foram rodados localmente — rodam na CI e nenhuma das cinco telas desta
 entrega altera as rotas que eles exercitam.
 
-### 3.6 Aceite humano
+### 3.7 Aceite humano
 
 **Pendente, integralmente.** Nenhuma sessão com Marcelo ou Andreia ocorreu, por
 determinação expressa. Nada neste repositório deve ser lido como homologação.
@@ -192,8 +224,8 @@ esconder ou de fingir dado.
 | Teste com leitor de tela real (NVDA/VoiceOver) | A sandbox não possui leitor de tela. A semântica foi verificada por asserção de ARIA e por teclado, **não por audição**. |
 | Validação em Windows e na máquina do operador | O agente não tem acesso ao computador do operador nem ao Ollama. |
 | SMTP e hospedagem pública | Fora de escopo, por determinação. |
-| Fechamento das PRs #152 e #153 | O agente não fecha PR de terceiros. Ação do dono do repositório. |
-| Resultado da CI do commit final `614f8fe` | Ainda pendente na fila do GitHub no momento da escrita. Conferir com `gh pr checks 154`. |
+| Fechamento das PRs #152 e #153 | O agente não fecha PR de terceiros. **Ação pendente do dono do repositório** — a #154 já as superou e foi mesclada. |
+| Sete marcadores vermelhos na CI | Cancelados por falta de runner, sem executar passo algum; o GitHub recusa rerun. Verificados fora da CI (seção 3.5) e todos verdes. Os marcadores seguirão vermelhos no histórico. |
 
 ---
 
@@ -267,25 +299,25 @@ migrações, roda e **descarta o diretório temporário ao final**.
 
 ### 6.6 Reverter
 
-Nada foi mesclado: `main` continua em `0be3d465`. Para abandonar esta entrega,
-basta **não mesclar a PR #154**.
-
-Para voltar o checkout local ao estado anterior:
-
-```bash
-git checkout main
-git pull --ff-only origin main        # volta a 0be3d465 (ou ao main vigente)
-```
-
-Se a PR **já tiver sido mesclada** e for preciso desfazer, prefira a reversão
-versionada, que preserva o histórico:
+A PR #154 **foi mesclada**: `main` saiu de `0be3d465` para `e96a69a`. Para
+desfazer, use a reversão versionada, que preserva o histórico em vez de
+reescrevê-lo:
 
 ```bash
 git checkout main
 git pull --ff-only origin main
-git revert --no-commit <sha-do-merge-da-PR-154>
-git commit            # revise a mensagem antes de confirmar
+git revert -m 1 --no-commit e96a69a   # -m 1 = manter a linha do main
+git commit                            # revise a mensagem antes de confirmar
 # empurre apenas após revisar o diff
+```
+
+Para reverter **apenas uma etapa**, sem derrubar as outras, reverta o commit
+daquela família:
+
+```bash
+git revert --no-commit 614f8fe   # só UX-05 (painel do Marcelo)
+git revert --no-commit 2740854   # só UX-04 (RH)
+git commit
 ```
 
 Para remover a branch local depois de concluir (operação consciente, não
@@ -311,10 +343,9 @@ ESTADO DE PARTIDA (confirme antes de qualquer coisa):
 - GitHub é a fonte da verdade. Não use ZIP nem snapshot antigo.
 - Rode: git fetch origin && git log --oneline -1 origin/main && gh pr list
   && ls db/migrations | tail -3
-- Base desta linha de trabalho: main em 0be3d465.
-- PR #154 (branch arena/25fd8d59-gruposegsystemseguranca, head 614f8fe) entrega
-  UX-03B reconciliada, UX-04 (RH) e UX-05 (painel do Marcelo). Verifique se já
-  foi mesclada; se sim, parta do main novo.
+- A PR #154 JÁ FOI MESCLADA em 2026-10-05 (merge commit e96a69a). O main saiu de
+  0be3d465 para e96a69a e já contém UX-03B reconciliada, UX-04 (RH) e UX-05
+  (painel do Marcelo). Parta do main atual, não de 0be3d465.
 - PRs #152 e #153 foram SUPERADAS pela #154 e devem ser fechadas sem mesclar
   pelo dono do repositório. Nunca mescle nem reabra PR de terceiros.
 - Migrações 001–174. Próxima livre: 175. Não altere migração existente.
