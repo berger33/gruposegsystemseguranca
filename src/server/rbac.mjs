@@ -42,6 +42,8 @@ export const KNOWN_PERMISSIONS = Object.freeze([
   "financeiro.receivables.write",
   "financeiro.reports.read",
   "financeiro.reports.generate",
+  "quality.read",
+  "quality.write",
   "knowledge.read",
   "knowledge.write",
   "knowledge.publish",

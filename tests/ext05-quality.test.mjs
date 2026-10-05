@@ -17,6 +17,10 @@ test("EXT-05: migração impõe evidência, responsável, história e eventos",a
  for(const token of ["ext_quality_causes","ext_quality_verifications","ext_quality_closures","ext_quality_reopenings","ext_quality_recurrences","ext_quality_events","closure prerequisites","historical record is immutable","::text"])assert.match(sql,new RegExp(token.replaceAll(" ","\\s+"),"i"));
  assert.doesNotMatch(sql,/INSERT INTO auth_identities/i);
 });
+test("EXT-05: migração 172 adiciona conta imutável e permissões escopáveis sem backfill",async()=>{
+ const sql=await readFile(new URL("../db/migrations/172-ext05-quality-client-account-scope.sql",import.meta.url),"utf8");
+ assert.match(sql,/client_account_id UUID REFERENCES client_accounts/);assert.match(sql,/quality\.read/);assert.match(sql,/quality\.write/);assert.match(sql,/client account is immutable/);assert.doesNotMatch(sql,/UPDATE ext_quality_nonconformities SET client_account_id/);
+});
 test("EXT-05: servidor liga apenas namespace canônico e legados exatos",async()=>{
  const source=await readFile(new URL("../server.mjs",import.meta.url),"utf8");assert.match(source,/createExtQualityApi/);assert.match(source,/\/api\/ext\/quality\/nonconformities/);assert.match(source,/ext-quality-nonconformities/);
  const legacy=await readFile(new URL("../src/server/ext-api.mjs",import.meta.url),"utf8");assert.doesNotMatch(legacy,/const handleQualityNonconformities/);assert.doesNotMatch(legacy,/const handleQualityActions/);
