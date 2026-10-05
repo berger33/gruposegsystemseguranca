@@ -2338,7 +2338,13 @@ const extExpansionApi = createExtExpansionApi({
   requireSession: readSession,
 });
 
-const extContinuityApi = createExtContinuityApi({ pool: getPool(), sameOrigin, requireSession: readSession });
+const extContinuityApi = createExtContinuityApi({
+  pool: getPool(),
+  sameOrigin,
+  requireSession: readSession,
+  // F06: leitura do plano publicado pelo cliente vinculado da própria conta.
+  readClientSession: clientAccessApi.readClientSession,
+});
 
 // EXT-11 / F07: analytics canônica. Escritas aceitam somente observações
 // agregadas de origem operacional interna, sem tráfego ou fornecedor externo.
@@ -2725,6 +2731,10 @@ async function routeApi(req, res) {
   const clientVisitMatch = url.pathname.match(/^\/api\/client\/visits\/([0-9a-f-]{36})$/i);
   if (clientVisitMatch) return clientSpaceApi.handleClientVisitUpdate(req, res, clientVisitMatch[1]);
   if (url.pathname === "/api/client/reports") return clientSpaceApi.handleClientReports(req, res, url);
+  // EXT-10 / F06: leitura (somente GET) dos planos de continuidade publicados para a conta do cliente.
+  if (url.pathname === "/api/client/continuity/plans" || url.pathname.startsWith("/api/client/continuity/plans/")) {
+    return extContinuityApi.handleClient(req, res);
+  }
   const clientReportAckMatch = url.pathname.match(/^\/api\/client\/reports\/([0-9a-f-]{36})\/acknowledge$/i);
   if (clientReportAckMatch) return clientSpaceApi.handleClientReportAcknowledge(req, res, clientReportAckMatch[1]);
   if (url.pathname === "/api/client/security/mfa/setup") return clientSecurityApi.handleMfaSetup(req, res);

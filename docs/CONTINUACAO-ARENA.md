@@ -1,3 +1,25 @@
+## Atualização corrente — F06 / EXT-10 Portal do cliente para planos de continuidade (Opção 1)
+
+- **Base e branch:** `origin/main` confirmado em `f1fd1a195e8bf0dc5e20079806b92699e1db6225` (merge commit da PR #142). Branch exclusiva desta sessão: `arena/01a109d5-gruposegsystemseguranca`, checkout limpo, nenhuma PR aberta.
+- **Fatia escolhida:** Opção 1 — EXT-10 / F06: leitura, pelo **cliente autenticado e vinculado**, do plano de continuidade da própria conta. Fecha a lacuna registrada desde o Incremento 12 (EXT-10 provada somente na jornada interna de staff, sem ator externo).
+- **Migração aditiva 169 (`169-ext10-continuity-client-portal.sql`):**
+  - Preserva 001–168 imutáveis; próxima livre passa a ser **170**.
+  - Adiciona a `ext_continuity_plans`: `client_visible` (FALSE por padrão), `client_visibility_note`, `client_visibility_set_at` e `client_visibility_set_by`, com índice parcial da publicação.
+  - Trigger `ext_continuity_client_visibility_guard`: publicação exige conta de cliente vinculada, estado publicável (`aprovado`/`em_teste`/`testado`), identidade autorizadora e justificativa (mín. 10 caracteres); a saída do estado publicável **retira a publicação no próprio banco**.
+  - Ampliação dinâmica de `auth_access_audit_action_check` com `continuity_plan_client_publish`, `continuity_plan_client_unpublish`, `continuity_plan_client_list` e `continuity_plan_client_detail`.
+- **API (`src/server/ext-continuity-api.mjs`):**
+  - Staff: `POST /api/ext/continuity/plans/:id/client-visibility` — publicação/retirada transacional com `Idempotency-Key`, fingerprint SHA-256, advisory lock, `FOR UPDATE`, evento imutável e auditoria atômica (`503 audit_unavailable` com rollback).
+  - Cliente: `GET /api/client/continuity/plans?account=` e `GET /api/client/continuity/plans/:id` — **somente leitura** (qualquer outro método responde 405). Escopo revalidado a cada requisição por `client_access_grants` ativo + conta ativa + restrição de unidade; negativa auditada e `403 forbidden` na listagem, `404 plan_not_found` idêntico para plano de outra conta e para plano não publicado.
+  - Projeção minimizada ao cliente: sem contatos internos, sem justificativa interna, sem `client_account_id`, sem `created_by_identity`, sem trilha de eventos e sem resultado textual de simulado (apenas datas).
+- **UI:** nova aba `/cliente/app/continuidade` (somente leitura, declara ausência de acionamento/alerta externo) e controle de publicação justificada no workspace `/admin/continuidade`.
+- **Evidências locais:**
+  - `node scripts/qa-wave0-static.mjs`: **5/5** (001–169).
+  - `tests/ext10-continuity.test.mjs`: **24/24** unitários.
+  - `npm run test:ext10-continuity:pg`: **31/31** na primeira execução (mínimo do gate elevado de 22 para 31; PG17 descartável, HTTP real, sessões staff e clientes vinculados sintéticos A/B, revogação de vínculo e tentativa de publicação direta por SQL recusada pelo banco).
+  - `npm test`: **628/628**; `npm run typecheck`: OK; `npm run test:migrations:pg`: **169/169** (dupla aplicação + rejeição de checksum adulterado); `npm run build`: **102 páginas**.
+  - Regressões de vizinhança: EXT-07 **50/50**, acesso do cliente **27/27**. `git diff --check` e `node --check`: OK.
+- **Limites honestos:** o cliente apenas **lê** um plano que a equipe publicou explicitamente; não há acionamento de plano, alerta, notificação, e-mail/SMTP, central externa, aceite humano, Windows/EPERM nem aplicação no banco do operador. Nenhuma migração foi aplicada em banco de destino; só clusters descartáveis. EXT-16/17 permanecem bloqueadas sem instrução explícita e avaliação de privacidade aprovada.
+
 ## Atualização corrente — F15 / EXT-07 Planos de Ação Corretivos e Preventivos de Compliance (Opção 1)
 
 - **Base e branch:** `origin/main` confirmado em `b26f93cb1262777827a46edc823e8fccd1c1e70e` (merge commit da PR #141). Branch exclusiva desta sessão: `arena/01a109c0-gruposegsystemseguranca`.
