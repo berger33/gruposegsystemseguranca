@@ -1,0 +1,57 @@
+.workspace {
+  padding: 24px;
+  min-width: 0;
+  border-radius: var(--ux-radius-md);
+  background: var(--ux-color-surface);
+  color: var(--ux-color-text);
+  font-family: system-ui, sans-serif;
+  overflow-wrap: anywhere;
+}
+.workspace h1 { font-size: clamp(24px, 3vw, 34px); line-height: 1.2; margin: 0 0 12px; }
+.workspace h2 { color: var(--ux-color-text); }
+.workspace p { line-height: 1.6; }
+.workspace input, .workspace select, .workspace textarea {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--ux-color-border);
+  border-radius: 6px;
+  color: var(--ux-color-text);
+  background: var(--ux-color-surface);
+}
+.workspace button { min-height: 44px; cursor: pointer; }
+.workspace button:disabled { cursor: default; }
+.workspace :is(button, input, select, textarea, a):focus-visible {
+  outline: 3px solid var(--ux-color-focus);
+  outline-offset: 3px;
+}
+.workspace section { scroll-margin-top: 20px; min-width: 0; }
+.workspace form { min-width: 0; }
+.workspace label { color: var(--ux-color-text); }
+.workspace th, .workspace td { padding: 8px; text-align: left; }
+.workspace table { min-width: 540px; overflow-wrap: normal; }
+.taskNav { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0; }
+.taskNav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--ux-color-border);
+  border-radius: var(--ux-radius-sm);
+  color: var(--ux-color-brand);
+  text-decoration: none;
+  font-weight: 600;
+}
+.taskNav a:hover { background: var(--ux-color-canvas); }
+.results { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; margin-top: 16px; }
+.results > div { min-width: 0; }
+.workspace .kanban { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 8px; max-height: 500px; overflow: auto; border: 1px solid var(--ux-color-border); padding: 8px; }
+@media (max-width: 1100px) { .results { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) {
+  .workspace { padding: 12px; }
+  .workspace form { flex-wrap: wrap; }
+  .workspace form > label { width: 100%; }
+  .workspace form :is(input, select) { min-width: 0 !important; width: 100% !important; }
+  .workspace form > button { flex: 1 1 auto; }
+}

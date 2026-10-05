@@ -12,6 +12,7 @@ import ContactManager from "./ContactManager";
 import UnitManager from "./UnitManager";
 import ImportDedupReview from "./ImportDedupReview";
 import AdminGate from "../AdminGate";
+import styles from "./CrmWorkspace.module.css";
 
 type Company = { id: string; display_name: string; type: string; city: string; segment: string | null; status: string; responsible_name: string | null; };
 type Unit = { id: string; display_name: string };
@@ -202,41 +203,51 @@ function CrmPageContent() {
   const stages = ["novo","qualificacao","vistoria","proposta_elaboracao","proposta_enviada","negociacao","ganho","perdido"];
 
   return (
-    <main style={{ padding: 24, maxWidth: 1200, margin: "0 auto", fontFamily: "system-ui, sans-serif" }}>
-      <h1>CRM — Empresas, contatos e funil (CRM-01..10 + CRM-03 import)</h1>
-      <p style={{ fontSize: 13, opacity: 0.8 }}>Cadastro central de empresas e contatos com tipo prospect/cliente/parceiro sem duplicar entidade (CRM-01), contato com função decisor/influenciador/usuario/financeiro (CRM-02), importar CSV com prévia, validação por linha, mapeamento, relatório, deduplicação revisável e prevenção fórmula maliciosa na exportação (CRM-03), converter lead preservando histórico com deduplicação (CRM-04), oportunidades com serviço, necessidade, responsável, unidade, previsão, valor estimado, próxima ação/data, origem, prioridade, motivo perda (CRM-05), funil novo→qualificação→vistoria→proposta_elaboração→enviada→negociação→ganho/perdido com motivo obrigatório perda e reabertura auditada, não tratar ganho como dinheiro recebido (CRM-06). O funil é pessoal: cada comercial vê apenas as próprias oportunidades.</p>
+    <main className={styles.workspace}>
+      <h1>Empresas e oportunidades</h1>
+      <p>Cadastre empresas, acompanhe suas oportunidades e organize os próximos contatos. Cada comercial acessa seu próprio funil; as permissões continuam verificadas no servidor.</p>
+      <nav className={styles.taskNav} aria-label="Tarefas do CRM">
+        <a href="#crm-cadastros">Cadastrar empresa</a>
+        <a href="#crm-importacao">Importar empresas</a>
+        <a href="#crm-oportunidade">Criar oportunidade</a>
+        <a href="#crm-funil">Consultar funil</a>
+        <a href="#crm-agenda">Agenda e delegações</a>
+      </nav>
 
-      <section style={{ marginTop: 16, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
-        <h2 style={{ fontSize: 16, margin: 0 }}>Nova empresa (CRM-01)</h2>
+      <section id="crm-cadastros" aria-label="Cadastro de empresa" style={{ marginTop: 16, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
+        <h2 style={{ fontSize: 16, margin: 0 }}>Nova empresa</h2>
         <form onSubmit={createCompany} style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
-          <input placeholder="Nome empresa" value={form.displayName} onChange={e=>setForm({...form, displayName: e.target.value})} required maxLength={200} style={{ padding: 6, minWidth: 200 }} />
-          <input placeholder="Cidade" value={form.city} onChange={e=>setForm({...form, city: e.target.value})} maxLength={100} style={{ padding: 6 }} />
-          <input placeholder="Segmento" value={form.segment} onChange={e=>setForm({...form, segment: e.target.value})} maxLength={100} style={{ padding: 6 }} />
-          <select value={form.type} onChange={e=>setForm({...form, type: e.target.value})} style={{ padding: 6 }}>
-            <option value="prospect">prospect</option>
-            <option value="client">client</option>
-            <option value="partner">partner</option>
-          </select>
+          <label>Nome da empresa<input aria-label="Nome da empresa" placeholder="Nome empresa" value={form.displayName} onChange={e=>setForm({...form, displayName: e.target.value})} required maxLength={200} style={{ padding: 6, minWidth: 200 }} /></label>
+          <label>Cidade<input aria-label="Cidade" placeholder="Cidade" value={form.city} onChange={e=>setForm({...form, city: e.target.value})} maxLength={100} style={{ padding: 6 }} /></label>
+          <label>Segmento<input aria-label="Segmento" placeholder="Segmento" value={form.segment} onChange={e=>setForm({...form, segment: e.target.value})} maxLength={100} style={{ padding: 6 }} /></label>
+          <label>Tipo da empresa<select aria-label="Tipo da empresa" value={form.type} onChange={e=>setForm({...form, type: e.target.value})} style={{ padding: 6 }}>
+            <option value="prospect">Potencial cliente</option>
+            <option value="client">Cliente</option>
+            <option value="partner">Parceiro</option>
+          </select></label>
           <button type="submit" style={{ padding: "6px 12px" }}>Criar</button>
-          <button type="button" onClick={convertLead} style={{ padding: "6px 12px" }}>Converter lead (CRM-04)</button>
-          <button type="button" onClick={exportCompanies} style={{ padding: "6px 12px" }}>Exportar CSV (CRM-03 prevenção fórmula)</button>
+          <button type="button" onClick={convertLead} style={{ padding: "6px 12px" }}>Converter lead</button>
+          <button type="button" onClick={exportCompanies} style={{ padding: "6px 12px" }}>Exportar CSV</button>
         </form>
         {error && <p style={{ color: "red" }}>{error}</p>}
       </section>
 
-      <section style={{ marginTop: 16, padding: 12, border: "1px solid #ddd", borderRadius: 8, background: "#f9fafb" }}>
-        <h2 style={{ fontSize: 16, margin: 0 }}>Importar CSV (CRM-03)</h2>
-        <p style={{ fontSize: 12, opacity: 0.7 }}>Prévia, validação por linha, mapeamento automático, relatório, deduplicação revisável (document_ref exact + display_name ILIKE) e prevenção de fórmula maliciosa na exportação (OWASP: prefixo ' para = + - @). Máx 5000 linhas, 800KB. Campos suportados: Nome/display_name, CNPJ/document_ref, Segmento/segment, Cidade/city, Estado/state, Tipo/type (prospect/client/partner), Email/email, Telefone/phone, Origem/origin, Campanha/campaign, Responsável/responsible_name, Observação/notes.</p>
+      <section id="crm-importacao" aria-label="Importação de empresas" style={{ marginTop: 16, padding: 12, border: "1px solid #ddd", borderRadius: 8, background: "#f9fafb" }}>
+        <h2 style={{ fontSize: 16, margin: 0 }}>Importar empresas por CSV</h2>
+        <p>Escolha um arquivo ou cole seu conteúdo. Revise os erros e possíveis duplicações antes de confirmar. Limite: 5.000 linhas e 800 KB.</p>
+        <details><summary>Colunas e formato aceitos</summary>
+          <p>Nome/display_name, CNPJ/document_ref, Segmento/segment, Cidade/city, Estado/state, Tipo/type (prospect/client/partner), Email/email, Telefone/phone, Origem/origin, Campanha/campaign, Responsável/responsible_name e Observação/notes. A prévia mostra o mapeamento e a revisão das duplicações.</p>
+        </details>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8, alignItems: "center" }}>
-          <input type="file" accept=".csv,text/csv" onChange={handleFileChange} />
-          <input placeholder="Nome arquivo" value={fileName} onChange={e=>setFileName(e.target.value)} style={{ padding: 6, minWidth: 200 }} />
-          <button onClick={previewImport} disabled={importLoading} style={{ padding: "6px 12px" }}>{importLoading ? "Processando..." : "Prévia (CRM-03)"}</button>
+          <input aria-label="Arquivo CSV de empresas" type="file" accept=".csv,text/csv" onChange={handleFileChange} />
+          <input aria-label="Nome do arquivo" placeholder="Nome arquivo" value={fileName} onChange={e=>setFileName(e.target.value)} style={{ padding: 6, minWidth: 200 }} />
+          <button onClick={previewImport} disabled={importLoading} style={{ padding: "6px 12px" }}>{importLoading ? "Processando..." : "Revisar prévia"}</button>
           {importPreview && importPreview.report.duplicate === 0 && <button onClick={commitImport} disabled={importLoading} style={{ padding: "6px 12px", background: "#16a34a", color: "#fff" }}>Confirmar importação {importPreview.report.valid} válidas</button>}
           {importPreview && importPreview.report.duplicate > 0 && <span style={{ fontSize: 12 }}>Confirmação pela revisão de deduplicação abaixo.</span>}
         </div>
         <div style={{ marginTop: 8 }}>
-          <label style={{ fontSize: 12 }}>Ou cole CSV (primeira linha cabeçalhos):</label>
-          <textarea value={csvContent} onChange={e=>setCsvContent(e.target.value)} placeholder={"display_name,document_ref,city,segment,type\nEmpresa A,123,Barueri,Segurança,prospect\nEmpresa B,456,Osasco,Condomínio,client"} style={{ width: "100%", minHeight: 100, fontFamily: "monospace", fontSize: 12, padding: 6, marginTop: 4 }} />
+          <label htmlFor="crm-csv-content" style={{ fontSize: 12 }}>Ou cole CSV (primeira linha cabeçalhos):</label>
+          <textarea id="crm-csv-content" value={csvContent} onChange={e=>setCsvContent(e.target.value)} placeholder={"display_name,document_ref,city,segment,type\nEmpresa A,123,Barueri,Segurança,prospect\nEmpresa B,456,Osasco,Condomínio,client"} style={{ width: "100%", minHeight: 100, fontFamily: "monospace", fontSize: 12, padding: 6, marginTop: 4 }} />
         </div>
         {importPreview && (
           <div style={{ marginTop: 12, border: "1px solid #ccc", borderRadius: 6, padding: 8, background: "#fff" }}>
@@ -274,9 +285,9 @@ function CrmPageContent() {
         )}
       </section>
 
-      <section style={{ marginTop: 16, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
-        <h2 style={{ fontSize: 16, margin: 0 }}>Nova oportunidade (CRM-05)</h2>
-        <p style={{ fontSize: 12, opacity: 0.7 }}>Todos os campos do requisito: serviço, necessidade, responsável (você, gravado na criação), unidade da mesma empresa, previsão, valor estimado, próxima ação/data, origem e prioridade. Origem/campanha e responsável são imutáveis depois de criados; motivo de perda é exigido no funil.</p>
+      <section id="crm-oportunidade" aria-label="Cadastro de oportunidade" style={{ marginTop: 16, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
+        <h2 style={{ fontSize: 16, margin: 0 }}>Nova oportunidade</h2>
+        <p>Você será o responsável pela oportunidade. Escolha uma empresa, descreva a necessidade e defina o próximo contato. Origem e responsável ficam preservados no histórico; a perda exige um motivo.</p>
         <form onSubmit={createOpportunity} style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8, alignItems: "flex-end" }}>
           <label htmlFor="opp-form-company" style={{ fontSize: 12 }}>Empresa</label>
           <select id="opp-form-company" value={oppForm.company_id} onChange={e=>{ setOppForm({...oppForm, company_id: e.target.value, unit_id: ""}); loadUnits(e.target.value); }} required style={{ display: "block", padding: 6, minWidth: 180 }}>
@@ -306,13 +317,13 @@ function CrmPageContent() {
       </section>
 
       <section style={{ marginTop: 16, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
-        <select value={filter.type} onChange={e=>setFilter({...filter, type: e.target.value})} style={{ padding: 6 }}>
+        <select aria-label="Filtrar empresas por tipo" value={filter.type} onChange={e=>setFilter({...filter, type: e.target.value})} style={{ padding: 6 }}>
           <option value="">todos tipos</option>
-          <option value="prospect">prospect</option>
-          <option value="client">client</option>
-          <option value="partner">partner</option>
+          <option value="prospect">Potencial cliente</option>
+          <option value="client">Cliente</option>
+          <option value="partner">Parceiro</option>
         </select>
-        <select value={filter.stage} onChange={e=>setFilter({...filter, stage: e.target.value})} style={{ padding: 6 }}>
+        <select aria-label="Filtrar oportunidades por estágio" value={filter.stage} onChange={e=>setFilter({...filter, stage: e.target.value})} style={{ padding: 6 }}>
           <option value="">todos estágios</option>
           {stages.map(s=><option key={s} value={s}>{s}</option>)}
         </select>
@@ -328,9 +339,9 @@ function CrmPageContent() {
         <button onClick={load} style={{ padding: "6px 12px" }}>Atualizar</button>
       </section>
 
-      <section style={{ marginTop: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <section id="crm-funil" aria-label="Empresas e funil" className={styles.results}>
         <div>
-          <h2 style={{ fontSize: 16 }}>Empresas ({companies.length}) — CRM-01</h2>
+          <h2 style={{ fontSize: 16 }}>Empresas ({companies.length})</h2>
           <div style={{ maxHeight: 500, overflow: "auto", border: "1px solid #eee" }}>
             <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
               <thead><tr><th>Nome</th><th>Tipo</th><th>Cidade</th><th>Segmento</th><th>Status</th></tr></thead>
@@ -349,7 +360,7 @@ function CrmPageContent() {
           </div>
         </div>
         <div>
-          <h2 style={{ fontSize: 16 }}>Oportunidades ({opps.length} de {oppsTotal}) — CRM-05/06 kanban e tabela</h2>
+          <h2 style={{ fontSize: 16 }}>Oportunidades ({opps.length} de {oppsTotal})</h2>
           <p style={{ fontSize: 11, opacity: 0.7, marginTop: 0 }}>Funil pessoal: só as suas oportunidades aparecem (busca e prioridade aplicadas no servidor, com curinga escapado).</p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8, alignItems: "center" }}>
             <button type="button" onClick={()=>setOppView(view=>view==="kanban"?"tabela":"kanban")} style={{ padding: "6px 12px" }}>
@@ -358,7 +369,7 @@ function CrmPageContent() {
           </div>
           {(() => (
             oppView === "kanban" ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8, maxHeight: 500, overflow: "auto", border: "1px solid #eee", padding: 8 }}>
+          <div className={styles.kanban}>
             {stages.map(stage=>(
               <div key={stage} style={{ border: "1px solid #ddd", borderRadius: 6, padding: 8, background: "#f8fafc" }}>
                 <h3 style={{ margin: "0 0 6px", fontSize: 12, textTransform: "uppercase" }}>{stage}</h3>
@@ -404,7 +415,7 @@ function CrmPageContent() {
           </div>
             )
           ))()}
-          <p style={{ fontSize: 11, opacity: 0.6, marginTop: 8 }}>CRM-07 kanban e tabela, filtros, busca, tarefas vencidas, histórico ligações/reuniões, anexos e notas internas autorizadas. Tarefas pessoais (com paginação, busca, edição de prazo e delegação explícita com aceite) e histórico de interações: use Abrir tarefas na oportunidade. Delegações recebidas aparecem em Tarefas delegadas a mim. Anexos, agenda de visitas/reuniões (CRM-08) e notas internas dedicadas já entregues; cadências manuais (CRM-09) criam tarefas a partir de modelos, sem envio automático; carteira (CRM-10) ainda está pendente.</p>
+          <p style={{ fontSize: 13, marginTop: 8 }}>Use Abrir tarefas para consultar o resumo, registrar contatos, organizar visitas e acompanhar a oportunidade. Cadências criam tarefas manuais; não enviam mensagens automaticamente.</p>
         </div>
       </section>
       <UnitManager companies={companies} />
@@ -415,8 +426,10 @@ function CrmPageContent() {
       {selectedOpportunity && <OpportunityInteractions key={"interactions-" + selectedOpportunity} opportunityId={selectedOpportunity} />}
       {selectedOpportunity && <OpportunityVisits key={"visits-" + selectedOpportunity} opportunityId={selectedOpportunity} />}
       {selectedOpportunity && <CadenceClient key={"cadence-" + selectedOpportunity} opportunityId={selectedOpportunity} />}
-      <MyDelegatedTasks />
-      <MyAgenda />
+      <section id="crm-agenda" aria-label="Agenda e delegações">
+        <MyDelegatedTasks />
+        <MyAgenda />
+      </section>
     </main>
   );
 }
