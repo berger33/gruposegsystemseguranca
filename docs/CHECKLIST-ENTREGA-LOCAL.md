@@ -1,3 +1,29 @@
+## Atualização corrente — F15 / EXT-05 isolamento A/B por `client_account_id`
+
+**Base:** commit `9612f26`; branch Arena fixa da sessão.
+
+- [x] Necessidade de DDL comprovada: tabelas 085/151 não possuíam conta; migração 172 aditiva, sem backfill fictício; 001–171 imutáveis; próxima livre 173.
+- [x] Vínculo opcional e imutável de não conformidade à conta; reincidência herda a conta do predecessor.
+- [x] Permissões explícitas `quality.read`/`quality.write`: global/organization vê registros sem conta e todas as contas; grant `account` vê e muta somente a própria conta.
+- [x] Criação valida UUID, existência da conta dentro da transação e escopo fail-closed; conta inexistente retorna 409 e conta fora do grant retorna 403.
+- [x] Lista, detalhe, filhos, transições, ações, fechamento, reabertura e reincidência respeitam escopo; detalhe/mutação fora do escopo retornam 404 indistinguível.
+- [x] UI `/admin/qualidade` declara o isolamento e permite vínculo opcional da conta.
+- [x] Evidência: Wave0 5/5 (001–172), focal PostgreSQL 17 + HTTP real **38/38**, unitários **648/648**, migrações **172/172 ×2** com checksum adulterado rejeitado, typecheck e build **103 páginas**.
+- [ ] Aceite humano, Windows/EPERM e banco de destino.
+
+## Atualização corrente — F15 Recuperação de acesso sem SMTP
+
+**Base:** merge `4f297bdfaddd67d008409715f43a4fb0dce9881b`; branch Arena fixa da sessão.
+
+- [x] Migração 171 aditiva; 001–170 imutáveis; próxima livre: 172.
+- [x] Pedido público com resposta genérica, sem enumeração, sem token ou e-mail em claro no ledger e sem alegar envio.
+- [x] Fila local restrita a TI individual com permissão revogável `client_recovery.manage`.
+- [x] Autorização exige método e justificativa de 30–500 caracteres; gera link de uso único por 15 minutos, exibido uma única vez para entrega manual em canal restrito.
+- [x] Novo token substitui tokens anteriores; revogação invalida o token; redefinição consome a solicitação e revoga sessões existentes atomicamente.
+- [x] UI cliente e seção operacional em `/admin/clientes`; nenhuma integração SMTP ou prova fictícia de posse da caixa postal.
+- [x] Wave0 5/5 (001–171), unitários 647/647, typecheck, build 103 páginas e migrações 171/171 x2 em PostgreSQL 17 descartável.
+- [ ] Aceite humano, Windows/EPERM e banco de destino.
+
 ## Atualização corrente — F15 / EXT-07 Planos de Ação de Compliance (Opção 1)
 
 **Base:** `b26f93cb1262777827a46edc823e8fccd1c1e70e`; branch fixa `arena/01a109c0-gruposegsystemseguranca`.

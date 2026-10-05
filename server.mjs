@@ -23,6 +23,7 @@ import { hasPermission } from "./src/server/rbac.mjs";
 import { dispatchGuarded, guardedRequestHandler, installProcessSafetyNet, DISPATCH_OUTCOME } from "./src/server/route-dispatch.mjs";
 import { createLocalOutbox, LOCAL_OUTBOX_LABEL, resolveDeliveryTarget } from "./src/server/local-outbox.mjs";
 import { createClientAccessApi } from "./src/server/client-access-api.mjs";
+import { createClientOfflineRecoveryApi } from "./src/server/client-offline-recovery-api.mjs";
 import { createClientSpaceApi } from "./src/server/client-space-api.mjs";
 import { createClientSecurityApi } from "./src/server/client-security-api.mjs";
 import { createAdminRbacApi } from "./src/server/admin-rbac-api.mjs";
@@ -1227,6 +1228,10 @@ const clientAccessApi = createClientAccessApi({
   clientIp,
   baseUrl: publicBaseUrl,
   localOutbox,
+});
+
+const clientOfflineRecoveryApi = createClientOfflineRecoveryApi({
+  json, sameOrigin, getPool, readAdminSession: readSession, baseUrl: publicBaseUrl,
 });
 
 const clientSpaceApi = createClientSpaceApi({
@@ -2715,7 +2720,13 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/leads/metrics") return handleAdminLeadMetrics(req, res, url);
   const leadMatch = url.pathname.match(/^\/api\/admin\/leads\/([0-9a-f-]{36})$/i);
   if (leadMatch) return handleAdminLeadStatus(req, res, leadMatch[1]);
+  if (url.pathname === "/api/auth/recovery/manual") return clientOfflineRecoveryApi.publicRequest(req, res);
   if (url.pathname.startsWith("/api/auth/")) return clientAccessApi.handleAuth(req, res, url);
+  if (url.pathname === "/api/admin/client-recoveries") return clientOfflineRecoveryApi.list(req, res);
+  const recoveryActionMatch = url.pathname.match(/^\/api\/admin\/client-recoveries\/([0-9a-f-]{36})\/(authorize|revoke)$/i);
+  if (recoveryActionMatch) return recoveryActionMatch[2] === "authorize"
+    ? clientOfflineRecoveryApi.authorize(req, res, recoveryActionMatch[1])
+    : clientOfflineRecoveryApi.revoke(req, res, recoveryActionMatch[1]);
   if (url.pathname === "/api/admin/invites") return clientAccessApi.handleAdminInvites(req, res, url);
   if (url.pathname === "/api/admin/client-verifications") return clientAccessApi.handleManualVerificationList(req, res);
   const approvalMatch = url.pathname.match(/^\/api\/admin\/client-verifications\/([0-9a-f-]{36})\/approve$/i);
@@ -4669,6 +4680,8 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/auth/")
   || pathname === "/api/admin/invites"
   || pathname.startsWith("/api/admin/invites/")
+  || pathname === "/api/admin/client-recoveries"
+  || pathname.startsWith("/api/admin/client-recoveries/")
   || pathname === "/api/admin/client-verifications"
   || pathname.startsWith("/api/admin/client-verifications/")
   || pathname.startsWith("/api/client/")

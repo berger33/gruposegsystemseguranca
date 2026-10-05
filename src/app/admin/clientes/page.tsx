@@ -9,6 +9,7 @@ import TicketsSection from "./TicketsSection";
 import VisitsSection from "./VisitsSection";
 import ReportsSection from "./ReportsSection";
 import InvitesSection from "./InvitesSection";
+import RecoveriesSection from "./RecoveriesSection";
 import AdminGate from "../AdminGate";
 import { callApi, type AdminAccount } from "./admin-shared";
 import styles from "./AdminClientes.module.css";
@@ -51,7 +52,7 @@ function ClientAdminWorkspace({ role }: { role: string }) {
           sem conter dados sensíveis.
         </p>
       </div>
-      {role === "ti" ? <InvitesSection /> : null}
+      {role === "ti" ? <><InvitesSection /><RecoveriesSection /></> : null}
       <AccountsSection accounts={accounts} reloadAccounts={loadAccounts} />
       <GrantsSection accounts={accounts} />
       <ContractsSection accounts={accounts} />

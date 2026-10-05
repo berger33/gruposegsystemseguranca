@@ -828,6 +828,14 @@ export function createClientAccessApi(ctx) {
         [row.identity_id, await hashPassword(body.password)],
       );
       await client.query("UPDATE auth_email_tokens SET used_at = NOW() WHERE id = $1", [row.id]);
+      // F15/171: quando o token veio da recuperação local autorizada, consumir a
+      // solicitação na mesma transação da senha. Tokens SMTP legados não possuem vínculo.
+      const recoveryCatalog = await client.query("SELECT to_regclass('client_access_recovery_requests') AS table_name");
+      if (recoveryCatalog.rows[0]?.table_name) {
+        await client.query(`UPDATE client_access_recovery_requests
+          SET status='consumida', consumed_at=NOW()
+          WHERE token_id=$1 AND status='autorizada'`, [row.id]);
+      }
       await client.query(
         "UPDATE auth_email_tokens SET superseded_at = NOW() WHERE identity_id = $1 AND kind = 'password_reset' AND used_at IS NULL AND superseded_at IS NULL",
         [row.identity_id],

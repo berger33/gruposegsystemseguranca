@@ -1,0 +1,10 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const read=p=>readFile(new URL(`../${p}`,import.meta.url),"utf8");
+test("F15/171 cria ledger local sem token bruto e com estados terminais",async()=>{const s=await read("db/migrations/171-client-offline-access-recovery.sql");assert.match(s,/client_access_recovery_requests/);assert.match(s,/status IN \('pendente','autorizada','consumida','expirada','revogada'\)/);assert.match(s,/token_id UUID REFERENCES auth_email_tokens/);assert.doesNotMatch(s,/raw_token|token_plain/);});
+test("F15/171 exige TI individual e permissão revogável",async()=>{const s=await read("src/server/client-offline-recovery-api.mjs");assert.match(s,/s\.role!=="ti"\|\|!s\.identityId/);assert.match(s,/permission='client_recovery\.manage'/);assert.match(s,/revoked_at IS NULL/);});
+test("pedido público é genérico e não devolve identidade",async()=>{const s=await read("src/server/client-offline-recovery-api.mjs");assert.match(s,/delivery:"manual_review"/);assert.doesNotMatch(s,/generic=.*email/);assert.match(s,/return json\(res,202,generic\)/);});
+test("autorização exige evidência, substitui token anterior e exibe link uma vez",async()=>{const s=await read("src/server/client-offline-recovery-api.mjs");assert.match(s,/reason\.length<30/);assert.match(s,/superseded_at=NOW\(\)/);assert.match(s,/displayOnce:true/);assert.match(s,/TTL_MS = 15 \* 60 \* 1000/);});
+test("reset consome solicitação e revoga sessões na mesma transação",async()=>{const s=await read("src/server/client-access-api.mjs");assert.match(s,/status='consumida', consumed_at=NOW\(\)/);assert.match(s,/revoke_reason = 'password_reset'/);});
+test("UI declara canal local sem SMTP",async()=>{const [a,c]=await Promise.all([read("src/app/admin/clientes/RecoveriesSection.tsx"),read("src/app/cliente/redefinir-senha/page.tsx")]);assert.match(a,/sem SMTP/);assert.match(a,/aparece uma única vez/);assert.match(c,/Nenhum e-mail foi enviado/);assert.match(c,/\/api\/auth\/recovery\/manual/);});
