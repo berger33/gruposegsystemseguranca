@@ -1,6 +1,7 @@
 // EXT-10 / F06 — PostgreSQL 17 descartável + servidor HTTP real + navegador real.
-// SQL prepara somente identidades, credenciais, grants e controles de teste;
-// planos, transições e exercícios nascem exclusivamente por HTTP canônico.
+// SQL prepara somente identidades, credenciais, grants, contas de cliente fictícias
+// (referência de escopo) e controles de teste; planos, transições e exercícios
+// nascem exclusivamente por HTTP canônico.
 import test, { before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -463,4 +464,134 @@ test("EXT-10 estado e sessão persistem depois de reiniciar o servidor HTTP", op
   assert.equal(detail.body.plan.title, "Plano navegador sintético");
   assert.equal(detail.body.plan.status, "rascunho");
   assert.ok(detail.body.events.length >= 1);
+});
+
+// --- Isolamento por client_account_id (requisito confirmado pelo operador) ---
+
+let accountA;
+let accountB;
+let scopedStaff;
+let cookieScoped;
+let planAccountA;
+let planAccountB;
+
+test("EXT-10 escopo: contas fictícias e staff com grant restrito à conta A", opt, async () => {
+  accountA = uuid();
+  accountB = uuid();
+  await pool.query(
+    `INSERT INTO client_accounts (id, display_name, status, created_by)
+     VALUES ($1,'Cliente Sintético A','active','ti'),($2,'Cliente Sintético B','active','ti')`,
+    [accountA, accountB],
+  );
+  scopedStaff = await createStaff("supervisor", "scoped");
+  for (const permission of ["continuity.read", "continuity.write"]) {
+    await pool.query(
+      `INSERT INTO auth_permissions (id, identity_id, permission, scope_type, scope_id, granted_by, granted_by_role, reason)
+       VALUES ($1,$2,$3,'account',$4,$5,'admin','QA EXT10 escopo por conta')`,
+      [uuid(), scopedStaff.id, permission, accountA, admin.id],
+    );
+  }
+  cookieScoped = await login(scopedStaff);
+  const grants = (await pool.query(
+    `SELECT count(*)::int AS n FROM auth_permissions WHERE identity_id=$1 AND scope_type='account' AND scope_id=$2 AND revoked_at IS NULL`,
+    [scopedStaff.id, accountA],
+  )).rows[0].n;
+  assert.equal(grants, 2);
+});
+
+test("EXT-10 criação vincula conta existente e recusa conta desconhecida ou malformada", opt, async () => {
+  const invalid = await api("/api/ext/continuity/plans", {
+    method: "POST",
+    body: { title: "Plano conta malformada", description: "Deve falhar por conta malformada.", responsible_name: "Equipe escopo", client_account_id: "nao-e-uuid" },
+  });
+  assert.equal(invalid.status, 400);
+  assert.equal(invalid.body.error, "invalid_client_account_id");
+  const unknown = await api("/api/ext/continuity/plans", {
+    method: "POST",
+    body: { title: "Plano conta inexistente", description: "Deve falhar por conta desconhecida.", responsible_name: "Equipe escopo", client_account_id: uuid() },
+  });
+  assert.equal(unknown.status, 409);
+  assert.equal(unknown.body.error, "client_account_not_found");
+  assert.equal((await pool.query(`SELECT count(*)::int AS n FROM ext_continuity_plans WHERE title='Plano conta inexistente'`)).rows[0].n, 0);
+  const createdA = await api("/api/ext/continuity/plans", {
+    method: "POST",
+    body: { title: "Plano da conta sintética A", description: "Plano vinculado à conta de cliente A.", responsible_name: "Equipe conta A", client_account_id: accountA },
+  });
+  assert.equal(createdA.status, 201);
+  planAccountA = createdA.body.plan;
+  assert.equal(planAccountA.client_account_id, accountA);
+  const createdB = await api("/api/ext/continuity/plans", {
+    method: "POST",
+    body: { title: "Plano da conta sintética B", description: "Plano vinculado à conta de cliente B.", responsible_name: "Equipe conta B", client_account_id: accountB },
+  });
+  assert.equal(createdB.status, 201);
+  planAccountB = createdB.body.plan;
+});
+
+test("EXT-10 staff com grant de conta vê somente planos da própria conta; global vê tudo", opt, async () => {
+  const listed = await api("/api/ext/continuity/plans", { cookie: cookieScoped });
+  assert.equal(listed.status, 200);
+  const ids = listed.body.items.map((item) => item.id);
+  assert.ok(ids.includes(planAccountA.id));
+  assert.ok(!ids.includes(planAccountB.id));
+  assert.ok(!ids.includes(planA.id));
+  for (const item of listed.body.items) assert.equal(item.client_account_id, accountA);
+  assert.match(listed.body.scope_note, /escopo da própria conta/);
+  const all = await api("/api/ext/continuity/plans");
+  assert.equal(all.status, 200);
+  const allIds = all.body.items.map((item) => item.id);
+  for (const id of [planAccountA.id, planAccountB.id, planA.id]) assert.ok(allIds.includes(id));
+  const row = all.body.items.find((item) => item.id === planAccountA.id);
+  assert.equal(row.client_name, "Cliente Sintético A");
+});
+
+test("EXT-10 detalhe e mutação fora do escopo da conta respondem 404 sem vazar existência", opt, async () => {
+  const own = await api(`/api/ext/continuity/plans/${planAccountA.id}`, { cookie: cookieScoped });
+  assert.equal(own.status, 200);
+  assert.equal(own.body.plan.client_name, "Cliente Sintético A");
+  const crossDetail = await api(`/api/ext/continuity/plans/${planAccountB.id}`, { cookie: cookieScoped });
+  assert.equal(crossDetail.status, 404);
+  assert.equal(crossDetail.body.error, "plan_not_found");
+  const unscoped = await api(`/api/ext/continuity/plans/${planA.id}`, { cookie: cookieScoped });
+  assert.equal(unscoped.status, 404);
+  assert.equal(unscoped.body.error, "plan_not_found");
+  const crossExercise = await api(`/api/ext/continuity/plans/${planAccountB.id}/exercises`, {
+    method: "POST",
+    cookie: cookieScoped,
+    body: { exercise_date: "2026-10-04", result: "Tentativa fora do escopo deve falhar fechada.", responsible_name: "Equipe escopo" },
+  });
+  assert.equal(crossExercise.status, 404);
+  assert.equal((await pool.query(`SELECT count(*)::int AS n FROM ext_continuity_exercises WHERE plan_id=$1`, [planAccountB.id])).rows[0].n, 0);
+});
+
+test("EXT-10 escrita escopada cria na própria conta e falha fechada fora dela e sem conta", opt, async () => {
+  const own = await api("/api/ext/continuity/plans", {
+    method: "POST",
+    cookie: cookieScoped,
+    body: { title: "Plano escopado conta A", description: "Plano criado por staff com grant restrito à conta A.", responsible_name: "Supervisor escopado", client_account_id: accountA },
+  });
+  assert.equal(own.status, 201);
+  assert.equal(own.body.plan.client_account_id, accountA);
+  assert.equal(own.body.plan.created_by_identity, scopedStaff.id);
+  const cross = await api("/api/ext/continuity/plans", {
+    method: "POST",
+    cookie: cookieScoped,
+    body: { title: "Plano indevido conta B", description: "Não deve nascer fora do escopo concedido.", responsible_name: "Supervisor escopado", client_account_id: accountB },
+  });
+  assert.equal(cross.status, 403);
+  assert.equal(cross.body.error, "forbidden_account_scope");
+  const global = await api("/api/ext/continuity/plans", {
+    method: "POST",
+    cookie: cookieScoped,
+    body: { title: "Plano global indevido", description: "Plano sem conta exige grant global ou organization.", responsible_name: "Supervisor escopado" },
+  });
+  assert.equal(global.status, 403);
+  assert.equal(global.body.error, "forbidden_account_scope");
+  assert.equal((await pool.query(`SELECT count(*)::int AS n FROM ext_continuity_plans WHERE title IN ('Plano indevido conta B','Plano global indevido')`)).rows[0].n, 0);
+  const activate = await api(`/api/ext/continuity/plans/${own.body.plan.id}/transition`, {
+    method: "POST",
+    cookie: cookieScoped,
+    body: { status: "aprovado" },
+  });
+  assert.equal(activate.status, 403);
 });
