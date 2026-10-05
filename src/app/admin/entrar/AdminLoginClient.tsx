@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
+import UiField from "../../../components/ui/UiField";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import {
@@ -228,28 +229,24 @@ export default function AdminLoginClient() {
 
               {mode === "individual" ? (
                 <form className={styles.formGrid} onSubmit={submitIndividual} noValidate>
-                  <div className={styles.field}>
-                    <label htmlFor="login-email">E-mail da conta individual</label>
-                    <input
+                  <UiField
                       id="login-email"
+                      label="E-mail da conta individual"
                       type="email"
                       value={email}
                       onChange={(event) => setEmail(event.target.value)}
                       required
                       autoComplete="username"
                     />
-                  </div>
-                  <div className={styles.field}>
-                    <label htmlFor="login-password">Senha individual</label>
-                    <input
+                  <UiField
                       id="login-password"
+                      label="Senha individual"
                       type="password"
                       value={password}
                       onChange={(event) => setPassword(event.target.value)}
                       required
                       autoComplete="current-password"
                     />
-                  </div>
                   <button className={styles.submit} type="submit" disabled={busy || !email || !password}>
                     {busy ? "Verificando…" : "Entrar"}
                   </button>

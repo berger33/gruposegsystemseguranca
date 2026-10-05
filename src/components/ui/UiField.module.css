@@ -1,0 +1,17 @@
+.field { display: grid; gap: var(--ux-space-1); color: var(--ux-color-text); }
+.field label { font-size: .875rem; font-weight: 700; line-height: 1.4; }
+.hint { margin: 0; color: var(--ux-color-muted); font-size: .8125rem; line-height: 1.45; }
+.input {
+  min-height: 44px;
+  width: 100%;
+  border: 1px solid var(--ux-color-border);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-surface);
+  color: var(--ux-color-text);
+  padding: var(--ux-space-2) var(--ux-space-3);
+  font: inherit;
+}
+.input:hover { border-color: var(--ux-color-brand); }
+.input:focus-visible { outline: 3px solid var(--ux-color-focus); outline-offset: 2px; border-color: var(--ux-color-brand); }
+.input[aria-invalid='true'] { border-color: var(--ux-color-error); }
+.error { margin: 0; color: var(--ux-color-error); font-size: .8125rem; line-height: 1.45; }

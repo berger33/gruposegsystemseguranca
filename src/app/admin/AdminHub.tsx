@@ -4,9 +4,9 @@
 // papel da sessão. Cada módulo continua protegido pela própria API; o hub é
 // navegação, não concessão de acesso.
 
-import Link from "next/link";
 import AdminGate, { modulesForRole } from "./AdminGate";
 import { roleLabel } from "../../lib/admin-entry.mjs";
+import UiCardLink from "../../components/ui/UiCardLink";
 import styles from "./AdminChrome.module.css";
 
 const MODULE_DESCRIPTIONS: Record<string, string> = {
@@ -43,10 +43,7 @@ export default function AdminHub() {
           </p>
           <div className={styles.hubGrid}>
             {modulesForRole(session.role).map((mod) => (
-              <Link key={mod.href} href={mod.href} className={styles.hubCard}>
-                <strong>{mod.label}</strong>
-                <span>{MODULE_DESCRIPTIONS[mod.href] || "Módulo administrativo."}</span>
-              </Link>
+              <UiCardLink key={mod.href} href={mod.href} label={mod.label} description={MODULE_DESCRIPTIONS[mod.href] || "Módulo administrativo."} />
             ))}
           </div>
           {modulesForRole(session.role).length === 0 ? (
