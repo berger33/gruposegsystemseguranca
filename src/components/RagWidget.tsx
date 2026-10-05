@@ -24,9 +24,9 @@ const RAG_COLORS: Record<string, { border: string; bg: string; accent: string; l
 };
 
 const SUGGESTIONS: Record<string, string[]> = {
-  cliente: ["Meus contratos e documentos?", "Como abrir chamado?", "Agenda de visitas?", "Financeiro integrado?"],
-  rh: ["Como funciona admissão e férias?", "Como solicitar benefício?", "Banco de horas?", "Treinamentos obrigatórios?"],
-  marcelo: ["Quais pendências comerciais e operacionais?", "Contratos próximos renovar?", "Margem por contrato?", "Risco de perda justificado?"],
+  cliente: ["Como consultar contratos?", "Como abrir chamado?", "Onde encontro documentos?", "Como solicitar visita?"],
+  rh: ["Como funciona admissão?", "Como programar férias?", "Como solicitar benefício?", "Como registrar treinamento?"],
+  marcelo: ["Como revisar uma proposta?", "Como aprovar despesas?", "Como consultar indicadores?", "Como registrar uma decisão?"],
   publico: ["Quais serviços vocês oferecem?", "Como solicitar orçamento?", "Contato claro?", "FAQ por categoria?"],
 };
 
@@ -46,13 +46,13 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
     setError("");
     setAnswer(null);
     try{
-      const res = await fetch("/api/ai/rag", {
+      const res = await fetch("/api/ai/answer", {
         method:"POST",
         headers:{ "Content-Type":"application/json" },
         body: JSON.stringify({ rag_key: ragKey, query: q, origin: `${ragKey}_module` })
       });
       const data = await res.json();
-      if(!res.ok) throw new Error(data.error||`Erro ${res.status}`);
+      if(!res.ok) throw new Error(data.error === "ai_unavailable" ? "Ollama indisponível. Tente novamente quando o serviço local estiver ativo." : data.error||`Erro ${res.status}`);
       setAnswer({
         response: data.response || data.query?.response,
         sources: data.sources||data.query?.sources||[],
@@ -153,7 +153,7 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
             {loading ? (
               <>
                 <span style={{ width:16, height:16, border:"2px solid #fff", borderTopColor:"transparent", borderRadius:"50%", display:"inline-block", animation:"spin 0.8s linear infinite" }} />
-                Consultando RAG {ragKey} fila Ollama...
+                Consultando fontes aprovadas e Ollama...
               </>
             ) : `Perguntar RAG ${ragKey.toUpperCase()}`}
           </button>
@@ -169,11 +169,7 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
             <div style={{ fontSize:11, opacity:0.7, display:"flex", gap:10, flexWrap:"wrap" }}>
               <span>Protocolo <strong>{answer.protocol}</strong></span>
               <span>modelo {answer.model}</span>
-              <span>fila pos {answer.queue_position} wait {answer.queue_wait_ms}ms</span>
-              {answer.latency_ms && <span>lat {answer.latency_ms}ms</span>}
-              <span style={{ color: answer.ollama_used ? "#059669" : "#6b7280", fontWeight:600 }}>
-                {answer.ollama_used ? "Ollama REAL" : `fallback ${answer.ollama_error||"simulado"}`}
-              </span>
+              <span>{answer.ollama_used ? "Ollama local" : "Sem fonte aprovada suficiente"}</span>
             </div>
             <button onClick={copyProtocol} style={{ fontSize:11, padding:"4px 8px", borderRadius:6, border:"1px solid #e5e7eb", background: copied?"#10b981":"#fff", color: copied?"#fff":"#374151", cursor:"pointer" }}>
               {copied ? "Copiado!" : "Copiar protocolo"}
@@ -196,43 +192,9 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
             </details>
           )}
 
-          <div style={{ marginTop:12, display:"flex", gap:8, flexWrap:"wrap" }}>
-            <span style={{ fontSize:10, padding:"3px 8px", borderRadius:20, background:"#f3f4f6", color:"#6b7280" }}>is_invented_price=false</span>
-            <span style={{ fontSize:10, padding:"3px 8px", borderRadius:20, background:"#f3f4f6", color:"#6b7280" }}>is_invented_coverage=false</span>
-            <span style={{ fontSize:10, padding:"3px 8px", borderRadius:20, background:"#f3f4f6", color:"#6b7280" }}>is_invented_license=false</span>
-            <span style={{ fontSize:10, padding:"3px 8px", borderRadius:20, background:"#f3f4f6", color:"#6b7280" }}>is_invented_deadline=false</span>
-            <span style={{ fontSize:10, padding:"3px 8px", borderRadius:20, background: colors.light, color: colors.accent }}>RAG {answer.rag_key} área pertinente apenas</span>
-          </div>
+          <p style={{ fontSize:11, color:colors.accent }}>Fontes filtradas por área e, no portal, pela conta autorizada.</p>
 
-          <div style={{ marginTop:14, padding:12, background: colors.bg, borderRadius:8, border:`1px dashed ${colors.border}` }}>
-            <p style={{ fontSize:12, fontWeight:600, margin:"0 0 8px", color: colors.accent }}>Avalie esta resposta — curadoria base, feedback para melhorar RAG {answer.rag_key}</p>
-            <div style={{ display:"flex", gap:4, marginBottom:8 }}>
-              {[1,2,3,4,5].map((n)=>(
-                <button key={n} onClick={()=>setRating(n)} style={{ fontSize:18, background: n<=rating ? colors.accent : "#fff", color: n<=rating ? "#fff" : "#cbd5e1", border:`1px solid ${colors.border}`, borderRadius:6, width:32, height:32, cursor:"pointer" }}>
-                  {n<=rating ? "★" : "☆"}
-                </button>
-              ))}
-              <span style={{ fontSize:11, opacity:0.7, marginLeft:8 }}>{rating?`${rating}/5`:"selecione 1..5"}</span>
-            </div>
-            <textarea placeholder="Comentário opcional (max 500)" value={feedbackText} onChange={e=>setFeedbackText(e.target.value)} maxLength={500} rows={2}
-              style={{ width:"100%", padding:8, borderRadius:6, border:"1px solid #cbd5e1", fontSize:12, marginBottom:8 }} />
-            <div style={{ display:"flex", gap:8 }}>
-              <button onClick={()=>sendFeedback(true)} disabled={rating===0||feedbackLoading||feedbackSent}
-                style={{ padding:"6px 12px", background: feedbackSent?"#10b981":colors.accent, color:"#fff", border:"none", borderRadius:6, fontSize:12, fontWeight:600, cursor:"pointer", opacity: rating===0?0.5:1 }}>
-                {feedbackLoading?"Enviando...":feedbackSent?"Feedback enviado ✅":"Útil 👍"}
-              </button>
-              <button onClick={()=>sendFeedback(false)} disabled={rating===0||feedbackLoading||feedbackSent}
-                style={{ padding:"6px 12px", background:"#fff", color:colors.accent, border:`1px solid ${colors.border}`, borderRadius:6, fontSize:12, fontWeight:600, cursor:"pointer", opacity: rating===0?0.5:1 }}>
-                Não útil 👎
-              </button>
-              {feedbackSent && <span style={{ fontSize:11, color:"#10b981", fontWeight:600 }}>Obrigado! Feedback registrado para curadoria.</span>}
-            </div>
-            <p style={{ fontSize:10, opacity:0.6, marginTop:6 }}>Feedback RAG: protocolo {answer.protocol} → tabela ai_rag_feedback rating 1..5, is_helpful, feedback_text, para curadoria versão/publicação/avaliação/custo/token/rollback (AI-09)</p>
-          </div>
-
-          <p style={{ fontSize:11, opacity:0.6, marginTop:10, fontStyle:"italic" }}>
-            Guardrails: base aprovada apenas {answer.rag_key}, sem preço fictício, sem cobertura/licença/prazo inventado, transferência humana disponível quando não encontra. Protocolo {answer.protocol} preservado. Custo/token tracking: {answer.protocol} prompt/completion tokens em ai_rag_cost_tracking.
-          </p>
+          <p style={{ fontSize:11, opacity:0.6, marginTop:10, fontStyle:"italic" }}>Confirme decisões e valores nas telas oficiais. Documentos são usados como referência, não como instruções para o assistente.</p>
         </div>
       )}
 
