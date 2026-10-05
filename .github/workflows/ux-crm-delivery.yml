@@ -1,0 +1,50 @@
+name: UX CRM delivery
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/admin/crm/**'
+      - 'src/app/admin/carteira/**'
+      - 'src/app/admin/comercial/**'
+      - 'src/components/ui/**'
+      - 'src/lib/crm-vocabulary.*'
+      - 'src/lib/crm-request.ts'
+      - 'src/styles/ux-tokens.css'
+      - 'src/server/crm-api.mjs'
+      - 'src/server/portfolio-api.mjs'
+      - 'server.mjs'
+      - 'tests/helpers/**'
+      - 'tests/ux-crm-vocabulary.test.mjs'
+      - 'tests/ux-crm-workspace.integration.test.mjs'
+      - 'scripts/qa-ux-crm-postgres.mjs'
+      - 'db/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/ux-crm-delivery.yml'
+concurrency:
+  group: ux-crm-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  ux-crm-postgres-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Verificação de tipos
+        run: npm run typecheck
+      - name: Vocabulário canônico do CRM (sem PostgreSQL)
+        run: node --test tests/ux-crm-vocabulary.test.mjs
+      - name: UX do funil — HTTP real, PostgreSQL descartável e Chromium
+        run: npm run test:ux-crm:pg

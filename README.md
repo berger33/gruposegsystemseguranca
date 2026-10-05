@@ -10,6 +10,8 @@
 
 **UX-03A:** [legibilidade e tarefas do CRM](docs/UX-03A-CRM-2026-10-05.md), com superfície clara e resultados responsivos. Detalhes, estados de leitura, comercial e carteira seguem pendentes na UX-03B.
 
+**UX-03B:** [detalhe da oportunidade, estados honestos, formulários, importação guiada, comercial e carteira](docs/UX-03B-CRM-2026-10-05.md), validados com HTTP real, PostgreSQL descartável e navegador (`npm run test:ux-crm:pg`, `npm run test:l04-delivery:pg`). Aceite humano de Marcelo e Andreia segue pendente.
+
 ## Continuação atual: EXT-05 — qualidade entregue localmente
 
 Base confirmada: PR #99 `MERGED`, merge commit `ba2202ff6655f425edf405afc42de7ce3786a2a0`, head EXT-04 `0c3a560d9ff1d4622a58e3fd306fb35bd4b26e6a`; após fetch, branch da sessão e `origin/main` em divergência **0/0**, árvore limpa. A migração aditiva 151 promove EXT-05 sem alterar 001–150.

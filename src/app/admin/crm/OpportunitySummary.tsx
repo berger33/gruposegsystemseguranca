@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { OPPORTUNITY_PRIORITIES, OPPORTUNITY_STAGES, stageHint, stageLabel } from "../../../lib/crm-vocabulary.mjs";
 
 // CRM-05/06: painel de detalhe e manutenção da oportunidade selecionada —
 // todos os campos do requisito, movimentação de funil com motivo de perda
@@ -18,9 +19,11 @@ type Opportunity = {
 };
 type Unit = { id: string; display_name: string };
 
-const STAGES = ["novo", "qualificacao", "vistoria", "proposta_elaboracao", "proposta_enviada", "negociacao", "ganho", "perdido"] as const;
+// UX-03B: a lista canônica passou a vir do vocabulário compartilhado, com
+// rótulo em português e VALOR inalterado — é o valor que vai para a API.
+const STAGES = OPPORTUNITY_STAGES;
 const OPEN_STAGES = new Set(["novo", "qualificacao", "vistoria", "proposta_elaboracao", "proposta_enviada", "negociacao"]);
-const PRIORITIES = ["baixa", "media", "alta", "critica"] as const;
+const PRIORITIES = OPPORTUNITY_PRIORITIES;
 
 const errors: Record<string, string> = {
   opportunity_not_found: "Oportunidade disponível apenas para o responsável atual.",
@@ -145,11 +148,11 @@ export default function OpportunitySummary({ opportunityId }: { opportunityId: s
   return (
     <section aria-label="Detalhe da oportunidade" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 16, overflowWrap: "anywhere" }}>
       <h2>Oportunidade — {opp.title}</h2>
-      <p>Estágio atual: <strong>{opp.stage}</strong>. {opp.is_won && <strong> ganho é estado de funil — não é dinheiro recebido.</strong>}{opp.is_lost && <strong> perdido — motivo: {opp.loss_reason}</strong>}</p>
+      <p>Estágio atual: <strong>{stageLabel(opp.stage)}</strong>. {stageHint(opp.stage)} {opp.is_won && <strong> Ganho é estado de funil — não é dinheiro recebido.</strong>}{opp.is_lost && <strong> Perdido — motivo: {opp.loss_reason}</strong>}</p>
       <p>Responsável: {opp.responsible_name || "—"} | Origem (imutável): {opp.origin || "—"}{opp.campaign ? ` | Campanha (imutável): ${opp.campaign}` : ""} | Unidade: {opp.unit_name || "—"} | Previsão: {opp.forecast_date ? String(opp.forecast_date).slice(0, 10) : "—"}</p>
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
-      <h3 style={{ fontSize: 14 }}>Manutenção dos campos (CRM-05)</h3>
+      <h3 style={{ fontSize: 14 }}>Manutenção dos campos</h3>
       <div style={{ display: "grid", gap: 10, maxWidth: 720 }}>
         <label>Serviço<input value={form.service_name} onChange={e => setForm({ ...form, service_name: e.target.value })} maxLength={100} style={{ display: "block" }} /></label>
         <label>Necessidade<textarea value={form.need_description} onChange={e => setForm({ ...form, need_description: e.target.value })} maxLength={2000} rows={3} style={{ display: "block" }} /></label>
@@ -157,7 +160,7 @@ export default function OpportunitySummary({ opportunityId }: { opportunityId: s
           <div>
             <label htmlFor="opp-summary-priority">Prioridade</label>
             <select id="opp-summary-priority" value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} style={{ display: "block" }}>
-              {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+              {PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
             </select>
           </div>
           <label>Previsão (fechamento)<input type="date" value={form.forecast_date} onChange={e => setForm({ ...form, forecast_date: e.target.value })} style={{ display: "block" }} /></label>
@@ -176,14 +179,14 @@ export default function OpportunitySummary({ opportunityId }: { opportunityId: s
         </div>
         <div><button type="button" disabled={busy} onClick={save}>Salvar campos da oportunidade</button></div>
       </div>
-      <h3 style={{ fontSize: 14, marginTop: 16 }}>Movimentar no funil (CRM-06)</h3>
+      <h3 style={{ fontSize: 14, marginTop: 16 }}>Movimentar no funil</h3>
       <p style={{ fontSize: 12, opacity: 0.75 }}>Perda exige motivo obrigatório. Sair de ganho/perdido é reabertura auditada com motivo. Não é possível trocar diretamente entre ganho e perdido.</p>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
         <div>
           <label htmlFor="opp-summary-stage">Próximo estágio</label>
           <select id="opp-summary-stage" value={moveStage} onChange={e => setMoveStage(e.target.value)} style={{ display: "block" }}>
             <option value="">escolher estágio</option>
-            {STAGES.filter(s => s !== opp.stage).map(s => <option key={s} value={s}>{s}</option>)}
+            {STAGES.filter(s => s.value !== opp.stage).map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
         </div>
         {(needsLossReason || needsReopenReason) && (
