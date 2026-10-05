@@ -87,10 +87,11 @@ test("Migrações 156–168 preservadas e ledger corrente registrado nos pontos 
   assert.match(migrator, /'168-ext07-compliance-action-plans\.sql'/);
   assert.match(migrator, /'171-client-offline-access-recovery\.sql'/);
   assert.match(migrator, /'172-ext05-quality-client-account-scope\.sql'/);
-  assert.match(migrator, /files\.length !== 172/);
-  assert.match(migrator, /001–172/);
+  assert.match(migrator, /'173-ai-rag-client-account-scope\.sql'/);
+  assert.match(migrator, /files\.length !== 173/);
+  assert.match(migrator, /001–173/);
   const wave0 = await readRepo("scripts/qa-wave0-static.mjs");
-  assert.match(wave0, /const latestMigration = 172;/);
+  assert.match(wave0, /const latestMigration = 173;/);
 });
 
 // ---------------------------------------------------------------------------
