@@ -51,7 +51,9 @@
     ".next/integration-l04/types/**/*.ts",
     ".next/integration-l04/dev/types/**/*.ts",
     ".next/integration-f03/types/**/*.ts",
-    ".next/integration-f03/dev/types/**/*.ts"
+    ".next/integration-f03/dev/types/**/*.ts",
+    ".next/ux-evidence/types/**/*.ts",
+    ".next/ux-evidence/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

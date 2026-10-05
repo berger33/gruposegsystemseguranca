@@ -63,6 +63,7 @@
     "test:ext10-continuity:pg": "node scripts/qa-ext10-continuity-postgres.mjs",
     "test:ext11-analytics:pg": "node scripts/qa-ext11-analytics-postgres.mjs",
     "qa:evidence": "node scripts/qa-evidence-report.mjs",
+    "ux:evidence": "node scripts/ux-evidence-postgres.mjs",
     "test:admin-entry:pg": "node scripts/qa-admin-entry-postgres.mjs",
     "test:f03-employee-request-rh-return:pg": "node scripts/qa-f03-employee-request-rh-return-postgres.mjs",
     "test:f03-client-ticket-acceptance:pg": "node scripts/qa-f03-client-ticket-acceptance-postgres.mjs",
