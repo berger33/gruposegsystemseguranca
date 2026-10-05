@@ -5,7 +5,7 @@
 - Entregue: configuração de canal com destinatário, contato, disponibilidade, finalidade e escalonamento declarados; ciclo `rascunho → em_teste → testado → ativo`; registros internos separados de teste de recebimento e atendimento, ambos explicitamente bem-sucedidos antes da ativação humana.
 - API/UI: `/api/ext/emergency/channels`, detalhe, `/:id/transition` e `/:id/tests`; escritas legadas `/api/ext/emergency-channels` e `/api/ext/emergency-tests` retornam 410 após guardas; `/admin/emergencial` protegido por `AdminGate`.
 - Garantias: RBAC `emergency.read/write/test/activate` fail-closed, sessão individual, same-origin, Idempotency-Key/fingerprint SHA-256, advisory lock + `FOR UPDATE`, replay/conflito e concorrência, auditoria transacional com rollback/503, eventos e testes append-only.
-- Evidência: Wave0 5/5; unitários focais 11/11; `npm run test:ext15-emergency:pg` 18/18 em PG17 descartável + HTTP + sessões reais; `npm test` 610/610; typecheck; migrações 167/167; build 101 páginas; `git diff --check` e `node --check`.
+- Evidência: Wave0 5/5; unitários focais 11/11; `npm run test:ext15-emergency:pg` 18/18 em PG17 descartável + HTTP + sessões reais; `npm test` 610/610; typecheck; migrações 167/167; build 101 páginas; regressões EXT-14 17/17 e L07 financeiro 43/43; `git diff --check` e `node --check`.
 - Limite honesto: teste é declaração interna auditada, não prova de recebimento/atendimento externo. O sistema não envia telefonema, WhatsApp, mensagem ou alerta, não opera central 24h e não integra fornecedor. Aceite humano, Windows/EPERM e banco de destino seguem pendentes.
 
 ## Atualização corrente — EXT-14 / F10 Inteligência comercial canônica
