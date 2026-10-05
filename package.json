@@ -75,7 +75,8 @@
     "test:ux-crm:pg": "node scripts/qa-ux-crm-postgres.mjs",
     "test:pendencies:pg": "node scripts/qa-ops-pendencies-postgres.mjs",
     "test:ux-hr:pg": "node scripts/qa-ux-hr-postgres.mjs",
-    "test:ux-adm:pg": "node scripts/qa-ux-adm-postgres.mjs"
+    "test:ux-adm:pg": "node scripts/qa-ux-adm-postgres.mjs",
+    "test:ux-portal:pg": "node scripts/qa-ux-portal-postgres.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",

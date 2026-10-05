@@ -364,3 +364,7 @@
 
 .metaItem span { display: block; font-size: 11px; color: var(--muted, #5a7189); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 3px; }
 .metaItem strong { font-weight: 700; color: var(--text, #112f52); word-break: break-word; }
+
+/* UX-06: o selo de situação não depende só da cor — o texto carrega o sentido
+   e o prefixo fica disponível para quem usa leitor de tela. */
+.srOnly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}

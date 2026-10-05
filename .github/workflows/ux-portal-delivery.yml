@@ -1,0 +1,51 @@
+name: UX portais do funcionario e do cliente delivery
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/funcionario/**'
+      - 'src/app/cliente/**'
+      - 'src/components/ui/**'
+      - 'src/lib/portal-vocabulary.*'
+      - 'src/lib/portal-request.ts'
+      - 'src/styles/ux-tokens.css'
+      - 'src/server/employee-api.mjs'
+      - 'src/server/client-space-api.mjs'
+      - 'src/server/client-access-api.mjs'
+      - 'src/server/rbac.mjs'
+      - 'server.mjs'
+      - 'tests/helpers/**'
+      - 'tests/ux-portal-vocabulary.test.mjs'
+      - 'tests/ux-portal-workspace.integration.test.mjs'
+      - 'scripts/qa-ux-portal-postgres.mjs'
+      - 'db/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/ux-portal-delivery.yml'
+concurrency:
+  group: ux-portal-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  ux-portal-postgres-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Verificação de tipos
+        run: npm run typecheck
+      - name: Vocabulário canônico dos portais (sem PostgreSQL)
+        run: node --test tests/ux-portal-vocabulary.test.mjs
+      - name: Portais — HTTP real, PostgreSQL descartável e Chromium
+        run: npm run test:ux-portal:pg
