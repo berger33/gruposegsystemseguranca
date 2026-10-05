@@ -5,6 +5,8 @@ Esta fatia usa Ollama instalado no **mesmo computador do servidor**, com o model
 fallback que se apresente como resposta gerada. O modelo foi encontrado nesta
 máquina em 05/10/2026 por `ollama list` e `/api/tags`. Isso não prova uma resposta
 completa, desempenho ou funcionamento em outra máquina.
+Uma chamada mínima local confirmou resposta com `think=false`; esse parâmetro
+evita consumir o pequeno limite de geração apenas no raciocínio do Qwen3.
 
 ## Antes de ativar
 
