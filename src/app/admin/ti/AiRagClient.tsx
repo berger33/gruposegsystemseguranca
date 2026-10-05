@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { ragDemoTemplates } from "./ragDemoTemplates";
 
 type RagIndex = { id: string; rag_key: string; name: string; description: string; scope: string; model_name: string; ollama_host: string; max_queue_size: number; is_active: boolean; is_approved: boolean; is_published: boolean; status: string; version: number };
 type RagDoc = { id: string; rag_key: string; client_account_id?: string|null; title: string; content: string; source: string; source_type: string; keywords: string[]; is_approved: boolean; is_published: boolean; status: string };
@@ -12,6 +13,7 @@ export default function AiRagClient(){
   const [indexes, setIndexes] = useState<RagIndex[]>([]);
   const [staffRole, setStaffRole] = useState("");
   const [docs, setDocs] = useState<RagDoc[]>([]);
+  const [accounts, setAccounts] = useState<{id:string;display_name:string}[]>([]);
   const [botConfig, setBotConfig] = useState<BotConfig|null>(null);
   const [modes, setModes] = useState<BotMode[]>([]);
   const [sessions, setSessions] = useState<BotSession[]>([]);
@@ -34,6 +36,7 @@ export default function AiRagClient(){
       setIndexes(iRes.items||[]);
       setStaffRole(sessionRes.role||"");
       setDocs(dRes.items||[]);
+      if(sessionRes.role==="admin"||sessionRes.role==="ti") fetch("/api/admin/client-accounts?limit=100").then(r=>r.json()).then(x=>setAccounts(x.accounts||[])).catch(()=>{});
       setBotConfig(cfgRes.config||null);
       setModes(cfgRes.modes||[]);
       if(cfgRes.config){
@@ -72,6 +75,27 @@ export default function AiRagClient(){
   }
   async function publishDoc(item:RagDoc){
     try{const res=await fetch("/api/admin/ai-rag-documents",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:item.id,status:"publicado",is_approved:true,is_published:true})});const data=await res.json();if(!res.ok)throw new Error(data.error||"falha");setMsg(`Documento ${item.title} publicado.`);load();}catch(err:any){setMsg(`Erro publicação: ${err.message}`)}
+  }
+  async function archiveDoc(item:RagDoc){
+    if(!window.confirm(`Retirar ${item.title} da base ${item.rag_key}?`)) return;
+    try{const res=await fetch("/api/admin/ai-rag-documents",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:item.id,status:"arquivado",is_approved:false,is_published:false})});const data=await res.json();if(!res.ok)throw new Error(data.error||"falha");setMsg(`Documento ${item.title} arquivado.`);load();}catch(err:any){setMsg(`Erro ao arquivar: ${err.message}`)}
+  }
+  async function installDemo(ragKey:keyof typeof ragDemoTemplates){
+    const accountId=ragKey==="cliente"?docForm.client_account_id:"";
+    if(ragKey==="cliente"&&!accountId){setMsg("Escolha uma conta de cliente para a demonstração privada.");return;}
+    if(docs.some(d=>d.rag_key===ragKey && (ragKey!=="cliente"||d.client_account_id===accountId) && d.title===ragDemoTemplates[ragKey].title && d.status!=="arquivado")){setMsg("Demonstração dessa área já existe. Revise-a na lista abaixo.");return;}
+    const template=ragDemoTemplates[ragKey];
+    setMsg(`Instalando demonstração ${ragKey}...`);
+    try{
+      const index=indexes.find(i=>i.rag_key===ragKey);
+      if(!index)throw new Error("índice ausente; crie-o primeiro");
+      if(!index.is_published)throw new Error("publique o índice primeiro");
+      const res=await fetch("/api/admin/ai-rag-documents",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({rag_key:ragKey,client_account_id:accountId,title:template.title,content:template.content,source:"Demonstração fictícia do sistema",source_type:"manual",keywords:template.keywords})});
+      const created=await res.json();if(!res.ok)throw new Error(created.error||"falha ao criar");
+      const pub=await fetch("/api/admin/ai-rag-documents",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:created.id,status:"publicado",is_approved:true,is_published:true})});
+      const published=await pub.json();if(!pub.ok)throw new Error(published.error||"falha ao publicar");
+      setMsg(`Demonstração ${ragKey} publicada. É conteúdo fictício; substitua pelo documento oficial antes da entrega.`);load();
+    }catch(err:any){setMsg(`Erro na demonstração: ${err.message}`);load();}
   }
 
   async function updateConfig(e: React.FormEvent){
@@ -115,10 +139,16 @@ export default function AiRagClient(){
     <section style={{ marginTop:24, padding:16, border:"1px solid #7c3aed", borderRadius:8, background:"#f5f3ff" }}>
       <h2 style={{ margin:0 }}>Bases dos assistentes</h2>
       <p style={{ fontSize:13, opacity:0.8 }}>Crie o índice de cada área, revise os documentos e publique-os explicitamente. Clientes veem somente documentos vinculados às próprias contas. Testes completos de carga e homologação ainda são necessários.</p>
+      <p style={{fontSize:12}}>Caminho: abra a base da área abaixo, publique o índice, instale o exemplo ou crie um documento, revise e publique. Para substituir um texto, copie-o para o formulário, crie a nova versão e arquive a anterior. Cada documento fica no banco e é administrado aqui, sem pasta manual no servidor.</p>
 
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}>
         {(["publico","cliente","rh","marcelo"] as const).filter(key=>(staffRole==="admin"||staffRole==="ti"&&["publico","cliente"].includes(key)||staffRole==="rh"&&key==="rh")&&!indexes.some(i=>i.rag_key===key)).map(key=><button key={key} type="button" onClick={()=>ensureIndex(key)} style={{padding:"6px 10px"}}>Criar índice {key}</button>)}
       </div>
+      <section style={{marginTop:12,padding:12,background:"#fff"}}>
+        <strong>Documentos fictícios de demonstração por área</strong>
+        <p style={{fontSize:12}}>Exemplos processuais, sem dados reais. A base cliente exige uma conta existente e só ficará visível para essa conta.</p>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{(["publico","cliente","rh","marcelo"] as const).filter(key=>staffRole==="admin"||staffRole==="ti"&&["publico","cliente"].includes(key)||staffRole==="rh"&&key==="rh").map(key=><button key={key} type="button" onClick={()=>installDemo(key)} disabled={!indexes.some(i=>i.rag_key===key&&i.is_published)}>Instalar exemplo {key}</button>)}</div>
+      </section>
 
       <details style={{ marginTop:12, background:"#fff", padding:12, borderRadius:6 }}>
         <summary style={{ fontWeight:600, cursor:"pointer" }}>RAG Indexes ({indexes.length}) — 3 separados + público</summary>
@@ -176,13 +206,14 @@ export default function AiRagClient(){
 
       <form onSubmit={createDoc} style={{ marginTop:16, display:"grid", gap:8, background:"#fff", padding:12, borderRadius:6 }}>
         <strong>Criar documento RAG por área pertinente (cliente/RH/Marcelo/publico)</strong>
+        <label>Importar texto para revisão (.txt ou .md, até 20 mil caracteres)<input type="file" accept=".txt,.md,text/plain,text/markdown" onChange={async e=>{const file=e.target.files?.[0];if(!file)return;if(file.size>80000){setMsg("Arquivo grande demais para um documento RAG.");return;}const content=await file.text();if(content.length>20000){setMsg("Texto excede 20 mil caracteres; divida-o em documentos menores.");return;}setDocForm(current=>({...current,title:file.name.replace(/\.(txt|md)$/i,"").slice(0,500),content,source:file.name.slice(0,500),source_type:"manual"}));setMsg("Texto carregado no formulário. Revise a área e o conteúdo antes de salvar.");}} /></label>
         <select value={docForm.rag_key} onChange={e=>setDocForm({...docForm, rag_key:e.target.value})} style={{ padding:6 }}>
           <option value="cliente">cliente — apenas portal cliente, sem RH/saúde/salário</option>
           {staffRole==="admin"&&<option value="rh">rh — apenas RH, sem dados cliente PII</option>}
           {staffRole==="admin"&&<option value="marcelo">marcelo — apenas gestão negócio, sem segredos técnicos/saúde irrestrita</option>}
           <option value="publico">publico — apenas site público, sem preço fictício</option>
         </select>
-        {docForm.rag_key==="cliente" && <input aria-label="ID da conta do cliente" placeholder="UUID da conta do cliente autorizada" value={docForm.client_account_id} onChange={e=>setDocForm({...docForm,client_account_id:e.target.value})} required />}
+        {docForm.rag_key==="cliente" && <><select aria-label="Conta do cliente" value={docForm.client_account_id} onChange={e=>setDocForm({...docForm,client_account_id:e.target.value})} required><option value="">Selecione a conta do cliente</option>{accounts.map(a=><option key={a.id} value={a.id}>{a.display_name} — {a.id}</option>)}</select><small>Se a conta não aparecer, cadastre-a primeiro em Clientes. O exemplo fica restrito à conta escolhida.</small></>}
         <input placeholder="title min 5 chars" value={docForm.title} onChange={e=>setDocForm({...docForm, title:e.target.value})} required maxLength={500} style={{ padding:6 }} />
         <textarea placeholder="content min 20 chars área pertinente apenas, ex: cliente=contratos/documentos/chamados, rh=admissão/férias/benefícios, marcelo=gestão comercial/operacional/financeiro" value={docForm.content} onChange={e=>setDocForm({...docForm, content:e.target.value})} required maxLength={20000} rows={4} style={{ padding:6 }} />
         <input placeholder="source ex: manual cliente" value={docForm.source} onChange={e=>setDocForm({...docForm, source:e.target.value})} required maxLength={500} style={{ padding:6 }} />
@@ -201,7 +232,7 @@ export default function AiRagClient(){
 
       <section style={{marginTop:16,padding:12,background:"#fff"}}>
         <h3>Documentos para revisão ({docs.length})</h3>
-        {docs.map(doc=><p key={doc.id}>{doc.rag_key} {doc.client_account_id ? `· conta ${doc.client_account_id}` : ""} · {doc.title} · {doc.is_published ? "publicado" : "rascunho"} {!doc.is_published&&<button type="button" onClick={()=>publishDoc(doc)}>Revisar e publicar</button>}</p>)}
+        {docs.map(doc=><p key={doc.id}>{doc.rag_key} {doc.client_account_id ? `· conta ${accounts.find(a=>a.id===doc.client_account_id)?.display_name||doc.client_account_id}` : ""} · {doc.title} · {doc.status} {!doc.is_published&&doc.status!=="arquivado"&&<button type="button" onClick={()=>publishDoc(doc)}>Revisar e publicar</button>} {doc.status!=="arquivado"&&<button type="button" onClick={()=>{setDocForm({rag_key:doc.rag_key,client_account_id:doc.client_account_id||"",title:doc.title,content:doc.content,source:doc.source,source_type:doc.source_type,keywords:doc.keywords.join(", ")});setMsg("Texto copiado para o formulário. Salve como nova versão e arquive a anterior.");}}>Criar nova versão</button>} {doc.status!=="arquivado"&&<button type="button" onClick={()=>archiveDoc(doc)}>Arquivar</button>}</p>)}
       </section>
 
       <details style={{ marginTop:12, background:"#fff", padding:12, borderRadius:6 }}>
@@ -255,13 +286,7 @@ export default function AiRagClient(){
       </details>
 
       <section style={{ marginTop:16, padding:12, background:"#fff", borderRadius:6, fontSize:12 }}>
-        <strong>Aceite AI:</strong><br/>
-        - 3 RAGs diferentes: cliente (portal cliente contratos/documentos/chamados sem RH/saúde/salário), RH (módulo RH admissão/férias/benefícios sem cliente PII), Marcelo (admin gestão negócio sem segredos técnicos/saúde irrestrita), público (site serviços/segmentos/FAQ/contato claro sem preço fictício)<br/>
-        - Modelo Ollama Qwen3 1.7B: model_name qwen3:1.7b, ollama_host http://localhost:11434, max_queue_size 100, max_tokens 2048, temperature 0.7, fila garante atendimento todo mundo em fila queue_position queue_wait_ms latency_ms<br/>
-        - Modo atendimento bot: campo administrador altera dinâmica sem_ia/com_ia/whatsapp em modo desenvolvedor ai_bot_config singleton_id=1 active_mode com_ia padrão beta, whatsapp_number e template com {`{protocol} {query}`}, is_dev_mode true is_beta_mode true default_rag_key publico, histórico imutável ai_bot_config_history<br/>
-        - Padrão entrega beta: com_ia, is_beta_mode true, default_rag_key publico, modelo qwen3:1.7b, fila 100<br/>
-        - Guardrails: is_invented_price=false CHECK etc, sem R$ inventado, sem cobertura/licença/prazo inventado, transferência humana quando sensível, base aprovada apenas área pertinente, embedding_status concluido, chunks 500 chars token_count<br/>
-        - Segurança: sameOrigin requireSession requireRole admin/ti auditLog, RAG queries com user_kind visitor_name origin, sem segredos em logs
+        <strong>Estado do RAG atual:</strong> conteúdo publicado e escopo conferidos antes da chamada local ao Ollama. A recuperação é lexical; não há embedding, fila persistida, custo/token calculado ou consulta automática aos registros vivos. Quando não há fonte, a resposta informa isso. Teste cada área com uma conta própria antes da entrega.
       </section>
     </section>
   );

@@ -52,6 +52,27 @@ CREATE TABLE IF NOT EXISTS auth_identities (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(kind, email)
 );
+CREATE TABLE IF NOT EXISTS client_accounts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parent_account_id UUID REFERENCES client_accounts(id),
+  display_name VARCHAR(160) NOT NULL,
+  document_ref VARCHAR(32),
+  status TEXT NOT NULL DEFAULT 'active',
+  notes VARCHAR(500),
+  created_by TEXT NOT NULL DEFAULT 'ti',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS client_access_grants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  identity_id UUID NOT NULL REFERENCES auth_identities(id),
+  client_account_id UUID NOT NULL REFERENCES client_accounts(id),
+  unit_account_id UUID,
+  revoked_at TIMESTAMPTZ,
+  reason VARCHAR(500) NOT NULL DEFAULT 'Demonstração local',
+  granted_by TEXT NOT NULL DEFAULT 'ti',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 -- Reexecutar este init também atualiza diretórios PGlite beta já existentes.
 ALTER TABLE auth_identities ADD COLUMN IF NOT EXISTS display_name TEXT;
 ALTER TABLE auth_identities ADD COLUMN IF NOT EXISTS session_epoch INTEGER NOT NULL DEFAULT 0;
@@ -161,6 +182,7 @@ CREATE TABLE IF NOT EXISTS ai_rag_documents (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE ai_rag_documents ADD COLUMN IF NOT EXISTS client_account_id UUID REFERENCES client_accounts(id);
 
 CREATE TABLE IF NOT EXISTS ai_rag_chunks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -341,6 +363,12 @@ END,
 true, true, 'publicado', 'concluido', 500
 FROM ai_rag_indexes
 ON CONFLICT DO NOTHING;
+
+-- O texto beta legado descreve recursos não homologados como fatos. Retirá-lo
+-- da recuperação; o painel permite instalar exemplos curtos e identificados.
+UPDATE ai_rag_documents SET is_published=false, is_approved=false, status='arquivado'
+WHERE title IN ('Portal cliente — contratos e documentos', 'RH — admissao e ferias',
+  'Administracao — visao comercial e operacional', 'Site publico — servicos e contato claro');
 
 -- Chunks 500 chars
 INSERT INTO ai_rag_chunks (document_id, rag_index_id, rag_key, chunk_index, content, token_count, metadata)

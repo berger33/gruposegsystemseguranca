@@ -11,8 +11,10 @@ evita consumir o pequeno limite de geração apenas no raciocínio do Qwen3.
 ## Antes de ativar
 
 1. Atualize o código para o commit que contém esta fatia. Faça backup do banco.
-2. Aplique o migrador oficial; ele inclui a migração 173. Execute novamente para
-   verificar o ledger. Não edite migrações anteriores nem aplique a 173 sozinha.
+2. Se usar PostgreSQL, aplique o migrador oficial; ele inclui a migração 173.
+   Execute novamente para verificar o ledger. Não edite migrações anteriores
+   nem aplique a 173 sozinha. No modo PGlite local, o init beta v3 prepara o
+   esquema mínimo de demonstração; esse banco não substitui PostgreSQL no aceite.
 3. Instale Ollama e obtenha o modelo com `ollama pull qwen3:1.7b`, caso ainda não
    esteja disponível. `ollama list` deve mostrá-lo. Mantenha a API em loopback.
 4. No arquivo de ambiente **fora do GitHub**, configure:
@@ -27,12 +29,21 @@ evita consumir o pequeno limite de geração apenas no raciocínio do Qwen3.
 
 ## Conteúdo e permissões
 
-Na seção de bases de IA de `/admin/ti`, um perfil autorizado cria um índice para
-`publico`, `cliente`, `rh` ou `marcelo`. Cria documentos em rascunho, revisa e
-publica explicitamente índice e documento. Um documento do cliente exige o UUID
-da conta. Conteúdo não publicado ou índice não publicado não é recuperado.
-O painel de TI só pode curar bases pública e de clientes; RH só a base RH;
-admin pode curar todas. O conteúdo deve ter origem identificável e aprovada.
+Na seção **Bases dos assistentes** de `/admin/ti`, publique o índice da área e
+clique **Instalar exemplo**. Os quatro textos são fictícios e processuais, sem
+dados reais. Para `cliente`, selecione antes uma conta existente no formulário:
+o exemplo fica restrito a ela. Instale uma cópia para cada conta de demonstração
+que for testar. O sistema não publica um exemplo de cliente para todas as contas.
+
+O painel também permite criar documento manual por área, carregar texto local
+`.txt`/`.md` para revisão, revisar/publicar,
+copiar o texto para criar nova versão e arquivar a antiga. **Não há caminho de
+pastas de documentos nem ingestão de PDF neste fluxo**: o texto e sua origem são
+geridos no painel e guardados no banco. O formulário lista as contas de cliente
+para evitar a digitação de UUID. Conteúdo ou índice não publicado não é
+recuperado. TI pode curar bases pública e de clientes; RH apenas a base RH; um
+administrador pode curar todas. Antes da entrega, substitua cada exemplo por
+conteúdo oficial revisado e arquive o exemplo.
 
 A nova rota `POST /api/ai/answer` decide o escopo **no servidor**:
 
@@ -54,8 +65,8 @@ ledger beta de custo/token, evitando alegar contagem ou custo inexistentes.
 
 ## Testes a executar pelo operador após o merge
 
-- Em banco **descartável**, aplicar 001–173 duas vezes e verificar ledger 173/173.
-- Publicar um documento fictício por área. Criar clientes A/B com acessos
+- Em banco **descartável** PostgreSQL, aplicar 001–173 duas vezes e verificar ledger 173/173.
+- Instalar os exemplos pelo painel. Criar clientes A/B com acessos
   separados; cada cliente só deve obter a fonte da própria conta. Revogar o
   vínculo A e confirmar que a fonte some antes de chamar Ollama.
 - Confirmar 401 para cliente sem sessão; 403 para RH perguntando à base Marcelo

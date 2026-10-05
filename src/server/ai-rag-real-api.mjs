@@ -68,13 +68,12 @@ export function createAiRagRealApi({ pool, sameOrigin, readStaffSession, readCli
     if (!actor) return;
     const question = typeof body.query === 'string' ? body.query.trim() : '';
     if (question.length < 5 || question.length > 500) return answerJson(res, 400, { error: 'invalid_query' });
-    if (process.env.OLLAMA_ENABLED !== 'true') return answerJson(res, 503, { error: 'ai_unavailable', reason: 'ollama_disabled' });
-    if (active >= 1) return answerJson(res, 503, { error: 'ai_busy', retry_after_seconds: 5 });
-
     let matches;
     try { matches = rankApprovedChunks(question, await retrieve(ragKey, actor)); }
     catch { return answerJson(res, 503, { error: 'rag_unavailable' }); }
     if (matches.length === 0) return answerJson(res, 200, { response: 'Não encontrei informação aprovada para responder a esta pergunta. Consulte a equipe responsável.', sources: [], rag_key: ragKey, ollama_used: false, reason: 'no_relevant_source' });
+    if (process.env.OLLAMA_ENABLED !== 'true') return answerJson(res, 503, { error: 'ai_unavailable', reason: 'ollama_disabled' });
+    if (active >= 1) return answerJson(res, 503, { error: 'ai_busy', retry_after_seconds: 5 });
 
     const model = process.env.OLLAMA_MODEL || 'qwen3:1.7b';
     const host = process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434';
