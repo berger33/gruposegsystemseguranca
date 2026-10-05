@@ -356,3 +356,88 @@ test('em 390px o painel não produz transbordo horizontal', { skip: !RUN }, asyn
     await context.close();
   } finally { await browser.close(); }
 });
+
+// ---------------------------------------------------------------------------
+// Pendência herdada da UX-05: as abas secundárias tinham recebido estados
+// honestos, rótulos e semântica de aba, mas NÃO haviam sido percorridas ponta a
+// ponta na interface — só por HTTP. Os dois testes abaixo fecham isso, abrindo
+// uma por uma no Chromium real e exigindo que cada uma resolva em um estado
+// declarado, nunca numa tela muda.
+// ---------------------------------------------------------------------------
+
+/** Cada aba, o testid do seu painel e o testid do seu estado de carregamento. */
+const ABAS_SECUNDARIAS = [
+  { id: 'aprovacoes', painel: 'adm-approvals' },
+  { id: 'espaco', painel: 'adm-workspace' },
+  { id: 'relatorios', painel: 'adm-reports' },
+  { id: 'configuracoes', painel: 'adm-configs' },
+  { id: 'metas', painel: 'adm-goals' },
+  { id: 'diario', painel: 'adm-diary' },
+  { id: 'expansao', painel: 'adm-expansion' },
+];
+
+test('as sete abas secundárias abrem e resolvem num estado declarado, uma a uma', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openPanel(browser, marceloCookie);
+    await page.waitForSelector('[role="tablist"]');
+
+    for (const aba of ABAS_SECUNDARIAS) {
+      await page.getByTestId(`adm-tab-${aba.id}`).click();
+      const painel = page.getByTestId(aba.painel);
+      await painel.waitFor();
+
+      // Só o painel da aba ativa fica montado.
+      assert.equal(await page.locator('[role="tabpanel"]').count(), 1,
+        `a aba ${aba.id} precisa montar exatamente um tabpanel`);
+      assert.equal(await painel.getAttribute('aria-labelledby'), `adm-aba-${aba.id}`,
+        `o painel de ${aba.id} precisa apontar para a sua aba`);
+
+      // A leitura precisa TERMINAR em um estado dito em voz alta: conteúdo,
+      // vazio declarado, recusa ou falha. Uma tela que fica muda é o defeito.
+      await page.waitForFunction(id => {
+        const node = document.querySelector(`[data-testid="${id}"]`);
+        if (!node) return false;
+        if (node.querySelector('[data-ui-state="loading"]')) return false;
+        return node.innerText.trim().length > 40;
+      }, aba.painel, { timeout: 30_000 });
+
+      const texto = await painel.innerText();
+      // Nenhum token canônico de erro pode aparecer como frase principal.
+      assert.doesNotMatch(texto, /^\s*[a-z0-9_]+_unavailable\s*$/m,
+        `a aba ${aba.id} não pode exibir o código cru como mensagem`);
+    }
+    await capture(page, 'ux-05-abas-secundarias');
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('em cada aba secundária, falha de leitura é falha — nunca lista vazia', { skip: !RUN }, async () => {
+  // A regra central da UX-05 aplicada às abas que ainda não haviam sido
+  // percorridas: com TODAS as leituras do painel derrubadas, cada aba precisa
+  // mostrar o seu erro e NENHUMA pode mostrar o seu texto de "nada aqui".
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openPanel(browser, marceloCookie, {
+      failRoutes: ['/api/adm/panel/'], status: 503, code: 'internal',
+    });
+    await page.waitForSelector('[role="tablist"]');
+
+    for (const aba of ABAS_SECUNDARIAS) {
+      await page.getByTestId(`adm-tab-${aba.id}`).click();
+      // Cada painel declara o seu próprio alerta de falha; esperamos por ele
+      // dentro do painel da aba, sem depender de um testid global.
+      await page.getByTestId(aba.painel).locator('[role="alert"]').first()
+        .waitFor({ timeout: 20_000 });
+
+      const painel = page.getByTestId(aba.painel);
+      const texto = await painel.innerText();
+      assert.match(texto, /Não foi possível|Acesso negado|Sessão/i,
+        `a aba ${aba.id} precisa dizer que a leitura falhou`);
+      assert.doesNotMatch(texto, /Nenhum[a]? (pendência|meta|favorito|decisão|análise) canônic/i,
+        `a aba ${aba.id} apresentou falha de leitura como ausência de registro`);
+    }
+    await capture(page, 'ux-05-abas-secundarias-falha');
+    await context.close();
+  } finally { await browser.close(); }
+});

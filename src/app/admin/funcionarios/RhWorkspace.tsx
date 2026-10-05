@@ -1129,6 +1129,7 @@ function Termination({ employees, run }: { employees: Employee[]; run: RunTask }
 
 function HrProcesses() {
   const [group, setGroup] = useState('cadastro');
+  const groupRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   // O código interno (HR-01..24) sai do rótulo visível e vira descrição: o
   // plano mestre pede que status técnico não ocupe o título da tarefa.
   const groups: { id: string; label: string; codes: string }[] = [
@@ -1140,6 +1141,26 @@ function HrProcesses() {
     { id: 'desenvolvimento', label: 'Treinamento, competências e uniformes', codes: 'HR-17 a HR-20' },
     { id: 'gestao', label: 'Folha, avaliações e indicadores', codes: 'HR-21 a HR-24' },
   ];
+
+  // Pendência herdada da UX-04: este tablist interno era um tablist apenas no
+  // nome — sem roving tabindex, sem teclado e sem tabpanel. O conteúdo legado
+  // ficava órfão de dono acessível. Aqui ele passa a seguir o mesmo padrão das
+  // abas externas, sem tocar nos componentes legados em si.
+  function onGroupKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
+    const index = groups.findIndex(item => item.id === group);
+    let next = index;
+    if (event.key === 'ArrowRight') next = (index + 1) % groups.length;
+    else if (event.key === 'ArrowLeft') next = (index - 1 + groups.length) % groups.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = groups.length - 1;
+    else return;
+    event.preventDefault();
+    const target = groups[next].id;
+    setGroup(target);
+    groupRefs.current[target]?.focus();
+  }
+
+  const activeGroup = groups.find(item => item.id === group)!;
 
   return (
     <section className={styles.panel} aria-labelledby="rh-processos-titulo">
@@ -1155,16 +1176,33 @@ function HrProcesses() {
             key={item.id}
             type="button"
             role="tab"
+            id={`rh-legado-aba-${item.id}`}
             aria-selected={group === item.id}
+            aria-controls={`rh-legado-painel-${item.id}`}
+            tabIndex={group === item.id ? 0 : -1}
+            ref={element => { groupRefs.current[item.id] = element; }}
             className={group === item.id ? styles.tabActive : styles.tab}
             onClick={() => setGroup(item.id)}
+            onKeyDown={onGroupKeyDown}
           >
             {item.label}
             <span className={styles.visuallyHidden}> (processos {item.codes})</span>
           </button>
         ))}
       </div>
-      <div className={styles.legacy}>
+      <div
+        className={styles.legacy}
+        role="tabpanel"
+        id={`rh-legado-painel-${group}`}
+        aria-labelledby={`rh-legado-aba-${group}`}
+        tabIndex={-1}
+      >
+        <h4 className={styles.visuallyHidden}>{activeGroup.label} — tela legada</h4>
+        <p className={styles.hint} data-ux-legacy="true">
+          Tela legada, exibida como está: {activeGroup.label} (processos {activeGroup.codes}). O
+          vocabulário e os estados desta área ainda não foram revisados. As permissões e a auditoria
+          são as mesmas do restante do RH.
+        </p>
         {group === 'cadastro' ? <HrClient /> : null}
         {group === 'recrutamento' ? <HrRecruitmentClient /> : null}
         {group === 'desligamento' ? <HrTerminationClient /> : null}

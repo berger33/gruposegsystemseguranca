@@ -287,9 +287,16 @@ test('browser: com a concessão, os indicadores aparecem e as abas andam pelo te
     await page.keyboard.press('End');
     assert.equal(await page.getByRole('tab', { name: 'Demais processos de RH' }).getAttribute('aria-selected'), 'true');
 
-    // O painel exposto corresponde à aba selecionada.
-    const painel = page.locator('[role="tabpanel"]');
-    assert.equal(await painel.count(), 1);
+    // O painel exposto corresponde à aba selecionada. A aba "Demais processos"
+    // traz um tablist aninhado (os sete componentes legados), que tem o seu
+    // próprio tabpanel — por isso a contagem é feita por nível, e não no
+    // documento inteiro.
+    assert.equal(await page.locator('[id^="rh-painel-"][role="tabpanel"]').count(), 1,
+      'só o painel da aba externa ativa fica montado');
+    assert.equal(await page.locator('[id^="rh-legado-painel-"][role="tabpanel"]').count(), 1,
+      'o tablist aninhado dos processos legados expõe exatamente um painel');
+    assert.equal(await page.locator('[role="tabpanel"]').count(), 2,
+      'nenhum outro tabpanel órfão pode existir na página');
     await capture(page, 'desktop-rh-abas');
   } finally {
     await browser.close();
@@ -442,6 +449,179 @@ test('browser: no celular o RH não rola na horizontal e as abas continuam utili
     assert.ok(alturas.length > 0);
     for (const altura of alturas) assert.ok(altura >= 40, `aba com ${altura}px de altura é alvo pequeno demais`);
     await capture(page, 'mobile-rh');
+  } finally {
+    await browser.close();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Pendências herdadas da UX-04, agora percorridas ponta a ponta na interface.
+// O relatório final de 05/10 registrava que Escala, Documentos e Fechamento
+// tinham recebido linguagem e estados, mas NÃO haviam sido percorridas na tela
+// com massa criada pelas próprias APIs. Os testes abaixo fecham isso.
+// ---------------------------------------------------------------------------
+
+/** Cria uma pessoa fictícia pela mesma API da interface e devolve o registro. */
+async function pessoaFicticia(sufixo) {
+  const criado = await api('/api/hr/employees', {
+    method: 'POST', cookie: grantedCookie,
+    body: {
+      matricula: `QA-${sufixo}-${randomUUID().slice(0, 6)}`,
+      display_name: `Pessoa ${sufixo}`,
+      cargo: 'vigilante',
+      status: 'ativo',
+      employment_type: 'clt',
+    },
+  });
+  assert.equal(criado.status, 201, `criação deveria retornar 201, veio ${criado.status}`);
+  return criado.body.employee || criado.body;
+}
+
+test('browser: a aba Escala publica a versão ponta a ponta e o plantão fica no banco', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const pessoa = await pessoaFicticia('Escala');
+    const { page } = await openRh(browser, grantedCookie);
+    await page.getByRole('tab', { name: 'Escala' }).click();
+    await page.locator('form').first().waitFor();
+
+    const titulo = `Escala sintética ${randomUUID().slice(0, 8)}`;
+    await page.locator('input[name="title"]').fill(titulo);
+    await page.locator('input[name="periodStart"]').fill('2026-11-01');
+    await page.locator('input[name="periodEnd"]').fill('2026-11-30');
+    await page.locator('select[name="employeeId"]').selectOption(pessoa.id);
+    await page.locator('input[name="location"]').fill('Posto sintético 1');
+    await page.locator('input[name="entryDate"]').fill('2026-11-10');
+    await page.locator('input[name="startTime"]').fill('07:00');
+    await page.locator('input[name="endTime"]').fill('19:00');
+    await page.getByRole('button', { name: /Criar versão, incluir turno e publicar/i }).click();
+
+    // A confirmação é dita na tela, e diz o que NÃO aconteceu.
+    const aviso = page.locator('[role="status"]', { hasText: /Escala versionada e publicada/i });
+    await aviso.waitFor({ timeout: 30_000 });
+    assert.match(await aviso.innerText(), /ciência da pessoa continua pendente/i,
+      'publicar escala não pode dar a ciência da pessoa como feita');
+
+    // E o efeito existe no PostgreSQL real, não apenas na tela.
+    const { rows } = await pool.query(
+      'SELECT status FROM emp_schedule_versions WHERE title = $1', [titulo]);
+    assert.equal(rows.length, 1, 'a versão de escala precisa ter sido gravada');
+    assert.equal(rows[0].status, 'publicado', 'a versão precisa terminar publicada');
+
+    const plantao = await pool.query(
+      'SELECT count(*)::int AS total FROM emp_shift_assignments WHERE employee_id = $1 AND shift_date = $2',
+      [pessoa.id, '2026-11-10']);
+    assert.equal(plantao.rows[0].total, 1, 'o plantão publicado precisa existir para a pessoa');
+    await capture(page, 'desktop-rh-escala-publicada');
+  } finally {
+    await browser.close();
+  }
+});
+
+test('browser: a aba Documentos aprova um envio real e a situação muda na tabela', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const pessoa = await pessoaFicticia('Documento');
+    const conteudo = Buffer.from('documento sintetico de teste', 'utf8').toString('base64');
+    const enviado = await api('/api/admin/hr/l03/documents', {
+      method: 'POST', cookie: grantedCookie,
+      body: {
+        employeeId: pessoa.id,
+        filename: 'comprovante.txt',
+        contentType: 'text/plain',
+        contentBase64: conteudo,
+        documentKind: 'submission',
+        category: 'admissao',
+        title: 'Comprovante sintético UX-06',
+      },
+    });
+    assert.equal(enviado.status, 201, `envio deveria retornar 201, veio ${enviado.status}`);
+
+    const { page } = await openRh(browser, grantedCookie);
+    await page.getByRole('tab', { name: 'Documentos' }).click();
+    const linha = page.locator('tr', { hasText: 'Comprovante sintético UX-06' });
+    await linha.waitFor();
+
+    // Antes: a tabela mostra a situação canônica traduzida, não o token cru.
+    assert.doesNotMatch(await linha.innerText(), /\bsubmitted\b|\bapproved\b/,
+      'a tabela não pode exibir o valor canônico cru na coluna de situação');
+
+    await linha.getByRole('button', { name: /Aprovar/i }).click();
+    const aviso = page.locator('[role="status"]', { hasText: /aprovado após revisão/i });
+    await aviso.waitFor({ timeout: 30_000 });
+
+    const { rows } = await pool.query(
+      'SELECT status FROM employee_private_documents WHERE id = $1', [enviado.body.document.id]);
+    assert.equal(rows[0].status, 'approved', 'a aprovação precisa ter sido gravada');
+    await capture(page, 'desktop-rh-documento-aprovado');
+  } finally {
+    await browser.close();
+  }
+});
+
+test('browser: a aba Fechamento fecha a competência e diz que não houve pagamento', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { page } = await openRh(browser, grantedCookie);
+    await page.getByRole('tab', { name: 'Fechamento e holerite' }).click();
+    // Há dois campos de competência na aba (fechar período e publicar
+    // holerite); o alvo é o do formulário de fechamento, identificado pelo
+    // próprio rótulo.
+    const campo = page.getByRole('textbox', { name: 'Competência' }).first();
+    await campo.waitFor();
+
+    const competencia = `2026-${String(1 + Math.floor(Math.random() * 9)).padStart(2, '0')}`;
+    await campo.fill(competencia);
+    await page.getByRole('button', { name: /Validar divergências e fechar/i }).click();
+
+    const aviso = page.locator('[role="status"]', { hasText: /Competência demonstrativa fechada/i });
+    await aviso.waitFor({ timeout: 30_000 });
+    // A frase que impede a leitura errada: fechar não é pagar.
+    assert.match(await aviso.innerText(), /não um pagamento/i,
+      'o fechamento precisa declarar que nenhum pagamento foi executado');
+
+    const { rows } = await pool.query(
+      'SELECT count(*)::int AS total FROM hr_dp_closures WHERE competence = $1', [competencia]);
+    assert.ok(rows[0].total >= 1, 'o fechamento precisa ter sido gravado');
+    await capture(page, 'desktop-rh-fechamento');
+  } finally {
+    await browser.close();
+  }
+});
+
+test('browser: as abas dos processos legados são um tablist de verdade e dizem que são legado', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { page } = await openRh(browser, grantedCookie);
+    await page.getByRole('tab', { name: 'Demais processos de RH' }).click();
+
+    const interno = page.locator('[role="tablist"][aria-label="Grupos de processos de RH"]');
+    await interno.waitFor();
+    const abas = interno.getByRole('tab');
+    assert.equal(await abas.count(), 7, 'são sete grupos de processos legados');
+
+    // Pendência herdada: este tablist não tinha roving tabindex nem teclado.
+    assert.equal(await interno.locator('[role="tab"][tabindex="0"]').count(), 1);
+    assert.equal(await interno.locator('[role="tab"][tabindex="-1"]').count(), 6);
+
+    const primeira = abas.first();
+    await primeira.focus();
+    await page.keyboard.press('ArrowRight');
+    assert.equal(await abas.nth(1).getAttribute('aria-selected'), 'true');
+    assert.equal(await abas.nth(1).evaluate(el => el === document.activeElement), true,
+      'a seta precisa mover o foco junto com a seleção');
+    await page.keyboard.press('End');
+    assert.equal(await abas.nth(6).getAttribute('aria-selected'), 'true');
+    await page.keyboard.press('Home');
+    assert.equal(await abas.nth(0).getAttribute('aria-selected'), 'true');
+
+    // O conteúdo legado agora tem dono acessível e está rotulado como legado.
+    const painel = page.locator('[id^="rh-legado-painel-"]');
+    assert.equal(await painel.count(), 1, 'o conteúdo legado precisa de um tabpanel');
+    assert.equal(await painel.getAttribute('role'), 'tabpanel');
+    assert.match(await painel.innerText(), /Tela legada, exibida como está/i,
+      'a tela precisa dizer que aquilo é legado, em vez de disfarçar');
+    await capture(page, 'desktop-rh-legado');
   } finally {
     await browser.close();
   }
