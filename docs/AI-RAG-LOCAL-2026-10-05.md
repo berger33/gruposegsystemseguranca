@@ -11,7 +11,9 @@ evita consumir o pequeno limite de geração apenas no raciocínio do Qwen3.
 ## Antes de ativar
 
 1. Atualize o código para o commit que contém esta fatia. Faça backup do banco.
-2. Se usar PostgreSQL, aplique o migrador oficial; ele inclui a migração 173.
+2. Se usar PostgreSQL, aplique o migrador oficial; ele inclui as migrações 173
+   e 174. A 174 corrige o default de `auth_permissions.id` necessário para
+   upgrades com identidades staff já cadastradas.
    Execute novamente para verificar o ledger. Não edite migrações anteriores
    nem aplique a 173 sozinha. No modo PGlite local, o init beta v3 prepara o
    esquema mínimo de demonstração; esse banco não substitui PostgreSQL no aceite.
@@ -65,7 +67,7 @@ ledger beta de custo/token, evitando alegar contagem ou custo inexistentes.
 
 ## Testes a executar pelo operador após o merge
 
-- Em banco **descartável** PostgreSQL, aplicar 001–173 duas vezes e verificar ledger 173/173.
+- Em banco **descartável** PostgreSQL, aplicar 001–174 duas vezes e verificar ledger 174/174.
 - Instalar os exemplos pelo painel. Criar clientes A/B com acessos
   separados; cada cliente só deve obter a fonte da própria conta. Revogar o
   vínculo A e confirmar que a fonte some antes de chamar Ollama.
