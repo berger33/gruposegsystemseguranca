@@ -130,7 +130,10 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
       q+=` AND d.rag_key=ANY($${params.length}::text[])`;
       q+=` ORDER BY d.created_at DESC LIMIT 200`;
       const { rows } = await pool.query(q, params);
-      return json(res,200,{items:rows, note:'documentos RAG apenas área pertinente por rag_key'});
+      const accounts = ['admin','ti'].includes(role)
+        ? (await pool.query(`SELECT id, display_name FROM client_accounts WHERE status='active' ORDER BY display_name LIMIT 200`)).rows
+        : [];
+      return json(res,200,{items:rows, accounts, note:'documentos RAG apenas área pertinente por rag_key'});
     }
     if(req.method==='POST'){
       const b=await readJson(req);

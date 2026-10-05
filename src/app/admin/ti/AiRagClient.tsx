@@ -36,7 +36,7 @@ export default function AiRagClient(){
       setIndexes(iRes.items||[]);
       setStaffRole(sessionRes.role||"");
       setDocs(dRes.items||[]);
-      if(sessionRes.role==="admin"||sessionRes.role==="ti") fetch("/api/admin/client-accounts?limit=100").then(r=>r.json()).then(x=>setAccounts(x.accounts||[])).catch(()=>{});
+      setAccounts(dRes.accounts||[]);
       setBotConfig(cfgRes.config||null);
       setModes(cfgRes.modes||[]);
       if(cfgRes.config){
