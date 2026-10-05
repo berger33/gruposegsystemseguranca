@@ -56,6 +56,15 @@ const STAGES = {
       { route: '/admin/marcelo', role: 'marcelo', slug: 'marcelo', waitFor: 'Que período você quer apurar?' },
     ],
   },
+  'ux-07a': {
+    outputDir: 'docs/ux-07a-evidencias',
+    targets: [
+      // O texto esperado precisa ser exclusivo do corpo: a 390px a barra
+      // lateral fica no DOM, porém oculta, e um rótulo de menu casaria
+      // primeiro com um nó invisível.
+      { route: '/admin/operacao', role: 'ti', slug: 'operacao', waitFor: 'Superfície canônica de operação' },
+    ],
+  },
   'ux-08': {
     outputDir: 'docs/ux-08-evidencias',
     targets: [

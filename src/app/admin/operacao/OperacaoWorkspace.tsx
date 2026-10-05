@@ -1,13 +1,45 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 import OpsAdvanced2Client from "../ti/OpsAdvanced2Client";
 import OpsAdvanced3Client from "../ti/OpsAdvanced3Client";
+import UiState from "../../../components/ui/UiState";
+import styles from "../../../components/ui/UiWorkspace.module.css";
+import {
+  allocationStatusLabel,
+  checklistStatusLabel,
+  coverageRequestStatusLabel,
+  describeOpsError,
+  dimensioningStatusLabel,
+  gapStatusLabel,
+  handoverStatusLabel,
+  occurrenceSeverityLabel,
+  occurrenceStatusLabel,
+  opsErrorFootnote,
+  opsErrorVariant,
+  postTypeLabel,
+  weekdayLabel,
+  roleTypeLabel,
+  scheduleVersionStatusLabel,
+} from "../../../lib/ops-vocabulary.mjs";
+import type { OpsErrorDescriptor } from "../../../lib/ops-vocabulary.mjs";
+
+// UX-07A: toda falha desta tela passa pelo vocabulário de operação. Antes, o
+// `catch` exibia `err.message` — ou seja, o código canônico cru, ou a frase
+// "Falha ao carregar." — e 403 (sem concessão) ficava indistinguível de 503
+// (leitura indisponível). Agora carregando, vazio, falha e negado são estados
+// distintos e declarados, e o código fica só no rodapé, entre parênteses.
+function asOpsFailure(err: unknown): OpsErrorDescriptor {
+  return err && typeof err === "object" && typeof (err as OpsErrorDescriptor).kind === "string"
+    ? (err as OpsErrorDescriptor)
+    : describeOpsError(null, 0);
+}
 
 // OPS-01: day_of_week segue a convenção 0=domingo .. 6=sábado (getDay).
 // NULL significa que a necessidade não restringe o dia — exibido sem inventar
-// semântica adicional.
-const WEEKDAY_LABELS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+// semântica adicional. UX-07A moveu o rótulo para `weekdayLabel`, no
+// vocabulário da família, para que a tela não tenha catálogo próprio.
 
 // OPS-03: janela de datas da validade da versão, limitada a 31 colunas para o
 // calendário continuar legível. Quando a validade excede a janela, o recorte é
@@ -207,8 +239,31 @@ type ScheduleValidation = {
   conflict_details: Record<string, unknown> | null;
 };
 
+// UX-07A: as abas passam a ser dados, não catorze blocos copiados. A mesma
+// lista governa o `tablist`, o `tabpanel`, o nome acessível do painel e o
+// roving tabindex.
+const OPS_TABS = [
+  ["postos", "Postos e alocações"],
+  ["jornada", "Jornada e habilitação (OPS-04)"],
+  ["dimensionamento", "Dimensionamento (OPS-02)"],
+  ["escalas", "Escalas (OPS-03)"],
+  ["cobertura", "Cobertura (OPS-05)"],
+  ["passagem", "Passagem de turno (OPS-06)"],
+  ["ocorrencias", "Livro de ocorrências (OPS-07)"],
+  ["checklists", "Checklists de posto (OPS-08)"],
+  ["supervisao", "Supervisão"],
+  ["rondas", "Rondas e claviculário"],
+  ["relatorios", "Relatórios"],
+  ["metricas", "Métricas e escalas"],
+  ["limpeza", "Limpeza"],
+  ["monitoramento", "Monitoramento sintético"],
+] as const satisfies readonly (readonly [string, string])[];
+
+type OpsTabId = (typeof OPS_TABS)[number][0];
+
 export default function OperacaoWorkspace() {
-  const [activeTab, setActiveTab] = useState<"postos" | "jornada" | "dimensionamento" | "escalas" | "cobertura" | "passagem" | "ocorrencias" | "checklists" | "supervisao" | "rondas" | "relatorios" | "metricas" | "limpeza" | "monitoramento">("postos");
+  const [activeTab, setActiveTab] = useState<OpsTabId>("postos");
+  const tabRefs = useRef<Partial<Record<OpsTabId, HTMLButtonElement | null>>>({});
   const [posts, setPosts] = useState<Post[]>([]);
   const [jobRoles, setJobRoles] = useState<JobRole[]>([]);
   const [shiftNeeds, setShiftNeeds] = useState<PostShiftNeed[]>([]);
@@ -230,33 +285,42 @@ export default function OperacaoWorkspace() {
   const [qualifications, setQualifications] = useState<Qualification[]>([]);
   const [validations, setValidations] = useState<ScheduleValidation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<OpsErrorDescriptor | null>(null);
   // OPS-01: o grupo de estrutura (cargo/função + necessidade por turno) carrega
   // em estado PRÓPRIO, desacoplado do Promise.all acima. Assim uma falha em um
   // grupo não derruba os painéis do outro — o acoplamento dos 9 fetches já é
   // um problema conhecido desta tela e não deve ser agravado.
   const [structureLoading, setStructureLoading] = useState(true);
-  const [structureError, setStructureError] = useState("");
+  const [structureError, setStructureError] = useState<OpsErrorDescriptor | null>(null);
   // OPS-02: o painel de dimensionamento também carrega em grupo próprio,
   // desacoplado dos demais — mesma razão do grupo de estrutura.
   const [dimLoading, setDimLoading] = useState(true);
-  const [dimError, setDimError] = useState("");
+  const [dimError, setDimError] = useState<OpsErrorDescriptor | null>(null);
   // OPS-03: versões de escala em grupo próprio; o detalhe da versão selecionada
   // (entradas, ciências e histórico) carrega sob demanda, também desacoplado.
   const [schedLoading, setSchedLoading] = useState(true);
-  const [schedError, setSchedError] = useState("");
+  const [schedError, setSchedError] = useState<OpsErrorDescriptor | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
   async function fetchJson(path: string) {
-    const response = await fetch(path, { cache: "no-store", headers: { accept: "application/json" } });
+    let response: Response;
+    try {
+      response = await fetch(path, { cache: "no-store", headers: { accept: "application/json" } });
+    } catch {
+      // A requisição nem chegou a ser respondida. Isso é falha de rede, nunca
+      // ausência de registro.
+      throw describeOpsError(null, 0);
+    }
     const value = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(value.error || "Não foi possível carregar a operação.");
+    if (!response.ok) {
+      throw describeOpsError(typeof value?.error === "string" ? value.error : null, response.status);
+    }
     return value;
   }
 
   async function load() {
     setLoading(true);
-    setError("");
+    setError(null);
     try {
       const [postData, allocData, covData, handData, occData, checkData, ruleData, qualData, validationData] = await Promise.all([
         fetchJson("/api/ops/posts?limit=100"),
@@ -278,8 +342,8 @@ export default function OperacaoWorkspace() {
       setWorkRules(ruleData.rules || []);
       setQualifications(qualData.qualifications || []);
       setValidations(validationData.validations || []);
-    } catch (err: any) {
-      setError(err.message || "Falha ao carregar.");
+    } catch (err: unknown) {
+      setError(asOpsFailure(err));
     } finally {
       setLoading(false);
     }
@@ -289,7 +353,7 @@ export default function OperacaoWorkspace() {
 
   async function loadStructure() {
     setStructureLoading(true);
-    setStructureError("");
+    setStructureError(null);
     try {
       const [roleData, needData] = await Promise.all([
         fetchJson("/api/ops/job-roles"),
@@ -297,8 +361,8 @@ export default function OperacaoWorkspace() {
       ]);
       setJobRoles(roleData.roles || []);
       setShiftNeeds(needData.needs || []);
-    } catch (err: any) {
-      setStructureError(err.message || "Falha ao carregar a estrutura operacional.");
+    } catch (err: unknown) {
+      setStructureError(asOpsFailure(err));
     } finally {
       setStructureLoading(false);
     }
@@ -308,7 +372,7 @@ export default function OperacaoWorkspace() {
 
   async function loadDimensioning() {
     setDimLoading(true);
-    setDimError("");
+    setDimError(null);
     try {
       const [dimData, gapData] = await Promise.all([
         fetchJson("/api/ops/dimensioning"),
@@ -316,8 +380,8 @@ export default function OperacaoWorkspace() {
       ]);
       setDimensionings(dimData.dimensionings || []);
       setGaps(gapData.gaps || []);
-    } catch (err: any) {
-      setDimError(err.message || "Falha ao carregar o dimensionamento.");
+    } catch (err: unknown) {
+      setDimError(asOpsFailure(err));
     } finally {
       setDimLoading(false);
     }
@@ -327,12 +391,12 @@ export default function OperacaoWorkspace() {
 
   async function loadSchedules() {
     setSchedLoading(true);
-    setSchedError("");
+    setSchedError(null);
     try {
       const data = await fetchJson("/api/ops/schedule-versions");
       setScheduleVersions(data.versions || []);
-    } catch (err: any) {
-      setSchedError(err.message || "Falha ao carregar as escalas.");
+    } catch (err: unknown) {
+      setSchedError(asOpsFailure(err));
     } finally {
       setSchedLoading(false);
     }
@@ -354,13 +418,13 @@ export default function OperacaoWorkspace() {
       setScheduleEntries(entryData.entries || []);
       setScheduleAcks(ackData.acknowledgments || []);
       setScheduleHistory(historyData.history || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       // O painel de detalhe não pode fingir calendário: sem leitura completa,
       // limpa as entradas e mostra o erro.
       setScheduleEntries([]);
       setScheduleAcks([]);
       setScheduleHistory([]);
-      setSchedError(err.message || "Falha ao carregar o detalhe da escala.");
+      setSchedError(asOpsFailure(err));
     } finally {
       setDetailLoading(false);
     }
@@ -381,13 +445,35 @@ export default function OperacaoWorkspace() {
       } else if (value.error === "duplicate_ack") {
         setAckMessage(`Ciência já registrada para ${employeeName} — segunda ciência não duplica efeito.`);
       } else {
-        setAckMessage(value.error ? `Ciência não registrada: ${value.error}${value.status ? ` (status da versão: ${value.status})` : ""}.` : "Ciência não registrada.");
+        const falha = describeOpsError(typeof value?.error === "string" ? value.error : null, response.status);
+        setAckMessage(`Ciência não registrada. ${falha.title}. ${falha.detail} ${opsErrorFootnote(falha)}`);
       }
       const ackData = await fetchJson(`/api/ops/schedule-acks?version_id=${selectedVersion.id}`);
       setScheduleAcks(ackData.acknowledgments || []);
-    } catch (err: any) {
-      setAckMessage(err.message || "Falha ao registrar a ciência.");
+    } catch (err: unknown) {
+      const falha = asOpsFailure(err);
+      setAckMessage(`${falha.title} ${falha.detail} ${opsErrorFootnote(falha)}`);
     }
+  }
+
+  const activeTabLabel = (OPS_TABS.find(([id]) => id === activeTab) ?? OPS_TABS[0])[1];
+
+  // UX-07A: roving tabindex de verdade. Só a aba ativa fica na ordem de
+  // tabulação; ←/→ circulam e Home/End vão aos extremos, como manda o padrão
+  // de `tablist` — antes as abas eram botões soltos com `role="tab"`, sem
+  // `tabpanel`, sem teclado e sem foco gerenciado.
+  function onTabKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    const index = OPS_TABS.findIndex(([id]) => id === activeTab);
+    let next = index;
+    if (event.key === "ArrowRight") next = (index + 1) % OPS_TABS.length;
+    else if (event.key === "ArrowLeft") next = (index - 1 + OPS_TABS.length) % OPS_TABS.length;
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = OPS_TABS.length - 1;
+    else return;
+    event.preventDefault();
+    const target = OPS_TABS[next][0];
+    setActiveTab(target);
+    tabRefs.current[target]?.focus();
   }
 
   return (
@@ -401,147 +487,49 @@ export default function OperacaoWorkspace() {
         Superfície canônica de operação. Alocar ou cobrir não significa faturamento nem recebimento. Contrato encerrado, cancelado ou suspenso não recebe nova alocação ou rotina; o histórico é preservado.
       </p>
 
-      <div role="tablist" style={{ display: "flex", flexWrap: "wrap", gap: 8, borderBottom: "2px solid #e2e8f0", marginBottom: 24 }}>
-        <button
-          role="tab"
-          aria-selected={activeTab === "postos"}
-          onClick={() => setActiveTab("postos")}
-          style={{
-            padding: "8px 16px",
-            border: "none",
-            background: "none",
-            borderBottom: activeTab === "postos" ? "3px solid #2563eb" : "3px solid transparent",
-            fontWeight: activeTab === "postos" ? "bold" : "normal",
-            cursor: "pointer",
-          }}
-        >
-          Postos e Alocações
-        </button>
-        <button
-          role="tab"
-          aria-selected={activeTab === "jornada"}
-          onClick={() => setActiveTab("jornada")}
-          style={{
-            padding: "8px 16px",
-            border: "none",
-            background: "none",
-            borderBottom: activeTab === "jornada" ? "3px solid #2563eb" : "3px solid transparent",
-            fontWeight: activeTab === "jornada" ? "bold" : "normal",
-            cursor: "pointer",
-          }}
-        >
-          Jornada &amp; Habilitação (OPS-04)
-        </button>
-        <button
-          role="tab"
-          aria-selected={activeTab === "dimensionamento"}
-          onClick={() => setActiveTab("dimensionamento")}
-          style={{
-            padding: "8px 16px",
-            border: "none",
-            background: "none",
-            borderBottom: activeTab === "dimensionamento" ? "3px solid #2563eb" : "3px solid transparent",
-            fontWeight: activeTab === "dimensionamento" ? "bold" : "normal",
-            cursor: "pointer",
-          }}
-        >
-          Dimensionamento (OPS-02)
-        </button>
-        <button
-          role="tab"
-          aria-selected={activeTab === "escalas"}
-          onClick={() => setActiveTab("escalas")}
-          style={{
-            padding: "8px 16px",
-            border: "none",
-            background: "none",
-            borderBottom: activeTab === "escalas" ? "3px solid #2563eb" : "3px solid transparent",
-            fontWeight: activeTab === "escalas" ? "bold" : "normal",
-            cursor: "pointer",
-          }}
-        >
-          Escalas (OPS-03)
-        </button>
-        <button
-          role="tab"
-          aria-selected={activeTab === "cobertura"}
-          onClick={() => setActiveTab("cobertura")}
-          style={{
-            padding: "8px 16px",
-            border: "none",
-            background: "none",
-            borderBottom: activeTab === "cobertura" ? "3px solid #2563eb" : "3px solid transparent",
-            fontWeight: activeTab === "cobertura" ? "bold" : "normal",
-            cursor: "pointer",
-          }}
-        >
-          Cobertura (OPS-05)
-        </button>
-        <button
-          role="tab"
-          aria-selected={activeTab === "passagem"}
-          onClick={() => setActiveTab("passagem")}
-          style={{
-            padding: "8px 16px",
-            border: "none",
-            background: "none",
-            borderBottom: activeTab === "passagem" ? "3px solid #2563eb" : "3px solid transparent",
-            fontWeight: activeTab === "passagem" ? "bold" : "normal",
-            cursor: "pointer",
-          }}
-        >
-          Passagem de Turno (OPS-06)
-        </button>
-        <button
-          role="tab"
-          aria-selected={activeTab === "ocorrencias"}
-          onClick={() => setActiveTab("ocorrencias")}
-          style={{
-            padding: "8px 16px",
-            border: "none",
-            background: "none",
-            borderBottom: activeTab === "ocorrencias" ? "3px solid #2563eb" : "3px solid transparent",
-            fontWeight: activeTab === "ocorrencias" ? "bold" : "normal",
-            cursor: "pointer",
-          }}
-        >
-          Livro de Ocorrências (OPS-07)
-        </button>
-        <button
-          role="tab"
-          aria-selected={activeTab === "checklists"}
-          onClick={() => setActiveTab("checklists")}
-          style={{
-            padding: "8px 16px",
-            border: "none",
-            background: "none",
-            borderBottom: activeTab === "checklists" ? "3px solid #2563eb" : "3px solid transparent",
-            fontWeight: activeTab === "checklists" ? "bold" : "normal",
-            cursor: "pointer",
-          }}
-        >
-          Checklists de Posto (OPS-08)
-        </button>
-        {([
-          ["supervisao", "Supervisão"],
-          ["rondas", "Rondas & Claviculário"],
-          ["relatorios", "Relatórios"],
-          ["metricas", "Métricas & Escalas"],
-          ["limpeza", "Limpeza"],
-          ["monitoramento", "Monitoramento Sintético"],
-        ] as const).map(([key, label]) => (
-          <button key={key} role="tab" aria-selected={activeTab === key} onClick={() => setActiveTab(key)}
-            style={{ padding: "8px 12px", border: "none", background: "none", borderBottom: activeTab === key ? "3px solid #2563eb" : "3px solid transparent", fontWeight: activeTab === key ? "bold" : "normal", cursor: "pointer" }}>
+      <div className={styles.tabs} role="tablist" aria-label="Seções da operação">
+        {OPS_TABS.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            id={`ops-aba-${id}`}
+            aria-selected={activeTab === id}
+            aria-controls={`ops-painel-${id}`}
+            tabIndex={activeTab === id ? 0 : -1}
+            ref={node => { tabRefs.current[id] = node; }}
+            className={activeTab === id ? styles.tabActive : styles.tab}
+            onClick={() => setActiveTab(id)}
+            onKeyDown={onTabKeyDown}
+          >
             {label}
           </button>
         ))}
       </div>
 
-      {loading && <p role="status">Carregando operação…</p>}
+      <div
+        role="tabpanel"
+        id={`ops-painel-${activeTab}`}
+        aria-labelledby={`ops-aba-${activeTab}`}
+        tabIndex={-1}
+        className={styles.tabPanel}
+      >
+      <h2 className={styles.visuallyHidden}>{activeTabLabel}</h2>
+      {loading && (
+        <UiState
+          variant="loading"
+          title="Carregando a operação…"
+          detail="Lendo postos, alocações, coberturas, passagens, ocorrências, checklists, regras de jornada, qualificações e validações."
+        />
+      )}
       {!loading && error && (
-        <p role="alert" style={{ padding: 12, background: "#fef2f2", borderRadius: 6, color: "#991b1b" }}>
-          {error}
-        </p>
+        <UiState
+          variant={opsErrorVariant(error)}
+          title={error.title}
+          detail={`${error.detail} ${opsErrorFootnote(error)}`}
+          retryLabel={error.canRetry ? "Tentar novamente" : undefined}
+          onRetry={error.canRetry ? () => { void load(); } : undefined}
+        />
       )}
 
       {!loading && !error && activeTab === "postos" && (
@@ -551,10 +539,10 @@ export default function OperacaoWorkspace() {
             alocação</strong>. Posto sem necessidade por turno cadastrada não gera cobrança de escala — a lacuna aparece
             como lacuna, não como número inventado.
           </p>
-          <section aria-labelledby="posts-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 12 }}>
+          <section className={styles.legacy} aria-labelledby="posts-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 12 }}>
             <h2 id="posts-title">Postos físicos</h2>
             {posts.length === 0 ? (
-              <p>Nenhum posto cadastrado ainda.</p>
+              <UiState variant="empty" title="Nenhum posto cadastrado" detail="A leitura foi concluída com sucesso: não há posto físico registrado para o seu escopo." />
             ) : (
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
@@ -572,7 +560,7 @@ export default function OperacaoWorkspace() {
                   {posts.map(post => (
                     <tr key={post.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
                       <td style={{ padding: 8 }}>{post.name}</td>
-                      <td style={{ padding: 8 }}>{post.post_type}</td>
+                      <td style={{ padding: 8 }}>{postTypeLabel(post.post_type)}</td>
                       <td style={{ padding: 8 }}>{post.company_name || (post.company_id ? "—" : "sem cliente")}</td>
                       <td style={{ padding: 8 }}>{post.unit_name || (post.unit_id ? "—" : "sem unidade")}</td>
                       <td style={{ padding: 8 }}>{post.contract_title || (post.contract_id ? "—" : "sem contrato")}</td>
@@ -587,19 +575,23 @@ export default function OperacaoWorkspace() {
             )}
           </section>
 
-          {structureLoading && <p role="status">Carregando estrutura operacional (cargos e necessidades)…</p>}
+          {structureLoading && <UiState variant="loading" title="Carregando a estrutura operacional…" detail="Lendo cargos, funções e necessidades por turno." />}
           {!structureLoading && structureError && (
-            <p role="alert" style={{ padding: 12, background: "#fef2f2", borderRadius: 6, color: "#991b1b" }}>
-              {structureError}
-            </p>
+            <UiState
+              variant={opsErrorVariant(structureError)}
+              title={structureError.title}
+              detail={`${structureError.detail} ${opsErrorFootnote(structureError)}`}
+              retryLabel={structureError.canRetry ? "Tentar novamente" : undefined}
+              onRetry={structureError.canRetry ? () => { void loadStructure(); } : undefined}
+            />
           )}
 
           {!structureLoading && !structureError && (
             <>
-              <section aria-labelledby="job-roles-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+              <section className={styles.legacy} aria-labelledby="job-roles-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
                 <h2 id="job-roles-title">Cargos e funções (OPS-01)</h2>
                 {jobRoles.length === 0 ? (
-                  <p>Nenhum cargo/função cadastrado. Alocação com cargo exigido depende de entidade própria registrada aqui.</p>
+                  <UiState variant="empty" title="Nenhum cargo ou função cadastrado" detail="A leitura foi concluída com sucesso. Alocação com cargo exigido depende de entidade própria registrada aqui." />
                 ) : (
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
@@ -614,7 +606,7 @@ export default function OperacaoWorkspace() {
                       {jobRoles.map(role => (
                         <tr key={role.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
                           <td style={{ padding: 8 }}>{role.name}</td>
-                          <td style={{ padding: 8 }}>{role.role_type}</td>
+                          <td style={{ padding: 8 }}>{roleTypeLabel(role.role_type)}</td>
                           <td style={{ padding: 8 }}>{role.description || "—"}</td>
                           <td style={{ padding: 8 }}>
                             <span style={{ padding: "2px 8px", borderRadius: 4, background: role.is_active ? "#dcfce7" : "#f1f5f9" }}>
@@ -628,10 +620,10 @@ export default function OperacaoWorkspace() {
                 )}
               </section>
 
-              <section aria-labelledby="shift-needs-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+              <section className={styles.legacy} aria-labelledby="shift-needs-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
                 <h2 id="shift-needs-title">Necessidade por turno (OPS-01)</h2>
                 {shiftNeeds.length === 0 ? (
-                  <p>Nenhuma necessidade por turno cadastrada. Sem cadastro, o dimensionamento de posto não é inferido.</p>
+                  <UiState variant="empty" title="Nenhuma necessidade por turno cadastrada" detail="A leitura foi concluída com sucesso. Sem cadastro, o dimensionamento de posto não é inferido." />
                 ) : (
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
@@ -650,7 +642,7 @@ export default function OperacaoWorkspace() {
                           <td style={{ padding: 8 }}>{need.post_name}</td>
                           <td style={{ padding: 8 }}>{need.shift_template_name || "—"}</td>
                           <td style={{ padding: 8 }}>
-                            {need.day_of_week === null ? "sem dia específico" : WEEKDAY_LABELS[need.day_of_week] || String(need.day_of_week)}
+                            {weekdayLabel(need.day_of_week)}
                           </td>
                           <td style={{ padding: 8 }}>{need.required_headcount}</td>
                           <td style={{ padding: 8 }}>{need.role_name || "não exigido"}</td>
@@ -668,10 +660,10 @@ export default function OperacaoWorkspace() {
             </>
           )}
 
-          <section aria-labelledby="alloc-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+          <section className={styles.legacy} aria-labelledby="alloc-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
             <h2 id="alloc-title">Alocações</h2>
             {allocations.length === 0 ? (
-              <p>Nenhuma alocação registrada ainda.</p>
+              <UiState variant="empty" title="Nenhuma alocação registrada" detail="A leitura foi concluída com sucesso: não há alocação no seu escopo." />
             ) : (
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
@@ -688,7 +680,7 @@ export default function OperacaoWorkspace() {
                       <td style={{ padding: 8 }}>{allocation.post_name || "—"}</td>
                       <td style={{ padding: 8 }}>{allocation.employee_name || "—"}</td>
                       <td style={{ padding: 8 }}>{String(allocation.allocation_date).slice(0, 10)}</td>
-                      <td style={{ padding: 8 }}>{allocation.status}</td>
+                      <td style={{ padding: 8 }}>{allocationStatusLabel(allocation.status)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -706,10 +698,10 @@ export default function OperacaoWorkspace() {
             explicitamente. Habilitação e documentação exigem cadastro em qualificações — competência não é inferida.
           </p>
 
-          <section aria-labelledby="work-rules-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 12 }}>
+          <section className={styles.legacy} aria-labelledby="work-rules-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 12 }}>
             <h2 id="work-rules-title">Regras de jornada e descanso</h2>
             {workRules.length === 0 ? (
-              <p>Nenhuma regra de jornada cadastrada. Sem regra aprovada, jornada e descanso não são validados.</p>
+              <UiState variant="empty" title="Nenhuma regra de jornada cadastrada" detail="A leitura foi concluída com sucesso. Sem regra aprovada, jornada e descanso não são validados." />
             ) : (
               <>
                 {workRules.every(rule => !(rule.is_approved && rule.is_active)) && (
@@ -754,10 +746,10 @@ export default function OperacaoWorkspace() {
             )}
           </section>
 
-          <section aria-labelledby="qualifications-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+          <section className={styles.legacy} aria-labelledby="qualifications-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
             <h2 id="qualifications-title">Habilitação e documentação</h2>
             {qualifications.length === 0 ? (
-              <p>Nenhuma qualificação cadastrada. Alocar com cargo/função exige habilitação registrada e dentro da validade.</p>
+              <UiState variant="empty" title="Nenhuma qualificação cadastrada" detail="A leitura foi concluída com sucesso. Alocar com cargo ou função exige habilitação registrada e dentro da validade." />
             ) : (
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
@@ -789,10 +781,10 @@ export default function OperacaoWorkspace() {
             )}
           </section>
 
-          <section aria-labelledby="validations-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+          <section className={styles.legacy} aria-labelledby="validations-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
             <h2 id="validations-title">Bloqueios registrados</h2>
             {validations.length === 0 ? (
-              <p>Nenhum bloqueio de validação registrado.</p>
+              <UiState variant="empty" title="Nenhum bloqueio de validação registrado" detail="A leitura foi concluída com sucesso: nenhuma validação inválida consta no período." />
             ) : (
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
@@ -830,19 +822,23 @@ export default function OperacaoWorkspace() {
             não como número fictício.
           </p>
 
-          {dimLoading && <p role="status">Carregando dimensionamento…</p>}
+          {dimLoading && <UiState variant="loading" title="Carregando o dimensionamento…" detail="Lendo contratado, planejado, realizado e lacunas de cobertura." />}
           {!dimLoading && dimError && (
-            <p role="alert" style={{ padding: 12, background: "#fef2f2", borderRadius: 6, color: "#991b1b" }}>
-              {dimError}
-            </p>
+            <UiState
+              variant={opsErrorVariant(dimError)}
+              title={dimError.title}
+              detail={`${dimError.detail} ${opsErrorFootnote(dimError)}`}
+              retryLabel={dimError.canRetry ? "Tentar novamente" : undefined}
+              onRetry={dimError.canRetry ? () => { void loadDimensioning(); } : undefined}
+            />
           )}
 
           {!dimLoading && !dimError && (
             <>
-              <section aria-labelledby="dimensioning-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 12 }}>
+              <section className={styles.legacy} aria-labelledby="dimensioning-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 12 }}>
                 <h2 id="dimensioning-title">Contratado × planejado × realizado por faixa de tempo</h2>
                 {dimensionings.length === 0 ? (
-                  <p>Nenhum dimensionamento registrado. Sem registro por faixa de tempo, cobertura não é inferida.</p>
+                  <UiState variant="empty" title="Nenhum dimensionamento registrado" detail="A leitura foi concluída com sucesso. Sem registro por faixa de tempo, cobertura não é inferida." />
                 ) : (
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
@@ -890,7 +886,7 @@ export default function OperacaoWorkspace() {
                             )}
                           </td>
                           <td style={{ padding: 8 }}>{dim.employees_without_requirement ?? 0}</td>
-                          <td style={{ padding: 8 }}>{dim.status}</td>
+                          <td style={{ padding: 8 }}>{dimensioningStatusLabel(dim.status)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -910,10 +906,10 @@ export default function OperacaoWorkspace() {
                 </footer>
               </section>
 
-              <section aria-labelledby="coverage-gaps-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+              <section className={styles.legacy} aria-labelledby="coverage-gaps-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
                 <h2 id="coverage-gaps-title">Lacunas de cobertura (OPS-02)</h2>
                 {gaps.length === 0 ? (
-                  <p>Nenhuma lacuna de cobertura registrada. Ausência de lacuna registrada não é prova de cobertura — é ausência de registro.</p>
+                  <UiState variant="empty" title="Nenhuma lacuna de cobertura registrada" detail="A leitura foi concluída com sucesso. Ausência de lacuna registrada não é prova de cobertura: é ausência de registro." />
                 ) : (
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
@@ -936,7 +932,7 @@ export default function OperacaoWorkspace() {
                           <td style={{ padding: 8 }}>{gap.reason || "—"}</td>
                           <td style={{ padding: 8 }}>
                             <span style={{ padding: "2px 8px", borderRadius: 4, background: gap.status === "resolvido" ? "#dcfce7" : "#fef3c7" }}>
-                              {gap.status}
+                              {gapStatusLabel(gap.status)}
                             </span>
                           </td>
                         </tr>
@@ -958,19 +954,23 @@ export default function OperacaoWorkspace() {
             segunda ciência não duplica efeito. Entradas só entram em versão editável e dentro da validade.
           </p>
 
-          {schedLoading && <p role="status">Carregando versões de escala…</p>}
+          {schedLoading && <UiState variant="loading" title="Carregando as versões de escala…" detail="Lendo as versões, sua validade e sua situação." />}
           {!schedLoading && schedError && (
-            <p role="alert" style={{ padding: 12, background: "#fef2f2", borderRadius: 6, color: "#991b1b" }}>
-              {schedError}
-            </p>
+            <UiState
+              variant={opsErrorVariant(schedError)}
+              title={schedError.title}
+              detail={`${schedError.detail} ${opsErrorFootnote(schedError)}`}
+              retryLabel={schedError.canRetry ? "Tentar novamente" : undefined}
+              onRetry={schedError.canRetry ? () => { void loadSchedules(); } : undefined}
+            />
           )}
 
           {!schedLoading && !schedError && (
             <>
-              <section aria-labelledby="schedule-versions-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 12 }}>
+              <section className={styles.legacy} aria-labelledby="schedule-versions-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 12 }}>
                 <h2 id="schedule-versions-title">Versões de escala</h2>
                 {scheduleVersions.length === 0 ? (
-                  <p>Nenhuma versão de escala registrada. Sem versão, não há calendário — nada é presumido.</p>
+                  <UiState variant="empty" title="Nenhuma versão de escala registrada" detail="A leitura foi concluída com sucesso. Sem versão não há calendário, e nada é presumido." />
                 ) : (
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
@@ -996,7 +996,7 @@ export default function OperacaoWorkspace() {
                               padding: "2px 8px", borderRadius: 4,
                               background: version.status === "publicada" || version.status === "revisada" ? "#dcfce7" : "#fef3c7",
                             }}>
-                              {version.status}
+                              {scheduleVersionStatusLabel(version.status)}
                             </span>
                           </td>
                           <td style={{ padding: 8 }}>{version.published_at ? String(version.published_at).slice(0, 16).replace("T", " ") : "—"}</td>
@@ -1018,7 +1018,7 @@ export default function OperacaoWorkspace() {
 
               {selectedVersion && (
                 <>
-                  <section aria-labelledby="schedule-calendar-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+                  <section className={styles.legacy} aria-labelledby="schedule-calendar-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
                     <h2 id="schedule-calendar-title">
                       Calendário da versão v{selectedVersion.version} — {String(selectedVersion.valid_from).slice(0, 10)} a {String(selectedVersion.valid_to).slice(0, 10)}
                     </h2>
@@ -1062,7 +1062,7 @@ export default function OperacaoWorkspace() {
                         }
                       }
                       if (groups.size === 0) {
-                        return <p>Nenhuma entrada nesta versão. Versão sem entrada é versão sem calendário — não inventamos escala.</p>;
+                        return <UiState variant="empty" title="Nenhuma entrada nesta versão" detail="A leitura foi concluída com sucesso. Versão sem entrada é versão sem calendário: nenhuma escala é inventada." />;
                       }
                       return (
                         <>
@@ -1114,7 +1114,7 @@ export default function OperacaoWorkspace() {
                     })()}
                   </section>
 
-                  <section aria-labelledby="schedule-acks-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+                  <section className={styles.legacy} aria-labelledby="schedule-acks-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
                     <h2 id="schedule-acks-title">Ciência da escala (OPS-03)</h2>
                     {detailLoading && <p role="status">Carregando ciências…</p>}
                     {!detailLoading && (() => {
@@ -1126,7 +1126,7 @@ export default function OperacaoWorkspace() {
                             profissional na mesma versão é rejeitada sem duplicar efeito — o banco garante e a tela mostra.
                           </p>
                           {employees.length === 0 ? (
-                            <p>Nenhum profissional com entrada nesta versão — ciência pressupõe escala publicada com entradas.</p>
+                            <UiState variant="empty" title="Nenhum profissional com entrada nesta versão" detail="A leitura foi concluída com sucesso. A ciência pressupõe escala publicada com entradas." />
                           ) : (
                             <table style={{ width: "100%", borderCollapse: "collapse" }}>
                               <thead>
@@ -1168,11 +1168,11 @@ export default function OperacaoWorkspace() {
                     })()}
                   </section>
 
-                  <section aria-labelledby="schedule-history-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
+                  <section className={styles.legacy} aria-labelledby="schedule-history-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16, marginTop: 20 }}>
                     <h2 id="schedule-history-title">Histórico da versão</h2>
                     {detailLoading && <p role="status">Carregando histórico…</p>}
                     {!detailLoading && scheduleHistory.length === 0 && (
-                      <p>Nenhuma transição registrada para esta versão.</p>
+                      <UiState variant="empty" title="Nenhuma transição registrada para esta versão" detail="A leitura foi concluída com sucesso: o histórico desta versão está vazio." />
                     )}
                     {!detailLoading && scheduleHistory.length > 0 && (
                       <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -1209,10 +1209,10 @@ export default function OperacaoWorkspace() {
       )}
 
       {!loading && !error && activeTab === "cobertura" && (
-        <section aria-labelledby="coverage-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16 }}>
+        <section className={styles.legacy} aria-labelledby="coverage-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16 }}>
           <h2 id="coverage-title">Solicitações de Cobertura e Substituição (OPS-05)</h2>
           {coverages.length === 0 ? (
-            <p>Nenhuma pendência de cobertura registrada.</p>
+            <UiState variant="empty" title="Nenhuma pendência de cobertura registrada" detail="A leitura foi concluída com sucesso: não há pedido de cobertura no seu escopo." />
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
@@ -1229,7 +1229,7 @@ export default function OperacaoWorkspace() {
                     <td style={{ padding: 8 }}>{cov.coverage_date || String(cov.requested_at).slice(0, 10)}</td>
                     <td style={{ padding: 8 }}>
                       <span style={{ padding: "2px 8px", borderRadius: 4, background: cov.status === "resolvido" ? "#dcfce7" : "#fef3c7" }}>
-                        {cov.status}
+                        {coverageRequestStatusLabel(cov.status)}
                       </span>
                     </td>
                     <td style={{ padding: 8 }}>{cov.responsible_name || "—"}</td>
@@ -1243,10 +1243,10 @@ export default function OperacaoWorkspace() {
       )}
 
       {!loading && !error && activeTab === "passagem" && (
-        <section aria-labelledby="handover-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16 }}>
+        <section className={styles.legacy} aria-labelledby="handover-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16 }}>
           <h2 id="handover-title">Passagem de Plantão (OPS-06)</h2>
           {handovers.length === 0 ? (
-            <p>Nenhuma passagem de plantão registrada.</p>
+            <UiState variant="empty" title="Nenhuma passagem de plantão registrada" detail="A leitura foi concluída com sucesso: não há passagem de turno no seu escopo." />
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
@@ -1264,7 +1264,7 @@ export default function OperacaoWorkspace() {
                     <td style={{ padding: 8 }}>{String(h.handover_date).slice(0, 16).replace("T", " ")}</td>
                     <td style={{ padding: 8 }}>
                       <span style={{ padding: "2px 8px", borderRadius: 4, background: h.status === "aceito" ? "#dcfce7" : "#fef3c7" }}>
-                        {h.status}
+                        {handoverStatusLabel(h.status)}
                       </span>
                     </td>
                     <td style={{ padding: 8 }}>{h.pending_tasks || "Sem pendências"}</td>
@@ -1277,10 +1277,10 @@ export default function OperacaoWorkspace() {
       )}
 
       {!loading && !error && activeTab === "ocorrencias" && (
-        <section aria-labelledby="occurrence-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16 }}>
+        <section className={styles.legacy} aria-labelledby="occurrence-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16 }}>
           <h2 id="occurrence-title">Livro de Ocorrências (OPS-07)</h2>
           {occurrences.length === 0 ? (
-            <p>Nenhuma ocorrência registrada no livro.</p>
+            <UiState variant="empty" title="Nenhuma ocorrência registrada no livro" detail="A leitura foi concluída com sucesso: o livro de ocorrências está vazio no seu escopo." />
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
@@ -1304,10 +1304,10 @@ export default function OperacaoWorkspace() {
                         background: occ.severity === "critica" ? "#fee2e2" : occ.severity === "alta" ? "#ffedd5" : "#f1f5f9",
                         color: occ.severity === "critica" ? "#991b1b" : "#1e293b"
                       }}>
-                        {occ.severity}
+                        {occurrenceSeverityLabel(occ.severity)}
                       </span>
                     </td>
-                    <td style={{ padding: 8 }}>{occ.status}</td>
+                    <td style={{ padding: 8 }}>{occurrenceStatusLabel(occ.status)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1317,10 +1317,10 @@ export default function OperacaoWorkspace() {
       )}
 
       {!loading && !error && activeTab === "checklists" && (
-        <section aria-labelledby="checklist-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16 }}>
+        <section className={styles.legacy} aria-labelledby="checklist-title" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: 16 }}>
           <h2 id="checklist-title">Checklists de Posto e Execução (OPS-08)</h2>
           {checklists.length === 0 ? (
-            <p>Nenhuma execução de checklist registrada.</p>
+            <UiState variant="empty" title="Nenhuma execução de checklist registrada" detail="A leitura foi concluída com sucesso: não há instância de checklist no seu escopo." />
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
@@ -1336,7 +1336,7 @@ export default function OperacaoWorkspace() {
                     <td style={{ padding: 8 }}>{String(inst.scheduled_date).slice(0, 10)}</td>
                     <td style={{ padding: 8 }}>
                       <span style={{ padding: "2px 8px", borderRadius: 4, background: inst.status === "concluido" ? "#dcfce7" : "#fef3c7" }}>
-                        {inst.status}
+                        {checklistStatusLabel(inst.status)}
                       </span>
                     </td>
                     <td style={{ padding: 8 }}>{inst.executed_at ? String(inst.executed_at).slice(0, 16).replace("T", " ") : "Pendente"}</td>
@@ -1349,7 +1349,7 @@ export default function OperacaoWorkspace() {
       )}
 
       {!loading && !error && (["supervisao", "rondas", "relatorios"] as const).includes(activeTab as any) && (
-        <section aria-label="Operação avançada OPS-09 a OPS-12">
+        <section className={styles.legacy} aria-label="Operação avançada OPS-09 a OPS-12">
           <p style={{ padding: 10, background: "#eff6ff", borderRadius: 6 }}>
             {activeTab === "supervisao" && "Supervisão de postos, inspeções e planos de ação."}
             {activeTab === "rondas" && "Rondas e claviculário — leituras são sintéticas e não comprovam GPS ou presença real."}
@@ -1359,7 +1359,7 @@ export default function OperacaoWorkspace() {
         </section>
       )}
       {!loading && !error && (["metricas", "limpeza", "monitoramento"] as const).includes(activeTab as any) && (
-        <section aria-label="Operação avançada OPS-13 a OPS-16">
+        <section className={styles.legacy} aria-label="Operação avançada OPS-13 a OPS-16">
           <p style={{ padding: 10, background: "#fff7ed", borderRadius: 6 }}>
             {activeTab === "metricas" && "Métricas com fonte, fórmula, janela e incompletude explícita; escalas exigem revisão humana."}
             {activeTab === "limpeza" && "Rotinas de limpeza, inspeção de qualidade e não conformidades."}
@@ -1368,6 +1368,7 @@ export default function OperacaoWorkspace() {
           <OpsAdvanced3Client />
         </section>
       )}
+      </div>
     </main>
   );
 }

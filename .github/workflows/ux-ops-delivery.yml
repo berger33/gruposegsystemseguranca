@@ -1,0 +1,51 @@
+name: UX operacao delivery
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/admin/operacao/**'
+      - 'src/components/ui/**'
+      - 'src/lib/ops-vocabulary.*'
+      - 'src/styles/ux-tokens.css'
+      - 'src/server/ops-api.mjs'
+      - 'src/server/ops-advanced-api.mjs'
+      - 'src/server/ops-advanced2-api.mjs'
+      - 'src/server/ops-advanced3-api.mjs'
+      - 'src/server/ops-pendency-api.mjs'
+      - 'src/server/rbac.mjs'
+      - 'server.mjs'
+      - 'tests/helpers/**'
+      - 'tests/ux-ops-vocabulary.test.mjs'
+      - 'tests/ux-ops-workspace.integration.test.mjs'
+      - 'scripts/qa-ux-ops-postgres.mjs'
+      - 'db/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/ux-ops-delivery.yml'
+concurrency:
+  group: ux-ops-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  ux-ops-postgres-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Verificação de tipos
+        run: npm run typecheck
+      - name: Vocabulário canônico da operação (sem PostgreSQL)
+        run: node --test tests/ux-ops-vocabulary.test.mjs
+      - name: Operação — HTTP real, PostgreSQL descartável e Chromium
+        run: npm run test:ux-ops:pg
