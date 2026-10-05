@@ -41,6 +41,7 @@ export const ADMIN_MODULES: ReadonlyArray<{ href: string; label: string; roles: 
   { href: "/admin/visual", label: "Editor visual", roles: ["admin", "ti"] },
   { href: "/admin/relatorios", label: "Relatórios periódicos", roles: ["admin", "ti"] },
   { href: "/admin/inteligencia", label: "Inteligência comercial", roles: ["admin", "ti"] },
+  { href: "/admin/emergencial", label: "Apoio emergencial", roles: ["admin", "ti"] },
   { href: "/admin/frota", label: "Frota", roles: ["marcelo", "admin", "ti"] },
   { href: "/admin/terceiros", label: "Terceiros", roles: ["marcelo", "admin", "ti"] },
   { href: "/admin/licitacoes", label: "Licitações", roles: ["marcelo", "admin", "ti"] },

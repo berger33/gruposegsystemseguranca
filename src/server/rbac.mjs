@@ -65,6 +65,10 @@ export const KNOWN_PERMISSIONS = Object.freeze([
   "intel.write",
   "intel.review",
   "intel.contact",
+  "emergency.read",
+  "emergency.write",
+  "emergency.test",
+  "emergency.activate",
 ]);
 
 export function isValidPermission(p) {

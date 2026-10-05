@@ -117,6 +117,7 @@ import { createExtAnalyticsApi } from "./src/server/ext-analytics-api.mjs";
 import { createExtVisualApi } from "./src/server/ext-visual-api.mjs";
 import { createExtReportsApi } from "./src/server/ext-reports-api.mjs";
 import { createExtIntelApi } from "./src/server/ext-intel-api.mjs";
+import { createExtEmergencyApi } from "./src/server/ext-emergency-api.mjs";
 import { parseSchedulerConfig, startExtComplianceScheduler } from "./src/server/ext-compliance-scheduler.mjs";
 import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
 import { createCommercialHistoryApi } from "./src/server/commercial-history-api.mjs";
@@ -2374,6 +2375,14 @@ const extIntelApi = createExtIntelApi({
   requireSession: readSession,
 });
 
+// EXT-15 / F11: configuração e testes internos declarados de recebimento e
+// atendimento. Nenhuma chamada ou mensagem externa é disparada.
+const extEmergencyApi = createExtEmergencyApi({
+  pool: getPool(),
+  sameOrigin,
+  requireSession: readSession,
+});
+
 const extAdvancedApi = createExtAdvancedApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -4424,12 +4433,12 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/ext-commercial-intelligence" || url.pathname === "/api/crm/hr/ext-commercial-intelligence" || url.pathname === "/api/hr/ext-commercial-intelligence" || url.pathname === "/api/ext/commercial-intelligence") {
     return extIntelApi.handleLegacy(req, res);
   }
-  // EXT-15 emergencial apoio testar recebimento e atendimento antes disponibilizar
-  if (url.pathname === "/api/admin/hr/ext-emergency-channels" || url.pathname === "/api/crm/hr/ext-emergency-channels" || url.pathname === "/api/hr/ext-emergency-channels" || url.pathname === "/api/ext/emergency-channels") {
-    return extReportingApi.handleEmergencyChannels(req, res);
-  }
-  if (url.pathname === "/api/admin/hr/ext-emergency-tests" || url.pathname === "/api/crm/hr/ext-emergency-tests" || url.pathname === "/api/hr/ext-emergency-tests" || url.pathname === "/api/ext/emergency-tests") {
-    return extReportingApi.handleEmergencyTests(req, res);
+  // EXT-15 / F11 apoio emergencial canônico: configuração, testes internos
+  // declarados de recebimento/atendimento e ativação humana; sem envio externo.
+  if (url.pathname.startsWith("/api/ext/emergency/")) return extEmergencyApi.handle(req, res);
+  if (url.pathname === "/api/admin/hr/ext-emergency-channels" || url.pathname === "/api/crm/hr/ext-emergency-channels" || url.pathname === "/api/hr/ext-emergency-channels" || url.pathname === "/api/ext/emergency-channels"
+    || url.pathname === "/api/admin/hr/ext-emergency-tests" || url.pathname === "/api/crm/hr/ext-emergency-tests" || url.pathname === "/api/hr/ext-emergency-tests" || url.pathname === "/api/ext/emergency-tests") {
+    return extEmergencyApi.handleLegacy(req, res);
   }
   // EXT-16 central monitoramento/vídeo projeto separado privacidade aprovada antes implantação
   if (url.pathname === "/api/admin/hr/ext-central-projects" || url.pathname === "/api/crm/hr/ext-central-projects" || url.pathname === "/api/hr/ext-central-projects" || url.pathname === "/api/ext/central-projects") {
@@ -5925,6 +5934,7 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/ext/visual/")
   || pathname.startsWith("/api/ext/reports/")
   || pathname.startsWith("/api/ext/intel/")
+  || pathname.startsWith("/api/ext/emergency/")
   || pathname.startsWith("/api/ext/satisfaction/")
   || pathname === "/api/admin/hr/ext-bidding-documents"
   || pathname === "/api/crm/hr/ext-bidding-documents"

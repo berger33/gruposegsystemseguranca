@@ -1,3 +1,13 @@
+## Atualização corrente — EXT-15 / F11 Apoio emergencial canônico
+
+- Base confirmada: PR #139 `MERGED` em `53492d681bfffd5bc8aaa85bf51de6d1dad10a5b`; `origin/main` e a branch fixa `arena/01a10969-gruposegsystemseguranca` iniciaram nesse SHA, com checkout limpo. PRs #126, #127, #129, #132, #133, #134, #136, #137, #138 e #139 permanecem integradas e intocadas.
+- Fatia escolhida: EXT-15, sem contar tabelas ou handlers legados da migração 087 como cobertura. Migração aditiva `167-ext15-emergency-canonical-journey.sql`; 001–166 imutáveis; próxima livre: **168**.
+- Entregue: configuração de canal com destinatário, contato, disponibilidade, finalidade e escalonamento declarados; ciclo `rascunho → em_teste → testado → ativo`; registros internos separados de teste de recebimento e atendimento, ambos explicitamente bem-sucedidos antes da ativação humana.
+- API/UI: `/api/ext/emergency/channels`, detalhe, `/:id/transition` e `/:id/tests`; escritas legadas `/api/ext/emergency-channels` e `/api/ext/emergency-tests` retornam 410 após guardas; `/admin/emergencial` protegido por `AdminGate`.
+- Garantias: RBAC `emergency.read/write/test/activate` fail-closed, sessão individual, same-origin, Idempotency-Key/fingerprint SHA-256, advisory lock + `FOR UPDATE`, replay/conflito e concorrência, auditoria transacional com rollback/503, eventos e testes append-only.
+- Evidência: Wave0 5/5; unitários focais 11/11; `npm run test:ext15-emergency:pg` 18/18 em PG17 descartável + HTTP + sessões reais; `npm test` 610/610; typecheck; migrações 167/167; build 101 páginas; regressões EXT-14 17/17 e L07 financeiro 43/43; `git diff --check` e `node --check`.
+- Limite honesto: teste é declaração interna auditada, não prova de recebimento/atendimento externo. O sistema não envia telefonema, WhatsApp, mensagem ou alerta, não opera central 24h e não integra fornecedor. Aceite humano, Windows/EPERM e banco de destino seguem pendentes.
+
 # Status atual consolidado — reconciliação F00 + F01 + F03 + F04 (EXT-08) + F05 (EXT-09) + F06 (EXT-10) + F07 (EXT-11) + F08 (EXT-12) + F09 (EXT-13) + F10 (EXT-14)
 
 ## Atualização desta sessão — F10 / EXT-14 Inteligência comercial canônica
@@ -497,7 +507,7 @@ Legenda do estado confirmado: `pronto_local` = validação automática local ant
 | EXT-12 | Editor visual avançado | entregue_e_verificado_gate_local | entregue_e_verificado_gate_local (migração 164, API/UI canônicas, RBAC, auditoria, idempotência e gate 14/14; PR #137 integrada) | aceite humano, Windows/EPERM e banco de destino; publicação é registro interno, sem deploy externo/CDN/upload real | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-13 | Relatório periódico | entregue_e_verificado_gate_local | entregue_e_verificado_gate_local (migração 165, API/UI canônicas, totais contados de fontes internas, destinatários staff ativos e gate 17/17) | aceite humano, Windows/EPERM e banco de destino; envio é registro interno autorizado, sem SMTP/arquivo/agenda automática | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-14 | Inteligência comercial | entregue_e_verificado_gate_local | entregue_e_verificado_gate_local (migração 166, API/UI canônicas, evidência contada do histórico interno, aprovação humana obrigatória antes do contato e gate 17/17) | aceite humano, Windows/EPERM e banco de destino; contato é registro interno autorizado, sem e-mail/telefone/mensagem externa | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
-| EXT-15 | Apoio emergencial | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
+| EXT-15 | Apoio emergencial | entregue_e_verificado_gate_local | entregue_e_verificado_gate_local (migração 167, API/UI canônicas, dois testes internos declarados e gate 18/18) | aceite humano, Windows/EPERM e banco de destino; sem telefonema, mensagem, central 24h ou prova externa de recebimento/atendimento | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-16 | Central/vídeo | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | EXT-17 | Biometria/reconhecimento | a_revalidar | a_revalidar | Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 ### AI — contexto comum do grupo
