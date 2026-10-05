@@ -50,7 +50,10 @@ const STAGES = {
   'ux-05': {
     outputDir: 'docs/ux-05-evidencias',
     targets: [
-      { route: '/admin/marcelo', role: 'marcelo', slug: 'marcelo', waitFor: 'Painel' },
+      // O texto precisa ser exclusivo do corpo da página: em 390px o menu
+      // lateral fica no DOM porém oculto, e "Painel" casaria primeiro com um
+      // item invisível do menu, fazendo a espera por visibilidade estourar.
+      { route: '/admin/marcelo', role: 'marcelo', slug: 'marcelo', waitFor: 'Que período você quer apurar?' },
     ],
   },
   'ux-08': {
