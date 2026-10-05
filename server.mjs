@@ -113,6 +113,7 @@ import { createExtComplianceApi } from "./src/server/ext-compliance-api.mjs";
 import { createExtKnowledgeApi } from "./src/server/ext-knowledge-api.mjs";
 import { createExtExpansionApi } from "./src/server/ext-expansion-api.mjs";
 import { createExtContinuityApi } from "./src/server/ext-continuity-api.mjs";
+import { createOpsPendencyApi } from "./src/server/ops-pendency-api.mjs";
 import { createExtAnalyticsApi } from "./src/server/ext-analytics-api.mjs";
 import { createExtVisualApi } from "./src/server/ext-visual-api.mjs";
 import { createExtReportsApi } from "./src/server/ext-reports-api.mjs";
@@ -2338,6 +2339,10 @@ const extExpansionApi = createExtExpansionApi({
   requireSession: readSession,
 });
 
+// F15: caixa interna de pendências da equipe. Deriva de fontes internas reais e não usa a
+// fila legada notification_queue; nenhuma mensagem sai do sistema.
+const opsPendencyApi = createOpsPendencyApi({ pool: getPool(), sameOrigin, requireSession: readSession });
+
 const extContinuityApi = createExtContinuityApi({
   pool: getPool(),
   sameOrigin,
@@ -4409,6 +4414,10 @@ async function routeApi(req, res) {
   }
   // EXT-10 continuidade canônica: planos, acionamentos internos, simulados e recuperação.
   if (url.pathname.startsWith("/api/ext/continuity/")) return extContinuityApi.handle(req, res);
+  // F15: caixa interna de pendências (somente registro interno, sem envio externo).
+  if (url.pathname === "/api/ops/pendencies" || url.pathname.startsWith("/api/ops/pendencies/")) {
+    return opsPendencyApi.handle(req, res);
+  }
   // EXT-11 / F07 analytics canônica: hipótese, variantes, métrica,
   // aprovação humana, observações reais e trilha imutável.
   if (url.pathname.startsWith("/api/ext/analytics/")) return extAnalyticsApi.handle(req, res);
@@ -5940,6 +5949,8 @@ const API_PATH_MATCH = pathname =>
   || pathname.startsWith("/api/ext/knowledge/")
   || pathname.startsWith("/api/ext/expansion/")
   || pathname.startsWith("/api/ext/continuity/")
+  || pathname === "/api/ops/pendencies"
+  || pathname.startsWith("/api/ops/pendencies/")
   || pathname.startsWith("/api/ext/analytics/")
   || pathname.startsWith("/api/ext/visual/")
   || pathname.startsWith("/api/ext/reports/")

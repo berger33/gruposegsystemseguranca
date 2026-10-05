@@ -1,3 +1,25 @@
+## Atualização corrente — F15 Caixa interna canônica de pendências da equipe (Opção 2)
+
+- **Base e branch:** continuação direta da fatia F06/EXT-10 desta mesma sessão (commit `24701a5`), sobre `origin/main` `f1fd1a195e8bf0dc5e20079806b92699e1db6225`. Branch exclusiva: `arena/01a109d5-gruposegsystemseguranca`.
+- **Fatia escolhida:** Opção 2 — notificações internas canônicas de pendências, eliminando a dependência de e-mail/SMTP para avisar a equipe sobre obrigações e prazos vencidos.
+- **Decisão de escopo honesta:** a fila legada `notification_queue` (PLT-04) é de **entrega externa** (email/SMS/WhatsApp/webhook) e **não foi contada como cobertura**; a caixa de pendências é jornada nova e independente.
+- **Migração aditiva 170 (`170-ops-internal-pendency-notifications.sql`):**
+  - Preserva 001–169 imutáveis; próxima livre passa a ser **171**.
+  - Cria `ops_pendency_notifications` com destinatário staff, módulo de origem, `source_id`, `source_fingerprint`, título, resumo, criticidade, vencimento, estado (`nao_lida`/`lida`/`arquivada`), justificativa de arquivamento e autoria da varredura.
+  - Índice único `(recipient_identity, source_module, source_id, source_fingerprint)`: a varredura é idempotente e só gera pendência nova quando o **estado real da origem muda**.
+  - Trigger `ops_pendency_notification_guard`: nasce `nao_lida`, exige destinatário **staff ativo com perfil**, impede deleção física, congela campos de núcleo, proíbe retorno a `nao_lida`, torna `arquivada` terminal e exige justificativa ≥ 10 caracteres no arquivamento.
+  - Permissão `pendency.sweep` concedida explicitamente a admin/TI (revogável) e ampliação da auditoria com `ops_pendency_sweep`, `ops_pendency_read` e `ops_pendency_archive`.
+- **API (`src/server/ops-pendency-api.mjs`):** `GET /api/ops/pendencies` (caixa **pessoal**, sempre filtrada pela identidade da sessão), `POST /api/ops/pendencies/sweep` (varredura transacional com permissão granular, same-origin, `Idempotency-Key`, advisory lock e auditoria atômica) e `POST /api/ops/pendencies/:id/(read|archive)`. Pendência de outra identidade responde **404**, sem revelar existência.
+- **Fontes internas reais (sem inferência e sem dado inventado):** obrigações de compliance vencidas, planos de ação de compliance em atraso, tarefas de compliance em atraso e planos de continuidade com teste vencido — todas exigindo responsável **staff ativo**; origem sem responsável válido não gera pendência para ninguém.
+- **UI:** `/admin/pendencias` protegida por `AdminGate`, com varredura, leitura e arquivamento justificado, declarando que nada é enviado para fora do sistema.
+- **Evidências locais:**
+  - `node scripts/qa-wave0-static.mjs`: **5/5** (001–170).
+  - `tests/ops-pendencies.test.mjs`: **13/13** unitários.
+  - `npm run test:pendencies:pg`: **17/17** (PG17 descartável, servidor HTTP real, sessões staff reais; origens criadas por HTTP canônico; prova de que `notification_queue` permanece vazia).
+  - `npm test`: **641/641**; `npm run typecheck`: OK; `npm run test:migrations:pg`: **170/170** (dupla aplicação + rejeição de checksum adulterado); `npm run build`: **103 páginas**.
+  - Regressões de vizinhança: EXT-07 **50/50**, EXT-10 **31/31**. `git diff --check` e `node --check`: OK.
+- **Limites honestos:** é **registro interno auditado**, não notificação. Não há SMTP, SMS, WhatsApp, push, webhook, uso da fila legada, agendamento automático (a varredura é disparada por staff autorizado), aceite humano, Windows/EPERM nem aplicação no banco do operador.
+
 ## Atualização corrente — F06 / EXT-10 Portal do cliente para planos de continuidade (Opção 1)
 
 - **Base e branch:** `origin/main` confirmado em `f1fd1a195e8bf0dc5e20079806b92699e1db6225` (merge commit da PR #142). Branch exclusiva desta sessão: `arena/01a109d5-gruposegsystemseguranca`, checkout limpo, nenhuma PR aberta.
