@@ -118,6 +118,16 @@ async function launchBrowser() {
 // distinguir isso de uma falha real da própria aplicação.
 const GENERIC_RESOURCE_ERROR = /^Failed to load resource/;
 
+// UX-03B: o detalhe da oportunidade deixou de ser uma pilha de seis painéis e
+// passou a ser um registro aberto com abas. O botão da lista mudou de "Abrir
+// tarefas" para "Abrir oportunidade"/"Abrir" e cada seção vive em sua aba.
+// Os seletores foram atualizados; nenhuma asserção de negócio foi removida.
+async function abrirOportunidade(escopo, page, aba) {
+  await escopo.getByRole('button', { name: /^Abrir/ }).first().click();
+  await page.getByRole('tab', { name: aba, exact: true }).click();
+  await page.getByRole('tabpanel').waitFor();
+}
+
 function trackFailures(page, failures) {
   page.on('console', msg => {
     if (msg.type() === 'error' && !GENERIC_RESOURCE_ERROR.test(msg.text())) {
@@ -679,7 +689,7 @@ test('CRM-07: tarefas pessoais por oportunidade, navegador e negação cruzada',
     await page.goto(baseUrl + '/admin/crm', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     const card = page.getByRole('article').filter({ hasText: opportunity.body.opportunity.title });
-    await card.getByRole('button', { name: 'Abrir tarefas' }).click();
+    await abrirOportunidade(card, page, 'Tarefas');
     const section = page.getByRole('region', { name: 'Minhas tarefas da oportunidade' });
     await section.getByLabel('Título da tarefa', { exact: true }).fill('Ligar para confirmar a vistoria');
     await section.getByLabel('Prazo da tarefa', { exact: true }).fill('2020-01-15T12:00');
@@ -695,7 +705,7 @@ test('CRM-07: tarefas pessoais por oportunidade, navegador e negação cruzada',
 
     await page.reload({ waitUntil: 'networkidle' });
     await page.waitForTimeout(500);
-    await page.getByRole('article').filter({ hasText: opportunity.body.opportunity.title }).getByRole('button', { name: 'Abrir tarefas' }).click();
+    await abrirOportunidade(page.getByRole('article').filter({ hasText: opportunity.body.opportunity.title }), page, 'Tarefas');
     await section.getByText('Ligar para confirmar a vistoria', { exact: true }).waitFor();
     const [completed] = await Promise.all([
       page.waitForResponse(r => r.url().endsWith(endpoint + '/' + taskId) && r.request().method() === 'PATCH'),
@@ -801,7 +811,7 @@ test('CRM-07: interações completas — tipos, contato, anexo privado, correç�
     await page.goto(baseUrl + '/admin/crm', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     const card = page.getByRole('article').filter({ hasText: opportunity.body.opportunity.title });
-    await card.getByRole('button', { name: 'Abrir tarefas' }).click();
+    await abrirOportunidade(card, page, 'Interações');
     const section = page.getByRole('region', { name: 'Histórico de interações da oportunidade' });
     await section.getByLabel('Tipo', { exact: true }).selectOption('ligacao');
     await section.getByLabel('Título', { exact: true }).fill('Ligação de alinhamento da vistoria');
@@ -821,7 +831,7 @@ test('CRM-07: interações completas — tipos, contato, anexo privado, correç�
 
     await page.reload({ waitUntil: 'networkidle' });
     await page.waitForTimeout(500);
-    await page.getByRole('article').filter({ hasText: opportunity.body.opportunity.title }).getByRole('button', { name: 'Abrir tarefas' }).click();
+    await abrirOportunidade(page.getByRole('article').filter({ hasText: opportunity.body.opportunity.title }), page, 'Interações');
     const interactionArticle = section.getByRole('article', { name: 'Interação Ligação de alinhamento da vistoria' });
     await interactionArticle.getByRole('button', { name: 'Editar interação', exact: true }).click();
     await interactionArticle.getByLabel('Tipo da interação', { exact: true }).selectOption('reuniao');
@@ -975,7 +985,7 @@ test('CRM-08: agenda de visitas/reuniões — responsável, participante, confir
     trackFailures(page, failures);
     await page.goto(baseUrl + '/admin/crm', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
-    await page.getByRole('article').filter({ hasText: opportunity.body.opportunity.title }).getByRole('button', { name: 'Abrir tarefas' }).click();
+    await abrirOportunidade(page.getByRole('article').filter({ hasText: opportunity.body.opportunity.title }), page, 'Visitas');
     const section = page.getByRole('region', { name: 'Agenda de visitas e reuniões da oportunidade' });
     await section.getByLabel('Título da visita', { exact: true }).fill(visitTitle);
     const pad = value => String(value).padStart(2, '0');
@@ -996,7 +1006,7 @@ test('CRM-08: agenda de visitas/reuniões — responsável, participante, confir
     // Persistência real: recarregar e reencontrar a visita e o convidado.
     await page.reload({ waitUntil: 'networkidle' });
     await page.waitForTimeout(500);
-    await page.getByRole('article').filter({ hasText: opportunity.body.opportunity.title }).getByRole('button', { name: 'Abrir tarefas' }).click();
+    await abrirOportunidade(page.getByRole('article').filter({ hasText: opportunity.body.opportunity.title }), page, 'Visitas');
     const visitArticle = section.getByRole('article', { name: 'Visita ' + visitTitle });
     await visitArticle.getByText('Solicitada: ' + visitTitle, { exact: true }).waitFor();
     await visitArticle.getByText(new RegExp(participant.email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '.*pendente')).waitFor();
@@ -1182,7 +1192,7 @@ test('CRM-09: modelos privados, tarefas manuais, opt-out e encerramento da cadê
     await page.goto(`${baseUrl}/admin/crm`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     const card = page.getByRole('article').filter({ hasText: opportunity.body.opportunity.title });
-    await card.getByRole('button', { name: 'Abrir tarefas' }).click();
+    await abrirOportunidade(card, page, 'Cadência');
     const cadence = page.getByRole('region', { name: 'Cadências manuais de prospecção' });
     await cadence.getByRole('heading', { name: 'CRM-09 — Cadências manuais' }).waitFor();
     await cadence.getByLabel('Nome do modelo', { exact: true }).fill('Primeiro contato manual');
@@ -1219,7 +1229,7 @@ test('CRM-09: modelos privados, tarefas manuais, opt-out e encerramento da cadê
 
     await page.reload({ waitUntil: 'networkidle' });
     await page.waitForTimeout(600);
-    await page.getByRole('article').filter({ hasText: opportunity.body.opportunity.title }).getByRole('button', { name: 'Abrir tarefas' }).click();
+    await abrirOportunidade(page.getByRole('article').filter({ hasText: opportunity.body.opportunity.title }), page, 'Cadência');
     await page.getByRole('region', { name: 'Cadências manuais de prospecção' }).getByText('Ligar para o contato', { exact: false }).first().waitFor();
     await assertNoHorizontalScroll(page, 'cadências no CRM');
     await context.close();
@@ -1535,9 +1545,12 @@ test('CRM-07: prazo, paginação, busca e delegação explícita com aceite', { 
     await ownerPage.waitForTimeout(800);
     // Ajuste declarado da fatia CRM-07/notas+kanban: o campo de busca de oportunidades
     // passou a ser aplicado no servidor e o rótulo mudou para refletir título/necessidade.
-    await ownerPage.getByLabel('Buscar oportunidade (título/necessidade)').fill(opportunity.body.opportunity.title);
+    // UX-03B: o filtro ganhou rótulo visível e associado; o valor continua
+    // indo para o mesmo parâmetro de busca no servidor.
+    await ownerPage.getByLabel('Buscar no título ou na necessidade').fill(opportunity.body.opportunity.title);
+    await ownerPage.getByRole('button', { name: 'Aplicar busca', exact: true }).click();
     const card = ownerPage.getByRole('article').filter({ hasText: opportunity.body.opportunity.title });
-    await card.getByRole('button', { name: 'Abrir tarefas' }).click();
+    await abrirOportunidade(card, ownerPage, 'Tarefas');
     const section = ownerPage.getByRole('region', { name: 'Minhas tarefas da oportunidade' });
     await section.getByLabel('Buscar por título').fill('qa-ui');
     await section.getByRole('button', { name: 'Buscar tarefas', exact: true }).click();
@@ -1586,7 +1599,7 @@ test('CRM-07: prazo, paginação, busca e delegação explícita com aceite', { 
 
     await ownerPage.reload({ waitUntil: 'networkidle' });
     await ownerPage.waitForTimeout(500);
-    await ownerPage.getByRole('article').filter({ hasText: opportunity.body.opportunity.title }).getByRole('button', { name: 'Abrir tarefas' }).click();
+    await abrirOportunidade(ownerPage.getByRole('article').filter({ hasText: opportunity.body.opportunity.title }), ownerPage, 'Tarefas');
     const sectionAfter = ownerPage.getByRole('region', { name: 'Minhas tarefas da oportunidade' });
     await sectionAfter.getByLabel('Buscar por título').fill('qa-ui');
     await sectionAfter.getByRole('button', { name: 'Buscar tarefas', exact: true }).click();
@@ -1762,7 +1775,7 @@ test('CRM-08: conflito de horário do responsável e vínculo PUB-04 do lead pú
     trackFailures(page, failures);
     await page.goto(baseUrl + '/admin/crm', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
-    await page.getByRole('article').filter({ hasText: opportunityTitle }).getByRole('button', { name: 'Abrir tarefas' }).click();
+    await abrirOportunidade(page.getByRole('article').filter({ hasText: opportunityTitle }), page, 'Visitas');
     const section = page.getByRole('region', { name: 'Agenda de visitas e reuniões da oportunidade' });
     await section.getByRole('article', { name: 'Visita Visita efetiva' }).getByText('Lead público vinculado (PUB-04) — situação propagada: Realizada', { exact: true }).waitFor();
     const pad = value => String(value).padStart(2, '0');
@@ -2090,8 +2103,8 @@ test('CRM-07/05/06: campo a campo de oportunidades, funil com reabertura auditad
     await page.getByLabel('Necessidade', { exact: true }).fill('Mansão com 3 pavimentos, quer sensores de abertura.');
     await page.getByLabel('Unidade', { exact: true }).selectOption({ label: 'Unidade Matriz Alphaville' });
     await page.getByLabel('Prioridade', { exact: true }).selectOption('alta');
-    await page.getByLabel('Previsão (fechamento)', { exact: true }).fill('2026-11-30');
-    await page.getByLabel('Valor estimado', { exact: true }).fill('8900.50');
+    await page.getByLabel('Previsão de fechamento', { exact: true }).fill('2026-11-30');
+    await page.getByLabel('Valor estimado (R$)', { exact: true }).fill('8900.50');
     await page.getByLabel('Próxima ação', { exact: true }).fill('Agendar visita técnica');
     const pad = value => String(value).padStart(2, '0');
     const uiNextAction = new Date(Date.now() + 6 * 24 * 3600 * 1000);
@@ -2106,9 +2119,13 @@ test('CRM-07/05/06: campo a campo de oportunidades, funil com reabertura auditad
     // Kanban exibe os campos de CRM-05 no cartão.
     const card = page.getByRole('article').filter({ hasText: uiTitle });
     await card.waitFor();
-    await card.getByText('Serviço: Alarme monitorado | Prioridade: alta | Valor: 8900.50', { exact: true }).waitFor();
-    await card.getByText('Responsável: QA Staff comercial | Unidade: Unidade Matriz Alphaville | Previsão: 2026-11-30', { exact: true }).waitFor();
-    await card.getByText('Origem: indicacao').waitFor();
+    // UX-03B: os mesmos fatos saíram de uma linha corrida para pares
+    // rótulo/valor, com prioridade e data em português. Nenhum fato sumiu.
+    await card.getByText('Alarme monitorado', { exact: true }).waitFor();
+    await card.getByText('Alta', { exact: true }).waitFor();
+    await card.getByText('R$ 8.900,50', { exact: true }).waitFor();
+    await card.getByText('Unidade Matriz Alphaville', { exact: true }).waitFor();
+    await card.getByText('30/11/2026', { exact: true }).waitFor();
 
     // Tabela com todas as colunas do requisito.
     await page.getByRole('button', { name: 'Ver em tabela', exact: true }).click();
@@ -2117,12 +2134,12 @@ test('CRM-07/05/06: campo a campo de oportunidades, funil com reabertura auditad
     await row.getByText('Alarme monitorado', { exact: true }).waitFor();
     await row.getByText('QA Staff comercial', { exact: true }).waitFor();
     await row.getByText('Unidade Matriz Alphaville', { exact: true }).waitFor();
-    await row.getByText('2026-11-30', { exact: true }).waitFor();
+    await row.getByText('30/11/2026', { exact: true }).waitFor();
     await row.getByText('indicacao', { exact: true }).waitFor();
     await assertNoHorizontalScroll(page, 'tabela de oportunidades');
 
     // Painel de detalhe: manutenção de campos e funil com motivos exigidos.
-    await row.getByRole('button', { name: 'Abrir tarefas', exact: true }).click();
+    await abrirOportunidade(row, page, 'Resumo e funil');
     const summary = page.getByRole('region', { name: 'Detalhe da oportunidade' });
     await summary.getByText(`Oportunidade — ${uiTitle}`, { exact: true }).waitFor();
     await summary.getByText('Origem (imutável): indicacao').waitFor();
@@ -2137,7 +2154,7 @@ test('CRM-07/05/06: campo a campo de oportunidades, funil com reabertura auditad
     await summary.getByText('Motivo de perda obrigatório para mover para perdido.', { exact: true }).waitFor();
     await summary.getByLabel('Motivo da perda (obrigatório)', { exact: true }).fill('Escolheu concorrente com preço menor');
     await summary.getByRole('button', { name: 'Mover estágio', exact: true }).click();
-    await summary.getByText('perdido — motivo: Escolheu concorrente com preço menor').waitFor();
+    await summary.getByText('Perdido — motivo: Escolheu concorrente com preço menor').waitFor();
 
     await summary.getByLabel('Próximo estágio', { exact: true }).selectOption('negociacao');
     await summary.getByLabel('Motivo da reabertura (obrigatório, auditado)', { exact: true }).waitFor();
@@ -2148,6 +2165,7 @@ test('CRM-07/05/06: campo a campo de oportunidades, funil com reabertura auditad
     await summary.getByText('Oportunidade reaberta com motivo auditado.', { exact: true }).waitFor();
 
     // Notas internas na interface: criar, editar e excluir.
+    await page.getByRole('tab', { name: 'Notas internas', exact: true }).click();
     const notesSection = page.getByRole('region', { name: 'Notas internas da oportunidade' });
     await notesSection.getByLabel('Nova nota (1–4000 caracteres)', { exact: true }).fill('Cliente fecha dezembro se incluir central nova.');
     await notesSection.getByRole('button', { name: 'Salvar nota', exact: true }).click();
@@ -2166,9 +2184,10 @@ test('CRM-07/05/06: campo a campo de oportunidades, funil com reabertura auditad
     assert.equal(await notesSection.getByText('Cliente fecha dezembro se incluir central nova e sem taxa de instalação.').count(), 0, 'nota excluída sai da leitura normal');
 
     // O ganho segue sendo estado de funil, nunca dinheiro recebido.
+    await page.getByRole('tab', { name: 'Resumo e funil', exact: true }).click();
     await summary.getByLabel('Próximo estágio', { exact: true }).selectOption('ganho');
     await summary.getByRole('button', { name: 'Mover estágio', exact: true }).click();
-    await summary.getByText('ganho é estado de funil — não é dinheiro recebido.', { exact: true }).waitFor();
+    await summary.getByText('Ganho é estado de funil — não é dinheiro recebido.', { exact: true }).waitFor();
 
     await context.close();
   } finally { await browser.close(); }

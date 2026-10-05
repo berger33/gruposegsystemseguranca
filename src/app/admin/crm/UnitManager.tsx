@@ -140,7 +140,7 @@ export default function UnitManager({ companies }: { companies: Company[] }) {
 
   return (
     <section role="region" aria-labelledby="crm-01-units-title" style={{ marginTop: 16, padding: 12, border: "1px solid #fed7aa", borderRadius: 8, background: "#fff7ed" }}>
-      <h2 id="crm-01-units-title" style={{ fontSize: 16, margin: 0 }}>Unidades — CRM-01</h2>
+      <h2 id="crm-01-units-title" style={{ fontSize: 16, margin: 0 }}>Unidades da empresa <span style={{ fontSize: 11, fontWeight: 400, opacity: 0.7 }}>· referência interna CRM-01</span></h2>
       <p style={{ fontSize: 12, margin: "6px 0", opacity: 0.8 }}>
         Cadastro central por empresa. Endereço, cidade e indicação de unidade principal são gerenciados pelo servidor com auditoria transacional.
       </p>

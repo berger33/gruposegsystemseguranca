@@ -43,7 +43,23 @@
     ".next/integration-ext07-sched/types/**/*.ts",
     ".next/integration-ext07-sched/dev/types/**/*.ts",
     ".next/integration-pendency/types/**/*.ts",
-    ".next/integration-pendency/dev/types/**/*.ts"
+    ".next/integration-pendency/dev/types/**/*.ts",
+    ".next/integration-admin-entry/types/**/*.ts",
+    ".next/integration-admin-entry/dev/types/**/*.ts",
+    ".next/integration-ux-crm/types/**/*.ts",
+    ".next/integration-ux-crm/dev/types/**/*.ts",
+    ".next/integration-l04/types/**/*.ts",
+    ".next/integration-l04/dev/types/**/*.ts",
+    ".next/integration-f03/types/**/*.ts",
+    ".next/integration-f03/dev/types/**/*.ts",
+    ".next/ux-evidence/types/**/*.ts",
+    ".next/ux-evidence/dev/types/**/*.ts",
+    ".next/integration-ux-hr/types/**/*.ts",
+    ".next/integration-ux-hr/dev/types/**/*.ts",
+    ".next/integration-l07/types/**/*.ts",
+    ".next/integration-l07/dev/types/**/*.ts",
+    ".next/integration-ux-adm/types/**/*.ts",
+    ".next/integration-ux-adm/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

@@ -1,0 +1,47 @@
+name: UX painel do Marcelo delivery
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/admin/marcelo/**'
+      - 'src/components/ui/**'
+      - 'src/lib/adm-vocabulary.*'
+      - 'src/styles/ux-tokens.css'
+      - 'src/server/adm-panel-api.mjs'
+      - 'src/server/rbac.mjs'
+      - 'server.mjs'
+      - 'tests/helpers/**'
+      - 'tests/ux-adm-vocabulary.test.mjs'
+      - 'tests/ux-adm-panel.integration.test.mjs'
+      - 'scripts/qa-ux-adm-postgres.mjs'
+      - 'db/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/ux-adm-delivery.yml'
+concurrency:
+  group: ux-adm-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  ux-adm-postgres-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Verificação de tipos
+        run: npm run typecheck
+      - name: Vocabulário canônico do painel (sem PostgreSQL)
+        run: node --test tests/ux-adm-vocabulary.test.mjs
+      - name: Painel do Marcelo — HTTP real, PostgreSQL descartável e Chromium
+        run: npm run test:ux-adm:pg

@@ -1,0 +1,31 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ux-space-1);
+  padding: 2px var(--ux-space-2);
+  border: 1px solid var(--ux-color-border);
+  border-radius: 999px;
+  background: var(--ux-color-canvas);
+  color: var(--ux-color-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+/* Cor nunca é o único sinal: cada tom vem acompanhado do prefixo textual. */
+.neutral { border-color: var(--ux-color-border); }
+.info { border-color: #7aa7d8; background: #eaf2fc; color: #0f3f70; }
+.success { border-color: #3f9a62; background: #e8f6ed; color: #14532d; }
+.warning { border-color: #b08900; background: #fff8e1; color: #6b4e00; }
+.danger { border-color: #c06a6a; background: #fdf2f2; color: var(--ux-color-error); }
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
