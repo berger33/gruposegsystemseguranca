@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "../styles/ux-tokens.css";
 import "../styles/themes.css";
 import PublishedTheme from "@/components/PublishedTheme";
 

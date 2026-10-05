@@ -1,6 +1,8 @@
 ## Referência atual para UX — 05/10/2026
 
-UX-00 foi registrada em [`UX-00-AUDITORIA-BASELINE-2026-10-05.md`](UX-00-AUDITORIA-BASELINE-2026-10-05.md), com inventário reproduzível de 98 páginas, matriz de jornadas, capturas desktop/mobile fictícias e fila de problemas. É uma linha de base; não altera código de produto nem atesta aceite humano. O próximo passo é UX-01 em PR separada.
+UX-00 foi registrada em [`UX-00-AUDITORIA-BASELINE-2026-10-05.md`](UX-00-AUDITORIA-BASELINE-2026-10-05.md), com inventário reproduzível de 98 páginas, matriz de jornadas, capturas desktop/mobile fictícias e fila de problemas. É uma linha de base; não altera código de produto nem atesta aceite humano.
+
+UX-01 introduziu tokens semânticos e dois componentes compartilhados no login staff e hub; veja [`UX-01-FUNDAMENTOS-2026-10-05.md`](UX-01-FUNDAMENTOS-2026-10-05.md). O próximo passo é UX-02, navegação por papel em grupos e responsiva, em PR separada.
 
 No início da iniciativa UX, `main`/`origin/main` estava em `84b3532eb110ed50ddbf743626f40b9b5d92fb48`, com migrações 001–174 e RAG local por área documentado em [`AI-RAG-LOCAL-2026-10-05.md`](AI-RAG-LOCAL-2026-10-05.md). A preparação operacional local foi verificada no computador do operador; isso não constitui aceite humano ou hospedagem pública. O plano de interface está em [`UX-PLANO-MESTRE-2026-10-05.md`](UX-PLANO-MESTRE-2026-10-05.md) e o prompt do Arena em [`ARENA-PROMPT-UX-ETAPAS-2026-10-05.md`](ARENA-PROMPT-UX-ETAPAS-2026-10-05.md). O estado da main pode avançar: reconcilie SHA e ledger antes de cada etapa. Todos os blocos “Atualização corrente” abaixo registram o contexto histórico da respectiva entrega, não o estado atual.
 

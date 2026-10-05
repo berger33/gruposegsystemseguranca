@@ -4,6 +4,8 @@
 
 **UX-00:** [auditoria e linha de base visual](docs/UX-00-AUDITORIA-BASELINE-2026-10-05.md), [inventário completo das 98 páginas](docs/UX-00-INVENTARIO-ROTAS.csv). São evidências de navegação e código, não homologação de todas as jornadas.
 
+**UX-01:** [tokens e primeiros componentes compartilhados](docs/UX-01-FUNDAMENTOS-2026-10-05.md) aplicados ao login staff e ao hub, com evidência visual/teclado; UX-02 seguirá com a navegação agrupada.
+
 ## Continuação atual: EXT-05 — qualidade entregue localmente
 
 Base confirmada: PR #99 `MERGED`, merge commit `ba2202ff6655f425edf405afc42de7ce3786a2a0`, head EXT-04 `0c3a560d9ff1d4622a58e3fd306fb35bd4b26e6a`; após fetch, branch da sessão e `origin/main` em divergência **0/0**, árvore limpa. A migração aditiva 151 promove EXT-05 sem alterar 001–150.

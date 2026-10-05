@@ -1,0 +1,20 @@
+/* UX-01: semantic foundations for new shared components. Existing public themes
+   keep their current variables until each journey is migrated and reviewed. */
+:root {
+  --ux-color-canvas: #f4f7fb;
+  --ux-color-surface: #ffffff;
+  --ux-color-text: #172b45;
+  --ux-color-muted: #4e647d;
+  --ux-color-brand: #135a9e;
+  --ux-color-border: #cbd9e8;
+  --ux-color-focus: #ffbf47;
+  --ux-color-error: #9b1c1c;
+  --ux-space-1: 4px;
+  --ux-space-2: 8px;
+  --ux-space-3: 12px;
+  --ux-space-4: 16px;
+  --ux-space-6: 24px;
+  --ux-radius-sm: 8px;
+  --ux-radius-md: 12px;
+  --ux-shadow-card: 0 4px 18px rgb(18 47 82 / 8%);
+}
