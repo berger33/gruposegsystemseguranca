@@ -1,6 +1,9 @@
+import { AI01_LIMITS, buildPublicRagPrompt, contentFingerprint, createPublicInferenceQueue, sanitizeUntrustedChunk } from './ai-public-inference.mjs';
+
 export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, requireRole }) {
-  const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
-  const readJson = async (req) => { const chunks=[]; for await (const c of req) chunks.push(c); const raw=Buffer.concat(chunks).toString('utf8'); if(!raw) return {}; try{ return JSON.parse(raw);} catch{ return {}; } };
+  const json = (res, status, body) => { if (res.writableEnded || res.destroyed) return; res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
+  const publicInference = createPublicInferenceQueue();
+  const readJson = async (req, maxBytes=1_000_000) => { const chunks=[]; let size=0; for await (const c of req) { size+=c.length; if(size>maxBytes) return { __body_too_large:true }; chunks.push(c); } const raw=Buffer.concat(chunks).toString('utf8'); if(!raw) return {}; try{ return JSON.parse(raw);} catch{ return {}; } };
   const generateProtocol = (prefix) => { const d=new Date(); const y=d.getFullYear().toString(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); const rand=Math.random().toString(36).substring(2,6).toUpperCase(); return `${prefix}-${y}${m}${day}-${rand}`; };
   const validRagKeys = ['cliente','rh','marcelo','publico'];
   const validModes = ['sem_ia','com_ia','whatsapp'];
@@ -196,7 +199,8 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
       return json(res,200,{items:rows, note:'RAG queries com fila Ollama Qwen3 1.7B, sem invenção preço/cobertura/licença/prazo'});
     }
     if(req.method==='POST'){
-      const b=await readJson(req);
+      const b=await readJson(req,isPublic?16_384:1_000_000);
+      if(b.__body_too_large) return json(res,413,{error:'input_too_large'});
       const rag_key=String(b.rag_key||b.scope||'publico').trim().toLowerCase();
       const query=String(b.query||b.question||'').trim();
       const visitor_name=b.visitor_name?String(b.visitor_name).trim():null;
@@ -206,7 +210,8 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
       // Ainda não existe vínculo tenant/conta no índice cliente: negar mesmo a TI
       // até que haja escopo verificável no servidor, nunca inferi-lo do body.
       if(rag_key==='cliente') return json(res,403,{error:'tenant_scope_not_implemented'});
-      if(query.length<5||query.length>2000) return json(res,400,{error:'invalid_query'});
+      const maxQueryChars=isPublic ? AI01_LIMITS.inputChars : 2000;
+      if(query.length<5||query.length>maxQueryChars) return json(res,400,{error:'invalid_query', max_chars:maxQueryChars});
       // buscar index
       const { rows: idxRows } = await pool.query(`SELECT * FROM ai_rag_indexes WHERE rag_key=$1 AND is_active=true AND is_approved=true AND is_published=true LIMIT 1`, [rag_key]);
       if(!idxRows.length) return json(res,404,{error:'rag_index_not_found'});
@@ -236,7 +241,59 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
           }
         }
       }
-      // fila Ollama Qwen3 1.7B: garante todo mundo atendido em fila + tenta Ollama real com fallback simulado
+
+      // AI-01 canônico: a rota pública nunca apresenta fallback como IA. Recuperação
+      // aprovada/publicada acontece antes da chamada local e documentos são entrada não confiável.
+      if(isPublic){
+        if(process.env.OLLAMA_ENABLED !== 'true') return json(res,503,{error:'ai_unavailable', reason:'ollama_disabled'});
+        const selectedChunks=matchedChunks
+          .filter((chunk)=>sanitizeUntrustedChunk(chunk.content).length>=10)
+          .slice(0,AI01_LIMITS.maxChunks);
+        if(!selectedChunks.length) return json(res,422,{error:'insufficient_sources'});
+
+        const protocol=generateProtocol('RAG-PUB');
+        const sources=selectedChunks.map((chunk,index)=>({
+          id:index+1,
+          title:chunk.title,
+          source:chunk.source,
+          excerpt:sanitizeUntrustedChunk(chunk.content).slice(0,200),
+        }));
+        const requestController=new AbortController();
+        const cancel=()=>requestController.abort('client_disconnected');
+        req.once?.('aborted',cancel);
+        res.once?.('close',()=>{ if(!res.writableEnded) cancel(); });
+
+        try{
+          const inference=await publicInference.generate({
+            host:process.env.OLLAMA_HOST||idx.ollama_host||'http://127.0.0.1:11434',
+            model:process.env.OLLAMA_MODEL||idx.model_name,
+            prompt:buildPublicRagPrompt({question:query,chunks:selectedChunks}),
+            timeoutMs:AI01_LIMITS.timeoutMs,
+            signal:requestController.signal,
+          });
+          const totalTokens=inference.totalTokens;
+          const { rows }=await pool.query(`INSERT INTO ai_rag_queries (protocol, rag_key, rag_index_id, query, response, sources, model_name, ollama_host, latency_ms, queue_position, queue_wait_ms, is_invented_price, is_invented_coverage, is_invented_license, is_invented_deadline, is_human_handoff_suggested, user_kind, user_identity, visitor_name, origin, responded_at) VALUES ($1,'publico',$2,'[not_retained]','[not_retained]',$3,$4,$5,$6,$7,$8,false,false,false,false,false,'publico',NULL,NULL,'ai01_public',NOW()) RETURNING *`,
+            [protocol,idx.id,JSON.stringify(sources),inference.model,process.env.OLLAMA_HOST||idx.ollama_host,inference.latencyMs,inference.queuePosition,inference.queueWaitMs]);
+          await pool.query(`INSERT INTO ai_rag_cost_tracking (protocol, rag_key, model_name, prompt_tokens, completion_tokens, total_tokens, cost_cents, latency_ms, queue_position, ollama_used) VALUES ($1,'publico',$2,$3,$4,$5,0,$6,$7,true)`,
+            [protocol,inference.model,inference.promptTokens,inference.completionTokens,totalTokens,inference.latencyMs,inference.queuePosition]);
+          await auditLog({action:'ai01_public_inference',actor:'anonymous',target:rows[0].id,meta:{
+            protocol,model:inference.model,prompt_tokens:inference.promptTokens,completion_tokens:inference.completionTokens,
+            latency_ms:inference.latencyMs,queue_position:inference.queuePosition,source_ids:sources.map((source)=>source.id),
+            question_sha256:contentFingerprint(query),ollama_used:true,
+          }});
+          return json(res,201,{response:inference.text,sources,protocol,model:inference.model,
+            prompt_tokens:inference.promptTokens,completion_tokens:inference.completionTokens,total_tokens:totalTokens,
+            latency_ms:inference.latencyMs,queue_position:inference.queuePosition,queue_wait_ms:inference.queueWaitMs,
+            rag_key:'publico',ollama_used:true,retention:'content_not_retained'});
+        }catch(error){
+          const reason=['queue_full','ollama_timeout','model_mismatch','ollama_invalid_response','ollama_missing_token_counts','request_cancelled'].includes(error?.code)
+            ? error.code : 'ollama_unavailable';
+          const status=reason==='queue_full'?429:reason==='request_cancelled'?499:503;
+          return json(res,status,{error:'ai_unavailable',reason});
+        }
+      }
+
+      // Caminhos privados legados permanecem fora de AI-01 e não contam como IA homologada.
       queueState.current++;
       const queue_position=queueState.current % (idx.max_queue_size||100);
       const queue_wait_ms=Math.floor(Math.random()*500)+100;

@@ -52,7 +52,11 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
         body: JSON.stringify({ rag_key: ragKey, query: q, origin: `${ragKey}_module` })
       });
       const data = await res.json();
-      if(!res.ok) throw new Error(data.error||`Erro ${res.status}`);
+      if(!res.ok) {
+        if(data.error==="ai_unavailable") throw new Error("IA indisponível no momento. Use o formulário de contato se desejar atendimento humano.");
+        if(data.error==="insufficient_sources") throw new Error("Não há informação suficiente nas fontes públicas aprovadas.");
+        throw new Error(data.error||`Erro ${res.status}`);
+      }
       setAnswer({
         response: data.response || data.query?.response,
         sources: data.sources||data.query?.sources||[],
@@ -122,15 +126,15 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
         <div>
           <h3 style={{ margin:0, fontSize:20, fontWeight:700, color: colors.accent }}>{title}</h3>
           <span style={{ display:"inline-block", marginTop:6, fontSize:11, padding:"3px 8px", borderRadius:20, background: colors.accent, color:"#fff", fontWeight:600 }}>
-            RAG {ragKey.toUpperCase()} • Ollama Qwen3 1.7B • área pertinente
+            RAG {ragKey.toUpperCase()} • Ollama local • fontes públicas
           </span>
         </div>
         <span style={{ fontSize:10, padding:"4px 8px", borderRadius:6, background: colors.light, color: colors.accent, fontWeight:600 }}>
-          modelo qwen3:1.7b • fila garantida
+          IA disponível somente com modelo local ativo
         </span>
       </div>
 
-      <p style={{ fontSize:13, opacity:0.85, margin:"12px 0 0", lineHeight:1.5 }}>{description} — informações apenas áreas pertinentes a <strong>{ragKey}</strong>. Modelo Qwen3 1.7B com fila garante todo mundo atendido. Sem invenção preço/cobertura/licença/prazo. Contato claro: Av. Armando Bei, 305 - Sala 01, Vila Nova Bonsucesso, Guarulhos, SP.</p>
+      <p style={{ fontSize:13, opacity:0.85, margin:"12px 0 0", lineHeight:1.5 }}>{description} — somente fontes públicas aprovadas. Se o modelo local estiver indisponível ou não houver fonte suficiente, nenhuma resposta será inventada. Não envie dados pessoais. Perguntas e respostas não são retidas.</p>
 
       <div style={{ marginTop:12, display:"flex", gap:6, flexWrap:"wrap" }}>
         {(SUGGESTIONS[ragKey]||[]).map((s,i)=>(
@@ -144,7 +148,7 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
       <form onSubmit={ask} style={{ marginTop:16, display:"grid", gap:10 }}>
         <textarea
           placeholder={placeholder||`Digite pergunta para RAG ${ragKey} ex: como consultar meus contratos?`}
-          value={query} onChange={e=>setQuery(e.target.value)} required maxLength={2000} rows={3}
+          value={query} onChange={e=>setQuery(e.target.value)} required maxLength={1000} rows={3}
           style={{ padding:12, borderRadius:8, border:"1px solid #cbd5e1", fontSize:14, resize:"vertical", outline:"none", boxShadow: "inset 0 1px 2px rgba(0,0,0,0.05)" }}
         />
         <div style={{ display:"flex", gap:8, alignItems:"center" }}>
@@ -153,15 +157,17 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
             {loading ? (
               <>
                 <span style={{ width:16, height:16, border:"2px solid #fff", borderTopColor:"transparent", borderRadius:"50%", display:"inline-block", animation:"spin 0.8s linear infinite" }} />
-                Consultando RAG {ragKey} fila Ollama...
+                Consultando fontes e modelo local...
               </>
             ) : `Perguntar RAG ${ragKey.toUpperCase()}`}
           </button>
-          <span style={{ fontSize:11, opacity:0.6 }}>{query.length}/2000</span>
+          <span style={{ fontSize:11, opacity:0.6 }}>{query.length}/1000</span>
         </div>
       </form>
 
-      {error && <div style={{ marginTop:12, color:"#dc2626", fontSize:13, background:"#fef2f2", padding:12, borderRadius:8, border:"1px solid #fecaca" }}>Erro: {error}</div>}
+      {error && <div style={{ marginTop:12, color:"#991b1b", fontSize:13, background:"#fef2f2", padding:12, borderRadius:8, border:"1px solid #fecaca" }}>
+        {error} <a href="/contato" style={{ color:"#0b5fff", fontWeight:600 }}>Abrir formulário de contato</a>. O formulário persiste a solicitação, mas não promete prazo nem envio externo.
+      </div>}
 
       {answer && (
         <div style={{ marginTop:16, padding:16, background:"#fff", borderRadius:10, borderLeft:`5px solid ${colors.accent}`, boxShadow:"0 2px 6px rgba(0,0,0,0.05)" }}>
@@ -172,7 +178,7 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
               <span>fila pos {answer.queue_position} wait {answer.queue_wait_ms}ms</span>
               {answer.latency_ms && <span>lat {answer.latency_ms}ms</span>}
               <span style={{ color: answer.ollama_used ? "#059669" : "#6b7280", fontWeight:600 }}>
-                {answer.ollama_used ? "Ollama REAL" : `fallback ${answer.ollama_error||"simulado"}`}
+                {answer.ollama_used ? "Ollama real verificado" : "IA indisponível"}
               </span>
             </div>
             <button onClick={copyProtocol} style={{ fontSize:11, padding:"4px 8px", borderRadius:6, border:"1px solid #e5e7eb", background: copied?"#10b981":"#fff", color: copied?"#fff":"#374151", cursor:"pointer" }}>
@@ -197,11 +203,9 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
           )}
 
           <div style={{ marginTop:12, display:"flex", gap:8, flexWrap:"wrap" }}>
-            <span style={{ fontSize:10, padding:"3px 8px", borderRadius:20, background:"#f3f4f6", color:"#6b7280" }}>is_invented_price=false</span>
-            <span style={{ fontSize:10, padding:"3px 8px", borderRadius:20, background:"#f3f4f6", color:"#6b7280" }}>is_invented_coverage=false</span>
-            <span style={{ fontSize:10, padding:"3px 8px", borderRadius:20, background:"#f3f4f6", color:"#6b7280" }}>is_invented_license=false</span>
-            <span style={{ fontSize:10, padding:"3px 8px", borderRadius:20, background:"#f3f4f6", color:"#6b7280" }}>is_invented_deadline=false</span>
-            <span style={{ fontSize:10, padding:"3px 8px", borderRadius:20, background: colors.light, color: colors.accent }}>RAG {answer.rag_key} área pertinente apenas</span>
+            <span style={{ fontSize:10, padding:"3px 8px", borderRadius:20, background: colors.light, color: colors.accent }}>Ollama real: {String(answer.ollama_used)}</span>
+            <span style={{ fontSize:10, padding:"3px 8px", borderRadius:20, background:"#f3f4f6", color:"#374151" }}>Pergunta e resposta não retidas</span>
+            <span style={{ fontSize:10, padding:"3px 8px", borderRadius:20, background: colors.light, color: colors.accent }}>Fontes públicas: {answer.sources.length}</span>
           </div>
 
           <div style={{ marginTop:14, padding:12, background: colors.bg, borderRadius:8, border:`1px dashed ${colors.border}` }}>
@@ -231,7 +235,7 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
           </div>
 
           <p style={{ fontSize:11, opacity:0.6, marginTop:10, fontStyle:"italic" }}>
-            Guardrails: base aprovada apenas {answer.rag_key}, sem preço fictício, sem cobertura/licença/prazo inventado, transferência humana disponível quando não encontra. Protocolo {answer.protocol} preservado. Custo/token tracking: {answer.protocol} prompt/completion tokens em ai_rag_cost_tracking.
+            Resposta limitada às fontes públicas exibidas. Modelo e tokens vêm da execução Ollama real. Pergunta e resposta não são persistidas; o protocolo preserva somente métricas e referências das fontes.
           </p>
         </div>
       )}
