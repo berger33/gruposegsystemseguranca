@@ -16,6 +16,7 @@ const today = "2026-10-03";
 const sql153 = () => readFile(new URL("../db/migrations/153-ext07-compliance-journey.sql", import.meta.url), "utf8");
 const sql154 = () => readFile(new URL("../db/migrations/154-ext07-compliance-hardening.sql", import.meta.url), "utf8");
 const sql155 = () => readFile(new URL("../db/migrations/155-ext07-compliance-hardening.sql", import.meta.url), "utf8");
+const sql168 = () => readFile(new URL("../db/migrations/168-ext07-compliance-action-plans.sql", import.meta.url), "utf8");
 
 // ---------------------------------------------------------------------------
 // Migrações: fonte canônica, legado preservado e hardening aditivo da 154+155.
@@ -136,11 +137,21 @@ const documentRow = {
   document_number: null, issuer: null, reference_source: "Órgão sintético", validity_rule: "validade_anual_renovavel",
 };
 
+const actionPlanId = "99999999-9999-4999-8999-999999999999";
+
+const actionPlanRow = {
+  id: actionPlanId, obligation_id: obligationId, document_id: documentId, task_id: taskId,
+  plan_type: "corretivo", title: "Plano corretivo sintético", description: "Descrição sintética do plano corretivo.",
+  root_cause: "Vencimento identificado na rotina de avaliação.", status: "aberto", due_date: "2026-11-01",
+  responsible_identity: identityId, created_by_identity: identityId,
+};
+
 function mutationPool({
   replayRow = null,
   obligation = obligationRow,
   document = documentRow,
-  task = { id: taskId, status: "aberta", responsible_identity: identityId },
+  task = { id: taskId, obligation_id: obligationId, status: "aberta", responsible_identity: identityId },
+  actionPlan = actionPlanRow,
   activeStaff = true,
   expiredDocuments = [],
   failAudit = false,
@@ -162,11 +173,20 @@ function mutationPool({
       if (sql.includes("FROM ext_compliance_obligations WHERE id=$1 FOR UPDATE")) {
         return { rows: obligation ? [{ ...obligation }] : [] };
       }
+      if (sql.includes("FROM ext_compliance_documents WHERE id=$1 AND origin='ext07_canonica'")) {
+        return { rows: document ? [{ ...document }] : [] };
+      }
       if (sql.includes("FROM ext_compliance_documents WHERE id=$1 FOR UPDATE")) {
         return { rows: document ? [{ ...document }] : [] };
       }
       if (sql.includes("FROM ext_compliance_tasks WHERE id=$1 FOR UPDATE")) {
         return { rows: task ? [{ ...task }] : [] };
+      }
+      if (sql.includes("FROM ext_compliance_tasks WHERE id=$1")) {
+        return { rows: task ? [{ ...task }] : [] };
+      }
+      if (sql.includes("FROM ext_compliance_action_plans WHERE id=$1 FOR UPDATE")) {
+        return { rows: actionPlan ? [{ ...actionPlan }] : [] };
       }
       if (sql.includes("FROM ext_compliance_documents d") && sql.includes("FOR UPDATE OF d")) {
         return { rows: expiredDocuments.map(d => ({ ...d })) };
@@ -180,6 +200,9 @@ function mutationPool({
       if (sql.startsWith("INSERT INTO ext_compliance_tasks")) {
         return { rows: [{ id: taskId }] };
       }
+      if (sql.startsWith("INSERT INTO ext_compliance_action_plans")) {
+        return { rows: [{ ...actionPlan, id: actionPlanId, obligation_id: params[0], document_id: params[1], task_id: params[2], plan_type: params[3], title: params[4], description: params[5], root_cause: params[6], due_date: params[7], responsible_identity: params[8], created_by_identity: params[9], status: "aberto" }] };
+      }
       if (sql.startsWith("UPDATE ext_compliance_documents SET status='substituida'")) {
         return { rows: [{ id: documentId, status: "substituida" }], rowCount: 1 };
       }
@@ -188,6 +211,9 @@ function mutationPool({
       }
       if (sql.startsWith("UPDATE ext_compliance_tasks")) {
         return { rows: [{ ...task, status: params[1] }] };
+      }
+      if (sql.startsWith("UPDATE ext_compliance_action_plans")) {
+        return { rows: [{ ...actionPlan, status: params[1] }] };
       }
       if (sql.startsWith("INSERT INTO ext_compliance_events")) return { rows: [], rowCount: 1 };
       if (sql.startsWith("UPDATE ext_compliance_obligations")) return { rows: [], rowCount: 1 };
@@ -408,7 +434,7 @@ test("EXT-07 falha de audit_log responde 503 com rollback e sem evento", async (
 
 test("EXT-07 listagens usam projeção minimizada sem storage_key, URL privada ou referência", async () => {
   const { statements, pool } = readPool();
-  for (const url of ["/api/ext/compliance/documents", "/api/ext/compliance/obligations", "/api/ext/compliance/tasks"]) {
+  for (const url of ["/api/ext/compliance/documents", "/api/ext/compliance/obligations", "/api/ext/compliance/tasks", "/api/ext/compliance/action-plans"]) {
     const res = responseCapture();
     await api(pool).handle(request({ url }), res);
     assert.equal(res.status, 200);
@@ -423,4 +449,130 @@ test("EXT-07 listagens usam projeção minimizada sem storage_key, URL privada o
   const legacy = await readFile(new URL("../src/server/ext-advanced-api.mjs", import.meta.url), "utf8");
   assert.doesNotMatch(legacy, /INSERT INTO ext_compliance_documents/);
   assert.doesNotMatch(legacy, /UPDATE ext_compliance_documents/);
+});
+
+// ---------------------------------------------------------------------------
+// F15 / EXT-07: Planos de ação corretivos e preventivos de compliance (migração 168)
+// ---------------------------------------------------------------------------
+
+test("EXT-07 168 adiciona ext_compliance_action_plans e eventos vinculados", async () => {
+  const migration = await sql168();
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS ext_compliance_action_plans/);
+  assert.match(migration, /plan_type IN \('corretivo', 'preventivo'\)/);
+  assert.match(migration, /status IN \('aberto', 'em_andamento', 'concluido', 'cancelado'\)/);
+  assert.match(migration, /ext_compliance_action_plan_guard/);
+  assert.match(migration, /terminal compliance action plan is immutable/);
+  assert.match(migration, /action plan completion requires responsible and result/);
+  assert.match(migration, /action plan cancellation requires justification/);
+  assert.match(migration, /action_plan_id UUID REFERENCES ext_compliance_action_plans/);
+  assert.match(migration, /ext07_action_plan_create/);
+  assert.match(migration, /ext07_action_plan_start/);
+  assert.match(migration, /ext07_action_plan_complete/);
+  assert.match(migration, /ext07_action_plan_cancel/);
+});
+
+test("EXT-07 criação de plano de ação valida obrigação, tipo, datas e responsável", async () => {
+  const { pool, statements } = mutationPool();
+  const res = responseCapture();
+  await api(pool).handle(request({
+    method: "POST",
+    url: "/api/ext/compliance/action-plans",
+    body: {
+      obligation_id: obligationId,
+      document_id: documentId,
+      task_id: taskId,
+      plan_type: "corretivo",
+      title: "Plano corretivo de adequação",
+      description: "Execução de auditoria interna e renovação da certidão.",
+      root_cause: "Vencimento identificado no relatório diário.",
+      due_date: "2026-11-15",
+      responsible_identity: identityId,
+    },
+  }), res);
+  assert.equal(res.status, 201);
+  assert.equal(res.payload.action_plan.plan_type, "corretivo");
+  assert.equal(res.payload.action_plan.status, "aberto");
+  const insert = statements[sqlIndex(statements, "INSERT INTO ext_compliance_action_plans")];
+  assert.ok(insert, "INSERT em ext_compliance_action_plans deve ocorrer");
+  assert.equal(insert.params[3], "corretivo");
+
+  // Rejeição para plano inválido / ausência de título
+  const badTitle = responseCapture();
+  await api(pool).handle(request({
+    method: "POST",
+    url: "/api/ext/compliance/action-plans",
+    body: {
+      obligation_id: obligationId,
+      plan_type: "corretivo",
+      title: "abc", // muito curto (< 5)
+      description: "Descrição válida suficientemente longa.",
+      due_date: "2026-11-15",
+    },
+  }), badTitle);
+  assert.equal(badTitle.status, 400);
+
+  // Rejeição para tipo de plano inválido
+  const badType = responseCapture();
+  await api(pool).handle(request({
+    method: "POST",
+    url: "/api/ext/compliance/action-plans",
+    body: {
+      obligation_id: obligationId,
+      plan_type: "invalido",
+      title: "Título válido",
+      description: "Descrição válida suficientemente longa.",
+      due_date: "2026-11-15",
+    },
+  }), badType);
+  assert.equal(badType.status, 400);
+});
+
+test("EXT-07 transições de plano de ação exigem resultado/justificativa e respeitam terminais", async () => {
+  // Transição start
+  const startRes = responseCapture();
+  await api(mutationPool().pool).handle(request({
+    method: "POST",
+    url: `/api/ext/compliance/action-plans/${actionPlanId}/start`,
+    body: {},
+  }), startRes);
+  assert.equal(startRes.status, 200);
+
+  // Conclusão sem resultado falha
+  const missingResult = responseCapture();
+  await api(mutationPool().pool).handle(request({
+    method: "POST",
+    url: `/api/ext/compliance/action-plans/${actionPlanId}/complete`,
+    body: {},
+  }), missingResult);
+  assert.equal(missingResult.status, 400);
+  assert.equal(missingResult.payload.error, "completion_result_required");
+
+  // Conclusão com resultado válido tem sucesso
+  const completeRes = responseCapture();
+  await api(mutationPool().pool).handle(request({
+    method: "POST",
+    url: `/api/ext/compliance/action-plans/${actionPlanId}/complete`,
+    body: { result: "Ações de conformidade executadas com sucesso." },
+  }), completeRes);
+  assert.equal(completeRes.status, 200);
+
+  // Cancelamento sem justificativa falha
+  const missingJust = responseCapture();
+  await api(mutationPool().pool).handle(request({
+    method: "POST",
+    url: `/api/ext/compliance/action-plans/${actionPlanId}/cancel`,
+    body: {},
+  }), missingJust);
+  assert.equal(missingJust.status, 400);
+  assert.equal(missingJust.payload.error, "cancellation_justification_required");
+
+  // Plano em estado terminal não pode ser alterado
+  const terminalRes = responseCapture();
+  await api(mutationPool({ actionPlan: { ...actionPlanRow, status: "concluido" } }).pool).handle(request({
+    method: "POST",
+    url: `/api/ext/compliance/action-plans/${actionPlanId}/start`,
+    body: {},
+  }), terminalRes);
+  assert.equal(terminalRes.status, 409);
+  assert.equal(terminalRes.payload.error, "invalid_transition");
 });
