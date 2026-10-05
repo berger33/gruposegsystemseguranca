@@ -1,4 +1,12 @@
-## Atualização corrente — EXT-15 / F11 Apoio emergencial canônico
+## Atualização corrente — EXT-10 isolamento por client_account_id (F06, requisito confirmado)
+
+- Base confirmada: PR #140 `MERGED` em `d393f076875b3fa2513a42d01dd856f2c7300729`; branch fixa `arena/01a10988-gruposegsystemseguranca` partiu desse SHA com checkout limpo. #128, #130 e #131 fechadas sem merge como `superseded` com autorização do operador.
+- Fatia escolhida: o operador confirmou o requisito de escopo/isolamento por `client_account_id` da EXT-10, pendência registrada desde o Incremento 12. Sem migração nova; 001–167 imutáveis; próxima livre continua **168**.
+- Entregue: listagem escopada (`EXISTS` sobre `auth_permissions`; grant `account` vê somente a própria conta; plano sem conta exige grant global/organization), criação com conta opcional validada (400/409/403 fail-closed), 404 fora do escopo em detalhe/transição/exercício sem vazar existência, UI com conta e escopo declarados.
+- Evidência: Wave0 5/5; unitário 13/13; gate `test:ext10-continuity:pg` **22/22** (mínimo 17→22); `npm test` 614/614; typecheck; build 101 páginas; migrações 167/167; `git diff --check`/`node --check` OK.
+- Limite honesto: isolamento vale para staff com grants escopados; não há ator externo/cliente autenticado, portal de cliente para planos, notificação externa, aceite humano, Windows/EPERM ou banco de destino. EXT-16/17 seguem bloqueadas sem aprovação prévia de privacidade.
+
+## Atualização anterior — EXT-15 / F11 Apoio emergencial canônico
 
 - Base confirmada: PR #139 `MERGED` em `53492d681bfffd5bc8aaa85bf51de6d1dad10a5b`; `origin/main` e a branch fixa `arena/01a10969-gruposegsystemseguranca` iniciaram nesse SHA, com checkout limpo. PRs #126, #127, #129, #132, #133, #134, #136, #137, #138 e #139 permanecem integradas e intocadas.
 - Fatia escolhida: EXT-15, sem contar tabelas ou handlers legados da migração 087 como cobertura. Migração aditiva `167-ext15-emergency-canonical-journey.sql`; 001–166 imutáveis; próxima livre: **168**.

@@ -29,13 +29,14 @@ function response() {
   };
 }
 
-function poolForCreate({ permission = true, audit = true } = {}) {
+function poolForCreate({ permission = true, audit = true, account = true } = {}) {
   const statements = [];
   const client = {
     async query(text, params = []) {
       statements.push({ text, params });
       if (["BEGIN", "COMMIT", "ROLLBACK"].includes(text)) return { rows: [] };
       if (text.includes("pg_advisory_xact_lock")) return { rows: [] };
+      if (text.includes("FROM client_accounts")) return { rows: account ? [{ id: params[0] }] : [] };
       if (text.includes("ext_continuity_events") && text.includes("WHERE")) return { rows: [] };
       if (text.includes("INSERT INTO ext_continuity_plans")) {
         return { rows: [{ id: plan, protocol: "CONT-EXT-20261004-A1B2", status: "rascunho", origin: "ext10_canonica" }] };
@@ -151,6 +152,48 @@ test("EXT-10 falha de auditoria é fail-closed e retorna 503", async () => {
   assert.ok(pool.statements.some(({ text }) => text === "ROLLBACK"));
 });
 
+test("EXT-10 API isola planos por conta de cliente de forma fail-closed", async () => {
+  const source = await readFile(path.join(root, "src/server/ext-continuity-api.mjs"), "utf8");
+  assert.match(source, /scope_type='account' AND ap\.scope_id=p\.client_account_id/);
+  assert.match(source, /client_account_not_found/);
+  assert.match(source, /forbidden_account_scope/);
+  assert.match(source, /invalid_client_account_id/);
+  assert.match(source, /scopedPlan/);
+});
+
+test("EXT-10 client_account_id malformado é recusado antes de abrir transação", async () => {
+  const pool = poolForCreate();
+  const api = createExtContinuityApi({ pool, sameOrigin, requireSession: session });
+  const res = response();
+  await api.handle(req({ method: "POST", body: { ...validBody, client_account_id: "nao-e-uuid" } }), res);
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.json().error, "invalid_client_account_id");
+  assert.equal(pool.statements.length, 0);
+});
+
+test("EXT-10 conta de cliente inexistente responde 409 e sofre rollback", async () => {
+  const pool = poolForCreate({ account: false });
+  const api = createExtContinuityApi({ pool, sameOrigin, requireSession: session });
+  const res = response();
+  await api.handle(req({ method: "POST", body: { ...validBody, client_account_id: "33333333-3333-4333-8333-333333333333" } }), res);
+  assert.equal(res.statusCode, 409);
+  assert.equal(res.json().error, "client_account_not_found");
+  assert.ok(pool.statements.some(({ text }) => text === "ROLLBACK"));
+  assert.ok(!pool.statements.some(({ text }) => text.includes("INSERT INTO ext_continuity_plans")));
+});
+
+test("EXT-10 criação com conta existente vincula client_account_id na mesma transação", async () => {
+  const pool = poolForCreate();
+  const api = createExtContinuityApi({ pool, sameOrigin, requireSession: session });
+  const res = response();
+  await api.handle(req({ method: "POST", body: { ...validBody, client_account_id: "33333333-3333-4333-8333-333333333333" } }), res);
+  assert.equal(res.statusCode, 201);
+  const insert = pool.statements.find(({ text }) => text.includes("INSERT INTO ext_continuity_plans"));
+  assert.ok(insert);
+  assert.ok(insert.params.includes("33333333-3333-4333-8333-333333333333"));
+  assert.ok(pool.statements.some(({ text }) => text.includes("FROM client_accounts")));
+});
+
 test("EXT-10 UI declara gate de autorização e fronteira interna", async () => {
   const page = await readFile(path.join(root, "src/app/admin/continuidade/page.tsx"), "utf8");
   const workspace = await readFile(path.join(root, "src/app/admin/continuidade/ContinuityWorkspace.tsx"), "utf8");
@@ -158,4 +201,6 @@ test("EXT-10 UI declara gate de autorização e fronteira interna", async () => 
   assert.match(page, /allowedRoles=\{\["admin","ti","marcelo","operacao","supervisor"\]\}/);
   assert.match(workspace, /não envia alertas externos/);
   assert.match(workspace, /\/api\/ext\/continuity\/plans/);
+  assert.match(workspace, /client_account_id/);
+  assert.match(workspace, /escopo por conta de cliente/);
 });
