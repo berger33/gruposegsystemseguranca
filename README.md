@@ -4,7 +4,9 @@
 
 **UX-00:** [auditoria e linha de base visual](docs/UX-00-AUDITORIA-BASELINE-2026-10-05.md), [inventário completo das 98 páginas](docs/UX-00-INVENTARIO-ROTAS.csv). São evidências de navegação e código, não homologação de todas as jornadas.
 
-**UX-01:** [tokens e primeiros componentes compartilhados](docs/UX-01-FUNDAMENTOS-2026-10-05.md) aplicados ao login staff e ao hub, com evidência visual/teclado; UX-02 seguirá com a navegação agrupada.
+**UX-01:** [tokens e primeiros componentes compartilhados](docs/UX-01-FUNDAMENTOS-2026-10-05.md) aplicados ao login staff e ao hub, com evidência visual/teclado.
+
+**UX-02:** [navegação administrativa por grupos e por papel](docs/UX-02-NAVEGACAO-2026-10-05.md), com busca de destinos permitidos, breadcrumb e menu móvel; UX-03 seguirá no CRM/comercial.
 
 ## Continuação atual: EXT-05 — qualidade entregue localmente
 

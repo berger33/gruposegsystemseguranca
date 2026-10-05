@@ -1339,6 +1339,11 @@ test("L07 FIN-10 aditivo: Chromium declara política ausente, mostra falha de le
 
     await page.getByTestId(`fin10-history-toggle-${created.rows[0].id}`).click();
     await page.waitForSelector(`[data-testid="fin10-history-${created.rows[0].id}"]`);
+    // The container appears while the HTTP history request is still loading.
+    // Wait for the actual authority snapshot, retaining the assertions below.
+    await page.waitForFunction((expenseId) =>
+      /R\$\s?2\.000,50/.test(document.querySelector(`[data-testid="fin10-history-${expenseId}"]`)?.textContent || ""),
+      created.rows[0].id);
     const historyText=await page.getByTestId(`fin10-history-${created.rows[0].id}`).textContent();
     assert.match(historyText||"",/R\$\s?2\.000,50/,"histórico mostra a alçada aplicada");
     assert.match(historyText||"",/conferido e aprovado/,"histórico mostra o motivo real");

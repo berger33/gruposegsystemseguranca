@@ -7,11 +7,12 @@
 // aqui apenas resolvemos UI — quem não tem papel vê mensagem honesta em vez
 // de estrutura quebrada.
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, LogOut, ShieldCheck } from "lucide-react";
+import { ArrowLeft, LogOut, Menu, Search, ShieldCheck, X } from "lucide-react";
 import { roleLabel } from "../../lib/admin-entry.mjs";
+import { groupAdminModules, searchAdminGroups } from "../../lib/admin-navigation.mjs";
 import styles from "./AdminChrome.module.css";
 
 type AdminSession = { role: string; identityId: string | null; mfaVerified: boolean; expiresAt: string };
@@ -74,9 +75,42 @@ export async function adminLogout(): Promise<void> {
 export function AdminChrome({ session, children }: { session: AdminSession; children: ReactNode }) {
   const pathname = usePathname();
   const nav = modulesForRole(session.role);
+  const groups = groupAdminModules(nav);
+  const [search, setSearch] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const sideNavRef = useRef<HTMLElement>(null);
+  const visibleGroups = searchAdminGroups(groups, search);
+  const currentModule = nav.find((module) => pathname === module.href || pathname.startsWith(`${module.href}/`));
+  const currentGroup = groups.find((group) => group.modules.some((module) => module.href === currentModule?.href));
+
+  useEffect(() => { setMenuOpen(false); }, [pathname]);
+  useEffect(() => {
+    if (!menuOpen) return;
+    // The drawer transitions from visibility:hidden; focusing before it is
+    // visible silently fails in Chromium.
+    const focusTimer = window.setTimeout(() => searchRef.current?.focus(), 230);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        menuButtonRef.current?.focus();
+      } else if (event.key === "Tab" && window.matchMedia("(max-width: 900px)").matches) {
+        const items = [...(sideNavRef.current?.querySelectorAll<HTMLElement>('button, a, input, summary') || [])]
+          .filter((item) => item.getClientRects().length > 0 && (item.tagName === 'SUMMARY' || !item.closest('details:not([open])')));
+        if (!items.length) return;
+        const first = items[0], last = items[items.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => { window.clearTimeout(focusTimer); window.removeEventListener("keydown", onKeyDown); };
+  }, [menuOpen]);
+
   return (
     <main className={styles.page}>
-      <div className={styles.container} data-admin-chrome="true">
+      <div className={`${styles.container} ${styles.adminContainer}`} data-admin-chrome="true">
         <header className={styles.topbar}>
           <Link href="/admin" className={styles.brand}>
             <span className={styles.brandMark}>SEG</span>
@@ -85,20 +119,9 @@ export function AdminChrome({ session, children }: { session: AdminSession; chil
               <strong>SEG System</strong>
             </span>
           </Link>
-          {nav.length ? (
-            <nav className={styles.nav} aria-label="Módulos administrativos" data-admin-nav="true">
-              {nav.map((mod) => (
-                <Link
-                  key={mod.href}
-                  href={mod.href}
-                  className={styles.navLink}
-                  aria-current={pathname === mod.href ? "page" : undefined}
-                >
-                  {mod.label}
-                </Link>
-              ))}
-            </nav>
-          ) : null}
+          {nav.length ? <button ref={menuButtonRef} type="button" className={styles.menuToggle} aria-controls="admin-module-nav" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>
+            {menuOpen ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />} Menu
+          </button> : null}
           <span className={styles.roleChip} data-role-chip={session.role}>
             <ShieldCheck size={13} aria-hidden="true" />
             {roleLabel(session.role)}
@@ -108,7 +131,39 @@ export function AdminChrome({ session, children }: { session: AdminSession; chil
             Sair
           </button>
         </header>
-        {children}
+        {menuOpen ? <button type="button" className={styles.navBackdrop} aria-label="Fechar menu" onClick={() => { setMenuOpen(false); menuButtonRef.current?.focus(); }} /> : null}
+        <div className={styles.workArea}>
+          {nav.length ? (
+            <nav ref={sideNavRef} id="admin-module-nav" className={`${styles.sideNav} ${menuOpen ? styles.sideNavOpen : ""}`} aria-label="Módulos administrativos" data-admin-nav="true">
+              <div className={styles.drawerHeader}><strong>Áreas do sistema</strong><button type="button" onClick={() => { setMenuOpen(false); menuButtonRef.current?.focus(); }}>Fechar</button></div>
+              <Link href="/admin" className={styles.homeLink} aria-current={pathname === "/admin" ? "page" : undefined} onClick={() => setMenuOpen(false)}>Início</Link>
+              <label className={styles.moduleSearch}>
+                <Search size={16} aria-hidden="true" />
+                <span className={styles.visuallyHidden}>Buscar módulo</span>
+                <input ref={searchRef} type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar módulo" />
+              </label>
+              <div className={styles.sideGroups}>
+                {visibleGroups.map((group) => (
+                  <details key={group.id} className={styles.sideGroup} open={Boolean(search) || group.id === currentGroup?.id || groups.length === 1 ? true : undefined}>
+                    <summary>{group.label}<span>{group.modules.length}</span></summary>
+                    <div className={styles.sideLinks}>
+                      {group.modules.map((mod) => (
+                        <Link key={mod.href} href={mod.href} className={styles.sideLink} aria-current={pathname === mod.href || pathname.startsWith(`${mod.href}/`) ? "page" : undefined} onClick={() => setMenuOpen(false)}>{mod.label}</Link>
+                      ))}
+                    </div>
+                  </details>
+                ))}
+                {visibleGroups.length === 0 ? <p className={styles.noResults}>Nenhum módulo do seu papel corresponde à busca.</p> : null}
+              </div>
+            </nav>
+          ) : null}
+          <div className={styles.mainContent}>
+            <nav className={styles.breadcrumb} aria-label="Você está aqui">
+              {pathname === "/admin" ? <span aria-current="page">Início</span> : <><Link href="/admin">Início</Link><span aria-hidden="true">/</span><span aria-current="page">{currentModule?.label || "Área administrativa"}</span></>}
+            </nav>
+            {children}
+          </div>
+        </div>
       </div>
     </main>
   );
