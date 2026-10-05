@@ -1,3 +1,13 @@
+## Atualização corrente — EXT-15 / F11 Apoio emergencial canônico
+
+- Base confirmada: PR #139 `MERGED` em `53492d681bfffd5bc8aaa85bf51de6d1dad10a5b`; `origin/main` e a branch fixa `arena/01a10969-gruposegsystemseguranca` iniciaram nesse SHA, com checkout limpo. PRs #126, #127, #129, #132, #133, #134, #136, #137, #138 e #139 permanecem integradas e intocadas.
+- Fatia escolhida: EXT-15, sem contar tabelas ou handlers legados da migração 087 como cobertura. Migração aditiva `167-ext15-emergency-canonical-journey.sql`; 001–166 imutáveis; próxima livre: **168**.
+- Entregue: configuração de canal com destinatário, contato, disponibilidade, finalidade e escalonamento declarados; ciclo `rascunho → em_teste → testado → ativo`; registros internos separados de teste de recebimento e atendimento, ambos explicitamente bem-sucedidos antes da ativação humana.
+- API/UI: `/api/ext/emergency/channels`, detalhe, `/:id/transition` e `/:id/tests`; escritas legadas `/api/ext/emergency-channels` e `/api/ext/emergency-tests` retornam 410 após guardas; `/admin/emergencial` protegido por `AdminGate`.
+- Garantias: RBAC `emergency.read/write/test/activate` fail-closed, sessão individual, same-origin, Idempotency-Key/fingerprint SHA-256, advisory lock + `FOR UPDATE`, replay/conflito e concorrência, auditoria transacional com rollback/503, eventos e testes append-only.
+- Evidência: Wave0 5/5; unitários focais 11/11; `npm run test:ext15-emergency:pg` 18/18 em PG17 descartável + HTTP + sessões reais; `npm test` 610/610; typecheck; migrações 167/167; build 101 páginas; `git diff --check` e `node --check`.
+- Limite honesto: teste é declaração interna auditada, não prova de recebimento/atendimento externo. O sistema não envia telefonema, WhatsApp, mensagem ou alerta, não opera central 24h e não integra fornecedor. Aceite humano, Windows/EPERM e banco de destino seguem pendentes.
+
 ## Atualização 2026-10-04 — F08 / EXT-12 Editor visual avançado canônico
 
 **Base:** PR #136 integrada em `e03c59141e614fbea31a9b6d9f05b24766177201`; branch fixa desta sessão `arena/01a108ff-gruposegsystemseguranca`; PRs #126, #127, #129, #132, #133, #134 e #136 não foram recriadas nem remescladas.
@@ -1682,10 +1692,10 @@ Inteligência comercial Aceite: Indicações, reativação e recomendações bas
 
 ## EXT-15
 Apoio emergencial Aceite: Canal, destinatário, disponibilidade e escalonamento definidos
-- Estado: a_revalidar
-- Tela / API / dados / autorização: Handlers `/api/ext/*` para canais/testes emergenciais; tabelas `ext_emergency_*`/087; interface correspondente está nos três componentes EXT órfãos de `/admin/ti`.
-- Integração e evidência (teste, resultado, commit): API e schema existem, mas não há rota que renderize o componente nem gate L08 por requisito; existência de tabela não é prova de jornada.
-- Pendência / fronteira externa / aceite humano: Permanece `a_revalidar`: faltam autorização por ator externo quando aplicável, auditoria transacional/rollback, idempotência, UI e fronteira simulada explícita. Ver `AUDITORIA-TERRENO-L08.md`.
+- Estado: **pronto_local — gate dedicado 18/18** (registros internos de staff; aceite humano e Windows pendentes)
+- Tela / API / dados / autorização: `/admin/emergencial` protegido por `AdminGate`; `/api/ext/emergency/channels`, detalhe, `/transition` e `/tests`; tabelas `ext_emergency_channels`, `ext_emergency_tests` e `ext_emergency_events`; grants `emergency.read/write/test/activate` consultados no servidor.
+- Integração e evidência: migração aditiva 167; unitário focal 11/11; `npm run test:ext15-emergency:pg` 18/18 em PostgreSQL 17 descartável, HTTP real e sessões staff reais. Cobre RBAC, same-origin, replay/conflito, concorrência, locks, ativação bloqueada até testes separados de recebimento e atendimento, auditoria/rollback/503, imutabilidade e legado 410. `npm test` 610/610; migrações 167/167; build 101 páginas.
+- Pendência / fronteira externa / aceite humano: os testes são registros internos declarados e auditados — não comprovam recebimento ou atendimento externo. Não há telefonema, WhatsApp, mensagem, alerta, central 24h ou fornecedor externo. Permanecem aceite humano, Windows/EPERM e banco de destino.
 
 ## EXT-16
 Central/vídeo Aceite: Projeto separado para eventos de monitoramento, vídeo e disponibilidade

@@ -1,3 +1,13 @@
+## Atualização corrente — EXT-15 / F11 Apoio emergencial canônico
+
+- Base confirmada: PR #139 `MERGED` em `53492d681bfffd5bc8aaa85bf51de6d1dad10a5b`; `origin/main` e a branch fixa `arena/01a10969-gruposegsystemseguranca` iniciaram nesse SHA, com checkout limpo. PRs #126, #127, #129, #132, #133, #134, #136, #137, #138 e #139 permanecem integradas e intocadas.
+- Fatia escolhida: EXT-15, sem contar tabelas ou handlers legados da migração 087 como cobertura. Migração aditiva `167-ext15-emergency-canonical-journey.sql`; 001–166 imutáveis; próxima livre: **168**.
+- Entregue: configuração de canal com destinatário, contato, disponibilidade, finalidade e escalonamento declarados; ciclo `rascunho → em_teste → testado → ativo`; registros internos separados de teste de recebimento e atendimento, ambos explicitamente bem-sucedidos antes da ativação humana.
+- API/UI: `/api/ext/emergency/channels`, detalhe, `/:id/transition` e `/:id/tests`; escritas legadas `/api/ext/emergency-channels` e `/api/ext/emergency-tests` retornam 410 após guardas; `/admin/emergencial` protegido por `AdminGate`.
+- Garantias: RBAC `emergency.read/write/test/activate` fail-closed, sessão individual, same-origin, Idempotency-Key/fingerprint SHA-256, advisory lock + `FOR UPDATE`, replay/conflito e concorrência, auditoria transacional com rollback/503, eventos e testes append-only.
+- Evidência: Wave0 5/5; unitários focais 11/11; `npm run test:ext15-emergency:pg` 18/18 em PG17 descartável + HTTP + sessões reais; `npm test` 610/610; typecheck; migrações 167/167; build 101 páginas; `git diff --check` e `node --check`.
+- Limite honesto: teste é declaração interna auditada, não prova de recebimento/atendimento externo. O sistema não envia telefonema, WhatsApp, mensagem ou alerta, não opera central 24h e não integra fornecedor. Aceite humano, Windows/EPERM e banco de destino seguem pendentes.
+
 # Continuidade Arena — 2026-10-04 (F10 / EXT-14 — inteligência comercial canônica)
 
 ## Incremento 15 — EXT-14 / F10 sugestão explicada, evidência contada e contato aprovado por humano
