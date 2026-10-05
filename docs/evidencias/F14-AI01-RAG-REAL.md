@@ -27,7 +27,7 @@ npm ci
 npm run test:ai01:pg
 ```
 
-O gate recusa `DATABASE_URL`, cria PostgreSQL 17 descartável, aplica 001–172, inicia HTTP real e exige o endpoint Ollama real. Ele cria e publica corpus sintético pela API canônica e verifica:
+O gate recusa `DATABASE_URL`, cria PostgreSQL 17 descartável em UTF-8, aplica 001–172, executa o build de produção, inicia HTTP real e exige o endpoint Ollama real. Ele cria e publica corpus sintético pela API canônica e verifica:
 
 - modelo e tokens retornados pelo Ollama;
 - fontes recuperadas na resposta;
