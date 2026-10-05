@@ -1,3 +1,16 @@
+## Atualização corrente — F15 Recuperação de acesso sem SMTP
+
+**Base:** merge `4f297bdfaddd67d008409715f43a4fb0dce9881b`; branch Arena fixa da sessão.
+
+- [x] Migração 171 aditiva; 001–170 imutáveis; próxima livre: 172.
+- [x] Pedido público com resposta genérica, sem enumeração, sem token ou e-mail em claro no ledger e sem alegar envio.
+- [x] Fila local restrita a TI individual com permissão revogável `client_recovery.manage`.
+- [x] Autorização exige método e justificativa de 30–500 caracteres; gera link de uso único por 15 minutos, exibido uma única vez para entrega manual em canal restrito.
+- [x] Novo token substitui tokens anteriores; revogação invalida o token; redefinição consome a solicitação e revoga sessões existentes atomicamente.
+- [x] UI cliente e seção operacional em `/admin/clientes`; nenhuma integração SMTP ou prova fictícia de posse da caixa postal.
+- [x] Wave0 5/5 (001–171), unitários 647/647, typecheck, build 103 páginas e migrações 171/171 x2 em PostgreSQL 17 descartável.
+- [ ] Aceite humano, Windows/EPERM e banco de destino.
+
 ## Atualização corrente — F15 / EXT-07 Planos de Ação de Compliance (Opção 1)
 
 **Base:** `b26f93cb1262777827a46edc823e8fccd1c1e70e`; branch fixa `arena/01a109c0-gruposegsystemseguranca`.

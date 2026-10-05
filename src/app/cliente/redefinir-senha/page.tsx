@@ -25,7 +25,7 @@ function RequestForm() {
     event.preventDefault();
     setBusy(true);
     try {
-      await fetch("/api/auth/recover", {
+      await fetch("/api/auth/recovery/manual", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -47,8 +47,8 @@ function RequestForm() {
         <>
           <p className={`${styles.message} ${styles.messageInfo}`} role="status">
             <span>
-              Se existir uma conta com este e-mail, enviaremos um link de redefinição válido por
-              1 hora. Por segurança, não confirmamos se o endereço tem conta.
+              Se existir uma conta elegível, a equipe de TI poderá validar o pedido por um canal conhecido.
+              Nenhum e-mail foi enviado e, por segurança, não confirmamos se o endereço tem conta.
             </span>
           </p>
           <div className={styles.actions}>
@@ -59,7 +59,7 @@ function RequestForm() {
         </>
       ) : (
         <>
-          <p className={styles.lead}>Informe o e-mail da sua conta para receber o link de redefinição.</p>
+          <p className={styles.lead}>Informe o e-mail da conta para abrir uma solicitação de validação manual. Este ambiente não usa SMTP.</p>
           <form className={styles.form} onSubmit={submit}>
             <div className={styles.field}>
               <label htmlFor="email">E-mail</label>
@@ -74,7 +74,7 @@ function RequestForm() {
               />
             </div>
             <button className={styles.submit} type="submit" disabled={busy}>
-              {busy ? "Enviando…" : "Enviar link de redefinição"}
+              {busy ? "Registrando…" : "Solicitar validação manual"}
             </button>
             <Link href="/cliente/entrar" className={styles.secondaryLink}>
               Voltar para a entrada

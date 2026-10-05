@@ -180,13 +180,14 @@ const files = [
   '167-ext15-emergency-canonical-journey.sql',
   '168-ext07-compliance-action-plans.sql',
   '169-ext10-continuity-client-portal.sql',
-  '170-ops-internal-pendency-notifications.sql'
+  '170-ops-internal-pendency-notifications.sql',
+  '171-client-offline-access-recovery.sql'
 ];
 
 async function main() {
   const actual = (await readdir(dir)).filter(f => /^\d{3}-.*\.sql$/.test(f)).sort();
-  if (files.length !== 170 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
-    throw new Error('migration_manifest_mismatch: compare 001–170 with db/migrations before connecting');
+  if (files.length !== 171 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
+    throw new Error('migration_manifest_mismatch: compare 001–171 with db/migrations before connecting');
   }
   const urlText = process.env.DATABASE_MIGRATION_URL || process.env.DATABASE_URL;
   if (!urlText) throw new Error('DATABASE_MIGRATION_URL or DATABASE_URL is required');
@@ -234,7 +235,7 @@ async function main() {
         throw error;
       }
     }
-    console.log('Migration ledger verified: 001–170 (PostgreSQL only)');
+    console.log('Migration ledger verified: 001–171 (PostgreSQL only)');
   } finally {
     client?.release();
     await pool.end();
