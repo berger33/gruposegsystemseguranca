@@ -44,10 +44,19 @@ async function waitForServer() {
 }
 
 async function startApp(enabled = true) {
+  // No Windows, nomes de variáveis são case-insensitive, mas o objeto JS pode
+  // herdar duplicatas com capitalização diferente. Remova-as antes de definir
+  // o bootstrap sintético, para o processo filho receber exatamente uma chave.
+  const childEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) => ![
+    'SITE_ADMIN_TOKEN_TI', 'SITE_ADMIN_LEGACY_TOKENS', 'OLLAMA_ENABLED', 'OLLAMA_HOST', 'OLLAMA_MODEL',
+  ].includes(key.toUpperCase())));
+  Object.assign(childEnv, {
+    PORT: new URL(baseUrl).port, BIND_HOST: '127.0.0.1', DATABASE_MIGRATION_URL: '',
+    OLLAMA_ENABLED: enabled ? 'true' : 'false', OLLAMA_HOST: proxyUrl, OLLAMA_MODEL: model,
+    SITE_ADMIN_TOKEN_TI: String(token), SITE_ADMIN_LEGACY_TOKENS: 'true', MAIL_HOST: '', NEXT_TELEMETRY_DISABLED: '1',
+  });
   app = spawn(process.execPath, ['server.mjs'], {
-    env: { ...process.env, PORT: new URL(baseUrl).port, BIND_HOST: '127.0.0.1', DATABASE_MIGRATION_URL: '',
-      OLLAMA_ENABLED: enabled ? 'true' : 'false', OLLAMA_HOST: proxyUrl, OLLAMA_MODEL: model,
-      SITE_ADMIN_TOKEN_TI: token, SITE_ADMIN_LEGACY_TOKENS: 'true', MAIL_HOST: '', NEXT_TELEMETRY_DISABLED: '1' },
+    env: childEnv,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   app.stdout.on('data', chunk => { logs += chunk; });
