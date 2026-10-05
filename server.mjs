@@ -1010,9 +1010,12 @@ async function handleAdminSession(req, res) {
   // Não habilita token alternativo em produção: exige flag focal, bind loopback
   // e PostgreSQL loopback. O valor continua chegando apenas por ambiente e
   // nunca é escrito em log ou no repositório.
-  const ai01GateToken = process.env.RUN_AI01_REAL === "1"
-    && hostname === "127.0.0.1"
-    && /^postgres(?:ql)?:\/\/[^@/]+@127\.0\.0\.1:\d+\//.test(String(process.env.DATABASE_URL || ""))
+  let ai01GateDatabaseIsLoopback = false;
+  try {
+    const gateDatabaseUrl = new URL(String(process.env.DATABASE_URL || ""));
+    ai01GateDatabaseIsLoopback = ["127.0.0.1", "localhost"].includes(gateDatabaseUrl.hostname);
+  } catch {}
+  const ai01GateToken = process.env.RUN_AI01_REAL === "1" && ai01GateDatabaseIsLoopback
     ? process.env.AI01_ADMIN_TOKEN
     : undefined;
   const credentials = [
