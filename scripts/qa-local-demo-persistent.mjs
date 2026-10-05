@@ -52,11 +52,12 @@ function exitOf(proc) {
   if (proc.exitCode !== null) return Promise.resolve(proc.exitCode);
   return new Promise((resolve, reject) => { proc.once('error', reject); proc.once('exit', code => resolve(code ?? 1)); });
 }
-async function ready(proc) {
+async function ready(proc, { credentials = false } = {}) {
   const deadline = Date.now() + 120_000;
   while (Date.now() < deadline) {
     if (proc.exitCode !== null) throw new Error('demo_exited_before_ready');
-    if (logs.join('').includes('DEMO_LOCAL_READY:')) return;
+    const output = logs.join('');
+    if (output.includes('DEMO_LOCAL_READY:') && (!credentials || /TI: (\S+) \/ (\S+)/.test(output))) return;
     await new Promise(resolve => setTimeout(resolve, 200));
   }
   throw new Error('demo_ready_timeout');
@@ -79,10 +80,13 @@ async function stop() {
   if (code !== 0) throw new Error(`demo_shutdown_exit_${code}`);
 }
 try {
-  child = spawnDemo('--init'); await ready(child);
+  child = spawnDemo('--init'); await ready(child, { credentials:true });
   const firstLog = logs.join('');
   const ti = firstLog.match(/TI: (\S+) \/ (\S+)/);
-  if (!ti || !firstLog.includes('DEMO_LOCAL_READY')) throw new Error('demo_no_initial_credential_or_url');
+  if (!ti || !firstLog.includes('DEMO_LOCAL_READY')) {
+    const diagnostic = firstLog.split('\n').filter(line => /^(Migration failed:|DEMO_ERROR:|DEMO_LOCAL_FAILED:)/.test(line)).map(line => line.slice(0, 160)).slice(-3);
+    throw new Error(`demo_no_initial_credential_or_url (${diagnostic.join(' | ') || 'no safe diagnostic'})`);
+  }
   const cfg = JSON.parse(await readFile(path.join(dir,'config.json'),'utf8'));
   if (process.platform !== 'win32' && ((await stat(path.join(dir,'config.json'))).mode & 0o077)) {
     throw new Error('demo_config_group_or_world_readable');

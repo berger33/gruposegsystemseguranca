@@ -183,13 +183,14 @@ const files = [
   '170-ops-internal-pendency-notifications.sql',
   '171-client-offline-access-recovery.sql',
   '172-ext05-quality-client-account-scope.sql',
-  '173-ai-rag-client-account-scope.sql'
+  '173-ai-rag-client-account-scope.sql',
+  '174-auth-permissions-id-default.sql'
 ];
 
 async function main() {
   const actual = (await readdir(dir)).filter(f => /^\d{3}-.*\.sql$/.test(f)).sort();
-  if (files.length !== 173 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
-    throw new Error('migration_manifest_mismatch: compare 001–173 with db/migrations before connecting');
+  if (files.length !== 174 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
+    throw new Error('migration_manifest_mismatch: compare 001–174 with db/migrations before connecting');
   }
   const urlText = process.env.DATABASE_MIGRATION_URL || process.env.DATABASE_URL;
   if (!urlText) throw new Error('DATABASE_MIGRATION_URL or DATABASE_URL is required');
@@ -224,6 +225,12 @@ async function main() {
           console.log(`Already applied: ${filename}`);
           continue;
         }
+        // 010 não definiu DEFAULT no id. Em bancos com staff ativo, 160 tenta
+        // inserir grants antes da correção formal 174. O ajuste fica na mesma
+        // transação da 160 e só ocorre quando ela ainda não foi aplicada.
+        if (filename === '160-ext08-knowledge-canonical-journey.sql') {
+          await client.query('ALTER TABLE auth_permissions ALTER COLUMN id SET DEFAULT gen_random_uuid()');
+        }
         await client.query(sql);
         await client.query('INSERT INTO __migrations (filename, checksum) VALUES ($1,$2)', [filename, checksum]);
         await client.query('COMMIT');
@@ -237,7 +244,7 @@ async function main() {
         throw error;
       }
     }
-    console.log('Migration ledger verified: 001–173 (PostgreSQL only)');
+    console.log('Migration ledger verified: 001–174 (PostgreSQL only)');
   } finally {
     client?.release();
     await pool.end();
