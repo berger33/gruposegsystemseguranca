@@ -156,17 +156,23 @@ async function exerciseInterfaces({ staffCookie }) {
     async function openAdmin() {
       await page.setViewportSize({ width: 1440, height: 1000 });
       await page.goto(`${baseUrl}/admin/funcionarios`, { waitUntil: 'domcontentloaded' });
-      await page.getByRole('heading', { name: 'Pessoas & jornada do funcionário' }).waitFor();
+      await page.getByRole('heading', { name: 'Pessoas e jornada do funcionário' }).waitFor();
       await page.waitForTimeout(800); // cabeçalho é SSR; aguarda hidratação
     }
+    // UX-04 transformou as frentes do RH num tablist de verdade: os destinos
+    // deixaram de ser `button` e passaram a ser `tab`. O rótulo visível também
+    // mudou ("&" virou "e", e os códigos HR-xx saíram do título). Este gate
+    // acompanha a cópia nova sem abrir mão de nenhuma asserção de negócio.
+    // O título do painel ativo é sempre um h3; o h2 de mesmo texto existe só
+    // para leitor de tela (nomeia o tabpanel) e não é visível.
     async function adminTab(name, heading) {
-      await page.getByRole('button', { name, exact: true }).click();
-      await page.getByRole('heading', { name: heading }).waitFor();
+      await page.getByRole('tab', { name, exact: true }).click();
+      await page.getByRole('heading', { name: heading, level: 3 }).waitFor();
     }
 
     // Jornada RH realmente acionada pela interface: cadastro + admissão + acesso.
     await openAdmin();
-    await adminTab('Admissão & acesso', 'Novo cadastro profissional');
+    await adminTab('Admissão e acesso', 'Novo cadastro profissional');
     const suffix = randomUUID().slice(0, 8);
     const matricula = `UI-L03-${suffix}`;
     const employeeName = `Funcionário Interface ${suffix}`;
@@ -179,7 +185,7 @@ async function exerciseInterfaces({ staffCookie }) {
     await admissionForm.locator('[name="empregador"]').fill('Empresa sintética local');
     await admissionForm.locator('[name="admission_date"]').fill('2026-10-01');
     const admissionCreated = page.waitForResponse(r => new URL(r.url()).pathname === '/api/hr/admissions' && r.request().method() === 'POST' && r.status() === 201);
-    await admissionForm.getByRole('button', { name: 'Criar cadastro separado do login' }).click();
+    await admissionForm.getByRole('button', { name: 'Criar cadastro e abrir admissão' }).click();
     await admissionCreated;
     const { rows: uiEmployees } = await pool.query('SELECT id FROM hr_employees WHERE matricula=$1', [matricula]);
     assert.equal(uiEmployees.length, 1, 'a admissão feita na tela deve persistir um cadastro profissional');
@@ -191,7 +197,7 @@ async function exerciseInterfaces({ staffCookie }) {
     const accessCreated = page.waitForResponse(r => new URL(r.url()).pathname.endsWith(`/employees/${uiEmployeeId}/access`) && r.status() === 201);
     await accessForm.getByRole('button', { name: 'Gerar credencial temporária' }).click();
     await accessCreated;
-    await page.getByText('Credencial temporária — exibição única').waitFor();
+    await page.getByText('Credencial temporária — exibida uma única vez').waitFor();
     const temporaryPassword = (await page.locator('code').innerText()).trim();
     assert.ok(temporaryPassword.length >= 12);
 
@@ -238,7 +244,7 @@ async function exerciseInterfaces({ staffCookie }) {
     expectingMissingEmployee = false;
 
     // Documento enviado pelo titular.
-    await page.getByRole('button', { name: /Docs$/ }).click();
+    await page.getByRole('tab', { name: /Docs$/ }).click();
     const documentTitle = `Documento interface ${suffix}`;
     const uploadForm = page.getByRole('heading', { name: 'Enviar documento' }).locator('..').locator('form');
     await uploadForm.locator('[name="title"]').fill(documentTitle);
@@ -250,7 +256,7 @@ async function exerciseInterfaces({ staffCookie }) {
 
     // Revisão acontece na tela RH, não por chamada auxiliar do teste.
     await openAdmin();
-    await adminTab('Documentos', 'Envios privados aguardando revisão');
+    await adminTab('Documentos', /^Documentos privados/);
     const documentRow = page.locator('tr').filter({ hasText: documentTitle });
     await documentRow.waitFor();
     const documentReviewed = page.waitForResponse(r => new URL(r.url()).pathname === '/api/admin/hr/l03/documents' && r.request().method() === 'PATCH' && r.status() === 200);
@@ -261,7 +267,7 @@ async function exerciseInterfaces({ staffCookie }) {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`${baseUrl}/funcionario`, { waitUntil: 'domcontentloaded' });
     await page.getByText(new RegExp(`Olá, ${employeeName.split(' ')[0]}`)).waitFor();
-    await page.getByRole('button', { name: /Jornada$/ }).click();
+    await page.getByRole('tab', { name: /Jornada$/ }).click();
     const scheduleAck = page.waitForResponse(r => /\/api\/employee\/schedule\/.+\/ack$/.test(new URL(r.url()).pathname) && r.status() === 200);
     await page.getByRole('button', { name: 'Dar ciência' }).click();
     await scheduleAck;
@@ -272,7 +278,7 @@ async function exerciseInterfaces({ staffCookie }) {
     const correctionCreated = page.waitForResponse(r => new URL(r.url()).pathname === '/api/employee/actions/time-correction' && r.status() === 201);
     await page.getByRole('button', { name: 'Enviar correção' }).click();
     await correctionCreated;
-    await page.getByRole('button', { name: /Pedidos$/ }).click();
+    await page.getByRole('tab', { name: /Pedidos$/ }).click();
     const absenceForm = page.getByRole('heading', { name: 'Novo registro' }).locator('..').locator('form');
     await absenceForm.locator('[name="shiftDate"]').fill('2026-10-20');
     await absenceForm.locator('[name="reasonCode"]').selectOption('transporte');
@@ -281,7 +287,7 @@ async function exerciseInterfaces({ staffCookie }) {
     await absenceForm.getByRole('button', { name: 'Enviar' }).click();
     await absenceCreated;
 
-    await page.getByRole('button', { name: /Mais$/ }).click();
+    await page.getByRole('tab', { name: /Mais$/ }).click();
     await page.getByRole('heading', { name: 'Uniforme, EPI e equipamento' }).waitFor();
     await page.getByRole('heading', { name: 'FAQ interno' }).waitFor();
     const procedureAck = page.getByRole('button', { name: 'Confirmar ciência' }).first();
@@ -303,13 +309,13 @@ async function exerciseInterfaces({ staffCookie }) {
 
     // Fechamento demonstrativo e holerite publicados pela interface RH.
     await openAdmin();
-    await adminTab('Fechamento & holerite', 'Fechar período demonstrativo');
+    await adminTab('Fechamento e holerite', 'Fechar período demonstrativo');
     const closureForm = page.getByRole('heading', { name: 'Fechar período demonstrativo' }).locator('..').locator('form');
     await closureForm.locator('[name="competence"]').fill('2026-10');
     const closureCreated = page.waitForResponse(r => new URL(r.url()).pathname === '/api/hr/dp-closures' && r.status() === 201);
     await closureForm.getByRole('button', { name: 'Validar divergências e fechar' }).click();
     await closureCreated;
-    const payrollForm = page.getByRole('heading', { name: 'Publicar holerite próprio' }).locator('..').locator('form');
+    const payrollForm = page.getByRole('heading', { name: 'Publicar holerite', exact: true }).locator('..').locator('form');
     await payrollForm.locator('[name="employeeId"]').selectOption(uiEmployeeId);
     await payrollForm.locator('[name="competence"]').fill('2026-10');
     await payrollForm.locator('[name="file"]').setInputFiles({ name: 'holerite-interface.txt', mimeType: 'text/plain', buffer: Buffer.from(`holerite privado ${suffix}`) });
@@ -319,7 +325,7 @@ async function exerciseInterfaces({ staffCookie }) {
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`${baseUrl}/funcionario`, { waitUntil: 'domcontentloaded' });
-    await page.getByRole('button', { name: /Docs$/ }).click();
+    await page.getByRole('tab', { name: /Docs$/ }).click();
     const payslipCard = page.locator('article').filter({ hasText: 'Holerite 2026-10' });
     await payslipCard.waitFor();
     const download = page.waitForEvent('download');
@@ -328,32 +334,43 @@ async function exerciseInterfaces({ staffCookie }) {
 
     // Todos os grupos HR-01..24 permanecem navegáveis e carregam suas APIs.
     await openAdmin();
-    await adminTab('Processos HR-01..24', 'Processos completos do RH');
+    await adminTab('Demais processos de RH', 'Demais processos de RH');
+    // O código HR-xx saiu do rótulo visível e virou texto só para leitor de
+    // tela; o destino continua sendo o mesmo componente legado, e cada um
+    // precisa continuar carregando a sua própria API.
     const processGroups = [
-      ['HR-01, 02 e 05 Cadastro, histórico e admissão', /HR-01 Cadastro profissional/],
-      ['HR-03, 04 e 06 Recrutamento, talentos e dossiê', /HR-03 Recrutamento/],
-      ['HR-07 a 09 Desligamento, status e férias', /HR-07 Desligamento/],
-      ['HR-10 a 12 Afastamento, ponto e banco de horas', /HR-10 Afastamentos/],
-      ['HR-13 a 16 Benefícios, reembolsos, saúde e exportação', /HR-13 Benefícios/],
-      ['HR-17 a 20 Treinamento, competências, uniformes e DP', /HR-17 Treinamento/],
-      ['HR-21 a 24 Folha, avaliações, atendimento e indicadores', /HR-21\.\.24 holerites/],
+      [/^Cadastro, histórico e admissão/, /HR-01 Cadastro profissional/],
+      [/^Recrutamento, talentos e dossiê/, /HR-03 Recrutamento/],
+      [/^Desligamento, situação e férias/, /HR-07 Desligamento/],
+      [/^Afastamento, ponto e banco de horas/, /HR-10 Afastamentos/],
+      [/^Benefícios, reembolsos e saúde/, /HR-13 Benefícios/],
+      [/^Treinamento, competências e uniformes/, /HR-17 Treinamento/],
+      [/^Folha, avaliações e indicadores/, /HR-21\.\.24 holerites/],
     ];
-    for (const [buttonName, heading] of processGroups) {
-      await page.getByRole('button', { name: buttonName, exact: true }).click();
+    for (const [tabName, heading] of processGroups) {
+      await page.getByRole('tab', { name: tabName }).click();
       await page.getByRole('heading', { name: heading }).waitFor();
     }
     await page.waitForTimeout(500);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), true, 'painel RH não deve criar rolagem horizontal');
 
     // Desligamento pela tela encerra a sessão employee já emitida.
-    await adminTab('Desligamento', 'Desligamento com revogação');
-    const terminationForm = page.getByRole('heading', { name: 'Desligamento com revogação' }).locator('..').locator('form');
+    await adminTab('Desligamento', /^Desligamento com revogação/);
+    const terminationForm = page.getByRole('heading', { name: /^Desligamento com revogação/ }).locator('..').locator('form');
     await terminationForm.locator('[name="employeeId"]').selectOption(uiEmployeeId);
     await terminationForm.locator('[name="date"]').fill('2026-10-31');
     await terminationForm.locator('[name="reason"]').fill('Encerramento sintético realizado integralmente pela interface');
-    page.once('dialog', dialog => dialog.accept());
+    // UX-04 trocou o window.confirm por uma confirmação da própria página, com
+    // o resumo do efeito. O desligamento agora é um passo em dois tempos.
+    let nativeDialog = false;
+    page.once('dialog', async dialog => { nativeDialog = true; await dialog.dismiss(); });
+    await terminationForm.getByRole('button', { name: 'Revisar antes de concluir' }).click();
+    const terminationSummary = page.locator('[role="alertdialog"]');
+    await terminationSummary.waitFor();
+    assert.equal(nativeDialog, false, 'a confirmação precisa ser da página, não um window.confirm');
+    assert.match(await terminationSummary.innerText(), /revogar imediatamente/i, 'o resumo precisa declarar a revogação');
     const terminationCompleted = page.waitForResponse(r => new URL(r.url()).pathname === '/api/hr/terminations' && r.request().method() === 'PATCH' && r.status() === 200);
-    await terminationForm.getByRole('button', { name: 'Concluir e revogar acesso' }).click();
+    await terminationSummary.getByRole('button', { name: 'Concluir desligamento e revogar acesso' }).click();
     await terminationCompleted;
     expectingRevokedEmployee = true;
     await page.setViewportSize({ width: 390, height: 844 });

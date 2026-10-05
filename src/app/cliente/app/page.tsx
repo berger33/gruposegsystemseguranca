@@ -3,15 +3,19 @@
 import { useCallback, useEffect, useState } from "react";
 import { CheckCircle2, RotateCw, ShieldCheck } from "lucide-react";
 import { useClientSpace } from "./ClientSpaceProvider";
+import UiState from "../../../components/ui/UiState";
+import { accountStatusLabel, portalErrorFootnote, portalErrorVariant } from "../../../lib/portal-vocabulary.mjs";
 import styles from "../RealAccess.module.css";
 import appStyles from "./ClientApp.module.css";
 
 type AccountStatus = "active" | "suspended" | "closed";
 
-const accountStatusLabel: Record<AccountStatus, { text: string; chip: string }> = {
-  active: { text: "Ativa", chip: appStyles.chipActive },
-  suspended: { text: "Suspensa", chip: appStyles.chipSuspended },
-  closed: { text: "Encerrada", chip: appStyles.chipEnded },
+// O RÓTULO vem do vocabulário compartilhado (um valor desconhecido passa cru);
+// aqui só fica o mapeamento visual do selo.
+const accountStatusChip: Record<AccountStatus, string> = {
+  active: appStyles.chipActive,
+  suspended: appStyles.chipSuspended,
+  closed: appStyles.chipEnded,
 };
 
 type SpaceStats = { contractsTotal: number; contractsActive: number; ticketsOpen: number };
@@ -19,7 +23,7 @@ type SpaceStats = { contractsTotal: number; contractsActive: number; ticketsOpen
 // Visão geral da área real do cliente: identidade confirmada no servidor,
 // vínculos cadastrais e um resumo dos dados protegidos da conta selecionada.
 export default function ClientAppPage() {
-  const { session, accounts, activeAccount, loading, notice, reload } = useClientSpace();
+  const { session, accounts, activeAccount, loading, accountsState, error, reload } = useClientSpace();
   const [stats, setStats] = useState<SpaceStats | null>(null);
   const [statsFailed, setStatsFailed] = useState(false);
 
@@ -63,20 +67,14 @@ export default function ClientAppPage() {
 
   return (
     <>
-      {notice ? (
-        <p className={`${styles.message} ${styles.messageError}`} role="alert">
-          <span>{notice}</span>
-          <button className={appStyles.retryButton} type="button" onClick={() => reload()}>
-            <RotateCw size={13} aria-hidden="true" />
-            Tentar novamente
-          </button>
-        </p>
-      ) : null}
-
+      {/* A falha de leitura dos vínculos é relatada UMA vez, dentro da seção
+          "Suas contas de cliente", junto da frase que impede a confusão entre
+          falha e ausência de vínculo. Repetir o aviso no topo só diluía a
+          mensagem e deixava a versão sem essa ressalva aparecer primeiro. */}
       <section className={appStyles.sectionCard} aria-labelledby="overview-title">
         <span className={styles.badge}>
           <ShieldCheck size={12} aria-hidden="true" />
-          Área logada real · Etapa 2
+          Área do cliente · sessão verificada no servidor
         </span>
         <h2 id="overview-title" className={appStyles.sectionTitle}>
           Olá{session.displayName ? `, ${session.displayName}` : ""}
@@ -117,7 +115,27 @@ export default function ClientAppPage() {
           Cadastros oficiais aos quais sua identidade foi vinculada pela equipe do Grupo SEG System.
           A navegação é por vínculo: nenhum dado é aceito com base no endereço digitado no navegador.
         </p>
-        {accounts.length === 0 ? (
+        {accountsState === "loading" ? (
+          <UiState
+            variant="loading"
+            title="Consultando os seus vínculos"
+            detail="Estamos lendo no servidor quais cadastros de cliente estão ligados à sua identidade."
+          />
+        ) : accountsState === "error" ? (
+          // A frase "ainda não vinculada" é uma afirmação de negócio e só pode
+          // ser dita depois de uma leitura BEM-SUCEDIDA que devolveu zero.
+          <UiState
+            variant={error ? portalErrorVariant(error) : "error"}
+            title={error?.title ?? "Não foi possível consultar os seus vínculos"}
+            detail={
+              (error?.detail ?? "A leitura falhou.") +
+              " Isto NÃO significa que você esteja sem vínculo: nada foi lido."
+            }
+            onRetry={() => reload()}
+          >
+            <p className={appStyles.sectionHint}>{portalErrorFootnote(error)}</p>
+          </UiState>
+        ) : accounts.length === 0 ? (
           <div className={styles.note}>
             Sua identidade foi criada com sucesso, mas ainda não está vinculada a um cadastro de
             cliente. A equipe fará a verificação cadastral e você verá seus contratos, documentos e
@@ -126,7 +144,7 @@ export default function ClientAppPage() {
         ) : (
           <ul className={appStyles.list}>
             {accounts.map(account => {
-              const status = accountStatusLabel[account.status];
+              const chip = accountStatusChip[account.status] ?? "";
               return (
                 <li key={account.id} className={appStyles.listItem}>
                   <div className={appStyles.listItemMain}>
@@ -135,7 +153,10 @@ export default function ClientAppPage() {
                       Vínculo desde {new Date(account.linked_at).toLocaleDateString("pt-BR")}
                     </p>
                   </div>
-                  <span className={`${appStyles.chip} ${status.chip}`}>{status.text}</span>
+                  <span className={`${appStyles.chip} ${chip}`}>
+                    <span className={appStyles.srOnly}>Situação: </span>
+                    {accountStatusLabel(account.status)}
+                  </span>
                 </li>
               );
             })}
@@ -151,7 +172,8 @@ export default function ClientAppPage() {
           {activeAccount.status !== "active" ? (
             <div className={appStyles.suspendedNote}>
               Este cadastro está {activeAccount.status === "suspended" ? "suspenso" : "encerrado"}, então os dados
-              protegidos não são exibidos por enquanto. Fale com a equipe para regularizar a situação.
+              protegidos não são exibidos por enquanto. Isto é uma regra de acesso, não uma falha de leitura.
+              Fale com a equipe para regularizar a situação.
             </div>
           ) : statsFailed ? (
             <div className={appStyles.emptyState}>
