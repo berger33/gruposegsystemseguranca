@@ -1,3 +1,7 @@
+## Referência atual para UX — 05/10/2026
+
+No início da iniciativa UX, `main`/`origin/main` estava em `84b3532eb110ed50ddbf743626f40b9b5d92fb48`, com migrações 001–174 e RAG local por área documentado em [`AI-RAG-LOCAL-2026-10-05.md`](AI-RAG-LOCAL-2026-10-05.md). A preparação operacional local foi verificada no computador do operador; isso não constitui aceite humano ou hospedagem pública. O plano de interface está em [`UX-PLANO-MESTRE-2026-10-05.md`](UX-PLANO-MESTRE-2026-10-05.md) e o prompt do Arena em [`ARENA-PROMPT-UX-ETAPAS-2026-10-05.md`](ARENA-PROMPT-UX-ETAPAS-2026-10-05.md). O estado da main pode avançar: reconcilie SHA e ledger antes de cada etapa. Todos os blocos “Atualização corrente” abaixo registram o contexto histórico da respectiva entrega, não o estado atual.
+
 ## Atualização corrente — F15 / EXT-07 Planos de Ação Corretivos e Preventivos de Compliance (Opção 1)
 
 - **Base:** `origin/main` confirmado em `b26f93cb1262777827a46edc823e8fccd1c1e70e`. Branch fixa: `arena/01a109c0-gruposegsystemseguranca`.
