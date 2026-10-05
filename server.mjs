@@ -24,6 +24,7 @@ import { dispatchGuarded, guardedRequestHandler, installProcessSafetyNet, DISPAT
 import { createLocalOutbox, LOCAL_OUTBOX_LABEL, resolveDeliveryTarget } from "./src/server/local-outbox.mjs";
 import { createClientAccessApi } from "./src/server/client-access-api.mjs";
 import { createClientOfflineRecoveryApi } from "./src/server/client-offline-recovery-api.mjs";
+import { createAiRagRealApi } from "./src/server/ai-rag-real-api.mjs";
 import { createClientSpaceApi } from "./src/server/client-space-api.mjs";
 import { createClientSecurityApi } from "./src/server/client-security-api.mjs";
 import { createAdminRbacApi } from "./src/server/admin-rbac-api.mjs";
@@ -2597,6 +2598,11 @@ const aiRagApi = createAiRagApi({
   },
 });
 
+const aiRagRealApi = createAiRagRealApi({
+  pool: getPool(), sameOrigin, readStaffSession: readSession,
+  readClientSession: clientAccessApi.readClientSession,
+});
+
 const reportApi = createReportApi({
   json,
   readJson,
@@ -4597,7 +4603,12 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/faq-assisted-handoff" || url.pathname === "/api/pub/handoff-requests" || url.pathname === "/api/admin/faq-handoff" || url.pathname === "/api/admin/human-handoff") {
     return pubFaqAssistedApi.handleHandoff(req, res);
   }
-  // AI RAG 3 separados cliente/RH/Marcelo Ollama Qwen3 1.7B fila + bot modes sem_ia/com_ia/whatsapp + feedback + custo/token
+  if (url.pathname === "/api/ai/answer") return aiRagRealApi.ask(req, res);
+  // Os endpoints beta públicos antigos não podem mais apresentar fallback como IA.
+  if (req.method === "POST" && ["/api/ai/rag", "/api/public/ai/rag", "/api/ai/rag/queries", "/api/admin/ai-rag-queries", "/api/ai/bot", "/api/public/ai/bot", "/api/bot", "/api/admin/ai-bot-sessions"].includes(url.pathname)) {
+    return json(res, 410, { error: "legacy_ai_retired", canonical: "/api/ai/answer" });
+  }
+  // APIs administrativas legadas de curadoria permanecem acessíveis ao staff autorizado.
   if (url.pathname === "/api/admin/ai-rag-indexes" || url.pathname === "/api/ai-rag-indexes" || url.pathname === "/api/ai/rag-indexes") {
     return aiRagApi.handleIndexes(req, res);
   }
@@ -6149,6 +6160,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/pub/handoff-requests"
   || pathname === "/api/admin/faq-handoff"
   || pathname === "/api/admin/human-handoff"
+  || pathname === "/api/ai/answer"
   || pathname === "/api/admin/ai-rag-indexes"
   || pathname === "/api/ai-rag-indexes"
   || pathname === "/api/ai/rag-indexes"

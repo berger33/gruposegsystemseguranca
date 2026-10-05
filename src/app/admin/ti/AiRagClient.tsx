@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 
 type RagIndex = { id: string; rag_key: string; name: string; description: string; scope: string; model_name: string; ollama_host: string; max_queue_size: number; is_active: boolean; is_approved: boolean; is_published: boolean; status: string; version: number };
-type RagDoc = { id: string; rag_key: string; title: string; content: string; source: string; source_type: string; keywords: string[]; is_approved: boolean; is_published: boolean; status: string };
+type RagDoc = { id: string; rag_key: string; client_account_id?: string|null; title: string; content: string; source: string; source_type: string; keywords: string[]; is_approved: boolean; is_published: boolean; status: string };
 type BotConfig = { id: string; active_mode: string; whatsapp_number: string; whatsapp_message_template: string; is_dev_mode: boolean; is_beta_mode: boolean; default_rag_key: string; ollama_host: string; model_name: string; max_queue_size: number; queue_timeout_ms: number };
 type BotMode = { mode_key: string; name: string; description: string; is_active: boolean };
 type BotSession = { id: string; protocol: string; rag_key: string; mode: string; query: string; response: string; status: string; queue_position: number; is_whatsapp_redirect: boolean; created_at: string };
@@ -10,26 +10,29 @@ type RagQuery = { id: string; protocol: string; rag_key: string; query: string; 
 
 export default function AiRagClient(){
   const [indexes, setIndexes] = useState<RagIndex[]>([]);
+  const [staffRole, setStaffRole] = useState("");
   const [docs, setDocs] = useState<RagDoc[]>([]);
   const [botConfig, setBotConfig] = useState<BotConfig|null>(null);
   const [modes, setModes] = useState<BotMode[]>([]);
   const [sessions, setSessions] = useState<BotSession[]>([]);
   const [queries, setQueries] = useState<RagQuery[]>([]);
-  const [docForm, setDocForm] = useState({ rag_key:"cliente", title:"", content:"", source:"manual cliente", source_type:"manual", keywords:"" });
+  const [docForm, setDocForm] = useState({ rag_key:"cliente", client_account_id:"", title:"", content:"", source:"manual cliente", source_type:"manual", keywords:"" });
   const [configForm, setConfigForm] = useState({ active_mode:"com_ia", whatsapp_number:"551134372217", whatsapp_message_template:"Olá, vim do site Grupo SEG System. Protocolo {protocol}. Pergunta: {query}. Gostaria de atendimento humano.", default_rag_key:"publico", reason:"Alteração modo bot desenvolvedor para beta com IA" });
   const [msg, setMsg] = useState("");
   const [testQuery, setTestQuery] = useState({ rag_key:"publico", query:"Quais serviços vocês oferecem?" });
 
   async function load(){
     try{
-      const [iRes, dRes, cfgRes, sRes, qRes] = await Promise.all([
+      const [iRes, dRes, cfgRes, sRes, qRes, sessionRes] = await Promise.all([
         fetch("/api/admin/ai-rag-indexes").then(r=>r.json()),
         fetch("/api/admin/ai-rag-documents").then(r=>r.json()),
         fetch("/api/admin/ai-bot-config").then(r=>r.json()),
         fetch("/api/admin/ai-bot-sessions").then(r=>r.json()),
         fetch("/api/admin/ai-rag-queries").then(r=>r.json()),
+        fetch("/api/admin/session").then(r=>r.json()),
       ]);
       setIndexes(iRes.items||[]);
+      setStaffRole(sessionRes.role||"");
       setDocs(dRes.items||[]);
       setBotConfig(cfgRes.config||null);
       setModes(cfgRes.modes||[]);
@@ -52,10 +55,23 @@ export default function AiRagClient(){
       const res = await fetch("/api/admin/ai-rag-documents", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) });
       const data = await res.json();
       if(!res.ok) throw new Error(data.error||"falha");
-      setMsg(`doc ${data.title} criado RAG ${data.rag_key} chunks gerados embedding concluido`);
-      setDocForm({ rag_key:"cliente", title:"", content:"", source:"manual cliente", source_type:"manual", keywords:"" });
+      setMsg(`Documento ${data.title} criado em rascunho. Revise e publique antes de consultar.`);
+      setDocForm({ rag_key:"cliente", client_account_id:"", title:"", content:"", source:"manual cliente", source_type:"manual", keywords:"" });
       load();
     }catch(err:any){ setMsg(`erro doc: ${err.message}`); }
+  }
+
+  async function ensureIndex(ragKey: string){
+    try{
+      const res=await fetch("/api/admin/ai-rag-indexes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({rag_key:ragKey,scope:ragKey,name:`Base ${ragKey}`,description:`Conteúdo revisado e publicado para consultas da área ${ragKey}.`})});
+      const data=await res.json();if(!res.ok)throw new Error(data.error||"falha");setMsg(`Índice ${ragKey} criado em rascunho.`);load();
+    }catch(err:any){setMsg(`Erro índice: ${err.message}`)}
+  }
+  async function publishIndex(item:RagIndex){
+    try{const res=await fetch("/api/admin/ai-rag-indexes",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:item.id,status:"publicado",is_approved:true,is_published:true,reason:"Revisão e publicação explícita da base"})});const data=await res.json();if(!res.ok)throw new Error(data.error||"falha");setMsg(`Índice ${item.rag_key} publicado.`);load();}catch(err:any){setMsg(`Erro publicação: ${err.message}`)}
+  }
+  async function publishDoc(item:RagDoc){
+    try{const res=await fetch("/api/admin/ai-rag-documents",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:item.id,status:"publicado",is_approved:true,is_published:true})});const data=await res.json();if(!res.ok)throw new Error(data.error||"falha");setMsg(`Documento ${item.title} publicado.`);load();}catch(err:any){setMsg(`Erro publicação: ${err.message}`)}
   }
 
   async function updateConfig(e: React.FormEvent){
@@ -74,11 +90,10 @@ export default function AiRagClient(){
     e.preventDefault();
     setMsg(`testando RAG ${testQuery.rag_key} com Ollama Qwen3 1.7B fila...`);
     try{
-      const endpoint = testQuery.rag_key === "publico" ? "/api/ai/rag" : "/api/admin/ai-rag-queries";
-      const res = await fetch(endpoint, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ rag_key: testQuery.rag_key, query: testQuery.query, origin:"admin_ti", visitor_name:"TI teste" }) });
+      const res = await fetch("/api/ai/answer", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ rag_key: testQuery.rag_key, query: testQuery.query }) });
       const data = await res.json();
       if(!res.ok) throw new Error(data.error||"falha");
-      setMsg(`RAG ${data.rag_key} protocolo ${data.protocol} fila pos ${data.queue_position} wait ${data.queue_wait_ms}ms modelo ${data.model}: ${data.response.slice(0,200)}...`);
+      setMsg(`RAG ${data.rag_key}, Ollama usado: ${String(data.ollama_used)}: ${data.response.slice(0,200)}...`);
       load();
     }catch(err:any){ setMsg(`erro rag test: ${err.message}`); }
   }
@@ -98,8 +113,12 @@ export default function AiRagClient(){
 
   return (
     <section style={{ marginTop:24, padding:16, border:"1px solid #7c3aed", borderRadius:8, background:"#f5f3ff" }}>
-      <h2 style={{ margin:0 }}>AI — configuração e diagnóstico TI (beta, sem homologação de escopos privados)</h2>
-      <p style={{ fontSize:13, opacity:0.8 }}>O assistente público opera em fallback beta. Diagnósticos RH/Marcelo são restritos à sessão TI/admin nesta versão; não comprovam acesso de usuários finais por papel. O assistente cliente está bloqueado até existir vínculo de conta no servidor. Ollama real, fila, aprovação de conteúdo e isolamento multi-tenant ainda exigem homologação.</p>
+      <h2 style={{ margin:0 }}>Bases dos assistentes</h2>
+      <p style={{ fontSize:13, opacity:0.8 }}>Crie o índice de cada área, revise os documentos e publique-os explicitamente. Clientes veem somente documentos vinculados às próprias contas. Testes completos de carga e homologação ainda são necessários.</p>
+
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}>
+        {(["publico","cliente","rh","marcelo"] as const).filter(key=>(staffRole==="admin"||staffRole==="ti"&&["publico","cliente"].includes(key)||staffRole==="rh"&&key==="rh")&&!indexes.some(i=>i.rag_key===key)).map(key=><button key={key} type="button" onClick={()=>ensureIndex(key)} style={{padding:"6px 10px"}}>Criar índice {key}</button>)}
+      </div>
 
       <details style={{ marginTop:12, background:"#fff", padding:12, borderRadius:6 }}>
         <summary style={{ fontWeight:600, cursor:"pointer" }}>RAG Indexes ({indexes.length}) — 3 separados + público</summary>
@@ -115,15 +134,16 @@ export default function AiRagClient(){
                 <td>{i.status}</td>
                 <td>{String(i.is_approved)}</td>
                 <td>{String(i.is_published)}</td>
+                <td>{!i.is_published&&<button type="button" onClick={()=>publishIndex(i)}>Revisar e publicar</button>}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <p style={{ fontSize:11, marginTop:8 }}>Ollama host: {indexes[0]?.ollama_host||"http://localhost:11434"} — modelo Qwen3 1.7B — fila garante atendimento todo mundo em fila</p>
+        <p style={{ fontSize:11, marginTop:8 }}>A rota nova usa o host local configurado em OLLAMA_BASE_URL e atende uma pergunta por vez.</p>
       </details>
 
       <details style={{ marginTop:12, background:"#fff", padding:12, borderRadius:6 }}>
-        <summary style={{ fontWeight:600, cursor:"pointer" }}>Modos bot ({modes.length}) + config atual — modo desenvolvedor altera dinâmica</summary>
+        <summary style={{ fontWeight:600, cursor:"pointer" }}>Configuração histórica do bot beta ({modes.length}) — não controla o RAG atual</summary>
         <ul style={{ fontSize:12 }}>
           {modes.map(m=> <li key={m.mode_key}><strong>{m.mode_key}</strong> — {m.name}: {m.description.slice(0,120)}...</li>)}
         </ul>
@@ -158,10 +178,11 @@ export default function AiRagClient(){
         <strong>Criar documento RAG por área pertinente (cliente/RH/Marcelo/publico)</strong>
         <select value={docForm.rag_key} onChange={e=>setDocForm({...docForm, rag_key:e.target.value})} style={{ padding:6 }}>
           <option value="cliente">cliente — apenas portal cliente, sem RH/saúde/salário</option>
-          <option value="rh">rh — apenas RH, sem dados cliente PII</option>
-          <option value="marcelo">marcelo — apenas gestão negócio, sem segredos técnicos/saúde irrestrita</option>
+          {staffRole==="admin"&&<option value="rh">rh — apenas RH, sem dados cliente PII</option>}
+          {staffRole==="admin"&&<option value="marcelo">marcelo — apenas gestão negócio, sem segredos técnicos/saúde irrestrita</option>}
           <option value="publico">publico — apenas site público, sem preço fictício</option>
         </select>
+        {docForm.rag_key==="cliente" && <input aria-label="ID da conta do cliente" placeholder="UUID da conta do cliente autorizada" value={docForm.client_account_id} onChange={e=>setDocForm({...docForm,client_account_id:e.target.value})} required />}
         <input placeholder="title min 5 chars" value={docForm.title} onChange={e=>setDocForm({...docForm, title:e.target.value})} required maxLength={500} style={{ padding:6 }} />
         <textarea placeholder="content min 20 chars área pertinente apenas, ex: cliente=contratos/documentos/chamados, rh=admissão/férias/benefícios, marcelo=gestão comercial/operacional/financeiro" value={docForm.content} onChange={e=>setDocForm({...docForm, content:e.target.value})} required maxLength={20000} rows={4} style={{ padding:6 }} />
         <input placeholder="source ex: manual cliente" value={docForm.source} onChange={e=>setDocForm({...docForm, source:e.target.value})} required maxLength={500} style={{ padding:6 }} />
@@ -175,8 +196,13 @@ export default function AiRagClient(){
           <option value="outro">outro</option>
         </select>
         <input placeholder="keywords csv ex: cliente, portal, contratos" value={docForm.keywords} onChange={e=>setDocForm({...docForm, keywords:e.target.value})} style={{ padding:6 }} />
-        <button type="submit" style={{ padding:"8px 12px", background:"#7c3aed", color:"#fff", border:"none", borderRadius:4 }}>Criar doc RAG + chunks + embedding concluido</button>
+        <button type="submit" style={{ padding:"8px 12px", background:"#7c3aed", color:"#fff", border:"none", borderRadius:4 }}>Criar documento em rascunho</button>
       </form>
+
+      <section style={{marginTop:16,padding:12,background:"#fff"}}>
+        <h3>Documentos para revisão ({docs.length})</h3>
+        {docs.map(doc=><p key={doc.id}>{doc.rag_key} {doc.client_account_id ? `· conta ${doc.client_account_id}` : ""} · {doc.title} · {doc.is_published ? "publicado" : "rascunho"} {!doc.is_published&&<button type="button" onClick={()=>publishDoc(doc)}>Revisar e publicar</button>}</p>)}
+      </section>
 
       <details style={{ marginTop:12, background:"#fff", padding:12, borderRadius:6 }}>
         <summary style={{ fontWeight:600, cursor:"pointer" }}>Docs RAG ({docs.length}) por área pertinente</summary>
@@ -207,7 +233,7 @@ export default function AiRagClient(){
             <option value="publico">publico</option>
           </select>
           <input value={testQuery.query} onChange={e=>setTestQuery({...testQuery, query:e.target.value})} required maxLength={2000} style={{ padding:6 }} />
-          <button type="submit" style={{ padding:"6px 10px", background:"#0b5fff", color:"#fff", border:"none", borderRadius:4, fontSize:12 }}>Testar bot {botConfig?.active_mode||"com_ia"}</button>
+          <button type="submit" disabled style={{ padding:"6px 10px", background:"#0b5fff", color:"#fff", border:"none", borderRadius:4, fontSize:12 }}>Bot beta aposentado</button>
           <p style={{ fontSize:10, opacity:0.7 }}>Modo atual: {botConfig?.active_mode||"com_ia"} — padrão beta com IA — WhatsApp {botConfig?.whatsapp_number}</p>
         </form>
       </section>

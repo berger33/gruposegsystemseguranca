@@ -1928,3 +1928,12 @@ passou 43/43 duas vezes e L08 passou 50/50 duas vezes.
 - [x] Tarefa canônica definida: `ext_compliance_tasks`, com unicidade por documento/período/regra.
 - [x] Critério estrutural: documento privado e avaliação temporal idempotente.
 - [ ] Gate PostgreSQL real e homologação permanecem pendentes até execução do ambiente dedicado.
+
+## Atualização 2026-10-05 — F14 / RAG local por área (implementação pendente de homologação)
+
+- [x] Rota canônica `/api/ai/answer` usa Ollama local real quando habilitado, documentos e índice aprovados/publicados e recuperação lexical antes do modelo.
+- [x] Escopos público, cliente por `client_account_id`/grant ativo, RH e Marcelo são decididos no servidor; migração 173 adiciona vínculo da conta aos documentos do cliente.
+- [x] Endpoints beta de perguntas deixam de apresentar fallback simulado como IA; UI pública e assistentes privados apontam à rota canônica.
+- [x] Wave0 5/5, typecheck, 33 testes unitários focais/legados e `git diff --check` nesta fatia.
+- [ ] Gate PostgreSQL/HTTP com A≠B, publicação e revogação; resposta real Ollama e falha/timeout; build, suíte completa, Windows e aceite do operador. Ver `docs/AI-RAG-LOCAL-2026-10-05.md`.
+- [ ] AI-01..10 não são promovidos como concluídos por esta fatia; busca é lexical, sem extração de documentos ou automações autônomas.

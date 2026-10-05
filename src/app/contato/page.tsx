@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { PUBLIC_SERVICES, PROPERTY_TYPES, buildRequestSummary } from "@/lib/service-catalog.mjs";
-import AiBotWidget from "@/components/AiBotWidget";
+import RagWidget from "@/components/RagWidget";
 
 export default function ContatoPage() {
   const [form, setForm] = useState({ name: "", phone: "", city: "", propertyType: "Condomínio", services: [] as string[], details: "", consent: false, requestKind: "quote" as "quote" | "visit", visitPreference: "" });
@@ -102,7 +102,7 @@ export default function ContatoPage() {
         {status.type==="error" && <p style={{ color: "red", background: "#fef2f2", padding: 12, borderRadius: 6 }}>Erro: {status.message}</p>}
       </form>
 
-      <AiBotWidget defaultRagKey="publico" showDevConfig={false} />
+      <RagWidget ragKey="publico" title="Assistente de dúvidas" description="Respostas baseadas apenas em conteúdo público aprovado." />
 
       <section style={{ marginTop: 32, padding: 16, borderLeft: "4px solid #0b5fff", background: "#eff6ff", fontSize: 13 }}>
         <strong>PUB-03 aceite:</strong> enviar pedido pelo celular → registro único → fila comercial com origem → próxima ação atribuída; falha SMTP não apaga lead nem produz confirmação de e-mail entregue. Recarga/retry não criam duplicatas indevidas (deduplicação via dedup_key).<br />

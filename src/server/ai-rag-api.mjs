@@ -55,9 +55,12 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
   const handleIndexes = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
     const sess=await requireSession(req);
-    if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
+    if(!sess) return json(res,401,{error:'unauthorized'});
+    const role=String(sess.role||'').toLowerCase();
+    const allowedKeys=role==='admin' ? validRagKeys : role==='rh' ? ['rh'] : role==='ti' ? ['publico','cliente'] : [];
+    if(!allowedKeys.length) return json(res,403,{error:'scope_forbidden'});
     if(req.method==='GET'){
-      const { rows } = await pool.query(`SELECT * FROM ai_rag_indexes ORDER BY rag_key ASC LIMIT 100`);
+      const { rows } = await pool.query(`SELECT * FROM ai_rag_indexes WHERE rag_key=ANY($1::text[]) ORDER BY rag_key ASC LIMIT 100`,[allowedKeys]);
       return json(res,200,{items:rows, note:'3 RAGs diferentes cliente/RH/Marcelo + publico, informações apenas áreas pertinentes, modelo Ollama Qwen3 1.7B fila'});
     }
     if(req.method==='POST'){
@@ -68,6 +71,8 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
       const scope=String(b.scope||rag_key).trim().toLowerCase();
       const model_name=String(b.model_name||'qwen3:1.7b').trim();
       if(!validRagKeys.includes(rag_key)) return json(res,400,{error:'invalid_rag_key', valid: validRagKeys});
+      if(!allowedKeys.includes(rag_key)) return json(res,403,{error:'scope_forbidden'});
+      if(scope!==rag_key) return json(res,400,{error:'scope_mismatch'});
       if(name.length<3||name.length>200) return json(res,400,{error:'invalid_name'});
       if(description.length<20||description.length>2000) return json(res,400,{error:'invalid_description'});
       if(!validScopes.includes(scope)) return json(res,400,{error:'invalid_scope'});
@@ -94,6 +99,7 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
       if(reason.length<10||reason.length>1000) return json(res,400,{error:'invalid_reason'});
       const { rows: existing } = await pool.query(`SELECT * FROM ai_rag_indexes WHERE id=$1`, [id]);
       if(!existing.length) return json(res,404,{error:'not_found'});
+      if(!allowedKeys.includes(existing[0].rag_key)) return json(res,404,{error:'not_found'});
       const cur=existing[0];
       const nextStatus=status||cur.status;
       const valid=['rascunho','em_revisao','aprovado','publicado','arquivado','rejeitado'];
@@ -110,13 +116,18 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
   const handleDocuments = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
     const sess=await requireSession(req);
-    if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
+    if(!sess) return json(res,401,{error:'unauthorized'});
+    const role=String(sess.role||'').toLowerCase();
+    const allowedKeys=role==='admin' ? validRagKeys : role==='rh' ? ['rh'] : role==='ti' ? ['publico','cliente'] : [];
+    if(!allowedKeys.length) return json(res,403,{error:'scope_forbidden'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
       const rag_key=url.searchParams.get('rag_key');
       let q=`SELECT d.*, i.name as index_name FROM ai_rag_documents d JOIN ai_rag_indexes i ON i.id=d.rag_index_id WHERE 1=1`;
       const params=[];
-      if(rag_key){ params.push(rag_key); q+=` AND d.rag_key=$${params.length}`; }
+      if(rag_key && !allowedKeys.includes(rag_key)) return json(res,403,{error:'scope_forbidden'});
+      params.push(rag_key ? [rag_key] : allowedKeys);
+      q+=` AND d.rag_key=ANY($${params.length}::text[])`;
       q+=` ORDER BY d.created_at DESC LIMIT 200`;
       const { rows } = await pool.query(q, params);
       return json(res,200,{items:rows, note:'documentos RAG apenas área pertinente por rag_key'});
@@ -129,7 +140,10 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
       const source=String(b.source||'manual').trim();
       const source_type=String(b.source_type||'manual').trim();
       const keywords=b.keywords||[];
+      const clientAccountId=rag_key==='cliente' ? String(b.client_account_id||'').trim() : null;
       if(!validRagKeys.includes(rag_key)) return json(res,400,{error:'invalid_rag_key'});
+      if(!allowedKeys.includes(rag_key)) return json(res,403,{error:'scope_forbidden'});
+      if(rag_key==='cliente' && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clientAccountId)) return json(res,400,{error:'client_account_required'});
       if(title.length<5||title.length>500) return json(res,400,{error:'invalid_title'});
       if(content.length<20||content.length>20000) return json(res,400,{error:'invalid_content'});
       if(source.length<3||source.length>500) return json(res,400,{error:'invalid_source'});
@@ -147,8 +161,8 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
         return json(res,400,{error:'rh_rag_cannot_contain_client_pii', note:'RAG RH apenas áreas pertinentes RH'});
       }
       // Não confiar nos defaults do banco beta (legado: true): documento novo é rascunho.
-      const { rows } = await pool.query(`INSERT INTO ai_rag_documents (rag_index_id, rag_key, title, content, source, source_type, keywords, is_price_sensitive, is_coverage_sensitive, is_license_sensitive, is_deadline_sensitive, created_by_identity, is_approved, is_published) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,false,false) RETURNING *`,
-        [rag_index_id, rag_key, title, content, source, source_type, keywords, !!b.is_price_sensitive, !!b.is_coverage_sensitive, !!b.is_license_sensitive, !!b.is_deadline_sensitive, sess.identityId||null]);
+      const { rows } = await pool.query(`INSERT INTO ai_rag_documents (rag_index_id, rag_key, title, content, source, source_type, keywords, is_price_sensitive, is_coverage_sensitive, is_license_sensitive, is_deadline_sensitive, created_by_identity, client_account_id, is_approved, is_published) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,false,false) RETURNING *`,
+        [rag_index_id, rag_key, title, content, source, source_type, keywords, !!b.is_price_sensitive, !!b.is_coverage_sensitive, !!b.is_license_sensitive, !!b.is_deadline_sensitive, sess.identityId||null,clientAccountId]);
       // criar chunks simples 500 chars
       const chunkSize=500;
       let idx=0;
@@ -157,7 +171,8 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
         await pool.query(`INSERT INTO ai_rag_chunks (document_id, rag_index_id, rag_key, chunk_index, content, token_count, metadata) VALUES ($1,$2,$3,$4,$5,$6,$7)`, [rows[0].id, rag_index_id, rag_key, idx, chunk, Math.ceil(chunk.length/4), JSON.stringify({ source, source_type })]);
         idx++;
       }
-      await pool.query(`UPDATE ai_rag_documents SET embedding_status='concluido', token_count=$2, updated_at=NOW() WHERE id=$1`, [rows[0].id, Math.ceil(content.length/4)]);
+      // A recuperação canônica é lexical; não declarar embedding não calculado.
+      await pool.query(`UPDATE ai_rag_documents SET token_count=$2, updated_at=NOW() WHERE id=$1`, [rows[0].id, Math.ceil(content.length/4)]);
       await auditLog({ action:'ai_rag_doc_create', actor:sess.identityId||'system', target:rows[0].id, meta:{ rag_key, title: title.substring(0,100) } });
       return json(res,201,rows[0]);
     }
@@ -170,6 +185,7 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
       if(!id) return json(res,400,{error:'missing_id'});
       const { rows: existing } = await pool.query(`SELECT * FROM ai_rag_documents WHERE id=$1`, [id]);
       if(!existing.length) return json(res,404,{error:'not_found'});
+      if(!allowedKeys.includes(existing[0].rag_key)) return json(res,404,{error:'not_found'});
       const { rows } = await pool.query(`UPDATE ai_rag_documents SET status=COALESCE($2,status), is_approved=COALESCE($3,is_approved), is_published=COALESCE($4,is_published), version=version+1, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, status||null, is_approved, is_published]);
       await auditLog({ action:'ai_rag_doc_update', actor:sess.identityId||'system', target:id, meta:{ status } });
       return json(res,200,rows[0]);
@@ -184,7 +200,7 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
     const isPublic=['/api/ai/rag','/api/public/ai/rag','/api/ai/rag/queries'].includes(url.pathname);
     if(!isPublic && !sameOrigin(req)) return json(res,403,{error:'forbidden'});
     const sess=!isPublic ? await requireSession(req) : null;
-    if(!isPublic && (!sess || !requireRole(sess,['admin','ti']))) return json(res,401,{error:'unauthorized'});
+    if(!isPublic && (!sess || String(sess.role||'').toLowerCase()!=='admin')) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       if(isPublic) return json(res,403,{error:'scope_forbidden'});
       const rag_key=url.searchParams.get('rag_key');
@@ -402,7 +418,7 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
     const isPublic=['/api/ai/bot','/api/public/ai/bot','/api/bot'].includes(url.pathname);
     if(!isPublic && !sameOrigin(req)) return json(res,403,{error:'forbidden'});
     const sess=!isPublic ? await requireSession(req) : null;
-    if(!isPublic && (!sess || !requireRole(sess,['admin','ti']))) return json(res,401,{error:'unauthorized'});
+    if(!isPublic && (!sess || String(sess.role||'').toLowerCase()!=='admin')) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
       if(isPublic) return json(res,403,{error:'scope_forbidden'});
       const rag_key=url.searchParams.get('rag_key');
@@ -540,7 +556,7 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
   const handleChunks = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
     const sess=await requireSession(req);
-    if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
+    if(!sess || String(sess.role||'').toLowerCase()!=='admin') return json(res,403,{error:'scope_forbidden'});
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
       const document_id=url.searchParams.get('document_id');

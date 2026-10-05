@@ -182,7 +182,8 @@ const files = [
   '169-ext10-continuity-client-portal.sql',
   '170-ops-internal-pendency-notifications.sql',
   '171-client-offline-access-recovery.sql',
-  '172-ext05-quality-client-account-scope.sql'
+  '172-ext05-quality-client-account-scope.sql',
+  '173-ai-rag-client-account-scope.sql'
 ];
 
 async function main() {
