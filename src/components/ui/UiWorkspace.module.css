@@ -149,6 +149,16 @@
 
 .notice { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--ux-color-border); border-left-width: 4px; border-left-color: var(--ux-color-brand); border-radius: var(--ux-radius-sm); line-height: 1.5; }
 .noticeError { border-left-color: #a4262c; }
+/* UX-07: variantes neutras de aviso, generalizadas a partir de Operação
+   (OperacaoWorkspace.tsx tinha 14 caixas de aviso com cor embutida inline). */
+.noticeInfo { background: #eff6ff; border-left-color: var(--ux-color-brand); }
+.noticeWarning { background: #fff7ed; border-left-color: #92400e; }
+
+/* Rodapé explicativo de fórmula/fonte de um painel — texto pequeno, sem alarde. */
+.footnote { margin-top: 12px; padding: 10px 12px; background: var(--ux-color-canvas); border-radius: var(--ux-radius-sm); color: var(--ux-color-muted); font-size: .8125rem; line-height: 1.6; }
+
+/* Calendário com primeira coluna fixa (posto/equipe/pessoa) ao rolar lateralmente. */
+.stickyCol { position: sticky; left: 0; background: var(--ux-color-surface); }
 
 /* Credencial temporária: exibição única, nunca persistida na tela. */
 .credential { margin-top: 12px; padding: 14px; border: 2px dashed #8a5a00; border-radius: var(--ux-radius-sm); }

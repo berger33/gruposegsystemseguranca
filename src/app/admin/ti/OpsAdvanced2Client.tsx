@@ -1,5 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
+import UiState from "../../../components/ui/UiState";
+import { opsErrorFootnote, type OpsErrorDescriptor } from "../../../lib/ops-vocabulary.mjs";
+import { opsRequest } from "../../../lib/ops-request";
 
 type Visit = { id:string; protocol:string; post_id:string; company_id:string|null; supervisor_employee_id:string|null; scheduled_date:string; executed_at:string|null; status:string; score:number|null; findings:string|null; responsible_name:string|null; verified_by:string|null; is_private:boolean; };
 type Inspection = { id:string; visit_id:string; inspection_type:string; status:string; title:string; description:string|null; result:string|null; score:number|null; };
@@ -20,20 +23,27 @@ export default function OpsAdvanced2Client() {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [msg, setMsg] = useState("");
+  // UX-07 (correção pontual, sem mudar URL/método/payload): antes, qualquer
+  // falha de leitura (rede fora do ar, 500, 503 de auditoria) era engolida
+  // pelo `.catch(()=>({visits:[]}))` de cada fetch — a tela mostrava "nenhum
+  // registro" quando na verdade a consulta nem chegou a responder. Agora a
+  // falha real aparece como falha real, nunca como lista vazia.
+  const [loadError, setLoadError] = useState<OpsErrorDescriptor | null>(null);
 
   async function loadAll() {
-    try {
-      const [vRes, pRes, kRes, rRes] = await Promise.all([
-        fetch("/api/hr/ops-supervision-visits").then(r=>r.json()).catch(()=>({visits:[]})),
-        fetch("/api/hr/ops-patrols").then(r=>r.json()).catch(()=>({patrols:[]})),
-        fetch("/api/hr/ops-keys").then(r=>r.json()).catch(()=>({keys:[]})),
-        fetch("/api/hr/ops-client-reports").then(r=>r.json()).catch(()=>({reports:[]})),
-      ]);
-      if (vRes.visits) setVisits(vRes.visits);
-      if (pRes.patrols) setPatrols(pRes.patrols);
-      if (kRes.keys) setKeys(kRes.keys);
-      if (rRes.reports) setReports(rRes.reports);
-    } catch {}
+    setLoadError(null);
+    const [vRes, pRes, kRes, rRes] = await Promise.all([
+      opsRequest<{ visits?: Visit[] }>("/api/hr/ops-supervision-visits"),
+      opsRequest<{ patrols?: Patrol[] }>("/api/hr/ops-patrols"),
+      opsRequest<{ keys?: Key[] }>("/api/hr/ops-keys"),
+      opsRequest<{ reports?: Report[] }>("/api/hr/ops-client-reports"),
+    ]);
+    const failed = [vRes, pRes, kRes, rRes].find(r => !r.ok);
+    if (failed && !failed.ok) setLoadError(failed.error);
+    if (vRes.ok) setVisits(vRes.data.visits || []);
+    if (pRes.ok) setPatrols(pRes.data.patrols || []);
+    if (kRes.ok) setKeys(kRes.data.keys || []);
+    if (rRes.ok) setReports(rRes.data.reports || []);
   }
   useEffect(()=>{ loadAll(); }, []);
 
@@ -152,6 +162,15 @@ export default function OpsAdvanced2Client() {
   return (
     <section style={{ marginTop:24, padding:16, border:"1px solid #ccc", borderRadius:8 }}>
       <h2 style={{ color:"var(--theme-accent)" }}>OPS-09/10/11/12 — Supervisão, Rondas, Chaves, Relatórios Cliente</h2>
+      {loadError ? (
+        <UiState
+          variant="error"
+          title={loadError.title}
+          detail={`${loadError.detail} ${opsErrorFootnote(loadError)}`}
+          retryLabel={loadError.canRetry ? "Tentar carregar novamente" : undefined}
+          onRetry={loadError.canRetry ? () => { void loadAll(); } : undefined}
+        />
+      ) : null}
       {msg && <p style={{ background:"#eef", padding:8 }}>{msg}</p>}
 
       <h3>OPS-09 Visitas Supervisão</h3>

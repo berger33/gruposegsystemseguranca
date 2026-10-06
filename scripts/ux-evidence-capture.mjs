@@ -62,6 +62,12 @@ const STAGES = {
       { route: '/admin/ti', role: 'ti', slug: 'ti', waitFor: 'Console de TI' },
     ],
   },
+  'ux-07-operacao': {
+    outputDir: 'docs/ux-07-operacao-evidencias',
+    targets: [
+      { route: '/admin/operacao', role: 'ti', slug: 'operacao', waitFor: 'Operação — controle e gestão operacional' },
+    ],
+  },
 };
 
 const plan = STAGES[stage];

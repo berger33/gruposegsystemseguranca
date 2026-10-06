@@ -1,5 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
+import UiState from "../../../components/ui/UiState";
+import { opsErrorFootnote, type OpsErrorDescriptor } from "../../../lib/ops-vocabulary.mjs";
+import { opsRequest } from "../../../lib/ops-request";
 
 type MetricDef = { id:string; name:string; metric_type:string; source:string; window_type:string; description:string|null; is_active:boolean; };
 type Snapshot = { id:string; metric_type:string; source:string; window_type:string; period_start:string; period_end:string; value:number; unit:string|null; status:string; };
@@ -28,26 +31,33 @@ export default function OpsAdvanced3Client() {
   const [connectors, setConnectors] = useState<Connector[]>([]);
   const [events, setEvents] = useState<MonEvent[]>([]);
   const [msg, setMsg] = useState("");
+  // UX-07 (correção pontual, sem mudar URL/método/payload): antes, qualquer
+  // falha de leitura (rede fora do ar, 500, 503 de auditoria) era engolida
+  // pelo `.catch(()=>({definitions:[]}))` de cada fetch — a tela mostrava
+  // "nenhum registro" quando na verdade a consulta nem chegou a responder.
+  // Agora a falha real aparece como falha real, nunca como lista vazia.
+  const [loadError, setLoadError] = useState<OpsErrorDescriptor | null>(null);
 
   async function loadAll() {
-    try {
-      const [dRes, sRes, rRes, pRes, eRes, cRes, evRes] = await Promise.all([
-        fetch("/api/hr/ops-metrics-definitions").then(r=>r.json()).catch(()=>({definitions:[]})),
-        fetch("/api/hr/ops-metrics-snapshots").then(r=>r.json()).catch(()=>({snapshots:[]})),
-        fetch("/api/hr/ops-metrics-reincidence").then(r=>r.json()).catch(()=>({reincidences:[]})),
-        fetch("/api/hr/ops-assisted-proposals").then(r=>r.json()).catch(()=>({proposals:[]})),
-        fetch("/api/hr/ops-cleaning-environments").then(r=>r.json()).catch(()=>({environments:[]})),
-        fetch("/api/hr/ops-monitoring-connectors").then(r=>r.json()).catch(()=>({connectors:[]})),
-        fetch("/api/hr/ops-monitoring-events").then(r=>r.json()).catch(()=>({events:[]})),
-      ]);
-      if (dRes.definitions) setDefs(dRes.definitions);
-      if (sRes.snapshots) setSnaps(sRes.snapshots);
-      if (rRes.reincidences) setReincs(rRes.reincidences);
-      if (pRes.proposals) setProposals(pRes.proposals);
-      if (eRes.environments) setEnvs(eRes.environments);
-      if (cRes.connectors) setConnectors(cRes.connectors);
-      if (evRes.events) setEvents(evRes.events);
-    } catch {}
+    setLoadError(null);
+    const [dRes, sRes, rRes, pRes, eRes, cRes, evRes] = await Promise.all([
+      opsRequest<{ definitions?: MetricDef[] }>("/api/hr/ops-metrics-definitions"),
+      opsRequest<{ snapshots?: Snapshot[] }>("/api/hr/ops-metrics-snapshots"),
+      opsRequest<{ reincidences?: Reinc[] }>("/api/hr/ops-metrics-reincidence"),
+      opsRequest<{ proposals?: Proposal[] }>("/api/hr/ops-assisted-proposals"),
+      opsRequest<{ environments?: CleanEnv[] }>("/api/hr/ops-cleaning-environments"),
+      opsRequest<{ connectors?: Connector[] }>("/api/hr/ops-monitoring-connectors"),
+      opsRequest<{ events?: MonEvent[] }>("/api/hr/ops-monitoring-events"),
+    ]);
+    const failed = [dRes, sRes, rRes, pRes, eRes, cRes, evRes].find(r => !r.ok);
+    if (failed && !failed.ok) setLoadError(failed.error);
+    if (dRes.ok) setDefs(dRes.data.definitions || []);
+    if (sRes.ok) setSnaps(sRes.data.snapshots || []);
+    if (rRes.ok) setReincs(rRes.data.reincidences || []);
+    if (pRes.ok) setProposals(pRes.data.proposals || []);
+    if (eRes.ok) setEnvs(eRes.data.environments || []);
+    if (cRes.ok) setConnectors(cRes.data.connectors || []);
+    if (evRes.ok) setEvents(evRes.data.events || []);
   }
   useEffect(()=>{ loadAll(); }, []);
 
@@ -139,6 +149,15 @@ export default function OpsAdvanced3Client() {
   return (
     <section style={{ marginTop:24, padding:16, border:"1px solid #999", borderRadius:8 }}>
       <h2 style={{ color:"var(--theme-accent)" }}>OPS-13/14/15/16 — Métricas, Escalas Assistidas, Limpeza, Monitoramento</h2>
+      {loadError ? (
+        <UiState
+          variant="error"
+          title={loadError.title}
+          detail={`${loadError.detail} ${opsErrorFootnote(loadError)}`}
+          retryLabel={loadError.canRetry ? "Tentar carregar novamente" : undefined}
+          onRetry={loadError.canRetry ? () => { void loadAll(); } : undefined}
+        />
+      ) : null}
       {msg && <p style={{ background:"#eef", padding:8 }}>{msg}</p>}
 
       <h3>OPS-13 Métricas cobertura, tempo descoberto, incidentes, visitas, reincidência fonte janela</h3>
