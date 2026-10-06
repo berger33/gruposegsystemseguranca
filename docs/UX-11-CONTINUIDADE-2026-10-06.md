@@ -45,3 +45,5 @@ A autorização continua deliberadamente fora do papel do `AdminGate`; grants re
 ## O que esta fatia não prova
 
 Não prova homologação humana, aceite de Marcelo ou Andreia, nem funcionamento operacional de alertas externos — estes não existem nesta família. Também não transforma um protótipo em produto homologado: a homologação segue pendente. O gate focal só pode ser considerado completo quando executado em ambiente com PostgreSQL/Chromium descartáveis; a massa deve ser fictícia e criada pelas APIs canônicas.
+
+<!-- Revalidação de checks: reexecução do gate L05 após falha intermitente. -->
