@@ -1,0 +1,26 @@
+name: UX-07 EXT-02 terceiros
+on:
+  pull_request:
+    paths:
+      - 'src/app/admin/terceiros/**'
+      - 'src/lib/third-party-*'
+      - 'tests/ux-third-party-*'
+      - 'scripts/qa-ux-third-party-postgres.mjs'
+      - 'scripts/ux-evidence-capture.mjs'
+      - 'package.json'
+jobs:
+  delivery:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 22, cache: npm}
+      - run: npm ci
+      - run: npm run typecheck
+      - run: node --test tests/ux-third-party-vocabulary.test.mjs
+      - run: node --test tests/ext02-third-parties.test.mjs
+      - run: npm run test:ext02-third-parties:pg
+      - run: npm run test:ux-third-party:pg

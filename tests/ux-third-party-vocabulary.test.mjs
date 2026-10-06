@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {ERROR_MESSAGES,ENUM_LABELS,EXTERNAL_BOUNDARY,describeThirdPartyError} from '../src/lib/third-party-vocabulary.mjs';
+const server=fs.readFileSync(new URL('../src/server/ext-third-party-api.mjs',import.meta.url),'utf8');
+const codes=[...server.matchAll(/\berror\s*:\s*["']([a-z0-9_]+)["']/g)].map(m=>m[1]);
+test('todos os códigos literais reais têm explicação',()=>{for(const c of new Set(codes))assert.ok(ERROR_MESSAGES[c],`código sem vocabulário: ${c}`)});
+test('valor desconhecido passa cru e ausência é honesta',()=>{assert.equal(describeThirdPartyError('codigo_novo').code,'codigo_novo');assert.notEqual(ENUM_LABELS.status.ativo,'ativo')});
+test('contrato da tela',()=>{const s=fs.readFileSync(new URL('../src/app/admin/terceiros/TerceirosWorkspace.tsx',import.meta.url),'utf8');assert.doesNotMatch(s,/style\s*=/);assert.doesNotMatch(s,/className\s*=\s*"/);assert.match(s,/role="tablist"/);assert.match(s,/Idempotency-Key/);assert.match(s,/Não existe ator externo/);assert.match(fs.readFileSync(new URL('../src/app/admin/terceiros/page.tsx',import.meta.url),'utf8'),/\["marcelo", "admin", "ti"\]/)});
+test('rotas canônicas permanecem explícitas',()=>{const s=fs.readFileSync(new URL('../src/app/admin/terceiros/TerceirosWorkspace.tsx',import.meta.url),'utf8');assert.match(s,/\/api\/ext\/third-party\/parties/);assert.match(s,/method:'POST'/)});
+test('fronteira externa declarada',()=>assert.match(EXTERNAL_BOUNDARY,/ator externo/));
