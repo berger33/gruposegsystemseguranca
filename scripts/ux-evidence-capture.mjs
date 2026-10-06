@@ -183,6 +183,28 @@ const STAGES = {
       { route: '/admin/frota', role: 'admin', slug: 'frota', waitFor: 'Frota própria, custo por veículo e alerta de manutenção', waitForRole: 'heading' },
     ],
   },
+  // EXT-02 — TERCEIROS. A captura usa banco limpo: o h1 real é a marca de
+  // montagem e a tela declara o vazio honesto ("a leitura funcionou e nenhum
+  // terceiro canônico está registrado"), nunca lista zerada. A jornada com
+  // massa real — dossiê, contrato validado, janela vigente, documento a
+  // vencer, nota zero real, recusa 403 e falha independente — é provada pelo
+  // gate tests/ux-third-party-workspace.integration.test.mjs
+  // (UX_THIRD_PARTY_EVIDENCE_DIR). Cobertura parcial declarada no documento.
+  // DECISÃO REGISTRADA sobre grant granular: o `grant` desta família é
+  // permissão de NEGÓCIO (janela de acesso do terceiro a um contrato ou a uma
+  // OS), não permissão de sessão. O servidor continua decidindo o acesso à
+  // tela por sessão de equipe, papel (`admin|marcelo|ti`, em
+  // THIRD_PARTY_READ_ROLES/THIRD_PARTY_WRITE_ROLES) e origem. Por isso esta
+  // etapa não declara o gancho opcional `grants`: ele seria no-op aqui.
+  // DECISÃO REGISTRADA sobre fronteira externa: não existe ator externo
+  // "terceiro" autenticado; a captura é da tela interna de equipe e nenhum
+  // canal externo é simulado.
+  'ux-07-terceiros': {
+    outputDir: 'docs/ux-07-terceiros-evidencias',
+    targets: [
+      { route: '/admin/terceiros', role: 'admin', slug: 'terceiros', waitFor: 'Terceiros, acesso por escopo autorizado e perda de acesso ao término', waitForRole: 'heading' },
+    ],
+  },
 };
 
 const plan = STAGES[stage];
