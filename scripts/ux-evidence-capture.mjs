@@ -163,6 +163,18 @@ const STAGES = {
       { route: '/admin/satisfacao', role: 'admin', slug: 'satisfacao', waitFor: 'Satisfação do cliente e acompanhamento interno', waitForRole: 'heading' },
     ],
   },
+  // UX-07 / EXT-01. O h1 real é a marca de montagem. O banco descartável
+  // começa limpo: a captura prova o VAZIO HONESTO informado por
+  // fleet_registered/source/base_date/note. A jornada com massa, 401/403,
+  // falha isolada e teclado pertence ao gate ux-fleet-workspace. EXT-01 não
+  // usa grant granular: sessão e papel (`admin|marcelo|ti`) são decididos pelo
+  // servidor canônico, portanto o gancho opcional `grants` seria no-op.
+  'ux-07-frota': {
+    outputDir: 'docs/ux-07-frota-evidencias',
+    targets: [
+      { route: '/admin/frota', role: 'admin', slug: 'frota', waitFor: 'Frota e histórico por veículo', waitForRole: 'heading' },
+    ],
+  },
 };
 
 const plan = STAGES[stage];

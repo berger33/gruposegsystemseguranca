@@ -1,0 +1,45 @@
+name: UX fleet delivery
+# UX-07 / EXT-01 — gate focal de FROTA. Nenhum servidor, scheduler ou migração
+# é alterado por esta fatia; paths ficam restritos à apresentação e aos gates.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/app/admin/frota/**"
+      - "src/lib/fleet-vocabulary.*"
+      - "src/lib/fleet-request.ts"
+      - "tests/ext01-fleet.test.mjs"
+      - "tests/ux-fleet-vocabulary.test.mjs"
+      - "tests/ux-fleet-workspace.integration.test.mjs"
+      - "scripts/qa-ux-fleet-postgres.mjs"
+      - "scripts/ux-evidence-capture.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/ux-fleet-delivery.yml"
+concurrency:
+  group: ux-fleet-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  ux-fleet-postgres-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      DATABASE_URL: ""
+      DATABASE_MIGRATION_URL: ""
+      RUN_DATABASE_INTEGRATION_REMOTE: ""
+      MAIL_HOST: ""
+      OLLAMA_ENABLED: "false"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: node --test tests/ux-fleet-vocabulary.test.mjs
+      - run: node --test tests/ext01-fleet.test.mjs
+      - run: npm run test:ux-fleet:pg
