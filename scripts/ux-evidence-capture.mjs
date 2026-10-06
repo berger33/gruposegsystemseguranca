@@ -89,6 +89,18 @@ const STAGES = {
       { route: '/admin/inteligencia', role: 'admin', slug: 'inteligencia-comercial', waitFor: 'Inteligência comercial', waitForRole: 'heading' },
     ],
   },
+  // UX-07 / EXT-11 / F07. A captura usa o h1 real da tela de produto como
+  // marca de montagem; o banco desta etapa é limpo, então o estado observado é
+  // o VAZIO HONESTO ("a leitura funcionou e nenhum experimento está
+  // registrado"). A jornada com massa real é coberta pelo gate
+  // tests/ux-analytics-workspace.integration.test.mjs
+  // (UX_ANALYTICS_EVIDENCE_DIR). Cobertura parcial declarada no documento.
+  'ux-07-analytics': {
+    outputDir: 'docs/ux-07-analytics-evidencias',
+    targets: [
+      { route: '/admin/analytics', role: 'admin', slug: 'analytics', waitFor: 'Analytics e experimentos A/B controlados', waitForRole: 'heading' },
+    ],
+  },
 };
 
 const plan = STAGES[stage];
