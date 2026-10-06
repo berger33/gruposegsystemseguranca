@@ -207,8 +207,28 @@ O extrator do teste remove antes os operandos de `.includes("…")` e de
 | `npm run test:ext02-third-parties:pg` | **22/22** (`EXT02_TAP_SUMMARY: pass=22 fail=0 … minimo_exigido=21`) |
 | `npm run test:ux-third-party:pg` | **10/10** (`UX_THIRD_PARTY_TEST_EXIT: 0`, `QA_PG_TEMP_CLEANED: true`) |
 | `npm run ux:evidence -- --stage=ux-07-terceiros` | **OK**, `UX_EVIDENCE_EXIT: 0` |
+| `npm audit --audit-level=high` | **0 vulnerabilidades** (ver 6.1) |
 
 Nenhuma asserção foi enfraquecida para ficar verde.
+
+### 6.1 Check `static-and-smoke` e o `npm audit`
+
+A primeira execução da PR reprovou em `static-and-smoke`, no passo
+*Audit dependencies (high and critical block)* (`npm audit --audit-level=high`).
+A causa **não é desta fatia**: é o aviso novo `GHSA-wq5f-xc86-pv6w`
+(CVE-2026-96889, vulnerabilidade do `librsvg` usado pelo `sharp`), que atinge
+`sharp < 0.35.5` e afeta igualmente a main.
+
+Correção aplicada, deliberadamente mínima: `npm audit fix` sem `--force`. O
+intervalo declarado já era `^0.35.4`, então **apenas o `package-lock.json`
+mudou** — `sharp` 0.35.4 → 0.35.5 e os binários `@img/sharp-libvips-*`
+1.3.3 → 1.3.4. Nenhuma dependência direta foi acrescentada, removida ou teve o
+intervalo alterado em `package.json`, e nenhum código de aplicação foi tocado.
+
+Revalidação completa após o bump: `npm ci`, `npm audit --audit-level=high`
+(**0 vulnerabilidades**), `npm run typecheck`, `npm run test:unit` (815/815),
+o teste de vocabulário (15/15) e o gate focal
+`npm run test:ux-third-party:pg` (10/10).
 
 ---
 
