@@ -1,26 +1,55 @@
 name: UX-11 continuidade delivery
 on:
   pull_request:
-    paths: ['src/app/admin/continuidade/**','src/lib/continuity-*','tests/ux-continuity-*','scripts/qa-ux-continuity-postgres.mjs','scripts/ux-evidence-capture.mjs','package.json']
+    branches: [main]
+    paths:
+      - 'src/app/admin/continuidade/**'
+      - 'src/app/cliente/app/continuidade/**'
+      - 'src/lib/continuity-*'
+      - 'tests/ext10-continuity.test.mjs'
+      - 'tests/ext10-continuity.integration.test.mjs'
+      - 'tests/ux-continuity-vocabulary.test.mjs'
+      - 'tests/ux-continuity-workspace.integration.test.mjs'
+      - 'tests/ux-continuity-client-portal-vocabulary.test.mjs'
+      - 'scripts/qa-ext10-continuity-postgres.mjs'
+      - 'scripts/qa-ux-continuity-postgres.mjs'
+      - 'scripts/qa-ux-continuity-client-postgres.mjs'
+      - 'scripts/ux-evidence-*.mjs'
+      - 'docs/UX-11-CONTINUIDADE-FLUXOS-PORTAL-*.md'
+      - 'docs/ux-11-continuidade-evidencias/**'
+      - 'docs/ux-11-continuidade-cliente-evidencias/**'
+      - 'package*.json'
+      - '.github/workflows/ux-continuity-delivery.yml'
+      - '.github/workflows/ux-continuity-client-delivery.yml'
   workflow_dispatch:
+concurrency:
+  group: ux-continuity-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
 jobs:
   focal:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 50
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npm run typecheck
-      - run: node --test tests/ux-continuity-vocabulary.test.mjs tests/ext10-continuity.test.mjs
+      - run: node --test tests/ux-continuity-vocabulary.test.mjs tests/ux-continuity-client-portal-vocabulary.test.mjs tests/ext10-continuity.test.mjs
       - run: npm run test:ext10-continuity:pg
-      - run: npm run test:ux-continuity:pg
-      # Evidência visual de /admin/continuidade com PostgreSQL descartável e
-      # Chromium real: reprova se houver rolagem horizontal, foco de teclado
-      # perdido, erro de console da própria aplicação ou resposta 5xx.
-      # O PNG versionado é a evidência do ambiente onde foi gerado; o `resumo`
-      # produzido aqui NÃO é comparado byte a byte, porque `externalBlocked`
-      # depende da saída de rede do runner. O que reprova é problema real.
+      # PostgreSQL descartável, HTTP canônico e Chromium real. O auditor TAP
+      # reprova falha, skip, todo e piso abaixo de 17, mesmo com exit 0.
+      # A variável grava as evidências do fluxo UI: transição, simulado,
+      # publicação para o cliente e retirada seguida de vazio honesto.
+      - run: UX_CONTINUITY_EVIDENCE_DIR=docs/ux-11-continuidade-evidencias npm run test:ux-continuity:pg
+      # Baseline visual autenticado da rota de equipe em 1440×900 e 390×844.
       - run: npm run ux:evidence -- --stage=ux-11-continuidade
       - run: npm audit --audit-level=high

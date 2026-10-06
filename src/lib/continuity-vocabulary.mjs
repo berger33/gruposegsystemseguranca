@@ -24,7 +24,7 @@ const ERROR_MESSAGES = Object.freeze({
   method_not_allowed:{kind:'invalid',title:'Método não permitido',detail:'A rota canônica não aceita este método.',canRetry:false},
   not_found:{kind:'not_found',title:'Rota não encontrada',detail:'O servidor não reconhece este endereço.',canRetry:false},
   origin_forbidden:{kind:'denied',title:'Origem recusada',detail:'Escritas só são aceitas pela origem da aplicação.',canRetry:false},
-  plan_not_found:{kind:'not_found',title:'Plano indisponível neste escopo',detail:'O plano não existe ou não está disponível para o escopo desta sessão. A tela não presume remoção.',canRetry:false},
+  plan_not_found:{kind:'not_found',title:'Plano indisponível neste escopo',detail:'O plano está indisponível para esta consulta e este escopo. Esta resposta não informa a causa da indisponibilidade.',canRetry:false},
   plan_not_publishable:{kind:'conflict',title:'Plano ainda não publicável',detail:'Somente planos aprovados, em teste ou testados podem aparecer no portal.',canRetry:false},
   unauthorized:{kind:'denied',title:'Sessão de equipe necessária',detail:'O servidor não reconheceu uma sessão válida.',canRetry:true},
   visibility_note_required:{kind:'invalid',title:'Justificativa de publicação obrigatória',detail:'Explique a publicação com pelo menos 10 caracteres.',canRetry:false},

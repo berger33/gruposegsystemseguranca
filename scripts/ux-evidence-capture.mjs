@@ -256,6 +256,10 @@ const STAGES = {
       waitFor: 'Continuidade de negócios e contingência',
       waitForRole: 'heading',
       grants: ['continuity.read', 'continuity.write', 'continuity.activate'],
+      gateEvidence: {
+        environment: 'UX_CONTINUITY_EVIDENCE_DIR',
+        scenarios: ['transição efetivada', 'simulado documentado', 'plano visível no portal', 'retirada e vazio honesto', 'mobile 390px'],
+      },
     }],
   },
   // UX-11 / EXT-10 — portal de continuidade do CLIENTE. Diferentemente da
@@ -272,6 +276,10 @@ const STAGES = {
       slug: 'continuidade-cliente',
       clientContinuity: true,
       timezoneId: 'America/Sao_Paulo',
+      gateEvidence: {
+        environment: 'UX_CONTINUITY_CLIENT_EVIDENCE_DIR',
+        scenarios: ['404 real de detalhe após retirada pela UI da equipe', 'mobile 390px'],
+      },
       waitFor: 'Plano fictício publicado na evidência de continuidade',
     }],
   },
@@ -589,6 +597,7 @@ try {
           role: target.role,
           viewport: `${viewport.width}x${viewport.height}`,
           screenshot: path.relative(root, file),
+          gateEvidence: target.gateEvidence || null,
           firstFocus: focus,
           problems,
           externalBlocked,

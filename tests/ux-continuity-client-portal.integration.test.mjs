@@ -232,14 +232,28 @@ async function waitForPlan(page) {
   return card;
 }
 
-// O React desmonta o botão assim que a requisição começa. O evento continua
-// sendo um clique do navegador sobre o controle real; despachá-lo diretamente
-// evita o retry de ação do Playwright sobre um nó que a própria tela removeu.
+// A página desmonta o botão assim que inicia a requisição. O evento abaixo é
+// disparado no próprio controle real (não há route, resposta ou fetch falso),
+// evitando que o Playwright tente uma segunda ação num nó que o React removeu.
 async function refreshList(page) {
   const button = page.getByRole('button', { name: 'Atualizar lista' });
   await button.waitFor();
   await button.evaluate(element => element.click());
 }
+
+async function openStaffWorkspace(browser) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'pt-BR', timezoneId: 'America/Sao_Paulo' });
+  const separator = adminCookie.indexOf('=');
+  await context.addCookies([{ name: adminCookie.slice(0, separator), value: adminCookie.slice(separator + 1), url: baseUrl }]);
+  const page = await context.newPage();
+  page.setDefaultTimeout(45_000);
+  page.setDefaultNavigationTimeout(120_000);
+  await page.goto(`${baseUrl}/admin/continuidade`, { waitUntil: 'domcontentloaded' });
+  await page.getByRole('heading', { level: 1, name: 'Continuidade de negócios e contingência' }).waitFor();
+  return { context, page };
+}
+
+const staffPlanCard = (page, id) => page.locator(`[data-testid="continuity-plan-card"][data-plan="${id}"]`);
 
 before(async () => {
   if (!RUN) return;
@@ -459,6 +473,57 @@ test('browser: em 390px o portal publicado não cria rolagem horizontal', opt, a
   });
 });
 
+test('browser: detalhe recebe 404 real após retirada pela tela de equipe e preserva a lista já lida', opt, async () => {
+  await withBrowser(async browser => {
+    const { context: clientContext, page: clientPage } = await openPortal(browser, clientA.cookie);
+    const listedCard = clientPage.locator(`[data-testid="client-continuity-plan"][data-plan="${planA.id}"]`);
+    await listedCard.waitFor();
+    assert.match(await listedCard.innerText(), /Plano fictício publicado no portal de continuidade/);
+
+    // O Chromium empacotado usa --single-process; a sessão da equipe ganha
+    // outro processo para manter a página do cliente aberta sem trocar actor,
+    // resposta nem controle real de nenhum dos dois lados.
+    const staffBrowser = await launchBrowser();
+    try {
+      const { context: staffContext, page: staffPage } = await openStaffWorkspace(staffBrowser);
+      await staffPage.getByRole('tab', { name: 'Planos', exact: true }).click();
+      const teamCard = staffPlanCard(staffPage, planA.id);
+      await teamCard.waitFor();
+      await teamCard.getByRole('button', { name: 'Retirar publicação' }).click();
+      await teamCard.getByText('Portal do cliente: não publicado por padrão').waitFor();
+      await staffContext.close();
+    } finally {
+      await staffBrowser.close().catch(() => {});
+    }
+
+    // A chamada parte do botão real da lista previamente lida. A espera apenas
+    // observa a resposta original do servidor canônico; não a intercepta.
+    const responsePromise = clientPage.waitForResponse(response =>
+      response.url().includes(`/api/client/continuity/plans/${planA.id}`),
+    );
+    await listedCard.getByRole('button', { name: 'Abrir detalhes' }).evaluate(element => element.click());
+    const detailResponse = await responsePromise;
+    assert.equal(detailResponse.status(), 404, 'o navegador recebeu o 404 canônico real');
+    assert.equal((await detailResponse.json()).error, 'plan_not_found');
+
+    const detail = clientPage.locator('[data-testid="client-continuity-detail"]');
+    const unavailable = detail.locator('[data-ui-state="error"]');
+    await unavailable.waitFor();
+    const text = await unavailable.innerText();
+    assert.match(text, /Plano indisponível neste escopo/);
+    assert.match(text, /indisponível para esta consulta e este escopo/);
+    assert.match(text, /Código técnico: plan_not_found/);
+    assert.doesNotMatch(text, /removid|exclu[ií]d|apagado|retirad/i, 'a indisponibilidade não afirma remoção, exclusão ou retirada');
+    assert.doesNotMatch(text, /Plano fictício publicado no portal de continuidade|Equipe fictícia de continuidade|Simulado fictício documentado/, 'o erro do detalhe não vaza conteúdo do plano');
+    assert.equal(await unavailable.getByRole('button', { name: 'Tentar novamente' }).count(), 0, '404 plan_not_found não oferece repetição inútil');
+    assert.equal(await clientPage.locator(`[data-testid="client-continuity-plan"][data-plan="${planA.id}"]`).count(), 1, 'a lista previamente lida permanece disponível');
+    assert.equal(await clientPage.locator('[data-ui-state="empty"]').count(), 0, '404 do detalhe não transforma a lista em vazio');
+
+    await capture(clientPage, 'gate-404-detalhe-indisponivel-real');
+    await clientContext.close();
+  });
+});
+
 test('anti-deriva: o portal mantém wrapper, estados e botão de atualização canônicos', async () => {
   const source = await readFile(new URL('../src/app/cliente/app/continuidade/page.tsx', import.meta.url), 'utf8');
   assert.match(source, /continuityRequest/);
@@ -467,4 +532,7 @@ test('anti-deriva: o portal mantém wrapper, estados e botão de atualização c
   assert.match(source, /honestNextTest/);
   assert.match(source, /data-ui-state/);
   assert.match(source, /Atualizar lista/);
+  assert.match(source, /Abrir detalhes/);
+  assert.match(source, /`\/api\/client\/continuity\/plans\/\$\{planId\}`/);
+  assert.match(source, /client-continuity-detail/);
 });

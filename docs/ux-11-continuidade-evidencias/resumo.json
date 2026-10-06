@@ -8,6 +8,16 @@
       "role": "admin",
       "viewport": "1440x900",
       "screenshot": "docs/ux-11-continuidade-evidencias/desktop-continuidade.png",
+      "gateEvidence": {
+        "environment": "UX_CONTINUITY_EVIDENCE_DIR",
+        "scenarios": [
+          "transição efetivada",
+          "simulado documentado",
+          "plano visível no portal",
+          "retirada e vazio honesto",
+          "mobile 390px"
+        ]
+      },
       "firstFocus": {
         "tag": "a",
         "text": "SEGGrupoSEG System",
@@ -25,6 +35,16 @@
       "role": "admin",
       "viewport": "390x844",
       "screenshot": "docs/ux-11-continuidade-evidencias/mobile-continuidade.png",
+      "gateEvidence": {
+        "environment": "UX_CONTINUITY_EVIDENCE_DIR",
+        "scenarios": [
+          "transição efetivada",
+          "simulado documentado",
+          "plano visível no portal",
+          "retirada e vazio honesto",
+          "mobile 390px"
+        ]
+      },
       "firstFocus": {
         "tag": "a",
         "text": "SEGGrupoSEG System",

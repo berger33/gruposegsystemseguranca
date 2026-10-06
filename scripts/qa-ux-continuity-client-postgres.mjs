@@ -18,7 +18,7 @@ if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.en
 }
 
 const root = path.resolve(import.meta.dirname, '..');
-const MINIMO = 9;
+const MINIMO = 10;
 
 function freePort() {
   return new Promise((resolve, reject) => {

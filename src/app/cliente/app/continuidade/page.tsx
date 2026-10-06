@@ -37,7 +37,12 @@ type ContinuityPlan = {
 };
 
 type PlansResponse = { plans?: unknown };
+type PlanDetailResponse = { plan?: unknown };
 type PlansPhase = "loading" | "ready" | "failed";
+type DetailLoad =
+  | { phase: "loading"; planId: string }
+  | { phase: "ready"; data: ContinuityPlan }
+  | { phase: "failed"; planId: string; error: ContinuityErrorDescriptor };
 
 const planStatus = (status: string) => ({
   text: continuityStatusLabels[status] ?? status,
@@ -47,12 +52,28 @@ const planStatus = (status: string) => ({
 const asList = (value: unknown): string[] =>
   Array.isArray(value) ? value.map(item => (typeof item === "string" ? item : JSON.stringify(item))).filter(Boolean) : [];
 
+const isContinuityPlan = (value: unknown): value is ContinuityPlan =>
+  Boolean(value) && typeof value === "object" &&
+  typeof (value as ContinuityPlan).id === "string" &&
+  typeof (value as ContinuityPlan).title === "string" &&
+  typeof (value as ContinuityPlan).protocol === "string";
+
 function incompletePlansResponse(status: number): ContinuityErrorDescriptor {
   return {
     ...describeContinuityError(null, status),
     kind: "unavailable",
     title: "Resposta de planos incompleta",
     detail: "O servidor respondeu sem uma lista de planos. Isto não é uma lista vazia.",
+    canRetry: true,
+  };
+}
+
+function incompleteDetailResponse(status: number): ContinuityErrorDescriptor {
+  return {
+    ...describeContinuityError(null, status),
+    kind: "unavailable",
+    title: "Resposta de detalhes incompleta",
+    detail: "O servidor respondeu sem os detalhes publicados do plano. Isto não é uma lista vazia.",
     canRetry: true,
   };
 }
@@ -77,11 +98,41 @@ function PlanLoadFailure({ error, onRetry }: { error: ContinuityErrorDescriptor;
   );
 }
 
+function PublishedPlanDetail({ plan }: { plan: ContinuityPlan }) {
+  const contingency = asList(plan.contingency_steps);
+  const recovery = asList(plan.recovery_steps);
+  const status = planStatus(plan.status);
+  return (
+    <section className={appStyles.responseBox} data-ui-state="ready" data-testid="client-continuity-detail-content" aria-labelledby="continuity-detail-title">
+      <strong id="continuity-detail-title">Detalhes publicados</strong>
+      <p className={appStyles.listItemTitle}>{plan.title}</p>
+      <p className={appStyles.listItemMeta}>
+        {plan.protocol} · {status.text} · último simulado {honestTestDate(plan.last_tested_at)} · próximo teste {honestNextTest(plan.next_test_due)}
+      </p>
+      <p className={appStyles.listItemDetail}>{plan.description}</p>
+      {contingency.length ? (
+        <div className={appStyles.responseBox}>
+          <strong>Passos de contingência publicados</strong>
+          <ol>{contingency.map((step, index) => <li key={`${plan.id}-detail-c-${index}`}>{step}</li>)}</ol>
+        </div>
+      ) : null}
+      {recovery.length ? (
+        <div className={appStyles.responseBox}>
+          <strong>Passos de recuperação publicados</strong>
+          <ol>{recovery.map((step, index) => <li key={`${plan.id}-detail-r-${index}`}>{step}</li>)}</ol>
+        </div>
+      ) : null}
+      <p className={appStyles.listItemMeta}>A visão de detalhes não exibe contatos internos, justificativas internas, trilha nem resultado textual de simulado.</p>
+    </section>
+  );
+}
+
 export default function ClientContinuityPage() {
   const { activeAccount, loading, notice, reload } = useClientSpace();
   const [plans, setPlans] = useState<ContinuityPlan[] | null>(null);
   const [phase, setPhase] = useState<PlansPhase>("loading");
   const [loadError, setLoadError] = useState<ContinuityErrorDescriptor | null>(null);
+  const [detail, setDetail] = useState<DetailLoad | null>(null);
 
   const loadPlans = useCallback(async (accountId: string) => {
     setLoadError(null);
@@ -108,10 +159,27 @@ export default function ClientContinuityPage() {
     setPhase("ready");
   }, []);
 
+  const loadDetail = useCallback(async (planId: string) => {
+    setDetail({ phase: "loading", planId });
+    const result = await continuityRequest<PlanDetailResponse>(`/api/client/continuity/plans/${planId}`);
+    if (!result.ok) {
+      // Uma falha no detalhe não invalida a lista já lida: em especial, 404
+      // pode indicar que a disponibilidade mudou depois da listagem.
+      setDetail({ phase: "failed", planId, error: result.error });
+      return;
+    }
+    if (!isContinuityPlan(result.data.plan)) {
+      setDetail({ phase: "failed", planId, error: incompleteDetailResponse(result.status) });
+      return;
+    }
+    setDetail({ phase: "ready", data: result.data.plan });
+  }, []);
+
   useEffect(() => {
     if (!activeAccount || activeAccount.status !== "active") {
       setPlans(null);
       setLoadError(null);
+      setDetail(null);
       return;
     }
     void loadPlans(activeAccount.id);
@@ -186,8 +254,9 @@ export default function ClientContinuityPage() {
             const status = planStatus(plan.status);
             const contingency = asList(plan.contingency_steps);
             const recovery = asList(plan.recovery_steps);
+            const detailIsLoading = detail?.phase === "loading" && detail.planId === plan.id;
             return (
-              <li key={plan.id} className={appStyles.listItem} data-testid="client-continuity-plan">
+              <li key={plan.id} className={appStyles.listItem} data-testid="client-continuity-plan" data-plan={plan.id}>
                 <div className={appStyles.listItemMain}>
                   <p className={appStyles.listItemTitle}>{plan.title}</p>
                   <p className={appStyles.listItemMeta}>
@@ -218,11 +287,30 @@ export default function ClientContinuityPage() {
                     {plan.client_visibility_note}
                   </div>
                 ) : null}
+                <div className={appStyles.inlineAction}>
+                  <button className={appStyles.retryButton} type="button" onClick={() => void loadDetail(plan.id)} disabled={detailIsLoading}>
+                    {detailIsLoading ? "Abrindo detalhes…" : "Abrir detalhes"}
+                  </button>
+                </div>
               </li>
             );
           })}
         </ul>
       )}
+      {detail ? (
+        <div className={appStyles.inlineAction} data-testid="client-continuity-detail" aria-live="polite">
+          {detail.phase === "loading" ? (
+            <div className={appStyles.loadingWrapWide} data-ui-state="loading">
+              <span className={styles.spinner} aria-hidden="true" />
+              Carregando detalhes publicados…
+            </div>
+          ) : detail.phase === "failed" ? (
+            <PlanLoadFailure error={detail.error} onRetry={() => void loadDetail(detail.planId)} />
+          ) : (
+            <PublishedPlanDetail plan={detail.data} />
+          )}
+        </div>
+      ) : null}
     </section>
   );
 }
