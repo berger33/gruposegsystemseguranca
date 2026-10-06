@@ -1,0 +1,52 @@
+name: UX knowledge delivery
+# UX-07 / EXT-08 — gate focal da família CONHECIMENTO (base de conhecimento).
+# Paths restritos à família e aos arquivos compartilhados REALMENTE tocados
+# nesta fatia. `server.mjs`, `src/server/ext-knowledge-api.mjs` e
+# `db/migrations/**` ficam de fora de propósito: nenhum deles foi alterado
+# aqui, e nenhuma migração nova foi criada (as 001–174 permanecem intactas).
+# O teste herdado da família entra no gate para provar que continua passando.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/admin/conhecimento/**'
+      - 'src/lib/knowledge-vocabulary.*'
+      - 'src/lib/knowledge-request.ts'
+      - 'tests/ext08-knowledge.test.mjs'
+      - 'tests/ext08-knowledge.integration.test.mjs'
+      - 'tests/ux-knowledge-vocabulary.test.mjs'
+      - 'tests/ux-knowledge-workspace.integration.test.mjs'
+      - 'scripts/qa-ux-knowledge-postgres.mjs'
+      - 'scripts/ux-evidence-capture.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ux-knowledge-delivery.yml'
+concurrency:
+  group: ux-knowledge-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  ux-knowledge-postgres-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      # O gate recusa rodar com banco do operador ou remoto; aqui os valores
+      # ficam explicitamente vazios.
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: node --test tests/ux-knowledge-vocabulary.test.mjs
+      - run: node --test tests/ext08-knowledge.test.mjs
+      - run: npm run test:ux-knowledge:pg

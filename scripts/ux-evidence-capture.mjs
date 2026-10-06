@@ -133,6 +133,22 @@ const STAGES = {
       { route: '/admin/compliance', role: 'admin', slug: 'compliance', waitFor: 'Compliance corporativo e obrigações internas', waitForRole: 'heading' },
     ],
   },
+  // UX-07 / EXT-08. Mesma convenção das etapas de analytics, qualidade e
+  // compliance: o h1 real da tela de produto é a marca de montagem; o banco
+  // desta etapa é limpo, então o estado observado é o VAZIO HONESTO ("a
+  // leitura funcionou e nenhum procedimento está registrado"). A jornada com
+  // massa real é coberta pelo gate
+  // tests/ux-knowledge-workspace.integration.test.mjs
+  // (UX_KNOWLEDGE_EVIDENCE_DIR). Cobertura parcial declarada no documento.
+  // EXT-08 NÃO usa permissão granular por grant nesta rota: o servidor
+  // canônico decide por sessão de equipe e papel. Por isso esta etapa não
+  // declara o gancho opcional `grants` — ele seria no-op aqui.
+  'ux-07-conhecimento': {
+    outputDir: 'docs/ux-07-conhecimento-evidencias',
+    targets: [
+      { route: '/admin/conhecimento', role: 'admin', slug: 'conhecimento', waitFor: 'Base de conhecimento e procedimentos operacionais', waitForRole: 'heading' },
+    ],
+  },
 };
 
 const plan = STAGES[stage];
