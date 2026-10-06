@@ -1,0 +1,54 @@
+name: UX fleet delivery
+# UX-07 / EXT-01 — gate focal da família FROTA.
+# Paths restritos à família e aos arquivos compartilhados REALMENTE tocados
+# nesta fatia. `server.mjs`, `src/server/ext-fleet-api.mjs` e
+# `db/migrations/**` ficam de fora de propósito: nenhum deles foi alterado
+# aqui, e nenhuma migração nova foi criada (as 001–174 permanecem intactas,
+# incluindo a 085 e a 147 desta família). Nenhum scheduler foi tocado — esta
+# família não tem execução agendada.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/admin/frota/**'
+      - 'src/lib/fleet-vocabulary.*'
+      - 'src/lib/fleet-request.ts'
+      - 'tests/ext01-fleet.test.mjs'
+      - 'tests/ux-fleet-vocabulary.test.mjs'
+      - 'tests/ux-fleet-workspace.integration.test.mjs'
+      - 'scripts/qa-ux-fleet-postgres.mjs'
+      - 'scripts/ux-evidence-capture.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ux-fleet-delivery.yml'
+concurrency:
+  group: ux-fleet-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  ux-fleet-postgres-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      # O gate recusa rodar com banco do operador ou remoto; aqui os valores
+      # ficam explicitamente vazios.
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: node --test tests/ux-fleet-vocabulary.test.mjs
+      # Teste herdado da família: o contrato do servidor canônico de frota
+      # precisa continuar passando sem alteração alguma.
+      - run: node --test tests/ext01-fleet.test.mjs
+      - run: npm run test:ux-fleet:pg

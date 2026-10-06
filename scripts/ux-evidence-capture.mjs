@@ -163,6 +163,26 @@ const STAGES = {
       { route: '/admin/satisfacao', role: 'admin', slug: 'satisfacao', waitFor: 'Satisfação do cliente e acompanhamento interno', waitForRole: 'heading' },
     ],
   },
+  // UX-07 / EXT-01. Mesma convenção das etapas anteriores: o h1 real da tela
+  // de produto é a marca de montagem; o banco desta etapa é limpo, então o
+  // estado observado é o VAZIO HONESTO ("a leitura funcionou e nenhum veículo
+  // canônico está registrado", com a `note` que o próprio servidor devolve —
+  // a condição do plano é "se frota própria existir"). A jornada com massa
+  // real — dossiê, custo, alerta derivado de regra, histórico de regras,
+  // recusa 403 e falha independente — é provada pelo gate
+  // tests/ux-fleet-workspace.integration.test.mjs (UX_FLEET_EVIDENCE_DIR).
+  // Cobertura parcial declarada no documento.
+  // DECISÃO REGISTRADA sobre grant granular: EXT-01 NÃO usa permissão por
+  // grant. O servidor canônico decide por sessão de equipe, papel
+  // (`admin|marcelo|ti`, em FLEET_READ_ROLES/FLEET_WRITE_ROLES) e origem.
+  // Por isso esta etapa não declara o gancho opcional `grants`: ele seria
+  // no-op aqui.
+  'ux-07-frota': {
+    outputDir: 'docs/ux-07-frota-evidencias',
+    targets: [
+      { route: '/admin/frota', role: 'admin', slug: 'frota', waitFor: 'Frota própria, custo por veículo e alerta de manutenção', waitForRole: 'heading' },
+    ],
+  },
 };
 
 const plan = STAGES[stage];
