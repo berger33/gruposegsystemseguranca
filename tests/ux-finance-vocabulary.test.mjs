@@ -75,6 +75,12 @@ function serverErrorCodes(source) {
     for (const literal of match[1].matchAll(/[`'"]([a-z0-9_]+)[`'"]/g)) codes.add(literal[1]);
   }
   for (const match of cleaned.matchAll(/new (?:HttpError|E)\(\s*\d+\s*,\s*[`'"]([a-z0-9_]+)[`'"]/g)) codes.add(match[1]);
+  // Wrappers locais de cada servidor:
+  //   const bad = (res, msg) => json(res, 400, { error: msg });
+  //   const unavailable = (res, msg) => json(res, 503, { error: msg });
+  // Foram esquecidos na primeira versão deste levantamento e escondiam 23
+  // códigos; a correção está declarada no documento desta fatia.
+  for (const match of cleaned.matchAll(/\b(?:bad|unavailable)\(\s*res\s*,\s*[`'"]([a-z0-9_]+)[`'"]/g)) codes.add(match[1]);
   return codes;
 }
 
@@ -86,8 +92,8 @@ for (const code of [
   'invalid_client_account_id', 'invalid_competence_date', 'invalid_status',
 ]) codigosServidor.add(code);
 
-test('UX-07 financeiro: o levantamento encontra mais de 300 códigos distintos nos seis servidores', () => {
-  assert.ok(codigosServidor.size > 300, `esperava mais de 300 códigos, achei ${codigosServidor.size}`);
+test('UX-07 financeiro: o levantamento encontra mais de 340 códigos distintos nos seis servidores', () => {
+  assert.ok(codigosServidor.size > 340, `esperava mais de 340 códigos, achei ${codigosServidor.size}`);
 });
 
 test('UX-07 vocabulário: todo código dos servidores financeiros tem frase em português', () => {
@@ -105,7 +111,7 @@ test('UX-07 vocabulário: nenhuma tradução inventa um código que os servidore
   const vocabulario = await readFile(new URL('../src/lib/finance-vocabulary.mjs', import.meta.url), 'utf8');
   const bloco = vocabulario.match(/const ERROR_MESSAGES = Object\.freeze\(\{([\s\S]*?)\n\}\);/)[1];
   const traduzidos = [...bloco.matchAll(/^\s{2}([a-z0-9_]+):\s*\{/gm)].map(match => match[1]);
-  assert.ok(traduzidos.length > 300, 'o vocabulário deveria cobrir mais de 300 códigos');
+  assert.ok(traduzidos.length > 340, 'o vocabulário deveria cobrir mais de 340 códigos');
 
   const inventados = traduzidos.filter(code => !codigosServidor.has(code));
   assert.deepEqual(inventados.sort(), [],

@@ -201,6 +201,49 @@ herdado falhou **1 de 43** (FIN-12 Chromium), pela comparação por mensagem
 descrita na seção 4; após a introdução de `FinanceApiError`, a rodada seguinte
 passou integralmente.
 
+### 5.3 Correção posterior: o levantamento de códigos estava incompleto
+
+Registrado depois da abertura da PR #159, na fatia C (Contratos) da mesma
+sessão, e corrigido no **mesmo PR** em commit próprio. Fica escrito aqui em vez
+de consertado em silêncio.
+
+O extrator usado para levantar os códigos de erro do financeiro casava apenas
+`{ error: '...' }` literal e `new HttpError(..., '...')`, e **ignorava os
+wrappers locais** que cada servidor define:
+
+```js
+const bad = (res, msg) => json(res, 400, { error: msg });
+const unavailable = (res, msg) => json(res, 503, { error: msg });
+```
+
+Por isso a seção 3 falava em **319 códigos**: o número real é **342**. Faltavam
+**23 traduções** — `invalid_name`, `invalid_title`, `invalid_percent`,
+`invalid_base_type`, `invalid_base_value`, `invalid_cancel_rule`,
+`invalid_period_type`, `invalid_period_start`, `invalid_period_end`,
+`invalid_period_range`, `invalid_goal_id`, `invalid_company_id`,
+`invalid_opportunity_id`, `invalid_responsible_id`, `invalid_target_type`,
+`invalid_target_value`, `no_fields`, `above_rule_maximum`,
+`below_rule_minimum`, `approve_in_separate_request`, `cancel_reason_required`,
+`payment_evidence_note_required` e `payment_status_conflict`. Esses códigos
+chegariam crus à tela — exatamente o defeito que a fatia se propôs a corrigir.
+
+Pior do que o número: `tests/ux-finance-vocabulary.test.mjs` afirmava cobertura
+total porque media a coisa errada, com um limiar (`> 300`) baixo demais para
+expor o buraco.
+
+Correção aplicada:
+
+- extrator do teste passou a casar `\b(?:bad|unavailable)\(\s*res\s*,\s*'código'`;
+- limiares subidos de `> 300` para `> 340`;
+- as 23 traduções acrescentadas a `src/lib/finance-vocabulary.mjs` (agora
+  **342 códigos, zero duplicado**);
+- `node --test tests/ux-finance-vocabulary.test.mjs` → **10/10** depois da
+  correção.
+
+Nenhum comportamento de servidor foi alterado: a correção só amplia o que a
+interface sabe traduzir. O detalhamento do método e o procedimento para as
+próximas fatias estão na seção 4 de `docs/UX-07-CONTRATOS-2026-10-05.md`.
+
 ## 6. O que NÃO foi feito (pendências declaradas)
 
 1. **As doze áreas FIN-05..FIN-16 não foram reescritas.** Receberam apenas a

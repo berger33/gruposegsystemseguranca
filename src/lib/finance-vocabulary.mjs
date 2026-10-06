@@ -1635,6 +1635,125 @@ const ERROR_MESSAGES = Object.freeze({
     title: 'O pagamento exige confirmação manual explícita',
     detail: 'Sem a confirmação humana, nada é pago. Nada foi alterado.',
   },
+  // ----- Validação de campo e regra de comissão/meta (wrapper `bad(res, ...)`)
+  // Levantados depois de estender o extrator para o helper local
+  // `const bad = (res, msg) => json(res, 400, { error: msg })`.
+  invalid_name: {
+    kind: 'invalid',
+    title: 'Nome inválido',
+    detail: 'O nome informado está vazio ou acima do limite aceito. Nada foi gravado.',
+  },
+  invalid_title: {
+    kind: 'invalid',
+    title: 'Título inválido',
+    detail: 'O título informado está vazio ou acima do limite aceito. Nada foi gravado.',
+  },
+  invalid_percent: {
+    kind: 'invalid',
+    title: 'Percentual inválido',
+    detail: 'O percentual precisa estar dentro da faixa aceita pela regra. Nada foi gravado.',
+  },
+  invalid_base_type: {
+    kind: 'invalid',
+    title: 'Base de cálculo inválida',
+    detail: 'A base da comissão precisa ser contratado, faturado ou recebido. Nada foi gravado.',
+  },
+  invalid_base_value: {
+    kind: 'invalid',
+    title: 'Valor de base inválido',
+    detail: 'O valor da base de cálculo não foi aceito pelo servidor. Nada foi gravado.',
+  },
+  invalid_cancel_rule: {
+    kind: 'invalid',
+    title: 'Regra de cancelamento inválida',
+    detail: 'A regra precisa ser uma das previstas para cancelamento de comissão. Nada foi gravado.',
+  },
+  invalid_period_type: {
+    kind: 'invalid',
+    title: 'Periodicidade inválida',
+    detail: 'A periodicidade precisa ser uma das previstas para a regra. Nada foi gravado.',
+  },
+  invalid_period_start: {
+    kind: 'invalid',
+    title: 'Início do período inválido',
+    detail: 'A data de início do período não foi aceita. Nada foi gravado.',
+  },
+  invalid_period_end: {
+    kind: 'invalid',
+    title: 'Fim do período inválido',
+    detail: 'A data de fim do período não foi aceita. Nada foi gravado.',
+  },
+  invalid_period_range: {
+    kind: 'invalid',
+    title: 'Intervalo de período inválido',
+    detail: 'O fim do período precisa ser posterior ao início. Nada foi gravado.',
+  },
+  invalid_goal_id: {
+    kind: 'invalid',
+    title: 'Meta inválida',
+    detail: 'O identificador da meta não corresponde a nenhuma meta acessível. Nada foi gravado.',
+  },
+  invalid_company_id: {
+    kind: 'invalid',
+    title: 'Empresa inválida',
+    detail: 'O identificador da empresa não corresponde a nenhuma empresa da sua carteira. Nada foi gravado.',
+  },
+  invalid_opportunity_id: {
+    kind: 'invalid',
+    title: 'Oportunidade inválida',
+    detail: 'O identificador da oportunidade não corresponde a nenhuma oportunidade acessível. Nada foi gravado.',
+  },
+  invalid_responsible_id: {
+    kind: 'invalid',
+    title: 'Responsável inválido',
+    detail: 'O identificador do responsável não corresponde a nenhuma pessoa da equipe. Nada foi gravado.',
+  },
+  invalid_target_type: {
+    kind: 'invalid',
+    title: 'Tipo de alvo da meta inválido',
+    detail: 'O alvo precisa ser um dos tipos previstos para a meta. Nada foi gravado.',
+  },
+  invalid_target_value: {
+    kind: 'invalid',
+    title: 'Valor-alvo inválido',
+    detail: 'O valor-alvo da meta não foi aceito pelo servidor. Nada foi gravado.',
+  },
+  no_fields: {
+    kind: 'invalid',
+    title: 'Nenhum campo para alterar',
+    detail: 'O pedido de alteração chegou sem nenhum campo. Nada foi gravado.',
+  },
+  above_rule_maximum: {
+    kind: 'conflict',
+    title: 'Valor acima do máximo da regra',
+    detail: 'A regra de comissão vigente define um teto que este valor ultrapassa. Nada foi gravado.',
+  },
+  below_rule_minimum: {
+    kind: 'conflict',
+    title: 'Valor abaixo do mínimo da regra',
+    detail: 'A regra de comissão vigente define um piso que este valor não alcança. Nada foi gravado.',
+  },
+  approve_in_separate_request: {
+    kind: 'denied',
+    title: 'Aprovar exige um pedido separado',
+    detail: 'Criar e aprovar são operações distintas, de propósito. Nada foi aprovado.',
+  },
+  cancel_reason_required: {
+    kind: 'invalid',
+    title: 'O motivo do cancelamento é obrigatório',
+    detail: 'O servidor exige o motivo real para cancelar. Nada foi cancelado.',
+  },
+  payment_evidence_note_required: {
+    kind: 'invalid',
+    title: 'A evidência do pagamento é obrigatória',
+    detail: 'Registrar pagamento exige declarar a evidência real. Nada foi gravado.',
+  },
+  payment_status_conflict: {
+    kind: 'conflict',
+    title: 'A situação de pagamento mudou',
+    detail: 'O registro já não está na situação esperada para esta operação. Recarregue antes de repetir.',
+  },
+
 });
 
 /**
