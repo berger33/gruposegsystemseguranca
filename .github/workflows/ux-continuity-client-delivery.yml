@@ -1,0 +1,53 @@
+name: UX-11 continuidade cliente delivery
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/cliente/app/continuidade/**'
+      - 'src/lib/continuity-*'
+      - 'tests/ext10-continuity.test.mjs'
+      - 'tests/ext10-continuity.integration.test.mjs'
+      - 'tests/ux-continuity-vocabulary.test.mjs'
+      - 'tests/ux-continuity-client-portal-vocabulary.test.mjs'
+      - 'tests/ux-continuity-client-portal.integration.test.mjs'
+      - 'scripts/qa-ext10-continuity-postgres.mjs'
+      - 'scripts/qa-ux-continuity-postgres.mjs'
+      - 'scripts/qa-ux-continuity-client-postgres.mjs'
+      - 'scripts/ux-evidence-*.mjs'
+      - 'package*.json'
+      - '.github/workflows/ux-continuity-client-delivery.yml'
+  workflow_dispatch:
+concurrency:
+  group: ux-continuity-client-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  focal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: node --test tests/ux-continuity-vocabulary.test.mjs tests/ux-continuity-client-portal-vocabulary.test.mjs tests/ext10-continuity.test.mjs
+      - run: npm run test:ext10-continuity:pg
+      - run: npm run test:ux-continuity:pg
+      # Gate próprio: PostgreSQL descartável, HTTP canônico e Chromium sem
+      # substituir resposta alguma. O script audita o piso de 9 casos TAP.
+      - run: npm run test:ux-continuity-client:pg
+      # Evidência visual autenticada do portal do cliente: massa fictícia é
+      # publicada pelas APIs reais; reprova por 5xx, console da aplicação,
+      # foco perdido ou rolagem horizontal em desktop e 390px.
+      - run: npm run ux:evidence -- --stage=ux-11-continuidade-cliente
+      - run: npm audit --audit-level=high

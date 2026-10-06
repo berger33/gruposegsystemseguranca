@@ -21,6 +21,7 @@ import pg from 'pg';
 import { chromium as playwrightChromium } from 'playwright';
 import packagedChromium from '@sparticuz/chromium';
 import { provisionStaff, STAFF_TEST_PASSWORD } from '../tests/helpers/staff-login.mjs';
+import { hashPassword } from '../src/lib/client-auth-core.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 
@@ -257,6 +258,23 @@ const STAGES = {
       grants: ['continuity.read', 'continuity.write', 'continuity.activate'],
     }],
   },
+  // UX-11 / EXT-10 — portal de continuidade do CLIENTE. Diferentemente da
+  // tela de equipe, a autorização da rota é o vínculo ativo em
+  // `client_access_grants`, sempre revalidado no servidor. A preparação cria
+  // conta, identidade, vínculo e sessão fictícios e publica um plano pelas
+  // APIs canônicas; assim a captura não abre em NEGADO nem inventa conteúdo
+  // por SQL. A recusa do vínculo continua pertencendo ao gate focal
+  // tests/ux-continuity-client-portal.integration.test.mjs.
+  'ux-11-continuidade-cliente': {
+    outputDir: 'docs/ux-11-continuidade-cliente-evidencias',
+    targets: [{
+      route: '/cliente/app/continuidade',
+      slug: 'continuidade-cliente',
+      clientContinuity: true,
+      timezoneId: 'America/Sao_Paulo',
+      waitFor: 'Plano fictício publicado na evidência de continuidade',
+    }],
+  },
 };
 
 const plan = STAGES[stage];
@@ -333,6 +351,97 @@ async function loginCookie(email) {
   return cookies.map(value => value.split(';')[0]).join('; ');
 }
 
+async function jsonRequest(pathname, { method = 'GET', cookie, body, headers = {} } = {}) {
+  const response = await fetch(`${baseUrl}${pathname}`, {
+    method,
+    headers: {
+      accept: 'application/json',
+      ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+      ...(method === 'GET' ? {} : { origin: baseUrl }),
+      ...(cookie ? { cookie } : {}),
+      ...headers,
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  return { status: response.status, body: await response.json().catch(() => null), cookies: response.headers.getSetCookie?.() || [] };
+}
+
+// A captura do portal não usa uma resposta forjada. Apenas a identidade, o
+// vínculo de acesso e a massa sintética são preparados no banco; o plano nasce
+// e é publicado pelas rotas HTTP canônicas com os grants de equipe reais.
+async function prepareClientContinuityTarget() {
+  const staff = await provisionStaff(pool, { role: 'admin' });
+  for (const permission of ['continuity.read', 'continuity.write', 'continuity.activate']) {
+    await pool.query(
+      `INSERT INTO auth_permissions(id,identity_id,permission,scope_type,granted_by,granted_by_role,reason)
+       VALUES($1,$2,$3,'global',$2,'admin','Evidência UX: preparação de plano fictício publicado')`,
+      [randomUUID(), staff.id, permission],
+    );
+  }
+  const staffCookie = await loginCookie(staff.email);
+  const accountId = randomUUID();
+  await pool.query(
+    `INSERT INTO client_accounts(id,display_name,status,created_by)
+     VALUES($1,'Conta fictícia da evidência de continuidade','active','ti')`,
+    [accountId],
+  );
+
+  const identityId = randomUUID();
+  const email = `evidencia-continuidade-${identityId.slice(0, 8)}@example.invalid`;
+  const password = `Cliente-Ficticio-${randomUUID()}!`;
+  await pool.query(
+    `INSERT INTO auth_identities(id,kind,email,display_name,status,verification_method,verified_at)
+     VALUES($1,'client',$2,'Cliente fictício da evidência','active','email_link',NOW())`,
+    [identityId, email],
+  );
+  await pool.query('INSERT INTO auth_credentials(identity_id,password_hash) VALUES($1,$2)', [identityId, await hashPassword(password)]);
+  await pool.query(
+    `INSERT INTO client_access_grants(id,identity_id,client_account_id,reason,granted_by)
+     VALUES($1,$2,$3,'Evidência UX: vínculo fictício do portal','ti')`,
+    [randomUUID(), identityId, accountId],
+  );
+
+  const login = await jsonRequest('/api/auth/login', { method: 'POST', body: { email, password } });
+  if (login.status !== 200) throw new Error(`client_login_failed_${login.status}`);
+  const clientCookie = login.cookies.map(value => value.split(';')[0]).join('; ');
+  if (!clientCookie.includes('seg_client_session=')) throw new Error('client_session_cookie_missing');
+
+  const key = label => `cont-evidence-${label}-${randomUUID()}`;
+  const created = await jsonRequest('/api/ext/continuity/plans', {
+    method: 'POST', cookie: staffCookie, headers: { 'idempotency-key': key('create') },
+    body: {
+      title: 'Plano fictício publicado na evidência de continuidade',
+      description: 'Plano sintético criado pela rota canônica apenas para registrar a evidência visual do portal do cliente.',
+      responsible_name: 'Equipe fictícia de continuidade',
+      client_account_id: accountId,
+      contingency_steps: ['Registrar a ocorrência no procedimento interno'],
+      recovery_steps: ['Confirmar a recuperação no procedimento interno'],
+    },
+  });
+  if (created.status !== 201 || !created.body?.plan?.id) throw new Error(`client_evidence_plan_create_${created.status}`);
+  const planId = created.body.plan.id;
+  const approved = await jsonRequest(`/api/ext/continuity/plans/${planId}/transition`, {
+    method: 'POST', cookie: staffCookie, headers: { 'idempotency-key': key('approve') }, body: { status: 'aprovado' },
+  });
+  if (approved.status !== 200) throw new Error(`client_evidence_plan_approve_${approved.status}`);
+  const exercise = await jsonRequest(`/api/ext/continuity/plans/${planId}/exercises`, {
+    method: 'POST', cookie: staffCookie, headers: { 'idempotency-key': key('exercise') },
+    body: {
+      exercise_date: '2026-03-11', next_due: '2026-09-11',
+      result: 'Simulado fictício documentado para a evidência visual do portal.',
+      responsible_name: 'Equipe fictícia de simulados',
+    },
+  });
+  if (exercise.status !== 201) throw new Error(`client_evidence_plan_exercise_${exercise.status}`);
+  const published = await jsonRequest(`/api/ext/continuity/plans/${planId}/client-visibility`, {
+    method: 'POST', cookie: staffCookie, headers: { 'idempotency-key': key('publish') },
+    body: { visible: true, note: 'Publicado para a conta fictícia conferir o procedimento na evidência visual.' },
+  });
+  if (published.status !== 200) throw new Error(`client_evidence_plan_publish_${published.status}`);
+
+  return clientCookie;
+}
+
 const report = [];
 let exitCode = 0;
 let pool;
@@ -343,7 +452,12 @@ try {
   pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 4 });
 
   const cookieByRole = new Map();
+  const cookieByTarget = new Map();
   for (const target of plan.targets) {
+    if (target.clientContinuity) {
+      cookieByTarget.set(target.slug, await prepareClientContinuityTarget());
+      continue;
+    }
     if (cookieByRole.has(target.role)) continue;
     const staff = await provisionStaff(pool, { role: target.role });
     // Famílias sem gatilho de provisionamento por papel declaram `grants` no
@@ -376,8 +490,10 @@ try {
         const context = await browser.newContext({
           viewport: { width: viewport.width, height: viewport.height },
           locale: 'pt-BR',
+          ...(target.timezoneId ? { timezoneId: target.timezoneId } : {}),
         });
-        const cookie = cookieByRole.get(target.role);
+        const cookie = cookieByTarget.get(target.slug) || cookieByRole.get(target.role);
+        if (!cookie) throw new Error(`capture_cookie_missing_${target.slug}`);
         const pair = cookie.split('; ')[0];
         const separator = pair.indexOf('=');
         await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
