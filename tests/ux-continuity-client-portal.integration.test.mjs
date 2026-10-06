@@ -183,9 +183,10 @@ async function launchBrowser() {
 }
 
 const BROWSER_CRASH = /Target (page|closed)|has been closed|Target crashed|browser has disconnected|crashed|SIGSEGV|Protocol error/i;
-async function withBrowser(body) {
+async function withBrowser(body, beforeAttempt = null) {
   let lastError;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
+    if (beforeAttempt) await beforeAttempt();
     const browser = await launchBrowser();
     try {
       return await body(browser);
@@ -254,6 +255,30 @@ async function openStaffWorkspace(browser) {
 }
 
 const staffPlanCard = (page, id) => page.locator(`[data-testid="continuity-plan-card"][data-plan="${id}"]`);
+
+// O cenário de 404 deliberadamente muda disponibilidade entre duas leituras.
+// Se o Chromium cair depois da retirada, uma nova tentativa recompõe a
+// publicação pelo mesmo controle de equipe antes de abrir uma nova lista do
+// cliente. Isso preserva a precondição sem falsificar resposta alguma.
+async function ensurePlanPublishedByTeam() {
+  const current = await api(`/api/ext/continuity/plans/${planA.id}`);
+  assert.equal(current.status, 200, 'a equipe precisa consultar o plano antes de recompor a publicação');
+  if (current.body.plan.client_visible) return;
+
+  const staffBrowser = await launchBrowser();
+  try {
+    const { context, page } = await openStaffWorkspace(staffBrowser);
+    await page.getByRole('tab', { name: 'Planos', exact: true }).click();
+    const card = staffPlanCard(page, planA.id);
+    await card.waitFor();
+    await card.locator('input[aria-label^="Justificativa de publicação"]').fill('Republicação fictícia para recompor a precondição do 404 visual.');
+    await card.getByRole('button', { name: 'Publicar no portal' }).click();
+    await card.getByText('Portal do cliente: publicado, somente leitura').waitFor();
+    await context.close();
+  } finally {
+    await staffBrowser.close().catch(() => {});
+  }
+}
 
 before(async () => {
   if (!RUN) return;
@@ -521,7 +546,7 @@ test('browser: detalhe recebe 404 real após retirada pela tela de equipe e pres
 
     await capture(clientPage, 'gate-404-detalhe-indisponivel-real');
     await clientContext.close();
-  });
+  }, ensurePlanPublishedByTeam);
 });
 
 test('anti-deriva: o portal mantém wrapper, estados e botão de atualização canônicos', async () => {
