@@ -1,5 +1,7 @@
 "use client";
 
+import styles from "../../../components/ui/UiWorkspace.module.css";
+import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
 import { FormEvent, useEffect, useState } from "react";
 
 type CostImport = {
@@ -23,7 +25,7 @@ const money = (value:string|number|undefined) => value == null ? "Dado ausente" 
 async function request(path:string, init?:RequestInit) {
   const response = await fetch(path, { ...init, headers:{ "Content-Type":"application/json", ...(init?.headers||{}) } });
   const data = await response.json().catch(()=>({}));
-  if (!response.ok) throw new Error(data.error || `Erro ${response.status}`);
+  if (!response.ok) throw new Error(financeErrorMessage(typeof data.error === "string" ? data.error : null, response.status));
   return data;
 }
 
@@ -45,11 +47,11 @@ export default function CostAllocationWorkspace() {
     setCostForm(initialCost); setNotice("Custo sintético criado com rateio documentado"); await load();
   }); };
 
-  return <section data-testid="fin08-costs" aria-labelledby="fin08-title" style={{display:"grid",gap:"1rem"}}>
+  return <section data-testid="fin08-costs" aria-labelledby="fin08-title" className={styles.stackWide}>
     <header><h2 id="fin08-title">FIN-08 · Custos e rateio documentado</h2><p>Registre metadados sintéticos de pessoal, equipamentos, materiais e supervisão por cliente, contrato e posto. Não há leitura de arquivo, folha, estoque ou integração externa.</p></header>
     {error&&<p role="alert" data-testid="fin08-error">{error}</p>}{notice&&<p role="status" data-testid="fin08-notice">{notice}</p>}
 
-    <form data-testid="fin08-import-form" onSubmit={createImport} style={{display:"grid",gap:8}}><h3>Metadados da importação sintética</h3>
+    <form data-testid="fin08-import-form" onSubmit={createImport} className={styles.stack}><h3>Metadados da importação sintética</h3>
       <label>Origem <select data-testid="fin08-import-source" value={importForm.source} onChange={e=>setImportForm({...importForm,source:e.target.value})}>{sources.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
       <label>Nome do arquivo sintético <input required maxLength={500} data-testid="fin08-import-file-name" value={importForm.file_name} onChange={e=>setImportForm({...importForm,file_name:e.target.value})}/></label>
       <label>URL local sintética <input required minLength={5} maxLength={1000} data-testid="fin08-import-file-url" value={importForm.file_url} onChange={e=>setImportForm({...importForm,file_url:e.target.value})}/></label>
@@ -61,7 +63,7 @@ export default function CostAllocationWorkspace() {
     </form>
     <table data-testid="fin08-imports"><thead><tr><th>Protocolo</th><th>Origem</th><th>Competência</th><th>Alocado</th><th>Registros</th></tr></thead><tbody>{imports.length===0?<tr><td colSpan={5}>Nenhuma importação.</td></tr>:imports.map(item=><tr key={item.id}><td>{item.protocol}</td><td>{item.source}</td><td>{String(item.competence_date).slice(0,10)}</td><td>{money(item.allocated_costs_cents)} / {money(item.total_costs_cents)}</td><td>{item.allocated_records} / {item.total_records}</td></tr>)}</tbody></table>
 
-    <form data-testid="fin08-cost-form" onSubmit={createCost} style={{display:"grid",gap:8}}><h3>Alocar custo</h3>
+    <form data-testid="fin08-cost-form" onSubmit={createCost} className={styles.stack}><h3>Alocar custo</h3>
       <label>Importação <select data-testid="fin08-cost-import" value={costForm.import_id} onChange={e=>selectImport(e.target.value)}><option value="">Custo manual sintético</option>{imports.map(item=><option key={item.id} value={item.id}>{item.protocol} · {item.source}</option>)}</select></label>
       {costForm.import_id&&<label>Chave do registro <input required maxLength={200} data-testid="fin08-cost-record-key" value={costForm.import_record_key} onChange={e=>setCostForm({...costForm,import_record_key:e.target.value})}/></label>}
       <label>Conta do cliente <input required data-testid="fin08-cost-account" value={costForm.client_account_id} onChange={e=>setCostForm({...costForm,client_account_id:e.target.value})}/></label>

@@ -65,7 +65,9 @@
     ".next/integration-ux-portal/types/**/*.ts",
     ".next/integration-ux-portal/dev/types/**/*.ts",
     ".next/integration-ux-ops/types/**/*.ts",
-    ".next/integration-ux-ops/dev/types/**/*.ts"
+    ".next/integration-ux-ops/dev/types/**/*.ts",
+    ".next/integration-ux-finance/types/**/*.ts",
+    ".next/integration-ux-finance/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

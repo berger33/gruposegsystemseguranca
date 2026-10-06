@@ -1,10 +1,11 @@
 "use client";
+import styles from "../../../components/ui/UiWorkspace.module.css";
 import { useCallback, useEffect, useState } from "react";
+import { financeErrorMessage, expenseStatusLabel } from "../../../lib/finance-vocabulary.mjs";
 
 type Expense = { id:string; protocol:string; expense_type:string; category:string; description:string; amount_cents:number; threshold_cents:number; status:"pendente"|"aprovado"|"rejeitado"|"cancelado"; requester_name:string; requester_identity:string; approver_name:string|null; evidence_file_name:string };
 type HistoryEntry={ id:string; previous_status:string|null; next_status:string; changed_by_identity:string; reason:string; authority_limit_cents:string|number|null; approver_identity:string|null; requester_identity:string|null };
 
-const STATUS_LABEL: Record<Expense["status"], string> = { pendente:"Pendente", aprovado:"Aprovada", rejeitado:"Recusada", cancelado:"Cancelada" };
 const brl = (cents:number|null|undefined) => cents==null ? "—" : new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(cents)/100);
 const parseBrl = (text:string) => {
   const value = Number(text.trim().replaceAll(".","").replace(",","."));
@@ -40,12 +41,20 @@ export default function ExpenseWorkspace() {
     setLoading(true);
     const q = (term ?? search).trim();
     if (q !== searchApplied) setSearchApplied("");
+    // UX-07 (fatia B): a falha de leitura preserva o código e o status reais
+    // devolvidos pelo servidor, em vez de virar um `Error("expenses")` mudo.
+    const readJson = async (url:string) => {
+      const response = await fetch(url,{cache:"no-store"});
+      const body = await response.json().catch(()=>({}));
+      if (!response.ok) throw new Error(financeErrorMessage(typeof body?.error === "string" ? body.error : null, response.status));
+      return body;
+    };
     const [lists,policy] = await Promise.allSettled([
-      fetch(`/api/fin/expenses${q?`?q=${encodeURIComponent(q)}`:""}`,{cache:"no-store"}).then(r=>r.ok?r.json():Promise.reject(new Error("expenses"))),
-      fetch(`/api/fin/expense-authorities`,{cache:"no-store"}).then(r=>r.ok?r.json():Promise.reject(new Error("authorities"))),
+      readJson(`/api/fin/expenses${q?`?q=${encodeURIComponent(q)}`:""}`),
+      readJson(`/api/fin/expense-authorities`),
     ]);
     if (lists.status!=="fulfilled") {
-      setError("Falha ao ler despesas. Toque em Tentar novamente.");
+      setError(`Não foi possível ler as despesas. ${lists.reason instanceof Error ? lists.reason.message : financeErrorMessage(null, 0)}`);
       setLoading(false);
       return;
     }
@@ -82,7 +91,7 @@ export default function ExpenseWorkspace() {
       idempotency_key:idempotency,
     })});
     const json=await response.json();
-    if (!response.ok) { setNotice(`Não foi possível registrar: ${json.error}.`); return; }
+    if (!response.ok) { setNotice(`Não foi possível registrar: ${financeErrorMessage(typeof json.error === "string" ? json.error : null, response.status)}`); return; }
     setNotice(json?.idempotent_replay ? "Solicitação já existia para esta chave de idempotência e foi reutilizada (replay, sem duplicar)." : "Solicitação registrada e pendente de aprovação por aprovador habilitado.");
     setDescription("");setAmountText("");setThresholdText("");setIdempotency(`fin10-${Date.now()}`);
     await load("");
@@ -92,7 +101,7 @@ export default function ExpenseWorkspace() {
     setNotice("");
     const response=await fetch(`/api/fin/expenses`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status,reason:decisionReason})});
     const json=await response.json();
-    if (!response.ok) { setNotice(`Decisão recusada: ${json.error}.`); return; }
+    if (!response.ok) { setNotice(`Decisão recusada: ${financeErrorMessage(typeof json.error === "string" ? json.error : null, response.status)}`); return; }
     setNotice(status==="aprovado" ? `Despesa aprovada dentro da alçada vigente do aprovador autenticado (limite aplicado: ${brl(json?.expense?.approval_limit_cents!=null?Number(json.expense.approval_limit_cents):null)}).` : "Despesa recusada com motivo obrigatório.");
     setDecisionReason("");
     await load("");
@@ -110,36 +119,36 @@ export default function ExpenseWorkspace() {
   const pendingCount=expenses.filter(e=>e.status==="pendente").length;
 
   return (
-    <div style={{display:"grid",gridTemplateColumns:"1.1fr 1fr",gap:12}}>
+    <div className={styles.twoColumns}>
       <section className="card">
         <h3>Solicitações de despesa, reembolso e compra</h3>
         <p className="section-desc">Solicitar, aprovar, recusar ou cancelar não cria pagamento, baixa, cobrança, recebível, pagável ou qualquer efeito financeiro externo: a solicitação fica pendente até decisão autorizada.</p>
         <div data-testid="fin10-policy">{policyText}</div>
-        <div style={{display:"flex",gap:8,margin:"8px 0"}}>
-          <input data-testid="fin10-search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por nome, protocolo ou referência" style={{flex:1}} />
+        <div className={styles.rowWrap}>
+          <input data-testid="fin10-search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por nome, protocolo ou referência" className={styles.grow} />
           <button data-testid="fin10-search-apply" onClick={()=>load()}>Buscar</button>
           <button data-testid="fin10-reload" onClick={()=>{setSearch("");load("");}} disabled={loading}>{loading?"Carregando…":"Limpar/atualizar"}</button>
         </div>
         {error ? (
-          <div data-testid="fin10-error" role="alert" style={{marginBottom:8}}>
+          <div data-testid="fin10-error" role="alert" className={styles.spacedBelow}>
             <strong>{error}</strong>{" "}
             <button data-testid="fin10-retry" onClick={()=>load()} disabled={loading}>Tentar novamente</button>
           </div>
         ) : null}
-        <ul className="listPane" data-testid="fin10-expenses" style={{maxHeight:360,overflow:"auto",listStyle:"none",paddingLeft:0,minHeight:40}}>
+        <ul className={`listPane ${styles.scrollList}`} data-testid="fin10-expenses">
           {!error && !loading && expenses.length===0 ? (
             <li data-testid="fin10-empty">{searchApplied ? "Nenhum resultado para a busca aplicada." : "Nenhuma solicitação."}</li>
           ) : null}
           {!error ? expenses.map(e=>(
-            <li key={e.id} style={{borderTop:"1px solid #e3e5e6",padding:"6px 0"}}>
-              <div data-testid={`fin10-expense-${e.id}`}><b>{e.protocol}</b> · {STATUS_LABEL[e.status]} · <span>{brl(e.amount_cents)}</span> · {e.category} — {e.description}</div>
-              <span style={{display:"block",fontSize:12}}>Solicitante: {e.requester_name}{e.approver_name?` · Aprovador: ${e.approver_name}`:""} · Evidência sintética: {e.evidence_file_name}</span>
-              {e.status==="pendente" ? <span style={{display:"block",fontSize:12}}>Decisão pendente com motivo obrigatório e aprovador habilitado.</span> : null}
-              <button data-testid={`fin10-history-toggle-${e.id}`} type="button" onClick={()=>setHistoryOpen(h=>({...h,[e.id]:!h[e.id]}))} style={{marginTop:4}}>
+            <li key={e.id} className={styles.dividedItem}>
+              <div data-testid={`fin10-expense-${e.id}`}><b>{e.protocol}</b> · {expenseStatusLabel(e.status)} · <span>{brl(e.amount_cents)}</span> · {e.category} — {e.description}</div>
+              <span className={styles.metaLine}>Solicitante: {e.requester_name}{e.approver_name?` · Aprovador: ${e.approver_name}`:""} · Evidência sintética: {e.evidence_file_name}</span>
+              {e.status==="pendente" ? <span className={styles.metaLine}>Decisão pendente com motivo obrigatório e aprovador habilitado.</span> : null}
+              <button data-testid={`fin10-history-toggle-${e.id}`} type="button" onClick={()=>setHistoryOpen(h=>({...h,[e.id]:!h[e.id]}))} className={styles.spacedTop}>
                 {historyOpen[e.id]?"Ocultar histórico":"Ver histórico"}
               </button>
               {historyOpen[e.id] ? (
-                <div data-testid={`fin10-history-${e.id}`} style={{fontSize:12,marginTop:4}}>
+                <div data-testid={`fin10-history-${e.id}`} className={styles.metaBlock}>
                   {(history[e.id]||[]).map(h=>(
                     <div key={h.id}>{h.previous_status??"início"} → {h.next_status} por {h.changed_by_identity}: {h.reason}{h.authority_limit_cents!=null?` — limite aplicado ${brl(Number(h.authority_limit_cents))}`:""}</div>
                   ))}
@@ -172,11 +181,11 @@ export default function ExpenseWorkspace() {
         <div className="field"><span>Chave de idempotência</span><input data-testid="fin10-idempotency" value={idempotency} onChange={e=>setIdempotency(e.target.value)} /></div>
         <button data-testid="fin10-create" onClick={create}>Registrar solicitação</button>{" "}
         {notice ? <span data-testid="fin10-notice">{notice}</span> : null}
-        <h4 style={{marginTop:16}}>Decisão (motivo obrigatório)</h4>
+        <h4 className={styles.spacedTopWide}>Decisão (motivo obrigatório)</h4>
         <div className="field"><span>Motivo da decisão</span><textarea data-testid="fin10-decision-reason" rows={3} value={decisionReason} onChange={e=>setDecisionReason(e.target.value)} /></div>
         <p>Para decidir, carregue a lista ao lado e use os botões da despesa pendente correspondente.</p>
         {expenses.filter(e=>e.status==="pendente").map(e=>(
-          <div key={e.id} style={{marginBottom:4}}>
+          <div key={e.id} className={styles.spacedBelow}>
             <button data-testid={`fin10-approve-${e.id}`} onClick={()=>decide(e.id,"aprovado")}>Aprovar {e.protocol} dentro da alçada</button>{" "}
             <button data-testid={`fin10-reject-${e.id}`} onClick={()=>decide(e.id,"rejeitado")}>Recusar {e.protocol}</button>
           </div>

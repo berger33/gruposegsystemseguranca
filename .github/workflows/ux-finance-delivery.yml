@@ -1,0 +1,52 @@
+name: UX financeiro delivery
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/admin/financeiro/**'
+      - 'src/components/ui/**'
+      - 'src/lib/finance-vocabulary.*'
+      - 'src/lib/finance-request.ts'
+      - 'src/styles/ux-tokens.css'
+      - 'src/server/fin-api.mjs'
+      - 'src/server/fin-advanced-api.mjs'
+      - 'src/server/fin-budget-api.mjs'
+      - 'src/server/fin-management-api.mjs'
+      - 'src/server/f03-finance-api.mjs'
+      - 'src/server/commission-api.mjs'
+      - 'server.mjs'
+      - 'tests/helpers/**'
+      - 'tests/ux-finance-vocabulary.test.mjs'
+      - 'tests/ux-finance-workspace.integration.test.mjs'
+      - 'scripts/qa-ux-finance-postgres.mjs'
+      - 'db/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/ux-finance-delivery.yml'
+concurrency:
+  group: ux-finance-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  ux-finance-postgres-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Verificação de tipos
+        run: npm run typecheck
+      - name: Vocabulário canônico do financeiro (sem PostgreSQL)
+        run: node --test tests/ux-finance-vocabulary.test.mjs
+      - name: Financeiro — HTTP real, PostgreSQL descartável e Chromium
+        run: npm run test:ux-finance:pg

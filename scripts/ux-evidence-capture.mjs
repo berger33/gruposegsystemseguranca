@@ -68,6 +68,12 @@ const STAGES = {
       { route: '/admin/operacao', role: 'ti', slug: 'operacao', waitFor: 'Operação — controle e gestão operacional' },
     ],
   },
+  'ux-07-financeiro': {
+    outputDir: 'docs/ux-07-financeiro-evidencias',
+    targets: [
+      { route: '/admin/financeiro', role: 'financeiro', slug: 'financeiro', waitFor: 'Financeiro — contas, recorrência e baixas' },
+    ],
+  },
 };
 
 const plan = STAGES[stage];

@@ -1,5 +1,6 @@
 "use client";
 
+import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
 import { FormEvent, useEffect, useState } from "react";
 
 type Gateway = { id:string; name:string; gateway_code:string|null; gateway_type:string; status:string; environment:string; is_selected:boolean; is_sandbox:boolean; is_active:boolean; charge_enabled?:boolean; has_sandbox_secret?:boolean };
@@ -7,10 +8,23 @@ type Webhook = { id:string; gateway_id:string; event_type:string; status:string;
 type Charge = { id:string; protocol:string; gateway_id:string; receivable_id:string|null; amount_cents:string|number; status:string; is_conciliated:boolean; simulated:boolean; idempotency_key:string };
 
 const money = (value:string|number|undefined) => value == null ? "Dado ausente" : `R$ ${(Number(value)/100).toFixed(2).replace(".",",")}`;
+// UX-07 (fatia B): a falha carrega a frase em português E o código canônico.
+// O código continua existindo porque esta tela decide o texto de recusa de
+// assinatura/replay por código, não por mensagem — traduzir sem preservá-lo
+// quebraria essa decisão.
+class FinanceApiError extends Error {
+  code: string | null;
+  constructor(code: string | null, status: number) {
+    super(financeErrorMessage(code, status));
+    this.name = "FinanceApiError";
+    this.code = code;
+  }
+}
+
 async function api(path:string, init?:RequestInit) {
   const response = await fetch(path, { ...init, headers:{ "Content-Type":"application/json", ...(init?.headers||{}) } });
   const data = await response.json().catch(()=>({}));
-  if (!response.ok) throw new Error(data.error || `Erro ${response.status}`);
+  if (!response.ok) throw new FinanceApiError(typeof data.error === "string" ? data.error : null, response.status);
   return data;
 }
 
@@ -61,7 +75,7 @@ export default function GatewayWorkspace() {
   // O simulador local assina a mensagem canônica; o servidor reconfere a
   // assinatura antes de aceitar o webhook e só então concilia a cobrança.
   const simulateWebhook = (item:Charge, forgeSignature:boolean) => run(async()=>{
-    if (reason.length < 10) throw new Error("reason_10_1000_required");
+    if (reason.length < 10) throw new Error(financeErrorMessage("reason_10_1000_required", 400));
     const idempotency_key = `fin12-ui-${item.protocol}-${forgeSignature?"forjado":"valido"}`;
     const payload = { protocol:item.protocol, amount_cents:Number(item.amount_cents), settlement:"synthetic" };
     const signed = await api("/api/fin/gateway-webhook-sign",{method:"POST",body:JSON.stringify({ gateway_id:item.gateway_id, event_type:"charge.paid", idempotency_key, payload })});
@@ -71,9 +85,9 @@ export default function GatewayWorkspace() {
       await api("/api/fin/gateway-webhooks",{method:"PATCH",body:JSON.stringify({ id:received.webhook.id, status:"conciliado", charge_id:item.id, reason })});
       setNotice("Webhook assinado, validado e conciliado; a baixa do recebível canônico foi registrada apenas no simulador.");
     } catch(e) {
-      const message = e instanceof Error ? e.message : "falha";
-      if (message === "webhook_signature_invalid") setNotice("Assinatura inválida recusada pelo servidor; nada foi conciliado.");
-      else if (message === "replay_detected") setNotice("Replay recusado pela chave de idempotência; nada foi aplicado duas vezes.");
+      const code = e instanceof FinanceApiError ? e.code : null;
+      if (code === "webhook_signature_invalid") setNotice("Assinatura inválida recusada pelo servidor; nada foi conciliado.");
+      else if (code === "replay_detected") setNotice("Replay recusado pela chave de idempotência; nada foi aplicado duas vezes.");
       else throw e;
     }
     setReason(""); await load();
