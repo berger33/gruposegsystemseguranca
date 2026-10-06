@@ -1,0 +1,40 @@
+{
+  "stage": "ux-11-continuidade",
+  "generatedBy": "scripts/ux-evidence-capture.mjs",
+  "entries": [
+    {
+      "stage": "ux-11-continuidade",
+      "route": "/admin/continuidade",
+      "role": "admin",
+      "viewport": "1440x900",
+      "screenshot": "docs/ux-11-continuidade-evidencias/desktop-continuidade.png",
+      "firstFocus": {
+        "tag": "a",
+        "text": "SEGGrupoSEG System",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-11-continuidade",
+      "route": "/admin/continuidade",
+      "role": "admin",
+      "viewport": "390x844",
+      "screenshot": "docs/ux-11-continuidade-evidencias/mobile-continuidade.png",
+      "firstFocus": {
+        "tag": "a",
+        "text": "SEGGrupoSEG System",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    }
+  ]
+}

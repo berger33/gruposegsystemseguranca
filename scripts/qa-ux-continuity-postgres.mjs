@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 // UX-11 / F06 — gate focal autoauditável (inclui isolamento por client_account_id).
-// PostgreSQL 17 descartável, ledger 001–169, servidor HTTP real, navegador real
+// PostgreSQL 17 descartável, ledger completo, servidor HTTP real, navegador real
 // e sessões staff fictícias. Não usa banco remoto e não cria negócio por SQL.
+//
+// O mínimo de casos é um piso contra erosão silenciosa: se um caso for
+// removido ou passar a ser pulado, o gate reprova mesmo que o node:test saia 0.
 
 import EmbeddedPostgres from "embedded-postgres";
 import { spawn } from "node:child_process";
@@ -35,6 +38,8 @@ const run = (command, args, env) => new Promise((resolve, reject) => {
   child.once("exit", (code) => resolve({ code: code ?? 1, output }));
 });
 
+const MINIMO = 14;
+
 const auditTap = (output) => {
   const value = (label) => {
     const match = output.match(new RegExp(`^# ${label} (\\d+)$`, "m"));
@@ -49,7 +54,7 @@ const auditTap = (output) => {
   if (fail) problems.push(`${fail} falha(s)`);
   if (skipped) problems.push(`${skipped} caso(s) pulado(s)`);
   if (todo) problems.push(`${todo} caso(s) todo`);
-  if (pass !== null && pass < 2) problems.push(`apenas ${pass} casos aprovados; mínimo 2`);
+  if (pass !== null && pass < MINIMO) problems.push(`apenas ${pass} casos aprovados; mínimo ${MINIMO}`);
   return { pass, fail, skipped, todo, problems };
 };
 
@@ -98,9 +103,9 @@ try {
   });
   exitCode = executed.code;
   const summary = auditTap(executed.output);
-  console.log(`UX11_TAP_SUMMARY: pass=${summary.pass} fail=${summary.fail} skipped=${summary.skipped} todo=${summary.todo} minimo_exigido=2`);
+  console.log(`UX11_TAP_SUMMARY: pass=${summary.pass} fail=${summary.fail} skipped=${summary.skipped} todo=${summary.todo} minimo_exigido=${MINIMO}`);
   if (summary.problems.length) {
-    console.error(`EXT10_GATE_REJECTED: ${summary.problems.join("; ")}`);
+    console.error(`UX11_GATE_REJECTED: ${summary.problems.join("; ")}`);
     exitCode = 1;
   }
   console.log(`UX11_CONTINUITY_TEST_EXIT: ${exitCode}`);

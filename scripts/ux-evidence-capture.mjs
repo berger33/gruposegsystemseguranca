@@ -231,9 +231,31 @@ const STAGES = {
       { route: '/admin/expansao', role: 'admin', slug: 'expansao', waitFor: 'Expansão, capacidade e cenários financeiros', waitForRole: 'heading' },
     ],
   },
+  // UX-11 / EXT-10. A autorização desta família é do SERVIDOR, por grant
+  // granular (`continuity.read`/`continuity.write`/`continuity.activate`), e
+  // não pelo papel: sem grant o servidor responde 403 e a tela mostra NEGADO
+  // — estado honesto, mas não o objetivo desta evidência. Os grants abaixo
+  // reproduzem o provisionamento administrativo real e ficam registrados em
+  // `auth_permissions`, exatamente como na etapa `ux-07-qualidade`. A recusa
+  // 403 sem grant continua provada, com servidor real, pelo gate focal
+  // tests/ux-continuity-workspace.integration.test.mjs.
+  //
+  // A aba inicial é "Novo plano": isso é contrato herdado, verificado pelo
+  // teste Chromium de tests/ext10-continuity.integration.test.mjs, que
+  // preenche os placeholders do formulário logo após abrir a rota. A captura
+  // registra a tela como ela realmente abre. O restante da jornada (lista,
+  // detalhe, NEGADO, escopo, falha de rede e idempotência) é coberto pelo
+  // gate focal, que grava PNG quando UX_CONTINUITY_EVIDENCE_DIR é definido.
   'ux-11-continuidade': {
     outputDir: 'docs/ux-11-continuidade-evidencias',
-    targets: [{ route: '/admin/continuidade', role: 'admin', slug: 'continuidade', waitFor: 'Continuidade de negócios e contingência', waitForRole: 'heading' }],
+    targets: [{
+      route: '/admin/continuidade',
+      role: 'admin',
+      slug: 'continuidade',
+      waitFor: 'Continuidade de negócios e contingência',
+      waitForRole: 'heading',
+      grants: ['continuity.read', 'continuity.write', 'continuity.activate'],
+    }],
   },
 };
 

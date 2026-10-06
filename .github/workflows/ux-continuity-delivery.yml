@@ -16,4 +16,11 @@ jobs:
       - run: node --test tests/ux-continuity-vocabulary.test.mjs tests/ext10-continuity.test.mjs
       - run: npm run test:ext10-continuity:pg
       - run: npm run test:ux-continuity:pg
+      # Evidência visual de /admin/continuidade com PostgreSQL descartável e
+      # Chromium real: reprova se houver rolagem horizontal, foco de teclado
+      # perdido, erro de console da própria aplicação ou resposta 5xx.
+      # O PNG versionado é a evidência do ambiente onde foi gerado; o `resumo`
+      # produzido aqui NÃO é comparado byte a byte, porque `externalBlocked`
+      # depende da saída de rede do runner. O que reprova é problema real.
+      - run: npm run ux:evidence -- --stage=ux-11-continuidade
       - run: npm audit --audit-level=high
