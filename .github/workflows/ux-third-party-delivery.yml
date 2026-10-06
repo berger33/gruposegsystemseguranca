@@ -1,0 +1,60 @@
+name: UX third party delivery
+# UX-07 / EXT-02 — gate focal da família TERCEIROS.
+# Paths restritos à família e aos arquivos compartilhados REALMENTE tocados
+# nesta fatia. `server.mjs`, `src/server/ext-third-party-api.mjs` e
+# `db/migrations/**` ficam de fora de propósito: nenhum deles foi alterado
+# aqui, e nenhuma migração nova foi criada (as 001–174 permanecem intactas,
+# incluindo a 085 e a 148 desta família). Nenhum scheduler foi tocado — esta
+# família não tem execução agendada.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/admin/terceiros/**'
+      - 'src/lib/third-party-vocabulary.*'
+      - 'src/lib/third-party-request.ts'
+      - 'tests/ext02-third-parties.test.mjs'
+      - 'tests/ext02-third-parties.integration.test.mjs'
+      - 'tests/ux-third-party-vocabulary.test.mjs'
+      - 'tests/ux-third-party-workspace.integration.test.mjs'
+      - 'scripts/qa-ext02-third-parties-postgres.mjs'
+      - 'scripts/qa-ux-third-party-postgres.mjs'
+      - 'scripts/ux-evidence-capture.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ux-third-party-delivery.yml'
+concurrency:
+  group: ux-third-party-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  ux-third-party-postgres-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      # Os gates recusam rodar com banco do operador ou remoto; aqui os valores
+      # ficam explicitamente vazios.
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: node --test tests/ux-third-party-vocabulary.test.mjs
+      # Teste herdado da família: o contrato do servidor canônico de terceiros
+      # precisa continuar passando sem alteração alguma.
+      - run: node --test tests/ext02-third-parties.test.mjs
+      # Gate de banco HERDADO da família, anterior a esta fatia e não alterado.
+      - run: npm run test:ext02-third-parties:pg
+      # Gate focal NOVO: apresentação da tela em PostgreSQL, servidor HTTP e
+      # Chromium reais.
+      - run: npm run test:ux-third-party:pg
