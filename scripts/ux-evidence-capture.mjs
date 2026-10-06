@@ -118,6 +118,21 @@ const STAGES = {
       { route: '/admin/qualidade', role: 'admin', slug: 'qualidade', waitFor: 'Qualidade e não conformidades internas', waitForRole: 'heading', grants: ['quality.read', 'quality.write'] },
     ],
   },
+  // UX-07 / EXT-07. Mesma convenção das etapas de analytics e qualidade: o h1
+  // real da tela de produto é a marca de montagem; o banco desta etapa é
+  // limpo, então o estado observado é o VAZIO HONESTO ("a leitura funcionou e
+  // nenhuma obrigação está declarada"). A jornada com massa real é coberta
+  // pelo gate tests/ux-compliance-workspace.integration.test.mjs
+  // (UX_COMPLIANCE_EVIDENCE_DIR). Cobertura parcial declarada no documento.
+  // EXT-07 NÃO usa permissão granular por grant: o servidor canônico decide
+  // por sessão de equipe e papel (admin/ti). Por isso esta etapa não declara
+  // o gancho opcional `grants` — ele seria no-op aqui.
+  'ux-07-compliance': {
+    outputDir: 'docs/ux-07-compliance-evidencias',
+    targets: [
+      { route: '/admin/compliance', role: 'admin', slug: 'compliance', waitFor: 'Compliance corporativo e obrigações internas', waitForRole: 'heading' },
+    ],
+  },
 };
 
 const plan = STAGES[stage];

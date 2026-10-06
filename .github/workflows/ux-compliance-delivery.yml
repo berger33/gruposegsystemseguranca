@@ -1,0 +1,54 @@
+name: UX compliance delivery
+# UX-07 / EXT-07 — gate focal da família COMPLIANCE.
+# Paths restritos à família e aos arquivos compartilhados REALMENTE tocados
+# nesta fatia. `server.mjs`, `src/server/ext-compliance-api.mjs`,
+# `src/server/ext-advanced-api.mjs` e `db/migrations/**` ficam de fora de
+# propósito: nenhum deles foi alterado aqui, e nenhuma migração nova foi criada
+# (as 001–174 permanecem intactas). O scheduler também não foi tocado, mas o
+# teste herdado dele entra no gate para provar que continua passando.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/admin/compliance/**'
+      - 'src/lib/compliance-vocabulary.*'
+      - 'src/lib/compliance-request.ts'
+      - 'tests/ext07-compliance.test.mjs'
+      - 'tests/ext07-compliance.integration.test.mjs'
+      - 'tests/ext-compliance-scheduler.test.mjs'
+      - 'tests/ux-compliance-vocabulary.test.mjs'
+      - 'tests/ux-compliance-workspace.integration.test.mjs'
+      - 'scripts/qa-ux-compliance-postgres.mjs'
+      - 'scripts/ux-evidence-capture.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ux-compliance-delivery.yml'
+concurrency:
+  group: ux-compliance-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  ux-compliance-postgres-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      # O gate recusa rodar com banco do operador ou remoto; aqui os valores
+      # ficam explicitamente vazios.
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: node --test tests/ux-compliance-vocabulary.test.mjs
+      - run: node --test tests/ext07-compliance.test.mjs tests/ext-compliance-scheduler.test.mjs
+      - run: npm run test:ux-compliance:pg
