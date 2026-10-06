@@ -69,7 +69,9 @@
     ".next/integration-ux-finance/types/**/*.ts",
     ".next/integration-ux-finance/dev/types/**/*.ts",
     ".next/integration-ux-contract/types/**/*.ts",
-    ".next/integration-ux-contract/dev/types/**/*.ts"
+    ".next/integration-ux-contract/dev/types/**/*.ts",
+    ".next/integration-ux-compliance/types/**/*.ts",
+    ".next/integration-ux-compliance/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"
