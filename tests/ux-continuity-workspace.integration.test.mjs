@@ -34,10 +34,10 @@
 // O que este gate NÃO prova: homologação humana, aceite de Marcelo ou de
 // Andreia, conformidade WCAG integral, nem comportamento em produção.
 //
-// Nenhuma resposta do servidor é falsificada: não há injeção em `window.fetch`
-// nem em `page.route()`. A instrumentação do navegador apenas REGISTRA o
-// cabeçalho `Idempotency-Key` enviado pela página e repassa a chamada
-// original. A massa é fictícia e nasce pelas APIs canônicas; nenhum dado
+// Nenhuma resposta do servidor é falsificada: não há `page.route()`,
+// substituição de `window.fetch` nem monkey-patch de resposta. A confirmação
+// de idempotência vem do ledger canônico depois do clique real. A massa é
+// fictícia e nasce pelas APIs canônicas; nenhum dado
 // pessoal real é usado. O servidor canônico, `server.mjs` e as migrações não
 // são tocados.
 
@@ -51,6 +51,7 @@ import pg from 'pg';
 import { chromium as playwrightChromium } from 'playwright';
 import packagedChromium from '@sparticuz/chromium';
 import { provisionStaff, STAFF_TEST_PASSWORD } from './helpers/staff-login.mjs';
+import { hashPassword } from '../src/lib/client-auth-core.mjs';
 
 const RUN = process.env.RUN_DATABASE_INTEGRATION === '1' && Boolean(process.env.DATABASE_URL);
 const REQUIRE = process.env.QA_UX_CONTINUITY_REQUIRE_DB === '1';
@@ -61,7 +62,8 @@ let server, baseUrl, serverPort, pool;
 let adminStaff, tiStaff, supervisorStaff;
 let adminCookie, tiCookie, supervisorCookie;
 let accountA, accountB;
-let planoSemData, planoComData, planoContaA, planoContaB;
+let planoSemData, planoComData, planoContaA, planoContaB, planoFluxoTela;
+let clientA, clientB;
 
 const sessionSecret = `${randomUUID()}${randomUUID()}`;
 
@@ -87,7 +89,7 @@ function api(pathname, { method = 'GET', body, cookie = adminCookie, headers = {
     body: body !== undefined ? JSON.stringify(body) : undefined,
     redirect: 'manual',
     signal: AbortSignal.timeout(60_000),
-  }).then(async res => ({ status: res.status, body: await res.json().catch(() => null) }));
+  }).then(async res => ({ status: res.status, body: await res.json().catch(() => null), headers: res.headers }));
 }
 
 async function loginStaffHttp(email) {
@@ -100,6 +102,27 @@ async function loginStaffHttp(email) {
   const raw = (res.headers.getSetCookie?.() || []).find(c => c.startsWith('seg_admin_session='));
   assert.ok(raw, 'o login precisa emitir o cookie de sessão de equipe');
   return raw.split(';')[0];
+}
+
+async function createClient(tag, accountId) {
+  const id = randomUUID();
+  const email = `ux11-continuity-workspace-${tag}-${id.slice(0, 8)}@example.invalid`;
+  const password = `Cliente-Ficticio-${randomUUID()}!`;
+  await pool.query(
+    `INSERT INTO auth_identities (id, kind, email, display_name, status, verification_method, verified_at)
+     VALUES ($1,'client',$2,$3,'active','email_link',NOW())`,
+    [id, email, `Cliente fictício UX-11 ${tag}`],
+  );
+  await pool.query('INSERT INTO auth_credentials (identity_id, password_hash) VALUES ($1,$2)', [id, await hashPassword(password)]);
+  await pool.query(
+    `INSERT INTO client_access_grants (id, identity_id, client_account_id, reason, granted_by)
+     VALUES ($1,$2,$3,'Vínculo fictício do gate UX-11 da tela de continuidade','ti')`,
+    [randomUUID(), id, accountId],
+  );
+  const response = await api('/api/auth/login', { method: 'POST', cookie: null, body: { email, password } });
+  assert.equal(response.status, 200, `login do cliente ${tag} deveria retornar 200, veio ${response.status}`);
+  const raw = response.headers?.getSetCookie?.() || [];
+  return { id, accountId, cookie: raw.map(item => item.split(';')[0]).join('; ') };
 }
 
 async function waitForServer(timeoutMs = 240_000) {
@@ -211,35 +234,31 @@ async function capture(page, nome) {
 }
 
 /**
- * Abre /admin/continuidade já autenticada. `gravarChaves` instala um registro
- * passivo do cabeçalho `Idempotency-Key`: a chamada original é sempre
- * repassada e a resposta nunca é substituída.
+ * Abre /admin/continuidade já autenticada, sem interceptar transporte algum.
  */
-async function abrir(browser, cookie, { width = 1440, height = 900, gravarChaves = false } = {}) {
-  const context = await browser.newContext({ viewport: { width, height }, locale: 'pt-BR' });
+async function abrir(browser, cookie, { width = 1440, height = 900 } = {}) {
+  const context = await browser.newContext({ viewport: { width, height }, locale: 'pt-BR', timezoneId: 'America/Sao_Paulo' });
   const separador = cookie.indexOf('=');
   await context.addCookies([{ name: cookie.slice(0, separador), value: cookie.slice(separador + 1), url: baseUrl }]);
   const page = await context.newPage();
   page.setDefaultTimeout(45_000);
   page.setDefaultNavigationTimeout(120_000);
-  if (gravarChaves) {
-    await page.addInitScript(() => {
-      window.__contRequests = [];
-      const original = window.fetch.bind(window);
-      window.fetch = async (input, init) => {
-        const url = typeof input === 'string' ? input : (input?.url || '');
-        const headers = new Headers((init && init.headers) || {});
-        window.__contRequests.push({
-          url,
-          method: (init && init.method) || 'GET',
-          idempotencyKey: headers.get('idempotency-key') || '',
-        });
-        return original(input, init);
-      };
-    });
-  }
   await page.goto(`${baseUrl}/admin/continuidade`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('heading', { level: 1, name: 'Continuidade de negócios e contingência' }).waitFor();
+  return { context, page };
+}
+
+async function abrirPortal(browser, cookie, { width = 1440, height = 900 } = {}) {
+  const context = await browser.newContext({ viewport: { width, height }, locale: 'pt-BR', timezoneId: 'America/Sao_Paulo' });
+  await context.addCookies(cookie.split('; ').filter(Boolean).map(pair => {
+    const separator = pair.indexOf('=');
+    return { name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl };
+  }));
+  const page = await context.newPage();
+  page.setDefaultTimeout(45_000);
+  page.setDefaultNavigationTimeout(120_000);
+  await page.goto(`${baseUrl}/cliente/app/continuidade`, { waitUntil: 'domcontentloaded' });
+  await page.getByRole('heading', { name: 'Planos de continuidade publicados' }).waitFor();
   return { context, page };
 }
 
@@ -276,6 +295,11 @@ before(async () => {
      VALUES ($1,'Cliente Fictício A — gate UX-11','active','ti'),($2,'Cliente Fictício B — gate UX-11','active','ti')`,
     [accountA, accountB],
   );
+  // A preparação por SQL limita-se a identidades, contas e vínculos. Os
+  // planos e cada ação do fluxo visual abaixo são enviados pelos controles da
+  // própria tela para as APIs canônicas.
+  clientA = await createClient('vinculado', accountA);
+  clientB = await createClient('sem-vinculo-do-plano', accountB);
   for (const permission of ['continuity.read', 'continuity.write']) {
     await pool.query(
       `INSERT INTO auth_permissions (id, identity_id, permission, scope_type, scope_id, granted_by, granted_by_role, reason)
@@ -561,7 +585,7 @@ test('browser: 404 de escopo não vira "plano removido" nem lista vazia', opt, a
       await estado.waitFor();
       const texto = await estado.textContent();
       assert.match(texto, /Plano indisponível neste escopo/, 'o 404 de escopo é dito como escopo, não como sumiço');
-      assert.match(texto, /A tela não presume remoção/, 'a tela nega explicitamente a hipótese de remoção');
+      assert.match(texto, /Esta resposta não informa a causa da indisponibilidade/, 'a tela não especula a causa da indisponibilidade');
       assert.match(texto, /Código técnico: plan_not_found/);
       assert.doesNotMatch(texto, /removido|exclu[ií]|não existe mais/i, 'a tela não afirma remoção');
       assert.equal(await detalhe.locator('[data-ui-state="empty"]').count(), 0, '404 de escopo não vira vazio');
@@ -620,16 +644,152 @@ test('browser: ausência de data é dita e nunca vira 01/01/1970, zero ou "em di
   });
 });
 
+test('browser: cria um plano e efetiva a transição de situação pela tela', opt, async () => {
+  await comNavegador(async browser => {
+    const title = `Plano fictício de fluxo pela tela ${randomUUID().slice(0, 8)}`;
+    const description = 'Massa fictícia criada com os controles da tela para provar a transição de estado pelo navegador real.';
+    const { context, page } = await abrir(browser, adminCookie);
+
+    await page.getByPlaceholder('Título').fill(title);
+    await page.getByPlaceholder('Descrição e escopo').fill(description);
+    await page.getByPlaceholder('Responsável').fill('Equipe fictícia de fluxo visual');
+    await page.getByLabel('Conta de cliente (UUID, opcional)').fill(accountA);
+    await page.getByPlaceholder('Passos de contingência, um por linha').fill('Registrar a ocorrência fictícia');
+    await page.getByPlaceholder('Passos de recuperação, um por linha').fill('Confirmar a recuperação fictícia');
+    await page.getByRole('button', { name: 'Registrar plano' }).click();
+
+    await abaPlanos(page).waitFor();
+    await page.getByText(title, { exact: true }).waitFor();
+    const listed = await api('/api/ext/continuity/plans');
+    assert.equal(listed.status, 200);
+    planoFluxoTela = listed.body.items.find(item => item.title === title);
+    assert.ok(planoFluxoTela?.id, 'o servidor canônico confirma a criação enviada pela tela');
+    assert.equal(planoFluxoTela.status, 'rascunho');
+    assert.equal(planoFluxoTela.client_account_id, accountA, 'a conta vinculada pela tela permanece no plano criado');
+
+    await cartao(page, planoFluxoTela.id).getByRole('button', { name: 'Abrir plano' }).click();
+    const detail = page.locator('[data-testid="continuity-detail"]');
+    await detail.getByRole('button', { name: 'Aprovar' }).click();
+    await detail.getByText('Aprovado', { exact: true }).waitFor();
+    const transitioned = await api(`/api/ext/continuity/plans/${planoFluxoTela.id}`);
+    assert.equal(transitioned.status, 200);
+    assert.equal(transitioned.body.plan.status, 'aprovado', 'o servidor confirma a transição realizada pelo botão');
+    assert.match(await detail.textContent(), /Estado:\s*Aprovado/);
+
+    await capture(page, 'gate-transicao-efetivada');
+    await context.close();
+  });
+});
+
+test('browser: documenta simulado pela tela com datas honestas, responsável e efeito de estado', opt, async () => {
+  await comNavegador(async browser => {
+    assert.ok(planoFluxoTela?.id, 'o caso de transição anterior precisa criar o plano do fluxo');
+    const { context, page } = await abrir(browser, adminCookie);
+    await abaPlanos(page).click();
+    await cartao(page, planoFluxoTela.id).getByRole('button', { name: 'Abrir plano' }).click();
+    const detail = page.locator('[data-testid="continuity-detail"]');
+
+    await detail.getByRole('button', { name: 'Colocar em teste' }).click();
+    await detail.getByText('Em teste', { exact: true }).waitFor();
+    await detail.getByLabel('Data').fill(SIMULADO_EM);
+    await detail.getByLabel('Resultado').fill('Simulado fictício documentado pela tela para comprovar a data, responsável e a passagem para testado.');
+    await detail.getByLabel('Responsável', { exact: true }).fill('Responsável fictício do simulado');
+    await detail.getByLabel('Próximo teste (opcional)').fill(PROXIMO_EM);
+    await detail.getByRole('button', { name: 'Registrar simulado' }).click();
+
+    await detail.getByText('Testado', { exact: true }).waitFor();
+    const summary = detail.locator('[data-testid="continuity-last-exercise"]');
+    await summary.waitFor();
+    const visible = await summary.textContent();
+    assert.match(visible, /11\/03\/2026/);
+    assert.match(visible, /Responsável fictício do simulado/);
+    assert.doesNotMatch(visible, /1970|\b0\b/);
+    assert.match(await detail.textContent(), /Próximo:\s*11\/09\/2026/);
+
+    const exercised = await api(`/api/ext/continuity/plans/${planoFluxoTela.id}`);
+    assert.equal(exercised.status, 200);
+    assert.equal(exercised.body.plan.status, 'testado', 'o simulado da tela aplica o efeito canônico de estado');
+    assert.equal(String(exercised.body.plan.last_tested_at).slice(0, 10), SIMULADO_EM);
+    assert.equal(String(exercised.body.plan.next_test_due).slice(0, 10), PROXIMO_EM);
+    assert.equal(exercised.body.exercises[0].responsible_name, 'Responsável fictício do simulado');
+
+    await capture(page, 'gate-simulado-documentado');
+    await context.close();
+  });
+});
+
+test('browser: publica e retira no portal pela tela de equipe e o cliente vê somente o vínculo correto', opt, async () => {
+  assert.ok(planoFluxoTela?.id, 'o plano do fluxo precisa existir antes de publicar');
+
+  // Cada sessão fica no seu próprio Chromium: o binário empacotado usa
+  // --single-process e fechar/reabrir entre atores não muda os controles nem
+  // as respostas medidas, só evita queda do processo ao manter três contexts.
+  await comNavegador(async browser => {
+    const { context: staffContext, page: staffPage } = await abrir(browser, adminCookie);
+    await abaPlanos(staffPage).click();
+    const card = cartao(staffPage, planoFluxoTela.id);
+    await card.waitFor();
+    const publishedState = card.getByText('Portal do cliente: publicado, somente leitura');
+    if (await publishedState.count() === 0) {
+      const publicationNote = card.locator('input[aria-label^="Justificativa de publicação"]');
+      await publicationNote.waitFor();
+      await publicationNote.fill('Publicação fictícia justificada para a conta vinculada no fluxo visual.');
+      await card.getByRole('button', { name: 'Publicar no portal' }).click();
+    }
+    await publishedState.waitFor();
+    const published = await api(`/api/ext/continuity/plans/${planoFluxoTela.id}`);
+    assert.equal(published.status, 200);
+    assert.equal(published.body.plan.client_visible, true, 'o servidor confirma a publicação acionada pela tela');
+    await staffContext.close();
+  });
+
+  await comNavegador(async browser => {
+    const { context: otherContext, page: otherPage } = await abrirPortal(browser, clientB.cookie);
+    const emptyOther = otherPage.locator('[data-ui-state="empty"]');
+    await emptyOther.waitFor();
+    assert.match(await emptyOther.textContent(), /Nenhum plano de continuidade publicado/);
+    assert.equal(await otherPage.locator(`[data-testid="client-continuity-plan"][data-plan="${planoFluxoTela.id}"]`).count(), 0, 'o plano não aparece para a conta sem vínculo');
+    await otherContext.close();
+  });
+
+  await comNavegador(async browser => {
+    const { context: linkedContext, page: linkedPage } = await abrirPortal(browser, clientA.cookie);
+    const linkedPlan = linkedPage.locator(`[data-testid="client-continuity-plan"][data-plan="${planoFluxoTela.id}"]`);
+    await linkedPlan.waitFor();
+    assert.match(await linkedPlan.textContent(), new RegExp(planoFluxoTela.title));
+    await capture(linkedPage, 'gate-plano-visivel-no-portal');
+
+    const staffBrowser = await launchBrowser();
+    try {
+      const { context: staffContext, page: staffPage } = await abrir(staffBrowser, adminCookie);
+      await abaPlanos(staffPage).click();
+      const card = cartao(staffPage, planoFluxoTela.id);
+      await card.getByRole('button', { name: 'Retirar publicação' }).click();
+      await card.getByText('Portal do cliente: não publicado por padrão').waitFor();
+      const withdrawn = await api(`/api/ext/continuity/plans/${planoFluxoTela.id}`);
+      assert.equal(withdrawn.status, 200);
+      assert.equal(withdrawn.body.plan.client_visible, false, 'o servidor confirma a retirada acionada pela tela');
+      await staffContext.close();
+    } finally {
+      await staffBrowser.close().catch(() => {});
+    }
+
+    await linkedPage.getByRole('button', { name: 'Atualizar lista' }).click();
+    const empty = linkedPage.locator('[data-ui-state="empty"]');
+    await empty.waitFor();
+    assert.match(await empty.textContent(), /Nenhum plano de continuidade publicado/);
+    assert.equal(await linkedPage.locator('[data-ui-state="error"], [data-ui-state="denied"]').count(), 0, 'retirada não é erro nem perda do vínculo');
+    await capture(linkedPage, 'gate-retirada-vazio-honesto');
+    await linkedContext.close();
+  });
+});
+
 test('browser: a chave de idempotência sobrevive à falha real e é descartada após o sucesso', opt, async () => {
   await comNavegador(async browser => {
     const marca = randomUUID().slice(0, 8);
     const tituloFalha = `Plano fictício de idempotência pela tela ${marca}`;
     const tituloNovo = `Plano fictício seguinte pela tela ${marca}`;
-    const { context, page } = await abrir(browser, adminCookie, { gravarChaves: true });
-
-    const chavesDeCriacao = async () => page.evaluate(() => (window.__contRequests || [])
-      .filter(item => item.method === 'POST' && item.url.endsWith('/api/ext/continuity/plans'))
-      .map(item => item.idempotencyKey));
+    const { context, page } = await abrir(browser, adminCookie);
 
     await pool.query(`CREATE OR REPLACE FUNCTION qa_ux11_fail_audit() RETURNS trigger AS $$ BEGIN RAISE EXCEPTION 'qa_ux11_audit_unavailable'; END; $$ LANGUAGE plpgsql`);
     await pool.query(`CREATE TRIGGER qa_ux11_fail_audit BEFORE INSERT ON auth_access_audit FOR EACH ROW EXECUTE FUNCTION qa_ux11_fail_audit()`);
@@ -647,29 +807,26 @@ test('browser: a chave de idempotência sobrevive à falha real e é descartada 
       assert.match(textoErro, /Auditoria indisponível/, 'a falha real do servidor é nomeada');
       assert.match(textoErro, /Código técnico: audit_unavailable/);
       const chaveVisivel = await page.locator('[data-testid="continuity-held-key"]').textContent();
-      assert.match(chaveVisivel, /Chave preservada para repetição segura: cont-/, 'a tela avisa que a chave foi preservada');
-
-      const depoisDaFalha = await chavesDeCriacao();
-      assert.equal(depoisDaFalha.length, 1, 'uma única tentativa de criação foi enviada');
-      assert.match(depoisDaFalha[0], /^cont-/, 'o prefixo de idempotência da apresentação é preservado');
+      const chavePreservada = chaveVisivel?.match(/Chave preservada para repetição segura: (cont-[^\s]+)/)?.[1];
+      assert.ok(chavePreservada, 'a tela precisa expor a chave preservada para a repetição segura');
 
       await pool.query(`DROP TRIGGER IF EXISTS qa_ux11_fail_audit ON auth_access_audit`);
       await pool.query(`DROP FUNCTION IF EXISTS qa_ux11_fail_audit()`);
       derrubado = false;
 
-      // Repetição da MESMA operação: a chave precisa ser a mesma.
+      // Repetição da MESMA operação no controle real: a chave que a tela
+      // mostrou depois da falha precisa chegar ao ledger canônico.
       await page.getByRole('button', { name: 'Registrar plano' }).click();
       await page.getByText(tituloFalha, { exact: true }).waitFor();
       assert.equal(await page.locator('[data-testid="continuity-held-key"]').count(), 0, 'depois do sucesso não há chave pendente');
-
-      const depoisDoSucesso = await chavesDeCriacao();
-      assert.equal(depoisDoSucesso.length, 2, 'a repetição enviou exatamente mais uma criação');
-      assert.equal(depoisDoSucesso[1], depoisDoSucesso[0], 'a repetição após falha usa a MESMA chave');
-      assert.equal(
-        (await pool.query(`SELECT count(*)::int AS n FROM ext_continuity_plans WHERE title=$1`, [tituloFalha])).rows[0].n,
-        1,
-        'a repetição não duplicou o plano',
+      const eventoFalha = await pool.query(
+        `SELECT e.idempotency_key FROM ext_continuity_events e
+         JOIN ext_continuity_plans p ON p.id=e.plan_id
+         WHERE p.title=$1 AND e.event_type='plan_created'`,
+        [tituloFalha],
       );
+      assert.equal(eventoFalha.rows.length, 1, 'a repetição não duplicou o plano');
+      assert.equal(eventoFalha.rows[0].idempotency_key, chavePreservada, 'o ledger confirma que a repetição usou a chave preservada');
 
       // Operação seguinte: chave nova, porque a anterior foi descartada.
       await page.getByRole('tab', { name: 'Novo plano', exact: true }).click();
@@ -678,11 +835,15 @@ test('browser: a chave de idempotência sobrevive à falha real e é descartada 
       await page.getByPlaceholder('Responsável').fill('Equipe fictícia de idempotência');
       await page.getByRole('button', { name: 'Registrar plano' }).click();
       await page.getByText(tituloNovo, { exact: true }).waitFor();
-
-      const depoisDaSegunda = await chavesDeCriacao();
-      assert.equal(depoisDaSegunda.length, 3);
-      assert.match(depoisDaSegunda[2], /^cont-/);
-      assert.notEqual(depoisDaSegunda[2], depoisDaSegunda[1], 'a operação seguinte usa chave nova');
+      const eventoNovo = await pool.query(
+        `SELECT e.idempotency_key FROM ext_continuity_events e
+         JOIN ext_continuity_plans p ON p.id=e.plan_id
+         WHERE p.title=$1 AND e.event_type='plan_created'`,
+        [tituloNovo],
+      );
+      assert.equal(eventoNovo.rows.length, 1);
+      assert.match(eventoNovo.rows[0].idempotency_key, /^cont-/);
+      assert.notEqual(eventoNovo.rows[0].idempotency_key, chavePreservada, 'a operação seguinte usa chave nova');
 
       await capture(page, 'gate-idempotencia');
     } finally {

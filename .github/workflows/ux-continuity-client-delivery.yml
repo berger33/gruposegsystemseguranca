@@ -3,18 +3,24 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'src/app/admin/continuidade/**'
       - 'src/app/cliente/app/continuidade/**'
       - 'src/lib/continuity-*'
       - 'tests/ext10-continuity.test.mjs'
       - 'tests/ext10-continuity.integration.test.mjs'
       - 'tests/ux-continuity-vocabulary.test.mjs'
+      - 'tests/ux-continuity-workspace.integration.test.mjs'
       - 'tests/ux-continuity-client-portal-vocabulary.test.mjs'
       - 'tests/ux-continuity-client-portal.integration.test.mjs'
       - 'scripts/qa-ext10-continuity-postgres.mjs'
       - 'scripts/qa-ux-continuity-postgres.mjs'
       - 'scripts/qa-ux-continuity-client-postgres.mjs'
       - 'scripts/ux-evidence-*.mjs'
+      - 'docs/UX-11-CONTINUIDADE-FLUXOS-PORTAL-*.md'
+      - 'docs/ux-11-continuidade-evidencias/**'
+      - 'docs/ux-11-continuidade-cliente-evidencias/**'
       - 'package*.json'
+      - '.github/workflows/ux-continuity-delivery.yml'
       - '.github/workflows/ux-continuity-client-delivery.yml'
   workflow_dispatch:
 concurrency:
@@ -42,12 +48,14 @@ jobs:
       - run: npm run typecheck
       - run: node --test tests/ux-continuity-vocabulary.test.mjs tests/ux-continuity-client-portal-vocabulary.test.mjs tests/ext10-continuity.test.mjs
       - run: npm run test:ext10-continuity:pg
-      - run: npm run test:ux-continuity:pg
-      # Gate próprio: PostgreSQL descartável, HTTP canônico e Chromium sem
-      # substituir resposta alguma. O script audita o piso de 9 casos TAP.
-      - run: npm run test:ux-continuity-client:pg
-      # Evidência visual autenticada do portal do cliente: massa fictícia é
-      # publicada pelas APIs reais; reprova por 5xx, console da aplicação,
-      # foco perdido ou rolagem horizontal em desktop e 390px.
+      # Gate herdado da equipe também cobre o fluxo real de publicação e
+      # retirada que antecede o portal. O TAP mantém piso mínimo 17.
+      - run: UX_CONTINUITY_EVIDENCE_DIR=docs/ux-11-continuidade-evidencias npm run test:ux-continuity:pg
+      # Gate do portal: PostgreSQL descartável, HTTP canônico e Chromium. A
+      # retirada vem da UI da equipe; o cliente abre detalhes e recebe 404 real.
+      # O auditor TAP reprova qualquer falha, skip/todo ou menos de 10 casos.
+      - run: UX_CONTINUITY_CLIENT_EVIDENCE_DIR=docs/ux-11-continuidade-cliente-evidencias npm run test:ux-continuity-client:pg
+      # Baseline autenticado em 1440×900 e 390×844. A preparação registra
+      # vínculo/grant fictício e cria, aprova, exercita e publica via APIs reais.
       - run: npm run ux:evidence -- --stage=ux-11-continuidade-cliente
       - run: npm audit --audit-level=high

@@ -7,6 +7,13 @@
       "route": "/cliente/app/continuidade",
       "viewport": "1440x900",
       "screenshot": "docs/ux-11-continuidade-cliente-evidencias/desktop-continuidade-cliente.png",
+      "gateEvidence": {
+        "environment": "UX_CONTINUITY_CLIENT_EVIDENCE_DIR",
+        "scenarios": [
+          "404 real de detalhe após retirada pela UI da equipe",
+          "mobile 390px"
+        ]
+      },
       "firstFocus": {
         "tag": "a",
         "text": "SEGGrupoSEG System",
@@ -23,6 +30,13 @@
       "route": "/cliente/app/continuidade",
       "viewport": "390x844",
       "screenshot": "docs/ux-11-continuidade-cliente-evidencias/mobile-continuidade-cliente.png",
+      "gateEvidence": {
+        "environment": "UX_CONTINUITY_CLIENT_EVIDENCE_DIR",
+        "scenarios": [
+          "404 real de detalhe após retirada pela UI da equipe",
+          "mobile 390px"
+        ]
+      },
       "firstFocus": {
         "tag": "a",
         "text": "SEGGrupoSEG System",

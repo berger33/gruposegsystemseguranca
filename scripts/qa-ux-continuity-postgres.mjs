@@ -38,7 +38,7 @@ const run = (command, args, env) => new Promise((resolve, reject) => {
   child.once("exit", (code) => resolve({ code: code ?? 1, output }));
 });
 
-const MINIMO = 14;
+const MINIMO = 17;
 
 const auditTap = (output) => {
   const value = (label) => {

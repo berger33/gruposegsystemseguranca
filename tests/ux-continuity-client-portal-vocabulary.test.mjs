@@ -50,6 +50,10 @@ test('a tela usa o transporte discriminado e não devolve falha como vazio', () 
   assert.match(page, /data-ui-state=\{state\}/);
   assert.match(page, /error\.canRetry/);
   assert.match(page, /Atualizar lista/);
+  assert.match(page, /Abrir detalhes/);
+  assert.match(page, /`\/api\/client\/continuity\/plans\/\$\{planId\}`/);
+  assert.match(page, /client-continuity-detail/);
+  assert.match(page, /detail\.phase === "failed"/);
 });
 
 test('a tela reutiliza as datas honestas do vocabulário, sem construir meia-noite local', () => {

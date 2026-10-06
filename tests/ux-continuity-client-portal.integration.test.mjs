@@ -183,14 +183,17 @@ async function launchBrowser() {
 }
 
 const BROWSER_CRASH = /Target (page|closed)|has been closed|Target crashed|browser has disconnected|crashed|SIGSEGV|Protocol error/i;
-async function withBrowser(body) {
+const RETRYABLE_CLIENT_RACE = /stale_client_list_race/i;
+async function withBrowser(body, beforeAttempt = null) {
   let lastError;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
+    if (beforeAttempt) await beforeAttempt();
     const browser = await launchBrowser();
     try {
       return await body(browser);
     } catch (error) {
-      if (error?.code === 'ERR_ASSERTION' || !BROWSER_CRASH.test(String(error?.message || ''))) throw error;
+      const message = String(error?.message || '');
+      if (error?.code === 'ERR_ASSERTION' || !(BROWSER_CRASH.test(message) || RETRYABLE_CLIENT_RACE.test(message))) throw error;
       lastError = error;
       console.log(`UX_CONTINUITY_CLIENT_BROWSER_RETRY tentativa=${attempt}: ${String(error.message).split('\n')[0]}`);
     } finally {
@@ -219,11 +222,34 @@ async function openPortal(browser, cookie, { width = 1440, height = 900 } = {}) 
     return { name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl };
   }));
   const page = await context.newPage();
+  const continuityTraffic = { pending: new Set(), lastActivityAt: Date.now() };
+  const tracksContinuity = request => request.url().includes('/api/client/continuity/');
+  page.on('request', request => {
+    if (!tracksContinuity(request)) return;
+    continuityTraffic.pending.add(request);
+    continuityTraffic.lastActivityAt = Date.now();
+  });
+  const finishContinuity = request => {
+    if (!tracksContinuity(request)) return;
+    continuityTraffic.pending.delete(request);
+    continuityTraffic.lastActivityAt = Date.now();
+  };
+  page.on('requestfinished', finishContinuity);
+  page.on('requestfailed', finishContinuity);
   page.setDefaultTimeout(45_000);
   page.setDefaultNavigationTimeout(120_000);
   await page.goto(`${baseUrl}/cliente/app/continuidade`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('heading', { name: 'Planos de continuidade publicados' }).waitFor();
-  return { context, page };
+  return { context, page, continuityTraffic };
+}
+
+async function waitForContinuitySettled(traffic, timeoutMs = 60_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (traffic.pending.size === 0 && Date.now() - traffic.lastActivityAt >= 800) return;
+    await wait(100);
+  }
+  throw new Error('client_continuity_initial_read_did_not_settle');
 }
 
 async function waitForPlan(page) {
@@ -232,13 +258,51 @@ async function waitForPlan(page) {
   return card;
 }
 
-// O React desmonta o botão assim que a requisição começa. O evento continua
-// sendo um clique do navegador sobre o controle real; despachá-lo diretamente
-// evita o retry de ação do Playwright sobre um nó que a própria tela removeu.
+// A página desmonta o botão assim que inicia a requisição. O evento abaixo é
+// disparado no próprio controle real (não há route, resposta ou fetch falso),
+// evitando que o Playwright tente uma segunda ação num nó que o React removeu.
 async function refreshList(page) {
   const button = page.getByRole('button', { name: 'Atualizar lista' });
   await button.waitFor();
   await button.evaluate(element => element.click());
+}
+
+async function openStaffWorkspace(browser) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'pt-BR', timezoneId: 'America/Sao_Paulo' });
+  const separator = adminCookie.indexOf('=');
+  await context.addCookies([{ name: adminCookie.slice(0, separator), value: adminCookie.slice(separator + 1), url: baseUrl }]);
+  const page = await context.newPage();
+  page.setDefaultTimeout(45_000);
+  page.setDefaultNavigationTimeout(120_000);
+  await page.goto(`${baseUrl}/admin/continuidade`, { waitUntil: 'domcontentloaded' });
+  await page.getByRole('heading', { level: 1, name: 'Continuidade de negócios e contingência' }).waitFor();
+  return { context, page };
+}
+
+const staffPlanCard = (page, id) => page.locator(`[data-testid="continuity-plan-card"][data-plan="${id}"]`);
+
+// O cenário de 404 deliberadamente muda disponibilidade entre duas leituras.
+// Se o Chromium cair depois da retirada, uma nova tentativa recompõe a
+// publicação pelo mesmo controle de equipe antes de abrir uma nova lista do
+// cliente. Isso preserva a precondição sem falsificar resposta alguma.
+async function ensurePlanPublishedByTeam() {
+  const current = await api(`/api/ext/continuity/plans/${planA.id}`);
+  assert.equal(current.status, 200, 'a equipe precisa consultar o plano antes de recompor a publicação');
+  if (current.body.plan.client_visible) return;
+
+  const staffBrowser = await launchBrowser();
+  try {
+    const { context, page } = await openStaffWorkspace(staffBrowser);
+    await page.getByRole('tab', { name: 'Planos', exact: true }).click();
+    const card = staffPlanCard(page, planA.id);
+    await card.waitFor();
+    await card.locator('input[aria-label^="Justificativa de publicação"]').fill('Republicação fictícia para recompor a precondição do 404 visual.');
+    await card.getByRole('button', { name: 'Publicar no portal' }).click();
+    await card.getByText('Portal do cliente: publicado, somente leitura').waitFor();
+    await context.close();
+  } finally {
+    await staffBrowser.close().catch(() => {});
+  }
 }
 
 before(async () => {
@@ -341,8 +405,9 @@ test('HTTP real: sessão, vínculo e 404 não vazam planos e preservam a classif
 
 test('browser: plano publicado usa data UTC e mostra somente a projeção do cliente', opt, async () => {
   await withBrowser(async browser => {
-    const { context, page } = await openPortal(browser, clientA.cookie);
+    const { context, page, continuityTraffic } = await openPortal(browser, clientA.cookie);
     const card = await waitForPlan(page);
+    await waitForContinuitySettled(continuityTraffic);
     const text = await card.innerText();
     assert.match(text, /Plano fictício publicado no portal de continuidade/);
     assert.match(text, /último simulado 11\/03\/2026/, 'a data não pode voltar um dia em America/Sao_Paulo');
@@ -369,8 +434,9 @@ test('browser: lista vazia é estado concluído, não falha', opt, async () => {
 
 test('browser: vínculo revogado produz NEGADO real, sem lista vazia ou repetição inútil', opt, async () => {
   await withBrowser(async browser => {
-    const { context, page } = await openPortal(browser, clientA.cookie);
+    const { context, page, continuityTraffic } = await openPortal(browser, clientA.cookie);
     await waitForPlan(page);
+    await waitForContinuitySettled(continuityTraffic);
     try {
       await pool.query('UPDATE client_access_grants SET revoked_at=NOW(), revoked_by=$2, revoke_reason=$3 WHERE identity_id=$1 AND revoked_at IS NULL', [
         clientA.id, 'ti', 'Gate UX-11: revogação sintética para provar a recusa do portal',
@@ -394,8 +460,9 @@ test('browser: vínculo revogado produz NEGADO real, sem lista vazia ou repetiç
 
 test('browser: 503 real da auditoria é falha recuperável, não vazio', opt, async () => {
   await withBrowser(async browser => {
-    const { context, page } = await openPortal(browser, clientA.cookie);
+    const { context, page, continuityTraffic } = await openPortal(browser, clientA.cookie);
     await waitForPlan(page);
+    await waitForContinuitySettled(continuityTraffic);
     await pool.query(`CREATE OR REPLACE FUNCTION qa_ux11_client_fail_audit() RETURNS trigger AS $$ BEGIN RAISE EXCEPTION 'qa_ux11_client_audit_unavailable'; END; $$ LANGUAGE plpgsql`);
     await pool.query('CREATE TRIGGER qa_ux11_client_fail_audit BEFORE INSERT ON auth_access_audit FOR EACH ROW EXECUTE FUNCTION qa_ux11_client_fail_audit()');
     try {
@@ -421,8 +488,9 @@ test('browser: 503 real da auditoria é falha recuperável, não vazio', opt, as
 
 test('browser: queda real do servidor é status 0 recuperável e volta pela nova tentativa', opt, async () => {
   await withBrowser(async browser => {
-    const { context, page } = await openPortal(browser, clientA.cookie);
+    const { context, page, continuityTraffic } = await openPortal(browser, clientA.cookie);
     await waitForPlan(page);
+    await waitForContinuitySettled(continuityTraffic);
     await stopServer();
     try {
       await refreshList(page);
@@ -449,14 +517,84 @@ test('browser: queda real do servidor é status 0 recuperável e volta pela nova
 
 test('browser: em 390px o portal publicado não cria rolagem horizontal', opt, async () => {
   await withBrowser(async browser => {
-    const { context, page } = await openPortal(browser, clientA.cookie, { width: 390, height: 844 });
+    const { context, page, continuityTraffic } = await openPortal(browser, clientA.cookie, { width: 390, height: 844 });
     await waitForPlan(page);
+    await waitForContinuitySettled(continuityTraffic);
     await page.waitForTimeout(400);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     assert.ok(overflow <= 1, `portal de continuidade transbordou ${overflow}px em 390px`);
     await capture(page, 'gate-mobile-390px');
     await context.close();
   });
+});
+
+test('browser: detalhe recebe 404 real após retirada pela tela de equipe e preserva a lista já lida', opt, async () => {
+  await withBrowser(async browser => {
+    const { context: clientContext, page: clientPage, continuityTraffic } = await openPortal(browser, clientA.cookie);
+    const listedCard = clientPage.locator(`[data-testid="client-continuity-plan"][data-plan="${planA.id}"]`);
+    await listedCard.waitFor();
+    assert.match(await listedCard.innerText(), /Plano fictício publicado no portal de continuidade/);
+    // Em dev, o React pode concluir outra leitura inicial em paralelo. Esperar
+    // todas as leituras já emitidas terminarem evita medir essa corrida como
+    // se fosse a mudança de disponibilidade provocada logo abaixo pela equipe.
+    await waitForContinuitySettled(continuityTraffic);
+    await listedCard.waitFor();
+
+    // O Chromium empacotado usa --single-process. A equipe recebe outro
+    // processo para preservar a página de cliente já listada, sem trocar actor,
+    // resposta nem controle real de nenhum dos dois lados.
+    const staffBrowser = await launchBrowser();
+    try {
+      const { context: staffContext, page: staffPage } = await openStaffWorkspace(staffBrowser);
+      await staffPage.getByRole('tab', { name: 'Planos', exact: true }).click();
+      const teamCard = staffPlanCard(staffPage, planA.id);
+      await teamCard.waitFor();
+      await teamCard.getByRole('button', { name: 'Retirar publicação' }).click();
+      await teamCard.getByText('Portal do cliente: não publicado por padrão').waitFor();
+      await staffContext.close();
+    } finally {
+      await staffBrowser.close().catch(() => {});
+    }
+
+    // A lista previamente lida deve permanecer no DOM até que o cliente
+    // escolha atualizá-la. Se um efeito inicial do React ainda estiver em voo
+    // no servidor de desenvolvimento e vencer a retirada, recompomos todo o
+    // cenário numa nova tentativa (publicação real + nova listagem), em vez de
+    // clicar numa lista que já não representa a leitura exigida por este caso.
+    if (await listedCard.count() !== 1) throw new Error('stale_client_list_race');
+
+    // O observador só lê a resposta originalmente devolvida ao Chromium: não
+    // a intercepta nem a altera. Assim, além do estado visual, a prova registra
+    // que o clique do cliente recebeu o 404 canônico após a retirada por UI.
+    let browserDetailResponse;
+    const observeDetailResponse = response => {
+      if (response.url().includes(`/api/client/continuity/plans/${planA.id}`)) browserDetailResponse = response;
+    };
+    clientPage.on('response', observeDetailResponse);
+    const detail = clientPage.locator('[data-testid="client-continuity-detail"]');
+    const unavailable = detail.locator('[data-ui-state="error"]');
+    try {
+      await listedCard.getByRole('button', { name: 'Abrir detalhes' }).evaluate(element => element.click());
+      await unavailable.waitFor();
+    } finally {
+      clientPage.off('response', observeDetailResponse);
+    }
+    assert.ok(browserDetailResponse, 'o clique do detalhe precisa chegar ao endpoint canônico');
+    assert.equal(browserDetailResponse.status(), 404, 'o navegador recebeu o 404 canônico real');
+    assert.equal((await browserDetailResponse.json()).error, 'plan_not_found');
+    const text = await unavailable.innerText();
+    assert.match(text, /Plano indisponível neste escopo/);
+    assert.match(text, /indisponível para esta consulta e este escopo/);
+    assert.match(text, /Código técnico: plan_not_found/);
+    assert.doesNotMatch(text, /removid|exclu[ií]d|apagado|retirad/i, 'a indisponibilidade não afirma remoção, exclusão ou retirada');
+    assert.doesNotMatch(text, /Plano fictício publicado no portal de continuidade|Equipe fictícia de continuidade|Simulado fictício documentado/, 'o erro do detalhe não vaza conteúdo do plano');
+    assert.equal(await unavailable.getByRole('button', { name: 'Tentar novamente' }).count(), 0, '404 plan_not_found não oferece repetição inútil');
+    assert.equal(await clientPage.locator(`[data-testid="client-continuity-plan"][data-plan="${planA.id}"]`).count(), 1, 'a lista previamente lida permanece disponível');
+    assert.equal(await clientPage.locator('[data-ui-state="empty"]').count(), 0, '404 do detalhe não transforma a lista em vazio');
+
+    await capture(clientPage, 'gate-404-detalhe-indisponivel-real');
+    await clientContext.close();
+  }, ensurePlanPublishedByTeam);
 });
 
 test('anti-deriva: o portal mantém wrapper, estados e botão de atualização canônicos', async () => {
@@ -467,4 +605,7 @@ test('anti-deriva: o portal mantém wrapper, estados e botão de atualização c
   assert.match(source, /honestNextTest/);
   assert.match(source, /data-ui-state/);
   assert.match(source, /Atualizar lista/);
+  assert.match(source, /Abrir detalhes/);
+  assert.match(source, /`\/api\/client\/continuity\/plans\/\$\{planId\}`/);
+  assert.match(source, /client-continuity-detail/);
 });
