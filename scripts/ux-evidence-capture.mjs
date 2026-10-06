@@ -231,6 +231,10 @@ const STAGES = {
       { route: '/admin/expansao', role: 'admin', slug: 'expansao', waitFor: 'Expansão, capacidade e cenários financeiros', waitForRole: 'heading' },
     ],
   },
+  'ux-11-continuidade': {
+    outputDir: 'docs/ux-11-continuidade-evidencias',
+    targets: [{ route: '/admin/continuidade', role: 'admin', slug: 'continuidade', waitFor: 'Continuidade de negócios e contingência', waitForRole: 'heading' }],
+  },
 };
 
 const plan = STAGES[stage];
