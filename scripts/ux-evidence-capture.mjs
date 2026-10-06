@@ -143,6 +143,26 @@ const STAGES = {
       { route: '/admin/conhecimento', role: 'admin', slug: 'conhecimento', waitFor: 'Base de Conhecimento e Procedimentos Operacionais', waitForRole: 'heading' },
     ],
   },
+  // UX-07 / EXT-06. Mesma convenção das etapas anteriores: o h1 real da tela
+  // de produto é a marca de montagem; o banco desta etapa é limpo, então o
+  // estado observado é o VAZIO HONESTO ("a leitura funcionou e nenhuma
+  // pesquisa canônica está registrada", com o `empty_state` que o próprio
+  // servidor devolve). A jornada com massa real — resposta do portal,
+  // acompanhamento, trilha, recusa 403 e falha independente — é provada pelo
+  // gate tests/ux-satisfaction-workspace.integration.test.mjs
+  // (UX_SATISFACTION_EVIDENCE_DIR). Cobertura parcial declarada no documento.
+  // DECISÃO REGISTRADA sobre grant granular: EXT-06 NÃO usa permissão por
+  // grant do lado da equipe — o servidor canônico decide por sessão de
+  // equipe, papel (`admin|marcelo|ti`) e origem. Por isso esta etapa não
+  // declara o gancho opcional `grants`: ele seria no-op aqui. A concessão de
+  // acesso (`client_access_grants`) pertence ao portal do CLIENTE e não
+  // participa desta captura de tela interna.
+  'ux-07-satisfacao': {
+    outputDir: 'docs/ux-07-satisfacao-evidencias',
+    targets: [
+      { route: '/admin/satisfacao', role: 'admin', slug: 'satisfacao', waitFor: 'Satisfação do cliente e acompanhamento interno', waitForRole: 'heading' },
+    ],
+  },
 };
 
 const plan = STAGES[stage];

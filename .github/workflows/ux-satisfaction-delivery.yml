@@ -1,0 +1,55 @@
+name: UX satisfaction delivery
+# UX-07 / EXT-06 — gate focal da família SATISFAÇÃO.
+# Paths restritos à família e aos arquivos compartilhados REALMENTE tocados
+# nesta fatia. `server.mjs`, `src/server/ext-satisfaction-api.mjs` e
+# `db/migrations/**` ficam de fora de propósito: nenhum deles foi alterado
+# aqui, e nenhuma migração nova foi criada (as 001–174 permanecem intactas).
+# Nenhum scheduler foi tocado — esta família não tem execução agendada.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/admin/satisfacao/**'
+      - 'src/lib/satisfaction-vocabulary.*'
+      - 'src/lib/satisfaction-request.ts'
+      - 'tests/ext06-satisfaction.test.mjs'
+      - 'tests/ext06-satisfaction.integration.test.mjs'
+      - 'tests/cli11-satisfaction-portal.test.mjs'
+      - 'tests/ux-satisfaction-vocabulary.test.mjs'
+      - 'tests/ux-satisfaction-workspace.integration.test.mjs'
+      - 'scripts/qa-ux-satisfaction-postgres.mjs'
+      - 'scripts/ux-evidence-capture.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ux-satisfaction-delivery.yml'
+concurrency:
+  group: ux-satisfaction-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  ux-satisfaction-postgres-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      # O gate recusa rodar com banco do operador ou remoto; aqui os valores
+      # ficam explicitamente vazios.
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: node --test tests/ux-satisfaction-vocabulary.test.mjs
+      # Testes herdados da família: o contrato de servidor e o portal do
+      # cliente (CLI-11) precisam continuar passando sem alteração alguma.
+      - run: node --test tests/ext06-satisfaction.test.mjs tests/cli11-satisfaction-portal.test.mjs
+      - run: npm run test:ux-satisfaction:pg
