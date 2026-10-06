@@ -205,6 +205,15 @@ const STAGES = {
       { route: '/admin/terceiros', role: 'admin', slug: 'terceiros', waitFor: 'Terceiros, acesso por escopo autorizado e perda de acesso ao término', waitForRole: 'heading' },
     ],
   },
+  // UX-08 / EXT-03 — LICITAÇÕES. Banco limpo evidencia o vazio honesto; a
+  // massa completa, negativa e falha injetada somente no browser pertencem ao
+  // gate focal. O servidor decide por sessão e papel, sem grant adicional.
+  'ux-08-licitacoes': {
+    outputDir: 'docs/ux-08-licitacoes-evidencias',
+    targets: [
+      { route: '/admin/licitacoes', role: 'admin', slug: 'licitacoes', waitFor: 'Licitações — EXT-03', waitForRole: 'heading' },
+    ],
+  },
 };
 
 const plan = STAGES[stage];
