@@ -12,7 +12,11 @@
 // há portal público integrado nem upload real) são declaradas pelo servidor e
 // exibidas aqui — não são simuladas.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import UiState from "../../../components/ui/UiState";
+import styles from "../../../components/ui/UiWorkspace.module.css";
+import { biddingRequest } from "../../../lib/bidding-request";
+import { biddingErrorFootnote, biddingErrorVariant, biddingStatusLabel, deadlineKindLabel, deadlineSourceLabel, deadlineSituationLabel, proposalDecisionLabel, honestMoney, honestDate, honestDateTime, type BiddingErrorDescriptor } from "../../../lib/bidding-vocabulary.mjs";
 
 interface MarketRelevance {
   condicao: string;
@@ -237,32 +241,45 @@ function newIdempotencyKey(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`;
 }
 
-async function parseError(res: Response): Promise<string> {
-  try {
-    const body = await res.json();
-    return body?.error ? `${res.status} ${body.error}` : `HTTP ${res.status}`;
-  } catch {
-    return `HTTP ${res.status}`;
-  }
+function formatCents(value: number | null): string {
+  return honestMoney(value);
 }
 
-function formatCents(value: number | null): string {
-  if (value === null || value === undefined) return "não declarado";
-  return (value / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
+const JOURNEY_SECTIONS = [
+  ["editais", "Editais"], ["novo", "Novo edital"], ["resumo", "Dossiê"],
+  ["prazos", "Prazos"], ["propostas", "Propostas"], ["documentos", "Documentos"],
+  ["governanca", "Governança"], ["historico", "Histórico"],
+] as const;
 
 export default function LicitacoesWorkspace() {
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const [activeSection, setActiveSection] = useState("editais");
+  function goToSection(id: string, focus = false) {
+    setActiveSection(id);
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (focus) tabRefs.current[JOURNEY_SECTIONS.findIndex(([key]) => key === id)]?.focus();
+  }
+  function onTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    let next = index;
+    if (event.key === "ArrowRight") next = (index + 1) % JOURNEY_SECTIONS.length;
+    else if (event.key === "ArrowLeft") next = (index - 1 + JOURNEY_SECTIONS.length) % JOURNEY_SECTIONS.length;
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = JOURNEY_SECTIONS.length - 1;
+    else return;
+    event.preventDefault(); goToSection(JOURNEY_SECTIONS[next][0], true);
+  }
+
   const [listing, setListing] = useState<NoticesResponse | null>(null);
   const [listLoading, setListLoading] = useState(true);
-  const [listError, setListError] = useState<string | null>(null);
+  const [listError, setListError] = useState<BiddingErrorDescriptor | null>(null);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dossier, setDossier] = useState<Dossier | null>(null);
   const [dossierLoading, setDossierLoading] = useState(false);
-  const [dossierError, setDossierError] = useState<string | null>(null);
+  const [dossierError, setDossierError] = useState<BiddingErrorDescriptor | null>(null);
 
   const [confirmation, setConfirmation] = useState<string | null>(null);
-  const [mutationError, setMutationError] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<BiddingErrorDescriptor | null>(null);
   const [busy, setBusy] = useState(false);
 
   // Cada formulário mantém a sua chave de idempotência, preservada em falha.
@@ -292,14 +309,10 @@ export default function LicitacoesWorkspace() {
   const loadNotices = useCallback(async () => {
     setListLoading(true);
     setListError(null);
-    try {
-      const res = await fetch("/api/ext/bidding/notices", { credentials: "same-origin" });
-      if (!res.ok) throw new Error(await parseError(res));
-      setListing(await res.json());
-    } catch (err: unknown) {
-      setListing(null);
-      setListError(err instanceof Error ? err.message : "Erro ao carregar licitações");
-    } finally {
+    const result = await biddingRequest<NoticesResponse>("/api/ext/bidding/notices");
+    if (result.ok) setListing(result.data);
+    else { setListing(null); setListError(result.error); }
+    try { /* estado final compartilhado */ } finally {
       setListLoading(false);
     }
   }, []);
@@ -307,14 +320,10 @@ export default function LicitacoesWorkspace() {
   const loadDossier = useCallback(async (id: string) => {
     setDossierLoading(true);
     setDossierError(null);
-    try {
-      const res = await fetch(`/api/ext/bidding/notices/${id}`, { credentials: "same-origin" });
-      if (!res.ok) throw new Error(await parseError(res));
-      setDossier(await res.json());
-    } catch (err: unknown) {
-      setDossier(null);
-      setDossierError(err instanceof Error ? err.message : "Erro ao carregar dossiê do edital");
-    } finally {
+    const result = await biddingRequest<Dossier>(`/api/ext/bidding/notices/${id}`);
+    if (result.ok) setDossier(result.data);
+    else { setDossier(null); setDossierError(result.error); }
+    try { /* estado final compartilhado */ } finally {
       setDossierLoading(false);
     }
   }, []);
@@ -331,19 +340,12 @@ export default function LicitacoesWorkspace() {
     setBusy(true);
     setMutationError(null);
     setConfirmation(null);
-    try {
-      const res = await fetch(url, {
-        method,
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json", "Idempotency-Key": key },
-        body: JSON.stringify(body),
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(payload?.error ? `${res.status} ${payload.error}` : `HTTP ${res.status}`);
-      onSuccess(payload as Record<string, unknown>);
-    } catch (err: unknown) {
-      setMutationError(err instanceof Error ? err.message : "Falha na operação; a chave de idempotência foi preservada para o retry.");
-    } finally {
+    const result = await biddingRequest<Record<string, unknown>>(url, {
+      method, headers: { "Idempotency-Key": key }, body: JSON.stringify(body),
+    });
+    if (result.ok) onSuccess(result.data);
+    else setMutationError(result.error);
+    try { /* a chave só é trocada pelos callbacks de sucesso */ } finally {
       setBusy(false);
     }
   }
@@ -358,7 +360,7 @@ export default function LicitacoesWorkspace() {
   const window_ = dossier?.proposal_window ?? null;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <main className={styles.workspace}>
       <div className="border-b pb-4">
         <h1 className="text-2xl font-bold tracking-tight text-gray-900">Licitações — EXT-03</h1>
         <p className="text-sm text-gray-500 mt-1">
@@ -383,17 +385,26 @@ export default function LicitacoesWorkspace() {
         </div>
       )}
 
+      <nav className={styles.tabs} role="tablist" aria-label="Etapas da jornada de licitações">
+        {JOURNEY_SECTIONS.map(([id, label], index) => (
+          <button key={id} ref={node => { tabRefs.current[index] = node; }} type="button" role="tab"
+            aria-selected={activeSection === id} aria-controls={id} tabIndex={activeSection === id ? 0 : -1}
+            className={activeSection === id ? styles.tabActive : styles.tab}
+            onClick={() => goToSection(id)} onKeyDown={event => onTabKeyDown(event, index)}>{label}</button>
+        ))}
+      </nav>
+
       {confirmation && (
         <div className="p-3 text-sm text-green-800 bg-green-50 border border-green-200 rounded" role="status">{confirmation}</div>
       )}
       {mutationError && (
         <div className="p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded" role="alert">
-          Erro: {mutationError} — a chave de idempotência foi preservada; repetir não duplica.
+          {mutationError.title}: {mutationError.detail} — a chave de idempotência foi preservada; repetir não duplica.
         </div>
       )}
 
       {/* ------------------------------------------------------------------ */}
-      <section className="space-y-3">
+      <section id="editais" role="tabpanel" className={styles.panel}>
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Editais registrados</h2>
           <button onClick={loadNotices} className="px-3 py-1.5 text-sm border rounded hover:bg-gray-50">Recarregar</button>
@@ -403,7 +414,7 @@ export default function LicitacoesWorkspace() {
 
         {!listLoading && listError && (
           <div className="p-4 text-sm bg-red-50 border border-red-200 rounded" role="alert">
-            <p className="text-red-700">Erro ao carregar: {listError}</p>
+            <p className="text-red-700">{listError.title}: {listError.detail}</p>
             <button onClick={loadNotices} className="mt-2 px-3 py-1.5 text-sm border border-red-300 rounded hover:bg-red-100">
               Tentar novamente
             </button>
@@ -440,7 +451,7 @@ export default function LicitacoesWorkspace() {
                     <td className="px-3 py-2">{notice.title}</td>
                     <td className="px-3 py-2">
                       <span className={`inline-block px-2 py-0.5 text-xs border rounded ${STATUS_CLASS[notice.status] ?? ""}`}>
-                        {STATUS_LABEL[notice.status] ?? notice.status}
+                        {biddingStatusLabel(notice.status)}
                       </span>
                     </td>
                     <td className="px-3 py-2 text-xs">{notice.stage === "encerrado" ? "Encerrado" : "Em andamento"}</td>
@@ -467,7 +478,7 @@ export default function LicitacoesWorkspace() {
       </section>
 
       {/* ------------------------------------------------------------------ */}
-      <section className="border rounded p-4 space-y-3">
+      <section id="novo" role="tabpanel" className={styles.panel}>
         <h2 className="text-lg font-semibold">Registrar edital</h2>
         <div className="grid gap-3 md:grid-cols-2">
           <input className="border rounded px-3 py-2 text-sm" placeholder="Título (5–200)"
@@ -508,7 +519,7 @@ export default function LicitacoesWorkspace() {
 
       {selectedId && !dossierLoading && dossierError && (
         <div className="p-4 text-sm bg-red-50 border border-red-200 rounded" role="alert">
-          <p className="text-red-700">Erro ao carregar o dossiê: {dossierError}</p>
+          <p className="text-red-700">{dossierError.title}: {dossierError.detail}</p>
           <button onClick={() => loadDossier(selectedId)} className="mt-2 px-3 py-1.5 text-sm border border-red-300 rounded hover:bg-red-100">
             Tentar novamente
           </button>
@@ -517,7 +528,7 @@ export default function LicitacoesWorkspace() {
 
       {selectedId && !dossierLoading && !dossierError && dossier && (
         <div className="space-y-6">
-          <section className="border rounded p-4 space-y-2">
+          <section id="resumo" role="tabpanel" className={styles.panel}>
             <h2 className="text-lg font-semibold">
               Dossiê — {dossier.notice.edital_number}
               <span className={`ml-2 inline-block px-2 py-0.5 text-xs border rounded ${STATUS_CLASS[dossier.notice.status] ?? ""}`}>
@@ -540,7 +551,7 @@ export default function LicitacoesWorkspace() {
           </section>
 
           {/* Prazos */}
-          <section className="border rounded p-4 space-y-3">
+          <section id="prazos" role="tabpanel" className={styles.panel}>
             <h3 className="font-semibold">Prazos</h3>
             {dossier.deadlines.length === 0 && (
               <p className="text-sm text-gray-600">Nenhum prazo registrado para este edital. Nenhuma data é estimada.</p>
@@ -563,7 +574,7 @@ export default function LicitacoesWorkspace() {
                         <td className="px-3 py-2">{deadline.deadline_kind.replace(/_/g, " ")}</td>
                         <td className="px-3 py-2">{deadline.due_date}</td>
                         <td className={`px-3 py-2 ${DEADLINE_SITUATION_CLASS[deadline.derived.situation] ?? ""}`}>
-                          {DEADLINE_SITUATION_LABEL[deadline.derived.situation] ?? deadline.derived.situation}
+                          {deadlineSituationLabel(deadline.derived.situation)}
                           {deadline.derived.days_overdue !== undefined && ` (${deadline.derived.days_overdue} dia(s) atrás)`}
                           {deadline.derived.days_remaining !== undefined && ` (faltam ${deadline.derived.days_remaining} dia(s))`}
                         </td>
@@ -659,11 +670,11 @@ export default function LicitacoesWorkspace() {
           </section>
 
           {/* Proposta */}
-          <section className="border rounded p-4 space-y-3">
+          <section id="propostas" role="tabpanel" className={styles.panel}>
             <h3 className="font-semibold">Proposta</h3>
             {window_ && (
               <div className={`p-2 text-sm border rounded ${window_.accepts_proposal ? "bg-green-50 border-green-200 text-green-900" : "bg-red-50 border-red-200 text-red-900"}`}>
-                <strong>{PROPOSAL_DECISION_LABEL[window_.decision] ?? window_.decision}</strong>
+                <strong>{proposalDecisionLabel(window_.decision)}</strong>
                 {window_.due_date && <span> · prazo {window_.due_date}</span>}
                 {window_.days_remaining !== undefined && <span> · faltam {window_.days_remaining} dia(s)</span>}
                 {window_.days_overdue !== undefined && <span> · encerrado há {window_.days_overdue} dia(s)</span>}
@@ -733,7 +744,7 @@ export default function LicitacoesWorkspace() {
           </section>
 
           {/* Checklist e dossiê */}
-          <section className="border rounded p-4 space-y-3">
+          <section id="documentos" role="tabpanel" className={styles.panel}>
             <h3 className="font-semibold">Checklist e dossiê versionado</h3>
             {dossier.checklist_summary.checklist_absence && (
               <p className="text-sm text-gray-600">Nenhum item de checklist registrado para este edital.</p>
@@ -836,7 +847,7 @@ export default function LicitacoesWorkspace() {
           </section>
 
           {/* Regra de alerta, responsável, situação e resultado */}
-          <section className="border rounded p-4 space-y-3">
+          <section id="governanca" role="tabpanel" className={styles.panel}>
             <h3 className="font-semibold">Alerta, responsável, situação e resultado</h3>
 
             <div className="grid gap-2 md:grid-cols-2">
@@ -949,7 +960,7 @@ export default function LicitacoesWorkspace() {
           </section>
 
           {/* Histórico */}
-          <section className="border rounded p-4 space-y-2">
+          <section id="historico" role="tabpanel" className={styles.panel}>
             <h3 className="font-semibold">Histórico (apenas-acréscimo)</h3>
             {dossier.events.length === 0 && <p className="text-sm text-gray-600">Nenhum evento registrado.</p>}
             <ul className="text-xs space-y-1">
@@ -963,6 +974,6 @@ export default function LicitacoesWorkspace() {
           </section>
         </div>
       )}
-    </div>
+    </main>
   );
 }
