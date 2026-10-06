@@ -214,6 +214,12 @@ const STAGES = {
       { route: '/admin/licitacoes', role: 'admin', slug: 'licitacoes', waitFor: 'Licitações — EXT-03', waitForRole: 'heading' },
     ],
   },
+  'ux-09-fornecedores': {
+    outputDir: 'docs/ux-09-fornecedores-evidencias',
+    targets: [
+      { route: '/admin/fornecedores', role: 'admin', slug: 'fornecedores', waitFor: 'EXT-04 — Fornecedores', waitForRole: 'heading' },
+    ],
+  },
 };
 
 const plan = STAGES[stage];

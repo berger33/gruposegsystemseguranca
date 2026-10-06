@@ -1,0 +1,11 @@
+export type SupplierErrorKind='conflict'|'invalid'|'not_found'|'denied'|'unavailable'|'network'|'error';
+export type SupplierErrorDescriptor={code:string|null;status:number;kind:SupplierErrorKind;title:string;detail:string;canRetry:boolean};
+export declare const ERROR_MESSAGES:Readonly<Record<string,SupplierErrorDescriptor>>;
+export declare function describeSupplierError(code:string|null,status?:number):SupplierErrorDescriptor;
+export declare const supplierErrorVariant:(error?:SupplierErrorDescriptor)=>'denied'|'error';
+export declare const supplierErrorFootnote:(error?:SupplierErrorDescriptor)=>string;
+export declare const supplierLabel:(value:unknown)=>string;
+export declare const supplierMoney:(value:unknown)=>string;
+export declare const supplierDate:(value:unknown)=>string;
+export declare const EXTERNAL_BOUNDARY:string;
+export declare const VOLUME_BOUNDARY:string;

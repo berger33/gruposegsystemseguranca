@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { supplierRequest } from "../../../lib/supplier-request";
+import { supplierErrorFootnote, supplierLabel, supplierMoney, supplierDate, EXTERNAL_BOUNDARY, VOLUME_BOUNDARY } from "../../../lib/supplier-vocabulary.mjs";
 
 type Supplier = { id: string; name: string; category?: string | null };
 type Product = { id: string; sku: string; name: string; supplier_id: string | null; unit_measure: string };
@@ -18,11 +20,16 @@ const input: React.CSSProperties = { minHeight: 38, padding: "7px 9px", border: 
 const button: React.CSSProperties = { minHeight: 38, padding: "7px 12px", border: 0, borderRadius: 6, background: "#1d4ed8", color: "white", cursor: "pointer" };
 const secondary: React.CSSProperties = { ...button, background: "#374151" };
 
-function money(cents: number) { return (Number(cents || 0) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+function money(cents: number | null | undefined) { return supplierMoney(cents); }
 function newKey(operation: string) { return `ext04-${operation}-${crypto.randomUUID()}`; }
 async function jsonOf(response: Response) {
   const text = await response.text();
   try { return JSON.parse(text); } catch { return { error: text || `HTTP ${response.status}` }; }
+}
+async function supplierJson<T>(url: string, init: RequestInit = {}): Promise<T> {
+  const result = await supplierRequest<T>(url, init);
+  if (!result.ok) { const error = new Error(`${result.error.title}: ${result.error.detail}`); (error as Error & { code?: string }).code = result.error.code ?? undefined; throw error; }
+  return result.data;
 }
 
 export default function FornecedoresWorkspace() {
@@ -35,6 +42,7 @@ export default function FornecedoresWorkspace() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  const [denied, setDenied] = useState(false);
   const [notice, setNotice] = useState("");
   const keys = useRef<Record<string, string>>({});
 
@@ -50,45 +58,38 @@ export default function FornecedoresWorkspace() {
 
   const loadDetail = useCallback(async (id: string) => {
     if (!id) { setDetail(null); return; }
-    const response = await fetch(`/api/ext/supplier/quotations/${id}`, { headers: { accept: "application/json" } });
-    const body = await jsonOf(response);
-    if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+    const body = await supplierJson<Detail>(`/api/ext/supplier/quotations/${id}`);
     setDetail(body);
   }, []);
 
   const load = useCallback(async () => {
-    setLoading(true); setError("");
+    setLoading(true); setError(""); setDenied(false);
     try {
-      const [referencesResponse, quotationsResponse, ordersResponse] = await Promise.all([
-        fetch("/api/ext/supplier/references", { headers: { accept: "application/json" } }),
-        fetch("/api/ext/supplier/quotations", { headers: { accept: "application/json" } }),
-        fetch("/api/ext/supplier/orders", { headers: { accept: "application/json" } }),
+      const [references, quotationData, orderData] = await Promise.all([
+        supplierJson<{ suppliers: Supplier[]; products: Product[] }>("/api/ext/supplier/references"),
+        supplierJson<{ quotations: Quotation[] }>("/api/ext/supplier/quotations"),
+        supplierJson<{ orders: Order[] }>("/api/ext/supplier/orders"),
       ]);
-      const [references, quotationData, orderData] = await Promise.all([jsonOf(referencesResponse), jsonOf(quotationsResponse), jsonOf(ordersResponse)]);
-      if (!referencesResponse.ok) throw new Error(references.error || `HTTP ${referencesResponse.status}`);
-      if (!quotationsResponse.ok) throw new Error(quotationData.error || `HTTP ${quotationsResponse.status}`);
-      if (!ordersResponse.ok) throw new Error(orderData.error || `HTTP ${ordersResponse.status}`);
       setSuppliers(references.suppliers || []); setProducts(references.products || []);
       setQuotations(quotationData.quotations || []); setOrders(orderData.orders || []);
       if (selectedId) await loadDetail(selectedId);
-    } catch (caught) { setError(caught instanceof Error ? caught.message : "Falha ao carregar a jornada."); }
+    } catch (caught) { const code = caught instanceof Error ? (caught as Error & { code?: string }).code : undefined; setDenied(code === "unauthorized" || code === "forbidden_role"); setError(caught instanceof Error ? caught.message : "Falha ao carregar a jornada."); }
     finally { setLoading(false); }
   }, [loadDetail, selectedId]);
 
   useEffect(() => { void load(); }, [load]);
 
-  async function mutate(operation: string, url: string, body: unknown) {
+  async function mutate(operation: string, url: string, body: unknown): Promise<any> {
     const key = keys.current[operation] || newKey(operation);
     keys.current[operation] = key; // preservada enquanto houver falha
     setBusy(operation); setError(""); setNotice("");
     try {
-      const response = await fetch(url, {
+      const result = await supplierRequest<unknown>(url, {
         method: "POST", headers: { "content-type": "application/json", "idempotency-key": key }, body: JSON.stringify(body),
       });
-      const data = await jsonOf(response);
-      if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+      if (!result.ok) { const failure = new Error(`${result.error.title}: ${result.error.detail} ${supplierErrorFootnote(result.error)}`); throw failure; }
       delete keys.current[operation]; // só uma resposta real bem-sucedida encerra a tentativa
-      return data;
+      return result.data;
     } catch (caught) {
       setError(`${caught instanceof Error ? caught.message : "Falha na operação."} Chave preservada para repetição segura: ${key}`);
       throw caught;
@@ -162,9 +163,13 @@ export default function FornecedoresWorkspace() {
       </section>
 
       {loading && <p role="status">Carregando cotações, documentos e pedidos do servidor…</p>}
-      {error && <div role="alert" style={{ ...panel, borderColor: "#dc2626", marginBottom: 12 }}><strong>Erro:</strong> {error}<br/><button style={secondary} onClick={() => void load()}>Repetir carregamento</button></div>}
+      {denied && error && <div role="alert" data-ui-state="denied" style={{ ...panel, borderColor: "#a16207", background: "#fffbeb", marginBottom: 12 }}><strong>NEGADO — esta sessão não pode acessar a jornada.</strong><p>{error}</p><small>Código técnico: unauthorized ou forbidden_role. A recusa veio do servidor.</small></div>}
+      {error && !denied && <div role="alert" data-ui-state="error" style={{ ...panel, borderColor: "#dc2626", marginBottom: 12 }}><strong>Falha de leitura:</strong> {error}<br/><button style={secondary} onClick={() => void load()}>Repetir carregamento</button></div>}
       {notice && <p role="status" style={{ color: "#166534" }}>{notice}</p>}
 
+      <nav aria-label="Etapas da jornada de fornecedores" role="tablist" style={{ ...row, marginBottom: 16 }}>
+        {['Cotações','Detalhe canônico','Validade e alertas','Referências documentais','Pedidos internos'].map((label, index) => <button key={label} role="tab" aria-selected={index === 0} tabIndex={index === 0 ? 0 : -1} style={index === 0 ? button : secondary}>{label}</button>)}
+      </nav>
       <section style={{ ...panel, marginBottom: 16 }}>
         <h2>Nova cotação interna</h2>
         {!suppliers.length || !products.length ? <p>Vazio declarado: é necessário fornecedor e produto ativos, vinculados no cadastro canônico AST. Nada será inventado.</p> : null}
@@ -178,7 +183,7 @@ export default function FornecedoresWorkspace() {
         </form>
       </section>
 
-      <section style={{ display: "grid", gridTemplateColumns: "minmax(280px, 1fr) minmax(420px, 2fr)", gap: 16, alignItems: "start" }}>
+      <section style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr)", gap: 16, alignItems: "start" }}>
         <div style={panel}>
           <h2>Cotações</h2>
           {!loading && !quotations.length && <p>Vazio declarado: nenhuma cotação canônica; nenhum preço ou volume estimado.</p>}
