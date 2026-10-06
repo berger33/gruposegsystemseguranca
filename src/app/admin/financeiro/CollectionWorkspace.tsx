@@ -1,5 +1,7 @@
 "use client";
 
+import styles from "../../../components/ui/UiWorkspace.module.css";
+import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
 import { FormEvent, useEffect, useState } from "react";
 
 type Policy = {
@@ -37,7 +39,7 @@ type HistoryEntry = {
 async function request(path: string, init?: RequestInit) {
   const response = await fetch(path, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers || {}) } });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || data.detail || `Erro ${response.status}`);
+  if (!response.ok) throw new Error(financeErrorMessage(typeof data.error === "string" ? data.error : null, response.status));
   return data;
 }
 
@@ -139,7 +141,7 @@ export default function CollectionWorkspace() {
   };
 
   return (
-    <section data-testid="fin06-collection" aria-labelledby="fin06-title" style={{ display: "grid", gap: "1rem" }}>
+    <section data-testid="fin06-collection" aria-labelledby="fin06-title" className={styles.stackWide}>
       <header>
         <h2 id="fin06-title">FIN-06 · Cobrança com responsável, lembretes e histórico</h2>
         <p>
@@ -151,7 +153,7 @@ export default function CollectionWorkspace() {
       {error && <p role="alert" data-testid="fin06-error">{error}</p>}
       {notice && <p role="status" data-testid="fin06-notice">{notice}</p>}
 
-      <form data-testid="fin06-policy-form" onSubmit={createPolicy} style={{ display: "grid", gap: 8 }}>
+      <form data-testid="fin06-policy-form" onSubmit={createPolicy} className={styles.stack}>
         <h3>Criar política de cobrança (rascunho)</h3>
         <label>Nome único <input required minLength={3} maxLength={200} data-testid="fin06-policy-name" value={policyForm.name} onChange={event => setPolicyForm({ ...policyForm, name: event.target.value })} /></label>
         <label>Descrição <input minLength={10} maxLength={1000} data-testid="fin06-policy-description" value={policyForm.description} onChange={event => setPolicyForm({ ...policyForm, description: event.target.value })} /></label>
@@ -177,7 +179,7 @@ export default function CollectionWorkspace() {
         </ul>
       </div>
 
-      <form data-testid="fin06-reminder-form" onSubmit={createReminder} style={{ display: "grid", gap: 8 }}>
+      <form data-testid="fin06-reminder-form" onSubmit={createReminder} className={styles.stack}>
         <h3>Criar lembrete de cobrança sintético</h3>
         <label>Recebível <select required data-testid="fin06-reminder-receivable" value={reminderForm.receivable_id} onChange={event => setReminderForm({ ...reminderForm, receivable_id: event.target.value })}>
           <option value="">Selecione o recebível</option>{receivables.map(account => <option key={account.id} value={account.id}>{account.protocol} · {account.status}</option>)}
@@ -208,7 +210,7 @@ export default function CollectionWorkspace() {
         </ul>
       </div>
 
-      <form data-testid="fin06-send-form" onSubmit={sendReminder} style={{ display: "grid", gap: 8 }}>
+      <form data-testid="fin06-send-form" onSubmit={sendReminder} className={styles.stack}>
         <h3>Registrar envio simulado</h3>
         <label>Id do lembrete <input required data-testid="fin06-send-id" value={sendForm.id} onChange={event => setSendForm({ ...sendForm, id: event.target.value })} /></label>
         <label>Novo estado <select data-testid="fin06-send-status" value={sendForm.status} onChange={event => setSendForm({ ...sendForm, status: event.target.value })}>
@@ -218,7 +220,7 @@ export default function CollectionWorkspace() {
         <button type="submit" data-testid="fin06-send">Confirmar (apenas simulado/local)</button>
       </form>
 
-      <form data-testid="fin06-history-form" onSubmit={loadHistory} style={{ display: "grid", gap: 8 }}>
+      <form data-testid="fin06-history-form" onSubmit={loadHistory} className={styles.stack}>
         <h3>Histórico imutável por recebível</h3>
         <label>Recebível <input required data-testid="fin06-history-receivable" value={historyReceivableId} onChange={event => setHistoryReceivableId(event.target.value)} /></label>
         <button type="submit" data-testid="fin06-load-history">Carregar histórico</button>

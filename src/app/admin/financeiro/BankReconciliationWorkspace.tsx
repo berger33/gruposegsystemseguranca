@@ -1,5 +1,7 @@
 "use client";
 
+import styles from "../../../components/ui/UiWorkspace.module.css";
+import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
 import { FormEvent, useEffect, useState } from "react";
 
 type Statement = {
@@ -42,7 +44,7 @@ async function request(path: string, init?: RequestInit) {
     headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || data.detail || `Erro ${response.status}`);
+  if (!response.ok) throw new Error(financeErrorMessage(typeof data.error === "string" ? data.error : null, response.status));
   return data;
 }
 
@@ -178,7 +180,7 @@ export default function BankReconciliationWorkspace() {
   const accountOptions = conciliationForm.account_type === "receber" ? receivables : payables;
 
   return (
-    <section data-testid="fin05-reconciliation" aria-labelledby="fin05-title" style={{ display: "grid", gap: "1rem" }}>
+    <section data-testid="fin05-reconciliation" aria-labelledby="fin05-title" className={styles.stackWide}>
       <header>
         <h2 id="fin05-title">FIN-05 · Conciliação bancária sintética</h2>
         <p>
@@ -189,7 +191,7 @@ export default function BankReconciliationWorkspace() {
       {error && <p role="alert" data-testid="fin05-error">{error}</p>}
       {notice && <p role="status" data-testid="fin05-notice">{notice}</p>}
 
-      <form data-testid="fin05-statement-form" onSubmit={createStatement} style={{ display: "grid", gap: 8 }}>
+      <form data-testid="fin05-statement-form" onSubmit={createStatement} className={styles.stack}>
         <h3>Importar extrato sintético</h3>
         <label>Origem <select data-testid="fin05-statement-source" value={statementForm.source} onChange={event => setStatementForm({ ...statementForm, source: event.target.value })}>
           <option value="extrato">Extrato</option><option value="importacao">Importação</option><option value="provedor">Provedor simulado</option><option value="manual">Manual</option>
@@ -210,7 +212,7 @@ export default function BankReconciliationWorkspace() {
         </ul>
       </div>
 
-      <form data-testid="fin05-transaction-form" onSubmit={createTransaction} style={{ display: "grid", gap: 8 }}>
+      <form data-testid="fin05-transaction-form" onSubmit={createTransaction} className={styles.stack}>
         <h3>Adicionar transação do extrato</h3>
         <label>Extrato <select required data-testid="fin05-transaction-statement" value={transactionForm.statement_id} onChange={event => setTransactionForm({ ...transactionForm, statement_id: event.target.value })}>
           <option value="">Selecione o extrato</option>{statements.map(statement => <option key={statement.id} value={statement.id}>{statement.protocol} · {statement.file_name}</option>)}
@@ -231,7 +233,7 @@ export default function BankReconciliationWorkspace() {
         </ul>
       </div>
 
-      <form data-testid="fin05-conciliation-form" onSubmit={createConciliation} style={{ display: "grid", gap: 8 }}>
+      <form data-testid="fin05-conciliation-form" onSubmit={createConciliation} className={styles.stack}>
         <h3>Sugerir conciliação</h3>
         <label>Tipo da conta <select data-testid="fin05-account-type" value={conciliationForm.account_type} onChange={event => setConciliationForm({ ...conciliationForm, account_type: event.target.value, account_id: "" })}>
           <option value="receber">Recebível</option><option value="pagar">Pagável</option>
@@ -262,7 +264,7 @@ export default function BankReconciliationWorkspace() {
         </ul>
       </div>
 
-      <form data-testid="fin05-confirmation-form" onSubmit={confirmConciliation} style={{ display: "grid", gap: 8 }}>
+      <form data-testid="fin05-confirmation-form" onSubmit={confirmConciliation} className={styles.stack}>
         <h3>Confirmar ou marcar divergência</h3>
         <label>Id da sugestão <input required data-testid="fin05-confirmation-id" value={confirmationForm.id} onChange={event => setConfirmationForm({ ...confirmationForm, id: event.target.value })} /></label>
         <label>Resultado <select data-testid="fin05-confirmation-status" value={confirmationForm.status} onChange={event => setConfirmationForm({ ...confirmationForm, status: event.target.value })}>

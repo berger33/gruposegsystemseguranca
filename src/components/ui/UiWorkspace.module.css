@@ -173,3 +173,24 @@
 .legacy :global(th), .legacy :global(td) { padding: 7px; border-bottom: 1px solid var(--ux-color-border); text-align: left; }
 .legacy :global(input), .legacy :global(select), .legacy :global(textarea) { max-width: 100%; }
 .legacy :global(pre), .legacy :global(a) { max-width: 100%; overflow-wrap: anywhere; }
+
+/* UX-07 (fatia B — Financeiro): utilitários de layout generalizados a partir
+   dos 39 `style` inline que as áreas FIN-05..FIN-16 de /admin/financeiro
+   usavam. Só posicionam; nenhuma regra aqui altera dado, permissão ou API. */
+.stack { display: grid; gap: 8px; }
+.stackTight { display: grid; gap: 6px; }
+.stackWide { display: grid; gap: 16px; }
+.rowWrap { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+.grow { flex: 1 1 220px; min-width: 0; }
+.twoColumns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 12px; align-items: start; }
+.padded { padding: 16px; }
+.spacedTop { margin-top: 4px; }
+.spacedTopWide { margin-top: 16px; }
+.spacedBelow { margin-bottom: 8px; }
+.dividedTop { border-top: 1px solid var(--ux-color-border); padding-top: 8px; }
+.dividedItem { border-top: 1px solid var(--ux-color-border); padding: 6px 0; }
+.metaLine { display: block; font-size: .8125rem; color: var(--ux-color-muted); line-height: 1.5; }
+.metaBlock { margin-top: 4px; font-size: .8125rem; color: var(--ux-color-muted); line-height: 1.5; }
+/* Lista longa com rolagem própria: `min-height` evita que a área colapse e
+   pareça "nenhum registro" enquanto a leitura ainda está em curso. */
+.scrollList { max-height: 360px; overflow: auto; list-style: none; padding-left: 0; min-height: 40px; }

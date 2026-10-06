@@ -1,8 +1,9 @@
 "use client";
+import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
 import {FormEvent,useCallback,useEffect,useMemo,useState} from "react";
 type Closure={id:string;competence_date:string;status:string;notes:string|null;closed_by_identity:string|null;reopened_by_identity:string|null;authorized_by_identity:string|null;reopen_reason:string|null};
 type Version={id:string;version:number|string;report_type:string;data:Record<string,unknown>;totals:Record<string,unknown>;created_by_identity:string|null;created_at:string;is_preserved:boolean};
-async function api(path:string,init?:RequestInit){const r=await fetch(path,{...init,headers:{"Content-Type":"application/json",...(init?.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(String(d.error||`Erro ${r.status}`));return d;}
+async function api(path:string,init?:RequestInit){const r=await fetch(path,{...init,headers:{"Content-Type":"application/json",...(init?.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(financeErrorMessage(typeof d.error === "string" ? d.error : null, r.status));return d;}
 export default function ClosureWorkspace(){
  const [rows,setRows]=useState<Closure[]>([]),[error,setError]=useState(""),[notice,setNotice]=useState(""),[busy,setBusy]=useState(false),[search,setSearch]=useState(""),[selectedId,setSelectedId]=useState(""),[versions,setVersions]=useState<Version[]>([]),[versionsError,setVersionsError]=useState(""),[reason,setReason]=useState("");const [form,setForm]=useState({competence_date:"",notes:""});
  const load=useCallback(async()=>{try{const d=await api("/api/fin/competence-closures");setRows(d.closures||[]);setError("")}catch(e){setError(`Não foi possível ler os fechamentos: ${e instanceof Error?e.message:"falha"}`)}},[]);useEffect(()=>{void load()},[load]);

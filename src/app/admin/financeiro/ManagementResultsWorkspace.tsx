@@ -1,5 +1,7 @@
 "use client";
 
+import styles from "../../../components/ui/UiWorkspace.module.css";
+import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
 import { FormEvent, useEffect, useState } from "react";
 
 type Result = {
@@ -19,7 +21,7 @@ const marginBasis = (result:Result) => {
 const api = async (path:string, options:RequestInit={}) => {
   const r=await fetch(path,{...options,headers:{"content-type":"application/json",...(options.headers||{})}});
   const b=await r.json().catch(()=>({}));
-  if(!r.ok) throw new Error(b.error||"Falha no resultado gerencial");
+  if(!r.ok) throw new Error(financeErrorMessage(typeof b.error === "string" ? b.error : null, r.status));
   return b;
 };
 
@@ -49,7 +51,7 @@ export default function ManagementResultsWorkspace(){
      setForm({...form,competence_date:"",received:"",costs:"",reason:""}); await load();
    }catch(e){setError(e instanceof Error?e.message:"Falha inesperada");}finally{setBusy(false);}
  };
- return <section data-testid="fin09-results" style={{padding:"1rem"}}>
+ return <section data-testid="fin09-results" className={styles.padded}>
    <h2>Resultado gerencial</h2>
    <p>Receita recebida, custos, caixa e margem por contrato. Dado ausente é mostrado como incompleto: nunca como margem zero ou percentual estimado.</p>
    {error&&<div role="alert" data-testid="fin09-error"><p>{error}</p><button type="button" data-testid="fin09-retry" disabled={loading} onClick={()=>void load()}>Tentar novamente</button></div>}

@@ -1,5 +1,7 @@
 "use client";
 
+import styles from "../../../components/ui/UiWorkspace.module.css";
+import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
 import { FormEvent, useEffect, useState } from "react";
 
 type ActivityRule = { id:string; activity_code:string; activity_label:string; obligation_type:string; jurisdiction:string; rule_reference:string; rule_description:string; is_active:boolean };
@@ -11,7 +13,7 @@ const money = (value:string|number) => `R$ ${(Number(value)/100).toFixed(2).repl
 async function api(path:string, init?:RequestInit) {
   const response = await fetch(path, { ...init, headers:{ "Content-Type":"application/json", ...(init?.headers||{}) } });
   const data = await response.json().catch(()=>({}));
-  if (!response.ok) throw new Error(data.error || `Erro ${response.status}`);
+  if (!response.ok) throw new Error(financeErrorMessage(typeof data.error === "string" ? data.error : null, response.status));
   return data;
 }
 
@@ -133,7 +135,7 @@ export default function FiscalWorkspace() {
           <td>{item.status==="pendente"&&<button disabled={busy||reason.length<10} data-testid={`fin11-obligation-determine-${item.id}`} onClick={()=>transitionObligation(item,"determinada")}>Determinar</button>}
               {item.status!=="cancelada"&&<button disabled={busy||reason.length<10} onClick={()=>transitionObligation(item,"cancelada")}>Cancelar</button>}</td></tr>)}
     </tbody></table>
-    {pendingProviderObligations.length>0&&<aside role="status" data-testid="fin11-provider-pending" style={{margin:"1rem 0",padding:".75rem",borderLeft:"4px solid #b45309"}}>
+    {pendingProviderObligations.length>0&&<aside role="status" data-testid="fin11-provider-pending" className={`${styles.notice} ${styles.noticeWarning}`}>
       Pendente de provedor sandbox selecionado/configurado para: {pendingProviderObligations.map(item=>`${item.activity_type} (${item.obligation_type})`).join(", ")}. Nenhum documento ou emissão é simulado enquanto essa pendência existir.
     </aside>}
 

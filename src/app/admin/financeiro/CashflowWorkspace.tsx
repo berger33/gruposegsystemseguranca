@@ -1,5 +1,7 @@
 "use client";
 
+import styles from "../../../components/ui/UiWorkspace.module.css";
+import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
 import { FormEvent, useEffect, useState } from "react";
 
 type Snapshot = {
@@ -55,7 +57,7 @@ const money = (value: string | number | undefined) => value == null ? "Dado ause
 async function request(path: string, init?: RequestInit) {
   const response = await fetch(path, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers || {}) } });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || `Erro ${response.status}`);
+  if (!response.ok) throw new Error(financeErrorMessage(typeof data.error === "string" ? data.error : null, response.status));
   return data;
 }
 
@@ -135,7 +137,7 @@ export default function CashflowWorkspace() {
   };
 
   return (
-    <section data-testid="fin07-cashflow" aria-labelledby="fin07-title" style={{ display: "grid", gap: "1rem" }}>
+    <section data-testid="fin07-cashflow" aria-labelledby="fin07-title" className={styles.stackWide}>
       <header>
         <h2 id="fin07-title">FIN-07 · Fluxo de caixa e aging de recebíveis</h2>
         <p>
@@ -146,7 +148,7 @@ export default function CashflowWorkspace() {
       {error && <p role="alert" data-testid="fin07-error">{error}</p>}
       {notice && <p role="status" data-testid="fin07-notice">{notice}</p>}
 
-      <form data-testid="fin07-cashflow-form" onSubmit={createSnapshot} style={{ display: "grid", gap: 8 }}>
+      <form data-testid="fin07-cashflow-form" onSubmit={createSnapshot} className={styles.stack}>
         <h3>Snapshot de fluxo de caixa</h3>
         <label>Competência <input required type="date" data-testid="fin07-cashflow-competence" value={snapshotForm.competence_date} onChange={event => setSnapshotForm({ ...snapshotForm, competence_date: event.target.value })} /></label>
         <label>Tipo <select data-testid="fin07-cashflow-type" value={snapshotForm.cashflow_type} onChange={event => setSnapshotForm({ ...snapshotForm, cashflow_type: event.target.value })}>
@@ -167,7 +169,7 @@ export default function CashflowWorkspace() {
         </tbody></table>
       </div>
 
-      <form data-testid="fin07-aging-form" onSubmit={createAging} style={{ display: "grid", gap: 8 }}>
+      <form data-testid="fin07-aging-form" onSubmit={createAging} className={styles.stack}>
         <h3>Aging de recebíveis por competência</h3>
         <label>Recebível <select required data-testid="fin07-aging-receivable" value={agingForm.receivable_id} onChange={event => selectReceivable(event.target.value)}>
           <option value="">Selecione o recebível</option>{receivables.map(receivable => <option key={receivable.id} value={receivable.id}>{receivable.protocol} · {receivable.status} · {money(receivable.amount_remaining_cents)} restante</option>)}

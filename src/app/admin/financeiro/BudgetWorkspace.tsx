@@ -13,6 +13,8 @@
 //    exigir nova aprovação;
 //  * a confirmação só aparece depois que o servidor persistiu a operação.
 
+import styles from "../../../components/ui/UiWorkspace.module.css";
+import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 type Budget = {
@@ -88,7 +90,7 @@ async function api(path: string, init?: RequestInit) {
     headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(String(data.error || `Erro ${response.status}`));
+  if (!response.ok) throw new Error(financeErrorMessage(typeof data.error === "string" ? data.error : null, response.status));
   return data;
 }
 
@@ -299,7 +301,7 @@ export default function BudgetWorkspace() {
       )}
       {scenariosError && <p role="alert" data-testid="fin13-scenarios-error">{scenariosError}</p>}
 
-      <form data-testid="fin13-budget-form" onSubmit={submitBudget} style={{ display: "grid", gap: 8, marginBottom: 16 }}>
+      <form data-testid="fin13-budget-form" onSubmit={submitBudget} className={`${styles.stack} ${styles.spacedBelow}`}>
         <h3>Criar orçamento ORC-FIN</h3>
         <input data-testid="fin13-budget-title" required minLength={5} maxLength={200} placeholder="Título" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
         <input data-testid="fin13-budget-description" required minLength={10} maxLength={2000} placeholder="Descrição" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
@@ -325,7 +327,7 @@ export default function BudgetWorkspace() {
       </select>
 
       {selected && (
-        <div data-testid="fin13-budget-detail" style={{ display: "grid", gap: 6, margin: "12px 0" }}>
+        <div data-testid="fin13-budget-detail" className={styles.stackTight}>
           <p data-testid="fin13-detail-protocol">{selected.protocol} · {selected.title}</p>
           <p>Situação: <strong data-testid="fin13-detail-status">{selected.status}</strong> · versão <span data-testid="fin13-detail-version">{String(selected.version)}</span> · período {String(selected.period_start).slice(0, 10)} a {String(selected.period_end).slice(0, 10)}</p>
           <p data-testid="fin13-detail-revenue">Receita estimada: {brl(selected.total_revenue_cents)}</p>
@@ -339,7 +341,7 @@ export default function BudgetWorkspace() {
           <label>Motivo da ação (10 a 1000 caracteres)
             <input data-testid="fin13-action-reason" minLength={10} maxLength={1000} placeholder="Motivo da ação" value={actionReason} onChange={e => setActionReason(e.target.value)} />
           </label>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div className={styles.rowWrap}>
             <button type="button" data-testid="fin13-send-review" disabled={busy || selected.status !== "rascunho"} onClick={() => transition("em_revisao", "Envio para revisão")}>Enviar para revisão</button>
             <button type="button" data-testid="fin13-approve" disabled={busy || selected.status !== "em_revisao"} onClick={() => transition("aprovado", "Aprovação")}>Aprovar</button>
             <button type="button" data-testid="fin13-reject" disabled={busy || selected.status !== "em_revisao"} onClick={() => transition("rejeitado", "Rejeição")}>Rejeitar</button>
@@ -347,7 +349,7 @@ export default function BudgetWorkspace() {
             <button type="button" data-testid="fin13-load-history" disabled={busy} onClick={() => loadHistory(selected.id)}>Ver histórico</button>
           </div>
 
-          <form data-testid="fin13-revision-form" onSubmit={submitRevision} style={{ display: "grid", gap: 6, borderTop: "1px solid #ccc", paddingTop: 8 }}>
+          <form data-testid="fin13-revision-form" onSubmit={submitRevision} className={`${styles.stackTight} ${styles.dividedTop}`}>
             <h4>Revisar orçamento aprovado</h4>
             <p>
               Orçamento aprovado não aceita edição comum. A revisão preserva a versão anterior no histórico, retira a aprovação e exige nova aprovação.
@@ -361,7 +363,7 @@ export default function BudgetWorkspace() {
         </div>
       )}
 
-      <form data-testid="fin13-scenario-form" onSubmit={submitScenario} style={{ display: "grid", gap: 8, marginBottom: 16 }}>
+      <form data-testid="fin13-scenario-form" onSubmit={submitScenario} className={`${styles.stack} ${styles.spacedBelow}`}>
         <h3>Criar cenário do orçamento selecionado</h3>
         <p data-testid="fin13-scenario-budget-label">{selected ? `${selected.protocol} · ${selected.title}` : "Nenhum orçamento selecionado"}</p>
         <select data-testid="fin13-scenario-type" aria-label="Tipo de cenário" value={scenario.scenario_type} onChange={e => setScenario({ ...scenario, scenario_type: e.target.value })}>

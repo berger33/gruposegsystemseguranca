@@ -1,0 +1,57 @@
+name: UX contratos delivery
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/admin/contratos/**'
+      - 'src/components/ui/**'
+      - 'src/lib/contract-vocabulary.*'
+      - 'src/lib/contract-request.ts'
+      - 'src/styles/ux-tokens.css'
+      - 'src/server/contract-api.mjs'
+      - 'src/server/contract-l05-api.mjs'
+      - 'src/server/contract-details-api.mjs'
+      - 'src/server/contract-status-api.mjs'
+      - 'src/server/contract-amendment-api.mjs'
+      - 'src/server/contract-alert-api.mjs'
+      - 'src/server/contract-doc-obligation-api.mjs'
+      - 'src/server/contract-implantation-api.mjs'
+      - 'src/server/contract-closure-api.mjs'
+      - 'src/server/contract-fiscal-api.mjs'
+      - 'src/server/contract-management-diary-api.mjs'
+      - 'server.mjs'
+      - 'tests/helpers/**'
+      - 'tests/ux-contract-vocabulary.test.mjs'
+      - 'tests/ux-contract-workspace.integration.test.mjs'
+      - 'scripts/qa-ux-contract-postgres.mjs'
+      - 'db/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/ux-contract-delivery.yml'
+concurrency:
+  group: ux-contract-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  ux-contract-postgres-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Verificação de tipos
+        run: npm run typecheck
+      - name: Vocabulário canônico de contratos (sem PostgreSQL)
+        run: node --test tests/ux-contract-vocabulary.test.mjs
+      - name: Contratos — HTTP real, PostgreSQL descartável e Chromium
+        run: npm run test:ux-contract:pg
