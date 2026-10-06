@@ -83,6 +83,12 @@ const STAGES = {
       { route: '/admin/contratos', role: 'admin', slug: 'contratos', waitFor: 'Contratos e implantação' },
     ],
   },
+  'ux-07-analytics': {
+    outputDir: 'docs/ux-07-analytics-evidencias',
+    targets: [
+      { route: '/admin/analytics', role: 'admin', slug: 'analytics', waitFor: 'Analytics e experimentos A/B controlados', waitForRole: 'heading' },
+    ],
+  },
   'ux-07-inteligencia-comercial': {
     outputDir: 'docs/ux-07-inteligencia-comercial-evidencias',
     targets: [

@@ -7,6 +7,8 @@ import { spawn } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
 import path from "node:path";
 import pg from "pg";
+import { chromium } from "playwright";
+import packagedChromium from "@sparticuz/chromium";
 import { hashPassword } from "../src/lib/client-auth-core.mjs";
 
 const RUN = process.env.RUN_DATABASE_INTEGRATION === "1" && process.env.DATABASE_URL;
@@ -311,4 +313,53 @@ test("EXT-11 escrita legada recebe 410 depois de autenticação e same-origin", 
   assert.equal(retired.status, 410);
   const after = (await pool.query(`SELECT count(*)::int AS n FROM ext_analytics_experiments WHERE origin='ext11_canonica'`)).rows[0].n;
   assert.equal(after, before);
+});
+
+
+// UX-07 analytics: navegador real no mesmo processo, para preservar a sessão
+// staff autenticada. A falha de leitura é injetada somente por addInitScript.
+test("UX-07 analytics browser: h1 real, falha honesta, abas acessíveis e sem scroll horizontal", opt, async () => {
+  let last;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    let browser;
+    try {
+      browser = await chromium.launch({ executablePath: await packagedChromium.executablePath(), headless: true, args: [...packagedChromium.args.filter((arg) => arg !== "--disable-web-security"), "--single-process"] });
+      const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+      await context.addCookies([{ name: "seg_admin_session", value: cookieAdmin.split("=")[1], url: base }]);
+      const page = await context.newPage();
+      await page.addInitScript(() => {
+        const original = window.fetch;
+        window.fetch = (...args) => String(args[0]).includes("/api/ext/analytics/experiments")
+          ? Promise.resolve(new Response(JSON.stringify({ error: "database_error" }), { status: 503, headers: { "content-type": "application/json" } }))
+          : original(...args);
+      });
+      await page.goto(`${base}/admin/analytics`, { waitUntil: "domcontentloaded" });
+      await page.getByRole("heading", { name: "Analytics e experimentos A/B controlados" }).waitFor();
+      const failure = await page.locator('[data-ui-state="error"]').first().innerText();
+      assert.match(failure, /Dados indisponíveis/);
+      assert.match(failure, /não significa que a lista esteja vazia/);
+      assert.equal(await page.getByRole("tab").count(), 3);
+      await page.getByRole("tab", { name: "Novo rascunho" }).focus();
+      await page.keyboard.press("End");
+      assert.equal(await page.getByRole("tab", { name: "Trilha do experimento" }).getAttribute("aria-selected"), "true");
+      await page.keyboard.press("Home");
+      assert.equal(await page.getByRole("tab", { name: "Novo rascunho" }).getAttribute("aria-selected"), "true");
+      assert.equal(await page.locator('[role="tabpanel"]').count(), 1);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      assert.ok(overflow <= 1, `scroll horizontal inesperado: ${overflow}px`);
+      await browser.close();
+      return;
+    } catch (error) {
+      last = error;
+      await browser?.close().catch(() => {});
+      if (!String(error?.message || error).includes("ERR_ASSERTION")) throw error;
+    }
+  }
+  throw last;
+});
+
+// Autorização continua sendo decidida pelo servidor: o papel sem permissão
+// granular não lê a jornada canônica, mesmo navegando até a rota.
+test("UX-07 analytics browser: papel sem permissão granular não recebe dados", opt, async () => {
+  assert.equal((await api("/api/ext/analytics/experiments", { cookie: cookieRh })).status, 403);
 });

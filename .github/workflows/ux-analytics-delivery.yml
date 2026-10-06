@@ -1,0 +1,42 @@
+name: UX analytics delivery
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/admin/analytics/**'
+      - 'src/lib/analytics-vocabulary.*'
+      - 'src/lib/analytics-request.ts'
+      - 'src/server/ext-analytics-api.mjs'
+      - 'tests/ext11-analytics.test.mjs'
+      - 'tests/ext11-analytics.integration.test.mjs'
+      - 'tests/ux-analytics-vocabulary.test.mjs'
+      - 'tests/ux-analytics-workspace.integration.test.mjs'
+      - 'scripts/qa-ux-analytics-postgres.mjs'
+      - 'scripts/ux-evidence-capture.mjs'
+      - 'package*.json'
+      - '.github/workflows/ux-analytics-delivery.yml'
+concurrency:
+  group: ux-analytics-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  ux-analytics-postgres-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: node --test tests/ux-analytics-vocabulary.test.mjs tests/ux-analytics-workspace.integration.test.mjs
+      - run: npm run test:ux-analytics:pg
