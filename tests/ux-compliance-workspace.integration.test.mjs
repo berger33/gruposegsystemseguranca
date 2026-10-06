@@ -58,10 +58,18 @@ let planoAbertoId;
 
 const key = label => `ext07-ux-${label}-${randomUUID()}`;
 
-const hoje = new Date();
+// As datas da massa são ancoradas no relógio do SERVIDOR, não no do processo
+// de teste: o servidor decide validade por CURRENT_DATE, e uma diferença de
+// fuso entre runner e banco tornaria a massa incoerente com a regra real.
+// Ler a data do banco é leitura de relógio, não criação de massa por SQL.
+let hoje = new Date();
 const iso = date => date.toISOString().slice(0, 10);
 const diasAtras = dias => iso(new Date(hoje.getTime() - dias * 86_400_000));
 const diasAFrente = dias => iso(new Date(hoje.getTime() + dias * 86_400_000));
+
+// Marca de progresso do preparo: quando o gate falha em CI, ela diz em qual
+// etapa parou. Não altera asserção alguma.
+const etapa = nome => console.log(`UX_COMPLIANCE_SETUP: ${nome}`);
 
 async function waitForServer(url, timeoutMs = 180_000) {
   const deadline = Date.now() + timeoutMs;
@@ -217,7 +225,10 @@ before(async () => {
   server.stdout.on('data', () => {});
   server.stderr.on('data', () => {});
   await waitForServer(baseUrl);
+  etapa('servidor no ar');
   pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 3 });
+  hoje = new Date(`${(await pool.query('SELECT CURRENT_DATE::text AS hoje')).rows[0].hoje}T12:00:00.000Z`);
+  etapa(`data-base do servidor ${iso(hoje)}`);
 
   // `admin`, `ti` e `marcelo` estão em allowedRoles do AdminGate; o servidor
   // canônico aceita somente `admin` e `ti`. Nenhum grant é necessário nesta
@@ -228,6 +239,7 @@ before(async () => {
   adminCookie = await loginStaffHttp(adminStaff.email);
   tiCookie = await loginStaffHttp(tiStaff.email);
   marceloCookie = await loginStaffHttp(marceloStaff.email);
+  etapa('identidades provisionadas');
 
   // Massa fictícia criada pelas PRÓPRIAS APIs canônicas, por HTTP: nada é
   // inserido por SQL de negócio.
@@ -267,6 +279,7 @@ before(async () => {
   });
   assert.equal(refVencida.status, 201, `referência deveria ser 201, veio ${refVencida.status} ${JSON.stringify(refVencida.body)}`);
   protocoloVencido = refVencida.body.document.protocol;
+  etapa('obrigação e referência vencida');
 
   // Segunda obrigação, com referência corrente a vencer: prova "A vencer".
   const obrigacaoVigente = await api('/api/ext/compliance/obligations', {
@@ -303,6 +316,7 @@ before(async () => {
   });
   assert.equal(refVigente.status, 201, `referência vigente deveria ser 201, veio ${refVigente.status} ${JSON.stringify(refVigente.body)}`);
   protocoloVigente = refVigente.body.document.protocol;
+  etapa('obrigação e referência a vencer');
 
   // Avaliação temporal EXPLÍCITA na data do servidor: é ela que gera a tarefa
   // de vencimento e marca a referência a vencer.
@@ -311,6 +325,7 @@ before(async () => {
   assert.equal(avaliacao.body.source, 'server_date', 'a data-base é sempre a do servidor');
   assert.ok(avaliacao.body.facts.tasks_created >= 1, 'o vencimento precisa gerar ao menos uma tarefa');
   assert.ok(avaliacao.body.facts.documents_marked_a_vencer >= 1, 'a referência dentro da antecedência precisa virar a_vencer');
+  etapa('avaliação temporal explícita');
 
   // Plano de ação corretivo para a obrigação vencida; fica ABERTO para provar
   // ausência honesta de conclusão.
@@ -352,6 +367,7 @@ before(async () => {
   });
   assert.equal(concluido.status, 200, `conclusão do plano deveria ser 200, veio ${concluido.status} ${JSON.stringify(concluido.body)}`);
   assert.equal(concluido.body.action_plan.status, 'concluido');
+  etapa('planos de ação');
 
   // Renovação real da referência vencida: cria versão 2 e torna a anterior
   // histórico imutável (`substituida`).
@@ -369,6 +385,7 @@ before(async () => {
   assert.equal(renovada.status, 201, `renovação deveria ser 201, veio ${renovada.status} ${JSON.stringify(renovada.body)}`);
   assert.equal(renovada.body.document.version_no, 2);
   assert.equal(renovada.body.previous.status, 'substituida');
+  etapa('renovação versionada');
 
   // A página precisa estar compilada antes de qualquer medição no navegador.
   for (const route of ['/admin/entrar', '/admin/compliance']) {
@@ -381,6 +398,7 @@ before(async () => {
       if (Date.now() > deadline) throw new Error(`page_compile_timeout_${route}`);
       await new Promise(r => setTimeout(r, 500));
     }
+    etapa(`página compilada ${route}`);
   }
 });
 
@@ -536,7 +554,10 @@ test('browser: a jornada real aparece em português, sem valor cru do banco', { 
     await page.getByRole('row', { name: new RegExp(protocoloVigente) })
       .getByRole('button', { name: 'Ver referência declarada' }).click();
     const detalhe = page.locator('[data-testid="compliance-document-detail"]');
-    await detalhe.locator('dl').waitFor();
+    await detalhe.waitFor();
+    // O cartão existe já no estado de carregando: esperar só por ele mediria a
+    // tela antes de a leitura terminar. A espera é pelo conteúdo carregado.
+    await detalhe.getByText('APOLICE-UX07-0002').waitFor();
     const textoDetalhe = await detalhe.textContent();
     assert.match(textoDetalhe, /Número declarado/, 'o tipo de referência sai em português');
     assert.match(textoDetalhe, /APOLICE-UX07-0002/, 'a referência declarada aparece como veio');
@@ -587,7 +608,10 @@ test('browser: ausência honesta no plano aberto e vazio honesto na execução a
     await page.getByRole('row', { name: /Protocolar renovação do alvará/ })
       .getByRole('button', { name: 'Ver trilha do plano' }).click();
     const detalhe = page.locator('[data-testid="compliance-plan-detail"]');
-    await detalhe.locator('dl').waitFor();
+    await detalhe.waitFor();
+    // Mesma lição: o cartão monta já em "Carregando". A trilha do plano só
+    // existe depois da leitura concluída, então é ela que marca o fim.
+    await page.locator('[data-testid="compliance-plan-events"]').waitFor();
     const texto = await detalhe.textContent();
     assert.match(texto, /Conclusão pendente/, 'conclusão ausente é dita, não datada');
     assert.match(texto, /Início pendente/, 'início ausente é dito, não datado');

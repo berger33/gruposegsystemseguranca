@@ -237,11 +237,25 @@ temporal **explícita**.
 | `npm run typecheck` (`tsc --noEmit`) | estática | exit 0 |
 | `node --test tests/ux-compliance-vocabulary.test.mjs` | estática (anti-deriva, dois servidores reais) | **15/15** |
 | `node --test tests/ext07-compliance.test.mjs tests/ext-compliance-scheduler.test.mjs` (herdados) | estática | **42/42** |
-| `npm run test:ux-compliance:pg` (novo gate) | HTTP real + PostgreSQL real + Chromium | **8/8**, exit 0, primeira execução, sem retry |
+| `npm run test:ux-compliance:pg` (novo gate) | HTTP real + PostgreSQL real + Chromium | **8/8**, exit 0, três execuções seguidas após a correção da corrida descrita em 6.1 |
 | `npm run test:unit` (inclui o vocabulário novo) | estática | **764/764** |
 | `npm run test:ext07-compliance:pg` (gate herdado da família) | HTTP real + PostgreSQL real | **50/50**, exit 0, sem precisar de reparo |
 | `npm run ux:evidence -- --stage=ux-07-compliance` | captura real, 1440×900 e 390×844 | exit 0, `problems: []` |
 | Aceite humano | — | **PENDENTE.** Marcelo e Andreia não participaram e não foram solicitados. Nada aqui é homologação. |
+
+### 6.1 Corrida corrigida no próprio teste (não no produto)
+
+A primeira execução em CI falhou no teste 7 e o defeito foi reproduzido
+localmente: o cartão de detalhe do plano **monta já no estado "Carregando"**,
+então `waitFor()` no cartão retornava antes de a leitura terminar e o teste
+media a tela cedo demais. A causa foi corrigida **no teste**, esperando o
+conteúdo carregado (a trilha do plano e a referência declarada do documento) —
+exatamente a lição do h1 real, agora aplicada aos cartões de detalhe. **Nenhuma
+asserção foi enfraquecida nem removida**, e o produto não foi alterado para o
+teste passar. O preparo do gate também passou a imprimir marcas de progresso
+(`UX_COMPLIANCE_SETUP`) e a ancorar as datas da massa no `CURRENT_DATE` do
+**servidor**, em vez do relógio do processo de teste — mais estrito, porque é o
+relógio que o servidor realmente usa para decidir validade.
 
 O que o gate `test:ux-compliance:pg` prova, teste a teste:
 
