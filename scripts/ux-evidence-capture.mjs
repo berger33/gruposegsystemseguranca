@@ -74,6 +74,15 @@ const STAGES = {
       { route: '/admin/financeiro', role: 'financeiro', slug: 'financeiro', waitFor: 'Financeiro — contas, recorrência e baixas' },
     ],
   },
+  // Só a lista entra aqui: o detalhe depende de um contrato existente, e esta
+  // captura não inventa massa. A evidência do detalhe vem do gate
+  // tests/ux-contract-workspace.integration.test.mjs (UX_CONTRACT_EVIDENCE_DIR).
+  'ux-07-contratos': {
+    outputDir: 'docs/ux-07-contratos-evidencias',
+    targets: [
+      { route: '/admin/contratos', role: 'admin', slug: 'contratos', waitFor: 'Contratos e implantação' },
+    ],
+  },
 };
 
 const plan = STAGES[stage];
