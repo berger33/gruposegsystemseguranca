@@ -101,6 +101,23 @@ const STAGES = {
       { route: '/admin/analytics', role: 'admin', slug: 'analytics', waitFor: 'Analytics e experimentos A/B controlados', waitForRole: 'heading' },
     ],
   },
+  // UX-07 / EXT-05. Mesma convenção da etapa de analytics: o h1 real da tela
+  // de produto é a marca de montagem; o banco desta etapa é limpo, então o
+  // estado observado é o VAZIO HONESTO ("a leitura funcionou e nenhuma não
+  // conformidade está registrada"). A jornada com massa real é coberta pelo
+  // gate tests/ux-quality-workspace.integration.test.mjs
+  // (UX_QUALITY_EVIDENCE_DIR). Cobertura parcial declarada no documento.
+  // EXT-05 não tem gatilho de provisionamento por papel (a migração 172 só
+  // preservou operadores existentes): o grant explícito abaixo reproduz o
+  // provisionamento administrativo real, igual ao da suíte herdada
+  // tests/ext05-quality.integration.test.mjs. Sem ele a captura mostraria a
+  // recusa 403 — estado honesto, mas não o objetivo desta evidência.
+  'ux-07-qualidade': {
+    outputDir: 'docs/ux-07-qualidade-evidencias',
+    targets: [
+      { route: '/admin/qualidade', role: 'admin', slug: 'qualidade', waitFor: 'Qualidade e não conformidades internas', waitForRole: 'heading', grants: ['quality.read', 'quality.write'] },
+    ],
+  },
 };
 
 const plan = STAGES[stage];
@@ -190,6 +207,17 @@ try {
   for (const target of plan.targets) {
     if (cookieByRole.has(target.role)) continue;
     const staff = await provisionStaff(pool, { role: target.role });
+    // Famílias sem gatilho de provisionamento por papel declaram `grants` no
+    // alvo; o insert reproduz o provisionamento administrativo real e fica
+    // registrado em auth_permissions como qualquer grant auditável.
+    const grants = [...new Set(plan.targets.filter(t => t.role === target.role).flatMap(t => t.grants || []))];
+    for (const permission of grants) {
+      await pool.query(
+        `INSERT INTO auth_permissions(id,identity_id,permission,scope_type,granted_by,granted_by_role,reason)
+         VALUES($1,$2,$3,'global',$2,$4,'Evidência UX: provisionamento administrativo da etapa')`,
+        [randomUUID(), staff.id, permission, target.role],
+      );
+    }
     cookieByRole.set(target.role, await loginCookie(staff.email));
   }
 
