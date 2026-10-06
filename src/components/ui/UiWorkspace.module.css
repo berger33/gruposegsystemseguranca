@@ -200,3 +200,73 @@
 /* Lista longa com rolagem própria: `min-height` evita que a área colapse e
    pareça "nenhum registro" enquanto a leitura ainda está em curso. */
 .scrollList { max-height: 360px; overflow: auto; list-style: none; padding-left: 0; min-height: 40px; }
+
+
+/* UX-07 / EXT-08 — Base de Conhecimento e Procedimentos Operacionais.
+   A apresentação fica nesta superfície compartilhada: não altera rotas,
+   dados, permissão ou transição do backend. */
+.knowledgeCardSelected { border-left-color: var(--ux-color-brand); border-left-width: 5px; }
+.knowledgeArticleButton {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.knowledgeArticleButton:hover .cardTitle { color: var(--ux-color-brand); text-decoration: underline; }
+.knowledgeCardHeader, .knowledgeDetailHeader {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+.knowledgeEyebrow, .knowledgeMeta, .knowledgeSummary {
+  overflow-wrap: anywhere;
+}
+.knowledgeEyebrow {
+  color: var(--ux-color-muted);
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.knowledgeSummary { color: var(--ux-color-text); line-height: 1.5; }
+.knowledgeMeta { color: var(--ux-color-muted); font-size: .8125rem; line-height: 1.5; }
+.knowledgeDetailHeader { align-items: flex-start; }
+.knowledgeContent, .knowledgeAcknowledgmentAction {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-canvas);
+  overflow-wrap: anywhere;
+}
+.knowledgeAcknowledgmentAction { border: 1px dashed var(--ux-color-border); background: var(--ux-color-surface); }
+.knowledgeContent p { margin-bottom: 0; white-space: pre-wrap; }
+.knowledgeSubheading { margin: 0 0 8px; font-size: .9375rem; line-height: 1.35; }
+.knowledgeList { display: grid; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+.knowledgeListItem {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 0;
+  border-top: 1px solid var(--ux-color-border);
+  color: var(--ux-color-text);
+  font-size: .875rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.knowledgeListItem:first-child { border-top: 0; padding-top: 0; }
+.knowledgeListItem > span:last-child { color: var(--ux-color-muted); font-size: .8125rem; }
+
+@media (max-width: 600px) {
+  .knowledgeCardHeader, .knowledgeDetailHeader { align-items: flex-start; }
+  .knowledgeCardHeader > :last-child, .knowledgeDetailHeader > :last-child { max-width: 100%; }
+  .knowledgeContent, .knowledgeAcknowledgmentAction { padding: 10px; }
+}
