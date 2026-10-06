@@ -1,0 +1,19 @@
+name: UX-09 fornecedores delivery
+on:
+  pull_request:
+    paths: ['src/app/admin/fornecedores/**','src/lib/supplier-*','tests/ux-supplier-*','scripts/qa-ux-supplier-postgres.mjs','scripts/ux-evidence-capture.mjs','package.json']
+  workflow_dispatch:
+jobs:
+  focal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: node --test tests/ux-supplier-vocabulary.test.mjs tests/ext04-suppliers.test.mjs
+      - run: npm run test:ext04-suppliers:pg
+      - run: npm run test:ux-supplier:pg
+      - run: npm audit --audit-level=high

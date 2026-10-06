@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+const root=process.cwd();
+const server=fs.readFileSync(path.join(root,'src/server/ext-supplier-api.mjs'),'utf8');
+const dispatch=fs.readFileSync(path.join(root,'server.mjs'),'utf8');
+const vocabulary=fs.readFileSync(path.join(root,'src/lib/supplier-vocabulary.mjs'),'utf8');
+const codes=[...new Set([...server.matchAll(/error\s*:\s*["']([a-z0-9_]+)["']/g)].map(m=>m[1]))];
+test('EXT-04 vocabulary covers every literal server error with distinct detail',()=>{for(const code of codes){assert.match(vocabulary,new RegExp(`\\b${code}\\s*:`),`missing ${code}`)}const details=[...vocabulary.matchAll(/E\('[^']+','[^']+','([^']+)'/g)].map(m=>m[1]);assert.equal(new Set(details).size,details.length);assert.ok(codes.length>=50)});
+test('EXT-04 dispatch is canonical and all exported handlers are wired',()=>{for(const handler of ['handleReferences','handleQuotations','handleCreateQuotation','handleQuotationById','handleQuotationStatus','handleQuotationDecision','handleQuotationValidities','handleValiditySupersede','handleAlertRules','handleDocuments','handleDocumentVersion','handleDocumentDeactivate','handleOrders','handleCreateOrder','handleOrderStatus','handleOrderDeadlines','handleOrderDeadlineSupersede','handleLegacyQuotations'])assert.match(dispatch,new RegExp(`extSupplierApi\\.${handler}`),handler);assert.match(dispatch,/\/api\/ext\/supplier\/references/);assert.match(dispatch,/\/api\/ext\/supplier\/quotations/);assert.match(dispatch,/\/api\/ext\/supplier\/orders/);});
+test('wrapper preserves raw payload and does not invent endpoint',()=>{assert.match(fs.readFileSync(path.join(root,'src/lib/supplier-request.ts'),'utf8'),/payload:unknown/);assert.match(fs.readFileSync(path.join(root,'src/lib/supplier-request.ts'),'utf8'),/credentials:'same-origin'/);});
