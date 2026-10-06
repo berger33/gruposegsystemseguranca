@@ -220,6 +220,17 @@ const STAGES = {
       { route: '/admin/fornecedores', role: 'admin', slug: 'fornecedores', waitFor: 'EXT-04 — Fornecedores', waitForRole: 'heading' },
     ],
   },
+  // UX-10 / EXT-09 — EXPANSÃO. Banco limpo evidencia o vazio honesto da lista
+  // de planos. Massa completa, recusa de papel (`financeiro` lê e é recusado
+  // na escrita) e falha injetada somente no browser pertencem ao gate focal
+  // scripts/qa-ux-expansion-postgres.mjs. O servidor decide por sessão e
+  // papel: não há grant a provisionar nesta família.
+  'ux-10-expansao': {
+    outputDir: 'docs/ux-10-expansao-evidencias',
+    targets: [
+      { route: '/admin/expansao', role: 'admin', slug: 'expansao', waitFor: 'Expansão, capacidade e cenários financeiros', waitForRole: 'heading' },
+    ],
+  },
 };
 
 const plan = STAGES[stage];
