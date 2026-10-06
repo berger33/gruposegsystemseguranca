@@ -1,0 +1,45 @@
+name: UX inteligência comercial delivery
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/admin/inteligencia/**'
+      - 'src/components/ui/**'
+      - 'src/lib/intel-vocabulary.*'
+      - 'src/lib/intel-request.ts'
+      - 'src/server/ext-intel-api.mjs'
+      - 'server.mjs'
+      - 'tests/ext14-intel.test.mjs'
+      - 'tests/ext14-intel.integration.test.mjs'
+      - 'tests/ux-intel-vocabulary.test.mjs'
+      - 'tests/ux-intel-workspace.integration.test.mjs'
+      - 'scripts/qa-ux-intel-postgres.mjs'
+      - 'scripts/ux-evidence-capture.mjs'
+      - 'db/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/ux-intel-delivery.yml'
+concurrency:
+  group: ux-intel-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  ux-intel-postgres-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: node --test tests/ux-intel-vocabulary.test.mjs
+      - run: npm run test:ux-intel:pg
