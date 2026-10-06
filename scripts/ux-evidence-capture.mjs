@@ -133,6 +133,16 @@ const STAGES = {
       { route: '/admin/compliance', role: 'admin', slug: 'compliance', waitFor: 'Compliance corporativo e obrigações internas', waitForRole: 'heading' },
     ],
   },
+  // UX-07 / EXT-08. O banco descartável começa vazio de propósito: esta
+  // evidência captura o VAZIO HONESTO da lista depois de a leitura canônica
+  // concluir. A jornada com dados, o 403 e a falha independente são provados
+  // pelo gate tests/ux-knowledge-workspace.integration.test.mjs.
+  'ux-07-conhecimento': {
+    outputDir: 'docs/ux-07-conhecimento-evidencias',
+    targets: [
+      { route: '/admin/conhecimento', role: 'admin', slug: 'conhecimento', waitFor: 'Base de Conhecimento e Procedimentos Operacionais', waitForRole: 'heading' },
+    ],
+  },
 };
 
 const plan = STAGES[stage];
