@@ -177,6 +177,15 @@ const STAGES = {
   // (`admin|marcelo|ti`, em FLEET_READ_ROLES/FLEET_WRITE_ROLES) e origem.
   // Por isso esta etapa não declara o gancho opcional `grants`: ele seria
   // no-op aqui.
+  // UX-07 / EXT-02. Banco limpo: vazio honesto depois do conteúdo carregado.
+  // Não existe login de terceiro externo. A concessão é granular por contrato
+  // ou OS, mas esta captura interna não provisiona grant: o servidor decide.
+  'ux-07-terceiros': {
+    outputDir: 'docs/ux-07-terceiros-evidencias',
+    targets: [
+      { route: '/admin/terceiros', role: 'admin', slug: 'terceiros', waitFor: 'Terceiros, acessos e documentos', waitForRole: 'heading' },
+    ],
+  },
   'ux-07-frota': {
     outputDir: 'docs/ux-07-frota-evidencias',
     targets: [
