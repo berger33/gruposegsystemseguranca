@@ -183,6 +183,10 @@ const STAGES = {
       { route: '/admin/frota', role: 'admin', slug: 'frota', waitFor: 'Frota própria, custo por veículo e alerta de manutenção', waitForRole: 'heading' },
     ],
   },
+  'ux-07-terceiros': {
+    outputDir: 'docs/ux-07-terceiros-evidencias',
+    targets: [{ route: '/admin/terceiros', role: 'admin', slug: 'terceiros', waitFor: 'Terceiros', waitForRole: 'heading' }],
+  },
 };
 
 const plan = STAGES[stage];
