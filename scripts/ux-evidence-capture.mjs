@@ -83,6 +83,12 @@ const STAGES = {
       { route: '/admin/contratos', role: 'admin', slug: 'contratos', waitFor: 'Contratos e implantação' },
     ],
   },
+  'ux-07-inteligencia-comercial': {
+    outputDir: 'docs/ux-07-inteligencia-comercial-evidencias',
+    targets: [
+      { route: '/admin/inteligencia', role: 'admin', slug: 'inteligencia-comercial', waitFor: 'Inteligência comercial', waitForRole: 'heading' },
+    ],
+  },
 };
 
 const plan = STAGES[stage];
@@ -230,7 +236,10 @@ try {
           problems.push(`navegação falhou: ${String(cause?.message || cause).slice(0, 120)}`);
         }
         if (target.waitFor) {
-          await page.getByText(target.waitFor, { exact: false }).first().waitFor({ timeout: 60_000 }).catch(() => {
+          const expected = target.waitForRole === 'heading'
+            ? page.getByRole('heading', { name: target.waitFor, exact: true })
+            : page.getByText(target.waitFor, { exact: false }).first();
+          await expected.waitFor({ timeout: 60_000 }).catch(() => {
             problems.push(`texto esperado ausente: ${target.waitFor}`);
           });
         }

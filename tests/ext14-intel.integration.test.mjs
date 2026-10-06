@@ -10,6 +10,8 @@ import { randomBytes, randomUUID } from "node:crypto";
 import path from "node:path";
 import pg from "pg";
 import { hashPassword } from "../src/lib/client-auth-core.mjs";
+import { chromium } from "playwright";
+import packagedChromium from "@sparticuz/chromium";
 
 const RUN = process.env.RUN_DATABASE_INTEGRATION === "1" && process.env.DATABASE_URL;
 const REQUIRE = process.env.QA_EXT14_REQUIRE_DB === "1";
@@ -334,4 +336,34 @@ test("EXT-14 escrita legada recebe 410 depois das guardas", opt, async () => {
   const retiredPatch = await api("/api/ext/commercial-intelligence", { method: "PATCH", body: { id: intel.id, status: "aprovada" } });
   assert.equal(retiredPatch.status, 410);
   assert.equal((await pool.query(`SELECT count(*)::int AS n FROM ext_commercial_intelligence WHERE origin='registro_legado'`)).rows[0].n, 0);
+});
+
+
+
+test("UX-07 inteligência browser: h1 real, falha honesta e abas acessíveis", opt, async () => {
+  let last;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    let browser;
+    try {
+      browser = await chromium.launch({ executablePath: await packagedChromium.executablePath(), headless: true, args: [...packagedChromium.args.filter(arg => arg !== "--disable-web-security"), "--single-process"] });
+      const context = await browser.newContext();
+      await context.addCookies([{ name: "seg_admin_session", value: cookieAdmin.split("=")[1], url: base }]);
+      const page = await context.newPage();
+      await page.addInitScript(() => {
+        const original = window.fetch;
+        window.fetch = (...args) => String(args[0]).includes("/api/ext/intel/suggestions")
+          ? Promise.resolve(new Response(JSON.stringify({ error: "database_error" }), { status: 503, headers: { "content-type": "application/json" } }))
+          : original(...args);
+      });
+      await page.goto(`${base}/admin/inteligencia`, { waitUntil: "domcontentloaded" });
+      await page.getByRole("heading", { name: "Inteligência comercial" }).waitFor();
+      await page.getByRole("tab", { name: "Sugestões canônicas" }).click();
+      assert.match(await page.locator('[data-ui-state="error"]').innerText(), /Dados indisponíveis/);
+      await page.getByRole("tab", { name: "Nova sugestão" }).focus();
+      await page.keyboard.press("End");
+      assert.equal(await page.getByRole("tab", { name: "Sugestões canônicas" }).getAttribute("aria-selected"), "true");
+      await browser.close(); return;
+    } catch (error) { last = error; await browser?.close().catch(() => {}); if (!String(error?.message || error).includes("ERR_ASSERTION")) throw error; }
+  }
+  throw last;
 });

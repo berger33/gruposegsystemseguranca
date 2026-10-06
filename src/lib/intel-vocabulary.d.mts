@@ -1,0 +1,13 @@
+export type IntelErrorDescriptor = { kind: string; title: string; detail: string; status: number; canRetry: boolean; code: string | null };
+export function describeIntelError(code: string | null | undefined, status?: number): IntelErrorDescriptor;
+export function intelErrorMessage(code: string | null | undefined, status?: number): string;
+export function intelErrorVariant(descriptor: IntelErrorDescriptor): 'denied' | 'error';
+export function intelErrorFootnote(descriptor: IntelErrorDescriptor): string;
+export function enumLabel(group: string, value: unknown): string;
+export function enumTone(group: string, value: unknown): string;
+export function intelStatusLabel(value: unknown): string;
+export function intelStatusTone(value: unknown): string;
+export function intelTypeLabel(value: unknown): string;
+export function intelTypeTone(value: unknown): string;
+export function honestDate(value: unknown): string;
+export function count(value: unknown): string;

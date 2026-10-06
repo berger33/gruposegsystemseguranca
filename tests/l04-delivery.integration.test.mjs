@@ -101,13 +101,26 @@ after(async () => {
 });
 
 async function launchBrowser() {
-  return playwrightChromium.launch({
-    executablePath: await packagedChromium.executablePath(),
-    // O pacote serverless inclui --disable-web-security, que removeria Origin
-    // dos POSTs e mascararia a proteção CSRF exercitada neste percurso.
-    args: packagedChromium.args.filter(arg => arg !== '--disable-web-security'),
-    headless: true,
-  });
+  // Chromium empacotado pode cair com SIGSEGV/ERR_ASSERTION depois de muitas
+  // sessões --single-process. Isso é crash de infraestrutura, não resultado
+  // do teste: repita somente a abertura da sessão inteira antes de permitir
+  // que qualquer asserção de jornada seja avaliada.
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await playwrightChromium.launch({
+        executablePath: await packagedChromium.executablePath(),
+        // O pacote serverless inclui --disable-web-security, que removeria Origin
+        // dos POSTs e mascararia a proteção CSRF exercitada neste percurso.
+        args: packagedChromium.args.filter(arg => arg !== '--disable-web-security'),
+        headless: true,
+      });
+    } catch (error) {
+      lastError = error;
+      if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 250));
+    }
+  }
+  throw lastError;
 }
 
 // "Failed to load resource" sem detalhe é o aviso genérico do Chromium para
