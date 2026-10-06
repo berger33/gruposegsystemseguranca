@@ -162,6 +162,7 @@ Nenhum banco do operador foi tocado; o gate recusa rodar com `DATABASE_URL`,
 | `npm run test:unit` (inclui os dois testes de vocabulário) | estática | **718/718** |
 | `npm run test:l05-delivery:pg` (gate herdado desta família) | HTTP real + PostgreSQL real + Chromium | **1/1**, exit 0, **sem precisar de reparo** |
 | `npm run ux:evidence -- --stage=ux-07-contratos` | captura real, 1440×900 e 390×844 | exit 0, `problems: []` |
+| `npm audit --audit-level=high` | estática | 0 vulnerabilidades, após o commit `chore(deps)` da seção 5.3 |
 | Aceite humano | — | **PENDENTE.** Marcelo e Andreia não participaram e não foram solicitados. Nada aqui é homologação. |
 
 O que o gate `test:ux-contract:pg` prova, teste a teste:
@@ -209,12 +210,33 @@ propagando só para o `client_contracts` vinculado).
 `allowedRoles` e o `sanitizeAdminNext("/admin/contratos/<uuid>")` não foram
 tocados.
 
-### 5.2 Instabilidade conhecida do Chromium empacotado
+### 5.2 Duas correções no próprio gate, depois da primeira rodada de CI
 
-Nesta máquina, o Chromium `--single-process` eventualmente sai com `SIGSEGV`
-no próprio `launch`. O helper do gate repete o lançamento até três vezes — isso
-não enfraquece asserção alguma, apenas repete a abertura do navegador. Nenhuma
-asserção foi relaxada e nenhum teste foi marcado como tolerante a falha.
+A primeira execução do job `ux-contract-postgres-browser` no GitHub Actions
+falhou, embora as rodadas locais estivessem verdes. Ambas as causas eram do
+teste, não do produto, e foram corrigidas **sem relaxar asserção alguma**:
+
+1. **Corrida de leitura.** O `tablist` do detalhe é montado antes de as oito
+   leituras terminarem; medir a tela logo depois dele pegava
+   `"Lendo o contrato…"` no lugar da situação. Os três testes que inspecionam
+   o detalhe passaram a esperar o `h1` do contrato. Reproduzido localmente
+   antes do conserto.
+2. **Crash do navegador não é resultado de teste.** O Chromium
+   `--single-process` eventualmente sai com `SIGSEGV` no `launch` ou com o
+   alvo fechado no meio da sessão. O helper `comNavegador` repete a sessão
+   inteira até três vezes **apenas** quando o erro casa o padrão de crash;
+   qualquer `ERR_ASSERTION` é repassado na hora. A repetição é registrada no
+   log (`UX_CONTRACT_BROWSER_RETRY`) para não virar flakiness silenciosa.
+
+### 5.3 Advisory alheio que travava o CI
+
+O job `static-and-smoke` passou a falhar em `npm audit --audit-level=high` por
+causa de um advisory publicado depois da última rodada verde desta branch
+(`GHSA-68fv-2mgg-jv7q`, `source-map-js`, dependência transitiva). Nada a ver
+com estas fatias. Correção mínima em commit próprio: `source-map-js` 1.2.1 →
+1.2.2 no lockfile, sem dependência nova e sem mexer em dependência direta;
+`npm ci`, `typecheck`, `test:unit` (718/718) e `npm run build` reexecutados
+depois da atualização.
 
 ## 6. O que NÃO foi feito (pendências declaradas)
 

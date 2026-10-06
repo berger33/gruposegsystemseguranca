@@ -97,6 +97,29 @@ async function launchBrowser() {
   throw ultimo;
 }
 
+// Um crash do navegador NÃO é resultado de teste. `comNavegador` repete a
+// sessão inteira quando o Chromium morre (SIGSEGV, alvo fechado), e repassa
+// na hora qualquer falha de asserção — nenhuma asserção fica tolerante.
+const CRASH = /Target (page|closed)|has been closed|Target crashed|browser has disconnected|crashed|SIGSEGV|Protocol error/i;
+
+async function comNavegador(corpo) {
+  let ultimo;
+  for (let tentativa = 1; tentativa <= 3; tentativa++) {
+    const browser = await launchBrowser();
+    try {
+      return await corpo(browser);
+    } catch (erro) {
+      if (erro?.code === 'ERR_ASSERTION' || !CRASH.test(String(erro?.message || ''))) throw erro;
+      ultimo = erro;
+      console.log(`UX_CONTRACT_BROWSER_RETRY tentativa=${tentativa}: ${String(erro.message).split('\n')[0]}`);
+    } finally {
+      await browser.close().catch(() => {});
+    }
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  throw ultimo;
+}
+
 const evidenceDir = process.env.UX_CONTRACT_EVIDENCE_DIR || '';
 async function capture(page, nome) {
   if (!evidenceDir) return;
@@ -244,136 +267,139 @@ test('menu não é autorização: comercial abre a tela e quem recusa é o servi
 });
 
 test('browser: a falha de UMA leitura não derruba mais a página inteira do contrato', { skip: !RUN }, async () => {
-  const browser = await launchBrowser();
-  try {
-    const { context, page } = await abrir(browser, `/admin/contratos/${contractId}`, adminCookie, {
-      failRoutes: ['/management-diary'], status: 503, code: 'diary_unavailable',
-    });
-    await page.locator('[role="tablist"]').waitFor();
+  await comNavegador(async browser => {
+      const { context, page } = await abrir(browser, `/admin/contratos/${contractId}`, adminCookie, {
+        failRoutes: ['/management-diary'], status: 503, code: 'diary_unavailable',
+      });
+      await page.locator('[role="tablist"]').waitFor();
+    // O tablist é montado antes das leituras terminarem: esperar o cabeçalho
+    // do contrato evita medir a tela ainda em "Lendo o contrato…".
+    await page.getByRole('heading', { level: 1, name: /Contrato sintético UX-07 fatia C/ }).waitFor();
 
-    assert.match(await page.locator('h1').innerText(), /Contrato sintético UX-07 fatia C/,
-      'o cabeçalho do contrato continua na tela apesar da falha do diário');
-    assert.equal(await page.locator('[data-testid="contract-detail-error"]').count(), 0,
-      'a falha de um recurso não pode virar erro da página inteira');
+      assert.match(await page.locator('h1').innerText(), /Contrato sintético UX-07 fatia C/,
+        'o cabeçalho do contrato continua na tela apesar da falha do diário');
+      assert.equal(await page.locator('[data-testid="contract-detail-error"]').count(), 0,
+        'a falha de um recurso não pode virar erro da página inteira');
 
-    await page.getByRole('tab', { name: 'Fiscalização e decisões', exact: true }).click();
-    const falha = page.locator('[data-testid="contract-diary-error"]');
-    await falha.waitFor();
-    const texto = await falha.textContent();
-    assert.match(texto, /não significa/i, 'a falha nega explicitamente a ausência de registros');
-    assert.match(texto, /\(diary_unavailable\)/, 'o código canônico fica disponível para diagnóstico');
-    assert.equal(await falha.locator('[data-ui-state="error"]').count(), 1,
-      'falha de leitura é estado próprio, distinto de vazio');
-    assert.ok(await falha.locator('button').count() >= 1, 'falha transitória precisa oferecer nova tentativa');
+      await page.getByRole('tab', { name: 'Fiscalização e decisões', exact: true }).click();
+      const falha = page.locator('[data-testid="contract-diary-error"]');
+      await falha.waitFor();
+      const texto = await falha.textContent();
+      assert.match(texto, /não significa/i, 'a falha nega explicitamente a ausência de registros');
+      assert.match(texto, /\(diary_unavailable\)/, 'o código canônico fica disponível para diagnóstico');
+      assert.equal(await falha.locator('[data-ui-state="error"]').count(), 1,
+        'falha de leitura é estado próprio, distinto de vazio');
+      assert.ok(await falha.locator('button').count() >= 1, 'falha transitória precisa oferecer nova tentativa');
 
-    // Dossiês fiscais, no mesmo painel, foram lidos e continuam na tela.
-    assert.equal(await page.locator('[data-testid="contract-fiscal-error"]').count(), 0,
-      'a leitura que funcionou continua valendo');
-    assert.equal(await page.locator('[data-testid="contract-fiscal"]').count(), 1);
+      // Dossiês fiscais, no mesmo painel, foram lidos e continuam na tela.
+      assert.equal(await page.locator('[data-testid="contract-fiscal-error"]').count(), 0,
+        'a leitura que funcionou continua valendo');
+      assert.equal(await page.locator('[data-testid="contract-fiscal"]').count(), 1);
 
-    await capture(page, 'desktop-contrato-falha-parcial');
-    await context.close();
-  } finally { await browser.close(); }
+      await capture(page, 'desktop-contrato-falha-parcial');
+      await context.close();
+  });
 });
 
 test('browser: as seis abas do contrato são um tablist de verdade, com teclado', { skip: !RUN }, async () => {
-  const browser = await launchBrowser();
-  try {
-    const { context, page } = await abrir(browser, `/admin/contratos/${contractId}`, adminCookie);
-    await page.locator('[role="tablist"]').waitFor();
+  await comNavegador(async browser => {
+      const { context, page } = await abrir(browser, `/admin/contratos/${contractId}`, adminCookie);
+      await page.locator('[role="tablist"]').waitFor();
+    // O tablist é montado antes das leituras terminarem: esperar o cabeçalho
+    // do contrato evita medir a tela ainda em "Lendo o contrato…".
+    await page.getByRole('heading', { level: 1, name: /Contrato sintético UX-07 fatia C/ }).waitFor();
 
-    const abas = page.getByRole('tab');
-    assert.equal(await abas.count(), 6, 'o contrato tem seis frentes de trabalho');
-    assert.equal(await page.locator('[role="tab"][tabindex="0"]').count(), 1);
-    assert.equal(await page.locator('[role="tab"][tabindex="-1"]').count(), 5);
-    assert.equal(await page.locator('[role="tabpanel"]').count(), 1, 'só o painel ativo fica montado');
+      const abas = page.getByRole('tab');
+      assert.equal(await abas.count(), 6, 'o contrato tem seis frentes de trabalho');
+      assert.equal(await page.locator('[role="tab"][tabindex="0"]').count(), 1);
+      assert.equal(await page.locator('[role="tab"][tabindex="-1"]').count(), 5);
+      assert.equal(await page.locator('[role="tabpanel"]').count(), 1, 'só o painel ativo fica montado');
 
-    await abas.first().focus();
-    await page.keyboard.press('ArrowRight');
-    assert.equal(await abas.nth(1).getAttribute('aria-selected'), 'true');
-    assert.equal(await abas.nth(1).evaluate(el => el === document.activeElement), true,
-      'a seta precisa mover o foco junto com a seleção');
-    await page.keyboard.press('End');
-    assert.equal(await abas.nth(5).getAttribute('aria-selected'), 'true');
-    await page.keyboard.press('Home');
-    assert.equal(await abas.nth(0).getAttribute('aria-selected'), 'true');
+      await abas.first().focus();
+      await page.keyboard.press('ArrowRight');
+      assert.equal(await abas.nth(1).getAttribute('aria-selected'), 'true');
+      assert.equal(await abas.nth(1).evaluate(el => el === document.activeElement), true,
+        'a seta precisa mover o foco junto com a seleção');
+      await page.keyboard.press('End');
+      assert.equal(await abas.nth(5).getAttribute('aria-selected'), 'true');
+      await page.keyboard.press('Home');
+      assert.equal(await abas.nth(0).getAttribute('aria-selected'), 'true');
 
-    await capture(page, 'desktop-contrato-abas');
-    await context.close();
-  } finally { await browser.close(); }
+      await capture(page, 'desktop-contrato-abas');
+      await context.close();
+  });
 });
 
 test('browser: situação, origem e etapas aparecem com vocabulário em português', { skip: !RUN }, async () => {
-  const browser = await launchBrowser();
-  try {
-    const { context, page } = await abrir(browser, `/admin/contratos/${contractId}`, adminCookie);
-    await page.locator('[role="tablist"]').waitFor();
+  await comNavegador(async browser => {
+      const { context, page } = await abrir(browser, `/admin/contratos/${contractId}`, adminCookie);
+      await page.locator('[role="tablist"]').waitFor();
+    // O tablist é montado antes das leituras terminarem: esperar o cabeçalho
+    // do contrato evita medir a tela ainda em "Lendo o contrato…".
+    await page.getByRole('heading', { level: 1, name: /Contrato sintético UX-07 fatia C/ }).waitFor();
 
-    // textContent, e não innerText: o prefixo de leitor de tela do UiBadge é
-    // recortado por CSS e não entra no texto renderizado.
-    const cabecalho = await page.getByTestId('contract-detail').locator('p').first().textContent();
-    assert.match(cabecalho, /Situação do contrato:\s*Rascunho/i, 'a situação `rascunho` é exibida em português');
-    assert.match(cabecalho, /Cadastro manual identificado/, 'a origem `manual` é exibida em português');
-    assert.match(cabecalho, /01\/03\/2036/, 'a vigência aparece em formato brasileiro');
+      // textContent, e não innerText: o prefixo de leitor de tela do UiBadge é
+      // recortado por CSS e não entra no texto renderizado.
+      const cabecalho = await page.getByTestId('contract-detail').locator('p').first().textContent();
+      assert.match(cabecalho, /Situação do contrato:\s*Rascunho/i, 'a situação `rascunho` é exibida em português');
+      assert.match(cabecalho, /Cadastro manual identificado/, 'a origem `manual` é exibida em português');
+      assert.match(cabecalho, /01\/03\/2036/, 'a vigência aparece em formato brasileiro');
 
-    await page.getByRole('tab', { name: 'Implantação', exact: true }).click();
-    const etapas = page.locator('[data-testid="contract-implantation-steps"]');
-    await etapas.waitFor();
-    const textoEtapas = await etapas.textContent();
-    assert.match(textoEtapas, /Situação da etapa:\s*Pendente/i, 'a situação da etapa sai em português');
-    assert.doesNotMatch(textoEtapas, /nao_aplicavel|em_andamento/, 'nenhum valor cru do banco é exibido');
+      await page.getByRole('tab', { name: 'Implantação', exact: true }).click();
+      const etapas = page.locator('[data-testid="contract-implantation-steps"]');
+      await etapas.waitFor();
+      const textoEtapas = await etapas.textContent();
+      assert.match(textoEtapas, /Situação da etapa:\s*Pendente/i, 'a situação da etapa sai em português');
+      assert.doesNotMatch(textoEtapas, /nao_aplicavel|em_andamento/, 'nenhum valor cru do banco é exibido');
 
-    await capture(page, 'desktop-contrato-vocabulario');
-    await context.close();
-  } finally { await browser.close(); }
+      await capture(page, 'desktop-contrato-vocabulario');
+      await context.close();
+  });
 });
 
 test('browser: falha de leitura da carteira NÃO vira "nenhum contrato"', { skip: !RUN }, async () => {
-  const browser = await launchBrowser();
-  try {
-    const { context, page } = await abrir(browser, '/admin/contratos', adminCookie, {
-      failRoutes: ['/api/crm/contracts'], status: 503, code: 'contracts_unavailable',
-    });
-    const lista = page.locator('[data-testid="contracts-list"]');
-    await lista.waitFor();
-    const estado = lista.locator('[data-ui-state="error"]');
-    await estado.waitFor();
-    const texto = await estado.textContent();
-    assert.match(texto, /não significa que a carteira esteja vazia/i, 'a falha nega explicitamente a lista vazia');
-    assert.match(texto, /\(contracts_unavailable\)/, 'o código canônico fica disponível');
-    assert.equal(await page.locator('[data-testid="contracts-table"]').count(), 0, 'nenhuma tabela vazia é renderizada');
-    assert.ok(await estado.locator('button').count() >= 1, 'falha transitória precisa oferecer nova tentativa');
+  await comNavegador(async browser => {
+      const { context, page } = await abrir(browser, '/admin/contratos', adminCookie, {
+        failRoutes: ['/api/crm/contracts'], status: 503, code: 'contracts_unavailable',
+      });
+      const lista = page.locator('[data-testid="contracts-list"]');
+      await lista.waitFor();
+      const estado = lista.locator('[data-ui-state="error"]');
+      await estado.waitFor();
+      const texto = await estado.textContent();
+      assert.match(texto, /não significa que a carteira esteja vazia/i, 'a falha nega explicitamente a lista vazia');
+      assert.match(texto, /\(contracts_unavailable\)/, 'o código canônico fica disponível');
+      assert.equal(await page.locator('[data-testid="contracts-table"]').count(), 0, 'nenhuma tabela vazia é renderizada');
+      assert.ok(await estado.locator('button').count() >= 1, 'falha transitória precisa oferecer nova tentativa');
 
-    // As outras duas leituras da página são independentes e seguem na tela.
-    assert.equal(await page.locator('[data-testid="contracts-manual"]').count(), 1,
-      'o cadastro manual continua utilizável mesmo com a lista fora do ar');
+      // As outras duas leituras da página são independentes e seguem na tela.
+      assert.equal(await page.locator('[data-testid="contracts-manual"]').count(), 1,
+        'o cadastro manual continua utilizável mesmo com a lista fora do ar');
 
-    await capture(page, 'desktop-contratos-falha-lista');
-    await context.close();
-  } finally { await browser.close(); }
+      await capture(page, 'desktop-contratos-falha-lista');
+      await context.close();
+  });
 });
 
 test('browser: carteira legitimamente vazia não é apresentada como falha', { skip: !RUN }, async () => {
-  const browser = await launchBrowser();
-  try {
-    const { context, page } = await abrir(browser, '/admin/contratos', comercialCookie);
-    const lista = page.locator('[data-testid="contracts-list"]');
-    await lista.waitFor();
-    const vazio = lista.locator('[data-ui-state="empty"]');
-    await vazio.waitFor();
-    const texto = await vazio.textContent();
-    assert.match(texto, /A leitura funcionou/i, 'vazio honesto diz que a leitura funcionou');
-    assert.equal(await lista.locator('[data-ui-state="error"]').count(), 0,
-      'lista vazia não pode ser confundida com falha');
-    await capture(page, 'desktop-contratos-vazio-honesto');
-    await context.close();
-  } finally { await browser.close(); }
+  await comNavegador(async browser => {
+      const { context, page } = await abrir(browser, '/admin/contratos', comercialCookie);
+      const lista = page.locator('[data-testid="contracts-list"]');
+      await lista.waitFor();
+      const vazio = lista.locator('[data-ui-state="empty"]');
+      await vazio.waitFor();
+      const texto = await vazio.textContent();
+      assert.match(texto, /A leitura funcionou/i, 'vazio honesto diz que a leitura funcionou');
+      assert.equal(await lista.locator('[data-ui-state="error"]').count(), 0,
+        'lista vazia não pode ser confundida com falha');
+      await capture(page, 'desktop-contratos-vazio-honesto');
+      await context.close();
+  });
 });
 
 test('browser: em 390px as telas contratuais não produzem transbordo horizontal', { skip: !RUN }, async () => {
   for (const rota of ['/admin/contratos', `/admin/contratos/${contractId}`]) {
-    const browser = await launchBrowser();
-    try {
+    await comNavegador(async browser => {
       const { context, page } = await abrir(browser, rota, adminCookie, { width: 390, height: 844 });
       await page.locator('main').waitFor();
       await page.waitForTimeout(600);
@@ -381,6 +407,6 @@ test('browser: em 390px as telas contratuais não produzem transbordo horizontal
       assert.ok(transbordo <= 1, `transbordo de ${transbordo}px em ${rota}`);
       await capture(page, `mobile-${rota.includes('/admin/contratos/') ? 'contrato-detalhe' : 'contratos-lista'}-390px`);
       await context.close();
-    } finally { await browser.close(); }
+    });
   }
 });
