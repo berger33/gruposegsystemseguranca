@@ -1130,12 +1130,15 @@ test("L06 Fatia B: cobertura, passagem de turno, ocorrência, checklists, evidê
     assert.match(content || "", /Inspetor CFTV/, "job roles section renders the OPS-01 entity");
     assert.match(content || "", /Noturno 12h/, "shift need renders the canonical shift template name");
     assert.match(content || "", /Portaria OPS-01/, "shift need row carries the post name via the canonical join");
-    assert.match(content || "", /sem dia específico/, "need without a day is shown without inventing semantics");
+    assert.match(content || "", /Sem dia específico/, "need without a day is shown without inventing semantics");
     assert.match(content || "", /QA Funcionário ativo/, "allocations table renders the professional of the chain");
 
     // Aba Dimensionamento (OPS-02): contratado × planejado × realizado por
     // faixa de tempo, com habilitação cruzada recomputada e fórmula explícita.
-    await page.click("button:has-text('Dimensionamento (OPS-02)')");
+    // UX-07 renomeou as abas para a tarefa (sem código OPS-XX no rótulo
+    // clicável, mesma regra de UX-04/UX-06); seletores apontam para a
+    // interface vigente via role=tab com correspondência exata.
+    await page.getByRole("tab", { name: "Dimensionamento", exact: true }).click();
     await page.waitForSelector("#dimensioning-title", { timeout: 30_000 });
     content = await page.textContent("body");
     assert.match(content || "", /QA OPS-02 Posto/, "dimensioning tab renders the post of the chain");
@@ -1148,7 +1151,7 @@ test("L06 Fatia B: cobertura, passagem de turno, ocorrência, checklists, evidê
     // Aba Escalas (OPS-03): versões com validade, calendário nas três visões
     // (posto, equipe, pessoa), histórico e ciência pela interface — jornada
     // completa com a API real.
-    await page.click("button:has-text('Escalas (OPS-03)')");
+    await page.getByRole("tab", { name: "Escalas", exact: true }).click();
     await page.waitForSelector("#schedule-versions-title", { timeout: 30_000 });
     content = await page.textContent("body");
     assert.match(content || "", /QA OPS-03 Empresa/, "schedule versions table renders the company scope");
@@ -1170,7 +1173,7 @@ test("L06 Fatia B: cobertura, passagem de turno, ocorrência, checklists, evidê
     await page.click("button:has-text('Por pessoa')");
     content = await page.textContent("body");
     assert.match(content || "", /QA OPS-03 Diurno/, "calendar by person renders the canonical shift name");
-    assert.match(content || "", /revisada → publicada/, "version history shows the visible transition");
+    assert.match(content || "", /Revisada → Publicada/, "version history shows the visible transition");
 
     // Jornada de ciência pela interface: o profissional pendente (criado no
     // subteste OPS-03) recebe ciência pela tela; a segunda ciência não duplica.
@@ -1190,7 +1193,7 @@ test("L06 Fatia B: cobertura, passagem de turno, ocorrência, checklists, evidê
     await page.waitForSelector("[role=status]:has-text('não duplica efeito')", { timeout: 30_000 });
     await page.waitForSelector("text=ciente desde", { timeout: 30_000 });
     content = await page.textContent("body");
-    assert.match(content || "", /ciente desde/, "acknowledged state is visible after the interface journey");
+    assert.match(content || "", /Ciente desde/, "acknowledged state is visible after the interface journey");
     const ackRows = await pool.query(
       `SELECT count(*)::int AS n FROM ops_schedule_acknowledgments ak
          JOIN ops_schedule_versions v ON v.id = ak.version_id
@@ -1201,37 +1204,37 @@ test("L06 Fatia B: cobertura, passagem de turno, ocorrência, checklists, evidê
 
     // Aba Jornada & Habilitação (OPS-04): regra aprovada, habilitação e trilha
     // de bloqueios, vindos da API real e persistidos pelo subteste OPS-04.
-    await page.click("button:has-text('Jornada & Habilitação (OPS-04)')");
+    await page.getByRole("tab", { name: "Jornada e habilitação", exact: true }).click();
     await page.waitForSelector("#work-rules-title", { timeout: 30_000 });
     content = await page.textContent("body");
     assert.match(content || "", /QA OPS-04 Jornada/, "approved work rule rendered from the real API");
-    assert.match(content || "", /aprovada e aplicada/, "screen distinguishes an enforced rule");
+    assert.match(content || "", /Aprovada e aplicada/, "screen distinguishes an enforced rule");
     assert.match(content || "", /Habilitação e documentação/, "qualification section rendered");
     assert.match(content || "", /Bloqueios registrados/, "refusal trail section rendered");
 
     // Aba Cobertura (OPS-05)
-    await page.click("button:has-text('Cobertura (OPS-05)')");
+    await page.getByRole("tab", { name: "Cobertura", exact: true }).click();
     await page.waitForSelector("#coverage-title", { timeout: 10_000 });
     content = await page.textContent("body");
     assert.match(content || "", /Falta médica do titular/, "coverage tab renders synthetic coverage request");
 
     // Aba Passagem (OPS-06)
-    await page.click("button:has-text('Passagem de Turno (OPS-06)')");
+    await page.getByRole("tab", { name: "Passagem de turno", exact: true }).click();
     await page.waitForSelector("#handover-title", { timeout: 10_000 });
     content = await page.textContent("body");
     assert.match(content || "", /HND-OPS-/, "handover tab renders synthetic protocol");
 
     // Aba Ocorrências (OPS-07)
-    await page.click("button:has-text('Livro de Ocorrências (OPS-07)')");
+    await page.getByRole("tab", { name: "Livro de ocorrências", exact: true }).click();
     await page.waitForSelector("#occurrence-title", { timeout: 10_000 });
     content = await page.textContent("body");
     assert.match(content || "", /Portão lateral/, "occurrence tab renders synthetic occurrence");
 
     // Aba Checklists (OPS-08)
-    await page.click("button:has-text('Checklists de Posto (OPS-08)')");
+    await page.getByRole("tab", { name: "Checklists de posto", exact: true }).click();
     await page.waitForSelector("#checklist-title", { timeout: 10_000 });
     content = await page.textContent("body");
-    assert.match(content || "", /Checklists de Posto e Execução/, "checklists tab renders synthetic checklist");
+    assert.match(content || "", /Checklists de posto e execução/, "checklists tab renders synthetic checklist");
   } finally {
     await browser.close();
   }
@@ -2058,7 +2061,11 @@ test("L06 Fatia E: OPS-09..16 — operação avançada, conflitos, idempotência
     await context.addCookies(admin.cookie.split("; ").map(pair => { const i=pair.indexOf("="); return { name:pair.slice(0,i), value:pair.slice(i+1), domain:"127.0.0.1", path:"/" }; }));
     const page = await context.newPage();
     await page.goto(`${baseUrl}/admin/operacao`, { waitUntil: "networkidle" });
-    for (const label of ["Supervisão", "Rondas & Claviculário", "Relatórios", "Métricas & Escalas", "Limpeza", "Monitoramento Sintético"]) await page.getByRole("tab", { name: label, exact: true }).waitFor();
+    // UX-07 renomeou os rótulos de aba (sem "&"/maiúsculas de título, sem
+    // código OPS-XX): "Rondas e claviculário", "Métricas e escalas
+    // assistidas", "Monitoramento sintético" — mesma interface vigente
+    // verificada no bloco da Fatia B acima.
+    for (const label of ["Supervisão", "Rondas e claviculário", "Relatórios", "Métricas e escalas assistidas", "Limpeza", "Monitoramento sintético"]) await page.getByRole("tab", { name: label, exact: true }).waitFor();
     // As abas existem desde o SSR, mas o conteúdo só renderiza depois do
     // bootstrap (!loading && !error). Sob carga em 2 vCPU, o networkidle e a
     // presença das abas não garantem hidratação concluída e o clique era
@@ -2066,8 +2073,8 @@ test("L06 Fatia E: OPS-09..16 — operação avançada, conflitos, idempotência
     // subtestes 1–8, um seletor de conteúdo real antes e depois de interagir;
     // a assertiva final permanece idêntica (sincronização, não timeout).
     await page.waitForSelector("#posts-title", { timeout: 30_000 });
-    await page.getByRole("tab", { name: "Monitoramento Sintético", exact: true }).click();
-    await page.waitForSelector('section[aria-label="Operação avançada OPS-13 a OPS-16"]', { timeout: 30_000 });
+    await page.getByRole("tab", { name: "Monitoramento sintético", exact: true }).click();
+    await page.waitForSelector('section[aria-label="Operação avançada — métricas, limpeza e monitoramento"]', { timeout: 30_000 });
     assert.match((await page.textContent("body")) || "", /sem central 24h e sem despacho externo real/i);
   } finally { await browser.close(); }
 });
