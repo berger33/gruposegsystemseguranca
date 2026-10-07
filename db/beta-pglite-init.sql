@@ -483,3 +483,70 @@ CREATE TABLE IF NOT EXISTS ai_rag_cost_tracking (
   ollama_used BOOLEAN,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- PR 1 — Recuperação híbrida (semântica + lexical) com embeddings reais.
+-- Espelho das tabelas criadas por 175 no PostgreSQL, sem FKs (o PGlite é um
+-- schema mínimo, sem auth_identities/client_accounts e sem trigger de
+-- updated_at). Não replica a pgvector (extensão indisponível aqui) — o caminho
+-- de busca fica em "exact" e a resposta declara vector_backend='exact'.
+CREATE TABLE IF NOT EXISTS ai_rag_chunk_embeddings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  chunk_id UUID NOT NULL UNIQUE REFERENCES ai_rag_chunks(id) ON DELETE CASCADE,
+  rag_key TEXT NOT NULL CHECK (rag_key IN ('publico','cliente','rh','marcelo')),
+  model_name TEXT NOT NULL CHECK (char_length(model_name) BETWEEN 3 AND 100),
+  model_digest TEXT,
+  dimensions INT NOT NULL CHECK (dimensions BETWEEN 16 AND 4096),
+  content_checksum TEXT NOT NULL CHECK (content_checksum ~ '^[0-9a-f]{64}$'),
+  embedding REAL[],
+  status TEXT NOT NULL DEFAULT 'pendente' CHECK (status IN ('pendente','gerado','erro')),
+  error_code TEXT,
+  generated_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT ai_rag_chunk_embeddings_gerado_com_vetor
+    CHECK (status <> 'gerado' OR (embedding IS NOT NULL AND generated_at IS NOT NULL)),
+  CONSTRAINT ai_rag_chunk_embeddings_vetor_dim
+    CHECK (embedding IS NULL OR array_length(embedding, 1) = dimensions)
+);
+CREATE TABLE IF NOT EXISTS ai_rag_answer_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  protocol TEXT NOT NULL UNIQUE CHECK (protocol ~ '^RAG-[A-Z]{2,4}-[0-9]{8}-[A-Z0-9]{4}$'),
+  rag_key TEXT NOT NULL CHECK (rag_key IN ('publico','cliente','rh','marcelo')),
+  client_account_id UUID,
+  actor_kind TEXT NOT NULL CHECK (actor_kind IN ('visitor','client','staff')),
+  actor_identity UUID,
+  outcome TEXT NOT NULL CHECK (outcome IN ('answered','no_source','ai_unavailable','error')),
+  retrieval_mode TEXT CHECK (retrieval_mode IN ('hybrid','lexical_only')),
+  vector_backend TEXT CHECK (vector_backend IS NULL OR vector_backend IN ('pgvector','exact','none')),
+  chunk_count INT NOT NULL DEFAULT 0 CHECK (chunk_count >= 0),
+  top_score NUMERIC(6,4),
+  latency_ms INT,
+  model_name TEXT,
+  ai_available BOOLEAN NOT NULL DEFAULT false,
+  query TEXT,
+  response TEXT,
+  sources JSONB NOT NULL DEFAULT '[]'::jsonb,
+  retention_expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '90 days'),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS ai_rag_retrieval_config (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  rag_key TEXT NOT NULL UNIQUE CHECK (rag_key IN ('publico','cliente','rh','marcelo')),
+  min_relevance NUMERIC(4,3) NOT NULL DEFAULT 0.500 CHECK (min_relevance >= 0 AND min_relevance <= 1),
+  max_chunks INT NOT NULL DEFAULT 6 CHECK (max_chunks BETWEEN 1 AND 20),
+  max_context_chars INT NOT NULL DEFAULT 6000 CHECK (max_context_chars BETWEEN 500 AND 20000),
+  lexical_candidates INT NOT NULL DEFAULT 40 CHECK (lexical_candidates BETWEEN 1 AND 100),
+  vector_candidates INT NOT NULL DEFAULT 40 CHECK (vector_candidates BETWEEN 1 AND 100),
+  vector_scan_limit INT NOT NULL DEFAULT 800 CHECK (vector_scan_limit BETWEEN 50 AND 5000),
+  retention_days INT NOT NULL DEFAULT 90 CHECK (retention_days BETWEEN 1 AND 365),
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  updated_by_identity UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+INSERT INTO ai_rag_retrieval_config (rag_key) VALUES
+  ('publico'), ('cliente'), ('rh'), ('marcelo')
+  ON CONFLICT (rag_key) DO NOTHING;
+
+ALTER TABLE ai_rag_documents ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+ALTER TABLE ai_rag_feedback ADD COLUMN IF NOT EXISTS answer_event_id UUID;

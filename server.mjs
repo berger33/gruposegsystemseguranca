@@ -25,6 +25,8 @@ import { createLocalOutbox, LOCAL_OUTBOX_LABEL, resolveDeliveryTarget } from "./
 import { createClientAccessApi } from "./src/server/client-access-api.mjs";
 import { createClientOfflineRecoveryApi } from "./src/server/client-offline-recovery-api.mjs";
 import { createAiRagRealApi } from "./src/server/ai-rag-real-api.mjs";
+import { createEmbeddingService } from "./src/server/ai-rag-embeddings.mjs";
+import { createRagRetrieval } from "./src/server/ai-rag-retrieval.mjs";
 import { createClientSpaceApi } from "./src/server/client-space-api.mjs";
 import { createClientSecurityApi } from "./src/server/client-security-api.mjs";
 import { createAdminRbacApi } from "./src/server/admin-rbac-api.mjs";
@@ -2580,6 +2582,13 @@ const pubFaqAssistedApi = createPubFaqAssistedApi({
   },
 });
 
+// Serviço compartilhado de embeddings + recuperação híbrida. Reusado pela
+// rota canônica (/api/ai/answer) e pelos endpoints de curadoria. Não baixa
+// modelos automaticamente e só conecta em loopback — ver
+// src/server/ai-rag-embeddings.mjs.
+const ragEmbeddingService = createEmbeddingService({});
+const ragRetrievalService = createRagRetrieval({ pool: getPool(), embeddings: ragEmbeddingService });
+
 const aiRagApi = createAiRagApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -2596,11 +2605,15 @@ const aiRagApi = createAiRagApi({
     const r = (sess.role || sess.userRole || '').toLowerCase();
     return roles.includes(r) || r === 'admin';
   },
+  retrieval: ragRetrievalService,
+  embeddings: ragEmbeddingService,
 });
 
 const aiRagRealApi = createAiRagRealApi({
   pool: getPool(), sameOrigin, readStaffSession: readSession,
   readClientSession: clientAccessApi.readClientSession,
+  retrieval: ragRetrievalService,
+  embeddings: ragEmbeddingService,
 });
 
 const reportApi = createReportApi({
@@ -4632,6 +4645,12 @@ async function routeApi(req, res) {
   }
   if (url.pathname === "/api/admin/ai-rag-chunks" || url.pathname === "/api/ai-rag-chunks" || url.pathname === "/api/ai/rag-chunks") {
     return aiRagApi.handleChunks(req, res);
+  }
+  if (url.pathname === "/api/admin/ai-rag-index-status" || url.pathname === "/api/ai/rag-index-status") {
+    return aiRagApi.handleIndexStatus(req, res);
+  }
+  if (url.pathname === "/api/admin/ai-rag-embeddings/backfill" || url.pathname === "/api/ai/rag-embeddings/backfill") {
+    return aiRagApi.handleEmbeddingBackfill(req, res);
   }
   return json(res, 404, { error: "not_found" });
     },

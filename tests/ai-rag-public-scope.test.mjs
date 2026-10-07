@@ -72,5 +72,8 @@ for (const [handler, pathname] of [['handleQueries', '/api/ai-rag-queries'], ['h
 test('RAG-SEG-001: feedback para escopo não público exige sessão', async () => {
   const t = harness('/api/ai/rag/feedback', 'POST', { rag_key: 'rh', protocol: 'RAG-RH-SYNTHETIC', rating: 5 });
   await t.api.handleFeedback(t.req, t.res);
-  assert.equal(t.result().status, 403);
+  // POST /api/ai/rag/feedback é a rota pública; sem sessão, o handler
+  // exige staff admin/ti (escopo privado). 401 (não 403) é a resposta
+  // correta — sem credencial, não se chega a comparar papel.
+  assert.equal(t.result().status, 401);
 });

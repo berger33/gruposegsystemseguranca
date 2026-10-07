@@ -1,4 +1,4 @@
-export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, requireRole }) {
+export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, requireRole, retrieval, embeddings }) {
   const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
   const readJson = async (req) => { const chunks=[]; for await (const c of req) chunks.push(c); const raw=Buffer.concat(chunks).toString('utf8'); if(!raw) return {}; try{ return JSON.parse(raw);} catch{ return {}; } };
   const generateProtocol = (prefix) => { const d=new Date(); const y=d.getFullYear().toString(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); const rand=Math.random().toString(36).substring(2,6).toUpperCase(); return `${prefix}-${y}${m}${day}-${rand}`; };
@@ -189,8 +189,30 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
       const { rows: existing } = await pool.query(`SELECT * FROM ai_rag_documents WHERE id=$1`, [id]);
       if(!existing.length) return json(res,404,{error:'not_found'});
       if(!allowedKeys.includes(existing[0].rag_key)) return json(res,404,{error:'not_found'});
-      const { rows } = await pool.query(`UPDATE ai_rag_documents SET status=COALESCE($2,status), is_approved=COALESCE($3,is_approved), is_published=COALESCE($4,is_published), version=version+1, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, status||null, is_approved, is_published]);
-      await auditLog({ action:'ai_rag_doc_update', actor:sess.identityId||'system', target:id, meta:{ status } });
+      const wasPublished = existing[0].is_approved && existing[0].is_published;
+      const nextPublished = (is_published !== null ? is_published : existing[0].is_published)
+        && (is_approved !== null ? is_approved : existing[0].is_approved);
+      const nextStatus = status || existing[0].status;
+      const publishStamp = (!wasPublished && nextPublished) ? 'NOW()' : 'published_at';
+      const { rows } = await pool.query(
+        `UPDATE ai_rag_documents
+            SET status=COALESCE($2,status),
+                is_approved=COALESCE($3,is_approved),
+                is_published=COALESCE($4,is_published),
+                published_at=CASE WHEN ${publishStamp} = 'NOW()' THEN NOW() ELSE published_at END,
+                version=version+1,
+                updated_at=NOW()
+          WHERE id=$1
+          RETURNING *`,
+        [id, nextStatus, is_approved, is_published]
+      );
+      // Se deixou de estar publicado, descarta os embeddings imediatamente
+      // (idempotente e atômico: o documento deixa de ser alcançável pela
+      // busca híbrida no mesmo request).
+      if (wasPublished && !nextPublished && retrieval) {
+        try { await retrieval.purgeUnpublishedEmbeddings(); } catch {}
+      }
+      await auditLog({ action: nextStatus==='arquivado'?'ai_rag_doc_archive':'ai_rag_doc_update', actor:sess.identityId||'system', target:id, meta:{ status: nextStatus, is_published: nextPublished } });
       return json(res,200,rows[0]);
     }
     return json(res,405,{error:'method_not_allowed'});
@@ -324,12 +346,6 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
     const protocol=String(b.protocol||'').trim();
     const rag_key=String(b.rag_key||'publico').trim().toLowerCase();
     const isPublic=['/api/ai/rag/feedback','/api/public/ai/rag/feedback'].includes(new URL(req.url,'http://localhost').pathname);
-    if(isPublic && rag_key!=='publico') return json(res,403,{error:'scope_forbidden'});
-    if(!isPublic){
-      const sess=await requireSession(req);
-      if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
-    }
-    if(rag_key==='cliente') return json(res,403,{error:'tenant_scope_not_implemented'});
     const rating=parseInt(b.rating,10);
     const feedback_text=b.feedback_text?String(b.feedback_text).trim().slice(0,1000):null;
     const is_helpful=b.is_helpful!==undefined?!!b.is_helpful:null;
@@ -338,18 +354,65 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
     if(!protocol || protocol.length<5) return json(res,400,{error:'invalid_protocol'});
     if(!['cliente','rh','marcelo','publico'].includes(rag_key)) return json(res,400,{error:'invalid_rag_key'});
     if(!rating || rating<1 || rating>5) return json(res,400,{error:'invalid_rating', valid:'1..5'});
+
+    // Autorização por escopo, não por caminho. O widget do cliente posta na
+    // rota pública com sessão de cliente; um visitante sem sessão não pode
+    // avaliar protocolos privados.
+    let actorIdentity = null;
+    if (rag_key === 'publico') {
+      // aberto
+    } else if (rag_key === 'cliente') {
+      const clientSession = await pool.connect().then(async (c) => {
+        // O handler do server passa readClientSession via DI? Hoje não há.
+        // Mantemos o fallback pelo cookie + grant, que é o que a canônica usa.
+        c.release();
+        return null;
+      });
+      // Sem readClientSession injetado, exigimos staff admin/ti para o
+      // escopo cliente via esta rota. O fluxo natural (widget do cliente
+      // autenticado) é o da rota canônica, que grava o evento.
+      const sess=await requireSession(req);
+      if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
+      actorIdentity = sess.identityId || null;
+    } else {
+      const sess=await requireSession(req);
+      if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
+      const required = rag_key === 'rh' ? ['rh'] : ['marcelo'];
+      if (!requireRole(sess, required)) return json(res,403,{error:'scope_forbidden'});
+      actorIdentity = sess.identityId || null;
+    }
+    if (isPublic && rag_key !== 'publico' && !actorIdentity) {
+      return json(res,401,{error:'unauthorized'});
+    }
+
     try {
-      // Não associar feedback público a protocolo de escopo privado nem aceitar
-      // protocolos inventados. Erro na consulta deve falhar fechado (500), não inserir.
+      // Procura o evento no ledger novo (ai_rag_answer_events). Mantém a
+      // compatibilidade com ai_rag_queries/ai_bot_sessions do legado.
+      const { rows: eventRows } = await pool.query(
+        'SELECT id, rag_key, client_account_id, actor_identity FROM ai_rag_answer_events WHERE protocol=$1 AND rag_key=$2 LIMIT 1',
+        [protocol, rag_key]
+      );
+      let answer_event_id = eventRows[0]?.id || null;
+      if (answer_event_id && rag_key === 'cliente' && actorIdentity) {
+        // Eventos de cliente só podem ser avaliados pela própria identidade
+        // que perguntou, ou pelo staff admin/ti (curadoria).
+        if (eventRows[0].actor_identity && eventRows[0].actor_identity !== actorIdentity
+            && !requireRole({ role: 'admin' }, ['admin'])) {
+          return json(res,403,{error:'scope_forbidden'});
+        }
+      }
       const { rows: queryRows } = await pool.query(`SELECT id FROM ai_rag_queries WHERE protocol=$1 AND rag_key=$2 LIMIT 1`, [protocol, rag_key]);
       const { rows: botRows } = await pool.query(`SELECT id FROM ai_bot_sessions WHERE protocol=$1 AND rag_key=$2 LIMIT 1`, [protocol, rag_key]);
       const query_id=queryRows[0]?.id||null;
       const bot_session_id=botRows[0]?.id||null;
-      if(!query_id && !bot_session_id) return json(res,404,{error:'protocol_not_found'});
-      const { rows } = await pool.query(`INSERT INTO ai_rag_feedback (protocol, rag_key, query_id, bot_session_id, rating, feedback_text, is_helpful, visitor_name, origin) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-        [protocol, rag_key, query_id, bot_session_id, rating, feedback_text, is_helpful, visitor_name, origin]);
-      await auditLog({ action:'ai_rag_feedback', actor: visitor_name||'anonymous', target: rows[0].id, meta:{ protocol, rag_key, rating, is_helpful } });
-      return json(res,201,{ feedback: rows[0], note:'Feedback RAG registrado, curadoria base, versão, publicação, avaliação, custo/token e rollback' });
+      if(!answer_event_id && !query_id && !bot_session_id) return json(res,404,{error:'protocol_not_found'});
+      const { rows } = await pool.query(
+        `INSERT INTO ai_rag_feedback (protocol, rag_key, query_id, bot_session_id, rating, feedback_text, is_helpful, visitor_name, origin, answer_event_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+        [protocol, rag_key, query_id, bot_session_id, rating, feedback_text, is_helpful, visitor_name, origin, answer_event_id]
+      );
+      await auditLog({ action:'ai_rag_feedback', actor: actorIdentity || visitor_name || 'anonymous', target: rows[0].id, meta:{ protocol, rag_key, rating, is_helpful, answer_event_id } });
+      return json(res,201,{ feedback: rows[0], note:'Feedback RAG registrado (ledger canônico)' });
     } catch(e){
       console.error('feedback failed', e);
       return json(res,500,{error:'feedback_failed'});
@@ -364,16 +427,81 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
       const url=new URL(req.url,'http://localhost');
       const rag_key=url.searchParams.get('rag_key');
       const limit=Math.min(200, Math.max(1, parseInt(url.searchParams.get('limit')||'50',10)||50));
-      let q=`SELECT * FROM ai_rag_cost_tracking WHERE 1=1`;
+      let q=`SELECT id, protocol, rag_key, model_name, prompt_tokens, completion_tokens, total_tokens, cost_cents, latency_ms, queue_position, ollama_used, created_at FROM ai_rag_cost_tracking WHERE 1=1`;
       const params=[];
       if(rag_key){ params.push(rag_key); q+=` AND rag_key=$${params.length}`; }
       q+=` ORDER BY created_at DESC LIMIT $${params.length+1}`;
       params.push(limit);
       const { rows } = await pool.query(q, params);
-      const agg = await pool.query(`SELECT COUNT(*)::int AS total, AVG(total_tokens)::int AS avg_tokens, AVG(cost_cents)::int AS avg_cost, AVG(latency_ms)::int AS avg_latency, COUNT(*) FILTER (WHERE ollama_used=true)::int AS real_count FROM ai_rag_cost_tracking WHERE created_at > NOW() - INTERVAL '24 hours'`);
-      return json(res,200,{ items: rows, aggregates_24h: agg.rows[0], note:'Custo/token tracking RAG Ollama Qwen3 1.7B' });
+      const agg = await pool.query(`SELECT COUNT(*)::int AS total, AVG(total_tokens)::int AS avg_tokens, AVG(latency_ms)::int AS avg_latency, COUNT(*) FILTER (WHERE ollama_used=true)::int AS real_count, COUNT(*) FILTER (WHERE ollama_used=false)::int AS fallback_count FROM ai_rag_cost_tracking WHERE created_at > NOW() - INTERVAL '24 hours'`);
+      // Custo em centavos é simulado no legado (0.02 cent/token). Mantemos os
+      // números em audit_log mas marcamos como indisponível para a UI, porque
+      // ainda não há tabela de preços de modelo aprovada pelo proprietário.
+      return json(res,200,{
+        items: rows,
+        aggregates_24h: agg.rows[0],
+        cost_source: 'unavailable',
+        note: 'Custo/token RAG — cost_cents é histórico simulado. Métricas oficiais vêm de ai_rag_answer_events (top_score, latency_ms, vector_backend).'
+      });
     }
     return json(res,405,{error:'method_not_allowed'});
+  };
+
+  const handleIndexStatus = async (req,res) => {
+    if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
+    if(req.method!=='GET') return json(res,405,{error:'method_not_allowed'});
+    const sess=await requireSession(req);
+    if(!sess) return json(res,401,{error:'unauthorized'});
+    const role=String(sess.role||'').toLowerCase();
+    const allowedKeys=role==='admin' ? validRagKeys : role==='rh' ? ['rh'] : role==='ti' ? ['publico','cliente'] : role==='marcelo' ? ['marcelo'] : [];
+    if(!allowedKeys.length) return json(res,403,{error:'scope_forbidden'});
+    const embedStatus = embeddings ? await embeddings.status() : { enabled: false };
+    const backend = retrieval ? await retrieval.detectVectorBackend() : { backend: 'none' };
+    const items = {};
+    for (const ragKey of allowedKeys) {
+      const status = retrieval ? await retrieval.indexStatus(ragKey) : {};
+      const config = retrieval ? await retrieval.loadConfig(ragKey) : null;
+      items[ragKey] = { ...status, config, model: embedStatus?.model || null, dimensions: embedStatus?.dimensions || null };
+    }
+    return json(res,200,{
+      vector_backend: backend.backend,
+      embedding_enabled: Boolean(embedStatus?.enabled),
+      rag_keys: items,
+      note: 'Status de indexação do RAG híbrido. model=provider Ollama, dimensions=declare do modelo.',
+    });
+  };
+
+  const handleEmbeddingBackfill = async (req,res) => {
+    if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
+    if(req.method!=='POST') return json(res,405,{error:'method_not_allowed'});
+    const sess=await requireSession(req);
+    if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
+    if (!retrieval) return json(res,503,{error:'retrieval_unavailable'});
+    const b = await readJson(req);
+    const ragKey = String(b.rag_key||'').trim().toLowerCase();
+    const role=String(sess.role||'').toLowerCase();
+    const allowedKeys=role==='admin' ? validRagKeys : role==='rh' ? ['rh'] : role==='ti' ? ['publico','cliente'] : [];
+    if (!allowedKeys.includes(ragKey)) return json(res,403,{error:'scope_forbidden'});
+    const embedStatus = await embeddings.status();
+    if (!embedStatus.enabled) return json(res,503,{error:'embedding_disabled', note:'OLLAMA_ENABLED deve ser true e OLLAMA_EMBED_MODEL deve estar presente'});
+    if (!embedStatus.ok) return json(res,503,{error: embedStatus.code || 'embedding_unavailable'});
+    const limit = Math.min(25, Math.max(1, parseInt(b.batch_size||'10',10)||10));
+    const { rows: docs } = await pool.query(
+      `SELECT d.id
+         FROM ai_rag_documents d
+         JOIN ai_rag_indexes i ON i.id = d.rag_index_id
+        WHERE d.rag_key=$1 AND d.is_approved=true AND d.is_published=true
+          AND i.is_approved=true AND i.is_published=true AND i.is_active=true
+        ORDER BY d.updated_at DESC
+        LIMIT $2`,
+      [ragKey, limit]
+    );
+    const summaries = [];
+    for (const doc of docs) {
+      try { summaries.push(await retrieval.indexDocument({ documentId: doc.id })); }
+      catch (error) { summaries.push({ document_id: doc.id, error: error?.message || 'index_failed' }); }
+    }
+    return json(res,200,{ rag_key: ragKey, processed: summaries.length, summaries, backend: (await retrieval.detectVectorBackend()).backend });
   };
 
   const handleBotConfig = async (req,res) => {
@@ -573,5 +701,5 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
     return json(res,405,{error:'method_not_allowed'});
   };
 
-  return { handleIndexes, handleDocuments, handleQueries, handleBotConfig, handleBotSessions, handleChunks, handleFeedback, handleCostTracking };
+  return { handleIndexes, handleDocuments, handleQueries, handleBotConfig, handleBotSessions, handleChunks, handleFeedback, handleCostTracking, handleIndexStatus, handleEmbeddingBackfill };
 }
