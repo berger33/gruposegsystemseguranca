@@ -1,0 +1,26 @@
+.workspace { box-sizing:border-box; padding:20px; border-radius:12px; color:var(--ux-color-text); background:var(--ux-color-surface); overflow-wrap:anywhere; font-family:system-ui,sans-serif; }
+.workspace * { box-sizing:border-box; }
+.workspace h1 { font-size:clamp(24px,3vw,32px); }
+.workspace h2,.workspace h3 { scroll-margin-top:24px; line-height:1.4; }
+.workspace p { line-height:1.6; }
+.workspace :is(input,select,textarea) { max-width:100%; min-height:44px; padding:8px; border:1px solid var(--ux-color-border); border-radius:6px; color:var(--ux-color-text); background:white; font:inherit; }
+.workspace button { min-height:44px; padding:8px 12px; cursor:pointer; border:1px solid var(--ux-color-border); border-radius:8px; background:var(--ux-color-canvas); color:var(--ux-color-text); font-weight:600; }
+.workspace button[type='submit'] { background:var(--ux-color-brand); color:white; border-color:var(--ux-color-brand); }
+.workspace button:disabled { cursor:default; opacity:.65; }
+.workspace :is(input,select,textarea,button,a,summary,[tabindex]):focus-visible { outline:3px solid var(--ux-color-focus); outline-offset:3px; }
+.workspace label { display:grid; gap:6px; min-width:0; font-size:14px; }
+.workspace section,.workspace article,.workspace form { min-width:0; }
+.workspace h2 { font-size:22px; margin-top:24px; }
+.workspace h3 { font-size:18px; }
+.workspace form { gap:12px; }
+.workspace [role='alert'] { padding:12px; border-left:4px solid var(--ux-color-error); background:#fff3f3; }
+.workspace pre { white-space:pre-wrap; overflow-wrap:anywhere; }
+.tasks { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
+.tasks a { display:inline-flex; align-items:center; min-height:44px; padding:8px 12px; border:1px solid var(--ux-color-border); border-radius:8px; color:var(--ux-color-brand); text-decoration:none; }
+.tableScroll { overflow:auto; max-width:100%; border:1px solid var(--ux-color-border); margin:12px 0; }
+.tableScroll table { min-width:580px; width:100%; border-collapse:collapse; overflow-wrap:normal; }
+.tableScroll th,.tableScroll td { padding:10px; text-align:left; }
+.tableScroll thead { background:var(--ux-color-canvas); }
+.tableScroll tbody tr:nth-child(even) { background:#f8fafc; }
+@media(max-width:700px){.workspace {padding:12px;} .workspace :global(.grid),.workspace [style*="grid-template-columns"]{grid-template-columns:minmax(0,1fr)!important;} .workspace form {flex-wrap:wrap;} }
+@media(prefers-reduced-motion:reduce){.workspace * {scroll-behavior:auto!important;animation:none!important;transition:none!important;}}

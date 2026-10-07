@@ -1,4 +1,5 @@
 "use client";
+import {workspaceFetch} from "@/lib/workspace-response";
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -24,14 +25,14 @@ export default function ClientMfaPage() {
   const [emailToken, setEmailToken] = useState("");
 
   async function loadSessions() {
-    const response = await fetch("/api/client/security/sessions", { cache: "no-store" });
+    const response = await workspaceFetch("/api/client/security/sessions", { cache: "no-store" });
     if (!response.ok) throw new Error("sessions");
     setSessions((await response.json()).sessions as ClientSession[]);
   }
   useEffect(() => { if (session) loadSessions().catch(() => setNotice("Não foi possível carregar as sessões. Tente novamente.")); }, [session]);
 
   async function post(path: string, body: object) {
-    const response = await fetch(`/api/client/security/mfa/${path}`, {
+    const response = await workspaceFetch(`/api/client/security/mfa/${path}`, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
     });
     return { ok: response.ok, status: response.status, data: await response.json() as Record<string, unknown> };
@@ -133,16 +134,16 @@ export default function ClientMfaPage() {
       <h2 id="sessions-title">Sessões da conta</h2>
       <p>Somente sessões desta identidade. Tokens e hashes nunca são exibidos.</p>
       <button type="button" className={styles.submit} onClick={() => loadSessions().catch(() => setNotice("Não foi possível atualizar as sessões."))}>Atualizar sessões</button>
-      <ul>{sessions.map(item => <li key={item.id}>{item.current ? "Sessão atual" : "Outra sessão"} · {new Date(item.created_at).toLocaleString()} · {item.active ? "ativa" : "revogada"} {!item.current && item.active && <button type="button" onClick={async () => { await fetch(`/api/client/security/sessions/${item.id}`, { method: "DELETE" }); await loadSessions(); }}>Revogar</button>}</li>)}</ul>
-      <button type="button" onClick={async () => { await fetch("/api/client/security/sessions", { method: "POST" }); await loadSessions(); }}>Revogar as demais sessões</button>
+      <ul>{sessions.map(item => <li key={item.id}>{item.current ? "Sessão atual" : "Outra sessão"} · {new Date(item.created_at).toLocaleString()} · {item.active ? "ativa" : "revogada"} {!item.current && item.active && <button type="button" onClick={async () => { await workspaceFetch(`/api/client/security/sessions/${item.id}`, { method: "DELETE" }); await loadSessions(); }}>Revogar</button>}</li>)}</ul>
+      <button type="button" onClick={async () => { await workspaceFetch("/api/client/security/sessions", { method: "POST" }); await loadSessions(); }}>Revogar as demais sessões</button>
     </section>
     <section aria-labelledby="email-title" style={{ marginTop: 28 }}>
       <h2 id="email-title">Trocar e-mail</h2>
       <p>O novo endereço só será aplicado após a confirmação do token manual, válido por 24 horas. A resposta do servidor define o estado.</p>
-      <form className={styles.form} onSubmit={async event => { event.preventDefault(); setBusy(true); try { const r = await fetch("/api/client/security/email-change", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ newEmail: email }) }); const d = await r.json(); setNotice(r.ok ? `Pedido ${d.requestId} criado; confirme antes de ${new Date(d.expiresAt).toLocaleString()}.` : (d.error || "Não foi possível solicitar.")); } catch { setNotice("Erro de conexão."); } finally { setBusy(false); } }}>
+      <form className={styles.form} onSubmit={async event => { event.preventDefault(); setBusy(true); try { const r = await workspaceFetch("/api/client/security/email-change", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ newEmail: email }) }); const d = await r.json(); setNotice(r.ok ? `Pedido ${d.requestId} criado; confirme antes de ${new Date(d.expiresAt).toLocaleString()}.` : (d.error || "Não foi possível solicitar.")); } catch { setNotice("Erro de conexão."); } finally { setBusy(false); } }}>
         <label htmlFor="new-email">Novo e-mail</label><input id="new-email" type="email" required value={email} onChange={e => setEmail(e.target.value)} /><button className={styles.submit} disabled={busy} type="submit">Solicitar troca</button>
       </form>
-      <form className={styles.form} onSubmit={async event => { event.preventDefault(); const r = await fetch("/api/client/security/email-change", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: emailToken }) }); const d = await r.json(); setNotice(r.ok ? "E-mail confirmado. Entre novamente." : (d.error || "Token inválido ou expirado.")); }}>
+      <form className={styles.form} onSubmit={async event => { event.preventDefault(); const r = await workspaceFetch("/api/client/security/email-change", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: emailToken }) }); const d = await r.json(); setNotice(r.ok ? "E-mail confirmado. Entre novamente." : (d.error || "Token inválido ou expirado.")); }}>
         <label htmlFor="email-token">Token da URL manual</label><input id="email-token" required value={emailToken} onChange={e => setEmailToken(e.target.value)} /><button className={styles.submit} type="submit">Confirmar troca</button>
       </form>
     </section>

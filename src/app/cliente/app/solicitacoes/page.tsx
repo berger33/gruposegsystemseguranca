@@ -1,4 +1,5 @@
 "use client";
+import {workspaceFetch} from "@/lib/workspace-response";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { CirclePlus, RotateCw, Send } from "lucide-react";
@@ -50,16 +51,15 @@ export default function ClientServiceRequestsPage() {
     setItems(null);
     try {
       const [requestResponse, contractResponse] = await Promise.all([
-        fetch(`/api/client/service-requests?account=${encodeURIComponent(accountId)}`, { cache: "no-store" }),
-        fetch(`/api/client/contracts?account=${encodeURIComponent(accountId)}`, { cache: "no-store" }),
+        workspaceFetch(`/api/client/service-requests?account=${encodeURIComponent(accountId)}`, { cache: "no-store" }),
+        workspaceFetch(`/api/client/contracts?account=${encodeURIComponent(accountId)}`, { cache: "no-store" }),
       ]);
       if (!requestResponse.ok || !contractResponse.ok) throw new Error("load_failed");
       const requestData = await requestResponse.json() as { serviceRequests: ServiceRequest[] };
       const contractData = await contractResponse.json() as { contracts: Contract[] };
       setItems(requestData.serviceRequests);
       setContracts(contractData.contracts);
-    } catch {
-      setLoadError("Não foi possível carregar as solicitações agora.");
+    } catch (error) { setLoadError(error instanceof Error ? error.message : "Não foi possível carregar as solicitações agora.");
     }
   }, []);
 
@@ -84,7 +84,7 @@ export default function ClientServiceRequestsPage() {
     setSuccess("");
     try {
       if (!keyRef.current) keyRef.current = newIdempotencyKey();
-      const response = await fetch("/api/client/service-requests", {
+      const response = await workspaceFetch("/api/client/service-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Idempotency-Key": keyRef.current },
         body: JSON.stringify({

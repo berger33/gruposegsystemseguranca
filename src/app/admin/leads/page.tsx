@@ -1,4 +1,5 @@
 "use client";
+import UiTaskWorkspace from "@/components/ui/UiTaskWorkspace";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { ArrowLeft, Check, LogOut, Mail, MessageCircle, RefreshCw, Shield, UserRound } from "lucide-react";
@@ -189,7 +190,7 @@ function LeadAdminContent() {
   }
 
   return (
-    <main className={styles.page}>
+    <UiTaskWorkspace className={styles.page}>
       <header className={styles.topbar}>
         <a className={styles.back} href="/"><ArrowLeft size={16} /> Voltar ao site</a>
         <nav className={styles.topLinks} aria-label="Atalhos administrativos">
@@ -281,7 +282,7 @@ function LeadAdminContent() {
         {notice && <p className={styles.notice} role="status"><Check size={15} /> {notice}</p>}
         {error && <p className={styles.error} role="alert">{error}</p>}
       </section>
-    </main>
+    </UiTaskWorkspace>
   );
 }
 

@@ -1,4 +1,5 @@
 "use client";
+import {workspaceResponse,workspaceFetch} from "@/lib/workspace-response";
 
 import { useCallback, useEffect, useState } from "react";
 import { CalendarClock, CheckCircle2, RotateCw } from "lucide-react";
@@ -69,13 +70,13 @@ export default function ClientAgendaPage() {
 
   const loadVisits = useCallback((accountId: string) => {
     setLoadError("");
-    fetch(`/api/client/visits?account=${encodeURIComponent(accountId)}`, { cache: "no-store" })
+    workspaceFetch(`/api/client/visits?account=${encodeURIComponent(accountId)}`, { cache: "no-store" })
       .then(async response => {
-        if (!response.ok) throw new Error("unexpected");
-        const data = (await response.json()) as { visits: Visit[] };
+        if (!response.ok) await workspaceResponse(response);
+        const data = (await workspaceResponse(response)) as { visits: Visit[] };
         setVisits(data.visits);
       })
-      .catch(() => setLoadError("Não foi possível carregar a agenda agora."));
+      .catch((error) => setLoadError(error instanceof Error ? error.message : "Não foi possível carregar a agenda agora."));
   }, []);
 
   useEffect(() => {
@@ -91,7 +92,7 @@ export default function ClientAgendaPage() {
     setBusy(visit.id);
     setMessage("");
     try {
-      const response = await fetch(`/api/client/visits/${visit.id}`, {
+      const response = await workspaceFetch(`/api/client/visits/${visit.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(status === "confirmed" ? { status } : { status, ...draft }),

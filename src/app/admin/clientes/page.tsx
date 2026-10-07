@@ -1,4 +1,5 @@
 "use client";
+import UiTaskWorkspace from "@/components/ui/UiTaskWorkspace";
 
 import { useCallback, useEffect, useState } from "react";
 import AccountsSection from "./AccountsSection";
@@ -39,7 +40,7 @@ function ClientAdminWorkspace({ role }: { role: string }) {
   }, [loadAccounts]);
 
   return (
-    <section aria-labelledby="intro-title">
+    <UiTaskWorkspace aria-labelledby="intro-title">
       <div className={styles.card} id="clientes-intro">
         <h1 id="intro-title" style={{ marginTop: 0 }}>
           Administração de clientes
@@ -60,7 +61,7 @@ function ClientAdminWorkspace({ role }: { role: string }) {
       <TicketsSection accounts={accounts} />
       <VisitsSection accounts={accounts} />
       <ReportsSection accounts={accounts} />
-    </section>
+    </UiTaskWorkspace>
   );
 }
 

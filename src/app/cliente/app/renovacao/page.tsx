@@ -1,4 +1,5 @@
 "use client";
+import {workspaceFetch} from "@/lib/workspace-response";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { RefreshCw, RotateCw, Send } from "lucide-react";
@@ -95,12 +96,11 @@ export default function ClientRenewalPage() {
     setLoadError("");
     setData(null);
     try {
-      const response = await fetch(`/api/client/renewal-communications?account=${encodeURIComponent(accountId)}`, { cache: "no-store" });
+      const response = await workspaceFetch(`/api/client/renewal-communications?account=${encodeURIComponent(accountId)}`, { cache: "no-store" });
       if (!response.ok) throw new Error("load_failed");
       const payload = await response.json() as Payload;
       setData(payload);
-    } catch {
-      setLoadError("Não foi possível carregar as comunicações agora.");
+    } catch (error) { setLoadError(error instanceof Error ? error.message : "Não foi possível carregar as comunicações agora.");
     }
   }, []);
 
@@ -138,7 +138,7 @@ export default function ClientRenewalPage() {
     try {
       if (!keyRef.current) keyRef.current = newIdempotencyKey();
       const trimmed = message.trim();
-      const response = await fetch("/api/client/renewal-communications", {
+      const response = await workspaceFetch("/api/client/renewal-communications", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Idempotency-Key": keyRef.current },
         body: JSON.stringify({ communication_id: selectedId, response_kind: kind, message: trimmed.length > 0 ? trimmed : undefined }),

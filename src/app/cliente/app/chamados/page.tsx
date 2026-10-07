@@ -1,4 +1,5 @@
 "use client";
+import {workspaceResponse,workspaceFetch} from "@/lib/workspace-response";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Headphones, RotateCw, Send } from "lucide-react";
@@ -81,13 +82,13 @@ export default function ClientTicketsPage() {
 
   const loadTickets = useCallback((accountId: string) => {
     setLoadError("");
-    fetch(`/api/client/tickets?account=${encodeURIComponent(accountId)}`, { cache: "no-store" })
+    workspaceFetch(`/api/client/tickets?account=${encodeURIComponent(accountId)}`, { cache: "no-store" })
       .then(async response => {
-        if (!response.ok) throw new Error("unexpected");
-        const data = (await response.json()) as { tickets: Ticket[] };
+        if (!response.ok) await workspaceResponse(response);
+        const data = (await workspaceResponse(response)) as { tickets: Ticket[] };
         setTickets(data.tickets);
       })
-      .catch(() => setLoadError("Não foi possível carregar seus chamados agora."));
+      .catch((error) => setLoadError(error instanceof Error ? error.message : "Não foi possível carregar seus chamados agora."));
   }, []);
 
   useEffect(() => {
@@ -109,7 +110,7 @@ export default function ClientTicketsPage() {
       retryRequest.current = { fingerprint: requestFingerprint, key: crypto.randomUUID() };
     }
     try {
-      const response = await fetch("/api/client/tickets", {
+      const response = await workspaceFetch("/api/client/tickets", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -144,7 +145,7 @@ export default function ClientTicketsPage() {
     setState("idle");
     setMessage("");
     try {
-      const response = await fetch(`/api/client/tickets/${ticket.id}/accept`, {
+      const response = await workspaceFetch(`/api/client/tickets/${ticket.id}/accept`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -178,7 +179,7 @@ export default function ClientTicketsPage() {
     setState("idle");
     setMessage("");
     try {
-      const response = await fetch(`/api/client/tickets/${ticket.id}/reopen`, {
+      const response = await workspaceFetch(`/api/client/tickets/${ticket.id}/reopen`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason }),

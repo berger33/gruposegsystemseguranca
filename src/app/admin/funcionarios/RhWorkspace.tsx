@@ -1199,8 +1199,7 @@ function HrProcesses() {
       >
         <h4 className={styles.visuallyHidden}>{activeGroup.label} — tela legada</h4>
         <p className={styles.hint} data-ux-legacy="true">
-          Tela legada, exibida como está: {activeGroup.label} (processos {activeGroup.codes}). O
-          vocabulário e os estados desta área ainda não foram revisados. As permissões e a auditoria
+          Processos complementares: {activeGroup.label} (processos {activeGroup.codes}). A apresentação recebeu melhorias; a validação de ponta a ponta ainda está pendente. As permissões e a auditoria
           são as mesmas do restante do RH.
         </p>
         {group === 'cadastro' ? <HrClient /> : null}

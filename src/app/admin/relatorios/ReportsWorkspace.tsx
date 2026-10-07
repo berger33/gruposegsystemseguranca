@@ -1,4 +1,5 @@
 "use client";
+import UiTaskWorkspace from "@/components/ui/UiTaskWorkspace";
 
 import { useEffect, useState, type FormEvent } from "react";
 
@@ -96,7 +97,7 @@ export default function ReportsWorkspace() {
   }
 
   return (
-    <main style={{ maxWidth: 1180, margin: "40px auto", padding: 24, fontFamily: "system-ui, sans-serif" }}>
+    <UiTaskWorkspace style={{ maxWidth: 1180, margin: "40px auto", padding: 24, fontFamily: "system-ui, sans-serif" }}>
       <p style={{ color: "#64748b", letterSpacing: 1 }}>EXT-13 · F09</p>
       <h1>Relatórios periódicos</h1>
       <p>
@@ -115,7 +116,7 @@ export default function ReportsWorkspace() {
       <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(310px, 1fr))", gap: 24 }}>
         <form onSubmit={createReport} style={{ display: "grid", gap: 10, border: "1px solid #cbd5e1", padding: 16, borderRadius: 12 }}>
           <h2>Nova definição de relatório</h2>
-          <input aria-label="Título" placeholder="Título" minLength={5} required value={title} onChange={(event) => setTitle(event.target.value)} />
+          <label>Título <input aria-label="Título" placeholder="Título" minLength={5} required value={title} onChange={(event) => setTitle(event.target.value)} /></label>
           <label>
             Tipo (fontes internas fixas)
             <select value={reportType} onChange={(event) => setReportType(event.target.value)}>
@@ -130,7 +131,7 @@ export default function ReportsWorkspace() {
             Fim do período
             <input aria-label="Fim do período" type="date" required value={periodEnd} onChange={(event) => setPeriodEnd(event.target.value)} />
           </label>
-          <input aria-label="Destinatários staff" placeholder="E-mails staff separados por vírgula" required value={recipients} onChange={(event) => setRecipients(event.target.value)} />
+          <label>E-mails staff separados por vírgula <input aria-label="Destinatários staff" placeholder="E-mails staff separados por vírgula" required value={recipients} onChange={(event) => setRecipients(event.target.value)} /></label>
           <button type="submit">Criar definição</button>
         </form>
 
@@ -168,6 +169,6 @@ export default function ReportsWorkspace() {
           <pre style={{ whiteSpace: "pre-wrap", overflowX: "auto" }}>{JSON.stringify(detail, null, 2)}</pre>
         </section>
       )}
-    </main>
+    </UiTaskWorkspace>
   );
 }

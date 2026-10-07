@@ -1,3 +1,5 @@
+> **Desenvolvimento de 07/10/2026:** consulte [entrega de UX/RAG](FECH-ENTREGA-DESENVOLVIMENTO-2026-10-07.md) e [runbook local](FECH-RUNBOOK-LOCAL-2026-10-07.md). O console TI e as fontes por pasta foram implementados; a migração 175 e os testes desta continuação estão pendentes. Avisos anteriores descrevem a base auditada antes desta alteração.
+
 > **Atualização de 07/10/2026:** para a execução atual, leia o [plano de fechamento UX/RAG](ARENA-FECHAMENTO-UX-RAG-2026-10-07.md) e o [checklist por fatia](FECHAMENTO-UX-RAG-CHECKLIST-2026-10-07.md). A UX completa e o RAG privado ainda não estão concluídos. Este documento preserva o contexto da sua data; orientações de continuação e estado antigo devem ser reconciliados com a main atual. Não confundir UX-08/09 das extensões posteriores com TI/RAG e auditoria final do plano original.
 
 # RAG local por área — preparação e limites

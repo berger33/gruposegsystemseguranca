@@ -1,4 +1,5 @@
 "use client";
+import UiTaskWorkspace from "@/components/ui/UiTaskWorkspace";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -51,7 +52,7 @@ function PortalAccessAdminPageContent() {
   const currentMode = modes.find(mode => mode.id === selectedMode) || modes[0];
 
   return (
-    <main className={styles.page}>
+    <UiTaskWorkspace className={styles.page}>
       <header className={styles.header}>
         <Link href="/admin/leads" className={styles.back}><ArrowLeft size={15} /> Administração</Link>
         <span className={styles.headerTag}><LockKeyhole size={14} /> PORTAL DO CLIENTE</span>
@@ -113,7 +114,7 @@ function PortalAccessAdminPageContent() {
           <Link href="/cliente">Abrir página informativa <ArrowUpRight size={13} /></Link>
         </footer>
       </section>
-    </main>
+    </UiTaskWorkspace>
   );
 }
 
