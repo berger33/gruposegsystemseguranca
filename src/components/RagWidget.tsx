@@ -1,20 +1,67 @@
 "use client";
-import { useState } from "react";
+import { useId, useMemo, useState } from "react";
+import { ragRequest } from "@/lib/rag-request";
+import {
+  honestDate,
+  honestRelevance,
+  honestStaleness,
+  ragNoSourceMessage,
+  ragRetrievalLabel,
+  ragVectorBackendLabel,
+  type RagErrorDescriptor,
+} from "@/lib/rag-vocabulary.mjs";
 
-type Props = { ragKey: "cliente"|"rh"|"marcelo"|"publico"; title: string; description: string; placeholder?: string };
+type Props = { ragKey: "cliente" | "rh" | "marcelo" | "publico"; title: string; description: string; placeholder?: string };
 
-type Answer = {
-  response: string;
-  sources: any[];
-  protocol: string;
-  queue_position: number;
-  queue_wait_ms: number;
-  model: string;
-  latency_ms?: number;
-  ollama_used?: boolean;
-  ollama_error?: string|null;
-  rag_key: string;
+type RagSource = {
+  title: string;
+  source: string;
+  document_id: string;
+  version?: number | null;
+  published_at?: string | null;
+  updated_at?: string | null;
+  excerpt?: string;
+  relevance?: number | null;
+  stale?: boolean;
+  age_days?: number | null;
 };
+
+type Retrieval = {
+  mode?: string | null;
+  vector_backend?: string | null;
+  vector_error?: string | null;
+  lexical_strategy?: string | null;
+  min_relevance?: number | null;
+  best_relevance?: number | null;
+  accepted?: number;
+  rejected?: number;
+  below_threshold?: boolean;
+};
+
+type AnswerPayload = {
+  response: string;
+  sources: RagSource[];
+  protocol: string | null;
+  model?: string;
+  ollama_used?: boolean;
+  kind?: string;
+  retrieval?: Retrieval;
+  data_freshness?: { stale_warning?: boolean; newest_published_at?: string | null };
+  notice?: string;
+  limitations?: string[];
+  reason?: string;
+  detail?: string;
+  rag_key?: string;
+};
+
+type ViewState =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "answered"; data: AnswerPayload }
+  | { kind: "empty"; detail: string | null; retrieval?: Retrieval }
+  | { kind: "refused"; error: RagErrorDescriptor }
+  | { kind: "unavailable"; error: RagErrorDescriptor }
+  | { kind: "failed"; error: RagErrorDescriptor };
 
 const RAG_COLORS: Record<string, { border: string; bg: string; accent: string; light: string }> = {
   cliente: { border: "#0b5fff", bg: "#eff6ff", accent: "#0b5fff", light: "#dbeafe" },
@@ -27,178 +74,243 @@ const SUGGESTIONS: Record<string, string[]> = {
   cliente: ["Como consultar contratos?", "Como abrir chamado?", "Onde encontro documentos?", "Como solicitar visita?"],
   rh: ["Como funciona admissão?", "Como programar férias?", "Como solicitar benefício?", "Como registrar treinamento?"],
   marcelo: ["Como revisar uma proposta?", "Como aprovar despesas?", "Como consultar indicadores?", "Como registrar uma decisão?"],
-  publico: ["Quais serviços vocês oferecem?", "Como solicitar orçamento?", "Contato claro?", "FAQ por categoria?"],
+  publico: ["Quais serviços vocês oferecem?", "Como solicitar orçamento?", "Atendem qual região?", "Como falar com um atendente?"],
 };
 
-export default function RagWidget({ ragKey, title, description, placeholder }: Props){
+export default function RagWidget({ ragKey, title, description, placeholder }: Props) {
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [answer, setAnswer] = useState<Answer|null>(null);
-  const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [state, setState] = useState<ViewState>({ kind: "idle" });
+  const [feedbackSent, setFeedbackSent] = useState(false);
+  const [feedbackNote, setFeedbackNote] = useState("");
+  const [comment, setComment] = useState("");
+  const [sendingFeedback, setSendingFeedback] = useState(false);
+  const inputId = useId();
   const colors = RAG_COLORS[ragKey] || RAG_COLORS.publico;
 
-  async function ask(e: React.FormEvent, customQuery?: string){
-    e.preventDefault();
-    const q = customQuery || query;
-    if(q.trim().length<5){ setError("Pergunta mínima 5 caracteres"); return; }
-    setLoading(true);
-    setError("");
-    setAnswer(null);
-    try{
-      const res = await fetch("/api/ai/answer", {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ rag_key: ragKey, query: q, origin: `${ragKey}_module` })
-      });
-      const data = await res.json();
-      if(!res.ok) throw new Error(data.error === "ai_unavailable" ? "Ollama indisponível. Tente novamente quando o serviço local estiver ativo." : data.error||`Erro ${res.status}`);
-      setAnswer({
-        response: data.response || data.query?.response,
-        sources: data.sources||data.query?.sources||[],
-        protocol: data.protocol||data.query?.protocol,
-        queue_position: data.queue_position ?? data.query?.queue_position ?? 0,
-        queue_wait_ms: data.queue_wait_ms ?? data.query?.queue_wait_ms ?? 0,
-        model: data.model || data.query?.model_name || "qwen3:1.7b",
-        latency_ms: data.query?.latency_ms || data.latency_ms,
-        ollama_used: data.ollama_used ?? data.query?.ollama_used,
-        ollama_error: data.ollama_error ?? data.query?.ollama_error,
-        rag_key: data.rag_key || ragKey,
-      });
-      if(!customQuery) setQuery("");
-    }catch(err:any){ setError(err.message); }
-    finally{ setLoading(false); }
+  const loading = state.kind === "loading";
+
+  async function ask(event: React.FormEvent, customQuery?: string) {
+    if (event?.preventDefault) event.preventDefault();
+    const question = (customQuery ?? query).trim();
+    if (question.length < 5) {
+      setState({ kind: "failed", error: { code: "invalid_query", status: 400, kind: "invalid", title: "Pergunta muito curta", detail: "Escreva pelo menos 5 caracteres.", canRetry: false } });
+      return;
+    }
+    setState({ kind: "loading" });
+    const result = await ragRequest<AnswerPayload>("/api/ai/answer", { method: "POST", body: JSON.stringify({ rag_key: ragKey, query: question }) });
+    if (!result.ok) {
+      if (result.status === 0) return setState({ kind: "failed", error: result.error });
+      if (result.error.kind === "empty") return setState({ kind: "empty", detail: null });
+      if (result.error.kind === "denied") return setState({ kind: "refused", error: result.error });
+      if (result.error.kind === "unavailable") return setState({ kind: "unavailable", error: result.error });
+      return setState({ kind: "failed", error: result.error });
+    }
+    const data = result.data;
+    setFeedbackSent(false);
+    setComment("");
+    setFeedbackNote("");
+    if (data.reason === "no_relevant_source" || (Array.isArray(data.sources) && data.sources.length === 0 && !data.ollama_used)) {
+      setState({ kind: "empty", detail: data.detail ?? null, retrieval: data.retrieval });
+      if (!customQuery) setQuery("");
+      return;
+    }
+    setState({ kind: "answered", data });
+    if (!customQuery) setQuery("");
   }
 
-  const [rating, setRating] = useState(0);
-  const [feedbackText, setFeedbackText] = useState("");
-  const [feedbackSent, setFeedbackSent] = useState(false);
-  const [feedbackLoading, setFeedbackLoading] = useState(false);
-
-  function copyProtocol(){
-    if(!answer) return;
-    navigator.clipboard.writeText(answer.protocol).then(()=>{
-      setCopied(true);
-      setTimeout(()=>setCopied(false), 2000);
+  async function sendFeedback(helpful: boolean) {
+    if (state.kind !== "answered" || !state.data.protocol) return;
+    setSendingFeedback(true);
+    const result = await ragRequest("/api/ai/rag/feedback", {
+      method: "POST",
+      body: JSON.stringify({
+        protocol: state.data.protocol,
+        rag_key: state.data.rag_key ?? ragKey,
+        rating: helpful ? 5 : 1,
+        is_helpful: helpful,
+        feedback_text: comment.slice(0, 500) || undefined,
+        origin: `${ragKey}_widget_feedback`,
+      }),
     });
+    setSendingFeedback(false);
+    if (result.ok) {
+      setFeedbackSent(true);
+      setFeedbackNote("Obrigado. O registro foi gravado e será usado pela curadoria.");
+    } else {
+      setFeedbackNote(result.error.kind === "unavailable"
+        ? "O servidor não conseguiu gravar o feedback agora. Nada foi registrado."
+        : result.error.detail);
+    }
   }
 
-  async function sendFeedback(helpful: boolean){
-    if(!answer || rating===0) return;
-    setFeedbackLoading(true);
-    try{
-      const res = await fetch("/api/ai/rag/feedback", {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({
-          protocol: answer.protocol,
-          rag_key: answer.rag_key,
-          rating,
-          feedback_text: feedbackText.slice(0,500),
-          is_helpful: helpful,
-          origin: `${ragKey}_widget_feedback`
-        })
-      });
-      const data = await res.json();
-      if(!res.ok) throw new Error(data.error||"falha feedback");
-      setFeedbackSent(true);
-      setTimeout(()=>{ setFeedbackSent(false); setRating(0); setFeedbackText(""); }, 3000);
-    }catch(e:any){ setError(e.message); }
-    finally{ setFeedbackLoading(false); }
-  }
+  const statusLabel = useMemo(() => {
+    if (state.kind === "loading") return "Consultando as fontes publicadas desta área.";
+    if (state.kind === "answered") return `Resposta gerada com ${state.data.sources?.length || 0} fonte(s).`;
+    if (state.kind === "empty") return ragNoSourceMessage(state.detail);
+    if (state.kind === "idle") return "Assistente pronto. Nenhuma pergunta enviada ainda.";
+    return "A consulta terminou com um problema declarado.";
+  }, [state]);
 
   if (ragKey !== "publico") {
     return (
-      <section style={{ border:`2px solid ${colors.border}`, borderRadius:12, padding:20, background:colors.bg, marginTop:20 }}>
-        <h3>{title} — indisponível nesta versão</h3>
-        <p>Consultas privadas aguardam validação de sessão, papel e, no portal do cliente, vínculo à conta. Não envie dados pessoais ao assistente público.</p>
+      <section style={{ border: `2px solid ${colors.border}`, borderRadius: 12, padding: 20, background: colors.bg, marginTop: 20, maxWidth: "100%", boxSizing: "border-box" }}>
+        <h3 style={{ margin: 0 }}>{title} — indisponível nesta versão</h3>
+        <p style={{ marginTop: 8, fontSize: 14 }}>Consultas privadas aguardam validação de sessão, papel e, no portal do cliente, vínculo à conta. Não envie dados pessoais ao assistente público.</p>
       </section>
     );
   }
 
   return (
-    <section style={{ border:`2px solid ${colors.border}`, borderRadius:12, padding:20, background: colors.bg, marginTop:20, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, flexWrap:"wrap" }}>
-        <div>
-          <h3 style={{ margin:0, fontSize:20, fontWeight:700, color: colors.accent }}>{title}</h3>
-          <span style={{ display:"inline-block", marginTop:6, fontSize:11, padding:"3px 8px", borderRadius:20, background: colors.accent, color:"#fff", fontWeight:600 }}>
-            RAG {ragKey.toUpperCase()} • Ollama Qwen3 1.7B • área pertinente
-          </span>
-        </div>
-        <span style={{ fontSize:10, padding:"4px 8px", borderRadius:6, background: colors.light, color: colors.accent, fontWeight:600 }}>
-          modelo qwen3:1.7b • fila garantida
-        </span>
-      </div>
+    <section style={{ border: `2px solid ${colors.border}`, borderRadius: 12, padding: 20, background: colors.bg, marginTop: 20, maxWidth: "100%", boxSizing: "border-box" }}>
+      <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: colors.accent }}>{title}</h3>
+      <p style={{ fontSize: 13, margin: "10px 0 0", lineHeight: 1.5 }}>{description}</p>
+      <p style={{ fontSize: 11, margin: "8px 0 0", color: colors.accent }}>
+        Responde somente com conteúdo público aprovado e publicado. Não é dado operacional, não executa ações e não substitui as telas oficiais.
+      </p>
 
-      <p style={{ fontSize:13, opacity:0.85, margin:"12px 0 0", lineHeight:1.5 }}>{description} — informações apenas áreas pertinentes a <strong>{ragKey}</strong>. Modelo Qwen3 1.7B com fila garante todo mundo atendido. Sem invenção preço/cobertura/licença/prazo. Contato claro: Av. Armando Bei, 305 - Sala 01, Vila Nova Bonsucesso, Guarulhos, SP.</p>
-
-      <div style={{ marginTop:12, display:"flex", gap:6, flexWrap:"wrap" }}>
-        {(SUGGESTIONS[ragKey]||[]).map((s,i)=>(
-          <button key={i} onClick={(e)=>{ setQuery(s); ask(e,s); }} disabled={loading}
-            style={{ fontSize:11, padding:"5px 10px", borderRadius:20, border:`1px solid ${colors.border}`, background:"#fff", color:colors.accent, cursor:"pointer", opacity: loading?0.6:1 }}>
-            {s}
+      <div style={{ marginTop: 12, display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {(SUGGESTIONS[ragKey] || []).map((suggestion, index) => (
+          <button key={index} type="button" onClick={event => ask(event, suggestion)} disabled={loading}
+            style={{ fontSize: 11, padding: "6px 10px", borderRadius: 20, border: `1px solid ${colors.border}`, background: "#fff", color: colors.accent, cursor: "pointer", opacity: loading ? 0.6 : 1 }}>
+            {suggestion}
           </button>
         ))}
       </div>
 
-      <form onSubmit={ask} style={{ marginTop:16, display:"grid", gap:10 }}>
+      <form onSubmit={ask} style={{ marginTop: 16, display: "grid", gap: 10 }}>
+        <label htmlFor={inputId} style={{ fontSize: 12, fontWeight: 600, color: colors.accent }}>Sua pergunta</label>
         <textarea
-          placeholder={placeholder||`Digite pergunta para RAG ${ragKey} ex: como consultar meus contratos?`}
-          value={query} onChange={e=>setQuery(e.target.value)} required maxLength={2000} rows={3}
-          style={{ padding:12, borderRadius:8, border:"1px solid #cbd5e1", fontSize:14, resize:"vertical", outline:"none", boxShadow: "inset 0 1px 2px rgba(0,0,0,0.05)" }}
+          id={inputId}
+          placeholder={placeholder || "Ex.: quais serviços são oferecidos?"}
+          value={query}
+          onChange={event => setQuery(event.target.value)}
+          maxLength={500}
+          rows={3}
+          aria-describedby={`${inputId}-help`}
+          style={{ padding: 12, borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, resize: "vertical", width: "100%", boxSizing: "border-box" }}
         />
-        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+        <span id={`${inputId}-help`} style={{ fontSize: 11, opacity: 0.75 }}>{query.length}/500 caracteres. Perguntas fora do conteúdo publicado recebem resposta de ausência, não suposição.</span>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <button type="submit" disabled={loading}
-            style={{ padding:"10px 18px", background: colors.accent, color:"#fff", border:"none", borderRadius:8, fontWeight:600, cursor: loading?"not-allowed":"pointer", opacity: loading?0.7:1, display:"flex", alignItems:"center", gap:8 }}>
-            {loading ? (
-              <>
-                <span style={{ width:16, height:16, border:"2px solid #fff", borderTopColor:"transparent", borderRadius:"50%", display:"inline-block", animation:"spin 0.8s linear infinite" }} />
-                Consultando fontes aprovadas e Ollama...
-              </>
-            ) : `Perguntar RAG ${ragKey.toUpperCase()}`}
+            style={{ padding: "10px 18px", background: colors.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, outlineOffset: 2 }}>
+            {loading ? "Consultando fontes publicadas…" : "Perguntar"}
           </button>
-          <span style={{ fontSize:11, opacity:0.6 }}>{query.length}/2000</span>
+          <span role="status" aria-live="polite" style={{ fontSize: 12, opacity: 0.8 }}>{statusLabel}</span>
         </div>
       </form>
 
-      {error && <div style={{ marginTop:12, color:"#dc2626", fontSize:13, background:"#fef2f2", padding:12, borderRadius:8, border:"1px solid #fecaca" }}>Erro: {error}</div>}
+      {state.kind === "empty" && (
+        <div role="status" style={{ marginTop: 16, padding: 14, background: "#fff", borderLeft: `5px solid ${colors.accent}`, borderRadius: 8 }}>
+          <strong style={{ fontSize: 14 }}>Sem fonte suficiente</strong>
+          <p style={{ margin: "6px 0 0", fontSize: 13 }}>{ragNoSourceMessage(state.detail)}</p>
+          <p style={{ margin: "6px 0 0", fontSize: 12, opacity: 0.8 }}>
+            {state.detail === "below_threshold"
+              ? "Nenhum trecho atingiu o limiar de relevância. O assistente não chamou o modelo e nada foi inventado."
+              : "Nada foi encontrado nesta área. Consulte a equipe responsável."}
+          </p>
+          {state.retrieval?.mode && <p style={{ margin: "6px 0 0", fontSize: 11, opacity: 0.75 }}>{ragRetrievalLabel(state.retrieval.mode)}</p>}
+        </div>
+      )}
 
-      {answer && (
-        <div style={{ marginTop:16, padding:16, background:"#fff", borderRadius:10, borderLeft:`5px solid ${colors.accent}`, boxShadow:"0 2px 6px rgba(0,0,0,0.05)" }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:8 }}>
-            <div style={{ fontSize:11, opacity:0.7, display:"flex", gap:10, flexWrap:"wrap" }}>
-              <span>Protocolo <strong>{answer.protocol}</strong></span>
-              <span>modelo {answer.model}</span>
-              <span>{answer.ollama_used ? "Ollama local" : "Sem fonte aprovada suficiente"}</span>
-            </div>
-            <button onClick={copyProtocol} style={{ fontSize:11, padding:"4px 8px", borderRadius:6, border:"1px solid #e5e7eb", background: copied?"#10b981":"#fff", color: copied?"#fff":"#374151", cursor:"pointer" }}>
-              {copied ? "Copiado!" : "Copiar protocolo"}
+      {state.kind === "refused" && (
+        <div role="alert" style={{ marginTop: 16, padding: 14, background: "#fff", borderLeft: "5px solid #b91c1c", borderRadius: 8 }}>
+          <strong style={{ fontSize: 14 }}>{state.error.title}</strong>
+          <p style={{ margin: "6px 0 0", fontSize: 13 }}>{state.error.detail}</p>
+        </div>
+      )}
+
+      {state.kind === "unavailable" && (
+        <div role="alert" style={{ marginTop: 16, padding: 14, background: "#fff", borderLeft: "5px solid #b45309", borderRadius: 8 }}>
+          <strong style={{ fontSize: 14 }}>{state.error.title}</strong>
+          <p style={{ margin: "6px 0 0", fontSize: 13 }}>{state.error.detail}</p>
+          <p style={{ margin: "6px 0 0", fontSize: 12, opacity: 0.8 }}>Enquanto isso, use as telas oficiais ou o formulário de contato para falar com uma pessoa.</p>
+        </div>
+      )}
+
+      {state.kind === "failed" && (
+        <div role="alert" style={{ marginTop: 16, padding: 14, background: "#fff", borderLeft: "5px solid #b91c1c", borderRadius: 8 }}>
+          <strong style={{ fontSize: 14 }}>{state.error.title}</strong>
+          <p style={{ margin: "6px 0 0", fontSize: 13 }}>{state.error.detail}</p>
+          {state.error.canRetry && (
+            <button type="button" onClick={event => ask(event)} style={{ marginTop: 8, padding: "6px 12px", borderRadius: 6, border: `1px solid ${colors.border}`, background: "#fff", color: colors.accent, cursor: "pointer" }}>
+              Tentar novamente
             </button>
+          )}
+        </div>
+      )}
+
+      {state.kind === "answered" && (
+        <div style={{ marginTop: 16, padding: 16, background: "#fff", borderRadius: 10, borderLeft: `5px solid ${colors.accent}` }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 11, opacity: 0.8 }}>
+            <span>Protocolo {state.data.protocol || "não registrado"}</span>
+            {state.data.model && <span>modelo {state.data.model}</span>}
+            <span>{state.data.ollama_used ? "modelo local (Ollama)" : "sem modelo"}</span>
+            <span>{ragRetrievalLabel(state.data.retrieval?.mode)}</span>
           </div>
 
-          <div style={{ fontSize:14, lineHeight:1.6, whiteSpace:"pre-wrap", color:"#1f2937" }}>{answer.response}</div>
+          <p style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap", marginTop: 10 }}>{state.data.response}</p>
 
-          {answer.sources.length>0 && (
-            <details style={{ marginTop:12, fontSize:12, background: colors.bg, padding:10, borderRadius:8 }}>
-              <summary style={{ cursor:"pointer", fontWeight:600, color: colors.accent }}>Fontes RAG {answer.rag_key} ({answer.sources.length}) — base aprovada apenas área pertinente</summary>
-              <ul style={{ marginTop:8, paddingLeft:18 }}>
-                {answer.sources.map((s:any,i:number)=>(
-                  <li key={i} style={{ marginBottom:6 }}>
-                    <strong>{s.title||s.source}</strong> — {s.excerpt?.slice(0,150) || s.source}...
-                    {s.source && <span style={{ fontSize:10, opacity:0.6, marginLeft:6 }}>({s.source})</span>}
+          {state.data.data_freshness?.stale_warning && (
+            <p role="note" style={{ marginTop: 10, padding: 10, background: "#fff7ed", border: "1px solid #fdba74", borderRadius: 8, fontSize: 12 }}>
+              Parte das fontes desta resposta é antiga. Confirme a informação em <strong>{honestDate(state.data.data_freshness.newest_published_at)}</strong> ou na tela oficial antes de decidir.
+            </p>
+          )}
+
+          {state.data.sources.length > 0 && (
+            <details style={{ marginTop: 12, fontSize: 12, background: colors.bg, padding: 10, borderRadius: 8 }} open>
+              <summary style={{ cursor: "pointer", fontWeight: 600, color: colors.accent }}>Fontes publicadas usadas ({state.data.sources.length})</summary>
+              <ul style={{ marginTop: 8, paddingLeft: 18 }}>
+                {state.data.sources.map((source, index) => (
+                  <li key={index} style={{ marginBottom: 8 }}>
+                    <strong>{source.title}</strong>
+                    <span style={{ fontSize: 11, opacity: 0.75 }}> — versão {source.version ?? "não informada"} · publicado em {honestDate(source.published_at || source.updated_at)} · {honestRelevance(source.relevance)}</span>
+                    {source.excerpt && <p style={{ margin: "4px 0 0", opacity: 0.85 }}>“{source.excerpt}…”</p>}
+                    {honestStaleness(source) && <p style={{ margin: "4px 0 0", color: "#b45309" }}>{honestStaleness(source)}</p>}
+                    <span style={{ fontSize: 11, opacity: 0.7 }}>Origem: {source.source}</span>
                   </li>
                 ))}
               </ul>
             </details>
           )}
 
-          <p style={{ fontSize:11, color:colors.accent }}>Fontes filtradas por área e, no portal, pela conta autorizada.</p>
+          <p style={{ fontSize: 11, opacity: 0.75, marginTop: 10 }}>{state.data.notice || "Resposta baseada em conteúdo documental publicado."}</p>
+          <p style={{ fontSize: 11, opacity: 0.6, marginTop: 4 }}>{ragVectorBackendLabel(state.data.retrieval?.vector_backend)}</p>
 
-          <p style={{ fontSize:11, opacity:0.6, marginTop:10, fontStyle:"italic" }}>Confirme decisões e valores nas telas oficiais. Documentos são usados como referência, não como instruções para o assistente.</p>
+          <fieldset disabled={!state.data.protocol || feedbackSent} style={{ marginTop: 12, border: `1px solid ${colors.light}`, borderRadius: 8, padding: 10 }}>
+            <legend style={{ fontSize: 12, fontWeight: 600, color: colors.accent }}>Esta resposta foi útil?</legend>
+            {!state.data.protocol && <p style={{ fontSize: 12, margin: 0, opacity: 0.8 }}>Sem protocolo registrado não é possível avaliar — o registro não foi gravado.</p>}
+            {state.data.protocol && !feedbackSent && (
+              <div style={{ display: "grid", gap: 8 }}>
+                <label htmlFor={`${inputId}-comment`} style={{ fontSize: 12 }}>Comentário (opcional, até 500 caracteres)</label>
+                <textarea id={`${inputId}-comment`} value={comment} onChange={event => setComment(event.target.value)} maxLength={500} rows={2}
+                  style={{ padding: 8, borderRadius: 6, border: "1px solid #cbd5e1", fontSize: 13, width: "100%", boxSizing: "border-box" }} />
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button type="button" onClick={() => sendFeedback(true)} disabled={sendingFeedback} style={{ padding: "8px 14px", borderRadius: 6, border: "none", background: "#059669", color: "#fff", cursor: "pointer" }}>Foi útil</button>
+                  <button type="button" onClick={() => sendFeedback(false)} disabled={sendingFeedback} style={{ padding: "8px 14px", borderRadius: 6, border: "1px solid #b91c1c", background: "#fff", color: "#b91c1c", cursor: "pointer" }}>Não ajudou</button>
+                </div>
+              </div>
+            )}
+            {feedbackSent && <p style={{ fontSize: 12, margin: 0 }}>Avaliação registrada. Ela é usada pela curadoria para revisar o conteúdo publicado.</p>}
+            {feedbackNote && !feedbackSent && <p role="status" style={{ fontSize: 12, margin: "6px 0 0", color: "#b45309" }}>{feedbackNote}</p>}
+          </fieldset>
+
+          {state.data.limitations && state.data.limitations.length > 0 && (
+            <ul style={{ fontSize: 11, opacity: 0.75, marginTop: 10, paddingLeft: 18 }}>
+              {state.data.limitations.map((item, index) => <li key={index}>{item}</li>)}
+            </ul>
+          )}
         </div>
       )}
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <p style={{ fontSize: 11, opacity: 0.7, marginTop: 14 }}>
+        Precisa de atendimento humano? Use o formulário de contato do site; o pedido é registrado com protocolo próprio.
+        {' '}Documentos são referência, nunca instruções para o assistente.
+      </p>
+      {state.kind === "idle" && (
+        <p style={{ fontSize: 11, opacity: 0.65 }} role="note">
+          Se o modelo local estiver desligado, a resposta será “modelo indisponível” — nunca um texto simulado.
+        </p>
+      )}
     </section>
   );
 }

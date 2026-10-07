@@ -22,16 +22,19 @@ export default function AiRagClient(){
   const [configForm, setConfigForm] = useState({ active_mode:"com_ia", whatsapp_number:"551134372217", whatsapp_message_template:"Olá, vim do site Grupo SEG System. Protocolo {protocol}. Pergunta: {query}. Gostaria de atendimento humano.", default_rag_key:"publico", reason:"Alteração modo bot desenvolvedor para beta com IA" });
   const [msg, setMsg] = useState("");
   const [testQuery, setTestQuery] = useState({ rag_key:"publico", query:"Quais serviços vocês oferecem?" });
+  const [indexStatus, setIndexStatus] = useState<{ items:any[]; embedding:any; vector_backend:string; pgvector_extension:boolean; fts_available:boolean }|null>(null);
+  const [backfillMsg, setBackfillMsg] = useState("");
 
   async function load(){
     try{
-      const [iRes, dRes, cfgRes, sRes, qRes, sessionRes] = await Promise.all([
+      const [iRes, dRes, cfgRes, sRes, qRes, sessionRes, statusRes] = await Promise.all([
         fetch("/api/admin/ai-rag-indexes").then(r=>r.json()),
         fetch("/api/admin/ai-rag-documents").then(r=>r.json()),
         fetch("/api/admin/ai-bot-config").then(r=>r.json()),
         fetch("/api/admin/ai-bot-sessions").then(r=>r.json()),
         fetch("/api/admin/ai-rag-queries").then(r=>r.json()),
         fetch("/api/admin/session").then(r=>r.json()),
+        fetch("/api/admin/ai-rag-index-status").then(r=>r.ok?r.json():null).catch(()=>null),
       ]);
       setIndexes(iRes.items||[]);
       setStaffRole(sessionRes.role||"");
@@ -44,6 +47,7 @@ export default function AiRagClient(){
       }
       setSessions(sRes.items||[]);
       setQueries(qRes.items||[]);
+      setIndexStatus(statusRes || null);
     }catch{}
   }
   useEffect(()=>{ load(); },[]);
@@ -98,6 +102,17 @@ export default function AiRagClient(){
     }catch(err:any){setMsg(`Erro na demonstração: ${err.message}`);load();}
   }
 
+  async function reindexar(vazio: string){
+    setBackfillMsg("solicitando reindexação idempotente...");
+    try{
+      const res = await fetch("/api/admin/ai-rag-embeddings/backfill", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ rag_key: vazio || undefined, limit: 100 }) });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error === "embedding_model_missing" ? `modelo de embeddings ausente (${data.embedding?.model||"não instalado"}): instale manualmente antes de indexar` : (data.error||"falha"));
+      setBackfillMsg(`Reindexação: documentos ${data.documents}, chunks ${data.chunks}, gerados ${data.generated}, pulados ${data.skipped}, erros ${data.errored}, modelo ${data.model} (${data.dimensions} dims). Embeddings removidos de conteúdo fora de circulação: ${data.embeddings_removidos}.`);
+      load();
+    }catch(err:any){ setBackfillMsg(`Reindexação não concluída: ${err.message}. Nenhum chunk foi marcado como indexado.`); }
+  }
+
   async function updateConfig(e: React.FormEvent){
     e.preventDefault();
     setMsg("atualizando config bot...");
@@ -112,12 +127,12 @@ export default function AiRagClient(){
 
   async function testRag(e: React.FormEvent){
     e.preventDefault();
-    setMsg(`testando RAG ${testQuery.rag_key} com Ollama Qwen3 1.7B fila...`);
+    setMsg(`testando RAG ${testQuery.rag_key}...`);
     try{
       const res = await fetch("/api/ai/answer", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ rag_key: testQuery.rag_key, query: testQuery.query }) });
       const data = await res.json();
       if(!res.ok) throw new Error(data.error||"falha");
-      setMsg(`RAG ${data.rag_key}, Ollama usado: ${String(data.ollama_used)}: ${data.response.slice(0,200)}...`);
+      setMsg(`RAG ${data.rag_key}, modelo usado: ${String(data.ollama_used)} (${data.retrieval?.mode||"modo não informado"}), protocolo ${data.protocol||"não registrado"}: ${data.response.slice(0,200)}...`);
       load();
     }catch(err:any){ setMsg(`erro rag test: ${err.message}`); }
   }
@@ -252,7 +267,7 @@ export default function AiRagClient(){
             <option value="publico">publico (padrão beta)</option>
           </select>
           <input value={testQuery.query} onChange={e=>setTestQuery({...testQuery, query:e.target.value})} required maxLength={2000} style={{ padding:6 }} />
-          <button type="submit" style={{ padding:"6px 10px", background:"#7c3aed", color:"#fff", border:"none", borderRadius:4, fontSize:12 }}>Testar RAG {testQuery.rag_key} Qwen3 1.7B</button>
+          <button type="submit" style={{ padding:"6px 10px", background:"#7c3aed", color:"#fff", border:"none", borderRadius:4, fontSize:12 }}>Testar RAG {testQuery.rag_key}</button>
         </form>
 
         <form onSubmit={testBot} style={{ background:"#fff", padding:12, borderRadius:6, display:"grid", gap:8 }}>
@@ -286,7 +301,34 @@ export default function AiRagClient(){
       </details>
 
       <section style={{ marginTop:16, padding:12, background:"#fff", borderRadius:6, fontSize:12 }}>
-        <strong>Estado do RAG atual:</strong> conteúdo publicado e escopo conferidos antes da chamada local ao Ollama. A recuperação é lexical; não há embedding, fila persistida, custo/token calculado ou consulta automática aos registros vivos. Quando não há fonte, a resposta informa isso. Teste cada área com uma conta própria antes da entrega.
+        <strong>Indexação semântica real</strong>
+        <p style={{ fontSize:12 }}>
+          Modelo de embeddings: {indexStatus?.embedding?.model || "não configurado"} ({indexStatus?.embedding?.dimensions || "?"} dimensões) —
+          {" "}{indexStatus?.embedding?.ok ? "disponível e verificado" : `indisponível: ${indexStatus?.embedding?.error_code || "não verificado"}`}.
+          Backend vetorial em uso: {indexStatus?.vector_backend || "não verificado"} (pgvector {indexStatus?.pgvector_extension ? "instalado" : "ausente"}; busca textual {indexStatus?.fts_available ? "disponível" : "indisponível"}).
+        </p>
+        <p style={{ fontSize:11, opacity:0.8 }}>O campo legado <code>embedding_status</code> não representa indexação real. O que vale é o estado abaixo: pendente, gerado ou erro por chunk, com modelo, dimensão e data. Nenhum modelo é baixado automaticamente.</p>
+        <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:8 }}>
+          <button type="button" onClick={()=>reindexar("")} disabled={!indexStatus?.embedding?.ok}>Reindexar tudo (idempotente)</button>
+          {([ "publico","cliente","rh","marcelo" ] as const).map(key=><button key={key} type="button" onClick={()=>reindexar(key)} disabled={!indexStatus?.embedding?.ok}>Reindexar {key}</button>)}
+        </div>
+        {backfillMsg && <p style={{ marginTop:8 }} role="status">{backfillMsg}</p>}
+        <table style={{ width:"100%", marginTop:8, fontSize:11, borderCollapse:"collapse" }}>
+          <thead><tr><th align="left">área</th><th align="left">documentos</th><th align="left">chunks</th><th align="left">indexados</th><th align="left">pendentes</th><th align="left">erros</th><th align="left">última geração</th></tr></thead>
+          <tbody>
+            {(indexStatus?.items||[]).map((row:any)=>(
+              <tr key={row.rag_key}>
+                <td>{row.rag_key}</td><td>{row.documents}</td><td>{row.chunks}</td><td>{row.indexed}</td><td>{row.pending}</td><td>{row.errored}{row.error_codes?.length?` (${row.error_codes.join(", ")})`:""}</td>
+                <td>{row.last_generated_at? new Date(row.last_generated_at).toLocaleString("pt-BR") : "nunca"}</td>
+              </tr>
+            ))}
+            {!indexStatus?.items?.length && <tr><td colSpan={7}>Nenhum documento publicado com chunks ainda.</td></tr>}
+          </tbody>
+        </table>
+      </section>
+
+      <section style={{ marginTop:16, padding:12, background:"#fff", borderRadius:6, fontSize:12 }}>
+        <strong>Estado do RAG atual:</strong> conteúdo publicado e escopo conferidos antes da busca, e a busca é híbrida quando há embeddings reais indexados — caso contrário a resposta declara explicitamente <em>busca textual</em>. Sem trecho acima do limiar, a resposta informa ausência de fonte e não chama o modelo. Não há consulta automática aos registros vivos, não há agente autônomo e o custo não é estimado. Teste cada área com uma conta própria antes da entrega.
       </section>
     </section>
   );

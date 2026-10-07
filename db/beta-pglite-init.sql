@@ -483,3 +483,73 @@ CREATE TABLE IF NOT EXISTS ai_rag_cost_tracking (
   ollama_used BOOLEAN,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- RAG-01 / Fase 1 — fundação semântica híbrida (espelho simplificado da 175).
+-- O modo beta 1-clique precisa destas tabelas para que a rota canônica
+-- /api/ai/answer degrade de forma explícita (lexical_only) em vez de falhar.
+CREATE TABLE IF NOT EXISTS ai_rag_chunk_embeddings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  chunk_id UUID NOT NULL UNIQUE REFERENCES ai_rag_chunks(id) ON DELETE CASCADE,
+  rag_key TEXT NOT NULL CHECK (rag_key IN ('cliente','rh','marcelo','publico')),
+  model_name TEXT NOT NULL,
+  model_digest TEXT,
+  dimensions INT NOT NULL CHECK (dimensions BETWEEN 16 AND 4096),
+  content_checksum TEXT NOT NULL,
+  embedding REAL[],
+  status TEXT NOT NULL DEFAULT 'pendente' CHECK (status IN ('pendente','gerado','erro')),
+  error_code TEXT,
+  generated_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT ai_rag_chunk_embeddings_gerado_exige_vetor
+    CHECK (status <> 'gerado' OR (embedding IS NOT NULL AND generated_at IS NOT NULL))
+);
+CREATE INDEX IF NOT EXISTS ai_rag_chunk_embeddings_rag_status_idx ON ai_rag_chunk_embeddings (rag_key, status);
+
+CREATE TABLE IF NOT EXISTS ai_rag_answer_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  protocol TEXT NOT NULL UNIQUE,
+  rag_key TEXT NOT NULL CHECK (rag_key IN ('cliente','rh','marcelo','publico')),
+  client_account_id UUID,
+  actor_kind TEXT NOT NULL DEFAULT 'visitor' CHECK (actor_kind IN ('visitor','client','staff')),
+  actor_identity UUID,
+  outcome TEXT NOT NULL CHECK (outcome IN ('answered','no_source','ai_unavailable','scope_denied','error')),
+  retrieval_mode TEXT,
+  vector_backend TEXT,
+  chunk_count INT NOT NULL DEFAULT 0,
+  top_relevance NUMERIC(5,4),
+  latency_ms INT,
+  model_name TEXT,
+  ai_available BOOLEAN NOT NULL DEFAULT false,
+  query TEXT,
+  response TEXT,
+  sources JSONB NOT NULL DEFAULT '[]'::jsonb,
+  retention_expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '90 days'),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ai_rag_answer_events_created_idx ON ai_rag_answer_events (created_at DESC);
+CREATE INDEX IF NOT EXISTS ai_rag_answer_events_rag_created_idx ON ai_rag_answer_events (rag_key, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS ai_rag_retrieval_config (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  rag_key TEXT NOT NULL UNIQUE CHECK (rag_key IN ('cliente','rh','marcelo','publico')),
+  min_relevance NUMERIC(4,3) NOT NULL DEFAULT 0.500,
+  max_chunks INT NOT NULL DEFAULT 6,
+  max_context_chars INT NOT NULL DEFAULT 6000,
+  lexical_candidates INT NOT NULL DEFAULT 40,
+  vector_candidates INT NOT NULL DEFAULT 40,
+  vector_scan_limit INT NOT NULL DEFAULT 800,
+  lexical_weight NUMERIC(3,2) NOT NULL DEFAULT 0.50,
+  vector_weight NUMERIC(3,2) NOT NULL DEFAULT 0.50,
+  retention_days INT NOT NULL DEFAULT 90,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  updated_by_identity UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+INSERT INTO ai_rag_retrieval_config (rag_key) VALUES ('publico'), ('cliente'), ('rh'), ('marcelo')
+ON CONFLICT (rag_key) DO NOTHING;
+
+ALTER TABLE ai_rag_documents ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+UPDATE ai_rag_documents SET published_at = updated_at WHERE is_published = true AND published_at IS NULL;
+ALTER TABLE ai_rag_feedback ADD COLUMN IF NOT EXISTS answer_event_id UUID;

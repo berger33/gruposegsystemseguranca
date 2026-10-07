@@ -87,3 +87,14 @@ Os endpoints beta de perguntas retornam 410 e apontam para a rota canônica.
 O formulário público de contato e os três assistentes usam a rota nova. A seção
 histórica de configuração de modos do bot permanece no painel técnico apenas
 para referência; ela não controla o novo RAG.
+
+## Atualização — fundação semântica híbrida (07/10/2026)
+
+A recuperação descrita acima foi evoluída pela PR 1 sem alterar o que já existia: a rota
+canônica continua a mesma e o escopo continua decidido no servidor antes da busca. O que
+mudou está em [RAG PR 1 — fundação semântica híbrida](RAG-PR1-FUNDACAO-SEMANTICA-2026-10-06.md):
+busca lexical por cobertura + busca vetorial opcional, limiar mínimo de relevância,
+protocolo persistido em ledger, retenção de 90 dias, indexação idempotente por chunk e
+painel de curadoria em `/admin/ti`. As variáveis novas (`OLLAMA_EMBED_MODEL`,
+`OLLAMA_EMBED_DIMENSIONS`, `OLLAMA_EMBED_TIMEOUT_MS`, `RAG_VECTOR_BACKEND`,
+`RAG_STALE_AFTER_DAYS`) estão em `.env.example`.

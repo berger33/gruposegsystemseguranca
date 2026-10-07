@@ -198,12 +198,12 @@ async function runMigrationsIfNeeded() {
   // v2 acrescenta o mínimo de identidade/sessão de staff exigido pelo login
   // endurecido. O marcador novo força uma única reaplicação idempotente em
   // diretórios PGlite beta que já carregaram o init antigo.
-  const betaInitMarker = 'beta-pglite-init-v3.sql';
+  const betaInitMarker = 'beta-pglite-init-v4.sql';
   if (fs.existsSync(betaInitPath)) {
     try {
       const { rows } = await db.query('SELECT filename FROM __migrations WHERE filename=$1', [betaInitMarker]);
       if (rows.length === 0) {
-        pgliteLog(`[PGlite] Running ${betaInitMarker} (schema mínimo RAG + sessão staff)`);
+        pgliteLog(`[PGlite] Running ${betaInitMarker} (schema mínimo RAG híbrido + sessão staff)`);
         const sql = fs.readFileSync(betaInitPath, 'utf8');
         await db.exec(sql);
         await db.query('INSERT INTO __migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING', [betaInitMarker]);

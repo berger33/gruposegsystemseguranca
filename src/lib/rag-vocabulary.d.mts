@@ -1,0 +1,15 @@
+export type RagErrorDescriptor = { code: string | null; status: number; kind: 'denied'|'empty'|'error'|'invalid'|'not_found'|'unavailable'; title: string; detail: string; canRetry: boolean };
+export declare const RAG_ERROR_CODES: readonly string[];
+export declare const RAG_ANSWER_KINDS: readonly string[];
+export declare const RAG_RETRIEVAL_MODES: readonly string[];
+export declare const RAG_VECTOR_BACKENDS: readonly string[];
+export declare const RAG_NO_SOURCE_DETAILS: readonly string[];
+export declare function describeRagError(code: string | null, status?: number): RagErrorDescriptor;
+export declare function ragNoSourceMessage(detail?: string | null): string;
+export declare function ragRetrievalLabel(mode?: string | null): string;
+export declare function ragVectorBackendLabel(backend?: string | null): string;
+export declare function honestDate(value?: string | null, absent?: string): string;
+export declare function honestRelevance(value?: number | null): string;
+export declare function honestStaleness(source?: { stale?: boolean; age_days?: number | null } | null): string;
+declare const _default: { ERROR_MESSAGES: Readonly<Record<string, Omit<RagErrorDescriptor,'code'|'status'>>>; RAG_ERROR_CODES: readonly string[] };
+export default _default;

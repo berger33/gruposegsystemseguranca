@@ -25,6 +25,8 @@ import { createLocalOutbox, LOCAL_OUTBOX_LABEL, resolveDeliveryTarget } from "./
 import { createClientAccessApi } from "./src/server/client-access-api.mjs";
 import { createClientOfflineRecoveryApi } from "./src/server/client-offline-recovery-api.mjs";
 import { createAiRagRealApi } from "./src/server/ai-rag-real-api.mjs";
+import { createEmbeddingService } from "./src/server/ai-rag-embeddings.mjs";
+import { createRagRetrieval } from "./src/server/ai-rag-retrieval.mjs";
 import { createClientSpaceApi } from "./src/server/client-space-api.mjs";
 import { createClientSecurityApi } from "./src/server/client-security-api.mjs";
 import { createAdminRbacApi } from "./src/server/admin-rbac-api.mjs";
@@ -2580,6 +2582,17 @@ const pubFaqAssistedApi = createPubFaqAssistedApi({
   },
 });
 
+// RAG-01: serviço de embeddings e motor de recuperação compartilhados entre a
+// rota canônica e a curadoria — sem duplicar lógica nem criar um segundo RAG.
+const ragEmbeddings = createEmbeddingService({});
+const ragRetrieval = createRagRetrieval({ pool: getPool(), embeddings: ragEmbeddings });
+
+const aiRagRealApi = createAiRagRealApi({
+  pool: getPool(), sameOrigin, readStaffSession: readSession,
+  readClientSession: clientAccessApi.readClientSession,
+  embeddings: ragEmbeddings, retrieval: ragRetrieval,
+});
+
 const aiRagApi = createAiRagApi({
   pool: getPool(),
   auditLog: async ({ action, actor, target, meta }) => {
@@ -2596,10 +2609,8 @@ const aiRagApi = createAiRagApi({
     const r = (sess.role || sess.userRole || '').toLowerCase();
     return roles.includes(r) || r === 'admin';
   },
-});
-
-const aiRagRealApi = createAiRagRealApi({
-  pool: getPool(), sameOrigin, readStaffSession: readSession,
+  retrieval: ragRetrieval,
+  embeddings: ragEmbeddings,
   readClientSession: clientAccessApi.readClientSession,
 });
 
@@ -4630,6 +4641,12 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/ai/bot" || url.pathname === "/api/public/ai/bot" || url.pathname === "/api/bot" || url.pathname === "/api/admin/ai-bot-sessions" || url.pathname === "/api/ai/bot-sessions") {
     return aiRagApi.handleBotSessions(req, res);
   }
+  if (url.pathname === "/api/admin/ai-rag-index-status" || url.pathname === "/api/ai-rag-index-status") {
+    return aiRagApi.handleIndexStatus(req, res);
+  }
+  if (url.pathname === "/api/admin/ai-rag-embeddings/backfill" || url.pathname === "/api/ai-rag-embeddings/backfill") {
+    return aiRagApi.handleEmbeddingBackfill(req, res);
+  }
   if (url.pathname === "/api/admin/ai-rag-chunks" || url.pathname === "/api/ai-rag-chunks" || url.pathname === "/api/ai/rag-chunks") {
     return aiRagApi.handleChunks(req, res);
   }
@@ -6188,7 +6205,11 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/ai/bot-sessions"
   || pathname === "/api/admin/ai-rag-chunks"
   || pathname === "/api/ai-rag-chunks"
-  || pathname === "/api/ai/rag-chunks";
+  || pathname === "/api/ai/rag-chunks"
+  || pathname === "/api/admin/ai-rag-index-status"
+  || pathname === "/api/ai-rag-index-status"
+  || pathname === "/api/admin/ai-rag-embeddings/backfill"
+  || pathname === "/api/ai-rag-embeddings/backfill";
 
 // Keep the custom development server on an explicit bundler. Next 16's
 // automatic selection can look for a missing dev/required-server-files.json
