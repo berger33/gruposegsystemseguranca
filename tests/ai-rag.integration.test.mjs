@@ -54,7 +54,7 @@ async function run() {
       const cookie = login.headers.get('set-cookie')?.split(';')[0];
       assert.ok(cookie);
       const draft = await post('/api/admin/ai-rag-documents', { rag_key: 'publico', title: 'QA rascunho oculto', content: 'qa_draft_never_expose_2843 é um texto sintético que não deve aparecer em respostas públicas.', source: 'qa_local', keywords: ['qa_draft_never_expose_2843'] }, cookie);
-      assert.equal(draft.status, 201);
+      assert.equal(draft.status, 201, JSON.stringify(draft.body)+' — '+serverError.slice(-700));
       const probe = await post('/api/ai/answer', { rag_key: 'publico', query: 'Existe qa_draft_never_expose_2843?' });
       assert.equal(probe.status, 200);
       assert.deepEqual(probe.body.sources, []);
