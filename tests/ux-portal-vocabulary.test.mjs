@@ -30,6 +30,8 @@ import {
   ticketStatusTone,
 } from '../src/lib/portal-vocabulary.mjs';
 
+const timeClockApi = await readFile(new URL('../src/server/employee-time-clock-api.mjs', import.meta.url), 'utf8');
+const timeClockCore = await readFile(new URL('../src/server/time-clock-core.mjs', import.meta.url), 'utf8');
 const employeeApi = await readFile(new URL('../src/server/employee-api.mjs', import.meta.url), 'utf8');
 const clientSpaceApi = await readFile(new URL('../src/server/client-space-api.mjs', import.meta.url), 'utf8');
 const clientAccessApi = await readFile(new URL('../src/server/client-access-api.mjs', import.meta.url), 'utf8');
@@ -46,6 +48,10 @@ function serverErrorCodes(source) {
 
 const codigosServidor = new Set([
   ...serverErrorCodes(employeeApi),
+  ...serverErrorCodes(timeClockApi),
+  ...[...timeClockApi.matchAll(/fail\(([^)]*)\)/g)].flatMap(m=>[...m[1].matchAll(/'([a-z0-9_]+)'/g)].map(v=>v[1])),
+  ...[...timeClockApi.matchAll(/error instanceof TimeClockError\?error\.message:'([a-z0-9_]+)'/g)].map(m=>m[1]),
+  ...[...timeClockCore.matchAll(/TimeClockError\('([a-z0-9_]+)'/g)].map(m=>m[1]),
   ...serverErrorCodes(clientSpaceApi),
   ...serverErrorCodes(clientAccessApi),
 ]);

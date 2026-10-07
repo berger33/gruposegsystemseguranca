@@ -24,11 +24,20 @@
  * O título é humano; o código canônico só aparece no rodapé, entre parênteses.
  */
 const ERROR_MESSAGES = Object.freeze({
+  competence_closed: {kind:'conflict',title:"Competência fechada",detail:"Solicite ao RH a revisão pelo fluxo de reabertura."},
+  corrected_hours_required: {kind:'conflict',title:"Informe as horas revisadas",detail:"O RH deve conferir e informar o total antes de aprovar."},
+  correction_already_decided: {kind:'conflict',title:"Este pedido já foi decidido",detail:"Atualize a lista para consultar a decisão registrada."},
+  correction_not_found: {kind:'conflict',title:"Pedido não localizado",detail:"Atualize a lista de pedidos autorizados."},
+  invalid_corrected_exit: {kind:'conflict',title:"Saída corrigida inválida",detail:"Confira a data e o horário da saída esquecida."},
+  invalid_correction_decision: {kind:'conflict',title:"Decisão inválida",detail:"Escolha aprovar ou rejeitar e preencha os campos obrigatórios."},
+  invalid_punch_history: {kind:'conflict',title:"Histórico de marcações inconsistente",detail:"Procure o RH para revisar esta jornada."},
+  missing_exit_correction_required: {kind:'conflict',title:"É necessário informar a saída esquecida",detail:"O RH deve registrar explicitamente o horário de encerramento."},
+  self_approval_forbidden: {kind:'conflict',title:"Você não pode aprovar seu próprio pedido",detail:"Outro responsável autorizado deve analisar o ajuste."},
+  time_entry_changed: {kind:'conflict',title:"A jornada mudou depois do pedido",detail:"Atualize os dados e solicite ao RH a revisão do pedido antigo."},
   location_required: {kind:'invalid',title:'Localização necessária',detail:'Autorize a localização para registrar o ponto.'},
   invalid_location: {kind:'invalid',title:'Localização inválida',detail:'Obtenha uma nova localização e tente novamente.'},
   location_expired: {kind:'invalid',title:'Localização desatualizada',detail:'Confira o relógio do dispositivo e tente marcar novamente.'},
   invalid_punch_transition: {kind:'conflict',title:'Esta marcação não é a próxima da jornada',detail:'Atualize as marcações e escolha a ação disponível.'},
-  journey_still_open: {kind:'conflict',title:'A jornada ainda está aberta',detail:'Registre a saída antes de solicitar um ajuste. Se esqueceu uma marcação, procure o RH.'},
   correction_already_pending: {kind:'conflict',title:'Já existe um ajuste aguardando análise',detail:'Acompanhe o pedido na seção Meus pedidos de ajuste.'},
   invalid_time_changes: {kind:'invalid',title:'Informe a alteração de ponto',detail:'Preencha ao menos um horário válido ou as horas trabalhadas para o ajuste.'},
   time_clock_unavailable: {kind:'retry',title:'O ponto não pôde ser confirmado',detail:'Tente novamente. A repetição da marcação usa o mesmo identificador.'},
