@@ -125,6 +125,13 @@ export function isTerminable(status) {
  * mostrar indicadores zerados.
  */
 const ERROR_MESSAGES = Object.freeze({
+  missing_exit_correction_required: {kind:'invalid',title:'A jornada precisa de uma saída',detail:'Informe o horário real de saída e as horas trabalhadas para encerrar a jornada mediante ajuste.'},
+  invalid_corrected_exit: {kind:'invalid',title:'Confira a saída informada',detail:'A saída não pode anteceder a entrada registrada nem estar no futuro.'},
+  self_approval_forbidden: {kind:'denied',title:'Outro responsável deve analisar',detail:'O autor do pedido não pode aprovar a própria correção.'},
+  corrected_hours_required: {kind:'invalid',title:'Confira as horas trabalhadas',detail:'Ao alterar horários, informe as horas trabalhadas descontando intervalos.'},
+  correction_already_decided: {kind:'conflict',title:'O pedido já foi decidido',detail:'Atualize os pedidos. Uma decisão concluída não pode ser reaplicada.'},
+  time_entry_changed: {kind:'conflict',title:'O registro mudou depois do pedido',detail:'O ajuste não foi aplicado. Confira a alteração posterior e solicite uma nova revisão.'},
+  rejection_reason_required: {kind:'invalid',title:'Explique a rejeição',detail:'Informe um motivo com pelo menos cinco caracteres.'},
   admin_session_required: {
     kind: 'auth',
     title: 'Sessão não reconhecida',

@@ -33,6 +33,7 @@ import {
   portalShouldSignIn,
 } from '../../lib/portal-vocabulary.mjs';
 import styles from './EmployeePortal.module.css';
+import EmployeeTimeClock from './EmployeeTimeClock';
 
 type Session = { employeeId:string; identityId:string; displayName:string; mustChangePassword:boolean };
 type Home = Record<string, any[]> & { employeeId?:string };
@@ -198,7 +199,7 @@ export default function EmployeePortal(){
         >
           <h2 className={styles.visuallyHidden}>{activeTab[2]}</h2>
           {tab==='inicio'&&<HomeTab home={home} act={act} setTab={setTab}/>}
-          {tab==='jornada'&&<JourneyTab home={home} act={act}/>}
+          {tab==='jornada'&&<JourneyTab home={home} act={act} onRecorded={refresh}/>}
           {tab==='pedidos'&&<RequestsTab home={home} act={act}/>}
           {tab==='documentos'&&<DocumentsTab home={home} act={act}/>}
           {tab==='mais'&&<MoreTab home={home} act={act}/>}
@@ -286,8 +287,8 @@ function HomeTab({home,act,setTab}:{home:Home;act:(p:string,b:any)=>Promise<bool
   {!(home.notifications||[]).length&&<UiState variant="empty" title="Nenhuma notificação" detail="A leitura foi concluída com sucesso: não há notificação no seu escopo." />}</div></section></>;
 }
 
-function JourneyTab({home,act}:{home:Home;act:(p:string,b:any)=>Promise<boolean>}){
-  return <><section className={styles.section}><h2>Escala publicada</h2><div className={styles.list}>{(home.schedule||[]).map(item=><article className={styles.item} key={item.id}><div className={styles.itemTop}><div><h3>{date(item.entry_date)} • {item.is_day_off?'Folga':'Trabalho'}</h3><p>{item.start_time||'—'}–{item.end_time||'—'} • {item.location||'local a definir'}</p><p>Versão {item.version}: {item.title}</p></div><span className={styles.tag}>{item.acknowledged?'Ciente':'Pendente'}</span></div>{!item.acknowledged&&<button className={styles.button} type="button" onClick={()=>act(`/api/employee/schedule/${item.id}/ack`,{})}>Dar ciência</button>}</article>)}
+function JourneyTab({home,act,onRecorded}:{home:Home;act:(p:string,b:any)=>Promise<boolean>;onRecorded:()=>Promise<void>}){
+  return <><EmployeeTimeClock onRecorded={onRecorded} revision={home}/><section className={styles.section}><h2>Escala publicada</h2><div className={styles.list}>{(home.schedule||[]).map(item=><article className={styles.item} key={item.id}><div className={styles.itemTop}><div><h3>{date(item.entry_date)} • {item.is_day_off?'Folga':'Trabalho'}</h3><p>{item.start_time||'—'}–{item.end_time||'—'} • {item.location||'local a definir'}</p><p>Versão {item.version}: {item.title}</p></div><span className={styles.tag}>{item.acknowledged?'Ciente':'Pendente'}</span></div>{!item.acknowledged&&<button className={styles.button} type="button" onClick={()=>act(`/api/employee/schedule/${item.id}/ack`,{})}>Dar ciência</button>}</article>)}
   {!(home.schedule||[]).length&&<UiState variant="empty" title="Nenhum item de escala publicado" detail="Assim que o RH publicar a versão da escala, ela aparece aqui." />}</div></section>
   <section className={styles.section}><h2>Jornada e correções</h2><div className={styles.list}>{(home.journey||[]).map(item=><article className={styles.item} key={item.id}><h3>{date(item.entry_date)} • {item.clock_in||'—'}–{item.clock_out||'—'}</h3><p>{item.hours_worked||0} h • {employeeItemStatusLabel(item.status)}</p><CorrectionForm entryId={item.id} act={act}/></article>)}
   {!(home.journey||[]).length&&<UiState variant="empty" title="Nenhum registro de ponto" detail="A leitura foi concluída com sucesso: não há registro de ponto no período." />}</div></section></>;

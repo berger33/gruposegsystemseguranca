@@ -163,53 +163,8 @@ export function createEmpPortalApi({ pool, auditLog, sameOrigin, requireSession,
   }
 
   async function handleJourneyCorrections(req,res){
-    const sess=await checkAuth(req,res); if(!sess) return;
-    if(req.method==='GET'){
-      const url=new URL(req.url,'http://localhost');
-      const employee_id=url.searchParams.get('employee_id'); const time_entry_id=url.searchParams.get('time_entry_id');
-      const where=[]; const params=[]; let i=1;
-      if(employee_id){ where.push(`jc.employee_id=$${i++}`); params.push(employee_id); }
-      if(time_entry_id){ where.push(`jc.time_entry_id=$${i++}`); params.push(time_entry_id); }
-      const sql=`SELECT jc.*, e.display_name as employee_name FROM emp_journey_corrections jc LEFT JOIN hr_employees e ON e.id=jc.employee_id ${where.length?'WHERE '+where.join(' AND '):''} ORDER BY jc.created_at DESC LIMIT 200`;
-      const r=await pool.query(sql,params);
-      return json(res,200,{ corrections:r.rows, note:'EMP-04 preservar registro original original_snapshot' });
-    }
-    if(req.method==='POST'){
-      const b=await readJson(req);
-      if(!isUuid(b.employee_id)) return json(res,400,{error:'invalid_employee_id'});
-      if(!isUuid(b.time_entry_id)) return json(res,400,{error:'invalid_time_entry_id'});
-      if(!b.reason || b.reason.length<10) return json(res,400,{error:'reason_required'});
-      if(!b.requested_changes || typeof b.requested_changes!=='object') return json(res,400,{error:'requested_changes_required'});
-      const te=await pool.query(`SELECT * FROM hr_time_entries WHERE id=$1`,[b.time_entry_id]);
-      if(!te.rows.length) return json(res,404,{error:'time_entry_not_found'});
-      // preservar registro original
-      const original=te.rows[0];
-      const r=await pool.query(`INSERT INTO emp_journey_corrections (employee_id, time_entry_id, original_snapshot, requested_changes, reason, status, notes, created_by, created_by_id) VALUES ($1,$2,$3,$4,$5,'solicitado',$6,$7,$8) RETURNING *`,[b.employee_id,b.time_entry_id,JSON.stringify(original),JSON.stringify(b.requested_changes),b.reason,b.notes||null,sess.identityId||sess.id,sess.identityId||sess.id]);
-      await auditLog({ action:'emp_journey_correction_request', actor:sess.identityId||sess.id, target:r.rows[0].id, meta:{ employee_id:b.employee_id, time_entry_id:b.time_entry_id } });
-      return json(res,201,{ correction:r.rows[0] });
-    }
-    if(req.method==='PATCH'){
-      const b=await readJson(req);
-      if(!isUuid(b.id)) return json(res,400,{error:'invalid_id'});
-      const allowed=['solicitado','em_analise','aprovado','rejeitado','cancelado','concluido'];
-      if(b.status && !allowed.includes(b.status)) return json(res,400,{error:'invalid_status'});
-      if(b.status==='rejeitado' && (!b.rejection_reason||b.rejection_reason.length<5)) return json(res,400,{error:'rejection_reason_required'});
-      const upd=await pool.query(`UPDATE emp_journey_corrections SET status=COALESCE($2,status), reviewed_by=CASE WHEN $2 IN ('aprovado','rejeitado','em_analise','concluido') THEN $3 ELSE reviewed_by END, reviewed_by_id=CASE WHEN $2 IN ('aprovado','rejeitado','em_analise','concluido') THEN $3 ELSE reviewed_by_id END, reviewed_at=CASE WHEN $2 IN ('aprovado','rejeitado','em_analise','concluido') THEN NOW() ELSE reviewed_at END, rejection_reason=COALESCE($4,rejection_reason), approved_changes=COALESCE($5,approved_changes), notes=COALESCE($6,notes), updated_at=NOW() WHERE id=$1 RETURNING *`,[b.id,b.status||null,sess.identityId||sess.id,b.rejection_reason||null,b.approved_changes?JSON.stringify(b.approved_changes):null,b.notes||null]);
-      if(!upd.rows.length) return json(res,404,{error:'not_found'});
-      // se aprovado, aplicar correção no hr_time_entries mas preservando original_snapshot já existente
-      if(b.status==='aprovado' || b.status==='concluido'){
-        const corr=upd.rows[0];
-        // atualizar hr_time_entries com approved_changes, mas preservar original_snapshot se ainda null
-        const changes=corr.approved_changes || corr.requested_changes;
-        // changes pode conter clock_in, clock_out, hours_worked, justification
-        if(changes){
-          const ch=typeof changes==='string'?JSON.parse(changes):changes;
-          await pool.query(`UPDATE hr_time_entries SET clock_in=COALESCE($2,clock_in), clock_out=COALESCE($3,clock_out), hours_worked=COALESCE($4,hours_worked), justification=COALESCE($5,justification), original_snapshot=COALESCE(original_snapshot,$6), corrected_by=$7, corrected_at=NOW(), status='corrigido', updated_at=NOW() WHERE id=$8`,[corr.id,ch.clock_in||null,ch.clock_out||null,ch.hours_worked||null,ch.justification||null,JSON.stringify(corr.original_snapshot),sess.identityId||sess.id,corr.time_entry_id]);
-        }
-      }
-      return json(res,200,{ correction:upd.rows[0] });
-    }
-    return json(res,405,{error:'method_not_allowed'});
+    // A rota HTTP delega ao fluxo transacional de employee-time-clock-api.
+    return json(res,410,{error:'legacy_journey_correction_retired',canonical_endpoint:'/api/admin/hr/l03/time-corrections'});
   }
 
   // EMP-05 aviso ausência/atraso
