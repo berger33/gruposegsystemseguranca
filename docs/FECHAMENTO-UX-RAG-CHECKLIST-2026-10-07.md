@@ -4,7 +4,7 @@ Base auditada: `c059e1207190988f8c1a305d1be28b8457ce3bde`. Este registro começa
 
 | ID | Escopo | Estado | PR/SHA/evidência | Próxima ação |
 |---|---|---|---|---|
-| FECH-01 | Assistentes privados e contrato | PR aberta | branch `arena/b75daccc-gruposegsystemseguranca`, base `7765d99`, head `__HEAD__`; PR #__PR__; `npm run test:ai-rag-widget:pg` 25/25 (PG 17 real + HTTP real + Chromium real + provedor **stub**); unit 19/19 com pool simulado; evidências em `docs/fech-01-assistentes-evidencias/` | Revisar o PR; rodar `npm test`/`npm run build`/`npm run test:rag` no CI; após merge, FECH-02 (console real de TI) |
+| FECH-01 | Assistentes privados e contrato | **PR aberta** (#182) | branch `arena/b75daccc-gruposegsystemseguranca`; base `main` `7765d99`; head `67388b2` (+ commit de registro do checklist); gate focal `npm run test:ai-rag-widget:pg` **25/25** (PG 17 real + HTTP real + Chromium real + provedor **stub determinístico**); unit `19/19` (pool simulado); `npm test` **865/865**; `npm run typecheck`, `npm run build` e `npm run test:rag` OK; evidências em `docs/fech-01-assistentes-evidencias/`; relatório `docs/FECH-01-ASSISTENTES-PRIVADOS-2026-10-07.md` | Aguardar checks do CI e revisão; após merge, iniciar **FECH-02** (console real de TI) |
 | FECH-02 | TI/curadoria operacional | pendente | — | Após FECH-01 |
 | FECH-03 | Fontes por diretório | pendente | — | Após curadoria |
 | FECH-04 | RH recrutamento/admissão | pendente | — | Inspecionar legado |
@@ -35,13 +35,17 @@ Para cada PR adicionar: rotas/papéis, implementação entregue, comandos/result
   **Ollama real: nenhum teste desta fatia**; Windows, desempenho e aceite humano: **pendentes**.
 - **Evidências:** capturas desktop (1440×900) e mobile (390×844) e de teclado em
   `docs/fech-01-assistentes-evidencias/` (arquivo → cenário → limite no README da pasta).
-- **Checks do head:** `npm run typecheck` OK; `node --test` dos dois arquivos unitários 19/19;
-  gate focal 25/25 com piso TAP 20 e 0 skip/todo. `npm test`, `npm run build` e o smoke PGlite
-  (`npm run test:rag`) devem ser confirmados no CI/PR antes do merge.
+- **Checks do head (`67388b2`):** `npm run typecheck` OK; unit 19/19; gate focal **25/25** com piso TAP 20 e
+  0 skip/todo; `npm test` **865/865** (0 skip/todo); `npm run build` OK; `npm run test:rag` (PGlite) OK após
+  alinhar o smoke herdado aos dois estados de ausência (`empty_scope` × `no_relevant_source`). Verificação no
+  sandbox Linux; CI da PR ainda pendente na abertura.
 - **Limitações:** 403 `scope_forbidden` não é alcançável pela navegação normal (menu por papel + trigger 102
   revoga sessões ao mudar o papel) — o gate apresenta a negativa real com cenário rotulado; curadoria segue
   não montada (FECH-02); busca lexical, sem PDF e sem fonte por diretório (FECH-03); feedback do assistente
   não existe nesta fatia.
-- **Próxima ação:** revisar/integrar o PR do FECH-01 e então iniciar **FECH-02**, sem reabrir FECH-01.
+- **Alteração de contrato que atingiu consumidor existente:** `tests/ai-rag.integration.test.mjs` passou a
+  exigir `empty_scope` quando o escopo não tem conteúdo publicado e ganhou a prova de `no_relevant_source`
+  com conteúdo publicado (asserção **adicionada**, nenhuma removida).
+- **Próxima ação:** revisar/integrar a PR #182 e então iniciar **FECH-02**, sem reabrir FECH-01.
 
 Validações fora do Arena: computador Windows do operador, desempenho/Ollama real, ativação no build local e aceite humano. Permanecem pendentes até evidência real; não bloqueiam a preparação de PRs na sandbox.
