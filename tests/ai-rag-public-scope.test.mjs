@@ -69,8 +69,25 @@ for (const [handler, pathname] of [['handleQueries', '/api/ai-rag-queries'], ['h
   });
 }
 
-test('RAG-SEG-001: feedback para escopo não público exige sessão', async () => {
-  const t = harness('/api/ai/rag/feedback', 'POST', { rag_key: 'rh', protocol: 'RAG-RH-SYNTHETIC', rating: 5 });
-  await t.api.handleFeedback(t.req, t.res);
-  assert.equal(t.result().status, 403);
+test('RAG-SEG-001: feedback de escopo privado exige a sessão dona, e o código diz qual', async () => {
+  const casos = [
+    ['rh', 'RAG-RH-SYNTHETIC', 'staff_session_required'],
+    ['marcelo', 'RAG-MAR-SYNTHETIC', 'staff_session_required'],
+    ['cliente', 'RAG-CLI-SYNTHETIC', 'client_session_required'],
+  ];
+  for (const [rag_key, protocol, esperado] of casos) {
+    const t = harness('/api/ai/rag/feedback', 'POST', { rag_key, protocol, rating: 5 });
+    await t.api.handleFeedback(t.req, t.res);
+    assert.equal(t.result().status, 401, `${rag_key} sem sessão é negado`);
+    assert.equal(t.result().body.error, esperado);
+  }
+  // Sessão de equipe não responde por escopo de cliente, nem sessão de cliente por RH.
+  const equipe = harness('/api/ai/rag/feedback', 'POST', { rag_key: 'cliente', protocol: 'RAG-CLI-SYNTHETIC', rating: 5 }, { role: 'rh' });
+  await equipe.api.handleFeedback(equipe.req, equipe.res);
+  assert.equal(equipe.result().status, 403);
+  assert.equal(equipe.result().body.error, 'scope_forbidden');
+  const clienteEmRh = harness('/api/ai/rag/feedback', 'POST', { rag_key: 'rh', protocol: 'RAG-RH-SYNTHETIC', rating: 5 }, { role: 'cliente' });
+  await clienteEmRh.api.handleFeedback(clienteEmRh.req, clienteEmRh.res);
+  assert.equal(clienteEmRh.result().status, 403);
+  assert.equal(clienteEmRh.result().body.error, 'scope_forbidden');
 });

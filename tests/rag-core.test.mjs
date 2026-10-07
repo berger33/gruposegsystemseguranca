@@ -26,6 +26,7 @@ const serverFiles = [
 ];
 // Códigos que o widget realmente recebe destas rotas além dos extraídos acima.
 const FEEDBACK_SURFACE_CODES = ['feedback_failed', 'protocol_not_found', 'same_origin_required', 'rag_unavailable', 'index_status_unavailable', 'retrieval_unavailable', 'embedding_backfill_failed'];
+const retrieval = await readFile(new URL('../src/server/ai-rag-retrieval.mjs', import.meta.url), 'utf8');
 const widget = await readFile(new URL('../src/components/RagWidget.tsx', import.meta.url), 'utf8');
 const panel = await readFile(new URL('../src/app/admin/ti/AiRagClient.tsx', import.meta.url), 'utf8');
 const migration = await readFile(new URL('../db/migrations/175-ai-rag-hybrid-embeddings.sql', import.meta.url), 'utf8');
@@ -54,6 +55,18 @@ test('RAG-01: ausência nunca é apresentada como resposta confiante', () => {
   assert.equal(honestRelevance(undefined), 'Relevância não informada');
   assert.match(ragRetrievalLabel('lexical_only'), /semântica indisponível/i);
   assert.match(ragVectorBackendLabel('exact'), /sem índice ANN/i);
+});
+
+test('RAG-01: FTS só acento-insensível nos dois lados, e com a guarda do provedor', () => {
+  // Acentuação assimétrica no FTS já produziu "ausência" falsa: admissao (consulta)
+  // nunca casava com admissão (conteúdo). O sinal lexical exige unaccent dos dois
+  // lados, com translate como reserva declarada — nunca só to_tsvector cru.
+  assert.match(retrieval, /probeInfo\.fts && probeInfo\.unaccent/, 'FTS condicionado à normalização de acento');
+  assert.match(retrieval, /to_tsvector\('portuguese', unaccent\(lower\(/, 'conteúdo normalizado com unaccent+lower');
+  assert.match(retrieval, /to_tsquery\('portuguese', ?unaccent\(lower\(/, 'rag do termo normalizado com unaccent+lower');
+  assert.match(retrieval, /translate\(/, 'reserva declarada quando unaccent não existe');
+  assert.ok(PT_STOPWORDS.includes('funciona') && PT_STOPWORDS.includes('existe'), 'moldura de pergunta não vira termo de conteúdo');
+  assert.deepEqual(contentTerms('Como funciona a admissão no RH?'), ['admissao'], 'a forma sem acento é a mesma do conteúdo indexado');
 });
 
 test('RAG-01: cobertura lexical usa termos de conteúdo, sem palavra funcional', () => {

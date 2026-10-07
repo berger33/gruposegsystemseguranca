@@ -98,3 +98,13 @@ protocolo persistido em ledger, retenção de 90 dias, indexação idempotente p
 painel de curadoria em `/admin/ti`. As variáveis novas (`OLLAMA_EMBED_MODEL`,
 `OLLAMA_EMBED_DIMENSIONS`, `OLLAMA_EMBED_TIMEOUT_MS`, `RAG_VECTOR_BACKEND`,
 `RAG_STALE_AFTER_DAYS`) estão em `.env.example`.
+
+## Atualização — assistentes privados por papel e conta (PR 1b, 07/10/2026)
+
+Os três assistentes privados (`/cliente/app/assistente`, `/admin/rh/assistente`,
+`/admin/marcelo/assistente`) voltaram a ser exercitados ponta a ponta, agora com gate de
+Chromium real por papel/conta: `npm run test:rag:chromium` (10 casos, 0 falhas). O feedback
+passou a ser autorizado pelo **escopo do protocolo** — cliente só avalia a resposta que ele
+mesmo pediu — e a recuperação lexical ganhou normalização de acento nos dois lados, sem a
+qual `admissao` (pergunta) não encontrava `admissão` (documento publicado). Detalhes, números
+e rollback em [RAG PR 1b — assistentes privados](RAG-PR1B-ASSISTENTES-PRIVADOS-2026-10-06.md).

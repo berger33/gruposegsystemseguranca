@@ -44,6 +44,11 @@ export const PT_STOPWORDS = Object.freeze([
   'que', 'com', 'sem', 'dos', 'das', 'por', 'tem', 'ter', 'foi', 'ser', 'sao', 'são', 'estou', 'está',
   'quero', 'pode', 'posso', 'preciso', 'fazer', 'muito', 'mais', 'menos', 'aqui', 'ali', 'ainda', 'depois',
   'antes', 'entao', 'então', 'tambem', 'também', 'apenas', 'todo', 'toda', 'todos', 'todas',
+  // Moldura de pergunta: aparece em quase toda frase e não discrimina conteúdo.
+  // Medição do gate: "Como funciona o gate X na admissão?" perdia cobertura por
+  // causa de 'funciona', que não existe no documento relevante.
+  'funciona', 'funcionam', 'existe', 'existem', 'gostaria', 'queria', 'saber', 'explica', 'explique',
+  'mostra', 'mostre', 'informa', 'informar', 'diz', 'dizer', 'ajuda', 'servem', 'serve', 'devo',
 ]);
 
 export function normalizeTerm(value, { foldAccents = true } = {}) {
@@ -272,7 +277,18 @@ export function createRagRetrieval({ pool, embeddings, env = process.env, now = 
     const probeInfo = await probe();
     const terms = contentTerms(question);
     if (!terms.length) return { rows: [], strategy: 'empty' };
-    if (probeInfo.fts) {
+    // Acento dobrado nos DOIS lados: sem isso 'admissao' vira 'admissa' na consulta
+    // enquanto 'admissão' no conteúdo vira 'admiss' — o termo se perde e a cobertura
+    // cai (medido: 2 de 3 termos → 1 de 3, abaixo do limiar). `unaccent` é a via
+    // preferida; `translate` é o recurso embutido do PostgreSQL para o mesmo papel.
+    const fold = expression => probeInfo.unaccent
+      ? `unaccent(lower(${expression}))`
+      : `translate(lower(${expression}), 'áàâãäéèêëíìîïóòôõöúùûüçñ', 'aaaaaeeeeiiiiooooouuuucn')`;
+
+    // Caminho FTS só com dicionário de português E acento dobrado disponíveis.
+    if (probeInfo.fts && probeInfo.unaccent) {
+      const bodyVector = `to_tsvector('portuguese', unaccent(lower(c.content)))`;
+      const termQuery = expression => `to_tsquery('portuguese', unaccent(lower(${expression})))`;
       params.push(terms);
       const termsParam = `$${params.length}`;
       params.push(terms.join(' | '));
@@ -282,18 +298,19 @@ export function createRagRetrieval({ pool, embeddings, env = process.env, now = 
       const sql = `SELECT c.id AS chunk_id, c.content, c.chunk_index,
           d.id AS document_id, d.title, d.source, d.version, d.published_at, d.updated_at, d.client_account_id,
           ((SELECT COUNT(*) FROM unnest(${termsParam}::text[]) AS term
-             WHERE to_tsvector('portuguese', c.content) @@ to_tsquery('portuguese', term))::numeric
+             WHERE ${bodyVector} @@ ${termQuery('term')})::numeric
             / array_length(${termsParam}::text[], 1))::float AS lexical_signal,
-          ts_rank_cd(to_tsvector('portuguese', c.content), to_tsquery('portuguese', ${queryParam})) AS lexical_rank
+          ts_rank_cd(${bodyVector}, ${termQuery(queryParam)}) AS lexical_rank
         ${BASE_FROM}
         WHERE ${PUBLISHED} ${scope}
-          AND to_tsvector('portuguese', c.content) @@ to_tsquery('portuguese', ${queryParam})
+          AND ${bodyVector} @@ ${termQuery(queryParam)}
         ORDER BY lexical_signal DESC, lexical_rank DESC, c.id ASC LIMIT ${limitParam}`;
       const { rows } = await pool.query(sql, params);
       return { rows, strategy: 'fts' };
     }
-    // Fallback declarado (sem dicionário de português disponível): candidatos por
-    // termo e cobertura calculada em JS, com a MESMA semântica de limiar.
+    // Fallback declarado (sem dicionário de português): candidatos por termo, com o
+    // mesmo acento dobrado dos dois lados, e cobertura calculada em JS com a MESMA
+    // semântica de limiar.
     const patterns = terms.map(term => `%${term}%`);
     params.push(patterns);
     const patternParam = `$${params.length}`;
@@ -303,7 +320,7 @@ export function createRagRetrieval({ pool, embeddings, env = process.env, now = 
     const sql = `SELECT c.id AS chunk_id, c.content, c.chunk_index,
         d.id AS document_id, d.title, d.source, d.version, d.published_at, d.updated_at, d.client_account_id
       ${BASE_FROM}
-      WHERE ${PUBLISHED} ${scope} AND c.content ILIKE ANY(${patternParam}::text[])
+      WHERE ${PUBLISHED} ${scope} AND ${fold('c.content')} ILIKE ANY(${patternParam}::text[])
       ORDER BY ${order}, c.id ASC LIMIT ${limitParam}`;
     const { rows } = await pool.query(sql, params);
     const scored = rows

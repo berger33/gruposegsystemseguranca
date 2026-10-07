@@ -337,23 +337,35 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
     const b=await readJson(req);
     const protocol=String(b.protocol||'').trim();
     const rag_key=String(b.rag_key||'publico').trim().toLowerCase();
-    const isPublic=['/api/ai/rag/feedback','/api/public/ai/rag/feedback'].includes(new URL(req.url,'http://localhost').pathname);
-    if(isPublic && rag_key!=='publico') return json(res,403,{error:'scope_forbidden'});
     if(!['cliente','rh','marcelo','publico'].includes(rag_key)) return json(res,400,{error:'invalid_rag_key'});
     if(!protocol || protocol.length<5) return json(res,400,{error:'invalid_protocol'});
     const rating=parseInt(b.rating,10);
     if(!rating || rating<1 || rating>5) return json(res,400,{error:'invalid_rating', valid:'1..5'});
 
-    // Escopo do feedback: quem responde pelo protocolo. Público é aberto;
-    // escopos privados exigem a sessão correspondente — nunca aceitar feedback
-    // de terceiros sobre resposta privada.
-    let feedbackActor=null;
-    if(!isPublic){
+    // Escopo do feedback: quem responde pelo protocolo. Público é aberto; escopos
+    // privados exigem a sessão correspondente — nunca aceitar feedback de terceiros
+    // sobre resposta privada. A decisão depende do ESCOPO, não do caminho: o widget
+    // do cliente usa a rota pública levando a própria sessão de cliente.
+    let feedbackActor=null;    // quem responde pelo feedback (staff ou cliente)
+    let clientIdentity=null;   // identidade de cliente, quando houver
+    if(rag_key==='cliente'){
+      const clientSession=readClientSession?await readClientSession(req):null;
+      clientIdentity=clientSession?.identityId||null;
+      if(clientIdentity){
+        feedbackActor=clientIdentity;
+      } else {
+        // Sem sessão de cliente: quem responde é a equipe admin/ti, nunca o público.
+        const sess=await requireSession(req);
+        if(!sess) return json(res,401,{error:'client_session_required'});
+        if(!requireRole(sess,['admin','ti'])) return json(res,403,{error:'scope_forbidden'});
+        feedbackActor=sess.identityId||null;
+      }
+    } else if(rag_key==='rh' || rag_key==='marcelo'){
       const sess=await requireSession(req);
-      if(!sess || !requireRole(sess,['admin','ti','rh','marcelo'])) return json(res,401,{error:'unauthorized'});
+      const allowedRoles=rag_key==='rh'?['rh','admin','ti']:['marcelo','admin','ti'];
+      if(!sess) return json(res,401,{error:'staff_session_required'});
+      if(!requireRole(sess,allowedRoles)) return json(res,403,{error:'scope_forbidden'});
       feedbackActor=sess.identityId||null;
-      if(rag_key==='rh' && !requireRole(sess,['admin','ti','rh'])) return json(res,403,{error:'scope_forbidden'});
-      if(rag_key==='marcelo' && !requireRole(sess,['admin','ti','marcelo'])) return json(res,403,{error:'scope_forbidden'});
     }
 
     const feedback_text=b.feedback_text?String(b.feedback_text).trim().slice(0,1000):null;
@@ -362,21 +374,17 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
     const origin=b.origin?String(b.origin).trim().slice(0,100):'site';
     try {
       // 1) protocolo canônico (resposta do assistente com fonte recuperada)
-      const { rows: eventRows } = await pool.query(`SELECT id, rag_key, client_account_id FROM ai_rag_answer_events WHERE protocol=$1 AND rag_key=$2 LIMIT 1`, [protocol, rag_key]);
+      const { rows: eventRows } = await pool.query(`SELECT id, rag_key, client_account_id, actor_identity FROM ai_rag_answer_events WHERE protocol=$1 AND rag_key=$2 LIMIT 1`, [protocol, rag_key]);
       let answer_event_id=eventRows[0]?.id||null;
-      if(answer_event_id && (isPublic || feedbackActor)){
-        // Protocolo canônico encontrado: valida o escopo do protocolo.
-        if(rag_key==='cliente'){
-          // Somente o próprio cliente vinculado (ou staff autorizado) avalia.
-          let clientIdentity=feedbackActor;
-          if(isPublic){
-            const clientSession=readClientSession ? await readClientSession(req) : null;
-            clientIdentity=clientSession?.identityId||null;
-          }
-          if(!clientIdentity) return json(res,403,{error:'scope_forbidden'});
-          const { rows: grants } = await pool.query(`SELECT 1 FROM client_access_grants WHERE identity_id=$1 AND revoked_at IS NULL LIMIT 1`, [clientIdentity]);
-          const allowed = grants.length>0 || !isPublic;
-          if(!allowed) return json(res,403,{error:'scope_forbidden'});
+      if(answer_event_id && rag_key==='cliente'){
+        // O evento pertence a quem perguntou. Só essa identidade (ou staff admin/ti,
+        // para curadoria) avalia — vínculo com alguma conta não basta.
+        if(clientIdentity){
+          // Sem dono registrado não há como provar que o protocolo é desta identidade:
+          // o vínculo com alguma conta não transfere autoria. Nesse caso, só a
+          // curadoria admin/ti avalia (caminho acima).
+          const owner=eventRows[0].actor_identity;
+          if(owner!==clientIdentity) return json(res,403,{error:'scope_forbidden'});
         }
       }
       // 2) protocolos legados (fila/beta) continuam aceitos para não perder histórico.

@@ -209,9 +209,11 @@ Nenhum passo remove linha de `ai_rag_documents`, `ai_rag_chunks` ou `ai_rag_feed
 
 ## 8. Pendências declaradas
 
-- **PR 1b** (assistentes privados: RagWidget por papel/conta + gate Chromium) — fora desta PR.
+- **PR 1b** (assistentes privados: RagWidget por papel/conta + gate Chromium) — entregue em
+  [RAG PR 1b — assistentes privados](RAG-PR1B-ASSISTENTES-PRIVADOS-2026-10-06.md), com gate
+  `npm run test:rag:chromium` (10 casos) e a correção do acento assimétrico no FTS descrita lá.
 - **Modelo real**: `ollama pull nomic-embed-text` é ato do proprietário; sem ele a
   indexação é declarada como indisponível (por desenho).
 - **pgvector**: caminho ANN só é exercitado onde a extensão estiver instalada e autorizada.
-- **Higiene**: PRs antigas `#173` e `#170` seguem aguardando decisão de fechamento como
-  substituídas.
+- **Higiene**: PRs antigas `#173` e `#170` foram fechadas como substituídas pela PR 1
+  (2026-10-07).
