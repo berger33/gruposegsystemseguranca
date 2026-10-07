@@ -2,6 +2,11 @@ import {createHash} from 'node:crypto';
 import {hasPermission} from './rbac.mjs';
 import {isUuid} from './employee-session.mjs';
 import {TimeClockError,nextPunchKinds,validatePosition,normalizeTimeChanges,workedHours,timeSnapshot} from './time-clock-core.mjs';
+import {reverseGeocodeHere} from './here-reverse-geocode.mjs';
+
+const HERE_TERMS_VERSION='here-end-user-terms-2026-10-07';
+const HERE_TERMS_URL='https://legal.here.com/terms/here-end-user-terms';
+const HERE_PRIVACY_URL='https://legal.here.com/privacy';
 
 export function createEmployeeTimeClockApi(ctx){
  const db=()=>ctx.getPool();
@@ -32,17 +37,51 @@ export function createEmployeeTimeClockApi(ctx){
   const punches=session?(await c.query('SELECT * FROM emp_time_punches WHERE session_id=$1 ORDER BY ordinal',[session.id])).rows:[];
   return {session,punches,allowedKinds:nextPunchKinds(punches.at(-1)?.kind)};
  }
+ function hereAddressEnabled(){return ctx.hereAddressEnabled??Boolean(process.env.HERE_API_KEY?.trim());}
+ async function hereConsentAccepted(c,employeeId){
+  const latest=(await c.query("SELECT accepted FROM emp_time_external_consent_events WHERE employee_id=$1 AND provider='HERE' ORDER BY recorded_at DESC,id DESC LIMIT 1",[employeeId])).rows[0];
+  return latest?.accepted===true;
+ }
+ async function hereConsent(req,res){
+  const employee=await ctx.readEmployeeSession(req);if(!employee)fail('employee_session_required',401);
+  if(req.method==='GET')return send(res,200,{enabled:hereAddressEnabled(),accepted:hereAddressEnabled()?await hereConsentAccepted(db(),employee.employeeId):false,termsUrl:HERE_TERMS_URL,privacyUrl:HERE_PRIVACY_URL});
+  if(req.method!=='POST')fail('method_not_allowed',405);
+  if(!hereAddressEnabled())fail('here_not_configured',503);
+  const b=await read(req);if(typeof b?.accepted!=='boolean')fail('invalid_consent');
+  const identity=(await db().query('SELECT status,identity_id FROM hr_employees WHERE id=$1',[employee.employeeId])).rows[0];
+  if(identity?.status!=='ativo'||identity.identity_id!==employee.identityId)fail('employee_status_blocks_access',403);
+  const event=await tx(async c=>{
+   const row=(await c.query('INSERT INTO emp_time_external_consent_events(employee_id,identity_id,provider,terms_version,accepted) VALUES($1,$2,\'HERE\',$3,$4) RETURNING id,accepted,recorded_at',[employee.employeeId,employee.identityId,HERE_TERMS_VERSION,b.accepted])).rows[0];
+   await audit(c,b.accepted?'employee_here_terms_accepted':'employee_here_terms_revoked',employee.identityId,row.id);
+   return row;
+  });
+  return send(res,201,{consent:event});
+ }
  async function clock(req,res){
   const employee=await ctx.readEmployeeSession(req);if(!employee)fail('employee_session_required',401);
   if(req.method==='GET'){
    const current=await state(db(),employee.employeeId);
    const punches=(await db().query('SELECT p.*,s.time_entry_id FROM emp_time_punches p JOIN emp_time_sessions s ON s.id=p.session_id WHERE p.employee_id=$1 ORDER BY p.recorded_at DESC LIMIT 100',[employee.employeeId])).rows;
    const corrections=(await db().query('SELECT id,time_entry_id,reason,requested_changes,status,rejection_reason,reviewed_at,created_at FROM emp_journey_corrections WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 60',[employee.employeeId])).rows;
-   return send(res,200,{allowedKinds:current.allowedKinds,openEntryId:current.session?.time_entry_id||null,punches,corrections,timezone:'America/Sao_Paulo'});
+   const addressEnabled=hereAddressEnabled();
+   const consentAccepted=addressEnabled?await hereConsentAccepted(db(),employee.employeeId):false;
+   return send(res,200,{allowedKinds:current.allowedKinds,openEntryId:current.session?.time_entry_id||null,punches,corrections,timezone:'America/Sao_Paulo',hereAddressEnabled:addressEnabled,hereConsentAccepted:consentAccepted});
   }
   if(req.method!=='POST')fail('method_not_allowed',405);
   const b=await read(req);if(!isUuid(b?.requestId))fail('idempotency_key_required');
   const hash=createHash('sha256').update(JSON.stringify([b.kind,b.position])).digest('hex');
+  const previous=(await db().query('SELECT * FROM emp_time_punches WHERE employee_id=$1 AND request_id=$2',[employee.employeeId,b.requestId])).rows[0];
+  if(previous){if(previous.request_hash!==hash)fail('idempotency_conflict',409);return send(res,200,{punch:previous,replayed:true});}
+  const preflight=(await db().query('SELECT status,identity_id FROM hr_employees WHERE id=$1',[employee.employeeId])).rows[0];
+  if(preflight?.status!=='ativo'||preflight.identity_id!==employee.identityId)fail('employee_status_blocks_access',403);
+  const candidatePosition=validatePosition(b.position,new Date());
+  const preflightState=await state(db(),employee.employeeId);
+  if(!preflightState.allowedKinds.includes(b.kind))fail('invalid_punch_transition',409);
+  const addressEnabled=hereAddressEnabled();
+  const consentAccepted=addressEnabled&&await hereConsentAccepted(db(),employee.employeeId);
+  const address=consentAccepted
+    ? await (ctx.reverseGeocode||reverseGeocodeHere)(candidatePosition)
+    : {address:null,provider:null,status:addressEnabled?'not_requested':'not_configured',resolvedAt:null};
   const result=await tx(async c=>{
    const e=(await c.query('SELECT id,status,identity_id FROM hr_employees WHERE id=$1 FOR UPDATE',[employee.employeeId])).rows[0];
    if(e?.status!=='ativo'||e.identity_id!==employee.identityId)fail('employee_status_blocks_access',403);
@@ -59,7 +98,7 @@ export function createEmployeeTimeClockApi(ctx){
    }else{
     const entry=(await c.query('SELECT competence FROM hr_time_entries WHERE id=$1 FOR UPDATE',[session.time_entry_id])).rows[0];await openCompetence(c,entry.competence);
    }
-   const punch=(await c.query('INSERT INTO emp_time_punches(session_id,employee_id,kind,recorded_at,position_at,latitude,longitude,accuracy_m,request_id,request_hash,actor_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *',[session.id,employee.employeeId,b.kind,now,position.positionAt,position.latitude,position.longitude,position.accuracy,b.requestId,hash,employee.identityId])).rows[0];
+   const punch=(await c.query('INSERT INTO emp_time_punches(session_id,employee_id,kind,recorded_at,position_at,latitude,longitude,accuracy_m,request_id,request_hash,actor_id,address_label,address_provider,address_status,address_resolved_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *',[session.id,employee.employeeId,b.kind,now,position.positionAt,position.latitude,position.longitude,position.accuracy,b.requestId,hash,employee.identityId,address.address,address.provider,address.status,address.resolvedAt])).rows[0];
    if(b.kind==='saida'){
     const hours=workedHours([...current.punches,punch]);
     await c.query('UPDATE emp_time_sessions SET ended_at=$2 WHERE id=$1',[session.id,now]);
@@ -134,6 +173,7 @@ export function createEmployeeTimeClockApi(ctx){
   try{
    if(!['GET','POST','PATCH'].includes(req.method))fail('method_not_allowed',405);
    if(req.method!=='GET'&&!ctx.sameOrigin(req))fail('same_origin_required',403);
+   if(url.pathname==='/api/employee/here-consent')return await hereConsent(req,res);
    if(url.pathname==='/api/employee/time-clock')return await clock(req,res);
    if(url.pathname==='/api/employee/actions/time-correction')return await requestCorrection(req,res);
    if(url.pathname==='/api/admin/hr/l03/time-clock'){
@@ -148,7 +188,7 @@ export function createEmployeeTimeClockApi(ctx){
     const employeeId=url.searchParams.get('employee_id'),entryId=url.searchParams.get('entry_id');
     if(!isUuid(employeeId)||!isUuid(entryId))fail('invalid_employee_id');
     await staff(req,employeeId,'employees.read');
-    const punches=(await db().query('SELECT p.id,p.kind,p.recorded_at,p.latitude,p.longitude,p.accuracy_m FROM emp_time_punches p JOIN emp_time_sessions s ON s.id=p.session_id WHERE p.employee_id=$1 AND s.time_entry_id=$2 ORDER BY p.ordinal',[employeeId,entryId])).rows;
+    const punches=(await db().query('SELECT p.id,p.kind,p.recorded_at,p.latitude,p.longitude,p.accuracy_m,p.request_hash,p.address_label,p.address_provider,p.address_status,p.address_resolved_at FROM emp_time_punches p JOIN emp_time_sessions s ON s.id=p.session_id WHERE p.employee_id=$1 AND s.time_entry_id=$2 ORDER BY p.ordinal',[employeeId,entryId])).rows;
     return send(res,200,{punches});
    }
    return await reviews(req,res,url);

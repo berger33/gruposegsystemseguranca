@@ -38,6 +38,8 @@ const ERROR_MESSAGES = Object.freeze({
   invalid_location: {kind:'invalid',title:'Localização inválida',detail:'Obtenha uma nova localização e tente novamente.'},
   location_expired: {kind:'invalid',title:'Localização desatualizada',detail:'Confira o relógio do dispositivo e tente marcar novamente.'},
   invalid_punch_transition: {kind:'conflict',title:'Esta marcação não é a próxima da jornada',detail:'Atualize as marcações e escolha a ação disponível.'},
+  here_not_configured: {kind:'retry',title:'Consulta de endereço indisponível',detail:'Seu ponto continua registrado com coordenadas e comprovante. A consulta de endereço ainda não foi configurada.'},
+  invalid_consent: {kind:'invalid',title:'Decisão de privacidade inválida',detail:'Escolha se deseja ou não permitir o envio das coordenadas ao HERE.'},
   correction_already_pending: {kind:'conflict',title:'Já existe um ajuste aguardando análise',detail:'Acompanhe o pedido na seção Meus pedidos de ajuste.'},
   invalid_time_changes: {kind:'invalid',title:'Informe a alteração de ponto',detail:'Preencha ao menos um horário válido ou as horas trabalhadas para o ajuste.'},
   time_clock_unavailable: {kind:'retry',title:'O ponto não pôde ser confirmado',detail:'Tente novamente. A repetição da marcação usa o mesmo identificador.'},
