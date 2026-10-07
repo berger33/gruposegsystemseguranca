@@ -4,7 +4,7 @@ Base auditada: `c059e1207190988f8c1a305d1be28b8457ce3bde`. Este registro começa
 
 | ID | Escopo | Estado | PR/SHA/evidência | Próxima ação |
 |---|---|---|---|---|
-| FECH-01 | Assistentes privados e contrato | **PR aberta** (#182) | branch `arena/b75daccc-gruposegsystemseguranca`; base `main` `7765d99`; head `67388b2` (+ commit de registro do checklist); gate focal `npm run test:ai-rag-widget:pg` **25/25** (PG 17 real + HTTP real + Chromium real + provedor **stub determinístico**); unit `19/19` (pool simulado); `npm test` **865/865**; `npm run typecheck`, `npm run build` e `npm run test:rag` OK; evidências em `docs/fech-01-assistentes-evidencias/`; relatório `docs/FECH-01-ASSISTENTES-PRIVADOS-2026-10-07.md` | Aguardar checks do CI e revisão; após merge, iniciar **FECH-02** (console real de TI) |
+| FECH-01 | Assistentes privados e contrato | **PR aberta** (#182), checks verdes | branch `arena/b75daccc-gruposegsystemseguranca`; base `main` `7765d99`; head `747ba46` (o commit seguinte altera só documentação); CI: workflow `fech-01-rag-widget-delivery` run `37571277715` **sucesso** (typecheck, unit, build, smoke PGlite e gate focal) e demais workflows da PR sem falha; gate focal `npm run test:ai-rag-widget:pg` **25/25** (PG 17 real + HTTP real + Chromium real + provedor **stub determinístico**); unit `19/19` (pool simulado); `npm test` **865/865**; `npm run typecheck`, `npm run build` e `npm run test:rag` OK; evidências em `docs/fech-01-assistentes-evidencias/`; relatório `docs/FECH-01-ASSISTENTES-PRIVADOS-2026-10-07.md` | Aguardar revisão humana; após merge, iniciar **FECH-02** (console real de TI) |
 | FECH-02 | TI/curadoria operacional | pendente | — | Após FECH-01 |
 | FECH-03 | Fontes por diretório | pendente | — | Após curadoria |
 | FECH-04 | RH recrutamento/admissão | pendente | — | Inspecionar legado |
@@ -48,8 +48,9 @@ Para cada PR adicionar: rotas/papéis, implementação entregue, comandos/result
   com conteúdo publicado (asserção **adicionada**, nenhuma removida).
 - **CI da PR:** a primeira execução do workflow `fech-01-rag-widget-delivery` reprovou na etapa `npm run test:rag`
   por ordem das próprias etapas — o smoke herdado sobe `server.mjs` em modo produção e exige `.next` compilado.
-  Corrigido movendo `npm run build` para antes do smoke; `static-and-smoke` (CI principal) e os gates das famílias
-  já haviam passado. Reprovou **antes** de rodar o gate focal, e isso está registrado em vez de declarado verde.
+  Corrigido movendo `npm run build` para antes do smoke. Na execução seguinte (run `37571277715`, head `747ba46`)
+  o workflow passou **integralmente**, incluindo o gate focal em GitHub Actions; os demais workflows da PR
+  (`static-and-smoke` e as famílias) também passaram. A reprovação real está registrada, não declarada verde.
 - **Próxima ação:** revisar/integrar a PR #182 e então iniciar **FECH-02**, sem reabrir FECH-01.
 
 Validações fora do Arena: computador Windows do operador, desempenho/Ollama real, ativação no build local e aceite humano. Permanecem pendentes até evidência real; não bloqueiam a preparação de PRs na sandbox.
