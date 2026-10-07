@@ -4,6 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 import {PGlite} from '@electric-sql/pglite';
 import {createEmployeeTimeClockApi} from '../src/server/employee-time-clock-api.mjs';
+import {reverseGeocodeHere} from '../src/server/here-reverse-geocode.mjs';
 import {nextPunchKinds,normalizeTimeChanges,validatePosition,workedHours} from '../src/server/time-clock-core.mjs';
 
 test('intervalos e jornada noturna; localização e alterações inválidas',()=>{
@@ -14,6 +15,15 @@ test('intervalos e jornada noturna; localização e alterações inválidas',()=
  assert.throws(()=>normalizeTimeChanges({clock_in:'25:00'}),/invalid_time_changes/);
  assert.throws(()=>normalizeTimeChanges({employee_id:randomUUID()}),/invalid_time_changes/);
  assert.deepEqual(normalizeTimeChanges({hours_worked:0,clock_in:'08:00',clock_out:''}),{hours_worked:0,clock_in:'08:00:00'});
+});
+
+test('HERE reverse geocoding sanitiza indisponibilidade e limita dados enviados',async()=>{
+ const position={latitude:-23.5,longitude:-46.6};let requested;
+ const resolved=await reverseGeocodeHere(position,{apiKey:'test-secret',now:()=>new Date('2026-10-07T12:00:00Z'),fetchImpl:async(url,options)=>{requested={url:String(url),options};return{ok:true,json:async()=>({items:[{address:{label:'Rua de Demonstração, 10, São Paulo, SP'}}]})};}});
+ assert.equal(resolved.status,'resolved');assert.equal(resolved.address,'Rua de Demonstração, 10, São Paulo, SP');assert.equal(resolved.provider,'HERE');assert.equal(requested.options.method,'GET');assert.match(requested.url,/at=-23\.5%2C-46\.6/);assert.match(requested.url,/lang=pt-BR/);assert.doesNotMatch(JSON.stringify(resolved),/test-secret/);
+ const missing=await reverseGeocodeHere(position,{apiKey:'test-secret',fetchImpl:async()=>({ok:true,json:async()=>({items:[]})})});assert.equal(missing.status,'not_found');
+ const failed=await reverseGeocodeHere(position,{apiKey:'test-secret',fetchImpl:async()=>{throw Error('must not be exposed');}});assert.equal(failed.status,'unavailable');assert.doesNotMatch(JSON.stringify(failed),/must not be exposed|test-secret/);
+ const unconfigured=await reverseGeocodeHere(position,{apiKey:'',fetchImpl:async()=>{throw Error('not called');}});assert.equal(unconfigured.status,'not_configured');
 });
 
 test('fluxo SQL focal: ponto, isolamento, idempotência, pedido, aprovação e rollback',async()=>{
@@ -29,26 +39,36 @@ test('fluxo SQL focal: ponto, isolamento, idempotência, pedido, aprovação e r
    CREATE TABLE emp_journey_corrections(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),employee_id uuid,time_entry_id uuid,original_snapshot jsonb,requested_changes jsonb,reason text,status text DEFAULT 'solicitado',created_by uuid,created_by_id uuid,reviewed_by uuid,reviewed_by_id uuid,reviewed_at timestamptz,rejection_reason text,approved_changes jsonb,created_at timestamptz DEFAULT now());
   `);
   await pg.exec(await readFile(new URL('../db/migrations/176-employee-geolocation-time-clock.sql',import.meta.url),'utf8'));
+  await pg.exec(await readFile(new URL('../db/migrations/178-employee-time-clock-here-address.sql',import.meta.url),'utf8'));
+  await pg.exec(await readFile(new URL('../db/migrations/179-employee-here-end-user-consent.sql',import.meta.url),'utf8'));
   await pg.query("INSERT INTO hr_employees VALUES($1,$2,$3,NULL,'ativo','Pessoa A','A'),($4,$5,NULL,NULL,'ativo','Pessoa B','B')",[a,ia,unit,b,ib]);
   await pg.query("INSERT INTO auth_permissions VALUES($1,'employees.read','unit',$2,NULL),($1,'employees.write','unit',$2,NULL)",[rh,unit]);
   const pool={query:(sql,args)=>pg.query(sql,args),connect:async()=>({query:(sql,args)=>pg.query(auditFailure&&sql.startsWith('INSERT INTO audit_log')?'INSERT INTO absent_audit VALUES(1)':sql,args),release(){}})};
-  const api=createEmployeeTimeClockApi({getPool:()=>pool,sameOrigin:req=>req.origin!==false,readEmployeeSession:async req=>req.employee||null,readStaffSession:async req=>req.staff||null,readJson:async req=>req.body,json:(res,status,data)=>Object.assign(res,{status,data})});
+  let geocodeCalls=0;
+  const api=createEmployeeTimeClockApi({getPool:()=>pool,hereAddressEnabled:true,reverseGeocode:async()=>{geocodeCalls++;return{address:'Rua de Demonstração, 10, São Paulo, SP',provider:'HERE',status:'resolved',resolvedAt:new Date().toISOString()};},sameOrigin:req=>req.origin!==false,readEmployeeSession:async req=>req.employee||null,readStaffSession:async req=>req.staff||null,readJson:async req=>req.body,json:(res,status,data)=>Object.assign(res,{status,data})});
   const employee={employeeId:a,identityId:ia},staff={identityId:rh,role:'rh'};
   async function call(path,method='GET',body={},extras={}){const res={};await api.handle({method,body,employee,...extras},res,new URL(path,'http://localhost'));return res;}
   const geo=()=>({latitude:-23.5,longitude:-46.6,accuracy:12,positionAt:new Date().toISOString()});
   const denied=await call('/api/employee/time-clock','POST',{requestId:randomUUID(),kind:'entrada',position:geo()},{origin:false});assert.equal(denied.status,403);
   assert.equal((await call('/api/employee/time-clock','GET',{}, {employee:null})).status,401);
+  assert.deepEqual((await call('/api/employee/here-consent')).data,{enabled:true,accepted:false,termsUrl:'https://legal.here.com/terms/here-end-user-terms',privacyUrl:'https://legal.here.com/privacy'});
   const request={requestId:randomUUID(),kind:'entrada',position:geo()};
   const first=await call('/api/employee/time-clock','POST',request);assert.equal(first.status,201);
-  assert.equal((await call('/api/employee/time-clock','POST',request)).data.replayed,true);
-  assert.equal((await call('/api/employee/time-clock','POST',{...request,kind:'saida'})).status,409);
+  assert.equal(first.data.punch.address_status,'not_requested');assert.equal(geocodeCalls,0,'coordinates are not sent before the employee accepts HERE terms');
+  const accepted=await call('/api/employee/here-consent','POST',{accepted:true});assert.equal(accepted.status,201);assert.equal(accepted.data.consent.accepted,true);
+  const interval={requestId:randomUUID(),kind:'saida_intervalo',position:geo()};
+  const withAddress=await call('/api/employee/time-clock','POST',interval);assert.equal(withAddress.status,201);
+  assert.equal(withAddress.data.punch.address_label,'Rua de Demonstração, 10, São Paulo, SP');assert.equal(withAddress.data.punch.address_status,'resolved');assert.match(withAddress.data.punch.request_hash,/^[a-f0-9]{64}$/);
+  assert.equal((await call('/api/employee/time-clock','POST',interval)).data.replayed,true);assert.equal(geocodeCalls,1,'replay must not transmit the same coordinates to HERE again');
+  assert.equal((await call('/api/employee/time-clock','POST',{...interval,kind:'saida'})).status,409);
   assert.equal((await call('/api/employee/time-clock','POST',{requestId:randomUUID(),kind:'entrada',position:geo()})).status,409);
   const entry=first.data.timeEntryId;
   const competence=(await pg.query('SELECT competence FROM hr_time_entries WHERE id=$1',[entry])).rows[0].competence;
   await assert.rejects(pg.query("INSERT INTO hr_time_competence_closures VALUES($1,'fechado')",[competence]),/competence_has_open_journeys/);
   await assert.rejects(pg.query('DELETE FROM emp_time_punches WHERE id=$1',[first.data.punch.id]),/cannot be changed/);
-  await call('/api/employee/time-clock','POST',{requestId:randomUUID(),kind:'saida_intervalo',position:geo()});
-  await call('/api/employee/time-clock','POST',{requestId:randomUUID(),kind:'retorno_intervalo',position:geo()});
+  await call('/api/employee/here-consent','POST',{accepted:false});
+  const privateReturn=await call('/api/employee/time-clock','POST',{requestId:randomUUID(),kind:'retorno_intervalo',position:geo()});assert.equal(privateReturn.data.punch.address_status,'not_requested');assert.equal(geocodeCalls,1,'revoked consent prevents future HERE requests');
+  await call('/api/employee/here-consent','POST',{accepted:true});
   const exit=await call('/api/employee/time-clock','POST',{requestId:randomUUID(),kind:'saida',position:geo()});assert.equal(exit.status,201);
   const correction={timeEntryId:entry,reason:'Horário lançado incorretamente',requestedChanges:{clock_in:'08:00',clock_out:'17:00'}};
   assert.equal((await call('/api/employee/actions/time-correction','POST',correction,{employee:{employeeId:b,identityId:ib}})).status,404);

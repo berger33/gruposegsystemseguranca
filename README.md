@@ -1,6 +1,6 @@
-> **Ativação local de 07/10/2026:** [evidências e limites operacionais](docs/ATIVACAO-LOCAL-PONTO-2026-10-07.md). No banco demonstrativo do operador, 001–177 foram aplicadas e repetidas; o ponto/RH passou por 27 verificações HTTP. GPS real e aceite humano continuam pendentes. Os avisos anteriores abaixo são históricos.
+> **Ativação local de 07/10/2026:** [evidências e limites operacionais](docs/ATIVACAO-LOCAL-PONTO-2026-10-07.md). No banco demonstrativo local, 001–179 foram aplicadas. Consulta de endereço exige `HERE_API_KEY` fora do Git e aceite individual dos termos HERE pelo funcionário; sem qualquer um deles, o ponto continua registrando apenas as coordenadas locais e o comprovante.
 
-> **Identidade visual de 07/10/2026:** [logo oficial, paleta do sistema, galeria dos dez layouts, evidências e ativação](docs/IDENTIDADE-VISUAL-E-APARENCIA-2026-10-07.md). Código e migrador agora incluem 001–177; aplicação no banco local e homologação das jornadas continuam pendentes. No site público, esta entrega altera somente o logo.
+> **Identidade visual de 07/10/2026:** [logo oficial, paleta do sistema, galeria dos dez layouts, evidências e ativação](docs/IDENTIDADE-VISUAL-E-APARENCIA-2026-10-07.md). Registro histórico daquela entrega: o migrador foi ampliado posteriormente até 001–178. No site público, a entrega visual alterou somente o logo.
 
 > **Desenvolvimento de 07/10/2026:** consulte [entrega de UX/RAG](docs/FECH-ENTREGA-DESENVOLVIMENTO-2026-10-07.md) e [runbook local](docs/FECH-RUNBOOK-LOCAL-2026-10-07.md). O console TI e as fontes por pasta foram implementados; a migração 175 e os testes desta continuação estão pendentes. Avisos anteriores descrevem a base auditada antes desta alteração.
 
