@@ -578,3 +578,6 @@ Legenda do estado confirmado: `pronto_local` = validação automática local ant
 5. `docs/auditoria-2026-10-04/` veio da branch docs/auditoria-arena-2026-10-04 (PR #121) sem alterar código do main.
 o` (anônimo sem caminho de login) e rótulo "E-mail individual de TI" em login compartilhado são os achados F01 tratados nesta mesma sessão; ver CONTINUACAO-ARENA.md.
 5. `docs/auditoria-2026-10-04/` veio da branch docs/auditoria-arena-2026-10-04 (PR #121) sem alterar código do main.
+# Atualização: ponto com localização e ajustes
+
+Implementados ponto no portal do funcionário e revisão dos pedidos pelo RH. Migração 176 pendente no ambiente operacional; testes focais passaram, validação de navegador/GPS e banco completo pendentes. Ver [relatório](PONTO-GEOLOCALIZACAO-RH-2026-10-07.md).

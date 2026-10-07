@@ -27,6 +27,7 @@ import HrAbsenceClient from '../ti/HrAbsenceClient';
 import HrBenefitsClient from '../ti/HrBenefitsClient';
 import HrTrainingClient from '../ti/HrTrainingClient';
 import HrAdvancedClient from '../ti/HrAdvancedClient';
+import TimeCorrectionReviews from './TimeCorrectionReviews';
 import UiState from '../../../components/ui/UiState';
 import UiBadge from '../../../components/ui/UiBadge';
 import { hrRequest, type HrErrorDescriptor } from '../../../lib/hr-request';
@@ -68,6 +69,7 @@ const TABS = [
   { id: 'equipe', label: 'Equipe' },
   { id: 'admissao', label: 'Admissão e acesso' },
   { id: 'escala', label: 'Escala' },
+  { id: 'ponto', label: 'Ponto e ajustes' },
   { id: 'solicitacoes', label: 'Solicitações' },
   { id: 'documentos', label: 'Documentos' },
   { id: 'folha', label: 'Fechamento e holerite' },
@@ -297,6 +299,7 @@ export default function RhWorkspace() {
             {tab === 'equipe' ? <Team employees={employees} /> : null}
             {tab === 'admissao' ? <Admission employees={employees} run={run} onCredential={setCredential} /> : null}
             {tab === 'escala' ? <Schedule employees={employees} run={run} /> : null}
+            {tab === 'ponto' ? <TimeCorrectionReviews employees={employees} /> : null}
             {tab === 'solicitacoes' ? <RequestReviews requests={requests} run={run} /> : null}
             {tab === 'documentos' ? <Documents docs={docs} run={run} /> : null}
             {tab === 'folha' ? <Payroll employees={employees} docs={docs} run={run} /> : null}

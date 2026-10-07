@@ -24,6 +24,14 @@
  * O título é humano; o código canônico só aparece no rodapé, entre parênteses.
  */
 const ERROR_MESSAGES = Object.freeze({
+  location_required: {kind:'invalid',title:'Localização necessária',detail:'Autorize a localização para registrar o ponto.'},
+  invalid_location: {kind:'invalid',title:'Localização inválida',detail:'Obtenha uma nova localização e tente novamente.'},
+  location_expired: {kind:'invalid',title:'Localização desatualizada',detail:'Confira o relógio do dispositivo e tente marcar novamente.'},
+  invalid_punch_transition: {kind:'conflict',title:'Esta marcação não é a próxima da jornada',detail:'Atualize as marcações e escolha a ação disponível.'},
+  journey_still_open: {kind:'conflict',title:'A jornada ainda está aberta',detail:'Registre a saída antes de solicitar um ajuste. Se esqueceu uma marcação, procure o RH.'},
+  correction_already_pending: {kind:'conflict',title:'Já existe um ajuste aguardando análise',detail:'Acompanhe o pedido na seção Meus pedidos de ajuste.'},
+  invalid_time_changes: {kind:'invalid',title:'Informe a alteração de ponto',detail:'Preencha ao menos um horário válido ou as horas trabalhadas para o ajuste.'},
+  time_clock_unavailable: {kind:'retry',title:'O ponto não pôde ser confirmado',detail:'Tente novamente. A repetição da marcação usa o mesmo identificador.'},
   // ----- Sessão e identidade -------------------------------------------------
   employee_session_required: {
     kind: 'auth',

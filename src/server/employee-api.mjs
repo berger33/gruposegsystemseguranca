@@ -4,6 +4,7 @@ import path from 'node:path';
 import { normalizeEmail, hashPassword, verifyPassword } from '../lib/client-auth-core.mjs';
 import { hasPermission } from './rbac.mjs';
 import { isUuid } from './employee-session.mjs';
+import { createEmployeeTimeClockApi } from './employee-time-clock-api.mjs';
 
 const MAX_PRIVATE_FILE_BYTES = 5 * 1024 * 1024;
 const SAFE_CONTENT_TYPES = new Set([
@@ -41,6 +42,7 @@ function readIdempotencyKey(req) {
 
 export function createEmployeeApi(ctx) {
   const db = () => ctx.getPool();
+  const timeClock = createEmployeeTimeClockApi(ctx);
 
   async function audit(action, actor, target, meta = null, client = db()) {
     await client.query(
@@ -379,19 +381,6 @@ export function createEmployeeApi(ctx) {
       );
       await audit('emp_absence_notice_create', actor, created[0].id);
       return ctx.json(res, 201, { notice: created[0] });
-    }
-    if (action === 'time-correction') {
-      if (!isUuid(data?.timeEntryId) || clean(data?.reason).length < 10) return ctx.json(res, 400, { error: 'invalid_time_correction' });
-      const { rows: entries } = await db().query('SELECT * FROM hr_time_entries WHERE id=$1 AND employee_id=$2', [data.timeEntryId, employeeId]);
-      if (!entries[0]) return ctx.json(res, 404, { error: 'time_entry_not_found' });
-      const requested = data?.requestedChanges && typeof data.requestedChanges === 'object' ? data.requestedChanges : {};
-      const { rows: created } = await db().query(
-        `INSERT INTO emp_journey_corrections(employee_id,time_entry_id,original_snapshot,requested_changes,reason,created_by,created_by_id)
-         VALUES ($1,$2,$3,$4,$5,$6,$6) RETURNING id,status,employee_id,time_entry_id,original_snapshot`,
-        [employeeId, data.timeEntryId, JSON.stringify(entries[0]), JSON.stringify(requested), clean(data.reason, 1000), actor],
-      );
-      await audit('emp_journey_correction_request', actor, created[0].id);
-      return ctx.json(res, 201, { correction: created[0] });
     }
     if (action === 'shift-swap') {
       if (isUuid(data?.requestId)) {
@@ -950,6 +939,12 @@ export function createEmployeeApi(ctx) {
 
   async function handle(req, res, url) {
     try {
+      if (url.pathname === '/api/employee/time-clock'
+          || url.pathname === '/api/employee/actions/time-correction'
+          || url.pathname === '/api/admin/hr/l03/time-corrections'
+          || url.pathname === '/api/admin/hr/l03/time-punches'
+          || url.pathname === '/api/admin/hr/l03/time-clock'
+          || ['/api/admin/hr/journey-corrections','/api/crm/hr/journey-corrections','/api/hr/journey-corrections'].includes(url.pathname)) return await timeClock.handle(req,res,url);
       if (url.pathname === '/api/employee/session') return handleSession(req, res);
       if (url.pathname === '/api/employee/session/password') return handlePassword(req, res);
       if (url.pathname === '/api/employee/me') return handleMe(req, res);

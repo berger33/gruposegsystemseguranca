@@ -2690,6 +2690,8 @@ async function routeApi(req, res) {
       || url.pathname === "/api/employee/profile-updates"
       || url.pathname === "/api/employee/documents"
       || url.pathname === "/api/employee/offline"
+      || url.pathname === "/api/employee/time-clock"
+      || ["/api/admin/hr/journey-corrections", "/api/crm/hr/journey-corrections", "/api/hr/journey-corrections"].includes(url.pathname)
       || url.pathname.startsWith("/api/employee/schedule/")
       || url.pathname.startsWith("/api/employee/actions/")
       || url.pathname.startsWith("/api/employee/documents/")

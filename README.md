@@ -205,3 +205,6 @@ A migração `152-ext06-satisfaction-journey.sql` promove a fonte funcional da C
 
 ### EXT-07 — Compliance corporativo
 A jornada canônica interna de compliance usa `/admin/compliance` e `/api/ext/compliance/*`. Obrigações são declaradas com fonte, aplicabilidade e responsável staff; referências documentais são privadas e não representam upload, bytes, checksum, malware scan ou download. A avaliação temporal é operação administrativa explícita na data do servidor (`CURRENT_DATE`): vencimento marca `vencida`, cria exatamente uma tarefa por documento/período/regra (`ext_compliance_tasks`, fail-closed sem responsável staff ativo) e antecedência declarada marca `a_vencer` sem tarefa. Renovação é novo registro versionado (`replacement_of`/`version_no`); a versão anterior vira `substituida`, terminal e imutável — no máximo uma versão corrente por obrigação. Listagens minimizam campos; o detalhe autorizado usa allowlist e nunca expõe `storage_key`/URL privada. Gate: `npm run test:ext07-compliance:pg` (PostgreSQL 17 descartável, migrações 001–155, HTTP real, sessão staff real, sem skip).
+# Ponto e ajustes pelo RH
+
+O registro de ponto com localização e a fila de ajustes do funcionário estão implementados no código. Ativação exige migração 176 e atualização do servidor. Consulte [entrega, permissões e validação](docs/PONTO-GEOLOCALIZACAO-RH-2026-10-07.md).
