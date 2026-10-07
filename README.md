@@ -1,3 +1,5 @@
+> **Atualização de 07/10/2026:** para a execução atual, leia o [plano de fechamento UX/RAG](docs/ARENA-FECHAMENTO-UX-RAG-2026-10-07.md) e o [checklist por fatia](docs/FECHAMENTO-UX-RAG-CHECKLIST-2026-10-07.md). A UX completa e o RAG privado ainda não estão concluídos. Este documento preserva o contexto da sua data; orientações de continuação e estado antigo devem ser reconciliados com a main atual. Não confundir UX-08/09 das extensões posteriores com TI/RAG e auditoria final do plano original.
+
 # Grupo SEG System
 
 > **Estado de referência (05/10/2026):** `main` inclui o RAG local por área e as migrações 001–174. Os blocos “Continuação atual” abaixo são registros históricos de etapas anteriores e não devem ser lidos como o HEAD vigente. Para evolução visual, leia o [plano mestre de UX](docs/UX-PLANO-MESTRE-2026-10-05.md) e o [prompt de execução em etapas para o Arena](docs/ARENA-PROMPT-UX-ETAPAS-2026-10-05.md). A configuração e os limites reais do RAG estão em [RAG local por área](docs/AI-RAG-LOCAL-2026-10-05.md). Verifique o SHA e o ledger novamente antes de implementar.

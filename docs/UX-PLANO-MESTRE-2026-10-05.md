@@ -1,3 +1,5 @@
+> **Atualização de 07/10/2026:** para a execução atual, leia o [plano de fechamento UX/RAG](ARENA-FECHAMENTO-UX-RAG-2026-10-07.md) e o [checklist por fatia](FECHAMENTO-UX-RAG-CHECKLIST-2026-10-07.md). A UX completa e o RAG privado ainda não estão concluídos. Este documento preserva o contexto da sua data; orientações de continuação e estado antigo devem ser reconciliados com a main atual. Não confundir UX-08/09 das extensões posteriores com TI/RAG e auditoria final do plano original.
+
 # Plano mestre de experiência e interface — SEG System
 
 **Data e base auditada:** 05/10/2026, `main` `84b3532eb110ed50ddbf743626f40b9b5d92fb48`. Este documento é um plano de produto e UX baseado no código e nos fluxos disponíveis; não equivale a teste com usuários nem declara que toda função está homologada. A implementação deve sempre partir do `main` mais recente.

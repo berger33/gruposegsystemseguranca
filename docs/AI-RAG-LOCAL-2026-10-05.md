@@ -1,3 +1,5 @@
+> **Atualização de 07/10/2026:** para a execução atual, leia o [plano de fechamento UX/RAG](ARENA-FECHAMENTO-UX-RAG-2026-10-07.md) e o [checklist por fatia](FECHAMENTO-UX-RAG-CHECKLIST-2026-10-07.md). A UX completa e o RAG privado ainda não estão concluídos. Este documento preserva o contexto da sua data; orientações de continuação e estado antigo devem ser reconciliados com a main atual. Não confundir UX-08/09 das extensões posteriores com TI/RAG e auditoria final do plano original.
+
 # RAG local por área — preparação e limites
 
 Esta fatia usa Ollama instalado no **mesmo computador do servidor**, com o modelo
@@ -30,6 +32,8 @@ evita consumir o pequeno limite de geração apenas no raciocínio do Qwen3.
 5. Reinicie o servidor. Nenhuma senha ou prompt deve ser enviada ao GitHub.
 
 ## Conteúdo e permissões
+
+**Correção da auditoria de 07/10:** o procedimento abaixo descreve capacidades do componente `AiRagClient`, que ainda não está montado em `/admin/ti`. Os assistentes privados também estão bloqueados visualmente em `RagWidget`. Portanto, estas instruções de painel não são executáveis na main auditada até FECH-01/02. Não interpretar o texto abaixo como ativação concluída. Fontes por diretório são requisito pendente de FECH-03.
 
 Na seção **Bases dos assistentes** de `/admin/ti`, publique o índice da área e
 clique **Instalar exemplo**. Os quatro textos são fictícios e processuais, sem

@@ -1,3 +1,5 @@
+> **Atualização de 07/10/2026:** para a execução atual, leia o [plano de fechamento UX/RAG](ARENA-FECHAMENTO-UX-RAG-2026-10-07.md) e o [checklist por fatia](FECHAMENTO-UX-RAG-CHECKLIST-2026-10-07.md). A UX completa e o RAG privado ainda não estão concluídos. Este documento preserva o contexto da sua data; orientações de continuação e estado antigo devem ser reconciliados com a main atual. Não confundir UX-08/09 das extensões posteriores com TI/RAG e auditoria final do plano original.
+
 ## Referência atual para UX — 05/10/2026
 
 UX-00 foi registrada em [`UX-00-AUDITORIA-BASELINE-2026-10-05.md`](UX-00-AUDITORIA-BASELINE-2026-10-05.md), com inventário reproduzível de 98 páginas, matriz de jornadas, capturas desktop/mobile fictícias e fila de problemas. É uma linha de base; não altera código de produto nem atesta aceite humano.
