@@ -25,6 +25,7 @@ import { createLocalOutbox, LOCAL_OUTBOX_LABEL, resolveDeliveryTarget } from "./
 import { createClientAccessApi } from "./src/server/client-access-api.mjs";
 import { createClientOfflineRecoveryApi } from "./src/server/client-offline-recovery-api.mjs";
 import { createAiRagRealApi } from "./src/server/ai-rag-real-api.mjs";
+import { createAiRagDirectoryApi } from "./src/server/ai-rag-directory-api.mjs";
 import { createClientSpaceApi } from "./src/server/client-space-api.mjs";
 import { createClientSecurityApi } from "./src/server/client-security-api.mjs";
 import { createAdminRbacApi } from "./src/server/admin-rbac-api.mjs";
@@ -2602,6 +2603,7 @@ const aiRagRealApi = createAiRagRealApi({
   pool: getPool(), sameOrigin, readStaffSession: readSession,
   readClientSession: clientAccessApi.readClientSession,
 });
+const aiRagDirectoryApi = createAiRagDirectoryApi({ pool: getPool(), sameOrigin, readSession });
 
 const reportApi = createReportApi({
   json,
@@ -4609,6 +4611,7 @@ async function routeApi(req, res) {
     return json(res, 410, { error: "legacy_ai_retired", canonical: "/api/ai/answer" });
   }
   // APIs administrativas legadas de curadoria permanecem acessíveis ao staff autorizado.
+  if (url.pathname === "/api/admin/ai-rag-directory-sources") return await aiRagDirectoryApi(req,res);
   if (url.pathname === "/api/admin/ai-rag-indexes" || url.pathname === "/api/ai-rag-indexes" || url.pathname === "/api/ai/rag-indexes") {
     return aiRagApi.handleIndexes(req, res);
   }

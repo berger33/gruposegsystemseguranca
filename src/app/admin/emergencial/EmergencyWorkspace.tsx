@@ -1,4 +1,5 @@
 "use client";
+import UiTaskWorkspace from "@/components/ui/UiTaskWorkspace";
 import { useEffect, useState, type FormEvent } from "react";
 
 type Channel={id:string;name:string;channel_type:string;recipient_name:string;status:string;is_tested:boolean;activated_at?:string|null};
@@ -12,7 +13,7 @@ export default function EmergencyWorkspace(){
  async function act(path:string,body:Record<string,unknown>,label:string){const id=selected||items[0]?.id;if(!id)return setError("Selecione um canal.");setError("");const r=await fetch(`/api/ext/emergency/channels/${id}${path}`,{method:"POST",headers:{"content-type":"application/json","Idempotency-Key":idem(label)},body:JSON.stringify(body)}),d=await r.json().catch(()=>({}));if(!r.ok)return setError(d.error||`Falha em ${label}`);setMessage(d.note);await load();await show(id);}
  async function show(id=selected){if(!id)return;const r=await fetch(`/api/ext/emergency/channels/${id}`,{cache:"no-store"}),d=await r.json().catch(()=>({}));if(r.ok)setDetail(d);}
  const field=(name:keyof typeof form,label:string)=><label>{label}<input required value={form[name]} onChange={e=>setForm({...form,[name]:e.target.value})}/></label>;
- return <main style={{maxWidth:1180,margin:"40px auto",padding:24,fontFamily:"system-ui"}}>
+ return <UiTaskWorkspace style={{maxWidth:1180,margin:"40px auto",padding:24,fontFamily:"system-ui"}}>
   <p style={{color:"#64748b",letterSpacing:1}}>EXT-15 · F11</p><h1>Apoio emergencial</h1>
   <p>Configure destinatário, disponibilidade e escalonamento; depois registre separadamente testes de recebimento e atendimento. Esta tela <strong>não usa handlers legados como cobertura</strong> e não envia telefonema, WhatsApp, mensagem ou alerta externo.</p>
   <p style={{background:"#fff7ed",padding:12,borderRadius:8}}><strong>Limite da prova:</strong> cada teste é um registro interno declarado por uma pessoa. Não comprova entrega de fornecedor nem central 24h. A ativação exige os dois registros bem-sucedidos e decisão humana.</p>
@@ -31,5 +32,5 @@ export default function EmergencyWorkspace(){
   </section>
   <section style={{marginTop:24}}><h2>Canais canônicos</h2>{items.length===0?<p>Nenhum canal canônico configurado.</p>:items.map(x=><article key={x.id} style={{borderTop:"1px solid #ddd",padding:10}}><strong>{x.name}</strong> · {x.channel_type} · {x.status}<br/><small>Destinatário: {x.recipient_name} · testes completos: {x.is_tested?"sim":"não"} · ativação humana: {x.activated_at?"registrada":"pendente"}</small></article>)}</section>
   {detail&&<section aria-label="Detalhe do canal" style={{marginTop:24,background:"#f8fafc",padding:16}}><h2>Trilha interna</h2><pre style={{whiteSpace:"pre-wrap",overflowX:"auto"}}>{JSON.stringify(detail,null,2)}</pre></section>}
- </main>;
+ </UiTaskWorkspace>;
 }

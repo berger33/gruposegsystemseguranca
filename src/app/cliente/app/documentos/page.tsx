@@ -1,4 +1,5 @@
 "use client";
+import {workspaceResponse,workspaceFetch} from "@/lib/workspace-response";
 
 import { useCallback, useEffect, useState } from "react";
 import { Download, FileText, RotateCw } from "lucide-react";
@@ -30,12 +31,11 @@ export default function ClientDocumentsPage() {
   const loadDocuments = useCallback(async (accountId: string) => {
     setError("");
     try {
-      const response = await fetch(`/api/client/documents?account=${encodeURIComponent(accountId)}`, { cache: "no-store" });
-      if (!response.ok) throw new Error("unexpected");
-      const data = (await response.json()) as { documents: ClientDocument[] };
+      const response = await workspaceFetch(`/api/client/documents?account=${encodeURIComponent(accountId)}`, { cache: "no-store" });
+      if (!response.ok) await workspaceResponse(response);
+      const data = (await workspaceResponse(response)) as { documents: ClientDocument[] };
       setDocuments(data.documents);
-    } catch {
-      setError("Não foi possível carregar seus documentos agora.");
+    } catch (error) { setError(error instanceof Error ? error.message : "Não foi possível carregar seus documentos agora.");
     }
   }, []);
 

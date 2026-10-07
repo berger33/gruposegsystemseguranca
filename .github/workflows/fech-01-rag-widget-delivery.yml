@@ -1,0 +1,54 @@
+name: FECH-01 assistentes privados e contrato do widget
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/components/RagWidget.tsx'
+      - 'src/lib/rag-widget-contract.mjs'
+      - 'src/lib/rag-widget-contract.d.mts'
+      - 'src/server/ai-rag-real-api.mjs'
+      - 'src/app/admin/rh/assistente/**'
+      - 'src/app/admin/marcelo/assistente/**'
+      - 'src/app/cliente/app/assistente/**'
+      - 'src/app/contato/**'
+      - 'tests/ai-rag-real-scope.test.mjs'
+      - 'tests/ai-rag.integration.test.mjs'
+      - 'tests/rag-widget-contract.test.mjs'
+      - 'tests/ai-rag-widget.integration.test.mjs'
+      - 'scripts/qa-ai-rag-widget-postgres.mjs'
+      - 'docs/FECH-01-*.md'
+      - 'docs/fech-01-assistentes-evidencias/**'
+      - 'package*.json'
+      - '.github/workflows/fech-01-rag-widget-delivery.yml'
+  workflow_dispatch:
+concurrency:
+  group: fech-01-rag-widget-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  focal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      # Contrato puro (sem HTTP/banco) e contrato do servidor com pool simulado
+      # e provedor determinístico identificado como stub — não é Ollama real.
+      - run: node --test tests/rag-widget-contract.test.mjs tests/ai-rag-real-scope.test.mjs
+      # Smoke HTTP do PGlite beta herdado: rota canônica, 401 privado e rascunho oculto.
+      - run: npm run test:rag
+      # Gate focal: PostgreSQL 17 descartável, HTTP real, Chromium real e stub
+      # determinístico. O auditor TAP exige >=20 casos, zero fail/skip/todo.
+      - run: npm run test:ai-rag-widget:pg
+      - run: npm audit --audit-level=high

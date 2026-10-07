@@ -56,7 +56,7 @@ export default function ContatoPage() {
   return (
     <main style={{ padding: 40, maxWidth: 900, margin: "0 auto", fontFamily: "system-ui, sans-serif" }}>
       <h1 style={{ fontSize: 32 }}>Contato claro — PUB-02 / PUB-03</h1>
-      <p style={{ opacity: 0.8 }}>Formulário integrado à mesma API de leads com protocolo persistido, consentimento, origem/campanha, antispam, deduplicação controlada e responsável de atendimento (PUB-03). Sem promessa de horário sem reserva real (PUB-04).</p>
+      <p style={{ opacity: 0.8 }}>Formulário integrado à mesma API de leads com protocolo persistido, consentimento, origem/campanha, antispam, deduplicação controlada e responsável de atendimento (PUB-03). Sem promessa de horário sem reserva real (PUB-04). O assistente abaixo responde apenas com base pública aprovada e publicada.</p>
 
       <section style={{ marginTop: 16, padding: 16, background: "#f8fafc", borderRadius: 8, fontSize: 14 }}>
         <strong>Endereço:</strong> Av. Armando Bei, 305 - Sala 01, Vila Nova Bonsucesso, Guarulhos, SP, 07175-000<br />
@@ -107,7 +107,7 @@ export default function ContatoPage() {
       <section style={{ marginTop: 32, padding: 16, borderLeft: "4px solid #0b5fff", background: "#eff6ff", fontSize: 13 }}>
         <strong>PUB-03 aceite:</strong> enviar pedido pelo celular → registro único → fila comercial com origem → próxima ação atribuída; falha SMTP não apaga lead nem produz confirmação de e-mail entregue. Recarga/retry não criam duplicatas indevidas (deduplicação via dedup_key).<br />
         <strong>PUB-04:</strong> visita com estados solicitada, em agendamento, confirmada, realizada, cancelada; pessoa responsável confirma, notificação não promete horário sem reserva real.<br />
-        <strong>AI RAG + bot modes:</strong> modo desenvolvedor campo altera dinâmica sem_ia/com_ia/whatsapp, padrão com_ia beta Ollama Qwen3 1.7B fila, 3 RAGs cliente/RH/Marcelo informações apenas áreas pertinentes.
+        <strong>AI RAG + bot modes:</strong> modo desenvolvedor campo altera dinâmica sem_ia/com_ia/whatsapp, padrão com_ia beta com Ollama Qwen3 1.7B local. Este assistente público responde apenas com conteúdo público aprovado; as bases de cliente, RH e gestão só respondem dentro da sessão com o papel/vínculo conferidos no servidor e não são acessíveis por aqui. Sem fonte aprovada relacionada, o modelo local não é chamado e o assistente informa a ausência; o atendimento é uma consulta por vez e pode responder "ocupado".
       </section>
     </main>
   );

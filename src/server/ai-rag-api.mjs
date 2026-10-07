@@ -1,4 +1,4 @@
-export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, requireRole }) {
+export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, requireRole, transactional = false }) {
   const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
   const readJson = async (req) => { const chunks=[]; for await (const c of req) chunks.push(c); const raw=Buffer.concat(chunks).toString('utf8'); if(!raw) return {}; try{ return JSON.parse(raw);} catch{ return {}; } };
   const generateProtocol = (prefix) => { const d=new Date(); const y=d.getFullYear().toString(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); const rand=Math.random().toString(36).substring(2,6).toUpperCase(); return `${prefix}-${y}${m}${day}-${rand}`; };
@@ -166,6 +166,12 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
       // Não confiar nos defaults do banco beta (legado: true): documento novo é rascunho.
       const { rows } = await pool.query(`INSERT INTO ai_rag_documents (rag_index_id, rag_key, title, content, source, source_type, keywords, is_price_sensitive, is_coverage_sensitive, is_license_sensitive, is_deadline_sensitive, created_by_identity, client_account_id, is_approved, is_published) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,false,false) RETURNING *`,
         [rag_index_id, rag_key, title, content, source, source_type, keywords, !!b.is_price_sensitive, !!b.is_coverage_sensitive, !!b.is_license_sensitive, !!b.is_deadline_sensitive, sess.identityId||null,clientAccountId]);
+      if(b.supersedes_document_id){
+        if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(b.supersedes_document_id)))return json(res,400,{error:'invalid_previous_document'});
+        const parent=(await pool.query('SELECT id,rag_key,client_account_id,version FROM ai_rag_documents WHERE id=$1',[b.supersedes_document_id])).rows[0];
+        if(!parent||parent.rag_key!==rag_key||String(parent.client_account_id||'')!==String(clientAccountId||'').toLowerCase())return json(res,400,{error:'previous_document_scope_mismatch'});
+        await pool.query('UPDATE ai_rag_documents SET supersedes_document_id=$2,version=$3 WHERE id=$1',[rows[0].id,parent.id,Number(parent.version)+1]);
+      }
       // criar chunks simples 500 chars
       const chunkSize=500;
       let idx=0;
@@ -573,5 +579,23 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
     return json(res,405,{error:'method_not_allowed'});
   };
 
-  return { handleIndexes, handleDocuments, handleQueries, handleBotConfig, handleBotSessions, handleChunks, handleFeedback, handleCostTracking };
+  function guardedMutation(name,handler){
+    if(transactional)return handler;
+    return async(req,res)=>{
+      if(!['POST','PATCH','DELETE'].includes(req.method))return handler(req,res);
+      if(!sameOrigin(req))return json(res,403,{error:'forbidden'});
+      const session=await requireSession(req);if(!session)return json(res,401,{error:'unauthorized'});
+      const client=await pool.connect();let status=200,headers={},output='';
+      try{
+        await client.query('BEGIN');
+        const api=createAiRagApi({pool:client,sameOrigin,requireSession,requireRole,transactional:true,auditLog:async({action,actor,target,meta})=>{
+          await client.query('INSERT INTO audit_log(action,actor,target,meta) VALUES($1,$2,$3,$4)',[action,actor,target,meta?JSON.stringify(meta):null]);
+        }});
+        await api[name](req,{writeHead:(code,h)=>{status=code;headers=h;},end:text=>{output=text;}});
+        if(status>=400)await client.query('ROLLBACK');else await client.query('COMMIT');
+        res.writeHead(status,headers);res.end(output);
+      }catch{await client.query('ROLLBACK');return json(res,503,{error:'rag_mutation_unavailable'});}finally{client.release();}
+    };
+  }
+  return { handleIndexes:guardedMutation('handleIndexes',handleIndexes), handleDocuments:guardedMutation('handleDocuments',handleDocuments), handleQueries, handleBotConfig, handleBotSessions, handleChunks, handleFeedback, handleCostTracking };
 }

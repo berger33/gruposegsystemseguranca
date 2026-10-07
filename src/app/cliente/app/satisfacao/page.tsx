@@ -1,4 +1,5 @@
 "use client";
+import {workspaceFetch} from "@/lib/workspace-response";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { RotateCw, Send, Star } from "lucide-react";
@@ -55,12 +56,11 @@ export default function ClientSatisfactionPage() {
     setLoadError("");
     setItems(null);
     try {
-      const response = await fetch(`/api/client/satisfaction-surveys?account=${encodeURIComponent(accountId)}`, { cache: "no-store" });
+      const response = await workspaceFetch(`/api/client/satisfaction-surveys?account=${encodeURIComponent(accountId)}`, { cache: "no-store" });
       if (!response.ok) throw new Error("load_failed");
       const data = await response.json() as { surveys: Survey[] };
       setItems(data.surveys);
-    } catch {
-      setLoadError("Não foi possível carregar as pesquisas agora.");
+    } catch (error) { setLoadError(error instanceof Error ? error.message : "Não foi possível carregar as pesquisas agora.");
     }
   }, []);
 
@@ -88,7 +88,7 @@ export default function ClientSatisfactionPage() {
     setSuccess("");
     try {
       if (!keyRef.current) keyRef.current = newIdempotencyKey();
-      const response = await fetch("/api/client/satisfaction-surveys", {
+      const response = await workspaceFetch("/api/client/satisfaction-surveys", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Idempotency-Key": keyRef.current },
         body: JSON.stringify({ survey_id: selectedId, score: Number(score), feedback }),

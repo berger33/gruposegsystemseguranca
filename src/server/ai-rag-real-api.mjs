@@ -41,6 +41,12 @@ export function createAiRagRealApi({ pool, sameOrigin, readStaffSession, readCli
     try { return JSON.parse(raw); } catch { return null; }
   }
 
+  // FECH-01: além das flags `is_approved`/`is_published`, a recuperação exige
+  // que o estado (`status`) seja aprovado/publicado. O banco não amarra flag e
+  // status, então um registro arquivado ou em rascunho com flag antiga ligada
+  // continuaria sendo recuperado. Publicado é flag E estado — nunca só um deles.
+  const PUBLISHED_STATES = `('aprovado','publicado')`;
+
   async function retrieve(ragKey, actor) {
     const clientFilter = ragKey === 'cliente' ? `AND d.client_account_id IS NOT NULL AND EXISTS (
       SELECT 1 FROM client_access_grants g JOIN client_accounts a ON a.id=g.client_account_id
@@ -52,8 +58,8 @@ export function createAiRagRealApi({ pool, sameOrigin, readStaffSession, readCli
       FROM ai_rag_chunks c JOIN ai_rag_documents d ON d.id=c.document_id
       JOIN ai_rag_indexes i ON i.id=d.rag_index_id
       WHERE d.rag_key=$1 AND c.rag_key=$1 AND i.rag_key=$1
-        AND d.is_approved=true AND d.is_published=true
-        AND i.is_approved=true AND i.is_published=true AND i.is_active=true
+        AND d.is_approved=true AND d.is_published=true AND d.status IN ${PUBLISHED_STATES}
+        AND i.is_approved=true AND i.is_published=true AND i.is_active=true AND i.status IN ${PUBLISHED_STATES}
         ${clientFilter} ORDER BY d.updated_at DESC,c.chunk_index LIMIT 150`;
     return (await pool.query(sql, ragKey === 'cliente' ? [ragKey, actor.identityId] : [ragKey])).rows;
   }
@@ -68,9 +74,16 @@ export function createAiRagRealApi({ pool, sameOrigin, readStaffSession, readCli
     if (!actor) return;
     const question = typeof body.query === 'string' ? body.query.trim() : '';
     if (question.length < 5 || question.length > 500) return answerJson(res, 400, { error: 'invalid_query' });
-    let matches;
-    try { matches = rankApprovedChunks(question, await retrieve(ragKey, actor)); }
+    let rows;
+    try { rows = await retrieve(ragKey, actor); }
     catch { return answerJson(res, 503, { error: 'rag_unavailable' }); }
+    // FECH-01: distinguir "escopo sem conteúdo publicado" de "conteúdo existe,
+    // mas nada relacionado à pergunta". Nos dois casos o modelo NÃO é chamado.
+    if (rows.length === 0) return answerJson(res, 200, {
+      response: 'Nenhum conteúdo aprovado e publicado está disponível para este escopo. Publique ou revise a base na curadoria; o modelo local não foi consultado.',
+      sources: [], rag_key: ragKey, ollama_used: false, reason: 'empty_scope',
+    });
+    const matches = rankApprovedChunks(question, rows);
     if (matches.length === 0) return answerJson(res, 200, { response: 'Não encontrei informação aprovada para responder a esta pergunta. Consulte a equipe responsável.', sources: [], rag_key: ragKey, ollama_used: false, reason: 'no_relevant_source' });
     if (process.env.OLLAMA_ENABLED !== 'true') return answerJson(res, 503, { error: 'ai_unavailable', reason: 'ollama_disabled' });
     if (active >= 1) return answerJson(res, 503, { error: 'ai_busy', retry_after_seconds: 5 });

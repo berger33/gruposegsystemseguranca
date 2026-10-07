@@ -1,4 +1,5 @@
 "use client";
+import {workspaceResponse,workspaceFetch} from "@/lib/workspace-response";
 
 import { useCallback, useEffect, useState } from "react";
 import { ClipboardCheck, CheckCircle2, RotateCw } from "lucide-react";
@@ -57,13 +58,13 @@ export default function ClientReportsPage() {
 
   const loadReports = useCallback((accountId: string) => {
     setLoadError("");
-    fetch(`/api/client/reports?account=${encodeURIComponent(accountId)}`, { cache: "no-store" })
+    workspaceFetch(`/api/client/reports?account=${encodeURIComponent(accountId)}`, { cache: "no-store" })
       .then(async response => {
-        if (!response.ok) throw new Error("unexpected");
-        const data = (await response.json()) as { reports: Report[] };
+        if (!response.ok) await workspaceResponse(response);
+        const data = (await workspaceResponse(response)) as { reports: Report[] };
         setReports(data.reports);
       })
-      .catch(() => setLoadError("Não foi possível carregar os relatórios agora."));
+      .catch((error) => setLoadError(error instanceof Error ? error.message : "Não foi possível carregar os relatórios agora."));
   }, []);
 
   useEffect(() => {
@@ -78,7 +79,7 @@ export default function ClientReportsPage() {
     setBusy(report.id);
     setMessage("");
     try {
-      const response = await fetch(`/api/client/reports/${report.id}/acknowledge`, {
+      const response = await workspaceFetch(`/api/client/reports/${report.id}/acknowledge`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ note: notes[report.id] ?? "" }),

@@ -125,7 +125,7 @@ export default function PublicSite() {
 
   return (
     <div className="site site--layered" id="inicio">
-      <div className="preview-bar"><div className="container preview-bar__inner"><span><span className="preview-dot" /> PRÉVIA DE DESENVOLVIMENTO <span className="preview-bar__extra">· Este não é o site publicado</span></span><span>Guarulhos, São Paulo <MapPin size={12} /></span></div></div>
+      <div className="preview-bar"><div className="container preview-bar__inner"><span><span className="preview-dot" /> DEMONSTRAÇÃO DO SISTEMA <span className="preview-bar__extra">· Ambiente de avaliação</span></span><span>Guarulhos, São Paulo <MapPin size={12} /></span></div></div>
       <header className="header">
         <div className="container header__inner">
           <Brand />

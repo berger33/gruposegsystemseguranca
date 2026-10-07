@@ -1,3 +1,5 @@
+> **Desenvolvimento de 07/10/2026:** consulte [entrega de UX/RAG](FECH-ENTREGA-DESENVOLVIMENTO-2026-10-07.md) e [runbook local](FECH-RUNBOOK-LOCAL-2026-10-07.md). O console TI e as fontes por pasta foram implementados; a migração 175 e os testes desta continuação estão pendentes. Avisos anteriores descrevem a base auditada antes desta alteração.
+
 > **Atualização de 07/10/2026:** para a execução atual, leia o [plano de fechamento UX/RAG](ARENA-FECHAMENTO-UX-RAG-2026-10-07.md) e o [checklist por fatia](FECHAMENTO-UX-RAG-CHECKLIST-2026-10-07.md). A UX completa e o RAG privado ainda não estão concluídos. Este documento preserva o contexto da sua data; orientações de continuação e estado antigo devem ser reconciliados com a main atual. Não confundir UX-08/09 das extensões posteriores com TI/RAG e auditoria final do plano original.
 
 # RAG local por área — preparação e limites
@@ -33,7 +35,7 @@ evita consumir o pequeno limite de geração apenas no raciocínio do Qwen3.
 
 ## Conteúdo e permissões
 
-**Correção da auditoria de 07/10:** o procedimento abaixo descreve capacidades do componente `AiRagClient`, que ainda não está montado em `/admin/ti`. Os assistentes privados também estão bloqueados visualmente em `RagWidget`. Portanto, estas instruções de painel não são executáveis na main auditada até FECH-01/02. Não interpretar o texto abaixo como ativação concluída. Fontes por diretório são requisito pendente de FECH-03.
+**Correção da auditoria de 07/10 (atualizada):** o procedimento abaixo descreve capacidades do componente `AiRagClient`, que **ainda não está montado** em `/admin/ti` — estas instruções de painel **não** são executáveis na main até a fatia FECH-02. Já a interface `RagWidget` deixou de bloquear os assistentes privados na fatia **FECH-01** (integrada localmente, PR pendente de revisão): as bases `cliente`, `rh` e `marcelo` passam a responder quando o **servidor** confirma sessão, papel e vínculo, e apresentam 401/403/ausência/indisponibilidade em vez de esconder o assistente. Isso **não** homologa a ativação: validação em Windows, Ollama real, desempenho no PC-alvo e aceite humano continuam pendentes, e fontes por diretório seguem como requisito de FECH-03.
 
 Na seção **Bases dos assistentes** de `/admin/ti`, publique o índice da área e
 clique **Instalar exemplo**. Os quatro textos são fictícios e processuais, sem

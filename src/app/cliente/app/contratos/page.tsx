@@ -1,4 +1,5 @@
 "use client";
+import {workspaceResponse,workspaceFetch} from "@/lib/workspace-response";
 
 import { useCallback, useEffect, useState } from "react";
 import { BriefcaseBusiness, RotateCw } from "lucide-react";
@@ -42,12 +43,11 @@ export default function ClientContractsPage() {
   const loadContracts = useCallback(async (accountId: string) => {
     setError("");
     try {
-      const response = await fetch(`/api/client/contracts?account=${encodeURIComponent(accountId)}`, { cache: "no-store" });
-      if (!response.ok) throw new Error("unexpected");
-      const data = (await response.json()) as { contracts: Contract[] };
+      const response = await workspaceFetch(`/api/client/contracts?account=${encodeURIComponent(accountId)}`, { cache: "no-store" });
+      if (!response.ok) await workspaceResponse(response);
+      const data = (await workspaceResponse(response)) as { contracts: Contract[] };
       setContracts(data.contracts);
-    } catch {
-      setError("Não foi possível carregar seus contratos agora.");
+    } catch (error) { setError(error instanceof Error ? error.message : "Não foi possível carregar seus contratos agora.");
     }
   }, []);
 

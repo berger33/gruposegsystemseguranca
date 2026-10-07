@@ -1,4 +1,6 @@
 "use client";
+import UiTaskWorkspace from "@/components/ui/UiTaskWorkspace";
+import UiTableScroll from "@/components/ui/UiTableScroll";
 
 import { useEffect, useState } from "react";
 
@@ -124,7 +126,7 @@ export default function PatrimonioWorkspace() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <UiTaskWorkspace className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="border-b pb-4">
         <h1 className="text-2xl font-bold tracking-tight text-gray-900">Patrimônio, Almoxarifado e Ativos</h1>
         <p className="text-sm text-gray-500 mt-1">
@@ -169,7 +171,7 @@ export default function PatrimonioWorkspace() {
             <div className="p-8 text-center text-gray-500 border rounded">Nenhum produto cadastrado no almoxarifado.</div>
           ) : (
             <div className="overflow-x-auto border rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <UiTableScroll><table className="min-w-full divide-y divide-gray-200 text-sm">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium text-gray-500">SKU</th>
@@ -194,7 +196,7 @@ export default function PatrimonioWorkspace() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></UiTableScroll>
             </div>
           )}
         </div>
@@ -209,7 +211,7 @@ export default function PatrimonioWorkspace() {
             <div className="p-8 text-center text-gray-500 border rounded">Nenhuma reserva ativa no momento.</div>
           ) : (
             <div className="overflow-x-auto border rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <UiTableScroll><table className="min-w-full divide-y divide-gray-200 text-sm">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium text-gray-500">Produto</th>
@@ -234,7 +236,7 @@ export default function PatrimonioWorkspace() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></UiTableScroll>
             </div>
           )}
         </div>
@@ -249,7 +251,7 @@ export default function PatrimonioWorkspace() {
             <div className="p-8 text-center text-gray-500 border rounded">Nenhum ativo serializado cadastrado.</div>
           ) : (
             <div className="overflow-x-auto border rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <UiTableScroll><table className="min-w-full divide-y divide-gray-200 text-sm">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium text-gray-500">Número de Série</th>
@@ -274,7 +276,7 @@ export default function PatrimonioWorkspace() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></UiTableScroll>
             </div>
           )}
         </div>
@@ -289,7 +291,7 @@ export default function PatrimonioWorkspace() {
             <div className="p-8 text-center text-gray-500 border rounded">Nenhuma ordem de serviço cadastrada.</div>
           ) : (
             <div className="overflow-x-auto border rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <UiTableScroll><table className="min-w-full divide-y divide-gray-200 text-sm">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium text-gray-500">Protocolo</th>
@@ -320,7 +322,7 @@ export default function PatrimonioWorkspace() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></UiTableScroll>
             </div>
           )}
         </div>
@@ -335,7 +337,7 @@ export default function PatrimonioWorkspace() {
             <div className="p-8 text-center text-gray-500 border rounded">Nenhum inventário cadastrado.</div>
           ) : (
             <div className="overflow-x-auto border rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <UiTableScroll><table className="min-w-full divide-y divide-gray-200 text-sm">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium text-gray-500">Protocolo</th>
@@ -358,7 +360,7 @@ export default function PatrimonioWorkspace() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></UiTableScroll>
             </div>
           )}
         </div>
@@ -376,7 +378,7 @@ export default function PatrimonioWorkspace() {
             <div className="p-8 text-center text-gray-500 border rounded">Nenhuma requisição registrada.</div>
           ) : (
             <div className="overflow-x-auto border rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <UiTableScroll><table className="min-w-full divide-y divide-gray-200 text-sm">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium text-gray-500">Protocolo</th>
@@ -407,11 +409,11 @@ export default function PatrimonioWorkspace() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></UiTableScroll>
             </div>
           )}
         </div>
       )}
-    </div>
+    </UiTaskWorkspace>
   );
 }

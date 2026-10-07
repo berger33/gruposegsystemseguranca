@@ -1,0 +1,15 @@
+export type RagKey='publico'|'cliente'|'rh'|'marcelo';
+export type RagFailureState='session_required'|'denied'|'invalid_question'|'source_unavailable'|'busy'|'ai_disabled'|'ai_unavailable'|'ai_timeout'|'ai_misconfigured'|'network'|'error';
+export type RagAnswerState='answered'|'no_source'|'empty_scope'|'error';
+export type RagFailure={code:string|null;status:number;state:RagFailureState;title:string;detail:string;canRetry:boolean;retryAfterSeconds:number|null};
+export type RagOutcome={state:RagAnswerState;title:string;detail:string};
+export type RagAnswer={response:string;sources:readonly Record<string,unknown>[];protocol:string|null;model:string|null;ollamaUsed:boolean;ragKey:string;reason:string|null};
+export const RAG_KEYS:readonly string[];
+export const RAG_QUESTION_MIN:number;
+export const RAG_QUESTION_MAX:number;
+export const RAG_SCOPE_LABELS:Readonly<Record<string,string>>;
+export function describeRagFailure(input?:{status?:number;error?:string|null;reason?:string|null;retryAfterSeconds?:number|null}):RagFailure;
+export function describeRagSuccess(answer?:RagAnswer|null):RagOutcome;
+export function normalizeRagAnswer(payload?:unknown):RagAnswer;
+export function validateRagQuestion(value:unknown):{ok:boolean;code:string|null;message:string};
+export function ragScopeLabel(ragKey:string):string;
