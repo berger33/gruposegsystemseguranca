@@ -34,11 +34,16 @@ async function run() {
   try {
     const old = await post('/api/ai/rag', { rag_key: 'publico', query: 'Quais serviços?' });
     assert.equal(old.status, 410, 'rota beta simulada deve permanecer aposentada');
+    // FECH-01: o banco beta não publica conteúdo público (o texto descritivo
+    // legado é arquivado no init), então o escopo está VAZIO. "Sem conteúdo
+    // publicado" e "sem trecho relacionado" são estados distintos e o modelo
+    // não é chamado em nenhum dos dois.
     const empty = await post('/api/ai/answer', { rag_key: 'publico', query: 'zxqvkj oculto inexistente?' });
     assert.equal(empty.status, 200);
-    assert.equal(empty.body.reason, 'no_relevant_source');
+    assert.equal(empty.body.reason, 'empty_scope');
     assert.deepEqual(empty.body.sources, []);
     assert.equal(empty.body.ollama_used, false);
+    assert.equal('protocol' in empty.body, false, 'sem fonte não existe protocolo');
     for (const rag_key of ['cliente', 'rh', 'marcelo']) {
       const privateResult = await post('/api/ai/answer', { rag_key, query: 'Quais documentos existem?' });
       assert.equal(privateResult.status, 401, `${rag_key} exige identidade própria`);
@@ -58,10 +63,18 @@ async function run() {
       const withSource = await post('/api/ai/answer', { rag_key: 'publico', query: 'Existe qa_draft_never_expose_2843?' });
       assert.equal(withSource.status, 503);
       assert.equal(withSource.body.reason, 'ollama_disabled');
+      // Com conteúdo publicado no escopo, uma pergunta sem trecho relacionado
+      // volta ao outro estado: `no_relevant_source`, ainda sem chamar o modelo.
+      const unrelated = await post('/api/ai/answer', { rag_key: 'publico', query: 'zzz pergunta sem relacao aprovada alguma?' });
+      assert.equal(unrelated.status, 200);
+      assert.equal(unrelated.body.reason, 'no_relevant_source');
+      assert.deepEqual(unrelated.body.sources, []);
+      assert.equal(unrelated.body.ollama_used, false);
       const archive = await fetch(base + '/api/admin/ai-rag-documents', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Origin: base, Cookie: cookie }, body: JSON.stringify({ id: draft.body.id, status: 'arquivado', is_approved: false, is_published: false }) });
       assert.equal(archive.status, 200);
       const afterArchive = await post('/api/ai/answer', { rag_key: 'publico', query: 'Existe qa_draft_never_expose_2843?' });
       assert.equal(afterArchive.status, 200);
+      assert.equal(afterArchive.body.reason, 'empty_scope', 'arquivado deixa o escopo vazio novamente');
       assert.deepEqual(afterArchive.body.sources, []);
     }
     console.log('RAG HTTP smoke: rota canônica, escopo privado e rascunho oculto OK');

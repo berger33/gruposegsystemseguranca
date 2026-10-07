@@ -6,7 +6,7 @@ function RhAssistentePageContent(){
   return (
     <main style={{ padding:24, maxWidth:900, margin:"0 auto", fontFamily:"system-ui, sans-serif" }}>
       <h1 style={{ fontSize:28 }}>Assistente RH</h1>
-      <p style={{ fontSize:13, opacity:0.8 }}>Consulta apenas a base de RH aprovada e publicada.</p>
+      <p style={{ fontSize:13, opacity:0.8 }}>Consulta apenas a base de RH aprovada e publicada. Sessão e papel são conferidos no servidor a cada pergunta: se a sessão expirar, o assistente avisa e não responde; outra base privada continua negada.</p>
 
       <RagWidget ragKey="rh" title="RAG RH Andreia" description="RH cadastro profissional separado login, histórico cargo lotação remuneração autorizada, recrutamento vaga candidatos triagem entrevista, banco talentos, admissão checklist documentos validação exame treinamento, dossiê tipos versões validade pendências aprovador, desligamento checklist devolução revogação, férias períodos aquisitivo concessivo saldo programação conflito cobertura, afastamentos período retorno documentação restrita substituição, ponto justificativas divergências workflow correção fechamento competência, banco horas adicionais, benefícios elegibilidade solicitações conferência exportação fornecedor, adiantamentos reembolsos alçada comprovantes, saúde ocupacional agenda vencimentos documentos restritos, integração contabilidade SST, treinamento por cargo, competências, uniformes EPI, fechamento DP, holerites fonte autorizada, avaliações planos desenvolvimento, atendimento interno, indicadores" placeholder="Ex: como admitir colaborador? como programar férias? como consultar benefício? qual treinamento vence?" />
 
