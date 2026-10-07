@@ -46,6 +46,10 @@ Para cada PR adicionar: rotas/papéis, implementação entregue, comandos/result
 - **Alteração de contrato que atingiu consumidor existente:** `tests/ai-rag.integration.test.mjs` passou a
   exigir `empty_scope` quando o escopo não tem conteúdo publicado e ganhou a prova de `no_relevant_source`
   com conteúdo publicado (asserção **adicionada**, nenhuma removida).
+- **CI da PR:** a primeira execução do workflow `fech-01-rag-widget-delivery` reprovou na etapa `npm run test:rag`
+  por ordem das próprias etapas — o smoke herdado sobe `server.mjs` em modo produção e exige `.next` compilado.
+  Corrigido movendo `npm run build` para antes do smoke; `static-and-smoke` (CI principal) e os gates das famílias
+  já haviam passado. Reprovou **antes** de rodar o gate focal, e isso está registrado em vez de declarado verde.
 - **Próxima ação:** revisar/integrar a PR #182 e então iniciar **FECH-02**, sem reabrir FECH-01.
 
 Validações fora do Arena: computador Windows do operador, desempenho/Ollama real, ativação no build local e aceite humano. Permanecem pendentes até evidência real; não bloqueiam a preparação de PRs na sandbox.

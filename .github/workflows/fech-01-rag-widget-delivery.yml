@@ -35,6 +35,8 @@ jobs:
       DATABASE_MIGRATION_URL: ''
       MAIL_HOST: ''
       NEXT_TELEMETRY_DISABLED: '1'
+      NEXT_PUBLIC_ALLOW_INDEX: 'false'
+      NEXT_PUBLIC_ENV: 'beta'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -46,7 +48,11 @@ jobs:
       # Contrato puro (sem HTTP/banco) e contrato do servidor com pool simulado
       # e provedor determinístico identificado como stub — não é Ollama real.
       - run: node --test tests/rag-widget-contract.test.mjs tests/ai-rag-real-scope.test.mjs
-      # Smoke HTTP do PGlite beta herdado: rota canônica, 401 privado e rascunho oculto.
+      # O build precisa vir antes do smoke PGlite herdado: `npm run test:rag`
+      # sobe `server.mjs` em modo produção, que exige `.next` compilado.
+      - run: npm run build
+      # Smoke HTTP do PGlite beta herdado: rota canônica, 401 privado, rascunho
+      # oculto e os dois estados de ausência (escopo vazio × sem trecho).
       - run: npm run test:rag
       # Gate focal: PostgreSQL 17 descartável, HTTP real, Chromium real e stub
       # determinístico. O auditor TAP exige >=20 casos, zero fail/skip/todo.
