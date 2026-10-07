@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import BrandLogo from '@/components/BrandLogo';
 import {
   ArrowDownRight, ArrowRight, ArrowUpRight, Building2, Camera,
   Check, CheckCircle2, ChevronDown, CircleHelp, Clock3, FileText, Headphones,
@@ -38,7 +39,7 @@ function whatsappLink(message: string) {
 function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <a className={`brand ${compact ? "brand--compact" : ""}`} href="#inicio" aria-label="Grupo SEG System — voltar ao início">
-      <span className="brand__symbol" aria-hidden="true"><Shield size={24} strokeWidth={1.7} /><span>S</span></span>
+      <BrandLogo size={50} alt=""/>
       <span className="brand__words"><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span>
     </a>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import BrandLogo from "@/components/BrandLogo";
 import { useState, type FormEvent } from "react";
 import {
   ArrowDown, ArrowRight, ArrowUpRight, Building2, Camera, Check,
@@ -50,7 +51,7 @@ export default function Layout04() {
     <main className={styles.site} id="inicio">
       <div className={styles.systemBar}><span><i /> PRÉVIA 04 <b>/</b> OPERAÇÃO</span><span>GRUPO SEG SYSTEM <b>—</b> GUARULHOS, SP</span></div>
       <header className={styles.header}>
-        <a className={styles.brand} href="#inicio" aria-label="Grupo SEG System, início"><span className={styles.brandIcon}><ShieldCheck size={23} /></span><span><strong>SEG<span> / </span>SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a>
+        <a className={styles.brand} href="#inicio" aria-label="Grupo SEG System, início"><BrandLogo size={48} alt=""/><span><strong>SEG<span> / </span>SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a>
         <button className={styles.menuButton} type="button" aria-label={menuOpen ? "Fechar navegação" : "Abrir navegação"} aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X /> : <Menu />}</button>
         <nav className={`${styles.nav} ${menuOpen ? styles.navOpen : ""}`} aria-label="Navegação principal"><a href="#solucoes" onClick={() => setMenuOpen(false)}>Soluções</a><a href="#metodo" onClick={() => setMenuOpen(false)}>Método</a><a href="#setores" onClick={() => setMenuOpen(false)}>Atuação</a><a href="#duvidas" onClick={() => setMenuOpen(false)}>FAQ</a></nav>
         <a className={styles.headerCta} href="#contato">Solicitar avaliação <ArrowUpRight size={15} /></a>
@@ -101,7 +102,7 @@ export default function Layout04() {
 
       <section className={styles.faq} id="duvidas"><div className={styles.faqHeader}><span className={styles.sectionKicker}>04 / PERGUNTAS FREQUENTES</span><h2>Antes da avaliação.</h2><a href={`https://wa.me/${phone}?text=${encodeURIComponent("Olá! Gostaria de saber mais sobre os serviços do Grupo SEG System.")}`} target="_blank" rel="noreferrer">Falar com a equipe <ArrowUpRight size={15} /></a></div><div className={styles.faqList}>{questions.map(([question, answer], index) => <article key={question}><button type="button" aria-expanded={openQuestion === index} onClick={() => setOpenQuestion(openQuestion === index ? -1 : index)}><span>Q.0{index + 1}</span>{question}<ChevronDown size={17} /></button>{openQuestion === index && <p>{answer}</p>}</article>)}</div></section>
 
-      <footer className={styles.footer}><a className={styles.footerBrand} href="#inicio"><span className={styles.brandIcon}><ShieldCheck size={21} /></span><span><strong>SEG <i>/</i> SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a><span>LAYOUT 04 <b>·</b> PRÉVIA EM DESENVOLVIMENTO</span><a href="/layout-01">Comparar com layout 01 <ArrowUpRight size={14} /></a></footer>
+      <footer className={styles.footer}><a className={styles.footerBrand} href="#inicio"><BrandLogo size={48} alt=""/><span><strong>SEG <i>/</i> SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a><span>LAYOUT 04 <b>·</b> PRÉVIA EM DESENVOLVIMENTO</span><a href="/layout-01">Comparar com layout 01 <ArrowUpRight size={14} /></a></footer>
       <a className={styles.floating} href={`https://wa.me/${phone}`} target="_blank" rel="noreferrer" aria-label="Falar pelo WhatsApp"><MessageCircle size={18} /><span>Falar com a equipe</span></a>
     </main>
   );

@@ -1,0 +1,3 @@
+/* Logo-only adaptation of the preserved static layout. */
+.brand__symbol {background:#fff url('/brand/grupo-seg-system-original.jpg') center/contain no-repeat!important;clip-path:none!important;transform:none!important;border-radius:50%!important;border:0!important;}
+.brand__symbol>* {visibility:hidden!important;}

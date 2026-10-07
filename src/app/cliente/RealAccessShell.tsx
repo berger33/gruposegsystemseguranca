@@ -1,5 +1,6 @@
 "use client";
 
+import BrandLogo from "@/components/BrandLogo";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import styles from "./RealAccess.module.css";
@@ -12,7 +13,7 @@ export default function RealAccessShell({ children }: { children: ReactNode }) {
     <div className={styles.page}>
       <header className={styles.header}>
         <Link href="/" className={styles.brand}>
-          <span className={styles.brandMark}>SEG</span>
+          <BrandLogo size={48} alt=""/>
           <span>
             <small>Grupo</small>
             <strong>SEG System</strong>

@@ -1,0 +1,6 @@
+.tools {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:24px 0;}
+.group {border:1px solid var(--ux-color-border);border-radius:12px;padding:12px;display:grid;align-content:start;gap:6px;}
+.group legend {padding:0 6px;font-size:12px;font-weight:750;color:var(--ux-color-muted);}
+.group button {width:100%;text-align:left;background:white;}
+@media(max-width:1000px){.tools{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:520px){.tools{grid-template-columns:minmax(0,1fr);}}

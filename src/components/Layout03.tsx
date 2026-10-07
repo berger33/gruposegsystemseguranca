@@ -1,5 +1,6 @@
 "use client";
 
+import BrandLogo from "@/components/BrandLogo";
 import { useState, type FormEvent } from "react";
 import {
   ArrowDown, ArrowRight, ArrowUpRight, Building2, Check, ChevronDown,
@@ -49,7 +50,7 @@ export default function Layout03() {
       <div className={styles.topline}><span><i /> PRÉVIA DE INTERFACE 03</span><span>SEGURANÇA INTEGRADA · GUARULHOS / SP</span></div>
       <header className={styles.header}>
         <a className={styles.brand} href="#inicio" aria-label="Grupo SEG System — início">
-          <span className={styles.brandSeal}><ShieldCheck size={24} /></span>
+          <BrandLogo size={48} alt=""/>
           <span className={styles.brandType}><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span>
         </a>
         <button className={styles.menuButton} type="button" aria-label={menuOpen ? "Fechar navegação" : "Abrir navegação"} aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X /> : <Menu />}</button>
@@ -109,7 +110,7 @@ export default function Layout03() {
 
       <section className={styles.faq} id="duvidas"><div className={styles.faqTitle}><span className={styles.kicker}>06 / DÚVIDAS</span><h2>Estamos aqui<br />para ajudar.</h2><p>Se preferir, fale diretamente com a equipe.</p><a href={`https://wa.me/${phone}?text=${encodeURIComponent("Olá! Tenho uma dúvida sobre os serviços do Grupo SEG System.")}`} target="_blank" rel="noreferrer">Falar com uma pessoa <ArrowUpRight size={14} /></a></div><div className={styles.faqList}>{questions.map(([question, answer], index) => <article key={question}><button type="button" aria-expanded={openFaq === index} onClick={() => setOpenFaq(openFaq === index ? -1 : index)}><span>0{index + 1}</span>{question}<ChevronDown size={18} /></button>{openFaq === index && <p>{answer}</p>}</article>)}</div></section>
 
-      <footer className={styles.footer}><a className={styles.footerBrand} href="#inicio"><span className={styles.brandSeal}><ShieldCheck size={21} /></span><span className={styles.brandType}><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a><span>Uma prévia em desenvolvimento · Layout 03</span><a href="/layout-01">Comparar com o Layout 01 <ArrowUpRight size={14} /></a></footer>
+      <footer className={styles.footer}><a className={styles.footerBrand} href="#inicio"><BrandLogo size={48} alt=""/><span className={styles.brandType}><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a><span>Uma prévia em desenvolvimento · Layout 03</span><a href="/layout-01">Comparar com o Layout 01 <ArrowUpRight size={14} /></a></footer>
       <a className={styles.floatContact} href={`https://wa.me/${phone}`} target="_blank" rel="noreferrer" aria-label="Conversar pelo WhatsApp"><MessageCircle size={19} /><span>Vamos conversar</span></a>
     </main>
   );

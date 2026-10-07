@@ -292,15 +292,15 @@ test("lead capture works end to end against a real PostgreSQL", testOptions, asy
     assert.deepEqual(anonymous.body, { error: "admin_session_required" });
   });
 
-  await t.test("keeps the global visual selection paused by default", async () => {
+  await t.test("exposes the active visual but refuses publication without individual staff", async () => {
     const current = await api("/api/site-visual");
     assert.equal(current.status, 200);
     assert.equal(current.body.visual, "06");
-    assert.equal(current.body.selectionEnabled, false);
+    assert.equal(current.body.selectionEnabled, true);
 
     const attempt = await api("/api/site-visual", { method: "PUT", body: { visual: "03", updatedBy: "marcelo" } });
-    assert.equal(attempt.status, 409);
-    assert.deepEqual(attempt.body, { error: "visual_selection_paused" });
+    assert.equal(attempt.status, 401);
+    assert.deepEqual(attempt.body, { error: "individual_staff_required" });
   });
 
   await t.test("serves the public page that hosts the lead form", async () => {

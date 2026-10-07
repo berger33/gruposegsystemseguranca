@@ -34,6 +34,8 @@ const visualComponents: Record<SiteVisualId, ComponentType> = {
   "10": Layout10,
 };
 
+export function SiteVisualPreview({visual}:{visual:SiteVisualId}){const Component=visualComponents[visual];return <Component/>;}
+
 export default function SiteVisualRenderer() {
   const [visualId, setVisualId] = useState<SiteVisualId>(DEFAULT_SITE_VISUAL);
 

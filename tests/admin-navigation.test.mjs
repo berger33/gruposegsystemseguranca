@@ -8,7 +8,7 @@ test('every destination in the existing admin catalog belongs to exactly one nam
   const section = source.split('export const ADMIN_MODULES')[1].split('export function modulesForRole')[0];
   const existing = [...section.matchAll(/href:\s*"(\/admin[^\"]+)"/g)].map(match => match[1]);
   const grouped = ADMIN_GROUPS.flatMap(group => group.hrefs);
-  assert.equal(existing.length, 26, 'review the navigation catalogue before changing this baseline');
+  assert.equal(existing.length, 27, 'review the navigation catalogue before changing this baseline');
   assert.deepEqual([...new Set(grouped)].sort(), [...existing].sort());
   assert.equal(grouped.length, existing.length, 'no destination may be duplicated');
 });

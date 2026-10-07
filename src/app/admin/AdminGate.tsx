@@ -7,6 +7,7 @@
 // aqui apenas resolvemos UI — quem não tem papel vê mensagem honesta em vez
 // de estrutura quebrada.
 
+import BrandLogo from "@/components/BrandLogo";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -40,6 +41,7 @@ export const ADMIN_MODULES: ReadonlyArray<{ href: string; label: string; roles: 
   { href: "/admin/expansao", label: "Expansão", roles: ["comercial", "financeiro", "marcelo", "admin", "ti"] },
   { href: "/admin/analytics", label: "Analytics", roles: ["marcelo", "admin", "ti"] },
   { href: "/admin/visual", label: "Editor visual", roles: ["admin", "ti"] },
+  { href: "/admin/aparencia", label: "Aparência do site", roles: ["admin", "marcelo", "ti"] },
   { href: "/admin/relatorios", label: "Relatórios periódicos", roles: ["admin", "ti"] },
   { href: "/admin/inteligencia", label: "Inteligência comercial", roles: ["admin", "ti"] },
   { href: "/admin/emergencial", label: "Apoio emergencial", roles: ["admin", "ti"] },
@@ -113,7 +115,7 @@ export function AdminChrome({ session, children }: { session: AdminSession; chil
       <div className={`${styles.container} ${styles.adminContainer}`} data-admin-chrome="true">
         <header className={styles.topbar}>
           <Link href="/admin" className={styles.brand}>
-            <span className={styles.brandMark}>SEG</span>
+            <BrandLogo size={48} alt=""/>
             <span>
               <small>Grupo</small>
               <strong>SEG System</strong>

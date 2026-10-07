@@ -1,5 +1,6 @@
 "use client";
 
+import BrandLogo from "@/components/BrandLogo";
 import ClientPortalNavigation from "@/components/ClientPortalNavigation";
 
 import { useState, type FormEvent } from "react";
@@ -57,7 +58,7 @@ export default function ClientRequestsPreview() {
     <main className={styles.page}>
       <header className={styles.header}>
         <Link className={styles.brand} href="/cliente/painel" aria-label="Voltar ao painel do cliente">
-          <span className={styles.brandMark}><ShieldCheck size={20} /></span>
+          <BrandLogo size={48} alt=""/>
           <span><strong>GRUPO SEG SYSTEM</strong><small>ÁREA DO CLIENTE · PRÉVIA</small></span>
         </Link>
         <Link className={styles.back} href="/cliente/painel"><ArrowLeft size={14} /> Painel do cliente</Link>

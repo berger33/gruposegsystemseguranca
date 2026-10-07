@@ -34,6 +34,7 @@ import {
 } from '../../lib/portal-vocabulary.mjs';
 import styles from './EmployeePortal.module.css';
 import EmployeeTimeClock from './EmployeeTimeClock';
+import BrandLogo from '@/components/BrandLogo';
 
 type Session = { employeeId:string; identityId:string; displayName:string; mustChangePassword:boolean };
 type Home = Record<string, any[]> & { employeeId?:string };
@@ -184,7 +185,7 @@ export default function EmployeePortal(){
 
   const activeTab=TABS.find(item=>item[0]===tab)!;
   return <main className={styles.shell}><div className={styles.app}>
-    <header className={styles.header}><div className={styles.brand}>SEG System • acesso próprio</div><div className={styles.headerRow}><div><h1>Olá, {session.displayName?.split(' ')[0]}</h1><p>Seus dados, sua escala e seus pedidos</p></div><button className={styles.logout} onClick={logout}>Sair</button></div></header>
+    <header className={styles.header}><div className={styles.brandLine}><BrandLogo size={44} alt=""/><div className={styles.brand}>Grupo SEG System • acesso próprio</div></div><div className={styles.headerRow}><div><h1>Olá, {session.displayName?.split(' ')[0]}</h1><p>Seus dados, sua escala e seus pedidos</p></div><button className={styles.logout} onClick={logout}>Sair</button></div></header>
     <div className={styles.content}>
       {message?<div className={styles.notice} role="status" aria-live="polite">{message}</div>:null}
       {actionError?<ErrorNotice descriptor={actionError}/>:null}
@@ -242,7 +243,7 @@ function Login({onLogin}:{onLogin:()=>Promise<void>}){
     }catch(err:unknown){ setError(describeThrown(err)); }
     finally{ setBusy(false); }
   }
-  return <main className={styles.shell}><div className={styles.login}><section className={styles.loginCard}><div className={styles.logo}>SEG</div><h1>Portal do funcionário</h1><p>Use somente sua identidade individual. Este acesso não utiliza credenciais de RH.</p>
+  return <main className={styles.shell}><div className={styles.login}><section className={styles.loginCard}><BrandLogo size={64}/><h1>Portal do funcionário</h1><p>Use somente sua identidade individual. Este acesso não utiliza credenciais de RH.</p>
     {error?<ErrorNotice descriptor={error}/>:null}
     <form className={styles.form} onSubmit={submit}>
       <div className={styles.field}><label htmlFor="portal-email">E-mail</label><input id="portal-email" className={styles.input} name="email" type="email" autoComplete="username" required/></div>

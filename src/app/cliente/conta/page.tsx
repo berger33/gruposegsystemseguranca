@@ -1,3 +1,4 @@
+import BrandLogo from "@/components/BrandLogo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, AtSign, KeyRound, LockKeyhole, ShieldCheck, Smartphone, TriangleAlert } from "lucide-react";
@@ -21,7 +22,7 @@ export default function ClientSecurityHubPage() {
     <main className={styles.page}>
       <header className={styles.header}>
         <Link className={styles.brand} href="/cliente/painel" aria-label="Voltar ao painel do cliente">
-          <span className={styles.brandMark}><ShieldCheck size={20} /></span>
+          <BrandLogo size={48} alt=""/>
           <span><strong>GRUPO SEG SYSTEM</strong><small>ÁREA DO CLIENTE · PRÉVIA</small></span>
         </Link>
         <Link className={styles.back} href="/cliente/painel">Voltar ao painel <ArrowRight size={14} /></Link>

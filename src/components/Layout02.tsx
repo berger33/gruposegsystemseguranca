@@ -1,5 +1,6 @@
 "use client";
 
+import BrandLogo from "@/components/BrandLogo";
 import { useState, type FormEvent } from "react";
 import {
   ArrowDown, ArrowRight, ArrowUpRight, Building2, Camera, Check,
@@ -53,7 +54,7 @@ export default function Layout02() {
       <div className={styles.notice}><span><i /> PRÉVIA 02 · CONCEITO CENTRAL</span><span>GRUPO SEG SYSTEM <b>—</b> GUARULHOS, SP</span></div>
       <header className={styles.header}>
         <a className={styles.brand} href="#topo" aria-label="Grupo SEG System, início">
-          <span className={styles.brandMark}><ShieldCheck size={25} strokeWidth={1.7} /></span>
+          <BrandLogo size={48} alt=""/>
           <span><strong>GRUPO <b>SEG</b></strong><small>SEGURANÇA INTEGRADA</small></span>
         </a>
         <button className={styles.menuButton} onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? "Fechar menu" : "Abrir menu"} aria-expanded={menuOpen}>
@@ -126,7 +127,7 @@ export default function Layout02() {
 
       <section className={styles.faq} id="duvidas"><div className={styles.faqHeading}><span className={styles.sectionLabel}>06 / DÚVIDAS FREQUENTES</span><h2>Antes de começar.</h2><a href={`https://wa.me/${phone}?text=${encodeURIComponent("Olá! Tenho uma dúvida sobre os serviços do Grupo SEG System.")}`} target="_blank" rel="noreferrer">Prefere atendimento direto? <ArrowUpRight size={15} /></a></div><div className={styles.faqList}>{faq.map(([question, answer], index) => <article className={styles.faqItem} key={question}><button type="button" aria-expanded={faqOpen === index} onClick={() => setFaqOpen(faqOpen === index ? -1 : index)}><span>0{index + 1}</span>{question}<ChevronDown size={18} /></button>{faqOpen === index && <p>{answer}</p>}</article>)}</div></section>
 
-      <footer className={styles.footer}><a className={styles.footerBrand} href="#topo"><span className={styles.brandMark}><ShieldCheck size={23} /></span><span><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a><span>Prévia de interface · Layout 02 / Central</span><a href="/layout-01">Comparar com o layout 01 <ArrowUpRight size={14} /></a></footer>
+      <footer className={styles.footer}><a className={styles.footerBrand} href="#topo"><BrandLogo size={48} alt=""/><span><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a><span>Prévia de interface · Layout 02 / Central</span><a href="/layout-01">Comparar com o layout 01 <ArrowUpRight size={14} /></a></footer>
       <a className={styles.floatingContact} href={`https://wa.me/${phone}`} target="_blank" rel="noreferrer" aria-label="Falar com a equipe pelo WhatsApp"><MessageCircle size={20} /><span>Falar com a equipe</span></a>
     </main>
   );
