@@ -247,14 +247,17 @@ indexação idempotente e métricas honestas — reaproveitando integralmente as
 **Sim — uma única migração aditiva: `175-ai-rag-hybrid-embeddings.sql`** (a 001–174 permanece intocada; rollback
 documentado em `docs/` com o `DROP`/`ALTER … DROP COLUMN` correspondente). Conteúdo previsto:
 
-1. `ai_rag_chunk_embeddings` — `chunk_id` (FK `ON DELETE CASCADE`, **UNIQUE**), `rag_key`, `model_name`,
-   `model_digest`, `dimensions`, `content_checksum` (SHA-256 do texto do chunk), `embedding real[]`,
+1. `ai_rag_chunk_embeddings` — `chunk_id` (FK `ON DELETE CASCADE`, **UNIQUE**), `rag_key`, `model_name`
+   (`nomic-embed-text`), `model_digest`, `dimensions` (**768**), `content_checksum` (SHA-256 do texto do chunk),
+   `embedding real[]` (portátil; também serve de origem ao cast `::vector` quando a extensão existir),
    `status` (`pendente|gerado|erro`), `error_code`, `generated_at`, `created_at/updated_at`. Sem vetor ⇒ sem
-   linha com status `gerado`.
+   linha com status `gerado`. `dimensions` divergente do modelo configurado ⇒ recusa, não grava.
 2. `ai_rag_answer_events` — protocolo, `rag_key`, `client_account_id`, `actor_kind`, `outcome`
    (`answered|no_source|ai_unavailable|scope_denied|error`), `retrieval_mode` (`hybrid|lexical_only`),
-   `vector_backend`, `chunk_count`, `top_score`, `latency_ms`, `model_name`, `ai_available`, `created_at`.
-   É o que torna a Fase 4 mensurável **e corrige R3** (o feedback passa a ter um protocolo persistido).
+   `vector_backend` (`pgvector|exact`), `chunk_count`, `top_score`, `latency_ms`, `model_name`, `ai_available`,
+   `query`, `response`, `sources`, `retention_expires_at`, `created_at`. É o que torna a Fase 4 mensurável
+   **e corrige R3** (o feedback passa a ter um protocolo persistido). Retenção e tratamento do texto conforme
+   §7 (decisão 3).
 3. `ai_rag_retrieval_config` — limites por `rag_key`: `min_relevance`, `max_chunks`, `max_context_chars`,
    `lexical_weight`, `vector_weight` com defaults conservadores; alterável só por `admin/ti` e auditado.
 4. `ALTER TABLE ai_rag_feedback ADD COLUMN answer_event_id UUID REFERENCES ai_rag_answer_events(id)` (aditivo,
@@ -270,12 +273,13 @@ Em modo beta (PGlite 1-clique) as mesmas tabelas entram em `db/beta-pglite-init.
 
 | Arquivo | Ação |
 |---|---|
-| `src/server/ai-rag-embeddings.mjs` | **novo**: cliente Ollama `/api/embed` **somente loopback**, identificação de modelo/dimensão/digest, checksum do chunk, idempotência (mesmo chunk + mesmo checksum ⇒ não regrava), erro explícito (`embedding_unavailable`), nunca logar conteúdo |
-| `src/server/ai-rag-retrieval.mjs` | **novo**: monta a busca com **filtro de escopo primeiro** (mesma cláusula SQL hoje validada em `ai-rag-real-api.mjs`, extraída para módulo testável), lexical via FTS português + `unaccent`/`pg_trgm` quando disponíveis, vetorial (pgvector ou cosseno exato), **fusão RRF determinística**, `min_relevance`, `max_chunks`, `max_context_chars` |
+| `src/server/ai-rag-embeddings.mjs` | **novo**: cliente Ollama `/api/embed` **somente loopback**, `nomic-embed-text` (768 dims) por padrão via `OLLAMA_EMBED_MODEL`, identificação de modelo/dimensão/digest, checksum do chunk, idempotência (mesmo chunk + mesmo checksum ⇒ não regrava), erro explícito (`embedding_unavailable`), recusa de dimensão divergente, nunca logar conteúdo |
+| `src/server/ai-rag-retrieval.mjs` | **novo**: monta a busca com **filtro de escopo primeiro** (mesma cláusula SQL hoje validada em `ai-rag-real-api.mjs`, extraída para módulo testável), lexical via FTS português + `unaccent`/`pg_trgm` quando disponíveis, vetorial com **detecção automática de backend** (`pgvector` quando `CREATE EXTENSION vector` estiver disponível e autorizada; caso contrário cosseno exato sobre o conjunto já filtrado), **fusão RRF determinística**, `min_relevance`, `max_chunks`, `max_context_chars` |
 | `src/server/ai-rag-real-api.mjs` | passar a usar o retrieval; gravar `ai_rag_answer_events` (protocolo persistido); devolver fontes com `title`, `source`, `document_id`, `version`, `published_at`, `excerpt` do trecho efetivamente usado, `stale_warning`, `retrieval_mode`, `vector_backend`; **continuar não chamando o modelo quando não há fonte** e mantendo `ai_unavailable` quando Ollama cai |
 | `src/server/ai-rag-api.mjs` | curadoria inalterada em contrato; `handleFeedback` aceita protocolo de `ai_rag_answer_events` (sem quebrar os antigos); custo deixa de ser estimado (`NULL` + `cost_source`) |
 | `server.mjs` | registrar as rotas administrativas mínimas: `GET /api/admin/ai-rag-index-status` (modelo/dim/datas/erros/pendências) e `POST /api/admin/ai-rag-embeddings/backfill` (admin/ti, idempotente, sem download de modelo). Nenhuma rota pública nova |
 | `scripts/rag-embed-backfill.mjs` | **novo**: indexação manual/idempotente com relatório de pendências e falhas; recusa rodar sem `OLLAMA_EMBED_MODEL` |
+| `scripts/rag-retention-purge.mjs` | **novo**: eliminação explícita e auditável dos eventos vencidos (`retention_expires_at`); executável manualmente ou por intervalo opt-in, nunca apaga em silêncio |
 | `src/app/admin/ti/AiRagClient.tsx` | exibir estado real de indexação (modelo, dimensão, data, erro) e o botão de backfill |
 | `src/components/RagWidget.tsx` | mostrar fontes com versão/data/trecho, aviso de conteúdo desatualizado, aviso de *conteúdo documental vs. dado operacional*, e estados distintos (carregando, sucesso, sem fonte, escopo negado, indisponível, falha de rede) |
 | `db/beta-pglite-init.sql` | tabelas novas do item 5.1 + marcador v4 |
@@ -326,15 +330,31 @@ seguinte — ver Q4).
 
 ---
 
-## 6. Perguntas que dependem de decisão do proprietário
+## 6. Decisões do proprietário (2026-10-06) — incorporadas à proposta
 
-1. **Armazenamento vetorial** — `pgvector` pode ser instalado/compilado no PostgreSQL do PC e autorizado nos
-   testes? Ou seguimos com backend portátil de cosseno exato (sem ANN) e declarado?
-2. **Modelo de embeddings** — qual modelo local autorizar (`nomic-embed-text` 768, `bge-m3` 1024, outro)? O
-   download (`ollama pull`) será feito manualmente por você, uma única vez.
-3. **Retenção de pergunta/resposta** — gravar pergunta+resposta+fontes para curadoria/métrica (com retenção
-   definida), gravar apenas metadados (outcome, contagens, latência) ou nada?
-4. **Escopo da PR 1** — incluir também a reativação dos três assistentes privados (cliente/RH/Marcelo) na UI com
-   gate Chromium, ou manter isso na fatia curta seguinte?
+| # | Pergunta | Decisão tomada | Efeito na PR 1 |
+|---|---|---|---|
+| 1 | Armazenamento vetorial | **Ambos com detecção automática**: vetor real gravado de forma portátil (`real[]`, 768 dims); `pgvector` é usado quando a extensão estiver disponível e autorizada no PostgreSQL do PC; caso contrário, cosseno exato sobre o conjunto já filtrado por escopo. O backend usado é declarado na resposta (`vector_backend`). | `RAG_VECTOR_BACKEND=auto`; o código nunca depende de `pgvector` para funcionar, e nunca chama o caminho exato de “ANN”. Gates rodam no caminho exato (o motor de testes não tem `pgvector`); o caminho `pgvector` é validado na máquina do operador, se/quando a extensão for instalada. |
+| 2 | Modelo de embeddings | **`nomic-embed-text` (768 dimensões, ~274 MB)**, obtido por `ollama pull` **manual** no PC do operador; nenhum download automático. | `OLLAMA_EMBED_MODEL=nomic-embed-text` como default documentado; dimensão validada na escrita; sem o modelo, os chunks permanecem `pendente` e a resposta declara `retrieval_mode: "lexical_only"` — nunca semântica fingida. |
+| 3 | Retenção de pergunta/resposta | **Texto completo (pergunta + resposta + fontes) com retenção definida de 90 dias.** | `ai_rag_answer_events` grava `query`, `response`, `sources` e `retention_expires_at` (90 dias, configurável por `rag_key`); leitura do texto restrita a `admin`/`ti`; **nada** de texto em log; purge explícito por `scripts/rag-retention-purge.mjs`. |
+| 4 | Escopo da PR 1 | **Servidor + curadoria; UI privada em fatia curta seguinte.** | Os três assistentes privados continuam inertes na PR 1; a reativação (`RagWidget` com sessão real + gate Chromium por papel/conta) será a **PR 1b**, pequena e revisável. |
 
-Confirmadas essas quatro decisões, inicio a PR 1 sem tocar em nenhuma migração existente.
+### 6.1 Ressalvas registradas sobre as decisões 1 e 3
+- **Decisão 1**: o caminho `pgvector` não é exercitado pelos gates descartáveis deste repositório nem pelo CI
+  (o `embedded-postgres` não traz a extensão). Enquanto o `pgvector` não for instalado no PC, a prova de ANN
+  fica **não executada** — e assim será reportada, sem tratar cosseno exato como índice vetorial aproximado.
+- **Decisão 3**: guardar texto completo em 90 dias inclui respostas de escopo `cliente` e `rh`, que podem conter
+  dado pessoal ou trabalhista. Mitigações na implementação: acesso ao texto somente por `admin`/`ti` e apenas
+  para curadoria; nenhuma cópia em log/console; purge auditado com contagem (sem conteúdo); possibilidade de
+  rebaixar escopos específicos para “somente metadados” por configuração, se o proprietário quiser depois.
+
+---
+
+## 7. Próximo passo
+
+Com as quatro decisões acima, a PR 1 está fechada em escopo e pronta para implementação: migração aditiva **175**,
+módulos `ai-rag-embeddings.mjs` / `ai-rag-retrieval.mjs`, ajustes na rota canônica `/api/ai/answer`, curadoria
+(`/admin/ti`), `beta-pglite-init.sql` (marcador v4), backfill e retenção, mais os gates unitário, PostgreSQL
+descartável/HTTP e Chromium descritos em §5.4. Nenhuma migração existente será alterada e nenhuma branch nova
+será criada.
+
