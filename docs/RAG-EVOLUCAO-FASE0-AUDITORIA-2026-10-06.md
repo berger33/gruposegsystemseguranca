@@ -358,3 +358,8 @@ módulos `ai-rag-embeddings.mjs` / `ai-rag-retrieval.mjs`, ajustes na rota canô
 descartável/HTTP e Chromium descritos em §5.4. Nenhuma migração existente será alterada e nenhuma branch nova
 será criada.
 
+**Executado em 07/10/2026** — o resultado está em
+[RAG PR 1 — fundação semântica híbrida](RAG-PR1-FUNDACAO-SEMANTICA-2026-10-06.md), com as medições de
+calibração e o rollback. A decisão nº 4 desta seção foi aplicada: esta PR entregou **servidor + curadoria**, e o
+gate Chromium dos três assistentes privados (RagWidget por papel/conta) passou para a **PR 1b**.
+
