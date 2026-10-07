@@ -1,5 +1,6 @@
 "use client";
 
+import BrandLogo from "@/components/BrandLogo";
 import { useState, type FormEvent } from "react";
 import {
   ArrowRight, ArrowUpRight, Camera, Check, ChevronDown, DoorOpen,
@@ -51,7 +52,7 @@ export default function Layout10() {
     <main className={styles.site} id="inicio">
       <div className={styles.topStrip}><span><i /> INTERFACE 10 <b>·</b> LINHA DE CUIDADO</span><span>GRUPO SEG SYSTEM <i /> GUARULHOS / SP</span></div>
       <header className={styles.header}>
-        <a className={styles.brand} href="#inicio" aria-label="Grupo SEG System — início"><span className={styles.brandMark}><ShieldCheck size={22} /></span><span><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a>
+        <a className={styles.brand} href="#inicio" aria-label="Grupo SEG System — início"><BrandLogo size={48} alt=""/><span><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a>
         <button className={styles.menuButton} type="button" aria-label={menuOpen ? "Fechar navegação" : "Abrir navegação"} aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X /> : <Menu />}</button>
         <nav className={`${styles.nav} ${menuOpen ? styles.navOpen : ""}`} aria-label="Navegação principal"><a href="#frentes" onClick={() => setMenuOpen(false)}>Frentes de cuidado</a><a href="#contato" onClick={() => setMenuOpen(false)}>Contato</a><a href="#duvidas" onClick={() => setMenuOpen(false)}>Dúvidas</a></nav>
         <a className={styles.headerCta} href="#contato">Iniciar conversa <ArrowUpRight size={14} /></a>
@@ -104,7 +105,7 @@ export default function Layout10() {
 
       <section className={styles.faq} id="duvidas"><div className={styles.faqIntro}><span className={styles.sectionNum}>03 <i /> DÚVIDAS</span><h2>Se ainda houver<br />uma pergunta.</h2><a href={whatsapp("Olá! Tenho uma dúvida sobre os serviços do Grupo SEG System.")} target="_blank" rel="noreferrer"><Headphones size={15} /> Falar com uma pessoa</a></div><div className={styles.faqList}>{faq.map(([question, answer], index) => <article key={question}><button type="button" aria-expanded={openFaq === index} onClick={() => setOpenFaq(openFaq === index ? -1 : index)}><span>0{index + 1}</span>{question}<ChevronDown size={17} /></button>{openFaq === index && <p>{answer}</p>}</article>)}</div></section>
 
-      <footer className={styles.footer}><a className={styles.footerBrand} href="#inicio"><span className={styles.brandMark}><ShieldCheck size={19} /></span><span><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a><span>LAYOUT 10 · LINHA DE CUIDADO</span><a href="/layout-01">Comparar com Layout 01 <ArrowUpRight size={13} /></a></footer>
+      <footer className={styles.footer}><a className={styles.footerBrand} href="#inicio"><BrandLogo size={48} alt=""/><span><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a><span>LAYOUT 10 · LINHA DE CUIDADO</span><a href="/layout-01">Comparar com Layout 01 <ArrowUpRight size={13} /></a></footer>
     </main>
   );
 }

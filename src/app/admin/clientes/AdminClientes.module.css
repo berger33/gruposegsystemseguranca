@@ -1,7 +1,7 @@
 .page {
   min-height: 100vh;
   background: #0b2246;
-  color: #112f52;
+  color: #15243d;
   padding: clamp(18px, 4vw, 42px) clamp(16px, 4vw, 36px);
   font-family: 'DM Sans', system-ui, sans-serif;
 }
@@ -14,7 +14,7 @@
   align-items: center;
   gap: 12px 18px;
   margin-bottom: 20px;
-  color: #e7f2fc;
+  color: #edf1fc;
 }
 
 .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
@@ -25,7 +25,7 @@
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #1a5db2, #347fce);
+  background: linear-gradient(135deg, #233f91, #315aca);
   color: #fff;
   font-family: Manrope, sans-serif;
   font-weight: 800;
@@ -78,14 +78,14 @@
 
 .card h1, .card h2 {
   font-family: Manrope, sans-serif;
-  color: #092c59;
+  color: #172b68;
   margin: 0 0 4px;
 }
 
 .card h1 { font-size: 22px; }
 .card h2 { font-size: 18px; }
 
-.hint { margin: 0 0 16px; font-size: 13px; color: #5a7189; line-height: 1.55; }
+.hint { margin: 0 0 16px; font-size: 13px; color: #52627c; line-height: 1.55; }
 
 .formGrid { display: grid; gap: 12px; margin-bottom: 16px; }
 
@@ -97,16 +97,16 @@
 
 .field { display: grid; gap: 5px; }
 
-.field label { font-size: 12px; font-weight: 700; color: #0c3974; letter-spacing: 0.02em; }
+.field label { font-size: 12px; font-weight: 700; color: #233f91; letter-spacing: 0.02em; }
 
 .field input,
 .field select,
 .field textarea {
   padding: 10px 12px;
-  border: 1px solid #dce7f0;
+  border: 1px solid #d1d9e8;
   border-radius: 9px;
   background: #fbfdff;
-  color: #112f52;
+  color: #15243d;
   font-size: 13px;
   font-family: inherit;
   width: 100%;
@@ -119,7 +119,7 @@
 .field select:focus,
 .field textarea:focus {
   outline: none;
-  border-color: #347fce;
+  border-color: #315aca;
   box-shadow: 0 0 0 3px rgba(52, 127, 206, 0.16);
 }
 
@@ -131,7 +131,7 @@
   padding: 11px 18px;
   border: none;
   border-radius: 10px;
-  background: linear-gradient(135deg, #1a5db2, #0c3974);
+  background: linear-gradient(135deg, #233f91, #233f91);
   color: #fff;
   font-size: 13px;
   font-weight: 800;
@@ -154,22 +154,22 @@
   align-items: center;
   gap: 8px 14px;
   padding: 12px 14px;
-  border: 1px solid #dce7f0;
+  border: 1px solid #d1d9e8;
   border-radius: 11px;
   background: #fbfdff;
 }
 
 .listItemMain { flex: 1 1 260px; min-width: 0; }
 
-.listItemTitle { margin: 0 0 2px; font-size: 13px; font-weight: 800; color: #112f52; word-break: break-word; }
+.listItemTitle { margin: 0 0 2px; font-size: 13px; font-weight: 800; color: #15243d; word-break: break-word; }
 
-.listItemMeta { margin: 0; font-size: 11px; color: #5a7189; line-height: 1.5; }
+.listItemMeta { margin: 0; font-size: 11px; color: #52627c; line-height: 1.5; }
 
 .listItemDetail {
   flex-basis: 100%;
   margin: 4px 0 0;
   font-size: 12px;
-  color: #112f52;
+  color: #15243d;
   line-height: 1.55;
   word-break: break-word;
 }
@@ -188,19 +188,19 @@
 }
 
 .chipActive { background: #e9f7ee; color: #1d6b34; border: 1px solid #bfe6cb; }
-.chipPlanned { background: #e7f2fc; color: #092c59; border: 1px solid #dce7f0; }
+.chipPlanned { background: #edf1fc; color: #172b68; border: 1px solid #d1d9e8; }
 .chipSuspended { background: #fdf6e3; color: #8a5a00; border: 1px solid #eeda9e; }
 .chipEnded, .chipClosed { background: #f3f4f6; color: #4b5563; border: 1px solid #dcdfe4; }
-.chipOpen { background: #e7f2fc; color: #092c59; border: 1px solid #dce7f0; }
+.chipOpen { background: #edf1fc; color: #172b68; border: 1px solid #d1d9e8; }
 .chipProgress { background: #fdf6e3; color: #8a5a00; border: 1px solid #eeda9e; }
 .chipResolved { background: #e9f7ee; color: #1d6b34; border: 1px solid #bfe6cb; }
 
 .smallSelect {
   padding: 7px 9px;
-  border: 1px solid #dce7f0;
+  border: 1px solid #d1d9e8;
   border-radius: 8px;
   background: #fff;
-  color: #112f52;
+  color: #15243d;
   font-size: 12px;
   font-family: inherit;
 }
@@ -227,10 +227,10 @@
   align-items: center;
   gap: 5px;
   padding: 7px 11px;
-  border: 1px solid #1a5db2;
+  border: 1px solid #233f91;
   border-radius: 8px;
   background: transparent;
-  color: #1a5db2;
+  color: #233f91;
   font-size: 11px;
   font-weight: 800;
   text-decoration: none;
@@ -238,15 +238,15 @@
   cursor: pointer;
 }
 
-.linkButton:hover { background: #e7f2fc; }
+.linkButton:hover { background: #edf1fc; }
 
 .empty {
   padding: 26px 16px;
   text-align: center;
-  color: #5a7189;
+  color: #52627c;
   font-size: 12px;
   line-height: 1.6;
-  border: 1px dashed #dce7f0;
+  border: 1px dashed #d1d9e8;
   border-radius: 11px;
   background: #fbfdff;
 }
@@ -262,10 +262,10 @@
 
 .inlineForm input, .inlineForm select, .inlineForm textarea {
   padding: 8px 10px;
-  border: 1px solid #dce7f0;
+  border: 1px solid #d1d9e8;
   border-radius: 8px;
   background: #fff;
-  color: #112f52;
+  color: #15243d;
   font-size: 12px;
   font-family: inherit;
   flex: 1 1 180px;
@@ -300,14 +300,14 @@
   width: 100%;
   text-align: left;
   padding: 9px 11px;
-  border: 1px solid #dce7f0;
+  border: 1px solid #d1d9e8;
   border-radius: 9px;
   background: #fff;
-  color: #112f52;
+  color: #15243d;
   font-size: 12px;
   font-family: inherit;
   cursor: pointer;
 }
 
-.searchOption:hover { background: #e7f2fc; }
-.searchOption small { display: block; color: #5a7189; margin-top: 1px; }
+.searchOption:hover { background: #edf1fc; }
+.searchOption small { display: block; color: #52627c; margin-top: 1px; }

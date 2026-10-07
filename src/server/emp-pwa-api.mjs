@@ -137,7 +137,7 @@ export function createEmpPwaApi({ pool, auditLog, sameOrigin, requireSession, re
         display: 'standalone',
         scope: '/',
         start_url: '/',
-        icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+        icons: [{ src: '/brand/grupo-seg-system-original.jpg', sizes: '345x345', type: 'image/jpeg' }],
       };
       const manifest = {
         name: cfg.name,

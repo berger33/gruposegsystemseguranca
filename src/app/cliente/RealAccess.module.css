@@ -1,14 +1,14 @@
 .page {
-  --navy: #092c59;
-  --navy-2: #0c3974;
-  --blue: #1a5db2;
-  --blue-bright: #347fce;
-  --text: #112f52;
-  --muted: #5a7189;
-  --paper: #f2f8fd;
+  --navy: #172b68;
+  --navy-2: #233f91;
+  --blue: #233f91;
+  --blue-bright: #315aca;
+  --text: #15243d;
+  --muted: #52627c;
+  --paper: #f3f5fb;
   --surface: #fff;
-  --line: #dce7f0;
-  --wash: #e7f2fc;
+  --line: #d1d9e8;
+  --wash: #edf1fc;
   --danger: #b3261e;
 
   min-height: 100vh;
@@ -284,3 +284,4 @@
   font-size: 14px;
   padding: 12px 0;
 }
+.page {--navy:#172b68;--navy-2:#233f91;--blue:#233f91;--blue-bright:#315aca;--text:#15243d;--muted:#52627c;--paper:#f3f5fb;--line:#d1d9e8;--wash:#edf1fc;}

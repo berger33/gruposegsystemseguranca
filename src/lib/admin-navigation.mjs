@@ -6,7 +6,7 @@ export const ADMIN_GROUPS = Object.freeze([
   { id: 'pessoas', label: 'Pessoas', hrefs: ['/admin/funcionarios'] },
   { id: 'gestao', label: 'Financeiro e conformidade', hrefs: ['/admin/financeiro', '/admin/compliance', '/admin/licitacoes', '/admin/fornecedores'] },
   { id: 'portais', label: 'Portais e conhecimento', hrefs: ['/admin/clientes', '/admin/conhecimento', '/admin/portal'] },
-  { id: 'sistema', label: 'Sistema', hrefs: ['/admin/ti', '/admin/visual'] },
+  { id: 'sistema', label: 'Sistema', hrefs: ['/admin/ti', '/admin/aparencia', '/admin/visual'] },
 ]);
 
 export function groupAdminModules(modules) {

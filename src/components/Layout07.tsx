@@ -1,5 +1,6 @@
 "use client";
 
+import BrandLogo from "@/components/BrandLogo";
 import { useState, type FormEvent } from "react";
 import {
   ArrowDown, ArrowDownRight, ArrowRight, ArrowUpRight, Building2,
@@ -58,7 +59,7 @@ export default function Layout07() {
   return (
     <div className={styles.appShell} id="inicio">
       <aside className={`${styles.sidebar} ${menuOpen ? styles.sidebarOpen : ""}`}>
-        <a className={styles.brand} href="#inicio" aria-label="Grupo SEG System — início"><span className={styles.brandShield}><ShieldCheck size={23} /></span><span><strong>GRUPO<br />SEG SYSTEM</strong><small>SEGURANÇA<br />INTEGRADA</small></span></a>
+        <a className={styles.brand} href="#inicio" aria-label="Grupo SEG System — início"><BrandLogo size={48} alt=""/><span><strong>GRUPO<br />SEG SYSTEM</strong><small>SEGURANÇA<br />INTEGRADA</small></span></a>
         <div className={styles.sideRule}><span>MAPA DE CUIDADO</span><i /></div>
         <nav className={styles.sideNav} aria-label="Navegação do site"><a href="#mapa" onClick={() => setMenuOpen(false)}><span>01</span> Visão geral</a><a href="#servicos" onClick={() => setMenuOpen(false)}><span>02</span> Pontos de cuidado</a><a href="#processo" onClick={() => setMenuOpen(false)}><span>03</span> Como começar</a><a href="#contato" onClick={() => setMenuOpen(false)}><span>04</span> Conversar</a><a href="#duvidas" onClick={() => setMenuOpen(false)}><span>05</span> Dúvidas</a></nav>
         <div className={styles.sidebarFoot}><span className={styles.sidePulse} /> PRÉVIA VISUAL <b>07 / 10</b></div>
@@ -121,7 +122,7 @@ export default function Layout07() {
 
         <section className={styles.faq} id="duvidas"><div className={styles.faqIntro}><span className={styles.sectionIndex}>05 <i /> DÚVIDAS</span><h2>Se o mapa ainda não estiver claro, <em>pergunte.</em></h2><a href={whatsapp("Olá! Tenho uma dúvida sobre os serviços do Grupo SEG System.")} target="_blank" rel="noreferrer">Falar com uma pessoa <ArrowUpRight size={14} /></a></div><div className={styles.faqList}>{faq.map(([question, answer], index) => <article key={question}><button type="button" aria-expanded={openFaq === index} onClick={() => setOpenFaq(openFaq === index ? -1 : index)}><span>0{index + 1}</span>{question}<ChevronDown size={17} /></button>{openFaq === index && <p>{answer}</p>}</article>)}</div></section>
 
-        <footer className={styles.footer}><a className={styles.footerBrand} href="#inicio"><span className={styles.brandShield}><ShieldCheck size={20} /></span><span><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a><span>MAPA DE CUIDADO · LAYOUT 07</span><a href="/layout-01">Voltar ao layout 01 <ArrowUpRight size={13} /></a></footer>
+        <footer className={styles.footer}><a className={styles.footerBrand} href="#inicio"><BrandLogo size={48} alt=""/><span><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a><span>MAPA DE CUIDADO · LAYOUT 07</span><a href="/layout-01">Voltar ao layout 01 <ArrowUpRight size={13} /></a></footer>
       </main>
       <a className={styles.floating} href={`https://wa.me/${phone}`} target="_blank" rel="noreferrer" aria-label="Conversar com a equipe pelo WhatsApp"><MessageCircle size={18} /><span>Falar com a equipe</span></a>
     </div>

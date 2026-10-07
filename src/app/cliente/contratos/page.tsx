@@ -1,3 +1,4 @@
+import BrandLogo from "@/components/BrandLogo";
 import ClientPortalNavigation from "@/components/ClientPortalNavigation";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -14,7 +15,7 @@ export default function ClientContractsPreviewPage() {
     <main className={styles.page}>
       <header className={styles.header}>
         <Link className={styles.brand} href="/cliente/painel" aria-label="Voltar ao painel do cliente">
-          <span className={styles.brandMark}><ShieldCheck size={20} /></span>
+          <BrandLogo size={48} alt=""/>
           <span><strong>GRUPO SEG SYSTEM</strong><small>ÁREA DO CLIENTE · PRÉVIA</small></span>
         </Link>
         <Link className={styles.back} href="/cliente/painel"><ArrowLeft size={14} /> Painel do cliente</Link>

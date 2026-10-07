@@ -1,5 +1,6 @@
 "use client";
 
+import BrandLogo from "@/components/BrandLogo";
 import { useState, type FormEvent } from "react";
 import {
   ArrowRight, ArrowUpRight, Camera, Check, ChevronDown,
@@ -53,7 +54,7 @@ export default function Layout08() {
     <main className={styles.site} id="inicio">
       <div className={styles.topStrip}><span><i /> LAYOUT 08 <b>/</b> NÚCLEO INTEGRADO</span><span>GRUPO SEG SYSTEM <i /> GUARULHOS, SP</span></div>
       <header className={styles.header}>
-        <a className={styles.brand} href="#inicio" aria-label="Grupo SEG System — início"><span className={styles.brandMark}><ShieldCheck size={24} /></span><span><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a>
+        <a className={styles.brand} href="#inicio" aria-label="Grupo SEG System — início"><BrandLogo size={48} alt=""/><span><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a>
         <nav className={styles.nav} aria-label="Navegação principal"><a href="#nucleo">O núcleo</a><a href="#frentes">Frentes de serviço</a><a href="#metodo">Como começar</a><a href="#duvidas">Dúvidas</a></nav>
         <a className={styles.headerCta} href="#contato">Fale com a equipe <ArrowUpRight size={15} /></a>
       </header>
@@ -106,7 +107,7 @@ export default function Layout08() {
 
       <section className={styles.faq} id="duvidas"><div className={styles.faqTitle}><span className={styles.sectionNum}>04 <i /> DÚVIDAS</span><h2>Sobre as conexões.</h2><a href={whatsapp("Olá! Tenho uma dúvida sobre os serviços do Grupo SEG System.")} target="_blank" rel="noreferrer">Falar com uma pessoa <ArrowUpRight size={14} /></a></div><div className={styles.faqList}>{faq.map(([question, answer], index) => <article key={question}><button type="button" aria-expanded={openFaq === index} onClick={() => setOpenFaq(openFaq === index ? -1 : index)}><span>0{index + 1}</span>{question}<ChevronDown size={17} /></button>{openFaq === index && <p>{answer}</p>}</article>)}</div></section>
 
-      <footer className={styles.footer}><a className={styles.footerBrand} href="#inicio"><span className={styles.brandMark}><ShieldCheck size={20} /></span><span><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a><span>PRÉVIA CONCEITUAL · LAYOUT 08</span><a href="/layout-01">Ver Layout 01 <ArrowUpRight size={13} /></a></footer>
+      <footer className={styles.footer}><a className={styles.footerBrand} href="#inicio"><BrandLogo size={48} alt=""/><span><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span></a><span>PRÉVIA CONCEITUAL · LAYOUT 08</span><a href="/layout-01">Ver Layout 01 <ArrowUpRight size={13} /></a></footer>
     </main>
   );
 }

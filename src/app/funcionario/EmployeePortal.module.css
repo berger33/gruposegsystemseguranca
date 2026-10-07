@@ -12,3 +12,23 @@
 .tab[aria-selected="true"]{color:#0e6089}
 .tab:focus-visible,.quick button:focus-visible,.button:focus-visible{outline:3px solid #0e6089;outline-offset:2px}
 .quick button[aria-pressed="true"]{border-color:#0e6089;color:#0e6089;background:#eaf4f9}
+.brandLine {display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.shell {background:var(--ux-color-canvas);color:var(--ux-color-text);}
+.header {background:linear-gradient(120deg,#172b68,#233f91);}
+.brand {color:#dce5ff;}
+.hero {background:#edf1fc;color:#172b68;box-shadow:none;border:1px solid #cbd5ef;}
+.button {background:var(--ux-color-brand);min-height:44px;}
+.secondary {background:var(--ux-color-brand-soft);color:var(--ux-color-brand);}
+.danger {background:var(--ux-color-error);}
+.metric b,.tab[aria-selected='true'],.active {color:var(--ux-color-brand);}
+.item p,.hint,.field label,.form label,.footnote,.metric span {color:var(--ux-color-muted);font-size:.875rem;}
+.tag {background:var(--ux-color-brand-soft);color:var(--ux-color-brand);font-size:.75rem;}
+.input,.select,.textarea {min-height:44px;border-color:var(--ux-color-border);}
+.tab {min-height:48px;font-size:.75rem;}
+.tab:focus-visible,.quick button:focus-visible,.button:focus-visible,.input:focus-visible,.select:focus-visible,.textarea:focus-visible {outline:3px solid var(--ux-color-focus);outline-offset:3px;}
+.login {background:linear-gradient(165deg,#172b68 0 45%,var(--ux-color-canvas) 45%);}
+.loginCard>img {margin-bottom:18px;}
+@media(min-width:900px){.app,.tabs {width:min(860px,calc(100% - 40px));}.content{padding:28px;}.section h2{font-size:1.15rem;}}
+.loginCard {width:min(520px,100%);margin:auto;box-sizing:border-box;}
+.login h1 {font-size:clamp(24px,3vw,32px);line-height:1.2;margin-bottom:12px;}
+.login .private {font-size:.8rem;line-height:1.5;}

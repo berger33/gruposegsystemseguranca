@@ -11,6 +11,7 @@ import path from "node:path";
 const root = path.resolve(import.meta.dirname, "..");
 
 const protectedPages = new Map([
+  ["src/app/admin/aparencia/page.tsx", ["admin", "marcelo", "ti"]],
   ["src/app/admin/analytics/page.tsx", ["admin", "ti", "marcelo"]],
   ["src/app/admin/carteira/page.tsx", ["comercial", "marcelo", "admin", "ti"]],
   ["src/app/admin/comercial/page.tsx", ["comercial", "marcelo", "admin", "ti"]],

@@ -1,3 +1,4 @@
+import BrandLogo from "@/components/BrandLogo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, ArrowUpRight, Check, FileText, Headphones, KeyRound, LockKeyhole, MessageCircle, ShieldCheck } from "lucide-react";
@@ -16,7 +17,7 @@ export default function ClientPortalPage() {
     <main className={styles.page}>
       <header className={styles.header}>
         <Link className={styles.brand} href="/" aria-label="Grupo SEG System — início">
-          <span className={styles.brandMark}><ShieldCheck size={23} /></span>
+          <BrandLogo size={48} alt=""/>
           <span><strong>GRUPO SEG SYSTEM</strong><small>SEGURANÇA INTEGRADA</small></span>
         </Link>
         <Link href="/" className={styles.backLink}><ArrowLeft size={15} /> Voltar ao site</Link>

@@ -26,6 +26,7 @@ import { createClientAccessApi } from "./src/server/client-access-api.mjs";
 import { createClientOfflineRecoveryApi } from "./src/server/client-offline-recovery-api.mjs";
 import { createAiRagRealApi } from "./src/server/ai-rag-real-api.mjs";
 import { createAiRagDirectoryApi } from "./src/server/ai-rag-directory-api.mjs";
+import { createSiteAppearanceApi } from './src/server/site-appearance-api.mjs';
 import { createClientSpaceApi } from "./src/server/client-space-api.mjs";
 import { createClientSecurityApi } from "./src/server/client-security-api.mjs";
 import { createAdminRbacApi } from "./src/server/admin-rbac-api.mjs";
@@ -148,8 +149,6 @@ import { normalizeEmail, verifyPassword } from "./src/lib/client-auth-core.mjs";
 const { loadEnvConfig } = nextEnv;
 const { Pool } = pg;
 loadEnvConfig(process.cwd());
-const DEFAULT_VISUAL = "06";
-const VISUAL_IDS = new Set(["01", "02", "03", "04", "05", "06", "07", "08", "09", "10"]);
 const SESSION_COOKIE = "seg_admin_session";
 const EMPLOYEE_SESSION_COOKIE = "seg_employee_session";
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
@@ -797,83 +796,6 @@ async function handleAdminLeadStatus(req, res, leadId) {
     const migrationMissing = error && typeof error === "object" && error.code === "42P01";
     if (!unconfigured) console.error("Could not update lead status.", error);
     return json(res, 503, { error: unconfigured ? "database_not_configured" : migrationMissing ? "migration_required" : "lead_update_unavailable" });
-  } finally {
-    client?.release();
-  }
-}
-
-async function handleSiteVisual(req, res, url) {
-  const selectionEnabled = process.env.SITE_VISUAL_SELECTION_ENABLED === "true";
-  if (req.method === "GET" && !selectionEnabled) {
-    return json(res, 200, { visual: DEFAULT_VISUAL, updatedBy: null, updatedAt: null, source: "default", selectionEnabled: false });
-  }
-  if (req.method === "PUT" && !selectionEnabled) {
-    return json(res, 409, { error: "visual_selection_paused" });
-  }
-  if (req.method === "GET") {
-    try {
-      const result = await getPool().query(
-        "SELECT active_visual, updated_by, updated_at FROM site_visual_config WHERE singleton_id = 1",
-      );
-      const row = result.rows[0];
-      return json(res, 200, {
-        visual: row?.active_visual || DEFAULT_VISUAL,
-        updatedBy: row?.updated_by || null,
-        updatedAt: row?.updated_at || null,
-        source: "postgres",
-        selectionEnabled: true,
-      });
-    } catch (error) {
-      const unconfigured = error instanceof Error && error.message === "DATABASE_NOT_CONFIGURED";
-      if (!unconfigured) console.error("Could not load the site visual configuration.", error);
-      return json(res, 503, { error: unconfigured ? "database_not_configured" : "database_unavailable" });
-    }
-  }
-
-  if (req.method !== "PUT") return json(res, 405, { error: "method_not_allowed" }, { Allow: "GET, PUT" });
-  if (!sameOrigin(req)) return json(res, 403, { error: "same_origin_required" });
-  const session = await readSession(req);
-  if (!session) return json(res, 401, { error: "admin_session_required" });
-
-  let body;
-  try {
-    body = await readJson(req);
-  } catch (error) {
-    return json(res, error instanceof Error && error.message === "BODY_TOO_LARGE" ? 413 : 400, { error: "invalid_request" });
-  }
-  const visual = String(body?.visual || "");
-  if (!VISUAL_IDS.has(visual)) return json(res, 400, { error: "invalid_visual_id" });
-
-  let client;
-  try {
-    client = await getPool().connect();
-    await client.query("BEGIN");
-    const current = await client.query(
-      "SELECT active_visual FROM site_visual_config WHERE singleton_id = 1 FOR UPDATE",
-    );
-    if (!current.rows[0]) throw new Error("SITE_VISUAL_MIGRATION_REQUIRED");
-    const previousVisual = current.rows[0].active_visual;
-    const updated = await client.query(
-      "UPDATE site_visual_config SET active_visual = $1, updated_by = $2, updated_at = NOW() WHERE singleton_id = 1 RETURNING active_visual, updated_by, updated_at",
-      [visual, session.role],
-    );
-    await client.query(
-      "INSERT INTO site_visual_audit (previous_visual, next_visual, changed_by) VALUES ($1, $2, $3)",
-      [previousVisual, visual, session.role],
-    );
-    await client.query("COMMIT");
-    return json(res, 200, {
-      visual: updated.rows[0].active_visual,
-      updatedBy: updated.rows[0].updated_by,
-      updatedAt: updated.rows[0].updated_at,
-      source: "postgres",
-    });
-  } catch (error) {
-    if (client) await client.query("ROLLBACK").catch(() => {});
-    const unconfigured = error instanceof Error && error.message === "DATABASE_NOT_CONFIGURED";
-    const migrationMissing = error instanceof Error && error.message === "SITE_VISUAL_MIGRATION_REQUIRED";
-    if (!unconfigured) console.error("Could not save the site visual configuration.", error);
-    return json(res, 503, { error: unconfigured ? "database_not_configured" : migrationMissing ? "migration_required" : "database_unavailable" });
   } finally {
     client?.release();
   }
@@ -2604,6 +2526,7 @@ const aiRagRealApi = createAiRagRealApi({
   readClientSession: clientAccessApi.readClientSession,
 });
 const aiRagDirectoryApi = createAiRagDirectoryApi({ pool: getPool(), sameOrigin, readSession });
+const siteAppearanceApi = createSiteAppearanceApi({getPool,readSession,sameOrigin});
 
 const reportApi = createReportApi({
   json,
@@ -2676,7 +2599,7 @@ async function routeApi(req, res) {
     if(!["admin","marcelo","ti"].includes(s.role)) return json(res,403,{error:"role_required"});
     if(req.method!=="GET"&&!sameOrigin(req)) return json(res,403,{error:"same_origin_required"});
   }
-  if (url.pathname === "/api/site-visual") return handleSiteVisual(req, res, url);
+  if (url.pathname === "/api/site-visual" || url.pathname === "/api/admin/site-visual") return await siteAppearanceApi(req, res);
   if (url.pathname === "/api/leads") return handleCreateLead(req, res);
   if (url.pathname === "/api/admin/session/options") return handleAdminSessionOptions(req, res);
   if (url.pathname === "/api/admin/session") return handleAdminSession(req, res);
@@ -4685,6 +4608,7 @@ async function routeApi(req, res) {
 
 const API_PATH_MATCH = pathname =>
   pathname === "/api/site-visual"
+  || pathname === "/api/admin/site-visual"
   || pathname === "/api/leads"
   || pathname === "/api/admin/session/options"
   || pathname === "/api/admin/session"

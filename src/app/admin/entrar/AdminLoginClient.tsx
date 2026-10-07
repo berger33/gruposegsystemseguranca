@@ -7,6 +7,7 @@
 // MFA: quando a conta exige, o segundo passo aparece aqui mesmo (desafio
 // descartável do servidor; nenhum cookie é emitido antes da verificação).
 
+import BrandLogo from "@/components/BrandLogo";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import UiField from "../../../components/ui/UiField";
@@ -173,7 +174,7 @@ export default function AdminLoginClient() {
       <div className={styles.container}>
         <header className={styles.topbar}>
           <Link href="/" className={styles.brand}>
-            <span className={styles.brandMark}>SEG</span>
+            <BrandLogo size={48} alt=""/>
             <span>
               <small>Grupo</small>
               <strong>SEG System</strong>
@@ -196,8 +197,7 @@ export default function AdminLoginClient() {
         <section className={styles.card} aria-labelledby="login-title" data-admin-login="true">
           <h1 id="login-title">Entrada da equipe</h1>
           <p className={styles.hint}>
-            Acesso individual de cada pessoa da equipe (Marcelo, Andreia e demais papéis). A sessão administrativa
-            expira em 8 horas, usa cookie HttpOnly e é separada do portal do cliente e do portal do funcionário.
+            Entre com seu e-mail e senha para acessar as ferramentas da sua equipe.
             {mfa ? (
               <>
                 {" "}

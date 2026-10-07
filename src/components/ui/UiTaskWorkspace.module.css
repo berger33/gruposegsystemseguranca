@@ -24,3 +24,10 @@
 .tableScroll tbody tr:nth-child(even) { background:#f8fafc; }
 @media(max-width:700px){.workspace {padding:12px;} .workspace :global(.grid),.workspace [style*="grid-template-columns"]{grid-template-columns:minmax(0,1fr)!important;} .workspace form {flex-wrap:wrap;} }
 @media(prefers-reduced-motion:reduce){.workspace * {scroll-behavior:auto!important;animation:none!important;transition:none!important;}}
+.workspace {border:1px solid var(--ux-color-border);box-shadow:var(--ux-shadow-card);border-radius:16px;}
+.workspace h1,.workspace h2,.workspace h3 {color:var(--ux-color-text);letter-spacing:-.025em;}
+.workspace h1 {margin-top:0;}
+.workspace p {color:var(--ux-color-muted);}
+.workspace nav a {min-height:44px;display:inline-flex;align-items:center;padding:8px 12px;background:var(--ux-color-brand-soft);border-radius:8px;text-decoration:none;}
+.workspace button[aria-pressed='true'] {background:var(--ux-color-brand);color:#fff;border-color:var(--ux-color-brand);}
+.workspace :is(input,select,textarea) {padding:11px 12px;border-radius:10px;}

@@ -15,8 +15,8 @@ export const metadata: Metadata = {
   manifest: "/api/pwa/manifest.json",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "SEG Func" },
   icons: {
-    icon: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
-    apple: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+    icon: [{ url: "/brand/grupo-seg-system-original.jpg", sizes: "345x345", type: "image/jpeg" }],
+    apple: [{ url: "/brand/grupo-seg-system-original.jpg", sizes: "345x345", type: "image/jpeg" }],
   },
 };
 

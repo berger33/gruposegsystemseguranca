@@ -90,10 +90,10 @@ test("Migrações 156–168 preservadas e ledger corrente registrado nos pontos 
   assert.match(migrator, /'173-ai-rag-client-account-scope\.sql'/);
   assert.match(migrator, /'174-auth-permissions-id-default\.sql'/);
   assert.match(migrator, /ALTER TABLE auth_permissions ALTER COLUMN id SET DEFAULT gen_random_uuid\(\)/);
-  assert.match(migrator, /files\.length !== 174/);
-  assert.match(migrator, /001–174/);
+  assert.match(migrator, /files\.length !== 177/);
+  assert.match(migrator, /001–177/);
   const wave0 = await readRepo("scripts/qa-wave0-static.mjs");
-  assert.match(wave0, /const latestMigration = 174;/);
+  assert.match(wave0, /const latestMigration = 177;/);
 });
 
 // ---------------------------------------------------------------------------

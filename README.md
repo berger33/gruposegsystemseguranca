@@ -1,3 +1,7 @@
+> **Ativação local de 07/10/2026:** [evidências e limites operacionais](docs/ATIVACAO-LOCAL-PONTO-2026-10-07.md). No banco demonstrativo do operador, 001–177 foram aplicadas e repetidas; o ponto/RH passou por 27 verificações HTTP. GPS real e aceite humano continuam pendentes. Os avisos anteriores abaixo são históricos.
+
+> **Identidade visual de 07/10/2026:** [logo oficial, paleta do sistema, galeria dos dez layouts, evidências e ativação](docs/IDENTIDADE-VISUAL-E-APARENCIA-2026-10-07.md). Código e migrador agora incluem 001–177; aplicação no banco local e homologação das jornadas continuam pendentes. No site público, esta entrega altera somente o logo.
+
 > **Desenvolvimento de 07/10/2026:** consulte [entrega de UX/RAG](docs/FECH-ENTREGA-DESENVOLVIMENTO-2026-10-07.md) e [runbook local](docs/FECH-RUNBOOK-LOCAL-2026-10-07.md). O console TI e as fontes por pasta foram implementados; a migração 175 e os testes desta continuação estão pendentes. Avisos anteriores descrevem a base auditada antes desta alteração.
 
 > **Atualização de 07/10/2026:** para a execução atual, leia o [plano de fechamento UX/RAG](docs/ARENA-FECHAMENTO-UX-RAG-2026-10-07.md) e o [checklist por fatia](docs/FECHAMENTO-UX-RAG-CHECKLIST-2026-10-07.md). A UX completa e o RAG privado ainda não estão concluídos. Este documento preserva o contexto da sua data; orientações de continuação e estado antigo devem ser reconciliados com a main atual. Não confundir UX-08/09 das extensões posteriores com TI/RAG e auditoria final do plano original.
@@ -208,3 +212,4 @@ A jornada canônica interna de compliance usa `/admin/compliance` e `/api/ext/co
 # Ponto e ajustes pelo RH
 
 O registro de ponto com localização e a fila de ajustes do funcionário estão implementados no código. Ativação exige migração 176 e atualização do servidor. Consulte [entrega, permissões e validação](docs/PONTO-GEOLOCALIZACAO-RH-2026-10-07.md).
+

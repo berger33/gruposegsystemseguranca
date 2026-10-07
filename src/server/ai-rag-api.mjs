@@ -588,13 +588,13 @@ export function createAiRagApi({ pool, auditLog, sameOrigin, requireSession, req
       const client=await pool.connect();let status=200,headers={},output='';
       try{
         await client.query('BEGIN');
-        const api=createAiRagApi({pool:client,sameOrigin,requireSession,requireRole,transactional:true,auditLog:async({action,actor,target,meta})=>{
+        const api=createAiRagApi({pool:client,sameOrigin,requireSession:async()=>session,requireRole,transactional:true,auditLog:async({action,actor,target,meta})=>{
           await client.query('INSERT INTO audit_log(action,actor,target,meta) VALUES($1,$2,$3,$4)',[action,actor,target,meta?JSON.stringify(meta):null]);
         }});
         await api[name](req,{writeHead:(code,h)=>{status=code;headers=h;},end:text=>{output=text;}});
         if(status>=400)await client.query('ROLLBACK');else await client.query('COMMIT');
         res.writeHead(status,headers);res.end(output);
-      }catch{await client.query('ROLLBACK');return json(res,503,{error:'rag_mutation_unavailable'});}finally{client.release();}
+      }catch(error){console.error('RAG_MUTATION_FAILED',{code:error?.code||'unknown'});await client.query('ROLLBACK');return json(res,503,{error:'rag_mutation_unavailable'});}finally{client.release();}
     };
   }
   return { handleIndexes:guardedMutation('handleIndexes',handleIndexes), handleDocuments:guardedMutation('handleDocuments',handleDocuments), handleQueries, handleBotConfig, handleBotSessions, handleChunks, handleFeedback, handleCostTracking };
