@@ -47,8 +47,11 @@ jobs:
       # e provedor determinístico identificado como stub — não é Ollama real.
       - run: node --test tests/rag-widget-contract.test.mjs tests/ai-rag-real-scope.test.mjs
       # Smoke HTTP do PGlite beta herdado: rota canônica, 401 privado e rascunho oculto.
+      # O servidor HTTP inicia Next em producao e exige um build existente.
+      - run: npm run build
       - run: npm run test:rag
       # Gate focal: PostgreSQL 17 descartável, HTTP real, Chromium real e stub
       # determinístico. O auditor TAP exige >=20 casos, zero fail/skip/todo.
       - run: npm run test:ai-rag-widget:pg
       - run: npm audit --audit-level=high
+
