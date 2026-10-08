@@ -14,7 +14,7 @@ export function createHrAbsenceApi({ pool, auditLog, sameOrigin, requireSession,
   async function handleAbsences(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const url=new URL(req.url,'http://localhost');
     if(req.method==='GET'){
       const employee_id=url.searchParams.get('employee_id'); const status=url.searchParams.get('status'); const type=url.searchParams.get('type');
@@ -114,7 +114,7 @@ export function createHrAbsenceApi({ pool, auditLog, sameOrigin, requireSession,
   async function handleTimeEntries(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const url=new URL(req.url,'http://localhost');
     if(req.method==='GET'){
       const employee_id=url.searchParams.get('employee_id'); const competence=url.searchParams.get('competence'); const status=url.searchParams.get('status');
@@ -198,7 +198,7 @@ export function createHrAbsenceApi({ pool, auditLog, sameOrigin, requireSession,
   async function handleTimeCorrections(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     if(req.method==='GET'){
       const entry_id=new URL(req.url,'http://localhost').searchParams.get('entry_id');
       let sql='SELECT * FROM hr_time_corrections'; const params=[]; let i=1;
@@ -253,7 +253,7 @@ export function createHrAbsenceApi({ pool, auditLog, sameOrigin, requireSession,
   async function handleCompetenceClosures(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     if(req.method==='GET'){
       const r=await pool.query('SELECT * FROM hr_time_competence_closures ORDER BY competence DESC LIMIT 100');
       res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({closures:r.rows})); return;
@@ -286,7 +286,7 @@ export function createHrAbsenceApi({ pool, auditLog, sameOrigin, requireSession,
   async function handleWorkRules(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     if(req.method==='GET'){
       const r=await pool.query('SELECT id, name, employment_type, convention_ref, version, validity_start, validity_end, approval_status, approved_at, rules, created_at FROM hr_work_rules ORDER BY name, version DESC LIMIT 200');
       res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({rules:r.rows, note:'HR-12 banco horas adicionais horas extras somente regras versionadas validadas vínculo/convenção não fixar 12x36/6x1 universal'})); return;
@@ -330,7 +330,7 @@ export function createHrAbsenceApi({ pool, auditLog, sameOrigin, requireSession,
   async function handleHourBank(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const url=new URL(req.url,'http://localhost');
     if(req.method==='GET'){
       const employee_id=url.searchParams.get('employee_id'); const competence=url.searchParams.get('competence');
@@ -386,7 +386,7 @@ export function createHrAbsenceApi({ pool, auditLog, sameOrigin, requireSession,
   async function handleHourMovements(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const url=new URL(req.url,'http://localhost');
     if(req.method==='GET'){
       const hour_bank_id=url.searchParams.get('hour_bank_id'); const employee_id=url.searchParams.get('employee_id');

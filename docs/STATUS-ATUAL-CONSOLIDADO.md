@@ -2,6 +2,8 @@
 
 > **Atualização de 07/10/2026:** para a execução atual, leia o [plano de fechamento UX/RAG](ARENA-FECHAMENTO-UX-RAG-2026-10-07.md) e o [checklist por fatia](FECHAMENTO-UX-RAG-CHECKLIST-2026-10-07.md). A UX completa e o RAG privado ainda não estão concluídos. Este documento preserva o contexto da sua data; orientações de continuação e estado antigo devem ser reconciliados com a main atual. Não confundir UX-08/09 das extensões posteriores com TI/RAG e auditoria final do plano original.
 
+> **Atualização de 08/10/2026 — RH para Marcelo:** menu e tela já existiam, mas APIs operacionais e a permissão granular não cobriam esse papel. A migração aditiva 180 concede `employees.read/write` no escopo da organização, e os endpoints operacionais permitem a revisão/aprovação de ajustes de ponto com autoria. Folha/remuneração, saúde ocupacional e conteúdo confidencial permanecem protegidos. Aplicar 001–180 no banco local alvo e reiniciar a aplicação antes de considerar isso ativo nesse ambiente; detalhes em [acesso do Marcelo ao RH](acesso-marcelo-rh.md).
+
 ## Referência atual para UX — 05/10/2026
 
 UX-00 foi registrada em [`UX-00-AUDITORIA-BASELINE-2026-10-05.md`](UX-00-AUDITORIA-BASELINE-2026-10-05.md), com inventário reproduzível de 98 páginas, matriz de jornadas, capturas desktop/mobile fictícias e fila de problemas. É uma linha de base; não altera código de produto nem atesta aceite humano.
@@ -84,7 +86,7 @@ Fatia escolhida: próxima EXT pendente, pois o requisito de escopo/isolamento po
 
 A migração **164** é aditiva e preserva 001–163: adiciona origem canônica a `ext_visual_tokens`/`ext_visual_layouts`, idempotência/fingerprint, campos de aprovação/publicação, vínculo opcional de layout com token, índices de versão publicada única, permissões `visual_editor.*`, ações de auditoria e eventos `ext_visual_editor_events` append-only. O ledger vigente é **001–164**; próxima migração livre: **165**.
 
-API/UI: `/api/ext/visual/tokens` e `/api/ext/visual/layouts` com criação, revisão, transição, prévia e publicação; `/admin/visual` protegido por `AdminGate`. Escritas legadas `/api/ext/visual-tokens` e `/api/ext/visual-layouts` retornam 410 após guardas.
+API: `/api/ext/visual/tokens` e `/api/ext/visual/layouts` mantêm criação, revisão, transição, prévia e publicação interna; escritas legadas `/api/ext/visual-tokens` e `/api/ext/visual-layouts` retornam 410 após guardas. A antiga tela `/admin/visual` agora redireciona para `/admin/aparencia`; a administração atual dos dez layouts fica somente em Aparência do site.
 
 **Resultado:** unitário EXT-12 **10/10**; gate `npm run test:ext12-visual:pg` **14/14** em PostgreSQL 17 descartável, migrações 001–164, HTTP real e sessões staff reais; Wave0 **5/5**; `npm run typecheck` OK; `npm test` **574/574**; `npm run test:migrations:pg` **164/164**; `npm run build` **98 páginas**; `git diff --check` e `node --check` OK.
 
@@ -233,7 +235,7 @@ Legenda do estado confirmado: `pronto_local` = validação automática local ant
 | SEC-15 | Proteção de abuso e identidade | a_revalidar | a_revalidar | preencher | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 ### PUB — contexto comum do grupo
 
-- Telas: / (site), /servicos, /segmentos, /orcamento, /contato, /faq, /conteudos, /pacotes, /simulador, /proposta/aceite/[token]; /admin/publicacao, /admin/visual, /admin/leads.
+- Telas: / (site), /servicos, /segmentos, /orcamento, /contato, /faq, /conteudos, /pacotes, /simulador, /proposta/aceite/[token]; /admin/publicacao, /admin/aparencia, /admin/leads. `/admin/visual` é compatibilidade legada com redirecionamento.
 - APIs: /api/public/leads, /api/seo-*, /api/public/*, /api/admin/publication, /api/admin/site-visual.
 - Tabelas canônicas: public_leads (002,013), site_visual* (001), cms_* (088), temas (089), seo (090,112), pacotes (091), origem (092), pub handoff (094).
 - Papéis: público anônimo; staff marcelo/ti/comercial na publicação e leads.
@@ -247,7 +249,7 @@ Legenda do estado confirmado: `pronto_local` = validação automática local ant
 | PUB-04 | visita com estados solicitada, em agendamento, confirmada, realizada, cancelada; pessoa… | pronto_local | pronto_local | Notificação ao solicitante sobre confirmação de horário usa a caixa local (L02) — nunca promete envio real (SMTP fora de escopo). Sem tela d | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | PUB-05 | FAQ assistida e transferência humana; bot não inventa preço, cobertura, licença ou praz… | pronto_local (escopo técnico L04) | pronto_local (escopo técnico L04) | LLM/RAG pertence a L09. Atendimento humano só é solicitado após persistir o formulário com consentimento; sem SMTP ou promessa de atendiment | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | PUB-06 | CMS de páginas, FAQ, cases, blog e vagas, com rascunho/revisão/publicação, histórico e … | pronto_local (escopo técnico L04) | pronto_local (escopo técnico L04) | Textos e autorização de cases precisam de aceite humano antes de uso real. Texto simples; sem novo upload público. | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
-| PUB-07 | temas com preview, publicação autorizada, configuração persistida e rollback; preferênc… | pronto_local (escopo técnico L04) | pronto_local (escopo técnico L04) | Tokens aplicados às superfícies editoriais; seleção dos dez layouts permanece em `/admin/visual`. Portais internos não são redesenhados. Ace | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
+| PUB-07 | temas com preview, publicação autorizada, configuração persistida e rollback; preferênc… | pronto_local (escopo técnico L04) | pronto_local (escopo técnico L04) | Tokens aplicados às superfícies editoriais; a seleção dos dez layouts fica em `/admin/aparencia`. Portais internos não são redesenhados. Ace | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | PUB-08 | SEO técnico, títulos, sitemap, redirects e verificação de domínio na liberação; preserv… | pronto_local (limites externos/condicionais descritos abaixo) | pronto_local (limites externos/condicionais descritos abaixo) | **Verificação de domínio fica FORA por fronteira externa** (exige DNS/HTTP no domínio real) — em vez de um botão que mente, o caminho que fa | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | PUB-09 | montador de pacote/comparador de serviços e planos somente a partir de catálogo e regra… | pronto_local (escopo técnico L04) | pronto_local (escopo técnico L04) | Sem tabela de preço inventada, compatibilidade de equipamento garantida ou contratação automática. Precificação segue vistoria/orçamento/pro | ver [plano](PLANO-CONCLUSAO-ARENA.md) |
 | PUB-10 | mensuração de origem e conversão com minimização de dados; testes A/B somente após tráf… | pronto_local (limites externos/condicionais descritos abaixo) | pronto_local (limites externos/condicionais descritos abaixo) | **Testes A/B continuam sem rota e sem tela, por decisão registrada** — o requisito os condiciona a tráfego, hipótese e tratamento de dados d | ver [plano](PLANO-CONCLUSAO-ARENA.md) |

@@ -28,7 +28,7 @@ test('HERE reverse geocoding sanitiza indisponibilidade e limita dados enviados'
 
 test('fluxo SQL focal: ponto, isolamento, idempotência, pedido, aprovação e rollback',async()=>{
  const pg=new PGlite();let auditFailure=false;
- const a=randomUUID(),b=randomUUID(),ia=randomUUID(),ib=randomUUID(),rh=randomUUID(),unit=randomUUID();
+ const a=randomUUID(),b=randomUUID(),ia=randomUUID(),ib=randomUUID(),rh=randomUUID(),marcelo=randomUUID(),unit=randomUUID();
  try{
   await pg.exec(`
    CREATE TABLE hr_employees(id uuid PRIMARY KEY,identity_id uuid,unit_id uuid,contract_id uuid,status text,display_name text,matricula text);
@@ -43,10 +43,11 @@ test('fluxo SQL focal: ponto, isolamento, idempotência, pedido, aprovação e r
   await pg.exec(await readFile(new URL('../db/migrations/179-employee-here-end-user-consent.sql',import.meta.url),'utf8'));
   await pg.query("INSERT INTO hr_employees VALUES($1,$2,$3,NULL,'ativo','Pessoa A','A'),($4,$5,NULL,NULL,'ativo','Pessoa B','B')",[a,ia,unit,b,ib]);
   await pg.query("INSERT INTO auth_permissions VALUES($1,'employees.read','unit',$2,NULL),($1,'employees.write','unit',$2,NULL)",[rh,unit]);
+  await pg.query("INSERT INTO auth_permissions VALUES($1,'employees.read','unit',$2,NULL),($1,'employees.write','unit',$2,NULL)",[marcelo,unit]);
   const pool={query:(sql,args)=>pg.query(sql,args),connect:async()=>({query:(sql,args)=>pg.query(auditFailure&&sql.startsWith('INSERT INTO audit_log')?'INSERT INTO absent_audit VALUES(1)':sql,args),release(){}})};
   let geocodeCalls=0;
   const api=createEmployeeTimeClockApi({getPool:()=>pool,hereAddressEnabled:true,reverseGeocode:async()=>{geocodeCalls++;return{address:'Rua de Demonstração, 10, São Paulo, SP',provider:'HERE',status:'resolved',resolvedAt:new Date().toISOString()};},sameOrigin:req=>req.origin!==false,readEmployeeSession:async req=>req.employee||null,readStaffSession:async req=>req.staff||null,readJson:async req=>req.body,json:(res,status,data)=>Object.assign(res,{status,data})});
-  const employee={employeeId:a,identityId:ia},staff={identityId:rh,role:'rh'};
+  const employee={employeeId:a,identityId:ia},staff={identityId:rh,role:'rh'},marceloStaff={identityId:marcelo,role:'marcelo'};
   async function call(path,method='GET',body={},extras={}){const res={};await api.handle({method,body,employee,...extras},res,new URL(path,'http://localhost'));return res;}
   const geo=()=>({latitude:-23.5,longitude:-46.6,accuracy:12,positionAt:new Date().toISOString()});
   const denied=await call('/api/employee/time-clock','POST',{requestId:randomUUID(),kind:'entrada',position:geo()},{origin:false});assert.equal(denied.status,403);
@@ -78,6 +79,7 @@ test('fluxo SQL focal: ponto, isolamento, idempotência, pedido, aprovação e r
   await assert.rejects(pg.query("INSERT INTO hr_time_competence_closures VALUES($1,'fechado')",[competence]),/competence_has_pending_corrections/);
   const reviews='/api/admin/hr/l03/time-corrections';
   assert.equal((await call(reviews,'GET',{}, {staff})).data.corrections[0].id,id);
+  assert.equal((await call(reviews,'GET',{}, {staff:marceloStaff})).data.corrections[0].id,id,'Marcelo com concessão RH pode consultar pedidos de ajuste');
   assert.equal((await call(reviews,'PATCH',{id,status:'aprovado'},{staff:{...staff,role:'ti'}})).status,403);
   assert.equal((await call(reviews,'PATCH',{id,status:'aprovado'},{staff})).data.error,'corrected_hours_required');
   auditFailure=true;
@@ -85,9 +87,9 @@ test('fluxo SQL focal: ponto, isolamento, idempotência, pedido, aprovação e r
   assert.equal((await call(reviews,'PATCH',approval,{staff})).status,503);
   assert.equal((await pg.query('SELECT status FROM emp_journey_corrections WHERE id=$1',[id])).rows[0].status,'solicitado');
   auditFailure=false;
-  assert.equal((await call(reviews,'PATCH',approval,{staff})).status,200);
+  assert.equal((await call(reviews,'PATCH',approval,{staff:marceloStaff})).status,200,'Marcelo pode aprovar o ajuste autorizado e fica registrado como revisor');
   assert.equal((await call(reviews,'PATCH',approval,{staff})).status,409);
-  const final=(await pg.query('SELECT * FROM hr_time_entries WHERE id=$1',[entry])).rows[0];assert.equal(final.status,'corrigido');assert.equal(Number(final.hours_worked),8);assert.ok(final.original_snapshot);
+  const final=(await pg.query('SELECT * FROM hr_time_entries WHERE id=$1',[entry])).rows[0];assert.equal(final.status,'corrigido');assert.equal(Number(final.hours_worked),8);assert.equal(final.corrected_by_id,marcelo,'a autoria da aprovação do Marcelo é mantida');assert.ok(final.original_snapshot);
   const proof=await call(`/api/admin/hr/l03/time-punches?employee_id=${a}&entry_id=${entry}`,'GET',{}, {staff});assert.equal(proof.data.punches.length,4);
   assert.equal((await call(`/api/admin/hr/l03/time-clock?employee_id=${a}`,'GET',{}, {staff})).data.entries[0].id,entry);
   assert.equal((await call(`/api/admin/hr/l03/time-punches?employee_id=${b}&entry_id=${entry}`,'GET',{}, {staff})).status,403);

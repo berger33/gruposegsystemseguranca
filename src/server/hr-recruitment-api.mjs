@@ -12,7 +12,7 @@ export function createHrRecruitmentApi({ pool, auditLog, sameOrigin, requireSess
   async function handleVacancies(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const url=new URL(req.url,'http://localhost');
     if(req.method==='GET'){
       const status=url.searchParams.get('status'); const cargo=url.searchParams.get('cargo'); const search=url.searchParams.get('search');
@@ -63,7 +63,7 @@ export function createHrRecruitmentApi({ pool, auditLog, sameOrigin, requireSess
   async function handleCandidates(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const url=new URL(req.url,'http://localhost');
     if(req.method==='GET'){
       const vacancy_id=url.searchParams.get('vacancy_id'); const status=url.searchParams.get('status'); const search=url.searchParams.get('search');
@@ -116,7 +116,7 @@ export function createHrRecruitmentApi({ pool, auditLog, sameOrigin, requireSess
   async function handleInterviews(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost'); const candidate_id=url.searchParams.get('candidate_id');
       let sql='SELECT * FROM hr_interviews'; const params=[]; let i=1;
@@ -158,7 +158,7 @@ export function createHrRecruitmentApi({ pool, auditLog, sameOrigin, requireSess
   async function handleTalentPool(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const url=new URL(req.url,'http://localhost');
     if(req.method==='GET'){
       const cargo=url.searchParams.get('cargo'); const active=url.searchParams.get('active'); const search=url.searchParams.get('search');
@@ -223,7 +223,7 @@ export function createHrRecruitmentApi({ pool, auditLog, sameOrigin, requireSess
   async function handleDossiers(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const url=new URL(req.url,'http://localhost');
     if(req.method==='GET'){
       const employee_id=url.searchParams.get('employee_id'); const status=url.searchParams.get('status'); const doc_type=url.searchParams.get('doc_type');

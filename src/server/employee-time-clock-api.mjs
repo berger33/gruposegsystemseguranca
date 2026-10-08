@@ -26,7 +26,7 @@ export function createEmployeeTimeClockApi(ctx){
  async function staff(req,employeeId,permission,c=db()){
   const s=await ctx.readStaffSession(req);
   if(!s?.identityId)fail('admin_session_required',401);
-  if(!['admin','rh'].includes(s.role))fail('permission_scope_denied',403);
+  if(!['admin','rh','marcelo'].includes(s.role))fail('permission_scope_denied',403);
   const e=employeeId?(await c.query('SELECT identity_id,unit_id,contract_id FROM hr_employees WHERE id=$1',[employeeId])).rows[0]:null;
   if(employeeId&&!e)fail('employee_not_found',404);
   if(!await hasPermission(c,{identityId:s.identityId,permission,resourceOwnerIdentityId:e?.identity_id,unitId:e?.unit_id,contractId:e?.contract_id}))fail('permission_scope_denied',403);
@@ -125,7 +125,7 @@ export function createEmployeeTimeClockApi(ctx){
  async function reviews(req,res,url){
   if(req.method==='GET'){
    const s=await ctx.readStaffSession(req);if(!s?.identityId)fail('admin_session_required',401);
-   if(!['admin','rh'].includes(s.role))fail('permission_scope_denied',403);
+   if(!['admin','rh','marcelo'].includes(s.role))fail('permission_scope_denied',403);
    const grants=(await db().query("SELECT scope_type,scope_id FROM auth_permissions WHERE identity_id=$1 AND permission='employees.read' AND revoked_at IS NULL",[s.identityId])).rows;
    if(!grants.length)fail('permission_scope_denied',403);
    const filter=url.searchParams.get('employee_id'),entryFilter=url.searchParams.get('time_entry_id');if(filter&&!isUuid(filter)||entryFilter&&!isUuid(entryFilter))fail('invalid_employee_id');

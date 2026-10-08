@@ -12,7 +12,7 @@ export function createHrApi({ pool, auditLog, sameOrigin, requireSession, requir
   async function handleEmployees(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const url=new URL(req.url,'http://localhost');
     if(req.method==='GET'){
       const status=url.searchParams.get('status'); const cargo=url.searchParams.get('cargo'); const search=url.searchParams.get('search');
@@ -63,7 +63,7 @@ export function createHrApi({ pool, auditLog, sameOrigin, requireSession, requir
   async function handleEmployeeById(req,res,id){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     if(!uuidRe().test(id)){ res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_id'})); return; }
     const cur=await pool.query('SELECT * FROM hr_employees WHERE id=$1',[id]);
     if(!cur.rows.length){ res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
@@ -117,7 +117,7 @@ export function createHrApi({ pool, auditLog, sameOrigin, requireSession, requir
   async function handleAdmissions(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     if(req.method==='GET'){
       const status=new URL(req.url,'http://localhost').searchParams.get('status');
       let sql='SELECT * FROM hr_admissions'; const params=[]; let i=1;
@@ -168,7 +168,7 @@ export function createHrApi({ pool, auditLog, sameOrigin, requireSession, requir
   async function handleAdmissionById(req,res,id){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     if(!uuidRe().test(id)){ res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_id'})); return; }
     const adm=await pool.query('SELECT * FROM hr_admissions WHERE id=$1',[id]);
     if(!adm.rows.length){ res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
@@ -179,7 +179,7 @@ export function createHrApi({ pool, auditLog, sameOrigin, requireSession, requir
   async function handleAdmissionProgress(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     if(req.method==='PATCH'){
       let body=''; for await(const c of req) body+=c; let data; try{ data=JSON.parse(body||'{}'); }catch{ data={}; }
       const id=String(data.id||''); const status=String(data.status||'').toLowerCase();

@@ -10,7 +10,7 @@ export function createHrTerminationApi({ pool, auditLog, sameOrigin, requireSess
   async function handleTerminations(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const url=new URL(req.url,'http://localhost');
     if(req.method==='GET'){
       const employee_id=url.searchParams.get('employee_id'); const status=url.searchParams.get('status');
@@ -92,7 +92,7 @@ export function createHrTerminationApi({ pool, auditLog, sameOrigin, requireSess
   async function handleTerminationById(req,res,id){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     if(!uuidRe().test(id)){ res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_id'})); return; }
     const term=await pool.query('SELECT * FROM hr_terminations WHERE id=$1',[id]);
     if(!term.rows.length){ res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
@@ -103,7 +103,7 @@ export function createHrTerminationApi({ pool, auditLog, sameOrigin, requireSess
   async function handleTerminationProgress(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     if(req.method==='PATCH'){
       let body=''; for await(const c of req) body+=c; let data; try{ data=JSON.parse(body||'{}'); }catch{ data={}; }
       const id=String(data.id||''); const status=String(data.status||'').toLowerCase(); const notes=data.notes? sanitize(data.notes,1000): null;
@@ -120,7 +120,7 @@ export function createHrTerminationApi({ pool, auditLog, sameOrigin, requireSess
   async function handleStatusPolicies(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     if(req.method==='GET'){
       const r=await pool.query('SELECT * FROM hr_status_policies ORDER BY status');
       res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({policies:r.rows, note:'HR-08 mudança status afastado/suspenso/desligado efeito permissões alocação conforme política sem automatizar sanção trabalhista'})); return;
@@ -131,7 +131,7 @@ export function createHrTerminationApi({ pool, auditLog, sameOrigin, requireSess
   async function handleVacationPeriods(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const url=new URL(req.url,'http://localhost');
     if(req.method==='GET'){
       const employee_id=url.searchParams.get('employee_id'); const status=url.searchParams.get('status');
@@ -182,7 +182,7 @@ export function createHrTerminationApi({ pool, auditLog, sameOrigin, requireSess
   async function handleVacationRequests(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const url=new URL(req.url,'http://localhost');
     if(req.method==='GET'){
       const employee_id=url.searchParams.get('employee_id'); const status=url.searchParams.get('status');

@@ -189,13 +189,14 @@ const files = [
   '176-employee-geolocation-time-clock.sql',
   '177-site-appearance-administration.sql',
   '178-employee-time-clock-here-address.sql',
-  '179-employee-here-end-user-consent.sql'
+  '179-employee-here-end-user-consent.sql',
+  '180-marcelo-rh-access.sql'
 ];
 
 async function main() {
   const actual = (await readdir(dir)).filter(f => /^\d{3}-.*\.sql$/.test(f)).sort();
-  if (files.length !== 179 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
-    throw new Error('migration_manifest_mismatch: compare 001–179 with db/migrations before connecting');
+  if (files.length !== 180 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
+    throw new Error('migration_manifest_mismatch: compare 001–180 with db/migrations before connecting');
   }
   const urlText = process.env.DATABASE_MIGRATION_URL || process.env.DATABASE_URL;
   if (!urlText) throw new Error('DATABASE_MIGRATION_URL or DATABASE_URL is required');
@@ -249,7 +250,7 @@ async function main() {
         throw error;
       }
     }
-    console.log('Migration ledger verified: 001–179 (PostgreSQL only)');
+    console.log('Migration ledger verified: 001–180 (PostgreSQL only)');
   } finally {
     client?.release();
     await pool.end();

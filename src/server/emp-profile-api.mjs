@@ -30,7 +30,7 @@ export function createEmpProfileApi({ pool, auditLog, sameOrigin, requireSession
       if(r.rows.length) employee=r.rows[0];
     }
     // If not linked, but admin/ti/rh querying own? allow lookup by employee_id param for admin
-    if(!employee && requireRole(sess,['admin','ti','rh'])){
+    if(!employee && requireRole(sess,['admin','ti','rh','marcelo'])){
       // allow query param employee_id for admin view masked as employee would see
       try{ const url=new URL(req.url,'http://localhost'); const eid=url.searchParams.get('employee_id'); if(eid && uuidRe().test(eid)){ const rr=await pool.query('SELECT * FROM hr_employees WHERE id=$1',[eid]); if(rr.rows.length) employee=rr.rows[0]; } }catch{}
     }
@@ -41,6 +41,8 @@ export function createEmpProfileApi({ pool, auditLog, sameOrigin, requireSession
       // Hide remuneracao unless admin/ti
       if(!requireRole(sess,['admin','ti'])) masked.remuneracao_atual=null;
       const reqs=await pool.query('SELECT * FROM hr_profile_update_requests WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 50',[employee.id]);
+      // Marcelo gets the RH workspace view, but the unmasked internal record
+      // remains restricted to HR/TI/admin. Remuneration is always hidden here.
       res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({employee: masked, raw: requireRole(sess,['admin','ti','rh'])? employee: undefined, field_config: fieldCfg.rows, update_requests: reqs.rows})); return;
     }
     if(req.method==='POST'){
@@ -68,7 +70,7 @@ export function createEmpProfileApi({ pool, auditLog, sameOrigin, requireSession
   async function handleUpdateRequests(req,res){
     if(!sameOrigin(req)){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const sess=await requireSession(req); if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
-    if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    if(!requireRole(sess,['admin','ti','rh','marcelo'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     const url=new URL(req.url,'http://localhost');
     if(req.method==='GET'){
       const status=url.searchParams.get('status'); const employee_id=url.searchParams.get('employee_id');

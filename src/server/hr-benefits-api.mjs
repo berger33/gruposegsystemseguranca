@@ -14,7 +14,7 @@ export function createHrBenefitsApi({ pool, auditLog, sameOrigin, requireSession
     if (sameOrigin && !sameOrigin(req)) { json(res, 403, { error: 'forbidden_origin' }); return null; }
     const sess = await requireSession(req);
     if (!sess) { json(res, 401, { error: 'unauthorized' }); return null; }
-    if (!requireRole(sess, ['admin','ti','rh'])) { json(res, 403, { error: 'forbidden_role' }); return null; }
+    if (!requireRole(sess, ['admin','ti','rh','marcelo'])) { json(res, 403, { error: 'forbidden_role' }); return null; }
     return sess;
   }
   function isUuid(v) { return typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v); }
@@ -367,6 +367,7 @@ export function createHrBenefitsApi({ pool, auditLog, sameOrigin, requireSession
   // HR-15
   async function handleOccupationalRequirements(req, res) {
     const sess = await checkAuth(req, res); if (!sess) return;
+    if (sess.role === 'marcelo') return json(res, 403, { error: 'restricted_hr_health_data' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
       const cargo = url.searchParams.get('cargo');
@@ -400,6 +401,7 @@ export function createHrBenefitsApi({ pool, auditLog, sameOrigin, requireSession
 
   async function handleOccupationalAgenda(req, res) {
     const sess = await checkAuth(req, res); if (!sess) return;
+    if (sess.role === 'marcelo') return json(res, 403, { error: 'restricted_hr_health_data' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
       const employee_id = url.searchParams.get('employee_id');
@@ -463,6 +465,7 @@ export function createHrBenefitsApi({ pool, auditLog, sameOrigin, requireSession
 
   async function handleOccupationalDocuments(req, res) {
     const sess = await checkAuth(req, res); if (!sess) return;
+    if (sess.role === 'marcelo') return json(res, 403, { error: 'restricted_hr_health_data' });
     if (req.method === 'GET') {
       const url = new URL(req.url, 'http://localhost');
       const employee_id = url.searchParams.get('employee_id');
