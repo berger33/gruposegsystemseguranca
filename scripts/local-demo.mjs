@@ -13,6 +13,10 @@ import { seedFreshDemo } from './local-demo-seed.mjs';
 const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const action = process.argv[2];
 const qa = process.env.SEG_DEMO_TEST_MODE === '1';
+// Ollama stays disabled by default. An operator may explicitly opt in to the
+// local-only model already running on loopback; this never accepts a provider
+// URL from the environment or forwards a model call to a remote host.
+const localOllamaEnabled = process.env.SEG_LOCAL_DEMO_OLLAMA === '1';
 const forbidden = ['DATABASE_URL','DATABASE_MIGRATION_URL','ALLOW_REMOTE_MIGRATIONS','QA_PGLITE_ONLY',
   'CLIENT_DOCS_DIR','PGLITE_DATA_DIR','PGHOST','PGSERVICE','MAIL_HOST','MAIL_USER','MAIL_PASSWORD',
   'SITE_ADMIN_SESSION_SECRET','EMPLOYEE_SESSION_SECRET','SITE_ADMIN_TOKEN_TI','SITE_ADMIN_TOKEN_MARCELO','CLIENT_MFA_ENCRYPTION_KEY',
@@ -138,7 +142,10 @@ function environment(cfg) {
     QA_HOMOLOGATION_MODE: 'true', SEG_LOCAL_DEMO_ONLY: 'true', SITE_ADMIN_SESSION_SECRET: cfg.sessionSecret,
     EMPLOYEE_SESSION_SECRET: cfg.employeeSessionSecret,
     SITE_ADMIN_TOKEN_TI: '', SITE_ADMIN_TOKEN_MARCELO: '', CLIENT_MFA_ENCRYPTION_KEY: cfg.mfaKey,
-    OLLAMA_ENABLED: 'false', MAIL_HOST: '', CLIENT_DOCS_DIR: path.join(demoDir, 'documents'),
+    OLLAMA_ENABLED: localOllamaEnabled ? 'true' : 'false',
+    OLLAMA_BASE_URL: localOllamaEnabled ? 'http://127.0.0.1:11434' : '',
+    OLLAMA_MODEL: localOllamaEnabled ? 'qwen3:1.7b' : '',
+    MAIL_HOST: '', CLIENT_DOCS_DIR: path.join(demoDir, 'documents'),
     NEXT_DISABLE_HTTPS: 'true', TRUST_PROXY: 'false' };
 }
 function childProcess(args, env, config) {

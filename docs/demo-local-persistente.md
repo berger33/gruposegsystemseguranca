@@ -1,14 +1,27 @@
 # Demonstração local persistente — **somente dados fictícios**
 
-**IDs rastreados:** `QA-HOM-008` e `QA-HOM-009`. Esta demonstração usa massa sintética ampliada; veja [roteiro de dados e apresentação](demo-dados-apresentacao.md) para escopos, logins de demonstração, jornadas e limites. Não é ambiente de produção, homologação Windows, backup operacional ou publicação. SMTP **não é configurado**. Não usar com dados reais, clientes reais, documentos privados, pagamento ou acesso remoto. O ZIP de homologação anterior é **descartável e histórico**, não contém esta versão.
+**IDs rastreados:** `QA-HOM-008` e `QA-HOM-009`. Esta demonstração usa massa sintética ampliada; veja [roteiro de dados e apresentação](demo-dados-apresentacao.md) para escopos, logins de demonstração, jornadas e limites. Não é ambiente de produção, homologação Windows, backup operacional ou publicação. SMTP **não é configurado**. Não usar com dados reais, clientes reais, documentos privados ou pagamentos. Acesso externo só pela apresentação temporária com Quick Tunnel descrita abaixo; qualquer visitante com o link alcança o site, mas as áreas privadas exigem autenticação. O ZIP de homologação anterior é **descartável e histórico**, não contém esta versão.
 
-## No PC Windows do proprietário (execução ainda NÃO validada naquele PC)
+## No PC Windows do proprietário (execução validada em 2026-10-08; demonstração fictícia)
 
 1. Instale Node.js **22 x64** com npm e mantenha o código em pasta própria. Não copie `.env`, `.env.local`, `node_modules` ou dados de outra instalação. O script recusa variáveis de banco/provedor existentes e qualquer arquivo `.env*` diferente de `.env.example`.
 2. Abra `INICIAR-DEMO-LOCAL.bat` na pasta do projeto. Na primeira vez, confirme digitando **SIM**. Será criado um **cluster PostgreSQL 17 separado, somente em 127.0.0.1**, no perfil do usuário, com banco UTF-8 e todas as migrations presentes no checkout. Pode exigir internet em `npm ci` e compatibilidade do binário `embedded-postgres` com este Windows. Se falhar, pare; não improvise exclusão/migração do diretório.
 3. Após `DEMO_LOCAL_READY`, abra o endereço com porta variável mostrado no terminal. Anote privadamente **na primeira execução** as senhas aleatórias dos papéis listados no terminal; elas não são gravadas em texto claro nem repetidas nos próximos inícios. Os e-mails são `@example.invalid`, incapazes de receber e-mail. Não envie senha, cookie, link de convite ou tela de terminal no chat.
 4. Para a lista de fluxos e limites da massa, siga [docs/demo-dados-apresentacao.md](demo-dados-apresentacao.md). Não alegue que rascunhos, aprovações pré-carregadas, referências de compliance, artigos ou cenários sintéticos são decisões/validações humanas ou dados da empresa. O escopo de Empresa A e B continua segregado; convites sem SMTP não provam posse de e-mail. Para ponto, use localização real autorizada no navegador; a massa não inventa GPS.
 5. Feche com **Ctrl+C**. Em abertura posterior, o `.bat` usa `--start`: não faz seed outra vez, não troca senhas/chaves, não reaplica automaticamente novas migrações. Dados e arquivos ficam em `%LOCALAPPDATA%\GrupoSEG\seg-system-demo-v1` (fora do repositório e de `node_modules`). **Não compartilhe `config.json`: contém segredo de sessão, chave MFA e senha do banco.** Somente o usuário Windows/administradores com acesso ao perfil devem poder ler essa pasta. Confirme ACLs no PC antes de prosseguir; não foram validadas neste ambiente Linux.
+
+### Ollama/RAG local e link externo temporário
+
+O runner mantém a IA desligada por padrão. Para usar somente um Ollama local que já esteja instalado e ativo em `127.0.0.1:11434`, inicie `--start` com `SEG_LOCAL_DEMO_OLLAMA=1`. A opção fixa o modelo `qwen3:1.7b` e o destino loopback; não aceita endereço externo. Exemplo para a instalação pública isolada deste PC (o caminho base separado preserva outra demonstração que já existia):
+
+```powershell
+$baseAnterior = $env:LOCALAPPDATA
+$env:LOCALAPPDATA = Join-Path $baseAnterior 'GrupoSEG-PublicoBase'
+$env:SEG_LOCAL_DEMO_OLLAMA = '1'
+npm run demo:local:start
+```
+
+Para disponibilizar a aplicação completa durante uma apresentação, abra outro PowerShell e execute `cloudflared tunnel --no-autoupdate --url http://127.0.0.1:<porta>` usando a porta impressa por `DEMO_LOCAL_READY`. O `cloudflared` deve permanecer aberto junto com o servidor e o PostgreSQL. O endereço `trycloudflare.com` é público e temporário, muda quando o túnel é recriado e para de responder quando qualquer processo ou o computador é desligado. Qualquer pessoa com o link consegue abrir o site; as áreas privadas continuam exigindo login individual. Use apenas a massa fictícia, não envie dados reais pelo sistema e mantenha as senhas privadas. Esse túnel é para demonstração, não para produção.
 
 ### Cópia fria e ensaio de restauração isolada — somente demo fictício
 
@@ -27,7 +40,7 @@ Crie a pasta-mãe (`E:\SEG-DEMO`) por meio autorizado antes; escolha nomes **que
 - A inicialização recusa pasta existente: **nunca sobrescreve**. Um `run.lock` remanescente após desligamento brusco deve ser investigado por pessoa técnica (verificar processos Node/PostgreSQL do demo e as portas gravadas/mostradas), não apagado às cegas. Se a migração parcial falhar, o runner recusa reinicialização; é preciso diagnóstico e recuperação controlada. Reinstalar Node ou reextrair código não apaga automaticamente a pasta de dados, mas **trocar a versão do código pode exigir upgrade/backup prévio**: `--start` compara os checksums do ledger e recusa esquema divergente.
 - O banco e a aplicação iniciam **somente enquanto a janela estiver aberta**; não há serviço Windows, inicialização automática, credenciais recuperáveis, controle de ACL comprovado, atualização segura, backup/restauração operacional nem monitoramento. Sem cópia independente, perda do disco/perfil ou senha TI significa perda de acesso/dados sintéticos; **não inserir dados reais**. `embedded-postgres` usa parada pelo sistema e deve ser ensaiado no Windows. A porta PostgreSQL escolhida no primeiro início é gravada e deve estar livre nos seguintes; não publicar porta nem usar `TRUST_PROXY`.
 - A UI de convite em `/admin/clientes` chama o endpoint real, não a prévia `/admin/portal/convites`. Convites sem SMTP aparecem somente para o TI autenticado no momento da emissão; depois não há recuperação do token em claro. Não é prova de posse da caixa postal. A massa preenche jornadas descritas no roteiro, mas não ativa integrações externas, não substitui aceite humano e não representa dado de produção.
-- O hostname fixo é **127.0.0.1**, sem Funnel, túnel, domínio ou link para o cliente. O endereço local acima abre somente no PC. Não há link HTTPS para terceiros nesta etapa.
+- A aplicação e o PostgreSQL continuam presos ao loopback **127.0.0.1**; não publique suas portas. Um Quick Tunnel iniciado separadamente pode encaminhar a aplicação por HTTPS para uma apresentação, conforme a seção acima. Ele não é permanente nem transforma esta demonstração em hospedagem de produção.
 
 ## Ensaio automatizado independente (Linux, descarta seu próprio diretório)
 
