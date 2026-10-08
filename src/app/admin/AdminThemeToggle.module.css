@@ -1,0 +1,32 @@
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid rgba(169, 198, 230, 0.38);
+  border-radius: 9px;
+  background: rgba(16, 42, 77, 0.72);
+  color: #e7f0fc;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.toggle:hover {
+  background: rgba(45, 89, 142, 0.72);
+  border-color: rgba(191, 219, 244, 0.72);
+}
+
+.toggle:focus-visible {
+  outline: 3px solid #91c9ff;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toggle { transition: none; }
+}

@@ -197,7 +197,7 @@ function LeadAdminContent() {
           <a className={styles.visualLink} href="/admin/crm">Empresas &amp; funil (CRM)</a>
           <a className={styles.visualLink} href="/admin/comercial">Workspace comercial</a>
           <a className={styles.visualLink} href="/admin/portal">Prévia da configuração do portal</a>
-          <a className={styles.visualLink} href="/admin/visual">Administração visual <ArrowLeft size={13} /></a>
+          <a className={styles.visualLink} href="/admin/aparencia">Aparência do site <ArrowLeft size={13} /></a>
         </nav>
       </header>
       <section className={styles.content}>

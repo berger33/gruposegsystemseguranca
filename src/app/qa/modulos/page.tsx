@@ -26,7 +26,7 @@ export default function QAModuleIndex() {
     { id: "RAG-SEG-001", group: "RH", title: "Assistente RH", href: "/admin/rh/assistente", state: "Bloqueado", note: "Consultas privadas pendentes; não inserir prontuários, salários ou qualquer dado real." },
     { id: "RAG-SEG-001", group: "Marcelo", title: "Assistente Marcelo", href: "/admin/marcelo/assistente", state: "Bloqueado", note: "Consultas privadas pendentes; não usar como ferramenta de gestão." },
     { id: "CLI-14", group: "Público", title: "Configuração do portal", href: "/admin/portal", state: "Protótipo sem efeito", note: "Opções mudam apenas na tela, sem alterar autenticação ou permissões reais." },
-    { id: "PUB-07", group: "Público", title: "Aparência", href: "/admin/visual", state: "Prévia visual", note: "Demonstra layouts; não equivale a publicar tema ou homologar editor." },
+    { id: "PUB-07", group: "Público", title: "Aparência do site", href: "/admin/aparencia", state: "Galeria e publicação auditada", note: "Compara layouts e publica uma escolha com permissão, confirmação e registro de auditoria." },
   ];
   return (
     <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 20px", fontFamily: "system-ui, sans-serif", lineHeight: 1.5 }}>

@@ -11,6 +11,14 @@
   --ux-color-border: #d1d9e8;
   --ux-color-focus: #315aca;
   --ux-color-error: #9b1c1c;
+  --ux-color-error-soft: #fff3f3;
+  --ux-color-success: #166534;
+  --ux-color-success-soft: #eaf6ed;
+  --ux-color-warning: #92400e;
+  --ux-color-warning-soft: #fff7ed;
+  --ux-color-info-soft: #eff6ff;
+  --ux-color-danger-strong: #a4262c;
+  --ux-color-table-stripe: #f8fafc;
   --ux-space-1: 4px;
   --ux-space-2: 8px;
   --ux-space-3: 12px;

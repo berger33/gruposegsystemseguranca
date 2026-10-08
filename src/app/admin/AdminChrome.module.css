@@ -24,7 +24,8 @@
   color: #d9e7f7;
 }
 .adminContainer .topbar { flex-wrap: nowrap; }
-.adminContainer .roleChip { margin-left: auto; }
+.adminContainer .roleChip { margin-left: 0; }
+.adminContainer [data-admin-theme-toggle="true"] { margin-left: auto; }
 
 .workArea { display: grid; grid-template-columns: 250px minmax(0, 1fr); align-items: start; gap: 18px; }
 .mainContent { min-width: 0; }
@@ -253,3 +254,118 @@
 .card[data-admin-login="true"] .formGrid {max-width:none;}
 .card[data-admin-login="true"] .submit {width:100%;}
 .card[data-admin-login="true"] .hint {font-size:15px;line-height:1.6;}
+
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] {
+  background:
+    radial-gradient(ellipse at 82% 0%, rgb(49 89 135 / 17%), transparent 43%),
+    linear-gradient(155deg, #0d192a 0%, #111e30 58%, #142235 100%);
+  color: var(--ux-color-text);
+}
+
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .topbar {
+  background: linear-gradient(110deg, #14294a, #1a355b);
+  border: 1px solid #344c6c;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 22%);
+  color: #e5edf7;
+}
+
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .sideNav,
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .card {
+  background: var(--ux-color-surface);
+  border-color: var(--ux-color-border);
+  color: var(--ux-color-text);
+  box-shadow: var(--ux-shadow-card);
+}
+
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .sideNav {
+  scrollbar-color: #526a86 #18263a;
+}
+
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .homeLink,
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .sideGroup summary,
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .sideLink {
+  color: var(--ux-color-text);
+}
+
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .homeLink:hover,
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .homeLink[aria-current="page"],
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .sideGroup summary:hover,
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .sideGroup[open] summary {
+  background: #203651;
+}
+
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .sideGroup summary span,
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .noResults,
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .hint {
+  color: var(--ux-color-muted);
+}
+
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .sideLink:hover,
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .sideLink[aria-current="page"] {
+  background: var(--ux-color-brand-soft);
+  color: var(--ux-color-brand-strong);
+}
+
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .moduleSearch {
+  background: #111e30;
+  border-color: var(--ux-color-border);
+  color: var(--ux-color-muted);
+}
+
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .moduleSearch input {
+  background: transparent;
+  color: var(--ux-color-text);
+}
+
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .breadcrumb,
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .center {
+  color: var(--ux-color-muted);
+}
+
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .card h1,
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .card h2,
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .field label {
+  color: var(--ux-color-brand-strong);
+}
+
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .field input,
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .tab {
+  background: #111e30;
+  border-color: var(--ux-color-border);
+  color: var(--ux-color-text);
+}
+
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .tab[aria-pressed="true"],
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .submit {
+  background: linear-gradient(135deg, #2e5f98, #244e7f);
+  border-color: #5e8fc5;
+  color: #f7faff;
+}
+
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .messageError {
+  background: var(--ux-color-error-soft);
+  border-color: #70484b;
+  color: var(--ux-color-error);
+}
+
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .messageOk {
+  background: var(--ux-color-success-soft);
+  border-color: #426b59;
+  color: var(--ux-color-success);
+}
+
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .messageInfo {
+  background: var(--ux-color-info-soft);
+  border-color: #405d7c;
+  color: var(--ux-color-brand-strong);
+}
+
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .drawerHeader {
+  color: var(--ux-color-text);
+}
+
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .drawerHeader button {
+  background: var(--ux-color-surface);
+  border-color: var(--ux-color-border);
+  color: var(--ux-color-text);
+}

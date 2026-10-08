@@ -13,6 +13,7 @@ import Link from "next/link";
 import UiField from "../../../components/ui/UiField";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
+import AdminThemeToggle from "../AdminThemeToggle";
 import {
   legacyLoginEnabled,
   loginErrorMessage,
@@ -156,7 +157,7 @@ export default function AdminLoginClient() {
 
   if (checking) {
     return (
-      <main className={styles.page}>
+      <main className={styles.page} data-admin-theme-scope="true">
         <div className={styles.container}>
           <p className={styles.center}>
             <span className={styles.spinner} aria-hidden="true" />
@@ -170,7 +171,7 @@ export default function AdminLoginClient() {
   const legacyAvailable = Boolean(options?.legacyTokens);
 
   return (
-    <main className={styles.page}>
+      <main className={styles.page} data-admin-theme-scope="true">
       <div className={styles.container}>
         <header className={styles.topbar}>
           <Link href="/" className={styles.brand}>
@@ -188,6 +189,7 @@ export default function AdminLoginClient() {
               Sou funcionário
             </Link>
           </nav>
+          <AdminThemeToggle />
           <Link href="/" className={styles.ghostButton}>
             <ArrowLeft size={13} aria-hidden="true" />
             Voltar ao site

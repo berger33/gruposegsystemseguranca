@@ -23,7 +23,7 @@ SMTP e hospedagem pública permanecem excluídos. L05 não foi implementado nest
 |---|---|---|
 | PUB-05 | FAQ legada com leitura pública de sessões/mensagens e encaminhamento desconectado | Consulta determinística sobre FAQ publicada no CMS; pergunta sensível vai ao formulário de contato. Protocolo somente após persistir lead com consentimento. Sessões antigas protegidas. Sem LLM neste lote. |
 | PUB-06 | Componente órfão; rotas públicas confundidas com administrativas; publicação/versionamento inseguros | /admin/publicacao: páginas, FAQ, cases, blog e vagas em texto simples. Rascunho → revisão → aprovação → publicação; versões, histórico e restauração como novo rascunho. Consumidor público em /conteudos e /conteudos/[slug]. |
-| PUB-07 | /admin/tema alterava somente um atributo no navegador | Versões persistidas de temas, prévia isolada, publicação autorizada, restauração de tema já publicado e preferência dia/noite separada. Tokens consumidos pelas superfícies editoriais. Os dez layouts existentes continuam separados em /admin/visual. |
+| PUB-07 | /admin/tema alterava somente um atributo no navegador | Versões persistidas de temas, prévia isolada, publicação autorizada, restauração de tema já publicado e preferência dia/noite separada. Tokens consumidos pelas superfícies editoriais. A administração dos dez layouts fica em /admin/aparencia; /admin/visual é compatibilidade legada com redirecionamento. |
 | PUB-09 | Montador/comparador órfão; preço recebido do navegador podia ser tratado como aprovado | Pacotes compostos por serviços validados e regras aprovadas; revisão e publicação; comparação pública e administrativa. Valores ausentes continuam “sob consulta”, nunca zero. Recolhimento após revogação de regra. |
 | CRM-08 | Calendário somente de leitura e lembretes pendentes | Editor autorizado reutilizado dentro da visão semanal; próximos compromissos em 24h ao abrir/atualizar a agenda, sem envio externo. |
 | CRM-10 | Sem área de carteira | /admin/carteira: grupos/unidades, filtros sem próxima ação, vencidas, ganhas/perdidas; renovação, ampliação, serviço adicional, recuperação e indicação criam oportunidade vinculada e próxima ação. Retry por chave não duplica. |
@@ -44,7 +44,7 @@ SMTP e hospedagem pública permanecem excluídos. L05 não foi implementado nest
 - A busca FAQ não é RAG nem LLM. Perguntas sobre preço/cobertura/licença/prazo/garantia pedem avaliação humana. A pergunta é preservada no navegador durante o encaminhamento, não na URL.
 - Não há mensagens externas: o atendimento humano entra pela fila de leads existente.
 - Pacotes não calculam preço comercial sem processo de custeio/proposta. Compatibilidade de equipamentos e SLA exigem avaliação técnica. Não há promessa de pacote “pronto para instalar”.
-- Novo tema não refaz os dez layouts ou a identidade dos portais internos. Publicação persiste a paleta das superfícies que usam os tokens; /admin/visual continua controlando a composição dos layouts.
+- Novo tema não refaz os dez layouts ou a identidade dos portais internos. Publicação persiste a paleta das superfícies que usam os tokens; /admin/aparencia controla a seleção dos layouts.
 - Histórico antigo de comissão não recebe uma regra fictícia retroativa: rule_snapshot fica nulo quando não havia evidência.
 
 ## Dados e integridade

@@ -166,12 +166,12 @@ test("EXT-12 servidor registra borda canônica e aposentadoria legada", async ()
   assert.match(server, /pathname\.startsWith\("\/api\/ext\/visual\/"\)/);
 });
 
-test("EXT-12 UI é AdminGate e declara prévia interna sem handlers legados", async () => {
+test("entrada visual legada redireciona para Aparência e o editor duplicado saiu da tela", async () => {
   const page = await readFile(path.join(root, "src/app/admin/visual/page.tsx"), "utf8");
-  const workspace = await readFile(path.join(root, "src/app/admin/visual/VisualEditorWorkspace.tsx"), "utf8");
-  assert.match(page, /AdminGate/);
-  assert.match(page, /VisualEditorWorkspace/);
-  assert.match(workspace, /não usa os handlers legados como cobertura/);
-  assert.match(workspace, /Prévia interna/);
-  assert.match(workspace, /Idempotency-Key/);
+  const gate = await readFile(path.join(root, "src/app/admin/AdminGate.tsx"), "utf8");
+  const nav = await readFile(path.join(root, "src/lib/admin-navigation.mjs"), "utf8");
+  assert.match(page, /redirect\(['"]\/admin\/aparencia['"]\)/);
+  assert.doesNotMatch(gate, /label:\s*["']Editor visual["']/);
+  assert.doesNotMatch(nav, /\/admin\/visual/);
+  await assert.rejects(readFile(path.join(root, "src/app/admin/visual/VisualEditorWorkspace.tsx")));
 });

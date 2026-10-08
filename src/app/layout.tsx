@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "../styles/ux-tokens.css";
 import "../styles/themes.css";
+import "./admin/admin-theme.css";
 import PublishedTheme from "@/components/PublishedTheme";
 
 // Produção gate: noindex preservado por padrão (beta). Para liberar produção, definir NEXT_PUBLIC_ALLOW_INDEX=true + is_beta_mode false via API
@@ -26,12 +27,17 @@ export const viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/api/pwa/manifest.json" />
         <meta name="theme-color" content="#0f172a" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try { if (localStorage.getItem("segsystem.admin.appearance.v1") === "night") document.documentElement.dataset.adminTheme = "night"; } catch {}`,
+          }}
+        />
       </head>
       <body>
         <PublishedTheme />

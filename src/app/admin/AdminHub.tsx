@@ -25,7 +25,6 @@ const MODULE_DESCRIPTIONS: Record<string, string> = {
   "/admin/conhecimento": "Conteúdo interno com revisão e publicação controladas.",
   "/admin/expansao": "Planos e cenários de expansão para decisão da equipe.",
   "/admin/analytics": "Experimentos internos com aprovação e observações registradas.",
-  "/admin/visual": "Edição e revisão do visual publicado.",
   "/admin/relatorios": "Relatórios periódicos e histórico de execução.",
   "/admin/inteligencia": "Sugestões comerciais baseadas em evidências internas e decisão humana.",
   "/admin/emergencial": "Configuração e testes internos de canais de apoio; sem envio externo automático.",

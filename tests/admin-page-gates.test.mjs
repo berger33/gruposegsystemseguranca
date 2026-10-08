@@ -48,7 +48,6 @@ const protectedPages = new Map([
   ["src/app/admin/relatorios/page.tsx", ["ti", "admin"]],
   ["src/app/admin/inteligencia/page.tsx", ["ti", "admin"]],
   ["src/app/admin/emergencial/page.tsx", ["ti", "admin"]],
-  ["src/app/admin/visual/page.tsx", ["ti", "admin"]],
   ["src/app/admin/clientes/page.tsx", ["marcelo", "ti"]],
   ["src/app/admin/funcionarios/page.tsx", ["rh", "marcelo", "admin", "ti"]],
 ]);
@@ -57,6 +56,7 @@ const deliberateExceptions = new Set([
   "src/app/admin/convite/page.tsx",
   "src/app/admin/verificacao-manual/page.tsx",
 ]);
+const redirectPages = new Set(["src/app/admin/visual/page.tsx"]);
 
 async function pageFiles(directory = path.join(root, "src/app/admin"), prefix = "src/app/admin") {
   const result = [];
@@ -77,7 +77,7 @@ function declaredRoles(source, file) {
 
 test("todas as páginas administrativas têm gate e papéis revisados", async () => {
   const pages = new Set(await pageFiles());
-  const expected = new Set([...protectedPages.keys(), ...deliberateExceptions, "src/app/admin/page.tsx", "src/app/admin/entrar/page.tsx"]);
+  const expected = new Set([...protectedPages.keys(), ...deliberateExceptions, ...redirectPages, "src/app/admin/page.tsx", "src/app/admin/entrar/page.tsx"]);
   assert.deepEqual([...pages].sort(), [...expected].sort(), "página administrativa nova precisa entrar na matriz de gate");
 
   for (const [file, roles] of protectedPages) {
@@ -89,6 +89,12 @@ test("todas as páginas administrativas têm gate e papéis revisados", async ()
   for (const file of deliberateExceptions) {
     const source = await readFile(path.join(root, file), "utf8");
     assert.doesNotMatch(source, /AdminGate/, `${file} é uma exceção deliberada e não deve ganhar o gate central`);
+  }
+
+  for (const file of redirectPages) {
+    const source = await readFile(path.join(root, file), "utf8");
+    assert.match(source, /redirect\(['"]\/admin\/aparencia['"]\)/, `${file} deve encaminhar para a entrada visual oficial`);
+    assert.doesNotMatch(source, /VisualEditorWorkspace|AppearanceGallery/, `${file} não deve recriar o editor duplicado`);
   }
 
   const hub = await readFile(path.join(root, "src/app/admin/AdminHub.tsx"), "utf8");

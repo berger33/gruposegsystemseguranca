@@ -15,7 +15,7 @@ O site público conserva seu conteúdo, composição, estilos e layout padrão 0
 | Formulários de entrada ocupavam largura excessiva | Cards proporcionais, campos legíveis e ações principais de 44 px | Login operacional depende das contas do destino |
 | Ferramentas TI apresentadas como sequência longa | Quatro grupos: conteúdo, operação, governança, experiência | Formulários internos complexos ainda exigem revisão por tarefa |
 | Confusão entre dez paletas e dez layouts | Galeria das dez apresentações reais, seleção e estado ativo distintos | Esquemas pequenos são miniaturas conceituais; iframe é a prévia real |
-| Ferramenta antiga de aparência pausada e contrato incompatível | Entrada canônica /admin/aparencia, TI → Aparência do site e /admin/visual | Editor avançado permanece separado em disclosure |
+| Ferramenta antiga de aparência pausada e contrato incompatível | Entrada canônica /admin/aparencia, TI → Aparência do site | A rota /admin/visual redireciona para Aparência; o editor duplicado foi removido da navegação |
 | Publicação sem identidade individual nem permissão específica | Papel admin/marcelo/TI + site.visual.write organizacional/global, motivo e autoria UUID | Contas futuras precisam receber concessão pelo fluxo RBAC existente |
 | Possibilidade de sobrescrever escolha de outro administrador | expectedVisual + bloqueio da linha + conflito 409 | Atualizar configuração antes de tentar novamente |
 | Migrações 175/176 fora do migrador oficial | Manifesto e verificador estático atualizados até 177 | Aplicação no banco de destino ainda pendente |

@@ -14,6 +14,7 @@ import { usePathname } from "next/navigation";
 import { ArrowLeft, LogOut, Menu, Search, ShieldCheck, X } from "lucide-react";
 import { roleLabel } from "../../lib/admin-entry.mjs";
 import { groupAdminModules, searchAdminGroups } from "../../lib/admin-navigation.mjs";
+import AdminThemeToggle from "./AdminThemeToggle";
 import styles from "./AdminChrome.module.css";
 
 type AdminSession = { role: string; identityId: string | null; mfaVerified: boolean; expiresAt: string };
@@ -40,7 +41,6 @@ export const ADMIN_MODULES: ReadonlyArray<{ href: string; label: string; roles: 
   { href: "/admin/conhecimento", label: "Conhecimento", roles: ["marcelo", "admin", "ti"] },
   { href: "/admin/expansao", label: "Expansão", roles: ["comercial", "financeiro", "marcelo", "admin", "ti"] },
   { href: "/admin/analytics", label: "Analytics", roles: ["marcelo", "admin", "ti"] },
-  { href: "/admin/visual", label: "Editor visual", roles: ["admin", "ti"] },
   { href: "/admin/aparencia", label: "Aparência do site", roles: ["admin", "marcelo", "ti"] },
   { href: "/admin/relatorios", label: "Relatórios periódicos", roles: ["admin", "ti"] },
   { href: "/admin/inteligencia", label: "Inteligência comercial", roles: ["admin", "ti"] },
@@ -111,7 +111,7 @@ export function AdminChrome({ session, children }: { session: AdminSession; chil
   }, [menuOpen]);
 
   return (
-    <main className={styles.page}>
+    <main className={styles.page} data-admin-theme-scope="true">
       <div className={`${styles.container} ${styles.adminContainer}`} data-admin-chrome="true">
         <header className={styles.topbar}>
           <Link href="/admin" className={styles.brand}>
@@ -128,6 +128,7 @@ export function AdminChrome({ session, children }: { session: AdminSession; chil
             <ShieldCheck size={13} aria-hidden="true" />
             {roleLabel(session.role)}
           </span>
+          <AdminThemeToggle />
           <button type="button" className={styles.ghostButton} onClick={() => void adminLogout()}>
             <LogOut size={13} aria-hidden="true" />
             Sair
@@ -216,7 +217,7 @@ export default function AdminGate({
 
   if (state.kind === "checking") {
     return (
-      <main className={styles.page}>
+      <main className={styles.page} data-admin-theme-scope="true">
         <div className={styles.container}>
           <p className={styles.center} data-admin-gate="checking">
             <span className={styles.spinner} aria-hidden="true" />
@@ -229,7 +230,7 @@ export default function AdminGate({
 
   if (state.kind === "error") {
     return (
-      <main className={styles.page}>
+      <main className={styles.page} data-admin-theme-scope="true">
         <div className={styles.container}>
           <section className={styles.card} data-admin-gate="error" style={{ marginTop: 24 }}>
             <h1>Não foi possível confirmar sua sessão</h1>

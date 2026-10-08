@@ -1,0 +1,88 @@
+/* Preferência privada das áreas RH, TI e Marcelo; não altera o site público. */
+html[data-admin-theme="night"] [data-admin-theme-scope="true"] {
+  color-scheme: dark;
+  --ux-color-canvas: #111b2b;
+  --ux-color-surface: #18263a;
+  --ux-color-text: #e5edf7;
+  --ux-color-muted: #adbdcf;
+  --ux-color-brand: #92bdf2;
+  --ux-color-brand-strong: #b6d2fa;
+  --ux-color-brand-soft: #243a57;
+  --ux-color-border: #354960;
+  --ux-color-focus: #95caff;
+  --ux-color-error: #ffb4b0;
+  --ux-color-error-soft: #432c31;
+  --ux-color-success: #a8dfbd;
+  --ux-color-success-soft: #233c34;
+  --ux-color-warning: #f0cf8b;
+  --ux-color-warning-soft: #423923;
+  --ux-color-info-soft: #203a58;
+  --ux-color-danger-strong: #ffb4b0;
+  --ux-color-table-stripe: #1c2b40;
+  --ux-shadow-card: 0 10px 28px rgb(0 0 0 / 24%);
+  background:
+    radial-gradient(ellipse at 82% 0%, rgb(49 89 135 / 17%), transparent 43%),
+    linear-gradient(155deg, #0d192a 0%, #111e30 58%, #142235 100%);
+  color: var(--ux-color-text);
+}
+
+html[data-admin-theme="night"] [data-admin-theme-scope="true"] :is(input, select, textarea) {
+  color-scheme: dark;
+  border-color: var(--ux-color-border);
+  background-color: #111e30;
+  color: var(--ux-color-text);
+}
+
+html[data-admin-theme="night"] [data-admin-theme-scope="true"] :is(input, select, textarea)::placeholder {
+  color: #90a3b9;
+  opacity: 1;
+}
+
+html[data-admin-theme="night"] [data-admin-theme-scope="true"] :is(a, button, summary, input, select, textarea, [tabindex]):focus-visible {
+  outline-color: var(--ux-color-focus);
+}
+
+/* Neutral inline surfaces remain useful in legacy TI forms, but no longer
+   flash as pure white or pale gray against the night palette. Semantic
+   success/warning/error fills are deliberately left alone. */
+html[data-admin-theme="night"] [data-admin-theme-scope="true"] :is(
+  [style*="background: white"], [style*="background:white"],
+  [style*="background: #fff"], [style*="background:#fff"],
+  [style*="background: rgb(255, 255, 255)"],
+  [style*="background: #f8fafc"], [style*="background:#f8fafc"],
+  [style*="background: rgb(248, 250, 252)"],
+  [style*="background: #f9fafb"], [style*="background:#f9fafb"],
+  [style*="background: #f9f9f9"], [style*="background:#f9f9f9"],
+  [style*="background: #f3f4f6"], [style*="background:#f3f4f6"],
+  [style*="background: #eff6ff"], [style*="background:#eff6ff"],
+  [style*="background: #edf1fc"], [style*="background:#edf1fc"],
+  [style*="background: #f5f3ff"], [style*="background:#f5f3ff"],
+  [style*="background: #eef"], [style*="background:#eef"],
+  [style*="background: rgb(238, 238, 255)"],
+  [style*="background: #7c3aed"], [style*="background:#7c3aed"],
+  [style*="background: rgb(124, 58, 237)"]
+) {
+  border-color: var(--ux-color-border) !important;
+  background: var(--ux-color-surface) !important;
+  color: var(--ux-color-text) !important;
+}
+
+html[data-admin-theme="night"] [data-admin-theme-scope="true"] :is(
+  [style*="color: #111827"], [style*="color:#111827"],
+  [style*="color: #12263f"], [style*="color:#12263f"],
+  [style*="color: #333"], [style*="color:#333"],
+  [style*="color: #444"], [style*="color:#444"],
+  [style*="color: #555"], [style*="color:#555"],
+  [style*="color: #666"], [style*="color:#666"],
+  [style*="color: #6b7280"], [style*="color:#6b7280"],
+  [style*="color: black"], [style*="color:black"],
+  [style*="color: red"], [style*="color:red"]
+) {
+  color: var(--ux-color-text) !important;
+}
+
+html[data-admin-theme="night"] [data-admin-theme-scope="true"] [role="alert"] {
+  border-color: var(--ux-color-error);
+  background: var(--ux-color-error-soft);
+  color: var(--ux-color-error);
+}

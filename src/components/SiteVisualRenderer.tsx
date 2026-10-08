@@ -69,7 +69,7 @@ export default function SiteVisualRenderer() {
   return (
     <>
       <SelectedVisual />
-      <a className={styles.appearanceShortcut} href="/admin/visual" aria-label="Abrir módulo de aparência do site">
+      <a className={styles.appearanceShortcut} href="/admin/aparencia" aria-label="Abrir módulo de aparência do site">
         <Palette size={16} aria-hidden="true" />
         <span>Aparência</span>
       </a>

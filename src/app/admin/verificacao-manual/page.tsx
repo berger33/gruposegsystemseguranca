@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
+import AdminThemeToggle from "../AdminThemeToggle";
 
 type Pending = { id: string; email: string; display_name: string | null; status: string; created_at: string };
 const frame = { maxWidth: 790, margin: "32px auto", padding: 24, fontFamily: "system-ui, sans-serif", lineHeight: 1.6 };
@@ -66,7 +67,10 @@ export default function ManualVerificationPage() {
     finally { setBusy(false); }
   }
 
-  return <main style={frame}>
+  return <main style={frame} data-admin-theme-scope="true">
+    <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+      <AdminThemeToggle />
+    </div>
     <p><Link href="/admin/clientes">← Administração de clientes</Link></p>
     <h1>Verificação manual do cliente</h1>
     <p><strong>Somente TI com conta individual.</strong> Use apenas massa fictícia nesta etapa. Esta decisão não comprova posse do e-mail: antes de aprovar, confira a identidade por contato presencial ou retorno para contato previamente conhecido (nunca o número informado no pedido).</p>
