@@ -21,7 +21,8 @@ const base = process.platform === 'win32'
   ? process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'GrupoSEG')
   : path.join(homedir(), '.local', 'share', 'GrupoSEG');
 const demoDir = qa ? process.env.SEG_DEMO_TEST_DIR : base && path.join(base, 'seg-system-demo-v1');
-const webPort = qa ? Number(process.env.SEG_DEMO_WEB_PORT) : 3000;
+const requestedWebPort = qa ? Number(process.env.SEG_DEMO_WEB_PORT) : null;
+let webPort = requestedWebPort;
 const databaseName = 'seg_demo_local';
 let engine, pool, web, lockFile, lockOwned = false, stopping = false;
 
@@ -62,14 +63,15 @@ async function preflight() {
   if (!['--init', '--start'].includes(action) || process.argv.length !== 3 || !demoDir ||
       (qa && (!path.basename(demoDir).startsWith('seg-demo-qa-') ||
         path.dirname(path.resolve(demoDir)) !== path.resolve(tmpdir()))) ||
-      (!qa && process.env.SEG_DEMO_TEST_DIR) || !Number.isInteger(webPort) || webPort < 1024) fail('demo_usage_refused');
+      (!qa && process.env.SEG_DEMO_TEST_DIR) ||
+      (qa && (!Number.isInteger(webPort) || webPort < 1024 || webPort > 65535))) fail('demo_usage_refused');
   if (process.versions.node.split('.')[0] !== '22') fail('demo_requires_node_22');
   for (const key of forbidden) if (process.env[key]) fail(`demo_env_refused_${key}`);
   for (const name of await readdir(project)) if ((name === '.env' || name.startsWith('.env.')) && name !== '.env.example') {
     fail(`demo_env_file_refused_${name}`);
   }
   await access(path.join(project, 'db/migrations/098-client-manual-verification.sql'));
-  await checkPort(webPort, 'web');
+  if (qa) await checkPort(webPort, 'web');
   if (action === '--init' && await statOrNull(demoDir)) fail('demo_directory_exists_use_start_or_stop_and_investigate');
   if (action === '--start') {
     const stat = await statOrNull(demoDir);
@@ -185,11 +187,28 @@ async function waitForHealth(child) {
 }
 for (const signal of ['SIGINT','SIGTERM']) process.on(signal, () => {
   stopping = true;
+  if (qa) process.stdin.pause();
   if (web?.exitCode === null) web.kill('SIGTERM');
 });
+// The Windows QA harness cannot reliably deliver console Ctrl+C to a child
+// without a TTY. Its private stdin pipe provides an explicit graceful stop.
+if (qa) {
+  process.stdin.setEncoding('utf8');
+  process.stdin.on('data', chunk => {
+    if (String(chunk).split(/\r?\n/).some(line => line.trim() === 'STOP')) {
+      stopping = true;
+      process.stdin.pause();
+      if (web?.exitCode === null) web.kill('SIGTERM');
+    }
+  });
+}
 let config;
 try {
   await preflight();
+  // A preview port is chosen for each run so unrelated software already on
+  // common development ports is left untouched. The exact URL is printed.
+  if (!qa) webPort = await freePort();
+  await checkPort(webPort, 'web');
   config = action === '--init' ? await initialiseDirectory() : await loadDirectory();
   await checkPort(config.pgPort, 'database');
   lockFile = path.join(demoDir, 'run.lock');
@@ -226,11 +245,12 @@ try {
       mode: 'isolated-local-demo', databaseName,
     });
     staff = seeded.credentials;
+    if (seeded.showcase) console.log(`DEMO_SHOWCASE_V2: ${JSON.stringify(seeded.showcase)}`);
   }
   await ledgerIsCurrent(pool, config.installationId);
   web = childProcess(['server.mjs','--dev'], env, config);
   await waitForHealth(web);
-  console.log(`\nDEMO_LOCAL_READY: http://127.0.0.1:${webPort}/qa/modulos`);
+  console.log(`\nDEMO_LOCAL_READY: http://127.0.0.1:${webPort}/admin/entrar`);
   console.log('Somente massa fictícia. Sem SMTP, Funnel, dados reais ou backup operacional.');
   if (staff) {
     console.log('CREDENCIAIS APENAS NESTA PRIMEIRA INICIALIZAÇÃO. Anote em local privado:');

@@ -4,8 +4,9 @@
 // on first run, and the installation UUID owned by local-demo.mjs.
 import { randomBytes, randomUUID } from 'node:crypto';
 import { hashPassword } from '../src/lib/client-auth-core.mjs';
+import { seedShowcase } from './local-demo-showcase.mjs';
 
-const SEED_VERSION = 1;
+const SEED_VERSION = 2;
 const DEMO_DATABASE = 'seg_demo_local';
 const DEMO_MODE = 'isolated-local-demo';
 const password = () => randomBytes(24).toString('base64url');
@@ -122,10 +123,17 @@ export async function seedFreshDemo(pool, installationId, authorization = {}) {
       VALUES ($1,$2,'employees.self_service','own',NULL,$3,'rh','Bootstrap F03 sintético: somente autoatendimento próprio')`,
     [randomUUID(), employee.id, rhIdentity]);
 
+    const showcase = await seedShowcase(client, {
+      staff: staff.map(({ role, id }) => ({ role, id })),
+      employeeId,
+      employeeIdentityId: employee.id,
+      accounts: [accountA, accountB],
+    });
+
     await client.query(`INSERT INTO audit_log (action,actor,target,meta)
       VALUES ('demo_f03_seed','system',$1,$2::jsonb)`, [installationId, JSON.stringify({
       seedVersion: SEED_VERSION, synthetic: true, staff: staff.length, clients: clients.length,
-      employees: 1, accounts: 2, contracts: 2,
+      employees: 1, accounts: 2, contracts: 2, showcase,
     })]);
     await client.query('COMMIT');
     return {
@@ -133,6 +141,7 @@ export async function seedFreshDemo(pool, installationId, authorization = {}) {
         ({ role: label, email, password: secret })),
       replay: false,
       seedVersion: SEED_VERSION,
+      showcase,
     };
   } catch (error) {
     await client.query('ROLLBACK');

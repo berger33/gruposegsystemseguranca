@@ -30,7 +30,7 @@ const env = { PATH: process.env.PATH || process.env.Path || '', SystemRoot: proc
 let child, pool, result = 1;
 const logs = [];
 function spawnDemo(action, overrides = {}) {
-  const proc = spawn(process.execPath, ['scripts/local-demo.mjs',action], { cwd: root, env: { ...env, ...overrides }, stdio: ['ignore','pipe','pipe'] });
+  const proc = spawn(process.execPath, ['scripts/local-demo.mjs',action], { cwd: root, env: { ...env, ...overrides }, stdio: ['pipe','pipe','pipe'] });
   proc.stdout.on('data', data => logs.push(String(data)));
   proc.stderr.on('data', data => logs.push(String(data)));
   return proc;
@@ -55,7 +55,11 @@ function exitOf(proc) {
 async function ready(proc, { credentials = false } = {}) {
   const deadline = Date.now() + 120_000;
   while (Date.now() < deadline) {
-    if (proc.exitCode !== null) throw new Error('demo_exited_before_ready');
+    if (proc.exitCode !== null) {
+      const safe = logs.join('').split('\n').filter(line =>
+        /^(DEMO_LOCAL_FAILED:|DEMO_PG_ERROR|Migration failed:|DEMO_LOCAL_READY:)/.test(line)).slice(-5);
+      throw new Error(`demo_exited_before_ready${safe.length ? ` (${safe.join(' | ').slice(0, 700)})` : ''}`);
+    }
     const output = logs.join('');
     if (output.includes('DEMO_LOCAL_READY:') && (!credentials || /TI: (\S+) \/ (\S+)/.test(output))) return;
     await new Promise(resolve => setTimeout(resolve, 200));
@@ -75,9 +79,14 @@ async function request(url, body, cookie) {
 }
 async function stop() {
   if (!child || child.exitCode !== null) return;
-  child.kill('SIGINT');
+  child.stdin.write('STOP\n');
+  child.stdin.end();
   const code = await Promise.race([exitOf(child), new Promise((_, reject) => setTimeout(() => reject(new Error('demo_shutdown_timeout')), 30_000))]);
-  if (code !== 0) throw new Error(`demo_shutdown_exit_${code}`);
+  if (code !== 0) {
+    const safe = logs.join('').split('\n').filter(line =>
+      /^(DEMO_LOCAL_FAILED:|DEMO_PG_ERROR|DEMO_PG_STOP_FAILED:|DEMO_LOCAL_DATA_PRESERVED:)/.test(line)).slice(-6);
+    throw new Error(`demo_shutdown_exit_${code}${safe.length ? ` (${safe.join(' | ').slice(0, 700)})` : ''}`);
+  }
 }
 try {
   child = spawnDemo('--init'); await ready(child, { credentials:true });
@@ -120,13 +129,32 @@ try {
     (SELECT count(*)::int FROM hr_employees) AS employees,
     (SELECT count(*)::int FROM auth_employee_access) AS employee_access,
     (SELECT count(*)::int FROM auth_permissions WHERE permission='employees.self_service' AND revoked_at IS NULL) AS employee_permissions,
+    (SELECT count(*)::int FROM crm_companies WHERE display_name LIKE 'DEMO FICTÍCIA%') AS demo_companies,
+    (SELECT count(*)::int FROM crm_opportunities WHERE title LIKE 'DEMO — %') AS demo_opportunities,
+    (SELECT count(*)::int FROM crm_tasks WHERE title LIKE 'DEMO — %') AS demo_tasks,
+    (SELECT count(*)::int FROM emp_journey_corrections WHERE reason LIKE 'DEMONSTRAÇÃO FICTÍCIA%') AS demo_corrections,
+    (SELECT count(*)::int FROM ext_compliance_obligations WHERE title LIKE 'DEMO — %') AS demo_obligations,
+    (SELECT count(*)::int FROM ext_compliance_tasks WHERE facts->>'synthetic'='true') AS demo_compliance_tasks,
+    (SELECT count(*)::int FROM ext_knowledge_base WHERE slug='demo-rotina-interna') AS demo_knowledge,
+    (SELECT count(*)::int FROM ext_expansion_plans WHERE protocol LIKE 'EXP-EXT-%-DEMO') AS demo_expansions,
+    (SELECT count(*)::int FROM ext_continuity_plans WHERE protocol LIKE 'CONT-EXT-%-DEMO') AS demo_continuity,
+    (SELECT count(*)::int FROM fin_expenses WHERE protocol LIKE 'DES-FIN-%-DEMO') AS demo_expenses,
+    (SELECT count(*)::int FROM ops_occurrence_book WHERE protocol LIKE 'DEMO-OPS-%') AS demo_occurrences,
+    (SELECT count(*)::int FROM ai_rag_indexes WHERE name LIKE 'DEMO — Base %') AS demo_rag_indexes,
+    (SELECT count(*)::int FROM ai_rag_documents WHERE title LIKE 'DEMO — %') AS demo_rag_documents,
+    (SELECT count(*)::int FROM ext_analytics_experiments WHERE protocol LIKE 'AB-EXT-%-DEMO') AS demo_analytics_drafts,
+    (SELECT count(*)::int FROM emp_time_punches) AS fabricated_gps_punches,
     (SELECT count(*)::int FROM audit_log WHERE action='demo_f03_seed') AS seed_audit`);
   // A contagem de migrações vem do disco: fixá-la como literal só cria um
   // segundo lugar para esquecer de atualizar. As demais contagens descrevem
   // explicitamente a massa sintética F03 e também provam replay sem duplicação.
   const expectedMigrations = (await readdir(path.join(root,'db/migrations'))).filter(f => /^\d{3}-.*\.sql$/.test(f)).length;
   const expectedSeed = { migrations:expectedMigrations,staff:7,clients:2,employee_identities:1,
-    accounts:2,contracts:2,grants:2,employees:1,employee_access:1,employee_permissions:1,seed_audit:1 };
+    accounts:2,contracts:2,grants:2,employees:1,employee_access:1,employee_permissions:1,
+    demo_companies:2,demo_opportunities:2,demo_tasks:2,demo_corrections:1,demo_obligations:1,
+    demo_compliance_tasks:1,demo_knowledge:1,demo_expansions:1,demo_continuity:1,demo_expenses:1,
+    demo_occurrences:1,demo_rag_indexes:4,demo_rag_documents:5,demo_analytics_drafts:1,
+    fabricated_gps_punches:0,seed_audit:1 };
   if (JSON.stringify(before) !== JSON.stringify(expectedSeed)) {
     throw new Error(`demo_seed_counts_mismatch: ${JSON.stringify(before)} != ${JSON.stringify(expectedSeed)}`);
   }
