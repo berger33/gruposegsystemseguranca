@@ -30,3 +30,12 @@ Esta entrega não certifica visualmente e por interação manual cada uma das 10
 Há interfaces antigas de TI com texto técnico, nomes de campos da API e instruções operacionais em inglês ou em formato de código. O ajuste `pt-BR` desta entrega corrige datas e horários, mas não traduz indiscriminadamente identificadores técnicos, contratos de API, payloads, logs, códigos ou mensagens de integrações. Devem ser revisados por módulo e traduzidos apenas quando forem rótulos destinados ao usuário.
 
 Para concluir a auditoria integral reivindicada pelo produto, a próxima etapa recomendada é uma passagem roteirizada por cada papel (Marcelo, RH e TI), exercitando criação/edição, validação, permissões, erros, vazio, carregamento, teclado e mobile, registrando screenshots/evidências por rota. Nenhuma falha de autenticação ou regra de autorização foi flexibilizada nesta rodada.
+
+### Resultado desta execução (08/10/2026)
+
+- `npm run typecheck`: aprovado (executado pelo build de produção).
+- `npm run build` com `NEXT_DIST_DIR=.next-audit`: concluído com código 0; compilação e verificação TypeScript aprovadas, 105 rotas estáticas geradas e rotas dinâmicas enumeradas.
+- Testes focados de localidade e painel Marcelo: 17 aprovados após a correção do rótulo do requisito.
+- `npm run test:unit`: 863 aprovados e 3 falharam. As três falhas são criação de symlink bloqueada pelo Windows (`EPERM`) em `qa-backup-coverage-inventory`, `qa-cli-v2-local-provider` e `qa-cli-v2-transfer`; não falharam superfícies desta alteração.
+- Healthcheck da demonstração local e através do túnel: saudável/HTTP 200. A página pública e a entrada da equipe responderam; `GET /api/admin/session` anônimo respondeu HTTP 401 (`admin_session_required`).
+- `git diff --check`: aprovado antes da publicação.
