@@ -98,7 +98,7 @@ L *= 0.82 / peak; R *= 0.82 / peak
 
 st = np.stack([L, R], axis=1)
 pcm = (np.clip(st, -1, 1) * 32767).astype("<i2")
-with wave.open("/home/user/apresentacao-video/build/music.wav", "wb") as w:
+with wave.open(__import__("os").path.join(__import__("os").environ.get("TRAILER_BUILD", __import__("os").path.join(__import__("os").path.dirname(__import__("os").path.abspath(__file__)), "build")), "music.wav"), "wb") as w:
     w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR)
     w.writeframes(pcm.tobytes())
 print("music.wav gerado:", pcm.shape[0] / SR, "s")

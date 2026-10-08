@@ -3,16 +3,18 @@
 import subprocess, sys
 FF = subprocess.run([sys.executable, "-c", "import imageio_ffmpeg;print(imageio_ffmpeg.get_ffmpeg_exe())"],
                     capture_output=True, text=True).stdout.strip()
-B = "/home/user/apresentacao-video"
+import os
+B = os.path.dirname(os.path.abspath(__file__))
+BLD = os.environ.get("TRAILER_BUILD", f"{B}/build")
 DUR = [12.02, 14.26, 12.98, 13.06, 10.61, 10.74, 8.67]
 START = [0.40]
 for d in DUR[:-1]:
     START.append(round(START[-1] + d + 0.45, 3))
 
-ins = ["-i", f"{B}/build/music.wav"]
+ins = ["-i", f"{BLD}/music.wav"]
 for i in range(7):
-    ins += ["-i", f"{B}/audio/c{i+1}.mp3"]
-ins += ["-i", f"{B}/build/trailer_silent.mp4"]
+    ins += ["-i", f"{B}/locucao/c{i+1}.mp3"]
+ins += ["-i", f"{BLD}/trailer_silent.mp4"]
 VIDEO_IDX = 8
 
 chains, mixes = [], []
@@ -31,6 +33,6 @@ filt = ";".join(chains)
 cmd = [FF, "-y", "-hide_banner", "-loglevel", "error", "-stats"] + ins + [
     "-filter_complex", filt, "-map", f"{VIDEO_IDX}:v:0", "-map", "[out]",
     "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2",
-    "-movflags", "+faststart", "-t", "89", f"{B}/trailer.mp4"]
+    "-movflags", "+faststart", "-t", "89", f"{BLD}/trailer.mp4"]
 subprocess.run(cmd, check=True)
 print("OK -> trailer.mp4")
