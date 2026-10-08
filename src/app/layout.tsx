@@ -7,6 +7,13 @@ import PublishedTheme from "@/components/PublishedTheme";
 
 // Produção gate: noindex preservado por padrão (beta). Para liberar produção, definir NEXT_PUBLIC_ALLOW_INDEX=true + is_beta_mode false via API
 const allowIndex = process.env.NEXT_PUBLIC_ALLOW_INDEX === 'true' && process.env.NEXT_PUBLIC_ENV === 'production';
+const serviceWorkerBootstrap = `if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/api/pwa/sw.js', { scope: '/', updateViaCache: 'none' })
+      .then(function(registration) { console.log('SW registered', registration.scope); })
+      .catch(function(err) { console.warn('SW registration failed', err); });
+  });
+}`;
 
 export const metadata: Metadata = {
   title: "Grupo SEG System | Segurança Integrada em Guarulhos",
@@ -44,15 +51,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         {children}
         <script
           dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/api/pwa/sw.js', { scope: '/' })
-                    .then(function(reg){ console.log('SW registered', reg.scope); })
-                    .catch(function(err){ console.log('SW fail', err); });
-                });
-              }
-            `,
+            __html: serviceWorkerBootstrap,
           }}
         />
       </body>

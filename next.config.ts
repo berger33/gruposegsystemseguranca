@@ -6,7 +6,9 @@ const isStaticPreview = process.env.STATIC_PREVIEW === "1";
 const isolatedDistDir = process.env.NEXT_DIST_DIR;
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["*.e2b.app", "127.0.0.1", "localhost"],
+  // Quick Tunnels receive an ephemeral hostname. The public demo must be
+  // allowed to load Next.js dev chunks/HMR, while production stays unaffected.
+  allowedDevOrigins: ["*.e2b.app", "*.trycloudflare.com", "127.0.0.1", "localhost"],
   ...(isolatedDistDir ? { distDir: isolatedDistDir } : {}),
   ...(isStaticPreview ? { output: "export" as const, assetPrefix: "./" } : {}),
 };

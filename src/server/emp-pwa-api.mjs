@@ -563,8 +563,9 @@ export function createEmpPwaApi({ pool, auditLog, sameOrigin, requireSession, re
     const doNotCache = [...new Set([...mandatoryPrivatePatterns, ...configuredPatterns])];
     const swContent = `
 // EMP-18 Service Worker - PWA instalável, fila offline limitada, não cachear médicos/salariais por padrão
-const CACHE_NAME = 'seg-system-v1';
+const CACHE_NAME = 'seg-system-v2';
 const OFFLINE_URL = '/offline.html';
+const DEV_MODE = ${process.env.NODE_ENV !== 'production' ? 'true' : 'false'};
 const DO_NOT_CACHE = ${JSON.stringify(doNotCache)};
 
 function shouldNotCache(url) {
@@ -588,6 +589,10 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
+  // Next.js dev assets are mutable at stable URLs; bypass all service-worker
+  // strategies in development so hot reload and session checks see live code.
+  if (DEV_MODE) return;
+
   const req = event.request;
   const url = req.url;
 
@@ -604,6 +609,13 @@ self.addEventListener('fetch', event => {
         return new Response(JSON.stringify({ queued_offline: true, device_timestamp: new Date().toISOString(), note: 'horário dispositivo separado do servidor, será sincronizado quando online' }), { status: 202, headers: { 'Content-Type': 'application/json' } });
       })
     );
+  }
+
+  // APIs (especially session checks) must bypass the service worker. Keeping
+  // them network-only avoids stale responses and lets auth failures resolve
+  // promptly while the app is served locally through a development tunnel.
+  if (new URL(url).origin === self.location.origin && new URL(url).pathname.startsWith('/api/')) {
+    return;
   }
 
   // Estratégia network_first para navegação, cache_first para assets

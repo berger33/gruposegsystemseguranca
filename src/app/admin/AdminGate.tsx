@@ -185,8 +185,15 @@ export default function AdminGate({
   const check = useCallback(async () => {
     setState({ kind: "checking" });
     let session: AdminSession | null = null;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 10_000);
     try {
-      const response = await fetch("/api/admin/session", { cache: "no-store", headers: { accept: "application/json" } });
+      const response = await fetch("/api/admin/session", {
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { accept: "application/json" },
+        signal: controller.signal,
+      });
       if (response.status === 401) {
         // Anônimo: login central com retorno ao caminho atual (sanitizado do
         // lado de lá; aqui só transportamos pathname+search internos).
@@ -200,8 +207,14 @@ export default function AdminGate({
       }
       session = (await response.json()) as AdminSession;
     } catch (cause) {
-      setState({ kind: "error", detail: cause instanceof Error ? cause.message : "falha_desconhecida" });
+      const timedOut = cause instanceof DOMException && cause.name === "AbortError";
+      setState({
+        kind: "error",
+        detail: timedOut ? "tempo_limite_sessao" : cause instanceof Error ? cause.message : "falha_desconhecida",
+      });
       return;
+    } finally {
+      window.clearTimeout(timeout);
     }
     const role = String(session.role || "").toLowerCase();
     if (allowedRoles && allowedRoles.length && !allowedRoles.includes(role)) {
@@ -235,8 +248,9 @@ export default function AdminGate({
           <section className={styles.card} data-admin-gate="error" style={{ marginTop: 24 }}>
             <h1>Não foi possível confirmar sua sessão</h1>
             <p className={styles.hint}>
-              O serviço de autenticação não respondeu como esperado. Isso não concede acesso: tente novamente e, se o
-              problema persistir, contate o TI. (Detalhe: {state.detail})
+            {state.detail === "tempo_limite_sessao"
+              ? "A verificação de sessão demorou mais que o esperado. A página não concedeu acesso. Tente novamente; se o problema persistir, confira se o servidor local está ativo."
+              : `O serviço de autenticação não respondeu como esperado. Isso não concede acesso: tente novamente e, se o problema persistir, contate o TI. (Detalhe: ${state.detail})`}
             </p>
             <div className={styles.backRow}>
               <button type="button" className={styles.submit} onClick={() => void check()}>
