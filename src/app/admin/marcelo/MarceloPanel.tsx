@@ -18,6 +18,7 @@ import {
   describeAdmError,
 } from "../../../lib/adm-vocabulary.mjs";
 import styles from "../../../components/ui/UiWorkspace.module.css";
+import executive from "./MarceloPanel.module.css";
 
 // UX-05: a falha continua sendo lançada com o MESMO `message` canônico de
 // antes (nada que dependia disso quebra), mas agora carrega um `descriptor`
@@ -114,6 +115,16 @@ function formatarDataHora(valor: string): string {
   return data.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 }
 
+function indicatorHeading(label: string): { area: string; title: string } {
+  const separator = label.indexOf(" — ");
+  if (separator < 0) return { area: "Indicador", title: label };
+  return { area: label.slice(0, separator), title: label.slice(separator + 3) };
+}
+
+function formatarContagem(valor: number | null | undefined): string {
+  return valor == null ? "—" : new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(valor);
+}
+
 const TABS: [Tab, string][] = [
   ["indicadores", "Indicadores"], ["aprovacoes", "Aprovações"], ["espaco", "Espaço de trabalho"],
   ["relatorios", "Relatórios"], ["configuracoes", "Configurações"], ["metas", "Metas x realizado"],
@@ -195,20 +206,31 @@ export default function MarceloPanel() {
   };
 
   return (
-    <main data-testid="marcelo-panel" className={styles.workspace}>
+    <main data-testid="marcelo-panel" className={`${styles.workspace} ${executive.workspace}`}>
       <nav className={styles.breadcrumbNav} aria-label="Trilha de navegação">
         <a href="/admin">Início</a> · <span aria-current="page">Painel de decisões</span>
       </nav>
 
-      <h1>Painel do Marcelo</h1>
-      <p className={styles.lede}>
-        Cada número vem de um registro canônico, com período, fonte e data-base declarados no próprio cartão.
-        Falha de leitura é declarada como falha e nunca vira zero. Nenhum pagamento, emissão ou envio externo
-        acontece aqui.
-      </p>
+      <header className={executive.pageIntro}>
+        <div>
+          <p className={executive.eyebrow}>Visão executiva</p>
+          <h1>Painel do Marcelo</h1>
+          <p className={styles.lede}>
+            Indicadores, decisões e acompanhamento dos módulos em um só lugar. Os números vêm dos registros reais;
+            falhas de leitura aparecem como falhas, nunca como zero.
+          </p>
+        </div>
+        <p className={executive.readOnlyNote}>Ações externas e pagamentos não são executados por este painel.</p>
+      </header>
 
-      <section className={styles.panel} aria-labelledby="adm-periodo-titulo">
-        <h2 id="adm-periodo-titulo" className={styles.panelTitle}>Que período você quer apurar?</h2>
+      <section className={`${styles.panel} ${executive.periodPanel}`} aria-labelledby="adm-periodo-titulo">
+        <div className={executive.periodHeading}>
+          <div>
+            <p className={executive.eyebrow}>Filtro de análise</p>
+            <h2 id="adm-periodo-titulo" className={styles.panelTitle}>Período dos indicadores</h2>
+          </div>
+          <p className={styles.hint}>Escolha as datas e aplique para atualizar os dados.</p>
+        </div>
         <form
           data-testid="adm-period-form"
           onSubmit={(event: FormEvent) => { event.preventDefault(); loadIndicators(); }}
@@ -267,8 +289,14 @@ export default function MarceloPanel() {
       ) : null}
 
       {tab === "indicadores" ? (
-        <section data-testid="adm-indicators" className={styles.panel} role="tabpanel" id="adm-painel-indicadores" aria-labelledby="adm-aba-indicadores" tabIndex={-1}>
-          <h2 className={styles.panelTitle}>O que exige a sua decisão neste período</h2>
+        <section data-testid="adm-indicators" className={`${styles.panel} ${executive.indicatorsPanel}`} role="tabpanel" id="adm-painel-indicadores" aria-labelledby="adm-aba-indicadores" tabIndex={-1}>
+          <div className={executive.sectionHeading}>
+            <div>
+              <p className={executive.eyebrow}>Resumo por área</p>
+              <h2 className={styles.panelTitle}>O que exige a sua decisão neste período</h2>
+            </div>
+            {indicators ? <span className={executive.updateStamp} data-testid="adm-as-of">Apurado <time dateTime={asOf}>{formatarDataHora(asOf)}</time></span> : null}
+          </div>
 
           {/* UX-05: carregando deixou de ser indistinguível de "não há nada". */}
           {indicatorsState === "loading" ? (
@@ -299,47 +327,62 @@ export default function MarceloPanel() {
 
           {indicators ? (
             <>
-              <p data-testid="adm-as-of" className={styles.hint}>
-                Data-base da apuração: <time dateTime={asOf}>{formatarDataHora(asOf)}</time>
-              </p>
-              <div className={styles.cards} style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
-                {indicators.map(indicator => (
-                  <article key={indicator.code} className={styles.card} data-testid={`adm-card-${testId(indicator.code)}`}>
-                    {/* O código interno sai do título e vira etiqueta: o plano
-                        mestre pede que status técnico não ocupe o nome da tarefa. */}
-                    <h3 className={styles.cardTitle}>{indicator.label}</h3>
-                    <p className={styles.requiredNote}>Requisito {indicator.requirement}</p>
+              <div className={executive.indicatorGrid}>
+                {indicators.map(indicator => {
+                  const heading = indicatorHeading(indicator.label);
+                  return (
+                  <article key={indicator.code} className={`${styles.card} ${executive.indicatorCard}`} data-testid={`adm-card-${testId(indicator.code)}`}>
+                    <header className={executive.indicatorHeader}>
+                      <div>
+                        <span className={executive.areaTag}>{heading.area}</span>
+                        <h3 className={styles.cardTitle}>{heading.title}</h3>
+                      </div>
+                      <span className={executive.requirementTag} title={`Referência interna ${indicator.requirement}`}>{indicator.requirement}</span>
+                    </header>
                     {indicator.status === "indisponivel" ? (
-                      <p data-testid={`adm-card-unavailable-${testId(indicator.code)}`}>
-                        <UiBadge tone="warning" srPrefix="Situação">Indicador indisponível</UiBadge>{" "}
-                        {indicator.unavailable_reason}. Não há número estimado nem zero no lugar.
-                      </p>
+                      <div className={executive.unavailable} data-testid={`adm-card-unavailable-${testId(indicator.code)}`}>
+                        <UiBadge tone="warning" srPrefix="Situação">Indisponível</UiBadge>
+                        <p>{indicator.unavailable_reason}. Não há número estimado nem zero no lugar.</p>
+                      </div>
                     ) : (
-                      <>
-                        <p data-testid={`adm-card-count-${testId(indicator.code)}`}>{indicator.value?.record_count} registro(s) canônico(s)</p>
-                        <p data-testid={`adm-card-amount-${testId(indicator.code)}`}>{indicator.unit === "cents" ? brl(indicator.value?.amount_cents ?? null) : "Indicador de contagem"}</p>
-                        {indicator.empty_reason ? <p data-testid={`adm-card-empty-${testId(indicator.code)}`}>Sem registro canônico no período informado.</p> : null}
-                      </>
+                      <div className={executive.metricBlock}>
+                        <div className={executive.metricPrimary}>
+                          <p className={executive.metricValue} data-testid={`adm-card-amount-${testId(indicator.code)}`}>
+                            {indicator.unit === "cents"
+                              ? indicator.value?.amount_cents == null ? "—" : brl(indicator.value.amount_cents)
+                              : formatarContagem(indicator.value?.record_count)}
+                          </p>
+                          <span className={executive.metricLabel}>{indicator.unit === "cents" ? "valor total" : "registros canônicos"}</span>
+                        </div>
+                        <p className={indicator.unit === "cents" ? executive.recordCount : styles.visuallyHidden} data-testid={`adm-card-count-${testId(indicator.code)}`}>
+                          {formatarContagem(indicator.value?.record_count)} {indicator.value?.record_count === 1 ? "registro canônico" : "registros canônicos"}
+                        </p>
+                        {indicator.empty_reason ? <p className={executive.emptyNote} data-testid={`adm-card-empty-${testId(indicator.code)}`}>Sem registros canônicos no período.</p> : null}
+                      </div>
                     )}
-                    <dl className={styles.facts}>
-                      <div>
-                        <dt>Fonte</dt>
-                        <dd data-testid={`adm-card-source-${testId(indicator.code)}`}>Fonte: {indicator.source.tables.join(", ")} · {indicator.source.period_field}</dd>
-                      </div>
-                      <div>
-                        <dt>Período</dt>
-                        <dd data-testid={`adm-card-period-${testId(indicator.code)}`}>Período: {indicator.period.start} a {indicator.period.end}</dd>
-                      </div>
-                    </dl>
                     {indicator.note ? <p className={styles.hint}>{indicator.note}</p> : null}
-                    <div className={styles.actions}>
+                    <details className={executive.metadata}>
+                      <summary>Fonte e período</summary>
+                      <dl className={styles.facts}>
+                        <div>
+                          <dt>Fonte</dt>
+                          <dd data-testid={`adm-card-source-${testId(indicator.code)}`}>{indicator.source.tables.join(", ")} · {indicator.source.period_field}</dd>
+                        </div>
+                        <div>
+                          <dt>Período</dt>
+                          <dd data-testid={`adm-card-period-${testId(indicator.code)}`}>Período: {indicator.period.start} a {indicator.period.end}</dd>
+                        </div>
+                      </dl>
+                    </details>
+                    <div className={`${styles.actions} ${executive.cardActions}`}>
                       <button data-testid={`adm-card-drill-${testId(indicator.code)}`} onClick={() => openDrilldown(indicator.code)}>
-                        Abrir registros
+                        Ver registros
                         <span className={styles.visuallyHidden}> de {indicator.label}</span>
                       </button>
                     </div>
                   </article>
-                ))}
+                  );
+                })}
               </div>
             </>
           ) : null}

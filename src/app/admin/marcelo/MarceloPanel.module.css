@@ -1,0 +1,78 @@
+.workspace {
+  max-width: 1360px;
+  padding: clamp(16px, 2.4vw, 30px);
+}
+
+.pageIntro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 4px 0 20px;
+}
+
+.pageIntro > div { min-width: 0; }
+.pageIntro h1 { margin: 4px 0 8px; font-size: clamp(28px, 3.4vw, 40px); letter-spacing: -.035em; }
+.pageIntro .lede { max-width: 78ch; margin-bottom: 0; }
+.eyebrow { margin: 0 0 5px; color: var(--ux-color-brand); font-size: .72rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.readOnlyNote { max-width: 240px; flex: 0 0 220px; margin: 0; padding: 10px 12px; border: 1px solid var(--ux-color-border); border-radius: 10px; background: var(--ux-color-canvas); color: var(--ux-color-muted); font-size: .78rem; line-height: 1.5; }
+
+.periodPanel { padding: clamp(14px, 2vw, 22px); }
+.periodHeading, .sectionHeading { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
+.periodHeading { margin-bottom: 14px; }
+.periodHeading .panelTitle, .sectionHeading .panelTitle { margin: 0; }
+.periodHeading .hint { max-width: 42ch; text-align: right; }
+.periodPanel form { display: grid; gap: 12px; }
+
+.workspace :global([role="tablist"]) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));
+  gap: 8px;
+  margin: 18px 0 0;
+}
+
+.workspace :global([role="tablist"] button) { width: 100%; min-height: 46px; text-align: center; }
+.indicatorsPanel { padding: clamp(14px, 2vw, 22px); }
+.sectionHeading { margin-bottom: 16px; }
+.updateStamp { flex: none; color: var(--ux-color-muted); font-size: .8rem; font-variant-numeric: tabular-nums; }
+.indicatorGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr)); gap: 14px; align-items: stretch; }
+.indicatorCard { display: flex; min-width: 0; flex-direction: column; gap: 13px; padding: 16px; border-left-width: 3px; }
+.indicatorHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.indicatorHeader > div { min-width: 0; }
+.areaTag { display: inline-block; margin-bottom: 7px; color: var(--ux-color-brand); font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.indicatorHeader .cardTitle { margin: 0; font-size: 1rem; line-height: 1.4; }
+.requirementTag { flex: none; padding: 4px 7px; border: 1px solid var(--ux-color-border); border-radius: 999px; color: var(--ux-color-muted); font-size: .68rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+.metricBlock { display: grid; gap: 8px; min-height: 82px; align-content: start; }
+.metricPrimary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+.metricValue { margin: 0; color: var(--ux-color-text); font-size: clamp(1.65rem, 2.4vw, 2.15rem); font-weight: 800; letter-spacing: -.035em; line-height: 1.15; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.metricLabel { color: var(--ux-color-muted); font-size: .82rem; }
+.recordCount { margin: 0; color: var(--ux-color-muted); font-size: .8rem; }
+.emptyNote { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--ux-color-info-soft); color: var(--ux-color-muted); font-size: .8rem; line-height: 1.45; }
+.unavailable { display: grid; gap: 8px; min-height: 82px; align-content: start; }
+.unavailable p { margin: 0; color: var(--ux-color-muted); font-size: .83rem; line-height: 1.5; }
+.metadata { border-top: 1px solid var(--ux-color-border); padding-top: 10px; }
+.metadata summary { min-height: 32px; display: flex; align-items: center; color: var(--ux-color-brand); font-size: .78rem; font-weight: 700; cursor: pointer; }
+.metadata[open] summary { margin-bottom: 8px; }
+.metadata .facts { margin: 0; gap: 8px; }
+.metadata .facts > div { display: grid; gap: 2px; font-size: .75rem; line-height: 1.45; overflow-wrap: anywhere; }
+.metadata .facts dt { color: var(--ux-color-muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .045em; }
+.metadata .facts dt::after { content: none; }
+.metadata .facts dd { color: var(--ux-color-text); }
+.indicatorCard > .hint { margin: 0; font-size: .78rem; }
+.cardActions { margin-top: auto; }
+.cardActions button { min-height: 40px; }
+
+@media (max-width: 760px) {
+  .pageIntro { align-items: flex-start; flex-direction: column; gap: 12px; }
+  .readOnlyNote { max-width: 100%; flex-basis: auto; }
+  .periodHeading, .sectionHeading { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .periodHeading .hint { text-align: left; }
+  .updateStamp { white-space: normal; }
+}
+
+@media (max-width: 520px) {
+  .workspace { padding: 14px; }
+  .workspace :global([role="tablist"]) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .workspace :global([role="tablist"] button) { min-height: 50px; padding: 8px; text-align: left; }
+  .indicatorGrid { grid-template-columns: minmax(0, 1fr); }
+}
