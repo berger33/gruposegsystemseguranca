@@ -278,7 +278,7 @@ export default function OpsAdvanced2Client() {
       </div>
       <ul style={{ fontSize:12, maxHeight:100, overflow:"auto" }}>
         {movements.map(m=>(
-          <li key={m.id}>{m.movement_type} {m.reason.slice(0,40)} {new Date(m.movement_date).toLocaleString()} from {m.from_employee_id?.slice(0,6)||"-"} → to {m.to_employee_id?.slice(0,6)||"-"}</li>
+          <li key={m.id}>{m.movement_type} {m.reason.slice(0,40)} {new Date(m.movement_date).toLocaleString("pt-BR")} from {m.from_employee_id?.slice(0,6)||"-"} → to {m.to_employee_id?.slice(0,6)||"-"}</li>
         ))}
       </ul>
 

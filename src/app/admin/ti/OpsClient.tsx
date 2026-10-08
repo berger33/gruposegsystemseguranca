@@ -186,7 +186,7 @@ export default function OpsClient() {
         <input placeholder="motivo" value={gapForm.reason} onChange={e=>setGapForm({...gapForm,reason:e.target.value})} />
         <button onClick={createGap}>Registrar gap cobertura</button>
       </div>
-      <div style={{ maxHeight: 80, overflow: 'auto', fontSize: 12, background: '#fef2f2', padding: 8 }}>{gaps.map(g=><div key={g.id}>posto {g.post_id.slice(0,6)} data {g.gap_date} {new Date(g.gap_start).toLocaleString()}→{new Date(g.gap_end).toLocaleString()} desc {g.uncovered_minutes}min motivo {g.reason?.slice(0,40)} status {g.status}</div>)}</div>
+      <div style={{ maxHeight: 80, overflow: 'auto', fontSize: 12, background: '#fef2f2', padding: 8 }}>{gaps.map(g=><div key={g.id}>posto {g.post_id.slice(0,6)} data {g.gap_date} {new Date(g.gap_start).toLocaleString("pt-BR")}→{new Date(g.gap_end).toLocaleString("pt-BR")} desc {g.uncovered_minutes}min motivo {g.reason?.slice(0,40)} status {g.status}</div>)}</div>
 
       <h3>OPS-03 Escala rascunho/publicada/revisada validade histórico calendário ciência</h3>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
@@ -196,7 +196,7 @@ export default function OpsClient() {
         <input type="date" value={verForm.valid_to} onChange={e=>setVerForm({...verForm,valid_to:e.target.value})} />
         <button onClick={createVersion}>Criar versão escala (rascunho)</button>
       </div>
-      <div style={{ maxHeight: 100, overflow: 'auto', fontSize: 12, background: '#f8fafc', padding: 8 }}>{versions.map(v=><div key={v.id}>v{v.version} company {v.company_id?.slice(0,6)||'-'} status {v.status} validade {v.valid_from}→{v.valid_to} publicada {v.published_at ? new Date(v.published_at).toLocaleString() : '-'} <button onClick={()=>publishVersion(v.id)}>Publicar</button></div>)}</div>
+      <div style={{ maxHeight: 100, overflow: 'auto', fontSize: 12, background: '#f8fafc', padding: 8 }}>{versions.map(v=><div key={v.id}>v{v.version} company {v.company_id?.slice(0,6)||'-'} status {v.status} validade {v.valid_from}→{v.valid_to} publicada {v.published_at ? new Date(v.published_at).toLocaleString("pt-BR") : '-'} <button onClick={()=>publishVersion(v.id)}>Publicar</button></div>)}</div>
 
       <h4>Entradas Escala + Ciência</h4>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
@@ -214,7 +214,7 @@ export default function OpsClient() {
         <input placeholder="employee_id UUID" value={ackForm.employee_id} onChange={e=>setAckForm({...ackForm,employee_id:e.target.value})} />
         <button onClick={createAck}>Registrar ciência versão publicada</button>
       </div>
-      <div style={{ maxHeight: 80, overflow: 'auto', fontSize: 12, background: '#f0fdf4', padding: 8 }}>{acks.map(a=><div key={a.id}>ver {a.version_id.slice(0,6)} emp {a.employee_id.slice(0,6)} ciência {new Date(a.acknowledged_at).toLocaleString()}</div>)}</div>
+      <div style={{ maxHeight: 80, overflow: 'auto', fontSize: 12, background: '#f0fdf4', padding: 8 }}>{acks.map(a=><div key={a.id}>ver {a.version_id.slice(0,6)} emp {a.employee_id.slice(0,6)} ciência {new Date(a.acknowledged_at).toLocaleString("pt-BR")}</div>)}</div>
 
       <h3>OPS-04 Regras jornada/descanso configuradas e aprovadas + Qualificações</h3>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
@@ -239,7 +239,7 @@ export default function OpsClient() {
 
       <h4>Validações (sobreposição/indisponibilidade/habilitação/documentação/jornada/descanso)</h4>
       <div style={{ maxHeight: 100, overflow: 'auto', fontSize: 12, background: '#fef3c7', padding: 8 }}>
-        {validations.map(v=><div key={v.id}>[{v.validation_type}] válida={String(v.is_valid)} emp {v.employee_id?.slice(0,6)||'-'} ver {v.version_id?.slice(0,6)||'-'} entry {v.entry_id?.slice(0,6)||'-'} conflito {JSON.stringify(v.conflict_details).slice(0,120)} em {new Date(v.validated_at).toLocaleString()}</div>)}
+        {validations.map(v=><div key={v.id}>[{v.validation_type}] válida={String(v.is_valid)} emp {v.employee_id?.slice(0,6)||'-'} ver {v.version_id?.slice(0,6)||'-'} entry {v.entry_id?.slice(0,6)||'-'} conflito {JSON.stringify(v.conflict_details).slice(0,120)} em {new Date(v.validated_at).toLocaleString("pt-BR")}</div>)}
         {validations.length===0 && <div>Nenhuma validação falha - sobreposição/indisponibilidade/habilitação OK</div>}
       </div>
     </section>

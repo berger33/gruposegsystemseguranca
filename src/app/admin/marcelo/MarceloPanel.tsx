@@ -337,7 +337,7 @@ export default function MarceloPanel() {
                         <span className={executive.areaTag}>{heading.area}</span>
                         <h3 className={styles.cardTitle}>{heading.title}</h3>
                       </div>
-                      <span className={executive.requirementTag} title={`Referência interna ${indicator.requirement}`}>{indicator.requirement}</span>
+                      <span className={executive.requirementTag} title={`Referência interna ${indicator.requirement}`}>Requisito {indicator.requirement}</span>
                     </header>
                     {indicator.status === "indisponivel" ? (
                       <div className={executive.unavailable} data-testid={`adm-card-unavailable-${testId(indicator.code)}`}>

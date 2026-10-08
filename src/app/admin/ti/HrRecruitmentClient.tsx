@@ -200,7 +200,7 @@ try {
           </div>
           <div className="max-h-40 overflow-auto border divide-y text-xs">
             {interviews.map(iv=>(
-              <div key={iv.id} className="p-1 flex justify-between"><span>{iv.candidate_id.slice(0,8)} {new Date(iv.scheduled_at).toLocaleString()} {iv.interviewer_name||''} {iv.interview_type} {iv.status} rating {iv.rating||'-'} {iv.decision?.slice(0,30)||''}</span><span className="flex gap-1"><button onClick={()=>patchInterview(iv.id,'realizada')} className="border px-1">realizada</button><button onClick={()=>patchInterview(iv.id,'nao_compareceu')} className="border px-1">não compareceu</button></span></div>
+              <div key={iv.id} className="p-1 flex justify-between"><span>{iv.candidate_id.slice(0,8)} {new Date(iv.scheduled_at).toLocaleString("pt-BR")} {iv.interviewer_name||''} {iv.interview_type} {iv.status} rating {iv.rating||'-'} {iv.decision?.slice(0,30)||''}</span><span className="flex gap-1"><button onClick={()=>patchInterview(iv.id,'realizada')} className="border px-1">realizada</button><button onClick={()=>patchInterview(iv.id,'nao_compareceu')} className="border px-1">não compareceu</button></span></div>
             ))}
           </div>
         </div>
@@ -251,7 +251,7 @@ try {
         </div>
         <div className="max-h-64 overflow-auto border divide-y text-xs">
           {dossiers.map(d=>(
-            <div key={d.id} className="p-1 flex justify-between gap-2"><div><b>{d.employee_id.slice(0,8)}</b> {d.doc_type} v{d.version} {d.title} status {d.status} CNV={String(d.is_cnv)} conf={String(d.requires_confirmation)} confirmado {d.confirmed_at? new Date(d.confirmed_at).toLocaleDateString(): '-'} validade {d.validity_end?.slice(0,10)||'-'} reqRole={String(d.is_required_for_role)} roles {d.applicable_roles?.join(',')||''} {d.file_url? 'arquivo': 'sem arquivo'}</div><div className="flex flex-col gap-1"><button onClick={()=>patchDossier(d.id,'em_analise')} className="border px-1">em análise</button><button onClick={()=>patchDossier(d.id,'aprovado')} className="border px-1 bg-green-100">aprovar</button><button onClick={()=>patchDossier(d.id,'',true)} className="border px-1 bg-blue-100">confirmar CNV aplicável</button><button onClick={()=>patchDossier(d.id,'rejeitado')} className="border px-1 bg-red-100">rejeitar</button></div></div>
+            <div key={d.id} className="p-1 flex justify-between gap-2"><div><b>{d.employee_id.slice(0,8)}</b> {d.doc_type} v{d.version} {d.title} status {d.status} CNV={String(d.is_cnv)} conf={String(d.requires_confirmation)} confirmado {d.confirmed_at? new Date(d.confirmed_at).toLocaleDateString("pt-BR"): '-'} validade {d.validity_end?.slice(0,10)||'-'} reqRole={String(d.is_required_for_role)} roles {d.applicable_roles?.join(',')||''} {d.file_url? 'arquivo': 'sem arquivo'}</div><div className="flex flex-col gap-1"><button onClick={()=>patchDossier(d.id,'em_analise')} className="border px-1">em análise</button><button onClick={()=>patchDossier(d.id,'aprovado')} className="border px-1 bg-green-100">aprovar</button><button onClick={()=>patchDossier(d.id,'',true)} className="border px-1 bg-blue-100">confirmar CNV aplicável</button><button onClick={()=>patchDossier(d.id,'rejeitado')} className="border px-1 bg-red-100">rejeitar</button></div></div>
           ))}
         </div>
       </div>

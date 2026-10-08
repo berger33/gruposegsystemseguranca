@@ -119,7 +119,7 @@ export default function ProposalDeliveryClient() {
               <td><strong>{d.status}</strong></td>
               <td>{d.provider_message_id || "-"}</td>
               <td>{d.attempts}</td>
-              <td>{d.sent_at ? new Date(d.sent_at).toLocaleString() : "-"} / {d.delivered_at ? new Date(d.delivered_at).toLocaleString() : "-"} / {d.read_at ? new Date(d.read_at).toLocaleString() : "-"}</td>
+              <td>{d.sent_at ? new Date(d.sent_at).toLocaleString("pt-BR") : "-"} / {d.delivered_at ? new Date(d.delivered_at).toLocaleString("pt-BR") : "-"} / {d.read_at ? new Date(d.read_at).toLocaleString("pt-BR") : "-"}</td>
               <td style={{ maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis" }}>{d.last_error_sanitized || "-"}</td>
               <td>
                 <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>

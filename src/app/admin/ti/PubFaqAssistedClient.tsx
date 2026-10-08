@@ -136,7 +136,7 @@ export default function PubFaqAssistedClient(){
       <details style={{ marginTop:12, background:"#fff", padding:12, borderRadius:6 }}>
         <summary style={{ fontWeight:600, cursor:"pointer" }}>Sessões FAQ assistida ({sessions.length}) — protocolo PUB-FAQ</summary>
         <ul style={{ fontSize:11 }}>
-          {sessions.slice(0,20).map(s=> <li key={s.id}>{s.protocol} — {s.visitor_name||"visitante"} — {s.status} — handoff:{String(s.is_human_handoff)} — {s.handoff_reason?.slice(0,80)||""} — {new Date(s.created_at).toLocaleString()}</li>)}
+          {sessions.slice(0,20).map(s=> <li key={s.id}>{s.protocol} — {s.visitor_name||"visitante"} — {s.status} — handoff:{String(s.is_human_handoff)} — {s.handoff_reason?.slice(0,80)||""} — {new Date(s.created_at).toLocaleString("pt-BR")}</li>)}
         </ul>
       </details>
 

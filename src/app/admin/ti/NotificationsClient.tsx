@@ -109,13 +109,13 @@ export default function NotificationsClient() {
           <tbody>
             {notifications.map(n=>(
               <tr key={n.id} style={{ borderTop: "1px solid #eee" }}>
-                <td>{new Date(n.created_at).toLocaleString()}</td>
+                <td>{new Date(n.created_at).toLocaleString("pt-BR")}</td>
                 <td>{n.recipient_kind}/{n.recipient_email || n.recipient_id?.slice(0,8) || "-"}</td>
                 <td>{n.channel}</td>
                 <td>{n.template}</td>
                 <td>{n.status}{n.last_error ? ` (${n.last_error.slice(0,40)})` : ""}</td>
                 <td>{n.attempts}/{n.max_attempts}</td>
-                <td>{new Date(n.next_attempt_at).toLocaleString()}</td>
+                <td>{new Date(n.next_attempt_at).toLocaleString("pt-BR")}</td>
                 <td>{(n.status==="failed"||n.status==="dead") && <button onClick={()=>retry(n.id)} style={{ fontSize: 11, padding: "2px 6px" }}>Retry</button>}</td>
               </tr>
             ))}

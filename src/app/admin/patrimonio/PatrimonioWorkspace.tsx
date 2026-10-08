@@ -267,7 +267,7 @@ export default function PatrimonioWorkspace() {
                       <td className="px-4 py-3 font-mono font-medium text-gray-900">{a.serial_number}</td>
                       <td className="px-4 py-3 text-gray-800">{a.product_name || "Equipamento"}</td>
                       <td className="px-4 py-3 text-gray-600">{a.owner_name} ({a.owner_type})</td>
-                      <td className="px-4 py-3 text-gray-500">{a.warranty_until ? new Date(a.warranty_until).toLocaleDateString() : "N/A"}</td>
+                      <td className="px-4 py-3 text-gray-500">{a.warranty_until ? new Date(a.warranty_until).toLocaleDateString("pt-BR") : "Não informada"}</td>
                       <td className="px-4 py-3">
                         <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
                           {a.status}

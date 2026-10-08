@@ -217,7 +217,7 @@ export default function ProposalClient() {
           <h5 style={{ marginTop: 12 }}>Versões preservadas</h5>
           <ul style={{ fontSize: 11 }}>
             {versions.map((v: any) => (
-              <li key={v.id}>v{v.version} — {v.reason || "-"} — {new Date(v.created_at).toLocaleString()} — <button onClick={() => downloadPdf(v.version)}>PDF v{v.version}</button></li>
+              <li key={v.id}>v{v.version} — {v.reason || "-"} — {new Date(v.created_at).toLocaleString("pt-BR")} — <button onClick={() => downloadPdf(v.version)}>PDF v{v.version}</button></li>
             ))}
           </ul>
         </div>

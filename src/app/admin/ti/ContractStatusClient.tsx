@@ -19,7 +19,7 @@ export default function ContractStatusClient() {
     setContract(j.contract);
     setHistory(j.history || []);
     setAllowed(j.allowed_transitions || []);
-    setMsg(`Contrato ${id} status ${j.contract.status} efeito ${j.contract.current_status_effective_date || "-"} assinatura ${j.contract.signed_at ? new Date(j.contract.signed_at).toLocaleDateString() : "-"} ativação operacional ${j.contract.operational_activated_at ? new Date(j.contract.operational_activated_at).toLocaleDateString() : "-"}`);
+    setMsg(`Contrato ${id} status ${j.contract.status} efeito ${j.contract.current_status_effective_date || "-"} assinatura ${j.contract.signed_at ? new Date(j.contract.signed_at).toLocaleDateString("pt-BR") : "-"} ativação operacional ${j.contract.operational_activated_at ? new Date(j.contract.operational_activated_at).toLocaleDateString("pt-BR") : "-"}`);
   }
 
   async function transition() {
@@ -64,7 +64,7 @@ export default function ContractStatusClient() {
 
       {contract && (
         <div style={{ fontSize: 12, marginBottom: 12, border: "1px solid #ddd", padding: 8 }}>
-          <strong>Contrato:</strong> {contract.id} — <span style={{ fontWeight: "bold" }}>{contract.status}</span> — efeito: {contract.current_status_effective_date || "-"} — assinatura: {contract.signed_at ? `${new Date(contract.signed_at).toLocaleString()} por ${contract.signed_by||"-"}` : "não assinado"} — ativação operacional: {contract.operational_activated_at ? new Date(contract.operational_activated_at).toLocaleString() : "não ativado"} — suspensão: {contract.suspension_reason || "-"} — encerramento: {contract.closure_reason || "-"}
+          <strong>Contrato:</strong> {contract.id} — <span style={{ fontWeight: "bold" }}>{contract.status}</span> — efeito: {contract.current_status_effective_date || "-"} — assinatura: {contract.signed_at ? `${new Date(contract.signed_at).toLocaleString("pt-BR")} por ${contract.signed_by||"-"}` : "não assinado"} — ativação operacional: {contract.operational_activated_at ? new Date(contract.operational_activated_at).toLocaleString("pt-BR") : "não ativado"} — suspensão: {contract.suspension_reason || "-"} — encerramento: {contract.closure_reason || "-"}
           <br />
           <em>Permitidas a partir de {contract.status}:</em> {allowed.length ? allowed.join(", ") : "nenhuma (terminal)"} — Todos: rascunho, em_revisao, aguardando_assinatura, ativo, suspenso, encerrado, cancelado
         </div>
@@ -105,8 +105,8 @@ export default function ContractStatusClient() {
           <ul style={{ fontSize: 11, maxHeight: 300, overflowY: "auto", border: "1px solid #eee", padding: 8 }}>
             {history.map((h: any) => (
               <li key={h.id} style={{ marginBottom: 4 }}>
-                <strong>{h.previous_status || "null"} → {h.next_status}</strong> efeito {h.effective_date} {h.is_signature_event ? "✍️ assinatura" : ""} {h.is_operational_activation ? "🚀 ativação operacional" : ""} — {h.reason || "-"} — por {h.changed_by} em {new Date(h.created_at).toLocaleString()}
-                {h.signed_at ? ` signed_at ${new Date(h.signed_at).toLocaleDateString()}` : ""} {h.operational_activated_at ? ` op_ativ ${new Date(h.operational_activated_at).toLocaleDateString()}` : ""}
+                <strong>{h.previous_status || "null"} → {h.next_status}</strong> efeito {h.effective_date} {h.is_signature_event ? "✍️ assinatura" : ""} {h.is_operational_activation ? "🚀 ativação operacional" : ""} — {h.reason || "-"} — por {h.changed_by} em {new Date(h.created_at).toLocaleString("pt-BR")}
+                {h.signed_at ? ` signed_at ${new Date(h.signed_at).toLocaleDateString("pt-BR")}` : ""} {h.operational_activated_at ? ` op_ativ ${new Date(h.operational_activated_at).toLocaleDateString("pt-BR")}` : ""}
               </li>
             ))}
           </ul>

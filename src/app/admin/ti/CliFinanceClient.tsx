@@ -175,7 +175,7 @@ export default function CliFinanceClient() {
         <input placeholder="block_reason 10..1000 se bloqueia" value={renForm.block_reason} onChange={e=>setRenForm({...renForm, block_reason:e.target.value})} />
         <button onClick={createRenewal}>Criar Comunicação Renovação</button>
       </div>
-      <ul style={{ fontSize:11, maxHeight:80, overflow:"auto" }}>{renewals.map(r=>(<li key={r.id}>{r.protocol} {r.comm_type} {r.title} {r.is_blocking?"BLOQUEIA":"não bloqueia"} enviado {r.sent_at? new Date(r.sent_at).toLocaleDateString():"-"}</li>))}</ul>
+      <ul style={{ fontSize:11, maxHeight:80, overflow:"auto" }}>{renewals.map(r=>(<li key={r.id}>{r.protocol} {r.comm_type} {r.title} {r.is_blocking?"BLOQUEIA":"não bloqueia"} enviado {r.sent_at? new Date(r.sent_at).toLocaleDateString("pt-BR"):"-"}</li>))}</ul>
 
       <h3>CLI-13 Modos convite solicitação com aprovação autocadastro configuráveis vínculo verificado servidor autocadastro nunca libera contratos sozinho</h3>
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
@@ -210,7 +210,7 @@ export default function CliFinanceClient() {
         <input placeholder="ip" value={secForm.ip_address} onChange={e=>setSecForm({...secForm, ip_address:e.target.value})} style={{ width:120 }} />
         <button onClick={createSecEvent}>Registrar Evento Segurança MFA Opcional</button>
       </div>
-      <ul style={{ fontSize:11, maxHeight:60, overflow:"auto" }}>{secEvents.map(s=>(<li key={s.id}>{s.event_type} conta {s.client_account_id.slice(0,6)} {new Date(s.created_at).toLocaleString()}</li>))}</ul>
+      <ul style={{ fontSize:11, maxHeight:60, overflow:"auto" }}>{secEvents.map(s=>(<li key={s.id}>{s.event_type} conta {s.client_account_id.slice(0,6)} {new Date(s.created_at).toLocaleString("pt-BR")}</li>))}</ul>
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
         <input placeholder="account_id e-mail troca" value={emailForm.client_account_id} onChange={e=>setEmailForm({...emailForm, client_account_id:e.target.value})} style={{ width:180 }} />
         <input placeholder="contact_id" value={emailForm.contact_id} onChange={e=>setEmailForm({...emailForm, contact_id:e.target.value})} style={{ width:180 }} />
@@ -218,7 +218,7 @@ export default function CliFinanceClient() {
         <input placeholder="new_email" value={emailForm.new_email} onChange={e=>setEmailForm({...emailForm, new_email:e.target.value})} />
         <button onClick={createEmailChange}>Solicitar Troca E-mail Token Backend Real</button>
       </div>
-      <ul style={{ fontSize:11, maxHeight:60, overflow:"auto" }}>{emailReqs.map(e=>(<li key={e.id}>{e.protocol} {e.old_email}→{e.new_email} {e.status} expira {new Date(e.expires_at).toLocaleString()} token {e.token.slice(0,8)}... <button onClick={()=>setEmailConfirmForm({id:e.id, token:e.token})}>Usar Token</button></li>))}</ul>
+      <ul style={{ fontSize:11, maxHeight:60, overflow:"auto" }}>{emailReqs.map(e=>(<li key={e.id}>{e.protocol} {e.old_email}→{e.new_email} {e.status} expira {new Date(e.expires_at).toLocaleString("pt-BR")} token {e.token.slice(0,8)}... <button onClick={()=>setEmailConfirmForm({id:e.id, token:e.token})}>Usar Token</button></li>))}</ul>
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
         <input placeholder="email change id" value={emailConfirmForm.id} onChange={e=>setEmailConfirmForm({...emailConfirmForm, id:e.target.value})} style={{ width:180 }} />
         <input placeholder="token" value={emailConfirmForm.token} onChange={e=>setEmailConfirmForm({...emailConfirmForm, token:e.target.value})} style={{ width:200 }} />

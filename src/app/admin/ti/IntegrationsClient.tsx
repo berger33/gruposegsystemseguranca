@@ -60,11 +60,11 @@ export default function IntegrationsClient() {
             <h3 style={{ margin: "0 0 6px", fontSize: 14 }}>{i.name} <span style={{ fontSize: 11, padding: "2px 6px", borderRadius: 4, background: "#eee" }}>{i.id}</span></h3>
             <p style={{ margin: 0, fontSize: 12 }}>Provider: {i.provider} | Status: <strong>{i.status}</strong></p>
             <p style={{ margin: "4px 0 0", fontSize: 11, opacity: 0.8 }}>Config sanitizada: {JSON.stringify(i.config_sanitized)}</p>
-            <p style={{ margin: "4px 0 0", fontSize: 11 }}>Último check: {i.last_check_at ? new Date(i.last_check_at).toLocaleString() : "-"}</p>
-            <p style={{ margin: "2px 0 0", fontSize: 11 }}>Último sucesso: {i.last_success_at ? new Date(i.last_success_at).toLocaleString() : "-"}</p>
-            <p style={{ margin: "2px 0 0", fontSize: 11 }}>Última falha: {i.last_failure_at ? new Date(i.last_failure_at).toLocaleString() : "-"}</p>
+            <p style={{ margin: "4px 0 0", fontSize: 11 }}>Último check: {i.last_check_at ? new Date(i.last_check_at).toLocaleString("pt-BR") : "-"}</p>
+            <p style={{ margin: "2px 0 0", fontSize: 11 }}>Último sucesso: {i.last_success_at ? new Date(i.last_success_at).toLocaleString("pt-BR") : "-"}</p>
+            <p style={{ margin: "2px 0 0", fontSize: 11 }}>Última falha: {i.last_failure_at ? new Date(i.last_failure_at).toLocaleString("pt-BR") : "-"}</p>
             {i.last_error_sanitized && <p style={{ margin: "4px 0 0", fontSize: 11, color: "#991b1b", background: "#fee2e2", padding: "4px 6px", borderRadius: 4 }}>Erro sanitizado: {i.last_error_sanitized}</p>}
-            <p style={{ margin: "4px 0 0", fontSize: 11 }}>Último processamento: {i.last_processed_at ? new Date(i.last_processed_at).toLocaleString() : "-"}</p>
+            <p style={{ margin: "4px 0 0", fontSize: 11 }}>Último processamento: {i.last_processed_at ? new Date(i.last_processed_at).toLocaleString("pt-BR") : "-"}</p>
             <button onClick={()=>test(i.id)} style={{ marginTop: 8, padding: "4px 10px", fontSize: 12 }}>Testar conexão (sanitizado)</button>
           </article>
         ))}

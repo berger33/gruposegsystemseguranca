@@ -141,7 +141,7 @@ export default function ContractClosureClient() {
           <h4 style={{ marginTop: 8 }}>Histórico encerramento ({history.length})</h4>
           <ul style={{ fontSize: 11, maxHeight: 150, overflowY: "auto", border: "1px solid #eee", padding: 8 }}>
             {history.map((h: any) => (
-              <li key={h.id}>{h.previous_status || "null"}→{h.next_status} efeito {h.effective_date} — {h.reason?.slice(0,80)} — por {h.changed_by} {new Date(h.created_at).toLocaleString()}</li>
+              <li key={h.id}>{h.previous_status || "null"}→{h.next_status} efeito {h.effective_date} — {h.reason?.slice(0,80)} — por {h.changed_by} {new Date(h.created_at).toLocaleString("pt-BR")}</li>
             ))}
           </ul>
         </div>

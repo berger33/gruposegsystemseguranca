@@ -65,7 +65,7 @@ export default function EmpProfileClient(){
                 <h5 className="font-medium">Minhas solicitações ({myRequests.length})</h5>
                 <div className="max-h-32 overflow-auto divide-y border">
                   {myRequests.map(rq=>(
-                    <div key={rq.id} className="p-1"><span className="font-mono">{rq.id.slice(0,8)}</span> {rq.status} {new Date(rq.created_at).toLocaleDateString()} changes {JSON.stringify(rq.requested_changes)} {rq.rejection_reason? `rejeitado: ${rq.rejection_reason}`:''}</div>
+                    <div key={rq.id} className="p-1"><span className="font-mono">{rq.id.slice(0,8)}</span> {rq.status} {new Date(rq.created_at).toLocaleDateString("pt-BR")} changes {JSON.stringify(rq.requested_changes)} {rq.rejection_reason? `rejeitado: ${rq.rejection_reason}`:''}</div>
                   ))}
                 </div>
               </div>
@@ -85,7 +85,7 @@ export default function EmpProfileClient(){
           <div className="max-h-96 overflow-auto border divide-y text-xs">
             {allRequests.map(rq=>(
               <div key={rq.id} className="p-1 flex justify-between gap-2">
-                <div><b>{rq.employee_name||rq.employee_id.slice(0,8)}</b> [{rq.matricula||''}] {rq.status} <span className="text-gray-500">{new Date(rq.created_at).toLocaleString()}</span><br/>mudanças: {JSON.stringify(rq.requested_changes)} <br/>atual: {JSON.stringify(rq.current_snapshot)}<br/>just: {rq.justification||'-'}</div>
+                <div><b>{rq.employee_name||rq.employee_id.slice(0,8)}</b> [{rq.matricula||''}] {rq.status} <span className="text-gray-500">{new Date(rq.created_at).toLocaleString("pt-BR")}</span><br/>mudanças: {JSON.stringify(rq.requested_changes)} <br/>atual: {JSON.stringify(rq.current_snapshot)}<br/>just: {rq.justification||'-'}</div>
                 <div className="flex flex-col gap-1">
                   <button onClick={()=>review(rq.id,'em_analise')} className="border px-1">em análise</button>
                   <button onClick={()=>review(rq.id,'aprovar')} className="border px-1 bg-green-100">aprovar + histórico</button>

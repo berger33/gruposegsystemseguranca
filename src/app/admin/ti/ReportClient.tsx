@@ -84,7 +84,7 @@ export default function ReportClient() {
           <h4>Tarefas atrasadas ({overdue.total})</h4>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead><tr><th>Título</th><th>Vencimento</th><th>Status</th><th>Oportunidade</th><th>Empresa</th></tr></thead>
-            <tbody>{(overdue.tasks || []).slice(0,20).map((t: any) => <tr key={t.id}><td>{t.title}</td><td>{new Date(t.due_date).toLocaleString()}</td><td>{t.status}</td><td>{t.opportunity_title || t.opportunity_id?.slice(0,8)}</td><td>{t.company_name || t.company_id?.slice(0,8)}</td></tr>)}</tbody>
+            <tbody>{(overdue.tasks || []).slice(0,20).map((t: any) => <tr key={t.id}><td>{t.title}</td><td>{new Date(t.due_date).toLocaleString("pt-BR")}</td><td>{t.status}</td><td>{t.opportunity_title || t.opportunity_id?.slice(0,8)}</td><td>{t.company_name || t.company_id?.slice(0,8)}</td></tr>)}</tbody>
           </table>
         </div>
       )}

@@ -253,7 +253,7 @@ export default function EmpPwaClient() {
       <button onClick={createQueue}>Enfileirar offline (idempotente)</button>
       <div style={{ maxHeight: 200, overflow: 'auto', fontSize: 12, margin: '8px 0', background: '#f8fafc', padding: 8 }}>
         {queues.map(q=><div key={q.id} style={{ borderBottom: '1px solid #e5e7eb', padding: '4px 0' }}>
-          {q.id.slice(0,8)} emp={q.employee_id.slice(0,8)} type={q.task_type} status={q.status} idem={q.idempotency_key.slice(0,20)} device={new Date(q.device_timestamp).toLocaleString()} server_recv={q.server_received_at ? new Date(q.server_received_at).toLocaleString() : 'null'} retry={q.retry_count} synced={q.synced_at ? new Date(q.synced_at).toLocaleString() : '-'} conflict={q.conflict_details ? JSON.stringify(q.conflict_details).slice(0,100) : '-'}
+          {q.id.slice(0,8)} emp={q.employee_id.slice(0,8)} type={q.task_type} status={q.status} idem={q.idempotency_key.slice(0,20)} device={new Date(q.device_timestamp).toLocaleString("pt-BR")} server_recv={q.server_received_at ? new Date(q.server_received_at).toLocaleString("pt-BR") : 'null'} retry={q.retry_count} synced={q.synced_at ? new Date(q.synced_at).toLocaleString("pt-BR") : '-'} conflict={q.conflict_details ? JSON.stringify(q.conflict_details).slice(0,100) : '-'}
           <button onClick={()=>syncQueue(q.id)} style={{ marginLeft: 8 }}>Sincronizar (server_received_at separado)</button>
         </div>)}
       </div>

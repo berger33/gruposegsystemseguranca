@@ -120,7 +120,7 @@ export default function ContractImplantationClient() {
           <ul style={{ fontSize: 11, maxHeight: 200, overflowY: "auto", border: "1px solid #eee", padding: 8, marginTop: 8 }}>
             {blocks.map((b: any) => (
               <li key={b.id} style={{ marginBottom: 4 }}>
-                <strong>{b.block_type} {b.title}</strong> — {b.is_legal_requirement ? "⚖️ legal" : ""} {b.is_blocking ? "🚫 bloqueante" : "⚠️ aviso"} — step {b.step_id || "-"} — {b.description.slice(0,100)} — {b.resolved_at ? `resolvido ${new Date(b.resolved_at).toLocaleDateString()}` : "pendente"} — id {b.id.slice(0,8)}
+                <strong>{b.block_type} {b.title}</strong> — {b.is_legal_requirement ? "⚖️ legal" : ""} {b.is_blocking ? "🚫 bloqueante" : "⚠️ aviso"} — step {b.step_id || "-"} — {b.description.slice(0,100)} — {b.resolved_at ? `resolvido ${new Date(b.resolved_at).toLocaleDateString("pt-BR")}` : "pendente"} — id {b.id.slice(0,8)}
               </li>
             ))}
           </ul>

@@ -117,7 +117,7 @@ export default function ProposalAcceptanceClient() {
               <td>{l.proposal_id.slice(0,8)} v{l.proposal_version}</td>
               <td>{l.token_prefix}</td>
               <td>{l.recipient_email} {l.recipient_name ? `(${l.recipient_name})` : ""}</td>
-              <td>{new Date(l.expires_at).toLocaleString()}</td>
+              <td>{new Date(l.expires_at).toLocaleString("pt-BR")}</td>
               <td>{l.status}</td>
               <td>{l.is_used ? "sim" : "não"}</td>
               <td style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>{l.legal_value_note || "-"}</td>

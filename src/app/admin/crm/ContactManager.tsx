@@ -33,6 +33,24 @@ type Draft = {
 
 const roles = ["decisor", "influenciador", "usuario", "financeiro", "outro"];
 const origins = ["manual", "consentimento_formulario", "indicacao", "evento", "importacao", "lead_publico", "site", "contato", "outro"];
+const roleLabels: Record<string, string> = {
+  decisor: "Decisor",
+  influenciador: "Influenciador",
+  usuario: "Usuário",
+  financeiro: "Financeiro",
+  outro: "Outro",
+};
+const originLabels: Record<string, string> = {
+  manual: "Cadastro manual",
+  consentimento_formulario: "Formulário com consentimento",
+  indicacao: "Indicação",
+  evento: "Evento",
+  importacao: "Importação",
+  lead_publico: "Pedido recebido pelo site",
+  site: "Site institucional",
+  contato: "Contato direto",
+  outro: "Outra origem",
+};
 const channels = [
   ["email", "E-mail"],
   ["phone", "Telefone"],
@@ -200,9 +218,9 @@ export default function ContactManager({ companies }: { companies: Company[] }) 
               <label style={{ fontSize: 12 }}>Nome do contato<input required maxLength={200} value={draft.display_name} onChange={event => updateDraft(setDraft, "display_name", event.target.value)} style={{ display: "block", width: "100%", boxSizing: "border-box", padding: 6 }} /></label>
               <label style={{ fontSize: 12 }}>E-mail<input type="email" maxLength={254} value={draft.email} onChange={event => updateDraft(setDraft, "email", event.target.value)} style={{ display: "block", width: "100%", boxSizing: "border-box", padding: 6 }} /></label>
               <label style={{ fontSize: 12 }}>Telefone<input maxLength={30} value={draft.phone} onChange={event => updateDraft(setDraft, "phone", event.target.value)} style={{ display: "block", width: "100%", boxSizing: "border-box", padding: 6 }} /></label>
-              <label style={{ fontSize: 12 }}>Função<select required aria-label="Função do contato" value={draft.role} onChange={event => updateDraft(setDraft, "role", event.target.value)} style={{ display: "block", width: "100%", padding: 6 }}><option value="">Escolha</option>{roles.map(role => <option key={role} value={role}>{role}</option>)}</select></label>
-              <label style={{ fontSize: 12 }}>Papel de compra<select aria-label="Papel de compra" value={draft.buying_role} onChange={event => updateDraft(setDraft, "buying_role", event.target.value)} style={{ display: "block", width: "100%", padding: 6 }}><option value="">Não informado</option>{roles.map(role => <option key={role} value={role}>{role}</option>)}</select></label>
-              <label style={{ fontSize: 12 }}>Origem legítima<select required aria-label="Origem legítima" value={draft.origin} onChange={event => updateDraft(setDraft, "origin", event.target.value)} style={{ display: "block", width: "100%", padding: 6 }}>{origins.map(origin => <option key={origin} value={origin}>{origin}</option>)}</select></label>
+              <label style={{ fontSize: 12 }}>Função<select required aria-label="Função do contato" value={draft.role} onChange={event => updateDraft(setDraft, "role", event.target.value)} style={{ display: "block", width: "100%", padding: 6 }}><option value="">Escolha uma função</option>{roles.map(role => <option key={role} value={role}>{roleLabels[role]}</option>)}</select></label>
+              <label style={{ fontSize: 12 }}>Papel de compra<select aria-label="Papel de compra" value={draft.buying_role} onChange={event => updateDraft(setDraft, "buying_role", event.target.value)} style={{ display: "block", width: "100%", padding: 6 }}><option value="">Não informado</option>{roles.map(role => <option key={role} value={role}>{roleLabels[role]}</option>)}</select></label>
+              <label style={{ fontSize: 12 }}>Origem legítima<select required aria-label="Origem legítima" value={draft.origin} onChange={event => updateDraft(setDraft, "origin", event.target.value)} style={{ display: "block", width: "100%", padding: 6 }}>{origins.map(origin => <option key={origin} value={origin}>{originLabels[origin]}</option>)}</select></label>
               <label style={{ fontSize: 12 }}>Melhor horário<input maxLength={100} value={draft.best_time} onChange={event => updateDraft(setDraft, "best_time", event.target.value)} style={{ display: "block", width: "100%", boxSizing: "border-box", padding: 6 }} /></label>
             </div>
             <fieldset style={{ margin: "8px 0", padding: 6, border: "1px solid #dbeafe" }}><legend style={{ fontSize: 12 }}>Preferências de abordagem</legend><div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>{channels.map(([value, label]) => <label key={value} style={{ fontSize: 12 }}><input type="checkbox" checked={draft.channels.includes(value)} onChange={() => toggleChannel(setDraft, value)} /> {label}</label>)}</div></fieldset>
@@ -223,9 +241,9 @@ export default function ContactManager({ companies }: { companies: Company[] }) 
                     <label style={{ fontSize: 12 }}>Nome do contato<input required maxLength={200} value={editingDraft.display_name} onChange={event => updateDraft(setEditingDraft, "display_name", event.target.value)} style={{ display: "block", width: "100%", boxSizing: "border-box", padding: 6 }} /></label>
                     <label style={{ fontSize: 12 }}>E-mail<input type="email" maxLength={254} value={editingDraft.email} onChange={event => updateDraft(setEditingDraft, "email", event.target.value)} style={{ display: "block", width: "100%", boxSizing: "border-box", padding: 6 }} /></label>
                     <label style={{ fontSize: 12 }}>Telefone<input maxLength={30} value={editingDraft.phone} onChange={event => updateDraft(setEditingDraft, "phone", event.target.value)} style={{ display: "block", width: "100%", boxSizing: "border-box", padding: 6 }} /></label>
-                    <label style={{ fontSize: 12 }}>Função<select required aria-label="Função do contato" value={editingDraft.role} onChange={event => updateDraft(setEditingDraft, "role", event.target.value)} style={{ display: "block", width: "100%", padding: 6 }}><option value="">Escolha</option>{roles.map(role => <option key={role} value={role}>{role}</option>)}</select></label>
-                    <label style={{ fontSize: 12 }}>Papel de compra<select aria-label="Papel de compra" value={editingDraft.buying_role} onChange={event => updateDraft(setEditingDraft, "buying_role", event.target.value)} style={{ display: "block", width: "100%", padding: 6 }}><option value="">Não informado</option>{roles.map(role => <option key={role} value={role}>{role}</option>)}</select></label>
-                    <label style={{ fontSize: 12 }}>Origem legítima<select required aria-label="Origem legítima" value={editingDraft.origin} onChange={event => updateDraft(setEditingDraft, "origin", event.target.value)} style={{ display: "block", width: "100%", padding: 6 }}>{origins.map(origin => <option key={origin} value={origin}>{origin}</option>)}</select></label>
+                    <label style={{ fontSize: 12 }}>Função<select required aria-label="Função do contato" value={editingDraft.role} onChange={event => updateDraft(setEditingDraft, "role", event.target.value)} style={{ display: "block", width: "100%", padding: 6 }}><option value="">Escolha uma função</option>{roles.map(role => <option key={role} value={role}>{roleLabels[role]}</option>)}</select></label>
+                    <label style={{ fontSize: 12 }}>Papel de compra<select aria-label="Papel de compra" value={editingDraft.buying_role} onChange={event => updateDraft(setEditingDraft, "buying_role", event.target.value)} style={{ display: "block", width: "100%", padding: 6 }}><option value="">Não informado</option>{roles.map(role => <option key={role} value={role}>{roleLabels[role]}</option>)}</select></label>
+                    <label style={{ fontSize: 12 }}>Origem legítima<select required aria-label="Origem legítima" value={editingDraft.origin} onChange={event => updateDraft(setEditingDraft, "origin", event.target.value)} style={{ display: "block", width: "100%", padding: 6 }}>{origins.map(origin => <option key={origin} value={origin}>{originLabels[origin]}</option>)}</select></label>
                     <label style={{ fontSize: 12 }}>Melhor horário<input maxLength={100} value={editingDraft.best_time} onChange={event => updateDraft(setEditingDraft, "best_time", event.target.value)} style={{ display: "block", width: "100%", boxSizing: "border-box", padding: 6 }} /></label>
                   </div>
                   <fieldset style={{ margin: "8px 0", padding: 6, border: "1px solid #dbeafe" }}><legend style={{ fontSize: 12 }}>Preferências de abordagem</legend><div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>{channels.map(([value, label]) => <label key={value} style={{ fontSize: 12 }}><input type="checkbox" checked={editingDraft.channels.includes(value)} onChange={() => toggleChannel(setEditingDraft, value)} /> {label}</label>)}</div></fieldset>
@@ -237,7 +255,7 @@ export default function ContactManager({ companies }: { companies: Company[] }) 
               ) : (
                 <article key={contact.id} aria-label={`Contato ${contact.display_name}`} style={{ padding: 10, background: "#fff", border: "1px solid #dbeafe", borderRadius: 6 }}>
                   <strong>{contact.display_name}</strong> <span style={{ fontSize: 12 }}>({contact.status === "active" ? "ativo" : "inativo"})</span>
-                  <p style={{ fontSize: 12, margin: "4px 0" }}>Função: {contact.role || "não informada"} · Papel: {contact.buying_role || "não informado"} · Origem: {contact.origin || "não informada"}</p>
+                  <p style={{ fontSize: 12, margin: "4px 0" }}>Função: {contact.role ? roleLabels[contact.role] || contact.role : "não informada"} · Papel: {contact.buying_role ? roleLabels[contact.buying_role] || contact.buying_role : "não informado"} · Origem: {contact.origin ? originLabels[contact.origin] || contact.origin : "não informada"}</p>
                   <p style={{ fontSize: 12, margin: "4px 0" }}>Preferências: {(contact.preferences?.channels || []).join(", ") || "não informadas"}{contact.preferences?.best_time ? ` · ${contact.preferences.best_time}` : ""} · Restrições: {contact.restrictions || "nenhuma"}</p>
                   <button type="button" onClick={() => { setEditingId(contact.id); setEditingDraft(draftFromContact(contact)); setMessage(""); }} style={{ padding: "6px 12px" }}>Editar contato</button>
                 </article>

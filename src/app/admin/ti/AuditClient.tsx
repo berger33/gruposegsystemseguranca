@@ -82,7 +82,7 @@ export default function AuditClient() {
           <tbody>
             {audits.map(a=>(
               <tr key={a.id} style={{ borderTop: "1px solid #eee" }}>
-                <td>{new Date(a.created_at).toLocaleString()}</td>
+                <td>{new Date(a.created_at).toLocaleString("pt-BR")}</td>
                 <td>{a.actor_kind}/{a.actor_id?.slice(0,8) || "-"}</td>
                 <td>{a.action}</td>
                 <td style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>{a.target?.slice(0,80)}</td>

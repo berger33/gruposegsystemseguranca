@@ -116,7 +116,7 @@ export default function OpsAdvancedClient() {
         <button onClick={createCovReq}>Criar pendência cobertura (ausência abre)</button>
       </div>
       <div style={{ maxHeight: 100, overflow: 'auto', fontSize: 12, background: '#f8fafc', padding: 8 }}>
-        {covReqs.map(r=><div key={r.id}>{r.id.slice(0,8)} posto {r.post_id.slice(0,6)} status {r.status} solicitado {new Date(r.requested_at).toLocaleString()} resp {r.responsible_name||'-'} decisão_humana={String(r.is_human_decision)} decisão_por {r.decision_by||'-'} <button onClick={()=>approveCovReq(r.id)}>Aprovar decisão humana</button></div>)}
+        {covReqs.map(r=><div key={r.id}>{r.id.slice(0,8)} posto {r.post_id.slice(0,6)} status {r.status} solicitado {new Date(r.requested_at).toLocaleString("pt-BR")} resp {r.responsible_name||'-'} decisão_humana={String(r.is_human_decision)} decisão_por {r.decision_by||'-'} <button onClick={()=>approveCovReq(r.id)}>Aprovar decisão humana</button></div>)}
       </div>
 
       <h4>Candidatos Substituição (disponibilidade/qualificação)</h4>
@@ -152,7 +152,7 @@ export default function OpsAdvancedClient() {
         <button onClick={createHandover}>Criar passagem plantão</button>
       </div>
       <div style={{ maxHeight: 100, overflow: 'auto', fontSize: 12, background: '#f8fafc', padding: 8 }}>
-        {handovers.map(h=><div key={h.id}>{h.protocol} posto {h.from_post_id?.slice(0,6)||'-'} de {h.from_employee_id.slice(0,6)} para {h.to_employee_id?.slice(0,6)||'-'} data {new Date(h.handover_date).toLocaleString()} status {h.status} esc_level {h.escalation_level} privada={String(h.is_private)} <button onClick={()=>acceptHandover(h.id)}>Aceite</button><button onClick={()=>escalateHandover(h.id)} style={{ marginLeft: 4 }}>Escalonar não aceite</button></div>)}
+        {handovers.map(h=><div key={h.id}>{h.protocol} posto {h.from_post_id?.slice(0,6)||'-'} de {h.from_employee_id.slice(0,6)} para {h.to_employee_id?.slice(0,6)||'-'} data {new Date(h.handover_date).toLocaleString("pt-BR")} status {h.status} esc_level {h.escalation_level} privada={String(h.is_private)} <button onClick={()=>acceptHandover(h.id)}>Aceite</button><button onClick={()=>escalateHandover(h.id)} style={{ marginLeft: 4 }}>Escalonar não aceite</button></div>)}
       </div>
 
       <h3>OPS-07 Livro Ocorrências (categoria/severidade responsável ações encerramento evidências privadas histórico imutável retificação)</h3>
