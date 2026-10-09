@@ -410,6 +410,13 @@ def shot(*, cam, keys, t, frac, url, kicker=None, head=None, cap=None, sub=None,
         r = camo.box(f["box"], t)
         R = (r[0] + cx0, r[1] + cy0, r[2] + cx0, r[3] + cy0)
         R = (max(R[0], cx0 + 4), max(R[1], cy0 + 4), min(R[2], cx0 + CW - 4), min(R[3], cy0 + CH - 4))
+        pk = t - f.get("press", 1e9)
+        if 0 <= pk < 0.6:
+            sc = 1 - 0.035 * math.sin(clamp(pk / 0.28) * math.pi)
+            mx_, my_ = (R[0] + R[2]) / 2, (R[1] + R[3]) / 2
+            R = (mx_ - (mx_ - R[0]) * sc, my_ - (my_ - R[1]) * sc, mx_ + (R[2] - mx_) * sc, my_ + (R[3] - my_) * sc)
+            if pk < 0.45:
+                ov.d.rounded_rectangle(R, 12, fill=(255, 255, 255, int(78 * (1 - pk / 0.45))))
         color = f.get("color", AMBER)
         draw_focus(ov, R, color, t, f["t0"], t1)
         if f.get("tag"):
@@ -491,12 +498,6 @@ def card_hook(t):
         ov.d.text((x + 112, y + 34), s, font=F(33, 700), fill=(255, 255, 255, aa), anchor="ls")
         ov.d.text((x + 112, y + 76), "ninguém sabe em que pé está", font=F(21, 400), fill=(170, 184, 214, aa), anchor="ls")
         y += 132
-    if 5.5 < t < 9.3:
-        at = eo3((t - 5.5) / 0.5) * fade_out
-        for i in range(3):
-            yy = 332 + i * 132 + 58
-            ov.d.line((LC_X + 40, yy, LC_X + 40 + 780 * at, yy), fill=(CORAL[0], CORAL[1], CORAL[2], 230), width=5)
-        ov.d.text((LC_X, 826), "Reconhece isso?", font=F(44, 800), fill=(255, 236, 200, int(255 * at)), anchor="ls")
     if t > 8.9:
         at = eo3((t - 8.9) / 0.9)
         cw = F(40, 700).getlength("E se tudo isso estivesse no mesmo sistema?") + 80
@@ -620,32 +621,33 @@ def planos():
     # 1 — gancho
     add(0.0, 12.4, lambda t, f: card_hook(t))
 
-    # 2 — o primeiro contato: o pedido chega pelo site
+    # 2 — o primeiro contato: o pedido chega pelo site (destaque, cursor, clique)
     add(12.4, 17.3, S(cam="site.png", url="/",
-        keys=[(0, (632, 356, 1265)), (2.2, (930, 220, 820)), (4.9, (930, 220, 820))],
+        keys=[(0, (632, 356, 1265)), (1.2, (942, 200, 645)), (4.9, (942, 200, 645))],
         kicker="O PRIMEIRO CONTATO", head="O pedido chega pelo site", chapter=0,
-        focus=[dict(box=(1049, 50, 1206, 90), t0=2.0, color=AMBER, tag="o visitante pede pelo próprio site")],
-        cursor=[(0.6, (470, 430)), (2.0, (1127, 70))], clicks=[2.25]), "wipe", 0.5)
+        focus=[dict(box=(1048, 49, 1209, 93), t0=1.5, color=AMBER, press=2.9,
+                    tag="o visitante pede pelo próprio site")],
+        cursor=[(0.6, (760, 330)), (2.6, (1128, 71))], clicks=[2.9]), "wipe", 0.5)
 
     # 3 — CRM: o pedido vira oportunidade
     add(17.3, 21.5, S(cam="crm.png", url="/admin/crm",
         keys=[(0, (720, 450, 1440)), (1.5, (560, 640, 760)), (4.2, (560, 640, 760))],
         kicker="CRM", head="Pedido recebido vira oportunidade", chapter=1, cap="o pedido entra com origem e data",
-        focus=[dict(box=(368, 656, 742, 700), t0=1.5, color=AMBER, tag="converte o pedido do site em oportunidade")],
+        focus=[dict(box=(357, 656, 747, 701), t0=1.5, color=AMBER, tag="converte o pedido do site em oportunidade")],
         cursor=[(0.4, (900, 300)), (1.4, (555, 678))], clicks=[1.6]), "whip", 0.45)
 
     # 4 — oportunidade: responsável e origem
     add(21.5, 25.0, S(cam="crmdetalhe.png", url="/admin/crm",
         keys=[(0, (720, 1500, 1440)), (1.4, (720, 1735, 820)), (3.5, (720, 1735, 820))],
         kicker="OPORTUNIDADE", head="Responsável e origem definidos", chapter=1, cap="nada entra sem responsável",
-        focus=[dict(box=(360, 1676, 1345, 1778), t0=1.2, color=ACENTO, tag="empresa, serviço e necessidade")]),
+        focus=[dict(box=(366, 1722, 1341, 1774), t0=1.2, color=ACENTO, tag="empresa, serviço e necessidade")]),
         "zoom", 0.45)
 
     # 5 — a oportunidade na lista, com estágio
     add(25.0, 27.6, S(cam="crmdetalhe.png", url="/admin/crm",
         keys=[(0, (900, 2800, 1000)), (2.6, (900, 2800, 1000))],
         kicker="HISTÓRICO", head="Fica na lista, com status", chapter=1,
-        focus=[dict(box=(798, 2816, 1060, 3036), t0=0.5, color=ACENTO, tag="a oportunidade, com responsável e estágio")]),
+        focus=[dict(box=(797, 2816, 1062, 3037), t0=0.5, color=ACENTO, tag="a oportunidade, com responsável e estágio")]),
         "whip", 0.4)
 
     # 6 — funil
@@ -659,7 +661,7 @@ def planos():
     add(33.0, 37.5, S(cam="comercial.png", url="/admin/comercial",
         keys=[(0, (720, 450, 1440)), (1.4, (1005, 358, 760)), (4.5, (1005, 358, 760))],
         kicker="PROPOSTA", head="Sai daqui, com link de aceite", chapter=2, cap="visita, orçamento, proposta — na mesma trilha",
-        focus=[dict(box=(914, 336, 1094, 380), t0=1.3, color=AMBER, tag="propostas e envio ao cliente")],
+        focus=[dict(box=(917, 333, 1098, 384), t0=1.3, color=AMBER, tag="propostas e envio ao cliente")],
         cursor=[(0.4, (600, 640)), (1.2, (1004, 358))], clicks=[1.4]), "wipe", 0.5)
 
     # 8 — aceite registrado (cartela)
@@ -669,7 +671,7 @@ def planos():
     add(41.0, 48.0, S(cam="contratos.png", url="/admin/contratos",
         keys=[(0, (720, 450, 1440)), (1.6, (854, 800, 1150)), (7.0, (854, 800, 1150))],
         kicker="CONTRATO", head="Criado a partir do aceite", chapter=3,
-        focus=[dict(box=(370, 800, 1338, 866), t0=1.3, color=AMBER, tag="escopo, prazo e valores do contrato")],
+        focus=[dict(box=(367, 799, 1342, 868), t0=1.3, color=AMBER, tag="escopo, prazo e valores do contrato")],
         steps=["postos", "horários", "SLA", "obrigações"]), "wipe", 0.5)
 
     # 10 — a mesma informação atravessa os módulos
@@ -683,9 +685,9 @@ def planos():
     add(54.5, 58.5, S(cam="cliente.png", url="/portal",
         keys=[(0, (632, 356, 1265)), (1.8, (470, 330, 960)), (4.0, (470, 330, 960))],
         kicker="PORTAL DO CLIENTE", head="Acesso próprio e verificado", chapter=4, cap="não é o sistema por dentro: é a conta dele",
-        focus=[dict(box=(439, 321, 812, 366), t0=0.7, t1=2.2, color=ACENTO, tag="e-mail e senha do convite"),
-               dict(box=(439, 400, 812, 445), t0=2.2, t1=3.0, color=ACENTO),
-               dict(box=(439, 463, 812, 506), t0=3.0, color=AMBER, tag="acesso verificado no servidor")],
+        focus=[dict(box=(439, 321, 813, 367), t0=0.7, t1=2.2, color=ACENTO, tag="e-mail e senha do convite"),
+               dict(box=(439, 400, 813, 446), t0=2.2, t1=3.0, color=ACENTO),
+               dict(box=(437, 461, 815, 509), t0=3.0, color=AMBER, tag="acesso verificado no servidor")],
         typing=[dict(x=455, y=343, text="cliente@empresa-exemplo.com.br", t0=0.9, cps=24, size=22),
                 dict(x=455, y=423, text="segredo-demonstracao", t0=2.4, cps=30, size=22, mask=True)],
         cursor=[(0.5, (640, 600)), (2.9, (625, 484))], clicks=[3.2]), "zoom", 0.45)
@@ -703,19 +705,19 @@ def planos():
     add(65.5, 71.0, S(cam="marcelo.png", url="/admin/painel",
         keys=[(0, (680, 800, 1000)), (2.6, (850, 800, 1000)), (3.9, (1000, 800, 1000)), (5.5, (1000, 800, 1000))],
         kicker="QUEM DECIDE", head="O que exige decisão, hoje", chapter=5, cap="cada número com fonte e responsável",
-        focus=[dict(box=(357, 740, 680, 900), t0=0.6, t1=2.6, color=AMBER, tag="pendências"),
-               dict(box=(692, 740, 1015, 900), t0=2.6, t1=3.9, color=ACENTO, tag="leads novos"),
-               dict(box=(1028, 740, 1350, 900), t0=3.9, color=AMBER, tag="oportunidades paradas")]),
+        focus=[dict(box=(354, 737, 684, 900), t0=0.6, t1=2.6, color=AMBER, tag="pendências"),
+               dict(box=(689, 737, 1020, 900), t0=2.6, t1=3.9, color=ACENTO, tag="leads novos"),
+               dict(box=(1025, 737, 1355, 900), t0=3.9, color=AMBER, tag="oportunidades paradas")]),
         "wipe", 0.5)
 
     # 14 — do site ao posto: a área administrativa percorrida módulo a módulo
     add(71.0, 76.4, S(cam="hub.png", url="/admin",
         keys=[(0, (720, 420, 1000)), (1.3, (470, 600, 900)), (2.6, (850, 600, 900)), (3.9, (1100, 600, 900)), (5.4, (1100, 600, 900))],
         kicker="ÁREA ADMINISTRATIVA", head="Do site ao posto", chapter=6, cap="tudo no mesmo lugar",
-        focus=[dict(box=(215, 533, 457, 657), t0=0.7, t1=1.9, color=ACENTO, tag="pedidos do site"),
-               dict(box=(727, 393, 968, 517), t0=1.9, t1=3.2, color=ACENTO, tag="CRM"),
-               dict(box=(471, 533, 713, 657), t0=3.2, t1=4.5, color=ACENTO, tag="contratos"),
-               dict(box=(983, 533, 1225, 657), t0=4.5, color=AMBER, tag="operação")],
+        focus=[dict(box=(214, 532, 459, 660), t0=0.7, t1=1.9, color=ACENTO, tag="pedidos do site"),
+               dict(box=(726, 392, 971, 521), t0=1.9, t1=3.2, color=ACENTO, tag="CRM"),
+               dict(box=(470, 532, 715, 660), t0=3.2, t1=4.5, color=ACENTO, tag="contratos"),
+               dict(box=(982, 532, 1227, 660), t0=4.5, color=AMBER, tag="operação")],
         cursor=[(0.4, (336, 600)), (1.6, (847, 455)), (3.0, (592, 600)), (4.2, (1104, 600))],
         clicks=[1.9, 3.2, 4.5]), "zoom", 0.45)
 
