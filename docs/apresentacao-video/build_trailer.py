@@ -596,7 +596,8 @@ def tr_wipe(A, B, e):
 
 def tr_win(A, B, e):
     """Só a tela do programa muda: o fundo, o texto e a barra ficam; a captura sai e entra deslizando dentro da janela."""
-    out = A * (1 - e) + B * e                     # textos e fundo: cruzamento sutil (fundo idêntico)
+    et = clamp(e / 0.36)                           # textos: cruzamento rápido (≈0,15 s), fundo idêntico
+    out = A * (1 - et) + B * et
     x0, y0 = WIN_X, WIN_Y
     x1, y1 = x0 + CW, y0 + CH + CHROME
     yc = y0 + CHROME
@@ -758,13 +759,14 @@ def planos():
         "win", 0.4)
 
     # 17 — montagem de papéis (cortes rápidos)
-    # título e barra ficam parados; só a tela do programa troca (gestão → RH → cliente)
+    # título e legenda ficam parados; só a tela do programa troca (gestão → RH → cliente)
+    PAP_CAP = "gestão · recursos humanos · cliente"
     add(80.8, 81.85, S(cam="marcelo.png", url="/admin/painel", keys=[(0, (720, 600, 1440)), (1.05, (720, 600, 1440))],
-        kicker="PAPÉIS", head="Só o que precisa ver", cap="papel: gestão", chapter=6, still=True), "win", 0.4)
+        kicker="PAPÉIS", head="Só o que precisa ver", cap=PAP_CAP, chapter=6, still=True, hold=True), "win", 0.4)
     add(81.85, 82.9, S(cam="rh.png", url="/admin/rh", keys=[(0, (720, 600, 1440)), (1.05, (720, 600, 1440))],
-        kicker="PAPÉIS", head="Só o que precisa ver", cap="papel: recursos humanos", chapter=6, still=True, hold=True), "win", 0.4)
+        kicker="PAPÉIS", head="Só o que precisa ver", cap=PAP_CAP, chapter=6, still=True, hold=True), "win", 0.4)
     add(82.9, 84.0, S(cam="clientecont.png", url="/portal", keys=[(0, (720, 450, 1440)), (1.1, (720, 450, 1440))],
-        kicker="PAPÉIS", head="Só o que precisa ver", cap="papel: cliente", chapter=6, still=True, hold=True), "win", 0.4)
+        kicker="PAPÉIS", head="Só o que precisa ver", cap=PAP_CAP, chapter=6, still=True, hold=True), "win", 0.4)
 
     # 18 — cartela final
     add(84.0, TOTAL, lambda t, f: card_end(t), "dissolve", 0.6)
