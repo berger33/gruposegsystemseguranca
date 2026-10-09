@@ -1,7 +1,14 @@
-# Trailer de apresentação — Grupo SEG System (v2)
+# Trailer de apresentação — Grupo SEG System (v3)
 
 Vídeo de **1 min 29 s**, 1920×1080, 30 fps, H.264 + AAC, `trailer-90s.mp4` (≈18 MB).
 **Demonstração com dados fictícios. Não é gravação ao vivo.**
+
+## O que mudou na v3
+- Removido o texto "Reconhece isso?" (≈9 s) e as linhas de contraste que o acompanhavam.
+- Cena do site (≈12–17 s): enquadramento só na região do botão, sem o texto da página sob a legenda; legenda "O primeiro contato" em painel limpo.
+- Clique no site: foco no botão "Solicitar proposta", leve escurecimento, cursor até o botão, onda de clique com efeito de pressão.
+- Destaques recalculados pelas bordas reais dos elementos (campos, botões, abas, cards), para encaixar nas caixas mostradas.
+- Locução, roteiro e tempos inalterados.
 
 ## O que mudou na v2
 - **Texto e locução mantidos** (mesmos sete blocos de voz pt-BR e mesmos tempos).
