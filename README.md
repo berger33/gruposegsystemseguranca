@@ -8,6 +8,10 @@
 
 # Grupo SEG System
 
+> **Instrução obrigatória para o Arena e outros agentes:** o proprietário pediu para preservar todas as funcionalidades existentes. Antes de editar, leia [`AGENTS.md`](AGENTS.md) e [`docs/ARENA-PRESERVAR-FUNCIONALIDADES.md`](docs/ARENA-PRESERVAR-FUNCIONALIDADES.md). Faça apenas mudanças compatíveis e aditivas; não remova, desative, oculte, substitua ou altere comportamentos fora do pedido. Se a mudança solicitada exigir quebrar essa regra, pare e peça autorização explícita.
+
+> **Demonstração local atual:** o setup com PostgreSQL, massa fictícia e Ollama Qwen3 está documentado em [`docs/demo-local-persistente.md`](docs/demo-local-persistente.md), com evidências e limites em [`docs/evidencias/QA-HOM-010-demo-publica-local-2026-10-08.md`](docs/evidencias/QA-HOM-010-demo-publica-local-2026-10-08.md). Links públicos temporários e credenciais não devem ser versionados.
+
 > **Estado de referência (05/10/2026):** `main` inclui o RAG local por área e as migrações 001–174. Os blocos “Continuação atual” abaixo são registros históricos de etapas anteriores e não devem ser lidos como o HEAD vigente. Para evolução visual, leia o [plano mestre de UX](docs/UX-PLANO-MESTRE-2026-10-05.md) e o [prompt de execução em etapas para o Arena](docs/ARENA-PROMPT-UX-ETAPAS-2026-10-05.md). A configuração e os limites reais do RAG estão em [RAG local por área](docs/AI-RAG-LOCAL-2026-10-05.md). Verifique o SHA e o ledger novamente antes de implementar.
 
 **UX-00:** [auditoria e linha de base visual](docs/UX-00-AUDITORIA-BASELINE-2026-10-05.md), [inventário completo das 98 páginas](docs/UX-00-INVENTARIO-ROTAS.csv). São evidências de navegação e código, não homologação de todas as jornadas.
