@@ -12,7 +12,9 @@
 
 ### Ollama/RAG local e link externo temporário
 
-O runner mantém a IA desligada por padrão. Para usar somente um Ollama local que já esteja instalado e ativo em `127.0.0.1:11434`, inicie `--start` com `SEG_LOCAL_DEMO_OLLAMA=1`. A opção fixa o modelo `qwen3:1.7b` e o destino loopback; não aceita endereço externo. Exemplo para a instalação pública isolada deste PC (o caminho base separado preserva outra demonstração que já existia):
+Para iniciar esta instalação sem pedir ajuda, dê duplo clique em `INICIAR-DEMO-SEG-SYSTEM.bat`. O iniciador reaproveita a base persistente já criada, verifica o Ollama local, inicia aplicação e Quick Tunnel em segundo plano, abre `/admin/entrar` no navegador e copia o link. O link fica salvo em `%LOCALAPPDATA%\GrupoSEG-PublicoBase\link-publico.txt`. Para fechar o acesso público e parar aplicação/banco sem apagar os dados, dê duplo clique em `PARAR-DEMO-SEG-SYSTEM.bat`.
+
+O runner mantém a IA desligada por padrão. O iniciador local explícito usa somente um Ollama ativo em `127.0.0.1:11434`, com o modelo `qwen3:1.7b` e destino fixo loopback; não aceita endereço de provedor externo. Exemplo equivalente para a instalação pública isolada deste PC (o caminho base separado preserva outra demonstração que já existia):
 
 ```powershell
 $baseAnterior = $env:LOCALAPPDATA
@@ -21,7 +23,7 @@ $env:SEG_LOCAL_DEMO_OLLAMA = '1'
 npm run demo:local:start
 ```
 
-Para disponibilizar a aplicação completa durante uma apresentação, abra outro PowerShell e execute `cloudflared tunnel --no-autoupdate --url http://127.0.0.1:<porta>` usando a porta impressa por `DEMO_LOCAL_READY`. O `cloudflared` deve permanecer aberto junto com o servidor e o PostgreSQL. O endereço `trycloudflare.com` é público e temporário, muda quando o túnel é recriado e para de responder quando qualquer processo ou o computador é desligado. Qualquer pessoa com o link consegue abrir o site; as áreas privadas continuam exigindo login individual. Use apenas a massa fictícia, não envie dados reais pelo sistema e mantenha as senhas privadas. Esse túnel é para demonstração, não para produção.
+O iniciador grava apenas PID, porta e URL temporária no arquivo de estado local, sem segredos. O endereço `trycloudflare.com` é público e temporário, muda quando o túnel é recriado e para de responder quando o túnel, aplicação ou computador é desligado. Qualquer pessoa com o link consegue abrir o site; as áreas privadas continuam exigindo login individual. Use apenas a massa fictícia, não envie dados reais pelo sistema e mantenha as senhas privadas. Esse túnel é para demonstração, não para produção.
 
 ### Cópia fria e ensaio de restauração isolada — somente demo fictício
 
@@ -37,8 +39,8 @@ Crie a pasta-mãe (`E:\SEG-DEMO`) por meio autorizado antes; escolha nomes **que
 
 ### Paradas, falhas e limites
 
-- A inicialização recusa pasta existente: **nunca sobrescreve**. Um `run.lock` remanescente após desligamento brusco deve ser investigado por pessoa técnica (verificar processos Node/PostgreSQL do demo e as portas gravadas/mostradas), não apagado às cegas. Se a migração parcial falhar, o runner recusa reinicialização; é preciso diagnóstico e recuperação controlada. Reinstalar Node ou reextrair código não apaga automaticamente a pasta de dados, mas **trocar a versão do código pode exigir upgrade/backup prévio**: `--start` compara os checksums do ledger e recusa esquema divergente.
-- O banco e a aplicação iniciam **somente enquanto a janela estiver aberta**; não há serviço Windows, inicialização automática, credenciais recuperáveis, controle de ACL comprovado, atualização segura, backup/restauração operacional nem monitoramento. Sem cópia independente, perda do disco/perfil ou senha TI significa perda de acesso/dados sintéticos; **não inserir dados reais**. `embedded-postgres` usa parada pelo sistema e deve ser ensaiado no Windows. A porta PostgreSQL escolhida no primeiro início é gravada e deve estar livre nos seguintes; não publicar porta nem usar `TRUST_PROXY`.
+- A inicialização recusa pasta existente: **nunca sobrescreve**. Se restar um `run.lock` após desligamento brusco, o iniciador só remove esse marcador após confirmar que o PID registrado está ausente, que a porta PostgreSQL do demo não está ouvindo e que não existe servidor Node do sistema ativo. Caso contrário, ele preserva o bloqueio e os dados para diagnóstico. Se a migração parcial falhar, o runner recusa reinicialização; é preciso diagnóstico e recuperação controlada. Reinstalar Node ou reextrair código não apaga automaticamente a pasta de dados, mas **trocar a versão do código pode exigir upgrade/backup prévio**: `--start` compara os checksums do ledger e recusa esquema divergente.
+- O iniciador executa banco, aplicação e túnel **em segundo plano** enquanto o computador estiver ligado; use `PARAR-DEMO-SEG-SYSTEM.bat` para encerrar. Não há serviço Windows nem inicialização automática. Permanecem sem comprovação: controle de ACL, atualização segura, backup/restauração operacional e monitoramento. Sem cópia independente, perda do disco/perfil ou senha TI significa perda de acesso/dados sintéticos; **não inserir dados reais**. `embedded-postgres` usa parada pelo sistema e deve ser ensaiado no Windows. A porta PostgreSQL escolhida no primeiro início é gravada e deve estar livre nos seguintes; não publicar porta nem usar `TRUST_PROXY`.
 - A UI de convite em `/admin/clientes` chama o endpoint real, não a prévia `/admin/portal/convites`. Convites sem SMTP aparecem somente para o TI autenticado no momento da emissão; depois não há recuperação do token em claro. Não é prova de posse da caixa postal. A massa preenche jornadas descritas no roteiro, mas não ativa integrações externas, não substitui aceite humano e não representa dado de produção.
 - A aplicação e o PostgreSQL continuam presos ao loopback **127.0.0.1**; não publique suas portas. Um Quick Tunnel iniciado separadamente pode encaminhar a aplicação por HTTPS para uma apresentação, conforme a seção acima. Ele não é permanente nem transforma esta demonstração em hospedagem de produção.
 

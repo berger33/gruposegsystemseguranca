@@ -28,7 +28,7 @@ const demoDir = qa ? process.env.SEG_DEMO_TEST_DIR : base && path.join(base, 'se
 const requestedWebPort = qa ? Number(process.env.SEG_DEMO_WEB_PORT) : null;
 let webPort = requestedWebPort;
 const databaseName = 'seg_demo_local';
-let engine, pool, web, lockFile, lockOwned = false, stopping = false;
+let engine, pool, web, lockFile, lockOwned = false, stopping = false, stopRequestTimer;
 
 function fail(code) { throw new Error(code); }
 function redact(message, config) {
@@ -192,11 +192,12 @@ async function waitForHealth(child) {
   }
   fail('demo_web_health_timeout');
 }
-for (const signal of ['SIGINT','SIGTERM']) process.on(signal, () => {
+function requestStop() {
   stopping = true;
   if (qa) process.stdin.pause();
   if (web?.exitCode === null) web.kill('SIGTERM');
-});
+}
+for (const signal of ['SIGINT','SIGTERM']) process.on(signal, requestStop);
 // The Windows QA harness cannot reliably deliver console Ctrl+C to a child
 // without a TTY. Its private stdin pipe provides an explicit graceful stop.
 if (qa) {
@@ -221,6 +222,23 @@ try {
   lockFile = path.join(demoDir, 'run.lock');
   const lock = await open(lockFile, 'wx', 0o600); lockOwned = true;
   try { await lock.writeFile(String(process.pid)); } finally { await lock.close(); }
+  // Windows one-click launcher requests a graceful shutdown by creating this
+  // marker in the isolated demo directory. No network control endpoint exists.
+  if (!qa) {
+    const stopRequest = path.join(demoDir, 'stop.request');
+    stopRequestTimer = setInterval(async () => {
+      try {
+        const stat = await statOrNull(stopRequest);
+        if (!stat) return;
+        if (!stat.isFile() || stat.isSymbolicLink()) return;
+        await unlink(stopRequest);
+        requestStop();
+      } catch (error) {
+        if (error.code !== 'ENOENT') console.error('DEMO_STOP_REQUEST_FAILED');
+      }
+    }, 750);
+    stopRequestTimer.unref();
+  }
   const ownedSignalListeners = new Map(['SIGINT','SIGTERM'].map(signal => [signal, process.listeners(signal)]));
   const [{ default: EmbeddedPostgres }, { default: pg }] = await Promise.all([
     import('embedded-postgres'), import('pg'),
@@ -256,6 +274,7 @@ try {
   }
   await ledgerIsCurrent(pool, config.installationId);
   web = childProcess(['server.mjs','--dev'], env, config);
+  if (stopping && web.exitCode === null) web.kill('SIGTERM');
   await waitForHealth(web);
   console.log(`\nDEMO_LOCAL_READY: http://127.0.0.1:${webPort}/admin/entrar`);
   console.log('Somente massa fictícia. Sem SMTP, Funnel, dados reais ou backup operacional.');
@@ -281,5 +300,6 @@ try {
     console.error('DEMO_PG_STOP_FAILED:', redact(error?.message, config)); process.exitCode = 1;
   }
   if (lockOwned) await unlink(lockFile).catch(() => { process.exitCode = 1; });
+  if (stopRequestTimer) clearInterval(stopRequestTimer);
   if (config && demoDir) console.log('DEMO_LOCAL_DATA_PRESERVED: true (no backup, no remote access)');
 }
