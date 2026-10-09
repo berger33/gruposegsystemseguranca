@@ -378,7 +378,7 @@ def steps_list(ov, items, t, y0=548, x0=LC_X):
 
 # ------------------------------------------------------------------ plano de captura (janela)
 def shot(*, cam, keys, t, frac, url, kicker=None, head=None, cap=None, sub=None,
-         focus=(), cursor=None, clicks=(), chapter=None, steps=None, typing=()):
+         focus=(), cursor=None, clicks=(), chapter=None, steps=None, typing=(), still=False, hold=False):
     camo = Cam(cam, keys)
     content = camo.frame(t)
 
@@ -387,8 +387,8 @@ def shot(*, cam, keys, t, frac, url, kicker=None, head=None, cap=None, sub=None,
     amt = max([fade(t, f["t0"], 0.5) for f in act], default=0.0)
     content = dim(content, rects, amt)
 
-    dy = int(round(-(1 - eo3(t / 0.7)) * 34 + 5 * math.sin(2 * math.pi * t / 7.0)))
-    alpha = eo3(t / 0.5)
+    dy = 0 if still else int(round(-(1 - eo3(t / 0.7)) * 34))
+    alpha = 1.0 if still else eo3(t / 0.5)
     canvas = place_window(stage(), content, url, dy, alpha)
 
     ov = Ov()
@@ -457,11 +457,11 @@ def shot(*, cam, keys, t, frac, url, kicker=None, head=None, cap=None, sub=None,
         draw_cursor(ov, X, Y, a_)
 
     if head:
-        head_block(ov, kicker, head, t, y0=290)
+        head_block(ov, kicker, head, 9.0 if hold else t, y0=290)
     if steps:
         steps_list(ov, steps, t)
     if cap:
-        caption(ov, cap, sub, t)
+        caption(ov, cap, sub, 9.0 if hold else t)
     chapter_bar(ov, chapter, frac)
     brand(ov)
     return compose(canvas, ov)
@@ -594,7 +594,29 @@ def tr_wipe(A, B, e):
     edge = np.exp(-((_DN - thr) / 0.007) ** 2)[..., None]
     return A * (1 - m) + B * m + edge * np.array([150, 180, 255], np.float32) * 0.9
 
-TRANS = {"dissolve": tr_dissolve, "whip": tr_whip, "zoom": tr_zoom, "wipe": tr_wipe}
+def tr_win(A, B, e):
+    """Só a tela do programa muda: o fundo, o texto e a barra ficam; a captura sai e entra deslizando dentro da janela."""
+    out = A * (1 - e) + B * e                     # textos e fundo: cruzamento sutil (fundo idêntico)
+    x0, y0 = WIN_X, WIN_Y
+    x1, y1 = x0 + CW, y0 + CH + CHROME
+    yc = y0 + CHROME
+    st = np.concatenate([A[yc:y1, x0:x1], B[yc:y1, x0:x1]], axis=1)
+    acc = np.zeros((CH, CW, 3), np.float32); K = 4
+    for k in range(K):                              # desfoque de movimento
+        ee = clamp(e + (k - (K - 1) / 2) * 0.012)
+        off = int(round(CW * ee))
+        acc += st[:, off:off + CW] / K
+    xb = CW * (1 - e)                               # borda de entrada da nova captura
+    xs = np.arange(CW, dtype=np.float32)
+    acc *= (1 - 0.30 * np.exp(-((xs - xb) / 22.0) ** 2))[None, :, None]
+    e2 = clamp((e - 0.25) / 0.5)                    # barra do navegador: troca de endereço suave
+    chrome_ = A[y0:yc, x0:x1] * (1 - e2) + B[y0:yc, x0:x1] * e2
+    win = np.vstack([chrome_, acc])
+    m = WINMASK[..., None]
+    out[y0:y1, x0:x1] = out[y0:y1, x0:x1] * (1 - m) + win * m
+    return out
+
+TRANS = {"dissolve": tr_dissolve, "whip": tr_whip, "zoom": tr_zoom, "wipe": tr_wipe, "win": tr_win}
 
 _VIG = None; _GRN = None
 def grade(arr, n):
@@ -731,17 +753,18 @@ def planos():
     # 16 — financeiro
     add(78.6, 80.8, S(cam="financeiro.png", url="/admin/financeiro",
         keys=[(0, (760, 600, 900)), (2.2, (760, 600, 900))],
-        kicker="FINANCEIRO", head="Contas e recorrência", chapter=6,
+        kicker="FINANCEIRO", head="Contas e recorrência", chapter=6, still=True,
         focus=[dict(box=(340, 495, 1367, 786), t0=0.6, color=AMBER, tag="recebíveis por contrato e conta")]),
-        "whip", 0.35)
+        "win", 0.4)
 
     # 17 — montagem de papéis (cortes rápidos)
+    # título e barra ficam parados; só a tela do programa troca (gestão → RH → cliente)
     add(80.8, 81.85, S(cam="marcelo.png", url="/admin/painel", keys=[(0, (720, 600, 1440)), (1.05, (720, 600, 1440))],
-        kicker="PAPÉIS", head="Só o que precisa ver", cap="papel: gestão"), "whip", 0.3)
+        kicker="PAPÉIS", head="Só o que precisa ver", cap="papel: gestão", chapter=6, still=True), "win", 0.4)
     add(81.85, 82.9, S(cam="rh.png", url="/admin/rh", keys=[(0, (720, 600, 1440)), (1.05, (720, 600, 1440))],
-        kicker="PAPÉIS", head="Só o que precisa ver", cap="papel: recursos humanos"), "whip", 0.3)
+        kicker="PAPÉIS", head="Só o que precisa ver", cap="papel: recursos humanos", chapter=6, still=True, hold=True), "win", 0.4)
     add(82.9, 84.0, S(cam="clientecont.png", url="/portal", keys=[(0, (720, 450, 1440)), (1.1, (720, 450, 1440))],
-        kicker="PAPÉIS", head="Só o que precisa ver", cap="papel: cliente"), "whip", 0.3)
+        kicker="PAPÉIS", head="Só o que precisa ver", cap="papel: cliente", chapter=6, still=True, hold=True), "win", 0.4)
 
     # 18 — cartela final
     add(84.0, TOTAL, lambda t, f: card_end(t), "dissolve", 0.6)

@@ -9,6 +9,9 @@ Vídeo de **1 min 29 s**, 1920×1080, 30 fps, H.264 + AAC, `trailer-90s.mp4` (�
 - Clique no site: foco no botão "Solicitar proposta", leve escurecimento, cursor até o botão, onda de clique com efeito de pressão.
 - Destaques recalculados pelas bordas reais dos elementos (campos, botões, abas, cards), para encaixar nas caixas mostradas.
 - Locução, roteiro e tempos inalterados.
+- **A partir de 1:18:** a transição passa a ser só da tela do programa. Fundo, título, barra de capítulos e logotipo ficam parados; a captura sai e entra deslizando dentro da janela do navegador.
+- **Papéis (≈80–84 s):** o título "Só o que precisa ver" permanece fixo durante a troca de gestão → RH → cliente; só a janela muda.
+- A janela não tem mais o balanço contínuo de 5 px, para ficar firme durante as trocas.
 
 ## O que mudou na v2
 - **Texto e locução mantidos** (mesmos sete blocos de voz pt-BR e mesmos tempos).
