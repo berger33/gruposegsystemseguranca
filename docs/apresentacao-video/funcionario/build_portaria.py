@@ -279,9 +279,9 @@ def logo_small(size):
     return _logo[size]
 
 def brand(ov, a=1.0):
-    ov.im.alpha_composite(logo_small(50), (LC_X - 6, 26))
-    ov.d.text((LC_X + 56, 36), "GRUPO SEG SYSTEM", font=F(22, 800), fill=(255, 255, 255, int(240 * a)), anchor="ls")
-    ov.d.text((LC_X + 56, 62), "Segurança integrada", font=F(16, 500), fill=(170, 186, 224, int(220 * a)), anchor="ls")
+    ov.im.alpha_composite(logo_small(67), (LC_X - 6, 22))
+    ov.d.text((LC_X + 76, 42), "GRUPO SEG SYSTEM", font=F(29, 800), fill=(255, 255, 255, int(240 * a)), anchor="ls")
+    ov.d.text((LC_X + 76, 72), "Segurança integrada", font=F(21, 500), fill=(170, 186, 224, int(220 * a)), anchor="ls")
     s = "demonstração · dados fictícios"
     f = F(19, 600); w = f.getlength(s) + 36
     x1 = W - 56
