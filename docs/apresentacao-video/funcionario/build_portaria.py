@@ -704,12 +704,12 @@ def planos():
                 dict(box=(1128, 1028, 2072, 1116), t0=1.7, t1=2.7, color=ACENTO, tag="senha pessoal"),
                 dict(box=(1128, 1154, 2072, 1242), t0=2.8, color=AMBER, press=3.9, tag="acesso seguro")],
          cursor=[(2.2, (1600, 1100)), (3.4, (1600, 1198))], clicks=[3.9])
-    # 3 — início (c2)
+    # 3 — início (c2 trecho 13–17 s; t0 relativo ao início da cena, 12,5 s)
     prog(12.5, 17.90, "win", 0.4, cam="home.png", url="/funcionario",
-         keys=[(0, (1620, 940, 1700))], kicker="INÍCIO", head="A escala e os atalhos do dia", chapter=1,
-         focus=[dict(box=(1338, 808, 1862, 960), t0=0.5, t1=1.7, color=AMBER, tag="novo pedido"),
-                dict(box=(796, 808, 1320, 960), t0=1.8, t1=2.9, color=ACENTO, tag="minha jornada"),
-                dict(box=(1880, 808, 2404, 960), t0=3.0, color=ACENTO, tag="documentos")])
+         keys=[(0, (1600, 960, 1700))], kicker="INÍCIO", head="A escala e os atalhos do dia", chapter=1,
+         focus=[dict(box=(796, 548, 1588, 706), t0=2.12, t1=3.02, color=ACENTO, tag="a escala"),
+                dict(box=(796, 992, 2404, 1344), t0=3.11, t1=4.07, color=ACENTO, tag="os comunicados"),
+                dict(box=(796, 740, 2404, 964), t0=4.11, color=AMBER, tag="atalhos do dia")])
     # 4 — ponto (c3: 17,90–27,84 s)
     prog(17.90, 28.09, "win", 0.4, cam="ponto.png", url="/funcionario/jornada",
          keys=[(0, (1060, 760, 1300)), (4.2, (1060, 760, 1300)), (5.4, (1600, 1150, 1700)), (9.8, (1600, 1150, 1700))],
@@ -717,13 +717,15 @@ def planos():
          focus=[dict(box=(796, 662, 1320, 814), t0=0.8, t1=4.6, color=AMBER, press=2.8, tag="toque em Entrada"),
                 dict(box=(796, 1132, 2404, 1192), t0=5.6, color=ACENTO, tag="comprovante na hora")],
          cursor=[(0.3, (1450, 520)), (2.0, (1058, 738))], clicks=[2.8])
-    # 5 — ocorrência (c4: 28,09–38,99 s)
+    # 5 — ocorrência (c4: "Algo fora do normal na portaria? Registre a ocorrência com Categoria, Gravidade, Local e o que aconteceu. O registro segue direto para quem vai analisar")
     prog(28.09, 39.24, "win", 0.4, cam="ocorrencia.png", url="/funcionario/pedidos",
-         keys=[(0, (1600, 1000, 1600))], kicker="OCORRÊNCIA", head="Relate na hora, com o que importa", chapter=3,
-         focus=[dict(box=(828, 836, 2372, 926), t0=0.6, t1=3.6, color=ACENTO, tag="gravidade: baixa, média, alta ou crítica"),
-                dict(box=(828, 1134, 2372, 1258), t0=3.8, t1=7.0, color=AMBER, tag="o que ocorreu, com clareza"),
-                dict(box=(828, 1444, 2372, 1532), t0=7.2, color=AMBER, press=8.8, tag="enviar para análise")],
-         cursor=[(6.9, (1600, 1000)), (8.2, (1600, 1488))], clicks=[8.8])
+         keys=[(0, (1600, 1080, 1750))], kicker="OCORRÊNCIA", head="Relate na hora, com o que importa", chapter=3,
+         focus=[dict(box=(828, 686, 2372, 776), t0=3.9, t1=4.85, color=ACENTO, tag="categoria"),
+                dict(box=(828, 836, 2372, 926), t0=4.95, t1=5.7, color=ACENTO, tag="gravidade"),
+                dict(box=(828, 1318, 2372, 1406), t0=5.8, t1=6.35, color=ACENTO, tag="local"),
+                dict(box=(828, 1134, 2372, 1258), t0=6.8, t1=8.0, color=AMBER, tag="o que aconteceu"),
+                dict(box=(828, 1444, 2372, 1532), t0=8.0, color=AMBER, press=9.9, tag="segue para análise")],
+         cursor=[(8.6, (1600, 1100)), (9.6, (1600, 1488))], clicks=[9.9])
     # 6 — pedidos de portaria: uniforme e EPI (c5: 39,24–49,18 s)
     prog(39.24, 49.43, "win", 0.4, cam="demanda.png", url="/funcionario/mais",
          keys=[(0, (1600, 520, 1600))], kicker="PEDIDOS DE PORTARIA", head="Uniforme, EPI e troca de plantão", chapter=4,
