@@ -230,7 +230,7 @@
       '<section class="login-hero">' +
       '<div class="orb o1"></div><div class="orb o2"></div><div class="grid-lines"></div>' +
       '<div class="login-inner">' +
-      '<div class="hero-brand reveal"><img class="brand-logo" src="vendor/seg-system-logo-circle.svg" alt=""><span>Academia Seg System Segurança</span><span class="pill-soon">Em construção</span></div>' +
+      '<div class="hero-brand reveal"><img class="brand-logo" src="vendor/seg-system-logo-circle.svg?v=2" alt=""><span>Academia Seg System Segurança</span><span class="pill-soon">Em construção</span></div>' +
       '<div class="login-copy">' +
       '<p class="eyebrow light reveal" style="--d:1">Capacitação corporativa</p>' +
       '<h2 class="reveal" style="--d:2">Aprender no ritmo do seu trabalho.</h2>' +
@@ -247,7 +247,7 @@
       '<section class="login-panel">' +
       '<div class="login-card reveal" style="--d:1">' +
       '<button type="button" class="theme-toggle js-theme login-theme" aria-label="Alternar tema"></button>' +
-      '<div class="login-head"><img class="brand-logo" src="vendor/seg-system-logo-circle.svg" alt=""><h1 class="grad-text">Entrar na Academia</h1><p>Use o e-mail e a senha informados pelo seu gestor.</p></div>' +
+      '<div class="login-head"><img class="brand-logo" src="vendor/seg-system-logo-circle.svg?v=2" alt=""><h1 class="grad-text">Entrar na Academia</h1><p>Use o e-mail e a senha informados pelo seu gestor.</p></div>' +
       '<form id="login-form" class="form" novalidate>' +
       '<div class="field"><label for="f-email">E-mail</label><div class="input-wrap">' + icon('mail') +
       '<input id="f-email" name="email" type="email" autocomplete="username" required placeholder="seu.nome@empresa.com.br"></div></div>' +
@@ -577,7 +577,7 @@
       '<div class="cert-actions"><p>Para salvar: escolha <strong>Salvar como PDF</strong> na janela de impressão.</p><div><button type="button" class="btn-ghost sm" id="cert-close">Fechar</button><button type="button" class="btn-primary sm" id="cert-print">Imprimir / salvar PDF ' + icon('arrow', 'sm') + '</button></div></div>' +
       '<article class="certificate-paper" id="certificate-paper">' +
         '<div class="certificate-border"><div class="certificate-inner">' +
-          '<header class="certificate-brand"><img src="vendor/seg-system-logo-circle.svg" alt="Logo Grupo SEG System Segurança"><div><strong>GRUPO SEG SYSTEM</strong><span>SEGURANÇA INTEGRADA</span></div><span class="certificate-seal" aria-hidden="true">SGS</span></header>' +
+          '<header class="certificate-brand"><img src="vendor/seg-system-logo-circle.svg?v=2" alt="Logo Grupo SEG System Segurança"><div><strong>GRUPO SEG SYSTEM</strong><span>SEGURANÇA INTEGRADA</span></div><span class="certificate-seal" aria-hidden="true">SGS</span></header>' +
           '<p class="certificate-kicker">ACADEMIA · DESENVOLVIMENTO PROFISSIONAL</p>' +
           '<h1 id="certificate-title">Certificado de conclusão</h1>' +
           '<p id="certificate-description" class="certificate-intro">Certificamos que</p>' +
@@ -644,7 +644,7 @@
     setPage('<section class="validation-card card" aria-live="polite"><p class="eyebrow">Validação pública</p><h1>Consultando certificado…</h1><p class="muted">Aguarde enquanto verificamos o código.</p></section>', 'Validar certificado');
     return api('/api/certificates/' + encodeURIComponent(normalized)).then(function (data) {
       var cert = data.certificate;
-      setPage('<section class="validation-card card" role="status"><img class="validation-logo" src="vendor/seg-system-logo-circle.svg" alt="Grupo SEG System Segurança"><span class="validation-mark valid">' + icon('check') + '</span><p class="eyebrow">Validação pública · ' + esc(cert.code) + '</p><h1>Certificado válido</h1><p class="validation-name">' + esc(cert.recipientName) + '</p><p class="validation-copy">concluiu a trilha</p><h2>' + esc(cert.trackTitle) + '</h2><div class="validation-meta"><span><strong>Carga horária</strong>' + esc(workloadLabel(cert.workloadMinutes)) + '</span><span><strong>Emitido em</strong>' + esc(formatCertificateDate(cert.issuedAt)) + '</span></div><p class="validation-note">Este registro foi localizado na base de certificados da Academia Seg System Segurança.</p>' + (document.documentElement.dataset.demo === 'true' ? '<p class="validation-note">Esta é uma demonstração: a validação global depende da publicação com servidor persistente.</p>' : '') + '<a class="btn-ghost" href="#/">Voltar à Academia</a></section>', 'Certificado válido');
+      setPage('<section class="validation-card card" role="status"><img class="validation-logo" src="vendor/seg-system-logo-circle.svg?v=2" alt="Grupo SEG System Segurança"><span class="validation-mark valid">' + icon('check') + '</span><p class="eyebrow">Validação pública · ' + esc(cert.code) + '</p><h1>Certificado válido</h1><p class="validation-name">' + esc(cert.recipientName) + '</p><p class="validation-copy">concluiu a trilha</p><h2>' + esc(cert.trackTitle) + '</h2><div class="validation-meta"><span><strong>Carga horária</strong>' + esc(workloadLabel(cert.workloadMinutes)) + '</span><span><strong>Emitido em</strong>' + esc(formatCertificateDate(cert.issuedAt)) + '</span></div><p class="validation-note">Este registro foi localizado na base de certificados da Academia Seg System Segurança.</p>' + (document.documentElement.dataset.demo === 'true' ? '<p class="validation-note">Esta é uma demonstração: a validação global depende da publicação com servidor persistente.</p>' : '') + '<a class="btn-ghost" href="#/">Voltar à Academia</a></section>', 'Certificado válido');
     }).catch(function (err) {
       if (err.status === 404) {
         setPage('<section class="validation-card card" role="alert"><span class="validation-mark invalid">' + icon('x') + '</span><p class="eyebrow">Validação pública · ' + esc(normalized) + '</p><h1>Certificado não encontrado</h1><p class="muted">Este código não consta na base de certificados. Verifique se foi digitado corretamente.</p><a class="btn-ghost" href="#/">Voltar à Academia</a></section>', 'Certificado não encontrado');
