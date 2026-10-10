@@ -2,7 +2,7 @@
 export const ADMIN_GROUPS = Object.freeze([
   { id: 'visao', label: 'Visão e pendências', hrefs: ['/admin/marcelo', '/admin/analytics', '/admin/relatorios'] },
   { id: 'comercial', label: 'Clientes e comercial', hrefs: ['/admin/crm', '/admin/carteira', '/admin/leads', '/admin/inteligencia', '/admin/expansao', '/admin/satisfacao'] },
-  { id: 'entrega', label: 'Entrega de serviços', hrefs: ['/admin/contratos', '/admin/operacao', '/admin/patrimonio', '/admin/frota', '/admin/terceiros', '/admin/qualidade', '/admin/emergencial'] },
+  { id: 'entrega', label: 'Entrega de serviços', hrefs: ['/admin/contratos', '/admin/operacao', '/admin/patrimonio', '/admin/frota', '/admin/terceiros', '/admin/qualidade', '/admin/emergencial', '/admin/continuidade'] },
   { id: 'pessoas', label: 'Pessoas', hrefs: ['/admin/funcionarios'] },
   { id: 'gestao', label: 'Financeiro e conformidade', hrefs: ['/admin/financeiro', '/admin/compliance', '/admin/licitacoes', '/admin/fornecedores'] },
   { id: 'portais', label: 'Portais e conhecimento', hrefs: ['/admin/clientes', '/admin/conhecimento', '/admin/portal'] },
