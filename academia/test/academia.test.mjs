@@ -9,7 +9,7 @@ import { createApp } from '../src/app.mjs';
 import { createSessions } from '../src/auth.mjs';
 import { createStore } from '../src/store.mjs';
 import { buildSeedState, DEMO_USERS, userIdFor, DEFAULT_DEMO_PASSWORD, demoPassword } from '../src/seed.mjs';
-import { TRACKS, lessonCount } from '../src/content.mjs';
+import { TRACKS, lessonCount, publishedCount, isPending } from '../src/content.mjs';
 import { levelFor, POINTS } from '../src/gamification.mjs';
 import { verifyPassword, hashPassword } from '../src/auth.mjs';
 
@@ -162,17 +162,18 @@ test('escolha inválida é rejeitada', async () => {
 
 test('concluir todas as aulas da trilha dá bônus, selo e aviso de trilha concluída', async () => {
   const { cookie } = await login('sergio.faria@academia.exemplo');
-  // Sérgio já concluiu as três aulas da trilha de gestão (semente); outro usuário faz o caminho completo.
+  // Sérgio já concluiu as aulas publicadas da trilha de gestão (semente); outro usuário faz o caminho completo.
   const { cookie: c2 } = await login('helena.duarte@academia.exemplo');
   const track = TRACKS.find(t => t.id === 'gestao-painel');
+  const publicadas = track.lessons.filter(l => !isPending(l));
   let last;
-  for (const lesson of track.lessons) {
+  for (const lesson of publicadas) {
     last = await request('POST', `/api/lessons/${lesson.id}/complete`, { cookie: c2, body: { choice: lesson.quiz.answer } });
   }
   assert.equal(last.json.trackCompleted, true);
   assert.ok(last.json.newBadges.some(b => b.id === 'trilha-gestao-painel'));
   assert.ok(last.json.newBadges.some(b => b.id === 'acerto-gestao-painel'));
-  const expected = track.lessons.length * (POINTS.lesson + POINTS.quiz) + POINTS.track;
+  const expected = publicadas.length * (POINTS.lesson + POINTS.quiz) + POINTS.track;
   assert.equal(last.json.points, expected);
 
   const home = await request('GET', '/api/home', { cookie: c2 });
@@ -184,14 +185,14 @@ test('concluir todas as aulas da trilha dá bônus, selo e aviso de trilha concl
   assert.ok(sergio.json.badges.earned.some(b => b.id === 'trilha-gestao-painel'));
 });
 
-test('níveis sobem conforme a pontuação', () => {
+test('níveis sobem conforme a pontuação (0 / 300 / 900 / 1.800)', () => {
   assert.equal(levelFor(0).name, 'Inicial');
-  assert.equal(levelFor(80).name, 'Em desenvolvimento');
-  assert.equal(levelFor(199).name, 'Em desenvolvimento');
-  assert.equal(levelFor(200).name, 'Proficiente');
-  assert.equal(levelFor(400).name, 'Referência');
-  assert.equal(levelFor(400).next, null);
-  assert.equal(levelFor(400).percent, 100);
+  assert.equal(levelFor(300).name, 'Em desenvolvimento');
+  assert.equal(levelFor(899).name, 'Em desenvolvimento');
+  assert.equal(levelFor(900).name, 'Proficiente');
+  assert.equal(levelFor(1800).name, 'Referência');
+  assert.equal(levelFor(1800).next, null);
+  assert.equal(levelFor(1800).percent, 100);
 });
 
 test('ranking mostra apenas colegas do mesmo setor e destaca quem consulta', async () => {
@@ -263,13 +264,24 @@ test('senha de demonstração é obrigatória em produção', () => {
   assert.throws(() => demoPassword({ NODE_ENV: 'production' }));
 });
 
-test('conteúdo: ids únicos, quiz consistente e contagem de aulas', () => {
+test('conteúdo: estrutura do plano, ids únicos e quiz consistente', () => {
   const ids = TRACKS.flatMap(t => t.lessons.map(l => l.id));
   assert.equal(new Set(ids).size, ids.length);
   assert.equal(lessonCount(), ids.length);
+  // Estrutura do plano de expansão: 24 trilhas (T25 fica de fora) e 165 aulas,
+  // sendo 28 publicadas com quiz e o restante em construção.
+  assert.equal(TRACKS.length, 24);
+  assert.equal(lessonCount(), 165);
+  assert.equal(publishedCount(), 28);
   for (const track of TRACKS) {
-    assert.ok(track.audiences.length > 0);
+    assert.ok(track.audiences.length > 0, track.id);
+    assert.ok(track.group, track.id);
     for (const lesson of track.lessons) {
+      if (isPending(lesson)) {
+        assert.ok(['S', 'P', 'T', 'D'].includes(lesson.tag), lesson.id);
+        assert.equal(lesson.quiz, undefined, lesson.id);
+        continue;
+      }
       assert.ok(lesson.quiz.options.length >= 2, lesson.id);
       assert.ok(Number.isInteger(lesson.quiz.answer) && lesson.quiz.answer < lesson.quiz.options.length, lesson.id);
       assert.ok(lesson.steps.length >= 2, lesson.id);
@@ -327,4 +339,119 @@ test('sessão por token no cabeçalho Authorization (sem depender do cookie)', a
     http.get(base + '/api/me', { headers }, r => { r.resume(); r.on('end', () => resolve(r.statusCode)); }).on('error', reject);
   });
   assert.equal(gone, 401);
+});
+
+// ---------- Área de acessos às trilhas e aulas em construção ----------
+
+test('área de acessos: só Marcelo, RH e admin entram; os demais recebem 403', async () => {
+  const { cookie: func } = await login('carla.mendes@academia.exemplo');
+  assert.equal((await request('GET', '/api/accesses', { cookie: func })).status, 403);
+  const { cookie: ti } = await login('tiago.ramos@academia.exemplo');
+  assert.equal((await request('GET', '/api/accesses', { cookie: ti })).status, 403);
+  const { cookie: rh } = await login('juliana.prado@academia.exemplo');
+  assert.equal((await request('GET', '/api/accesses', { cookie: rh })).status, 200);
+  const { cookie: gestao } = await login('helena.duarte@academia.exemplo');
+  const matrix = await request('GET', '/api/accesses', { cookie: gestao });
+  assert.equal(matrix.status, 200);
+  assert.equal(matrix.json.people.length, DEMO_USERS.length);
+  assert.equal(matrix.json.tracks.length, TRACKS.length);
+  assert.ok(matrix.json.labels.padrao);
+  const carlaId = userIdFor('carla.mendes@academia.exemplo');
+  assert.equal(matrix.json.states[carlaId]['fundamentos'], 'padrao');
+  assert.equal(matrix.json.states[carlaId]['compliance-gestao'], 'sem');
+  const helenaId = userIdFor('helena.duarte@academia.exemplo');
+  assert.equal(matrix.json.states[helenaId]['compliance-gestao'], 'gestao');
+});
+
+test('liberação individual dá acesso a trilha de outro setor e fica na auditoria', async () => {
+  const { cookie: func } = await login('carla.mendes@academia.exemplo');
+  assert.equal((await request('GET', '/api/tracks/compliance-gestao', { cookie: func })).status, 404);
+  const { cookie: gestao } = await login('helena.duarte@academia.exemplo');
+  const res = await request('POST', '/api/accesses/user', {
+    cookie: gestao,
+    body: { userId: userIdFor('carla.mendes@academia.exemplo'), trackId: 'compliance-gestao', action: 'grant', reason: 'Apoio ao projeto de compliance do período' },
+  });
+  assert.equal(res.status, 200);
+  const after = await request('GET', '/api/tracks/compliance-gestao', { cookie: func });
+  assert.equal(after.status, 200);
+  const matrix = await request('GET', '/api/accesses', { cookie: gestao });
+  assert.equal(matrix.json.states[userIdFor('carla.mendes@academia.exemplo')]['compliance-gestao'], 'liberada');
+  assert.ok(matrix.json.audit.some(e => e.action === 'grant' && e.trackId === 'compliance-gestao' && e.reason.includes('compliance')));
+});
+
+test('bloqueio individual tira trilha do próprio setor', async () => {
+  const { cookie: func } = await login('rafael.nunes@academia.exemplo');
+  assert.equal((await request('GET', '/api/tracks/funcionario-pedidos', { cookie: func })).status, 200);
+  const { cookie: gestao } = await login('helena.duarte@academia.exemplo');
+  const res = await request('POST', '/api/accesses/user', {
+    cookie: gestao,
+    body: { userId: userIdFor('rafael.nunes@academia.exemplo'), trackId: 'funcionario-pedidos', action: 'block', reason: 'Trilha reservada à próxima turma' },
+  });
+  assert.equal(res.status, 200);
+  assert.equal((await request('GET', '/api/tracks/funcionario-pedidos', { cookie: func })).status, 404);
+  const matrix = await request('GET', '/api/accesses', { cookie: gestao });
+  assert.equal(matrix.json.states[userIdFor('rafael.nunes@academia.exemplo')]['funcionario-pedidos'], 'bloqueada');
+});
+
+test('aulas em construção aparecem marcadas, não contam no progresso e não são concluíveis', async () => {
+  const { cookie } = await login('diego.moraes@academia.exemplo');
+  const home = await request('GET', '/api/home', { cookie });
+  assert.equal(home.status, 200);
+  // Público do controlador de acesso: T01 (3) + T03 (2) + T04 (1) aulas publicadas.
+  assert.equal(home.json.lessonsTotal, 6);
+  const row = home.json.tracks.find(t => t.id === 'controle-acesso');
+  assert.ok(row.pendingCount > 0);
+  const track = await request('GET', '/api/tracks/controle-acesso', { cookie });
+  assert.equal(track.status, 200);
+  assert.equal(track.json.total, 0);
+  assert.ok(track.json.lessons.every(l => l.pending === true && l.tag));
+  const lesson = await request('GET', '/api/lessons/t22-credenciais', { cookie });
+  assert.equal(lesson.status, 404);
+  assert.equal(lesson.json.error, 'aula_em_construcao');
+  const attempt = await request('POST', '/api/lessons/t22-credenciais/complete', { cookie, body: { choice: 0 } });
+  assert.equal(attempt.status, 404);
+  assert.equal(attempt.json.error, 'aula_em_construcao');
+});
+
+test('padrão do setor libera e retira trilhas para o setor inteiro', async () => {
+  const { cookie: gestao } = await login('helena.duarte@academia.exemplo');
+  const { cookie: diego } = await login('diego.moraes@academia.exemplo');
+  assert.equal((await request('GET', '/api/tracks/portaria-rotina', { cookie: diego })).status, 404);
+  const on = await request('POST', '/api/accesses/sector', {
+    cookie: gestao,
+    body: { sector: 'controlador_acesso', trackId: 'portaria-rotina', on: true, reason: 'Equipe fará apoio à portaria no período' },
+  });
+  assert.equal(on.status, 200);
+  assert.equal((await request('GET', '/api/tracks/portaria-rotina', { cookie: diego })).status, 200);
+
+  const { cookie: carla } = await login('carla.mendes@academia.exemplo');
+  assert.equal((await request('GET', '/api/tracks/funcionario-pedidos', { cookie: carla })).status, 200);
+  const off = await request('POST', '/api/accesses/sector', {
+    cookie: gestao,
+    body: { sector: 'funcionario', trackId: 'funcionario-pedidos', on: false, reason: 'Trilha suspensa para revisão do conteúdo' },
+  });
+  assert.equal(off.status, 200);
+  assert.equal((await request('GET', '/api/tracks/funcionario-pedidos', { cookie: carla })).status, 404);
+});
+
+test('toda alteração de acesso exige motivo e fica registrada na auditoria', async () => {
+  const { cookie: gestao } = await login('helena.duarte@academia.exemplo');
+  const semMotivo = await request('POST', '/api/accesses/user', {
+    cookie: gestao,
+    body: { userId: userIdFor('diego.moraes@academia.exemplo'), trackId: 'gestao-painel', action: 'grant' },
+  });
+  assert.equal(semMotivo.status, 400);
+  assert.equal(semMotivo.json.error, 'motivo_obrigatorio');
+  const { cookie: func } = await login('carla.mendes@academia.exemplo');
+  const semPermissao = await request('POST', '/api/accesses/user', {
+    cookie: func,
+    body: { userId: userIdFor('diego.moraes@academia.exemplo'), trackId: 'gestao-painel', action: 'grant', reason: 'Tentativa sem alçada' },
+  });
+  assert.equal(semPermissao.status, 403);
+  const matrix = await request('GET', '/api/accesses', { cookie: gestao });
+  assert.ok(matrix.json.audit.length >= 4);
+  for (const entry of matrix.json.audit.slice(0, 5)) {
+    assert.ok(entry.at && entry.byId && entry.byName && entry.reason, entry.trackId);
+    assert.ok(entry.trackId);
+  }
 });

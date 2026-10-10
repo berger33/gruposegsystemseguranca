@@ -42,18 +42,39 @@
     search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
     logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
     star: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+    sliders: '<path d="M4 7h9"/><path d="M17 7h3"/><circle cx="15" cy="7" r="2"/><path d="M4 17h3"/><path d="M11 17h9"/><circle cx="9" cy="17" r="2"/>',
+    download: '<path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/>',
+    history: '<path d="M3 12a9 9 0 1 0 2.6-6.3"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/>',
   };
   var TRACK_ICON = {
     fundamentos: 'layers',
+    'equipe-entrada': 'users',
     'funcionario-ponto': 'clock',
+    'funcionario-pedidos': 'book',
     'cliente-portal': 'users',
-    'rh-processos': 'briefcase',
+    'cliente-servicos': 'briefcase',
     'comercial-funil': 'target',
-    'financeiro-receber': 'chart',
-    'operacao-escala': 'pin',
     'gestao-painel': 'grid',
-    'ti-controle': 'shield',
+    'rh-processos': 'briefcase',
+    'rh-vida': 'users',
+    'rh-folha': 'chart',
+    'operacao-escala': 'pin',
+    'operacao-postos': 'pin',
+    'operacao-recursos': 'grid',
+    'contratos-gestao': 'book',
+    'financeiro-receber': 'chart',
+    'compliance-gestao': 'shield',
+    'admin-acessos': 'lock',
+    'admin-sistema': 'shield',
+    'ti-seguranca': 'shield',
+    'portaria-rotina': 'pin',
+    'controle-acesso': 'lock',
+    'servicos-gerais': 'sparkles',
+    'instalacao-seguranca': 'target',
   };
+  var TAG_LABEL = { S: 'Sistema', P: 'Procedimento', T: 'Conteúdo técnico', D: 'Demonstração' };
+  var STATE_LABEL = { gestao: 'Papel de gestão', padrao: 'Padrão do setor', liberada: 'Liberada', bloqueada: 'Bloqueada', sem: 'Sem acesso' };
+  var STATE_GLYPH = { gestao: '★', padrao: '●', liberada: '＋', bloqueada: '－', sem: '○' };
 
   function esc(value) {
     return String(value === undefined || value === null ? '' : value).replace(/[&<>"']/g, function (c) {
@@ -161,7 +182,7 @@
 
   function toast(options) {
     var el = document.createElement('div');
-    el.className = 'toast';
+    el.className = 'toast' + (options.danger ? ' danger' : '');
     el.setAttribute('role', 'status');
     el.innerHTML = '<span class="t-ico">' + icon(options.icon || 'sparkles') + '</span><div><strong>' + esc(options.title) + '</strong>' +
       (options.text ? '<div class="small">' + esc(options.text) + '</div>' : '') + '</div><span class="t-bar"></span>';
@@ -369,12 +390,14 @@
 
   function trackCard(t, i) {
     var accent = accentFor(t.id);
-    var status = t.complete ? '<span class="pill-ok">' + icon('check') + ' Concluída</span>' : '<span class="pct">' + t.percent + '%</span>';
+    var status = t.complete
+      ? '<span class="pill-ok">' + icon('check') + ' Concluída</span>'
+      : (t.total === 0 ? '<span class="pill-muted">Em construção</span>' : '<span class="pct">' + t.percent + '%</span>');
     return '<a class="track-card card spot reveal" style="--d:' + i + ';--accent:' + accent + '" href="#/trilha/' + esc(t.id) + '">' +
       '<div class="track-top"><span class="track-ico">' + icon(TRACK_ICON[t.id] || 'book', 'lg') + '</span>' + status + '</div>' +
       '<h3>' + esc(t.title) + '</h3><p>' + esc(t.summary) + '</p>' +
       '<div class="bar"><span data-bar="' + t.percent + '"></span></div>' +
-      '<div class="track-meta"><span>' + t.done + ' de ' + t.total + (t.total === 1 ? ' aula' : ' aulas') + '</span><span>' + icon('arrow', 'sm') + '</span></div></a>';
+      '<div class="track-meta"><span>' + t.done + ' de ' + t.total + (t.total === 1 ? ' aula' : ' aulas') + (t.pendingCount ? ' · ' + t.pendingCount + ' em construção' : '') + '</span><span>' + icon('arrow', 'sm') + '</span></div></a>';
   }
 
   function renderHome() {
@@ -420,7 +443,13 @@
         '<div class="card stat-card reveal" style="--d:4"><span class="stat-ico">' + icon('target') + '</span><div><strong data-count="' + d.tracks.length + '">0</strong><span>Trilhas do setor</span></div></div>' +
         '</div>';
 
-      html += '<div class="grid-home"><div>' +
+      var manage = d.user.canManage
+        ? '<a class="card access-cta reveal" style="--d:2" href="#/acessos"><span class="stat-ico">' + icon('sliders') + '</span>' +
+          '<div class="access-cta-body"><strong>Acessos às trilhas</strong><span class="muted small">Gerencie quem vê cada trilha: liberações, bloqueios e padrão do setor.</span></div>' +
+          icon('arrow', 'sm') + '</a>'
+        : '';
+
+      html += '<div class="grid-home"><div>' + manage +
         '<div class="section-head"><h2>Trilhas do seu setor</h2><span class="muted">' + d.tracks.length + (d.tracks.length === 1 ? ' trilha' : ' trilhas') + '</span></div>' +
         '<div class="tracks">' + d.tracks.map(trackCard).join('') + '</div>' +
         '</div><aside class="stack">' +
@@ -438,6 +467,13 @@
     return api('/api/tracks/' + encodeURIComponent(id)).then(function (t) {
       var accent = accentFor(t.id);
       var items = t.lessons.map(function (l, i) {
+        if (l.pending) {
+          return '<div class="tl-item pending reveal" style="--d:' + i + '">' +
+            '<span class="tl-node">' + icon('lock', 'sm') + '</span>' +
+            '<div class="tl-card card"><div><h3>' + esc(l.title) + '</h3>' +
+            '<p class="muted small">' + (TAG_LABEL[l.tag] ? 'Origem: ' + TAG_LABEL[l.tag] + ' · ' : '') + 'Conteúdo ainda não publicado.</p></div>' +
+            '<div class="tl-side"><span class="pill-soon-tag">Em construção</span></div></div></div>';
+        }
         return '<a class="tl-item reveal ' + (l.done ? 'done' : '') + '" style="--d:' + i + '" href="#/aula/' + esc(l.id) + '">' +
           '<span class="tl-node">' + (l.done ? icon('check', 'sm') : i + 1) + '</span>' +
           '<div class="tl-card card spot"><div><h3>' + esc(l.title) + '</h3><p class="muted small">' + esc(l.objective) + '</p></div>' +
@@ -590,6 +626,431 @@
     });
   }
 
+  // ---------- Acessos às trilhas (Marcelo, RH e admin) ----------
+  var accessView = null;
+  var accessFilters = { sector: '', person: '', track: '', changedOnly: false };
+  var accessSelection = {};
+
+  function accessStateChip(state) {
+    var label = STATE_LABEL[state] || state;
+    return '<span class="st st-' + esc(state) + '" title="' + esc(label) + '"><i>' + (STATE_GLYPH[state] || '·') + '</i>' + esc(label) + '</span>';
+  }
+
+  function accessLegend() {
+    return '<div class="access-legend">' + ['gestao', 'padrao', 'liberada', 'bloqueada', 'sem'].map(function (k) {
+      return '<span class="st st-' + k + '"><i>' + STATE_GLYPH[k] + '</i>' + STATE_LABEL[k] + '</span>';
+    }).join('') + '</div>';
+  }
+
+  function accessPersonMatches(person) {
+    if (accessFilters.sector && person.sector !== accessFilters.sector) return false;
+    if (accessFilters.person) {
+      var q = accessFilters.person.toLowerCase();
+      if (person.name.toLowerCase().indexOf(q) === -1 && person.email.toLowerCase().indexOf(q) === -1) return false;
+    }
+    if (accessFilters.changedOnly) {
+      var states = accessView.states[person.id] || {};
+      var any = false;
+      for (var key in states) {
+        if (states[key] === 'liberada' || states[key] === 'bloqueada') { any = true; break; }
+      }
+      if (!any) return false;
+    }
+    return true;
+  }
+
+  function accessTrackMatches(track) {
+    if (accessFilters.track) {
+      var q = accessFilters.track.toLowerCase();
+      if (track.title.toLowerCase().indexOf(q) === -1 && track.id.indexOf(q) === -1) return false;
+    }
+    return true;
+  }
+
+  function paintAccessMatrix() {
+    var host = document.getElementById('access-matrix');
+    if (!host || !accessView) return;
+    var tracks = accessView.tracks.filter(accessTrackMatches);
+    var people = accessView.people.filter(accessPersonMatches);
+    if (!tracks.length || !people.length) {
+      host.innerHTML = '<p class="empty">Nenhum resultado para os filtros escolhidos.</p>';
+      return;
+    }
+    var groups = [];
+    tracks.forEach(function (t) {
+      var last = groups[groups.length - 1];
+      if (last && last.name === t.group) last.count += 1;
+      else groups.push({ name: t.group, count: 1 });
+    });
+    var head =
+      '<tr class="grp">' + '<th class="person-col"></th>' + groups.map(function (g) {
+        return '<th colspan="' + g.count + '">' + esc(g.name) + '</th>';
+      }).join('') + '</tr>' +
+      '<tr>' + '<th class="person-col"><label class="chk"><input type="checkbox" id="chk-all"><span>Pessoa</span></label></th>' +
+      tracks.map(function (t) {
+        return '<th class="track-col"><button type="button" class="track-head" data-track="' + esc(t.id) + '" title="Padrão do setor: ' + esc(t.title) + '">' +
+          '<span>' + esc(t.title.split(':')[0]) + (t.pendingCount ? '<i class="pend-dot" title="' + t.pendingCount + ' aulas em construção"></i>' : '') + '</span></button></th>';
+      }).join('') + '</tr>';
+
+    var body = people.map(function (person) {
+      var states = accessView.states[person.id] || {};
+      return '<tr data-user="' + esc(person.id) + '">' +
+        '<th class="person-col"><label class="chk"><input type="checkbox" class="chk-person" data-user="' + esc(person.id) + '"' + (accessSelection[person.id] ? ' checked' : '') + '>' +
+        '<span class="avatar sm" style="background:linear-gradient(135deg,' + colorFor(person.name) + ',#172b68)">' + esc(initials(person.name)) + '</span>' +
+        '<button type="button" class="person-link" data-user="' + esc(person.id) + '"><strong>' + esc(person.name) + '</strong>' +
+        '<em>' + esc(person.sectorLabel) + (person.manager ? ' · gestão' : '') + '</em></button></label></th>' +
+        tracks.map(function (t) {
+          var st = states[t.id] || 'sem';
+          return '<td><button type="button" class="cell st-' + esc(st) + '" data-user="' + esc(person.id) + '" data-track="' + esc(t.id) + '" title="' + esc(STATE_LABEL[st]) + '">' +
+            '<i>' + (STATE_GLYPH[st] || '·') + '</i></button></td>';
+        }).join('') + '</tr>';
+    }).join('');
+
+    host.innerHTML = '<div class="matrix-scroll"><table class="access-matrix"><thead>' + head + '</thead><tbody>' + body + '</tbody></table></div>';
+
+    var all = document.getElementById('chk-all');
+    if (all) {
+      all.checked = people.length > 0 && people.every(function (p) { return accessSelection[p.id]; });
+      all.addEventListener('change', function () {
+        people.forEach(function (p) {
+          if (all.checked) accessSelection[p.id] = true;
+          else delete accessSelection[p.id];
+        });
+        paintAccessMatrix();
+        updateBatchBar();
+      });
+    }
+    Array.prototype.forEach.call(host.querySelectorAll('.chk-person'), function (chk) {
+      chk.addEventListener('change', function () {
+        if (chk.checked) accessSelection[chk.dataset.user] = true;
+        else delete accessSelection[chk.dataset.user];
+        updateBatchBar();
+      });
+    });
+    Array.prototype.forEach.call(host.querySelectorAll('.cell'), function (btn) {
+      btn.addEventListener('click', function () { openCellModal(btn.dataset.user, btn.dataset.track); });
+    });
+    Array.prototype.forEach.call(host.querySelectorAll('.person-link'), function (btn) {
+      btn.addEventListener('click', function () { openPersonDrawer(btn.dataset.user); });
+    });
+    Array.prototype.forEach.call(host.querySelectorAll('.track-head'), function (btn) {
+      btn.addEventListener('click', function () { openSectorModal(btn.dataset.track); });
+    });
+  }
+
+  function updateBatchBar() {
+    var bar = document.getElementById('batch-bar');
+    if (!bar) return;
+    var ids = Object.keys(accessSelection);
+    bar.hidden = ids.length === 0;
+    var count = document.getElementById('batch-count');
+    if (count) count.textContent = ids.length + (ids.length === 1 ? ' pessoa selecionada' : ' pessoas selecionadas');
+    var sel = document.getElementById('batch-track');
+    if (sel && !sel.options.length && accessView) {
+      sel.innerHTML = accessView.tracks.map(function (t) {
+        return '<option value="' + esc(t.id) + '">' + esc(t.title) + '</option>';
+      }).join('');
+    }
+  }
+
+  function postAccess(path, body, okMessage) {
+    return api(path, { method: 'POST', body: body }).then(function () {
+      toast({ icon: 'check', title: 'Tudo certo', text: okMessage });
+      return reloadAccess();
+    }).catch(function (err) {
+      var msg = err && err.data && err.data.error === 'motivo_obrigatorio'
+        ? 'Informe um motivo com pelo menos 3 letras.'
+        : 'Não foi possível aplicar a alteração.';
+      toast({ icon: 'alert', title: 'Alteração não aplicada', text: msg, danger: true });
+    });
+  }
+
+  function openModal(html) {
+    closeModal();
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'modal-overlay';
+    overlay.innerHTML = '<div class="modal card" role="dialog" aria-modal="true">' + html + '</div>';
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function (event) {
+      if (event.target === overlay) closeModal();
+    });
+    document.addEventListener('keydown', escModal);
+    return overlay;
+  }
+
+  function escModal(event) {
+    if (event.key === 'Escape') closeModal();
+  }
+
+  function closeModal() {
+    var overlay = document.getElementById('modal-overlay');
+    if (overlay) overlay.remove();
+    document.removeEventListener('keydown', escModal);
+  }
+
+  function askReason(title, text, confirmLabel, onConfirm) {
+    var overlay = openModal(
+      '<h2>' + esc(title) + '</h2><p class="muted small">' + esc(text) + '</p>' +
+      '<div class="field"><label for="m-reason">Motivo (fica na auditoria)</label>' +
+      '<textarea id="m-reason" rows="3" placeholder="Ex.: alinhado com o plano de treinamento do período"></textarea></div>' +
+      '<div class="modal-actions"><button type="button" class="btn-ghost" id="m-cancel">Cancelar</button>' +
+      '<button type="button" class="btn-primary" id="m-ok">' + esc(confirmLabel) + '</button></div>'
+    );
+    overlay.querySelector('#m-cancel').addEventListener('click', closeModal);
+    overlay.querySelector('#m-ok').addEventListener('click', function () {
+      var reason = overlay.querySelector('#m-reason').value.trim();
+      if (reason.length < 3) {
+        overlay.querySelector('#m-reason').classList.add('invalid');
+        return;
+      }
+      closeModal();
+      onConfirm(reason);
+    });
+    overlay.querySelector('#m-reason').focus();
+  }
+
+  function openCellModal(userId, trackId) {
+    var person = accessView.people.filter(function (p) { return p.id === userId; })[0];
+    var track = accessView.tracks.filter(function (t) { return t.id === trackId; })[0];
+    if (!person || !track) return;
+    var state = (accessView.states[userId] || {})[trackId] || 'sem';
+    if (person.manager) {
+      var info = openModal('<h2>' + esc(person.name) + '</h2><p class="muted small">' + esc(track.title) + '</p>' +
+        '<p>Esta pessoa tem <strong>papel de gestão</strong> e enxerga todas as trilhas. Não há estado individual a alterar.</p>' +
+        '<div class="modal-actions"><button type="button" class="btn-primary" id="m-close">Fechar</button></div>');
+      info.querySelector('#m-close').addEventListener('click', closeModal);
+      return;
+    }
+    var overlay = openModal(
+      '<h2>' + esc(person.name) + '</h2><p class="muted small">' + esc(track.title) + ' · estado atual: ' + esc(STATE_LABEL[state]) + '</p>' +
+      '<div class="field"><label for="m-reason">Motivo (fica na auditoria)</label>' +
+      '<textarea id="m-reason" rows="3" placeholder="Ex.: liberado para a turma de supervisão"></textarea></div>' +
+      '<div class="modal-actions">' +
+      '<button type="button" class="btn-ghost" data-act="reset">Padrão do setor</button>' +
+      '<button type="button" class="btn-ghost ok" data-act="grant">Liberar</button>' +
+      '<button type="button" class="btn-ghost danger" data-act="block">Bloquear</button>' +
+      '</div>'
+    );
+    Array.prototype.forEach.call(overlay.querySelectorAll('[data-act]'), function (btn) {
+      btn.addEventListener('click', function () {
+        var reason = overlay.querySelector('#m-reason').value.trim();
+        if (reason.length < 3) {
+          overlay.querySelector('#m-reason').classList.add('invalid');
+          return;
+        }
+        closeModal();
+        postAccess('/api/accesses/user', { userId: userId, trackId: trackId, action: btn.dataset.act, reason: reason },
+          'Acesso de ' + person.name.split(' ')[0] + ' atualizado.');
+      });
+    });
+    overlay.querySelector('#m-reason').focus();
+  }
+
+  function openSectorModal(trackId) {
+    var track = accessView.tracks.filter(function (t) { return t.id === trackId; })[0];
+    if (!track) return;
+    var sectorIds = Object.keys(accessView.sectors);
+    var rows = sectorIds.map(function (sid) {
+      var custom = accessView.sectorDefaults[sid] && accessView.sectorDefaults[sid][trackId];
+      return '<label class="sector-row"><input type="checkbox" data-sector="' + esc(sid) + '"' + (custom === true ? ' checked' : '') + (custom === undefined ? ' data-default="1"' : '') + '>' +
+        '<span>' + esc(accessView.sectors[sid]) + '</span><em class="muted small">' + (custom === undefined ? 'padrão da trilha' : (custom ? 'liberada' : 'retirada')) + '</em></label>';
+    }).join('');
+    var overlay = openModal(
+      '<h2>Padrão do setor</h2><p class="muted small">' + esc(track.title) + ' · afeta todas as pessoas do setor que não tenham liberação ou bloqueio individual.</p>' +
+      '<div class="sector-list">' + rows + '</div>' +
+      '<div class="field"><label for="m-reason">Motivo (fica na auditoria)</label><textarea id="m-reason" rows="2"></textarea></div>' +
+      '<label class="chk confirm"><input type="checkbox" id="m-confirm"><span>Entendo que isso altera o acesso de todas as pessoas dos setores marcados</span></label>' +
+      '<div class="modal-actions"><button type="button" class="btn-ghost" id="m-cancel">Cancelar</button>' +
+      '<button type="button" class="btn-primary" id="m-ok">Salvar alterações</button></div>'
+    );
+    overlay.querySelector('#m-cancel').addEventListener('click', closeModal);
+    overlay.querySelector('#m-ok').addEventListener('click', function () {
+      var reason = overlay.querySelector('#m-reason').value.trim();
+      var confirm = overlay.querySelector('#m-confirm').checked;
+      if (reason.length < 3 || !confirm) {
+        if (reason.length < 3) overlay.querySelector('#m-reason').classList.add('invalid');
+        if (!confirm) overlay.querySelector('#m-confirm').closest('.chk').classList.add('invalid');
+        return;
+      }
+      var changed = [];
+      Array.prototype.forEach.call(overlay.querySelectorAll('[data-sector]'), function (chk) {
+        var sid = chk.dataset.sector;
+        var custom = accessView.sectorDefaults[sid] && accessView.sectorDefaults[sid][trackId];
+        if (custom === undefined) return;
+        if (custom !== chk.checked) changed.push({ sector: sid, on: chk.checked });
+      });
+      closeModal();
+      if (!changed.length) return;
+      var chain = Promise.resolve();
+      changed.forEach(function (item) {
+        chain = chain.then(function () {
+          return api('/api/accesses/sector', { method: 'POST', body: { sector: item.sector, trackId: trackId, on: item.on, reason: reason } });
+        });
+      });
+      chain.then(function () {
+        toast({ icon: 'check', title: 'Padrão atualizado', text: changed.length + (changed.length === 1 ? ' setor alterado.' : ' setores alterados.') });
+        return reloadAccess();
+      }).catch(function () {
+        toast({ icon: 'alert', title: 'Alteração não aplicada', text: 'Tente novamente.', danger: true });
+      });
+    });
+  }
+
+  function openPersonDrawer(userId) {
+    var person = accessView.people.filter(function (p) { return p.id === userId; })[0];
+    if (!person) return;
+    var states = accessView.states[userId] || {};
+    var rows = accessView.tracks.map(function (t) {
+      var st = states[t.id] || 'sem';
+      var why = st === 'gestao' ? 'Papel de gestão: vê todas as trilhas'
+        : st === 'liberada' ? 'Liberação individual'
+        : st === 'bloqueada' ? 'Bloqueio individual'
+        : st === 'padrao' ? 'Padrão do setor'
+        : 'Sem acesso';
+      var prog = (person.progress || []).filter(function (x) { return x.id === t.id; })[0];
+      var pct = prog && prog.total ? Math.round((prog.done / prog.total) * 100) : 0;
+      return '<li><div class="pd-track"><strong>' + esc(t.title) + '</strong>' + accessStateChip(st) + '</div>' +
+        '<p class="muted small">' + esc(why) + (prog ? ' · ' + prog.done + ' de ' + prog.total + ' aulas publicadas' + (prog.pendingCount ? ' · ' + prog.pendingCount + ' em construção' : '') : '') + '</p>' +
+        (prog && prog.total ? '<div class="bar thin"><span data-bar="' + pct + '"></span></div>' : '') + '</li>';
+    }).join('');
+    var mine = accessView.audit.filter(function (e) { return e.userId === userId || e.sector === person.sector; });
+    var audit = mine.length ? mine.slice(0, 12).map(function (e) {
+      return '<li><strong>' + esc(e.trackTitle) + '</strong><p class="muted small">' + esc(e.action === 'grant' ? 'Liberada' : e.action === 'block' ? 'Bloqueada' : e.action === 'reset' ? 'Voltou ao padrão' : e.action === 'sector-on' ? 'Padrão do setor: liberada' : 'Padrão do setor: retirada') +
+        ' · ' + esc(e.byName) + ' · ' + esc(String(e.at).slice(0, 10)) + '</p><p class="small">' + esc(e.reason) + '</p></li>';
+    }).join('') : '<li><p class="muted small">Nenhuma alteração registrada.</p></li>';
+
+    var overlay = openModal(
+      '<div class="drawer-head"><span class="avatar lg" style="background:linear-gradient(135deg,' + colorFor(person.name) + ',#172b68)">' + esc(initials(person.name)) + '</span>' +
+      '<div><h2>' + esc(person.name) + '</h2><p class="muted small">' + esc(person.email) + ' · ' + esc(person.sectorLabel) + '</p></div></div>' +
+      '<div class="stat-row mini"><div class="card stat-card"><strong>' + person.points + '</strong><span>Pontos</span></div>' +
+      '<div class="card stat-card"><strong>' + person.lessonsDone + '/' + person.lessonsTotal + '</strong><span>Aulas</span></div></div>' +
+      '<h3>Trilhas e acesso</h3><ul class="pd-list">' + rows + '</ul>' +
+      '<h3>Histórico de alterações</h3><ul class="pd-audit">' + audit + '</ul>' +
+      '<div class="modal-actions"><button type="button" class="btn-primary" id="m-close">Fechar</button></div>'
+    );
+    overlay.querySelector('#m-close').addEventListener('click', closeModal);
+    animateMeters(overlay);
+  }
+
+  function exportAccessCsv() {
+    if (!accessView) return;
+    var tracks = accessView.tracks;
+    var lines = [['Pessoa', 'E-mail', 'Setor'].concat(tracks.map(function (t) { return t.title; }))];
+    accessView.people.forEach(function (person) {
+      var states = accessView.states[person.id] || {};
+      lines.push([person.name, person.email, person.sectorLabel].concat(tracks.map(function (t) { return STATE_LABEL[states[t.id]] || ''; })));
+    });
+    var csv = lines.map(function (row) {
+      return row.map(function (cell) { return '"' + String(cell).replace(/"/g, '""') + '"'; }).join(';');
+    }).join('\n');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'acessos-as-trilhas.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  function paintAccessAudit() {
+    var host = document.getElementById('access-audit');
+    if (!host || !accessView) return;
+    var q = (accessFilters.track || '').toLowerCase();
+    var items = accessView.audit.filter(function (e) {
+      if (accessFilters.person) {
+        var p = accessFilters.person.toLowerCase();
+        if ((e.userName || e.sectorLabel || '').toLowerCase().indexOf(p) === -1 && (e.byName || '').toLowerCase().indexOf(p) === -1) return false;
+      }
+      return true;
+    });
+    host.innerHTML = items.length
+      ? '<ul class="audit-list">' + items.map(function (e) {
+        return '<li><div class="audit-top"><strong>' + esc(e.trackTitle) + '</strong><span class="muted small">' + esc(String(e.at).replace('T', ' ').slice(0, 16)) + '</span></div>' +
+          '<p class="small">' + esc(e.action === 'grant' ? 'Liberada para ' + (e.userName || '') : e.action === 'block' ? 'Bloqueada para ' + (e.userName || '') : e.action === 'reset' ? 'Voltou ao padrão para ' + (e.userName || '') : e.action === 'sector-on' ? 'Padrão do setor liberado: ' + (e.sectorLabel || '') : 'Padrão do setor retirado: ' + (e.sectorLabel || '')) + '</p>' +
+          '<p class="muted small">' + esc(e.byName) + ' · ' + esc(e.reason) + '</p></li>';
+      }).join('') + '</ul>'
+      : '<p class="empty">Nenhuma alteração registrada até aqui.</p>';
+  }
+
+  function reloadAccess() {
+    return api('/api/accesses').then(function (data) {
+      accessView = data;
+      paintAccessMatrix();
+      paintAccessAudit();
+      updateBatchBar();
+      animateMeters(document.getElementById('app'));
+    });
+  }
+
+  function renderAcessos() {
+    setPage(skeleton(), 'Acessos às trilhas');
+    return api('/api/accesses').then(function (data) {
+      accessView = data;
+      accessSelection = {};
+      var sectorOpts = Object.keys(data.sectors).map(function (sid) {
+        return '<option value="' + esc(sid) + '">' + esc(data.sectors[sid]) + '</option>';
+      }).join('');
+      setPage(
+        '<nav class="crumbs reveal"><a href="#/">Início</a><span>/</span><span>Acessos às trilhas</span></nav>' +
+        '<div class="access-head reveal"><div><h1>Acessos às trilhas</h1>' +
+        '<p class="muted">Quem vê cada trilha, por setor e por pessoa. Toda alteração exige motivo e fica registrada.</p></div>' +
+        '<a class="btn-ghost" href="#/">' + icon('arrow', 'sm') + ' Voltar</a></div>' +
+        '<section class="card reveal" style="--d:1"><div class="access-toolbar">' +
+        '<div class="field"><label for="f-setor">Setor</label><select id="f-setor"><option value="">Todos</option>' + sectorOpts + '</select></div>' +
+        '<div class="field"><label for="f-pessoa">Pessoa</label><input id="f-pessoa" type="search" placeholder="Nome ou e-mail"></div>' +
+        '<div class="field"><label for="f-trilha">Trilha</label><input id="f-trilha" type="search" placeholder="Nome da trilha"></div>' +
+        '<label class="chk solo"><input type="checkbox" id="f-changed"><span>Só alterados</span></label>' +
+        '<button type="button" class="btn-ghost sm" id="f-export">' + icon('download', 'sm') + ' Exportar CSV</button>' +
+        '</div>' + accessLegend() +
+        '<div class="batch-bar" id="batch-bar" hidden><strong id="batch-count"></strong>' +
+        '<select id="batch-track" aria-label="Trilha da ação em lote"></select>' +
+        '<button type="button" class="btn-ghost sm ok" data-batch="grant">Liberar</button>' +
+        '<button type="button" class="btn-ghost sm danger" data-batch="block">Bloquear</button>' +
+        '<button type="button" class="btn-ghost sm" data-batch="reset">Padrão</button></div>' +
+        '<div id="access-matrix"></div></section>' +
+        '<section class="card reveal" style="--d:2"><div class="side-title"><h2>Auditoria</h2>' + icon('history', 'sm') + '</div>' +
+        '<p class="muted small">As últimas 100 alterações, com quem fez, o que mudou e o motivo.</p>' +
+        '<div id="access-audit"></div></section>',
+        'Acessos às trilhas'
+      );
+
+      document.getElementById('f-setor').addEventListener('change', function (e) { accessFilters.sector = e.target.value; paintAccessMatrix(); });
+      document.getElementById('f-pessoa').addEventListener('input', function (e) { accessFilters.person = e.target.value.trim(); paintAccessMatrix(); paintAccessAudit(); });
+      document.getElementById('f-trilha').addEventListener('input', function (e) { accessFilters.track = e.target.value.trim(); paintAccessMatrix(); });
+      document.getElementById('f-changed').addEventListener('change', function (e) { accessFilters.changedOnly = e.target.checked; paintAccessMatrix(); });
+      document.getElementById('f-export').addEventListener('click', exportAccessCsv);
+      Array.prototype.forEach.call(document.querySelectorAll('[data-batch]'), function (btn) {
+        btn.addEventListener('click', function () {
+          var ids = Object.keys(accessSelection);
+          var trackId = document.getElementById('batch-track').value;
+          if (!ids.length || !trackId) return;
+          var action = btn.dataset.batch;
+          askReason('Alteração em lote', ids.length + ' pessoas · ' + action + ' na trilha selecionada.', 'Aplicar', function (reason) {
+            var chain = Promise.resolve();
+            ids.forEach(function (uid) {
+              chain = chain.then(function () {
+                return api('/api/accesses/user', { method: 'POST', body: { userId: uid, trackId: trackId, action: action, reason: reason } });
+              });
+            });
+            chain.then(function () {
+              toast({ icon: 'check', title: 'Alteração aplicada', text: ids.length + ' pessoas atualizadas.' });
+              accessSelection = {};
+              return reloadAccess();
+            }).catch(function () {
+              toast({ icon: 'alert', title: 'Alteração não aplicada', text: 'Tente novamente.', danger: true });
+            });
+          });
+        });
+      });
+
+      paintAccessMatrix();
+      paintAccessAudit();
+      updateBatchBar();
+      animateMeters(document.getElementById('app'));
+    });
+  }
+
   // ---------- Roteamento ----------
   function route() {
     var loading = me ? Promise.resolve(me) : api('/api/me').then(function (d) { return d.user; }).catch(function () { return null; });
@@ -601,7 +1062,8 @@
       var segments = parts[0].split('/').filter(Boolean);
       var query = new URLSearchParams(parts[1] || '');
       var page;
-      if (segments[0] === 'trilha' && segments[1]) page = renderTrack(segments[1]);
+      if (segments[0] === 'acessos') page = renderAcessos();
+      else if (segments[0] === 'trilha' && segments[1]) page = renderTrack(segments[1]);
       else if (segments[0] === 'aula' && segments[1]) page = renderLesson(segments[1]);
       else if (segments[0] === 'busca') page = renderSearch(query.get('q') || '');
       else page = renderHome();

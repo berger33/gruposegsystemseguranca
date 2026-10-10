@@ -21,6 +21,16 @@ export const DEMO_USERS = Object.freeze([
   { name: 'Vanessa Lopes', email: 'vanessa.lopes@academia.exemplo', sector: 'ti', seeded: ['ti-papeis', 'ti-auditoria'] },
   { name: 'Camila Nogueira', email: 'camila.nogueira@academia.exemplo', sector: 'admin', seeded: [] },
   { name: 'Henrique Brito', email: 'henrique.brito@academia.exemplo', sector: 'admin', seeded: ['fund-acesso'] },
+  // Setores de campo (trilhas T21–T24). O segundo de cada setor tem progresso
+  // de exemplo nas aulas publicadas que o setor enxerga (T01, T03 e T04).
+  { name: 'Jorge Pinto', email: 'jorge.pinto@academia.exemplo', sector: 'porteiro', seeded: [] },
+  { name: 'Aline Cardoso', email: 'aline.cardoso@academia.exemplo', sector: 'porteiro', seeded: ['fund-acesso', 'func-ponto'] },
+  { name: 'Diego Moraes', email: 'diego.moraes@academia.exemplo', sector: 'controlador_acesso', seeded: [] },
+  { name: 'Fernanda Reis', email: 'fernanda.reis@academia.exemplo', sector: 'controlador_acesso', seeded: ['fund-acesso', 'func-ocorrencia'] },
+  { name: 'Rosa Lima', email: 'rosa.lima@academia.exemplo', sector: 'servicos_gerais', seeded: [] },
+  { name: 'Ivan Barros', email: 'ivan.barros@academia.exemplo', sector: 'servicos_gerais', seeded: ['fund-acesso', 'func-pedidos'] },
+  { name: 'Murilo Ferraz', email: 'murilo.ferraz@academia.exemplo', sector: 'instalador', seeded: [] },
+  { name: 'Amanda Rocha', email: 'amanda.rocha@academia.exemplo', sector: 'instalador', seeded: ['fund-acesso', 'fund-progresso'] },
 ]);
 
 export function userIdFor(email) {

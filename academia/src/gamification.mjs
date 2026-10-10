@@ -1,15 +1,18 @@
 // Regras de progresso: pontos, níveis, selos e ranking por setor.
 // Pontos de aula são gravados na primeira conclusão. Bônus de trilha e selos
 // são derivados do progresso, então não podem ficar fora de sincronia.
-import { canSeeTrack } from './sectors.mjs';
+// Aulas em construção não contam no progresso e não podem ser concluídas.
+import { canSeeTrack } from './access.mjs';
+import { isPending } from './content.mjs';
 
 export const POINTS = Object.freeze({ lesson: 10, quiz: 5, track: 30 });
 
+// Decisão 4 confirmada do plano de expansão: 0 / 300 / 900 / 1.800.
 export const LEVELS = Object.freeze([
   { name: 'Inicial', min: 0 },
-  { name: 'Em desenvolvimento', min: 80 },
-  { name: 'Proficiente', min: 200 },
-  { name: 'Referência', min: 400 },
+  { name: 'Em desenvolvimento', min: 300 },
+  { name: 'Proficiente', min: 900 },
+  { name: 'Referência', min: 1800 },
 ]);
 
 const pct = (done, total) => (total ? Math.round((done / total) * 100) : 0);
@@ -31,7 +34,7 @@ export function levelFor(points) {
 
 export function summarize(state, user, content) {
   const mine = state.progress[user.id] || {};
-  const tracks = content.filter(track => canSeeTrack(track, user.sector));
+  const tracks = content.filter(track => canSeeTrack(track, user, state));
   let points = 0;
   let bonus = 0;
   let lessonsDone = 0;
@@ -41,13 +44,16 @@ export function summarize(state, user, content) {
 
   const trackViews = tracks.map(track => {
     const lessons = track.lessons.map(lesson => {
-      const entry = mine[lesson.id] || null;
-      lessonsTotal += 1;
-      if (entry) {
-        points += entry.pointsEarned;
-        lessonsDone += 1;
-      } else if (!next) {
-        next = { id: lesson.id, title: lesson.title, minutes: lesson.minutes, trackId: track.id, trackTitle: track.title };
+      const pending = isPending(lesson);
+      const entry = pending ? null : (mine[lesson.id] || null);
+      if (!pending) {
+        lessonsTotal += 1;
+        if (entry) {
+          points += entry.pointsEarned;
+          lessonsDone += 1;
+        } else if (!next) {
+          next = { id: lesson.id, title: lesson.title, minutes: lesson.minutes, trackId: track.id, trackTitle: track.title };
+        }
       }
       return {
         id: lesson.id,
@@ -56,18 +62,33 @@ export function summarize(state, user, content) {
         objective: lesson.objective,
         done: Boolean(entry),
         firstCorrect: Boolean(entry && entry.firstCorrect),
+        pending,
+        tag: lesson.tag || null,
       };
     });
-    const done = lessons.filter(l => l.done).length;
-    const complete = done === lessons.length;
+    const published = lessons.filter(l => !l.pending);
+    const pendingCount = lessons.length - published.length;
+    const done = published.filter(l => l.done).length;
+    const complete = published.length > 0 && done === published.length;
     if (complete) {
       bonus += POINTS.track;
       earned.push({ id: `trilha-${track.id}`, title: 'Trilha concluída', detail: track.title });
-      if (lessons.every(l => l.firstCorrect)) {
+      if (published.every(l => l.firstCorrect)) {
         earned.push({ id: `acerto-${track.id}`, title: 'Acerto integral', detail: track.title });
       }
     }
-    return { id: track.id, title: track.title, summary: track.summary, total: lessons.length, done, percent: pct(done, lessons.length), complete, lessons };
+    return {
+      id: track.id,
+      title: track.title,
+      summary: track.summary,
+      group: track.group,
+      total: published.length,
+      pendingCount,
+      done,
+      percent: pct(done, published.length),
+      complete,
+      lessons,
+    };
   });
 
   if (lessonsDone > 0) earned.unshift({ id: 'primeiro-passo', title: 'Primeiro passo', detail: 'Primeira aula concluída' });

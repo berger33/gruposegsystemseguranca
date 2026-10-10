@@ -2,9 +2,11 @@
 // intercepta as chamadas /api/* do front-end e responde com a mesma lógica do servidor
 // (conteúdo, pontuação, níveis, selos e ranking). Progresso e sessões ficam no navegador.
 // ATENÇÃO: aqui a alçada NÃO é verificada em servidor. Serve só para demonstrar a interface.
-import { TRACKS } from './content.mjs';
-import { SECTORS, canSeeTrack } from './sectors.mjs';
+import { TRACKS, isPending } from './content.mjs';
+import { SECTORS } from './sectors.mjs';
+import { canSeeTrack, canManageAccess } from './access.mjs';
 import { POINTS, summarize, leaderboard } from './gamification.mjs';
+import { accessMatrix, changeUserAccess, changeSectorDefault } from './acessos-api.mjs';
 import { DEMO_USERS, userIdFor } from './demo-users.mjs';
 
 const DEMO_PASSWORD = 'Academia#2026';
@@ -40,16 +42,22 @@ function freshState() {
     const mine = {};
     for (const lessonId of user.seeded) {
       const found = lessonIndex.get(lessonId);
-      if (found) mine[lessonId] = { completedAt: now, firstChoice: found.lesson.quiz.answer, firstCorrect: true, pointsEarned: POINTS.lesson + POINTS.quiz };
+      if (found && !isPending(found.lesson)) mine[lessonId] = { completedAt: now, firstChoice: found.lesson.quiz.answer, firstCorrect: true, pointsEarned: POINTS.lesson + POINTS.quiz };
     }
     if (Object.keys(mine).length) progress[userIdFor(user.email)] = mine;
   }
-  return { users, progress };
+  return { users, progress, access: {}, sectorDefaults: {}, audit: [] };
 }
 
 function loadState() {
   const saved = readJson(STATE_KEY, null);
-  if (saved && saved.users && saved.progress) return saved;
+  if (saved && saved.users && saved.progress) {
+    // Migração: estados antigos não têm as estruturas da área de acessos.
+    if (!saved.access) saved.access = {};
+    if (!saved.sectorDefaults) saved.sectorDefaults = {};
+    if (!saved.audit) saved.audit = [];
+    return saved;
+  }
   const fresh = freshState();
   writeJson(STATE_KEY, fresh);
   return fresh;
@@ -69,7 +77,15 @@ function sessionUser(token) {
 }
 
 function publicUser(user) {
-  return { id: user.id, name: user.name, firstName: user.name.split(' ')[0], email: user.email, sector: user.sector, sectorLabel: SECTORS[user.sector] };
+  return {
+    id: user.id,
+    name: user.name,
+    firstName: user.name.split(' ')[0],
+    email: user.email,
+    sector: user.sector,
+    sectorLabel: SECTORS[user.sector],
+    canManage: canManageAccess(user.sector),
+  };
 }
 
 const normalize = text => String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -135,13 +151,32 @@ function handle(method, path, params, body, token) {
     const q = normalize(params.get('q')).trim();
     if (q.length < 2) return { status: 200, data: { results: [] } };
     const results = [];
-    for (const track of TRACKS.filter(t => canSeeTrack(t, user.sector))) {
+    for (const track of TRACKS.filter(t => canSeeTrack(t, user, state))) {
       for (const lesson of track.lessons) {
+        if (isPending(lesson)) continue;
         const haystack = normalize([lesson.title, lesson.objective, ...lesson.steps].join(' '));
         if (haystack.includes(q)) results.push({ id: lesson.id, title: lesson.title, minutes: lesson.minutes, trackId: track.id, trackTitle: track.title });
       }
     }
     return { status: 200, data: { results: results.slice(0, 20) } };
+  }
+
+  // Área "Acessos às trilhas": mesmas funções do servidor (acessos-api.mjs).
+  if (method === 'GET' && path === '/accesses') {
+    const result = accessMatrix(state, TRACKS, user);
+    return { status: result.ok ? 200 : result.status, data: result.ok ? result.data : { error: result.error } };
+  }
+
+  if (method === 'POST' && path === '/accesses/user') {
+    const result = changeUserAccess(state, TRACKS, user, body);
+    if (result.ok) writeJson(STATE_KEY, state);
+    return { status: result.ok ? 200 : result.status, data: result.ok ? result.data : { error: result.error } };
+  }
+
+  if (method === 'POST' && path === '/accesses/sector') {
+    const result = changeSectorDefault(state, TRACKS, user, body);
+    if (result.ok) writeJson(STATE_KEY, state);
+    return { status: result.ok ? 200 : result.status, data: result.ok ? result.data : { error: result.error } };
   }
 
   let match = path.match(/^\/tracks\/([a-z0-9-]+)$/);
@@ -155,8 +190,9 @@ function handle(method, path, params, body, token) {
   match = path.match(/^\/lessons\/([a-z0-9-]+)$/);
   if (match && method === 'GET') {
     const found = lessonIndex.get(match[1]);
-    if (!found || !canSeeTrack(found.track, user.sector)) return { status: 404, data: { error: 'aula_nao_encontrada' } };
+    if (!found || !canSeeTrack(found.track, user, state)) return { status: 404, data: { error: 'aula_nao_encontrada' } };
     const { track, lesson, index } = found;
+    if (isPending(lesson)) return { status: 404, data: { error: 'aula_em_construcao' } };
     const entry = (state.progress[user.id] || {})[lesson.id] || null;
     return {
       status: 200,
@@ -182,8 +218,9 @@ function handle(method, path, params, body, token) {
   match = path.match(/^\/lessons\/([a-z0-9-]+)\/complete$/);
   if (match && method === 'POST') {
     const found = lessonIndex.get(match[1]);
-    if (!found || !canSeeTrack(found.track, user.sector)) return { status: 404, data: { error: 'aula_nao_encontrada' } };
+    if (!found || !canSeeTrack(found.track, user, state)) return { status: 404, data: { error: 'aula_nao_encontrada' } };
     const { track, lesson, index } = found;
+    if (isPending(lesson)) return { status: 404, data: { error: 'aula_em_construcao' } };
     const mine = state.progress[user.id] || (state.progress[user.id] = {});
     if (mine[lesson.id]) return { status: 200, data: { alreadyCompleted: true, ...resultOf(lesson, mine[lesson.id]) } };
     const choice = body.choice;
@@ -258,6 +295,6 @@ if (typeof document !== 'undefined') {
   // Sinaliza ao app.js que está na demonstração (mostra a caixa de conta de demonstração no acesso).
   document.documentElement.dataset.demo = 'true';
   const script = document.createElement('script');
-  script.src = 'app.js?v=6';
+  script.src = 'app.js?v=7';
   document.body.appendChild(script);
 }

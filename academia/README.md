@@ -34,23 +34,36 @@ Dois usuários por setor. Os nomes são fictícios e a senha é a de demonstraç
 | RH | juliana.prado@academia.exemplo | marcos.alves@academia.exemplo |
 | Comercial | renata.costa@academia.exemplo | bruno.lima@academia.exemplo |
 | Financeiro | fernando.gomes@academia.exemplo | patricia.souza@academia.exemplo |
-| Operação e supervisão | eduardo.martins@academia.exemplo | sandra.pires@academia.exemplo |
+| Supervisão (equipe de operação) | eduardo.martins@academia.exemplo | sandra.pires@academia.exemplo |
 | Gestão | helena.duarte@academia.exemplo | sergio.faria@academia.exemplo |
 | TI | tiago.ramos@academia.exemplo | vanessa.lopes@academia.exemplo |
 | Administração | camila.nogueira@academia.exemplo | henrique.brito@academia.exemplo |
+| Portaria | jorge.pinto@academia.exemplo | aline.cardoso@academia.exemplo |
+| Controle de acesso | diego.moraes@academia.exemplo | fernanda.reis@academia.exemplo |
+| Serviços gerais | rosa.lima@academia.exemplo | ivan.barros@academia.exemplo |
+| Instalação | murilo.ferraz@academia.exemplo | amanda.rocha@academia.exemplo |
 
 Os dois primeiros registros de cada setor são os usuários de demonstração principais.
+O setor "supervisor de posto" e a trilha T25 ficam de fora até o nome do papel ser
+confirmado com o Marcelo (decisão pendente do plano de expansão).
 
 ## Regras
 
 - **Acesso único.** A mesma tela de entrada atende todos os setores.
-- **Alçada no servidor.** Cada trilha declara quem pode vê-la (`audiences`). Trilha de outro setor responde 404, mesmo com o identificador certo. A página só reflete isso.
-- **Administração** vê todas as trilhas.
+- **Alçada no servidor.** O acesso efetivo é `(padrão do setor + liberações) − bloqueios`, calculado em `src/access.mjs` e aplicado em cada requisição. Trilha sem acesso responde 404, mesmo com o identificador certo. A página só reflete isso.
+- **Papéis de gestão** (Gestão e Administração) veem todas as trilhas.
+- **Acessos às trilhas.** Marcelo, RH e admin gerenciam a matriz de pessoas por trilha
+  (liberação e bloqueio individual, padrão do setor e auditoria com motivo). A regra
+  vive em `src/acessos-api.mjs`, compartilhada pelo servidor e pela demonstração.
+  Na demonstração estática não há servidor para garantir a alçada; a garantia é do servidor.
+- **Aulas em construção.** As 24 trilhas do plano de expansão têm 165 aulas: 28
+  publicadas e as demais marcadas "em construção" (sem conteúdo). Elas aparecem na
+  trilha, mas não contam no progresso e não podem ser concluídas.
 - **Pontuação.**
   - Cada aula concluída vale 10 pontos, creditados na primeira conclusão.
   - Acertar o quiz na primeira tentativa soma 5 pontos extras.
   - Concluir todas as aulas de uma trilha dá 30 pontos de bônus.
-- **Níveis.** Inicial (0), Em desenvolvimento (80), Proficiente (200), Referência (400).
+- **Níveis.** Inicial (0), Em desenvolvimento (300), Proficiente (900), Referência (1.800).
 - **Selos.** Primeiro passo; por trilha, Trilha concluída e Acerto integral (todas as aulas certas na primeira tentativa).
 - **Ranking.** Top 5 do setor, com a posição de quem consulta. Empates recebem a mesma posição. Mostra apenas nome e pontos.
 - **Gabarito.** A resposta correta e a explicação só são enviadas depois que a aula é concluída.
@@ -63,11 +76,13 @@ academia/
   server.mjs            ponto de entrada (node:http)
   src/
     app.mjs             rotas da API, arquivos estáticos e cabeçalhos
+    acessos-api.mjs     área de acessos às trilhas (matriz, alterações, auditoria)
+    access.mjs          regra efetiva de acesso (padrão + liberações − bloqueios)
     auth.mjs            senhas com scrypt e sessões
-    content.mjs         trilhas e aulas (texto, quiz e explicação)
+    content.mjs         trilhas do plano e aulas (texto, quiz e explicação)
     gamification.mjs    pontos, níveis, selos e ranking
-    sectors.mjs         setores e regra de alçada
-    seed.mjs            usuários e progresso de demonstração
+    sectors.mjs         setores (alçadas) da Academia
+    seed.mjs            usuários de demonstração e migração dos dados
     store.mjs           persistência em JSON com escrita atômica
   public/               interface (HTML, CSS e JavaScript puro)
   test/                 testes automatizados
@@ -89,6 +104,9 @@ Todas as rotas, exceto `POST /api/login`, exigem sessão.
 | POST | `/api/lessons/:id/complete` | `{choice}`; conclui a aula e devolve pontos, nível e selos |
 | GET | `/api/leaderboard` | Ranking do setor |
 | GET | `/api/search?q=` | Busca nas aulas do setor |
+| GET | `/api/accesses` | Matriz de acessos (Marcelo, RH e admin) |
+| POST | `/api/accesses/user` | `{userId, trackId, action, reason}`; libera, bloqueia ou devolve ao padrão |
+| POST | `/api/accesses/sector` | `{sector, trackId, on, reason}`; altera o padrão do setor |
 
 ## Fora de escopo nesta fase
 

@@ -4,9 +4,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { verifyPassword, SESSION_TTL_MS } from './auth.mjs';
-import { TRACKS } from './content.mjs';
-import { SECTORS, canSeeTrack } from './sectors.mjs';
+import { TRACKS, isPending } from './content.mjs';
+import { SECTORS } from './sectors.mjs';
+import { canSeeTrack, canManageAccess } from './access.mjs';
 import { POINTS, summarize, leaderboard } from './gamification.mjs';
+import { accessMatrix, changeUserAccess, changeSectorDefault } from './acessos-api.mjs';
 
 const PUBLIC_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'public');
 const COOKIE = 'academia_sessao';
@@ -103,7 +105,15 @@ const clearCookie = req => `${COOKIE}=; Path=/; HttpOnly; ${cookieAttributes(req
 const normalize = text => String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 function publicUser(user) {
-  return { id: user.id, name: user.name, firstName: user.name.split(' ')[0], email: user.email, sector: user.sector, sectorLabel: SECTORS[user.sector] };
+  return {
+    id: user.id,
+    name: user.name,
+    firstName: user.name.split(' ')[0],
+    email: user.email,
+    sector: user.sector,
+    sectorLabel: SECTORS[user.sector],
+    canManage: canManageAccess(user.sector),
+  };
 }
 
 export function createApp({ store, sessions, content = TRACKS }) {
@@ -119,7 +129,7 @@ export function createApp({ store, sessions, content = TRACKS }) {
 
   function visibleLesson(user, lessonId) {
     const found = lessonIndex.get(lessonId);
-    if (!found || !canSeeTrack(found.track, user.sector)) return null;
+    if (!found || !canSeeTrack(found.track, user, store.state)) return null;
     return found;
   }
 
@@ -150,6 +160,7 @@ export function createApp({ store, sessions, content = TRACKS }) {
     const found = visibleLesson(user, lessonId);
     if (!found) return sendJson(res, 404, { error: 'aula_nao_encontrada' });
     const { track, lesson, index } = found;
+    if (isPending(lesson)) return sendJson(res, 404, { error: 'aula_em_construcao' });
     const body = await readJson(req);
     const mine = store.state.progress[user.id] || (store.state.progress[user.id] = {});
 
@@ -226,13 +237,35 @@ export function createApp({ store, sessions, content = TRACKS }) {
       const q = normalize(url.searchParams.get('q')).trim();
       if (q.length < 2) return sendJson(res, 200, { results: [] });
       const results = [];
-      for (const track of content.filter(t => canSeeTrack(t, user.sector))) {
+      for (const track of content.filter(t => canSeeTrack(t, user, store.state))) {
         for (const lesson of track.lessons) {
+          if (isPending(lesson)) continue;
           const haystack = normalize([lesson.title, lesson.objective, ...lesson.steps].join(' '));
           if (haystack.includes(q)) results.push({ id: lesson.id, title: lesson.title, minutes: lesson.minutes, trackId: track.id, trackTitle: track.title });
         }
       }
       return sendJson(res, 200, { results: results.slice(0, 20) });
+    }
+
+    // Área "Acessos às trilhas" (Marcelo, RH e admin): matriz, liberações,
+    // bloqueios, padrão do setor e auditoria. A regra é a mesma do demo-shim.
+    if (p === '/api/accesses' && m === 'GET') {
+      const result = accessMatrix(store.state, content, user);
+      return sendJson(res, result.ok ? 200 : result.status, result.ok ? result.data : { error: result.error });
+    }
+
+    if (p === '/api/accesses/user' && m === 'POST') {
+      const body = await readJson(req);
+      const result = changeUserAccess(store.state, content, user, body);
+      if (result.ok) store.save();
+      return sendJson(res, result.ok ? 200 : result.status, result.ok ? result.data : { error: result.error });
+    }
+
+    if (p === '/api/accesses/sector' && m === 'POST') {
+      const body = await readJson(req);
+      const result = changeSectorDefault(store.state, content, user, body);
+      if (result.ok) store.save();
+      return sendJson(res, result.ok ? 200 : result.status, result.ok ? result.data : { error: result.error });
     }
 
     let match = p.match(/^\/api\/tracks\/([a-z0-9-]+)$/);
@@ -248,6 +281,7 @@ export function createApp({ store, sessions, content = TRACKS }) {
       const found = visibleLesson(user, match[1]);
       if (!found) return sendJson(res, 404, { error: 'aula_nao_encontrada' });
       const { track, lesson, index } = found;
+      if (isPending(lesson)) return sendJson(res, 404, { error: 'aula_em_construcao' });
       const entry = (store.state.progress[user.id] || {})[lesson.id] || null;
       return sendJson(res, 200, {
         id: lesson.id,

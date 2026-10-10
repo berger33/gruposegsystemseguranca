@@ -1,7 +1,7 @@
 // Persistência em arquivo JSON (escrita atômica). Sem banco, sem dependências.
 import fs from 'node:fs';
 import path from 'node:path';
-import { buildSeedState } from './seed.mjs';
+import { buildSeedState, migrateState } from './seed.mjs';
 
 export function createStore({ file, seed = buildSeedState } = {}) {
   let state = null;
@@ -9,6 +9,7 @@ export function createStore({ file, seed = buildSeedState } = {}) {
     state = JSON.parse(fs.readFileSync(file, 'utf8'));
   }
   if (!state) state = seed();
+  else migrateState(state);
   const save = () => {
     if (!file) return;
     fs.mkdirSync(path.dirname(file), { recursive: true });

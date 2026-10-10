@@ -3,7 +3,7 @@
 // a senha padrão de demonstração (proibida em produção).
 import { hashPassword } from './auth.mjs';
 import { POINTS } from './gamification.mjs';
-import { TRACKS } from './content.mjs';
+import { TRACKS, isPending } from './content.mjs';
 
 export const DEFAULT_DEMO_PASSWORD = 'Academia#2026';
 
@@ -33,10 +33,27 @@ export function buildSeedState({ password = demoPassword(), content = TRACKS, no
     const mine = {};
     user.seeded.forEach(lessonId => {
       const lesson = lessons.get(lessonId);
-      if (!lesson) return;
+      if (!lesson || isPending(lesson)) return;
       mine[lessonId] = { completedAt: now, firstChoice: lesson.quiz.answer, firstCorrect: true, pointsEarned: POINTS.lesson + POINTS.quiz };
     });
     if (Object.keys(mine).length) progress[users[i].id] = mine;
   });
-  return { version: 1, demo: true, users, progress };
+  return { version: 2, demo: true, users, progress, access: {}, sectorDefaults: {}, audit: [] };
+}
+
+// Migração dos dados já gravados: acrescenta usuários de demonstração novos e
+// as estruturas da área de acessos sem apagar o progresso existente.
+export function migrateState(state, { password = demoPassword(), now = new Date().toISOString() } = {}) {
+  if (!state.users) state.users = [];
+  if (!state.progress) state.progress = {};
+  if (!state.access) state.access = {};
+  if (!state.sectorDefaults) state.sectorDefaults = {};
+  if (!state.audit) state.audit = [];
+  const known = new Set(state.users.map(user => user.email));
+  for (const user of DEMO_USERS) {
+    if (known.has(user.email)) continue;
+    state.users.push({ id: userIdFor(user.email), name: user.name, email: user.email, sector: user.sector, ...hashPassword(password), createdAt: now });
+  }
+  if (state.version !== 2) state.version = 2;
+  return state;
 }

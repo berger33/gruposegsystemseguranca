@@ -1,12 +1,18 @@
 // Conteúdo da Academia. Textos em português do Brasil, sem vídeo nesta fase.
 // Cada aula tem objetivo, passos, um quiz de uma pergunta e a explicação
 // (a explicação e a resposta só são enviadas após a conclusão da aula).
+//
+// Estrutura: BASE guarda as aulas já publicadas (texto completo, com quiz).
+// O organizador abaixo monta as 24 trilhas do plano de expansão
+// (docs/academia/PLANO-DE-EXPANSAO.md), reaproveitando as aulas publicadas
+// pelos ids e acrescentando as demais como "em construção" (sem conteúdo).
+// Aulas em construção não contam no progresso e não podem ser concluídas.
 
 function aula(id, title, minutes, objective, steps, question, options, answer, explanation) {
   return { id, title, minutes, objective, steps, quiz: { question, options, answer, explanation } };
 }
 
-export const TRACKS = Object.freeze([
+const BASE = Object.freeze([
   {
     id: 'fundamentos',
     title: 'Fundamentos do sistema',
@@ -408,6 +414,305 @@ export const TRACKS = Object.freeze([
   },
 ]);
 
+// ---------- Organizador das trilhas do plano de expansão ----------
+// Cada trilha do plano (T01–T24) vira uma entrada em TRACKS. As aulas já
+// publicadas entram pelos ids (o progresso é gravado por id e não muda);
+// as demais são marcadas com a origem prevista no plano:
+//   [S] rotina com tela no sistema  [P] procedimento de campo, a validar
+//   [T] conteúdo técnico da SEG     [D] demonstração com dados fictícios
+// A T25 (supervisores de posto) fica de fora até o nome do papel ser
+// confirmado com o Marcelo (decisão 1 do plano).
+
+const PUBLICADAS = new Map();
+BASE.forEach(track => track.lessons.forEach(lesson => PUBLICADAS.set(lesson.id, lesson)));
+
+function pub(id) {
+  const lesson = PUBLICADAS.get(id);
+  if (!lesson) throw new Error(`Aula publicada não encontrada: ${id}`);
+  return lesson;
+}
+
+function pend(id, title, tag) {
+  return { id, title, minutes: 3, pending: true, tag: tag || 'S' };
+}
+
+function trilha(id, title, summary, group, audiences, lessons) {
+  return { id, title, summary, group, audiences, lessons };
+}
+
+export const TAG_LABELS = Object.freeze({
+  S: 'Sistema',
+  P: 'Procedimento',
+  T: 'Conteúdo técnico',
+  D: 'Demonstração',
+});
+
+export function isPending(lesson) {
+  return Boolean(lesson && lesson.pending);
+}
+
+export const TRACKS = Object.freeze([
+  trilha('fundamentos', 'Fundamentos do sistema',
+    'Acesso, progresso e uso da base de conhecimento. Trilha comum a todos os setores.',
+    'Todos', ['todos'], [
+      pub('fund-acesso'), pub('fund-progresso'), pub('fund-base'),
+    ]),
+  trilha('equipe-entrada', 'Equipe: entrada, papéis e navegação',
+    'Primeiro acesso da equipe interna, o que cada papel vê e convites administrativos.',
+    'Equipe interna', ['comercial', 'rh', 'financeiro', 'supervisor', 'marcelo', 'ti', 'admin'], [
+      pub('ti-papeis'),
+      pend('t02-hub', 'Hub administrativo: os módulos que o seu papel vê'),
+      pend('t02-convite', 'Aceitar um convite administrativo'),
+    ]),
+  trilha('funcionario-ponto', 'Funcionário: rotina diária',
+    'Ponto, ocorrências, ausências, ajustes, escala e passagem de plantão no portal do funcionário.',
+    'Funcionário e campo', ['funcionario', 'porteiro', 'controlador_acesso', 'servicos_gerais', 'instalador', 'admin'], [
+      pub('func-ponto'), pub('func-ocorrencia'),
+      pend('t03-ausencia', 'Registrar ausência ou falta'),
+      pend('t03-ajuste-ponto', 'Solicitar ajuste de ponto'),
+      pend('t03-troca-escala', 'Solicitar troca de escala'),
+      pend('t03-ciencia', 'Dar ciência de comunicados e procedimentos'),
+      pend('t03-plantao', 'Receber a passagem de plantão'),
+    ]),
+  trilha('funcionario-pedidos', 'Funcionário: pedidos, documentos e atendimento',
+    'Pedidos ao RH, uniforme, documentos, perfil, cursos, atendimento confidencial e reclamações.',
+    'Funcionário e campo', ['funcionario', 'porteiro', 'controlador_acesso', 'servicos_gerais', 'instalador', 'admin'], [
+      pub('func-pedidos'),
+      pend('t04-uniforme', 'Solicitar uniforme e confirmar o recebimento'),
+      pend('t04-documentos', 'Ver os seus documentos privados'),
+      pend('t04-perfil', 'Ver e pedir atualização do seu perfil'),
+      pend('t04-comprovante', 'Enviar comprovante de curso'),
+      pend('t04-atendimento', 'Abrir atendimento confidencial com o RH'),
+      pend('t04-reclamacao', 'Registrar uma reclamação'),
+    ]),
+  trilha('cliente-portal', 'Cliente: acesso e segurança',
+    'Convite, primeiro acesso, verificação em duas etapas e sessões do portal do cliente.',
+    'Cliente', ['cliente', 'admin'], [
+      pub('cli-convite'),
+      pend('t05-primeiro-acesso', 'Primeiro acesso e confirmação de e-mail'),
+      pend('t05-email', 'Alterar o e-mail, com verificação'),
+      pub('cli-seguranca'),
+      pend('t05-sessoes', 'Ver e encerrar sessões abertas'),
+      pend('t05-acesso-portal', 'Pedir acesso ao portal'),
+    ]),
+  trilha('cliente-servicos', 'Cliente: serviços, chamados e documentos',
+    'Painel do portal, contratos, documentos, chamados, visitas, relatórios e renovação.',
+    'Cliente', ['cliente', 'admin'], [
+      pend('t06-painel', 'Painel: o que é seu no portal'),
+      pend('t06-contratos', 'Contratos e itens de serviço'),
+      pend('t06-documentos', 'Documentos: ver e baixar, com registro de acesso'),
+      pub('cli-chamados'),
+      pend('t06-servico', 'Pedir um serviço e acompanhar'),
+      pend('t06-agenda', 'Agenda de visitas e manutenções'),
+      pend('t06-relatorios', 'Relatórios de execução, medição e aceite'),
+      pend('t06-satisfacao', 'Pesquisa de satisfação e plano de ação'),
+      pend('t06-renovacao', 'Renovação e continuidade'),
+      pend('t06-contatos', 'Contatos, escopos e delegados'),
+      pend('t06-reclamacao', 'Registrar reclamação sobre um colaborador'),
+    ]),
+  trilha('comercial-funil', 'Comercial: do pedido ao contrato',
+    'Entrada de pedidos do site, funil e relacionamento, condições e carteira, proposta e contrato.',
+    'Comercial', ['comercial', 'marcelo', 'admin'], [
+      pend('t07-pedido-site', 'Pedido de orçamento pelo site'),
+      pend('t07-contato-simulador', 'Contato e simulador'),
+      pend('t07-conteudos', 'Conteúdos, FAQ e privacidade, com solicitação de titular'),
+      pend('t07-leads', 'Lista de leads: o que entra e como acompanhar'),
+      pub('com-pedido'), pub('com-funil'),
+      pend('t07-interacoes', 'Registrar interações e notas internas'),
+      pend('t07-tarefas', 'Criar tarefas e delegar'),
+      pend('t07-agenda', 'Agenda de visitas e reuniões, com conflito de agenda'),
+      pend('t07-cadencias', 'Cadências manuais'),
+      pend('t07-import-csv', 'Importar empresas por CSV, revisando prévia e duplicatas'),
+      pend('t07-desconto', 'Pedido de desconto e aprovação'),
+      pend('t07-comissao', 'Regras de comissão'),
+      pend('t07-carteira', 'Carteira de clientes'),
+      pend('t07-satisfacao', 'Satisfação do cliente'),
+      pub('com-proposta'),
+      pend('t07-link-aceite', 'Entregar a proposta por link de aceite'),
+      pend('t07-versoes', 'Comparar versões da proposta'),
+      pend('t07-aceite', 'Acompanhar o aceite do cliente'),
+      pend('t07-contrato', 'Criar o contrato a partir da proposta aceita'),
+    ]),
+  trilha('gestao-painel', 'Gestão: painel, pendências e decisões',
+    'Pendências do período, aprovação unificada, diário de decisões, indicadores e relatórios.',
+    'Gestão', ['marcelo', 'admin'], [
+      pub('ges-pendencias'), pub('ges-aprovacoes'),
+      pend('t08-diario', 'Diário de decisões, com registro canônico'),
+      pend('t08-indicadores', 'Indicadores: meta x realizado'),
+      pub('ges-relatorios'),
+      pend('t08-analises', 'Análises e relatórios gerenciais'),
+    ]),
+  trilha('rh-processos', 'RH: admissão e acesso',
+    'Cadastro profissional, abertura da admissão, credencial temporária e documentos privados.',
+    'RH', ['rh', 'admin'], [
+      pub('rh-admissao'), pub('rh-credencial'),
+      pend('t09-documentos', 'Documentos privados do funcionário'),
+    ]),
+  trilha('rh-vida', 'RH: vida funcional',
+    'Escala, ponto, solicitações, férias, afastamento, benefícios e treinamento.',
+    'RH', ['rh', 'admin'], [
+      pend('t10-escala-ciencia', 'Publicar a escala versionada e registrar a ciência'),
+      pend('t10-ponto-ajustes', 'Consultar ponto e decidir ajustes pedidos pelo funcionário'),
+      pend('t10-solicitacoes', 'Decidir as solicitações: férias, afastamento, benefício e reembolso'),
+      pend('t10-ferias', 'Férias: aprovação e registro (demonstração conceitual)', 'D'),
+      pend('t10-afastamento', 'Processo de afastamento'),
+      pend('t10-beneficios', 'Processo de benefícios'),
+      pend('t10-treinamento', 'Processo de treinamento e recrutamento'),
+    ]),
+  trilha('rh-folha', 'RH: folha e desligamento',
+    'Fechamento do período, holerite no espaço privado e desligamento com revogação de acesso.',
+    'RH', ['rh', 'admin'], [
+      pend('t11-fechamento', 'Fechar o período demonstrativo', 'D'),
+      pub('rh-holerite'),
+      pub('rh-desligamento'),
+    ]),
+  trilha('operacao-escala', 'Operação: postos e escala',
+    'Postos, habilitação por função, alocação, escala versionada, jornada e cobertura.',
+    'Operação', ['supervisor', 'marcelo', 'admin'], [
+      pub('op-escala'),
+      pend('t12-habilitacao', 'Habilitação e documentação exigida por função'),
+      pend('t12-turnos', 'Necessidade por turno e faixa de horário'),
+      pend('t12-alocacao', 'Alocação de pessoas e confronto com o planejado'),
+      pend('t12-escala-ciencia', 'Escala versionada: publicar e registrar a ciência'),
+      pend('t12-jornada', 'Regras de jornada e descanso'),
+      pend('t12-cobertura', 'Solicitar cobertura e substituição'),
+      pend('t12-lacunas', 'Lacunas de cobertura e plano de cobertura'),
+    ]),
+  trilha('operacao-postos', 'Operação: rotinas de posto e ocorrências',
+    'Livro de ocorrências, passagem de plantão, checklists, rondas, chaves e continuidade.',
+    'Operação', ['supervisor', 'marcelo', 'admin'], [
+      pub('op-ocorrencias'),
+      pend('t13-plantao', 'Passagem de plantão entre turnos'),
+      pub('op-checklist'),
+      pend('t13-rondas', 'Rondas e leituras de ronda'),
+      pend('t13-limpeza', 'Rotinas de limpeza e não conformidades'),
+      pend('t13-chaves', 'Movimentação de chaves'),
+      pend('t13-apoio', 'Apoio emergencial'),
+      pend('t13-continuidade', 'Continuidade de negócios'),
+    ]),
+  trilha('operacao-recursos', 'Operação: recursos, terceiros e qualidade',
+    'Frota, patrimônio e almoxarifado, terceiros e qualidade.',
+    'Operação', ['supervisor', 'admin'], [
+      pend('t14-frota', 'Frota'),
+      pend('t14-patrimonio', 'Patrimônio e almoxarifado'),
+      pend('t14-terceiros', 'Terceiros'),
+      pend('t14-qualidade', 'Qualidade'),
+    ]),
+  trilha('contratos-gestao', 'Contratos: implantação e gestão',
+    'Cadastro, escopo e vigência, implantação, aditivos, alertas, obrigações e encerramento.',
+    'Financeiro e compliance', ['comercial', 'financeiro', 'admin'], [
+      pend('t15-cadastro', 'Cadastro manual de contrato'),
+      pend('t15-escopo', 'Escopo e vigência dos itens'),
+      pend('t15-implantacao', 'Implantação do contrato, por etapas'),
+      pend('t15-aditivo', 'Aditivo: registrar a alteração'),
+      pend('t15-alertas', 'Alertas de vencimento'),
+      pend('t15-diario', 'Diário de gestão do contrato'),
+      pend('t15-obrigacoes', 'Obrigações documentais'),
+      pend('t15-encerramento', 'Encerramento e fechamento'),
+      pend('t15-versoes', 'Versões comerciais: histórico de vistoria, orçamento, proposta e contrato'),
+    ]),
+  trilha('financeiro-receber', 'Financeiro: receber, pagar, competência e conciliação',
+    'Contas a receber e a pagar, recorrência, aging, custos, orçamento, fechamento e conciliação.',
+    'Financeiro e compliance', ['financeiro', 'marcelo', 'admin'], [
+      pub('fin-receber'),
+      pend('t16-recorrencia', 'Recorrência: regra e geração de lançamentos'),
+      pend('t16-aging', 'Aging e fluxo de caixa'),
+      pend('t16-custos', 'Custos e rateio por centro de custo'),
+      pend('t16-orcamento', 'Orçamento e cenários'),
+      pub('fin-competencia'),
+      pend('t16-exportacoes', 'Exportações do período'),
+      pub('fin-conciliacao'),
+      pend('t16-cobranca', 'Cobrança e histórico de lembretes', 'D'),
+      pend('t16-pagamentos', 'Pagamentos e documento fiscal (gateway em sandbox, não é fiscal real)', 'D'),
+    ]),
+  trilha('compliance-gestao', 'Compliance, licitações e fornecedores',
+    'Obrigações, avaliação temporal, renovação, licitações e fornecedores.',
+    'Financeiro e compliance', ['financeiro', 'marcelo', 'admin'], [
+      pend('t17-obrigacao', 'Declarar obrigação, referência documental e plano de ação'),
+      pend('t17-avaliacao', 'Avaliação temporal de compliance: agenda, resultado e tarefas por vencimento'),
+      pend('t17-renovacao', 'Renovar uma obrigação'),
+      pend('t17-licitacoes', 'Licitações'),
+      pend('t17-fornecedores', 'Fornecedores'),
+    ]),
+  trilha('admin-acessos', 'Administração: acessos e portal',
+    'Convites, permissões, solicitações de acesso, alertas e cadastro central de clientes.',
+    'Administração e TI', ['admin', 'ti'], [
+      pub('ti-portal'),
+      pend('t18-permissoes', 'Permissões: conceder, revogar, suspender, desativar e reativar'),
+      pend('t18-solicitacoes', 'Solicitações de acesso e autocadastro (sem acesso automático)'),
+      pend('t18-alertas', 'Alertas de acesso e trocas de e-mail sinalizadas'),
+      pend('t18-cadastro', 'Cadastro central de clientes e vínculos de acesso verificados'),
+      pend('t18-vinculos', 'Contratos, documentos, chamados e visitas do cliente no cadastro central'),
+    ]),
+  trilha('admin-sistema', 'Administração: sistema, LGPD e auditoria',
+    'Trilha de auditoria, papéis e permissões, site, LGPD, aparência e notificações.',
+    'Administração e TI', ['admin'], [
+      pub('ti-auditoria'),
+      pend('t19-rbac', 'Permissões por papel (RBAC) e o motivo de cada concessão'),
+      pend('t19-site', 'Publicação do site'),
+      pend('t19-lgpd', 'LGPD: solicitações de titular, retenção e descarte'),
+      pend('t19-aparencia', 'Aparência, tema e visual'),
+      pend('t19-notificacoes', 'Fila de notificações e preferências'),
+    ]),
+  trilha('ti-seguranca', 'TI: segurança, backup e observabilidade',
+    'Backup e restauração, observabilidade, verificação técnica e limites declarados do sistema.',
+    'Administração e TI', ['ti', 'admin'], [
+      pend('t20-backup', 'Backup e restauração'),
+      pend('t20-observabilidade', 'Observabilidade e healthcheck'),
+      pend('t20-verificacao', 'Verificação manual pelo time técnico'),
+      pend('t20-limites', 'Limites declarados do sistema: RAG privado, e-mail e sandbox financeiro'),
+    ]),
+  trilha('portaria-rotina', 'Porteiros: portaria e rotina de posto',
+    'Recepção, controle de visitantes, livro de ocorrências, chaves, rondas e emergência.',
+    'Campo', ['porteiro', 'admin'], [
+      pend('t21-recepcao', 'Recepção de quem chega: identificação e orientação', 'P'),
+      pend('t21-visitantes', 'Controle de visitantes e veículos: registro de entrada e saída', 'P'),
+      pend('t21-ocorrencias', 'Livro de ocorrências: como registrar o que aconteceu'),
+      pend('t21-chaves', 'Chaves: retirada, devolução e conferência'),
+      pend('t21-checklist', 'Checklist de posto de portaria'),
+      pend('t21-rondas', 'Rondas e leituras de ronda'),
+      pend('t21-plantao', 'Passagem de plantão'),
+      pend('t21-emergencia', 'Acionar emergência e apoio'),
+    ]),
+  trilha('controle-acesso', 'Controladores de acesso',
+    'Credenciais, acessos fora do padrão, áreas restritas, alarme, plantão e emergência.',
+    'Campo', ['controlador_acesso', 'admin'], [
+      pend('t22-credenciais', 'Conferir credenciais e autorização de acesso', 'P'),
+      pend('t22-fora-padrao', 'Acesso fora do padrão: registrar como ocorrência'),
+      pend('t22-chaves', 'Controle de chaves e de áreas restritas'),
+      pend('t22-rondas', 'Rondas e checklist do controle de acesso'),
+      pend('t22-alarme', 'Alarme disparado: o que fazer', 'P'),
+      pend('t22-plantao', 'Passagem de plantão com pendências de acesso'),
+      pend('t22-emergencia', 'Emergência e evacuação: acionar o apoio'),
+    ]),
+  trilha('servicos-gerais', 'Auxiliares de serviços gerais: limpeza e conservação',
+    'Rotina de limpeza, não conformidades, materiais, EPI e comunicação com o posto.',
+    'Campo', ['servicos_gerais', 'admin'], [
+      pend('t23-ponto', 'Ponto, escala e troca de turno'),
+      pend('t23-limpeza', 'Rotina de limpeza: execução e checklist'),
+      pend('t23-nao-conformidade', 'Não conformidade de limpeza: registrar e tratar'),
+      pend('t23-materiais', 'Materiais, almoxarifado e patrimônio'),
+      pend('t23-epi', 'Segurança no trabalho e uso de EPI', 'P'),
+      pend('t23-comunicacao', 'Ocorrências e comunicação com o posto'),
+    ]),
+  trilha('instalacao-seguranca', 'Instaladores de segurança eletrônica',
+    'Visitas e ordens de serviço, frota, equipamentos, execução, segurança e sistemas instalados.',
+    'Campo', ['instalador', 'admin'], [
+      pend('t24-agenda', 'Agenda de visitas e ordem de serviço do cliente'),
+      pend('t24-frota', 'Frota e veículo de instalação'),
+      pend('t24-patrimonio', 'Patrimônio e equipamentos em uso: inventário'),
+      pend('t24-checklist', 'Checklist de instalação por tipo de sistema', 'P'),
+      pend('t24-execucao', 'Registro de execução: fotos, medição e relatório de aceite'),
+      pend('t24-ocorrencia', 'Ocorrência durante a instalação'),
+      pend('t24-seguranca', 'Segurança na instalação: altura, eletricidade e EPI', 'P'),
+      pend('t24-equipamentos', 'Equipamentos: câmeras, sensores, alarmes, central e cerca elétrica', 'T'),
+    ]),
+]);
+
 export function lessonCount(tracks = TRACKS) {
   return tracks.reduce((total, track) => total + track.lessons.length, 0);
+}
+
+export function publishedCount(tracks = TRACKS) {
+  return tracks.reduce((total, track) => total + track.lessons.filter(lesson => !isPending(lesson)).length, 0);
 }
