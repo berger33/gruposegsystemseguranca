@@ -368,9 +368,13 @@ try {
   const migrator = spawnChild(['scripts/migrate-site-visual.mjs'], env);
   if (await exited(migrator) !== 0) throw new Error('qa_migrations_failed');
   const { rows } = await pool.query('SELECT count(*)::int AS count FROM __migrations WHERE checksum IS NOT NULL');
-  if (rows[0].count !== 98) throw new Error(`qa_migrations_expected_98_got_${rows[0].count}`);
+  // O disco é a fonte de verdade. Havia aqui um literal `!== 98` que envelheceu
+  // na migração 099 e passou a reprovar toda execução da homologação, inclusive
+  // em cluster íntegro. O migrador já falha fechado se disco != manifesto.
+  const noDisco = (await readdir(path.join(root, 'db/migrations'))).filter(f => /^\d{3}-.*\.sql$/.test(f)).length;
+  if (rows[0].count !== noDisco) throw new Error(`qa_migrations_expected_${noDisco}_got_${rows[0].count}`);
   const identities = await seed(pool);
-  console.log('QA-HOM-001: 98/98 migrações no PostgreSQL novo; 4 identidades e 2 empresas 100% fictícias.');
+  console.log(`QA-HOM-001: ${rows[0].count}/${noDisco} migrações no PostgreSQL novo; 4 identidades e 2 empresas 100% fictícias.`);
   web = spawnChild(['server.mjs', '--dev'], { ...env, QA_MIGRATION_ONLY: '' });
   await waitForHealth(web);
   if (verify) {
