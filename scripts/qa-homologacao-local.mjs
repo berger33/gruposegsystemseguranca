@@ -273,12 +273,34 @@ async function smoke(identities, marceloToken, pool) {
   const pendingPassword = randomPassword();
   const created = await auth('/api/admin/invites', { email: pendingEmail, scopeNote: 'Somente QA sintético sem dados reais' }, ti.cookie);
   expect(created, 201, '007_INVITE_CREATED');
-  if (created.data.emailStatus !== 'not_configured' || !created.data.inviteUrl) throw new Error('qa_manual_invite_delivery_mismatch');
+  // L02: sem SMTP a entrega cai na caixa local e o token NÃO é mais ecoado na
+  // resposta — ele só volta quando não existe canal algum. Este passo sempre
+  // quis garantir que nenhuma identidade vire 'e-mail confirmado' sozinha; a
+  // regra de eco do token passou a fazer parte dessa garantia.
+  const inviteDelivery = created.data.emailStatus;
+  if (inviteDelivery === 'sent') throw new Error('qa_manual_invite_claimed_smtp_delivery');
+  if (inviteDelivery !== 'local_outbox' && inviteDelivery !== 'not_configured') {
+    throw new Error(`qa_manual_invite_delivery_mismatch_${inviteDelivery}`);
+  }
+  if (inviteDelivery === 'not_configured' && !created.data.inviteUrl) throw new Error('qa_manual_invite_url_missing');
+  if (inviteDelivery === 'local_outbox' && created.data.inviteUrl) throw new Error('qa_manual_invite_token_echoed');
+  console.log(`QA-HOM-007_INVITE_DELIVERY: ${inviteDelivery} (sem envio real).`);
+  let inviteUrl = created.data.inviteUrl || '';
+  if (!inviteUrl) {
+    // O operador copia o link da caixa local; o ensaio faz exatamente o mesmo.
+    const { rows: outbox } = await pool.query(
+      `SELECT body FROM local_outbox_messages
+        WHERE recipient_address = $1 AND template = 'client_invite'
+        ORDER BY created_at DESC LIMIT 1`, [pendingEmail]);
+    inviteUrl = /\/cliente\/convite\?token=[A-Za-z0-9_-]+/.exec(outbox[0]?.body || '')?.[0] || '';
+    if (!inviteUrl) throw new Error('qa_manual_invite_not_in_outbox');
+  }
   const accepted = await auth('/api/auth/invite/accept', {
-    token: new URL(created.data.inviteUrl).searchParams.get('token'), password: pendingPassword, displayName: 'Cliente Manual Fictício',
+    token: new URL(inviteUrl, 'http://127.0.0.1:3000').searchParams.get('token'), password: pendingPassword, displayName: 'Cliente Manual Fictício',
   });
   expect(accepted, 201, '007_INVITE_ACCEPTED_PENDING');
-  if (accepted.data.status !== 'pending_email' || accepted.data.emailStatus !== 'not_configured') throw new Error('qa_manual_pending_expected');
+  if (accepted.data.status !== 'pending_email') throw new Error('qa_manual_pending_expected');
+  if (accepted.data.emailStatus === 'sent') throw new Error('qa_manual_pending_claimed_smtp_delivery');
   const pendingLogin = () => auth('/api/auth/login', { email: pendingEmail, password: pendingPassword });
   const blockedPending = await pendingLogin(); expect(blockedPending, 403, '007_PENDING_LOGIN_DENIED');
   if (blockedPending.cookie) throw new Error('qa_pending_cookie_issued');
