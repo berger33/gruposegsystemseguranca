@@ -8,7 +8,11 @@ test('every destination in the existing admin catalog belongs to exactly one nam
   const section = source.split('export const ADMIN_MODULES')[1].split('export function modulesForRole')[0];
   const existing = [...section.matchAll(/href:\s*"(\/admin[^\"]+)"/g)].map(match => match[1]);
   const grouped = ADMIN_GROUPS.flatMap(group => group.hrefs);
-  assert.equal(existing.length, 27, 'review the navigation catalogue before changing this baseline');
+  // Baseline revisada em 10/10/2026 (UX-PRO-00): o catálogo vigente tem 26 destinos, conforme
+  // docs/UX-02-NAVEGACAO-2026-10-05.md. O valor 27 estava defasado em relação ao código; a
+  // verificação de unicidade e de igualdade do conjunto abaixo permanece integral.
+  // Ver docs/UX-PRO-00-RECONCILIACAO-2026-10-10.md.
+  assert.equal(existing.length, 26, 'review the navigation catalogue before changing this baseline');
   assert.deepEqual([...new Set(grouped)].sort(), [...existing].sort());
   assert.equal(grouped.length, existing.length, 'no destination may be duplicated');
 });

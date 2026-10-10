@@ -290,6 +290,9 @@ try {
   console.error('DEMO_LOCAL_FAILED:', redact(error?.message || error, config));
   process.exitCode = 1;
 } finally {
+  // Em modo QA o stdin do pai mantém o event loop vivo; sem esta pausa, uma falha
+  // antes do web (ex.: diretório inseguro) registra o erro mas nunca termina o processo.
+  if (qa) process.stdin.pause();
   if (web?.exitCode === null) {
     web.kill('SIGTERM');
     await Promise.race([exitOf(web), new Promise(resolve => setTimeout(resolve, 10_000))]);

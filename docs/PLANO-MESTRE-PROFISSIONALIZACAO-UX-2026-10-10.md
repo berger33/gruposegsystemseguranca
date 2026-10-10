@@ -5,6 +5,8 @@
 **Escopo:** auditoria e melhoria visual incremental de todas as áreas do SEG System.
 **Estado inicial:** plano de trabalho; as fatias abaixo ainda precisam ser reavaliadas contra o código atual antes de qualquer implementação.
 
+**Registro de execução:** UX-PRO-00 (reconciliação e mapa de cobertura) foi executada em 10/10/2026 sobre a `main` `c50a99beecb057c2a819d5556cf1405f3434458c`. Resultado, critério de contagem (100 `page.tsx`; 98 = histórico) e matriz: [UX-PRO-00-RECONCILIACAO-2026-10-10.md](UX-PRO-00-RECONCILIACAO-2026-10-10.md). A base `87aef9f` citada acima não existe no clone atual; ver o registro.
+
 ## Instrução prioritária ao Arena
 
 Leia este documento inteiro e `AGENTS.md`, `README.md`, `docs/ARENA-PRESERVAR-FUNCIONALIDADES.md`, `docs/AUDITORIA-INTERFACE-ROTAS-2026-10-08.md` e `docs/FECH-ENTREGA-DESENVOLVIMENTO-2026-10-07.md` antes de alterar o repositório. Os dois últimos são registros com limites e datas próprios; não trate pendência histórica como defeito atual sem conferir o código na `main` mais recente.

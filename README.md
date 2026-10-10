@@ -18,7 +18,7 @@
 
 > **Estado de referência (05/10/2026):** `main` inclui o RAG local por área e as migrações 001–174. Os blocos “Continuação atual” abaixo são registros históricos de etapas anteriores e não devem ser lidos como o HEAD vigente. Para evolução visual, leia o [plano mestre de UX](docs/UX-PLANO-MESTRE-2026-10-05.md) e o [prompt de execução em etapas para o Arena](docs/ARENA-PROMPT-UX-ETAPAS-2026-10-05.md). A configuração e os limites reais do RAG estão em [RAG local por área](docs/AI-RAG-LOCAL-2026-10-05.md). Verifique o SHA e o ledger novamente antes de implementar.
 
-**UX-00:** [auditoria e linha de base visual](docs/UX-00-AUDITORIA-BASELINE-2026-10-05.md), [inventário completo das 98 páginas](docs/UX-00-INVENTARIO-ROTAS.csv). São evidências de navegação e código, não homologação de todas as jornadas.
+**UX-00:** [auditoria e linha de base visual](docs/UX-00-AUDITORIA-BASELINE-2026-10-05.md), [inventário das 98 páginas de 05/10/2026 (histórico)](docs/UX-00-INVENTARIO-ROTAS.csv). Inventário **vigente** em 10/10/2026: 100 arquivos `page.tsx`, reconciliados em [UX-PRO-00](docs/UX-PRO-00-RECONCILIACAO-2026-10-10.md) com a [matriz de cobertura](docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-10.csv). São evidências de navegação e código, não homologação de todas as jornadas.
 
 **UX-01:** [tokens e primeiros componentes compartilhados](docs/UX-01-FUNDAMENTOS-2026-10-05.md) aplicados ao login staff e ao hub, com evidência visual/teclado.
 
