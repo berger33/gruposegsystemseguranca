@@ -3802,6 +3802,12 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/cli-charges-v2" || url.pathname === "/api/crm/hr/cli-charges-v2" || url.pathname === "/api/hr/cli-charges-v2" || url.pathname === "/api/cli/charges-v2" || url.pathname === "/api/client/charges-v2") {
     return cliFinanceApi.handleChargesV2(req, res);
   }
+  // CLI-09 leitura de cobranças pelo portal do cliente: rota canônica própria,
+  // com sessão de cliente e escopo por vínculo. Os alias *-v2 acima seguem sendo
+  // de staff, como tickets-v2 e reports-v2.
+  if (url.pathname === "/api/client/cobrancas") {
+    return cliFinanceApi.handleClientCharges(req, res);
+  }
   // CLI-10 solicitação serviço adicional gera oportunidade CRM origem responsável
   if (url.pathname === "/api/admin/hr/cli-service-requests" || url.pathname === "/api/crm/hr/cli-service-requests" || url.pathname === "/api/hr/cli-service-requests" || url.pathname === "/api/cli/service-requests" || url.pathname === "/api/client/service-requests") {
     return cliFinanceApi.handleServiceRequests(req, res);
@@ -5512,6 +5518,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/hr/cli-charges-v2"
   || pathname === "/api/cli/charges-v2"
   || pathname === "/api/client/charges-v2"
+  || pathname === "/api/client/cobrancas"
   || pathname === "/api/admin/hr/cli-service-requests"
   || pathname === "/api/crm/hr/cli-service-requests"
   || pathname === "/api/hr/cli-service-requests"
