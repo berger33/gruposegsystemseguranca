@@ -1,5 +1,7 @@
 # Desenvolvimento das frentes de fechamento — 07/10/2026
 
+> **Reconciliação de 10/10/2026 (UX-PRO-00):** registro histórico — preserva a contagem e os limites da sua data. A fonte vigente do inventário de rotas e da cobertura é [UX-PRO-00-RECONCILIACAO-COBERTURA-2026-10-10.md](UX-PRO-00-RECONCILIACAO-COBERTURA-2026-10-10.md): **100 entradas de rota** na `main` `c50a99beec…`, com critério reproduzível (`node scripts/ux-pro-00-inventory.mjs`) e a reconciliação 98 × 100.
+
 Base: main `7765d9983bdd7bad97f6d8e088e9ae9356d9be8f`. Incorporado o código da PR #182, head `605a64bbfc7fae7ab0d9383f03d86347ad27c69b`, sem repetir os testes do Arena. O proprietário determinou foco no desenvolvimento das 12 frentes e adiamento dos testes. Portanto esta entrega **não é homologação completa, aceite humano ou certificação WCAG**.
 
 ## Implementação por frente

@@ -1,5 +1,7 @@
 # Auditoria de interface e legibilidade — 08/10/2026
 
+> **Reconciliação de 10/10/2026 (UX-PRO-00):** registro histórico — preserva a contagem e os limites da sua data. A fonte vigente do inventário de rotas e da cobertura é [UX-PRO-00-RECONCILIACAO-COBERTURA-2026-10-10.md](UX-PRO-00-RECONCILIACAO-COBERTURA-2026-10-10.md): **100 entradas de rota** na `main` `c50a99beec…`, com critério reproduzível (`node scripts/ux-pro-00-inventory.mjs`) e a reconciliação 98 × 100.
+
 ## Resultado e escopo
 
 Foi feita uma auditoria estática do código de rotas e superfícies visuais e uma revisão manual focal da área administrativa, com atenção a CRM, filtros, seletores e tabelas no desktop e em viewport estreita. A interface administrativa recebeu uma camada visual compartilhada para RH, TI e Marcelo; o site público não foi alterado pela tipografia/tabelas globais.

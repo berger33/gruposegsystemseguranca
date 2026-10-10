@@ -1,5 +1,7 @@
 # Continuação após desenvolvimento das 12 frentes
 
+> **Reconciliação de 10/10/2026 (UX-PRO-00):** registro histórico — preserva a contagem e os limites da sua data. A fonte vigente do inventário de rotas e da cobertura é [UX-PRO-00-RECONCILIACAO-COBERTURA-2026-10-10.md](UX-PRO-00-RECONCILIACAO-COBERTURA-2026-10-10.md): **100 entradas de rota** na `main` `c50a99beec…`, com critério reproduzível (`node scripts/ux-pro-00-inventory.mjs`) e a reconciliação 98 × 100.
+
 Trabalhe no repositório berger33/gruposegsystemseguranca, partindo da main mais recente. Leia README.md, docs/FECH-ENTREGA-DESENVOLVIMENTO-2026-10-07.md, docs/FECH-RUNBOOK-LOCAL-2026-10-07.md e docs/FECH-12-MATRIZ-COBERTURA-2026-10-07.csv. O proprietário pediu desenvolvimento com testes completos adiados nesta entrega. Sua tarefa agora é validar e corrigir defeitos comprovados, por lotes pequenos, sem declarar homologação por inspeção estática.
 
 1. Reconcilie branches/PRs e checks do SHA atual, sem recriar entregas anteriores. Registre os bloqueios reais do ambiente. Execute typecheck/build; corrija erros antes dos gates de domínio.

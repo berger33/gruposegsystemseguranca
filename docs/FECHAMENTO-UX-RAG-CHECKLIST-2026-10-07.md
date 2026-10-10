@@ -1,5 +1,7 @@
 # Estado de desenvolvimento — fechamento UX/RAG (07/10/2026)
 
+> **Reconciliação de 10/10/2026 (UX-PRO-00):** registro histórico — preserva a contagem e os limites da sua data. A fonte vigente do inventário de rotas e da cobertura é [UX-PRO-00-RECONCILIACAO-COBERTURA-2026-10-10.md](UX-PRO-00-RECONCILIACAO-COBERTURA-2026-10-10.md): **100 entradas de rota** na `main` `c50a99beec…`, com critério reproduzível (`node scripts/ux-pro-00-inventory.mjs`) e a reconciliação 98 × 100.
+
 Por instrução do proprietário, as 12 frentes receberam desenvolvimento consolidado e os testes foram adiados. Ver [relatório de implementação](FECH-ENTREGA-DESENVOLVIMENTO-2026-10-07.md), [matriz estática das 98 páginas](FECH-12-MATRIZ-COBERTURA-2026-10-07.csv) e [runbook local](FECH-RUNBOOK-LOCAL-2026-10-07.md).
 
 **Estado atual: código em entrega; validação pendente.** Não interpretar a cobertura focal como redesign/homologação integral das 98 rotas. FECH-01 aproveita a PR #182; FECH-02/03 adicionam console e fontes; FECH-04–11 modernizam famílias; FECH-12 consolida documentação estática. As limitações por frente estão no relatório. Migração aditiva 175 requer aplicação oficial; não foi aplicada ao banco operacional.

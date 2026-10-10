@@ -1,5 +1,7 @@
 # UX-00 — inventário, linha de base e prioridades
 
+> **Reconciliação de 10/10/2026 (UX-PRO-00):** registro histórico — preserva a contagem e os limites da sua data. A fonte vigente do inventário de rotas e da cobertura é [UX-PRO-00-RECONCILIACAO-COBERTURA-2026-10-10.md](UX-PRO-00-RECONCILIACAO-COBERTURA-2026-10-10.md): **100 entradas de rota** na `main` `c50a99beec…`, com critério reproduzível (`node scripts/ux-pro-00-inventory.mjs`) e a reconciliação 98 × 100.
+
 **Base:** `main` `1c4b859c965df994378e1d4c1d318887ecf085e2`, 05/10/2026. **Natureza:** auditoria de rotas/código e observação local com contas fictícias. Não há pesquisa com Marcelo ou Andreia, nem homologação de todos os fluxos. Nenhuma mutação de negócio foi executada para esta auditoria.
 
 ## Método e artefatos

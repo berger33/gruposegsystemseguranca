@@ -1,5 +1,7 @@
 # Identidade visual e administração da aparência — 07/10/2026
 
+> **Reconciliação de 10/10/2026 (UX-PRO-00):** registro histórico — preserva a contagem e os limites da sua data. A fonte vigente do inventário de rotas e da cobertura é [UX-PRO-00-RECONCILIACAO-COBERTURA-2026-10-10.md](UX-PRO-00-RECONCILIACAO-COBERTURA-2026-10-10.md): **100 entradas de rota** na `main` `c50a99beec…`, com critério reproduzível (`node scripts/ux-pro-00-inventory.mjs`) e a reconciliação 98 × 100.
+
 ## Resultado e escopo
 
 Logo oficial fornecido pelo usuário aplicado aos cabeçalhos e entradas do staff, funcionário, cliente e às dez apresentações do site, além do ícone padrão da aplicação. A fotografia de referência orientou a leitura corporativa, mas não foi adicionada ao site. O JPG de 345 × 345 foi preservado sem redesenhar letras ou escudo; o tratamento circular é CSS. Para impressão ou ampliação, obter futuramente o arquivo vetorial oficial.
