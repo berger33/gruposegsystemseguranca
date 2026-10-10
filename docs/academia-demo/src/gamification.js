@@ -1,7 +1,7 @@
 // Regras de progresso: pontos, níveis, selos e ranking por setor.
 // Pontos de aula são gravados na primeira conclusão. Bônus de trilha e selos
 // são derivados do progresso, então não podem ficar fora de sincronia.
-import { canSeeTrack } from './sectors.mjs';
+import { canSeeTrack } from './sectors.js';
 
 export const POINTS = Object.freeze({ lesson: 10, quiz: 5, track: 30 });
 

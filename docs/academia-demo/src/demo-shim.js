@@ -2,10 +2,10 @@
 // intercepta as chamadas /api/* do front-end e responde com a mesma lógica do servidor
 // (conteúdo, pontuação, níveis, selos e ranking). Progresso e sessões ficam no navegador.
 // ATENÇÃO: aqui a alçada NÃO é verificada em servidor. Serve só para demonstrar a interface.
-import { TRACKS } from './content.mjs';
-import { SECTORS, canSeeTrack } from './sectors.mjs';
-import { POINTS, summarize, leaderboard } from './gamification.mjs';
-import { DEMO_USERS, userIdFor } from './demo-users.mjs';
+import { TRACKS } from './content.js';
+import { SECTORS, canSeeTrack } from './sectors.js';
+import { POINTS, summarize, leaderboard } from './gamification.js';
+import { DEMO_USERS, userIdFor } from './demo-users.js';
 
 const DEMO_PASSWORD = 'Academia#2026';
 const STATE_KEY = 'academia-demo-estado-v1';
