@@ -239,7 +239,7 @@
       '</section>' +
       '<section class="login-panel">' +
       '<div class="login-card reveal" style="--d:1">' +
-      '<div class="login-head"><span class="brand-mark"><span>AS</span></span><h1>Entrar na Academia</h1><p>Use o e-mail e a senha informados pelo seu gestor.</p></div>' +
+      '<div class="login-head"><span class="brand-mark"><span>AS</span></span><h1 class="grad-text">Entrar na Academia</h1><p>Use o e-mail e a senha informados pelo seu gestor.</p></div>' +
       '<form id="login-form" class="form" novalidate>' +
       '<div class="field"><label for="f-email">E-mail</label><div class="input-wrap">' + icon('mail') +
       '<input id="f-email" name="email" type="email" autocomplete="username" required placeholder="seu.nome@empresa.com.br"></div></div>' +
@@ -928,9 +928,66 @@
     card.style.setProperty('--mx', (event.clientX - rect.left) + 'px');
     card.style.setProperty('--my', (event.clientY - rect.top) + 'px');
   });
+  // ---------- Fundo de partículas (constelação) ----------
+  function initParticles() {
+    var canvas = document.getElementById('fx-canvas');
+    if (!canvas) return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var ctx = canvas.getContext('2d');
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var parts = [];
+    var W = 0, H = 0;
+    var COLORS = ['110,160,255', '139,92,246', '34,211,238'];
+    function resize() {
+      W = canvas.width = Math.floor(window.innerWidth * dpr);
+      H = canvas.height = Math.floor(window.innerHeight * dpr);
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      var n = Math.min(70, Math.floor((window.innerWidth * window.innerHeight) / 26000));
+      parts = [];
+      for (var i = 0; i < n; i++) {
+        parts.push({
+          x: Math.random() * W, y: Math.random() * H,
+          vx: (Math.random() - 0.5) * 0.14 * dpr, vy: (Math.random() - 0.5) * 0.14 * dpr,
+          r: (Math.random() * 1.6 + 0.6) * dpr,
+          c: COLORS[i % COLORS.length], a: Math.random() * 0.5 + 0.2,
+        });
+      }
+    }
+    function tick() {
+      ctx.clearRect(0, 0, W, H);
+      var link = 120 * dpr;
+      for (var i = 0; i < parts.length; i++) {
+        var p = parts[i];
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0 || p.x > W) p.vx *= -1;
+        if (p.y < 0 || p.y > H) p.vy *= -1;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(' + p.c + ',' + p.a + ')';
+        ctx.fill();
+        for (var j = i + 1; j < parts.length; j++) {
+          var q = parts[j];
+          var dx = p.x - q.x, dy = p.y - q.y;
+          var d = Math.sqrt(dx * dx + dy * dy);
+          if (d < link) {
+            ctx.strokeStyle = 'rgba(' + p.c + ',' + (0.14 * (1 - d / link)) + ')';
+            ctx.lineWidth = dpr * 0.6;
+            ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+    requestAnimationFrame(tick);
+  }
+
   app.addEventListener('click', onAppClick);
   app.addEventListener('input', onAppInput);
   app.addEventListener('change', onAppChange);
   window.addEventListener('hashchange', route);
+  initParticles();
   route();
 })();
