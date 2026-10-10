@@ -2,6 +2,8 @@
 
 # Continuação da implementação de UX — Arena
 
+> **Reconciliação de 10/10/2026 (UX-PRO-00):** registro histórico — preserva a contagem e os limites da sua data. A fonte vigente do inventário de rotas e da cobertura é [UX-PRO-00-RECONCILIACAO-COBERTURA-2026-10-10.md](UX-PRO-00-RECONCILIACAO-COBERTURA-2026-10-10.md): **100 entradas de rota** na `main` `c50a99beec…`, com critério reproduzível (`node scripts/ux-pro-00-inventory.mjs`) e a reconciliação 98 × 100.
+
 ## Leia antes de executar
 
 Trabalhe em `github.com/berger33/gruposegsystemseguranca`, a partir da **main mais recente no GitHub**. O GitHub é a fonte central. Não use ZIPs ou snapshots antigos. Leia, nesta ordem:
