@@ -411,17 +411,25 @@ Antes de cada fase: conferir cada aula [S] na tela real com dados fictícios. Au
 
 ---
 
-## 10. Decisões pendentes
+## 10. Respostas e status (rodada de confirmação)
 
-1. **Nomes dos novos setores.** Proposta: `porteiro`, `controlador_acesso`, `servicos_gerais`, `instalador` e `supervisor_posto`. Confirme ou sugira outros nomes. Atenção ao conflito com o papel de supervisão da equipe.
-2. **Onde morar a área de permissões.** Opção A: dentro da Academia, com papel de gestão próprio para o Marcelo (recomendado, mantém o isolamento). Opção B: dentro do painel administrativo, ligado às contas do sistema principal (exige integração).
-3. **Quem altera permissões.** Só o Marcelo? Ou também o RH, para as trilhas de RH? Ou o admin?
-4. **Conteúdo técnico da instalação (T24, aula 8).** Quem fornece: a equipe técnica da SEG? Sem isso, essa aula fica bloqueada.
-5. **Procedimentos [P] de portaria, controle de acesso e serviços gerais.** Quem valida: a operação e a SST? Ou algum supervisor de referência?
-6. **Visitantes e veículos.** O sistema não tem esse módulo. Você quer que a portaria seja ensinada só com o procedimento manual por enquanto?
+| # | Pergunta | Resposta | Status |
+|---|---|---|---|
+| 1 | Nome do papel "supervisor" | Deixar pendente. Você confirma com o Marcelo como ele quer | **Pendente (Marcelo)** |
+| 2 | Onde morar a área de permissões | Dentro da Academia | Confirmada |
+| 3 | Quem altera permissões | Marcelo, RH e admin | Confirmada. Detalhe a definir: se o RH altera qualquer trilha ou só as trilhas de RH |
+| 4 | Conteúdo técnico da instalação (T24, aula 8) | Em construção, até confirmar com o Marcelo | **Em construção** |
+| 5 | Validação dos procedimentos [P] de portaria, controle de acesso e serviços gerais | Em construção, até confirmar com o Marcelo | **Em construção** |
+| 6 | Visitantes e veículos | Em construção, até confirmar com o Marcelo | **Em construção** |
+
+### Efeitos no plano
+- **Papel supervisor (T25 e a trilha de supervisão T12/T13):** o nome e o público ficam pendentes. Até a resposta, a T25 e as aulas de supervisão não são publicadas com um papel definido. As aulas de supervisão da equipe continuam no plano, sem alteração de conteúdo.
+- **Aulas [P] e [T]:** ficam marcadas como "em construção" na Academia, sem publicação até a validação.
+- **Visitantes e veículos (T21, aula 2):** em construção.
+- **Área de permissões:** dentro da Academia, com acesso para Marcelo, RH e admin.
 
 ---
 
-## 11. Próximo passo sugerido
+## 11. Próximo passo
 
-Depois da sua confirmação das decisões 1 a 6 desta versão, começo pela Fase 1: os setores novos, as trilhas de base, as aulas [S] de T01 a T09 e a área de permissões do Marcelo.
+A Fase 1 pode começar com o que não depende das pendências: trilhas T01 a T09 (exceto o que depender do papel supervisor), a área de permissões dentro da Academia e os setores novos que não usam o nome pendente (porteiro, controlador de acesso, serviços gerais e instalador). O conteúdo de cada aula é conferido na tela real antes de publicar.
