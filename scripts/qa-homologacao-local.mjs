@@ -143,6 +143,67 @@ async function request(url, init) {
   const response = await fetch(`http://127.0.0.1:3000${url}`, init);
   return { status: response.status, data: await response.json().catch(() => ({})), cookie: response.headers.get('set-cookie')?.split(';')[0] || '' };
 }
+// L01/SEC-05: o token compartilhado continua válido COMO BOOTSTRAP quando o
+// operador liga o flag explicitamente. O Next não aceita um segundo dev server
+// no mesmo diretório, então o opt-in é provado reiniciando o MESMO servidor com
+// o flag ligado, depois que o smoke padrão (que prova a recusa) já terminou.
+async function stopChild(child) {
+  if (!child || child.exitCode !== null || child.signalCode) return;
+  child.kill('SIGTERM');
+  await Promise.race([exited(child).catch(() => {}), new Promise(resolve => setTimeout(resolve, 10_000))]);
+  if (child.exitCode === null) child.kill('SIGKILL');
+}
+async function legacyBootstrapProbe(currentWeb, marceloToken, env, pool) {
+  await stopChild(currentWeb);
+  const child = spawnChild(['server.mjs', '--dev'], {
+    ...env, QA_MIGRATION_ONLY: '', SITE_ADMIN_LEGACY_TOKENS: 'true',
+  });
+  const origin = 'http://127.0.0.1:3000';
+  function expect(result, code, label) {
+    if (result.status !== code) throw new Error(`qa_smoke_${label}_expected_${code}_got_${result.status}`);
+    console.log(`QA-HOM-${label}: HTTP ${code}`);
+  }
+  // evaluateLegacyTokenPolicy (src/server/staff-session.mjs) exige o flag
+  // ligado E zero staff individual provisionado: assim que a primeira conta
+  // individual existe, o token compartilhado morre sozinho. O seed cria contas
+  // individuais, então o ensaio simula o estado ANTERIOR ao bootstrap marcando
+  // os perfis do seed — exatamente o predicado que o contador usa — e os
+  // devolve no finally, como o QA-HOM-007 já faz com a verificação de e-mail.
+  let flipped = [];
+  try {
+    const { rows: provisioned } = await pool.query(
+      `UPDATE auth_staff_profiles SET is_bootstrap = TRUE
+        WHERE is_bootstrap = FALSE
+        RETURNING identity_id`);
+    flipped = provisioned.map(row => row.identity_id);
+    await waitForHealth(child);
+    const marcelo = await request('/api/admin/session', {
+      method: 'POST',
+      headers: { origin, 'content-type': 'application/json' },
+      body: JSON.stringify({ token: marceloToken }),
+    });
+    expect(marcelo, 200, '002_MARCELO_TOKEN_OPT_IN');
+    if (marcelo.data.role !== 'marcelo') throw new Error('qa_smoke_marcelo_role_mismatch');
+    if (marcelo.data.bootstrap !== true) throw new Error('qa_smoke_marcelo_bootstrap_flag_missing');
+    // As rotas que dependiam da sessão do token compartilhado continuam sendo
+    // exercitadas — agora no servidor em que essa sessão existe de fato.
+    expect(await request('/api/admin/client-accounts', { headers: { cookie: marcelo.cookie } }), 200, '003_MARCELO_ACCOUNTS_ALLOWED');
+    expect(await request('/api/admin/client-verifications', { headers: { cookie: marcelo.cookie } }), 403, '007_LEGACY_QUEUE_DENIED');
+    return child;
+  } catch (error) {
+    await stopChild(child);
+    throw error;
+  } finally {
+    try {
+      if (flipped.length) {
+        await pool.query('UPDATE auth_staff_profiles SET is_bootstrap = FALSE WHERE identity_id = ANY($1::uuid[])', [flipped]);
+      }
+      console.log(`QA-HOM-002_BOOTSTRAP_STATE_RESTORED: ${flipped.length} perfis devolvidos a is_bootstrap=FALSE.`);
+    } catch (restoreError) {
+      console.error('QA_HOM_RESTORE_FAILED:', String(restoreError?.message || restoreError).slice(0, 200));
+    }
+  }
+}
 async function smoke(identities, marceloToken, pool) {
   const { generate } = await import('otplib');
   const origin = 'http://127.0.0.1:3000';
@@ -164,9 +225,13 @@ async function smoke(identities, marceloToken, pool) {
   expect(rh, 200, '002_RH_LOGIN');
   const adm = await login({ email: identities[2].email, password: identities[2].password });
   expect(adm, 200, '002_ADMIN_LOGIN');
+  // L01/SEC-05: tokens compartilhados ficam DESLIGADOS por padrão e deixam de
+  // valer assim que existe conta individual de staff ativa — e o seed cria
+  // quatro. O smoke prova essa recusa. O bootstrap opt-in continua existindo e
+  // é provado logo adiante por legacyBootstrapProbe, que reinicia o servidor
+  // com o flag ligado.
   const marcelo = await login({ token: marceloToken });
-  expect(marcelo, 200, '002_MARCELO_TOKEN');
-  if (marcelo.data.role !== 'marcelo') throw new Error('qa_smoke_marcelo_role_mismatch');
+  expect(marcelo, 403, '002_MARCELO_TOKEN_RECUSADO_POR_PADRAO');
   const client = await request('/api/auth/login', { method: 'POST', headers: { origin, 'content-type': 'application/json' },
     body: JSON.stringify({ email: identities[3].email, password: identities[3].password }) });
   expect(client, 200, '002_CLIENT_LOGIN');
@@ -179,7 +244,6 @@ async function smoke(identities, marceloToken, pool) {
   }), 403, '003_RH_LEAD_WRITE_DENIED');
   expect(await request('/api/admin/client-accounts', { headers: { cookie: adm.cookie } }), 403, '003_ADMIN_LEGACY_ACCOUNTS_DENIED');
   expect(await request('/api/admin/leads', { headers: { cookie: ti.cookie } }), 200, '003_TI_LEADS_ALLOWED');
-  expect(await request('/api/admin/client-accounts', { headers: { cookie: marcelo.cookie } }), 200, '003_MARCELO_ACCOUNTS_ALLOWED');
   expect(await request('/api/client/accounts'), 401, '004_ANON_CLIENT_DENIED');
   const accounts = await request('/api/client/accounts', { headers: { cookie: client.cookie } });
   expect(accounts, 200, '004_CLIENT_ACCOUNT');
@@ -306,7 +370,6 @@ async function smoke(identities, marceloToken, pool) {
   if (blockedPending.cookie) throw new Error('qa_pending_cookie_issued');
   expect(await request('/api/admin/client-verifications'), 401, '007_ANON_QUEUE_DENIED');
   expect(await request('/api/admin/client-verifications', { headers: { cookie: rh.cookie } }), 403, '007_RH_QUEUE_DENIED');
-  expect(await request('/api/admin/client-verifications', { headers: { cookie: marcelo.cookie } }), 403, '007_LEGACY_QUEUE_DENIED');
   const queue = await request('/api/admin/client-verifications', { headers: { cookie: ti.cookie } });
   expect(queue, 200, '007_INDIVIDUAL_TI_QUEUE');
   const target = queue.data.pending?.find(row => row.email === pendingEmail);
@@ -410,6 +473,7 @@ try {
   await waitForHealth(web);
   if (verify) {
     await smoke(identities, marceloToken, pool);
+    web = await legacyBootstrapProbe(web, marceloToken, env, pool);
     result = 0;
   } else {
     console.log('\n=== HOMOLOGAÇÃO LOCAL, SOMENTE NESTE TERMINAL ===');
