@@ -14,8 +14,19 @@
     });
   }
 
+  // Token de sessão por aba. Usado quando o navegador não mantém o cookie (preview em iframe).
+  var TOKEN_KEY = 'academia_token';
+  function getToken() {
+    try { return sessionStorage.getItem(TOKEN_KEY); } catch (_) { return null; }
+  }
+  function setToken(value) {
+    try { if (value) sessionStorage.setItem(TOKEN_KEY, value); else sessionStorage.removeItem(TOKEN_KEY); } catch (_) {}
+  }
+
   function api(path, options) {
     var opts = { method: (options && options.method) || 'GET', credentials: 'same-origin', headers: {} };
+    var token = getToken();
+    if (token) opts.headers.Authorization = 'Bearer ' + token;
     if (options && options.body !== undefined) {
       opts.headers['Content-Type'] = 'application/json';
       opts.body = JSON.stringify(options.body);
@@ -97,6 +108,7 @@
     api('/api/login', { method: 'POST', body: { email: email, password: password } })
       .then(function (data) {
         me = data.user;
+        setToken(data.token);
         justLoggedIn = true;
         history.replaceState(null, '', '#/');
         return route();
@@ -110,6 +122,7 @@
   function onLogout() {
     api('/api/logout', { method: 'POST' }).catch(function () {}).then(function () {
       me = null;
+      setToken(null);
       history.replaceState(null, '', '#/');
       route();
     });
@@ -321,6 +334,7 @@
       return page.then(function () { justLoggedIn = false; }).catch(function (err) {
         if (err.status === 401) {
           me = null;
+          setToken(null);
           updateTopbar();
           if (justLoggedIn) {
             return renderLogin('O navegador não manteve a sua sessão. Tente abrir a Academia em uma nova aba, sem bloqueio de cookies de terceiros, e entre de novo.');

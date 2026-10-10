@@ -306,3 +306,25 @@ test('cookie de sessão: SameSite=Lax em localhost e SameSite=None; Secure atrá
   const remote = await post({ Host: 'academia-3100.example.app' });
   assert.match(remote, /SameSite=None; Secure/);
 });
+
+test('sessão por token no cabeçalho Authorization (sem depender do cookie)', async () => {
+  const res = await request('POST', '/api/login', { body: { email: 'carla.mendes@academia.exemplo', password: PASSWORD } });
+  const token = res.json.token;
+  assert.match(token, /^[0-9a-f]{64}$/);
+  const headers = { Authorization: `Bearer ${token}` };
+  const me = await new Promise((resolve, reject) => {
+    http.get(base + '/api/me', { headers }, r => { let d = ''; r.on('data', c => { d += c; }); r.on('end', () => resolve({ status: r.statusCode, body: JSON.parse(d) })); }).on('error', reject);
+  });
+  assert.equal(me.status, 200);
+  assert.equal(me.body.user.email, 'carla.mendes@academia.exemplo');
+  const out = await new Promise((resolve, reject) => {
+    const req = http.request(base + '/api/logout', { method: 'POST', headers }, r => { r.resume(); r.on('end', () => resolve(r.statusCode)); });
+    req.on('error', reject);
+    req.end();
+  });
+  assert.equal(out, 200);
+  const gone = await new Promise((resolve, reject) => {
+    http.get(base + '/api/me', { headers }, r => { r.resume(); r.on('end', () => resolve(r.statusCode)); }).on('error', reject);
+  });
+  assert.equal(gone, 401);
+});

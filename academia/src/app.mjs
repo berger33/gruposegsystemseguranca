@@ -69,7 +69,12 @@ function readJson(req) {
   });
 }
 
+// Aceita o cookie de sessão ou o token no cabeçalho Authorization.
+// O cabeçalho existe porque alguns navegadores bloqueiam cookies de terceiros
+// dentro do preview (iframe). O token fica na sessionStorage da aba.
 function tokenOf(req) {
+  const auth = String(req.headers.authorization || '');
+  if (auth.startsWith('Bearer ')) return auth.slice(7).trim() || null;
   const raw = String(req.headers.cookie || '');
   for (const part of raw.split(';')) {
     const [name, ...rest] = part.trim().split('=');
@@ -138,7 +143,7 @@ export function createApp({ store, sessions, content = TRACKS }) {
       return;
     }
     const token = sessions.create(user.id);
-    sendJson(res, 200, { user: publicUser(user) }, { 'Set-Cookie': sessionCookie(req, token) });
+    sendJson(res, 200, { user: publicUser(user), token }, { 'Set-Cookie': sessionCookie(req, token) });
   }
 
   async function complete(req, res, user, lessonId) {
