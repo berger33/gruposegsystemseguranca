@@ -295,7 +295,13 @@ export function createApp({ store, sessions, content = TRACKS }) {
   return async function handle(req, res) {
     try {
       const url = new URL(req.url, 'http://localhost');
-      if (url.pathname.startsWith('/api/')) return await api(req, res, url);
+      if (url.pathname.startsWith('/api/')) {
+        // Diagnóstico de sessão: registra só método, rota, status e presença de credenciais (nunca os valores).
+        res.on('finish', () => {
+          console.log(`[academia] ${req.method} ${url.pathname} -> ${res.statusCode} auth=${req.headers.authorization ? 'sim' : 'nao'} cookie=${req.headers.cookie ? 'sim' : 'nao'} sessoes=${sessions.size()} host=${req.headers.host || '-'} proto=${req.headers['x-forwarded-proto'] || '-'}`);
+        });
+        return await api(req, res, url);
+      }
       if (req.method !== 'GET' && req.method !== 'HEAD') {
         res.writeHead(405, SECURITY_HEADERS);
         return res.end();
