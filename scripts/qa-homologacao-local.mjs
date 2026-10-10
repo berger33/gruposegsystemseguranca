@@ -194,7 +194,16 @@ async function smoke(identities, marceloToken, pool) {
   const post = (path, headers) => request(path, { method: 'POST', headers: { origin, 'content-type': 'application/json', ...headers }, body: '{}' });
   expect(await post(mfaPath), 401, '005_MFA_ANON_DENIED');
   expect(await post(mfaPath, { cookie: client.cookie }), 409, '005_MFA_SETUP_REQUIRED');
-  expect(await post(changePath, { cookie: client.cookie }), 503, '005_EMAIL_CHANGE_EXPLICIT_UNAVAILABLE');
+  // A troca de e-mail deixou de ser um stub indisponível: hoje exige um e-mail
+  // novo válido e DIFERENTE, grava pedido com token hasheado e expiração, e só
+  // efetiva no PUT. O corpo vazio usado aqui prova a recusa antes de qualquer
+  // efeito colateral — que é o que este passo sempre quis garantir.
+  expect(await post(changePath), 401, '005_EMAIL_CHANGE_ANON_DENIED');
+  const emptyChange = await post(changePath, { cookie: client.cookie });
+  expect(emptyChange, 400, '005_EMAIL_CHANGE_EMPTY_BODY_DENIED');
+  if (emptyChange.data.error !== 'new_email_different_required') {
+    throw new Error('qa_smoke_email_change_error_mismatch');
+  }
   expect(await request(mfaPath, { method: 'POST', headers: { cookie: client.cookie, origin: 'https://foreign.invalid' }, body: '{}' }), 403, '005_MFA_FOREIGN_ORIGIN_DENIED');
   // A legacy record with activated_at must not let a password-only login (or an
   // earlier cookie) bypass the absent challenge. This DB is synthetic + disposable.
