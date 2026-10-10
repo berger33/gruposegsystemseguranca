@@ -8,6 +8,8 @@
 
 # Grupo SEG System
 
+> **Continuação visual vigente (10/10/2026):** para concluir a profissionalização e padronização da interface, siga [`docs/PLANO-MESTRE-PROFISSIONALIZACAO-UX-2026-10-10.md`](docs/PLANO-MESTRE-PROFISSIONALIZACAO-UX-2026-10-10.md). O plano define fatias pequenas, preservação das funcionalidades, evidências por tema/tela e a regra de abrir PR, exigir checks verdes, fazer merge e entregar o prompt da sessão seguinte. Os status e inventários antigos abaixo são históricos; confirme sempre a `main` e o código vigente.
+
 > **Instrução obrigatória para o Arena e outros agentes:** o proprietário pediu para preservar todas as funcionalidades existentes. Antes de editar, leia [`AGENTS.md`](AGENTS.md) e [`docs/ARENA-PRESERVAR-FUNCIONALIDADES.md`](docs/ARENA-PRESERVAR-FUNCIONALIDADES.md). Faça apenas mudanças compatíveis e aditivas; não remova, desative, oculte, substitua ou altere comportamentos fora do pedido. Se a mudança solicitada exigir quebrar essa regra, pare e peça autorização explícita.
 
 > **Demonstração local atual:** o setup com PostgreSQL, massa fictícia e Ollama Qwen3 está documentado em [`docs/demo-local-persistente.md`](docs/demo-local-persistente.md), com evidências e limites em [`docs/evidencias/QA-HOM-010-demo-publica-local-2026-10-08.md`](docs/evidencias/QA-HOM-010-demo-publica-local-2026-10-08.md). Links públicos temporários e credenciais não devem ser versionados.
