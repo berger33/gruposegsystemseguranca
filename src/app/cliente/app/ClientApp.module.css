@@ -369,3 +369,8 @@
 /* UX-06: o selo de situação não depende só da cor — o texto carrega o sentido
    e o prefixo fica disponível para quem usa leitor de tela. */
 .srOnly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* Base de conhecimento: item de menu em construção (sem link). */
+.tabSoon{opacity:.6;cursor:not-allowed;}
+.tabSoon:hover{color:inherit;}
+.soonTag{display:block;font-size:.62rem;font-weight:600;color:#52627c;background:#e9eef7;border-radius:999px;padding:1px 7px;margin-top:2px;}
