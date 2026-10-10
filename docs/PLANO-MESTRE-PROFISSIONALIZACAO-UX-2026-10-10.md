@@ -48,6 +48,12 @@ Trabalhe **uma fatia por sessão e uma PR por fatia**. No início de cada sessã
 - Corrija links/documentos de entrada conflitantes sem apagar registros históricos; registre o que foi confirmado e o que segue desconhecido.
 - Não faça redesign amplo nesta fatia.
 
+#### Registro vigente desta fatia — 10/10/2026
+
+A fonte de cobertura desta execução e referência vigente após a integração desta PR é [`docs/UX-PRO-00-COBERTURA-ROTAS-2026-10-10.md`](UX-PRO-00-COBERTURA-ROTAS-2026-10-10.md), com a matriz de 100 entradas em [`docs/UX-PRO-00-MATRIZ-COBERTURA-ROTAS-2026-10-10.csv`](UX-PRO-00-MATRIZ-COBERTURA-ROTAS-2026-10-10.csv). A base de código auditada foi `origin/main` `c50a99beecb057c2a819d5556cf1405f3434458c`. A diferença de 98/100 corresponde às páginas `/admin/aparencia` e `/layout-preview`, adicionadas pela PR #185; os CSVs e relatórios anteriores foram preservados como históricos. O SHA `87aef9f…` no cabeçalho deste plano é a base de referência quando o plano foi redigido, não substitui o SHA atual indicado no registro de execução.
+
+A matriz separa código, teste automatizado, captura, validação manual, aceite humano e lacunas. É um inventário estático, não uma auditoria visual completa e não inventa aceite por rota. Consulte o relatório para método reproduzível, componentes/layouts, limites e critério de interpretação.
+
 ### UX-PRO-01 — Tokens e chrome compartilhado
 
 - Inspecione tokens e shell existentes; defina/complete escala de tipografia, espaçamento, superfícies, bordas, elevação, foco, estados, largura de conteúdo e breakpoint.
