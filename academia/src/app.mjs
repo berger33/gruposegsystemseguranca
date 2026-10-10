@@ -1,6 +1,7 @@
 // Roteador HTTP da Academia (node:http, sem dependências).
 // A alçada é aplicada no servidor: trilhas de outros setores respondem 404.
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { verifyPassword, SESSION_TTL_MS } from './auth.mjs';
@@ -9,10 +10,22 @@ import { SECTORS } from './sectors.mjs';
 import { accessPanel, changeGrant, changeDefault } from './acessos-api.mjs';
 import { accessOf, visibleTracks, isManager } from './access.mjs';
 import { POINTS, summarize, leaderboard } from './gamification.mjs';
+import { certificateWorkload, isCertificateCode, normalizeCertificateCode, publicCertificate, trackCompletedBy } from './certificates.mjs';
 
 const PUBLIC_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'public');
 const COOKIE = 'academia_sessao';
 const MAX_BODY = 8 * 1024;
+const CERTIFICATE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+function mintCertificateCode(certificates) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const bytes = crypto.randomBytes(8);
+    const raw = Array.from(bytes, byte => CERTIFICATE_ALPHABET[byte & 31]).join('');
+    const code = `SGS-${raw.slice(0, 4)}-${raw.slice(4)}`;
+    if (!certificates[code]) return code;
+  }
+  throw new Error('Não foi possível gerar um código de certificado único.');
+}
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -20,6 +33,8 @@ const MIME = {
   '.js': 'text/javascript; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
   '.ico': 'image/x-icon',
 };
 
@@ -202,10 +217,50 @@ export function createApp({ store, sessions, content = TRACKS }) {
       return sendJson(res, 200, { ok: true }, { 'Set-Cookie': clearCookie(req) });
     }
 
+    // Consulta pública: QR codes podem ser verificados sem login.
+    const publicCertMatch = p.match(/^\/api\/certificates\/([^/]+)$/);
+    if (publicCertMatch && m === 'GET') {
+      const code = normalizeCertificateCode(publicCertMatch[1]);
+      if (!isCertificateCode(code)) return sendJson(res, 404, { error: 'certificado_nao_encontrado' });
+      const record = (store.state.certificates || {})[code];
+      if (!record) return sendJson(res, 404, { error: 'certificado_nao_encontrado' });
+      return sendJson(res, 200, { certificate: publicCertificate(record) });
+    }
+
     const user = currentUser(req);
     if (!user) return sendJson(res, 401, { error: 'nao_autenticado' });
 
     if (p === '/api/me' && m === 'GET') return sendJson(res, 200, { user: publicUser(user) });
+
+    if (p === '/api/certificates' && m === 'POST') {
+      const body = await readJson(req);
+      const trackId = String(body.trackId || '').trim();
+      const track = content.find(item => item.id === trackId);
+      if (!track || !accessOf(track, user, store.state).visible) return sendJson(res, 404, { error: 'trilha_nao_encontrada' });
+      const progress = store.state.progress[user.id] || {};
+      if (!trackCompletedBy(track, progress)) return sendJson(res, 409, { error: 'trilha_incompleta' });
+
+      store.state.certificates = store.state.certificates || {};
+      let record = Object.values(store.state.certificates).find(item => item.userId === user.id && item.trackId === track.id);
+      let created = false;
+      if (!record) {
+        const code = mintCertificateCode(store.state.certificates);
+        const workload = certificateWorkload(track);
+        record = {
+          code,
+          userId: user.id,
+          recipientName: user.name,
+          trackId: track.id,
+          trackTitle: track.title,
+          ...workload,
+          issuedAt: new Date().toISOString(),
+        };
+        store.state.certificates[code] = record;
+        store.save();
+        created = true;
+      }
+      return sendJson(res, 200, { certificate: publicCertificate(record), created });
+    }
 
     if (p === '/api/home' && m === 'GET') {
       const s = summarize(store.state, user, content);

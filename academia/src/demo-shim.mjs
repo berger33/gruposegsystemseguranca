@@ -9,6 +9,7 @@ import { isPending } from './content.mjs';
 import { accessOf, visibleTracks, isManager } from './access.mjs';
 import { accessPanel, changeGrant, changeDefault } from './acessos-api.mjs';
 import { DEMO_USERS, userIdFor } from './demo-users.mjs';
+import { certificateWorkload, isCertificateCode, normalizeCertificateCode, publicCertificate, trackCompletedBy } from './certificates.mjs';
 
 const DEMO_PASSWORD = 'Academia#2026';
 const STATE_KEY = 'academia-demo-estado-v2';
@@ -47,12 +48,15 @@ function freshState() {
     }
     if (Object.keys(mine).length) progress[userIdFor(user.email)] = mine;
   }
-  return { users, progress, grants: {}, grantLog: [], sectorDefaults: {} };
+  return { users, progress, grants: {}, grantLog: [], sectorDefaults: {}, certificates: {} };
 }
 
 function loadState() {
   const saved = readJson(STATE_KEY, null);
-  if (saved && saved.users && saved.progress) return saved;
+  if (saved && saved.users && saved.progress) {
+    saved.certificates = saved.certificates || {};
+    return saved;
+  }
   const fresh = freshState();
   writeJson(STATE_KEY, fresh);
   return fresh;
@@ -76,6 +80,18 @@ function publicUser(user) {
 }
 
 const normalize = text => String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const CERTIFICATE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+function mintCertificateCode(certificates) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const bytes = new Uint8Array(8);
+    crypto.getRandomValues(bytes);
+    const raw = Array.from(bytes, byte => CERTIFICATE_ALPHABET[byte & 31]).join('');
+    const code = `SGS-${raw.slice(0, 4)}-${raw.slice(4)}`;
+    if (!certificates[code]) return code;
+  }
+  throw new Error('Não foi possível gerar um código único.');
+}
 
 function randomToken() {
   const bytes = new Uint8Array(32);
@@ -108,10 +124,46 @@ function handle(method, path, params, body, token) {
     return { status: 200, data: { ok: true } };
   }
 
+  const publicCertMatch = path.match(/^\/certificates\/([^/]+)$/);
+  if (publicCertMatch && method === 'GET') {
+    const code = normalizeCertificateCode(publicCertMatch[1]);
+    if (!isCertificateCode(code)) return { status: 404, data: { error: 'certificado_nao_encontrado' } };
+    const record = state.certificates[code];
+    if (!record) return { status: 404, data: { error: 'certificado_nao_encontrado' } };
+    return { status: 200, data: { certificate: publicCertificate(record) } };
+  }
+
   const user = state.users.find(u => u.id === sessionUser(token));
   if (!user) return { status: 401, data: { error: 'nao_autenticado' } };
 
   if (method === 'GET' && path === '/me') return { status: 200, data: { user: publicUser(user) } };
+
+  if (method === 'POST' && path === '/certificates') {
+    const trackId = String(body.trackId || '').trim();
+    const track = TRACKS.find(item => item.id === trackId);
+    if (!track || !accessOf(track, user, state).visible) return { status: 404, data: { error: 'trilha_nao_encontrada' } };
+    const progress = state.progress[user.id] || {};
+    if (!trackCompletedBy(track, progress)) return { status: 409, data: { error: 'trilha_incompleta' } };
+    state.certificates = state.certificates || {};
+    let record = Object.values(state.certificates).find(item => item.userId === user.id && item.trackId === track.id);
+    let created = false;
+    if (!record) {
+      const code = mintCertificateCode(state.certificates);
+      record = {
+        code,
+        userId: user.id,
+        recipientName: user.name,
+        trackId: track.id,
+        trackTitle: track.title,
+        ...certificateWorkload(track),
+        issuedAt: new Date().toISOString(),
+      };
+      state.certificates[code] = record;
+      writeJson(STATE_KEY, state);
+      created = true;
+    }
+    return { status: 200, data: { certificate: publicCertificate(record), created } };
+  }
 
   if (method === 'GET' && path === '/home') {
     const s = summarize(state, user, TRACKS);
@@ -285,6 +337,6 @@ if (typeof document !== 'undefined') {
   // Sinaliza ao app.js que está na demonstração (mostra a caixa de conta de demonstração no acesso).
   document.documentElement.dataset.demo = 'true';
   const script = document.createElement('script');
-  script.src = 'app.js?v=11';
+  script.src = 'app.js?v=16';
   document.body.appendChild(script);
 }

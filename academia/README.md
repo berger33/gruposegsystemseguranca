@@ -63,6 +63,9 @@ Nos quatro setores de campo (portaria, controle de acesso, serviços gerais e in
 - **Ranking.** Top 5 do setor, com a posição de quem consulta. Empates recebem a mesma posição. Mostra apenas nome e pontos.
 - **Gabarito.** A resposta correta e a explicação só são enviadas depois que a aula é concluída.
 - **Sessão.** Cookie `HttpOnly` com `SameSite=Lax`, validade de 8 horas, revogado no logout.
+- **Retomada.** A página inicial prioriza a última aula aberta que ainda não foi concluída. O identificador é guardado localmente por usuário neste navegador.
+- **Certificados.** Só podem ser emitidos após concluir todas as aulas publicadas da trilha. O código é único e idempotente por usuário/trilha; a carga horária é somada das durações cadastradas nas aulas publicadas. O certificado pode ser impresso ou salvo como PDF.
+- **Demonstração estática.** Certificados e progresso ficam no armazenamento deste navegador. A validação pública funciona nele; validar em outro dispositivo exige publicar a aplicação com o servidor persistente.
 
 ## Estrutura
 
@@ -86,7 +89,7 @@ academia/
 
 ## API
 
-Todas as rotas, exceto `POST /api/login`, exigem sessão.
+Todas as rotas, exceto `POST /api/login` e a consulta pública `GET /api/certificates/:code`, exigem sessão.
 
 | Método | Rota | Descrição |
 |---|---|---|
@@ -97,6 +100,8 @@ Todas as rotas, exceto `POST /api/login`, exigem sessão.
 | GET | `/api/tracks/:id` | Trilha do setor com status das aulas |
 | GET | `/api/lessons/:id` | Aula; inclui resultado somente se já concluída |
 | POST | `/api/lessons/:id/complete` | `{choice}`; conclui a aula e devolve pontos, nível e selos |
+| POST | `/api/certificates` | `{trackId}`; emite ou devolve o certificado já emitido para a trilha concluída |
+| GET | `/api/certificates/:code` | Consulta pública dos dados de validação, sem sessão |
 | GET | `/api/leaderboard` | Ranking do setor |
 | GET | `/api/search?q=` | Busca nas aulas do setor |
 | GET | `/api/acessos` | Painel de acessos (só gestão) |

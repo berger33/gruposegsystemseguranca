@@ -28,6 +28,7 @@ export function completeState(state, { password = demoPassword(), content = TRAC
   state.grants = state.grants || {};
   state.grantLog = state.grantLog || [];
   state.sectorDefaults = state.sectorDefaults || {};
+  state.certificates = state.certificates || {};
   const lessons = new Map();
   content.forEach(track => track.lessons.forEach(lesson => lessons.set(lesson.id, lesson)));
   const have = new Set(state.users.map(user => user.id));

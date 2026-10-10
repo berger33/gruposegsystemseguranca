@@ -16,6 +16,7 @@ import { verifyPassword, hashPassword } from '../src/auth.mjs';
 let server;
 let base;
 let dir;
+let store;
 const PASSWORD = 'Teste#2026';
 
 function request(method, url, { body, cookie } = {}) {
@@ -52,7 +53,7 @@ async function login(email) {
 
 before(async () => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'academia-test-'));
-  const store = createStore({ file: path.join(dir, 'academia.json'), seed: () => buildSeedState({ password: PASSWORD }) });
+  store = createStore({ file: path.join(dir, 'academia.json'), seed: () => buildSeedState({ password: PASSWORD }) });
   const app = createApp({ store, sessions: createSessions() });
   server = http.createServer(app);
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -432,4 +433,38 @@ test('aula em construção aparece sem quiz, não pode ser concluída e não som
   const after = await request('GET', '/api/home', { cookie });
   const rowAfter = after.json.tracks.find(t => t.id === 'porteiros');
   assert.equal(rowAfter.percent, before.json.tracks.find(t => t.id === 'porteiros').percent);
+});
+
+
+test('certificados: exige conclusão, pode ser emitido uma vez e valida sem sessão', async () => {
+  const { cookie } = await login('camila.nogueira@academia.exemplo');
+  const track = TRACKS.find(item => item.id === 'admin-sistema');
+  const incomplete = await request('POST', '/api/certificates', { cookie, body: { trackId: track.id } });
+  assert.equal(incomplete.status, 409);
+  assert.equal(incomplete.json.error, 'trilha_incompleta');
+
+  for (const lesson of track.lessons.filter(item => !isPending(item))) {
+    const completed = await request('POST', `/api/lessons/${lesson.id}/complete`, { cookie, body: { choice: lesson.quiz.answer } });
+    assert.equal(completed.status, 200);
+  }
+  const issued = await request('POST', '/api/certificates', { cookie, body: { trackId: track.id } });
+  assert.equal(issued.status, 200);
+  assert.equal(issued.json.certificate.valid, true);
+  assert.match(issued.json.certificate.code, /^SGS-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/);
+  assert.equal(issued.json.certificate.trackTitle, track.title);
+  const expectedWorkload = track.lessons.filter(item => !isPending(item)).reduce((sum, item) => sum + item.minutes, 0);
+  assert.equal(issued.json.certificate.workloadMinutes, expectedWorkload);
+  assert.equal(issued.json.certificate.workloadHours, Number((expectedWorkload / 60).toFixed(2)));
+  assert.ok(Number.isFinite(Date.parse(issued.json.certificate.issuedAt)));
+  assert.equal(issued.json.created, true);
+  assert.equal('userId' in issued.json.certificate, false);
+
+  const validated = await request('GET', `/api/certificates/${issued.json.certificate.code}`);
+  assert.equal(validated.status, 200);
+  assert.equal(validated.json.certificate.recipientName, 'Camila Nogueira');
+  const repeated = await request('POST', '/api/certificates', { cookie, body: { trackId: track.id } });
+  assert.equal(repeated.json.certificate.code, issued.json.certificate.code);
+  assert.equal(repeated.json.created, false);
+  const missing = await request('GET', '/api/certificates/SGS-AAAA-2222');
+  assert.equal(missing.status, 404);
 });

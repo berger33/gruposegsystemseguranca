@@ -1,6 +1,7 @@
 // Testa a versão estática (GitHub Pages) com o mesmo conteúdo e as mesmas regras do servidor.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
+import { TRACKS, isPending } from '../src/content.mjs';
 
 const store = new Map();
 let fetchApi;
@@ -64,4 +65,25 @@ test('versão estática: ranking e busca respeitam o setor', async () => {
   assert.equal(lb.json.me.isMe, true);
   const search = await call('GET', 'search?q=desligamento', { token: login.token });
   assert.ok(search.json.results.some(r => r.id === 'rh-desligamento'));
+});
+
+
+test('versão estática: emite certificado após conclusão e valida código sem login', async () => {
+  const { json: login } = await call('POST', 'login', { body: { email: 'camila.nogueira@academia.exemplo', password: 'Academia#2026' } });
+  const token = login.token;
+  const track = TRACKS.find(item => item.id === 'admin-sistema');
+  const before = await call('POST', 'certificates', { token, body: { trackId: track.id } });
+  assert.equal(before.status, 409);
+
+  for (const lesson of track.lessons.filter(item => !isPending(item))) {
+    const completed = await call('POST', `lessons/${lesson.id}/complete`, { token, body: { choice: lesson.quiz.answer } });
+    assert.equal(completed.status, 200);
+  }
+  const issued = await call('POST', 'certificates', { token, body: { trackId: track.id } });
+  assert.equal(issued.status, 200);
+  assert.match(issued.json.certificate.code, /^SGS-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/);
+  const verified = await call('GET', `certificates/${issued.json.certificate.code}`);
+  assert.equal(verified.status, 200);
+  assert.equal(verified.json.certificate.recipientName, 'Camila Nogueira');
+  assert.equal((await call('GET', `certificates/${issued.json.certificate.code}`)).status, 200);
 });

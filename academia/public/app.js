@@ -11,6 +11,8 @@
   var me = null;
   var justLoggedIn = false;
   var memoryToken = null;
+  var memoryResumeId = null;
+  var memoryResumeUserId = null;
   var TOKEN_KEY = 'academia_token';
 
   var PALETTE = ['#315aca', '#0f766e', '#7c3aed', '#b45309', '#be185d', '#0369a1', '#4f46e5', '#15803d', '#475569'];
@@ -335,6 +337,42 @@
   }
 
   // ---------- Página inicial ----------
+  function resumeStorageKey() { return me ? 'academia-last-lesson:' + me.id : null; }
+  function rememberLesson(id) {
+    var key = resumeStorageKey();
+    if (!key || !id) return;
+    memoryResumeId = id;
+    memoryResumeUserId = me.id;
+    try { localStorage.setItem(key, id); } catch (e) {}
+  }
+  function clearRememberedLesson(id) {
+    var key = resumeStorageKey();
+    if (!key) return;
+    var clearThis = !id || (memoryResumeUserId === me.id && memoryResumeId === id);
+    if (clearThis) { memoryResumeId = null; memoryResumeUserId = null; }
+    try {
+      var stored = localStorage.getItem(key);
+      if (!id || stored === id || clearThis) localStorage.removeItem(key);
+    } catch (e) {}
+  }
+  function resolveResumeTarget(fallback) {
+    var key = resumeStorageKey();
+    if (!key) return Promise.resolve(fallback);
+    var remembered = memoryResumeUserId === me.id ? memoryResumeId : null;
+    try { if (!remembered) remembered = localStorage.getItem(key); } catch (e) {}
+    if (!remembered || (fallback && remembered === fallback.id)) return Promise.resolve(fallback);
+    return api('/api/lessons/' + encodeURIComponent(remembered)).then(function (lesson) {
+      if (lesson.pending || lesson.done) {
+        clearRememberedLesson(remembered);
+        return fallback;
+      }
+      return { id: lesson.id, title: lesson.title, minutes: lesson.minutes, trackId: lesson.trackId, trackTitle: lesson.trackTitle, resumed: true };
+    }).catch(function () {
+      clearRememberedLesson(remembered);
+      return fallback;
+    });
+  }
+
   function heroMessage(d) {
     if (d.lessonsTotal === 0) return 'Nenhuma aula publicada para o seu setor ainda.';
     if (d.lessonsDone === 0) return 'Sua primeira aula está a um clique de distância.';
@@ -389,16 +427,17 @@
   function renderHome() {
     setPage(skeleton(), 'Início');
     return api('/api/home').then(function (d) {
+      return resolveResumeTarget(d.next).then(function (resumeNext) {
       var lv = d.level;
       var pct = d.lessonsTotal ? Math.round((d.lessonsDone / d.lessonsTotal) * 100) : 0;
       var rank = d.leaderboard.me ? d.leaderboard.me.rank : null;
       var earnedCount = d.badges.earned.length;
-      var next = d.next
-        ? '<section class="card next-card spot reveal" style="--d:1;--accent:' + accentFor(d.next.trackId) + '">' +
-          '<span class="next-ico">' + icon(TRACK_ICON[d.next.trackId] || 'book', 'lg') + '</span>' +
-          '<div class="next-body"><span class="label">Continue de onde parou</span><h2>' + esc(d.next.title) + '</h2>' +
-          '<p class="muted small">' + esc(d.next.trackTitle) + ' · ' + d.next.minutes + ' min</p></div>' +
-          '<a class="btn-primary" href="#/aula/' + esc(d.next.id) + '">Continuar ' + icon('arrow', 'sm') + '</a></section>'
+      var next = resumeNext
+        ? '<section class="card next-card spot reveal" style="--d:1;--accent:' + accentFor(resumeNext.trackId) + '">' +
+          '<span class="next-ico">' + icon(TRACK_ICON[resumeNext.trackId] || 'book', 'lg') + '</span>' +
+          '<div class="next-body"><span class="label">' + (resumeNext.resumed ? 'Retomar sua última aula' : 'Continue de onde parou') + '</span><h2>' + esc(resumeNext.title) + '</h2>' +
+          '<p class="muted small">' + esc(resumeNext.trackTitle) + ' · ' + resumeNext.minutes + ' min</p></div>' +
+          '<a class="btn-primary" href="#/aula/' + esc(resumeNext.id) + '">' + (resumeNext.resumed ? 'Retomar' : 'Continuar') + ' ' + icon('arrow', 'sm') + '</a></section>'
         : '<section class="card next-card reveal" style="--d:1"><span class="done-check">' + icon('check', 'lg') + '</span>' +
           '<div class="next-body"><span class="label">Concluído</span><h2>Você concluiu as aulas do seu setor</h2>' +
           '<p class="muted small">Novas trilhas aparecerão aqui quando forem publicadas.</p></div></section>';
@@ -438,6 +477,7 @@
         '</aside></div>';
 
       setPage(html, 'Início');
+      });
     });
   }
 
@@ -458,6 +498,9 @@
           '<div class="tl-side"><span class="muted small">' + l.minutes + ' min</span><span class="status ' + (l.done ? 'ok' : '') + '">' +
           (l.done ? 'Concluída' : 'Pendente') + '</span></div></div></a>';
       }).join('');
+      var certificateCta = t.complete && t.total > 0
+        ? '<section class="cert-cta card reveal" aria-labelledby="cert-cta-title"><div><span class="eyebrow">Conquista da trilha</span><h2 id="cert-cta-title">Sua jornada foi concluída</h2><p class="muted small">Emita um certificado digital com código único e QR de validação pública.</p></div><button class="btn-primary" type="button" data-certificate="' + esc(t.id) + '">Emitir certificado ' + icon('arrow', 'sm') + '</button></section>'
+        : '';
       setPage(
         '<nav class="crumbs reveal" aria-label="Você está aqui"><a href="#/">Início</a><span>/</span><span>' + esc(t.title) + '</span></nav>' +
         '<section class="track-hero hero-card reveal" style="--accent:' + accent + '">' +
@@ -468,10 +511,146 @@
         '<div class="ring-wrap sm"><svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-bg" cx="60" cy="60" r="52"/>' +
         '<circle class="ring-fg" data-ring="' + t.percent + '" cx="60" cy="60" r="52"/></svg>' +
         (t.total ? '<div class="ring-text"><strong>' + t.percent + '%</strong><span>' + t.done + ' de ' + t.total + '</span></div>' : '<div class="ring-text"><strong>Em</strong><span>construção</span></div>') + '</div>' +
-        '</section>' +
+        '</section>' + certificateCta +
         '<div class="timeline">' + items + '</div>',
         t.title
       );
+    });
+  }
+
+  // ---------- Certificado digital e validação pública ----------
+  var CERTIFICATE_OVERLAY_ID = 'certificate-overlay';
+  var certificateReturnFocus = null;
+  var certificateBackground = [];
+  function certificateUrl(code) {
+    var url = new URL(location.href);
+    url.hash = '/validar-certificado?codigo=' + encodeURIComponent(code);
+    return url.toString();
+  }
+  function workloadLabel(minutes) {
+    var total = Math.max(0, Number(minutes) || 0);
+    var hours = Math.floor(total / 60);
+    var rest = total % 60;
+    if (!hours) return total + (total === 1 ? ' minuto' : ' minutos');
+    if (!rest) return hours + (hours === 1 ? ' hora' : ' horas');
+    return hours + 'h ' + String(rest).padStart(2, '0') + 'min';
+  }
+  function formatCertificateDate(value) {
+    try { return new Date(value).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }); }
+    catch (e) { return ''; }
+  }
+  function makeQrSvg(url) {
+    if (typeof window.qrcode !== 'function') return '';
+    var qr = window.qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    return qr.createSvgTag({ cellSize: 4, margin: 16, scalable: true, title: 'Validar certificado de conclusão', alt: 'QR code para consultar a validade deste certificado' });
+  }
+  function closeCertificate() {
+    var overlay = document.getElementById(CERTIFICATE_OVERLAY_ID);
+    if (overlay) overlay.remove();
+    document.body.classList.remove('certificate-open', 'printing-certificate');
+    certificateBackground.forEach(function (state) {
+      if (state.inert) state.node.setAttribute('inert', '');
+      else state.node.removeAttribute('inert');
+      if (state.ariaHidden === null) state.node.removeAttribute('aria-hidden');
+      else state.node.setAttribute('aria-hidden', state.ariaHidden);
+    });
+    certificateBackground = [];
+    if (certificateReturnFocus && document.contains(certificateReturnFocus)) certificateReturnFocus.focus();
+    certificateReturnFocus = null;
+  }
+  function showCertificate(cert) {
+    closeCertificate();
+    certificateReturnFocus = document.activeElement;
+    var verifyUrl = certificateUrl(cert.code);
+    var qrSvg = '';
+    try { qrSvg = makeQrSvg(verifyUrl); } catch (e) { qrSvg = ''; }
+    var overlay = document.createElement('div');
+    overlay.className = 'cert-overlay';
+    overlay.id = CERTIFICATE_OVERLAY_ID;
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'certificate-title');
+    overlay.setAttribute('aria-describedby', 'certificate-description');
+    overlay.innerHTML =
+      '<div class="cert-actions"><p>Para salvar: escolha <strong>Salvar como PDF</strong> na janela de impressão.</p><div><button type="button" class="btn-ghost sm" id="cert-close">Fechar</button><button type="button" class="btn-primary sm" id="cert-print">Imprimir / salvar PDF ' + icon('arrow', 'sm') + '</button></div></div>' +
+      '<article class="certificate-paper" id="certificate-paper">' +
+        '<div class="certificate-border"><div class="certificate-inner">' +
+          '<header class="certificate-brand"><img src="vendor/seg-system-logo.jpg" alt="Logo Grupo SEG System Segurança"><div><strong>GRUPO SEG SYSTEM</strong><span>SEGURANÇA INTEGRADA</span></div><span class="certificate-seal" aria-hidden="true">SGS</span></header>' +
+          '<p class="certificate-kicker">ACADEMIA · DESENVOLVIMENTO PROFISSIONAL</p>' +
+          '<h1 id="certificate-title">Certificado de conclusão</h1>' +
+          '<p id="certificate-description" class="certificate-intro">Certificamos que</p>' +
+          '<h2 class="certificate-name">' + esc(cert.recipientName) + '</h2>' +
+          '<p class="certificate-copy">concluiu com êxito a trilha de aprendizagem</p>' +
+          '<h3 class="certificate-track">' + esc(cert.trackTitle) + '</h3>' +
+          '<p class="certificate-workload">Carga horária: <strong>' + esc(workloadLabel(cert.workloadMinutes)) + '</strong></p>' +
+          (document.documentElement.dataset.demo === 'true' ? '<p class="certificate-demo-note">Demonstração: os registros ficam neste navegador. Para validar em qualquer dispositivo, a Academia precisa estar publicada com o servidor persistente.</p>' : '') +
+          '<footer class="certificate-footer"><div class="certificate-signature"><span>Emitido digitalmente pela</span><strong>Grupo SEG System Segurança</strong><small>' + esc(formatCertificateDate(cert.issuedAt)) + '</small></div>' +
+            '<div class="certificate-verify"><div class="certificate-qr" aria-label="QR code para validar este certificado">' + (qrSvg || '<span class="qr-unavailable">QR indisponível neste navegador</span>') + '</div><code>' + esc(cert.code) + '</code><a href="' + esc(verifyUrl) + '" target="_blank" rel="noopener noreferrer">Validar certificado</a></div></footer>' +
+        '</div></div>' +
+      '</article>';
+    document.body.appendChild(overlay);
+    document.body.classList.add('certificate-open');
+    certificateBackground = Array.prototype.map.call(document.body.children, function (node) {
+      return node === overlay ? null : { node: node, inert: Boolean(node.inert), ariaHidden: node.getAttribute('aria-hidden') };
+    }).filter(Boolean);
+    certificateBackground.forEach(function (state) {
+      state.node.setAttribute('inert', '');
+      state.node.setAttribute('aria-hidden', 'true');
+    });
+    overlay.querySelector('#cert-close').addEventListener('click', closeCertificate);
+    overlay.querySelector('#cert-print').addEventListener('click', function () {
+      document.body.classList.add('printing-certificate');
+      window.addEventListener('afterprint', function () { document.body.classList.remove('printing-certificate'); }, { once: true });
+      window.print();
+    });
+    overlay.addEventListener('click', function (event) { if (event.target === overlay) closeCertificate(); });
+    overlay.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        closeCertificate();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      event.stopPropagation();
+      var focusable = Array.prototype.slice.call(overlay.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter(function (node) { return !node.hidden && node.getClientRects().length > 0; });
+      if (!focusable.length) { event.preventDefault(); overlay.focus(); return; }
+      var first = focusable[0];
+      var last = focusable[focusable.length - 1];
+      var outside = !overlay.contains(document.activeElement);
+      if (event.shiftKey && (document.activeElement === first || outside)) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || outside)) { event.preventDefault(); first.focus(); }
+    });
+    overlay.querySelector('#cert-close').focus();
+  }
+  function issueCertificate(trackId) {
+    api('/api/certificates', { method: 'POST', body: { trackId: trackId } }).then(function (data) {
+      if (!data.certificate) throw new Error('certificado_indisponivel');
+      showCertificate(data.certificate);
+    }).catch(function (err) {
+      if (err.status === 409) toast({ icon: 'alert', title: 'Trilha ainda não concluída', text: 'Conclua todas as aulas publicadas antes de emitir o certificado.' });
+      else if (err.status === 401) route();
+      else toast({ icon: 'alert', title: 'Não foi possível emitir', text: 'Tente novamente em alguns instantes.' });
+    });
+  }
+  function renderCertificateValidation(code) {
+    var normalized = String(code || '').trim().toUpperCase();
+    if (!/^SGS-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/.test(normalized)) {
+      setPage('<section class="validation-card card" role="status"><span class="validation-mark invalid">' + icon('x') + '</span><p class="eyebrow">Validação pública</p><h1>Certificado não encontrado</h1><p class="muted">Confira o código impresso no certificado ou leia novamente o QR code.</p><a class="btn-ghost" href="#/">Voltar à Academia</a></section>', 'Validar certificado');
+      return Promise.resolve();
+    }
+    setPage('<section class="validation-card card" aria-live="polite"><p class="eyebrow">Validação pública</p><h1>Consultando certificado…</h1><p class="muted">Aguarde enquanto verificamos o código.</p></section>', 'Validar certificado');
+    return api('/api/certificates/' + encodeURIComponent(normalized)).then(function (data) {
+      var cert = data.certificate;
+      setPage('<section class="validation-card card" role="status"><img class="validation-logo" src="vendor/seg-system-logo.jpg" alt="Grupo SEG System Segurança"><span class="validation-mark valid">' + icon('check') + '</span><p class="eyebrow">Validação pública · ' + esc(cert.code) + '</p><h1>Certificado válido</h1><p class="validation-name">' + esc(cert.recipientName) + '</p><p class="validation-copy">concluiu a trilha</p><h2>' + esc(cert.trackTitle) + '</h2><div class="validation-meta"><span><strong>Carga horária</strong>' + esc(workloadLabel(cert.workloadMinutes)) + '</span><span><strong>Emitido em</strong>' + esc(formatCertificateDate(cert.issuedAt)) + '</span></div><p class="validation-note">Este registro foi localizado na base de certificados da Academia Seg System Segurança.</p>' + (document.documentElement.dataset.demo === 'true' ? '<p class="validation-note">Esta é uma demonstração: a validação global depende da publicação com servidor persistente.</p>' : '') + '<a class="btn-ghost" href="#/">Voltar à Academia</a></section>', 'Certificado válido');
+    }).catch(function (err) {
+      if (err.status === 404) {
+        setPage('<section class="validation-card card" role="alert"><span class="validation-mark invalid">' + icon('x') + '</span><p class="eyebrow">Validação pública · ' + esc(normalized) + '</p><h1>Certificado não encontrado</h1><p class="muted">Este código não consta na base de certificados. Verifique se foi digitado corretamente.</p><a class="btn-ghost" href="#/">Voltar à Academia</a></section>', 'Certificado não encontrado');
+        return;
+      }
+      renderError('Não foi possível consultar o certificado agora. Tente novamente em instantes.');
     });
   }
 
@@ -488,6 +667,7 @@
     setPage(skeleton(), 'Aula');
     return api('/api/lessons/' + encodeURIComponent(id)).then(function (l) {
       if (l.pending) return renderPendingLesson(l);
+      if (l.done) clearRememberedLesson(l.id); else rememberLesson(l.id);
       var r = l.result;
       var options = l.options.map(function (opt, i) {
         var cls = 'opt';
@@ -563,6 +743,7 @@
     api('/api/lessons/' + encodeURIComponent(lessonId) + '/complete', { method: 'POST', body: { choice: Number(checked.value) } })
       .then(function (res) {
         if (!res.alreadyCompleted) {
+          if (res.nextLessonId) rememberLesson(res.nextLessonId); else clearRememberedLesson(lessonId);
           var text = '+' + res.pointsEarned + ' pontos' + (res.correct ? ' · acerto na primeira tentativa' : '');
           if (res.trackCompleted) {
             toast({ icon: 'trophy', title: 'Trilha concluída!', text: text });
@@ -837,6 +1018,11 @@
   }
 
   function onAppClick(event) {
+    var certificateButton = event.target.closest && event.target.closest('[data-certificate]');
+    if (certificateButton && !certificateButton.disabled) {
+      issueCertificate(certificateButton.getAttribute('data-certificate'));
+      return;
+    }
     var el = event.target.closest && event.target.closest('[data-access]');
     if (!el || el.disabled) return;
     var kind = el.getAttribute('data-access');
@@ -876,14 +1062,18 @@
 
   // ---------- Roteamento ----------
   function route() {
+    var parts = location.hash.replace(/^#/, '').split('?');
+    var segments = parts[0].split('/').filter(Boolean);
+    var query = new URLSearchParams(parts[1] || '');
+    if (segments[0] === 'validar-certificado') {
+      if (document.getElementById(CERTIFICATE_OVERLAY_ID)) closeCertificate();
+      return renderCertificateValidation(query.get('codigo') || '');
+    }
     var loading = me ? Promise.resolve(me) : api('/api/me').then(function (d) { return d.user; }).catch(function () { return null; });
     return loading.then(function (user) {
       me = user;
       updateTopbar();
       if (!me) return renderLogin();
-      var parts = location.hash.replace(/^#/, '').split('?');
-      var segments = parts[0].split('/').filter(Boolean);
-      var query = new URLSearchParams(parts[1] || '');
       var page;
       if (segments[0] === 'trilha' && segments[1]) page = renderTrack(segments[1]);
       else if (segments[0] === 'aula' && segments[1]) page = renderLesson(segments[1]);
@@ -919,10 +1109,40 @@
   });
   document.getElementById('search-input').addEventListener('input', onSearchInput);
   document.getElementById('search-input').addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') hideSearchPop();
+    if (event.key === 'Escape') { hideSearchPop(); return; }
+    if (event.key === 'ArrowDown' && setSearchActive(1)) event.preventDefault();
+    else if (event.key === 'ArrowUp' && setSearchActive(-1)) event.preventDefault();
+    else if (event.key === 'Enter') {
+      var pop = document.getElementById('search-pop');
+      var active = pop && !pop.hidden ? pop.querySelector('[role="option"][aria-selected="true"]') : null;
+      if (active) { event.preventDefault(); active.click(); }
+    }
   });
   document.getElementById('search-input').addEventListener('blur', function () { setTimeout(hideSearchPop, 160); });
   document.addEventListener('keydown', function (event) {
+    var certDialog = document.getElementById(CERTIFICATE_OVERLAY_ID);
+    var tourDialog = document.getElementById('tour-card');
+    var dialog = certDialog || tourDialog;
+    if (event.key === 'Escape') {
+      if (certDialog) { event.preventDefault(); closeCertificate(); return; }
+      if (tourDialog) { event.preventDefault(); endTour(); return; }
+      var notificationPanel = document.getElementById('notif-pop');
+      if (notificationPanel && !notificationPanel.hidden) {
+        notificationPanel.hidden = true;
+        document.getElementById('notif-toggle').setAttribute('aria-expanded', 'false');
+        document.getElementById('notif-toggle').focus();
+        return;
+      }
+      hideSearchPop();
+    }
+    if (dialog && event.key === 'Tab') {
+      var focusables = Array.prototype.slice.call(dialog.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), [tabindex="0"]'));
+      if (focusables.length) {
+        var first = focusables[0], last = focusables[focusables.length - 1];
+        if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
+    }
     if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey) return;
     var tag = (document.activeElement && document.activeElement.tagName) || '';
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
@@ -965,7 +1185,28 @@
 
   // ---------- Busca instantânea ----------
   var searchTimer = null;
-  function hideSearchPop() { var p = document.getElementById('search-pop'); if (p) p.hidden = true; }
+  function hideSearchPop() {
+    var p = document.getElementById('search-pop'); if (p) p.hidden = true;
+    var input = document.getElementById('search-input');
+    if (input) { input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); }
+  }
+  function setSearchActive(delta) {
+    var input = document.getElementById('search-input');
+    var pop = document.getElementById('search-pop');
+    if (!input || !pop || pop.hidden) return false;
+    var options = Array.prototype.slice.call(pop.querySelectorAll('[role="option"]'));
+    if (!options.length) return false;
+    var current = options.findIndex(function (option) { return option.getAttribute('aria-selected') === 'true'; });
+    var index = current < 0 ? (delta > 0 ? 0 : options.length - 1) : (current + delta + options.length) % options.length;
+    options.forEach(function (option, i) {
+      var active = i === index;
+      option.setAttribute('aria-selected', active ? 'true' : 'false');
+      option.classList.toggle('hl', active);
+    });
+    input.setAttribute('aria-activedescendant', options[index].id);
+    options[index].scrollIntoView({ block: 'nearest' });
+    return true;
+  }
   function onSearchInput() {
     var input = document.getElementById('search-input');
     var pop = document.getElementById('search-pop');
@@ -976,12 +1217,14 @@
       api('/api/search?q=' + encodeURIComponent(q)).then(function (data) {
         if (input.value.trim() !== q) return;
         var items = data.results.slice(0, 6);
-        var html = items.length ? items.map(function (r) {
-          return '<a href="#/aula/' + esc(r.id) + '"><span class="sp-ico">' + icon('book') + '</span><div><strong>' + esc(r.title) + '</strong><small>' + esc(r.trackTitle) + ' · ' + r.minutes + ' min</small></div></a>';
-        }).join('') : '<div class="sp-empty">Nada encontrado no seu setor para “' + esc(q) + '”.</div>';
-        html += '<a class="sp-foot" href="#/busca?q=' + encodeURIComponent(q) + '">Ver todos os resultados</a>';
+        var html = items.length ? items.map(function (r, index) {
+          return '<a role="option" aria-selected="false" id="search-option-' + index + '" href="#/aula/' + esc(r.id) + '"><span class="sp-ico">' + icon('book') + '</span><div><strong>' + esc(r.title) + '</strong><small>' + esc(r.trackTitle) + ' · ' + r.minutes + ' min</small></div></a>';
+        }).join('') : '<div class="sp-empty" role="status">Nada encontrado no seu setor para “' + esc(q) + '”.</div>';
+        html += '<a role="option" aria-selected="false" id="search-option-' + items.length + '" class="sp-foot" href="#/busca?q=' + encodeURIComponent(q) + '">Ver todos os resultados</a>';
         pop.innerHTML = html;
         pop.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
+        input.removeAttribute('aria-activedescendant');
       }).catch(function () { hideSearchPop(); });
     }, 200);
   }
@@ -1006,14 +1249,18 @@
   }
   function openNotif() {
     var pop = document.getElementById('notif-pop');
-    if (!pop.hidden) { pop.hidden = true; return; }
-    pop.innerHTML = '<div class="notif-head"><h3>Notificações</h3></div><div class="notif-list"><div class="notif-item"><span class="n-ico">' + icon('clock', 'sm') + '</span><p>Carregando…</p></div></div>';
+    var button = document.getElementById('notif-toggle');
+    if (!pop.hidden) { pop.hidden = true; button.setAttribute('aria-expanded', 'false'); return; }
+    button.setAttribute('aria-expanded', 'true');
+    pop.innerHTML = '<div class="notif-head"><h3 id="notif-title">Notificações</h3></div><div class="notif-list"><div class="notif-item"><span class="n-ico">' + icon('clock', 'sm') + '</span><p>Carregando…</p></div></div>';
     pop.hidden = false;
     loadNotif().then(function (items) {
       var html = items.map(function (n) {
         return '<div class="notif-item ' + n.type + '"><span class="n-ico">' + icon(n.ico, 'sm') + '</span><div><strong>' + esc(n.title) + '</strong><p>' + esc(n.text) + '</p>' + (n.time ? '<time>' + esc(n.time) + '</time>' : '') + '</div></div>';
       }).join('');
+      if (pop.hidden) return;
       pop.querySelector('.notif-list').innerHTML = html || '<div class="notif-item"><p>Sem notificações.</p></div>';
+      pop.focus();
     });
   }
   function refreshNotifBell() {
@@ -1042,7 +1289,7 @@
     ['tour-overlay', 'tour-card'].forEach(function (id) { var e = document.getElementById(id); if (e) e.remove(); });
     var s = document.querySelector('.tour-spot'); if (s) s.remove();
   }
-  function endTour() { clearTourDom(); try { localStorage.setItem(TOUR_KEY, '1'); } catch (e) {} }
+  function endTour() { clearTourDom(); try { localStorage.setItem(TOUR_KEY, '1'); } catch (e) {} app.focus({ preventScroll: true }); }
   function positionTourCard(card, spot) {
     var vw = window.innerWidth, vh = window.innerHeight;
     if (spot) {
@@ -1058,7 +1305,7 @@
     if (tourIndex >= tourSteps.length) return endTour();
     var step = tourSteps[tourIndex];
     var target = document.querySelector(step.sel);
-    var overlay = document.createElement('div'); overlay.className = 'tour-overlay'; overlay.id = 'tour-overlay';
+    var overlay = document.createElement('div'); overlay.className = 'tour-overlay'; overlay.id = 'tour-overlay'; overlay.setAttribute('aria-hidden', 'true');
     document.body.appendChild(overlay);
     var spot = null;
     var r = target.getBoundingClientRect();
@@ -1067,12 +1314,14 @@
     spot.style.width = (r.width + 12) + 'px'; spot.style.height = (r.height + 12) + 'px';
     document.body.appendChild(spot);
     var card = document.createElement('div'); card.className = 'tour-card'; card.id = 'tour-card';
-    card.innerHTML = '<span class="t-step">Passo ' + (tourIndex + 1) + ' de ' + tourSteps.length + '</span><h3>' + esc(step.t) + '</h3><p>' + esc(step.d) + '</p>' +
+    card.setAttribute('role', 'dialog'); card.setAttribute('aria-modal', 'true'); card.setAttribute('aria-labelledby', 'tour-title'); card.setAttribute('aria-describedby', 'tour-description');
+    card.innerHTML = '<span class="t-step">Passo ' + (tourIndex + 1) + ' de ' + tourSteps.length + '</span><h3 id="tour-title">' + esc(step.t) + '</h3><p id="tour-description">' + esc(step.d) + '</p>' +
       '<div class="tour-actions"><button class="btn-ghost sm" id="tour-skip" type="button">Pular</button><button class="btn-primary sm" id="tour-next" type="button">' + (tourIndex === tourSteps.length - 1 ? 'Concluir' : 'Próximo') + '</button></div>';
     document.body.appendChild(card);
     positionTourCard(card, spot);
     document.getElementById('tour-skip').addEventListener('click', endTour);
     document.getElementById('tour-next').addEventListener('click', function () { tourIndex++; renderTour(); });
+    document.getElementById('tour-next').focus();
   }
   function startTour() { try { if (localStorage.getItem(TOUR_KEY)) return; } catch (e) { return; } tourIndex = 0; setTimeout(renderTour, 500); }
 
@@ -1139,9 +1388,12 @@
     var t = event.target.closest && event.target.closest('.js-theme');
     if (t) { event.preventDefault(); toggleTheme(); return; }
     var notif = document.getElementById('notif-pop');
-    if (notif && !notif.hidden && !event.target.closest('.notif-wrap')) notif.hidden = true;
+    if (notif && !notif.hidden && !event.target.closest('.notif-wrap')) {
+      notif.hidden = true;
+      document.getElementById('notif-toggle').setAttribute('aria-expanded', 'false');
+    }
     var sp = document.getElementById('search-pop');
-    if (sp && !sp.hidden && !event.target.closest('.search')) sp.hidden = true;
+    if (sp && !sp.hidden && !event.target.closest('.search')) hideSearchPop();
   });
   document.getElementById('notif-toggle').addEventListener('click', function (event) {
     event.stopPropagation();

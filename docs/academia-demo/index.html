@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#172b68">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23172b68'/%3E%3Ctext x='16' y='21' font-family='Arial' font-size='12' font-weight='700' fill='white' text-anchor='middle'%3EAS%3C/text%3E%3C/svg%3E">
   <title>Academia Seg System Segurança</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=16">
 </head>
 <body>
   <canvas id="fx-canvas" aria-hidden="true"></canvas>
@@ -25,16 +25,16 @@
     <form class="search" id="search-form" role="search">
       <label class="sr-only" for="search-input">Buscar aulas</label>
       <svg class="search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="search-input" type="search" name="q" placeholder="Buscar aulas e temas" autocomplete="off" minlength="2">
+      <input id="search-input" type="search" name="q" placeholder="Buscar aulas e temas" autocomplete="off" minlength="2" role="combobox" aria-autocomplete="list" aria-haspopup="listbox" aria-expanded="false" aria-controls="search-pop">
       <kbd aria-hidden="true">/</kbd>
-      <div class="search-pop" id="search-pop" hidden></div>
+      <div class="search-pop" id="search-pop" role="listbox" aria-label="Sugestões de aulas" aria-live="polite" hidden></div>
     </form>
     <div class="account">
       <a class="nav-link" id="nav-acessos" href="#/acessos" hidden>Acessos</a>
       <span class="sector-chip" id="sector-chip"></span>
       <div class="notif-wrap">
-        <button type="button" class="theme-toggle" id="notif-toggle" aria-label="Notificações" aria-haspopup="true"></button>
-        <div class="notif-pop" id="notif-pop" hidden></div>
+        <button type="button" class="theme-toggle" id="notif-toggle" aria-label="Notificações" aria-haspopup="dialog" aria-controls="notif-pop" aria-expanded="false"></button>
+        <div class="notif-pop" id="notif-pop" role="dialog" aria-modal="false" aria-labelledby="notif-title" aria-label="Central de notificações" tabindex="-1" hidden></div>
       </div>
       <button type="button" class="theme-toggle js-theme" id="theme-toggle" aria-label="Alternar tema"></button>
       <span class="avatar" id="avatar" aria-hidden="true"></span>
@@ -45,6 +45,7 @@
   <div class="toast-stack" id="toasts" aria-live="polite"></div>
   <div class="confetti-layer" id="confetti" aria-hidden="true"></div>
   <footer class="footer">Grupo SEG System · Guarulhos, SP · Uso interno e de clientes convidados</footer>
+  <script src="vendor/qrcode.js?v=16"></script>
   <script type="module" src="src/demo-shim.js"></script>
 </body>
 </html>
