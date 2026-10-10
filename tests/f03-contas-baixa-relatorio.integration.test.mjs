@@ -90,7 +90,9 @@ test('F03: conta → baixa → relatório é escopada, idempotente, transacional
     const context=await browser.newContext(); const [name,value]=finance.split('='); await context.addCookies([{name,value,url:baseUrl}]);
     const page=await context.newPage(); const failures=[]; page.on('pageerror',e=>failures.push(e.message)); page.on('response',r=>{if(new URL(r.url()).origin===baseUrl&&r.status()>=500)failures.push(`${r.status()} ${r.url()}`)});
     await page.goto(`${baseUrl}/admin/financeiro`,{waitUntil:'networkidle'}); await page.getByTestId('financeiro-workspace').waitFor();
-    await page.getByText(created.body.receivable.protocol).waitFor(); await page.getByTestId('finance-tab-f03reports').click();
-    await page.getByText('Não há integração bancária, baixa automática, SMTP ou envio externo.').waitFor(); assert.deepEqual(failures,[]);
+    // O protocolo aparece duas vezes na tela (célula da tabela e botão "Abrir conta
+    // <protocolo>"); mirar a célula mantém a asserção inequívoca sem afrouxá-la.
+    await page.getByRole('cell',{name:created.body.receivable.protocol,exact:true}).waitFor(); await page.getByTestId('finance-tab-f03reports').click();
+    await page.getByText('Não há integração bancária, baixa automática, SMTP nem envio externo.').waitFor(); assert.deepEqual(failures,[]);
   } finally { await browser.close(); }
 });
