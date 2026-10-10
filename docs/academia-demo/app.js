@@ -258,7 +258,7 @@
       '<button class="btn-primary btn-block" type="submit" id="login-submit"><span class="btn-label">Entrar</span>' + icon('arrow', 'sm') + '<span class="spinner" aria-hidden="true"></span></button>' +
       '</form>' +
       demoBox +
-      '<p class="login-note">A mesma página atende todos os setores. Depois de entrar, você vê somente as trilhas do seu setor.</p>' +
+      '<p class="login-note">' + (document.documentElement.dataset.demo === 'true' ? 'Demonstração: o progresso fica neste navegador.' : 'A mesma página atende todos os setores; você verá apenas as trilhas do seu setor.') + '</p>' +
       '</div></section></div>',
       'Entrar'
     );

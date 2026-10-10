@@ -329,14 +329,9 @@ host.fetch = async function demoFetch(input, init = {}) {
 
 // Carrega a interface depois de instalar o interceptador.
 if (typeof document !== 'undefined') {
-  const banner = document.createElement('div');
-  banner.setAttribute('role', 'note');
-  banner.style.cssText = 'background:#172b68;color:#fff;font:13px/1.4 system-ui,sans-serif;padding:8px 16px;text-align:center';
-  banner.textContent = 'Demonstração estática do sistema. Progresso e contas ficam neste navegador; a alçada não é verificada em servidor.';
-  document.body.insertBefore(banner, document.body.firstChild);
   // Sinaliza ao app.js que está na demonstração (mostra a caixa de conta de demonstração no acesso).
   document.documentElement.dataset.demo = 'true';
   const script = document.createElement('script');
-  script.src = 'app.js?v=20';
+  script.src = 'app.js?v=21';
   document.body.appendChild(script);
 }
