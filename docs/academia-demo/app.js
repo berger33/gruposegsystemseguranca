@@ -360,7 +360,7 @@
     });
     var locked = Math.min(available, 3);
     for (var i = 0; i < locked; i++) {
-      tiles.push('<div class="badge-tile locked"><span class="badge-medal">' + icon('lock', 'sm') + '</span><strong>A conquistar</strong><span>Continue as trilhas</span></div>');
+      tiles.push('<div class="badge-tile locked"><span class="badge-medal">' + icon('lock', 'sm') + '</span><strong>Em aberto</strong><span>Continue as trilhas</span></div>');
     }
     if (!tiles.length) return '<p class="empty">Nenhum selo ainda. Conclua a primeira aula para começar.</p>';
     return '<div class="badge-grid">' + tiles.join('') + '</div>' +

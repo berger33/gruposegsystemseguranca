@@ -76,7 +76,7 @@ button, input { font: inherit; }
 @keyframes shimmer { from { background-position: -240px 0; } to { background-position: 240px 0; } }
 @keyframes drift { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(30px, -24px, 0) scale(1.08); } }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(49, 90, 202, 0.35); } 100% { box-shadow: 0 0 0 14px rgba(49, 90, 202, 0); } }
-@keyframes toastIn { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes toastIn { from { opacity: 0; transform: translate3d(-18px, 0, 0); } to { opacity: 1; transform: none; } }
 @keyframes toastBar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 @keyframes fall { 0% { transform: translate3d(0, -10vh, 0) rotate(0deg); opacity: 1; } 100% { transform: translate3d(var(--dx, 0), 110vh, 0) rotate(720deg); opacity: 0.9; } }
 
@@ -417,11 +417,11 @@ button, input { font: inherit; }
 .login-note { margin-top: 22px; font-size: 13px; color: var(--muted); }
 
 /* Notificações e celebração */
-.toast-stack { position: fixed; right: 22px; bottom: 22px; display: grid; gap: 10px; z-index: 60; width: min(360px, calc(100vw - 32px)); }
+.toast-stack { position: fixed; left: 22px; bottom: 22px; display: grid; gap: 10px; z-index: 60; width: min(360px, calc(100vw - 32px)); }
 .toast { position: relative; overflow: hidden; display: flex; gap: 12px; align-items: center; background: #15243d; color: #fff; padding: 14px 16px; border-radius: 16px; box-shadow: 0 20px 40px -18px rgba(0, 0, 0, 0.5); animation: toastIn 0.45s var(--ease) both; font-size: 14px; }
 .toast .t-ico { width: 34px; height: 34px; border-radius: 11px; background: rgba(255, 255, 255, 0.14); display: grid; place-items: center; flex: none; }
 .toast .t-bar { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: linear-gradient(90deg, #7fb0ff, #c8a8ff); transform-origin: left; animation: toastBar 6s linear forwards; }
-.toast.out { opacity: 0; transform: translateX(20px); transition: all 0.3s; }
+.toast.out { opacity: 0; transform: translateX(-16px); transition: all 0.3s; }
 .confetti-layer { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 70; }
 .confetti { position: absolute; top: -12px; width: 9px; height: 14px; border-radius: 2px; animation: fall 2.8s cubic-bezier(0.2, 0.6, 0.4, 1) forwards; }
 
