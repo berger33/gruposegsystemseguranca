@@ -655,9 +655,9 @@ button, input { font: inherit; }
 .notif-item time { font-size: 11px; color: var(--muted); }
 
 /* ---------- Tour de boas-vindas ---------- */
-.tour-overlay { position: fixed; inset: 0; z-index: 80; background: rgba(4, 8, 18, 0.6); backdrop-filter: blur(2px); }
-.tour-spot { position: fixed; z-index: 81; border-radius: 14px; box-shadow: 0 0 0 4px var(--glow), 0 0 0 9999px rgba(4, 8, 18, 0.55); transition: all 0.35s var(--ease); pointer-events: none; }
-.tour-card { position: fixed; z-index: 82; width: min(340px, calc(100vw - 32px)); background: var(--surface-2); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-lift); padding: 18px; backdrop-filter: blur(16px); animation: rise 0.3s var(--ease) backwards; }
+.tour-overlay { position: fixed; inset: 0; z-index: 9900; background: rgba(4, 8, 18, 0.52); backdrop-filter: blur(2px); }
+.tour-spot { position: fixed; z-index: 9901; border-radius: 14px; box-shadow: 0 0 0 4px var(--glow), 0 0 0 9999px rgba(4, 8, 18, 0.45); transition: all 0.35s var(--ease); pointer-events: none; }
+.tour-card { position: fixed; z-index: 9902; width: min(340px, calc(100vw - 32px)); max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-lift); padding: 18px; backdrop-filter: blur(16px); animation: rise 0.3s var(--ease) backwards; }
 .tour-card .t-step { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--azul-3); }
 .tour-card h3 { margin: 6px 0 6px; font-size: 17px; }
 .tour-card p { font-size: 14px; color: var(--ink-2); }

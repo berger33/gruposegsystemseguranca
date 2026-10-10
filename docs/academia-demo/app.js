@@ -1285,44 +1285,122 @@
     { sel: '.ring-wrap', t: 'Seu progresso', d: 'O anel mostra quanto da sua jornada você já concluiu.' },
   ];
   var tourIndex = 0;
+  var tourSpotTarget = null;
   function clearTourDom() {
     ['tour-overlay', 'tour-card'].forEach(function (id) { var e = document.getElementById(id); if (e) e.remove(); });
     var s = document.querySelector('.tour-spot'); if (s) s.remove();
+    tourSpotTarget = null;
   }
   function endTour() { clearTourDom(); try { localStorage.setItem(TOUR_KEY, '1'); } catch (e) {} app.focus({ preventScroll: true }); }
-  function positionTourCard(card, spot) {
-    var vw = window.innerWidth, vh = window.innerHeight;
-    if (spot) {
-      var r = spot.getBoundingClientRect();
-      var top = r.bottom + 14, left = Math.min(Math.max(16, r.left), vw - 356);
-      if (top + 200 > vh) top = Math.max(16, r.top - 210);
-      card.style.top = top + 'px'; card.style.left = Math.max(16, left) + 'px';
-    } else { card.style.top = '50%'; card.style.left = '50%'; card.style.transform = 'translate(-50%,-50%)'; }
+  function positionTourCard(card, target) {
+    var vw = window.innerWidth || document.documentElement.clientWidth || 320;
+    var vh = window.innerHeight || document.documentElement.clientHeight || 568;
+    var gutter = Math.min(16, Math.max(8, Math.floor(vw / 20)));
+    var availableWidth = Math.max(1, vw - gutter * 2);
+    var availableHeight = Math.max(1, vh - gutter * 2);
+    var bounds = card.getBoundingClientRect();
+    var width = Math.min(bounds.width || Math.min(340, availableWidth), availableWidth);
+    var height = Math.min(bounds.height || 180, availableHeight);
+    var left = (vw - width) / 2;
+    var top = (vh - height) / 2;
+    if (target && target.isConnected !== false) {
+      var r = target.getBoundingClientRect();
+      if (r && r.width > 0 && r.height > 0) {
+        left = Math.min(Math.max(gutter, r.left), Math.max(gutter, vw - width - gutter));
+        var below = r.bottom + 14;
+        var above = r.top - height - 14;
+        if (below + height <= vh - gutter) top = below;
+        else if (above >= gutter) top = above;
+      }
+    }
+    card.style.left = Math.max(gutter, Math.min(left, Math.max(gutter, vw - width - gutter))) + 'px';
+    card.style.top = Math.max(gutter, Math.min(top, Math.max(gutter, vh - height - gutter))) + 'px';
+    card.style.transform = 'none';
+  }
+  function repositionTour() {
+    var card = document.getElementById('tour-card');
+    if (!card) return;
+    var target = tourSpotTarget && tourSpotTarget.isConnected !== false ? tourSpotTarget : null;
+    var spot = document.querySelector('.tour-spot');
+    if (spot && target) {
+      var r = target.getBoundingClientRect();
+      if (r && r.width > 0 && r.height > 0) {
+        var left = Math.max(0, r.left - 6), top = Math.max(0, r.top - 6);
+        var vw = window.innerWidth || document.documentElement.clientWidth || r.right + 6;
+        var vh = window.innerHeight || document.documentElement.clientHeight || r.bottom + 6;
+        spot.style.left = left + 'px';
+        spot.style.top = top + 'px';
+        spot.style.width = Math.max(0, Math.min(vw, r.right + 6) - left) + 'px';
+        spot.style.height = Math.max(0, Math.min(vh, r.bottom + 6) - top) + 'px';
+      } else { spot.remove(); tourSpotTarget = null; target = null; }
+    } else if (spot) { spot.remove(); }
+    positionTourCard(card, target);
   }
   function renderTour() {
     clearTourDom();
-    while (tourIndex < tourSteps.length && !document.querySelector(tourSteps[tourIndex].sel)) tourIndex++;
     if (tourIndex >= tourSteps.length) return endTour();
     var step = tourSteps[tourIndex];
-    var target = document.querySelector(step.sel);
-    var overlay = document.createElement('div'); overlay.className = 'tour-overlay'; overlay.id = 'tour-overlay'; overlay.setAttribute('aria-hidden', 'true');
-    document.body.appendChild(overlay);
+    var target = null;
+    var overlay = null;
     var spot = null;
-    var r = target.getBoundingClientRect();
-    spot = document.createElement('div'); spot.className = 'tour-spot';
-    spot.style.left = (r.left - 6) + 'px'; spot.style.top = (r.top - 6) + 'px';
-    spot.style.width = (r.width + 12) + 'px'; spot.style.height = (r.height + 12) + 'px';
-    document.body.appendChild(spot);
-    var card = document.createElement('div'); card.className = 'tour-card'; card.id = 'tour-card';
-    card.setAttribute('role', 'dialog'); card.setAttribute('aria-modal', 'true'); card.setAttribute('aria-labelledby', 'tour-title'); card.setAttribute('aria-describedby', 'tour-description');
-    card.innerHTML = '<span class="t-step">Passo ' + (tourIndex + 1) + ' de ' + tourSteps.length + '</span><h3 id="tour-title">' + esc(step.t) + '</h3><p id="tour-description">' + esc(step.d) + '</p>' +
-      '<div class="tour-actions"><button class="btn-ghost sm" id="tour-skip" type="button">Pular</button><button class="btn-primary sm" id="tour-next" type="button">' + (tourIndex === tourSteps.length - 1 ? 'Concluir' : 'Próximo') + '</button></div>';
-    document.body.appendChild(card);
-    positionTourCard(card, spot);
-    document.getElementById('tour-skip').addEventListener('click', endTour);
-    document.getElementById('tour-next').addEventListener('click', function () { tourIndex++; renderTour(); });
-    document.getElementById('tour-next').focus();
+    var card = null;
+    try {
+      target = document.querySelector(step.sel);
+      if (target && target.isConnected !== false && typeof target.getBoundingClientRect === 'function') {
+        if (typeof target.scrollIntoView === 'function') {
+          try { target.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (scrollError) { target.scrollIntoView(); }
+        }
+        var r = target.getBoundingClientRect();
+        if (!r || r.width <= 0 || r.height <= 0) target = null;
+      } else target = null;
+
+      overlay = document.createElement('div');
+      overlay.className = 'tour-overlay';
+      overlay.id = 'tour-overlay';
+      overlay.setAttribute('aria-hidden', 'true');
+
+      if (target) {
+        var bounds = target.getBoundingClientRect();
+        spot = document.createElement('div');
+        spot.className = 'tour-spot';
+        var left = Math.max(0, bounds.left - 6), top = Math.max(0, bounds.top - 6);
+        var vw = window.innerWidth || document.documentElement.clientWidth || bounds.right + 6;
+        var vh = window.innerHeight || document.documentElement.clientHeight || bounds.bottom + 6;
+        spot.style.left = left + 'px';
+        spot.style.top = top + 'px';
+        spot.style.width = Math.max(0, Math.min(vw, bounds.right + 6) - left) + 'px';
+        spot.style.height = Math.max(0, Math.min(vh, bounds.bottom + 6) - top) + 'px';
+      }
+
+      card = document.createElement('div');
+      card.className = 'tour-card';
+      card.id = 'tour-card';
+      card.setAttribute('role', 'dialog');
+      card.setAttribute('aria-modal', 'true');
+      card.setAttribute('aria-labelledby', 'tour-title');
+      card.setAttribute('aria-describedby', 'tour-description');
+      card.setAttribute('aria-live', 'polite');
+      card.innerHTML = '<span class="t-step">Passo ' + (tourIndex + 1) + ' de ' + tourSteps.length + '</span><h3 id="tour-title">' + esc(step.t) + '</h3><p id="tour-description">' + esc(step.d) + '</p>' +
+        '<div class="tour-actions"><button class="btn-ghost sm" id="tour-skip" type="button">Pular</button><button class="btn-primary sm" id="tour-next" type="button">' + (tourIndex === tourSteps.length - 1 ? 'Concluir' : 'Próximo') + '</button></div>';
+
+      document.body.appendChild(overlay);
+      if (spot) document.body.appendChild(spot);
+      document.body.appendChild(card);
+      tourSpotTarget = spot ? target : null;
+      positionTourCard(card, target);
+
+      document.getElementById('tour-skip').addEventListener('click', endTour);
+      var nextButton = document.getElementById('tour-next');
+      nextButton.addEventListener('click', function () { tourIndex++; renderTour(); });
+      try { nextButton.focus({ preventScroll: true }); } catch (focusError) { nextButton.focus(); }
+    } catch (error) {
+      // Uma falha ao localizar/posicionar um destaque não pode deixar a tela escura sem orientação.
+      clearTourDom();
+      if (window.console && typeof window.console.error === 'function') window.console.error('Não foi possível mostrar esta etapa do tour.', error);
+    }
   }
+  window.addEventListener('resize', repositionTour, { passive: true });
+  window.addEventListener('scroll', repositionTour, true);
   function startTour() { try { if (localStorage.getItem(TOUR_KEY)) return; } catch (e) { return; } tourIndex = 0; setTimeout(renderTour, 500); }
 
   // ---------- Fundo de partículas (constelação) ----------
