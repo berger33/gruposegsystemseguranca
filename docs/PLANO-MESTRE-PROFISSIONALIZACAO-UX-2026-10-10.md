@@ -1,8 +1,8 @@
 # Plano mestre — profissionalização e padronização da interface
 
-**Data:** 10/10/2026  
-**Base confirmada:** `main` / `origin/main`, `87aef9f486d893f0e793b5a6faf2677714bb240f`  
-**Escopo:** auditoria e melhoria visual incremental de todas as áreas do SEG System.  
+**Data:** 10/10/2026
+**Base confirmada:** `main` / `origin/main`, `87aef9f486d893f0e793b5a6faf2677714bb240f`
+**Escopo:** auditoria e melhoria visual incremental de todas as áreas do SEG System.
 **Estado inicial:** plano de trabalho; as fatias abaixo ainda precisam ser reavaliadas contra o código atual antes de qualquer implementação.
 
 ## Instrução prioritária ao Arena
@@ -138,4 +138,3 @@ Ao terminar UX-PRO-00, a próxima sessão começa em UX-PRO-01. Em cada sessão 
 ## Definição de pronto
 
 Uma fatia só está pronta quando o escopo corresponde ao código atual, tarefas e rótulos são claros, aparência é consistente nos estados e temas previstos, desktop/mobile/teclado foram comprovados com evidências, comportamento funcional e segurança foram preservados, checks obrigatórios passaram, documentação está atualizada e o merge foi confirmado na `main`. A experiência integral do sistema só pode ser declarada concluída após UX-PRO-10 e sem lacunas ocultadas.
-
