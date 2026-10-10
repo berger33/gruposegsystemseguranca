@@ -230,7 +230,7 @@
       '<section class="login-hero">' +
       '<div class="orb o1"></div><div class="orb o2"></div><div class="grid-lines"></div>' +
       '<div class="login-inner">' +
-      '<div class="hero-brand reveal"><img class="brand-logo" src="vendor/seg-system-logo-circle.svg?v=2" alt=""><span>Academia Seg System Segurança</span><span class="pill-soon">Em construção</span></div>' +
+      '<div class="hero-brand reveal"><img class="brand-logo" src="vendor/seg-system-logo-emblem.svg?v=2" alt=""><span>Academia Seg System Segurança</span><span class="pill-soon">Em construção</span></div>' +
       '<div class="login-copy">' +
       '<p class="eyebrow light reveal" style="--d:1">Capacitação corporativa</p>' +
       '<h2 class="reveal" style="--d:2">Aprender no ritmo do seu trabalho.</h2>' +
@@ -247,7 +247,7 @@
       '<section class="login-panel">' +
       '<div class="login-card reveal" style="--d:1">' +
       '<button type="button" class="theme-toggle js-theme login-theme" aria-label="Alternar tema"></button>' +
-      '<div class="login-head"><img class="brand-logo" src="vendor/seg-system-logo-circle.svg?v=2" alt=""><h1 class="grad-text">Entrar na Academia</h1><p>Use o e-mail e a senha informados pelo seu gestor.</p></div>' +
+      '<div class="login-head"><img class="brand-logo" src="vendor/seg-system-logo-emblem.svg?v=2" alt=""><h1 class="grad-text">Entrar na Academia</h1><p>Use o e-mail e a senha informados pelo seu gestor.</p></div>' +
       '<form id="login-form" class="form" novalidate>' +
       '<div class="field"><label for="f-email">E-mail</label><div class="input-wrap">' + icon('mail') +
       '<input id="f-email" name="email" type="email" autocomplete="username" required placeholder="seu.nome@empresa.com.br"></div></div>' +

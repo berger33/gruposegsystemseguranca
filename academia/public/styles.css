@@ -449,7 +449,7 @@ button, input { font: inherit; }
 .hero-brand { display: flex; align-items: center; gap: 12px; font-weight: 650; flex-wrap: wrap; }
 .hero-brand .brand-mark { background: rgba(255, 255, 255, 0.16); box-shadow: none; border: 1px solid rgba(255, 255, 255, 0.3); animation: none; }
 .hero-brand .brand-mark::after { border-color: rgba(255, 255, 255, 0.3); }
-.brand-logo { display: block; width: 63px; height: 63px; flex: none; object-fit: contain; border-radius: 50%; background: transparent; border: 0; box-shadow: none; filter: drop-shadow(0 2px 4px rgba(20, 45, 111, 0.22)); }
+.brand-logo { display: block; width: 63px; height: 63px; flex: none; object-fit: contain; border-radius: 0; background: transparent; border: 0; box-shadow: none; filter: drop-shadow(0 2px 4px rgba(20, 45, 111, 0.22)); }
 .hero-brand .brand-logo { width: 72px; height: 72px; }
 .login-head .brand-logo { width: 87px; height: 87px; margin-bottom: 18px; }
 .login-copy { margin-top: 72px; max-width: 560px; }
