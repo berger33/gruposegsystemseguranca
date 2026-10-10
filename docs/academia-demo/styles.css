@@ -449,8 +449,8 @@ button, input { font: inherit; }
 .hero-brand { display: flex; align-items: center; gap: 12px; font-weight: 650; flex-wrap: wrap; }
 .hero-brand .brand-mark { background: rgba(255, 255, 255, 0.16); box-shadow: none; border: 1px solid rgba(255, 255, 255, 0.3); animation: none; }
 .hero-brand .brand-mark::after { border-color: rgba(255, 255, 255, 0.3); }
-.brand-mark.brand-logo { background: #fff; border: 2px solid rgba(255, 255, 255, 0.94); border-radius: 50%; box-shadow: 0 4px 12px rgba(20, 45, 111, 0.2); animation: none; overflow: hidden; }
-.brand-mark.brand-logo img { display: block; width: 100%; height: 100%; object-fit: contain; border-radius: 50%; }
+.brand-mark.brand-logo { background: transparent; border: 0; border-radius: 50%; box-shadow: none; animation: none; overflow: visible; }
+.brand-mark.brand-logo img { display: block; width: 100%; height: 100%; object-fit: contain; border-radius: 50%; filter: drop-shadow(0 2px 4px rgba(20, 45, 111, 0.22)); }
 .brand-mark.brand-logo::after { content: none; }
 .topbar .brand-mark.brand-logo { width: 42px; height: 42px; }
 .hero-brand .brand-mark.brand-logo { width: 48px; height: 48px; border-radius: 50%; flex: none; }
