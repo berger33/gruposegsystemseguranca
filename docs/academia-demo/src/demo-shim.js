@@ -332,11 +332,11 @@ if (typeof document !== 'undefined') {
   const banner = document.createElement('div');
   banner.setAttribute('role', 'note');
   banner.style.cssText = 'background:#172b68;color:#fff;font:13px/1.4 system-ui,sans-serif;padding:8px 16px;text-align:center';
-  banner.textContent = 'Demonstração estática publicada no GitHub Pages. Progresso e contas ficam neste navegador; a alçada não é verificada em servidor.';
+  banner.textContent = 'Demonstração estática do sistema. Progresso e contas ficam neste navegador; a alçada não é verificada em servidor.';
   document.body.insertBefore(banner, document.body.firstChild);
   // Sinaliza ao app.js que está na demonstração (mostra a caixa de conta de demonstração no acesso).
   document.documentElement.dataset.demo = 'true';
   const script = document.createElement('script');
-  script.src = 'app.js?v=16';
+  script.src = 'app.js?v=17';
   document.body.appendChild(script);
 }
