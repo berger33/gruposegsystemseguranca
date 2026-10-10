@@ -1292,7 +1292,7 @@
     tourSpotTarget = null;
   }
   function endTour() { clearTourDom(); try { localStorage.setItem(TOUR_KEY, '1'); } catch (e) {} app.focus({ preventScroll: true }); }
-  function positionTourCard(card, target) {
+  function positionTourCard(card) {
     var vw = window.innerWidth || document.documentElement.clientWidth || 320;
     var vh = window.innerHeight || document.documentElement.clientHeight || 568;
     var gutter = Math.min(16, Math.max(8, Math.floor(vw / 20)));
@@ -1301,20 +1301,8 @@
     var bounds = card.getBoundingClientRect();
     var width = Math.min(bounds.width || Math.min(340, availableWidth), availableWidth);
     var height = Math.min(bounds.height || 180, availableHeight);
-    var left = (vw - width) / 2;
-    var top = (vh - height) / 2;
-    if (target && target.isConnected !== false) {
-      var r = target.getBoundingClientRect();
-      if (r && r.width > 0 && r.height > 0) {
-        left = Math.min(Math.max(gutter, r.left), Math.max(gutter, vw - width - gutter));
-        var below = r.bottom + 14;
-        var above = r.top - height - 14;
-        if (below + height <= vh - gutter) top = below;
-        else if (above >= gutter) top = above;
-      }
-    }
-    card.style.left = Math.max(gutter, Math.min(left, Math.max(gutter, vw - width - gutter))) + 'px';
-    card.style.top = Math.max(gutter, Math.min(top, Math.max(gutter, vh - height - gutter))) + 'px';
+    card.style.left = Math.max(gutter, (vw - width) / 2) + 'px';
+    card.style.top = Math.max(gutter, (vh - height) / 2) + 'px';
     card.style.transform = 'none';
   }
   function repositionTour() {
@@ -1334,7 +1322,7 @@
         spot.style.height = Math.max(0, Math.min(vh, r.bottom + 6) - top) + 'px';
       } else { spot.remove(); tourSpotTarget = null; target = null; }
     } else if (spot) { spot.remove(); }
-    positionTourCard(card, target);
+    positionTourCard(card);
   }
   function renderTour() {
     clearTourDom();
@@ -1387,7 +1375,7 @@
       if (spot) document.body.appendChild(spot);
       document.body.appendChild(card);
       tourSpotTarget = spot ? target : null;
-      positionTourCard(card, target);
+      positionTourCard(card);
 
       document.getElementById('tour-skip').addEventListener('click', endTour);
       var nextButton = document.getElementById('tour-next');
