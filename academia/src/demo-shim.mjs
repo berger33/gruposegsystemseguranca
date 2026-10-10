@@ -337,6 +337,6 @@ if (typeof document !== 'undefined') {
   // Sinaliza ao app.js que está na demonstração (mostra a caixa de conta de demonstração no acesso).
   document.documentElement.dataset.demo = 'true';
   const script = document.createElement('script');
-  script.src = 'app.js?v=18';
+  script.src = 'app.js?v=19';
   document.body.appendChild(script);
 }
