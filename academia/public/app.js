@@ -1276,7 +1276,7 @@
   }
 
   // ---------- Tour de boas-vindas ----------
-  var TOUR_KEY = 'academia-tour-v1';
+  var TOUR_KEY = 'academia-tour-v2';
   var tourSteps = [
     { sel: '#search-input', t: 'Busque sem sair da página', d: 'Digite para ver resultados instantâneos das aulas do seu setor.' },
     { sel: '#notif-toggle', t: 'Central de notificações', d: 'Acompanhe conquistas e, para gestores, as alterações de acesso.' },
