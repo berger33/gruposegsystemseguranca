@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Academia Seg System Segurança</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a class="skip" href="#app">Ir para o conteúdo</a>
+  <header class="topbar" id="topbar" hidden>
+    <a class="brand" href="#/" aria-label="Academia Seg System Segurança, página inicial">
+      <span class="brand-mark" aria-hidden="true">AS</span>
+      <span class="brand-text">Academia <strong>Seg System Segurança</strong></span>
+    </a>
+    <form class="search" id="search-form" role="search">
+      <label class="sr-only" for="search-input">Buscar aulas</label>
+      <input id="search-input" type="search" name="q" placeholder="Buscar aulas" autocomplete="off" minlength="2">
+    </form>
+    <div class="account">
+      <span class="sector-chip" id="sector-chip"></span>
+      <span class="who" id="who"></span>
+      <button type="button" class="ghost" id="logout">Sair</button>
+    </div>
+  </header>
+  <div class="status-bar" id="status-bar" hidden>
+    <span class="pill">Em construção</span>
+    Módulo em fase de testes. Conteúdos e pontuações podem mudar antes da liberação.
+  </div>
+  <main id="app" class="page" tabindex="-1"></main>
+  <footer class="footer">Grupo SEG System · Guarulhos, SP · Uso interno e de clientes convidados</footer>
+  <script src="/app.js"></script>
+</body>
+</html>
