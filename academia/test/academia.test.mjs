@@ -286,3 +286,23 @@ test('persistência: progresso sobrevive a reinício do armazenamento', async ()
   const store2 = createStore({ file });
   assert.equal(store2.state.progress[id]['com-pedido'].pointsEarned, 15);
 });
+
+test('cookie de sessão: SameSite=Lax em localhost e SameSite=None; Secure atrás de HTTPS (preview)', async () => {
+  const body = JSON.stringify({ email: 'carla.mendes@academia.exemplo', password: PASSWORD });
+  const post = (headers) => new Promise((resolve, reject) => {
+    const req = http.request(base + '/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body), ...headers } }, res => {
+      res.resume();
+      res.on('end', () => resolve(res.headers['set-cookie'][0]));
+    });
+    req.on('error', reject);
+    req.end(body);
+  });
+  const local = await post({});
+  assert.match(local, /SameSite=Lax/);
+  assert.ok(!/Secure/.test(local));
+  const preview = await post({ 'x-forwarded-proto': 'https', Host: 'academia-3100.example.app' });
+  assert.match(preview, /SameSite=None; Secure/);
+  assert.match(preview, /HttpOnly/);
+  const remote = await post({ Host: 'academia-3100.example.app' });
+  assert.match(remote, /SameSite=None; Secure/);
+});

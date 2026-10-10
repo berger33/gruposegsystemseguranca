@@ -6,6 +6,7 @@
   var app = document.getElementById('app');
   var topbar = document.getElementById('topbar');
   var me = null;
+  var justLoggedIn = false;
 
   function esc(value) {
     return String(value === undefined || value === null ? '' : value).replace(/[&<>"']/g, function (c) {
@@ -96,6 +97,7 @@
     api('/api/login', { method: 'POST', body: { email: email, password: password } })
       .then(function (data) {
         me = data.user;
+        justLoggedIn = true;
         history.replaceState(null, '', '#/');
         return route();
       })
@@ -316,10 +318,13 @@
       else if (segments[0] === 'aula' && segments[1]) page = renderLesson(segments[1]);
       else if (segments[0] === 'busca') page = renderSearch(query.get('q') || '');
       else page = renderHome();
-      return page.catch(function (err) {
+      return page.then(function () { justLoggedIn = false; }).catch(function (err) {
         if (err.status === 401) {
           me = null;
           updateTopbar();
+          if (justLoggedIn) {
+            return renderLogin('O navegador não manteve a sua sessão. Tente abrir a Academia em uma nova aba, sem bloqueio de cookies de terceiros, e entre de novo.');
+          }
           return renderLogin('Sua sessão expirou. Entre novamente.');
         }
         if (err.status === 404) return renderError('Este conteúdo não está disponível para o seu setor.');

@@ -78,8 +78,22 @@ function tokenOf(req) {
   return null;
 }
 
-const sessionCookie = token => `${COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`;
-const clearCookie = () => `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
+// O preview do ambiente abre a página dentro de um iframe em outro site (HTTPS).
+// Nesse contexto o navegador só guarda e envia cookies com SameSite=None; Secure.
+// Em localhost (HTTP) continua SameSite=Lax.
+function isLocalRequest(req) {
+  const host = String(req.headers.host || '').split(':')[0].toLowerCase();
+  return host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host === '';
+}
+
+function cookieAttributes(req) {
+  const forwardedHttps = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';
+  const https = forwardedHttps || Boolean(req.socket && req.socket.encrypted) || !isLocalRequest(req);
+  return https ? 'SameSite=None; Secure' : 'SameSite=Lax';
+}
+
+const sessionCookie = (req, token) => `${COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; ${cookieAttributes(req)}; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`;
+const clearCookie = req => `${COOKIE}=; Path=/; HttpOnly; ${cookieAttributes(req)}; Max-Age=0`;
 
 const normalize = text => String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
@@ -124,7 +138,7 @@ export function createApp({ store, sessions, content = TRACKS }) {
       return;
     }
     const token = sessions.create(user.id);
-    sendJson(res, 200, { user: publicUser(user) }, { 'Set-Cookie': sessionCookie(token) });
+    sendJson(res, 200, { user: publicUser(user) }, { 'Set-Cookie': sessionCookie(req, token) });
   }
 
   async function complete(req, res, user, lessonId) {
@@ -177,7 +191,7 @@ export function createApp({ store, sessions, content = TRACKS }) {
     if (p === '/api/login' && m === 'POST') return login(req, res);
     if (p === '/api/logout' && m === 'POST') {
       sessions.drop(tokenOf(req));
-      return sendJson(res, 200, { ok: true }, { 'Set-Cookie': clearCookie() });
+      return sendJson(res, 200, { ok: true }, { 'Set-Cookie': clearCookie(req) });
     }
 
     const user = currentUser(req);
