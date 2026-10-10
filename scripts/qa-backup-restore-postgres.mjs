@@ -142,6 +142,7 @@ async function snapshot(pool, idA, idB, docA, docB, legacyDocId = null, expected
   const { rows: ledger } = await pool.query('SELECT filename, checksum FROM __migrations ORDER BY filename');
   const { rows: [values] } = await pool.query(`SELECT
     (SELECT count(*)::int FROM pg_tables WHERE schemaname='public') AS tables,
+    (SELECT count(*)::int FROM __migrations WHERE checksum IS NOT NULL) AS migrations,
     (SELECT count(*)::int FROM pg_constraint WHERE contype='f' AND connamespace='public'::regnamespace) AS foreign_keys,
     (SELECT count(*)::int FROM client_accounts WHERE id IN ($1,$2)) AS accounts,
     (SELECT count(*)::int FROM client_access_grants WHERE client_account_id=$1) AS grants_a,
@@ -152,7 +153,10 @@ async function snapshot(pool, idA, idB, docA, docB, legacyDocId = null, expected
     (SELECT count(*)::int FROM client_documents WHERE id=$5) AS legacy_files,
     (SELECT count(*)::int FROM audit_log WHERE action='qa_restore_source') AS operational_audit,
     (SELECT count(*)::int FROM auth_access_audit WHERE actor_id='qa_restore_source') AS access_audit`, [idA, idB, docA, docB, legacyDocId]);
-  if (ledger.length !== 98 || ledger.some(x => !x.checksum) || values.tables < 400 || values.foreign_keys < 1 ||
+  // O disco é a fonte de verdade: havia aqui um literal 98 que envelheceu e
+  // reprovaria o snapshot mesmo com cluster íntegro.
+  const noDisco = (await readdir(path.resolve(import.meta.dirname, '..', 'db/migrations'))).filter(f => /^\d{3}-.*\.sql$/.test(f)).length;
+  if (ledger.length !== noDisco || ledger.some(x => !x.checksum) || values.tables < 400 || values.foreign_keys < 1 ||
       values.accounts !== 2 || values.grants_a !== 1 || values.grants_b !== (expectedHttp ? 1 : 0) ||
       values.sessions !== (expectedHttp ? 2 : 0) || values.docs !== 2 || values.versions !== (expectedCli ? 3 : 1) || values.legacy_files !== (legacyDocId ? 1 : 0) ||
       values.operational_audit !== 1 || values.access_audit !== 1) throw new Error('qa_restore_snapshot_invalid');
@@ -374,7 +378,7 @@ try {
     console.log('QA_RESTORE_CLI_SCOPE_VERIFIED: A grant revoked after HTTP, B object remains accessible in destination QA');
   }
   if (poolHadError) throw new Error('qa_restore_pool_unavailable');
-  console.log(`QA_RESTORE_VERIFIED: ${separateClusters ? 'two independent clusters' : 'two separate DBs'}, ${after.values.tables} tables, 98/98 checksums, A/B grants, documents, versions, both audit catalogs, source unchanged; restored migrator exit 0`);
+  console.log(`QA_RESTORE_VERIFIED: ${separateClusters ? 'two independent clusters' : 'two separate DBs'}, ${after.values.tables} tables, ${after.values.migrations}/${after.values.migrations} checksums, A/B grants, documents, versions, both audit catalogs, source unchanged; restored migrator exit 0`);
   result = 0;
 } catch (error) {
   console.error('QA_RESTORE_FAILED', redact(error?.message || error).slice(0, 350));
