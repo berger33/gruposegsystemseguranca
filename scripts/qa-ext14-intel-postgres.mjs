@@ -94,6 +94,10 @@ try {
     OLLAMA_ENABLED: "false",
     MAIL_HOST: "",
     NEXT_TELEMETRY_DISABLED: "1",
+    // @sparticuz/chromium inclui as bibliotecas AL2023 (libnspr4, libnss3) que o
+    // subteste de interface precisa; a flag apenas seleciona esse pacote local,
+    // sem usar AWS. Mesmo ajuste dos demais gates que abrem Chromium.
+    AWS_EXECUTION_ENV: "AWS_Lambda_nodejs22.x",
   });
   exitCode = executed.code;
   const summary = auditTap(executed.output);

@@ -2976,7 +2976,9 @@ test('CRM-02: contato dedicado com escopo de empresa, edição e auditoria trans
       editForm.getByRole('button', { name: 'Salvar contato', exact: true }).click(),
     ]);
     assert.equal(updateResponse.status(), 200);
-    await region.getByText(/Função: financeiro/).waitFor();
+    // A tela exibe o rótulo legível do papel (roleLabels.financeiro = "Financeiro"),
+    // não o valor interno "financeiro". A asserção prova que a edição persistiu.
+    await region.getByText(/Função: Financeiro/).waitFor();
     await assertNoHorizontalScroll(page, 'CRM-02 contatos');
     await context.close();
   } finally { await browser.close(); }

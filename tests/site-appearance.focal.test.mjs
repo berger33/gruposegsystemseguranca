@@ -4,11 +4,15 @@ import {readFile,readdir} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 import {PGlite} from '@electric-sql/pglite';
 import {createSiteAppearanceApi} from '../src/server/site-appearance-api.mjs';
-test('o manifesto oficial inclui todas as migrações até 177',async()=>{
+test('o manifesto oficial declara exatamente as migrações presentes em db/migrations',async()=>{
  const source=await readFile(new URL('../scripts/migrate-site-visual.mjs',import.meta.url),'utf8');
  const declared=[...source.split('const files = [')[1].split('];')[0].matchAll(/'([0-9]{3}-[^']+\.sql)'/g)].map(m=>m[1]);
  const actual=(await readdir(new URL('../db/migrations/',import.meta.url))).filter(f=>/^\d{3}-.*\.sql$/.test(f)).sort();
- assert.equal(declared.length,177);assert.deepEqual(declared,actual);
+ // O disco é a fonte de verdade: o deepEqual abaixo pega manifesto incompleto,
+ // com sobra ou fora de ordem. Um contador fixo aqui não acrescenta verificação
+ // e envelhece a cada migração nova — foi o que o deixou reprovando em 178-180.
+ assert.ok(actual.length>=1,'db/migrations precisa ter ao menos uma migração');
+ assert.deepEqual(declared,actual);
 });
 test('seleção real, papel/concessão, conflito, auditoria e rollback',async()=>{
  const pg=new PGlite(),id=randomUUID(),revoked=randomUUID();let failAudit=false;

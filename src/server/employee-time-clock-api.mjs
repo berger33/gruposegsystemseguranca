@@ -118,7 +118,7 @@ export function createEmployeeTimeClockApi(ctx){
    const entry=(await c.query('SELECT * FROM hr_time_entries WHERE id=$1 AND employee_id=$2 FOR UPDATE',[b.timeEntryId,s.employeeId])).rows[0];
    if(!entry)fail('time_entry_not_found',404);await openCompetence(c,entry.competence);
    if((await c.query("SELECT 1 FROM emp_journey_corrections WHERE time_entry_id=$1 AND status IN ('solicitado','em_analise')",[entry.id])).rows.length)fail('correction_already_pending',409);
-   const created=(await c.query("INSERT INTO emp_journey_corrections(employee_id,time_entry_id,original_snapshot,requested_changes,reason,created_by,created_by_id) VALUES($1,$2,$3,$4,$5,$6,$6) RETURNING id,status,time_entry_id,reason",[s.employeeId,entry.id,JSON.stringify(entry),JSON.stringify(changes),reason,s.identityId])).rows[0];
+   const created=(await c.query("INSERT INTO emp_journey_corrections(employee_id,time_entry_id,original_snapshot,requested_changes,reason,created_by,created_by_id) VALUES($1,$2,$3,$4,$5,$6,$6) RETURNING id,status,employee_id,time_entry_id,reason",[s.employeeId,entry.id,JSON.stringify(entry),JSON.stringify(changes),reason,s.identityId])).rows[0];
    await audit(c,'emp_journey_correction_request',s.identityId,created.id);return created;
   });return send(res,201,{correction});
  }

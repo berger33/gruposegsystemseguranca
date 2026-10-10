@@ -143,6 +143,67 @@ async function request(url, init) {
   const response = await fetch(`http://127.0.0.1:3000${url}`, init);
   return { status: response.status, data: await response.json().catch(() => ({})), cookie: response.headers.get('set-cookie')?.split(';')[0] || '' };
 }
+// L01/SEC-05: o token compartilhado continua válido COMO BOOTSTRAP quando o
+// operador liga o flag explicitamente. O Next não aceita um segundo dev server
+// no mesmo diretório, então o opt-in é provado reiniciando o MESMO servidor com
+// o flag ligado, depois que o smoke padrão (que prova a recusa) já terminou.
+async function stopChild(child) {
+  if (!child || child.exitCode !== null || child.signalCode) return;
+  child.kill('SIGTERM');
+  await Promise.race([exited(child).catch(() => {}), new Promise(resolve => setTimeout(resolve, 10_000))]);
+  if (child.exitCode === null) child.kill('SIGKILL');
+}
+async function legacyBootstrapProbe(currentWeb, marceloToken, env, pool) {
+  await stopChild(currentWeb);
+  const child = spawnChild(['server.mjs', '--dev'], {
+    ...env, QA_MIGRATION_ONLY: '', SITE_ADMIN_LEGACY_TOKENS: 'true',
+  });
+  const origin = 'http://127.0.0.1:3000';
+  function expect(result, code, label) {
+    if (result.status !== code) throw new Error(`qa_smoke_${label}_expected_${code}_got_${result.status}`);
+    console.log(`QA-HOM-${label}: HTTP ${code}`);
+  }
+  // evaluateLegacyTokenPolicy (src/server/staff-session.mjs) exige o flag
+  // ligado E zero staff individual provisionado: assim que a primeira conta
+  // individual existe, o token compartilhado morre sozinho. O seed cria contas
+  // individuais, então o ensaio simula o estado ANTERIOR ao bootstrap marcando
+  // os perfis do seed — exatamente o predicado que o contador usa — e os
+  // devolve no finally, como o QA-HOM-007 já faz com a verificação de e-mail.
+  let flipped = [];
+  try {
+    const { rows: provisioned } = await pool.query(
+      `UPDATE auth_staff_profiles SET is_bootstrap = TRUE
+        WHERE is_bootstrap = FALSE
+        RETURNING identity_id`);
+    flipped = provisioned.map(row => row.identity_id);
+    await waitForHealth(child);
+    const marcelo = await request('/api/admin/session', {
+      method: 'POST',
+      headers: { origin, 'content-type': 'application/json' },
+      body: JSON.stringify({ token: marceloToken }),
+    });
+    expect(marcelo, 200, '002_MARCELO_TOKEN_OPT_IN');
+    if (marcelo.data.role !== 'marcelo') throw new Error('qa_smoke_marcelo_role_mismatch');
+    if (marcelo.data.bootstrap !== true) throw new Error('qa_smoke_marcelo_bootstrap_flag_missing');
+    // As rotas que dependiam da sessão do token compartilhado continuam sendo
+    // exercitadas — agora no servidor em que essa sessão existe de fato.
+    expect(await request('/api/admin/client-accounts', { headers: { cookie: marcelo.cookie } }), 200, '003_MARCELO_ACCOUNTS_ALLOWED');
+    expect(await request('/api/admin/client-verifications', { headers: { cookie: marcelo.cookie } }), 403, '007_LEGACY_QUEUE_DENIED');
+    return child;
+  } catch (error) {
+    await stopChild(child);
+    throw error;
+  } finally {
+    try {
+      if (flipped.length) {
+        await pool.query('UPDATE auth_staff_profiles SET is_bootstrap = FALSE WHERE identity_id = ANY($1::uuid[])', [flipped]);
+      }
+      console.log(`QA-HOM-002_BOOTSTRAP_STATE_RESTORED: ${flipped.length} perfis devolvidos a is_bootstrap=FALSE.`);
+    } catch (restoreError) {
+      console.error('QA_HOM_RESTORE_FAILED:', String(restoreError?.message || restoreError).slice(0, 200));
+    }
+  }
+}
 async function smoke(identities, marceloToken, pool) {
   const { generate } = await import('otplib');
   const origin = 'http://127.0.0.1:3000';
@@ -164,9 +225,13 @@ async function smoke(identities, marceloToken, pool) {
   expect(rh, 200, '002_RH_LOGIN');
   const adm = await login({ email: identities[2].email, password: identities[2].password });
   expect(adm, 200, '002_ADMIN_LOGIN');
+  // L01/SEC-05: tokens compartilhados ficam DESLIGADOS por padrão e deixam de
+  // valer assim que existe conta individual de staff ativa — e o seed cria
+  // quatro. O smoke prova essa recusa. O bootstrap opt-in continua existindo e
+  // é provado logo adiante por legacyBootstrapProbe, que reinicia o servidor
+  // com o flag ligado.
   const marcelo = await login({ token: marceloToken });
-  expect(marcelo, 200, '002_MARCELO_TOKEN');
-  if (marcelo.data.role !== 'marcelo') throw new Error('qa_smoke_marcelo_role_mismatch');
+  expect(marcelo, 403, '002_MARCELO_TOKEN_RECUSADO_POR_PADRAO');
   const client = await request('/api/auth/login', { method: 'POST', headers: { origin, 'content-type': 'application/json' },
     body: JSON.stringify({ email: identities[3].email, password: identities[3].password }) });
   expect(client, 200, '002_CLIENT_LOGIN');
@@ -179,7 +244,6 @@ async function smoke(identities, marceloToken, pool) {
   }), 403, '003_RH_LEAD_WRITE_DENIED');
   expect(await request('/api/admin/client-accounts', { headers: { cookie: adm.cookie } }), 403, '003_ADMIN_LEGACY_ACCOUNTS_DENIED');
   expect(await request('/api/admin/leads', { headers: { cookie: ti.cookie } }), 200, '003_TI_LEADS_ALLOWED');
-  expect(await request('/api/admin/client-accounts', { headers: { cookie: marcelo.cookie } }), 200, '003_MARCELO_ACCOUNTS_ALLOWED');
   expect(await request('/api/client/accounts'), 401, '004_ANON_CLIENT_DENIED');
   const accounts = await request('/api/client/accounts', { headers: { cookie: client.cookie } });
   expect(accounts, 200, '004_CLIENT_ACCOUNT');
@@ -194,7 +258,16 @@ async function smoke(identities, marceloToken, pool) {
   const post = (path, headers) => request(path, { method: 'POST', headers: { origin, 'content-type': 'application/json', ...headers }, body: '{}' });
   expect(await post(mfaPath), 401, '005_MFA_ANON_DENIED');
   expect(await post(mfaPath, { cookie: client.cookie }), 409, '005_MFA_SETUP_REQUIRED');
-  expect(await post(changePath, { cookie: client.cookie }), 503, '005_EMAIL_CHANGE_EXPLICIT_UNAVAILABLE');
+  // A troca de e-mail deixou de ser um stub indisponível: hoje exige um e-mail
+  // novo válido e DIFERENTE, grava pedido com token hasheado e expiração, e só
+  // efetiva no PUT. O corpo vazio usado aqui prova a recusa antes de qualquer
+  // efeito colateral — que é o que este passo sempre quis garantir.
+  expect(await post(changePath), 401, '005_EMAIL_CHANGE_ANON_DENIED');
+  const emptyChange = await post(changePath, { cookie: client.cookie });
+  expect(emptyChange, 400, '005_EMAIL_CHANGE_EMPTY_BODY_DENIED');
+  if (emptyChange.data.error !== 'new_email_different_required') {
+    throw new Error('qa_smoke_email_change_error_mismatch');
+  }
   expect(await request(mfaPath, { method: 'POST', headers: { cookie: client.cookie, origin: 'https://foreign.invalid' }, body: '{}' }), 403, '005_MFA_FOREIGN_ORIGIN_DENIED');
   // A legacy record with activated_at must not let a password-only login (or an
   // earlier cookie) bypass the absent challenge. This DB is synthetic + disposable.
@@ -264,18 +337,39 @@ async function smoke(identities, marceloToken, pool) {
   const pendingPassword = randomPassword();
   const created = await auth('/api/admin/invites', { email: pendingEmail, scopeNote: 'Somente QA sintético sem dados reais' }, ti.cookie);
   expect(created, 201, '007_INVITE_CREATED');
-  if (created.data.emailStatus !== 'not_configured' || !created.data.inviteUrl) throw new Error('qa_manual_invite_delivery_mismatch');
+  // L02: sem SMTP a entrega cai na caixa local e o token NÃO é mais ecoado na
+  // resposta — ele só volta quando não existe canal algum. Este passo sempre
+  // quis garantir que nenhuma identidade vire 'e-mail confirmado' sozinha; a
+  // regra de eco do token passou a fazer parte dessa garantia.
+  const inviteDelivery = created.data.emailStatus;
+  if (inviteDelivery === 'sent') throw new Error('qa_manual_invite_claimed_smtp_delivery');
+  if (inviteDelivery !== 'local_outbox' && inviteDelivery !== 'not_configured') {
+    throw new Error(`qa_manual_invite_delivery_mismatch_${inviteDelivery}`);
+  }
+  if (inviteDelivery === 'not_configured' && !created.data.inviteUrl) throw new Error('qa_manual_invite_url_missing');
+  if (inviteDelivery === 'local_outbox' && created.data.inviteUrl) throw new Error('qa_manual_invite_token_echoed');
+  console.log(`QA-HOM-007_INVITE_DELIVERY: ${inviteDelivery} (sem envio real).`);
+  let inviteUrl = created.data.inviteUrl || '';
+  if (!inviteUrl) {
+    // O operador copia o link da caixa local; o ensaio faz exatamente o mesmo.
+    const { rows: outbox } = await pool.query(
+      `SELECT body FROM local_outbox_messages
+        WHERE recipient_address = $1 AND template = 'client_invite'
+        ORDER BY created_at DESC LIMIT 1`, [pendingEmail]);
+    inviteUrl = /\/cliente\/convite\?token=[A-Za-z0-9_-]+/.exec(outbox[0]?.body || '')?.[0] || '';
+    if (!inviteUrl) throw new Error('qa_manual_invite_not_in_outbox');
+  }
   const accepted = await auth('/api/auth/invite/accept', {
-    token: new URL(created.data.inviteUrl).searchParams.get('token'), password: pendingPassword, displayName: 'Cliente Manual Fictício',
+    token: new URL(inviteUrl, 'http://127.0.0.1:3000').searchParams.get('token'), password: pendingPassword, displayName: 'Cliente Manual Fictício',
   });
   expect(accepted, 201, '007_INVITE_ACCEPTED_PENDING');
-  if (accepted.data.status !== 'pending_email' || accepted.data.emailStatus !== 'not_configured') throw new Error('qa_manual_pending_expected');
+  if (accepted.data.status !== 'pending_email') throw new Error('qa_manual_pending_expected');
+  if (accepted.data.emailStatus === 'sent') throw new Error('qa_manual_pending_claimed_smtp_delivery');
   const pendingLogin = () => auth('/api/auth/login', { email: pendingEmail, password: pendingPassword });
   const blockedPending = await pendingLogin(); expect(blockedPending, 403, '007_PENDING_LOGIN_DENIED');
   if (blockedPending.cookie) throw new Error('qa_pending_cookie_issued');
   expect(await request('/api/admin/client-verifications'), 401, '007_ANON_QUEUE_DENIED');
   expect(await request('/api/admin/client-verifications', { headers: { cookie: rh.cookie } }), 403, '007_RH_QUEUE_DENIED');
-  expect(await request('/api/admin/client-verifications', { headers: { cookie: marcelo.cookie } }), 403, '007_LEGACY_QUEUE_DENIED');
   const queue = await request('/api/admin/client-verifications', { headers: { cookie: ti.cookie } });
   expect(queue, 200, '007_INDIVIDUAL_TI_QUEUE');
   const target = queue.data.pending?.find(row => row.email === pendingEmail);
@@ -368,13 +462,18 @@ try {
   const migrator = spawnChild(['scripts/migrate-site-visual.mjs'], env);
   if (await exited(migrator) !== 0) throw new Error('qa_migrations_failed');
   const { rows } = await pool.query('SELECT count(*)::int AS count FROM __migrations WHERE checksum IS NOT NULL');
-  if (rows[0].count !== 98) throw new Error(`qa_migrations_expected_98_got_${rows[0].count}`);
+  // O disco é a fonte de verdade. Havia aqui um literal `!== 98` que envelheceu
+  // na migração 099 e passou a reprovar toda execução da homologação, inclusive
+  // em cluster íntegro. O migrador já falha fechado se disco != manifesto.
+  const noDisco = (await readdir(path.join(root, 'db/migrations'))).filter(f => /^\d{3}-.*\.sql$/.test(f)).length;
+  if (rows[0].count !== noDisco) throw new Error(`qa_migrations_expected_${noDisco}_got_${rows[0].count}`);
   const identities = await seed(pool);
-  console.log('QA-HOM-001: 98/98 migrações no PostgreSQL novo; 4 identidades e 2 empresas 100% fictícias.');
+  console.log(`QA-HOM-001: ${rows[0].count}/${noDisco} migrações no PostgreSQL novo; 4 identidades e 2 empresas 100% fictícias.`);
   web = spawnChild(['server.mjs', '--dev'], { ...env, QA_MIGRATION_ONLY: '' });
   await waitForHealth(web);
   if (verify) {
     await smoke(identities, marceloToken, pool);
+    web = await legacyBootstrapProbe(web, marceloToken, env, pool);
     result = 0;
   } else {
     console.log('\n=== HOMOLOGAÇÃO LOCAL, SOMENTE NESTE TERMINAL ===');
