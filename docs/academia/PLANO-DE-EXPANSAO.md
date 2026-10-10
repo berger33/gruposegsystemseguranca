@@ -433,3 +433,10 @@ Antes de cada fase: conferir cada aula [S] na tela real com dados fictícios. Au
 ## 11. Próximo passo
 
 A Fase 1 pode começar com o que não depende das pendências: trilhas T01 a T09 (exceto o que depender do papel supervisor), a área de permissões dentro da Academia e os setores novos que não usam o nome pendente (porteiro, controlador de acesso, serviços gerais e instalador). O conteúdo de cada aula é conferido na tela real antes de publicar.
+
+**Status (estrutura e interface):** as 24 trilhas e 165 aulas do plano já existem no
+módulo `academia/` (28 publicadas e o restante "em construção", com etiquetas [S],
+[P], [T] e [D]), assim como a área "Acessos às trilhas" (matriz de pessoas por
+trilha, liberação e bloqueio individual, padrão do setor, painel por pessoa e
+auditoria). Os vídeos e o preenchimento das aulas em construção ficam para depois
+que todo o sistema estiver pronto.

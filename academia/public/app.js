@@ -397,7 +397,7 @@
       '<div class="track-top"><span class="track-ico">' + icon(TRACK_ICON[t.id] || 'book', 'lg') + '</span>' + status + '</div>' +
       '<h3>' + esc(t.title) + '</h3><p>' + esc(t.summary) + '</p>' +
       '<div class="bar"><span data-bar="' + t.percent + '"></span></div>' +
-      '<div class="track-meta"><span>' + t.done + ' de ' + t.total + (t.total === 1 ? ' aula' : ' aulas') + (t.pendingCount ? ' · ' + t.pendingCount + ' em construção' : '') + '</span><span>' + icon('arrow', 'sm') + '</span></div></a>';
+      '<div class="track-meta"><span>' + (t.total ? t.done + ' de ' + t.total + (t.total === 1 ? ' aula' : ' aulas') + (t.pendingCount ? ' · ' : '') : '') + (t.pendingCount ? t.pendingCount + ' em construção' : '') + '</span><span>' + icon('arrow', 'sm') + '</span></div></a>';
   }
 
   function renderHome() {
@@ -489,7 +489,7 @@
         '<p class="hero-sub">' + esc(t.summary) + '</p></div></div>' +
         '<div class="ring-wrap sm"><svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-bg" cx="60" cy="60" r="52"/>' +
         '<circle class="ring-fg" data-ring="' + t.percent + '" cx="60" cy="60" r="52"/></svg>' +
-        '<div class="ring-text"><strong>' + t.percent + '%</strong><span>' + t.done + ' de ' + t.total + '</span></div></div>' +
+        '<div class="ring-text"><strong>' + (t.total ? t.percent + '%' : '—') + '</strong><span>' + (t.total ? t.done + ' de ' + t.total + ' aulas' : t.pendingCount + ' em construção') + '</span></div></div>' +
         '</section>' +
         '<div class="timeline">' + items + '</div>',
         t.title
@@ -903,15 +903,15 @@
     var states = accessView.states[userId] || {};
     var rows = accessView.tracks.map(function (t) {
       var st = states[t.id] || 'sem';
-      var why = st === 'gestao' ? 'Papel de gestão: vê todas as trilhas'
-        : st === 'liberada' ? 'Liberação individual'
-        : st === 'bloqueada' ? 'Bloqueio individual'
-        : st === 'padrao' ? 'Padrão do setor'
-        : 'Sem acesso';
+      var why = st === 'gestao' ? 'Vê todas as trilhas pelo papel'
+        : st === 'liberada' ? 'Liberação individual registrada'
+        : st === 'bloqueada' ? 'Bloqueio individual registrado'
+        : st === 'padrao' ? 'Definido pelo setor'
+        : 'Fora do setor e sem liberação';
       var prog = (person.progress || []).filter(function (x) { return x.id === t.id; })[0];
       var pct = prog && prog.total ? Math.round((prog.done / prog.total) * 100) : 0;
       return '<li><div class="pd-track"><strong>' + esc(t.title) + '</strong>' + accessStateChip(st) + '</div>' +
-        '<p class="muted small">' + esc(why) + (prog ? ' · ' + prog.done + ' de ' + prog.total + ' aulas publicadas' + (prog.pendingCount ? ' · ' + prog.pendingCount + ' em construção' : '') : '') + '</p>' +
+        '<p class="muted small">' + esc(why) + (prog && prog.total ? ' · ' + prog.done + ' de ' + prog.total + ' aulas publicadas' + (prog.pendingCount ? ' · ' + prog.pendingCount + ' em construção' : '') : (prog && prog.pendingCount ? ' · ' + prog.pendingCount + ' em construção' : '')) + '</p>' +
         (prog && prog.total ? '<div class="bar thin"><span data-bar="' + pct + '"></span></div>' : '') + '</li>';
     }).join('');
     var mine = accessView.audit.filter(function (e) { return e.userId === userId || e.sector === person.sector; });
