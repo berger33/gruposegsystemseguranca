@@ -52,6 +52,24 @@ function exitOf(proc) {
   if (proc.exitCode !== null) return Promise.resolve(proc.exitCode);
   return new Promise((resolve, reject) => { proc.once('error', reject); proc.once('exit', code => resolve(code ?? 1)); });
 }
+/**
+ * Recusas precisam encerrar rápido. Sem limite, um filho que imprime o erro e
+ * não sai (por exemplo mantendo o event loop vivo) pendura o gate inteiro até
+ * o timeout do CI, sem diagnosticar nada. Aqui a espera é limitada e o filho é
+ * encerrado; a falha vira erro nomeado, não silêncio.
+ */
+async function exitOfBounded(proc, ms, label) {
+  if (proc.exitCode !== null) return proc.exitCode;
+  const code = await Promise.race([
+    exitOf(proc),
+    new Promise(resolve => setTimeout(() => resolve(null), ms).unref?.()),
+  ]);
+  if (code === null) {
+    proc.kill('SIGKILL');
+    throw new Error(`${label}_did_not_exit_within_${ms}ms`);
+  }
+  return code;
+}
 async function ready(proc, { credentials = false } = {}) {
   const deadline = Date.now() + 120_000;
   while (Date.now() < deadline) {
@@ -264,7 +282,7 @@ try {
     await chmod(cfgFile, 0o644);
     try {
       logs.length = 0; child = spawnDemo('--start');
-      if (await exitOf(child) !== 1 || !logs.join('').includes('demo_insecure_data_permissions')) {
+      if (await exitOfBounded(child, 30_000, 'demo_insecure_config_refusal') !== 1 || !logs.join('').includes('demo_insecure_data_permissions')) {
         throw new Error('demo_world_readable_config_not_refused');
       }
       console.log('QA-HOM-008_INSECURE_CONFIG_REFUSED: no database started');
@@ -272,7 +290,7 @@ try {
   }
   // An interrupted bootstrap must NEVER replace an existing local state.
   logs.length = 0; child = spawnDemo('--init');
-  if (await exitOf(child) !== 1 || !logs.join('').includes('demo_directory_exists')) throw new Error('demo_reinit_not_refused');
+  if (await exitOfBounded(child, 30_000, 'demo_reinit_refusal') !== 1 || !logs.join('').includes('demo_directory_exists')) throw new Error('demo_reinit_not_refused');
   console.log('QA-HOM-008_REINIT_REFUSED: old data not reset');
   logs.length = 0; child = spawnDemo('--start'); await ready(child);
   if (logs.join('').includes('CREDENCIAIS APENAS')) throw new Error('demo_password_reprinted_on_restart');
