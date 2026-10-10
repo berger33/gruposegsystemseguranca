@@ -3,12 +3,15 @@
 // (conteúdo, pontuação, níveis, selos e ranking). Progresso e sessões ficam no navegador.
 // ATENÇÃO: aqui a alçada NÃO é verificada em servidor. Serve só para demonstrar a interface.
 import { TRACKS } from './content.mjs';
-import { SECTORS, canSeeTrack } from './sectors.mjs';
+import { SECTORS } from './sectors.mjs';
 import { POINTS, summarize, leaderboard } from './gamification.mjs';
+import { isPending } from './content.mjs';
+import { accessOf, visibleTracks, isManager } from './access.mjs';
+import { accessPanel, changeGrant, changeDefault } from './acessos-api.mjs';
 import { DEMO_USERS, userIdFor } from './demo-users.mjs';
 
 const DEMO_PASSWORD = 'Academia#2026';
-const STATE_KEY = 'academia-demo-estado-v1';
+const STATE_KEY = 'academia-demo-estado-v2';
 const SESSION_KEY = 'academia-demo-sessoes-v1';
 const SESSION_TTL = 8 * 60 * 60 * 1000;
 
@@ -44,7 +47,7 @@ function freshState() {
     }
     if (Object.keys(mine).length) progress[userIdFor(user.email)] = mine;
   }
-  return { users, progress };
+  return { users, progress, grants: {}, grantLog: [], sectorDefaults: {} };
 }
 
 function loadState() {
@@ -69,7 +72,7 @@ function sessionUser(token) {
 }
 
 function publicUser(user) {
-  return { id: user.id, name: user.name, firstName: user.name.split(' ')[0], email: user.email, sector: user.sector, sectorLabel: SECTORS[user.sector] };
+  return { id: user.id, name: user.name, firstName: user.name.split(' ')[0], email: user.email, sector: user.sector, sectorLabel: SECTORS[user.sector], isManager: isManager(user.sector) };
 }
 
 const normalize = text => String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -131,12 +134,29 @@ function handle(method, path, params, body, token) {
 
   if (method === 'GET' && path === '/leaderboard') return { status: 200, data: leaderboard(state, user, TRACKS) };
 
+  if (path.startsWith('/acessos')) {
+    if (!isManager(user.sector)) return { status: 403, data: { error: 'sem_permissao' } };
+    if (method === 'GET' && path === '/acessos') return { status: 200, data: accessPanel(state, TRACKS) };
+    if (method === 'POST' && path === '/acessos/alterar') {
+      const result = changeGrant(state, TRACKS, user, body);
+      if (result.error) return { status: result.status, data: { error: result.error } };
+      writeJson(STATE_KEY, state);
+      return { status: 200, data: result };
+    }
+    if (method === 'POST' && path === '/acessos/padrao') {
+      const result = changeDefault(state, TRACKS, user, body);
+      if (result.error) return { status: result.status, data: { error: result.error } };
+      writeJson(STATE_KEY, state);
+      return { status: 200, data: result };
+    }
+  }
+
   if (method === 'GET' && path === '/search') {
     const q = normalize(params.get('q')).trim();
     if (q.length < 2) return { status: 200, data: { results: [] } };
     const results = [];
-    for (const track of TRACKS.filter(t => canSeeTrack(t, user.sector))) {
-      for (const lesson of track.lessons) {
+    for (const track of visibleTracks(user, state, TRACKS)) {
+      for (const lesson of track.lessons.filter(l => !isPending(l))) {
         const haystack = normalize([lesson.title, lesson.objective, ...lesson.steps].join(' '));
         if (haystack.includes(q)) results.push({ id: lesson.id, title: lesson.title, minutes: lesson.minutes, trackId: track.id, trackTitle: track.title });
       }
@@ -155,8 +175,14 @@ function handle(method, path, params, body, token) {
   match = path.match(/^\/lessons\/([a-z0-9-]+)$/);
   if (match && method === 'GET') {
     const found = lessonIndex.get(match[1]);
-    if (!found || !canSeeTrack(found.track, user.sector)) return { status: 404, data: { error: 'aula_nao_encontrada' } };
+    if (!found || !accessOf(found.track, user, state).visible) return { status: 404, data: { error: 'aula_nao_encontrada' } };
     const { track, lesson, index } = found;
+    if (isPending(lesson)) {
+      return {
+        status: 200,
+        data: { id: lesson.id, title: lesson.title, minutes: lesson.minutes, objective: lesson.objective, steps: [], trackId: track.id, trackTitle: track.title, position: index + 1, total: track.lessons.length, pending: true, rotulo: lesson.rotulo || null, question: null, options: [], done: false, result: null, nextLessonId: null },
+      };
+    }
     const entry = (state.progress[user.id] || {})[lesson.id] || null;
     return {
       status: 200,
@@ -182,8 +208,9 @@ function handle(method, path, params, body, token) {
   match = path.match(/^\/lessons\/([a-z0-9-]+)\/complete$/);
   if (match && method === 'POST') {
     const found = lessonIndex.get(match[1]);
-    if (!found || !canSeeTrack(found.track, user.sector)) return { status: 404, data: { error: 'aula_nao_encontrada' } };
+    if (!found || !accessOf(found.track, user, state).visible) return { status: 404, data: { error: 'aula_nao_encontrada' } };
     const { track, lesson, index } = found;
+    if (isPending(lesson)) return { status: 409, data: { error: 'aula_em_construcao' } };
     const mine = state.progress[user.id] || (state.progress[user.id] = {});
     if (mine[lesson.id]) return { status: 200, data: { alreadyCompleted: true, ...resultOf(lesson, mine[lesson.id]) } };
     const choice = body.choice;
@@ -258,6 +285,6 @@ if (typeof document !== 'undefined') {
   // Sinaliza ao app.js que está na demonstração (mostra a caixa de conta de demonstração no acesso).
   document.documentElement.dataset.demo = 'true';
   const script = document.createElement('script');
-  script.src = 'app.js?v=6';
+  script.src = 'app.js?v=7';
   document.body.appendChild(script);
 }

@@ -45,12 +45,14 @@ Os dois primeiros registros de cada setor são os usuários de demonstração pr
 
 - **Acesso único.** A mesma tela de entrada atende todos os setores.
 - **Alçada no servidor.** Cada trilha declara quem pode vê-la (`audiences`). Trilha de outro setor responde 404, mesmo com o identificador certo. A página só reflete isso.
-- **Administração** vê todas as trilhas.
+- **Acesso efetivo** = padrão do setor + liberações individuais − bloqueios individuais (`src/access.mjs`). Admin e Marcelo veem todas as trilhas e não podem ser restringidos.
+- **Quem altera acessos:** Marcelo, RH e admin (`/api/acessos*`). Toda alteração pede motivo de pelo menos 5 caracteres e fica no registro de alterações.
+- **Aulas em construção** aparecem na trilha, sem conteúdo nem quiz, não contam no progresso e não podem ser concluídas (409 `aula_em_construcao`).
 - **Pontuação.**
   - Cada aula concluída vale 10 pontos, creditados na primeira conclusão.
   - Acertar o quiz na primeira tentativa soma 5 pontos extras.
   - Concluir todas as aulas de uma trilha dá 30 pontos de bônus.
-- **Níveis.** Inicial (0), Em desenvolvimento (80), Proficiente (200), Referência (400).
+- **Níveis.** Inicial (0), Em desenvolvimento (80), Proficiente (200), Referência (400). *Pendente: o plano prevê 0 / 300 / 900 / 1.800, ainda não aplicado.*
 - **Selos.** Primeiro passo; por trilha, Trilha concluída e Acerto integral (todas as aulas certas na primeira tentativa).
 - **Ranking.** Top 5 do setor, com a posição de quem consulta. Empates recebem a mesma posição. Mostra apenas nome e pontos.
 - **Gabarito.** A resposta correta e a explicação só são enviadas depois que a aula é concluída.
@@ -66,7 +68,9 @@ academia/
     auth.mjs            senhas com scrypt e sessões
     content.mjs         trilhas e aulas (texto, quiz e explicação)
     gamification.mjs    pontos, níveis, selos e ranking
-    sectors.mjs         setores e regra de alçada
+    sectors.mjs         setores (13)
+    access.mjs          regra única de acesso às trilhas (servidor e demonstração)
+    acessos-api.mjs     operações da área de acessos (liberar, bloquear, padrão do setor, registro)
     seed.mjs            usuários e progresso de demonstração
     store.mjs           persistência em JSON com escrita atômica
   public/               interface (HTML, CSS e JavaScript puro)
@@ -89,6 +93,9 @@ Todas as rotas, exceto `POST /api/login`, exigem sessão.
 | POST | `/api/lessons/:id/complete` | `{choice}`; conclui a aula e devolve pontos, nível e selos |
 | GET | `/api/leaderboard` | Ranking do setor |
 | GET | `/api/search?q=` | Busca nas aulas do setor |
+| GET | `/api/acessos` | Painel de acessos (só gestão) |
+| POST | `/api/acessos/alterar` | `{userId, trackId, acao: liberar│bloquear│padrao, motivo}` (só gestão) |
+| POST | `/api/acessos/padrao` | `{trackId, setores: [...] │ null, motivo}`; muda o público da trilha no setor (só gestão) |
 
 ## Fora de escopo nesta fase
 

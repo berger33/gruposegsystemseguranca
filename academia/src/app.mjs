@@ -4,8 +4,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { verifyPassword, SESSION_TTL_MS } from './auth.mjs';
-import { TRACKS } from './content.mjs';
-import { SECTORS, canSeeTrack } from './sectors.mjs';
+import { TRACKS, isPending } from './content.mjs';
+import { SECTORS } from './sectors.mjs';
+import { accessPanel, changeGrant, changeDefault } from './acessos-api.mjs';
+import { accessOf, visibleTracks, isManager } from './access.mjs';
 import { POINTS, summarize, leaderboard } from './gamification.mjs';
 
 const PUBLIC_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'public');
@@ -25,7 +27,7 @@ const MIME = {
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'same-origin',
-  'Content-Security-Policy': "default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'self'",
+  'Content-Security-Policy': "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'self'",
 };
 
 class HttpError extends Error {
@@ -103,7 +105,7 @@ const clearCookie = req => `${COOKIE}=; Path=/; HttpOnly; ${cookieAttributes(req
 const normalize = text => String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 function publicUser(user) {
-  return { id: user.id, name: user.name, firstName: user.name.split(' ')[0], email: user.email, sector: user.sector, sectorLabel: SECTORS[user.sector] };
+  return { id: user.id, name: user.name, firstName: user.name.split(' ')[0], email: user.email, sector: user.sector, sectorLabel: SECTORS[user.sector], isManager: isManager(user.sector) };
 }
 
 export function createApp({ store, sessions, content = TRACKS }) {
@@ -119,7 +121,7 @@ export function createApp({ store, sessions, content = TRACKS }) {
 
   function visibleLesson(user, lessonId) {
     const found = lessonIndex.get(lessonId);
-    if (!found || !canSeeTrack(found.track, user.sector)) return null;
+    if (!found || !accessOf(found.track, user, store.state).visible) return null;
     return found;
   }
 
@@ -150,6 +152,7 @@ export function createApp({ store, sessions, content = TRACKS }) {
     const found = visibleLesson(user, lessonId);
     if (!found) return sendJson(res, 404, { error: 'aula_nao_encontrada' });
     const { track, lesson, index } = found;
+    if (isPending(lesson)) return sendJson(res, 409, { error: 'aula_em_construcao' });
     const body = await readJson(req);
     const mine = store.state.progress[user.id] || (store.state.progress[user.id] = {});
 
@@ -222,12 +225,32 @@ export function createApp({ store, sessions, content = TRACKS }) {
 
     if (p === '/api/leaderboard' && m === 'GET') return sendJson(res, 200, leaderboard(store.state, user, content));
 
+    // Área de acessos às trilhas: só gestão (Marcelo, RH e admin).
+    if (p === '/api/acessos' && m === 'GET') {
+      if (!isManager(user.sector)) return sendJson(res, 403, { error: 'sem_permissao' });
+      return sendJson(res, 200, accessPanel(store.state, content));
+    }
+    if (p === '/api/acessos/alterar' && m === 'POST') {
+      if (!isManager(user.sector)) return sendJson(res, 403, { error: 'sem_permissao' });
+      const result = changeGrant(store.state, content, user, await readJson(req));
+      if (result.error) return sendJson(res, result.status, { error: result.error });
+      store.save();
+      return sendJson(res, 200, result);
+    }
+    if (p === '/api/acessos/padrao' && m === 'POST') {
+      if (!isManager(user.sector)) return sendJson(res, 403, { error: 'sem_permissao' });
+      const result = changeDefault(store.state, content, user, await readJson(req));
+      if (result.error) return sendJson(res, result.status, { error: result.error });
+      store.save();
+      return sendJson(res, 200, result);
+    }
+
     if (p === '/api/search' && m === 'GET') {
       const q = normalize(url.searchParams.get('q')).trim();
       if (q.length < 2) return sendJson(res, 200, { results: [] });
       const results = [];
-      for (const track of content.filter(t => canSeeTrack(t, user.sector))) {
-        for (const lesson of track.lessons) {
+      for (const track of visibleTracks(user, store.state, content)) {
+        for (const lesson of track.lessons.filter(l => !isPending(l))) {
           const haystack = normalize([lesson.title, lesson.objective, ...lesson.steps].join(' '));
           if (haystack.includes(q)) results.push({ id: lesson.id, title: lesson.title, minutes: lesson.minutes, trackId: track.id, trackTitle: track.title });
         }
@@ -248,6 +271,13 @@ export function createApp({ store, sessions, content = TRACKS }) {
       const found = visibleLesson(user, match[1]);
       if (!found) return sendJson(res, 404, { error: 'aula_nao_encontrada' });
       const { track, lesson, index } = found;
+      if (isPending(lesson)) {
+        return sendJson(res, 200, {
+          id: lesson.id, title: lesson.title, minutes: lesson.minutes, objective: lesson.objective, steps: [],
+          trackId: track.id, trackTitle: track.title, position: index + 1, total: track.lessons.length,
+          pending: true, rotulo: lesson.rotulo || null, question: null, options: [], done: false, result: null, nextLessonId: null,
+        });
+      }
       const entry = (store.state.progress[user.id] || {})[lesson.id] || null;
       return sendJson(res, 200, {
         id: lesson.id,

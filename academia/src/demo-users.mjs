@@ -21,6 +21,14 @@ export const DEMO_USERS = Object.freeze([
   { name: 'Vanessa Lopes', email: 'vanessa.lopes@academia.exemplo', sector: 'ti', seeded: ['ti-papeis', 'ti-auditoria'] },
   { name: 'Camila Nogueira', email: 'camila.nogueira@academia.exemplo', sector: 'admin', seeded: [] },
   { name: 'Henrique Brito', email: 'henrique.brito@academia.exemplo', sector: 'admin', seeded: ['fund-acesso'] },
+  { name: 'Osvaldo Ramos', email: 'osvaldo.ramos@academia.exemplo', sector: 'porteiro', seeded: [] },
+  { name: 'Denise Araújo', email: 'denise.araujo@academia.exemplo', sector: 'porteiro', seeded: [] },
+  { name: 'Wellington Batista', email: 'wellington.batista@academia.exemplo', sector: 'controlador_acesso', seeded: [] },
+  { name: 'Simone Correia', email: 'simone.correia@academia.exemplo', sector: 'controlador_acesso', seeded: [] },
+  { name: 'Lourdes Pinto', email: 'lourdes.pinto@academia.exemplo', sector: 'servicos_gerais', seeded: [] },
+  { name: 'Adriano Silva', email: 'adriano.silva@academia.exemplo', sector: 'servicos_gerais', seeded: [] },
+  { name: 'Leandro Moreira', email: 'leandro.moreira@academia.exemplo', sector: 'instalador', seeded: [] },
+  { name: 'Gustavo Freitas', email: 'gustavo.freitas@academia.exemplo', sector: 'instalador', seeded: [] },
 ]);
 
 export function userIdFor(email) {

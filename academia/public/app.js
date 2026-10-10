@@ -191,6 +191,8 @@
   function updateTopbar() {
     topbar.hidden = !me;
     if (me) {
+      var navAccess = document.getElementById('nav-acessos');
+      if (navAccess) navAccess.hidden = !me.isManager;
       document.getElementById('sector-chip').textContent = me.sectorLabel;
       var avatar = document.getElementById('avatar');
       avatar.textContent = initials(me.name);
@@ -374,7 +376,8 @@
       '<div class="track-top"><span class="track-ico">' + icon(TRACK_ICON[t.id] || 'book', 'lg') + '</span>' + status + '</div>' +
       '<h3>' + esc(t.title) + '</h3><p>' + esc(t.summary) + '</p>' +
       '<div class="bar"><span data-bar="' + t.percent + '"></span></div>' +
-      '<div class="track-meta"><span>' + t.done + ' de ' + t.total + (t.total === 1 ? ' aula' : ' aulas') + '</span><span>' + icon('arrow', 'sm') + '</span></div></a>';
+      '<div class="track-meta"><span>' + t.done + ' de ' + t.total + (t.total === 1 ? ' aula' : ' aulas') +
+      (t.pendingCount ? ' · ' + t.pendingCount + ' em construção' : '') + '</span><span>' + icon('arrow', 'sm') + '</span></div></a>';
   }
 
   function renderHome() {
@@ -438,6 +441,11 @@
     return api('/api/tracks/' + encodeURIComponent(id)).then(function (t) {
       var accent = accentFor(t.id);
       var items = t.lessons.map(function (l, i) {
+        if (l.pending) {
+          return '<div class="tl-item pending reveal" style="--d:' + i + '"><span class="tl-node">' + icon('lock', 'sm') + '</span>' +
+            '<div class="tl-card card"><div><h3>' + esc(l.title) + '</h3><p class="muted small">' + esc(l.objective) + '</p></div>' +
+            '<div class="tl-side"><span class="muted small">' + l.minutes + ' min</span><span class="status pending">Em construção</span></div></div></div>';
+        }
         return '<a class="tl-item reveal ' + (l.done ? 'done' : '') + '" style="--d:' + i + '" href="#/aula/' + esc(l.id) + '">' +
           '<span class="tl-node">' + (l.done ? icon('check', 'sm') : i + 1) + '</span>' +
           '<div class="tl-card card spot"><div><h3>' + esc(l.title) + '</h3><p class="muted small">' + esc(l.objective) + '</p></div>' +
@@ -453,7 +461,7 @@
         '<p class="hero-sub">' + esc(t.summary) + '</p></div></div>' +
         '<div class="ring-wrap sm"><svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-bg" cx="60" cy="60" r="52"/>' +
         '<circle class="ring-fg" data-ring="' + t.percent + '" cx="60" cy="60" r="52"/></svg>' +
-        '<div class="ring-text"><strong>' + t.percent + '%</strong><span>' + t.done + ' de ' + t.total + '</span></div></div>' +
+        (t.total ? '<div class="ring-text"><strong>' + t.percent + '%</strong><span>' + t.done + ' de ' + t.total + '</span></div>' : '<div class="ring-text"><strong>Em</strong><span>construção</span></div>') + '</div>' +
         '</section>' +
         '<div class="timeline">' + items + '</div>',
         t.title
@@ -473,6 +481,7 @@
   function renderLesson(id) {
     setPage(skeleton(), 'Aula');
     return api('/api/lessons/' + encodeURIComponent(id)).then(function (l) {
+      if (l.pending) return renderPendingLesson(l);
       var r = l.result;
       var options = l.options.map(function (opt, i) {
         var cls = 'opt';
@@ -590,6 +599,275 @@
     });
   }
 
+  // ---------- Aula em construção ----------
+  function renderPendingLesson(l) {
+    setPage(
+      '<nav class="crumbs reveal" aria-label="Você está aqui"><a href="#/">Início</a><span>/</span><a href="#/trilha/' + esc(l.trackId) + '">' +
+      esc(l.trackTitle) + '</a><span>/</span><span>Aula ' + l.position + ' de ' + l.total + '</span></nav>' +
+      '<div class="lesson-layout"><section class="lesson-main">' +
+      '<header class="lesson-head reveal"><p class="eyebrow">' + esc(l.trackTitle) + '</p><h1>' + esc(l.title) + '</h1>' +
+      '<div class="lesson-meta"><span>' + icon('clock', 'sm') + ' ' + l.minutes + ' min</span><span>Aula ' + l.position + ' de ' + l.total + '</span>' +
+      '<span class="status pending">Em construção</span>' + (l.rotulo ? '<span class="pill-soon dark">' + esc(l.rotulo) + '</span>' : '') + '</div></header>' +
+      '<div class="callout reveal" style="--d:1"><span class="callout-ico">' + icon('target') + '</span><div><strong>Objetivo</strong><p>' + esc(l.objective) + '</p></div></div>' +
+      '</section>' +
+      '<aside class="card quiz-card reveal" style="--d:2"><p class="eyebrow">Em construção</p><h2>Esta aula ainda não foi publicada</h2>' +
+      '<p class="muted small">O conteúdo e a verificação de aprendizagem serão liberados depois de validados pela área responsável. Enquanto isso, ela não entra no seu progresso.</p>' +
+      '<p style="margin-top:16px"><a class="btn-ghost" href="#/trilha/' + esc(l.trackId) + '">Voltar à trilha</a></p></aside></div>',
+      l.title
+    );
+  }
+
+  // ---------- Acessos às trilhas (gestão) ----------
+  var SOURCE_TEXT = { gestao: 'Gestão total', padrao: 'Padrão do setor', liberada: 'Liberada', bloqueada: 'Bloqueada', nenhum: 'Sem acesso' };
+  var ACTION_TEXT = { liberar: 'Liberou a trilha', bloquear: 'Bloqueou a trilha', padrao: 'Voltou ao padrão', 'padrao-setor': 'Alterou o público da trilha' };
+  var ERROR_TEXT = {
+    motivo_obrigatorio: 'Informe um motivo com pelo menos 5 caracteres.',
+    perfil_de_gestao: 'Admin e Marcelo sempre veem todas as trilhas e não podem ser restringidos.',
+    sem_permissao: 'Sua conta não pode alterar acessos.',
+    setor_invalido: 'Um dos setores escolhidos não existe.',
+    setores_invalidos: 'Escolha pelo menos um público para a trilha.',
+  };
+  var ACCESS = { data: null, tab: 'trilha', trackId: null, personId: null, motivo: '', busca: '', msg: '' };
+
+  function accessError(err) {
+    if (err.status === 401) return route();
+    ACCESS.msg = ERROR_TEXT[err.message] || 'Não foi possível salvar agora. Tente novamente.';
+    drawAccess();
+    var motive = document.getElementById('a-motivo');
+    if (motive && err.message === 'motivo_obrigatorio') motive.focus();
+  }
+
+  function renderAccess() {
+    setPage(skeleton(), 'Acessos às trilhas');
+    return api('/api/acessos').then(function (data) {
+      ACCESS.data = data;
+      if (!ACCESS.trackId || !data.tracks.some(function (t) { return t.id === ACCESS.trackId; })) ACCESS.trackId = data.tracks[0].id;
+      if (!ACCESS.personId || !data.people.some(function (p) { return p.id === ACCESS.personId; })) ACCESS.personId = data.people[0].id;
+      drawAccess();
+    });
+  }
+
+  function reloadAccess() {
+    return api('/api/acessos').then(function (data) {
+      ACCESS.data = data;
+      ACCESS.msg = '';
+      drawAccess();
+    });
+  }
+
+  function drawAccess() {
+    var tabs = '<div class="seg-tabs" role="tablist" aria-label="Forma de gestão">' +
+      accessTab('trilha', 'Por trilha', 'layers') + accessTab('pessoa', 'Por pessoa', 'users') + '</div>';
+    var body = ACCESS.tab === 'trilha' ? trackAccessHtml() : personAccessHtml();
+    var motive = '<div class="motive-bar"><label for="a-motivo"><strong>Motivo da alteração</strong>' +
+      '<span class="muted small"> · obrigatório, com pelo menos 5 caracteres · fica registrado</span></label>' +
+      '<input id="a-motivo" type="text" maxlength="240" value="' + esc(ACCESS.motivo) + '" placeholder="Ex.: novo posto de portaria, revisão do setor"></div>';
+    setPage(
+      '<nav class="crumbs reveal" aria-label="Você está aqui"><a href="#/">Início</a><span>/</span><span>Acessos às trilhas</span></nav>' +
+      '<section class="hero-card reveal"><div class="orb o1"></div><div class="orb o2"></div><div class="grid-lines"></div>' +
+      '<div class="hero-main"><p class="eyebrow light">Gestão da Academia</p><h1 class="hero-title">Acessos às trilhas</h1>' +
+      '<p class="hero-sub">O acesso de cada pessoa é o padrão do setor, somado às liberações e menos os bloqueios individuais. Toda alteração pede um motivo e fica no registro.</p></div></section>' +
+      tabs + motive +
+      '<div class="alert-line" id="a-msg" role="status" aria-live="polite">' + (ACCESS.msg ? '<span>' + esc(ACCESS.msg) + '</span>' : '') + '</div>' +
+      body + logHtml(),
+      'Acessos às trilhas'
+    );
+  }
+
+  function accessTab(id, label, ico) {
+    var on = ACCESS.tab === id;
+    return '<button type="button" class="seg-tab' + (on ? ' on' : '') + '" role="tab" aria-selected="' + on + '" data-access="tab" data-tab="' + id + '">' +
+      icon(ico, 'sm') + '<span>' + label + '</span></button>';
+  }
+
+  function trackAccessHtml() {
+    var d = ACCESS.data;
+    var sel = d.tracks.filter(function (t) { return t.id === ACCESS.trackId; })[0] || d.tracks[0];
+    var groups = [];
+    var byGroup = {};
+    d.tracks.forEach(function (t) {
+      if (!byGroup[t.group]) { byGroup[t.group] = []; groups.push(t.group); }
+      byGroup[t.group].push(t);
+    });
+    var picker = groups.map(function (g) {
+      return '<div class="pick-group"><h3>' + esc(g) + '</h3>' + byGroup[g].map(function (t) {
+        var on = t.id === sel.id;
+        var meta = t.published + (t.published === 1 ? ' aula publicada' : ' aulas publicadas') +
+          (t.pending ? ' · ' + t.pending + ' em construção' : '') + (t.customDefault ? ' · público ajustado' : '');
+        return '<button type="button" class="pick' + (on ? ' on' : '') + '" data-access="track" data-track="' + esc(t.id) + '" aria-pressed="' + on + '">' +
+          '<span class="pick-title">' + esc(t.title) + '</span><span class="pick-meta">' + esc(meta) + '</span></button>';
+      }).join('') + '</div>';
+    }).join('');
+
+    var audiences = sel.audiences || [];
+    var allOn = audiences.indexOf('todos') >= 0;
+    var options = [{ id: 'todos', label: 'Todos os setores' }].concat(d.sectors);
+    var checks = options.map(function (s) {
+      var checked = allOn ? s.id === 'todos' : audiences.indexOf(s.id) >= 0;
+      var disabled = allOn && s.id !== 'todos';
+      return '<label class="sector-check' + (checked ? ' on' : '') + '"><input type="checkbox" value="' + esc(s.id) + '" data-sector-check' +
+        (checked ? ' checked' : '') + (disabled ? ' disabled' : '') + '><span>' + esc(s.label) + '</span></label>';
+    }).join('');
+
+    return '<div class="access-layout">' +
+      '<aside class="card pick-panel reveal" aria-label="Trilhas"><p class="eyebrow">Trilhas</p>' + picker + '</aside>' +
+      '<section class="card access-editor reveal" style="--d:1"><p class="eyebrow">Quem vê esta trilha</p>' +
+      '<h2>' + esc(sel.title) + '</h2><p class="muted small">' + esc(sel.group) + ' · ' + sel.published + ' publicadas' +
+      (sel.pending ? ' · ' + sel.pending + ' em construção' : '') + '</p>' +
+      '<div class="sector-grid">' + checks + '</div>' +
+      '<div class="ae-actions"><button type="button" class="btn-primary" data-access="save-default" data-track="' + esc(sel.id) + '">Salvar público' + ' ' + icon('check', 'sm') + '</button>' +
+      '<button type="button" class="btn-ghost" data-access="reset-default" data-track="' + esc(sel.id) + '">Restaurar padrão original</button></div>' +
+      '<p class="muted small ae-note">Mudar o público da trilha vale para todo o setor. Para uma pessoa específica, use a aba “Por pessoa”. Admin e Marcelo veem todas as trilhas.</p>' +
+      '</section></div>';
+  }
+
+  function personAccessHtml() {
+    var d = ACCESS.data;
+    var q = ACCESS.busca.trim().toLowerCase();
+    var people = d.people.filter(function (p) {
+      return !q || (p.name + ' ' + p.sectorLabel + ' ' + p.email).toLowerCase().indexOf(q) >= 0;
+    });
+    var sel = d.people.filter(function (p) { return p.id === ACCESS.personId; })[0] || d.people[0];
+    var list = people.length ? people.map(function (p) {
+      var on = p.id === sel.id;
+      return '<button type="button" class="person-pick' + (on ? ' on' : '') + '" data-access="person" data-person="' + esc(p.id) + '" aria-pressed="' + on + '">' +
+        '<span class="avatar sm" style="background:linear-gradient(135deg,' + colorFor(p.name) + ',#172b68)">' + esc(initials(p.name)) + '</span>' +
+        '<span class="pp-text"><strong>' + esc(p.name) + '</strong><small>' + esc(p.sectorLabel) + (p.fullAccess ? ' · gestão total' : '') + '</small></span></button>';
+    }).join('') : '<p class="empty">Nenhuma pessoa encontrada.</p>';
+
+    function grantBtn(person, track, acao, label, current) {
+      return '<button type="button" class="seg' + (current ? ' on' : '') + '" data-access="grant" data-person="' + esc(person.id) +
+        '" data-track="' + esc(track.id) + '" data-acao="' + acao + '" aria-pressed="' + current + '"' + (person.fullAccess ? ' disabled' : '') + '>' + label + '</button>';
+    }
+    var rows = d.tracks.map(function (t) {
+      var src = sel.access[t.id] || 'nenhum';
+      return '<div class="grant-row ' + src + '"><div class="gr-text"><strong>' + esc(t.title) + '</strong><small>' + esc(t.group) + '</small></div>' +
+        '<span class="src-pill ' + src + '">' + esc(SOURCE_TEXT[src] || src) + '</span>' +
+        '<div class="seg-group" role="group" aria-label="Acesso à trilha ' + esc(t.title) + '">' +
+        grantBtn(sel, t, 'padrao', 'Padrão', src === 'padrao' || src === 'nenhum' || src === 'gestao') +
+        grantBtn(sel, t, 'liberar', 'Liberar', src === 'liberada') +
+        grantBtn(sel, t, 'bloquear', 'Bloquear', src === 'bloqueada') + '</div></div>';
+    }).join('');
+
+    return '<div class="access-layout">' +
+      '<aside class="card pick-panel reveal" aria-label="Pessoas"><p class="eyebrow">Pessoas</p>' +
+      '<input type="search" id="a-busca" class="search-field" placeholder="Buscar pessoa ou setor" value="' + esc(ACCESS.busca) + '" aria-label="Buscar pessoa">' +
+      '<div class="people-list">' + list + '</div></aside>' +
+      '<section class="card access-editor reveal" style="--d:1"><p class="eyebrow">Trilhas desta pessoa</p>' +
+      '<div class="person-head"><span class="avatar" style="background:linear-gradient(135deg,' + colorFor(sel.name) + ',#172b68)">' + esc(initials(sel.name)) + '</span>' +
+      '<div><h2>' + esc(sel.name) + '</h2><p class="muted small">' + esc(sel.sectorLabel) + ' · ' + esc(sel.email) + '</p></div></div>' +
+      (sel.fullAccess ? '<div class="callout" style="margin-top:14px"><span class="callout-ico">' + icon('shield') + '</span><div><strong>Perfil de gestão</strong><p>Vê todas as trilhas e não pode ser restringido.</p></div></div>' : '') +
+      '<div class="grant-list">' + rows + '</div>' +
+      '<p class="muted small ae-note">Padrão: segue o público do setor. Liberar: adiciona a trilha, mesmo fora do setor. Bloquear: retira a trilha, mesmo dentro do setor.</p>' +
+      '</section></div>';
+  }
+
+  function logHtml() {
+    var log = ACCESS.data.log || [];
+    var names = {};
+    ACCESS.data.sectors.forEach(function (s) { names[s.id] = s.label; });
+    names.todos = 'Todos os setores';
+    function mapped(acao, text) {
+      if (acao === 'padrao-setor') return String(text).split(', ').map(function (x) { return names[x] || x; }).join(', ');
+      return SOURCE_TEXT[text] || text;
+    }
+    if (!log.length) return '<section class="card log-card reveal"><h2>Registro de alterações</h2><p class="empty">Nenhuma alteração registrada ainda.</p></section>';
+    var rows = log.slice(0, 12).map(function (e) {
+      return '<li><span class="log-when">' + esc(fmtDate(e.at)) + '</span><div><strong>' + esc(ACTION_TEXT[e.acao] || e.acao) + '</strong> · ' +
+        esc(e.trackTitle) + (e.pessoaNome ? ' · ' + esc(e.pessoaNome) : '') +
+        '<p class="muted small">' + esc(e.porNome) + ' · ' + esc(e.motivo) + '</p>' +
+        '<p class="muted small">' + esc(mapped(e.acao, e.antes)) + ' → ' + esc(mapped(e.acao, e.depois)) + '</p></div></li>';
+    }).join('');
+    return '<section class="card log-card reveal"><h2>Registro de alterações</h2><ol class="log-list">' + rows + '</ol></section>';
+  }
+
+  function fmtDate(text) {
+    var date = new Date(text);
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function motiveOk() {
+    if (ACCESS.motivo.trim().length >= 5) return true;
+    ACCESS.msg = ERROR_TEXT.motivo_obrigatorio;
+    drawAccess();
+    document.getElementById('a-motivo').focus();
+    return false;
+  }
+
+  function setGrant(personId, trackId, acao) {
+    if (!motiveOk()) return;
+    api('/api/acessos/alterar', { method: 'POST', body: { userId: personId, trackId: trackId, acao: acao, motivo: ACCESS.motivo.trim() } })
+      .then(function () {
+        toast({ icon: 'check', title: 'Acesso atualizado', text: 'A alteração foi registrada.' });
+        ACCESS.motivo = '';
+        return reloadAccess();
+      })
+      .catch(accessError);
+  }
+
+  function saveTrackDefault(trackId) {
+    if (!motiveOk()) return;
+    var boxes = app.querySelectorAll('input[data-sector-check]:checked');
+    var setores = Array.prototype.map.call(boxes, function (el) { return el.value; });
+    api('/api/acessos/padrao', { method: 'POST', body: { trackId: trackId, setores: setores, motivo: ACCESS.motivo.trim() } })
+      .then(function () {
+        toast({ icon: 'check', title: 'Público da trilha atualizado', text: 'Vale para todo o setor e fica registrado.' });
+        ACCESS.motivo = '';
+        return reloadAccess();
+      })
+      .catch(accessError);
+  }
+
+  function resetTrackDefault(trackId) {
+    if (!motiveOk()) return;
+    api('/api/acessos/padrao', { method: 'POST', body: { trackId: trackId, setores: null, motivo: ACCESS.motivo.trim() } })
+      .then(function () {
+        toast({ icon: 'refresh', title: 'Padrão original restaurado' });
+        ACCESS.motivo = '';
+        return reloadAccess();
+      })
+      .catch(accessError);
+  }
+
+  function onAppClick(event) {
+    var el = event.target.closest && event.target.closest('[data-access]');
+    if (!el || el.disabled) return;
+    var kind = el.getAttribute('data-access');
+    if (kind === 'tab') { ACCESS.tab = el.getAttribute('data-tab'); ACCESS.msg = ''; drawAccess(); }
+    else if (kind === 'track') { ACCESS.trackId = el.getAttribute('data-track'); ACCESS.msg = ''; drawAccess(); }
+    else if (kind === 'person') { ACCESS.personId = el.getAttribute('data-person'); ACCESS.msg = ''; drawAccess(); }
+    else if (kind === 'grant') setGrant(el.getAttribute('data-person'), el.getAttribute('data-track'), el.getAttribute('data-acao'));
+    else if (kind === 'save-default') saveTrackDefault(el.getAttribute('data-track'));
+    else if (kind === 'reset-default') resetTrackDefault(el.getAttribute('data-track'));
+  }
+
+  function onAppInput(event) {
+    var target = event.target;
+    if (target.id === 'a-motivo') { ACCESS.motivo = target.value; return; }
+    if (target.id === 'a-busca') {
+      var pos = target.selectionStart;
+      ACCESS.busca = target.value;
+      drawAccess();
+      var box = document.getElementById('a-busca');
+      box.focus();
+      box.setSelectionRange(pos, pos);
+    }
+  }
+
+  function onAppChange(event) {
+    var target = event.target;
+    if (!target.hasAttribute || !target.hasAttribute('data-sector-check')) return;
+    if (target.value !== 'todos') return;
+    Array.prototype.forEach.call(app.querySelectorAll('input[data-sector-check]'), function (box) {
+      if (box.value === 'todos') return;
+      box.disabled = target.checked;
+      if (target.checked) box.checked = false;
+      box.parentNode.classList.toggle('on', box.checked);
+    });
+    target.parentNode.classList.toggle('on', target.checked);
+  }
+
   // ---------- Roteamento ----------
   function route() {
     var loading = me ? Promise.resolve(me) : api('/api/me').then(function (d) { return d.user; }).catch(function () { return null; });
@@ -604,6 +882,7 @@
       if (segments[0] === 'trilha' && segments[1]) page = renderTrack(segments[1]);
       else if (segments[0] === 'aula' && segments[1]) page = renderLesson(segments[1]);
       else if (segments[0] === 'busca') page = renderSearch(query.get('q') || '');
+      else if (segments[0] === 'acessos') page = me.isManager ? renderAccess() : renderHome();
       else page = renderHome();
       return page.then(function () { justLoggedIn = false; }).catch(function (err) {
         if (err.status === 401) {
@@ -649,6 +928,9 @@
     card.style.setProperty('--mx', (event.clientX - rect.left) + 'px');
     card.style.setProperty('--my', (event.clientY - rect.top) + 'px');
   });
+  app.addEventListener('click', onAppClick);
+  app.addEventListener('input', onAppInput);
+  app.addEventListener('change', onAppChange);
   window.addEventListener('hashchange', route);
   route();
 })();

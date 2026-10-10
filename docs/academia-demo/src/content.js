@@ -6,7 +6,7 @@ function aula(id, title, minutes, objective, steps, question, options, answer, e
   return { id, title, minutes, objective, steps, quiz: { question, options, answer, explanation } };
 }
 
-export const TRACKS = Object.freeze([
+const PUBLISHED_TRACKS = Object.freeze([
   {
     id: 'fundamentos',
     title: 'Fundamentos do sistema',
@@ -408,6 +408,195 @@ export const TRACKS = Object.freeze([
   },
 ]);
 
+// ---------------------------------------------------------------------------
+// Estrutura completa (plano de expansão v2). As aulas já escritas acima são reutilizadas
+// pelo id. As demais entram como "em construção": aparecem na trilha, mas não contam no
+// progresso e não podem ser concluídas até o conteúdo e o vídeo (quando houver) existirem.
+const EM_CONSTRUCAO = 'Em construção';
+const DEMO = 'Demonstração · dados fictícios';
+
+function pend(id, title, extra = {}) {
+  return { id, title, minutes: 3, status: 'em-construcao', objective: 'Conteúdo em construção.', steps: [], quiz: null, rotulo: EM_CONSTRUCAO, ...extra };
+}
+
+const CAMPO = ['funcionario', 'porteiro', 'controlador_acesso', 'servicos_gerais', 'instalador'];
+const EQUIPE = ['comercial', 'rh', 'financeiro', 'supervisor', 'marcelo', 'ti'];
+
+// Cada trilha: id, grupo (coluna da matriz), público padrão e aulas (ids já escritos ou pend()).
+const LAYOUT = [
+  { id: 'fundamentos', group: 'Todos', audiences: ['todos'], title: 'Fundamentos do sistema',
+    summary: 'Acesso, progresso e uso da base de conhecimento. Trilha comum a todos os setores.',
+    lessons: ['fund-acesso', 'fund-progresso', 'fund-base'] },
+  { id: 'equipe-entrada', group: 'Equipe', audiences: EQUIPE, title: 'Equipe: entrada, papéis e navegação',
+    summary: 'Como entrar, em qual página começar e quais módulos o seu papel enxerga.',
+    lessons: ['ti-papeis', pend('equipe-hub', 'Hub administrativo: os módulos do seu papel'), pend('equipe-convite', 'Aceitar um convite administrativo')] },
+  { id: 'funcionario-ponto', group: 'Funcionário', audiences: CAMPO, title: 'Funcionário: rotina diária',
+    summary: 'Ponto, ocorrências, ausências, ajustes e escala no dia a dia.',
+    lessons: ['func-ponto', 'func-ocorrencia', 'func-pedidos',
+      pend('func-ajuste', 'Solicitar ajuste de ponto'),
+      pend('func-troca', 'Solicitar troca de escala'), pend('func-ciencia', 'Dar ciência de comunicados e procedimentos'),
+      pend('func-passagem', 'Receber a passagem de plantão')] },
+  { id: 'funcionario-pedidos', group: 'Funcionário', audiences: CAMPO, title: 'Funcionário: pedidos, documentos e atendimento',
+    summary: 'Pedidos ao RH, uniforme, documentos privados, perfil e atendimento confidencial.',
+    lessons: [pend('func-pedido-tipo', 'Fazer um pedido: férias, benefício, afastamento ou reembolso'),
+      pend('func-uniforme', 'Solicitar uniforme e confirmar o recebimento'), pend('func-documentos', 'Ver os seus documentos privados'),
+      pend('func-perfil', 'Ver e pedir atualização do seu perfil'), pend('func-comprovante', 'Enviar comprovante de curso'),
+      pend('func-atendimento', 'Abrir atendimento confidencial com o RH'), pend('func-reclamacao', 'Registrar uma reclamação')] },
+  { id: 'cliente-portal', group: 'Cliente', audiences: ['cliente'], title: 'Cliente: acesso e segurança',
+    summary: 'Convite, primeiro acesso, verificação em duas etapas e sessões.',
+    lessons: ['cli-convite', 'cli-seguranca', pend('cli-primeiro', 'Primeiro acesso e confirmação de e-mail'),
+      pend('cli-email', 'Alterar o e-mail, com verificação'), pend('cli-mfa', 'Ativar e desativar a verificação em duas etapas'),
+      pend('cli-pedido-acesso', 'Pedir acesso ao portal')] },
+  { id: 'cliente-servicos', group: 'Cliente', audiences: ['cliente'], title: 'Cliente: serviços, chamados e documentos',
+    summary: 'Contratos, chamados, pedidos de serviço, agenda, relatórios e satisfação.',
+    lessons: ['cli-chamados', pend('cli-painel', 'Painel: o que é seu no portal'), pend('cli-contratos', 'Contratos e itens de serviço'),
+      pend('cli-documentos', 'Documentos: ver e baixar, com registro de acesso'), pend('cli-pedido-servico', 'Pedir um serviço e acompanhar'),
+      pend('cli-agenda', 'Agenda de visitas e manutenções'), pend('cli-relatorios', 'Relatórios de execução, medição e aceite'),
+      pend('cli-satisfacao', 'Pesquisa de satisfação e plano de ação'), pend('cli-renovacao', 'Renovação e continuidade'),
+      pend('cli-contatos', 'Contatos, escopos e delegados'), pend('cli-reclamacao', 'Registrar reclamação sobre um colaborador')] },
+  { id: 'comercial-funil', group: 'Comercial', audiences: ['comercial', 'marcelo'], title: 'Comercial: do pedido ao contrato',
+    summary: 'Entrada de pedidos, funil, condições, carteira e proposta até o contrato.',
+    lessons: [pend('com-site-orcamento', 'Pedido de orçamento pelo site'), pend('com-contato', 'Contato e simulador'),
+      pend('com-conteudos', 'Conteúdos, FAQ e privacidade'), pend('com-leads', 'Lista de leads: o que entra e como acompanhar'),
+      'com-pedido', pend('com-mover', 'Movimentar a oportunidade no funil'), pend('com-notas', 'Registrar interações e notas internas'),
+      'com-funil', pend('com-agenda', 'Agenda de visitas e reuniões'), pend('com-cadencia', 'Cadências manuais'),
+      pend('com-csv', 'Importar empresas por CSV'),
+      pend('com-desconto', 'Pedido de desconto e aprovação'), pend('com-comissao', 'Regras de comissão'),
+      pend('com-carteira', 'Carteira de clientes'), pend('com-satisfacao', 'Satisfação do cliente'),
+      pend('com-criar-proposta', 'Criar a proposta, com orçamento de mão de obra e técnico'), pend('com-entregar', 'Entregar a proposta por link de aceite'),
+      pend('com-comparar', 'Comparar versões da proposta'), pend('com-aceite', 'Acompanhar o aceite do cliente'),
+      'com-proposta'] },
+  { id: 'gestao-painel', group: 'Gestão', audiences: ['marcelo'], title: 'Gestão: painel, pendências e decisões',
+    summary: 'Pendências que pedem decisão, aprovações, indicadores e relatórios auditados.',
+    lessons: ['ges-pendencias', 'ges-aprovacoes', 'ges-relatorios', pend('ges-indicadores', 'Indicadores: meta x realizado'),
+      pend('ges-auditoria', 'Relatórios com trilha de auditoria'), pend('ges-analises', 'Análises e relatórios gerenciais')] },
+  { id: 'rh-processos', group: 'RH', audiences: ['rh'], title: 'RH: admissão e acesso',
+    summary: 'Cadastro profissional, abertura de admissão, credencial temporária e documentos.',
+    lessons: ['rh-admissao', 'rh-credencial', pend('rh-documentos', 'Documentos privados do funcionário')] },
+  { id: 'rh-vida', group: 'RH', audiences: ['rh'], title: 'RH: vida funcional',
+    summary: 'Escala, ponto, solicitações, férias, afastamento, benefícios e treinamento.',
+    lessons: [pend('rh-escala', 'Publicar a escala versionada e registrar a ciência'), pend('rh-ponto-ajustes', 'Consultar ponto e decidir ajustes'),
+      pend('rh-solicitacoes', 'Decidir solicitações: férias, afastamento, benefício e reembolso'),
+      pend('rh-ferias', 'Férias: aprovação e registro', { rotulo: 'Demonstração conceitual · sem captura real da tela' }),
+      pend('rh-afastamento', 'Processo de afastamento'), pend('rh-beneficios', 'Processo de benefícios'),
+      pend('rh-treinamento', 'Treinamento e recrutamento')] },
+  { id: 'rh-folha', group: 'RH', audiences: ['rh'], title: 'RH: folha e desligamento',
+    summary: 'Fechamento do período, holerite e desligamento com revisão.',
+    lessons: [pend('rh-fechamento', 'Fechar o período demonstrativo', { rotulo: DEMO }),
+      { ref: 'rh-holerite', rotulo: DEMO }, 'rh-desligamento'] },
+  { id: 'operacao-escala', group: 'Operação', audiences: ['supervisor'], title: 'Operação: postos e escala',
+    summary: 'Postos, funções, necessidade por turno, alocação, escala, jornada e cobertura.',
+    lessons: ['op-escala', pend('op-postos', 'Cadastro de postos e de cargos e funções'), pend('op-habilitacao', 'Habilitação e documentação exigida por função'),
+      pend('op-necessidade', 'Necessidade por turno e faixa de horário'), pend('op-alocacao', 'Alocação de pessoas e confronto com o planejado'),
+      pend('op-jornada', 'Regras de jornada e descanso'), pend('op-cobertura', 'Solicitar cobertura e substituição'),
+      pend('op-lacunas', 'Lacunas de cobertura e plano de cobertura')] },
+  { id: 'operacao-rotinas', group: 'Operação', audiences: ['supervisor'], title: 'Operação: rotinas de posto e ocorrências',
+    summary: 'Livro de ocorrências, passagem de plantão, checklists, rondas, chaves e emergências.',
+    lessons: ['op-ocorrencias', 'op-checklist', pend('op-rondas', 'Rondas e leituras de ronda'),
+      pend('op-limpeza', 'Rotinas de limpeza e não conformidades'), pend('op-chaves', 'Movimentação de chaves'),
+      pend('op-emergencial', 'Apoio emergencial'), pend('op-continuidade', 'Continuidade de negócios'),
+      pend('op-analise', 'Análise de ocorrências pela supervisão')] },
+  { id: 'recursos-terceiros', group: 'Operação', audiences: ['supervisor'], title: 'Recursos, terceiros e qualidade',
+    summary: 'Frota, patrimônio e almoxarifado, terceiros e qualidade.',
+    lessons: [pend('rec-frota', 'Frota'), pend('rec-patrimonio', 'Patrimônio e almoxarifado'), pend('rec-terceiros', 'Terceiros'), pend('rec-qualidade', 'Qualidade')] },
+  { id: 'contratos-gestao', group: 'Comercial', audiences: ['comercial', 'financeiro'], title: 'Contratos: implantação e gestão',
+    summary: 'Cadastro, escopo, implantação, aditivos, alertas, diário e encerramento.',
+    lessons: [pend('ctr-manual', 'Cadastro manual de contrato'), pend('ctr-escopo', 'Escopo e vigência dos itens'),
+      pend('ctr-implantacao', 'Implantação do contrato, por etapas'), pend('ctr-aditivo', 'Aditivo: registrar a alteração'),
+      pend('ctr-alertas', 'Alertas de vencimento'), pend('ctr-diario', 'Diário de gestão do contrato'),
+      pend('ctr-obrigacoes', 'Obrigações documentais'), pend('ctr-encerramento', 'Encerramento e fechamento'),
+      pend('ctr-versoes', 'Versões comerciais: histórico de vistoria, orçamento, proposta e contrato')] },
+  { id: 'financeiro-receber', group: 'Financeiro', audiences: ['financeiro'], title: 'Financeiro: receber, pagar, competência e conciliação',
+    summary: 'Baixas, recorrência, fluxo de caixa, custos, orçamento, fechamento e conciliação.',
+    lessons: ['fin-receber', 'fin-competencia', { ref: 'fin-conciliacao', rotulo: DEMO },
+      pend('fin-pagar', 'Contas a pagar: baixa'), pend('fin-recorrencia', 'Recorrência: regra e geração de lançamentos'),
+      pend('fin-custos', 'Custos e rateio por centro de custo'), pend('fin-orcamento', 'Orçamento e cenários'),
+      pend('fin-exportacao', 'Exportações do período'), pend('fin-cobranca', 'Cobrança e histórico de lembretes', { rotulo: DEMO }),
+      pend('fin-pagamentos', 'Pagamentos e documento fiscal', { rotulo: 'Demonstração · sandbox e documento sintético, não é fiscal real' })] },
+  { id: 'compliance-fornecedores', group: 'Financeiro', audiences: ['financeiro'], title: 'Compliance, licitações e fornecedores',
+    summary: 'Obrigações, avaliação temporal, licitações e fornecedores.',
+    lessons: [pend('cmp-obrigacao', 'Declarar obrigação, referência documental e plano de ação'),
+      pend('cmp-avaliacao', 'Avaliação temporal de compliance'), pend('cmp-renovar', 'Renovar uma obrigação'),
+      pend('cmp-licitacoes', 'Licitações'), pend('cmp-fornecedores', 'Fornecedores')] },
+  { id: 'admin-acessos', group: 'Administração', audiences: ['ti'], title: 'Administração: acessos e portal',
+    summary: 'Convites, permissões, solicitações, alertas e cadastro central de clientes.',
+    lessons: ['ti-portal', pend('adm-permissoes', 'Permissões: conceder, revogar, suspender e reativar'),
+      pend('adm-solicitacoes', 'Solicitações de acesso e autocadastro'), pend('adm-alertas', 'Alertas de acesso e trocas de e-mail'),
+      pend('adm-clientes', 'Cadastro central de clientes e vínculos'),
+      pend('adm-cliente-docs', 'Contratos, documentos e chamados do cliente no cadastro central')] },
+  { id: 'admin-sistema', group: 'Administração', audiences: [], title: 'Administração: sistema, LGPD e auditoria',
+    summary: 'Auditoria, permissões por papel, publicação, LGPD, aparência e notificações.',
+    lessons: ['ti-auditoria', pend('adm-rbac', 'Permissões por papel (RBAC) e motivos'), pend('adm-publicacao', 'Publicação do site'),
+      pend('adm-lgpd', 'LGPD: solicitações, retenção e descarte'), pend('adm-aparencia', 'Aparência, tema e visual'),
+      pend('adm-notificacoes', 'Fila de notificações e preferências')] },
+  { id: 'ti-seguranca', group: 'TI', audiences: ['ti'], title: 'TI: segurança, backup e observabilidade',
+    summary: 'Backup, restauração, observabilidade, verificação manual e limites declarados.',
+    lessons: [pend('ti-backup', 'Backup e restauração'), pend('ti-observabilidade', 'Observabilidade e healthcheck'),
+      pend('ti-verificacao', 'Verificação manual pelo time técnico'), pend('ti-limites', 'Limites declarados do sistema')] },
+  { id: 'porteiros', group: 'Campo', audiences: ['porteiro'], title: 'Porteiros: portaria e rotina de posto',
+    summary: 'Recepção, visitantes e veículos, ocorrências, chaves, rondas e plantão.',
+    lessons: [pend('por-recepcao', 'Recepção de quem chega', { rotulo: 'Procedimento a validar com a operação' }),
+      pend('por-visitantes', 'Controle de visitantes e veículos', { rotulo: 'Em construção: o sistema ainda não tem módulo de visitantes' }),
+      pend('por-ocorrencia', 'Livro de ocorrências: como registrar'), pend('por-chaves', 'Chaves: retirada, devolução e conferência'),
+      pend('por-checklist', 'Checklist de posto de portaria'), pend('por-rondas', 'Rondas e leituras de ronda'),
+      pend('por-plantao', 'Passagem de plantão'), pend('por-emergencia', 'Acionar emergência e apoio')] },
+  { id: 'controladores-acesso', group: 'Campo', audiences: ['controlador_acesso'], title: 'Controladores de acesso',
+    summary: 'Credenciais, acessos fora do padrão, chaves, alarmes, rondas e emergências.',
+    lessons: [pend('cac-credenciais', 'Conferir credenciais e autorização de acesso', { rotulo: 'Procedimento a validar com a operação' }),
+      pend('cac-fora-padrao', 'Acesso fora do padrão: registrar como ocorrência'), pend('cac-chaves', 'Controle de chaves e de áreas restritas'),
+      pend('cac-rondas', 'Rondas e checklist do controle de acesso'),
+      pend('cac-alarme', 'Alarme disparado: o que fazer', { rotulo: 'Procedimento a validar · monitoramento em tempo real fora desta fase' }),
+      pend('cac-plantao', 'Passagem de plantão com pendências de acesso'), pend('cac-emergencia', 'Emergência e evacuação: acionar o apoio')] },
+  { id: 'servicos-gerais', group: 'Campo', audiences: ['servicos_gerais'], title: 'Auxiliares de serviços gerais: limpeza e conservação',
+    summary: 'Ponto e escala, limpeza, não conformidades, materiais, segurança e comunicação.',
+    lessons: [pend('sg-ponto', 'Ponto, escala e troca de turno'), pend('sg-limpeza', 'Rotina de limpeza: execução e checklist'),
+      pend('sg-nao-conformidade', 'Não conformidade de limpeza: registrar e tratar'), pend('sg-materiais', 'Materiais, almoxarifado e patrimônio'),
+      pend('sg-epi', 'Segurança no trabalho e uso de EPI', { rotulo: 'Procedimento a validar com SST' }),
+      pend('sg-comunicacao', 'Ocorrências e comunicação com o posto')] },
+  { id: 'instaladores', group: 'Campo', audiences: ['instalador'], title: 'Instaladores de segurança eletrônica',
+    summary: 'Agenda, frota, inventário, checklist de instalação, execução e aceite.',
+    lessons: [pend('ins-agenda', 'Agenda de visitas e ordem de serviço do cliente'), pend('ins-frota', 'Frota e veículo de instalação'),
+      pend('ins-inventario', 'Patrimônio e equipamentos em uso: inventário'),
+      pend('ins-checklist', 'Checklist de instalação por tipo de sistema', { rotulo: 'Checklist técnico a fornecer pela equipe técnica' }),
+      pend('ins-execucao', 'Registro de execução: fotos, medição e relatório de aceite'), pend('ins-ocorrencia', 'Ocorrência durante a instalação'),
+      pend('ins-seguranca', 'Segurança na instalação: altura, eletricidade e EPI', { rotulo: 'Procedimento a validar com SST e técnico' }),
+      pend('ins-equipamentos', 'Câmeras, sensores, alarmes, central e cerca elétrica', { rotulo: 'Bloqueada: aguarda conteúdo técnico' })] },
+];
+
+const byId = new Map();
+PUBLISHED_TRACKS.forEach(track => track.lessons.forEach(lesson => byId.set(lesson.id, lesson)));
+
+function resolveLesson(item) {
+  if (typeof item === 'string') {
+    const lesson = byId.get(item);
+    if (!lesson) throw new Error(`Aula inexistente no conteúdo: ${item}`);
+    return lesson;
+  }
+  if (item.ref) {
+    const lesson = byId.get(item.ref);
+    if (!lesson) throw new Error(`Aula inexistente no conteúdo: ${item.ref}`);
+    return { ...lesson, rotulo: item.rotulo || lesson.rotulo };
+  }
+  return item;
+}
+
+export const TRACKS = Object.freeze(LAYOUT.map(def => Object.freeze({
+  id: def.id,
+  group: def.group,
+  title: def.title,
+  summary: def.summary,
+  audiences: Object.freeze([...def.audiences]),
+  lessons: Object.freeze(def.lessons.map(resolveLesson)),
+})));
+
+export function isPending(lesson) {
+  return lesson.status === 'em-construcao';
+}
+
 export function lessonCount(tracks = TRACKS) {
   return tracks.reduce((total, track) => total + track.lessons.length, 0);
+}
+
+export function publishedLessonCount(tracks = TRACKS) {
+  return tracks.reduce((total, track) => total + track.lessons.filter(lesson => !isPending(lesson)).length, 0);
 }

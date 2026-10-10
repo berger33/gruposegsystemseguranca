@@ -18,25 +18,34 @@ export function demoPassword(env = process.env) {
 export { DEMO_USERS, userIdFor } from './demo-users.mjs';
 import { DEMO_USERS, userIdFor } from './demo-users.mjs';
 
-export function buildSeedState({ password = demoPassword(), content = TRACKS, now = new Date().toISOString() } = {}) {
+// Completa um estado já existente: acrescenta usuários de demonstração que ainda não estão
+// gravados (sem apagar progresso), e garante as estruturas de liberações e padrões.
+export function completeState(state, { password = demoPassword(), content = TRACKS, now = new Date().toISOString() } = {}) {
+  state.version = state.version || 1;
+  state.demo = state.demo ?? true;
+  state.users = state.users || [];
+  state.progress = state.progress || {};
+  state.grants = state.grants || {};
+  state.grantLog = state.grantLog || [];
+  state.sectorDefaults = state.sectorDefaults || {};
   const lessons = new Map();
   content.forEach(track => track.lessons.forEach(lesson => lessons.set(lesson.id, lesson)));
-  const users = DEMO_USERS.map(user => ({
-    id: userIdFor(user.email),
-    name: user.name,
-    email: user.email,
-    sector: user.sector,
-    ...hashPassword(password),
-  }));
-  const progress = {};
-  DEMO_USERS.forEach((user, i) => {
+  const have = new Set(state.users.map(user => user.id));
+  for (const user of DEMO_USERS) {
+    const id = userIdFor(user.email);
+    if (have.has(id)) continue;
+    state.users.push({ id, name: user.name, email: user.email, sector: user.sector, ...hashPassword(password) });
     const mine = {};
     user.seeded.forEach(lessonId => {
       const lesson = lessons.get(lessonId);
       if (!lesson) return;
       mine[lessonId] = { completedAt: now, firstChoice: lesson.quiz.answer, firstCorrect: true, pointsEarned: POINTS.lesson + POINTS.quiz };
     });
-    if (Object.keys(mine).length) progress[users[i].id] = mine;
-  });
-  return { version: 1, demo: true, users, progress };
+    if (Object.keys(mine).length) state.progress[id] = mine;
+  }
+  return state;
+}
+
+export function buildSeedState(options = {}) {
+  return completeState({ version: 1, demo: true, users: [], progress: {} }, options);
 }

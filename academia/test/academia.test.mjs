@@ -9,7 +9,7 @@ import { createApp } from '../src/app.mjs';
 import { createSessions } from '../src/auth.mjs';
 import { createStore } from '../src/store.mjs';
 import { buildSeedState, DEMO_USERS, userIdFor, DEFAULT_DEMO_PASSWORD, demoPassword } from '../src/seed.mjs';
-import { TRACKS, lessonCount } from '../src/content.mjs';
+import { TRACKS, lessonCount, isPending } from '../src/content.mjs';
 import { levelFor, POINTS } from '../src/gamification.mjs';
 import { verifyPassword, hashPassword } from '../src/auth.mjs';
 
@@ -166,13 +166,14 @@ test('concluir todas as aulas da trilha dá bônus, selo e aviso de trilha concl
   const { cookie: c2 } = await login('helena.duarte@academia.exemplo');
   const track = TRACKS.find(t => t.id === 'gestao-painel');
   let last;
-  for (const lesson of track.lessons) {
+  const published = track.lessons.filter(l => !isPending(l));
+  for (const lesson of published) {
     last = await request('POST', `/api/lessons/${lesson.id}/complete`, { cookie: c2, body: { choice: lesson.quiz.answer } });
   }
   assert.equal(last.json.trackCompleted, true);
   assert.ok(last.json.newBadges.some(b => b.id === 'trilha-gestao-painel'));
   assert.ok(last.json.newBadges.some(b => b.id === 'acerto-gestao-painel'));
-  const expected = track.lessons.length * (POINTS.lesson + POINTS.quiz) + POINTS.track;
+  const expected = published.length * (POINTS.lesson + POINTS.quiz) + POINTS.track;
   assert.equal(last.json.points, expected);
 
   const home = await request('GET', '/api/home', { cookie: c2 });
@@ -268,8 +269,12 @@ test('conteúdo: ids únicos, quiz consistente e contagem de aulas', () => {
   assert.equal(new Set(ids).size, ids.length);
   assert.equal(lessonCount(), ids.length);
   for (const track of TRACKS) {
-    assert.ok(track.audiences.length > 0);
+    assert.ok(track.group, track.id);
     for (const lesson of track.lessons) {
+      if (isPending(lesson)) {
+        assert.equal(lesson.quiz, null, lesson.id);
+        continue;
+      }
       assert.ok(lesson.quiz.options.length >= 2, lesson.id);
       assert.ok(Number.isInteger(lesson.quiz.answer) && lesson.quiz.answer < lesson.quiz.options.length, lesson.id);
       assert.ok(lesson.steps.length >= 2, lesson.id);
@@ -327,4 +332,104 @@ test('sessão por token no cabeçalho Authorization (sem depender do cookie)', a
     http.get(base + '/api/me', { headers }, r => { r.resume(); r.on('end', () => resolve(r.statusCode)); }).on('error', reject);
   });
   assert.equal(gone, 401);
+});
+
+// ---------- Acessos às trilhas (gestão) ----------
+
+test('área de acessos: só gestão (Marcelo, RH e admin) acessa; funcionário recebe 403', async () => {
+  const { cookie: funcionario } = await login('carla.mendes@academia.exemplo');
+  const denied = await request('GET', '/api/acessos', { cookie: funcionario });
+  assert.equal(denied.status, 403);
+  const { cookie: marcelo } = await login('helena.duarte@academia.exemplo');
+  const ok = await request('GET', '/api/acessos', { cookie: marcelo });
+  assert.equal(ok.status, 200);
+  assert.equal(ok.json.tracks.length, TRACKS.length);
+  assert.ok(ok.json.people.length >= 26);
+});
+
+test('Marcelo vê todas as trilhas e não pode ser restringido', async () => {
+  const { cookie } = await login('helena.duarte@academia.exemplo');
+  const home = await request('GET', '/api/home', { cookie });
+  assert.equal(home.json.tracks.length, TRACKS.length);
+  const target = await request('POST', '/api/acessos/alterar', {
+    cookie, body: { userId: userIdFor('camila.nogueira@academia.exemplo'), trackId: 'fundamentos', acao: 'bloquear', motivo: 'teste de restrição' },
+  });
+  assert.equal(target.status, 409);
+  assert.equal(target.json.error, 'perfil_de_gestao');
+});
+
+test('liberar e bloquear trilhas por pessoa, com motivo obrigatório e registro de auditoria', async () => {
+  const { cookie: gestor } = await login('helena.duarte@academia.exemplo');
+  const porteiro = userIdFor('osvaldo.ramos@academia.exemplo');
+  const { cookie: c } = await login('osvaldo.ramos@academia.exemplo');
+
+  const sem = await request('POST', '/api/acessos/alterar', { cookie: gestor, body: { userId: porteiro, trackId: 'comercial-funil', acao: 'liberar', motivo: 'ab' } });
+  assert.equal(sem.status, 400);
+  assert.equal(sem.json.error, 'motivo_obrigatorio');
+
+  const antes = await request('GET', '/api/home', { cookie: c });
+  assert.ok(!antes.json.tracks.some(t => t.id === 'comercial-funil'));
+
+  const lib = await request('POST', '/api/acessos/alterar', { cookie: gestor, body: { userId: porteiro, trackId: 'comercial-funil', acao: 'liberar', motivo: 'Apoio ao posto de recepção' } });
+  assert.equal(lib.status, 200);
+  assert.equal(lib.json.person.access['comercial-funil'], 'liberada');
+  const depois = await request('GET', '/api/home', { cookie: c });
+  assert.ok(depois.json.tracks.some(t => t.id === 'comercial-funil'));
+
+  const blq = await request('POST', '/api/acessos/alterar', { cookie: gestor, body: { userId: porteiro, trackId: 'porteiros', acao: 'bloquear', motivo: 'Trilha em revisão para este posto' } });
+  assert.equal(blq.json.person.access.porteiros, 'bloqueada');
+  const semPorteiros = await request('GET', '/api/home', { cookie: c });
+  assert.ok(!semPorteiros.json.tracks.some(t => t.id === 'porteiros'));
+
+  const volta = await request('POST', '/api/acessos/alterar', { cookie: gestor, body: { userId: porteiro, trackId: 'porteiros', acao: 'padrao', motivo: 'Revisão concluída' } });
+  assert.equal(volta.json.person.access.porteiros, 'padrao');
+
+  const panel = await request('GET', '/api/acessos', { cookie: gestor });
+  assert.ok(panel.json.log.some(e => e.pessoaId === porteiro && e.acao === 'liberar' && e.motivo === 'Apoio ao posto de recepção'));
+});
+
+test('RH também altera liberações, mas não altera perfil de gestão', async () => {
+  const { cookie: rh } = await login('juliana.prado@academia.exemplo');
+  const ok = await request('POST', '/api/acessos/alterar', { cookie: rh, body: { userId: userIdFor('lucia.andrade@academia.exemplo'), trackId: 'rh-processos', acao: 'liberar', motivo: 'Consulta de admissão' } });
+  assert.equal(ok.status, 200);
+  const marcelo = await request('POST', '/api/acessos/alterar', { cookie: rh, body: { userId: userIdFor('helena.duarte@academia.exemplo'), trackId: 'rh-processos', acao: 'bloquear', motivo: 'Teste de restrição' } });
+  assert.equal(marcelo.status, 409);
+});
+
+test('padrão do setor: mudar o público de uma trilha, com registro, e restaurar', async () => {
+  const { cookie: gestor } = await login('helena.duarte@academia.exemplo');
+  const { cookie: porteiro } = await login('osvaldo.ramos@academia.exemplo');
+  const { cookie: controlador } = await login('wellington.batista@academia.exemplo');
+  const antes = await request('GET', '/api/home', { cookie: porteiro });
+  assert.ok(antes.json.tracks.some(t => t.id === 'porteiros'));
+  const mudou = await request('POST', '/api/acessos/padrao', { cookie: gestor, body: { trackId: 'porteiros', setores: ['controlador_acesso'], motivo: 'Teste de padrão do setor' } });
+  assert.equal(mudou.status, 200);
+  assert.deepEqual(mudou.json.audiences, ['controlador_acesso']);
+  const porteiroDepois = await request('GET', '/api/home', { cookie: porteiro });
+  assert.ok(!porteiroDepois.json.tracks.some(t => t.id === 'porteiros'));
+  const controladorDepois = await request('GET', '/api/home', { cookie: controlador });
+  assert.ok(controladorDepois.json.tracks.some(t => t.id === 'porteiros'));
+  const invalido = await request('POST', '/api/acessos/padrao', { cookie: gestor, body: { trackId: 'porteiros', setores: ['setor_inexistente'], motivo: 'Teste de setor inválido' } });
+  assert.equal(invalido.status, 400);
+  const restaura = await request('POST', '/api/acessos/padrao', { cookie: gestor, body: { trackId: 'porteiros', setores: null, motivo: 'Restaurar padrão original' } });
+  assert.equal(restaura.status, 200);
+  assert.deepEqual(restaura.json.audiences, ['porteiro']);
+  const volta = await request('GET', '/api/home', { cookie: porteiro });
+  assert.ok(volta.json.tracks.some(t => t.id === 'porteiros'));
+});
+
+test('aula em construção aparece sem quiz, não pode ser concluída e não soma pontos', async () => {
+  const { cookie } = await login('osvaldo.ramos@academia.exemplo');
+  const pending = TRACKS.find(t => t.id === 'porteiros').lessons.find(l => isPending(l));
+  const view = await request('GET', `/api/lessons/${pending.id}`, { cookie });
+  assert.equal(view.status, 200);
+  assert.equal(view.json.pending, true);
+  assert.equal(view.json.question, null);
+  const before = await request('GET', '/api/home', { cookie });
+  const done = await request('POST', `/api/lessons/${pending.id}/complete`, { cookie, body: { choice: 0 } });
+  assert.equal(done.status, 409);
+  assert.equal(done.json.error, 'aula_em_construcao');
+  const after = await request('GET', '/api/home', { cookie });
+  const rowAfter = after.json.tracks.find(t => t.id === 'porteiros');
+  assert.equal(rowAfter.percent, before.json.tracks.find(t => t.id === 'porteiros').percent);
 });
