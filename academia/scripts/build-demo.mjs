@@ -14,7 +14,7 @@ fs.mkdirSync(path.join(out, 'vendor'), { recursive: true });
 
 // Interface: caminhos relativos (o site fica em um subcaminho do GitHub Pages).
 let html = fs.readFileSync(path.join(academia, 'public', 'index.html'), 'utf8');
-html = html.replace(/href="\/styles\.css\?v=\d+"/, 'href="styles.css?v=22"');
+html = html.replace(/href="\/styles\.css\?v=\d+"/, 'href="styles.css?v=23"');
 html = html.replace(/src="\/vendor\/qrcode\.js\?v=\d+"/, 'src="vendor/qrcode.js?v=16"');
 const appTag = /\s*<script src="\/app\.js\?v=\d+"><\/script>/;
 if (!appTag.test(html)) throw new Error('index.html: tag de app.js não encontrada');
