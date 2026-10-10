@@ -5,8 +5,10 @@ export const ADMIN_GROUPS = Object.freeze([
   { id: 'entrega', label: 'Entrega de serviços', hrefs: ['/admin/contratos', '/admin/operacao', '/admin/patrimonio', '/admin/frota', '/admin/terceiros', '/admin/qualidade', '/admin/emergencial'] },
   { id: 'pessoas', label: 'Pessoas', hrefs: ['/admin/funcionarios'] },
   { id: 'gestao', label: 'Financeiro e conformidade', hrefs: ['/admin/financeiro', '/admin/compliance', '/admin/licitacoes', '/admin/fornecedores'] },
-  { id: 'portais', label: 'Portais e conhecimento', hrefs: ['/admin/clientes', '/admin/conhecimento', '/admin/portal'] },
+  { id: 'portais', label: 'Portais', hrefs: ['/admin/clientes', '/admin/portal'] },
   { id: 'sistema', label: 'Sistema', hrefs: ['/admin/ti', '/admin/aparencia'] },
+  // Último grupo do menu: a Base de conhecimento fica sempre como último item.
+  { id: 'conhecimento', label: 'Conhecimento', hrefs: ['/admin/conhecimento'] },
 ]);
 
 export function groupAdminModules(modules) {
