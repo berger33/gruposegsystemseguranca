@@ -42,6 +42,8 @@
     search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
     logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
     star: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.9 4.9 1.4 1.4"/><path d="m17.7 17.7 1.4 1.4"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m4.9 19.1 1.4-1.4"/><path d="m17.7 6.3 1.4-1.4"/>',
+    moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
   };
   var TRACK_ICON = {
     fundamentos: 'layers',
@@ -121,6 +123,7 @@
     document.title = (title ? title + ' · ' : '') + 'Academia Seg System Segurança';
     app.focus({ preventScroll: true });
     animateMeters(app);
+    applyTheme(currentTheme());
   }
 
   // Anéis e barras começam vazios e animam até o valor (sem depender de CSS inline no HTML).
@@ -239,6 +242,7 @@
       '</section>' +
       '<section class="login-panel">' +
       '<div class="login-card reveal" style="--d:1">' +
+      '<button type="button" class="theme-toggle js-theme login-theme" aria-label="Alternar tema"></button>' +
       '<div class="login-head"><span class="brand-mark"><span>AS</span></span><h1 class="grad-text">Entrar na Academia</h1><p>Use o e-mail e a senha informados pelo seu gestor.</p></div>' +
       '<form id="login-form" class="form" novalidate>' +
       '<div class="field"><label for="f-email">E-mail</label><div class="input-wrap">' + icon('mail') +
@@ -928,6 +932,29 @@
     card.style.setProperty('--mx', (event.clientX - rect.left) + 'px');
     card.style.setProperty('--my', (event.clientY - rect.top) + 'px');
   });
+  // ---------- Tema claro/escuro ----------
+  var THEME_KEY = 'academia-tema';
+  function storedTheme() {
+    try { return localStorage.getItem(THEME_KEY); } catch (e) { return null; }
+  }
+  function currentTheme() {
+    return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  }
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    var isLight = theme === 'light';
+    Array.prototype.forEach.call(document.querySelectorAll('.js-theme'), function (btn) {
+      btn.innerHTML = icon(isLight ? 'moon' : 'sun', 'sm');
+      btn.setAttribute('aria-label', isLight ? 'Ativar modo escuro' : 'Ativar modo claro');
+      btn.title = isLight ? 'Modo claro ativo' : 'Modo escuro ativo';
+    });
+  }
+  function toggleTheme() {
+    var next = currentTheme() === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+    applyTheme(next);
+  }
+
   // ---------- Fundo de partículas (constelação) ----------
   function initParticles() {
     var canvas = document.getElementById('fx-canvas');
@@ -987,7 +1014,12 @@
   app.addEventListener('click', onAppClick);
   app.addEventListener('input', onAppInput);
   app.addEventListener('change', onAppChange);
+  document.addEventListener('click', function (event) {
+    var t = event.target.closest && event.target.closest('.js-theme');
+    if (t) { event.preventDefault(); toggleTheme(); }
+  });
   window.addEventListener('hashchange', route);
+  applyTheme(storedTheme() === 'light' ? 'light' : 'dark');
   initParticles();
   route();
 })();
