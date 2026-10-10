@@ -15,11 +15,16 @@
   }
 
   // Token de sessão por aba. Usado quando o navegador não mantém o cookie (preview em iframe).
+  // Em iframe sandbox o navegador pode bloquear sessionStorage; então o token fica também na memória da página
+  // (sobrevive às trocas de tela com #, mas não a um recarregamento).
   var TOKEN_KEY = 'academia_token';
+  var memoryToken = null;
   function getToken() {
+    if (memoryToken) return memoryToken;
     try { return sessionStorage.getItem(TOKEN_KEY); } catch (_) { return null; }
   }
   function setToken(value) {
+    memoryToken = value || null;
     try { if (value) sessionStorage.setItem(TOKEN_KEY, value); else sessionStorage.removeItem(TOKEN_KEY); } catch (_) {}
   }
 
