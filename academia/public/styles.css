@@ -1,7 +1,7 @@
 /* Academia Seg System Segurança — tema duplo (noturno padrão / claro), vidro, neon e cascata. */
 :root {
-  --bg0: #05070f;
-  --bg1: #0a1020;
+  --bg0: #0a1124;
+  --bg1: #0e1834;
   --ink: #eaf0ff;
   --ink-2: #c6d2ee;
   --muted: #8b98bd;
@@ -11,9 +11,9 @@
   --field: rgba(15, 22, 44, 0.6);
   --hover: rgba(91, 140, 255, 0.08);
   --hover-2: rgba(91, 140, 255, 0.16);
-  --topbar: rgba(7, 10, 20, 0.66);
-  --panel: rgba(7, 10, 20, 0.5);
-  --node-bg: #0a1020;
+  --topbar: rgba(10, 17, 36, 0.72);
+  --panel: rgba(10, 17, 36, 0.45);
+  --node-bg: #0e1834;
   --dash: rgba(139, 152, 189, 0.3);
   --track-bg: rgba(139, 152, 189, 0.18);
   --skel-a: rgba(139, 152, 189, 0.1);
@@ -615,3 +615,40 @@ button, input { font: inherit; }
   .grant-row { grid-template-columns: 1fr; }
   .log-list li { grid-template-columns: 1fr; gap: 4px; }
 }
+
+/* ---------- Busca instantânea ---------- */
+.search-pop { position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 40; background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-lift); backdrop-filter: blur(16px); overflow: hidden; animation: rise 0.25s var(--ease) backwards; }
+.search-pop a { display: flex; gap: 12px; align-items: center; padding: 11px 14px; color: var(--ink); border-bottom: 1px solid var(--line); transition: background 0.15s; }
+.search-pop a:last-child { border-bottom: 0; }
+.search-pop a:hover, .search-pop a.hl { background: var(--hover-2); }
+.search-pop .sp-ico { width: 34px; height: 34px; border-radius: 10px; background: var(--hover-2); color: var(--azul-3); display: grid; place-items: center; flex: none; }
+.search-pop .sp-ico .ico { width: 16px; height: 16px; }
+.search-pop strong { font-size: 14px; display: block; }
+.search-pop small { font-size: 12px; color: var(--muted); }
+.search-pop .sp-empty { padding: 14px; color: var(--muted); font-size: 13px; }
+.search-pop .sp-foot { display: block; padding: 9px 14px; font-size: 12px; color: var(--azul-3); background: var(--hover); }
+
+/* ---------- Central de notificações ---------- */
+.notif-wrap { position: relative; }
+.notif-count { position: absolute; top: -5px; right: -5px; min-width: 17px; height: 17px; border-radius: 999px; background: var(--grad-vivo); background-size: 300% 100%; color: #fff; font-size: 10px; font-weight: 800; display: grid; place-items: center; padding: 0 4px; box-shadow: 0 4px 10px -4px rgba(79,124,255,.8); animation: hueflow 6s linear infinite; }
+.notif-pop { position: absolute; top: calc(100% + 10px); right: 0; width: min(360px, calc(100vw - 32px)); z-index: 45; background: var(--surface-2); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-lift); backdrop-filter: blur(16px); overflow: hidden; animation: rise 0.25s var(--ease) backwards; }
+.notif-head { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-bottom: 1px solid var(--line); }
+.notif-head h3 { font-size: 15px; }
+.notif-list { max-height: min(420px, 60vh); overflow: auto; }
+.notif-item { display: flex; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.notif-item:last-child { border-bottom: 0; }
+.notif-item .n-ico { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; flex: none; background: var(--hover-2); color: var(--azul-3); }
+.notif-item.ok .n-ico { background: var(--ok-bg); color: var(--ok); }
+.notif-item.warn .n-ico { background: var(--warn-bg); color: var(--warn); }
+.notif-item p { font-size: 13px; color: var(--ink-2); }
+.notif-item strong { font-size: 13px; color: var(--ink); display: block; }
+.notif-item time { font-size: 11px; color: var(--muted); }
+
+/* ---------- Tour de boas-vindas ---------- */
+.tour-overlay { position: fixed; inset: 0; z-index: 80; background: rgba(4, 8, 18, 0.6); backdrop-filter: blur(2px); }
+.tour-spot { position: fixed; z-index: 81; border-radius: 14px; box-shadow: 0 0 0 4px var(--glow), 0 0 0 9999px rgba(4, 8, 18, 0.55); transition: all 0.35s var(--ease); pointer-events: none; }
+.tour-card { position: fixed; z-index: 82; width: min(340px, calc(100vw - 32px)); background: var(--surface-2); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-lift); padding: 18px; backdrop-filter: blur(16px); animation: rise 0.3s var(--ease) backwards; }
+.tour-card .t-step { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--azul-3); }
+.tour-card h3 { margin: 6px 0 6px; font-size: 17px; }
+.tour-card p { font-size: 14px; color: var(--ink-2); }
+.tour-actions { display: flex; justify-content: space-between; gap: 10px; margin-top: 16px; }

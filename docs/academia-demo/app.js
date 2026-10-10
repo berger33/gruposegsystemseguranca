@@ -44,6 +44,7 @@
     star: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.9 4.9 1.4 1.4"/><path d="m17.7 17.7 1.4 1.4"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m4.9 19.1 1.4-1.4"/><path d="m17.7 6.3 1.4-1.4"/>',
     moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+    bell: '<path d="M18 9a6 6 0 1 0-12 0c0 6-2 7-2 7h16s-2-1-2-7"/><path d="M10.5 20a1.8 1.8 0 0 0 3 0"/>',
   };
   var TRACK_ICON = {
     fundamentos: 'layers',
@@ -201,6 +202,7 @@
       avatar.textContent = initials(me.name);
       avatar.style.background = 'linear-gradient(135deg,' + colorFor(me.name) + ',#172b68)';
       avatar.title = me.name;
+      refreshNotifBell();
     }
   }
 
@@ -888,7 +890,7 @@
       else if (segments[0] === 'busca') page = renderSearch(query.get('q') || '');
       else if (segments[0] === 'acessos') page = me.isManager ? renderAccess() : renderHome();
       else page = renderHome();
-      return page.then(function () { justLoggedIn = false; }).catch(function (err) {
+      return page.then(function () { if (justLoggedIn) startTour(); justLoggedIn = false; }).catch(function (err) {
         if (err.status === 401) {
           me = null;
           setToken(null);
@@ -911,9 +913,15 @@
   });
   document.getElementById('search-form').addEventListener('submit', function (event) {
     event.preventDefault();
+    hideSearchPop();
     var q = document.getElementById('search-input').value.trim();
     if (q.length >= 2) location.hash = '#/busca?q=' + encodeURIComponent(q);
   });
+  document.getElementById('search-input').addEventListener('input', onSearchInput);
+  document.getElementById('search-input').addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') hideSearchPop();
+  });
+  document.getElementById('search-input').addEventListener('blur', function () { setTimeout(hideSearchPop, 160); });
   document.addEventListener('keydown', function (event) {
     if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey) return;
     var tag = (document.activeElement && document.activeElement.tagName) || '';
@@ -954,6 +962,119 @@
     try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
     applyTheme(next);
   }
+
+  // ---------- Busca instantânea ----------
+  var searchTimer = null;
+  function hideSearchPop() { var p = document.getElementById('search-pop'); if (p) p.hidden = true; }
+  function onSearchInput() {
+    var input = document.getElementById('search-input');
+    var pop = document.getElementById('search-pop');
+    clearTimeout(searchTimer);
+    var q = input.value.trim();
+    if (q.length < 2) { hideSearchPop(); return; }
+    searchTimer = setTimeout(function () {
+      api('/api/search?q=' + encodeURIComponent(q)).then(function (data) {
+        if (input.value.trim() !== q) return;
+        var items = data.results.slice(0, 6);
+        var html = items.length ? items.map(function (r) {
+          return '<a href="#/aula/' + esc(r.id) + '"><span class="sp-ico">' + icon('book') + '</span><div><strong>' + esc(r.title) + '</strong><small>' + esc(r.trackTitle) + ' · ' + r.minutes + ' min</small></div></a>';
+        }).join('') : '<div class="sp-empty">Nada encontrado no seu setor para “' + esc(q) + '”.</div>';
+        html += '<a class="sp-foot" href="#/busca?q=' + encodeURIComponent(q) + '">Ver todos os resultados</a>';
+        pop.innerHTML = html;
+        pop.hidden = false;
+      }).catch(function () { hideSearchPop(); });
+    }, 200);
+  }
+
+  // ---------- Central de notificações ----------
+  function notifFromLog(e) {
+    var when = '';
+    try { when = new Date(e.at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (err) {}
+    if (e.acao === 'padrao-setor') return { type: '', ico: 'users', title: 'Público da trilha alterado', text: e.porNome + ' alterou o público de “' + e.trackTitle + '”.', time: when };
+    var verb = e.acao === 'liberar' ? 'liberou' : e.acao === 'bloquear' ? 'bloqueou' : 'restaurou o padrão de';
+    return { type: e.acao === 'bloquear' ? 'warn' : 'ok', ico: e.acao === 'bloquear' ? 'lock' : 'check', title: 'Trilha ' + verb, text: e.porNome + ' ' + verb + ' “' + e.trackTitle + '” para ' + e.pessoaNome + '.', time: when };
+  }
+  function loadNotif() {
+    var items = [{ type: '', ico: 'sparkles', title: 'Bem-vindo(a) à Academia', text: 'Trilhas por setor com progresso, selos e ranking.' }];
+    var ps = [api('/api/home').then(function (d) {
+      (d.badges.earned || []).forEach(function (b) { items.push({ type: 'ok', ico: 'star', title: 'Selo conquistado: ' + b.title, text: b.detail || '' }); });
+    }).catch(function () {})];
+    if (me && me.isManager) ps.push(api('/api/acessos').then(function (d) {
+      (d.log || []).slice(0, 8).forEach(function (e) { items.push(notifFromLog(e)); });
+    }).catch(function () {}));
+    return Promise.all(ps).then(function () { return items; });
+  }
+  function openNotif() {
+    var pop = document.getElementById('notif-pop');
+    if (!pop.hidden) { pop.hidden = true; return; }
+    pop.innerHTML = '<div class="notif-head"><h3>Notificações</h3></div><div class="notif-list"><div class="notif-item"><span class="n-ico">' + icon('clock', 'sm') + '</span><p>Carregando…</p></div></div>';
+    pop.hidden = false;
+    loadNotif().then(function (items) {
+      var html = items.map(function (n) {
+        return '<div class="notif-item ' + n.type + '"><span class="n-ico">' + icon(n.ico, 'sm') + '</span><div><strong>' + esc(n.title) + '</strong><p>' + esc(n.text) + '</p>' + (n.time ? '<time>' + esc(n.time) + '</time>' : '') + '</div></div>';
+      }).join('');
+      pop.querySelector('.notif-list').innerHTML = html || '<div class="notif-item"><p>Sem notificações.</p></div>';
+    });
+  }
+  function refreshNotifBell() {
+    var b = document.getElementById('notif-toggle');
+    if (!b) return;
+    b.innerHTML = icon('bell', 'sm');
+    if (me && me.isManager) {
+      api('/api/acessos').then(function (d) {
+        var n = (d.log || []).length;
+        b.innerHTML = icon('bell', 'sm') + (n ? '<span class="notif-count">' + (n > 9 ? '9+' : n) + '</span>' : '');
+      }).catch(function () {});
+    }
+  }
+
+  // ---------- Tour de boas-vindas ----------
+  var TOUR_KEY = 'academia-tour-v1';
+  var tourSteps = [
+    { sel: '#search-input', t: 'Busque sem sair da página', d: 'Digite para ver resultados instantâneos das aulas do seu setor.' },
+    { sel: '#notif-toggle', t: 'Central de notificações', d: 'Acompanhe conquistas e, para gestores, as alterações de acesso.' },
+    { sel: '#theme-toggle', t: 'Tema claro ou escuro', d: 'Alterne quando quiser; a escolha fica salva neste navegador.' },
+    { sel: '.track-card', t: 'Suas trilhas', d: 'Cada cartão é uma trilha do seu setor, com progresso e aulas.' },
+    { sel: '.ring-wrap', t: 'Seu progresso', d: 'O anel mostra quanto da sua jornada você já concluiu.' },
+  ];
+  var tourIndex = 0;
+  function clearTourDom() {
+    ['tour-overlay', 'tour-card'].forEach(function (id) { var e = document.getElementById(id); if (e) e.remove(); });
+    var s = document.querySelector('.tour-spot'); if (s) s.remove();
+  }
+  function endTour() { clearTourDom(); try { localStorage.setItem(TOUR_KEY, '1'); } catch (e) {} }
+  function positionTourCard(card, spot) {
+    var vw = window.innerWidth, vh = window.innerHeight;
+    if (spot) {
+      var r = spot.getBoundingClientRect();
+      var top = r.bottom + 14, left = Math.min(Math.max(16, r.left), vw - 356);
+      if (top + 200 > vh) top = Math.max(16, r.top - 210);
+      card.style.top = top + 'px'; card.style.left = Math.max(16, left) + 'px';
+    } else { card.style.top = '50%'; card.style.left = '50%'; card.style.transform = 'translate(-50%,-50%)'; }
+  }
+  function renderTour() {
+    clearTourDom();
+    while (tourIndex < tourSteps.length && !document.querySelector(tourSteps[tourIndex].sel)) tourIndex++;
+    if (tourIndex >= tourSteps.length) return endTour();
+    var step = tourSteps[tourIndex];
+    var target = document.querySelector(step.sel);
+    var overlay = document.createElement('div'); overlay.className = 'tour-overlay'; overlay.id = 'tour-overlay';
+    document.body.appendChild(overlay);
+    var spot = null;
+    var r = target.getBoundingClientRect();
+    spot = document.createElement('div'); spot.className = 'tour-spot';
+    spot.style.left = (r.left - 6) + 'px'; spot.style.top = (r.top - 6) + 'px';
+    spot.style.width = (r.width + 12) + 'px'; spot.style.height = (r.height + 12) + 'px';
+    document.body.appendChild(spot);
+    var card = document.createElement('div'); card.className = 'tour-card'; card.id = 'tour-card';
+    card.innerHTML = '<span class="t-step">Passo ' + (tourIndex + 1) + ' de ' + tourSteps.length + '</span><h3>' + esc(step.t) + '</h3><p>' + esc(step.d) + '</p>' +
+      '<div class="tour-actions"><button class="btn-ghost sm" id="tour-skip" type="button">Pular</button><button class="btn-primary sm" id="tour-next" type="button">' + (tourIndex === tourSteps.length - 1 ? 'Concluir' : 'Próximo') + '</button></div>';
+    document.body.appendChild(card);
+    positionTourCard(card, spot);
+    document.getElementById('tour-skip').addEventListener('click', endTour);
+    document.getElementById('tour-next').addEventListener('click', function () { tourIndex++; renderTour(); });
+  }
+  function startTour() { try { if (localStorage.getItem(TOUR_KEY)) return; } catch (e) { return; } tourIndex = 0; setTimeout(renderTour, 500); }
 
   // ---------- Fundo de partículas (constelação) ----------
   function initParticles() {
@@ -1016,10 +1137,26 @@
   app.addEventListener('change', onAppChange);
   document.addEventListener('click', function (event) {
     var t = event.target.closest && event.target.closest('.js-theme');
-    if (t) { event.preventDefault(); toggleTheme(); }
+    if (t) { event.preventDefault(); toggleTheme(); return; }
+    var notif = document.getElementById('notif-pop');
+    if (notif && !notif.hidden && !event.target.closest('.notif-wrap')) notif.hidden = true;
+    var sp = document.getElementById('search-pop');
+    if (sp && !sp.hidden && !event.target.closest('.search')) sp.hidden = true;
   });
-  window.addEventListener('hashchange', route);
-  applyTheme(storedTheme() === 'light' ? 'light' : 'dark');
+  document.getElementById('notif-toggle').addEventListener('click', function (event) {
+    event.stopPropagation();
+    openNotif();
+  });
+  window.addEventListener('hashchange', function () { hideSearchPop(); route(); });
+
+  // Tema automático: usa a preferência do sistema quando não há escolha salva.
+  var prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+  applyTheme(storedTheme() === 'light' ? 'light' : storedTheme() === 'dark' ? 'dark' : (prefersLight ? 'light' : 'dark'));
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: light)');
+    var onSys = function (ev) { if (!storedTheme()) applyTheme(ev.matches ? 'light' : 'dark'); };
+    if (mq.addEventListener) mq.addEventListener('change', onSys); else if (mq.addListener) mq.addListener(onSys);
+  }
   initParticles();
   route();
 })();

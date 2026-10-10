@@ -27,10 +27,15 @@
       <svg class="search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input id="search-input" type="search" name="q" placeholder="Buscar aulas e temas" autocomplete="off" minlength="2">
       <kbd aria-hidden="true">/</kbd>
+      <div class="search-pop" id="search-pop" hidden></div>
     </form>
     <div class="account">
       <a class="nav-link" id="nav-acessos" href="#/acessos" hidden>Acessos</a>
       <span class="sector-chip" id="sector-chip"></span>
+      <div class="notif-wrap">
+        <button type="button" class="theme-toggle" id="notif-toggle" aria-label="Notificações" aria-haspopup="true"></button>
+        <div class="notif-pop" id="notif-pop" hidden></div>
+      </div>
       <button type="button" class="theme-toggle js-theme" id="theme-toggle" aria-label="Alternar tema"></button>
       <span class="avatar" id="avatar" aria-hidden="true"></span>
       <button type="button" class="btn-ghost sm" id="logout">Sair</button>
