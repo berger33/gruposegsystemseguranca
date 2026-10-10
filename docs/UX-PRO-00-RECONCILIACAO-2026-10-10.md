@@ -206,6 +206,25 @@ Observação: a saída da sequência foi truncada no meio do log; por isso `type
 
 `npm ci` foi executado no início da fatia. O `next-env.d.ts` gerado pelo `next build` foi revertido e não faz parte da entrega.
 
+### Checks da PR (GitHub) e reprodução na `main`
+
+Na PR, `QA baseline` (job `static-and-smoke` de `ci.yml`) passou. Oito checks de frentes de UX/L04 ficaram **vermelhos**. Eles disparam em `pull_request` porque a alteração toca `package.json` (ou `package*.json`), que está no filtro `paths` desses workflows; nunca rodaram na `main` pelo GitHub.
+
+Para separar causa, o mesmo gate foi reexecutado localmente numa cópia exportada da `main` (`git archive c50a99b`), com as variáveis do workflow:
+
+| Check na PR (workflow) | Comando do gate | Resultado na `main` (c50a99b, local) |
+|---|---|---|
+| `focal` (UX-10 expansao delivery) | `npm run test:ux-expansion:pg` | EXIT 1 |
+| `focal` (UX-11 continuidade delivery) | `npm run test:ux-continuity:pg` | EXIT 1 |
+| `focal` (UX-11 continuidade cliente delivery) | `npm run test:ux-continuity:pg` | EXIT 1 |
+| `ux-analytics-postgres-browser` | `npm run test:ux-analytics:pg` | EXIT 1 (subteste “as quatro abas são um tablist de verdade, com teclado”; igual na PR) |
+| `ux-compliance-postgres-browser` | `npm run test:ux-compliance:pg` | EXIT 1 |
+| `ux-quality-postgres-browser` | `npm run test:ux-quality:pg` | EXIT 1 |
+| `ux-satisfaction-postgres-browser` | `npm run test:ux-satisfaction:pg` | EXIT 1 |
+| `crm-postgres-browser` (L04) | `npm run test:l04-delivery:pg` | EXIT 1 (19/20; falha `CRM-02`) |
+
+**Conclusão:** as falhas já existem na `main` (c50a99b) e não são causadas por esta fatia. Porém a PR não tem checks exigidos verdes, e a fatia **não** altera essas frentes (nenhum `src/**`, teste de analytics, compliance, quality, satisfaction, expansion, continuity ou CRM). Corrigi-las exigiria alterar comportamento de telas e testes de outras frentes, o que está fora de UX-PRO-00. **Não houve merge.** Limitação: os logs dos jobs no GitHub não puderam ser baixados deste ambiente; a reprodução é local, com o mesmo código e variáveis.
+
 ## 13. Prompt da próxima sessão — UX-PRO-01 (Tokens e chrome compartilhado)
 
 > Trabalhe no repositório `berger33/gruposegsystemseguranca`, partindo da `main` mais recente. Leia `AGENTS.md`, `README.md`, `docs/ARENA-PRESERVAR-FUNCIONALIDADES.md` e `docs/PLANO-MESTRE-PROFISSIONALIZACAO-UX-2026-10-10.md`. Antes de qualquer alteração, leia também `docs/UX-PRO-00-RECONCILIACAO-2026-10-10.md` e a matriz `docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-10.csv`.
