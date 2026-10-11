@@ -21,6 +21,15 @@ const key = (name) => `ext14-${name}-${uuid()}`;
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const fetchTimeout = (url, init = {}) => fetch(url, { ...init, signal: AbortSignal.timeout(init.method && init.method !== "GET" ? 60000 : 30000) });
 
+// Um crash do navegador NÃO é resultado de teste — mesma convenção dos demais
+// gates de interface (ux-contract, l04, ...). O Chromium empacotado roda em
+// --single-process e, sob contenção de CPU ou memória, pode morrer durante o
+// próprio launch: "browserType.launch: Target page, context or browser has
+// been closed" em dezenas de milissegundos, antes de qualquer asserção ser
+// avaliada. A sessão inteira é repetida em crash; qualquer falha de asserção
+// é repassada na hora — nenhuma asserção fica tolerante.
+const CRASH = /Target (page|closed)|has been closed|Target crashed|browser has disconnected|crashed|SIGSEGV|Protocol error/i;
+
 const today = new Date().toISOString().slice(0, 10);
 const historyStart = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
 
@@ -342,7 +351,7 @@ test("EXT-14 escrita legada recebe 410 depois das guardas", opt, async () => {
 
 test("UX-07 inteligência browser: h1 real, falha honesta e abas acessíveis", opt, async () => {
   let last;
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
     let browser;
     try {
       browser = await chromium.launch({ executablePath: await packagedChromium.executablePath(), headless: true, args: [...packagedChromium.args.filter(arg => arg !== "--disable-web-security"), "--single-process"] });
@@ -363,7 +372,8 @@ test("UX-07 inteligência browser: h1 real, falha honesta e abas acessíveis", o
       await page.keyboard.press("End");
       assert.equal(await page.getByRole("tab", { name: "Sugestões canônicas" }).getAttribute("aria-selected"), "true");
       await browser.close(); return;
-    } catch (error) { last = error; await browser?.close().catch(() => {}); if (!String(error?.message || error).includes("ERR_ASSERTION")) throw error; }
+    } catch (error) { last = error; await browser?.close().catch(() => {}); if (error?.code === "ERR_ASSERTION" || !CRASH.test(String(error?.message || error))) throw error; console.log(`EXT14_BROWSER_RETRY tentativa=${attempt}: ${String(error?.message || error).split("\n")[0]}`); }
+    await wait(2000);
   }
   throw last;
 });
