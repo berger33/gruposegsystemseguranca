@@ -25,7 +25,7 @@ fs.copyFileSync(path.join(academia, 'public', 'app.js'), path.join(out, 'app.js'
 fs.copyFileSync(path.join(academia, 'public', 'vendor', 'qrcode.js'), path.join(out, 'vendor', 'qrcode.js'));
 fs.copyFileSync(path.join(academia, 'public', 'vendor', 'seg-system-logo.jpg'), path.join(out, 'vendor', 'seg-system-logo.jpg'));
 fs.copyFileSync(path.join(academia, 'public', 'vendor', 'seg-system-logo-circle.svg'), path.join(out, 'vendor', 'seg-system-logo-circle.svg'));
-fs.copyFileSync(path.join(academia, 'public', 'vendor', 'seg-system-logo-emblem.svg'), path.join(out, 'vendor', 'seg-system-logo-emblem.svg'));
+fs.copyFileSync(path.join(academia, 'public', 'vendor', 'seg-system-logo-emblem.png'), path.join(out, 'vendor', 'seg-system-logo-emblem.png'));
 fs.copyFileSync(path.join(academia, 'public', 'vendor', 'THIRD-PARTY-NOTICES.txt'), path.join(out, 'vendor', 'THIRD-PARTY-NOTICES.txt'));
 
 // Lógica compartilhada com o servidor (somente módulos sem dependências do Node).
