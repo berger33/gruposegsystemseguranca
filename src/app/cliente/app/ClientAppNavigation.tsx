@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BriefcaseBusiness, CalendarClock, CirclePlus, ClipboardCheck, FileText, Headphones, LayoutDashboard, LifeBuoy, LogOut, RefreshCw, ShieldAlert, ShieldCheck, Receipt, Star } from "lucide-react";
+import { BookOpen, BriefcaseBusiness, CalendarClock, CirclePlus, ClipboardCheck, FileText, Headphones, LayoutDashboard, LifeBuoy, LogOut, RefreshCw, ShieldAlert, ShieldCheck, Receipt, Star } from "lucide-react";
 import { useClientSpace } from "./ClientSpaceProvider";
 import styles from "./ClientApp.module.css";
 
@@ -38,6 +38,12 @@ export default function ClientAppNavigation() {
             </Link>
           );
         })}
+        {/* Último item do menu: Base de conhecimento, em construção (sem link até a liberação da Academia). */}
+        <span className={`${styles.tab} ${styles.tabSoon}`} aria-disabled="true" title="Em construção">
+          <BookOpen size={14} aria-hidden="true" />
+          Base de conhecimento
+          <span className={styles.soonTag}>Em construção</span>
+        </span>
       </div>
       <div className={styles.navTools}>
         {accounts.length > 1 && activeAccount ? (

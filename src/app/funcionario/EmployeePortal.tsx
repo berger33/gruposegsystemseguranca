@@ -225,6 +225,10 @@ export default function EmployeePortal(){
           <span className={styles.tabIcon} aria-hidden="true">{icon}</span>{label}
         </button>
       ))}
+      {/* Último item: Base de conhecimento, em construção (sem link até a liberação da Academia). */}
+      <span className={`${styles.tab} ${styles.tabSoon}`} aria-disabled="true" title="Em construção" role="none">
+        <span className={styles.tabIcon} aria-hidden="true">◎</span>Base de conhecimento
+      </span>
     </div>
   </div></main>;
 }
