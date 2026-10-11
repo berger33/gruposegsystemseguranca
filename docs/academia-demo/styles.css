@@ -682,7 +682,7 @@ body.certificate-open:not(.printing-certificate) { overflow: hidden; }
 .certificate-inner::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 50% 45%, rgba(198, 164, 91, .10), transparent 52%), repeating-linear-gradient(135deg, transparent 0 14px, rgba(24, 48, 95, .018) 14px 15px); pointer-events: none; }
 .certificate-inner > * { position: relative; z-index: 1; }
 .certificate-brand { width: 100%; display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 12px; color: #172b68; }
-.certificate-brand img { width: 54px; height: 54px; object-fit: contain; border-radius: 50%; }
+.certificate-brand img { width: 54px; height: 54px; object-fit: contain; border-radius: 0; }
 .certificate-brand div { display: grid; text-align: left; line-height: 1.2; letter-spacing: .06em; }
 .certificate-brand strong { font-size: 14px; }
 .certificate-brand span:not(.certificate-seal) { font-size: 9px; letter-spacing: .2em; margin-top: 3px; }

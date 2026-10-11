@@ -14,7 +14,7 @@ fs.mkdirSync(path.join(out, 'vendor'), { recursive: true });
 
 // Interface: caminhos relativos (o site fica em um subcaminho do GitHub Pages).
 let html = fs.readFileSync(path.join(academia, 'public', 'index.html'), 'utf8');
-html = html.replace(/href="\/styles\.css\?v=\d+"/, 'href="styles.css?v=25"');
+html = html.replace(/href="\/styles\.css\?v=\d+"/, 'href="styles.css?v=26"');
 html = html.replace(/src="\/vendor\/qrcode\.js\?v=\d+"/, 'src="vendor/qrcode.js?v=16"');
 const appTag = /\s*<script src="\/app\.js\?v=\d+"><\/script>/;
 if (!appTag.test(html)) throw new Error('index.html: tag de app.js não encontrada');
@@ -23,9 +23,7 @@ fs.writeFileSync(path.join(out, 'index.html'), html);
 fs.copyFileSync(path.join(academia, 'public', 'styles.css'), path.join(out, 'styles.css'));
 fs.copyFileSync(path.join(academia, 'public', 'app.js'), path.join(out, 'app.js'));
 fs.copyFileSync(path.join(academia, 'public', 'vendor', 'qrcode.js'), path.join(out, 'vendor', 'qrcode.js'));
-fs.copyFileSync(path.join(academia, 'public', 'vendor', 'seg-system-logo.jpg'), path.join(out, 'vendor', 'seg-system-logo.jpg'));
-fs.copyFileSync(path.join(academia, 'public', 'vendor', 'seg-system-logo-circle.svg'), path.join(out, 'vendor', 'seg-system-logo-circle.svg'));
-fs.copyFileSync(path.join(academia, 'public', 'vendor', 'seg-system-logo-emblem.png'), path.join(out, 'vendor', 'seg-system-logo-emblem.png'));
+fs.copyFileSync(path.join(academia, 'public', 'vendor', 'seg-system-logo.svg'), path.join(out, 'vendor', 'seg-system-logo.svg'));
 fs.copyFileSync(path.join(academia, 'public', 'vendor', 'THIRD-PARTY-NOTICES.txt'), path.join(out, 'vendor', 'THIRD-PARTY-NOTICES.txt'));
 
 // Lógica compartilhada com o servidor (somente módulos sem dependências do Node).
