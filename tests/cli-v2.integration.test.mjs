@@ -265,11 +265,61 @@ test('TENANT-SEG-003 / PLT-AUD-003: HTTP CLI v2 docs staff-only, legacy client s
     }
   });
 
+  await t.test('CLI-09: rota canônica do portal serve só as cobranças integradas da própria conta', async () => {
+    // Três cobranças sintéticas para separar os dois filtros da rota: uma
+    // integrada na conta A (deve aparecer), uma NÃO integrada na conta A
+    // (filtrada por finance_integration_active) e uma integrada na conta B
+    // (filtrada pelo escopo de grant).
+    const visivel = randomUUID(), naoIntegrada = randomUUID(), outraConta = randomUUID();
+    await pool.query(`INSERT INTO cli_charges_v2
+        (id, protocol, client_account_id, amount_cents, due_date, finance_integration_active)
+      VALUES ($1,'CHG-CLI-20261010-QA0A',$2,15000,'2026-11-05',true),
+             ($3,'CHG-CLI-20261010-QA0B',$2,25000,'2026-11-10',false),
+             ($4,'CHG-CLI-20261010-QA0C',$5,35000,'2026-11-15',true)`,
+      [visivel, accountA, naoIntegrada, outraConta, accountB]);
+
+    const anon = await api('/api/client/cobrancas');
+    assert.equal(anon.status, 401, JSON.stringify(anon.body));
+    assert.equal(anon.body.error, 'client_session_required');
+
+    const portal = await api('/api/client/cobrancas', { cookie: cookieA });
+    assert.equal(portal.status, 200, JSON.stringify(portal.body));
+    const protocolos = portal.body.charges.map(row => row.protocol);
+    assert.ok(protocolos.includes('CHG-CLI-20261010-QA0A'), 'cobrança integrada da própria conta deve aparecer');
+    assert.ok(!protocolos.includes('CHG-CLI-20261010-QA0B'), 'cobrança não integrada não deve aparecer');
+    assert.ok(!protocolos.includes('CHG-CLI-20261010-QA0C'), 'cobrança de outra conta não deve aparecer');
+
+    // Sessão de staff não é sessão de cliente: a rota do portal é só do cliente.
+    // É o outro lado da separação que tornou /api/client/charges-v2 só de staff.
+    for (const [rotulo, cookie] of [['TI', adminCookie], ['RH', rhCookie]]) {
+      const negado = await api('/api/client/cobrancas', { cookie });
+      assert.equal(negado.status, 401, `${rotulo}: ${JSON.stringify(negado.body)}`);
+    }
+
+    // sameOrigin() libera GET/HEAD de propósito (navegadores não mandam Origin
+    // em GET same-origin), então o guarda de origem só é observável em método
+    // que muda estado. O 405 e o 403 são provados com POST, nunca com GET.
+    const metodoErrado = await api('/api/client/cobrancas', { method: 'POST', cookie: cookieA, body: {} });
+    assert.equal(metodoErrado.status, 405, JSON.stringify(metodoErrado.body));
+    const origemEstrangeira = await fetch(origin + '/api/client/cobrancas', {
+      method: 'POST',
+      headers: { Origin: 'https://origem-estranha.invalid', Cookie: cookieA, 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    assert.equal(origemEstrangeira.status, 403, 'origem estrangeira em método que muda estado');
+  });
+
   await t.test('revoking client grant closes the legacy account route; v2 remains disabled', async () => {
     await pool.query('UPDATE client_access_grants SET revoked_at=NOW(), revoked_by=\'ti\', revoke_reason=\'QA revocation\' WHERE identity_id=$1 AND client_account_id=$2', [idA, accountA]);
     const legacy = await api(`/api/client/documents?account=${accountA}`, { cookie: cookieA });
     assert.equal(legacy.status, 403, JSON.stringify(legacy.body));
     const v2 = await api(`/api/client/documents-v2?client_account_id=${accountA}`, { cookie: cookieA });
     assert.equal(v2.status, 401);
+  });
+
+  await t.test('CLI-09: grant revogado esvazia a rota canônica do portal sem derrubar a sessão', async () => {
+    const portal = await api('/api/client/cobrancas', { cookie: cookieA });
+    assert.equal(portal.status, 200, JSON.stringify(portal.body));
+    assert.deepEqual(portal.body.charges, [], 'sem grant ativo não há cobrança visível');
   });
 });

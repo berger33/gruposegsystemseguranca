@@ -302,4 +302,12 @@ try {
   if (lockOwned) await unlink(lockFile).catch(() => { process.exitCode = 1; });
   if (stopRequestTimer) clearInterval(stopRequestTimer);
   if (config && demoDir) console.log('DEMO_LOCAL_DATA_PRESERVED: true (no backup, no remote access)');
+  // No modo QA o listener de stdin é instalado de propósito e mantém o event
+  // loop vivo, para que a prévia só pare com a linha "STOP". No caminho de erro
+  // isso virava travamento permanente: o processo imprimia DEMO_LOCAL_FAILED,
+  // marcava exitCode=1 e nunca encerrava, deixando o chamador (o gate
+  // QA-HOM-008) esperando para sempre. Liberar o stdin aqui devolve o exit code
+  // nos dois caminhos; nada mais neste script roda depois do finally.
+  process.stdin.pause();
+  process.stdin.unref?.();
 }

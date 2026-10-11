@@ -264,7 +264,7 @@ test('F03: funcionário solicita, RH analisa e devolve retorno idempotente e aud
     await addCookie(employeeContext, employee);
     await employeePage.goto(`${baseUrl}/funcionario`, { waitUntil: 'networkidle' });
     await employeePage.getByText(/Olá, Funcionário/).waitFor();
-    await employeePage.getByRole('button', { name: /Pedidos$/ }).click();
+    await employeePage.getByRole('tab', { name: /Pedidos$/ }).click();
     await employeePage.getByRole('button', { name: 'Solicitação' }).click();
     await employeePage.locator('[name="requestType"]').selectOption('beneficio');
     await employeePage.locator('[name="title"]').fill(uiTitle);
@@ -286,8 +286,8 @@ test('F03: funcionário solicita, RH analisa e devolve retorno idempotente e aud
     trackFailures(rhPage, failures);
     await addCookie(rhContext, rh);
     await rhPage.goto(`${baseUrl}/admin/funcionarios`, { waitUntil: 'networkidle' });
-    await rhPage.getByRole('heading', { name: 'Pessoas & jornada do funcionário' }).waitFor();
-    await rhPage.getByRole('button', { name: 'Solicitações' }).click();
+    await rhPage.getByRole('heading', { name: 'Pessoas e jornada do funcionário' }).waitFor();
+    await rhPage.getByRole('tab', { name: 'Solicitações' }).click();
     const requestCard = rhPage.locator('article').filter({ hasText: uiTitle });
     await requestCard.waitFor();
     const responseBox = requestCard.getByRole('textbox', { name: /Retorno para/ });
@@ -297,7 +297,7 @@ test('F03: funcionário solicita, RH analisa e devolve retorno idempotente e aud
     await analysisUi;
     // Aguarda o refresh assíncrono e a limpeza intencional do campo anterior:
     // o segundo comando deve carregar uma nova mensagem, não reaproveitar a antiga.
-    await rhPage.getByText('Análise registrada e visível ao funcionário.').waitFor();
+    await rhPage.getByText('Análise iniciada. A pessoa já vê que a solicitação está sendo tratada.').waitFor();
     await requestCard.getByRole('button', { name: 'Aprovar solicitação' }).waitFor();
     await responseBox.fill('RH aprovou a solicitação pela interface Chromium.');
     const approvalUi = rhPage.waitForResponse(response => new URL(response.url()).pathname === '/api/admin/hr/l03/self-requests' && response.request().method() === 'PATCH' && response.status() === 200);
@@ -316,7 +316,7 @@ test('F03: funcionário solicita, RH analisa e devolve retorno idempotente e aud
     trackFailures(employeePage, failures);
     await addCookie(employeeContext, employee);
     await employeePage.goto(`${baseUrl}/funcionario`, { waitUntil: 'networkidle' });
-    await employeePage.getByRole('button', { name: /Pedidos$/ }).click();
+    await employeePage.getByRole('tab', { name: /Pedidos$/ }).click();
     const employeeCard = employeePage.locator('article').filter({ hasText: uiTitle });
     await employeeCard.waitFor();
     assert.equal(await employeeCard.getByText('Retorno do RH:', { exact: false }).count(), 2, 'portal mostra os dois retornos canônicos do RH');

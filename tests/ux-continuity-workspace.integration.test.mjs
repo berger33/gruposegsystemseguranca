@@ -866,7 +866,12 @@ test('browser: as abas são um tablist real, com roving tabindex e teclado', opt
     assert.equal(await page.locator('[role="tab"][tabindex="0"]').count(), 1, 'roving tabindex: só uma aba tabulável');
     assert.equal(await page.locator('[role="tab"][tabindex="-1"]').count(), 2);
     assert.equal(await page.locator('[role="tabpanel"]').count(), 1, 'só o painel ativo fica montado');
-    assert.equal(await page.locator('[aria-pressed]').count(), 0, 'aria-pressed não substitui tab');
+    assert.equal(await page.locator('[role="tablist"] [aria-pressed]').count(), 0, 'aria-pressed não substitui tab');
+    // O seletor de tema do chrome administrativo é um toggle legítimo e carrega
+    // aria-pressed em todo /admin/*; a regra vale para a faixa de abas e para
+    // qualquer outro controle da tela, não para o chrome compartilhado.
+    assert.equal(await page.locator('[aria-pressed]:not([data-admin-theme-toggle="true"])').count(), 0,
+      'fora do seletor de tema, nenhum controle desta tela usa aria-pressed');
     assert.equal(await abas.first().getAttribute('aria-controls'), 'continuity-panel-planos');
 
     await abas.first().click();

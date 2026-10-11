@@ -44,3 +44,5 @@ jobs:
         run: npm run test:tenant:pg
       - name: QA-HOM-008 persistent synthetic restart (isolated localhost PostgreSQL)
         run: npm run test:demo-local:pg
+      - name: CLI-09 portal charges and v2 document aliases (isolated localhost PostgreSQL)
+        run: npm run test:cli-v2:pg
