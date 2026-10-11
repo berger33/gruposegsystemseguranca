@@ -123,6 +123,23 @@ async function launchBrowser() {
   throw lastError;
 }
 
+// /conteudos é pré-renderizada: o data-theme não vem no HTML — é aplicado pelo
+// cliente (PublishedTheme) depois que /api/public/themes responde. Sob
+// contenção de CPU, networkidle pode disparar antes de a hidratação concluir
+// esse efeito (e um getAttribute imediato leria null), ou nem disparar dentro
+// do timeout enquanto o servidor dev ainda compila a rota. A navegação usa
+// domcontentloaded e a espera é pelo atributo — a propriedade real sob teste —
+// com falha honesta pelo valor real no timeout. A asserção fica intacta.
+async function assertThemeApplied(page, expected, timeoutMs = 20_000) {
+  const deadline = Date.now() + timeoutMs;
+  let value = await page.locator('html').getAttribute('data-theme');
+  while (value !== expected && Date.now() < deadline) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    value = await page.locator('html').getAttribute('data-theme');
+  }
+  assert.equal(value, expected);
+}
+
 // "Failed to load resource" sem detalhe é o aviso genérico do Chromium para
 // QUALQUER requisição de rede que falhe (inclusive de terceiros). Este
 // sandbox não tem acesso à internet, então a fonte externa do Google Fonts
@@ -3426,7 +3443,7 @@ test('L04 fechamento: temas persistidos, preview isolado, rollback e preferênci
  assert.equal((await api('/api/public/themes')).body.theme_key,'tech');
  assert.equal((await api('/api/admin/theme-preferences',{cookie})).body.theme_mode,'escuro');
  assert.equal((await pool.query('SELECT COUNT(*)::int AS n FROM pub_themes WHERE is_active')).rows[0].n,1);
- const browser=await launchBrowser();try{const page=await browser.newPage();await page.goto(baseUrl+'/conteudos',{waitUntil:'networkidle'});assert.equal(await page.locator('html').getAttribute('data-theme'),'tech');await page.reload({waitUntil:'networkidle'});assert.equal(await page.locator('html').getAttribute('data-theme'),'tech');}finally{await browser.close();}
+ const browser=await launchBrowser();try{const page=await browser.newPage();await page.goto(baseUrl+'/conteudos',{waitUntil:'domcontentloaded'});await assertThemeApplied(page,'tech');await page.reload({waitUntil:'domcontentloaded'});await assertThemeApplied(page,'tech');}finally{await browser.close();}
 });
 
 test('L04 fechamento: pacotes de catálogo, aprovação, comparação e revogação',{skip:!RUN,timeout:90000},async()=>{
