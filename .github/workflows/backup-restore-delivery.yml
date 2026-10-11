@@ -58,6 +58,8 @@ jobs:
       - name: Install and verify PostgreSQL 17 client tools
         shell: bash
         run: |
+          set -Eeuo pipefail
+          trap 'status=$?; command=$BASH_COMMAND; line=$LINENO; trap - ERR; echo "::error title=PG17 client setup failed::line ${line}: ${command} (exit ${status})"; exit "$status"' ERR
           sudo apt-get update
           sudo apt-get install -y ca-certificates curl gnupg
           sudo install -d -m 0755 /usr/share/postgresql-common/pgdg
@@ -69,8 +71,22 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
           sudo apt-get update
           sudo apt-get install -y postgresql-client-17
-          pg_dump --version | grep -Eq '^pg_dump \(PostgreSQL\) 17\.'
-          pg_restore --version | grep -Eq '^pg_restore \(PostgreSQL\) 17\.'
+          client_bin=/usr/lib/postgresql/17/bin
+          test -x "$client_bin/pg_dump"
+          test -x "$client_bin/pg_restore"
+          dump_version="$("$client_bin/pg_dump" --version)"
+          restore_version="$("$client_bin/pg_restore" --version)"
+          printf '%s\n%s\n' "$dump_version" "$restore_version"
+          if [[ "$dump_version" != 'pg_dump (PostgreSQL) 17.'* ]]; then
+            echo "::error title=PostgreSQL client version mismatch::expected pg_dump 17, got ${dump_version}"
+            exit 1
+          fi
+          if [[ "$restore_version" != 'pg_restore (PostgreSQL) 17.'* ]]; then
+            echo "::error title=PostgreSQL client version mismatch::expected pg_restore 17, got ${restore_version}"
+            exit 1
+          fi
+          printf '%s\n' "$client_bin" >> "$GITHUB_PATH"
+          export PATH="$client_bin:$PATH"
           pg_dump --version
           pg_restore --version
       - name: Run all eight isolated backup and restore variants
