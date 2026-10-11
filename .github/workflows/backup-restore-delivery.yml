@@ -1,0 +1,116 @@
+name: PostgreSQL 17 backup and restore gates
+
+on:
+  push:
+    branches: [main, 'arena/**']
+    paths:
+      - 'src/**'
+      - 'server.mjs'
+      - 'next.config.*'
+      - 'db/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'package*.json'
+      - 'tsconfig.json'
+      - '.github/workflows/backup-restore-delivery.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'server.mjs'
+      - 'next.config.*'
+      - 'db/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'package*.json'
+      - 'tsconfig.json'
+      - '.github/workflows/backup-restore-delivery.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: backup-restore-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  backup-restore-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      ALLOW_REMOTE_MIGRATIONS: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
+      CLIENT_DOCS_DIR: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Install and verify PostgreSQL 17 client tools
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          trap 'status=$?; command=$BASH_COMMAND; line=$LINENO; trap - ERR; echo "::error title=PG17 client setup failed::line ${line}: ${command} (exit ${status})"; exit "$status"' ERR
+          sudo apt-get update
+          sudo apt-get install -y ca-certificates curl gnupg
+          sudo install -d -m 0755 /usr/share/postgresql-common/pgdg
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | gpg --dearmor \
+            | sudo tee /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg >/dev/null
+          codename="$(. /etc/os-release && printf '%s' "$VERSION_CODENAME")"
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg] https://apt.postgresql.org/pub/repos/apt ${codename}-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+          client_bin=/usr/lib/postgresql/17/bin
+          test -x "$client_bin/pg_dump"
+          test -x "$client_bin/pg_restore"
+          dump_version="$("$client_bin/pg_dump" --version)"
+          restore_version="$("$client_bin/pg_restore" --version)"
+          printf '%s\n%s\n' "$dump_version" "$restore_version"
+          if [[ "$dump_version" != 'pg_dump (PostgreSQL) 17.'* ]]; then
+            echo "::error title=PostgreSQL client version mismatch::expected pg_dump 17, got ${dump_version}"
+            exit 1
+          fi
+          if [[ "$restore_version" != 'pg_restore (PostgreSQL) 17.'* ]]; then
+            echo "::error title=PostgreSQL client version mismatch::expected pg_restore 17, got ${restore_version}"
+            exit 1
+          fi
+          printf '%s\n' "$client_bin" >> "$GITHUB_PATH"
+          export PATH="$client_bin:$PATH"
+          pg_dump --version
+          pg_restore --version
+      - name: Run all eight isolated backup and restore variants
+        shell: bash
+        run: |
+          set +e
+          failed=0
+          for gate in \
+            test:backup-restore:pg \
+            test:backup-restore:pg:clusters \
+            test:backup-restore:pg:files \
+            test:backup-restore:pg:http \
+            test:backup-restore:pg:signed \
+            test:backup-restore:pg:inventory \
+            test:backup-restore:pg:cli-objects \
+            test:backup-restore:pg:cli-partial
+          do
+            echo "::group::${gate}"
+            npm run "$gate"
+            result=$?
+            echo "::endgroup::"
+            if [ "$result" -ne 0 ]; then
+              echo "::error title=Backup/restore gate failed::${gate} exited ${result}"
+              failed=1
+            fi
+          done
+          exit "$failed"

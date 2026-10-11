@@ -92,6 +92,28 @@ const suggestionPayload = (overrides = {}) => ({
   ...overrides,
 });
 
+const BROWSER_CRASH = /Target page, context or browser has been closed|Target closed|Target crashed|has been closed|browser has disconnected|crashed|SIGABRT|SIGSEGV|SIGKILL|ERR_ASSERTION|Protocol error/i;
+
+async function launchBrowser() {
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await chromium.launch({
+        executablePath: await packagedChromium.executablePath(),
+        headless: true,
+        args: [...packagedChromium.args.filter(arg => arg !== "--disable-web-security"), "--single-process"],
+      });
+    } catch (error) {
+      lastError = error;
+      const message = String(error?.message || error);
+      if (attempt === 3 || !BROWSER_CRASH.test(message)) throw error;
+      console.warn(`EXT14_BROWSER_LAUNCH_RETRY attempt=${attempt}/3: Chromium closed before the browser session started.`);
+      await wait(1000 * attempt);
+    }
+  }
+  throw lastError;
+}
+
 before(async () => {
   if (!RUN) return;
   pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 14 });
@@ -340,12 +362,12 @@ test("EXT-14 escrita legada recebe 410 depois das guardas", opt, async () => {
 
 
 
-test("UX-07 inteligência browser: h1 real, falha honesta e abas acessíveis", opt, async () => {
+test("UX-07 inteligência browser: h1 real, falha honesta e abas acessíveis", { ...opt, timeout: 90000 }, async () => {
   let last;
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
     let browser;
     try {
-      browser = await chromium.launch({ executablePath: await packagedChromium.executablePath(), headless: true, args: [...packagedChromium.args.filter(arg => arg !== "--disable-web-security"), "--single-process"] });
+      browser = await launchBrowser();
       const context = await browser.newContext();
       await context.addCookies([{ name: "seg_admin_session", value: cookieAdmin.split("=")[1], url: base }]);
       const page = await context.newPage();
@@ -362,8 +384,17 @@ test("UX-07 inteligência browser: h1 real, falha honesta e abas acessíveis", o
       await page.getByRole("tab", { name: "Nova sugestão" }).focus();
       await page.keyboard.press("End");
       assert.equal(await page.getByRole("tab", { name: "Sugestões canônicas" }).getAttribute("aria-selected"), "true");
-      await browser.close(); return;
-    } catch (error) { last = error; await browser?.close().catch(() => {}); if (!String(error?.message || error).includes("ERR_ASSERTION")) throw error; }
+      await browser.close();
+      return;
+    } catch (error) {
+      last = error;
+      await browser?.close().catch(() => {});
+      if (error?.code === "ERR_ASSERTION" || !BROWSER_CRASH.test(String(error?.message || error))) throw error;
+      if (attempt < 2) {
+        console.warn(`EXT14_BROWSER_SESSION_RETRY attempt=${attempt}/2: Chromium closed during the UI journey.`);
+        await wait(1000 * attempt);
+      }
+    }
   }
   throw last;
 });

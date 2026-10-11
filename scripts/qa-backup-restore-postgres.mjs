@@ -324,7 +324,7 @@ try {
       if (requireFullCoverage) await inventoryQaFileCoverage({ ...inventoryArgs, requireFull: true });
     }
   }
-  let cliRestored;
+  let cliRestored, partialCliRollbackVerified = false;
   if (includeCliObjects) {
     if (process.env.QA_RESTORE_INJECT_CLI_V2_COTAMPER === '1') {
       await injectQaCliV2CoTamper({ bundleDir: fileBundle });
@@ -340,22 +340,26 @@ try {
         }
         console.log('QA_RESTORE_CLI_COTAMPER_REJECTED: untrusted key; zero destination objects before cleanup');
       }
-      if (injectCliPartial) {
-        const remaining = await inventoryQaCliV2Objects({ pool: restoredPool, root: cliDestRoot });
-        const sourceInventory = await inventoryQaCliV2Objects({ pool: sourcePool, root: cliSourceRoot });
-        const destinationAgain = await snapshot(restoredPool, accountA, accountB, docA, docB,
-          legacyDocId, verifyHttpDownload, includeCliObjects);
-        if (error?.message !== 'qa_cli_injected_partial_import_rolled_back' ||
-            remaining.referenced !== 0 || remaining.unreferenced !== 0 || remaining.missing !== 3 ||
-            sourceInventory.referenced !== 3 || sourceInventory.unreferenced !== 1 ||
-            JSON.stringify(after) !== JSON.stringify(destinationAgain)) {
-          throw new Error('qa_cli_partial_failure_not_compensated');
-        }
-        console.log('QA_RESTORE_CLI_PARTIAL_COMPENSATED: 1/3 imported then scoped removal; 0 destination objects, DB unchanged; source unreferenced object retained until QA cleanup');
+      if (!injectCliPartial) throw error;
+      const remaining = await inventoryQaCliV2Objects({ pool: restoredPool, root: cliDestRoot });
+      const sourceInventory = await inventoryQaCliV2Objects({ pool: sourcePool, root: cliSourceRoot });
+      const destinationAgain = await snapshot(restoredPool, accountA, accountB, docA, docB,
+        legacyDocId, verifyHttpDownload, includeCliObjects);
+      if (error?.message !== 'qa_cli_injected_partial_import_rolled_back' ||
+          remaining.referenced !== 0 || remaining.unreferenced !== 0 || remaining.missing !== 3 ||
+          sourceInventory.referenced !== 3 || sourceInventory.unreferenced !== 1 ||
+          JSON.stringify(after) !== JSON.stringify(destinationAgain)) {
+        throw new Error('qa_cli_partial_failure_not_compensated');
       }
-      throw error;
+      partialCliRollbackVerified = true;
+      console.log('QA_RESTORE_CLI_PARTIAL_COMPENSATED: 1/3 imported then scoped removal; 0 destination objects, DB unchanged; source unreferenced object retained until QA cleanup');
     }
-    console.log(`QA_RESTORE_CLI_OBJECTS_VERIFIED: ${cliRestored.count} synthetic versioned objects; signed manifest and DB/bytes/tenant compared before destination write`);
+    if (injectCliPartial && !partialCliRollbackVerified) throw new Error('qa_cli_partial_failure_not_injected');
+    if (partialCliRollbackVerified) {
+      console.log('QA_RESTORE_CLI_PARTIAL_GATE_PASSED: expected injected failure was compensated; continue restored database, HTTP and source-isolation checks');
+    } else {
+      console.log(`QA_RESTORE_CLI_OBJECTS_VERIFIED: ${cliRestored.count} synthetic versioned objects; signed manifest and DB/bytes/tenant compared before destination write`);
+    }
   }
   await migrate(destination, true); // ledger restaurado tem de passar verificação idempotente
   await restoredPool.query("INSERT INTO audit_log(action,actor,target) VALUES ('qa_restore_destination_only','qa_synthetic','isolated')");
@@ -370,12 +374,20 @@ try {
     });
   }
   if (includeCliObjects) {
-    if (await cliRestored.scope(identityA, docA, 2)) throw new Error('qa_cli_revocation_not_applied');
-    const bScope = await cliRestored.scope(identityB, docB, 1);
-    if (!bScope || !(await cliRestored.provider.read({ ...bScope, receipt: cliFixture.receipts[2] })).equals(cliFixture.bytes[2])) {
-      throw new Error('qa_cli_account_b_not_preserved');
+    if (partialCliRollbackVerified) {
+      const finalInventory = await inventoryQaCliV2Objects({ pool: restoredPool, root: cliDestRoot });
+      if (finalInventory.referenced !== 0 || finalInventory.unreferenced !== 0 || finalInventory.missing !== 3) {
+        throw new Error('qa_cli_partial_final_state_changed');
+      }
+      console.log('QA_RESTORE_CLI_PARTIAL_FINAL_STATE_VERIFIED: import remains fully rolled back after database and HTTP checks');
+    } else {
+      if (await cliRestored.scope(identityA, docA, 2)) throw new Error('qa_cli_revocation_not_applied');
+      const bScope = await cliRestored.scope(identityB, docB, 1);
+      if (!bScope || !(await cliRestored.provider.read({ ...bScope, receipt: cliFixture.receipts[2] })).equals(cliFixture.bytes[2])) {
+        throw new Error('qa_cli_account_b_not_preserved');
+      }
+      console.log('QA_RESTORE_CLI_SCOPE_VERIFIED: A grant revoked after HTTP, B object remains accessible in destination QA');
     }
-    console.log('QA_RESTORE_CLI_SCOPE_VERIFIED: A grant revoked after HTTP, B object remains accessible in destination QA');
   }
   if (poolHadError) throw new Error('qa_restore_pool_unavailable');
   console.log(`QA_RESTORE_VERIFIED: ${separateClusters ? 'two independent clusters' : 'two separate DBs'}, ${after.values.tables} tables, ${after.values.migrations}/${after.values.migrations} checksums, A/B grants, documents, versions, both audit catalogs, source unchanged; restored migrator exit 0`);
