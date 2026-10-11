@@ -401,3 +401,136 @@ código, documentação ou log.
 3. **Os 8 gates de `backup-restore`** só executam em máquina com
    `postgresql-client-17`. Em CI isso significa instalar o pacote no job; local,
    instalar o cliente. Não há alternativa sem mudar a superfície de dependências.
+
+> **Atualização 2026-10-11:** os itens 2 e 3 acima foram executados e a seção 10
+> está superada pela seção 11. O item 1 foi resolvido na sessão anterior com o
+> PR #190 (merge `6c97c8b`, 21 commits, um por defeito).
+
+---
+
+## 11. Atualização — 2026-10-11
+
+Escopo: fechar os dois itens que sobravam da seção 10 — estabilizar os dois
+subtestes sensíveis a carga e destravar os 8 gates de `backup-restore` no CI.
+Nenhuma funcionalidade foi removida, renomeada ou reduzida; nenhuma asserção
+foi enfraquecida.
+
+### 11.1 `ext14-intel` subteste 18 — crash de launch do Chromium
+
+**Causa raiz.** O laço de repetição do subteste de interface só re-tentava
+quando a mensagem do erro continha o literal `ERR_ASSERTION`. Uma `AssertionError`
+do `node:assert` não carrega esse literal na mensagem — ele fica em `error.code` —
+portanto o predicado **nunca** disparava: qualquer falha, inclusive de asserção,
+era relançada na primeira tentativa. O erro observado na varredura
+(`browserType.launch: Target page, context or browser has been closed`, em 54 ms,
+antes de qualquer asserção) passava direto pelo retry e reprovava o gate.
+
+**Correção.** Alinhamento à convenção que o próprio repo já usa em 10+ gates de
+interface (`ux-contract`, `ux-analytics`, `l04`, ...): regex `CRASH` para erros de
+infraestrutura do Chromium em `--single-process`, 3 tentativas com 2 s de pausa,
+falha de asserção repassada na hora e rastro `EXT14_BROWSER_RETRY` no log. Nenhuma
+asserção ficou tolerante — se a jornada real falhar nas 3 tentativas, o último
+erro é relançado e o gate reprova.
+
+**Provas.**
+
+| Experimento | Resultado |
+| --- | --- |
+| Harness determinístico (launch stubado morrendo 1× com o erro real, depois funcionando) | predicado ANTIGO: reprova na hora com `browserType.launch: Target page...`; predicado NOVO: passa |
+| Mesmo harness, launch morrendo em todas as tentativas | reprova após esgotar as tentativas (falha honesta preservada) |
+| Mesmo harness, asserção real falhando | reprova na hora (nenhuma tolerância) |
+| Gate isolado, sem carga | 18/18, exit 0 |
+| Gate sob carga (2 CPUs + 1,2 GB ocupados) | 18/18, exit 0 |
+
+### 11.2 `l04-delivery` subteste 17 — corrida do `data-theme` em rota pré-renderizada
+
+**Causa raiz.** `/conteudos` é pré-renderizada: o `data-theme` não vem no HTML —
+é aplicado no cliente por `PublishedTheme` depois que `fetch('/api/public/themes')`
+responde. `waitUntil: 'networkidle'` não garante que a hidratação concluiu o
+efeito: sob contenção de CPU o `networkidle` dispara antes de o cliente aplicar o
+atributo, e o `getAttribute` imediato seguinte lia `null`. Sob carga mais pesada o
+próprio `networkidle` deixava de estabelecer dentro do timeout de 30 s do
+Playwright.
+
+**Correção.** `assertThemeApplied(page, 'tech')`: navegação com
+`domcontentloaded` (padrão já usado em outros pontos do mesmo arquivo) e espera
+limitada de 20 s pelo atributo — a propriedade real sob teste — com
+`assert.equal(value, expected)` no fim. Se o tema nunca for aplicado, a falha
+acontece com o valor real. A asserção fica idêntica; só a corrida sai.
+
+**Provas.**
+
+| Experimento | Resultado |
+| --- | --- |
+| Reprodução sintética fiel (HTML pré-renderizado + tema aplicado no cliente após "hidratação") | padrão ANTIGO (`networkidle` + `getAttribute` imediato): `null`; padrão NOVO: `'tech'` em 324 ms |
+| Gate isolado, sem carga | 20/20, exit 0 |
+| Gate sob carga controlada (2 CPUs + 1,2 GB ocupados), código PRÉ-FIX | `not ok 17` — `null !== 'tech'` na linha do `getAttribute`; gate exit 1 |
+| Gate sob a MESMA carga, código PÓS-FIX | **20/20, 0 falhas, exit 0** — subteste 17 em 6,3 s (a espera foi usada) |
+| Gate sob carga 3× (2,2 GB + 3 CPUs, máquina triturada) | a primeira verificação de tema passou (pré-fix falhava ali); a falha passou a ser o `networkidle` do `reload`, que motivou o `domcontentloaded` |
+
+O subteste 16 (CMS versionado), que falhara no mesmo experimento de carga com o
+código pré-fix, também passou no pós-fix sob carga idêntica — mesma família de
+sensibilidade a `networkidle`.
+
+O terceiro caso conhecido (`ux-contract-postgres-browser`, falha única no CI
+revertida sem mudança de código) já usava a convenção `CRASH` + `comNavegador`
+desde antes e não precisou de alteração.
+
+### 11.3 Os 8 gates de `backup-restore` no CI
+
+Novo workflow `.github/workflows/backup-restore-delivery.yml`: matriz com as 8
+variantes (`:pg`, `:clusters`, `:files`, `:http`, `:signed`, `:inventory`,
+`:cli-objects`, `:cli-partial`), `fail-fast: false`, `timeout-minutes: 40`, e o
+passo que instala `postgresql-client-17` do repositório PGDG — o gate exige
+`pg_dump`/`pg_restore` **exatamente** da versão 17 (o servidor embutido é 17.9) e
+recusa qualquer outra com `QA_RESTORE_CLIENT_MISSING_OR_INCOMPATIBLE`. O
+`/usr/lib/postgresql/17/bin` é fixado no `$GITHUB_PATH` para que a versão não
+dependa do sistema de alternativas da imagem do runner.
+
+**Verificação local.** Impossível neste sandbox: `apt.postgresql.org` está fora da
+allowlist de rede e o `embedded-postgres` traz apenas `initdb`, `pg_ctl` e
+`postgres` (confirmado: `node_modules/@embedded-postgres/linux-x64/native/bin/`).
+O que foi verificado localmente: YAML parseia (1 job, 6 steps, matriz com os 8
+nomes de script batendo byte a byte com o `package.json`), o gate continua
+recusando de forma limpa e acionável sem o cliente (`QA_RESTORE_CLIENT_MISSING_OR_INCOMPATIBLE`,
+exit 2 em 1,4 s, sem criar banco) e os guardas unitários do caminho
+(`backup-restore-guard`, `backup-api-fail-closed`, `backup-synthetic-file-bundle`,
+`qa-detached-manifest-signature`, `qa-backup-coverage-inventory`, `qa-cli-v2-*`,
+`backup-gate-documentation`) passam em `npm test`.
+
+### 11.4 Verificação desta rodada (depois da última alteração)
+
+| Verificação | Comando | Resultado |
+| --- | --- | --- |
+| Suíte unitária (86 arquivos) | `npm test` | **889/889**, 0 falhas |
+| Typecheck | `npm run typecheck` | exit 0 |
+| Gates estáticos | `node scripts/qa-wave0-static.mjs` | 5/5 OK |
+| ext14 isolado | `npm run test:ext14-intel:pg` | 18/18, exit 0 |
+| ext14 sob carga | idem, 2 CPUs + 1,2 GB ocupados | 18/18, exit 0 |
+| l04 isolado | `npm run test:l04-delivery:pg` | 20/20, exit 0 |
+| l04 sob carga, pós-fix | idem, mesma carga | 20/20, exit 0 |
+| backup-restore base | `npm run test:backup-restore:pg` | exit 2, recusa limpa (sem cliente 17 no sandbox) |
+
+### 11.5 Arquivos alterados nesta atualização
+
+```
+tests/ext14-intel.integration.test.mjs        (retry de crash alinhado à convenção CRASH)
+tests/l04-delivery.integration.test.mjs       (assertThemeApplied + domcontentloaded)
+.github/workflows/backup-restore-delivery.yml (novo; matriz das 8 variantes com cliente 17)
+docs/RELATORIO-TESTES-FUNCIONAIS-2026-10-10.md (esta seção)
+```
+
+Nenhuma rota, módulo, papel, permissão, contrato de API ou layout foi removido,
+renomeado ou reduzido. Nenhum segredo, credencial ou dado real foi gravado em
+código, documentação ou log. Os subprodutos de gate (`next-env.d.ts`,
+`tsconfig.json`) foram revertidos com `git checkout --`.
+
+### 11.6 Próximos passos
+
+1. **Varredura completa dos 68 alvos** com o código estabilizado — agora sem os
+   8 `backup-restore` travando: eles têm job próprio no CI e, em máquina com
+   `postgresql-client-17`, executam local.
+2. **Push da branch e PR** com os 4 commits (2 de estabilização, 1 de CI, 1 de
+   doc), seguindo a convenção de um commit por defeito do PR #190.
+3. Confirmar no CI que os 8 gates de `backup-restore` ficam verdes com o cliente
+   17 instalado pelo job.
