@@ -1,0 +1,70 @@
+name: Backup/restore PostgreSQL delivery
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'server.mjs'
+      - 'scripts/qa-backup-restore-postgres.mjs'
+      - 'scripts/qa-synthetic-file-bundle.mjs'
+      - 'scripts/qa-detached-manifest-signature.mjs'
+      - 'scripts/qa-backup-coverage-inventory.mjs'
+      - 'scripts/qa-cli-v2-transfer.mjs'
+      - 'scripts/qa-cli-v2-local-provider.mjs'
+      - 'scripts/qa-restored-document-http.mjs'
+      - 'scripts/migrate-site-visual.mjs'
+      - 'scripts/qa-wave0-static.mjs'
+      - 'db/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/backup-restore-delivery.yml'
+concurrency:
+  group: backup-restore-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  backup-restore-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        gate:
+          - 'test:backup-restore:pg'
+          - 'test:backup-restore:pg:clusters'
+          - 'test:backup-restore:pg:files'
+          - 'test:backup-restore:pg:http'
+          - 'test:backup-restore:pg:signed'
+          - 'test:backup-restore:pg:inventory'
+          - 'test:backup-restore:pg:cli-objects'
+          - 'test:backup-restore:pg:cli-partial'
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      # O gate exige pg_dump/pg_restore EXATAMENTE da versão 17 (o servidor
+      # embutido é 17.9). A imagem do runner não traz o cliente 17, então ele
+      # vem do repositório PGDG; o PATH é fixado em /usr/lib/postgresql/17/bin
+      # para que a escolha da versão não dependa do alternativas do sistema.
+      - name: Cliente PostgreSQL 17 (pg_dump/pg_restore)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+          pg_dump --version
+          pg_restore --version
+      - run: npm ci
+      - name: Migrações, replay e checksum em PostgreSQL descartável
+        run: npm run test:migrations:pg
+      - name: Backup/restore (${{ matrix.gate }})
+        run: npm run ${{ matrix.gate }}
