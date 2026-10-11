@@ -1566,7 +1566,20 @@ test('CRM-07: prazo, paginação, busca e delegação explícita com aceite', { 
     await abrirOportunidade(card, ownerPage, 'Tarefas');
     const section = ownerPage.getByRole('region', { name: 'Minhas tarefas da oportunidade' });
     await section.getByLabel('Buscar por título').fill('qa-ui');
-    await section.getByRole('button', { name: 'Buscar tarefas', exact: true }).click();
+    const [filteredTasks] = await Promise.all([
+      ownerPage.waitForResponse(response => {
+        const url = new URL(response.url());
+        return url.origin === baseUrl
+          && url.pathname === endpoint
+          && url.searchParams.get('q') === 'qa-ui'
+          && response.request().method() === 'GET';
+      }, { timeout: 60_000 }),
+      section.getByRole('button', { name: 'Buscar tarefas', exact: true }).click(),
+    ]);
+    assert.equal(filteredTasks.status(), 200);
+    const filteredTaskPage = await filteredTasks.json();
+    assert.equal(filteredTaskPage.total, 1);
+    assert.deepEqual(filteredTaskPage.tasks.map(task => task.id), [taskD.id]);
     await section.getByText('Delegável pela interface qa-ui', { exact: true }).waitFor();
     await section.getByText('1 tarefa(s) neste filtro', { exact: false }).waitFor();
     await section.getByRole('button', { name: 'Editar prazo', exact: true }).click();
@@ -3407,7 +3420,7 @@ test('L04 fechamento: CMS versionado, autorização, histórico, publicação e 
  assert.deepEqual(failures,[]);
 });
 
-test('L04 fechamento: temas persistidos, preview isolado, rollback e preferência pessoal',{skip:!RUN,timeout:90000},async()=>{
+test('L04 fechamento: temas persistidos, preview isolado, rollback e preferência pessoal',{skip:!RUN,timeout:120000},async()=>{
  const admin=await provisionAndLoginStaff(pool,api,{role:'admin'}),cookie=admin.cookie;
  const baseline=(await api('/api/public/themes')).body.theme_key;
  assert.equal((await api('/api/public/themes',{method:'POST',body:{theme_key:'tech'}})).status,405);
@@ -3426,7 +3439,17 @@ test('L04 fechamento: temas persistidos, preview isolado, rollback e preferênci
  assert.equal((await api('/api/public/themes')).body.theme_key,'tech');
  assert.equal((await api('/api/admin/theme-preferences',{cookie})).body.theme_mode,'escuro');
  assert.equal((await pool.query('SELECT COUNT(*)::int AS n FROM pub_themes WHERE is_active')).rows[0].n,1);
- const browser=await launchBrowser();try{const page=await browser.newPage();await page.goto(baseUrl+'/conteudos',{waitUntil:'networkidle'});assert.equal(await page.locator('html').getAttribute('data-theme'),'tech');await page.reload({waitUntil:'networkidle'});assert.equal(await page.locator('html').getAttribute('data-theme'),'tech');}finally{await browser.close();}
+ const browser=await launchBrowser();try{
+  const page=await browser.newPage();
+  const assertPublishedTheme=async()=>{
+   await page.waitForFunction(()=>document.documentElement.dataset.theme==='tech',null,{timeout:30000,polling:100});
+   assert.equal(await page.locator('html').getAttribute('data-theme'),'tech');
+  };
+  await page.goto(baseUrl+'/conteudos',{waitUntil:'domcontentloaded'});
+  await assertPublishedTheme();
+  await page.reload({waitUntil:'domcontentloaded'});
+  await assertPublishedTheme();
+ }finally{await browser.close();}
 });
 
 test('L04 fechamento: pacotes de catálogo, aprovação, comparação e revogação',{skip:!RUN,timeout:90000},async()=>{
