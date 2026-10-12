@@ -6,8 +6,9 @@ import { TRACKS } from './content.js';
 import { SECTORS } from './sectors.js';
 import { POINTS, summarize, leaderboard } from './gamification.js';
 import { isPending } from './content.js';
-import { accessOf, visibleTracks, isManager } from './access.js';
+import { accessOf, visibleTracks, isManager, canManageContent } from './access.js';
 import { accessPanel, changeGrant, changeDefault } from './acessos-api.js';
+import { resolveContent, conteudoTree, salvarTrilha, salvarAula, ensureConteudo } from './conteudo-gestao.js';
 import { DEMO_USERS, userIdFor } from './demo-users.js';
 import { certificateWorkload, isCertificateCode, normalizeCertificateCode, publicCertificate, trackCompletedBy } from './certificates.js';
 
@@ -16,8 +17,24 @@ const STATE_KEY = 'academia-demo-estado-v2';
 const SESSION_KEY = 'academia-demo-sessoes-v1';
 const SESSION_TTL = 8 * 60 * 60 * 1000;
 
-const lessonIndex = new Map();
-for (const track of TRACKS) track.lessons.forEach((lesson, index) => lessonIndex.set(lesson.id, { track, lesson, index }));
+// Conteúdo efetivo: base + camada da área "Conteúdo" (mesmas funções do servidor).
+let lessonIndex = new Map();
+let revAtual = -1;
+let conteudoEfetivo = TRACKS;
+function indexar(conteudo) {
+  lessonIndex = new Map();
+  for (const track of conteudo) track.lessons.forEach((lesson, index) => lessonIndex.set(lesson.id, { track, lesson, index }));
+}
+indexar(TRACKS);
+function conteudo(state) {
+  const rev = Number((state.conteudo && state.conteudo.rev) || 0);
+  if (rev !== revAtual) {
+    revAtual = rev;
+    conteudoEfetivo = resolveContent(state, TRACKS);
+    indexar(conteudoEfetivo);
+  }
+  return conteudoEfetivo;
+}
 
 function readJson(key, fallback) {
   try {
@@ -48,13 +65,16 @@ function freshState() {
     }
     if (Object.keys(mine).length) progress[userIdFor(user.email)] = mine;
   }
-  return { users, progress, grants: {}, grantLog: [], sectorDefaults: {}, certificates: {} };
+  const fresh = { users, progress, grants: {}, grantLog: [], sectorDefaults: {}, certificates: {} };
+  ensureConteudo(fresh);
+  return fresh;
 }
 
 function loadState() {
   const saved = readJson(STATE_KEY, null);
   if (saved && saved.users && saved.progress) {
     saved.certificates = saved.certificates || {};
+    ensureConteudo(saved);
     return saved;
   }
   const fresh = freshState();
@@ -76,7 +96,7 @@ function sessionUser(token) {
 }
 
 function publicUser(user) {
-  return { id: user.id, name: user.name, firstName: user.name.split(' ')[0], email: user.email, sector: user.sector, sectorLabel: SECTORS[user.sector], isManager: isManager(user.sector) };
+  return { id: user.id, name: user.name, firstName: user.name.split(' ')[0], email: user.email, sector: user.sector, sectorLabel: SECTORS[user.sector], isManager: isManager(user.sector), canManageContent: canManageContent(user.sector) };
 }
 
 const normalize = text => String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -140,7 +160,7 @@ function handle(method, path, params, body, token) {
 
   if (method === 'POST' && path === '/certificates') {
     const trackId = String(body.trackId || '').trim();
-    const track = TRACKS.find(item => item.id === trackId);
+    const track = conteudo(state).find(item => item.id === trackId);
     if (!track || !accessOf(track, user, state).visible) return { status: 404, data: { error: 'trilha_nao_encontrada' } };
     const progress = state.progress[user.id] || {};
     if (!trackCompletedBy(track, progress)) return { status: 409, data: { error: 'trilha_incompleta' } };
@@ -166,7 +186,7 @@ function handle(method, path, params, body, token) {
   }
 
   if (method === 'GET' && path === '/home') {
-    const s = summarize(state, user, TRACKS);
+    const s = summarize(state, user, conteudo(state));
     return {
       status: 200,
       data: {
@@ -179,24 +199,47 @@ function handle(method, path, params, body, token) {
         tracks: s.tracks.map(({ lessons, ...rest }) => rest),
         next: s.next,
         badges: s.badges,
-        leaderboard: leaderboard(state, user, TRACKS),
+        leaderboard: leaderboard(state, user, conteudo(state)),
       },
     };
   }
 
-  if (method === 'GET' && path === '/leaderboard') return { status: 200, data: leaderboard(state, user, TRACKS) };
+  if (method === 'GET' && path === '/leaderboard') return { status: 200, data: leaderboard(state, user, conteudo(state)) };
 
   if (path.startsWith('/acessos')) {
     if (!isManager(user.sector)) return { status: 403, data: { error: 'sem_permissao' } };
-    if (method === 'GET' && path === '/acessos') return { status: 200, data: accessPanel(state, TRACKS) };
+    if (method === 'GET' && path === '/acessos') return { status: 200, data: accessPanel(state, conteudo(state)) };
     if (method === 'POST' && path === '/acessos/alterar') {
-      const result = changeGrant(state, TRACKS, user, body);
+      const result = changeGrant(state, conteudo(state), user, body);
       if (result.error) return { status: result.status, data: { error: result.error } };
       writeJson(STATE_KEY, state);
       return { status: 200, data: result };
     }
     if (method === 'POST' && path === '/acessos/padrao') {
-      const result = changeDefault(state, TRACKS, user, body);
+      const result = changeDefault(state, conteudo(state), user, body);
+      if (result.error) return { status: result.status, data: { error: result.error } };
+      writeJson(STATE_KEY, state);
+      return { status: 200, data: result };
+    }
+  }
+
+  if (path === '/conteudo' || path.startsWith('/conteudo/')) {
+    if (!canManageContent(user.sector)) return { status: 403, data: { error: 'sem_permissao' } };
+    if (method === 'GET' && path === '/conteudo') return { status: 200, data: conteudoTree(state, TRACKS) };
+    if (method === 'POST' && path === '/conteudo/trilha') {
+      const result = salvarTrilha(state, TRACKS, user, body);
+      if (result.error) return { status: result.status, data: { error: result.error } };
+      writeJson(STATE_KEY, state);
+      return { status: 200, data: result };
+    }
+    if (method === 'POST' && path === '/conteudo/aula') {
+      const result = salvarAula(state, TRACKS, user, body);
+      if (result.error) return { status: result.status, data: { error: result.error } };
+      writeJson(STATE_KEY, state);
+      return { status: 200, data: result };
+    }
+    if (method === 'POST' && path === '/conteudo/publico') {
+      const result = changeDefault(state, conteudo(state), user, body);
       if (result.error) return { status: result.status, data: { error: result.error } };
       writeJson(STATE_KEY, state);
       return { status: 200, data: result };
@@ -207,7 +250,7 @@ function handle(method, path, params, body, token) {
     const q = normalize(params.get('q')).trim();
     if (q.length < 2) return { status: 200, data: { results: [] } };
     const results = [];
-    for (const track of visibleTracks(user, state, TRACKS)) {
+    for (const track of visibleTracks(user, state, conteudo(state))) {
       for (const lesson of track.lessons.filter(l => !isPending(l))) {
         const haystack = normalize([lesson.title, lesson.objective, ...lesson.steps].join(' '));
         if (haystack.includes(q)) results.push({ id: lesson.id, title: lesson.title, minutes: lesson.minutes, trackId: track.id, trackTitle: track.title });
@@ -218,7 +261,7 @@ function handle(method, path, params, body, token) {
 
   let match = path.match(/^\/tracks\/([a-z0-9-]+)$/);
   if (match && method === 'GET') {
-    const s = summarize(state, user, TRACKS);
+    const s = summarize(state, user, conteudo(state));
     const track = s.tracks.find(t => t.id === match[1]);
     if (!track) return { status: 404, data: { error: 'trilha_nao_encontrada' } };
     return { status: 200, data: { ...track, sectorLabel: SECTORS[user.sector] } };
@@ -268,12 +311,12 @@ function handle(method, path, params, body, token) {
     const choice = body.choice;
     if (!Number.isInteger(choice) || choice < 0 || choice >= lesson.quiz.options.length) return { status: 400, data: { error: 'resposta_invalida' } };
 
-    const before = summarize(state, user, TRACKS);
+    const before = summarize(state, user, conteudo(state));
     const correct = choice === lesson.quiz.answer;
     const pointsEarned = POINTS.lesson + (correct ? POINTS.quiz : 0);
     mine[lesson.id] = { completedAt: new Date().toISOString(), firstChoice: choice, firstCorrect: correct, pointsEarned };
     writeJson(STATE_KEY, state);
-    const after = summarize(state, user, TRACKS);
+    const after = summarize(state, user, conteudo(state));
 
     const trackBefore = before.tracks.find(t => t.id === track.id);
     const trackAfter = after.tracks.find(t => t.id === track.id);
@@ -332,6 +375,6 @@ if (typeof document !== 'undefined') {
   // Sinaliza ao app.js que está na demonstração (mostra a caixa de conta de demonstração no acesso).
   document.documentElement.dataset.demo = 'true';
   const script = document.createElement('script');
-  script.src = 'app.js?v=29';
+  script.src = 'app.js?v=31';
   document.body.appendChild(script);
 }

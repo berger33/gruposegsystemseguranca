@@ -4,6 +4,7 @@
 import { hashPassword } from './auth.mjs';
 import { POINTS } from './gamification.mjs';
 import { TRACKS } from './content.mjs';
+import { ensureConteudo } from './conteudo-gestao.mjs';
 
 export const DEFAULT_DEMO_PASSWORD = 'Academia#2026';
 
@@ -29,6 +30,8 @@ export function completeState(state, { password = demoPassword(), content = TRAC
   state.grantLog = state.grantLog || [];
   state.sectorDefaults = state.sectorDefaults || {};
   state.certificates = state.certificates || {};
+  // Camada de alterações da área "Conteúdo" (vazia = conteúdo original preservado).
+  ensureConteudo(state);
   const lessons = new Map();
   content.forEach(track => track.lessons.forEach(lesson => lessons.set(lesson.id, lesson)));
   const have = new Set(state.users.map(user => user.id));
