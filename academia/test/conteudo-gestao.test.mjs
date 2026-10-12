@@ -343,4 +343,11 @@ test('interface: a área Conteúdo existe no menu só para quem gere, com rota e
   const versaoHtml = html.match(/app\.js\?v=(\d+)/)[1];
   assert.equal(shim.match(/app\.js\?v=(\d+)/)[1], versaoHtml, 'as duas versões de app.js andam juntas');
   assert.match(html, /styles\.css\?v=\d+/, 'o CSS continua versionado para não servir cache antigo');
+  // Preview embutido: quando o navegador bloqueia cookies de terceiros e o armazenamento, a sessão
+  // viaja no endereço (#/t/<token>/...) para não se perder ao recarregar. Fora de iframe nada muda.
+  assert.match(js, /window\.top !== window\.self/, 'o app reconhece quando está dentro de um iframe');
+  assert.match(js, /'#\/t\/' \+ token/, 'a sessão do iframe viaja no endereço');
+  assert.match(js, /segments\[0\] === 't' && segments\[1\]/, 'a rota lê e reaproveita o token do endereço');
+  assert.match(js, /sincronizarTokenNoEndereco/, 'cada navegação mantém o token no endereço');
+  assert.match(js, /return tokenDoEndereco\(\);/, 'o endereço serve de reserva quando o armazenamento falha');
 });

@@ -78,7 +78,7 @@ A conta de gestão vê todas as trilhas, não pode ser restringida e é a única
 - **Selos.** Primeiro passo; por trilha, Trilha concluída e Acerto integral (todas as aulas certas na primeira tentativa).
 - **Ranking.** Top 5 do setor, com a posição de quem consulta. Empates recebem a mesma posição. Mostra apenas nome e pontos.
 - **Gabarito.** A resposta correta e a explicação só são enviadas depois que a aula é concluída.
-- **Sessão.** Cookie `HttpOnly` com `SameSite=Lax`, validade de 8 horas, revogado no logout.
+- **Sessão.** Cookie `HttpOnly`, validade de 8 horas, revogado no logout; `SameSite=Lax` em HTTP local e `SameSite=None; Secure` quando servida por HTTPS (necessário quando a página é aberta dentro de um iframe, como no preview do ambiente). Embutida em outro site, com cookies de terceiros e armazenamento bloqueados pelo navegador, a sessão também viaja no próprio endereço (`#/t/...`, trecho que nunca é enviado ao servidor); aberta em uma aba normal, o endereço não muda.
 - **Retomada.** A página inicial prioriza a última aula aberta que ainda não foi concluída. O identificador é guardado localmente por usuário neste navegador.
 - **Certificados.** Só podem ser emitidos após concluir todas as aulas publicadas da trilha. O código é único e idempotente por usuário/trilha; a carga horária é somada das durações cadastradas nas aulas publicadas. O certificado pode ser impresso ou salvo como PDF.
 - **Demonstração estática.** Certificados e progresso ficam no armazenamento deste navegador. A validação pública funciona nele; validar em outro dispositivo exige publicar a aplicação com o servidor persistente.

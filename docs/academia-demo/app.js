@@ -91,11 +91,33 @@
   // Token de sessão: sessionStorage quando disponível; memória da página como reserva (iframe sandbox).
   function getToken() {
     if (memoryToken) return memoryToken;
-    try { return sessionStorage.getItem(TOKEN_KEY); } catch (_) { return null; }
+    try { var saved = sessionStorage.getItem(TOKEN_KEY); if (saved) return saved; } catch (_) {}
+    return tokenDoEndereco();
   }
   function setToken(value) {
     memoryToken = value || null;
     try { if (value) sessionStorage.setItem(TOKEN_KEY, value); else sessionStorage.removeItem(TOKEN_KEY); } catch (_) {}
+  }
+
+  // Preview embutido (iframe de outro site): alguns navegadores bloqueiam cookies de terceiros e o
+  // armazenamento, e a sessão se perderia ao recarregar a página. Nesse caso o token viaja no
+  // próprio endereço (#/t/<token>/...) — o trecho após # nunca é enviado ao servidor. Fora de
+  // iframe nada muda: o endereço continua exatamente como antes.
+  function emIframe() {
+    try { return window.top !== window.self; } catch (_) { return true; }
+  }
+  function tokenDoEndereco() {
+    var found = /^#\/t\/([A-Za-z0-9_-]{16,})/.exec(location.hash || '');
+    return found ? found[1] : null;
+  }
+  function enderecoComToken(resto, query) {
+    var token = getToken();
+    if (!emIframe() || !token) return null;
+    return '#/t/' + token + '/' + (resto || '') + (query ? '?' + query : '');
+  }
+  function sincronizarTokenNoEndereco(resto, query) {
+    var destino = enderecoComToken(resto, query);
+    if (destino && location.hash !== destino) history.replaceState(null, '', destino);
   }
 
   function api(path, options) {
@@ -1488,6 +1510,13 @@
   function route() {
     var parts = location.hash.replace(/^#/, '').split('?');
     var segments = parts[0].split('/').filter(Boolean);
+    if (segments[0] === 't' && segments[1]) {
+      setToken(segments[1]);
+      segments = segments.slice(2);
+      sincronizarTokenNoEndereco(segments.join('/'), parts[1]);
+    } else {
+      sincronizarTokenNoEndereco(segments.join('/'), parts[1]);
+    }
     var query = new URLSearchParams(parts[1] || '');
     if (segments[0] === 'validar-certificado') {
       if (document.getElementById(CERTIFICATE_OVERLAY_ID)) closeCertificate();
