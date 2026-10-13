@@ -216,9 +216,11 @@ async function launchOnce() {
  * `window.fetch` da página. Nada disso entra no sistema: o servidor continua
  * intacto e, ao limpar a variável, a leitura real volta a valer.
  */
-async function forceFunnelStatus(context, status, code) {
-  await context.addInitScript(({ status, code }) => {
-    window.__uxForcarFalhaFunil = true;
+async function forceFunnelStatus(context, status, code, { inicial = true } = {}) {
+  await context.addInitScript(({ status, code, inicial }) => {
+    // `inicial: false` arma a interceptação DESLIGADA: a leitura inicial
+    // conclui com normalidade e o teste liga a falha só na atualização.
+    window.__uxForcarFalhaFunil = inicial ? true : false;
     const original = window.fetch.bind(window);
     window.fetch = (input, init) => {
       const url = typeof input === 'string' ? input : input?.url || '';
@@ -229,7 +231,7 @@ async function forceFunnelStatus(context, status, code) {
       }
       return original(input, init);
     };
-  }, { status, code });
+  }, { status, code, inicial });
 }
 
 async function loginBrowser(page, email) {
@@ -454,6 +456,159 @@ test('browser: filtro sem resultado mostra estado vazio, diferente de falha', { 
 
     await page.selectOption('#filtro-estagio', '');
     await page.waitForSelector('text=Portaria 24h Vazio', { timeout: 30_000 });
+
+    await context.close();
+  } finally { /* o navegador é compartilhado e fechado no after() */ }
+});
+
+// ---------------------------------------------------------------------------
+// UX-PRO-06 — funil de oportunidades (/admin/crm): estados de leitura
+//
+// O que estes testes provam: uma atualização que falha NÃO apaga o funil já
+// lido — a tela mantém os dados, diz que podem estar desatualizados e oferece
+// repetição; durante uma atualização em curso a lista permanece visível com
+// indicador em role="status"; e as superfícies do funil não transbordam em
+// 320/768 px e escurecem no tema noturno pelo controle real do envelope.
+
+test('browser: falha ao atualizar mantém o funil carregado e marca os dados como desatualizados', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'comercial' });
+  const cookie = await loginHttp(staff.email);
+  await seedFunnel(cookie, 'Desatualizado');
+
+  try {
+    const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+    // Interceptação armada DESLIGADA: a leitura inicial conclui de verdade.
+    await forceFunnelStatus(context, 503, 'crm_unavailable', { inicial: false });
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/crm', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector('text=Portaria 24h Desatualizado', { timeout: 90_000 });
+
+    // A partir daqui a atualização falha; o funil já lido precisa permanecer.
+    await page.evaluate(() => { window.__uxForcarFalhaFunil = true; });
+    await page.click('button:has-text("Atualizar listas")');
+    await page.waitForSelector('[data-testid="crm-funil-stale"]', { timeout: 30_000 });
+
+    const aviso = await page.textContent('[data-testid="crm-funil-stale"]');
+    assert.match(aviso || '', /desatualizados/, 'a faixa precisa dizer que os dados podem estar desatualizados');
+    assert.match(aviso || '', /não significa que o funil esteja vazio/i, 'falha não pode ser lida como funil vazio');
+    assert.match(aviso || '', /Não foi possível consultar agora/, 'a faixa cita o motivo real da falha');
+    assert.ok(await page.isVisible('text=Portaria 24h Desatualizado'), 'o funil carregado não pode sumir com a falha');
+    assert.equal(await page.isVisible('#crm-funil [data-ui-state="error"]'), false, 'com dados preservados não deve haver estado de erro cheio');
+    await capture(page, 'desktop-crm-funil-desatualizado');
+
+    // A repetição dentro da faixa volta a falar com o servidor de verdade.
+    await page.evaluate(() => { window.__uxForcarFalhaFunil = false; });
+    await page.click('[data-testid="crm-funil-stale"] button:has-text("Tentar novamente")');
+    await page.waitForSelector('[data-testid="crm-funil-stale"]', { state: 'detached', timeout: 30_000 });
+    assert.ok(await page.isVisible('text=Portaria 24h Desatualizado'), 'o funil continua na tela após a repetição');
+
+    await context.close();
+  } finally { /* o navegador é compartilhado e fechado no after() */ }
+});
+
+test('browser: atualizar com o funil carregado mantém a lista visível durante a consulta', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'comercial' });
+  const cookie = await loginHttp(staff.email);
+  await seedFunnel(cookie, 'Atendimento');
+
+  try {
+    const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+    await context.addInitScript(() => {
+      window.__uxAtrasarFunil = false;
+      const original = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : input?.url || '';
+        if (window.__uxAtrasarFunil && url.includes('/api/crm/opportunities?')) {
+          await new Promise(resolve => setTimeout(resolve, 4000));
+        }
+        return original(input, init);
+      };
+    });
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/crm', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector('text=Portaria 24h Atendimento', { timeout: 90_000 });
+
+    await page.evaluate(() => { window.__uxAtrasarFunil = true; });
+    await page.click('button:has-text("Atualizar listas")');
+    await page.waitForSelector('[data-testid="crm-funil-updating"]', { timeout: 30_000 });
+    // Com a consulta ainda em voo, o funil segue na tela — não é substituído
+    // por um bloco de carregamento que apaga o que a pessoa já estava lendo.
+    assert.ok(await page.isVisible('text=Portaria 24h Atendimento'), 'a lista não pode desaparecer durante a atualização');
+    await page.waitForSelector('[data-testid="crm-funil-updating"]', { state: 'detached', timeout: 30_000 });
+    assert.equal(await page.isVisible('[data-testid="crm-funil-stale"]'), false, 'atualização concluída não é desatualização');
+    assert.ok(await page.isVisible('text=Portaria 24h Atendimento'));
+
+    await context.close();
+  } finally { /* o navegador é compartilhado e fechado no after() */ }
+});
+
+test('browser: o funil não transborda em 320/768 px e as superfícies seguem o tema noturno', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'comercial' });
+  const cookie = await loginHttp(staff.email);
+  await seedFunnel(cookie, 'Larguras');
+
+  try {
+    const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/crm', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector('text=Portaria 24h Larguras', { timeout: 90_000 });
+    await capture(page, 'desktop-crm-funil');
+
+    for (const [largura, altura] of [[320, 844], [768, 1024]]) {
+      await page.setViewportSize({ width: largura, height: altura });
+      await page.waitForTimeout(300);
+      // Reflow pós-resize ainda em curso não é overflow real: mede, espera e
+      // reconfirma antes de reprovar.
+      const medir = () => page.evaluate(() => {
+        const raiz = document.documentElement;
+        const sobra = raiz.scrollWidth - raiz.clientWidth;
+        if (sobra <= 1) return { sobra, culpados: [] };
+        const dentroDeRolagem = node => {
+          for (let atual = node.parentElement; atual && atual !== document.body; atual = atual.parentElement) {
+            const overflowX = getComputedStyle(atual).overflowX;
+            if (overflowX === 'auto' || overflowX === 'scroll' || overflowX === 'hidden' || overflowX === 'clip') return true;
+          }
+          return false;
+        };
+        const culpados = [...document.querySelectorAll('body *')]
+          .filter(node => !dentroDeRolagem(node))
+          .map(node => ({ node, excesso: Math.round(node.getBoundingClientRect().right - raiz.clientWidth) }))
+          .filter(item => item.excesso > 1)
+          .sort((a, b) => b.excesso - a.excesso)
+          .slice(0, 8)
+          .map(({ node, excesso }) =>
+            `${node.tagName}#${node.id}.${String(node.className).slice(0, 60)}+${excesso}px{${(node.textContent || '').trim().slice(0, 30)}}`);
+        return { sobra, culpados };
+      });
+      let overflow = await medir();
+      if (overflow.sobra > 1) {
+        await page.waitForTimeout(400);
+        overflow = await medir();
+      }
+      assert.ok(overflow.sobra <= 1, `o funil não pode transbordar em ${largura}px (sobra ${overflow.sobra}px): ${overflow.culpados.join(' | ')}`);
+      await capture(page, `funil-${largura}`);
+    }
+
+    // Tema noturno pelo controle real do envelope administrativo.
+    await page.click('[data-admin-theme-toggle="true"]');
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night', null, { timeout: 20_000 });
+    const cores = await page.evaluate(() => {
+      const coluna = document.querySelector('[data-testid="crm-funil-board"] > div');
+      const titulo = document.querySelector('[data-testid="crm-funil-board"] > div h4');
+      const ler = (elemento) => {
+        if (!elemento) return null;
+        const estilo = getComputedStyle(elemento);
+        return { fundo: estilo.backgroundColor, texto: estilo.color };
+      };
+      return { coluna: ler(coluna), titulo: ler(titulo) };
+    });
+    const canais = (cor) => (cor.match(/\d+/g) || []).slice(0, 3).map(Number);
+    assert.ok(cores.coluna && canais(cores.coluna.fundo).reduce((a, b) => a + b, 0) < 240, `a coluna do quadro precisa escurecer no tema noturno: ${cores.coluna?.fundo}`);
+    assert.ok(cores.titulo && canais(cores.titulo.texto).reduce((a, b) => a + b, 0) > 480, `o título da coluna precisa clarear no tema noturno: ${cores.titulo?.texto}`);
+    await capture(page, 'funil-768-noturno');
 
     await context.close();
   } finally { /* o navegador é compartilhado e fechado no after() */ }

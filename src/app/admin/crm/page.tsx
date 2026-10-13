@@ -70,6 +70,14 @@ function formatMoney(value: string | null) {
   return parsed.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+// UX-PRO-06 (funil): hora da última leitura concluída, para a faixa de dados
+// desatualizados. Derivada do relógio do navegador no instante do sucesso —
+// nenhum valor é estimado nem gravado.
+function formatReadAt(value: number | null) {
+  if (value === null) return "—";
+  return new Date(value).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+}
+
 function CrmPageContent() {
   const [selectedOpportunity, setSelectedOpportunity] = useState<string | null>(null);
   const [selectedTitle, setSelectedTitle] = useState("");
@@ -78,11 +86,20 @@ function CrmPageContent() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [companiesState, setCompaniesState] = useState<ReadState>("loading");
   const [companiesError, setCompaniesError] = useState<CrmErrorDescriptor | null>(null);
+  // UX-PRO-06 (funil): uma leitura concluída não é apagada pela falha seguinte.
+  // O ref marca que JÁ existiu sucesso (sem causar recarga em cascata); o estado
+  // guarda quando foi para a faixa de dados desatualizados.
+  const companiesReadRef = useRef(false);
+  const [companiesReadAt, setCompaniesReadAt] = useState<number | null>(null);
+  const [companiesStale, setCompaniesStale] = useState(false);
 
   const [opps, setOpps] = useState<Opportunity[]>([]);
   const [oppsTotal, setOppsTotal] = useState(0);
   const [oppsState, setOppsState] = useState<ReadState>("loading");
   const [oppsError, setOppsError] = useState<CrmErrorDescriptor | null>(null);
+  const oppsReadRef = useRef(false);
+  const [oppsReadAt, setOppsReadAt] = useState<number | null>(null);
+  const [oppsStale, setOppsStale] = useState(false);
 
   const [filter, setFilter] = useState({ type: "", stage: "" });
   const [oppSearch, setOppSearch] = useState("");
@@ -128,12 +145,28 @@ function CrmPageContent() {
     const result = await crmRequest<{ companies?: Company[] }>(`/api/crm/companies?${params.toString()}`);
     if (!result.ok) {
       // UX-03B: falha de leitura não vira lista vazia. A tela diz o que houve.
+      // UX-PRO-06 (funil): se já houve uma leitura concluída, a falha de uma
+      // ATUALIZAÇÃO preserva os dados e a tela os marca como desatualizados.
+      // Dúvida de autorização (403/401) é diferente: ali o estado negado
+      // completo substitui a lista — a apresentação falha fechada.
+      const autorizacaoDuvidosa = result.error.kind === "denied" || result.error.kind === "auth";
+      if (companiesReadRef.current && !autorizacaoDuvidosa) {
+        setCompaniesError(result.error);
+        setCompaniesStale(true);
+        setCompaniesState("ready");
+        return;
+      }
       setCompanies([]);
+      companiesReadRef.current = false;
+      setCompaniesStale(false);
       setCompaniesError(result.error);
       setCompaniesState("failed");
       return;
     }
     setCompanies(result.data.companies || []);
+    companiesReadRef.current = true;
+    setCompaniesReadAt(Date.now());
+    setCompaniesStale(false);
     setCompaniesState("ready");
   }, [filter.type]);
 
@@ -148,14 +181,29 @@ function CrmPageContent() {
     if (oppPriority) params.set("priority", oppPriority);
     const result = await crmRequest<{ opportunities?: Opportunity[]; total?: number }>(`/api/crm/opportunities?${params.toString()}`);
     if (!result.ok) {
+      // UX-PRO-06 (funil): mesma regra das empresas — atualização que falha
+      // mantém o funil já lido, com faixa de desatualização; autorização com
+      // dúvida substitui tudo pelo estado negado (fail-closed).
+      const autorizacaoDuvidosa = result.error.kind === "denied" || result.error.kind === "auth";
+      if (oppsReadRef.current && !autorizacaoDuvidosa) {
+        setOppsError(result.error);
+        setOppsStale(true);
+        setOppsState("ready");
+        return;
+      }
       setOpps([]);
       setOppsTotal(0);
+      oppsReadRef.current = false;
+      setOppsStale(false);
       setOppsError(result.error);
       setOppsState("failed");
       return;
     }
     setOpps(result.data.opportunities || []);
     setOppsTotal(result.data.total || 0);
+    oppsReadRef.current = true;
+    setOppsReadAt(Date.now());
+    setOppsStale(false);
     setOppsState("ready");
   }, [filter.stage, appliedOppSearch, oppPriority]);
 
@@ -665,7 +713,7 @@ function CrmPageContent() {
         <h2 id="crm-funil-titulo" className={styles.visuallyHidden}>Empresas e funil</h2>
         <div>
           <h3 className={styles.panelTitle}>Empresas{companiesState === "ready" ? ` (${companies.length})` : ""}</h3>
-          {companiesState === "loading" ? (
+          {companiesState === "loading" && !companiesReadRef.current ? (
             <UiState variant="loading" title="Consultando as empresas do seu escopo…" />
           ) : companiesState === "failed" && companiesError ? (
             <UiState
@@ -674,26 +722,46 @@ function CrmPageContent() {
               detail={companiesError.detail}
               onRetry={companiesError.kind === "retry" ? () => loadCompanies() : undefined}
             />
-          ) : companies.length === 0 ? (
-            <UiState variant="empty" title="Nenhuma empresa neste filtro." detail="Ajuste o filtro de tipo ou cadastre a primeira empresa em “Nova empresa”." />
           ) : (
-            <div className={styles.tableScroll}>
-              <table>
-                <caption className={styles.visuallyHidden}>Empresas do seu escopo</caption>
-                <thead><tr><th scope="col">Nome</th><th scope="col">Tipo</th><th scope="col">Cidade</th><th scope="col">Segmento</th><th scope="col">Situação</th></tr></thead>
-                <tbody>
-                  {companies.map(c => (
-                    <tr key={c.id}>
-                      <td>{c.display_name}</td>
-                      <td>{companyTypeLabel(c.type)}</td>
-                      <td>{c.city || "—"}</td>
-                      <td>{c.segment || "—"}</td>
-                      <td>{companyStatusLabel(c.status)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              {companiesState === "loading" ? (
+                <p role="status" className={styles.updating} data-testid="crm-empresas-updating">Atualizando as empresas…</p>
+              ) : null}
+              {companiesStale && companiesError ? (
+                <p role="alert" className={styles.stale} data-testid="crm-empresas-stale">
+                  A última atualização da lista falhou ({companiesError.title}). As empresas abaixo são da
+                  leitura de {formatReadAt(companiesReadAt)} e podem estar desatualizadas — isto não
+                  significa que a lista esteja vazia.
+                  {companiesError.kind === "retry" ? (
+                    <>
+                      {" "}
+                      <button type="button" onClick={() => loadCompanies()}>Tentar novamente</button>
+                    </>
+                  ) : null}
+                </p>
+              ) : null}
+              {companies.length === 0 ? (
+                <UiState variant="empty" title="Nenhuma empresa neste filtro." detail="Ajuste o filtro de tipo ou cadastre a primeira empresa em “Nova empresa”." />
+              ) : (
+                <div className={styles.tableScroll}>
+                  <table>
+                    <caption className={styles.visuallyHidden}>Empresas do seu escopo</caption>
+                    <thead><tr><th scope="col">Nome</th><th scope="col">Tipo</th><th scope="col">Cidade</th><th scope="col">Segmento</th><th scope="col">Situação</th></tr></thead>
+                    <tbody>
+                      {companies.map(c => (
+                        <tr key={c.id}>
+                          <td>{c.display_name}</td>
+                          <td>{companyTypeLabel(c.type)}</td>
+                          <td>{c.city || "—"}</td>
+                          <td>{c.segment || "—"}</td>
+                          <td>{companyStatusLabel(c.status)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -708,7 +776,7 @@ function CrmPageContent() {
             </button>
           </div>
 
-          {oppsState === "loading" ? (
+          {oppsState === "loading" && !oppsReadRef.current ? (
             <UiState variant="loading" title="Consultando o seu funil…" />
           ) : oppsState === "failed" && oppsError ? (
             <UiState
@@ -717,10 +785,28 @@ function CrmPageContent() {
               detail={oppsError.detail}
               onRetry={oppsError.kind === "retry" ? () => loadOpportunities() : undefined}
             />
-          ) : opps.length === 0 ? (
-            <UiState variant="empty" title="Nenhuma oportunidade neste filtro." detail="Limpe os filtros acima ou crie uma oportunidade em “Nova oportunidade”." />
-          ) : oppView === "kanban" ? (
-            <div className={styles.kanban}>
+          ) : (
+            <>
+              {oppsState === "loading" ? (
+                <p role="status" className={styles.updating} data-testid="crm-funil-updating">Atualizando o funil…</p>
+              ) : null}
+              {oppsStale && oppsError ? (
+                <p role="alert" className={styles.stale} data-testid="crm-funil-stale">
+                  A última atualização do funil falhou ({oppsError.title}). Os itens abaixo são da
+                  leitura de {formatReadAt(oppsReadAt)} e podem estar desatualizados — isto não significa
+                  que o funil esteja vazio; as contagens acima também são desta leitura.
+                  {oppsError.kind === "retry" ? (
+                    <>
+                      {" "}
+                      <button type="button" onClick={() => loadOpportunities()}>Tentar novamente</button>
+                    </>
+                  ) : null}
+                </p>
+              ) : null}
+              {opps.length === 0 ? (
+                <UiState variant="empty" title="Nenhuma oportunidade neste filtro." detail="Limpe os filtros acima ou crie uma oportunidade em “Nova oportunidade”." />
+              ) : oppView === "kanban" ? (
+            <div className={styles.kanban} data-testid="crm-funil-board">
               {OPPORTUNITY_STAGES.map(stage => {
                 const items = opps.filter(o => o.stage === stage.value);
                 return (
@@ -784,6 +870,8 @@ function CrmPageContent() {
                 </tbody>
               </table>
             </div>
+              )}
+            </>
           )}
         </div>
       </section>
