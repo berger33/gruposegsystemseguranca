@@ -121,8 +121,10 @@ gate de navegador do funil. Isso alterou duas colunas do inventário gerado
   `responsible_id` e `updated_at` na resposta, provando que nenhum contrato novo
   foi necessário.
 - **Automatizado de navegador (Chromium real, PostgreSQL descartável, migrações
-  001–180):** `npm run test:ux-crm:pg` — **14/14**, sendo 7 testes pré-existentes
-  do funil e 7 novos da fila:
+  001–180):** `npm run test:ux-crm:pg` — **15/15**, sendo 7 testes pré-existentes
+  do funil, 1 guarda de ambiente e 7 novos da fila:
+  0. guarda de ambiente: falha se `RUN_DATABASE_INTEGRATION`/`DATABASE_URL`
+     não estiverem definidos, para a suíte não passar verde com tudo ignorado;
   1. contrato da API preservado (401/403 e campos existentes);
   2. espera, fonte nomeada, responsável, protocolo e próxima ação, incluindo as
      duas ausências ("Não informada no registro", "Não atribuído");

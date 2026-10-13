@@ -477,6 +477,15 @@ function cardTestId(leadId) {
   return `lead-card-${String(leadId).slice(0, 8)}`;
 }
 
+// Sem este teste, a suíte inteira poderia ser ignorada quando o ambiente não
+// estivesse configurado e o gate continuaria verde sem provar nada. Ele roda
+// sempre: se o ambiente faltar, ele falha em vez de desaparecer.
+test('o ambiente do gate está configurado, portanto nenhum teste da suíte pode ser ignorado', async () => {
+  // RUN é a própria DATABASE_URL quando o ambiente está pronto (e falso quando
+  // não está); por isso a checagem é de veracidade, não de igualdade.
+  assert.ok(RUN, 'RUN_DATABASE_INTEGRATION=1 e DATABASE_URL precisam estar definidos; sem isso a suíte é ignorada sem falhar');
+});
+
 test('a API da fila continua exigindo sessão e papel e já devolve os campos que a tela passou a mostrar', { skip: !RUN }, async () => {
   const anonimo = await api('/api/admin/leads');
   assert.equal(anonimo.status, 401, 'anônimo deve continuar recebendo 401');
