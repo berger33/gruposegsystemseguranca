@@ -1,158 +1,84 @@
-"use client";
-import { useEffect, useState } from "react";
+'use client';
 
-type Incident={ id:string; incident_type:string; severity:string; status:string; title:string; description:string; detected_at:string; affected_data_categories:string[]; affected_records_estimate:number|null; responsible_name:string|null; containment_lead_name:string|null; dpo_notified:boolean; authority_notified:boolean; data_subjects_notified:boolean; root_cause:string|null; impact_assessment:string|null; remediation_plan:string|null; lessons_learned:string|null; };
-type Evidence={ id:string; evidence_type:string; title:string; description:string|null; checksum:string|null; collected_by:string|null; collected_at:string; };
-type Action={ id:string; action_type:string; title:string; description:string; status:string; assigned_to_name:string|null; due_at:string|null; completed_at:string|null; };
-type Comm={ id:string; recipient_type:string; recipient_contact:string|null; subject:string; content:string; sent_at:string|null; sent_by:string|null; };
-type Hist={ id:string; previous_status:string|null; next_status:string; reason:string|null; changed_by:string|null; created_at:string; };
+import { useEffect, useMemo, useState } from 'react';
+import UiState from '@/components/ui/UiState';
+import styles from './IncidentClient.module.css';
 
-const TYPES=['vazamento_dados','acesso_nao_autorizado','perda_dados','indisponibilidade','malware','phishing','violacao_privacidade','outro'];
-const SEVS=['baixa','media','alta','critica'];
-const STATUSES=['aberto','em_contencao','em_analise','em_remediacao','aguardando_comunicacao','comunicado','encerrado','reaberto'];
-const EVID_TYPES=['log','print','relatorio','depoimento','arquivo','outro'];
-const ACT_TYPES=['contencao','erradicacao','recuperacao','comunicacao','analise','prevencao','outro'];
-const RECIP=['dpo','autoridade','titular','interno','cliente','outro'];
+type Incident = { id:string; incident_type:string; severity:string; status:string; title:string; description:string; detected_at:string; affected_data_categories:string[]; affected_records_estimate:number|null; responsible_name:string|null; containment_lead_name:string|null; dpo_notified:boolean; authority_notified:boolean; data_subjects_notified:boolean; root_cause:string|null; impact_assessment:string|null; remediation_plan:string|null; lessons_learned:string|null };
+type Evidence = { id:string; evidence_type:string; title:string; description:string|null; checksum:string|null; collected_by:string|null; collected_at:string };
+type Action = { id:string; action_type:string; title:string; description:string; status:string; assigned_to_name:string|null; due_at:string|null; completed_at:string|null };
+type Comm = { id:string; recipient_type:string; recipient_contact:string|null; subject:string; content:string; sent_at:string|null; sent_by:string|null };
+type Hist = { id:string; previous_status:string|null; next_status:string; reason:string|null; changed_by:string|null; created_at:string };
+type Detail = { incident?:Incident; evidences?:Evidence[]; actions?:Action[]; communications?:Comm[]; history?:Hist[]; error?:string };
+type UiFeedback = { variant:'error'|'denied'; title:string; detail:string };
+
+const TYPES = [['vazamento_dados','Exposição ou vazamento de dados'],['acesso_nao_autorizado','Acesso não autorizado'],['perda_dados','Perda de dados'],['indisponibilidade','Indisponibilidade'],['malware','Malware'],['phishing','Phishing'],['violacao_privacidade','Violação de privacidade'],['outro','Outro']] as const;
+const SEVERITIES = [['baixa','Baixa'],['media','Média'],['alta','Alta'],['critica','Crítica']] as const;
+const STATUSES = [['aberto','Aberto'],['em_contencao','Em contenção'],['em_analise','Em análise'],['em_remediacao','Em remediação'],['aguardando_comunicacao','Aguardando comunicação'],['comunicado','Comunicado'],['encerrado','Encerrado'],['reaberto','Reaberto']] as const;
+const EVIDENCE_TYPES = [['log','Registro de sistema'],['print','Captura de tela'],['relatorio','Relatório'],['depoimento','Depoimento'],['arquivo','Arquivo referenciado'],['outro','Outro']] as const;
+const ACTION_TYPES = [['contencao','Contenção'],['erradicacao','Erradicação'],['recuperacao','Recuperação'],['comunicacao','Comunicação'],['analise','Análise'],['prevencao','Prevenção'],['outro','Outro']] as const;
+const ACTION_STATUSES = [['pendente','Pendente'],['em_execucao','Em execução'],['concluida','Concluída'],['cancelada','Cancelada']] as const;
+const RECIPIENTS = [['dpo','Encarregado de dados (DPO)'],['autoridade','Autoridade'],['titular','Titular dos dados'],['interno','Equipe interna'],['cliente','Cliente'],['outro','Outro']] as const;
+const CATEGORIES = [['identificacao','Identificação'],['contato','Contato'],['localizacao','Localização'],['profissional','Profissional'],['financeiro','Financeiro'],['tecnico','Técnico'],['comportamental','Comportamental'],['sensivel','Sensível'],['outro','Outro']] as const;
+const ERROR_LABELS:Record<string,string> = { unauthorized:'Sua sessão expirou. Entre novamente para consultar incidentes.', forbidden:'Esta solicitação não foi autorizada. Verifique sua sessão e o perfil de acesso.', invalid_type:'Escolha um tipo de incidente válido.', invalid_severity:'Escolha uma severidade válida.', title_min_10:'O título precisa ter pelo menos 10 caracteres.', description_min_20:'A descrição precisa ter pelo menos 20 caracteres.', invalid_status:'Escolha uma situação válida.', invalid_transition:'Esta transição não é permitida a partir da situação atual.', containment_lead_required:'Informe a pessoa responsável pela contenção antes de avançar para “Em contenção”.', root_cause_required_for_close:'Registre a causa raiz antes de encerrar o incidente.', no_changes:'Nenhuma alteração foi informada.', invalid_evidence_type:'Escolha um tipo de evidência válido.', title_min_3:'O título da evidência precisa ter pelo menos 3 caracteres.', invalid_action_type:'Escolha um tipo de ação válido.', description_min_10:'A descrição da ação precisa ter pelo menos 10 caracteres.', invalid_recipient_type:'Escolha um destinatário válido.', subject_min_5:'O assunto precisa ter pelo menos 5 caracteres.', content_min_20:'O conteúdo precisa ter pelo menos 20 caracteres.', not_found:'O incidente não foi localizado. Atualize a lista e tente novamente.' };
+
+function label(options:readonly (readonly [string,string])[], value?:string|null):string { return options.find(([key])=>key===value)?.[1] || value || 'Não informado'; }
+function date(value?:string|null):string { if(!value) return 'Não informado'; const parsed=new Date(value); return Number.isNaN(parsed.valueOf())?'Data indisponível':parsed.toLocaleString('pt-BR'); }
+function errorText(code?:string):string { return code ? ERROR_LABELS[code] || 'A operação não foi concluída. Revise os dados e tente novamente.' : 'Não foi possível concluir a operação. Verifique a conexão e tente novamente.'; }
+async function jsonRequest<T>(url:string, init?:RequestInit):Promise<{response:Response;data:T}> { const response=await fetch(url,{credentials:'include',cache:'no-store',...init}); const data=await response.json().catch(()=>({})) as T; return {response,data}; }
+function Field({label:fieldLabel,help,children,className}:{label:string;help?:string;children:React.ReactNode;className?:string}) { return <label className={`${styles.field} ${className||''}`}><span>{fieldLabel}</span>{children}{help&&<small>{help}</small>}</label>; }
+function SelectOptions({items}:{items:readonly (readonly [string,string])[]}) { return <>{items.map(([value,text])=><option key={value} value={value}>{text}</option>)}</>; }
+function Notice({feedback,onRetry}:{feedback:UiFeedback;onRetry?:()=>void}) { return <UiState variant={feedback.variant} title={feedback.title} detail={feedback.detail} onRetry={onRetry} retryLabel="Tentar novamente" />; }
 
 export default function IncidentClient(){
-  const [incidents,setIncidents]=useState<Incident[]>([]);
-  const [selected,setSelected]=useState<Incident|null>(null);
-  const [evidences,setEvidences]=useState<Evidence[]>([]);
-  const [actions,setActions]=useState<Action[]>([]);
-  const [comms,setComms]=useState<Comm[]>([]);
-  const [history,setHistory]=useState<Hist[]>([]);
-  const [msg,setMsg]=useState('');
-  const [form,setForm]=useState({incident_type:'vazamento_dados', severity:'alta', title:'', description:'', affected_data_categories:['contato'], affected_records_estimate:'', responsible_name:''});
-  const [updateForm,setUpdateForm]=useState({next_status:'em_contencao', reason:'', root_cause:'', impact_assessment:'', remediation_plan:'', lessons_learned:'', containment_lead_name:'', responsible_name:'', severity:''});
-  const [evForm,setEvForm]=useState({evidence_type:'log', title:'', description:'', file_reference:''});
-  const [actForm,setActForm]=useState({action_type:'contencao', title:'', description:'', assigned_to_name:'', due_at:''});
-  const [commForm,setCommForm]=useState({recipient_type:'dpo', recipient_contact:'', subject:'', content:''});
+  const [incidents,setIncidents]=useState<Incident[]>([]); const [selected,setSelected]=useState<Incident|null>(null);
+  const [evidences,setEvidences]=useState<Evidence[]>([]); const [actions,setActions]=useState<Action[]>([]); const [comms,setComms]=useState<Comm[]>([]); const [history,setHistory]=useState<Hist[]>([]);
+  const [loading,setLoading]=useState(true); const [detailLoading,setDetailLoading]=useState(false); const [requestedId,setRequestedId]=useState(''); const [saving,setSaving]=useState(''); const [error,setError]=useState<UiFeedback|null>(null); const [detailError,setDetailError]=useState<UiFeedback|null>(null); const [message,setMessage]=useState('');
+  const [filter,setFilter]=useState(''); const [statusFilter,setStatusFilter]=useState('');
+  const [form,setForm]=useState({incident_type:'vazamento_dados',severity:'alta',title:'',description:'',affected_data_categories:['contato'],affected_records_estimate:'',responsible_name:''});
+  const [updateForm,setUpdateForm]=useState({next_status:'',reason:'',root_cause:'',impact_assessment:'',remediation_plan:'',lessons_learned:'',containment_lead_name:'',responsible_name:'',severity:''});
+  const [evForm,setEvForm]=useState({evidence_type:'log',title:'',description:'',file_reference:''});
+  const [actForm,setActForm]=useState({action_type:'contencao',title:'',description:'',assigned_to_name:'',due_at:''});
+  const [commForm,setCommForm]=useState({recipient_type:'dpo',recipient_contact:'',subject:'',content:''});
 
-  async function load(){
-    try{
-      const r=await fetch('/api/admin/incidents',{credentials:'include'}).then(r=>r.json());
-      if(r.incidents) setIncidents(r.incidents);
-    }catch(e:any){ setMsg(String(e)); }
-  }
-  useEffect(()=>{ load(); },[]);
+  async function load(){ setLoading(true);setError(null);try{const {response,data}=await jsonRequest<{incidents?:Incident[];error?:string}>('/api/admin/incidents');if(!response.ok)throw {status:response.status,code:data.error};setIncidents(data.incidents||[]);}catch(failure){const denied=typeof failure==='object'&&failure!==null&&'status'in failure&&(failure.status===401||failure.status===403);setError({variant:denied?'denied':'error',title:denied?'Acesso necessário':'Lista indisponível',detail:errorText(typeof failure==='object'&&failure!==null&&'code'in failure?String(failure.code):undefined)});}finally{setLoading(false);} }
+  useEffect(()=>{void load();},[]);
+  const visibleIncidents=useMemo(()=>incidents.filter(item=>(!statusFilter||item.status===statusFilter)&&(!filter||`${item.title} ${item.incident_type} ${item.responsible_name||''}`.toLocaleLowerCase('pt-BR').includes(filter.toLocaleLowerCase('pt-BR')))),[incidents,statusFilter,filter]);
 
-  async function loadDetail(id:string){
-    const r=await fetch(`/api/admin/incidents/${id}`,{credentials:'include'}).then(r=>r.json());
-    if(r.incident){ setSelected(r.incident); setEvidences(r.evidences||[]); setActions(r.actions||[]); setComms(r.communications||[]); setHistory(r.history||[]); }
-  }
+  async function loadDetail(id:string){ setRequestedId(id);setSelected(null);setDetailLoading(true);setDetailError(null);setMessage('');try{const {response,data}=await jsonRequest<Detail>(`/api/admin/incidents/${id}`);if(!response.ok||!data.incident)throw {status:response.status,code:data.error};setSelected(data.incident);setEvidences(data.evidences||[]);setActions(data.actions||[]);setComms(data.communications||[]);setHistory(data.history||[]);setUpdateForm({next_status:data.incident.status,reason:'',root_cause:data.incident.root_cause||'',impact_assessment:data.incident.impact_assessment||'',remediation_plan:data.incident.remediation_plan||'',lessons_learned:data.incident.lessons_learned||'',containment_lead_name:data.incident.containment_lead_name||'',responsible_name:data.incident.responsible_name||'',severity:''});}catch(failure){const denied=typeof failure==='object'&&failure!==null&&'status'in failure&&(failure.status===401||failure.status===403);setDetailError({variant:denied?'denied':'error',title:denied?'Acesso necessário':'Detalhes indisponíveis',detail:errorText(typeof failure==='object'&&failure!==null&&'code'in failure?String(failure.code):undefined)});}finally{setDetailLoading(false);} }
+  async function mutate(key:string,url:string,method:string,payload:unknown,successText:string):Promise<boolean>{setSaving(key);setError(null);setDetailError(null);setMessage('');try{const {response,data}=await jsonRequest<{error?:string;incident?:Incident;action?:Action;id?:string}>(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});if(!response.ok)throw {status:response.status,code:data.error};await load();if(selected)await loadDetail(selected.id);setMessage(successText);return true;}catch(failure){const denied=typeof failure==='object'&&failure!==null&&'status'in failure&&(failure.status===401||failure.status===403);const feedback={variant:denied?'denied' as const:'error' as const,title:denied?'Acesso necessário':'A operação não foi concluída',detail:errorText(typeof failure==='object'&&failure!==null&&'code'in failure?String(failure.code):undefined)};if(selected)setDetailError(feedback);else setError(feedback);return false;}finally{setSaving('');}}
+  async function createIncident(event:React.FormEvent<HTMLFormElement>){event.preventDefault();const ok=await mutate('create','/api/admin/incidents','POST',{...form,affected_records_estimate:form.affected_records_estimate?Number.parseInt(form.affected_records_estimate,10):null,affected_systems:[]},'Incidente aberto e registrado.');if(ok)setForm(current=>({...current,title:'',description:'',affected_records_estimate:'',responsible_name:''}));}
+  async function updateIncident(event:React.FormEvent<HTMLFormElement>){event.preventDefault();if(!selected)return;const payload:{[key:string]:string}={...updateForm};if(!payload.next_status)delete payload.next_status;if(!payload.severity)delete payload.severity;await mutate('update',`/api/admin/incidents/${selected.id}`,'PATCH',payload,'Alterações do incidente registradas.');}
+  async function addEvidence(event:React.FormEvent<HTMLFormElement>){event.preventDefault();if(!selected)return;const ok=await mutate('evidence','/api/admin/incidents/evidences','POST',{...evForm,incident_id:selected.id},'Referência de evidência registrada.');if(ok)setEvForm({evidence_type:'log',title:'',description:'',file_reference:''});}
+  async function addAction(event:React.FormEvent<HTMLFormElement>){event.preventDefault();if(!selected)return;const ok=await mutate('action','/api/admin/incidents/actions','POST',{...actForm,incident_id:selected.id},'Ação de resposta registrada.');if(ok)setActForm({action_type:'contencao',title:'',description:'',assigned_to_name:'',due_at:''});}
+  async function completeAction(id:string){if(!selected)return;await mutate(`complete-${id}`,'/api/admin/incidents/actions','PATCH',{id,status:'concluida'},'Ação marcada como concluída.');}
+  async function addComm(event:React.FormEvent<HTMLFormElement>){event.preventDefault();if(!selected)return;await mutate('communication','/api/admin/incidents/communications','POST',{...commForm,incident_id:selected.id},'Registro de comunicação adicionado. Nenhuma mensagem foi enviada por este formulário.');setCommForm({recipient_type:'dpo',recipient_contact:'',subject:'',content:''});}
+  function toggleCategory(value:string){setForm(current=>({...current,affected_data_categories:current.affected_data_categories.includes(value)?current.affected_data_categories.filter(item=>item!==value):[...current.affected_data_categories,value]}));}
+  const statusCount=(status:string)=>incidents.filter(item=>item.status===status).length;
 
-  async function createIncident(){
-    setMsg('criando incidente...');
-    const payload:any={...form, affected_records_estimate: form.affected_records_estimate? parseInt(form.affected_records_estimate,10): null, affected_systems:[]};
-    const r=await fetch('/api/admin/incidents',{method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
-    const j=await r.json(); if(!r.ok){ setMsg('erro: '+(j.error||r.status)); return; } setMsg('incidente criado '+j.incident.id); load();
-  }
-  async function updateIncident(){
-    if(!selected){ setMsg('selecione incidente'); return; }
-    setMsg('atualizando...');
-    const payload:any={...updateForm};
-    if(!payload.next_status) delete payload.next_status;
-    if(!payload.severity) delete payload.severity;
-    const r=await fetch(`/api/admin/incidents/${selected.id}`,{method:'PATCH', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
-    const j=await r.json(); if(!r.ok){ setMsg('erro: '+(j.error||JSON.stringify(j))); return; } setMsg('atualizado '+j.incident.status); loadDetail(selected.id);
-  }
-  async function addEvidence(){
-    if(!selected){ setMsg('selecione incidente'); return; }
-    const r=await fetch('/api/admin/incidents/evidences',{method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...evForm, incident_id:selected.id})});
-    const j=await r.json(); if(!r.ok){ setMsg('erro evid: '+(j.error||r.status)); return; } setMsg('evidência adicionada'); loadDetail(selected.id);
-  }
-  async function addAction(){
-    if(!selected){ setMsg('selecione incidente'); return; }
-    const r=await fetch('/api/admin/incidents/actions',{method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...actForm, incident_id:selected.id})});
-    const j=await r.json(); if(!r.ok){ setMsg('erro ação: '+(j.error||r.status)); return; } setMsg('ação criada'); loadDetail(selected.id);
-  }
-  async function completeAction(id:string){
-    const r=await fetch('/api/admin/incidents/actions',{method:'PATCH', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id, status:'concluida'})});
-    const j=await r.json(); if(!r.ok){ setMsg('erro completar: '+(j.error||r.status)); return; } setMsg('ação concluída'); if(selected) loadDetail(selected.id);
-  }
-  async function addComm(){
-    if(!selected){ setMsg('selecione incidente'); return; }
-    const r=await fetch('/api/admin/incidents/communications',{method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...commForm, incident_id:selected.id})});
-    const j=await r.json(); if(!r.ok){ setMsg('erro comm: '+(j.error||r.status)); return; } setMsg('comunicação registrada '+j.communication.recipient_type); loadDetail(selected.id);
-  }
-
-  return (
-    <section style={{margin:'24px 0', padding:16, border:'1px solid #333', borderRadius:8}}>
-      <h2>PLT-12 Resposta a incidente — contenção, evidências, análise, comunicação</h2>
-      {msg && <p style={{color:'#0af'}}>{msg}</p>}
-      <button onClick={load}>Recarregar incidentes</button>
-
-      <h3>Incidentes ({incidents.length})</h3>
-      <ul style={{maxHeight:160, overflow:'auto'}}>
-        {incidents.map(i=><li key={i.id}><button onClick={()=>loadDetail(i.id)} style={{marginRight:8}}>Abrir</button>{i.status} {i.severity} {i.incident_type} {i.title.slice(0,60)} resp={i.responsible_name||'-'} cont={i.containment_lead_name||'-'} dpo={i.dpo_notified?'SIM':'não'} aut={i.authority_notified?'SIM':'não'}</li>)}
-      </ul>
-
-      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:8}}>
-        <select value={form.incident_type} onChange={e=>setForm({...form, incident_type:e.target.value})}>{TYPES.map(t=><option key={t} value={t}>{t}</option>)}</select>
-        <select value={form.severity} onChange={e=>setForm({...form, severity:e.target.value})}>{SEVS.map(s=><option key={s} value={s}>{s}</option>)}</select>
-        <input placeholder="título min 10" value={form.title} onChange={e=>setForm({...form, title:e.target.value})} />
-        <input placeholder="responsável nome" value={form.responsible_name} onChange={e=>setForm({...form, responsible_name:e.target.value})} />
-        <input placeholder="estimativa registros afetados" value={form.affected_records_estimate} onChange={e=>setForm({...form, affected_records_estimate:e.target.value})} />
-        <textarea placeholder="descrição min 20" value={form.description} onChange={e=>setForm({...form, description:e.target.value})} style={{gridColumn:'1 / span 2'}} />
-      </div>
-      <button onClick={createIncident}>Abrir incidente</button>
-
-      {selected && (
-        <div style={{marginTop:16, borderTop:'1px solid #555', paddingTop:12}}>
-          <h3>Detalhe {selected.id} — {selected.status} {selected.severity}</h3>
-          <p>{selected.title} — {selected.description.slice(0,200)}</p>
-          <p>Responsável: {selected.responsible_name||'-'} | Contenção lead: {selected.containment_lead_name||'-'} | DPO {selected.dpo_notified?'notificado':'não'} | Autoridade {selected.authority_notified?'notificada':'não'} | Titulares {selected.data_subjects_notified?'notificados':'não'}</p>
-          <p>Root cause: {selected.root_cause||'-'} | Impacto: {selected.impact_assessment||'-'} | Remediação: {selected.remediation_plan||'-'} | Lições: {selected.lessons_learned||'-'}</p>
-
-          <h4>Atualizar status / análise</h4>
-          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8}}>
-            <select value={updateForm.next_status} onChange={e=>setUpdateForm({...updateForm, next_status:e.target.value})}>{STATUSES.map(s=><option key={s} value={s}>{s}</option>)}</select>
-            <select value={updateForm.severity} onChange={e=>setUpdateForm({...updateForm, severity:e.target.value})}><option value="">manter severidade</option>{SEVS.map(s=><option key={s} value={s}>{s}</option>)}</select>
-            <input placeholder="containment_lead_name (obrigatório para em_contencao)" value={updateForm.containment_lead_name} onChange={e=>setUpdateForm({...updateForm, containment_lead_name:e.target.value})} />
-            <input placeholder="responsible_name" value={updateForm.responsible_name} onChange={e=>setUpdateForm({...updateForm, responsible_name:e.target.value})} />
-            <textarea placeholder="reason transição" value={updateForm.reason} onChange={e=>setUpdateForm({...updateForm, reason:e.target.value})} />
-            <textarea placeholder="root_cause (obrigatório para encerrado)" value={updateForm.root_cause} onChange={e=>setUpdateForm({...updateForm, root_cause:e.target.value})} />
-            <textarea placeholder="impact_assessment" value={updateForm.impact_assessment} onChange={e=>setUpdateForm({...updateForm, impact_assessment:e.target.value})} />
-            <textarea placeholder="remediation_plan" value={updateForm.remediation_plan} onChange={e=>setUpdateForm({...updateForm, remediation_plan:e.target.value})} />
-            <textarea placeholder="lessons_learned" value={updateForm.lessons_learned} onChange={e=>setUpdateForm({...updateForm, lessons_learned:e.target.value})} />
-          </div>
-          <button onClick={updateIncident}>Atualizar incidente</button>
-
-          <h4>Evidências ({evidences.length})</h4>
-          <ul>{evidences.map(ev=><li key={ev.id}>{ev.evidence_type} {ev.title} {ev.checksum?.slice(0,12)||''} por {ev.collected_by||'-'} {ev.collected_at.slice(0,19)}</li>)}</ul>
-          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8}}>
-            <select value={evForm.evidence_type} onChange={e=>setEvForm({...evForm, evidence_type:e.target.value})}>{EVID_TYPES.map(t=><option key={t} value={t}>{t}</option>)}</select>
-            <input placeholder="título evidência" value={evForm.title} onChange={e=>setEvForm({...evForm, title:e.target.value})} />
-            <input placeholder="file_reference (caminho/hash)" value={evForm.file_reference} onChange={e=>setEvForm({...evForm, file_reference:e.target.value})} />
-            <textarea placeholder="descrição evidência" value={evForm.description} onChange={e=>setEvForm({...evForm, description:e.target.value})} />
-          </div>
-          <button onClick={addEvidence}>Adicionar evidência (checksum automático)</button>
-
-          <h4>Ações contenção/erradicação/recuperação ({actions.length})</h4>
-          <ul>{actions.map(a=><li key={a.id}>{a.status} {a.action_type} {a.title} resp={a.assigned_to_name||'-'} due={a.due_at?.slice(0,10)||'-'} <button onClick={()=>completeAction(a.id)}>Concluir</button></li>)}</ul>
-          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8}}>
-            <select value={actForm.action_type} onChange={e=>setActForm({...actForm, action_type:e.target.value})}>{ACT_TYPES.map(t=><option key={t} value={t}>{t}</option>)}</select>
-            <input placeholder="título ação" value={actForm.title} onChange={e=>setActForm({...actForm, title:e.target.value})} />
-            <input placeholder="assigned_to_name" value={actForm.assigned_to_name} onChange={e=>setActForm({...actForm, assigned_to_name:e.target.value})} />
-            <input type="datetime-local" value={actForm.due_at} onChange={e=>setActForm({...actForm, due_at:e.target.value})} />
-            <textarea placeholder="descrição ação min10" value={actForm.description} onChange={e=>setActForm({...actForm, description:e.target.value})} style={{gridColumn:'1 / span 2'}} />
-          </div>
-          <button onClick={addAction}>Criar ação</button>
-
-          <h4>Comunicações DPO/autoridade/titulares ({comms.length})</h4>
-          <ul>{comms.map(c=><li key={c.id}>{c.recipient_type} {c.subject} para={c.recipient_contact||'-'} por={c.sent_by||'-'} {c.sent_at?.slice(0,19)||''}</li>)}</ul>
-          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8}}>
-            <select value={commForm.recipient_type} onChange={e=>setCommForm({...commForm, recipient_type:e.target.value})}>{RECIP.map(r=><option key={r} value={r}>{r}</option>)}</select>
-            <input placeholder="recipient_contact email/telefone" value={commForm.recipient_contact} onChange={e=>setCommForm({...commForm, recipient_contact:e.target.value})} />
-            <input placeholder="assunto min5" value={commForm.subject} onChange={e=>setCommForm({...commForm, subject:e.target.value})} />
-            <textarea placeholder="conteúdo comunicação min20" value={commForm.content} onChange={e=>setCommForm({...commForm, content:e.target.value})} style={{gridColumn:'1 / span 2'}} />
-          </div>
-          <button onClick={addComm}>Registrar comunicação (atualiza flags DPO/autoridade/titular)</button>
-
-          <h4>Histórico transições ({history.length})</h4>
-          <ul>{history.map(h=><li key={h.id}>{h.previous_status||'null'} → {h.next_status} por {h.changed_by||'-'} {h.reason||''} {h.created_at.slice(0,19)}</li>)}</ul>
-        </div>
-      )}
+  return <section className={styles.workspace} aria-labelledby="incident-title">
+    <header className={styles.header}><div><p className={styles.eyebrow}>Segurança e resposta</p><h2 id="incident-title">Gestão de incidentes</h2><p>Registre ocorrências, acompanhe a resposta e mantenha evidências, ações, comunicações registradas e histórico em um só lugar.</p></div><button type="button" onClick={()=>void load()} disabled={loading}>{loading?'Atualizando…':'Atualizar lista'}</button></header>
+    <section className={styles.panel} aria-labelledby="list-title"><div className={styles.sectionHeading}><div><h3 id="list-title">Incidentes registrados</h3><p>{incidents.length} registros retornados pela API; a lista mostra até 200 ocorrências mais recentes.</p></div><span className={styles.count}>{incidents.length} no total</span></div>
+      <div className={styles.summary} aria-label="Resumo por situação">{STATUSES.map(([key,text])=><div key={key}><span>{text}</span><strong>{statusCount(key)}</strong></div>)}</div>
+      <div className={styles.filters}><Field label="Buscar incidente"><input value={filter} onChange={event=>setFilter(event.target.value)} placeholder="Título, tipo ou responsável" /></Field><Field label="Filtrar por situação"><select value={statusFilter} onChange={event=>setStatusFilter(event.target.value)}><option value="">Todas as situações</option><SelectOptions items={STATUSES}/></select></Field></div>
+      {error&&<Notice feedback={error} onRetry={()=>void load()} />}{loading&&<UiState variant="loading" title="Carregando incidentes" detail="Consultando os registros mais recentes." />}
+      {!loading&&!error&&incidents.length===0&&<UiState variant="empty" title="Nenhum incidente registrado" detail="Quando uma ocorrência for registrada, ela aparecerá nesta lista. O sistema não cria incidentes fictícios." />}
+      {!loading&&!error&&incidents.length>0&&visibleIncidents.length===0&&<UiState variant="empty" title="Nenhum resultado para estes filtros" detail="Altere a busca ou selecione outra situação." />}
+      {!loading&&!error&&visibleIncidents.length>0&&<div className={styles.tableWrap} tabIndex={0} aria-label="Lista rolável de incidentes"><table><thead><tr><th>Ocorrência</th><th>Situação</th><th>Severidade</th><th>Responsável</th><th>Detectado em</th><th><span className={styles.srOnly}>Ação</span></th></tr></thead><tbody>{visibleIncidents.map(item=><tr key={item.id} className={selected?.id===item.id?styles.selectedRow:''}><td><strong>{item.title}</strong><small>{label(TYPES,item.incident_type)}</small></td><td><span className={`${styles.badge} ${styles[`status_${item.status}`]||''}`}>{label(STATUSES,item.status)}</span></td><td><span className={`${styles.badge} ${styles[`severity_${item.severity}`]||''}`}>{label(SEVERITIES,item.severity)}</span></td><td>{item.responsible_name||'Não atribuído'}</td><td>{date(item.detected_at)}</td><td><button type="button" className={styles.secondary} onClick={()=>void loadDetail(item.id)} aria-label={`Abrir ${item.title}`}>Abrir</button></td></tr>)}</tbody></table></div>}
     </section>
-  );
+    <section className={styles.panel} aria-labelledby="create-title"><div className={styles.sectionHeading}><div><h3 id="create-title">Registrar incidente</h3><p>O registro inicial começa na situação “Aberto”. Campos obrigatórios são validados pelo serviço.</p></div></div>
+      <form className={styles.form} onSubmit={event=>void createIncident(event)}><div className={styles.formGrid}><Field label="Tipo de ocorrência"><select value={form.incident_type} onChange={event=>setForm({...form,incident_type:event.target.value})}><SelectOptions items={TYPES}/></select></Field><Field label="Severidade"><select value={form.severity} onChange={event=>setForm({...form,severity:event.target.value})}><SelectOptions items={SEVERITIES}/></select></Field><Field label="Título" help="Mínimo de 10 caracteres."><input required minLength={10} maxLength={200} value={form.title} onChange={event=>setForm({...form,title:event.target.value})}/></Field><Field label="Responsável pelo incidente"><input maxLength={200} value={form.responsible_name} onChange={event=>setForm({...form,responsible_name:event.target.value})}/></Field><Field label="Estimativa de registros afetados" help="Opcional; deixe vazio se ainda não houver estimativa."><input type="number" min="0" step="1" inputMode="numeric" value={form.affected_records_estimate} onChange={event=>setForm({...form,affected_records_estimate:event.target.value})}/></Field><fieldset className={styles.categoryField}><legend>Categorias de dados possivelmente afetadas</legend><div className={styles.checkOptions}>{CATEGORIES.map(([value,text])=><label key={value}><input type="checkbox" checked={form.affected_data_categories.includes(value)} onChange={()=>toggleCategory(value)}/>{text}</label>)}</div></fieldset><Field label="Descrição" help="Mínimo de 20 caracteres; registre os fatos conhecidos sem incluir segredos ou dados desnecessários." className={styles.full}><textarea required minLength={20} maxLength={5000} rows={4} value={form.description} onChange={event=>setForm({...form,description:event.target.value})}/></Field></div><button className={styles.primary} type="submit" disabled={Boolean(saving)}>{saving==='create'?'Registrando…':'Abrir incidente'}</button></form>
+    </section>
+    {message&&<UiState variant="success" title={message} />}
+    {detailError&&<Notice feedback={detailError} onRetry={()=>requestedId&&void loadDetail(requestedId)} />}{detailLoading&&<UiState variant="loading" title="Carregando detalhes" detail="Buscando informações, ações e histórico do incidente." />}
+    {selected&&!detailLoading&&!detailError&&<section className={styles.panel} aria-labelledby="detail-title"><div className={styles.detailHeader}><div><p className={styles.eyebrow}>Registro selecionado</p><h3 id="detail-title">{selected.title}</h3><p>{label(TYPES,selected.incident_type)} · detectado em {date(selected.detected_at)}</p></div><div className={styles.detailBadges}><span className={`${styles.badge} ${styles[`status_${selected.status}`]||''}`}>{label(STATUSES,selected.status)}</span><span className={`${styles.badge} ${styles[`severity_${selected.severity}`]||''}`}>{label(SEVERITIES,selected.severity)}</span></div></div>
+      <div className={styles.overview}><p>{selected.description}</p><dl><div><dt>Responsável</dt><dd>{selected.responsible_name||'Não atribuído'}</dd></div><div><dt>Líder da contenção</dt><dd>{selected.containment_lead_name||'Não informado'}</dd></div><div><dt>Estimativa de registros afetados</dt><dd>{selected.affected_records_estimate??'Ainda não estimada'}</dd></div><div><dt>Categorias de dados</dt><dd>{selected.affected_data_categories?.length?selected.affected_data_categories.map(item=>label(CATEGORIES,item)).join(', '):'Não informadas'}</dd></div></dl><div className={styles.flags}><span>DPO: {selected.dpo_notified?'registro de comunicação existente':'sem registro'}</span><span>Autoridade: {selected.authority_notified?'registro de comunicação existente':'sem registro'}</span><span>Titulares: {selected.data_subjects_notified?'registro de comunicação existente':'sem registro'}</span></div></div>
+      <details className={styles.subsection}><summary>Análise e remediação registradas</summary><dl className={styles.analysis}><div><dt>Causa raiz</dt><dd>{selected.root_cause||'Não registrada'}</dd></div><div><dt>Avaliação de impacto</dt><dd>{selected.impact_assessment||'Não registrada'}</dd></div><div><dt>Plano de remediação</dt><dd>{selected.remediation_plan||'Não registrado'}</dd></div><div><dt>Lições aprendidas</dt><dd>{selected.lessons_learned||'Não registradas'}</dd></div></dl></details>
+      <section className={styles.subpanel}><div className={styles.sectionHeading}><div><h4>Atualizar situação e análise</h4><p>Transições inválidas e requisitos de contenção/encerramento são recusados pela API.</p></div></div><form className={styles.form} onSubmit={event=>void updateIncident(event)}><div className={styles.formGrid}><Field label="Nova situação"><select value={updateForm.next_status} onChange={event=>setUpdateForm({...updateForm,next_status:event.target.value})}><option value="">Manter situação atual ({label(STATUSES,selected.status)})</option><SelectOptions items={STATUSES}/></select></Field><Field label="Alterar severidade"><select value={updateForm.severity} onChange={event=>setUpdateForm({...updateForm,severity:event.target.value})}><option value="">Manter severidade atual</option><SelectOptions items={SEVERITIES}/></select></Field><Field label="Responsável pelo incidente"><input value={updateForm.responsible_name} onChange={event=>setUpdateForm({...updateForm,responsible_name:event.target.value})}/></Field><Field label="Líder da contenção" help="Obrigatório ao avançar para Em contenção."><input value={updateForm.containment_lead_name} onChange={event=>setUpdateForm({...updateForm,containment_lead_name:event.target.value})}/></Field>{[['reason','Motivo da transição'],['root_cause','Causa raiz'],['impact_assessment','Avaliação de impacto'],['remediation_plan','Plano de remediação'],['lessons_learned','Lições aprendidas']].map(([key,text])=><Field key={key} label={text} className={styles.half}><textarea rows={3} value={updateForm[key as keyof typeof updateForm]} onChange={event=>setUpdateForm({...updateForm,[key]:event.target.value})}/></Field>)}</div><button type="submit" disabled={Boolean(saving)}>{saving==='update'?'Salvando…':'Salvar atualização'}</button></form></section>
+      <div className={styles.detailGrid}><section className={styles.subpanel}><div className={styles.sectionHeading}><div><h4>Evidências registradas ({evidences.length})</h4><p>O sistema guarda uma referência e um checksum derivado do texto informado; não faz upload nem verifica arquivos.</p></div></div>{evidences.length?<ul className={styles.recordList}>{evidences.map(item=><li key={item.id}><strong>{item.title}</strong><span>{label(EVIDENCE_TYPES,item.evidence_type)} · {date(item.collected_at)}</span><span>Registrado por {item.collected_by||'Não informado'} · checksum {item.checksum||'não disponível'}</span>{item.description&&<p>{item.description}</p>}</li>)}</ul>:<UiState variant="empty" title="Nenhuma referência de evidência" detail="Adicione uma referência quando houver material pertinente."/>}<form className={styles.form} onSubmit={event=>void addEvidence(event)}><div className={styles.formGrid}><Field label="Tipo de evidência"><select value={evForm.evidence_type} onChange={event=>setEvForm({...evForm,evidence_type:event.target.value})}><SelectOptions items={EVIDENCE_TYPES}/></select></Field><Field label="Título da referência"><input required minLength={3} maxLength={200} value={evForm.title} onChange={event=>setEvForm({...evForm,title:event.target.value})}/></Field><Field label="Referência do arquivo ou material" help="Registra apenas o texto informado; não anexe conteúdo sensível aqui."><input maxLength={500} value={evForm.file_reference} onChange={event=>setEvForm({...evForm,file_reference:event.target.value})}/></Field><Field label="Descrição"><textarea maxLength={2000} value={evForm.description} onChange={event=>setEvForm({...evForm,description:event.target.value})}/></Field></div><button type="submit" disabled={Boolean(saving)}>{saving==='evidence'?'Registrando…':'Adicionar referência'}</button></form></section>
+      <section className={styles.subpanel}><div className={styles.sectionHeading}><div><h4>Ações de resposta ({actions.length})</h4><p>Registre responsável, prazo e estado de cada ação.</p></div></div>{actions.length?<ul className={styles.recordList}>{actions.map(item=><li key={item.id}><strong>{item.title}</strong><span>{label(ACTION_TYPES,item.action_type)} · {label(ACTION_STATUSES,item.status)}</span><span>Responsável: {item.assigned_to_name||'Não atribuído'} · prazo: {date(item.due_at)}</span>{item.description&&<p>{item.description}</p>}{item.status!=='concluida'&&<button type="button" className={styles.secondary} onClick={()=>void completeAction(item.id)} disabled={Boolean(saving)}>{saving===`complete-${item.id}`?'Salvando…':'Marcar como concluída'}</button>}</li>)}</ul>:<UiState variant="empty" title="Nenhuma ação de resposta" detail="Crie ações de contenção, análise, recuperação ou prevenção conforme a necessidade."/>}<form className={styles.form} onSubmit={event=>void addAction(event)}><div className={styles.formGrid}><Field label="Tipo de ação"><select value={actForm.action_type} onChange={event=>setActForm({...actForm,action_type:event.target.value})}><SelectOptions items={ACTION_TYPES}/></select></Field><Field label="Título da ação"><input required minLength={3} maxLength={200} value={actForm.title} onChange={event=>setActForm({...actForm,title:event.target.value})}/></Field><Field label="Responsável pela ação"><input value={actForm.assigned_to_name} onChange={event=>setActForm({...actForm,assigned_to_name:event.target.value})}/></Field><Field label="Prazo"><input type="datetime-local" value={actForm.due_at} onChange={event=>setActForm({...actForm,due_at:event.target.value})}/></Field><Field label="Descrição da ação" help="Mínimo de 10 caracteres." className={styles.full}><textarea required minLength={10} maxLength={2000} rows={3} value={actForm.description} onChange={event=>setActForm({...actForm,description:event.target.value})}/></Field></div><button type="submit" disabled={Boolean(saving)}>{saving==='action'?'Registrando…':'Criar ação'}</button></form></section>
+      <section className={styles.subpanel}><div className={styles.sectionHeading}><div><h4>Comunicações registradas ({comms.length})</h4><p>Este formulário registra conteúdo e atualiza indicadores internos; ele não envia e-mail, SMS ou notificação externa.</p></div></div>{comms.length?<ul className={styles.recordList}>{comms.map(item=><li key={item.id}><strong>{item.subject}</strong><span>{label(RECIPIENTS,item.recipient_type)} · registro interno em {date(item.sent_at)} · por {item.sent_by||'Não informado'}</span><span>Contato informado: {item.recipient_contact||'Não informado'}</span><details><summary>Ver conteúdo registrado</summary><p>{item.content}</p></details></li>)}</ul>:<UiState variant="empty" title="Nenhuma comunicação registrada" detail="Registrar uma comunicação nesta tela não a envia ao destinatário."/>}<form className={styles.form} onSubmit={event=>void addComm(event)}><div className={styles.formGrid}><Field label="Destinatário"><select value={commForm.recipient_type} onChange={event=>setCommForm({...commForm,recipient_type:event.target.value})}><SelectOptions items={RECIPIENTS}/></select></Field><Field label="Contato do destinatário"><input maxLength={320} value={commForm.recipient_contact} onChange={event=>setCommForm({...commForm,recipient_contact:event.target.value})}/></Field><Field label="Assunto"><input required minLength={5} maxLength={200} value={commForm.subject} onChange={event=>setCommForm({...commForm,subject:event.target.value})}/></Field><Field label="Conteúdo a registrar" help="Mínimo de 20 caracteres. Não inclui envio externo." className={styles.full}><textarea required minLength={20} maxLength={5000} rows={4} value={commForm.content} onChange={event=>setCommForm({...commForm,content:event.target.value})}/></Field></div><button type="submit" disabled={Boolean(saving)}>{saving==='communication'?'Registrando…':'Registrar comunicação'}</button></form></section>
+      <section className={styles.subpanel}><div className={styles.sectionHeading}><div><h4>Histórico de situação ({history.length})</h4><p>Registro cronológico das transições retornadas pelo serviço.</p></div></div>{history.length?<ol className={styles.recordList}>{history.map(item=><li key={item.id}><strong>{item.previous_status?label(STATUSES,item.previous_status):'Abertura'} → {label(STATUSES,item.next_status)}</strong><span>{date(item.created_at)} · por {item.changed_by||'Não informado'}</span>{item.reason&&<p>{item.reason}</p>}</li>)}</ol>:<UiState variant="empty" title="Nenhuma transição registrada" detail="O histórico aparecerá após a abertura ou alteração da situação."/>}</section></div>
+    </section>}
+  </section>;
 }
