@@ -18,3 +18,39 @@
 .metricsTable tbody th{font-weight:700;overflow-wrap:anywhere;white-space:normal}
 .metricsFootnote{margin:14px 0 0;color:#8593a5;font-size:11px;line-height:1.6}
 @media(max-width:650px){.metricsPanel{padding:18px 16px}.metricsHead{align-items:flex-start;flex-direction:column}.metricsControls{flex-wrap:wrap}}
+
+/* UX-PRO-02: legacy lead cards, filters and metrics follow the staff theme. */
+:global(html[data-admin-theme="night"]) .page { background:#111b2b; color:#e5edf7; }
+:global(html[data-admin-theme="night"]) .topbar,
+:global(html[data-admin-theme="night"]) .session,
+:global(html[data-admin-theme="night"]) .loginCard,
+:global(html[data-admin-theme="night"]) .toolbar,
+:global(html[data-admin-theme="night"]) .card,
+:global(html[data-admin-theme="night"]) .metricsPanel,
+:global(html[data-admin-theme="night"]) .metricsTotals>div,
+:global(html[data-admin-theme="night"]) .empty { background:#18263a; border-color:#354960; color:#e5edf7; box-shadow:0 8px 24px rgb(0 0 0 / 16%); }
+:global(html[data-admin-theme="night"]) .heading h1,
+:global(html[data-admin-theme="night"]) .card h2,
+:global(html[data-admin-theme="night"]) .metricsHead h2,
+:global(html[data-admin-theme="night"]) .empty strong,
+:global(html[data-admin-theme="night"]) .detailsGrid :is(strong,a),
+:global(html[data-admin-theme="night"]) .detailsGrid p { color:#e5edf7; }
+:global(html[data-admin-theme="night"]) .heading p,
+:global(html[data-admin-theme="night"]) .date,
+:global(html[data-admin-theme="night"]) .summary span,
+:global(html[data-admin-theme="night"]) .detailsGrid small,
+:global(html[data-admin-theme="night"]) .metricsHead p,
+:global(html[data-admin-theme="night"]) .metricsFootnote,
+:global(html[data-admin-theme="night"]) .metricsTable caption { color:#adbdcf; }
+:global(html[data-admin-theme="night"]) .topbar { background:#182f50; }
+:global(html[data-admin-theme="night"]) :is(.session button,.controls select,.actions select,.refresh,.metricsControls input) { background:#111e30; border-color:#40546b; color:#e5edf7; }
+:global(html[data-admin-theme="night"]) .detailsGrid { border-color:#354960; }
+:global(html[data-admin-theme="night"]) .metricsTable :is(th,td) { border-color:#354960; color:#d3deea; }
+:global(html[data-admin-theme="night"]) .status_new { background:#203a58; color:#b6d2fa; }
+:global(html[data-admin-theme="night"]) .status_contacted { background:#423923; color:#f0cf8b; }
+:global(html[data-admin-theme="night"]) .status_closed,
+:global(html[data-admin-theme="night"]) .email_sent { background:#233c34; color:#a8dfbd; }
+:global(html[data-admin-theme="night"]) .notice { background:#233c34; color:#a8dfbd; }
+:global(html[data-admin-theme="night"]) .error { background:#432c31; color:#ffb4b0; }
+:global(html[data-admin-theme="night"]) :is(.loginCard input,.controls select,.actions select,.metricsControls input):focus-visible,
+:global(html[data-admin-theme="night"]) :is(a,button,select,input):focus-visible { outline:3px solid #95caff; outline-offset:3px; }

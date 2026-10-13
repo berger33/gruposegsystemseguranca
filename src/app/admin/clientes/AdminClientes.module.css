@@ -311,3 +311,36 @@
 
 .searchOption:hover { background: #edf1fc; }
 .searchOption small { display: block; color: #52627c; margin-top: 1px; }
+
+/* UX-PRO-02: keep the older client workspace readable in the shared night theme. */
+:global(html[data-admin-theme="night"]) .card,
+:global(html[data-admin-theme="night"]) .listItem,
+:global(html[data-admin-theme="night"]) .empty,
+:global(html[data-admin-theme="night"]) .searchOption,
+:global(html[data-admin-theme="night"]) .smallSelect,
+:global(html[data-admin-theme="night"]) .inlineForm :is(input,select,textarea),
+:global(html[data-admin-theme="night"]) .field :is(input,select,textarea) {
+  background: #18263a;
+  border-color: #354960;
+  color: #e5edf7;
+}
+:global(html[data-admin-theme="night"]) .card :is(h1,h2,h3,.listItemTitle,.listItemDetail),
+:global(html[data-admin-theme="night"]) .linkButton,
+:global(html[data-admin-theme="night"]) .field label { color: #e5edf7; }
+:global(html[data-admin-theme="night"]) .hint,
+:global(html[data-admin-theme="night"]) .listItemMeta,
+:global(html[data-admin-theme="night"]) .empty,
+:global(html[data-admin-theme="night"]) .searchOption small { color: #adbdcf; }
+:global(html[data-admin-theme="night"]) .listItem { box-shadow: 0 4px 16px rgb(0 0 0 / 16%); }
+:global(html[data-admin-theme="night"]) .chipActive,
+:global(html[data-admin-theme="night"]) .chipResolved { background:#233c34; border-color:#456b57; color:#a8dfbd; }
+:global(html[data-admin-theme="night"]) .chipSuspended,
+:global(html[data-admin-theme="night"]) .chipProgress { background:#423923; border-color:#75633c; color:#f0cf8b; }
+:global(html[data-admin-theme="night"]) .chipEnded,
+:global(html[data-admin-theme="night"]) .chipClosed,
+:global(html[data-admin-theme="night"]) .chipPlanned,
+:global(html[data-admin-theme="night"]) .chipOpen { background:#243a57; border-color:#405a78; color:#b6d2fa; }
+:global(html[data-admin-theme="night"]) .messageError { background:#432c31; border-color:#74454a; color:#ffb4b0; }
+:global(html[data-admin-theme="night"]) .messageOk { background:#233c34; border-color:#456b57; color:#a8dfbd; }
+:global(html[data-admin-theme="night"]) :is(.submit,.linkButton,.dangerButton,.searchOption):focus-visible,
+:global(html[data-admin-theme="night"]) :is(.submit,.linkButton,.dangerButton,.searchOption):focus { outline:3px solid #95caff; outline-offset:3px; }
