@@ -1,7 +1,7 @@
 # UX-PRO-00 — atualização do inventário vigente
 
-**Data:** 13/10/2026  
-**Base auditada:** `main` / `origin/main` em `bdc6345` (após o merge da PR #193).  
+**Data:** 13/10/2026
+**Base auditada:** `main` / `origin/main` em `bdc6345` (após o merge da PR #193).
 **Escopo:** regenerar o inventário e a matriz de cobertura de UX-PRO-00 para refletir a base atual; não é uma auditoria visual nova.
 
 ## Resultado
