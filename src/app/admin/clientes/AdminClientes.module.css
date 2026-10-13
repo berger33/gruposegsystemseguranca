@@ -342,5 +342,3 @@
 :global(html[data-admin-theme="night"]) .chipOpen { background:#243a57; border-color:#405a78; color:#b6d2fa; }
 :global(html[data-admin-theme="night"]) .messageError { background:#432c31; border-color:#74454a; color:#ffb4b0; }
 :global(html[data-admin-theme="night"]) .messageOk { background:#233c34; border-color:#456b57; color:#a8dfbd; }
-:global(html[data-admin-theme="night"]) :is(.submit,.linkButton,.dangerButton,.searchOption):focus-visible,
-:global(html[data-admin-theme="night"]) :is(.submit,.linkButton,.dangerButton,.searchOption):focus { outline:3px solid #95caff; outline-offset:3px; }

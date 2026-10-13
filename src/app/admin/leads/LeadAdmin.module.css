@@ -43,7 +43,7 @@
 :global(html[data-admin-theme="night"]) .metricsFootnote,
 :global(html[data-admin-theme="night"]) .metricsTable caption { color:#adbdcf; }
 :global(html[data-admin-theme="night"]) .topbar { background:#182f50; }
-:global(html[data-admin-theme="night"]) :is(.session button,.controls select,.actions select,.refresh,.metricsControls input) { background:#111e30; border-color:#40546b; color:#e5edf7; }
+:global(html[data-admin-theme="night"]) .page :is(.session button,.controls select,.actions select,.refresh,.metricsControls input) { background:#111e30; border-color:#40546b; color:#e5edf7; }
 :global(html[data-admin-theme="night"]) .detailsGrid { border-color:#354960; }
 :global(html[data-admin-theme="night"]) .metricsTable :is(th,td) { border-color:#354960; color:#d3deea; }
 :global(html[data-admin-theme="night"]) .status_new { background:#203a58; color:#b6d2fa; }
@@ -52,5 +52,5 @@
 :global(html[data-admin-theme="night"]) .email_sent { background:#233c34; color:#a8dfbd; }
 :global(html[data-admin-theme="night"]) .notice { background:#233c34; color:#a8dfbd; }
 :global(html[data-admin-theme="night"]) .error { background:#432c31; color:#ffb4b0; }
-:global(html[data-admin-theme="night"]) :is(.loginCard input,.controls select,.actions select,.metricsControls input):focus-visible,
-:global(html[data-admin-theme="night"]) :is(a,button,select,input):focus-visible { outline:3px solid #95caff; outline-offset:3px; }
+:global(html[data-admin-theme="night"]) .page :is(.loginCard input,.controls select,.actions select,.metricsControls input):focus-visible,
+:global(html[data-admin-theme="night"]) .page :is(a,button,select,input):focus-visible { outline:3px solid #95caff; outline-offset:3px; }
