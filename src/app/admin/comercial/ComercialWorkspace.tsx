@@ -18,6 +18,7 @@ import CommissionClient from "../ti/CommissionClient";
 import CommercialLibraryClient from "../ti/CommercialLibraryClient";
 import PartnershipClient from "../ti/PartnershipClient";
 import styles from "../../../components/ui/UiWorkspace.module.css";
+import local from "./Comercial.module.css";
 
 // UX-03B: a sequência comercial passa a ser lida como etapas, com a pergunta
 // que cada área responde e o próximo passo explícito. Os rótulos dos botões
@@ -75,7 +76,7 @@ export default function ComercialWorkspace() {
             type="button"
             onClick={() => setView(item.id)}
             aria-pressed={view === item.id}
-            className={view === item.id ? styles.tabActive : styles.tab}
+            className={view === item.id ? `${styles.tabActive} ${local.etapaAtiva}` : styles.tab}
           >
             {item.label}
           </button>

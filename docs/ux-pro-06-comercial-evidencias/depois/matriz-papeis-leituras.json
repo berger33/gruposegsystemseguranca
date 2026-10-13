@@ -1,0 +1,149 @@
+{
+  "base": "api",
+  "linhas": [
+    {
+      "caminho": "/api/catalog",
+      "anonimo": 200,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/campaigns?limit=5",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/commercial-library?limit=5",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/commission-rules",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/commissions",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/contracts",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/cost-parameters",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/discount-policies",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/discount-requests",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/equipment",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/goals",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/inspection-templates",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/inspections",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/labor-budgets",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/partners",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/partnership-metrics",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/price-scenarios",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/proposal-comparisons",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/proposal-deliveries",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/proposals",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/referrals",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/renewals",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/reports",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    },
+    {
+      "caminho": "/api/crm/technical-budgets",
+      "anonimo": 401,
+      "comercial": 200,
+      "marcelo": 200
+    }
+  ]
+}

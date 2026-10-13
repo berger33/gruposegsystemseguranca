@@ -1376,3 +1376,600 @@ test('browser: os controles novos da fila são alcançáveis pelo teclado e most
     await context.close();
   } finally { /* o navegador é compartilhado e fechado no after() */ }
 });
+
+// ---------------------------------------------------------------------------
+// UX-PRO-06 — /admin/comercial: casca em etapas e histórico de versões
+// (fatia própria; provas HTTP e de navegador contra PostgreSQL descartável)
+// ---------------------------------------------------------------------------
+
+const comercialEvidenceDir = process.env.UX_COMERCIAL_EVIDENCE_DIR || '';
+async function captureComercial(page, nome) {
+  await capture(page, nome, comercialEvidenceDir);
+}
+async function writeComercialEvidence(nome, dados) {
+  if (!comercialEvidenceDir) return;
+  await mkdir(comercialEvidenceDir, { recursive: true });
+  await writeFile(path.join(comercialEvidenceDir, nome), JSON.stringify(dados, null, 2) + '\n');
+}
+
+const COMERCIAL_ETAPAS = [
+  'Vistoria',
+  'Orçamentos (MO/técnico/custos)',
+  'Preço & descontos',
+  'Propostas & envio',
+  'Contrato (idempotência)',
+  'Catálogo & equipamentos',
+  'Relatórios & comissões',
+  'Biblioteca & parcerias',
+];
+
+// Leituras GET que as etapas da casca disparam (sem identificador de registro).
+const COMERCIAL_LEITURAS = [
+  '/api/catalog',
+  '/api/crm/campaigns?limit=5',
+  '/api/crm/commercial-library?limit=5',
+  '/api/crm/commission-rules',
+  '/api/crm/commissions',
+  '/api/crm/contracts',
+  '/api/crm/cost-parameters',
+  '/api/crm/discount-policies',
+  '/api/crm/discount-requests',
+  '/api/crm/equipment',
+  '/api/crm/goals',
+  '/api/crm/inspection-templates',
+  '/api/crm/inspections',
+  '/api/crm/labor-budgets',
+  '/api/crm/partners',
+  '/api/crm/partnership-metrics',
+  '/api/crm/price-scenarios',
+  '/api/crm/proposal-comparisons',
+  '/api/crm/proposal-deliveries',
+  '/api/crm/proposals',
+  '/api/crm/referrals',
+  '/api/crm/renewals',
+  '/api/crm/reports',
+  '/api/crm/technical-budgets',
+];
+
+/** Mesma medição das telas irmãs: reconfirma após reflow e ignora rolagem contida. */
+async function medirTransbordoComercial(page) {
+  return page.evaluate(() => {
+    const raiz = document.documentElement;
+    const sobra = raiz.scrollWidth - raiz.clientWidth;
+    if (sobra <= 1) return { sobra, culpados: [] };
+    const dentroDeRolagem = node => {
+      for (let atual = node.parentElement; atual && atual !== document.body; atual = atual.parentElement) {
+        const overflowX = getComputedStyle(atual).overflowX;
+        if (overflowX === 'auto' || overflowX === 'scroll' || overflowX === 'hidden' || overflowX === 'clip') return true;
+      }
+      return false;
+    };
+    const culpados = [...document.querySelectorAll('body *')]
+      .filter(node => !dentroDeRolagem(node))
+      .map(node => ({ node, excesso: Math.round(node.getBoundingClientRect().right - raiz.clientWidth) }))
+      .filter(item => item.excesso > 1)
+      .sort((a, b) => b.excesso - a.excesso)
+      .slice(0, 6)
+      .map(({ node, excesso }) =>
+        `${node.tagName}#${node.id}.${String(node.className).slice(0, 50)}+${excesso}px{${(node.textContent || '').trim().slice(0, 30)}}`);
+    return { sobra, culpados };
+  });
+}
+
+/**
+ * Força, SÓ dentro da aba, a resposta da consulta de versões. Ligada por
+ * `window.__uxForcarFalhaHistorico`; desligada, a leitura real volta a valer.
+ */
+async function forceCommercialHistoryStatus(context, status, code) {
+  await context.addInitScript(({ status, code }) => {
+    window.__uxForcarFalhaHistorico = false;
+    const original = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      if (window.__uxForcarFalhaHistorico && url.includes('/api/crm/commercial-versions?')) {
+        return Promise.resolve(new Response(JSON.stringify({ error: code }), {
+          status, headers: { 'content-type': 'application/json' },
+        }));
+      }
+      return original(input, init);
+    };
+  }, { status, code });
+}
+
+/** Atrasa a consulta de versões para observar o estado de consulta em curso. */
+async function delayCommercialHistoryFetch(context, ms = 3000) {
+  await context.addInitScript(({ ms }) => {
+    window.__uxAtrasarHistorico = false;
+    const original = window.fetch.bind(window);
+    window.fetch = async (input, init) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      if (window.__uxAtrasarHistorico && url.includes('/api/crm/commercial-versions?')) {
+        await new Promise(resolve => setTimeout(resolve, ms));
+      }
+      return original(input, init);
+    };
+  }, { ms });
+}
+
+function secaoHistoricoComercial(page) {
+  // Seção que tem o título como FILHO DIRETO: o cartão externo de "Relatórios
+  // & comissões" também é <section> e contém esta, por isso não usar :has().
+  return page.locator('xpath=//section[h2[normalize-space(.)="Histórico de versões comerciais"]]');
+}
+
+async function irParaEtapaComercial(page, nome) {
+  await page.locator('nav[aria-label="Etapas comerciais"] button', { hasText: nome }).first().click();
+  await page.waitForSelector(`h2#comercial-contexto:has-text("${nome}")`, { timeout: 30_000 });
+  await page.waitForLoadState('networkidle').catch(() => {});
+}
+
+test('UX-PRO-06 comercial: a API do histórico exige sessão, papel e identificador válido, sem mudança de contrato', { skip: !RUN }, async () => {
+  const id = randomUUID();
+  const anonimo = await api(`/api/crm/commercial-versions?type=crm_goals&id=${id}`);
+  assert.equal(anonimo.status, 401, 'anônimo deve continuar recebendo 401');
+  assert.equal(anonimo.body?.error, 'session_required');
+
+  const rh = await provisionStaff(pool, { role: 'rh' });
+  const cookieRh = await loginHttp(rh.email);
+  const negadoRh = await api(`/api/crm/commercial-versions?type=crm_goals&id=${id}`, { cookie: cookieRh });
+  assert.equal(negadoRh.status, 403, 'papel fora da lista continua sem acesso');
+  assert.equal(negadoRh.body?.error, 'role_required');
+
+  // Divergência registrada, não corrigida aqui: a tela /admin/comercial libera
+  // o papel comercial, mas esta API decide por admin/marcelo/ti. Mudar esse
+  // papel é decisão de permissão do proprietário, fora desta fatia.
+  const comercial = await provisionStaff(pool, { role: 'comercial' });
+  const cookieComercial = await loginHttp(comercial.email);
+  const negadoComercial = await api(`/api/crm/commercial-versions?type=crm_goals&id=${id}`, { cookie: cookieComercial });
+  assert.equal(negadoComercial.status, 403, 'comercial continua recebendo 403 desta API (permissão preservada)');
+  assert.equal(negadoComercial.body?.error, 'role_required');
+
+  const marcelo = await provisionStaff(pool, { role: 'marcelo' });
+  const cookieMarcelo = await loginHttp(marcelo.email);
+  const vazio = await api(`/api/crm/commercial-versions?type=crm_goals&id=${id}`, { cookie: cookieMarcelo });
+  assert.equal(vazio.status, 200, JSON.stringify(vazio.body));
+  assert.deepEqual(vazio.body?.items, [], 'identificador sem versões responde lista vazia');
+
+  const invalido = await api('/api/crm/commercial-versions?type=crm_goals&id=nao-e-uuid', { cookie: cookieMarcelo });
+  assert.equal(invalido.status, 400);
+  assert.equal(invalido.body?.error, 'invalid_entity');
+
+  const tipoInvalido = await api(`/api/crm/commercial-versions?type=outra&id=${id}`, { cookie: cookieMarcelo });
+  assert.equal(tipoInvalido.status, 400);
+  assert.equal(tipoInvalido.body?.error, 'invalid_entity');
+});
+
+test('UX-PRO-06 comercial: matriz de papéis das leituras das etapas (evidência; leituras internas exigem sessão)', { skip: !RUN }, async () => {
+  const comercial = await provisionStaff(pool, { role: 'comercial' });
+  const cookieComercial = await loginHttp(comercial.email);
+  const marcelo = await provisionStaff(pool, { role: 'marcelo' });
+  const cookieMarcelo = await loginHttp(marcelo.email);
+  const linhas = [];
+  for (const caminho of COMERCIAL_LEITURAS) {
+    const anonimo = await api(caminho);
+    // O catálogo de serviços é público por desenho (também lido pelo simulador);
+    // as leituras internas do comercial precisam recusar anônimo.
+    if (caminho.startsWith('/api/crm/')) assert.equal(anonimo.status, 401, `${caminho}: anônimo deve receber 401`);
+    const comercialRes = await api(caminho, { cookie: cookieComercial });
+    const marceloRes = await api(caminho, { cookie: cookieMarcelo });
+    linhas.push({ caminho, anonimo: anonimo.status, comercial: comercialRes.status, marcelo: marceloRes.status });
+  }
+  await writeComercialEvidence('matriz-papeis-leituras.json', { base: 'api', linhas });
+  assert.equal(linhas.length, COMERCIAL_LEITURAS.length);
+});
+
+test('browser: as oito etapas trocam pelo teclado, anunciam a etapa atual e mostram foco visível', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'comercial' });
+  await loginHttp(staff.email);
+  const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+  try {
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/comercial', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector('nav[aria-label="Etapas comerciais"]', { timeout: 90_000 });
+
+    const botoes = page.locator('nav[aria-label="Etapas comerciais"] button');
+    assert.equal(await botoes.count(), COMERCIAL_ETAPAS.length, 'as oito etapas continuam presentes');
+    for (const [indice, nome] of COMERCIAL_ETAPAS.entries()) {
+      assert.ok((await botoes.nth(indice).innerText()).includes(nome.split(' (')[0].split(' &')[0]), `etapa ${indice + 1} mantém o rótulo`);
+    }
+    assert.equal(await botoes.nth(0).getAttribute('aria-pressed'), 'true', 'a primeira etapa começa ativa');
+
+    await botoes.nth(0).focus();
+    await page.keyboard.press('Tab');
+    const focado = await page.evaluate(() => document.activeElement?.textContent?.trim() || '');
+    assert.ok(focado.includes('Orçamentos'), `Tab leva à etapa seguinte; focado: "${focado}"`);
+    const contorno = await page.evaluate(() => {
+      const estilo = getComputedStyle(document.activeElement);
+      return { outline: estilo.outlineStyle, largura: estilo.outlineWidth, sombra: estilo.boxShadow };
+    });
+    assert.ok((contorno.outline !== 'none' && contorno.largura !== '0px') || contorno.sombra !== 'none',
+      `a etapa focada precisa de contorno visível: ${JSON.stringify(contorno)}`);
+
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('h2#comercial-contexto:has-text("Orçamentos (MO/técnico/custos)")', { timeout: 30_000 });
+    assert.equal(await botoes.nth(1).getAttribute('aria-pressed'), 'true', 'a etapa escolhida fica anunciada como ativa');
+    assert.equal(await botoes.nth(0).getAttribute('aria-pressed'), 'false', 'a etapa anterior deixa de estar ativa');
+    const pergunta = await page.locator('p', { hasText: 'Pergunta desta etapa' }).first().innerText();
+    assert.ok(pergunta.includes('Quanto custa entregar esse serviço?'), 'a pergunta da etapa acompanha a troca');
+    await captureComercial(page, 'desktop-comercial-etapas');
+  } finally {
+    await context.close();
+  }
+});
+
+test('browser: a casca e as etapas não transbordam em 320/390/768/1440 px', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'comercial' });
+  await loginHttp(staff.email);
+  const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+  const resultados = [];
+  try {
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/comercial', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector('nav[aria-label="Etapas comerciais"]', { timeout: 90_000 });
+    for (const [largura, altura] of [[320, 844], [390, 844], [768, 1024], [1440, 900]]) {
+      await page.setViewportSize({ width: largura, height: altura });
+      await page.waitForTimeout(300);
+      for (const nome of COMERCIAL_ETAPAS) {
+        await irParaEtapaComercial(page, nome);
+        let medida = await medirTransbordoComercial(page);
+        if (medida.sobra > 1) {
+          await page.waitForTimeout(400);
+          medida = await medirTransbordoComercial(page);
+        }
+        resultados.push({ largura, etapa: nome, sobra: medida.sobra, culpados: medida.culpados });
+        if (largura === 320 && nome === 'Vistoria') await captureComercial(page, 'comercial-320');
+        if (largura === 768 && nome === 'Relatórios & comissões') await captureComercial(page, 'comercial-768-relatorios');
+      }
+    }
+  } finally {
+    await context.close();
+  }
+  await writeComercialEvidence('transbordo-por-etapa.json', resultados);
+  const falhas = resultados.filter(item => item.sobra > 1);
+  assert.equal(falhas.length, 0, `nenhuma etapa pode transbordar: ${falhas.map(f => `${f.largura}px ${f.etapa} (+${f.sobra}px ${f.culpados.join(' | ')})`).join(' ;; ')}`);
+});
+
+async function abrirHistoricoComoMarcelo(context, staffEmail) {
+  const page = await context.newPage();
+  await loginBrowser(page, staffEmail);
+  await page.goto('/admin/comercial', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+  await page.waitForSelector('nav[aria-label="Etapas comerciais"]', { timeout: 90_000 });
+  await irParaEtapaComercial(page, 'Relatórios & comissões');
+  const secao = secaoHistoricoComercial(page);
+  await secao.waitFor({ timeout: 30_000 });
+  return { page, secao };
+}
+
+async function criarItemBibliotecaSintetico(pool, cookie) {
+  const lib = await api('/api/crm/commercial-library', {
+    method: 'POST', cookie,
+    body: { title: 'Apresentação Sintética Histórico', type: 'apresentacao', description: 'Material fictício', category: 'vendas', file_url: '', tags: [] },
+  });
+  assert.ok(lib.status === 201, `criação de item da biblioteca: ${lib.status} ${JSON.stringify(lib.body)}`);
+  const libId = lib.body?.item?.id;
+  assert.ok(libId, 'a API devolve o id do item criado');
+  return libId;
+}
+
+test('browser: o histórico lê a versão e distingue "sem versões" de identificador inválido', { skip: !RUN }, async () => {
+  const marcelo = await provisionStaff(pool, { role: 'marcelo' });
+  const cookie = await loginHttp(marcelo.email);
+  const libId = await criarItemBibliotecaSintetico(pool, cookie);
+
+  const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+  try {
+    const { page, secao } = await abrirHistoricoComoMarcelo(context, marcelo.email);
+    await secao.locator('select').selectOption('crm_commercial_library');
+    await secao.getByLabel('Identificador do registro').fill(libId);
+    await secao.getByRole('button', { name: 'Consultar versões' }).click();
+    await page.waitForSelector('text=Versão 1', { timeout: 30_000 });
+    assert.ok(await secao.locator('article h3', { hasText: 'Versão 1' }).isVisible(), 'a versão lida aparece');
+
+    // Vazio explícito: identificador válido sem versões não pode parecer tela em branco.
+    await secao.getByLabel('Identificador do registro').fill(randomUUID());
+    await secao.getByRole('button', { name: 'Consultar versões' }).click();
+    await page.waitForSelector('text=/nenhuma versão/i', { timeout: 30_000 });
+
+    // Identificador inválido: mensagem compreensível, sem o código técnico cru.
+    await secao.getByLabel('Identificador do registro').fill('nao-e-uuid');
+    await secao.getByRole('button', { name: 'Consultar versões' }).click();
+    await page.waitForSelector('[role="alert"]', { timeout: 30_000 });
+    const textoInvalido = await secao.locator('[role="alert"]').innerText();
+    assert.ok(!textoInvalido.includes('invalid_entity'), `não expor o código técnico: "${textoInvalido}"`);
+    assert.ok(/identificador/i.test(textoInvalido), `a mensagem diz o que corrigir: "${textoInvalido}"`);
+    await captureComercial(page, 'desktop-comercial-historico-identificador');
+  } finally {
+    await context.close();
+  }
+});
+
+test('browser: falha após leitura concluída mantém a versão lida, declara desatualização com hora e repete', { skip: !RUN }, async () => {
+  const marcelo = await provisionStaff(pool, { role: 'marcelo' });
+  const cookie = await loginHttp(marcelo.email);
+  const libId = await criarItemBibliotecaSintetico(pool, cookie);
+
+  const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+  try {
+    await forceCommercialHistoryStatus(context, 503, 'service_unavailable');
+    const { page, secao } = await abrirHistoricoComoMarcelo(context, marcelo.email);
+    await secao.locator('select').selectOption('crm_commercial_library');
+    await secao.getByLabel('Identificador do registro').fill(libId);
+    await secao.getByRole('button', { name: 'Consultar versões' }).click();
+    await page.waitForSelector('text=Versão 1', { timeout: 30_000 });
+
+    // Falha após leitura concluída: mantém a última versão lida, declara o estado e repete.
+    await page.evaluate(() => { window.__uxForcarFalhaHistorico = true; });
+    await secao.getByRole('button', { name: 'Consultar versões' }).click();
+    await page.waitForSelector('[data-testid="historico-desatualizado"]', { timeout: 30_000 });
+    assert.ok(await secao.locator('article h3', { hasText: 'Versão 1' }).isVisible(), 'a falha não apaga a versão já lida');
+    const aviso = await secao.locator('[data-testid="historico-desatualizado"]').innerText();
+    assert.ok(/desatualizad/i.test(aviso), `o aviso diz que os dados podem estar desatualizados: "${aviso}"`);
+    assert.ok(/\d{1,2}:\d{2}/.test(aviso), `o aviso traz a hora da última leitura concluída: "${aviso}"`);
+    assert.ok(!aviso.includes('service_unavailable'), `não expor o código técnico: "${aviso}"`);
+    assert.ok(await secao.getByRole('button', { name: 'Tentar novamente' }).isVisible(), 'a falha recuperável oferece repetir');
+    await captureComercial(page, 'desktop-comercial-historico-desatualizado');
+
+    await page.evaluate(() => { window.__uxForcarFalhaHistorico = false; });
+    await secao.getByRole('button', { name: 'Tentar novamente' }).click();
+    await page.waitForSelector('[data-testid="historico-desatualizado"]', { state: 'detached', timeout: 30_000 });
+    assert.ok(await secao.locator('article h3', { hasText: 'Versão 1' }).isVisible(), 'a repetição bem-sucedida mantém o histórico atualizado');
+  } finally {
+    await context.close();
+  }
+});
+
+test('browser: consulta de versões em curso mostra estado de espera e bloqueia nova chamada', { skip: !RUN }, async () => {
+  const marcelo = await provisionStaff(pool, { role: 'marcelo' });
+  const cookie = await loginHttp(marcelo.email);
+  const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+  try {
+    await delayCommercialHistoryFetch(context, 3000);
+    const page = await context.newPage();
+    await loginBrowser(page, marcelo.email);
+    await page.goto('/admin/comercial', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector('nav[aria-label="Etapas comerciais"]', { timeout: 90_000 });
+    await irParaEtapaComercial(page, 'Relatórios & comissões');
+    const secao = secaoHistoricoComercial(page);
+    await secao.waitFor({ timeout: 30_000 });
+    await secao.getByLabel('Identificador do registro').fill(randomUUID());
+    await page.evaluate(() => { window.__uxAtrasarHistorico = true; });
+    await secao.getByRole('button', { name: 'Consultar versões' }).click();
+    const enquanto = secao.locator('[role="status"]', { hasText: /consultando/i });
+    await enquanto.waitFor({ timeout: 2_000 });
+    assert.ok(await enquanto.isVisible(), 'a consulta em curso precisa ser anunciada');
+    assert.ok(await secao.getByRole('button', { name: /consultar/i }).isDisabled(), 'o botão não aceita nova chamada durante a consulta');
+    await page.waitForSelector('text=/nenhuma versão/i', { timeout: 30_000 });
+    await captureComercial(page, 'desktop-comercial-historico-consultando');
+  } finally {
+    await context.close();
+  }
+});
+
+test('browser: o papel comercial vê a negativa do histórico em linguagem clara, sem o código cru nem repetição', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'comercial' });
+  await loginHttp(staff.email);
+  const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+  try {
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/comercial', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector('nav[aria-label="Etapas comerciais"]', { timeout: 90_000 });
+    await irParaEtapaComercial(page, 'Relatórios & comissões');
+    const secao = secaoHistoricoComercial(page);
+    await secao.waitFor({ timeout: 30_000 });
+    await secao.getByLabel('Identificador do registro').fill(randomUUID());
+    await secao.getByRole('button', { name: 'Consultar versões' }).click();
+    await page.waitForSelector('[role="alert"]', { timeout: 30_000 });
+    const texto = await secao.locator('[role="alert"]').innerText();
+    assert.ok(!texto.includes('role_required'), `não expor o código técnico: "${texto}"`);
+    assert.ok(/permiss|acesso/i.test(texto), `a negativa diz que o papel não tem acesso: "${texto}"`);
+    assert.equal(await secao.getByRole('button', { name: 'Tentar novamente' }).count(), 0, 'negativa não oferece repetição');
+    await captureComercial(page, 'desktop-comercial-historico-negado');
+  } finally {
+    await context.close();
+  }
+});
+
+test('browser: no tema noturno a casca e o histórico mantêm contraste de texto legível', { skip: !RUN }, async () => {
+  const marcelo = await provisionStaff(pool, { role: 'marcelo' });
+  await loginHttp(marcelo.email);
+  const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 768, height: 1024 } });
+  try {
+    const page = await context.newPage();
+    await loginBrowser(page, marcelo.email);
+    await page.goto('/admin/comercial', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector('nav[aria-label="Etapas comerciais"]', { timeout: 90_000 });
+    await page.click('[data-admin-theme-toggle="true"]');
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night', null, { timeout: 20_000 });
+    await irParaEtapaComercial(page, 'Relatórios & comissões');
+    await secaoHistoricoComercial(page).waitFor({ timeout: 30_000 });
+
+    const medicoes = await page.evaluate(() => {
+      const fundoEfetivo = elemento => {
+        for (let atual = elemento; atual; atual = atual.parentElement) {
+          const cor = getComputedStyle(atual).backgroundColor;
+          const canais = (cor.match(/[\d.]+/g) || []).map(Number);
+          if (canais.length >= 3 && (canais.length < 4 || canais[3] > 0.5)) return canais.slice(0, 3);
+        }
+        return [255, 255, 255];
+      };
+      const luminancia = ([r, g, b]) => {
+        const lin = c => { const s = c / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; };
+        return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+      };
+      const contraste = (a, b) => {
+        const [l1, l2] = [luminancia(a), luminancia(b)].sort((x, y) => y - x);
+        return (l1 + 0.05) / (l2 + 0.05);
+      };
+      const alvos = {
+        'titulo-etapa': document.querySelector('h2#comercial-contexto'),
+        'dica': document.querySelector('p[class*="hint"]'),
+        'botao-etapa-ativa': document.querySelector('nav[aria-label="Etapas comerciais"] button[aria-pressed="true"]'),
+        'titulo-historico': [...document.querySelectorAll('h2')].find(h => h.textContent?.includes('Histórico de versões')) || null,
+        'dica-historico': [...document.querySelectorAll('section p')].find(p => p.textContent?.includes('nenhuma comissão é paga')) || null,
+      };
+      const saida = {};
+      for (const [nome, el] of Object.entries(alvos)) {
+        if (!el) { saida[nome] = null; continue; }
+        const cor = (getComputedStyle(el).color.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+        saida[nome] = Math.round(contraste(cor, fundoEfetivo(el)) * 100) / 100;
+      }
+      return { tema: document.documentElement.dataset.adminTheme, contraste: saida };
+    });
+    await writeComercialEvidence('contraste-noturno.json', medicoes);
+    for (const [nome, valor] of Object.entries(medicoes.contraste)) {
+      assert.ok(valor !== null, `elemento "${nome}" precisa existir no tema noturno`);
+      assert.ok(valor >= 4.5, `contraste de "${nome}" no tema noturno precisa ser ≥ 4.5:1 (medido ${valor}:1)`);
+    }
+    await captureComercial(page, 'comercial-768-noturno');
+  } finally {
+    await context.close();
+  }
+});
+
+test('browser: o gate administrativo continua barrando papel fora da lista em /admin/comercial', { skip: !RUN }, async () => {
+  const rh = await provisionStaff(pool, { role: 'rh' });
+  await loginHttp(rh.email);
+  const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+  try {
+    const page = await context.newPage();
+    await loginBrowser(page, rh.email);
+    await page.goto('/admin/comercial', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector('[data-admin-gate="forbidden"]', { timeout: 90_000 });
+    assert.equal(await page.locator('nav[aria-label="Etapas comerciais"]').count(), 0, 'papel sem acesso não vê as etapas');
+  } finally {
+    await context.close();
+  }
+});
+
+async function ajustarTemaAdmin(page, desejado) {
+  const atual = await page.evaluate(() => document.documentElement.dataset.adminTheme || 'day');
+  if (atual !== desejado) {
+    await page.click('[data-admin-theme-toggle="true"]');
+    await page.waitForFunction(v => (document.documentElement.dataset.adminTheme || 'day') === v, desejado, { timeout: 20_000 });
+  }
+}
+
+// Evidência própria da fatia: mede sempre; grava capturas e resumo.json somente
+// quando UX_COMERCIAL_EVIDENCE_DIR existe (sem variável, nenhum arquivo é escrito).
+// Mede e captura /admin/comercial em 320/390/768/1440 px, dia e noite, e registra
+// o percurso de teclado. Gera resumo.json legível por máquina (sem dado real).
+test('browser: evidência própria de /admin/comercial em 320/390/768/1440 px, dia e noite, com teclado', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'marcelo' });
+  await loginHttp(staff.email);
+  const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+  const capturas = [];
+  let teclado = null;
+  try {
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/comercial', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector('nav[aria-label="Etapas comerciais"]', { timeout: 90_000 });
+
+    for (const tema of ['day', 'night']) {
+      await ajustarTemaAdmin(page, tema);
+      for (const [largura, altura] of [[320, 844], [390, 844], [768, 1024], [1440, 900]]) {
+        await page.setViewportSize({ width: largura, height: altura });
+        await page.waitForTimeout(250);
+        for (const nome of ['Vistoria', 'Relatórios & comissões']) {
+          await irParaEtapaComercial(page, nome);
+          let medida = await medirTransbordoComercial(page);
+          if (medida.sobra > 1) { await page.waitForTimeout(400); medida = await medirTransbordoComercial(page); }
+          const contraste = await page.evaluate(() => {
+            const el = document.querySelector('nav[aria-label="Etapas comerciais"] button[aria-pressed="true"]');
+            if (!el) return null;
+            const canal = cor => (cor.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+            const fundo = (() => {
+              for (let a = el; a; a = a.parentElement) {
+                const c = getComputedStyle(a).backgroundColor;
+                const v = (c.match(/[\d.]+/g) || []).map(Number);
+                if (v.length >= 3 && (v.length < 4 || v[3] > 0.5)) return v.slice(0, 3);
+              }
+              return [255, 255, 255];
+            })();
+            const lum = ([r, g, b]) => { const f = x => { const s = x / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+            const [l1, l2] = [lum(canal(getComputedStyle(el).color)), lum(fundo)].sort((x, y) => y - x);
+            return Math.round(((l1 + 0.05) / (l2 + 0.05)) * 100) / 100;
+          });
+          const slug = nome.startsWith('Vistoria') ? 'vistoria' : 'relatorios';
+          const arquivo = `${largura}-${tema === 'night' ? 'noite' : 'dia'}-${slug}.png`;
+          await captureComercial(page, arquivo.replace(/\.png$/, ''));
+          capturas.push({ arquivo, largura, altura, tema, etapa: nome, sobraPx: medida.sobra, contrasteEtapaAtiva: contraste });
+        }
+      }
+    }
+
+    // Teclado no celular (390 px, dia): foco visível, Tab entre etapas e Enter para ativar.
+    await ajustarTemaAdmin(page, 'day');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await irParaEtapaComercial(page, 'Vistoria');
+    await page.locator('nav[aria-label="Etapas comerciais"] button').first().focus();
+    const percurso = [];
+    for (let passo = 0; passo < 3; passo += 1) {
+      await page.keyboard.press('Tab');
+      percurso.push(await page.evaluate(() => (document.activeElement?.textContent || '').trim().slice(0, 40)));
+    }
+    const contorno = await page.evaluate(() => {
+      const e = getComputedStyle(document.activeElement);
+      return { outlineStyle: e.outlineStyle, outlineWidth: e.outlineWidth, boxShadow: e.boxShadow };
+    });
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('h2#comercial-contexto', { timeout: 30_000 });
+    teclado = {
+      largura: 390,
+      tema: 'day',
+      percurso,
+      contornoFocoNaUltimaEtapa: contorno,
+      enterAtivaEtapa: await page.locator('h2#comercial-contexto').innerText(),
+    };
+    await captureComercial(page, '390-dia-teclado');
+  } finally {
+    await context.close();
+  }
+
+  const falhas = capturas.filter(c => c.sobraPx > 1);
+  const entries = capturas.map(c => ({
+    stage: 'ux-pro-06-comercial',
+    route: '/admin/comercial',
+    role: 'marcelo',
+    viewport: `${c.largura}x${c.altura}`,
+    theme: c.tema === 'night' ? 'noite' : 'dia',
+    etapa: c.etapa,
+    file: c.arquivo,
+    sobraDocumentoPx: c.sobraPx,
+    contrasteEtapaAtivaTema: c.contrasteEtapaAtiva,
+  }));
+  if (teclado) entries.push({
+    stage: 'ux-pro-06-comercial',
+    route: '/admin/comercial',
+    role: 'marcelo',
+    viewport: '390x844',
+    theme: 'dia',
+    etapa: 'teclado',
+    file: '390-dia-teclado.png',
+    firstFocus: true,
+    percursoTeclado: teclado.percurso,
+  });
+  const resumo = {
+    stage: 'ux-pro-06-comercial',
+    generatedBy: 'gate npm run test:ux-crm:pg (UX_COMERCIAL_EVIDENCE_DIR=docs/ux-pro-06-comercial-evidencias/depois)',
+    notes: 'Evidência da fatia UX-PRO-06 — /admin/comercial. Massa sintética criada pelas APIs; papel marcelo provisionado pelo gate; sem dado pessoal ou credencial. As medições do checkout de main (267fb55) ficam em antes/ e NÃO são evidência vigente.',
+    fatia: 'UX-PRO-06 — /admin/comercial',
+    rota: '/admin/comercial',
+    papel_usado: 'marcelo (dados sintéticos; sem credencial registrada)',
+    viewports: [320, 390, 768, 1440],
+    temas: ['dia', 'noite'],
+    entries,
+    capturas,
+    transbordoDocumentoPorCaptura: falhas.length === 0 ? 'nenhum' : falhas,
+    teclado,
+    limites: [
+      'Medição automatizada por Chromium; não é validação manual nem aceite de Marcelo, Andreia ou comercial.',
+      'Componentes de domínio das etapas (src/app/admin/ti/*) são medidos apenas pela casca; não foram alterados nesta fatia.',
+    ],
+  };
+  await writeComercialEvidence('resumo.json', resumo);
+  assert.equal(falhas.length, 0, `transbordo de documento: ${JSON.stringify(falhas)}`);
+});
