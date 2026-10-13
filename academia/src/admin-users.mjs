@@ -45,11 +45,17 @@ export function ensureAdminAccount(state, { password, email = ADMIN_EMAIL, name 
   state.users = state.users || [];
   const alvo = String(email).trim().toLowerCase();
   const id = userIdFor(alvo);
-  const existente = state.users.find(u => u.id === id);
+  const porId = state.users.find(u => u.id === id);
+  const porEmail = state.users.find(u => String(u.email || '').trim().toLowerCase() === alvo);
+  const existente = porId || porEmail;
   if (existente) {
-    // Garante apenas os vínculos de gestão, sem tocar em credencial.
-    existente.sector = ADMIN_SECTOR;
-    existente.kind = 'gestao';
+    // Nunca promover ou reparar silenciosamente uma conta preexistente: ela pode
+    // ser uma conta de demonstração com credencial conhecida. Só reutilize uma
+    // conta de gestão já vinculada exatamente a este ID e e-mail.
+    if (existente.id !== id || String(existente.email || '').trim().toLowerCase() !== alvo ||
+        existente.kind !== 'gestao' || existente.sector !== ADMIN_SECTOR) {
+      throw new Error(`Conflito na conta de gestão da Academia para ${alvo}; nenhuma conta existente foi alterada.`);
+    }
     return { created: false, user: existente, id };
   }
   if (!password) return { created: false, user: null, id };
