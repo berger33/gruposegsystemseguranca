@@ -27,12 +27,13 @@
 - `npm run typecheck` — aprovado.
 - `npm run build` — aprovado; compilação e geração das 105 páginas concluídas.
 - `node scripts/ux-pro-00-inventory.mjs --check` — aprovado; 100 rotas reconciliadas com os inventários vigentes.
-- `npm run test:unit` — **908 aprovados, 3 falharam, 0 ignorados**. As três falhas são `EPERM` ao criar symlinks em Windows nos testes `qa-backup-coverage-inventory.test.mjs`, `qa-cli-v2-local-provider.test.mjs` e `qa-cli-v2-transfer.test.mjs`; os casos não tocam os arquivos desta fatia. A suíte completa, portanto, não está verde neste host. Os checks remotos ainda precisam validar o ambiente Linux do CI; esse resultado não converte a falha local em sucesso.
+- `npm run test:unit` local no Windows — **908 aprovados, 3 falharam, 0 ignorados**. As três falhas são `EPERM` ao criar symlinks nos testes `qa-backup-coverage-inventory.test.mjs`, `qa-cli-v2-local-provider.test.mjs` e `qa-cli-v2-transfer.test.mjs`; esses casos não tocam os arquivos desta fatia. O host local não pode executar esses cenários com a configuração atual.
+- O workflow obrigatório `QA baseline` executa `npm test` em `ubuntu-latest`; no commit `38f6eb71674326dd4127a0a1573ecb5e7f3d07fa`, o passo **Unit tests (no silent integration skip)** passou, assim como o restante do job. A validação remota usa o ambiente suportado pelos testes e não apaga a limitação da execução local Windows.
 - `git diff --check` — aprovado.
 - Revisão estática do CSS nos breakpoints 320, 390, 650, 768, 1000 e 1440 px; tema claro/escuro usa tokens `--ux-color-*`, e foco `:focus-visible` é visível. Não foi feita medição automática de contraste.
 - Revisão de código confirma ordem de leitura sem controles customizados, nomes nativos dos botões/summary, foco visível e alvo principal mínimo de 44 px.
 - Não houve sessão autenticada no navegador, screenshots comparáveis, passagem manual de teclado ou teste visual dos temas. Essas verificações ficam registradas como não realizadas, não como aprovação manual.
-- WSL está instalado no host, mas o comando disponível abriu a distribuição `docker-desktop`, sem `bash`; não foi possível repetir a suíte em Linux local.
+- WSL está instalado no host, mas a única distribuição disponível é `docker-desktop`, sem `bash`; não foi possível repetir a suíte em Linux local.
 
 ## Limitação operacional que continua explícita
 
