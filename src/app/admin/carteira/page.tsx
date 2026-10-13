@@ -5,6 +5,7 @@ import UiState from "../../../components/ui/UiState";
 import { crmRequest, type CrmErrorDescriptor } from "../../../lib/crm-request";
 import { stageLabel } from "../../../lib/crm-vocabulary.mjs";
 import styles from "../../../components/ui/UiWorkspace.module.css";
+import carteiraStyles from "./Carteira.module.css";
 
 // UX-03B: carteira legível. As chamadas, o `request_key` de idempotência, os
 // filtros canônicos e o escopo por responsável continuam exatamente como
@@ -47,10 +48,25 @@ function formatDateTime(value: string | null) {
   return Number.isNaN(parsed.getTime()) ? "Sem data combinada" : parsed.toLocaleString("pt-BR");
 }
 
+// UX-PRO-06 (carteira): hora da última leitura concluída, para a faixa de dados
+// desatualizados. Derivada do relógio do navegador no instante do sucesso —
+// nenhum valor é estimado nem gravado.
+function formatReadAt(value: number | null) {
+  if (value === null) return "—";
+  return new Date(value).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+}
+
 function CarteiraContent() {
   const [data, setData] = useState<PortfolioData | null>(null);
   const [readState, setReadState] = useState<"loading" | "ready" | "failed">("loading");
   const [readError, setReadError] = useState<CrmErrorDescriptor | null>(null);
+  // UX-PRO-06 (carteira): uma leitura concluída não é apagada pela falha
+  // seguinte. O ref marca que JÁ existiu sucesso (sem causar recarga em
+  // cascata); o estado guarda quando isso aconteceu e qual recorte foi lido.
+  const readRef = useRef(false);
+  const [readAt, setReadAt] = useState<number | null>(null);
+  const [stale, setStale] = useState(false);
+  const [readOffset, setReadOffset] = useState(0);
   const [filter, setFilter] = useState<string>("all");
   const [offset, setOffset] = useState(0);
 
@@ -70,12 +86,31 @@ function CarteiraContent() {
     setReadError(null);
     const result = await crmRequest<PortfolioData>(`/api/crm/portfolio?filter=${filter}&offset=${offset}`);
     if (!result.ok) {
+      // UX-03B: falha de leitura não vira carteira vazia.
+      // UX-PRO-06 (carteira): uma releitura que falha NÃO apaga o que já foi
+      // lido — a tela preserva itens, totais e paginação e os marca como
+      // desatualizados. Dúvida de autorização (401/403) é diferente: ali o
+      // conteúdo é substituído pelo estado negado completo — a apresentação
+      // falha fechada, sem dado preservado.
+      const autorizacaoDuvidosa = result.error.kind === "denied" || result.error.kind === "auth";
+      if (readRef.current && !autorizacaoDuvidosa) {
+        setReadError(result.error);
+        setStale(true);
+        setReadState("ready");
+        return;
+      }
       setData(null);
+      readRef.current = false;
+      setStale(false);
       setReadError(result.error);
       setReadState("failed");
       return;
     }
     setData(result.data);
+    readRef.current = true;
+    setReadAt(Date.now());
+    setReadOffset(offset);
+    setStale(false);
     setReadState("ready");
   }, [filter, offset]);
 
@@ -155,7 +190,7 @@ function CarteiraContent() {
           Oportunidades da carteira{readState === "ready" && data ? ` (${data.total})` : ""}
         </h2>
 
-        {readState === "loading" ? (
+        {readState === "loading" && !readRef.current ? (
           <UiState variant="loading" title="Consultando a sua carteira…" />
         ) : readState === "failed" && readError ? (
           <UiState
@@ -164,42 +199,69 @@ function CarteiraContent() {
             detail={readError.detail}
             onRetry={readError.kind === "retry" ? () => load() : undefined}
           />
-        ) : !data || data.items.length === 0 ? (
-          <UiState variant="empty" title="Nenhuma oportunidade neste recorte." detail="Troque o filtro acima ou acompanhe o funil em Empresas e funil." />
         ) : (
           <>
-            <div className={styles.cards}>
-              {data.items.map(item => {
-                const semProxima = !item.next_action || !item.next_action_date;
-                const vencida = Boolean(item.next_action_date) && new Date(item.next_action_date as string) < new Date();
-                return (
-                  <article key={item.id} className={styles.card} data-alert={semProxima || vencida ? "true" : "false"}>
-                    <h3 className={styles.cardTitle}>{item.title}</h3>
-                    <dl className={styles.facts}>
-                      <div><dt>Empresa</dt><dd>{item.company_name}</dd></div>
-                      <div><dt>Grupo</dt><dd>{item.group_name || "não vinculado"}</dd></div>
-                      <div><dt>Unidade</dt><dd>{item.unit_name || "não definida"}</dd></div>
-                      <div><dt>Estágio</dt><dd>{stageLabel(item.stage)}</dd></div>
-                      <div><dt>Próxima ação</dt><dd>{item.next_action || "Sem próxima ação combinada"}</dd></div>
-                      <div><dt>Quando</dt><dd>{formatDateTime(item.next_action_date)}</dd></div>
-                    </dl>
-                    {semProxima ? <p className={styles.hint}><strong>Pendente:</strong> esta oportunidade está sem próximo contato combinado.</p> : null}
-                    {!semProxima && vencida ? <p className={styles.hint}><strong>Atrasada:</strong> o contato combinado já venceu.</p> : null}
-                    <div className={styles.actions}>
-                      <button type="button" className={styles.primary} onClick={() => startAction(item)}>
-                        Criar ação de carteira<span className={styles.visuallyHidden}> a partir de {item.title}</span>
-                      </button>
-                      <a className={styles.button} href="/admin/crm">Abrir o funil para atualizar</a>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-            <div className={styles.actions}>
-              <button type="button" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE))}>Página anterior</button>
-              <button type="button" disabled={offset + PAGE >= data.total} onClick={() => setOffset(offset + PAGE)}>Próxima página</button>
-              <span className={styles.hint}>Exibindo {data.items.length ? offset + 1 : 0}–{offset + data.items.length} de {data.total}.</span>
-            </div>
+            {readState === "loading" ? (
+              <p role="status" className={carteiraStyles.updating} data-testid="carteira-atualizando">Atualizando a carteira…</p>
+            ) : null}
+            {stale && readError ? (
+              <p role="alert" className={carteiraStyles.stale} data-testid="carteira-desatualizada">
+                A última atualização da carteira falhou ({readError.title}). Os itens, os totais de ações e as ações
+                recentes abaixo são da última leitura concluída, de {formatReadAt(readAt)}, e podem estar desatualizados
+                — isto não significa que a carteira esteja vazia; o recorte exibido pode não ser o que você acabou de
+                escolher. Fundo, totais e paginação voltam a acompanhar o recorte assim que uma leitura concluir.
+                {readError.kind === "retry" ? (
+                  <>
+                    {" "}
+                    <button type="button" onClick={() => load()}>Tentar novamente</button>
+                  </>
+                ) : null}
+              </p>
+            ) : null}
+            {!data || data.items.length === 0 ? (
+              <UiState variant="empty" title="Nenhuma oportunidade neste recorte." detail="Troque o filtro acima ou acompanhe o funil em Empresas e funil." />
+            ) : (
+              <>
+                <div className={styles.cards}>
+                  {data.items.map(item => {
+                    const semProxima = !item.next_action || !item.next_action_date;
+                    const vencida = Boolean(item.next_action_date) && new Date(item.next_action_date as string) < new Date();
+                    return (
+                      <article key={item.id} className={styles.card} data-alert={semProxima || vencida ? "true" : "false"} data-testid="carteira-cartao">
+                        <h3 className={styles.cardTitle}>{item.title}</h3>
+                        <dl className={styles.facts}>
+                          <div><dt>Empresa</dt><dd>{item.company_name}</dd></div>
+                          <div><dt>Grupo</dt><dd>{item.group_name || "não vinculado"}</dd></div>
+                          <div><dt>Unidade</dt><dd>{item.unit_name || "não definida"}</dd></div>
+                          <div><dt>Estágio</dt><dd>{stageLabel(item.stage)}</dd></div>
+                          <div><dt>Próxima ação</dt><dd>{item.next_action || "Sem próxima ação combinada"}</dd></div>
+                          <div><dt>Quando</dt><dd>{formatDateTime(item.next_action_date)}</dd></div>
+                        </dl>
+                        {semProxima ? <p className={styles.hint}><strong>Pendente:</strong> esta oportunidade está sem próximo contato combinado.</p> : null}
+                        {!semProxima && vencida ? <p className={styles.hint}><strong>Atrasada:</strong> o contato combinado já venceu.</p> : null}
+                        <div className={styles.actions}>
+                          <button type="button" className={styles.primary} onClick={() => startAction(item)}>
+                            Criar ação de carteira<span className={styles.visuallyHidden}> a partir de {item.title}</span>
+                          </button>
+                          <a className={styles.button} href="/admin/crm">Abrir o funil para atualizar</a>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+                <div className={styles.actions}>
+                  <button type="button" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE))}>Página anterior</button>
+                  <button type="button" disabled={offset + PAGE >= data.total} onClick={() => setOffset(offset + PAGE)}>Próxima página</button>
+                  {/* UX-PRO-06 (carteira): o intervalo descreve o recorte que
+                      produziu os itens exibidos, não o recorte pedido que ainda
+                      não voltou — sem leitura nova, `offset` pode estar à frente. */}
+                  <span className={styles.hint}>
+                    Exibindo {data.items.length ? readOffset + 1 : 0}–{readOffset + data.items.length} de {data.total}
+                    {stale ? " (última leitura concluída)" : ""}.
+                  </span>
+                </div>
+              </>
+            )}
           </>
         )}
       </section>
@@ -262,29 +324,45 @@ function CarteiraContent() {
 
       <section aria-labelledby="carteira-resultados-titulo" className={styles.panel}>
         <h2 id="carteira-resultados-titulo" className={styles.panelTitle}>Resultado das ações que você registrou</h2>
-        {readState !== "ready" || !data ? (
-          <p className={styles.hint}>Os números aparecem junto com a lista acima.</p>
-        ) : data.metrics.length === 0 ? (
-          <UiState variant="empty" title="Nenhuma ação de carteira registrada ainda." detail="Os totais aparecem assim que você criar a primeira ação." />
-        ) : (
-          <ul>
-            {data.metrics.map(metric => (
-              <li key={metric.kind}>
-                <strong>{kindLabel(metric.kind)}</strong>: {metric.total} criada(s), {metric.won} ganha(s), {metric.lost} perdida(s).
-              </li>
-            ))}
-          </ul>
-        )}
+        {readState === "ready" && data ? (
+          <>
+            {stale ? (
+              <p className={styles.hint}>
+                Estes totais são da última leitura concluída, de {formatReadAt(readAt)}, e podem estar desatualizados.
+              </p>
+            ) : null}
+            {data.metrics.length === 0 ? (
+              <UiState variant="empty" title="Nenhuma ação de carteira registrada ainda." detail="Os totais aparecem assim que você criar a primeira ação." />
+            ) : (
+              <ul>
+                {data.metrics.map(metric => (
+                  <li key={metric.kind}>
+                    <strong>{kindLabel(metric.kind)}</strong>: {metric.total} criada(s), {metric.won} ganha(s), {metric.lost} perdida(s).
+                  </li>
+                ))}
+              </ul>
+            )}
 
-        <h3 className={styles.panelTitle}>Ações recentes</h3>
-        {readState !== "ready" || !data ? null : data.actions.length === 0 ? (
-          <p className={styles.hint}>Nenhuma ação recente.</p>
+            <h3 className={styles.panelTitle}>Ações recentes</h3>
+            {data.actions.length === 0 ? (
+              <p className={styles.hint}>Nenhuma ação recente.</p>
+            ) : (
+              <ul>
+                {data.actions.map(action => (
+                  <li key={action.id}>{kindLabel(action.kind)} — {action.title} — {stageLabel(action.stage)}</li>
+                ))}
+              </ul>
+            )}
+          </>
+        ) : readState === "failed" && readError ? (
+          // UX-PRO-06 (carteira): sem leitura concluída não existe total. A tela
+          // diz que a leitura falhou em vez de sugerir que não há ações.
+          <p className={styles.hint}>
+            A leitura dos resultados falhou ({readError.title}). Nada é mostrado aqui para não parecer que você não
+            tem ações registradas: {readError.detail}
+          </p>
         ) : (
-          <ul>
-            {data.actions.map(action => (
-              <li key={action.id}>{kindLabel(action.kind)} — {action.title} — {stageLabel(action.stage)}</li>
-            ))}
-          </ul>
+          <p className={styles.hint}>Os totais aparecem depois que a leitura da carteira terminar.</p>
         )}
       </section>
     </main>

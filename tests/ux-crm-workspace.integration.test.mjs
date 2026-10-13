@@ -128,6 +128,7 @@ after(async () => {
 // escopo quando a suíte inteira é executada.
 const evidenceDir = process.env.UX_CRM_EVIDENCE_DIR || '';
 const leadsEvidenceDir = process.env.UX_LEADS_EVIDENCE_DIR || '';
+const carteiraEvidenceDir = process.env.UX_CARTEIRA_EVIDENCE_DIR || '';
 async function capture(page, nome, directory = evidenceDir) {
   if (!directory) return;
   await mkdir(directory, { recursive: true });
@@ -135,6 +136,9 @@ async function capture(page, nome, directory = evidenceDir) {
 }
 async function captureLeads(page, nome) {
   await capture(page, nome, leadsEvidenceDir);
+}
+async function captureCarteira(page, nome) {
+  await capture(page, nome, carteiraEvidenceDir);
 }
 
 function api(pathname, { method = 'GET', body, cookie } = {}) {
@@ -232,6 +236,45 @@ async function forceFunnelStatus(context, status, code, { inicial = true } = {})
       return original(input, init);
     };
   }, { status, code, inicial });
+}
+
+/**
+ * Força, SÓ dentro da aba do navegador, uma resposta de erro para a leitura da
+ * carteira (`GET /api/crm/portfolio`). Mesma técnica usada no funil: a
+ * interceptação de rede do Playwright não funciona com o Chromium empacotado
+ * deste repositório, então a falha é induzida no próprio `window.fetch` da
+ * página. Nada disso entra no sistema: o servidor continua intacto e, ao
+ * desligar a variável, a leitura real volta a valer.
+ */
+async function forcePortfolioStatus(context, status, code, { inicial = true } = {}) {
+  await context.addInitScript(({ status, code, inicial }) => {
+    window.__uxForcarFalhaCarteira = inicial;
+    const original = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      if (window.__uxForcarFalhaCarteira && url.includes('/api/crm/portfolio?')) {
+        return Promise.resolve(new Response(JSON.stringify({ error: code }), {
+          status, headers: { 'content-type': 'application/json' },
+        }));
+      }
+      return original(input, init);
+    };
+  }, { status, code, inicial });
+}
+
+/** Atrasa a leitura da carteira para observar o estado de atualização em curso. */
+async function delayPortfolioFetch(context, ms = 4000) {
+  await context.addInitScript(({ ms }) => {
+    window.__uxAtrasarCarteira = false;
+    const original = window.fetch.bind(window);
+    window.fetch = async (input, init) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      if (window.__uxAtrasarCarteira && url.includes('/api/crm/portfolio?')) {
+        await new Promise(resolve => setTimeout(resolve, ms));
+      }
+      return original(input, init);
+    };
+  }, { ms });
 }
 
 async function loginBrowser(page, email) {
@@ -609,6 +652,340 @@ test('browser: o funil não transborda em 320/768 px e as superfícies seguem o 
     assert.ok(cores.coluna && canais(cores.coluna.fundo).reduce((a, b) => a + b, 0) < 240, `a coluna do quadro precisa escurecer no tema noturno: ${cores.coluna?.fundo}`);
     assert.ok(cores.titulo && canais(cores.titulo.texto).reduce((a, b) => a + b, 0) > 480, `o título da coluna precisa clarear no tema noturno: ${cores.titulo?.texto}`);
     await capture(page, 'funil-768-noturno');
+
+    await context.close();
+  } finally { /* o navegador é compartilhado e fechado no after() */ }
+});
+
+// ---------------------------------------------------------------------------
+// UX-PRO-06 — carteira comercial (/admin/carteira): estados de leitura
+//
+// O que estes testes provam: uma releitura que falha NÃO apaga a carteira já
+// lida — a tela mantém os itens, diz que podem estar desatualizados, cita o
+// motivo real e a hora da última leitura concluída, e oferece repetição;
+// durante uma releitura em curso a lista permanece visível com indicador em
+// role="status"; dúvida de autorização continua falhando fechada (o estado
+// negado substitui tudo, sem convite a repetir); a primeira leitura que falha
+// não é apresentada como carteira vazia nem como zero de resultados; a tela
+// não transborda em 320/390/768 px, escurece no tema noturno pelo controle
+// real do envelope e é operável pelo teclado.
+//
+// O que NÃO provam: aceite humano, homologação de Marcelo/Andreia, execução em
+// Windows ou na máquina do operador.
+// ---------------------------------------------------------------------------
+
+test('a carteira continua exigindo sessão e papel, com recorte pessoal e filtros canônicos', { skip: !RUN }, async () => {
+  const anonimo = await api('/api/crm/portfolio');
+  assert.equal(anonimo.status, 401, 'anônimo deve continuar recebendo 401');
+  assert.equal(anonimo.body?.error, 'session_required');
+
+  const rh = await provisionStaff(pool, { role: 'rh' });
+  const cookieRh = await loginHttp(rh.email);
+  const negado = await api('/api/crm/portfolio', { cookie: cookieRh });
+  assert.equal(negado.status, 403, 'papel fora da lista continua sem acesso');
+  assert.equal(negado.body?.error, 'role_required');
+
+  const dono = await provisionStaff(pool, { role: 'comercial' });
+  const cookieDono = await loginHttp(dono.email);
+  await seedFunnel(cookieDono, 'Contrato Carteira');
+  const meu = await api('/api/crm/portfolio?filter=all', { cookie: cookieDono });
+  assert.equal(meu.status, 200, JSON.stringify(meu.body));
+  assert.ok(meu.body.items.some(item => item.title === 'Portaria 24h Contrato Carteira'), 'o responsável vê o próprio item');
+  assert.equal(meu.body.limit, 50, 'o limite de página continua 50');
+
+  const colega = await provisionStaff(pool, { role: 'comercial' });
+  const cookieColega = await loginHttp(colega.email);
+  const alheio = await api('/api/crm/portfolio?filter=all', { cookie: cookieColega });
+  assert.equal(alheio.status, 200);
+  assert.equal(alheio.body.items.some(item => item.title === 'Portaria 24h Contrato Carteira'), false, 'a carteira continua pessoal');
+
+  const filtroInvalido = await api('/api/crm/portfolio?filter=qualquer&offset=0', { cookie: cookieDono });
+  assert.equal(filtroInvalido.status, 400, 'recorte fora da lista canônica continua recusado');
+  assert.equal(filtroInvalido.body?.error, 'invalid_filter');
+});
+
+test('browser: falha ao atualizar mantém a carteira já lida e marca os dados como desatualizados', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'comercial' });
+  const cookie = await loginHttp(staff.email);
+  await seedFunnel(cookie, 'Carteira Desatualizada');
+
+  try {
+    const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+    // Interceptação armada DESLIGADA: a leitura inicial conclui de verdade.
+    await forcePortfolioStatus(context, 503, 'crm_unavailable', { inicial: false });
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/carteira', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector('text=Portaria 24h Carteira Desatualizada', { timeout: 90_000 });
+
+    // A partir daqui a releitura falha; a carteira já lida precisa permanecer.
+    // O caminho da pessoa é o mesmo: trocar o recorte dispara nova consulta.
+    await page.evaluate(() => { window.__uxForcarFalhaCarteira = true; });
+    await page.selectOption('#carteira-filtro', 'no_next');
+    await page.waitForSelector('[data-testid="carteira-desatualizada"]', { timeout: 30_000 });
+
+    const aviso = await page.textContent('[data-testid="carteira-desatualizada"]') || '';
+    assert.match(aviso, /desatualizados/i, 'a faixa precisa dizer que os dados podem estar desatualizados');
+    assert.match(aviso, /não significa que a carteira esteja vazia/i, 'falha não pode ser lida como carteira vazia');
+    assert.match(aviso, /Não foi possível consultar agora/, 'a faixa cita o motivo real da falha');
+    assert.match(aviso, /última leitura concluída/i, 'a faixa diz de quando é o dado preservado');
+    assert.ok(await page.isVisible('text=Portaria 24h Carteira Desatualizada'), 'a carteira lida não pode sumir com a falha');
+    assert.equal(await page.isVisible('[data-ui-state="error"]'), false, 'com dados preservados não deve haver estado de erro cheio');
+    await captureCarteira(page, 'desktop-carteira-desatualizada');
+
+    // A repetição dentro da faixa volta a falar com o servidor de verdade.
+    await page.evaluate(() => { window.__uxForcarFalhaCarteira = false; });
+    await page.click('[data-testid="carteira-desatualizada"] button:has-text("Tentar novamente")');
+    await page.waitForSelector('[data-testid="carteira-desatualizada"]', { state: 'detached', timeout: 30_000 });
+    assert.ok(await page.isVisible('text=Portaria 24h Carteira Desatualizada'), 'a carteira continua na tela após a repetição');
+
+    await context.close();
+  } finally { /* o navegador é compartilhado e fechado no after() */ }
+});
+
+test('browser: releitura em curso mantém a carteira visível com indicador de atualização', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'comercial' });
+  const cookie = await loginHttp(staff.email);
+  await seedFunnel(cookie, 'Carteira Atendimento');
+
+  try {
+    const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+    await delayPortfolioFetch(context, 4000);
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/carteira', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector('text=Portaria 24h Carteira Atendimento', { timeout: 90_000 });
+
+    await page.evaluate(() => { window.__uxAtrasarCarteira = true; });
+    await page.selectOption('#carteira-filtro', 'no_next');
+    await page.waitForSelector('[data-testid="carteira-atualizando"]', { timeout: 30_000 });
+    // Com a consulta ainda em voo, a carteira segue na tela — não é substituída
+    // por um bloco de carregamento que apaga o que a pessoa já estava lendo.
+    assert.ok(await page.isVisible('text=Portaria 24h Carteira Atendimento'), 'a lista não pode desaparecer durante a atualização');
+
+    await page.waitForSelector('[data-testid="carteira-atualizando"]', { state: 'detached', timeout: 30_000 });
+    assert.equal(await page.isVisible('[data-testid="carteira-desatualizada"]'), false, 'releitura concluída não é desatualização');
+    assert.ok(await page.isVisible('text=Portaria 24h Carteira Atendimento'));
+
+    await context.close();
+  } finally { /* o navegador é compartilhado e fechado no after() */ }
+});
+
+test('browser: falha de autorização na releitura da carteira falha fechada, sem dados preservados', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'comercial' });
+  const cookie = await loginHttp(staff.email);
+  await seedFunnel(cookie, 'Carteira Negada');
+
+  try {
+    const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+    await forcePortfolioStatus(context, 403, 'role_required', { inicial: false });
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/carteira', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector('text=Portaria 24h Carteira Negada', { timeout: 90_000 });
+
+    await page.evaluate(() => { window.__uxForcarFalhaCarteira = true; });
+    await page.selectOption('#carteira-filtro', 'no_next');
+    await page.waitForSelector('[data-ui-state="denied"]', { timeout: 30_000 });
+
+    assert.equal(await page.isVisible('text=Portaria 24h Carteira Negada'), false, 'dúvida de autorização não mantém dado na tela');
+    assert.equal(await page.isVisible('[data-testid="carteira-desatualizada"]'), false, 'negativa não vira "dados desatualizados"');
+    assert.equal(await page.isVisible('[data-ui-state="denied"] button'), false, 'negativa não convida a repetir a mesma chamada');
+    const texto = await page.textContent('[data-ui-state="denied"]') || '';
+    assert.match(texto, /Acesso negado/);
+
+    await context.close();
+  } finally { /* o navegador é compartilhado e fechado no after() */ }
+});
+
+test('browser: a primeira leitura que falha não é apresentada como carteira vazia nem como zero', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'comercial' });
+  const cookie = await loginHttp(staff.email);
+  await seedFunnel(cookie, 'Carteira Falha Inicial');
+
+  try {
+    const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+    await forcePortfolioStatus(context, 503, 'crm_unavailable');
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/carteira', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector('[data-ui-state="error"]', { timeout: 90_000 });
+
+    const texto = await page.textContent('[data-ui-state="error"]') || '';
+    assert.match(texto, /Não foi possível consultar agora/);
+    assert.match(texto, /não significa zero registros/i, 'a tela precisa negar a leitura de "zero"');
+    assert.equal(await page.isVisible('[data-ui-state="empty"]'), false, 'falha não pode ser mostrada como ausência de itens');
+    assert.equal(await page.isVisible('text=Portaria 24h Carteira Falha Inicial'), false, 'nada é exibido sem leitura concluída');
+
+    const titulo = await page.textContent('#carteira-lista-titulo') || '';
+    assert.doesNotMatch(titulo, /\d/, `a contagem não pode aparecer sem leitura concluída: ${titulo}`);
+    const resultados = await page.textContent('#carteira-resultados-titulo + *') || '';
+    assert.match(resultados, /não puderam ser lidos|leitura/i, `os resultados precisam declarar a falha, não a ausência: ${resultados.slice(0, 160)}`);
+    await captureCarteira(page, 'desktop-carteira-falha');
+
+    // Repetir é oferecido e funciona quando a origem volta.
+    await page.evaluate(() => { window.__uxForcarFalhaCarteira = false; });
+    await page.click('[data-ui-state="error"] button:has-text("Tentar novamente")');
+    await page.waitForSelector('[data-ui-state="error"]', { state: 'detached', timeout: 30_000 });
+    await page.waitForSelector('text=Portaria 24h Carteira Falha Inicial', { timeout: 30_000 });
+
+    await context.close();
+  } finally { /* o navegador é compartilhado e fechado no after() */ }
+});
+
+test('browser: a carteira não transborda em 320/390/768 px e o tema noturno alcança as superfícies', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'comercial' });
+  const cookie = await loginHttp(staff.email);
+  await seedFunnel(cookie, 'Carteira Larguras');
+
+  try {
+    const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/carteira', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector('text=Portaria 24h Carteira Larguras', { timeout: 90_000 });
+    await captureCarteira(page, 'desktop-carteira');
+
+    // Medição compartilhada com o funil: reflow pós-resize não é overflow real,
+    // então mede, espera e reconfirma antes de reprovar; nós dentro de um
+    // contêiner com rolagem própria não contam (a rolagem contida é permitida).
+    const medir = () => page.evaluate(() => {
+      const raiz = document.documentElement;
+      const sobra = raiz.scrollWidth - raiz.clientWidth;
+      if (sobra <= 1) return { sobra, culpados: [] };
+      const dentroDeRolagem = node => {
+        for (let atual = node.parentElement; atual && atual !== document.body; atual = atual.parentElement) {
+          const overflowX = getComputedStyle(atual).overflowX;
+          if (overflowX === 'auto' || overflowX === 'scroll' || overflowX === 'hidden' || overflowX === 'clip') return true;
+        }
+        return false;
+      };
+      const culpados = [...document.querySelectorAll('body *')]
+        .filter(node => !dentroDeRolagem(node))
+        .map(node => ({ node, excesso: Math.round(node.getBoundingClientRect().right - raiz.clientWidth) }))
+        .filter(item => item.excesso > 1)
+        .sort((a, b) => b.excesso - a.excesso)
+        .slice(0, 8)
+        .map(({ node, excesso }) =>
+          `${node.tagName}#${node.id}.${String(node.className).slice(0, 60)}+${excesso}px{${(node.textContent || '').trim().slice(0, 30)}}`);
+      return { sobra, culpados };
+    });
+
+    for (const [largura, altura, nome] of [[320, 844, 'carteira-320'], [390, 844, 'carteira-390'], [768, 1024, 'carteira-768']]) {
+      await page.setViewportSize({ width: largura, height: altura });
+      await page.waitForTimeout(300);
+      let overflow = await medir();
+      if (overflow.sobra > 1) {
+        await page.waitForTimeout(400);
+        overflow = await medir();
+      }
+      assert.ok(overflow.sobra <= 1, `a carteira não pode transbordar em ${largura}px (sobra ${overflow.sobra}px): ${overflow.culpados.join(' | ')}`);
+      await captureCarteira(page, nome);
+    }
+
+    // O caminho mais largo da tela: o formulário aberto no tipo "Indicação",
+    // cujo seletor de empresa carrega nomes longos de cadastro. É aí que a
+    // coluna de campo poderia empurrar rótulo e nota além do contêiner em 320 px.
+    await page.setViewportSize({ width: 320, height: 844 });
+    await page.locator('button', { hasText: 'Criar ação de carteira' }).first().click();
+    await page.waitForSelector('#carteira-acao-titulo', { timeout: 30_000 });
+    await page.selectOption('#acao-tipo', 'indicacao');
+    await page.waitForFunction(() => {
+      const select = document.querySelector('#acao-empresa');
+      return !!select && select.options.length > 1;
+    }, null, { timeout: 30_000 });
+    await page.waitForTimeout(300);
+    let overflowFormulario = await medir();
+    if (overflowFormulario.sobra > 1) {
+      await page.waitForTimeout(400);
+      overflowFormulario = await medir();
+    }
+    assert.ok(overflowFormulario.sobra <= 1, `o formulário de ação não pode transbordar em 320px (sobra ${overflowFormulario.sobra}px): ${overflowFormulario.culpados.join(' | ')}`);
+    await captureCarteira(page, 'carteira-320-formulario-indicacao');
+
+    // Tema noturno pelo controle real do envelope administrativo.
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.waitForTimeout(200);
+    await page.click('[data-admin-theme-toggle="true"]');
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night', null, { timeout: 20_000 });
+    const cores = await page.evaluate(() => {
+      const cartao = document.querySelector('[data-testid="carteira-cartao"]');
+      const titulo = document.querySelector('[data-testid="carteira-cartao"] h3');
+      const ler = (elemento) => {
+        if (!elemento) return null;
+        const estilo = getComputedStyle(elemento);
+        return { fundo: estilo.backgroundColor, texto: estilo.color };
+      };
+      return { cartao: ler(cartao), titulo: ler(titulo) };
+    });
+    const canais = (cor) => (cor.match(/\d+/g) || []).slice(0, 3).map(Number);
+    assert.ok(cores.cartao && canais(cores.cartao.fundo).reduce((a, b) => a + b, 0) < 240, `o cartão precisa escurecer no tema noturno: ${cores.cartao?.fundo}`);
+    assert.ok(cores.titulo && canais(cores.titulo.texto).reduce((a, b) => a + b, 0) > 480, `o título do cartão precisa clarear no tema noturno: ${cores.titulo?.texto}`);
+    await captureCarteira(page, 'carteira-768-noturno');
+
+    await context.close();
+  } finally { /* o navegador é compartilhado e fechado no after() */ }
+});
+
+test('browser: o teclado percorre filtro, cartão e paginação, e criar ação devolve o foco ao formulário', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'comercial' });
+  const cookie = await loginHttp(staff.email);
+  await seedFunnel(cookie, 'Carteira Teclado');
+
+  try {
+    const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/carteira', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector('text=Portaria 24h Carteira Teclado', { timeout: 90_000 });
+
+    const ativo = () => page.evaluate(() => ({
+      id: document.activeElement?.id || '',
+      texto: (document.activeElement?.textContent || '').trim(),
+      tag: document.activeElement?.tagName || '',
+      contorno: getComputedStyle(document.activeElement).outlineStyle,
+      espessura: getComputedStyle(document.activeElement).outlineWidth,
+    }));
+
+    // Percurso real de Tab a partir do recorte: a próxima parada é a ação do
+    // cartão — nenhum controle fica apenas "parecendo" disponível.
+    await page.focus('#carteira-filtro');
+    await page.keyboard.press('Tab');
+    let foco = await ativo();
+    assert.match(foco.texto, /Criar ação de carteira/, `o Tab do filtro precisa alcançar a ação do cartão: ${foco.texto}`);
+    assert.notEqual(foco.contorno, 'none', 'o controle focado precisa ter contorno visível');
+    assert.ok(Number.parseFloat(foco.espessura) > 0, `o contorno de foco precisa ter espessura: ${foco.espessura}`);
+
+    // A segunda ação do cartão continua alcançável pelo teclado.
+    await page.keyboard.press('Tab');
+    foco = await ativo();
+    assert.equal(foco.tag, 'A', `o link do cartão precisa continuar alcançável: ${foco.tag}/${foco.texto}`);
+
+    // Abrir o formulário pelo teclado move o foco para o título da seção.
+    await page.focus('#carteira-filtro');
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => document.activeElement?.id === 'carteira-acao-titulo', null, { timeout: 30_000 });
+    foco = await ativo();
+    assert.equal(foco.id, 'carteira-acao-titulo', 'o formulário precisa receber o foco ao abrir');
+
+    // Do título, o Tab entra nos campos do formulário.
+    await page.keyboard.press('Tab');
+    assert.equal((await ativo()).id, 'acao-tipo', 'o primeiro campo do formulário precisa ser alcançável pelo Tab');
+    await page.keyboard.press('Tab');
+    assert.equal((await ativo()).id, 'acao-titulo', 'o campo de título precisa seguir na ordem do teclado');
+    await page.keyboard.press('Tab');
+    assert.equal((await ativo()).id, 'acao-proxima', 'a próxima ação precisa seguir na ordem do teclado');
+    await page.keyboard.press('Tab');
+    assert.equal((await ativo()).id, 'acao-data', 'a data combinada precisa seguir na ordem do teclado');
+
+    // O select de tipo continua operável pelo teclado: as setas mudam a opção
+    // canônica que é enviada ao servidor, sem depender do mouse.
+    await page.focus('#acao-tipo');
+    for (const [tecla, esperado] of [['ArrowDown', 'upsell'], ['ArrowDown', 'cross_sell'], ['ArrowUp', 'upsell'], ['ArrowUp', 'renovacao']]) {
+      await page.keyboard.press(tecla);
+      await page.waitForFunction(valor => document.getElementById('acao-tipo')?.value === valor, esperado, { timeout: 10_000 });
+    }
 
     await context.close();
   } finally { /* o navegador é compartilhado e fechado no after() */ }
