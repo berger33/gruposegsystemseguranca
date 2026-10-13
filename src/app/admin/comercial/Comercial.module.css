@@ -1,0 +1,154 @@
+/* UX-PRO-06 — /admin/comercial. Estilos locais da tela: não alteram
+   UiWorkspace.module.css (compartilhado por outras telas) e usam apenas tokens
+   semânticos de src/styles/ux-tokens.css e do tema noturno em admin-theme.css. */
+
+/* Contraste da etapa ativa no tema noturno: a marca vira azul claro
+   (#92bdf2) e o texto fixo do estado ativo ficava branco (1,95:1). Aqui o texto
+   passa a usar o fundo escuro do tema. Vale só para esta tela. */
+:global(html[data-admin-theme="night"]) .etapaAtiva {
+  color: var(--ux-color-canvas);
+}
+
+.hint {
+  margin: 0;
+  color: var(--ux-color-muted);
+  font-size: var(--ux-font-size-control);
+  line-height: var(--ux-line-height-reading);
+}
+
+.historico {
+  padding: var(--ux-space-4);
+  min-width: 0;
+  display: grid;
+  gap: var(--ux-space-3);
+  color: var(--ux-color-text);
+}
+
+.historicoTitulo {
+  margin: 0;
+  font-size: var(--ux-font-size-body);
+  line-height: var(--ux-line-height-heading);
+}
+
+.historicoForm {
+  display: grid;
+  gap: var(--ux-space-3);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: end;
+}
+
+@media (min-width: 768px) {
+  .historicoForm {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
+  }
+}
+
+.campo {
+  display: grid;
+  gap: var(--ux-space-1);
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  font-size: var(--ux-font-size-control);
+}
+
+.controle {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-height: var(--ux-height-control);
+  padding: var(--ux-space-1) var(--ux-space-2);
+  border: 1px solid var(--ux-color-border);
+  border-radius: var(--ux-radius-field);
+  background: var(--ux-color-surface);
+  color: var(--ux-color-text);
+  font: inherit;
+}
+
+.botao {
+  min-height: var(--ux-height-target);
+  padding: var(--ux-space-1) var(--ux-space-3);
+  border: 1px solid var(--ux-color-brand);
+  border-radius: var(--ux-radius-control);
+  background: var(--ux-color-brand);
+  color: var(--ux-color-surface);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.botao:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.status {
+  margin: 0;
+  color: var(--ux-color-muted);
+  font-size: var(--ux-font-size-control);
+}
+
+.aviso {
+  display: grid;
+  gap: var(--ux-space-2);
+  padding: var(--ux-space-3);
+  border: 1px solid var(--ux-color-warning);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-warning-soft);
+  color: var(--ux-color-text);
+  font-size: var(--ux-font-size-control);
+  overflow-wrap: anywhere;
+}
+
+.aviso p {
+  margin: 0;
+}
+
+.aviso .botao {
+  justify-self: start;
+}
+
+.versoes {
+  display: grid;
+  gap: var(--ux-space-3);
+  min-width: 0;
+}
+
+.versao {
+  display: grid;
+  gap: var(--ux-space-2);
+  min-width: 0;
+  padding: var(--ux-space-3);
+  border: 1px solid var(--ux-color-border);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-surface);
+}
+
+.versaoTitulo {
+  margin: 0;
+  font-size: var(--ux-font-size-control);
+  overflow-wrap: anywhere;
+}
+
+.dl {
+  margin: 0;
+  display: grid;
+  gap: var(--ux-space-1);
+}
+
+.dlLinha {
+  display: grid;
+  gap: var(--ux-space-1);
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dlLinha dt {
+  color: var(--ux-color-muted);
+  font-size: var(--ux-font-size-caption);
+}
+
+.dlLinha dd {
+  margin: 0;
+  min-width: 0;
+}

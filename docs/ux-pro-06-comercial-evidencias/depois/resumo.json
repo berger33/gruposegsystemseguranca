@@ -1,0 +1,377 @@
+{
+  "stage": "ux-pro-06-comercial",
+  "generatedBy": "gate npm run test:ux-crm:pg (UX_COMERCIAL_EVIDENCE_DIR=docs/ux-pro-06-comercial-evidencias/depois)",
+  "notes": "Evidência da fatia UX-PRO-06 — /admin/comercial. Massa sintética criada pelas APIs; papel marcelo provisionado pelo gate; sem dado pessoal ou credencial. As medições do checkout de main (267fb55) ficam em antes/ e NÃO são evidência vigente.",
+  "fatia": "UX-PRO-06 — /admin/comercial",
+  "rota": "/admin/comercial",
+  "papel_usado": "marcelo (dados sintéticos; sem credencial registrada)",
+  "viewports": [
+    320,
+    390,
+    768,
+    1440
+  ],
+  "temas": [
+    "dia",
+    "noite"
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-06-comercial",
+      "route": "/admin/comercial",
+      "role": "marcelo",
+      "viewport": "320x844",
+      "theme": "dia",
+      "etapa": "Vistoria",
+      "file": "320-dia-vistoria.png",
+      "sobraDocumentoPx": 0,
+      "contrasteEtapaAtivaTema": 9.58
+    },
+    {
+      "stage": "ux-pro-06-comercial",
+      "route": "/admin/comercial",
+      "role": "marcelo",
+      "viewport": "320x844",
+      "theme": "dia",
+      "etapa": "Relatórios & comissões",
+      "file": "320-dia-relatorios.png",
+      "sobraDocumentoPx": 0,
+      "contrasteEtapaAtivaTema": 9.58
+    },
+    {
+      "stage": "ux-pro-06-comercial",
+      "route": "/admin/comercial",
+      "role": "marcelo",
+      "viewport": "390x844",
+      "theme": "dia",
+      "etapa": "Vistoria",
+      "file": "390-dia-vistoria.png",
+      "sobraDocumentoPx": 0,
+      "contrasteEtapaAtivaTema": 9.58
+    },
+    {
+      "stage": "ux-pro-06-comercial",
+      "route": "/admin/comercial",
+      "role": "marcelo",
+      "viewport": "390x844",
+      "theme": "dia",
+      "etapa": "Relatórios & comissões",
+      "file": "390-dia-relatorios.png",
+      "sobraDocumentoPx": 0,
+      "contrasteEtapaAtivaTema": 9.58
+    },
+    {
+      "stage": "ux-pro-06-comercial",
+      "route": "/admin/comercial",
+      "role": "marcelo",
+      "viewport": "768x1024",
+      "theme": "dia",
+      "etapa": "Vistoria",
+      "file": "768-dia-vistoria.png",
+      "sobraDocumentoPx": 0,
+      "contrasteEtapaAtivaTema": 9.58
+    },
+    {
+      "stage": "ux-pro-06-comercial",
+      "route": "/admin/comercial",
+      "role": "marcelo",
+      "viewport": "768x1024",
+      "theme": "dia",
+      "etapa": "Relatórios & comissões",
+      "file": "768-dia-relatorios.png",
+      "sobraDocumentoPx": 0,
+      "contrasteEtapaAtivaTema": 9.58
+    },
+    {
+      "stage": "ux-pro-06-comercial",
+      "route": "/admin/comercial",
+      "role": "marcelo",
+      "viewport": "1440x900",
+      "theme": "dia",
+      "etapa": "Vistoria",
+      "file": "1440-dia-vistoria.png",
+      "sobraDocumentoPx": 0,
+      "contrasteEtapaAtivaTema": 9.58
+    },
+    {
+      "stage": "ux-pro-06-comercial",
+      "route": "/admin/comercial",
+      "role": "marcelo",
+      "viewport": "1440x900",
+      "theme": "dia",
+      "etapa": "Relatórios & comissões",
+      "file": "1440-dia-relatorios.png",
+      "sobraDocumentoPx": 0,
+      "contrasteEtapaAtivaTema": 9.58
+    },
+    {
+      "stage": "ux-pro-06-comercial",
+      "route": "/admin/comercial",
+      "role": "marcelo",
+      "viewport": "320x844",
+      "theme": "noite",
+      "etapa": "Vistoria",
+      "file": "320-noite-vistoria.png",
+      "sobraDocumentoPx": 0,
+      "contrasteEtapaAtivaTema": 8.87
+    },
+    {
+      "stage": "ux-pro-06-comercial",
+      "route": "/admin/comercial",
+      "role": "marcelo",
+      "viewport": "320x844",
+      "theme": "noite",
+      "etapa": "Relatórios & comissões",
+      "file": "320-noite-relatorios.png",
+      "sobraDocumentoPx": 0,
+      "contrasteEtapaAtivaTema": 8.87
+    },
+    {
+      "stage": "ux-pro-06-comercial",
+      "route": "/admin/comercial",
+      "role": "marcelo",
+      "viewport": "390x844",
+      "theme": "noite",
+      "etapa": "Vistoria",
+      "file": "390-noite-vistoria.png",
+      "sobraDocumentoPx": 0,
+      "contrasteEtapaAtivaTema": 8.87
+    },
+    {
+      "stage": "ux-pro-06-comercial",
+      "route": "/admin/comercial",
+      "role": "marcelo",
+      "viewport": "390x844",
+      "theme": "noite",
+      "etapa": "Relatórios & comissões",
+      "file": "390-noite-relatorios.png",
+      "sobraDocumentoPx": 0,
+      "contrasteEtapaAtivaTema": 8.87
+    },
+    {
+      "stage": "ux-pro-06-comercial",
+      "route": "/admin/comercial",
+      "role": "marcelo",
+      "viewport": "768x1024",
+      "theme": "noite",
+      "etapa": "Vistoria",
+      "file": "768-noite-vistoria.png",
+      "sobraDocumentoPx": 0,
+      "contrasteEtapaAtivaTema": 8.87
+    },
+    {
+      "stage": "ux-pro-06-comercial",
+      "route": "/admin/comercial",
+      "role": "marcelo",
+      "viewport": "768x1024",
+      "theme": "noite",
+      "etapa": "Relatórios & comissões",
+      "file": "768-noite-relatorios.png",
+      "sobraDocumentoPx": 0,
+      "contrasteEtapaAtivaTema": 8.87
+    },
+    {
+      "stage": "ux-pro-06-comercial",
+      "route": "/admin/comercial",
+      "role": "marcelo",
+      "viewport": "1440x900",
+      "theme": "noite",
+      "etapa": "Vistoria",
+      "file": "1440-noite-vistoria.png",
+      "sobraDocumentoPx": 0,
+      "contrasteEtapaAtivaTema": 8.87
+    },
+    {
+      "stage": "ux-pro-06-comercial",
+      "route": "/admin/comercial",
+      "role": "marcelo",
+      "viewport": "1440x900",
+      "theme": "noite",
+      "etapa": "Relatórios & comissões",
+      "file": "1440-noite-relatorios.png",
+      "sobraDocumentoPx": 0,
+      "contrasteEtapaAtivaTema": 8.87
+    },
+    {
+      "stage": "ux-pro-06-comercial",
+      "route": "/admin/comercial",
+      "role": "marcelo",
+      "viewport": "390x844",
+      "theme": "dia",
+      "etapa": "teclado",
+      "file": "390-dia-teclado.png",
+      "firstFocus": true,
+      "percursoTeclado": [
+        "Orçamentos (MO/técnico/custos)",
+        "Preço & descontos",
+        "Propostas & envio"
+      ]
+    }
+  ],
+  "capturas": [
+    {
+      "arquivo": "320-dia-vistoria.png",
+      "largura": 320,
+      "altura": 844,
+      "tema": "day",
+      "etapa": "Vistoria",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 9.58
+    },
+    {
+      "arquivo": "320-dia-relatorios.png",
+      "largura": 320,
+      "altura": 844,
+      "tema": "day",
+      "etapa": "Relatórios & comissões",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 9.58
+    },
+    {
+      "arquivo": "390-dia-vistoria.png",
+      "largura": 390,
+      "altura": 844,
+      "tema": "day",
+      "etapa": "Vistoria",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 9.58
+    },
+    {
+      "arquivo": "390-dia-relatorios.png",
+      "largura": 390,
+      "altura": 844,
+      "tema": "day",
+      "etapa": "Relatórios & comissões",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 9.58
+    },
+    {
+      "arquivo": "768-dia-vistoria.png",
+      "largura": 768,
+      "altura": 1024,
+      "tema": "day",
+      "etapa": "Vistoria",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 9.58
+    },
+    {
+      "arquivo": "768-dia-relatorios.png",
+      "largura": 768,
+      "altura": 1024,
+      "tema": "day",
+      "etapa": "Relatórios & comissões",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 9.58
+    },
+    {
+      "arquivo": "1440-dia-vistoria.png",
+      "largura": 1440,
+      "altura": 900,
+      "tema": "day",
+      "etapa": "Vistoria",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 9.58
+    },
+    {
+      "arquivo": "1440-dia-relatorios.png",
+      "largura": 1440,
+      "altura": 900,
+      "tema": "day",
+      "etapa": "Relatórios & comissões",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 9.58
+    },
+    {
+      "arquivo": "320-noite-vistoria.png",
+      "largura": 320,
+      "altura": 844,
+      "tema": "night",
+      "etapa": "Vistoria",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 8.87
+    },
+    {
+      "arquivo": "320-noite-relatorios.png",
+      "largura": 320,
+      "altura": 844,
+      "tema": "night",
+      "etapa": "Relatórios & comissões",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 8.87
+    },
+    {
+      "arquivo": "390-noite-vistoria.png",
+      "largura": 390,
+      "altura": 844,
+      "tema": "night",
+      "etapa": "Vistoria",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 8.87
+    },
+    {
+      "arquivo": "390-noite-relatorios.png",
+      "largura": 390,
+      "altura": 844,
+      "tema": "night",
+      "etapa": "Relatórios & comissões",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 8.87
+    },
+    {
+      "arquivo": "768-noite-vistoria.png",
+      "largura": 768,
+      "altura": 1024,
+      "tema": "night",
+      "etapa": "Vistoria",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 8.87
+    },
+    {
+      "arquivo": "768-noite-relatorios.png",
+      "largura": 768,
+      "altura": 1024,
+      "tema": "night",
+      "etapa": "Relatórios & comissões",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 8.87
+    },
+    {
+      "arquivo": "1440-noite-vistoria.png",
+      "largura": 1440,
+      "altura": 900,
+      "tema": "night",
+      "etapa": "Vistoria",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 8.87
+    },
+    {
+      "arquivo": "1440-noite-relatorios.png",
+      "largura": 1440,
+      "altura": 900,
+      "tema": "night",
+      "etapa": "Relatórios & comissões",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 8.87
+    }
+  ],
+  "transbordoDocumentoPorCaptura": "nenhum",
+  "teclado": {
+    "largura": 390,
+    "tema": "day",
+    "percurso": [
+      "Orçamentos (MO/técnico/custos)",
+      "Preço & descontos",
+      "Propostas & envio"
+    ],
+    "contornoFocoNaUltimaEtapa": {
+      "outlineStyle": "solid",
+      "outlineWidth": "3px",
+      "boxShadow": "none"
+    },
+    "enterAtivaEtapa": "Propostas & envio"
+  },
+  "limites": [
+    "Medição automatizada por Chromium; não é validação manual nem aceite de Marcelo, Andreia ou comercial.",
+    "Componentes de domínio das etapas (src/app/admin/ti/*) são medidos apenas pela casca; não foram alterados nesta fatia."
+  ]
+}

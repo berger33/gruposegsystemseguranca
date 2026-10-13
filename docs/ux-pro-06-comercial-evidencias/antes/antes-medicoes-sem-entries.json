@@ -1,0 +1,165 @@
+{
+  "fatia": "UX-PRO-06 — /admin/comercial",
+  "rota": "/admin/comercial",
+  "papel_usado": "marcelo (dados sintéticos; sem credencial registrada)",
+  "viewports": [
+    320,
+    390,
+    768,
+    1440
+  ],
+  "temas": [
+    "dia",
+    "noite"
+  ],
+  "capturas": [
+    {
+      "arquivo": "320-dia-vistoria.png",
+      "largura": 320,
+      "tema": "day",
+      "etapa": "Vistoria",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 9.58
+    },
+    {
+      "arquivo": "320-dia-relatorios.png",
+      "largura": 320,
+      "tema": "day",
+      "etapa": "Relatórios & comissões",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 9.58
+    },
+    {
+      "arquivo": "390-dia-vistoria.png",
+      "largura": 390,
+      "tema": "day",
+      "etapa": "Vistoria",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 9.58
+    },
+    {
+      "arquivo": "390-dia-relatorios.png",
+      "largura": 390,
+      "tema": "day",
+      "etapa": "Relatórios & comissões",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 9.58
+    },
+    {
+      "arquivo": "768-dia-vistoria.png",
+      "largura": 768,
+      "tema": "day",
+      "etapa": "Vistoria",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 9.58
+    },
+    {
+      "arquivo": "768-dia-relatorios.png",
+      "largura": 768,
+      "tema": "day",
+      "etapa": "Relatórios & comissões",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 9.58
+    },
+    {
+      "arquivo": "1440-dia-vistoria.png",
+      "largura": 1440,
+      "tema": "day",
+      "etapa": "Vistoria",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 9.58
+    },
+    {
+      "arquivo": "1440-dia-relatorios.png",
+      "largura": 1440,
+      "tema": "day",
+      "etapa": "Relatórios & comissões",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 9.58
+    },
+    {
+      "arquivo": "320-noite-vistoria.png",
+      "largura": 320,
+      "tema": "night",
+      "etapa": "Vistoria",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 1.95
+    },
+    {
+      "arquivo": "320-noite-relatorios.png",
+      "largura": 320,
+      "tema": "night",
+      "etapa": "Relatórios & comissões",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 1.95
+    },
+    {
+      "arquivo": "390-noite-vistoria.png",
+      "largura": 390,
+      "tema": "night",
+      "etapa": "Vistoria",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 1.95
+    },
+    {
+      "arquivo": "390-noite-relatorios.png",
+      "largura": 390,
+      "tema": "night",
+      "etapa": "Relatórios & comissões",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 1.95
+    },
+    {
+      "arquivo": "768-noite-vistoria.png",
+      "largura": 768,
+      "tema": "night",
+      "etapa": "Vistoria",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 1.95
+    },
+    {
+      "arquivo": "768-noite-relatorios.png",
+      "largura": 768,
+      "tema": "night",
+      "etapa": "Relatórios & comissões",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 1.95
+    },
+    {
+      "arquivo": "1440-noite-vistoria.png",
+      "largura": 1440,
+      "tema": "night",
+      "etapa": "Vistoria",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 1.95
+    },
+    {
+      "arquivo": "1440-noite-relatorios.png",
+      "largura": 1440,
+      "tema": "night",
+      "etapa": "Relatórios & comissões",
+      "sobraPx": 0,
+      "contrasteEtapaAtiva": 1.95
+    }
+  ],
+  "transbordoDocumentoPorCaptura": "nenhum",
+  "teclado": {
+    "largura": 390,
+    "tema": "day",
+    "percurso": [
+      "Orçamentos (MO/técnico/custos)",
+      "Preço & descontos",
+      "Propostas & envio"
+    ],
+    "contornoFocoNaUltimaEtapa": {
+      "outlineStyle": "solid",
+      "outlineWidth": "3px",
+      "boxShadow": "none"
+    },
+    "enterAtivaEtapa": "Propostas & envio"
+  },
+  "limites": [
+    "Medição automatizada por Chromium; não é validação manual nem aceite de Marcelo, Andreia ou comercial.",
+    "Componentes de domínio das etapas (src/app/admin/ti/*) são medidos apenas pela casca; não foram alterados nesta fatia."
+  ]
+}

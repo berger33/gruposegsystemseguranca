@@ -12,6 +12,8 @@
 
 > **Inventário vigente de rotas e cobertura (atualizado em 13/10/2026):** consulte [`docs/UX-PRO-00-ATUALIZACAO-2026-10-13.md`](docs/UX-PRO-00-ATUALIZACAO-2026-10-13.md), com [inventário de 100 rotas](docs/UX-PRO-00-INVENTARIO-ROTAS-2026-10-13.csv), [matriz de evidências](docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-13.csv) e gerador reproduzível (`node scripts/ux-pro-00-inventory.mjs --check`). Os documentos e CSVs datados de 10/10 permanecem como registros daquele snapshot.
 
+> **UX-PRO-06 — /admin/comercial:** estados honestos do histórico de versões e contraste noturno da etapa ativa; registro em [escopo](docs/UX-PRO-06-COMERCIAL-ESCOPO-2026-10-13.md) e [estados](docs/UX-PRO-06-COMERCIAL-ESTADOS-2026-10-13.md).
+
 > **UX-PRO-03 — console de TI:** confira os relatórios atuais de [Incidentes](docs/UX-PRO-03-INCIDENTES-TI-2026-10-13.md) e [Registros de integração](docs/UX-PRO-03-REGISTROS-INTEGRACAO-TI-2026-10-13.md). A tela de integração registra demonstrações internas; não prova envio a provedores externos. Continue pela próxima superfície realmente montada, sem ativar componentes órfãos.
 
 > **Instrução obrigatória para o Arena e outros agentes:** o proprietário pediu para preservar todas as funcionalidades existentes. Antes de editar, leia [`AGENTS.md`](AGENTS.md) e [`docs/ARENA-PRESERVAR-FUNCIONALIDADES.md`](docs/ARENA-PRESERVAR-FUNCIONALIDADES.md). Faça apenas mudanças compatíveis e aditivas; não remova, desative, oculte, substitua ou altere comportamentos fora do pedido. Se a mudança solicitada exigir quebrar essa regra, pare e peça autorização explícita.
