@@ -74,6 +74,11 @@ async function loginStaffHttp(email) {
 // O Chromium empacotado roda com --single-process: reaproveitar o mesmo
 // browser entre contextos derruba o alvo. Cada teste abre o seu.
 async function launchBrowser() {
+  // @sparticuz/chromium contains a Linux binary. On Windows use the installed
+  // Edge channel so the same browser checks can run on the operator machine.
+  if (process.platform === 'win32') {
+    return playwrightChromium.launch({ channel: 'msedge', headless: true });
+  }
   return playwrightChromium.launch({
     executablePath: await packagedChromium.executablePath(),
     args: packagedChromium.args.filter(arg => arg !== '--disable-web-security'),
@@ -356,6 +361,58 @@ test('browser: as abas do portal do funcionário são um tablist de verdade', { 
     assert.equal(await abas.nth(0).getAttribute('aria-selected'), 'true');
 
     await capture(page, 'ux-06-funcionario-abas');
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('browser: tema dia/noite cobre o portal do funcionário, persiste no navegador e reflowa em quatro larguras', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openPage(browser, '/funcionario', null);
+    await signInEmployee(page);
+    const toggle = page.locator('[data-admin-theme-toggle="true"]');
+    await toggle.waitFor();
+    assert.equal(await toggle.getAttribute('aria-pressed'), 'false', 'o portal começa no tema dia sem preferência anterior');
+
+    // Ativa o controle pelo teclado e verifica também um card e uma ação,
+    // além do escopo global. Isso cobre valores CSS reais, não só atributos.
+    await toggle.focus();
+    await page.keyboard.press('Space');
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night');
+    assert.equal(await toggle.getAttribute('aria-pressed'), 'true');
+    const darkColors = await page.evaluate(() => ({
+      app: getComputedStyle(document.querySelector('main[data-admin-theme-scope="true"] > div')).backgroundColor,
+      hero: getComputedStyle(document.querySelector('main[data-admin-theme-scope="true"] section')).backgroundColor,
+      action: getComputedStyle(document.querySelector('main[data-admin-theme-scope="true"] [class*="button"]')).backgroundColor,
+      stored: localStorage.getItem('segsystem.admin.appearance.v1'),
+    }));
+    assert.equal(darkColors.app, 'rgb(17, 30, 48)');
+    assert.equal(darkColors.hero, 'rgb(36, 58, 87)');
+    assert.equal(darkColors.action, 'rgb(46, 95, 152)');
+    assert.equal(darkColors.stored, 'night', 'a preferência continua local ao navegador/perfil');
+
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      for (const theme of ['night', 'day']) {
+        if (theme === 'day') await toggle.click();
+        else if (await page.locator('html').getAttribute('data-admin-theme') !== 'night') await toggle.click();
+        await page.waitForTimeout(80);
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        assert.ok(overflow <= 1, `${width}px/${theme}: transbordo horizontal de ${overflow}px`);
+        await capture(page, `ux-pro-02-funcionario-${width}-${theme}`);
+      }
+    }
+
+    await toggle.click();
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.getByRole('tablist', { name: 'Seções do portal do funcionário' }).waitFor();
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night');
+    assert.equal(await page.locator('[data-admin-theme-toggle="true"]').getAttribute('aria-pressed'), 'true',
+      'a preferência volta após recarregar, sem estar vinculada à identidade de funcionário');
+
+    // A alteração visual não encerra nem modifica a sessão de funcionário.
+    assert.equal(await page.getByRole('tablist', { name: 'Seções do portal do funcionário' }).count(), 1);
+    assert.equal(await page.getByRole('button', { name: 'Sair' }).count(), 1);
     await context.close();
   } finally { await browser.close(); }
 });

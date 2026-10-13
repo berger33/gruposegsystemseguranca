@@ -34,3 +34,47 @@
 .login .private {font-size:.8rem;line-height:1.5;}
 
 .tabSoon{opacity:.55;cursor:not-allowed}
+
+/* UX-PRO-02: the employee portal uses the same browser preference as staff. */
+.loginThemeToggle {position:fixed;top:max(14px,env(safe-area-inset-top));right:max(14px,env(safe-area-inset-right));z-index:20;}
+.headerActions {display:flex;align-items:center;gap:8px;}
+.shell[data-admin-theme-scope="true"] {color:var(--ux-color-text);background:var(--ux-color-canvas);}
+.app {color:var(--ux-color-text);}
+.tab:focus-visible,.quick button:focus-visible,.button:focus-visible,.input:focus-visible,.select:focus-visible,.textarea:focus-visible,.logout:focus-visible,.ghost:focus-visible,.blockLink:focus-visible {outline:3px solid var(--ux-color-focus);outline-offset:3px;}
+
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] {
+  --employee-app: #111e30;
+  --employee-surface: #18263a;
+  --employee-text: #e5edf7;
+  --employee-muted: #adbdcf;
+  --employee-border: #354960;
+  --employee-brand: #b6d2fa;
+  --employee-brand-soft: #243a57;
+  --employee-button: #2e5f98;
+  --employee-danger: #7f292e;
+  --employee-success-soft: #233c34;
+  --employee-success: #a8dfbd;
+  --employee-error-soft: #432c31;
+  --employee-error: #ffb4b0;
+  background:#111b2b;
+  color:var(--employee-text);
+}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] .app {background:var(--employee-app);color:var(--employee-text);box-shadow:0 0 40px rgb(0 0 0 / 24%);}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] :is(.metric,.card,.item,.quick button,.loginCard) {background:var(--employee-surface);border-color:var(--employee-border);color:var(--employee-text);box-shadow:0 4px 16px rgb(0 0 0 / 18%);}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] .hero {background:var(--employee-brand-soft);border-color:var(--employee-border);color:var(--employee-text);box-shadow:none;}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] :is(.metric b,.active,.tab[aria-selected="true"],.tag) {color:var(--employee-brand);}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] .tag {background:var(--employee-brand-soft);}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] :is(.metric span,.item p,.hint,.field label,.form label,.footnote,.login p,.empty,.private) {color:var(--employee-muted);}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] .private {background:var(--employee-brand-soft);}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] :is(.input,.select,.textarea) {background:var(--employee-app);border-color:var(--employee-border);color:var(--employee-text);}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] .tabs {background:var(--employee-surface);border-color:var(--employee-border);box-shadow:0 -8px 30px rgb(0 0 0 / 22%);}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] .tab {color:var(--employee-muted);}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] .notice {background:var(--employee-success-soft);color:var(--employee-success);}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] .error {background:var(--employee-error-soft);color:var(--employee-error);}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] .secondary {background:var(--employee-brand-soft);color:var(--employee-brand);}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] .button {background:var(--employee-button);color:#fff;}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] .danger {background:var(--employee-danger);color:#fff;}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] .quick button[aria-pressed="true"] {background:var(--employee-brand-soft);border-color:var(--employee-brand);color:var(--employee-brand);}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] .login {background:linear-gradient(165deg,#172b68 0 45%,#111b2b 45%);}
+
+@media(max-width:380px){.headerRow{align-items:flex-start}.headerActions{flex-direction:column;align-items:flex-end;gap:6px}.headerActions :global([data-admin-theme-toggle="true"]){padding-inline:8px;}}
