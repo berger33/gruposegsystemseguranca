@@ -33,6 +33,36 @@
 .login h1 {font-size:clamp(24px,3vw,32px);line-height:1.2;margin-bottom:12px;}
 .login .private {font-size:.8rem;line-height:1.5;}
 
+/* UX-PRO-05: hierarquia da jornada, comprovante e estados de rede. */
+.clockSubheading{margin:22px 0 10px;font-size:.95rem;}
+.clockAction{min-height:64px;padding:10px;border:1px solid var(--ux-color-border);border-radius:14px;background:var(--ux-color-surface,#fff);color:var(--ux-color-text);font:inherit;font-weight:750;line-height:1.3;cursor:pointer;}
+.clockAction:hover:not(:disabled){border-color:var(--ux-color-brand);background:var(--ux-color-brand-soft);}
+.clockAction:disabled{opacity:.48;cursor:not-allowed;}
+.clockAction:focus-visible,.punchTechnical summary:focus-visible{outline:3px solid var(--ux-color-focus);outline-offset:3px;}
+.clockError{margin:14px 0;padding:14px;border:1px solid var(--ux-color-error);border-radius:14px;background:var(--ux-color-error-soft);color:var(--ux-color-text);}
+.clockError p{margin:6px 0;font-size:.875rem;color:var(--ux-color-muted);}
+.clockMessage{min-height:1.4em;margin:10px 0;color:var(--ux-color-muted);font-size:.875rem;}
+.punchReceipt{border-left:4px solid var(--ux-color-brand);}
+.punchReceipt h4{display:flex;justify-content:space-between;gap:12px;margin:0 0 10px;color:var(--ux-color-text);font-size:1rem;}
+.punchReceipt h4 span{color:var(--ux-color-muted);font-size:.82rem;font-weight:600;text-align:right;}
+.punchReceipt .punchLocation{color:var(--ux-color-text);font-size:.875rem;}
+.punchReceipt .punchAddress{color:var(--ux-color-muted);font-size:.82rem;}
+.punchTechnical{margin-top:12px;border-top:1px solid var(--ux-color-border);padding-top:9px;color:var(--ux-color-muted);font-size:.78rem;}
+.punchTechnical summary{width:max-content;max-width:100%;cursor:pointer;font-weight:700;color:var(--ux-color-brand);}
+.punchTechnical dl{display:grid;grid-template-columns:minmax(140px,.7fr) minmax(0,1.3fr);gap:5px 12px;margin:10px 0 0;}
+.punchTechnical dt{font-weight:700;}
+.punchTechnical dd{margin:0;overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.74rem;}
+.correctionItem h4{margin:0 0 8px;color:var(--ux-color-text);}
+.correctionItem p{font-size:.875rem;}
+.correctionNote{margin-top:10px!important;padding-top:8px;border-top:1px solid var(--ux-color-border);color:var(--ux-color-muted)!important;}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] .clockAction{background:var(--employee-surface);border-color:var(--employee-border);color:var(--employee-text);}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] .clockAction:hover:not(:disabled){background:var(--employee-brand-soft);border-color:var(--employee-brand);}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] .clockError{background:var(--employee-error-soft);border-color:var(--employee-error);color:var(--employee-text);}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] .punchReceipt{border-left-color:var(--employee-brand);}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] .punchTechnical{border-color:var(--employee-border);}
+:global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] .punchTechnical summary{color:var(--employee-brand);}
+@media(max-width:520px){.quick{grid-template-columns:repeat(2,minmax(0,1fr));}.punchReceipt h4{display:grid;gap:3px}.punchReceipt h4 span{text-align:left}.punchTechnical dl{grid-template-columns:1fr;gap:3px}.punchTechnical dd{margin-bottom:7px}}
+
 .tabSoon{opacity:.55;cursor:not-allowed}
 
 /* UX-PRO-02: the employee portal uses the same browser preference as staff. */

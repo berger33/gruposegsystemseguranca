@@ -34,6 +34,7 @@ const root = path.resolve(import.meta.dirname, '..');
 let server, baseUrl, pool;
 let rhCookie;
 let employee, employeeEmail, employeePassword;
+let employeeCookie;
 let clientEmail, clientPassword, clientCookie;
 
 async function waitForServer(url, timeoutMs = 120_000) {
@@ -252,6 +253,7 @@ test('o contrato de acesso dos portais não mudou: 401 sem sessão, dado própri
   const session = await api('/api/employee/session', { method: 'POST', body: { email: employeeEmail, password: employeePassword } });
   assert.equal(session.status, 200);
   const cookie = session.setCookie.find(c => c.startsWith('seg_employee_session='))?.split(';')[0];
+  employeeCookie = cookie;
   const home = await api('/api/employee/home', { cookie });
   assert.equal(home.status, 200);
   assert.equal(home.body.employeeId, employee.id, 'o portal só devolve o cadastro da própria pessoa');
@@ -413,6 +415,72 @@ test('browser: tema dia/noite cobre o portal do funcionário, persiste no navega
     // A alteração visual não encerra nem modifica a sessão de funcionário.
     assert.equal(await page.getByRole('tablist', { name: 'Seções do portal do funcionário' }).count(), 1);
     assert.equal(await page.getByRole('button', { name: 'Sair' }).count(), 1);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('browser: Minha jornada hierarquiza marcações próprias, endereço opcional, hash e pedido de ajuste', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const punch = await api('/api/employee/time-clock', {
+      method: 'POST', cookie: employeeCookie,
+      body: { requestId: randomUUID(), kind: 'entrada', position: { latitude: -23.55, longitude: -46.63, accuracy: 18, positionAt: new Date().toISOString() } },
+    });
+    assert.equal(punch.status, 201, `marca sintética do portal deveria ser 201, veio ${punch.status}`);
+    const correction = await api('/api/employee/actions/time-correction', {
+      method: 'POST', cookie: employeeCookie,
+      body: { timeEntryId: punch.body.timeEntryId, reason: 'Ajuste sintético para validar o estado visual', requestedChanges: { clock_in: '08:00' } },
+    });
+    assert.equal(correction.status, 201, `pedido sintético deveria ser 201, veio ${correction.status}`);
+    const { context, page } = await openPage(browser, '/funcionario', null);
+    await signInEmployee(page);
+    await page.getByRole('tab', { name: 'Jornada' }).click();
+    const area = page.getByRole('heading', { name: 'Registrar ponto com localização' }).locator('..');
+    await area.getByRole('heading', { name: 'Comprovantes de marcação' }).waitFor();
+    const receipt = area.locator('article').filter({ hasText: 'Entrada' }).first();
+    await receipt.waitFor();
+    assert.match(await receipt.innerText(), /Consulta de endereço não configurada|Endereço retornado pelo HERE|Endereço não consultado|serviço de endereço estava indisponível|não localizou um endereço/i);
+    assert.equal(await receipt.locator('details[open]').count(), 0, 'hash fica recolhido por padrão');
+    await receipt.locator('summary').click();
+    assert.match(await receipt.innerText(), /Hash SHA-256 da solicitação/);
+    assert.match(await receipt.innerText(), /Identificador do registro/);
+    assert.equal(await area.getByRole('heading', { name: 'Meus pedidos de ajuste' }).count(), 1);
+    assert.match(await area.locator('text=O pedido não altera as marcações originais').first().innerText(), /marcações originais/);
+
+    const theme = page.locator('[data-admin-theme-toggle="true"]');
+    await theme.focus();
+    await page.keyboard.press('Space');
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night');
+    const button = area.getByRole('button', { name: 'Entrada' });
+    const night = await button.evaluate(el => getComputedStyle(el).backgroundColor);
+    assert.equal(night, 'rgb(24, 38, 58)', 'a ação usa a superfície do tema noturno');
+    await button.focus();
+    await page.keyboard.press('Tab');
+    assert.ok(await page.evaluate(() => document.activeElement instanceof HTMLElement && getComputedStyle(document.activeElement).outlineStyle !== 'none'), 'o foco de teclado permanece visível no fluxo');
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      assert.ok(overflow <= 1, `${width}px: transbordo horizontal de ${overflow}px`);
+      await capture(page, `ux-pro-05-jornada-${width}-night`);
+    }
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('browser: falha da consulta de ponto mostra estado e repetição sem sugerir jornada vazia', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openPage(browser, '/funcionario', null, {
+      failRoutes: ['/api/employee/time-clock'], status: 503, code: 'employee_time_clock_unavailable',
+    });
+    await signInEmployee(page);
+    await page.getByRole('tab', { name: 'Jornada' }).click();
+    const error = page.getByRole('alert').filter({ hasText: 'Não foi possível consultar seu ponto' });
+    await error.waitFor();
+    assert.equal(await error.getByRole('button', { name: 'Tentar carregar novamente' }).count(), 1);
+    assert.equal(await page.getByRole('heading', { name: 'Comprovantes de marcação' }).count(), 0);
+    assert.doesNotMatch(await error.innerText(), /Nenhuma marcação registrada/);
+    await capture(page, 'ux-pro-05-jornada-falha-rede');
     await context.close();
   } finally { await browser.close(); }
 });
