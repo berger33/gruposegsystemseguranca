@@ -25,11 +25,12 @@
 ## Validação e evidências
 
 - Teste focal `node --test tests/ux-pro-03-ti-notifications-ui.test.mjs`: 4/4 aprovados, cobrindo montagem e gate, endpoints/payloads, estados honestos, opções aceitas, acessibilidade estrutural, tokens e breakpoints.
-- `npm run typecheck`: aprovado.
-- `npm run build`: aprovado; Next.js compilou e gerou as 105 páginas. Será repetido após os ajustes finais antes do merge.
-- Inventário `node scripts/ux-pro-00-inventory.mjs --check`: estava desatualizado no início da fatia. `node scripts/ux-pro-00-inventory.mjs` regenerou os CSVs versionados em 13/10; total confirmado de 100 entradas de rota. Repetir `--check` ao final.
-- `git diff --check`: aprovado antes da regeneração do inventário; repetir no fechamento.
+- `npm run typecheck`: aprovado após os ajustes finais.
+- `npm run build`: aprovado após os ajustes finais; Next.js compilou e gerou as 105 páginas.
+- Inventário `node scripts/ux-pro-00-inventory.mjs --check`: estava desatualizado no início da fatia. `node scripts/ux-pro-00-inventory.mjs` regenerou os CSVs versionados em 13/10; a checagem final passou e confirmou 100 entradas de rota.
+- `git diff --check`: aprovado no fechamento.
 - `npm test`: 912 aprovados e 3 falhas em 915 testes. As falhas coincidem com as limitações conhecidas deste checkout Windows ao criar symlinks (`EPERM`) nos testes de inventário de cobertura de backup e dos fluxos CLI v2 local provider/transfer. O gate obrigatório `QA baseline` roda em `ubuntu-latest` e precisa passar integralmente na PR; a execução local não substitui esse check.
+- No primeiro commit da PR #203, os 30 checks publicados pelo GitHub concluíram com sucesso, incluindo `QA baseline` (`static-and-smoke`), testes focais e integrações PostgreSQL/browser. A documentação foi atualizada após essa execução; confirmar os checks novamente no SHA final antes do merge.
 - Revisão estática de layout: breakpoints 520/760 px (com herança do shell TI), tokens semânticos compartilhados e foco visível em controles/tabela/diagnóstico. A tabela usa rolagem contida; no celular o formulário vira uma coluna. A matriz global segue cobrindo viewports 320/390/768/1440 px.
 - **Validação visual manual não realizada:** não houve sessão autenticada com dados fictícios para inspecionar a tela nos quatro viewports, alternar tema dia/noite e percorrer todos os controles via teclado. As afirmações acima são revisão de código e teste estrutural, não evidência de navegador nem aceite humano. Não há captura antes/depois.
 - Limite conhecido: serviço responde no máximo 50 itens nesta consulta; não foi alterada nem acrescentada paginação. Contadores de situação são calculados sobre os itens exibidos, enquanto o total é o total devolvido pela API.
