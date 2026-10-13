@@ -1,0 +1,36 @@
+/* UX-PRO-06 (carteira): estados de atualização e de dados desatualizados desta
+   tela. Espelha as definições já entregues no funil (CrmWorkspace.module.css)
+   usando os mesmos tokens de aviso — nada de cor fixa, portanto os dois temas
+   continuam valendo. Módulo local de propósito: UiWorkspace.module.css é
+   compartilhado por 32 arquivos e não precisa ser tocado por esta fatia. */
+.updating {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  color: var(--ux-color-brand);
+  font-size: .8125rem;
+  font-weight: 700;
+}
+.stale {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--ux-color-warning);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-warning-soft);
+  color: var(--ux-color-warning);
+  font-size: .8125rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.stale button {
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 8px 16px;
+  border: 1px solid var(--ux-color-warning);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-surface);
+  color: var(--ux-color-text);
+  font: inherit;
+  font-weight: 700;
+}

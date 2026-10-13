@@ -1,0 +1,82 @@
+{
+  "stage": "ux-pro-06-carteira",
+  "generatedBy": "gate npm run test:ux-crm:pg (UX_CARTEIRA_EVIDENCE_DIR=docs/ux-pro-06-carteira-evidencias)",
+  "notes": "Evidências da fatia UX-PRO-06 — estados de leitura da carteira comercial (/admin/carteira). Massa inteiramente sintética criada pelas próprias APIs, sessão de staff provisionada pelo gate; nenhuma captura usa dado pessoal ou credencial. As capturas de comportamento anterior (subpasta antes/) foram produzidas pela mesma suíte num checkout descartável de d84dc8f e ficam fora do resumo de propósito: documentam o defeito corrigido, não a evidência vigente. As demais capturas geradas pela suíte durante a execução foram mantidas fora desta pasta para não misturar artefatos de outras fatias.",
+  "entries": [
+    {
+      "stage": "ux-pro-06-carteira",
+      "route": "/admin/carteira",
+      "role": "comercial",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-06-carteira-evidencias/desktop-carteira.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-carteira",
+      "route": "/admin/carteira",
+      "role": "comercial",
+      "viewport": "320x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-06-carteira-evidencias/carteira-320.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-carteira",
+      "route": "/admin/carteira",
+      "role": "comercial",
+      "viewport": "320x844",
+      "theme": "day",
+      "state": "formulario_indicacao_aberto",
+      "screenshot": "docs/ux-pro-06-carteira-evidencias/carteira-320-formulario-indicacao.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-carteira",
+      "route": "/admin/carteira",
+      "role": "comercial",
+      "viewport": "390x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-06-carteira-evidencias/carteira-390.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-carteira",
+      "route": "/admin/carteira",
+      "role": "comercial",
+      "viewport": "768x1024",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-06-carteira-evidencias/carteira-768.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-carteira",
+      "route": "/admin/carteira",
+      "role": "comercial",
+      "viewport": "768x1024",
+      "theme": "night",
+      "screenshot": "docs/ux-pro-06-carteira-evidencias/carteira-768-noturno.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-carteira",
+      "route": "/admin/carteira",
+      "role": "comercial",
+      "viewport": "1440x900",
+      "theme": "day",
+      "state": "atualizacao_falhou_dados_preservados",
+      "screenshot": "docs/ux-pro-06-carteira-evidencias/desktop-carteira-desatualizada.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-carteira",
+      "route": "/admin/carteira",
+      "role": "comercial",
+      "viewport": "1440x900",
+      "theme": "day",
+      "state": "primeira_leitura_falhou_sem_leitura_concluida",
+      "screenshot": "docs/ux-pro-06-carteira-evidencias/desktop-carteira-falha.png",
+      "problems": []
+    }
+  ]
+}
