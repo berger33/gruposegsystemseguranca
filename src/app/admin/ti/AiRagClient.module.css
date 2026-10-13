@@ -1,0 +1,15 @@
+.workspace { display: grid; gap: 14px; margin-top: 20px; padding: clamp(16px, 2vw, 24px); border: 1px solid var(--ux-color-border); border-radius: 16px; }
+.workspace > h2 { margin: 0; font-size: 1.4rem; }
+.workspace > p { line-height: 1.6; }
+.panel { min-width: 0; border: 1px solid var(--ux-color-border); background: var(--ux-color-surface); color: var(--ux-color-text); }
+.panel :is(p, small) { line-height: 1.55; }
+.panel :is(input:not([type="checkbox"]), select, textarea) { max-width: 100%; box-sizing: border-box; border: 1px solid var(--ux-color-border); border-radius: 8px; background: var(--ux-color-surface); color: var(--ux-color-text); font: inherit; }
+.panel label { display: grid; gap: 6px; color: var(--ux-color-text); font-weight: 600; }
+.panel :is(input, select, textarea, button, summary):focus-visible { outline: 3px solid var(--ux-color-focus); outline-offset: 2px; }
+.panel button, .primary { min-height: 40px; padding: 8px 12px !important; border: 1px solid var(--ux-color-brand) !important; border-radius: 8px !important; background: var(--ux-color-brand) !important; color: #fff !important; font: inherit; font-weight: 650; cursor: pointer; }
+.panel :is(th, td) { padding: 8px; text-align: left; }
+.panel th { color: var(--ux-color-muted); font-size: .8rem; }
+.message { border: 1px solid var(--ux-color-border); background: var(--ux-color-brand-soft); color: var(--ux-color-text); line-height: 1.55; }
+.queryGrid { grid-template-columns: minmax(0, 1fr) !important; }
+@media (min-width: 900px) { .queryGrid { grid-template-columns: minmax(0, 1fr) !important; } }
+@media (max-width: 600px) { .workspace { padding: 14px; } .panel :is(input:not([type="checkbox"]), select, textarea) { width: 100%; } }

@@ -4,6 +4,7 @@ import UiTableScroll from "@/components/ui/UiTableScroll";
 import {workspaceResponse} from "@/lib/workspace-response";
 import { useEffect, useRef, useState } from "react";
 import { ragDemoTemplates } from "./ragDemoTemplates";
+import styles from "./AiRagClient.module.css";
 
 type RagIndex = { id: string; rag_key: string; name: string; description: string; scope: string; model_name: string; ollama_host: string; max_queue_size: number; is_active: boolean; is_approved: boolean; is_published: boolean; status: string; version: number };
 type RagDoc = { id: string; rag_key: string; client_account_id?: string|null; title: string; content: string; source: string; source_type: string; keywords: string[]; is_approved: boolean; is_published: boolean; status: string };
@@ -11,6 +12,11 @@ type BotConfig = { id: string; active_mode: string; whatsapp_number: string; wha
 type BotMode = { mode_key: string; name: string; description: string; is_active: boolean };
 type BotSession = { id: string; protocol: string; rag_key: string; mode: string; query: string; response: string; status: string; queue_position: number; is_whatsapp_redirect: boolean; created_at: string };
 type RagQuery = { id: string; protocol: string; rag_key: string; query: string; response: string; queue_position: number; model_name: string; created_at: string };
+
+function statusLabel(status: string) {
+  const labels: Record<string, string> = { rascunho: "Rascunho", publicado: "Publicado", arquivado: "Arquivado", active: "Ativo", inactive: "Inativo" };
+  return labels[status] || status;
+}
 
 export default function AiRagClient(){
  const [workspaceLoading,setWorkspaceLoading]=useState(false);
@@ -153,7 +159,7 @@ try {
   }
 
   return (
-    <UiTaskWorkspace style={{ marginTop:24, padding:16, border:"1px solid #7c3aed", borderRadius:8, background:"#f5f3ff" }}>
+    <UiTaskWorkspace className={styles.workspace}>
 <fieldset disabled={operationBusy} aria-label="Processos desta área" style={{border:0,padding:0,margin:0,minWidth:0}}>
 {operationBusy&&<p role="status">Salvando alteração…</p>}
 {workspaceLoading && <p role="status">Carregando informações desta área…</p>}
@@ -164,26 +170,26 @@ try {
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}>
         {(["publico","cliente","rh","marcelo"] as const).filter(key=>(staffRole==="admin"||staffRole==="ti"&&["publico","cliente"].includes(key)||staffRole==="rh"&&key==="rh")&&!indexes.some(i=>i.rag_key===key)).map(key=><button key={key} type="button" onClick={()=>ensureIndex(key)} style={{padding:"6px 10px"}}>Criar índice {key}</button>)}
       </div>
-      <section style={{marginTop:12,padding:12,background:"#fff"}}>
+      <section className={styles.panel} style={{marginTop:12,padding:12}}>
         <strong>Documentos fictícios de demonstração por área</strong>
         <p style={{fontSize:12}}>Exemplos processuais, sem dados reais. A base cliente exige uma conta existente e só ficará visível para essa conta.</p>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{(["publico","cliente","rh","marcelo"] as const).filter(key=>staffRole==="admin"||staffRole==="ti"&&["publico","cliente"].includes(key)||staffRole==="rh"&&key==="rh").map(key=><button key={key} type="button" onClick={()=>installDemo(key)} disabled={!indexes.some(i=>i.rag_key===key&&i.is_published)}>Instalar exemplo {key}</button>)}</div>
       </section>
 
-      <details style={{ marginTop:12, background:"#fff", padding:12, borderRadius:6 }}>
-        <summary style={{ fontWeight:600, cursor:"pointer" }}>RAG Indexes ({indexes.length}) — 3 separados + público</summary>
+      <details className={styles.panel} style={{ marginTop:12, padding:12, borderRadius:6 }}>
+        <summary style={{ fontWeight:600, cursor:"pointer" }}>Índices das bases ({indexes.length}) — áreas separadas e base pública</summary>
         <UiTableScroll><table style={{ width:"100%", fontSize:11, marginTop:8, borderCollapse:"collapse" }}>
-          <thead><tr><th>rag_key</th><th>scope</th><th>model</th><th>queue</th><th>status</th><th>aprov</th><th>pub</th></tr></thead>
+          <thead><tr><th>Área da base</th><th>Escopo</th><th>Modelo de IA</th><th>Limite da fila</th><th>Estado</th><th>Aprovado</th><th>Publicado</th><th>Ação</th></tr></thead>
           <tbody>
             {indexes.map(i=>(
-              <tr key={i.id} style={{ borderTop:"1px solid #ddd" }}>
+              <tr key={i.id} style={{ borderTop:"1px solid var(--ux-color-border)" }}>
                 <td><strong>{i.rag_key}</strong></td>
                 <td>{i.scope}</td>
                 <td>{i.model_name}</td>
                 <td>{i.max_queue_size}</td>
-                <td>{i.status}</td>
-                <td>{String(i.is_approved)}</td>
-                <td>{String(i.is_published)}</td>
+                <td>{statusLabel(i.status)}</td>
+                <td>{i.is_approved ? "Sim" : "Não"}</td>
+                <td>{i.is_published ? "Sim" : "Não"}</td>
                 <td>{!i.is_published&&<button type="button" onClick={()=>publishIndex(i)}>Revisar e publicar</button>}</td>
               </tr>
             ))}
@@ -194,7 +200,7 @@ try {
 
 
 
-      <form onSubmit={createDoc} style={{ marginTop:16, display:"grid", gap:8, background:"#fff", padding:12, borderRadius:6 }}>
+      <form className={styles.panel} onSubmit={createDoc} style={{ marginTop:16, display:"grid", gap:12, padding:16, borderRadius:10 }}>
         <strong>Novo documento para revisão</strong>
         <label>Importar texto para revisão (.txt ou .md, até 20 mil caracteres)<input type="file" accept=".txt,.md,text/plain,text/markdown" onChange={async e=>{const file=e.target.files?.[0];if(!file)return;if(file.size>80000){setMsg("Arquivo grande demais para um documento RAG.");return;}const content=await file.text();if(content.length>20000){setMsg("Texto excede 20 mil caracteres; divida-o em documentos menores.");return;}setDocForm(current=>({...current,title:file.name.replace(/\.(txt|md)$/i,"").slice(0,500),content,source:file.name.slice(0,500),source_type:"manual"}));setMsg("Texto carregado no formulário. Revise a área e o conteúdo antes de salvar.");}} /></label>
         <label>Área da base<select value={docForm.rag_key} onChange={e=>setDocForm({...docForm, rag_key:e.target.value})} style={{ padding:6 }}>
@@ -204,36 +210,36 @@ try {
           <option value="publico">publico — apenas site público, sem preço fictício</option>
         </select></label>
         {docForm.rag_key==="cliente" && <><label>Conta do cliente<select aria-label="Conta do cliente" value={docForm.client_account_id} onChange={e=>setDocForm({...docForm,client_account_id:e.target.value})} required><option value="">Selecione a conta do cliente</option>{accounts.map(a=><option key={a.id} value={a.id}>{a.display_name} — {a.id}</option>)}</select></label><small>Se a conta não aparecer, cadastre-a primeiro em Clientes. O exemplo fica restrito à conta escolhida.</small></>}
-        <label>Título <input placeholder="title min 5 chars" value={docForm.title} onChange={e=>setDocForm({...docForm, title:e.target.value})} required maxLength={500} style={{ padding:6 }} /></label>
-        <label>Conteúdo autorizado desta área <textarea placeholder="content min 20 chars área pertinente apenas, ex: cliente=contratos/documentos/chamados, rh=admissão/férias/benefícios, marcelo=gestão comercial/operacional/financeiro" value={docForm.content} onChange={e=>setDocForm({...docForm, content:e.target.value})} required maxLength={20000} rows={4} style={{ padding:6 }} /></label>
-        <label>Origem do documento <input placeholder="source ex: manual cliente" value={docForm.source} onChange={e=>setDocForm({...docForm, source:e.target.value})} required maxLength={500} style={{ padding:6 }} /></label>
-        <label>Source type<select value={docForm.source_type} onChange={e=>setDocForm({...docForm, source_type:e.target.value})} style={{ padding:6 }}>
-          <option value="manual">manual</option>
-          <option value="faq">faq</option>
-          <option value="procedimento">procedimento</option>
-          <option value="contrato_template">contrato_template</option>
-          <option value="politica">politica</option>
-          <option value="comunicado">comunicado</option>
-          <option value="outro">outro</option>
+        <label>Título <input placeholder="Mínimo de 5 caracteres" value={docForm.title} onChange={e=>setDocForm({...docForm, title:e.target.value})} required minLength={5} maxLength={500} style={{ padding:6 }} /></label>
+        <label>Conteúdo autorizado desta área <textarea placeholder="Mínimo de 20 caracteres. Inclua somente informações pertinentes à área selecionada." value={docForm.content} onChange={e=>setDocForm({...docForm, content:e.target.value})} required minLength={20} maxLength={20000} rows={4} style={{ padding:6 }} /></label>
+        <label>Origem do documento <input placeholder="Ex.: manual de atendimento" value={docForm.source} onChange={e=>setDocForm({...docForm, source:e.target.value})} required maxLength={500} style={{ padding:6 }} /></label>
+        <label>Tipo de documento<select value={docForm.source_type} onChange={e=>setDocForm({...docForm, source_type:e.target.value})} style={{ padding:6 }}>
+          <option value="manual">Manual</option>
+          <option value="faq">Perguntas frequentes</option>
+          <option value="procedimento">Procedimento</option>
+          <option value="contrato_template">Modelo de contrato</option>
+          <option value="politica">Política</option>
+          <option value="comunicado">Comunicado</option>
+          <option value="outro">Outro</option>
         </select></label>
         <label>Palavras-chave separadas por vírgula <input placeholder="keywords csv ex: cliente, portal, contratos" value={docForm.keywords} onChange={e=>setDocForm({...docForm, keywords:e.target.value})} style={{ padding:6 }} /></label>
-        <button type="submit" style={{ padding:"8px 12px", background:"#7c3aed", color:"#fff", border:"none", borderRadius:4 }}>Criar documento em rascunho</button>
+        <button className={styles.primary} type="submit">Criar documento em rascunho</button>
       </form>
 
-      <section style={{marginTop:16,padding:12,background:"#fff"}}>
+      <section className={styles.panel} style={{marginTop:16,padding:12}}>
         <h3>Documentos para revisão ({docs.length})</h3>
-        {docs.map(doc=><article key={doc.id}><details><summary>Ler conteúdo e conferir escopo</summary><pre style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{doc.content}</pre><label><input type="checkbox" checked={reviewed.includes(doc.id)} onChange={e=>setReviewed(list=>e.target.checked?[...list,doc.id]:list.filter(id=>id!==doc.id))}/>Revisei o conteúdo e a área de publicação.</label></details><p>{doc.rag_key} {doc.client_account_id ? `· conta ${accounts.find(a=>a.id===doc.client_account_id)?.display_name||doc.client_account_id}` : ""} · {doc.title} · {doc.status} {!doc.is_published&&doc.status!=="arquivado"&&<button type="button" disabled={!reviewed.includes(doc.id)} onClick={()=>publishDoc(doc)}>Publicar conteúdo revisado</button>} {doc.status!=="arquivado"&&<button type="button" onClick={()=>{setDocForm({rag_key:doc.rag_key,client_account_id:doc.client_account_id||"",title:doc.title,content:doc.content,source:doc.source,source_type:doc.source_type,keywords:doc.keywords.join(", "),supersedes_document_id:doc.id});setMsg("Texto copiado para o formulário. Salve como nova versão e arquive a anterior.");}}>Criar nova versão</button>} {doc.status!=="arquivado"&&<button type="button" onClick={()=>archiveDoc(doc)}>Arquivar</button>}</p></article>)}
+        {docs.map(doc=><article key={doc.id}><details><summary>Ler conteúdo e conferir escopo</summary><pre style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{doc.content}</pre><label><input type="checkbox" checked={reviewed.includes(doc.id)} onChange={e=>setReviewed(list=>e.target.checked?[...list,doc.id]:list.filter(id=>id!==doc.id))}/>Revisei o conteúdo e a área de publicação.</label></details><p>{doc.rag_key} {doc.client_account_id ? `· conta ${accounts.find(a=>a.id===doc.client_account_id)?.display_name||"conta vinculada"}` : ""} · {doc.title} · {statusLabel(doc.status)} {!doc.is_published&&doc.status!=="arquivado"&&<button type="button" disabled={!reviewed.includes(doc.id)} onClick={()=>publishDoc(doc)}>Publicar conteúdo revisado</button>} {doc.status!=="arquivado"&&<button type="button" onClick={()=>{setDocForm({rag_key:doc.rag_key,client_account_id:doc.client_account_id||"",title:doc.title,content:doc.content,source:doc.source,source_type:doc.source_type,keywords:doc.keywords.join(", "),supersedes_document_id:doc.id});setMsg("Texto copiado para o formulário. Salve como nova versão e arquive a anterior.");}}>Criar nova versão</button>} {doc.status!=="arquivado"&&<button type="button" onClick={()=>archiveDoc(doc)}>Arquivar</button>}</p></article>)}
       </section>
 
-      <details style={{ marginTop:12, background:"#fff", padding:12, borderRadius:6 }}>
-        <summary style={{ fontWeight:600, cursor:"pointer" }}>Docs RAG ({docs.length}) por área pertinente</summary>
+      <details className={styles.panel} style={{ marginTop:12, padding:12, borderRadius:6 }}>
+        <summary style={{ fontWeight:600, cursor:"pointer" }}>Visão compacta dos documentos ({docs.length})</summary>
         <ul style={{ fontSize:11, maxHeight:200, overflowY:"auto" }}>
-          {docs.slice(0,30).map(d=> <li key={d.id}>{d.rag_key} — {d.title.slice(0,60)} — {d.source_type} — pub:{String(d.is_published)} — {d.keywords?.slice(0,3).join(",")}</li>)}
+          {docs.slice(0,30).map(d=> <li key={d.id}>{d.rag_key} — {d.title.slice(0,60)} — {statusLabel(d.status)}{d.is_published ? " · publicado" : " · não publicado"}</li>)}
         </ul>
       </details>
 
-      <section style={{ marginTop:16, display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-        <form onSubmit={testRag} style={{ background:"#fff", padding:12, borderRadius:6, display:"grid", gap:8 }}>
+      <section className={styles.queryGrid} style={{ marginTop:16, display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,320px),1fr))", gap:12 }}>
+        <form className={styles.panel} onSubmit={testRag} style={{ padding:12, borderRadius:6, display:"grid", gap:8 }}>
           <strong>Consultar a base publicada</strong>
           <label>Área da base<select value={testQuery.rag_key} onChange={e=>setTestQuery({...testQuery, rag_key:e.target.value})} style={{ padding:6 }}>
             <option value="cliente">cliente</option>
@@ -241,20 +247,20 @@ try {
             <option value="marcelo">marcelo</option>
             <option value="publico">publico (padrão beta)</option>
           </select></label>
-          <input value={testQuery.query} onChange={e=>setTestQuery({...testQuery, query:e.target.value})} required maxLength={500} style={{ padding:6 }} />
-          <button type="submit" style={{ padding:"6px 10px", background:"#7c3aed", color:"#fff", border:"none", borderRadius:4, fontSize:12 }}>Testar RAG {testQuery.rag_key} </button>
+          <label>Pergunta de teste<input aria-label="Pergunta para consultar a base" value={testQuery.query} onChange={e=>setTestQuery({...testQuery, query:e.target.value})} required maxLength={500} style={{ padding:6 }} /></label>
+          <button className={styles.primary} type="submit">Testar RAG {testQuery.rag_key}</button>
         </form>
 
 
       </section>
 
-      {msg && <p style={{ marginTop:12, fontSize:12, background:"#f8fafc", padding:8, borderRadius:4, whiteSpace:"pre-wrap" }}>{msg}</p>}
+      {msg && <p role="status" className={styles.message} style={{ marginTop:12, fontSize:12, padding:8, borderRadius:4, whiteSpace:"pre-wrap" }}>{msg}</p>}
 
 
 
 
 
-      <section style={{ marginTop:16, padding:12, background:"#fff", borderRadius:6, fontSize:12 }}>
+      <section className={styles.panel} style={{ marginTop:16, padding:12, borderRadius:6, fontSize:12 }}>
         <strong>Estado do RAG atual:</strong> conteúdo publicado e escopo conferidos antes da chamada local ao Ollama. A recuperação é lexical; não há embedding, fila persistida, custo/token calculado ou consulta automática aos registros vivos. Quando não há fonte, a resposta informa isso. Teste cada área com uma conta própria antes da entrega.
       </section>
     </fieldset></UiTaskWorkspace>
