@@ -74,7 +74,7 @@
 .fieldset { border: 1px solid var(--ux-color-border); border-radius: var(--ux-radius-sm); padding: 12px; margin: 0; min-width: 0; }
 .fieldset > legend { padding: 0 6px; font-size: .8125rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--ux-color-muted); }
 .fieldRow { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 12px; }
-.field { display: grid; gap: 4px; align-content: start; min-width: 0; }
+.field { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; align-content: start; min-width: 0; }
 .field > label { font-size: .875rem; font-weight: 700; line-height: 1.4; }
 .requiredNote { margin: 0; font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ux-color-muted); }
 .required { font-weight: 600; color: var(--ux-color-muted); }
@@ -98,6 +98,39 @@
   border-color: var(--ux-color-brand);
 }
 .filterBar { display: grid; gap: 12px; }
+
+/* Estados de atualização e dados desatualizados (UX-PRO-06, funil).
+   Os tokens de aviso já têm contraste nos dois temas; nenhuma cor fixa. */
+.updating {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  color: var(--ux-color-brand);
+  font-size: .8125rem;
+  font-weight: 700;
+}
+.stale {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--ux-color-warning);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-warning-soft);
+  color: var(--ux-color-warning);
+  font-size: .8125rem;
+  line-height: 1.55;
+}
+.stale button {
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 8px 16px;
+  border: 1px solid var(--ux-color-warning);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-surface);
+  color: var(--ux-color-text);
+  font: inherit;
+  font-weight: 700;
+}
 
 /* Importação em passos --------------------------------------------------- */
 .steps { display: grid; gap: 16px; margin: 16px 0 0; padding: 0; list-style: none; counter-reset: none; }

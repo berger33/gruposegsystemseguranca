@@ -1,0 +1,53 @@
+{
+  "stage": "ux-pro-06-funil",
+  "generatedBy": "gate npm run test:ux-crm:pg (UX_CRM_EVIDENCE_DIR=docs/ux-pro-06-funil-evidencias)",
+  "notes": "Evidências da fatia UX-PRO-06 — estados de leitura do funil de oportunidades (/admin/crm). Massa inteiramente sintética criada pelas próprias APIs, sessão de staff provisionada pelo gate; nenhuma captura usa dado pessoal ou credencial. As demais capturas geradas pela suíte do funil durante a execução foram mantidas fora desta pasta para não misturar artefatos de outras fatias.",
+  "entries": [
+    {
+      "stage": "ux-pro-06-funil",
+      "route": "/admin/crm",
+      "role": "comercial",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-06-funil-evidencias/desktop-crm-funil.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-funil",
+      "route": "/admin/crm",
+      "role": "comercial",
+      "viewport": "320x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-06-funil-evidencias/funil-320.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-funil",
+      "route": "/admin/crm",
+      "role": "comercial",
+      "viewport": "768x1024",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-06-funil-evidencias/funil-768.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-funil",
+      "route": "/admin/crm",
+      "role": "comercial",
+      "viewport": "768x1024",
+      "theme": "night",
+      "screenshot": "docs/ux-pro-06-funil-evidencias/funil-768-noturno.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-funil",
+      "route": "/admin/crm",
+      "role": "comercial",
+      "viewport": "1440x900",
+      "theme": "day",
+      "state": "atualizacao_falhou_dados_preservados",
+      "screenshot": "docs/ux-pro-06-funil-evidencias/desktop-crm-funil-desatualizado.png",
+      "problems": []
+    }
+  ]
+}
