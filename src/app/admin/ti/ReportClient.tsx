@@ -1,134 +1,60 @@
 "use client";
+
 import { useEffect, useState } from "react";
+import UiState from "@/components/ui/UiState";
+import UiTableScroll from "@/components/ui/UiTableScroll";
+import styles from "@/components/ui/CommercialEstimate.module.css";
+
+type Data = Record<string, any>;
+const money = (value: unknown) => value == null || value === "" || !Number.isFinite(Number(value)) ? "—" : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value));
+const number = (value: unknown, digits = 0) => value == null || value === "" || !Number.isFinite(Number(value)) ? "—" : Number(value).toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+const valueLabel = (value: unknown) => value == null || value === "" ? "—" : String(value);
+const dateLabel = (value: unknown) => { if (!value) return "—"; const date = new Date(String(value)); return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString("pt-BR"); };
+
+async function readJson(url: string) {
+  const response = await fetch(url, { cache: "no-store" });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || `Falha ao consultar ${url.split("/").pop()}.`);
+  return data;
+}
+const ERRORS: Record<string,string> = { admin_session_required: "Sua sessão expirou. Entre novamente para consultar os relatórios.", same_origin_required: "A solicitação foi recusada pela proteção de origem.", database_not_configured: "O banco de dados não está configurado neste ambiente." };
+const reportError = (error: unknown) => { const code = error instanceof Error ? error.message : ""; return ERRORS[code] || (code && !code.includes("/") ? code : "Não foi possível carregar os relatórios. Tente novamente."); };
 
 export default function ReportClient() {
-  const [summary, setSummary] = useState<any>(null);
-  const [conversion, setConversion] = useState<any>(null);
-  const [salesCycle, setSalesCycle] = useState<any>(null);
-  const [overdue, setOverdue] = useState<any>(null);
-  const [loss, setLoss] = useState<any>(null);
-  const [pipeline, setPipeline] = useState<any>(null);
-  const [forecast, setForecast] = useState<any>(null);
-  const [msg, setMsg] = useState("");
-
+  const [reports, setReports] = useState<Data[] | null>(null); const [loading, setLoading] = useState(false); const [error, setError] = useState("");
+  const [summary, conversion, salesCycle, overdue, loss, pipeline, forecast] = reports || [];
   async function loadAll() {
-    setMsg("Carregando relatórios...");
+    setLoading(true); setError("");
     try {
-      const [sumR, convR, cycleR, overR, lossR, pipeR, foreR] = await Promise.all([
-        fetch("/api/crm/reports").then(r => r.json()),
-        fetch("/api/crm/reports/conversion").then(r => r.json()),
-        fetch("/api/crm/reports/sales-cycle").then(r => r.json()),
-        fetch("/api/crm/reports/overdue-tasks").then(r => r.json()),
-        fetch("/api/crm/reports/loss-reasons").then(r => r.json()),
-        fetch("/api/crm/reports/pipeline").then(r => r.json()),
-        fetch("/api/crm/reports/weighted-forecast").then(r => r.json()),
-      ]);
-      setSummary(sumR);
-      setConversion(convR);
-      setSalesCycle(cycleR);
-      setOverdue(overR);
-      setLoss(lossR);
-      setPipeline(pipeR);
-      setForecast(foreR);
-      setMsg("Relatórios carregados");
-    } catch (e: any) {
-      setMsg(`Erro: ${e.message}`);
-    }
+      const paths = ["/api/crm/reports", "/api/crm/reports/conversion", "/api/crm/reports/sales-cycle", "/api/crm/reports/overdue-tasks", "/api/crm/reports/loss-reasons", "/api/crm/reports/pipeline", "/api/crm/reports/weighted-forecast"];
+      const result = await Promise.all(paths.map(readJson)); setReports(result);
+    } catch (e) { setReports(null); setError(reportError(e)); } finally { setLoading(false); }
   }
-
-  useEffect(() => { loadAll(); }, []);
-
-  return (
-    <section style={{ marginTop: 24, padding: 16, border: "1px solid #ccc", borderRadius: 8 }}>
-      <h2>CRM-24 — Relatórios conversão, ciclo, atrasadas, perda, pipeline, previsão ponderada</h2>
-      <p style={{ fontSize: 12, color: "#555" }}>Conversão por etapa/origem, ciclo de vendas, tarefas atrasadas, motivos de perda, pipeline por período e cenário, previsão ponderada é estimativa identificada (probabilidade por etapa).</p>
-      <button onClick={loadAll}>Recarregar relatórios</button>
-      {msg && <div style={{ fontSize: 12, marginTop: 8 }}>{msg}</div>}
-
-      {summary && (
-        <div style={{ marginTop: 12, padding: 12, background: "#f0f0f0", borderRadius: 6, fontSize: 12 }}>
-          <h4>Resumo</h4>
-          <p>Total oportunidades: {summary.summary?.total} | Ganho: {summary.summary?.won} | Perdido: {summary.summary?.lost} | Valor total: R$ {summary.summary?.total_value} | Tarefas atrasadas: {summary.summary?.overdue_tasks} | Pipeline: R$ {summary.summary?.pipeline_value}</p>
-          <p>{summary.note}</p>
-        </div>
-      )}
-
-      {conversion && (
-        <div style={{ marginTop: 12, fontSize: 11 }}>
-          <h4>Conversão por etapa/origem</h4>
-          <p>Total: {conversion.total} Ganho: {conversion.won} Taxa: {(conversion.conversionRate * 100).toFixed(1)}%</p>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr><th>Etapa</th><th>Count</th><th>Valor</th></tr></thead>
-            <tbody>{(conversion.byStage || []).map((s: any) => <tr key={s.stage}><td>{s.stage}</td><td>{s.count}</td><td>R$ {s.total_value}</td></tr>)}</tbody>
-          </table>
-          <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
-            <thead><tr><th>Origem</th><th>Count</th><th>Ganho</th><th>Perdido</th><th>Valor</th></tr></thead>
-            <tbody>{(conversion.byOrigin || []).map((o: any) => <tr key={o.origin || "null"}><td>{o.origin || "-"}</td><td>{o.count}</td><td>{o.won}</td><td>{o.lost}</td><td>R$ {o.total_value}</td></tr>)}</tbody>
-          </table>
-        </div>
-      )}
-
-      {salesCycle && (
-        <div style={{ marginTop: 12, fontSize: 11 }}>
-          <h4>Ciclo de vendas</h4>
-          <p>Média dias para etapa atual: {Number(salesCycle.overall?.avg_days_to_current_stage || 0).toFixed(1)} | Para ganho: {Number(salesCycle.overall?.avg_days_to_won || 0).toFixed(1)} | Para perdido: {Number(salesCycle.overall?.avg_days_to_lost || 0).toFixed(1)}</p>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr><th>Etapa</th><th>Count</th><th>Média dias</th></tr></thead>
-            <tbody>{(salesCycle.byStage || []).map((s: any) => <tr key={s.stage}><td>{s.stage}</td><td>{s.count}</td><td>{Number(s.avg_days || 0).toFixed(1)}</td></tr>)}</tbody>
-          </table>
-        </div>
-      )}
-
-      {overdue && (
-        <div style={{ marginTop: 12, fontSize: 11 }}>
-          <h4>Tarefas atrasadas ({overdue.total})</h4>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr><th>Título</th><th>Vencimento</th><th>Status</th><th>Oportunidade</th><th>Empresa</th></tr></thead>
-            <tbody>{(overdue.tasks || []).slice(0,20).map((t: any) => <tr key={t.id}><td>{t.title}</td><td>{new Date(t.due_date).toLocaleString("pt-BR")}</td><td>{t.status}</td><td>{t.opportunity_title || t.opportunity_id?.slice(0,8)}</td><td>{t.company_name || t.company_id?.slice(0,8)}</td></tr>)}</tbody>
-          </table>
-        </div>
-      )}
-
-      {loss && (
-        <div style={{ marginTop: 12, fontSize: 11 }}>
-          <h4>Motivos de perda (total perdido {loss.totalLost})</h4>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr><th>Motivo</th><th>Count</th><th>Valor</th></tr></thead>
-            <tbody>{(loss.byReason || []).map((r: any, i: number) => <tr key={i}><td>{r.loss_reason}</td><td>{r.count}</td><td>R$ {r.total_value}</td></tr>)}</tbody>
-          </table>
-        </div>
-      )}
-
-      {pipeline && (
-        <div style={{ marginTop: 12, fontSize: 11 }}>
-          <h4>Pipeline por período e cenário</h4>
-          <p>Total pipeline: {pipeline.total?.count} oportunidades, R$ {pipeline.total?.total_value} — {pipeline.note} {pipeline.isEstimate ? "(estimativa)" : ""}</p>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr><th>Etapa</th><th>Count</th><th>Valor total</th><th>Média</th></tr></thead>
-            <tbody>{(pipeline.byStage || []).map((s: any) => <tr key={s.stage}><td>{s.stage}</td><td>{s.count}</td><td>R$ {s.total_value}</td><td>R$ {s.avg_value}</td></tr>)}</tbody>
-          </table>
-          <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
-            <thead><tr><th>Mês (forecast)</th><th>Count</th><th>Valor</th></tr></thead>
-            <tbody>{(pipeline.byPeriod || []).map((p: any) => <tr key={p.month}><td>{p.month}</td><td>{p.count}</td><td>R$ {p.total_value}</td></tr>)}</tbody>
-          </table>
-          <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
-            <thead><tr><th>Cenário de preço (alternativas, não somar)</th><th>Count</th><th>Valor</th></tr></thead>
-            <tbody>{(pipeline.byScenario || []).map((s: any, i: number) => <tr key={i}><td>{s.title} · v{s.version} · {s.approval_status}</td><td>{s.count}</td><td>R$ {s.total_value}</td></tr>)}</tbody>
-          </table>
-        </div>
-      )}
-
-      {forecast && (
-        <div style={{ marginTop: 12, fontSize: 11, background: "#fffbe6", padding: 12, borderRadius: 6 }}>
-          <h4>Previsão ponderada (ESTIMATIVA identificada)</h4>
-          <p>Total estimado: R$ {forecast.totalEstimated} | Total ponderado: R$ {forecast.totalWeighted.toFixed(2)} — {forecast.note}</p>
-          <p style={{ fontWeight: "bold", color: "#b58900" }}>ESTIMATIVA: não é garantia de faturamento. Probabilidades por etapa: {JSON.stringify(forecast.probabilities)}</p>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr><th>Etapa</th><th>Count</th><th>Estimado</th><th>Prob</th><th>Ponderado</th></tr></thead>
-            <tbody>{(forecast.byStage || []).map((s: any) => <tr key={s.stage}><td>{s.stage}</td><td>{s.count}</td><td>R$ {s.total_estimated}</td><td>{(s.probability * 100).toFixed(0)}%</td><td>R$ {s.weighted.toFixed(2)}</td></tr>)}</tbody>
-          </table>
-        </div>
-      )}
-    </section>
-  );
+  useEffect(() => { void loadAll(); }, []);
+  return <section className={styles.workspace} aria-labelledby="crm-report-title">
+    <header className={styles.header}><div><p className={styles.eyebrow}>Comercial · CRM-24</p><h2 id="crm-report-title">Relatórios comerciais</h2><p>Indicadores de conversão, ritmo de vendas, tarefas, perdas e pipeline. A previsão ponderada é uma estimativa baseada nas probabilidades configuradas.</p></div><button className={styles.primary} type="button" onClick={()=>void loadAll()} disabled={loading}>{loading ? "Atualizando…" : "Atualizar relatórios"}</button></header>
+    {error ? <UiState variant="error" title="Relatórios indisponíveis" detail={error} onRetry={()=>void loadAll()} /> : loading && !reports ? <UiState variant="loading" title="Consultando relatórios comerciais" detail="As fontes do CRM estão sendo consultadas." /> : !reports ? <UiState variant="empty" title="Sem dados para exibir" detail="Os relatórios serão apresentados quando a consulta estiver disponível." onRetry={()=>void loadAll()} /> : <div className={styles.reports}>
+      {summary && <section className={styles.reportCard} aria-labelledby="report-summary-title"><h3 id="report-summary-title">Resumo do período disponível</h3><div className={styles.metrics}>
+        {[ ["Oportunidades",summary.summary?.total], ["Ganhos",summary.summary?.won], ["Perdidos",summary.summary?.lost], ["Valor total",money(summary.summary?.total_value)], ["Tarefas atrasadas",summary.summary?.overdue_tasks], ["Valor em pipeline",money(summary.summary?.pipeline_value)] ].map(([label,value])=><div className={styles.metric} key={String(label)}><span>{label}</span><strong>{valueLabel(value)}</strong></div>)}
+      </div>{summary.note && <p>{summary.note}</p>}</section>}
+      <div className={styles.reportGrid}>
+        {conversion && <section className={styles.reportCard}><h3>Conversão por etapa e origem</h3><p>{valueLabel(conversion.total)} oportunidades · {valueLabel(conversion.won)} ganhos · taxa {number(conversion.conversionRate == null ? null : Number(conversion.conversionRate)*100,1)}{conversion.conversionRate == null ? "" : "%"}</p>
+          <UiTableScroll><table className={styles.table}><caption>Resultados por etapa</caption><thead><tr><th>Etapa</th><th>Quantidade</th><th>Valor</th></tr></thead><tbody>{(conversion.byStage || []).map((s:Data)=><tr key={s.stage}><th scope="row">{valueLabel(s.stage)}</th><td>{valueLabel(s.count)}</td><td>{money(s.total_value)}</td></tr>)}</tbody></table></UiTableScroll>
+          <UiTableScroll><table className={styles.table}><caption>Resultados por origem</caption><thead><tr><th>Origem</th><th>Quantidade</th><th>Ganhos</th><th>Perdidos</th><th>Valor</th></tr></thead><tbody>{(conversion.byOrigin || []).map((o:Data,i:number)=><tr key={`${o.origin ?? "sem-origem"}-${i}`}><th scope="row">{valueLabel(o.origin || "Não informada")}</th><td>{valueLabel(o.count)}</td><td>{valueLabel(o.won)}</td><td>{valueLabel(o.lost)}</td><td>{money(o.total_value)}</td></tr>)}</tbody></table></UiTableScroll>
+        </section>}
+        {salesCycle && <section className={styles.reportCard}><h3>Ritmo do ciclo de vendas</h3><div className={styles.metrics}>{[["Até a etapa atual (dias)",salesCycle.overall?.avg_days_to_current_stage],["Até ganho (dias)",salesCycle.overall?.avg_days_to_won],["Até perda (dias)",salesCycle.overall?.avg_days_to_lost]].map(([label,value])=><div className={styles.metric} key={String(label)}><span>{label}</span><strong>{number(value,1)}</strong></div>)}</div><UiTableScroll><table className={styles.table}><caption>Média por etapa</caption><thead><tr><th>Etapa</th><th>Quantidade</th><th>Média (dias)</th></tr></thead><tbody>{(salesCycle.byStage || []).map((s:Data)=><tr key={s.stage}><th scope="row">{valueLabel(s.stage)}</th><td>{valueLabel(s.count)}</td><td>{number(s.avg_days,1)}</td></tr>)}</tbody></table></UiTableScroll></section>}
+        {overdue && <section className={styles.reportCard}><h3>Tarefas atrasadas <span className={styles.badge}>{valueLabel(overdue.total)}</span></h3>{overdue.tasks?.length ? <UiTableScroll><table className={styles.table}><caption>Até 20 tarefas retornadas pelo relatório</caption><thead><tr><th>Tarefa</th><th>Vencimento</th><th>Situação</th><th>Oportunidade</th><th>Empresa</th></tr></thead><tbody>{(overdue.tasks || []).slice(0,20).map((t:Data)=><tr key={t.id}><th scope="row">{valueLabel(t.title)}</th><td>{dateLabel(t.due_date)}</td><td>{valueLabel(t.status)}</td><td>{valueLabel(t.opportunity_title || t.opportunity_id?.slice(0,8))}</td><td>{valueLabel(t.company_name || t.company_id?.slice(0,8))}</td></tr>)}</tbody></table></UiTableScroll> : <p>Nenhuma tarefa atrasada foi retornada.</p>}</section>}
+        {loss && <section className={styles.reportCard}><h3>Motivos de perda</h3><p>{valueLabel(loss.totalLost)} oportunidade(s) perdida(s)</p>{loss.byReason?.length ? <UiTableScroll><table className={styles.table}><caption>Distribuição registrada no CRM</caption><thead><tr><th>Motivo</th><th>Quantidade</th><th>Valor</th></tr></thead><tbody>{loss.byReason.map((r:Data,i:number)=><tr key={`${r.loss_reason}-${i}`}><th scope="row">{valueLabel(r.loss_reason)}</th><td>{valueLabel(r.count)}</td><td>{money(r.total_value)}</td></tr>)}</tbody></table></UiTableScroll> : <p>Nenhum motivo de perda foi retornado.</p>}</section>}
+        {pipeline && <section className={styles.reportCard}><h3>Pipeline por etapa, período e cenário</h3><p>{valueLabel(pipeline.total?.count)} oportunidades · {money(pipeline.total?.total_value)}{pipeline.isEstimate ? " · estimativa" : ""}</p>{pipeline.note && <p>{pipeline.note}</p>}
+          <UiTableScroll><table className={styles.table}><caption>Pipeline por etapa</caption><thead><tr><th>Etapa</th><th>Quantidade</th><th>Valor total</th><th>Valor médio</th></tr></thead><tbody>{(pipeline.byStage || []).map((s:Data)=><tr key={s.stage}><th scope="row">{valueLabel(s.stage)}</th><td>{valueLabel(s.count)}</td><td>{money(s.total_value)}</td><td>{money(s.avg_value)}</td></tr>)}</tbody></table></UiTableScroll>
+          <UiTableScroll><table className={styles.table}><caption>Valores por mês</caption><thead><tr><th>Mês</th><th>Quantidade</th><th>Valor</th></tr></thead><tbody>{(pipeline.byPeriod || []).map((p:Data)=><tr key={p.month}><th scope="row">{valueLabel(p.month)}</th><td>{valueLabel(p.count)}</td><td>{money(p.total_value)}</td></tr>)}</tbody></table></UiTableScroll>
+          <UiTableScroll><table className={styles.table}><caption>Cenários alternativos (não somar entre si)</caption><thead><tr><th>Cenário</th><th>Quantidade</th><th>Valor</th></tr></thead><tbody>{(pipeline.byScenario || []).map((s:Data,i:number)=><tr key={`${s.title}-${s.version}-${i}`}><th scope="row">{valueLabel(s.title)} · v{valueLabel(s.version)}<span className={styles.secondary}>Aprovação: {valueLabel(s.approval_status)}</span></th><td>{valueLabel(s.count)}</td><td>{money(s.total_value)}</td></tr>)}</tbody></table></UiTableScroll>
+        </section>}
+        {forecast && <section className={`${styles.reportCard} ${styles.estimate}`}><h3>Previsão ponderada · estimativa</h3><p>Valor estimado: {money(forecast.totalEstimated)} · valor ponderado: {money(forecast.totalWeighted)}</p>{forecast.note && <p>{forecast.note}</p>}<p>Estimativa baseada nas probabilidades por etapa; não representa garantia de faturamento.</p>
+          <UiTableScroll><table className={styles.table}><caption>Estimativa por etapa</caption><thead><tr><th>Etapa</th><th>Quantidade</th><th>Valor estimado</th><th>Probabilidade</th><th>Valor ponderado</th></tr></thead><tbody>{(forecast.byStage || []).map((s:Data)=><tr key={s.stage}><th scope="row">{valueLabel(s.stage)}</th><td>{valueLabel(s.count)}</td><td>{money(s.total_estimated)}</td><td>{s.probability == null ? "—" : `${number(Number(s.probability)*100)}%`}</td><td>{money(s.weighted)}</td></tr>)}</tbody></table></UiTableScroll>
+          <details><summary>Ver probabilidades técnicas usadas no cálculo</summary><pre className={styles.json}>{JSON.stringify(forecast.probabilities ?? {},null,2)}</pre></details>
+        </section>}
+      </div>
+    </div>}
+  </section>;
 }
