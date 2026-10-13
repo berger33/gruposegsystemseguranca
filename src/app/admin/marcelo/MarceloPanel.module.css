@@ -61,6 +61,15 @@
 .indicatorCard > .hint { margin: 0; font-size: .78rem; }
 .cardActions { margin-top: auto; }
 .cardActions button { min-height: 40px; }
+.recordsScroll { max-width: 100%; margin-top: 12px; overflow-x: auto; border: 1px solid var(--ux-color-border); border-radius: var(--ux-radius-sm); }
+.recordsScroll:focus-visible { outline: 3px solid var(--ux-color-focus); outline-offset: 3px; }
+.recordsTable { width: 100%; min-width: 850px; border-collapse: collapse; background: var(--ux-color-surface); color: var(--ux-color-text); font-size: .875rem; }
+.recordsTable caption { padding: 10px 12px; color: var(--ux-color-muted); text-align: left; }
+.recordsTable th, .recordsTable td { padding: 10px 12px; border-top: 1px solid var(--ux-color-border); text-align: left; vertical-align: top; }
+.recordsTable th { color: var(--ux-color-muted); font-size: .75rem; letter-spacing: .035em; }
+.recordsTable td { min-width: 100px; }
+.recordsTable button { min-height: 40px; padding: 7px 10px; border: 1px solid var(--ux-color-brand); border-radius: var(--ux-radius-sm); background: var(--ux-color-surface); color: var(--ux-color-brand); font: inherit; font-weight: 700; cursor: pointer; }
+.recordsTable button:focus-visible { outline: 3px solid var(--ux-color-focus); outline-offset: 3px; }
 
 @media (max-width: 760px) {
   .pageIntro { align-items: flex-start; flex-direction: column; gap: 12px; }

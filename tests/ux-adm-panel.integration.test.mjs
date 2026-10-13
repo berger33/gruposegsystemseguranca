@@ -18,6 +18,7 @@
 
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
@@ -72,9 +73,13 @@ async function loginHttp(email) {
 // O Chromium empacotado roda com --single-process: reaproveitar o mesmo
 // browser entre contextos derruba o alvo. Cada teste abre o seu.
 async function launchBrowser() {
+  const localChrome = process.platform === 'win32'
+    ? [process.env.CHROME_PATH, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe']
+      .find(candidate => candidate && existsSync(candidate))
+    : null;
   return playwrightChromium.launch({
-    executablePath: await packagedChromium.executablePath(),
-    args: packagedChromium.args.filter(arg => arg !== '--disable-web-security'),
+    executablePath: localChrome || await packagedChromium.executablePath(),
+    args: localChrome ? ['--no-sandbox'] : packagedChromium.args.filter(arg => arg !== '--disable-web-security'),
     headless: true,
   });
 }
@@ -92,18 +97,22 @@ async function capture(page, nome) {
  * indicadas. `page.route()` é instável com este Chromium empacotado, então a
  * substituição é feita em `window.fetch`, como nos demais gates do repositório.
  */
-async function openPanel(browser, cookie, { width = 1440, height = 900, failRoutes = [], status = 503, code = 'drilldown_source_unavailable' } = {}) {
+async function openPanel(browser, cookie, { width = 1440, height = 900, failRoutes = [], mockResponses = {}, status = 503, code = 'drilldown_source_unavailable' } = {}) {
   const context = await browser.newContext({ viewport: { width, height }, locale: 'pt-BR' });
   const separator = cookie.indexOf('=');
   await context.addCookies([{ name: cookie.slice(0, separator), value: cookie.slice(separator + 1), url: baseUrl }]);
   const page = await context.newPage();
   page.setDefaultTimeout(45_000);
   page.setDefaultNavigationTimeout(90_000);
-  if (failRoutes.length) {
-    await page.addInitScript(({ routes, failStatus, failCode }) => {
+  if (failRoutes.length || Object.keys(mockResponses).length) {
+    await page.addInitScript(({ routes, responses, failStatus, failCode }) => {
       const original = window.fetch.bind(window);
       window.fetch = async (input, init) => {
         const url = typeof input === 'string' ? input : (input?.url || '');
+        const response = Object.entries(responses).find(([route]) => url.includes(route));
+        if (response) return new Response(JSON.stringify(response[1]), {
+          status: 200, headers: { 'content-type': 'application/json' },
+        });
         if (routes.some(route => url.includes(route))) {
           return new Response(JSON.stringify({ error: failCode }), {
             status: failStatus, headers: { 'content-type': 'application/json' },
@@ -111,7 +120,7 @@ async function openPanel(browser, cookie, { width = 1440, height = 900, failRout
         }
         return original(input, init);
       };
-    }, { routes: failRoutes, failStatus: status, failCode: code });
+    }, { routes: failRoutes, responses: mockResponses, failStatus: status, failCode: code });
   }
   await page.goto(`${baseUrl}/admin/marcelo`, { waitUntil: 'domcontentloaded' });
   return { context, page };
@@ -353,6 +362,53 @@ test('em 390px o painel não produz transbordo horizontal', { skip: !RUN }, asyn
       nodes.map(node => node.getBoundingClientRect().height));
     for (const altura of alturas) assert.ok(altura >= 32, `aba com apenas ${altura}px de altura`);
     await capture(page, 'ux-05-painel-390px');
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('detalhamento fica legível, contido e operável nos dois temas e em quatro larguras', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const fixture = {
+      records: [{
+        record_kind: 'cli_ticket', record_id: 'fixture-ux-pro-04', record_label: 'CH-TESTE-04',
+        record_detail: 'Aguardando retorno do cliente', priority: 'alta', responsible: 'Equipe de atendimento',
+        reference_at: '2026-10-12T12:00:00.000Z', amount_cents: null,
+        canonical: { api: '/api/adm/panel/records/cli_ticket/fixture-ux-pro-04', table: 'cli_tickets_v2', path: '/admin/clientes' },
+      }],
+    };
+    const { context, page } = await openPanel(browser, marceloCookie, {
+      mockResponses: { '/api/adm/panel/drilldown': fixture },
+    });
+    await page.waitForSelector('[data-testid="adm-indicators"]');
+    await page.locator('[data-testid^="adm-card-drill-"]').first().click();
+    await page.getByTestId('adm-drill-row-fixture-ux-pro-04').waitFor();
+    const row = page.getByTestId('adm-drill-row-fixture-ux-pro-04');
+    assert.match(await row.innerText(), /Alta[\s\S]*Equipe de atendimento[\s\S]*12\/10\/2026/);
+    assert.match(await page.locator('[data-testid="adm-drilldown"]').innerText(), /pode ser criação, ocorrência ou vencimento/);
+
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      assert.ok(overflow <= 1, `transbordo do documento de ${overflow}px em ${width}px`);
+      const table = await page.locator('[data-testid="adm-drilldown"] [role="region"]').evaluate(node => ({
+        scroll: getComputedStyle(node).overflowX,
+        clientWidth: node.clientWidth,
+        scrollWidth: node.scrollWidth,
+      }));
+      assert.equal(table.scroll, 'auto', 'a tabela conserva rolagem horizontal própria');
+      assert.ok(table.scrollWidth >= table.clientWidth, 'a região de tabela precisa conter seu conteúdo');
+      await capture(page, `ux-pro-04-detalhamento-${width}px-dia`);
+    }
+
+    const region = page.locator('[data-testid="adm-drilldown"] [role="region"]');
+    await region.focus();
+    await page.keyboard.press('Tab');
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('data-testid')), 'adm-open-record-fixture-ux-pro-04',
+      'a rolagem da tabela deve entregar o foco ao controle seguinte');
+    await page.getByRole('button', { name: 'Ativar modo noite' }).click();
+    assert.equal(await page.locator('html').getAttribute('data-admin-theme'), 'night');
+    await capture(page, 'ux-pro-04-detalhamento-1440px-noite');
     await context.close();
   } finally { await browser.close(); }
 });

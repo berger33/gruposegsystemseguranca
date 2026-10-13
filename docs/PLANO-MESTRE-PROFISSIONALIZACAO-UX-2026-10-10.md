@@ -84,6 +84,8 @@ O registro de 10/10 acima descreve o snapshot `c50a99b` e é histórico. A matri
 - Explicar ausência de dados e métricas; zero só quando medido. Distinguir simulação, estimativa e valor canônico.
 - Mover IDs técnicos e detalhes de origem para contexto secundário; não inventar dados nem alterar alçada.
 
+> **Execução em andamento em 13/10/2026** — fatia limitada ao detalhamento de indicadores realmente montado em `/admin/marcelo`; antes/depois, preservações, verificações e limites serão registrados em [`UX-PRO-04-PAINEL-MARCELO-2026-10-13.md`](UX-PRO-04-PAINEL-MARCELO-2026-10-13.md). Pendências, analytics e relatórios foram confirmados como rotas distintas e continuam fora desta PR.
+
 ### UX-PRO-05 — RH e funcionário
 
 - Rever RH de ponta a ponta por tarefas: pessoas, admissão, jornada/ponto, ajuste, escala, documentos, benefícios, treinamento, afastamentos, folha e desligamento conforme implementados.

@@ -48,6 +48,9 @@ const password = randomBytes(24).toString('hex');
 const postgres = new EmbeddedPostgres({
   databaseDir: path.join(directory, 'data'),
   port, user: 'seg_qa', password, persistent: false,
+  // A local Windows locale can default initdb to WIN1252; the migrations and
+  // product text are UTF-8, so keep the disposable QA cluster portable.
+  initdbFlags: ['--locale=C', '--encoding=UTF8'],
   postgresFlags: ['-c', 'listen_addresses=127.0.0.1'],
   onLog: () => {},
   onError: error => console.error('QA_PG_ENGINE_ERROR', String(error).replaceAll(password, '[redacted]').slice(0, 300)),
