@@ -136,6 +136,11 @@ gate de navegador do funil. Isso alterou duas colunas do inventário gerado
      calculado);
   7. percurso de Tab (filtro → atualizar → ordenação), contorno de foco visível
      e operação do seletor de ordenação por seta.
+- **Outro gate que toca esta tela:** `npm run test:l04-delivery:pg` também visita
+  `/admin/leads` em Chromium autenticado (1440×1000), conferindo ausência de
+  rolagem horizontal e ausência de erro de console/HTTP 5xx (trecho 15 do
+  primeiro teste de `tests/l04-delivery.integration.test.mjs`). Executado
+  localmente com as mudanças desta PR: **20/20**.
 - **Automatizado geral:** `npm run typecheck` aprovado; `npm run build`
   aprovado; `npm test` (933 asserções) aprovado; `node scripts/qa-wave0-static.mjs`
   5/5; `node --test tests/admin-navigation.test.mjs` 2/2;
