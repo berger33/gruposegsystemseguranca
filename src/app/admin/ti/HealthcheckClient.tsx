@@ -1,93 +1,238 @@
-"use client";
-import { useState } from "react";
+'use client';
+
+import { useState, type ReactNode } from 'react';
+import UiState from '@/components/ui/UiState';
+import styles from './HealthcheckClient.module.css';
+
+type Check = {
+  id?: string; name?: string; check_name?: string; dependency?: string; dependency_type?: string;
+  status?: string; latency_ms?: number | null; is_degraded?: boolean; degradation_reason?: string | null;
+  error_sanitized?: string | null; metadata?: Record<string, unknown> | null; checked_at?: string;
+};
+type StatusSnapshot = {
+  id?: string; overall_status?: string; is_degraded?: boolean; degraded_dependencies?: string[] | null;
+  checks?: Check[]; created_at?: string;
+};
+type HealthPayload = {
+  status?: string; check?: string; overall_status?: string; is_degraded?: boolean; ready?: boolean;
+  degraded_dependencies?: string[]; checks?: Check[]; uptime_seconds?: number; timestamp?: string; note?: string;
+  error?: string;
+};
+type HistoryPayload = { checks?: Check[]; status_history?: StatusSnapshot[] };
+type UiFeedback = { variant: 'error' | 'denied'; title: string; detail: string };
+
+const modes = [
+  ['health', 'Verificação completa'], ['live', 'Resposta do processo'],
+  ['ready', 'Prontidão do serviço'], ['operational', 'Painel operacional restrito'],
+] as const;
+const modeDescriptions: Record<string, string> = {
+  health: 'Consulta dependências monitoradas e o estado geral.',
+  live: 'Confirma apenas se o processo do servidor responde; não testa dependências.',
+  ready: 'Verifica se o banco crítico está disponível para receber tráfego.',
+  operational: 'Consulta restrita a perfis TI e Administração; a consulta é registrada na auditoria.',
+};
+const statusLabels: Record<string, string> = {
+  healthy: 'Saudável', degraded: 'Degradado', unhealthy: 'Indisponível', unknown: 'Não verificado',
+};
+const checkLabels: Record<string, string> = {
+  database: 'Banco de dados', queue: 'Fila de notificações', integrations: 'Integrações', observability: 'Observabilidade',
+};
+const dependencyLabels: Record<string, string> = { database: 'Banco de dados', other: 'Outro serviço' };
+const errorLabels: Record<string, string> = {
+  same_origin_required: 'A origem desta solicitação não foi aceita. Recarregue a página e tente novamente.',
+  admin_session_required: 'Sua sessão administrativa expirou. Entre novamente para acessar o painel.',
+  operational_panel_restricted_admin_ti: 'Esta consulta está disponível apenas para TI e Administração.',
+  operational_panel_restricted: 'Seu perfil não tem acesso ao histórico operacional.',
+  operational_history_unavailable: 'O histórico operacional não pôde ser consultado agora.',
+};
+
+function asError(value: unknown, fallback: string): string {
+  if (typeof value === 'string') return errorLabels[value] || fallback;
+  return fallback;
+}
+
+function readableDate(value?: string | null): string {
+  if (!value) return 'Não informado';
+  const date = new Date(value);
+  return Number.isNaN(date.valueOf()) ? 'Data indisponível' : date.toLocaleString('pt-BR');
+}
+
+function statusLabel(value?: string): string { return statusLabels[value || ''] || 'Não informado'; }
+
+function healthClass(value?: string): string {
+  if (value === 'healthy') return styles.healthy;
+  if (value === 'degraded') return styles.degraded;
+  if (value === 'unhealthy') return styles.unhealthy;
+  return styles.unknown;
+}
+
+function technicalDetails(title: string, value: unknown): ReactNode {
+  if (value == null || value === '') return null;
+  const content = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+  return <details className={styles.technical}><summary>{title}</summary><pre>{content}</pre></details>;
+}
+
+function CheckCard({ check, historic = false }: { check: Check; historic?: boolean }) {
+  const name = check.name || check.check_name || 'Verificação';
+  const status = check.status || 'unknown';
+  const metadata = check.metadata || null;
+  return (
+    <article className={styles.checkCard}>
+      <div className={styles.checkHeader}>
+        <div><h4>{checkLabels[name] || name}</h4><p>{dependencyLabels[check.dependency || check.dependency_type || ''] || 'Dependência monitorada'}</p></div>
+        <span className={`${styles.badge} ${healthClass(status)}`}>{statusLabel(status)}</span>
+      </div>
+      <dl className={styles.metrics}>
+        {typeof check.latency_ms === 'number' && <div><dt>Tempo de resposta</dt><dd>{check.latency_ms} ms</dd></div>}
+        {typeof metadata?.queued === 'number' && <div><dt>Itens aguardando</dt><dd>{metadata.queued}</dd></div>}
+        {typeof metadata?.total === 'number' && <div><dt>Integrações avaliadas</dt><dd>{metadata.total}</dd></div>}
+        {typeof metadata?.failures === 'number' && <div><dt>Falhas de integração</dt><dd>{metadata.failures}</dd></div>}
+        {typeof metadata?.http_5xx === 'number' && <div><dt>Respostas HTTP 5xx recentes</dt><dd>{metadata.http_5xx}</dd></div>}
+        {typeof metadata?.jobs_failed === 'number' && <div><dt>Processos com falha</dt><dd>{metadata.jobs_failed}</dd></div>}
+        {check.degradation_reason && <div className={styles.wide}><dt>Motivo informado</dt><dd>{check.degradation_reason}</dd></div>}
+      </dl>
+      {historic && <p className={styles.recordDate}>Verificado em {readableDate(check.checked_at)}</p>}
+      {(check.error_sanitized || metadata) && <div className={styles.diagnostics}>
+        {check.error_sanitized && technicalDetails('Detalhe técnico sanitizado', check.error_sanitized)}
+        {metadata && technicalDetails('Metadados técnicos', metadata)}
+      </div>}
+    </article>
+  );
+}
 
 export default function HealthcheckClient() {
-  const [data, setData] = useState<any>(null);
-  const [history, setHistory] = useState<any>(null);
-  const [msg, setMsg] = useState("");
-  const [type, setType] = useState("health");
+  const [data, setData] = useState<HealthPayload | null>(null);
+  const [history, setHistory] = useState<HistoryPayload | null>(null);
+  const [mode, setMode] = useState<string>('health');
+  const [loading, setLoading] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [error, setError] = useState<UiFeedback | null>(null);
+  const [historyError, setHistoryError] = useState<UiFeedback | null>(null);
+  const [success, setSuccess] = useState('');
+  const [historySuccess, setHistorySuccess] = useState('');
 
   async function load() {
-    setMsg("Carregando...");
+    setLoading(true); setError(null); setSuccess(''); setData(null);
+    const urls: Record<string, string> = {
+      health: '/api/health', live: '/api/health/live', ready: '/api/health/ready', operational: '/api/admin/operational',
+    };
     try {
-      let url = "/api/health";
-      if (type === "live") url = "/api/health/live";
-      if (type === "ready") url = "/api/health/ready";
-      if (type === "operational") url = "/api/admin/operational";
-      const r = await fetch(url);
-      const j = await r.json();
-      if (!r.ok && r.status !== 503) throw new Error(j.error || 'load_failed');
-      setData(j);
-      setMsg(`OK ${type} overall=${j.overall_status || j.status} degraded=${j.is_degraded} ready=${j.ready ?? 'n/a'} uptime=${j.uptime_seconds}s`);
-    } catch (e: any) {
-      setMsg(`Erro: ${e.message}`);
-    }
+      const response = await fetch(urls[mode], { cache: 'no-store' });
+      const result = await response.json() as HealthPayload;
+      // Readiness deliberately returns 503 with a useful health payload when a critical dependency is not ready.
+      if (!response.ok && !(mode === 'ready' && response.status === 503)) {
+        const denied = response.status === 401 || response.status === 403;
+        throw { denied, code: result.error };
+      }
+      setData(result);
+      setSuccess(mode === 'live' ? 'Resposta do processo consultada.' : 'Estado do serviço consultado.');
+    } catch (failure) {
+      const denied = typeof failure === 'object' && failure !== null && 'denied' in failure && failure.denied === true;
+      const code = typeof failure === 'object' && failure !== null && 'code' in failure ? failure.code : undefined;
+      setError({
+        variant: denied ? 'denied' : 'error',
+        title: denied ? 'Acesso necessário' : 'Consulta não concluída',
+        detail: asError(code, 'Não foi possível consultar o estado agora. Verifique a conexão e tente novamente.'),
+      });
+    } finally { setLoading(false); }
   }
 
   async function loadHistory() {
-    setMsg("Carregando histórico...");
+    setHistoryLoading(true); setHistoryError(null); setHistorySuccess(''); setHistory(null);
     try {
-      const r = await fetch('/api/admin/operational/history?limit=50');
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error || 'history_failed');
-      setHistory(j);
-      setMsg(`Histórico ${j.checks?.length || 0} checks, ${j.status_history?.length || 0} status`);
-    } catch (e: any) {
-      setMsg(`Erro hist: ${e.message}`);
-    }
+      const response = await fetch('/api/admin/operational/history?limit=50', { cache: 'no-store' });
+      const result = await response.json() as HistoryPayload & { error?: string };
+      if (!response.ok) {
+        const denied = response.status === 401 || response.status === 403;
+        throw { denied, code: result.error };
+      }
+      setHistory(result);
+      setHistorySuccess('Histórico consultado.');
+    } catch (failure) {
+      const denied = typeof failure === 'object' && failure !== null && 'denied' in failure && failure.denied === true;
+      const code = typeof failure === 'object' && failure !== null && 'code' in failure ? failure.code : undefined;
+      setHistoryError({
+        variant: denied ? 'denied' : 'error',
+        title: denied ? 'Acesso necessário' : 'Histórico indisponível',
+        detail: asError(code, 'Não foi possível consultar o histórico agora. Tente novamente.'),
+      });
+    } finally { setHistoryLoading(false); }
   }
 
+  const overall = data?.overall_status || data?.status;
+  const isLive = data?.check === 'liveness';
+
   return (
-    <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16, marginTop: 16 }}>
-      <h3 style={{ fontSize: 16, fontWeight: 700 }}>PLT-07 Healthcheck / Liveness / Readiness — degradação explícita dependências painel operacional restrito</h3>
-      <p style={{ fontSize: 12, color: '#6b7280' }}>Endpoints: /api/health/live (liveness processo), /api/health/ready (readiness DB crítico 503 se não ready), /api/health (full checks DB/queue/integrations/observability), /api/admin/operational (painel restrito admin/ti). Degradação explícita: overall healthy/degraded/unhealthy, is_degraded, degraded_dependencies, checks com latency_ms, degradation_reason, error_sanitized sem segredos.</p>
-      {msg && <div style={{ background: '#f3f4f6', padding: 8, borderRadius: 8, fontSize: 11, marginTop: 8, whiteSpace: 'pre-wrap' }}>{msg}</div>}
-      <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-        <select value={type} onChange={e => setType(e.target.value)} style={{ padding: 6, borderRadius: 6, border: '1px solid #d1d5db', fontSize: 12 }}>
-          <option value="health">health</option><option value="live">live</option><option value="ready">ready</option><option value="operational">operational (restrito)</option>
-        </select>
-        <button onClick={load} style={{ padding: '6px 12px', borderRadius: 6, background: '#111827', color: '#fff', fontSize: 12 }}>Carregar</button>
-        <button onClick={loadHistory} style={{ padding: '6px 12px', borderRadius: 6, background: '#374151', color: '#fff', fontSize: 12 }}>Histórico</button>
-      </div>
+    <section className={styles.workspace} aria-labelledby="health-title">
+      <header className={styles.header}>
+        <div><p className={styles.eyebrow}>Saúde e operação</p><h2 id="health-title">Saúde do sistema</h2>
+          <p>Consulte a resposta do processo, a disponibilidade de dependências e o histórico operacional permitido ao seu perfil.</p></div>
+      </header>
 
-      {data && (
-        <div style={{ marginTop: 12 }}>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ padding: 8, borderRadius: 8, border: '1px solid #e5e7eb', background: data.overall_status === 'healthy' ? '#dcfce7' : data.overall_status === 'degraded' ? '#fef3c7' : '#fee2e2', fontSize: 12 }}>
-              <strong>Overall:</strong> {data.overall_status || data.status} {data.is_degraded ? '(DEGRADED)' : ''} {data.ready !== undefined ? (data.ready ? 'READY' : 'NOT READY') : ''}
-            </div>
-            <div style={{ padding: 8, borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 11 }}>Uptime {data.uptime_seconds}s<br/>Timestamp {data.timestamp}</div>
-            {data.degraded_dependencies && data.degraded_dependencies.length > 0 && <div style={{ padding: 8, borderRadius: 8, border: '1px solid #e5e7eb', background: '#fef3c7', fontSize: 11 }}>Degraded deps: {data.degraded_dependencies.join(', ')}</div>}
-          </div>
-          {data.checks && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8, marginTop: 10 }}>
-              {data.checks.map((c: any) => (
-                <div key={c.name} style={{ padding: 8, borderRadius: 8, border: '1px solid #e5e7eb', background: c.status === 'healthy' ? '#f0fdf4' : c.status === 'degraded' ? '#fffbeb' : '#fef2f2', fontSize: 11 }}>
-                  <div style={{ fontWeight: 600 }}>{c.name} • {c.dependency} • {c.status} {c.is_degraded ? '(degraded)' : ''}</div>
-                  <div>latency {c.latency_ms}ms</div>
-                  {c.degradation_reason && <div style={{ color: '#92400e' }}>degradação: {c.degradation_reason}</div>}
-                  {c.error_sanitized && <div style={{ color: '#991b1b' }}>err: {c.error_sanitized.slice(0,100)}</div>}
-                  {c.metadata && <div style={{ color: '#6b7280', fontSize: 10 }}>meta: {JSON.stringify(c.metadata).slice(0,120)}</div>}
-                </div>
-              ))}
-            </div>
-          )}
-          <div style={{ marginTop: 10, fontSize: 10, fontFamily: 'monospace', whiteSpace: 'pre-wrap', background: '#f9fafb', padding: 8, borderRadius: 8, maxHeight: 200, overflowY: 'auto' }}>{JSON.stringify(data, null, 2).slice(0, 5000)}</div>
+      <section className={styles.panel} aria-labelledby="check-title">
+        <div className={styles.sectionHeading}><div><h3 id="check-title">Consultar estado atual</h3><p>Escolha o escopo da verificação. A consulta completa não substitui monitoramento contínuo.</p></div></div>
+        <div className={styles.controls}>
+          <label className={styles.field}>Tipo de consulta
+            <select value={mode} onChange={(event) => { setMode(event.target.value); setData(null); setError(null); setSuccess(''); }} disabled={loading}>
+              {modes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+            <span className={styles.hint}>{modeDescriptions[mode]}</span>
+          </label>
+          <button type="button" onClick={() => void load()} disabled={loading} className={styles.primary}>{loading ? 'Consultando…' : data ? 'Atualizar consulta' : 'Consultar agora'}</button>
         </div>
-      )}
+        {error && <UiState variant={error.variant} title={error.title} detail={error.detail} onRetry={() => void load()} retryLabel="Tentar novamente" />}
+        {success && !loading && <UiState variant="success" title={success} detail="O resultado abaixo reflete esta consulta, não uma garantia de disponibilidade futura." />}
+        {loading && <UiState variant="loading" title="Consultando o serviço" detail="A resposta será exibida quando a verificação terminar." />}
+        {!loading && !error && !data && <UiState variant="empty" title="Nenhuma consulta realizada" detail="Selecione o escopo e consulte para ver o estado atual." />}
+        {data && !error && <div className={styles.results}>
+          <div className={styles.summary}>
+            <div className={styles.summaryPrimary}>
+              <span className={styles.summaryLabel}>{isLive ? 'Resposta do processo' : data.ready === false ? 'Prontidão do serviço' : 'Estado geral'}</span>
+              <strong className={healthClass(data.ready === false ? 'unhealthy' : overall)}>
+                {isLive ? 'Processo respondendo' : data.ready === false ? 'Não pronto' : statusLabel(overall)}
+              </strong>
+              {data.is_degraded && <span className={styles.degradedNote}>Há dependências degradadas</span>}
+            </div>
+            <dl className={styles.summaryMetrics}>
+              {typeof data.uptime_seconds === 'number' && <div><dt>Tempo ativo do processo</dt><dd>{data.uptime_seconds.toLocaleString('pt-BR')} s</dd></div>}
+              {data.timestamp && <div><dt>Consultado em</dt><dd>{readableDate(data.timestamp)}</dd></div>}
+              {typeof data.ready === 'boolean' && <div><dt>Prontidão</dt><dd>{data.ready ? 'Pronto' : 'Não pronto'}</dd></div>}
+            </dl>
+          </div>
+          {data.note && <p className={styles.note}>{data.note}</p>}
+          {data.degraded_dependencies?.length ? <p className={styles.degradedList}><strong>Dependências com degradação:</strong> {data.degraded_dependencies.map((item) => checkLabels[item] || item).join(', ')}</p> : null}
+          {data.checks && data.checks.length > 0 && <div className={styles.checkGrid}>{data.checks.map((check, index) => <CheckCard key={`${check.name || check.check_name}-${index}`} check={check} />)}</div>}
+          {data.checks && data.checks.length === 0 && <UiState variant="empty" title="Nenhuma dependência retornada" detail="A resposta não incluiu verificações de dependência para este escopo." />}
+          {technicalDetails('Resposta técnica completa (JSON)', data)}
+        </div>}
+      </section>
 
-      {history && (
-        <div style={{ marginTop: 12 }}>
-          <h4 style={{ fontSize: 12, fontWeight: 600 }}>Histórico checks ({history.checks?.length || 0})</h4>
-          <div style={{ maxHeight: 200, overflowY: 'auto', fontSize: 10, fontFamily: 'monospace' }}>
-            {(history.checks || []).map((c: any) => (<div key={c.id} style={{ padding: 2, borderBottom: '1px solid #f3f4f6' }}>{new Date(c.checked_at).toLocaleString('pt-BR')} {c.check_name} {c.dependency_type} {c.status} {c.is_degraded ? 'DEGRADED' : ''} {c.latency_ms}ms {c.degradation_reason || ''}</div>))}
-          </div>
-          <h4 style={{ fontSize: 12, fontWeight: 600, marginTop: 10 }}>Histórico status ({history.status_history?.length || 0})</h4>
-          <div style={{ maxHeight: 200, overflowY: 'auto', fontSize: 10, fontFamily: 'monospace' }}>
-            {(history.status_history || []).map((s: any) => (<div key={s.id} style={{ padding: 2, borderBottom: '1px solid #f3f4f6' }}>{new Date(s.created_at).toLocaleString('pt-BR')} overall {s.overall_status} degraded {String(s.is_degraded)} deps {s.degraded_dependencies?.join(',') || '—'}</div>))}
-          </div>
+      <section className={styles.panel} aria-labelledby="history-title">
+        <div className={styles.sectionHeading}>
+          <div><h3 id="history-title">Histórico operacional</h3><p>Até 50 verificações e registros de estado. Esta consulta exige sessão de TI ou Administração.</p></div>
+          <button type="button" onClick={() => void loadHistory()} disabled={historyLoading}>{historyLoading ? 'Consultando…' : history ? 'Atualizar histórico' : 'Consultar histórico'}</button>
         </div>
-      )}
-    </div>
+        {historyError && <UiState variant={historyError.variant} title={historyError.title} detail={historyError.detail} onRetry={() => void loadHistory()} retryLabel="Tentar novamente" />}
+        {historySuccess && !historyLoading && <UiState variant="success" title={historySuccess} detail="Os registros correspondem ao limite retornado pelo serviço." />}
+        {historyLoading && <UiState variant="loading" title="Consultando histórico" detail="Buscando os registros operacionais recentes." />}
+        {!historyLoading && !historyError && !history && <UiState variant="empty" title="Histórico ainda não consultado" detail="Consulte para verificar se existem registros operacionais recentes." />}
+        {history && !historyError && <div className={styles.historyGrid}>
+          <section aria-labelledby="history-checks-title" className={styles.historySection}>
+            <div className={styles.sectionHeading}><div><h4 id="history-checks-title">Verificações registradas</h4><p>{history.checks?.length || 0} registros retornados</p></div></div>
+            {history.checks?.length ? <div className={styles.checkGrid}>{history.checks.map((check, index) => <CheckCard key={`${check.id || check.check_name}-${index}`} check={check} historic />)}</div> : <UiState variant="empty" title="Nenhuma verificação no histórico" detail="O serviço não retornou registros de verificação para o período consultado." />}
+          </section>
+          <section aria-labelledby="history-status-title" className={styles.historySection}>
+            <div className={styles.sectionHeading}><div><h4 id="history-status-title">Mudanças de estado</h4><p>{history.status_history?.length || 0} registros retornados</p></div></div>
+            {history.status_history?.length ? <ol className={styles.statusList}>{history.status_history.map((snapshot, index) => (
+              <li key={`${snapshot.id || snapshot.created_at}-${index}`} className={styles.statusRecord}>
+                <div className={styles.checkHeader}><div><strong>{statusLabel(snapshot.overall_status)}</strong><p>{readableDate(snapshot.created_at)}</p></div><span className={`${styles.badge} ${healthClass(snapshot.overall_status)}`}>{snapshot.is_degraded ? 'Degradação registrada' : 'Sem degradação registrada'}</span></div>
+                {snapshot.degraded_dependencies?.length ? <p className={styles.degradedList}><strong>Dependências:</strong> {snapshot.degraded_dependencies.map((item) => checkLabels[item] || item).join(', ')}</p> : null}
+                {snapshot.checks && technicalDetails('Verificações deste registro', snapshot.checks)}
+              </li>
+            ))}</ol> : <UiState variant="empty" title="Nenhuma mudança de estado no histórico" detail="O serviço não retornou registros de estado para o período consultado." />}
+          </section>
+        </div>}
+      </section>
+    </section>
   );
 }
