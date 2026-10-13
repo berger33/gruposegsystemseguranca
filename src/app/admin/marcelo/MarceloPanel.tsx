@@ -115,6 +115,13 @@ function formatarDataHora(valor: string): string {
   return data.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 }
 
+function formatarDataReferencia(valor: string | null): string {
+  if (!valor) return "Sem data de referência";
+  const data = new Date(valor);
+  if (Number.isNaN(data.getTime())) return valor;
+  return data.toLocaleDateString("pt-BR", { dateStyle: "short" });
+}
+
 function indicatorHeading(label: string): { area: string; title: string } {
   const separator = label.indexOf(" — ");
   if (separator < 0) return { area: "Indicador", title: label };
@@ -401,24 +408,29 @@ export default function MarceloPanel() {
           {drilldown ? (
             <section data-testid="adm-drilldown">
               <h3>Registros de {drilldown.code}</h3>
+              <p className={styles.hint}>Prioridade e responsável vêm do registro. A data abaixo é a referência usada pela fonte e pode ser criação, ocorrência ou vencimento, conforme o tipo de registro.</p>
               {drilldown.records.length === 0 ? (
                 <p data-testid="adm-drilldown-empty">Nenhum registro canônico no período (leitura concluída com sucesso).</p>
               ) : (
-                <table>
-                  <thead><tr><th>Registro</th><th>Detalhe</th><th>Prioridade</th><th>Responsável</th><th>Valor</th><th>Ação</th></tr></thead>
-                  <tbody>
-                    {drilldown.records.map(item => (
-                      <tr key={`${item.record_kind}-${item.record_id}`} data-testid={`adm-drill-row-${item.record_id}`}>
-                        <td>{item.record_label}</td>
-                        <td>{item.record_detail}</td>
-                        <td>{item.priority}</td>
-                        <td>{item.responsible}</td>
-                        <td>{item.amount_cents == null ? "Sem valor" : brl(item.amount_cents)}</td>
-                        <td><button data-testid={`adm-open-record-${item.record_id}`} onClick={() => openRecord(item)}>Abrir registro</button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className={executive.recordsScroll} role="region" aria-label="Registros do indicador" tabIndex={0}>
+                  <table className={executive.recordsTable}>
+                    <caption>Registros canônicos encontrados para o período selecionado</caption>
+                    <thead><tr><th scope="col">Registro</th><th scope="col">Estado ou próxima ação</th><th scope="col">Prioridade</th><th scope="col">Responsável</th><th scope="col">Data de referência</th><th scope="col">Valor</th><th scope="col">Ação</th></tr></thead>
+                    <tbody>
+                      {drilldown.records.map(item => (
+                        <tr key={`${item.record_kind}-${item.record_id}`} data-testid={`adm-drill-row-${item.record_id}`}>
+                          <td>{item.record_label}</td>
+                          <td>{item.record_detail}</td>
+                          <td>{admPriorityLabel(item.priority)}</td>
+                          <td>{item.responsible}</td>
+                          <td>{formatarDataReferencia(item.reference_at)}</td>
+                          <td>{item.amount_cents == null ? "Sem valor" : brl(item.amount_cents)}</td>
+                          <td><button data-testid={`adm-open-record-${item.record_id}`} onClick={() => openRecord(item)}>Abrir registro</button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </section>
           ) : null}

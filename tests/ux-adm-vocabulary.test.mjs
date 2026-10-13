@@ -178,3 +178,14 @@ test('UX-05 tela: a decisão não pode ser enviada duas vezes com um clique dupl
   assert.match(panelUi, /disabled=\{deciding\}/, 'os botões de decisão precisam desabilitar durante o envio');
   assert.match(panelUi, /finally \{ setDeciding\(false\); \}/, 'o estado de envio precisa ser sempre liberado');
 });
+
+test('UX-PRO-04 painel: detalhamento destaca referência, prioridade, responsável e próxima ação', () => {
+  assert.match(panelUi, /Estado ou próxima ação/, 'a descrição do registro deve orientar a decisão sem inventar estado');
+  assert.match(panelUi, /Prioridade[\s\S]*Responsável[\s\S]*Data de referência/, 'a tabela deve tornar os critérios de decisão escaneáveis');
+  assert.match(panelUi, /admPriorityLabel\(item\.priority\)/, 'prioridades canônicas recebem rótulos de negócio');
+  assert.match(panelUi, /formatarDataReferencia\(item\.reference_at\)/, 'a data de referência deve aparecer em pt-BR');
+  assert.match(panelUi, /pode ser criação, ocorrência ou vencimento/, 'o significado variável da data precisa ficar explícito');
+  assert.match(panelUi, /role="region" aria-label="Registros do indicador" tabIndex=\{0\}/,
+    'a tabela larga precisa ter rolagem contida operável por teclado');
+  assert.match(panelUi, /adm-open-record-\$\{item\.record_id\}/, 'a ação para abrir o registro canônico deve permanecer');
+});
