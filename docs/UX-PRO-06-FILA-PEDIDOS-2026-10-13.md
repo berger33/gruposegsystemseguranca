@@ -78,8 +78,10 @@ da família CRM/comercial.
     isto não significa que a fila esteja vazia";
   - durante a atualização, a lista permanece visível com um indicador
     "Atualizando a fila…" em vez de desaparecer.
-- **Ação por pedido:** o envio passou a ser travado por pedido (`pendingId`).
-  A trava de duplo envio continua existindo, mas uma ação num cartão deixa de
+- **Ação por pedido:** o envio passou a ser travado por conjunto de ids
+  pendentes (`pendingIds`). A trava de duplo envio continua existindo mesmo se
+  duas ações em pedidos distintos começarem juntas; cada cartão só volta a ficar
+  disponível quando a sua própria resposta termina. Uma ação num cartão deixa de
   congelar os demais.
 
 ## Preservações e escopo técnico
@@ -100,12 +102,15 @@ alterado. Em particular:
   produção; `LEAD_MAX_ATTEMPTS` só é elevado dentro do gate, como os demais
   gates já fazem com `ADMIN_LOGIN_MAX_ATTEMPTS`.
 
-A única mudança fora da tela é de **configuração de verificação**:
+As mudanças fora da tela são de **configuração e higiene de verificação**:
 `src/app/admin/leads/**` passou a constar nos `paths` de
 `.github/workflows/ux-crm-delivery.yml`, para que a fila passe a ter o mesmo
 gate de navegador do funil. Isso alterou duas colunas do inventário gerado
 (`gates_automatizados` e `gates_jobs` de `/admin/leads`), e os CSVs vigentes de
-13/10 foram regenerados pelo próprio gerador.
+13/10 foram regenerados pelo próprio gerador. Os gates UX CRM e L04 também
+passaram a restaurar `next-env.d.ts` e `tsconfig.json` depois de encerrar o
+servidor Next isolado; assim um `distDir` de teste não vira alteração funcional
+no checkout.
 
 ## Verificações e evidência
 
@@ -121,8 +126,8 @@ gate de navegador do funil. Isso alterou duas colunas do inventário gerado
   `responsible_id` e `updated_at` na resposta, provando que nenhum contrato novo
   foi necessário.
 - **Automatizado de navegador (Chromium real, PostgreSQL descartável, migrações
-  001–180):** `npm run test:ux-crm:pg` — **15/15**, sendo 7 testes pré-existentes
-  do funil, 1 guarda de ambiente e 7 novos da fila:
+  001–180):** `npm run test:ux-crm:pg` — **16/16**, sendo 7 testes pré-existentes
+  do funil, 1 guarda de ambiente e 8 novos da fila:
   0. guarda de ambiente: falha se `RUN_DATABASE_INTEGRATION`/`DATABASE_URL`
      não estiverem definidos, para a suíte não passar verde com tudo ignorado;
   1. contrato da API preservado (401/403 e campos existentes);
@@ -131,10 +136,12 @@ gate de navegador do funil. Isso alterou duas colunas do inventário gerado
   3. falha de leitura marca a fila como desatualizada e mantém os pedidos;
   4. filtro sem resultado é ausência de dados, com caminho de volta;
   5. ordenação por espera é derivada e declarada;
-  6. sem transbordo horizontal em **320, 390 e 768 px** e tema noturno aplicado
+  6. duas ações simultâneas em pedidos diferentes mantêm cada cartão travado
+     até a própria resposta, sem permitir duplo envio nem congelar a fila;
+  7. sem transbordo horizontal em **320, 390 e 768 px** e tema noturno aplicado
      às superfícies novas (fundo escuro e número claro verificados por CSS
      calculado);
-  7. percurso de Tab (filtro → atualizar → ordenação), contorno de foco visível
+  8. percurso de Tab (filtro → atualizar → ordenação), contorno de foco visível
      e operação do seletor de ordenação por seta.
 - **Outro gate que toca esta tela:** `npm run test:l04-delivery:pg` também visita
   `/admin/leads` em Chromium autenticado (1440×1000), conferindo ausência de
@@ -146,7 +153,8 @@ gate de navegador do funil. Isso alterou duas colunas do inventário gerado
   5/5; `node --test tests/admin-navigation.test.mjs` 2/2;
   `node scripts/ux-pro-00-inventory.mjs --check` OK.
 - **Capturas** (massa inteiramente sintética, sem dado pessoal e sem
-  credencial), em `docs/ux-pro-06-evidencias/`:
+  credencial), mantidas em `docs/ux-pro-06-evidencias/`. Reexecuções desta fatia
+  usam o escopo próprio `UX_LEADS_EVIDENCE_DIR`, sem criar capturas do funil CRM:
   [`desktop-leads-fila.png`](ux-pro-06-evidencias/desktop-leads-fila.png),
   [`desktop-leads-desatualizado.png`](ux-pro-06-evidencias/desktop-leads-desatualizado.png),
   [`mobile-leads-fila.png`](ux-pro-06-evidencias/mobile-leads-fila.png) e

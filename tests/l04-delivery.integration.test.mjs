@@ -9,7 +9,7 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import pg from 'pg';
@@ -19,7 +19,26 @@ import { provisionAndLoginStaff } from './helpers/staff-login.mjs';
 
 const RUN = process.env.RUN_DATABASE_INTEGRATION === '1' && process.env.DATABASE_URL;
 const root = path.resolve(import.meta.dirname, '..');
-let server, baseUrl, pool, workDir;
+
+// Next reescreve estes arquivos apontando para o distDir isolado do gate.
+// A restauração impede que uma execução local deixe artefato gerado para ser
+// incluído por engano na próxima alteração funcional.
+const GENERATED_FILES = ['next-env.d.ts', 'tsconfig.json'];
+async function snapshotGeneratedFiles() {
+  const snapshot = new Map();
+  for (const name of GENERATED_FILES) {
+    snapshot.set(name, await readFile(path.join(root, name), 'utf8').catch(() => null));
+  }
+  return snapshot;
+}
+async function restoreGeneratedFiles(snapshot) {
+  if (!snapshot) return;
+  for (const [name, content] of snapshot) {
+    if (content !== null) await writeFile(path.join(root, name), content);
+  }
+}
+
+let server, baseUrl, pool, workDir, generatedFiles;
 
 async function waitForServer(url, timeoutMs = 90_000) {
   const deadline = Date.now() + timeoutMs;
@@ -60,6 +79,7 @@ function cookieOf(response) {
 
 before(async () => {
   if (!RUN) return;
+  generatedFiles = await snapshotGeneratedFiles();
   workDir = await mkdtemp(path.join(tmpdir(), 'seg-l04-'));
   const port = 3400 + Math.floor(Math.random() * 1500);
   baseUrl = `http://127.0.0.1:${port}`;
@@ -92,12 +112,20 @@ before(async () => {
 
 after(async () => {
   await pool?.end().catch(() => {});
-  if (server && !server.killed) {
-    server.kill('SIGTERM');
-    await new Promise(resolve => setTimeout(resolve, 300));
-    server.kill('SIGKILL');
+  if (server?.exitCode === null) {
+    await new Promise(resolve => {
+      const timer = setTimeout(() => {
+        if (server.exitCode === null) server.kill('SIGKILL');
+      }, 1_000);
+      server.once('exit', () => {
+        clearTimeout(timer);
+        resolve();
+      });
+      server.kill('SIGTERM');
+    });
   }
   if (workDir) await rm(workDir, { recursive: true, force: true });
+  await restoreGeneratedFiles(generatedFiles);
 });
 
 async function launchBrowser() {
