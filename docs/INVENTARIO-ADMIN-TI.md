@@ -123,3 +123,7 @@ reintroduziria exatamente o problema que o L07 está fechando.
   permanece protótipo e **não** deve ser contado como funcionalidade entregue.
 - Nenhum arquivo foi apagado: a remoção só é segura depois que cada área tiver
   sua tela provada, para não perder o rascunho de requisito que eles carregam.
+
+## Retificação de estado — 13/10/2026
+
+Este inventário é um retrato histórico de 02/10 e não deve ser usado como prova do estado atual de montagem. Na `main` `8e3aec1b330b9b427366ec7d5175b83599b53e2b`, `TiConsole.tsx` importa `IntegrationLogClient` e renderiza o componente na aba **Registros de integração**. O servidor roteia as cinco famílias de endpoints `/api/admin/integrations/{jobs,logs,webhooks,webhooks/deliveries,reconciliation}` e aplica guarda de mesma origem, sessão e papel `admin`/`ti`. A revisão UX da tela e seus limites demonstrativos estão em [`UX-PRO-03-REGISTROS-INTEGRACAO-TI-2026-10-13.md`](UX-PRO-03-REGISTROS-INTEGRACAO-TI-2026-10-13.md). Esta retificação não reclassifica os demais componentes órfãos do snapshot nem declara integração externa operacional.
