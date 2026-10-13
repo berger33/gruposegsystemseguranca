@@ -8,12 +8,16 @@
 //   4. Padrão do setor: a lista de públicos da trilha (ou o padrão alterado pela gestão).
 //
 // Quem altera liberações e padrões: MANAGER_SECTORS (Marcelo, RH e admin).
+// Quem altera o conteúdo (trilhas, aulas e vídeos): CONTENT_MANAGER_SECTORS (Marcelo e admin).
 import { SECTORS, isKnownSector } from './sectors.mjs';
 
 export const FULL_ACCESS_SECTORS = Object.freeze(['admin', 'marcelo']);
 export const MANAGER_SECTORS = Object.freeze(['admin', 'marcelo', 'rh']);
+// Área "Conteúdo" (criar, alterar e remover trilhas, aulas e vídeos): só a gestão total.
+export const CONTENT_MANAGER_SECTORS = Object.freeze(['admin', 'marcelo']);
 
 export const isManager = sector => MANAGER_SECTORS.includes(sector);
+export const canManageContent = sector => CONTENT_MANAGER_SECTORS.includes(sector);
 
 export function defaultAudiences(track, state) {
   const override = state && state.sectorDefaults && state.sectorDefaults[track.id];

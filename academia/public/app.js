@@ -91,11 +91,33 @@
   // Token de sessão: sessionStorage quando disponível; memória da página como reserva (iframe sandbox).
   function getToken() {
     if (memoryToken) return memoryToken;
-    try { return sessionStorage.getItem(TOKEN_KEY); } catch (_) { return null; }
+    try { var saved = sessionStorage.getItem(TOKEN_KEY); if (saved) return saved; } catch (_) {}
+    return tokenDoEndereco();
   }
   function setToken(value) {
     memoryToken = value || null;
     try { if (value) sessionStorage.setItem(TOKEN_KEY, value); else sessionStorage.removeItem(TOKEN_KEY); } catch (_) {}
+  }
+
+  // Preview embutido (iframe de outro site): alguns navegadores bloqueiam cookies de terceiros e o
+  // armazenamento, e a sessão se perderia ao recarregar a página. Nesse caso o token viaja no
+  // próprio endereço (#/t/<token>/...) — o trecho após # nunca é enviado ao servidor. Fora de
+  // iframe nada muda: o endereço continua exatamente como antes.
+  function emIframe() {
+    try { return window.top !== window.self; } catch (_) { return true; }
+  }
+  function tokenDoEndereco() {
+    var found = /^#\/t\/([A-Za-z0-9_-]{16,})/.exec(location.hash || '');
+    return found ? found[1] : null;
+  }
+  function enderecoComToken(resto, query) {
+    var token = getToken();
+    if (!emIframe() || !token) return null;
+    return '#/t/' + token + '/' + (resto || '') + (query ? '?' + query : '');
+  }
+  function sincronizarTokenNoEndereco(resto, query) {
+    var destino = enderecoComToken(resto, query);
+    if (destino && location.hash !== destino) history.replaceState(null, '', destino);
   }
 
   function api(path, options) {
@@ -199,6 +221,8 @@
     if (me) {
       var navAccess = document.getElementById('nav-acessos');
       if (navAccess) navAccess.hidden = !me.isManager;
+      var navConteudo = document.getElementById('nav-conteudo');
+      if (navConteudo) navConteudo.hidden = !me.canManageContent;
       document.getElementById('sector-chip').textContent = me.sectorLabel;
       var avatar = document.getElementById('avatar');
       avatar.textContent = initials(me.name);
@@ -1023,6 +1047,8 @@
       issueCertificate(certificateButton.getAttribute('data-certificate'));
       return;
     }
+    var contentEl = event.target.closest && event.target.closest('[data-content]');
+    if (contentEl && !contentEl.disabled) { onContentClick(contentEl); return; }
     var el = event.target.closest && event.target.closest('[data-access]');
     if (!el || el.disabled) return;
     var kind = el.getAttribute('data-access');
@@ -1034,9 +1060,25 @@
     else if (kind === 'reset-default') resetTrackDefault(el.getAttribute('data-track'));
   }
 
+  function onAppToggle(event) {
+    var el = event.target;
+    if (!el || !el.matches || !el.matches('details.tree-sector, details.tree-track')) return;
+    CONTENT.abertos[el.getAttribute('data-sector') || el.getAttribute('data-track')] = el.open;
+  }
+
   function onAppInput(event) {
     var target = event.target;
     if (target.id === 'a-motivo') { ACCESS.motivo = target.value; return; }
+    if (target.id === 'c-motivo') { CONTENT.motivo = target.value; return; }
+    if (target.id === 'c-busca') {
+      var cpos = target.selectionStart;
+      CONTENT.filtro = target.value;
+      drawConteudo();
+      var cbox = document.getElementById('c-busca');
+      cbox.focus();
+      cbox.setSelectionRange(cpos, cpos);
+      return;
+    }
     if (target.id === 'a-busca') {
       var pos = target.selectionStart;
       ACCESS.busca = target.value;
@@ -1060,10 +1102,421 @@
     target.parentNode.classList.toggle('on', target.checked);
   }
 
+
+  // ---------- Conteúdo (gestão): árvore de trilhas, aulas e vídeos por setor ----------
+  var TIPO_TEXT = { aula: 'Aula', video: 'Vídeo' };
+  var CONTENT_ACTION_TEXT = {
+    'trilha-criada': 'Criou a trilha', 'trilha-editada': 'Alterou a trilha',
+    'trilha-arquivada': 'Removeu a trilha', 'trilha-restaurada': 'Restaurou a trilha',
+    'aula-criada': 'Adicionou conteúdo', 'aula-editada': 'Alterou o conteúdo',
+    'aula-arquivada': 'Removeu o conteúdo', 'aula-restaurada': 'Restaurou o conteúdo',
+    'aula-movida': 'Moveu o conteúdo de trilha',
+  };
+  var CONTENT_ERROR_TEXT = {
+    motivo_obrigatorio: 'Informe um motivo com pelo menos 5 caracteres.',
+    sem_permissao: 'Só a gestão (Marcelo e admin) pode alterar o conteúdo.',
+    titulo_curto: 'O título precisa de pelo menos 3 caracteres.',
+    titulo_longo: 'O título pode ter no máximo 120 caracteres.',
+    minutos_invalidos: 'A duração deve ficar entre 1 e 600 minutos.',
+    tipo_invalido: 'Escolha entre aula e vídeo.',
+    video_url_invalida: 'A URL do vídeo deve começar com http:// ou https://.',
+    video_url_sem_tipo: 'Para informar uma URL, o item precisa ser do tipo vídeo.',
+    video_url_longa: 'A URL do vídeo é longa demais.',
+    trilha_nao_encontrada: 'Esta trilha não existe mais. Recarregue a página.',
+    aula_nao_encontrada: 'Este conteúdo não existe mais. Recarregue a página.',
+    trilha_destino_nao_encontrada: 'A trilha de destino não existe.',
+    destino_igual: 'Escolha uma trilha de destino diferente.',
+    setor_invalido: 'Um dos setores escolhidos não existe.',
+    setores_invalidos: 'Escolha pelo menos um público.',
+    acao_invalida: 'Ação não reconhecida.',
+  };
+  var CONTENT = { data: null, motivo: '', msg: '', form: null, abertos: {}, filtro: '' };
+
+  function renderConteudo() {
+    setPage(skeleton(), 'Conteúdo');
+    return api('/api/conteudo').then(function (data) {
+      CONTENT.data = data;
+      drawConteudo();
+    });
+  }
+
+  function reloadConteudo() {
+    return api('/api/conteudo').then(function (data) {
+      CONTENT.data = data;
+      CONTENT.msg = '';
+      drawConteudo();
+    });
+  }
+
+  function contentError(err) {
+    if (err.status === 401) return route();
+    CONTENT.msg = CONTENT_ERROR_TEXT[err.message] || 'Não foi possível salvar agora. Tente novamente.';
+    drawConteudo();
+    var motive = document.getElementById('c-motivo');
+    if (motive && err.message === 'motivo_obrigatorio') motive.focus();
+  }
+
+  function contentMotiveOk() {
+    if (CONTENT.motivo.trim().length >= 5) return true;
+    CONTENT.msg = CONTENT_ERROR_TEXT.motivo_obrigatorio;
+    drawConteudo();
+    var motive = document.getElementById('c-motivo');
+    if (motive) motive.focus();
+    return false;
+  }
+
+  function setoresLabel(t) {
+    if (t.todosOsSetores) return 'Todos os setores';
+    var names = {};
+    CONTENT.data.setores.forEach(function (s) { names[s.id] = s.label; });
+    return t.setores.map(function (id) { return names[id] || id; }).join(', ') || 'Nenhum setor';
+  }
+
+  function drawConteudo() {
+    var d = CONTENT.data;
+    var resumo = d.resumo;
+    var buscando = CONTENT.filtro.trim().toLowerCase();
+    var setores = d.setores.filter(function (s) {
+      return !buscando || s.label.toLowerCase().indexOf(buscando) >= 0;
+    });
+    var arvore = setores.map(sectorTreeHtml).join('') || '<p class="empty">Nenhum setor encontrado.</p>';
+    setPage(
+      '<nav class="crumbs reveal" aria-label="Você está aqui"><a href="#/">Início</a><span>/</span><span>Conteúdo</span></nav>' +
+      '<section class="hero-card reveal"><div class="orb o1"></div><div class="orb o2"></div><div class="grid-lines"></div>' +
+      '<div class="hero-main"><p class="eyebrow light">Gestão da Academia</p><h1 class="hero-title">Conteúdo por setor</h1>' +
+      '<p class="hero-sub">Árvore das trilhas (cursos) e dos conteúdos — aulas e vídeos — de cada setor. Altere, remova (de forma reversível), adicione itens ou atribua uma trilha a outro setor. Nada é apagado: o que sai fica arquivado e pode voltar.</p></div></section>' +
+      '<div class="content-stats reveal">' +
+      '<span class="cstat"><strong>' + resumo.trilhas + '</strong> trilhas ativas</span>' +
+      '<span class="cstat"><strong>' + resumo.aulas + '</strong> conteúdos</span>' +
+      '<span class="cstat"><strong>' + resumo.videos + '</strong> vídeos</span>' +
+      '<span class="cstat muted"><strong>' + resumo.arquivadas + '</strong> arquivados</span></div>' +
+      formHtml() +
+      '<div class="motive-bar"><label for="c-motivo"><strong>Motivo da alteração</strong>' +
+      '<span class="muted small"> · obrigatório, com pelo menos 5 caracteres · fica registrado</span></label>' +
+      '<input id="c-motivo" type="text" maxlength="240" value="' + esc(CONTENT.motivo) + '" placeholder="Ex.: novo procedimento de portaria, revisão do setor"></div>' +
+      '<div class="content-tools reveal">' +
+      '<label class="sr-only" for="c-busca">Buscar setor</label>' +
+      '<input id="c-busca" class="search-field" type="search" placeholder="Buscar setor" value="' + esc(CONTENT.filtro) + '">' +
+      '<button type="button" class="btn-primary" data-content="nova-trilha">' + icon('sparkles', 'sm') + ' Nova trilha</button></div>' +
+      '<div class="alert-line" id="c-msg" role="status" aria-live="polite">' + (CONTENT.msg ? '<span>' + esc(CONTENT.msg) + '</span>' : '') + '</div>' +
+      '<section class="content-tree reveal" aria-label="Árvore de conteúdo por setor">' + arvore + '</section>' +
+      archivedHtml() + contentLogHtml(),
+      'Conteúdo'
+    );
+  }
+
+  function sectorTreeHtml(sector) {
+    var trilhas = CONTENT.data.trilhas.filter(function (t) {
+      return t.todosOsSetores || t.setores.indexOf(sector.id) >= 0;
+    });
+    var abertos = CONTENT.abertos[sector.id] || false;
+    var corpo = trilhas.length
+      ? trilhas.map(trackTreeHtml).join('')
+      : '<p class="empty">Nenhuma trilha publicada para este setor.</p>';
+    return '<details class="tree-sector" data-sector="' + esc(sector.id) + '"' + (abertos ? ' open' : '') + '>' +
+      '<summary><span class="ts-name">' + esc(sector.label) + '</span>' +
+      '<span class="ts-meta">' + trilhas.length + (trilhas.length === 1 ? ' trilha' : ' trilhas') + '</span></summary>' +
+      '<div class="ts-body">' + corpo + '</div></details>';
+  }
+
+  function trackTreeHtml(t) {
+    var aberto = CONTENT.abertos[t.id] || false;
+    var chips = '<span class="chip-mini">' + t.publicadas + ' publicada' + (t.publicadas === 1 ? '' : 's') + '</span>' +
+      (t.emConstrucao ? '<span class="chip-mini warn">' + t.emConstrucao + ' em construção</span>' : '') +
+      (t.videos ? '<span class="chip-mini">' + t.videos + ' vídeo' + (t.videos === 1 ? '' : 's') + '</span>' : '') +
+      (t.origem === 'novo' ? '<span class="chip-mini novo">Adicionada</span>' : '');
+    var acoes =
+      '<button type="button" class="btn-ghost xs" data-content="editar-trilha" data-track="' + esc(t.id) + '">' + icon('book', 'sm') + ' Editar</button>' +
+      '<button type="button" class="btn-ghost xs" data-content="publico-trilha" data-track="' + esc(t.id) + '">' + icon('users', 'sm') + ' Setores</button>' +
+      '<button type="button" class="btn-ghost xs" data-content="nova-aula" data-track="' + esc(t.id) + '">' + icon('clock', 'sm') + ' Aula</button>' +
+      '<button type="button" class="btn-ghost xs" data-content="nova-aula" data-track="' + esc(t.id) + '" data-tipo="video">' + icon('eye', 'sm') + ' Vídeo</button>' +
+      '<button type="button" class="btn-ghost xs danger" data-content="arquivar-trilha" data-track="' + esc(t.id) + '">' + icon('x', 'sm') + ' Remover</button>';
+    var aulas = t.aulas.length ? '<ul class="tree-lessons">' + t.aulas.map(lessonRowHtml(t.id)).join('') + '</ul>'
+      : '<p class="empty small">Esta trilha ainda não tem conteúdos.</p>';
+    return '<details class="tree-track" data-track="' + esc(t.id) + '"' + (aberto ? ' open' : '') + '>' +
+      '<summary><span class="tt-title">' + esc(t.title) + '</span>' +
+      '<span class="tt-group">' + esc(t.group) + '</span><span class="tt-chips">' + chips + '</span></summary>' +
+      '<div class="tt-body"><p class="tt-public">' + icon('users', 'sm') + ' ' + esc(setoresLabel(t)) +
+      (t.ajustePorSetor ? ' <span class="muted small">· há ajuste por pessoa/setor na área Acessos</span>' : '') + '</p>' +
+      '<div class="tt-actions">' + acoes + '</div>' + aulas + '</div></details>';
+  }
+
+  function lessonRowHtml(trilhaId) {
+    return function (a) {
+      return '<li class="tree-lesson">' +
+        '<span class="tl-tipo ' + (a.kind === 'video' ? 'video' : 'aula') + '">' + esc(TIPO_TEXT[a.kind] || 'Aula') + '</span>' +
+        '<span class="tl-title">' + esc(a.title) + '</span>' +
+        '<span class="tl-meta">' + a.minutes + ' min' + (a.pendente ? ' · em construção' : '') + (a.origem === 'novo' ? ' · adicionado' : '') + '</span>' +
+        (a.videoUrl ? '<a class="tl-link" href="' + esc(a.videoUrl) + '" target="_blank" rel="noopener noreferrer">abrir vídeo</a>' : '') +
+        '<span class="tl-actions">' +
+        '<button type="button" class="btn-ghost xs" data-content="editar-aula" data-track="' + esc(trilhaId) + '" data-lesson="' + esc(a.id) + '">Editar</button>' +
+        '<button type="button" class="btn-ghost xs" data-content="mover-aula" data-track="' + esc(trilhaId) + '" data-lesson="' + esc(a.id) + '">Mover</button>' +
+        '<button type="button" class="btn-ghost xs danger" data-content="arquivar-aula" data-track="' + esc(trilhaId) + '" data-lesson="' + esc(a.id) + '">Remover</button>' +
+        '</span></li>';
+    };
+  }
+
+  function archivedHtml() {
+    var d = CONTENT.data;
+    var trilhas = d.arquivadas || [];
+    var aulas = [];
+    d.trilhas.forEach(function (t) {
+      (t.aulasArquivadas || []).forEach(function (a) { aulas.push({ trilhaId: t.id, aula: a }); });
+    });
+    if (!trilhas.length && !aulas.length) {
+      return '<section class="card log-card reveal"><h2>Arquivados</h2><p class="empty">Nada arquivado. O que você remover aparece aqui e pode voltar.</p></section>';
+    }
+    var listaTrilhas = trilhas.map(function (t) {
+      return '<li><span class="tl-tipo">Trilha</span><span class="tl-title">' + esc(t.title) + '</span>' +
+        '<span class="tl-meta">' + t.aulas + ' conteúdos</span><span class="tl-actions">' +
+        '<button type="button" class="btn-ghost xs" data-content="restaurar-trilha" data-track="' + esc(t.id) + '">Restaurar</button></span></li>';
+    }).join('');
+    var listaAulas = aulas.map(function (item) {
+      return '<li><span class="tl-tipo">' + (item.aula.origem === 'novo' ? 'Novo' : 'Aula') + '</span><span class="tl-title">' + esc(item.aula.title) + '</span>' +
+        '<span class="tl-meta">em ' + esc(nomeDaTrilha(item.trilhaId)) + '</span><span class="tl-actions">' +
+        '<button type="button" class="btn-ghost xs" data-content="restaurar-aula" data-track="' + esc(item.trilhaId) + '" data-lesson="' + esc(item.aula.id) + '">Restaurar</button></span></li>';
+    }).join('');
+    return '<section class="card log-card reveal"><h2>Arquivados</h2><ul class="tree-lessons archive-list">' +
+      listaTrilhas + listaAulas + '</ul></section>';
+  }
+
+  function nomeDaTrilha(id) {
+    var t = CONTENT.data.trilhas.filter(function (x) { return x.id === id; })[0];
+    if (t) return t.title;
+    var a = (CONTENT.data.arquivadas || []).filter(function (x) { return x.id === id; })[0];
+    return a ? a.title : id;
+  }
+
+  function contentLogHtml() {
+    var log = CONTENT.data.log || [];
+    if (!log.length) return '<section class="card log-card reveal"><h2>Registro de alterações</h2><p class="empty">Nenhuma alteração registrada ainda.</p></section>';
+    var rows = log.slice(0, 12).map(function (e) {
+      return '<li><span class="log-when">' + esc(fmtDate(e.at)) + '</span><div><strong>' + esc(CONTENT_ACTION_TEXT[e.acao] || e.acao) + '</strong> · ' +
+        esc(e.alvoTitulo) + '<p class="muted small">' + esc(e.porNome) + ' · ' + esc(e.motivo) + '</p>' +
+        '<p class="muted small">' + esc(e.antes) + ' → ' + esc(e.depois) + '</p></div></li>';
+    }).join('');
+    return '<section class="card log-card reveal"><h2>Registro de alterações</h2><ol class="log-list">' + rows + '</ol></section>';
+  }
+
+  // Formulário único (criar/editar/mover): só um por vez, sempre com o motivo obrigatório.
+  function formHtml() {
+    var f = CONTENT.form;
+    if (!f) return '';
+    var d = CONTENT.data;
+    var titulo = f.modo === 'criar' ? 'Nova trilha' : f.modo === 'criar-aula' ? (f.tipo === 'video' ? 'Novo vídeo' : 'Nova aula')
+      : f.modo === 'editar-trilha' ? 'Editar trilha' : f.modo === 'publico' ? 'Setores da trilha' : f.modo === 'mover' ? 'Mover conteúdo' : 'Editar conteúdo';
+    var campos = '';
+    if (f.modo === 'criar' || f.modo === 'editar-trilha') {
+      campos =
+        '<label class="field"><span>Título da trilha</span><input id="c-titulo" type="text" maxlength="120" value="' + esc(f.titulo) + '"></label>' +
+        '<label class="field"><span>Grupo (coluna da matriz)</span><input id="c-grupo" type="text" maxlength="60" value="' + esc(f.grupo) + '"></label>' +
+        '<label class="field"><span>Resumo</span><input id="c-resumo" type="text" maxlength="240" value="' + esc(f.resumo) + '"></label>';
+    } else if (f.modo === 'criar-aula' || f.modo === 'editar-aula') {
+      campos =
+        '<label class="field"><span>Título do conteúdo</span><input id="c-titulo" type="text" maxlength="120" value="' + esc(f.titulo) + '"></label>' +
+        '<label class="field"><span>Tipo</span><select id="c-tipo"><option value="aula"' + (f.tipo === 'aula' ? ' selected' : '') + '>Aula</option>' +
+        '<option value="video"' + (f.tipo === 'video' ? ' selected' : '') + '>Vídeo</option></select></label>' +
+        '<label class="field"><span>Duração (minutos)</span><input id="c-minutos" type="number" min="1" max="600" value="' + esc(f.minutos) + '"></label>' +
+        '<label class="field"><span>URL do vídeo</span><input id="c-video" type="url" maxlength="500" placeholder="https://" value="' + esc(f.videoUrl) + '"></label>';
+    } else if (f.modo === 'mover') {
+      var opcoes = d.trilhas.filter(function (t) { return t.id !== f.trilhaId; }).map(function (t) {
+        return '<option value="' + esc(t.id) + '">' + esc(t.title) + '</option>';
+      }).join('');
+      campos = '<label class="field"><span>Mover para a trilha</span><select id="c-destino">' + opcoes + '</select></label>';
+    }
+    var setores = '';
+    if (f.modo === 'criar' || f.modo === 'editar-trilha' || f.modo === 'publico') {
+      var todos = f.setores.indexOf('todos') >= 0;
+      var opcoes = [{ id: 'todos', label: 'Todos os setores' }].concat(d.setores);
+      setores = '<div class="sector-grid">' + opcoes.map(function (s) {
+        var marcado = todos ? s.id === 'todos' : f.setores.indexOf(s.id) >= 0;
+        var desabilitado = todos && s.id !== 'todos';
+        return '<label class="sector-check' + (marcado ? ' on' : '') + '"><input type="checkbox" value="' + esc(s.id) + '" data-sector-check' +
+          (marcado ? ' checked' : '') + (desabilitado ? ' disabled' : '') + '><span>' + esc(s.label) + '</span></label>';
+      }).join('') + '</div>';
+    }
+    var salvar = f.modo === 'publico' ? 'salvar-publico'
+      : (f.modo === 'criar-aula' || f.modo === 'editar-aula' || f.modo === 'mover') ? 'salvar-aula' : 'salvar-trilha';
+    return '<section class="card content-form reveal" role="group" aria-label="' + esc(titulo) + '">' +
+      '<div class="cf-head"><h2>' + esc(titulo) + '</h2>' +
+      (f.alvo ? '<p class="muted small">' + esc(f.alvo) + '</p>' : '') + '</div>' +
+      '<div class="cf-grid">' + campos + '</div>' + setores +
+      '<div class="ae-actions"><button type="button" class="btn-primary" data-content="' + salvar + '">Salvar ' + icon('check', 'sm') + '</button>' +
+      '<button type="button" class="btn-ghost" data-content="cancelar">Cancelar</button></div></section>';
+  }
+
+  function encontrarAula(trilhaId, aulaId) {
+    var t = CONTENT.data.trilhas.filter(function (x) { return x.id === trilhaId; })[0];
+    if (!t) return null;
+    return t.aulas.filter(function (a) { return a.id === aulaId; })[0] || null;
+  }
+
+  function setoresMarcados() {
+    var boxes = app.querySelectorAll('input[data-sector-check]:checked');
+    return Array.prototype.map.call(boxes, function (el) { return el.value; });
+  }
+
+  function campo(id) {
+    var el = document.getElementById(id);
+    return el ? el.value : '';
+  }
+
+  function onContentClick(el) {
+    var kind = el.getAttribute('data-content');
+    var track = el.getAttribute('data-track');
+    var lesson = el.getAttribute('data-lesson');
+    var trilha = track ? CONTENT.data.trilhas.filter(function (t) { return t.id === track; })[0] : null;
+
+    if (kind === 'cancelar') { CONTENT.form = null; CONTENT.msg = ''; drawConteudo(); return; }
+    if (kind === 'nova-trilha') {
+      CONTENT.form = { modo: 'criar', titulo: '', grupo: '', resumo: '', setores: ['todos'] };
+      CONTENT.msg = '';
+      drawConteudo();
+      var t1 = document.getElementById('c-titulo');
+      if (t1) t1.focus();
+      return;
+    }
+    if (kind === 'editar-trilha' && trilha) {
+      CONTENT.form = { modo: 'editar-trilha', trilhaId: track, titulo: trilha.title, grupo: trilha.group, resumo: trilha.summary, setores: trilha.setores.slice(), alvo: trilha.title };
+      CONTENT.msg = '';
+      drawConteudo();
+      var t2 = document.getElementById('c-titulo');
+      if (t2) t2.focus();
+      return;
+    }
+    if (kind === 'publico-trilha' && trilha) {
+      CONTENT.form = { modo: 'publico', trilhaId: track, setores: trilha.setores.slice(), alvo: trilha.title };
+      CONTENT.msg = '';
+      drawConteudo();
+      return;
+    }
+    if (kind === 'nova-aula' && trilha) {
+      var tipo = el.getAttribute('data-tipo') === 'video' ? 'video' : 'aula';
+      CONTENT.form = { modo: 'criar-aula', trilhaId: track, tipo: tipo, titulo: '', minutos: tipo === 'video' ? 5 : 3, videoUrl: '', alvo: 'Em ' + trilha.title };
+      CONTENT.msg = '';
+      drawConteudo();
+      var t3 = document.getElementById('c-titulo');
+      if (t3) t3.focus();
+      return;
+    }
+    if (kind === 'editar-aula' && trilha) {
+      var aula = encontrarAula(track, lesson);
+      if (!aula) return;
+      CONTENT.form = { modo: 'editar-aula', trilhaId: track, aulaId: lesson, tipo: aula.kind, titulo: aula.title, minutos: aula.minutes, videoUrl: aula.videoUrl || '', alvo: 'Em ' + trilha.title };
+      CONTENT.msg = '';
+      drawConteudo();
+      var t4 = document.getElementById('c-titulo');
+      if (t4) t4.focus();
+      return;
+    }
+    if (kind === 'mover-aula' && trilha) {
+      var alvo = encontrarAula(track, lesson);
+      if (!alvo) return;
+      CONTENT.form = { modo: 'mover', trilhaId: track, aulaId: lesson, alvo: alvo.title + ' · em ' + trilha.title };
+      CONTENT.msg = '';
+      drawConteudo();
+      return;
+    }
+    if (kind === 'arquivar-trilha' && track) return arquivarTrilha(track, true);
+    if (kind === 'restaurar-trilha' && track) return arquivarTrilha(track, false);
+    if (kind === 'arquivar-aula') return arquivarAula(track, lesson, true);
+    if (kind === 'restaurar-aula') return arquivarAula(track, lesson, false);
+    if (kind === 'salvar-trilha') return salvarTrilhaForm();
+    if (kind === 'salvar-publico') return salvarPublico();
+    if (kind === 'salvar-aula') return salvarAulaForm();
+    return undefined;
+  }
+
+  function arquivarTrilha(trilhaId, arquivar) {
+    if (!contentMotiveOk()) return;
+    api('/api/conteudo/trilha', { method: 'POST', body: { acao: arquivar ? 'arquivar' : 'restaurar', trilhaId: trilhaId, motivo: CONTENT.motivo.trim() } })
+      .then(function () {
+        toast({ icon: 'check', title: arquivar ? 'Trilha removida' : 'Trilha restaurada', text: arquivar ? 'Ela saiu da visão dos setores e ficou arquivada.' : 'Ela voltou a aparecer para os setores.' });
+        CONTENT.motivo = '';
+        return reloadConteudo();
+      })
+      .catch(contentError);
+  }
+
+  function arquivarAula(trilhaId, aulaId, arquivar) {
+    if (!contentMotiveOk()) return;
+    api('/api/conteudo/aula', { method: 'POST', body: { acao: arquivar ? 'arquivar' : 'restaurar', trilhaId: trilhaId, aulaId: aulaId, motivo: CONTENT.motivo.trim() } })
+      .then(function () {
+        toast({ icon: 'check', title: arquivar ? 'Conteúdo removido' : 'Conteúdo restaurado', text: arquivar ? 'Ficou arquivado e pode voltar.' : 'Voltou para a trilha.' });
+        CONTENT.motivo = '';
+        return reloadConteudo();
+      })
+      .catch(contentError);
+  }
+
+  function salvarTrilhaForm() {
+    var f = CONTENT.form;
+    if (!f || !contentMotiveOk()) return;
+    var corpo = f.modo === 'criar'
+      ? { acao: 'criar', titulo: campo('c-titulo'), grupo: campo('c-grupo'), resumo: campo('c-resumo'), setores: setoresMarcados(), motivo: CONTENT.motivo.trim() }
+      : { acao: 'editar', trilhaId: f.trilhaId, titulo: campo('c-titulo'), grupo: campo('c-grupo'), resumo: campo('c-resumo'), setores: setoresMarcados(), motivo: CONTENT.motivo.trim() };
+    api('/api/conteudo/trilha', { method: 'POST', body: corpo })
+      .then(function () {
+        toast({ icon: 'check', title: f.modo === 'criar' ? 'Trilha criada' : 'Trilha atualizada', text: 'A alteração foi registrada.' });
+        CONTENT.motivo = '';
+        CONTENT.form = null;
+        return reloadConteudo();
+      })
+      .catch(contentError);
+  }
+
+  function salvarPublico() {
+    var f = CONTENT.form;
+    if (!f || !contentMotiveOk()) return;
+    api('/api/conteudo/publico', { method: 'POST', body: { trackId: f.trilhaId, setores: setoresMarcados(), motivo: CONTENT.motivo.trim() } })
+      .then(function () {
+        toast({ icon: 'check', title: 'Setores atualizados', text: 'A trilha passa a valer para os setores escolhidos.' });
+        CONTENT.motivo = '';
+        CONTENT.form = null;
+        return reloadConteudo();
+      })
+      .catch(contentError);
+  }
+
+  function salvarAulaForm() {
+    var f = CONTENT.form;
+    if (!f || !contentMotiveOk()) return;
+    var tipo = campo('c-tipo') || f.tipo;
+    var corpo = {
+      acao: f.modo === 'mover' ? 'mover' : (f.modo === 'criar-aula' ? 'criar' : 'editar'),
+      trilhaId: f.trilhaId,
+      aulaId: f.aulaId,
+      motivo: CONTENT.motivo.trim(),
+    };
+    if (f.modo === 'mover') corpo.destinoTrilhaId = campo('c-destino');
+    else {
+      corpo.titulo = campo('c-titulo');
+      corpo.tipo = tipo;
+      corpo.minutos = campo('c-minutos');
+      corpo.videoUrl = tipo === 'video' ? campo('c-video') : '';
+    }
+    api('/api/conteudo/aula', { method: 'POST', body: corpo })
+      .then(function () {
+        var titulo = f.modo === 'criar-aula' ? 'Conteúdo adicionado' : f.modo === 'mover' ? 'Conteúdo movido' : 'Conteúdo atualizado';
+        toast({ icon: 'check', title: titulo, text: 'A alteração foi registrada.' });
+        CONTENT.motivo = '';
+        CONTENT.form = null;
+        return reloadConteudo();
+      })
+      .catch(contentError);
+  }
+
   // ---------- Roteamento ----------
   function route() {
     var parts = location.hash.replace(/^#/, '').split('?');
     var segments = parts[0].split('/').filter(Boolean);
+    if (segments[0] === 't' && segments[1]) {
+      setToken(segments[1]);
+      segments = segments.slice(2);
+      sincronizarTokenNoEndereco(segments.join('/'), parts[1]);
+    } else {
+      sincronizarTokenNoEndereco(segments.join('/'), parts[1]);
+    }
     var query = new URLSearchParams(parts[1] || '');
     if (segments[0] === 'validar-certificado') {
       if (document.getElementById(CERTIFICATE_OVERLAY_ID)) closeCertificate();
@@ -1079,6 +1532,7 @@
       else if (segments[0] === 'aula' && segments[1]) page = renderLesson(segments[1]);
       else if (segments[0] === 'busca') page = renderSearch(query.get('q') || '');
       else if (segments[0] === 'acessos') page = me.isManager ? renderAccess() : renderHome();
+      else if (segments[0] === 'conteudo') page = me.canManageContent ? renderConteudo() : renderHome();
       else page = renderHome();
       return page.then(function () { if (justLoggedIn) startTour(); justLoggedIn = false; }).catch(function (err) {
         if (err.status === 401) {
@@ -1097,6 +1551,7 @@
   }
 
   document.getElementById('logout').addEventListener('click', onLogout);
+  app.addEventListener('toggle', onAppToggle, true);
   document.querySelector('.skip').addEventListener('click', function (event) {
     event.preventDefault();
     app.focus();

@@ -16,7 +16,12 @@ test('logo mantém a referência original intacta e só recorta o contorno exter
   const original = fs.readFileSync(path.join(repoDir, 'public/brand/grupo-seg-system-original.jpg'));
   assert.deepEqual(Buffer.from(image[1], 'base64'), original);
   assert.match(svg, /<clipPath id="emblem" clipPathUnits="userSpaceOnUse">/);
-  assert.match(svg, /M72 77H276V263Q276 269 270 272L174 307L78 272Q72 269 72 263Z/);
+  // Contorno medido no próprio emblema original: laterais x=72.35/275.24, topo y=77.30,
+  // ombros y=270.03/270.28, ponta (176.04, 306.32) e raio 1.56 nos ombros.
+  assert.match(
+    svg,
+    /M72\.35 77\.30H275\.24V270\.28Q275\.24 271\.38 274\.20 271\.75L176\.04 306\.32L73\.41 271\.51Q72\.35 271\.15 72\.35 270\.03Z/,
+  );
   assert.doesNotMatch(svg, /<text\b|<tspan\b/, 'textos e elementos internos não devem ser redesenhados');
   assert.equal(
     fs.readFileSync(path.join(repoDir, 'docs/academia-demo/vendor/seg-system-logo.svg'), 'utf8'),
