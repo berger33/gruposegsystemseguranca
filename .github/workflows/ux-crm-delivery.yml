@@ -6,6 +6,7 @@ on:
       - 'src/app/admin/crm/**'
       - 'src/app/admin/carteira/**'
       - 'src/app/admin/comercial/**'
+      - 'src/app/admin/leads/**'
       - 'src/components/ui/**'
       - 'src/lib/crm-vocabulary.*'
       - 'src/lib/crm-request.ts'
