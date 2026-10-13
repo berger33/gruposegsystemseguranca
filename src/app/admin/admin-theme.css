@@ -1,32 +1,32 @@
 /* Preferência privada das áreas RH, TI e Marcelo; não altera o site público. */
 html body main[data-admin-theme-scope="true"] {
-  font-family: "DM Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
-  font-size: 15px;
-  line-height: 1.55;
+  font-family: var(--ux-font-body);
+  font-size: var(--ux-font-size-body);
+  line-height: var(--ux-line-height-body);
   font-kerning: normal;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
 
 html body main[data-admin-theme-scope="true"] :is(h1, h2, h3, h4) {
-  font-family: Manrope, "DM Sans", "Segoe UI", system-ui, sans-serif;
-  line-height: 1.25;
+  font-family: var(--ux-font-heading);
+  line-height: var(--ux-line-height-heading);
   letter-spacing: -0.02em;
 }
 
 html body main[data-admin-theme-scope="true"] :is(p, li, dd, dt) {
-  line-height: 1.6;
+  line-height: var(--ux-line-height-reading);
 }
 
 html body main[data-admin-theme-scope="true"] :is(label, legend) {
   font-size: 0.8125rem;
-  line-height: 1.45;
+  line-height: var(--ux-line-height-control);
 }
 
 html body main[data-admin-theme-scope="true"] :is(input, select, textarea) {
   font-family: inherit;
   font-size: 0.9375rem;
-  line-height: 1.45;
+  line-height: var(--ux-line-height-control);
 }
 
 /* One calm, readable table system for every administrative module. This
