@@ -10,7 +10,7 @@
 
 > **Continuação visual vigente (10/10/2026):** para concluir a profissionalização e padronização da interface, siga [`docs/PLANO-MESTRE-PROFISSIONALIZACAO-UX-2026-10-10.md`](docs/PLANO-MESTRE-PROFISSIONALIZACAO-UX-2026-10-10.md). O plano define fatias pequenas, preservação das funcionalidades, evidências por tema/tela e a regra de abrir PR, exigir checks verdes, fazer merge e entregar o prompt da sessão seguinte. Os status e inventários antigos abaixo são históricos; confirme sempre a `main` e o código vigente.
 
-> **Inventário de rotas vigente (UX-PRO-00, 10/10/2026):** a fonte atual é [`docs/UX-PRO-00-RECONCILIACAO-COBERTURA-2026-10-10.md`](docs/UX-PRO-00-RECONCILIACAO-COBERTURA-2026-10-10.md) — **100 entradas de rota**, com [inventário](docs/UX-PRO-00-INVENTARIO-ROTAS-2026-10-10.csv), [matriz de cobertura](docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-10.csv), critério de contagem reproduzível (`node scripts/ux-pro-00-inventory.mjs`) e a reconciliação das contagens históricas de 98 e 100. As menções a “98 páginas” abaixo são registros das suas datas e foram preservadas.
+> **Inventário vigente de rotas e cobertura (atualizado em 13/10/2026):** consulte [`docs/UX-PRO-00-ATUALIZACAO-2026-10-13.md`](docs/UX-PRO-00-ATUALIZACAO-2026-10-13.md), com [inventário de 100 rotas](docs/UX-PRO-00-INVENTARIO-ROTAS-2026-10-13.csv), [matriz de evidências](docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-13.csv) e gerador reproduzível (`node scripts/ux-pro-00-inventory.mjs --check`). Os documentos e CSVs datados de 10/10 permanecem como registros daquele snapshot.
 
 > **Instrução obrigatória para o Arena e outros agentes:** o proprietário pediu para preservar todas as funcionalidades existentes. Antes de editar, leia [`AGENTS.md`](AGENTS.md) e [`docs/ARENA-PRESERVAR-FUNCIONALIDADES.md`](docs/ARENA-PRESERVAR-FUNCIONALIDADES.md). Faça apenas mudanças compatíveis e aditivas; não remova, desative, oculte, substitua ou altere comportamentos fora do pedido. Se a mudança solicitada exigir quebrar essa regra, pare e peça autorização explícita.
 
@@ -20,7 +20,7 @@
 
 > **Estado de referência (05/10/2026):** `main` inclui o RAG local por área e as migrações 001–174. Os blocos “Continuação atual” abaixo são registros históricos de etapas anteriores e não devem ser lidos como o HEAD vigente. Para evolução visual, leia o [plano mestre de UX](docs/UX-PLANO-MESTRE-2026-10-05.md) e o [prompt de execução em etapas para o Arena](docs/ARENA-PROMPT-UX-ETAPAS-2026-10-05.md). A configuração e os limites reais do RAG estão em [RAG local por área](docs/AI-RAG-LOCAL-2026-10-05.md). Verifique o SHA e o ledger novamente antes de implementar.
 
-**UX-00:** [auditoria e linha de base visual](docs/UX-00-AUDITORIA-BASELINE-2026-10-05.md), [inventário completo das 98 páginas](docs/UX-00-INVENTARIO-ROTAS.csv). São evidências de navegação e código, não homologação de todas as jornadas.
+**UX-00 histórico (05/10/2026):** [auditoria e linha de base visual](docs/UX-00-AUDITORIA-BASELINE-2026-10-05.md), [inventário de 98 entradas daquele snapshot](docs/UX-00-INVENTARIO-ROTAS.csv). Para a cobertura vigente, use os artefatos de 13/10 apontados acima.
 
 **UX-01:** [tokens e primeiros componentes compartilhados](docs/UX-01-FUNDAMENTOS-2026-10-05.md) aplicados ao login staff e ao hub, com evidência visual/teclado.
 

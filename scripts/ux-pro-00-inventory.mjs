@@ -14,7 +14,7 @@
  *   node scripts/ux-pro-00-inventory.mjs           # regenera os CSVs e imprime o resumo
  *   node scripts/ux-pro-00-inventory.mjs --check   # não escreve; exit 1 se os CSVs versionados estiverem desatualizados
  *
- * Critério de contagem (ver docs/UX-PRO-00-RECONCILIACAO-COBERTURA-2026-10-10.md):
+ * Critério de contagem (ver docs/UX-PRO-00-ATUALIZACAO-2026-10-13.md):
  *   1 entrada = 1 arquivo `page.(tsx|jsx|ts|js)` sob `src/app`.
  *   A rota é o diretório desse arquivo relativo a `src/app`, com grupos de
  *   rota `(nome)` removidos. Segmentos dinâmicos `[param]` permanecem literais.
@@ -28,8 +28,8 @@ const appRoot = path.join(root, 'src', 'app');
 const docsRoot = path.join(root, 'docs');
 const workflowsRoot = path.join(root, '.github', 'workflows');
 
-const INVENTORY_CSV = 'docs/UX-PRO-00-INVENTARIO-ROTAS-2026-10-10.csv';
-const MATRIX_CSV = 'docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-10.csv';
+const INVENTORY_CSV = 'docs/UX-PRO-00-INVENTARIO-ROTAS-2026-10-13.csv';
+const MATRIX_CSV = 'docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-13.csv';
 
 /** Inventários históricos usados apenas na reconciliação; nunca são reescritos. */
 const HISTORICAL_INVENTORIES = [

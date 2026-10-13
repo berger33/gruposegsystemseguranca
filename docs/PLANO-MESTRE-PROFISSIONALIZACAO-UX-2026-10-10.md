@@ -52,6 +52,10 @@ Trabalhe **uma fatia por sessão e uma PR por fatia**. No início de cada sessã
 
 > **Executada em 10/10/2026** — base `c50a99beec…`. Entregues: inventário vigente de **100 entradas de rota** ([CSV](UX-PRO-00-INVENTARIO-ROTAS-2026-10-10.csv)), matriz rota → área/papel → componente → tema → responsividade → teclado → estados → evidência → lacuna ([CSV](UX-PRO-00-MATRIZ-COBERTURA-2026-10-10.csv)), gerador reproduzível `scripts/ux-pro-00-inventory.mjs` com regressão `tests/ux-pro-00-inventory.test.mjs`, escala de evidência em cinco níveis e reconciliação 98 × 100. Registro completo, limitações e validação em [`UX-PRO-00-RECONCILIACAO-COBERTURA-2026-10-10.md`](UX-PRO-00-RECONCILIACAO-COBERTURA-2026-10-10.md). Nesta fatia também foi corrigido o baseline de `tests/admin-navigation.test.mjs` (27 → 26), único step vermelho da `QA baseline` na `main`; nenhuma rota, permissão ou capacidade foi alterada. Cobertura de evidência ao final: código 46 · teste automatizado de jornada 34 · captura visual 20 · validação manual 0 · aceite humano 0.
 
+#### Atualização de referência — 13/10/2026
+
+O registro de 10/10 acima descreve o snapshot `c50a99b` e é histórico. A matriz vigente foi regenerada sobre a `main` `bdc6345` (inclui a correção da PR #193): continua havendo **100 entradas de rota**, mas o catálogo administrativo atual tem **27 destinos**; portanto, o baseline de navegação da execução anterior (26) não deve ser reaplicado. Consulte [`UX-PRO-00-ATUALIZACAO-2026-10-13.md`](UX-PRO-00-ATUALIZACAO-2026-10-13.md) e os CSVs de 13/10. A contagem e a matriz são estáticas: não representam passagem visual integral, teste de todos os estados nem aceite humano. A próxima fatia de implementação continua sendo UX-PRO-01.
+
 ### UX-PRO-01 — Tokens e chrome compartilhado
 
 - Inspecione tokens e shell existentes; defina/complete escala de tipografia, espaçamento, superfícies, bordas, elevação, foco, estados, largura de conteúdo e breakpoint.
