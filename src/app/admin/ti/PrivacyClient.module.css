@@ -1,0 +1,73 @@
+.workspace {
+  display: grid;
+  gap: 1.25rem;
+  min-width: 0;
+  margin-top: 1.25rem;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  border: 1px solid var(--ux-color-border);
+  border-radius: 16px;
+  background: var(--ux-color-surface);
+  color: var(--ux-color-text);
+  box-shadow: var(--ux-shadow-card);
+}
+.header, .sectionHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.header h2 { margin: .25rem 0 .5rem; font-size: clamp(1.45rem, 2.2vw, 1.85rem); }
+.header p:not(.eyebrow), .sectionHeading p { max-width: 72ch; margin: .25rem 0 0; color: var(--ux-color-muted); }
+.eyebrow { margin: 0; color: var(--ux-color-brand); font-size: .75rem; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; }
+.workspace button { min-height: 44px; padding: .62rem .82rem; border: 1px solid var(--ux-color-border); border-radius: 9px; background: var(--ux-color-surface); color: var(--ux-color-text); font: inherit; font-weight: 650; cursor: pointer; }
+.workspace button:hover:not(:disabled) { border-color: var(--ux-color-brand); }
+.workspace button:disabled { cursor: wait; opacity: .65; }
+.workspace button:focus-visible, .field :is(input, select, textarea):focus-visible, .checks input:focus-visible, .policyDetails summary:focus-visible { outline: 3px solid var(--ux-color-focus); outline-offset: 3px; }
+.workspace .primary { border-color: var(--ux-color-brand); background: var(--ux-color-brand); color: var(--ux-color-surface); }
+.notice { padding: 1rem 1.1rem; border: 1px solid var(--ux-color-warning); border-left: 4px solid var(--ux-color-warning); border-radius: 12px; background: var(--ux-color-canvas); }
+.notice strong { display: block; margin-bottom: .25rem; }
+.notice p { margin: 0; color: var(--ux-color-muted); line-height: 1.55; }
+.columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 1rem; min-width: 0; }
+.panel { display: grid; gap: 1rem; min-width: 0; padding: clamp(.9rem, 1.5vw, 1.25rem); border: 1px solid var(--ux-color-border); border-radius: 14px; background: var(--ux-color-canvas); }
+.sectionHeading h3, .sectionHeading h4 { margin: 0; font-size: 1.08rem; }
+.sectionHeading h4 { font-size: 1rem; }
+.sectionHeading p { font-size: .82rem; }
+.count { flex: none; padding: .4rem .6rem; border: 1px solid var(--ux-color-border); border-radius: 999px; background: var(--ux-color-surface); color: var(--ux-color-muted); font-size: .76rem; font-weight: 700; }
+.recordList { display: grid; gap: .75rem; min-width: 0; }
+.record { display: grid; gap: .65rem; min-width: 0; padding: .9rem; border: 1px solid var(--ux-color-border); border-radius: 12px; background: var(--ux-color-surface); }
+.recordHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: .6rem; }
+.recordHeading > div { display: grid; justify-items: start; gap: .35rem; min-width: 0; }
+.record h4 { margin: 0; font-size: 1rem; overflow-wrap: anywhere; }
+.record > p { margin: 0; color: var(--ux-color-muted); line-height: 1.5; overflow-wrap: anywhere; }
+.badge { display: inline-flex; align-items: center; max-width: 100%; padding: .22rem .55rem; border: 1px solid var(--ux-color-border); border-radius: 999px; background: var(--ux-color-canvas); color: var(--ux-color-text); font-size: .73rem; font-weight: 700; overflow-wrap: anywhere; }
+.warningBadge { border-color: var(--ux-color-warning); color: var(--ux-color-warning); }
+.published { border-color: var(--ux-color-success); color: var(--ux-color-success); }
+.approved { border-color: var(--ux-color-info, var(--ux-color-brand)); color: var(--ux-color-info, var(--ux-color-brand)); }
+.details { display: grid; gap: .6rem; margin: 0; }
+.details > div { min-width: 0; }
+.details dt { color: var(--ux-color-muted); font-size: .74rem; font-weight: 700; }
+.details dd { margin: .12rem 0 0; overflow-wrap: anywhere; line-height: 1.45; }
+.meta, .hint { color: var(--ux-color-muted)!important; font-size: .77rem; }
+.form { display: grid; gap: .9rem; min-width: 0; padding: 1rem; border: 1px solid var(--ux-color-border); border-radius: 12px; background: var(--ux-color-surface); }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
+.field { display: grid; align-content: start; gap: .38rem; min-width: 0; color: var(--ux-color-text); font-size: .8rem; font-weight: 650; }
+.field input, .field select, .field textarea { width: 100%; min-height: 44px; padding: .62rem .7rem; border: 1px solid var(--ux-color-border); border-radius: 8px; background: var(--ux-color-surface); color: var(--ux-color-text); font: inherit; font-weight: 400; }
+.field textarea { resize: vertical; line-height: 1.5; }
+.field select { padding-right: 2rem; }
+.wide { grid-column: 1 / -1; }
+.hint { margin: 0; font-weight: 400; }
+.checks { display: flex; flex-wrap: wrap; gap: .75rem 1rem; }
+.checks label { display: flex; align-items: center; gap: .5rem; min-height: 44px; color: var(--ux-color-text); font-size: .84rem; }
+.checks input { width: 1.1rem; height: 1.1rem; accent-color: var(--ux-color-brand); }
+.actions { display: flex; justify-content: flex-end; }
+.policyDetails { display: grid; gap: .7rem; min-width: 0; }
+.policyDetails summary { min-height: 36px; padding: .45rem 0; color: var(--ux-color-brand); font-weight: 700; cursor: pointer; }
+.policyContent { max-height: 20rem; overflow: auto; padding: .75rem; border: 1px solid var(--ux-color-border); border-radius: 8px; background: var(--ux-color-canvas); white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
+.statusActions { display: flex; flex-wrap: wrap; gap: .45rem; padding-top: .35rem; border-top: 1px solid var(--ux-color-border); }
+.statusActions button[aria-pressed='true'] { border-color: var(--ux-color-brand); background: var(--ux-color-brand-soft); color: var(--ux-color-brand-strong); }
+
+@media (max-width: 900px) { .columns { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 650px) {
+  .workspace { padding: .85rem; }
+  .header, .sectionHeading { flex-direction: column; }
+  .header > button { width: 100%; }
+  .fields { grid-template-columns: minmax(0, 1fr); }
+  .wide { grid-column: auto; }
+  .recordHeading { flex-direction: column; }
+  .actions, .actions button { width: 100%; }
+}
