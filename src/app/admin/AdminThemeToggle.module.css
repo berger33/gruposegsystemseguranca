@@ -2,15 +2,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 44px;
+  gap: var(--ux-space-2);
+  min-height: var(--ux-height-target);
   padding: 8px 12px;
   border: 1px solid rgba(169, 198, 230, 0.38);
-  border-radius: 9px;
+  border-radius: var(--ux-radius-control);
   background: rgba(16, 42, 77, 0.72);
   color: #e7f0fc;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--ux-font-size-nav);
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
@@ -23,8 +23,8 @@
 }
 
 .toggle:focus-visible {
-  outline: 3px solid #91c9ff;
-  outline-offset: 3px;
+  outline: var(--ux-focus-ring-width) solid var(--ux-color-focus-on-dark);
+  outline-offset: var(--ux-focus-ring-offset-control);
 }
 
 @media (prefers-reduced-motion: reduce) {
