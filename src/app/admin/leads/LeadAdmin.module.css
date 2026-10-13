@@ -54,3 +54,48 @@
 :global(html[data-admin-theme="night"]) .error { background:#432c31; color:#ffb4b0; }
 :global(html[data-admin-theme="night"]) .page :is(.loginCard input,.controls select,.actions select,.metricsControls input):focus-visible,
 :global(html[data-admin-theme="night"]) .page :is(a,button,select,input):focus-visible { outline:3px solid #95caff; outline-offset:3px; }
+
+/* UX-PRO-06: resumo da fila, espera, fonte, responsável e próxima ação.
+   Nada aqui altera rota, permissão, contrato ou dado: são superfícies novas
+   sobre campos que a API já devolvia. */
+.controlsSecondary{display:flex;align-items:center;gap:9px;margin:-4px 0 18px;padding:0 2px;flex-wrap:wrap}
+.controlsSecondary label{font-size:12px;color:#6b7b90}
+.controlsSecondary select{height:36px;max-width:100%;padding:0 28px 0 10px;border:1px solid #d4deea;border-radius:7px;background:#fff;color:#334963;font:inherit;font-size:12px}
+.updating{display:inline-flex;align-items:center;gap:6px;color:#42699f;font-size:12px;font-weight:700}
+.queueSummary{margin:0 0 18px;padding:18px 20px;background:#fff;border:1px solid #dce4ee;border-radius:12px}
+.queueSummaryTitle{margin:0 0 14px;color:#1a2d47;font-size:16px;letter-spacing:-.02em}
+.queueSummaryGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:0}
+.queueSummaryGrid>div{display:flex;flex-direction:column;gap:5px;min-width:0;padding:13px 14px;background:#f6f9fd;border:1px solid #e4ebf4;border-radius:10px}
+.queueSummaryGrid dt{color:#8794a6;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.queueSummaryGrid dd{margin:0;color:#174f91;font-size:24px;line-height:1.2;overflow-wrap:anywhere}
+.queueNote{color:#6b7b90;font-size:11px;line-height:1.5}
+.queueHint{margin:12px 0 0;color:#8593a5;font-size:11px;line-height:1.6}
+.stale{margin:0 0 16px;padding:12px 14px;border-radius:8px;background:#fff5e8;color:#8a5310;font-size:13px;line-height:1.55}
+.cardBadges{display:flex;flex:none;flex-direction:column;align-items:flex-end;gap:7px;max-width:52%}
+.attention{padding:5px 9px;border-radius:20px;background:#fff1e8;color:#9c4a11;font-size:11px;font-weight:700;text-align:right}
+.protocol{margin:6px 0 0;color:#8593a5;font-size:11px;font-weight:600}
+.protocol span{color:#8794a6;font-size:9px;font-weight:800;letter-spacing:.12em}
+.nextAction{margin:15px 0 0;color:#334963;font-size:13px;line-height:1.55}
+.nextAction span{color:#8794a6;font-size:9px;font-weight:800;letter-spacing:.12em}
+.clearFilter{height:36px;padding:0 14px;border:1px solid #d4deea;border-radius:7px;background:#fff;color:#174f91;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+@media(max-width:650px){.controlsSecondary select{flex:1}.cardBadges{max-width:100%;align-items:flex-start}.queueSummary{padding:16px 14px}.queueSummaryTitle{font-size:15px}}
+
+/* Tema noturno: as superfícies novas seguem a mesma convenção das antigas. */
+:global(html[data-admin-theme="night"]) .queueSummary { background:#18263a; border-color:#354960; }
+:global(html[data-admin-theme="night"]) .queueSummaryTitle { color:#e5edf7; }
+:global(html[data-admin-theme="night"]) .queueSummaryGrid>div { background:#111e30; border-color:#354960; }
+:global(html[data-admin-theme="night"]) .queueSummaryGrid dt,
+:global(html[data-admin-theme="night"]) .queueNote,
+:global(html[data-admin-theme="night"]) .queueHint,
+:global(html[data-admin-theme="night"]) .protocol,
+:global(html[data-admin-theme="night"]) .protocol span { color:#adbdcf; }
+:global(html[data-admin-theme="night"]) .queueSummaryGrid dd { color:#9ec6f5; }
+:global(html[data-admin-theme="night"]) .updating { color:#9ec6f5; }
+:global(html[data-admin-theme="night"]) .stale { background:#42341c; color:#f0cf8b; }
+:global(html[data-admin-theme="night"]) .attention { background:#42291d; color:#f3b98d; }
+:global(html[data-admin-theme="night"]) .nextAction { color:#d3deea; }
+:global(html[data-admin-theme="night"]) .nextAction span { color:#adbdcf; }
+:global(html[data-admin-theme="night"]) .controlsSecondary select,
+:global(html[data-admin-theme="night"]) .clearFilter { background:#111e30; border-color:#40546b; color:#e5edf7; }
+.muted{color:#8593a5;font-size:11px;font-style:normal;line-height:1.5}
+:global(html[data-admin-theme="night"]) .muted { color:#adbdcf; }
