@@ -19,13 +19,30 @@ import path from 'node:path';
 import pg from 'pg';
 import { chromium as playwrightChromium } from 'playwright';
 import packagedChromium from '@sparticuz/chromium';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { provisionStaff, STAFF_TEST_PASSWORD } from './helpers/staff-login.mjs';
 
 const RUN = process.env.RUN_DATABASE_INTEGRATION === '1' && process.env.DATABASE_URL;
 const root = path.resolve(import.meta.dirname, '..');
 
-let server, baseUrl, pool, browser;
+// O Next aponta estes arquivos gerados para o distDir isolado do navegador.
+// Mantemos o checkout limpo restaurando o conteúdo original ao encerrar a suíte.
+const GENERATED_FILES = ['next-env.d.ts', 'tsconfig.json'];
+async function snapshotGeneratedFiles() {
+  const snapshot = new Map();
+  for (const name of GENERATED_FILES) {
+    snapshot.set(name, await readFile(path.join(root, name), 'utf8').catch(() => null));
+  }
+  return snapshot;
+}
+async function restoreGeneratedFiles(snapshot) {
+  if (!snapshot) return;
+  for (const [name, content] of snapshot) {
+    if (content !== null) await writeFile(path.join(root, name), content);
+  }
+}
+
+let server, baseUrl, pool, browser, generatedFiles;
 
 async function waitForServer(url, timeoutMs = 120_000) {
   const deadline = Date.now() + timeoutMs;
@@ -41,6 +58,7 @@ async function waitForServer(url, timeoutMs = 120_000) {
 
 before(async () => {
   if (!RUN) return;
+  generatedFiles = await snapshotGeneratedFiles();
   const port = 3000 + Math.floor(Math.random() * 2000);
   baseUrl = `http://127.0.0.1:${port}`;
   server = spawn(process.execPath, ['server.mjs', '--dev'], {
@@ -89,16 +107,34 @@ before(async () => {
 after(async () => {
   await browser?.close().catch(() => {});
   await pool?.end().catch(() => {});
-  if (server && !server.killed) { server.kill('SIGTERM'); await new Promise(r => setTimeout(r, 300)); server.kill('SIGKILL'); }
+  if (server?.exitCode === null) {
+    await new Promise(resolve => {
+      const timer = setTimeout(() => {
+        if (server.exitCode === null) server.kill('SIGKILL');
+      }, 1_000);
+      server.once('exit', () => {
+        clearTimeout(timer);
+        resolve();
+      });
+      server.kill('SIGTERM');
+    });
+  }
+  await restoreGeneratedFiles(generatedFiles);
 });
 
-// Evidência opcional: com UX_CRM_EVIDENCE_DIR, o gate grava capturas
-// sanitizadas (massa fictícia, sem dado pessoal e sem credencial).
+// Evidência opcional e sanitizada (massa fictícia, sem dado pessoal nem
+// credencial). Cada fatia registra apenas as próprias capturas: UX_CRM_* para
+// o funil pré-existente e UX_LEADS_* para a fila, evitando artefato fora de
+// escopo quando a suíte inteira é executada.
 const evidenceDir = process.env.UX_CRM_EVIDENCE_DIR || '';
-async function capture(page, nome) {
-  if (!evidenceDir) return;
-  await mkdir(evidenceDir, { recursive: true });
-  await page.screenshot({ path: path.join(evidenceDir, `${nome}.png`), fullPage: true });
+const leadsEvidenceDir = process.env.UX_LEADS_EVIDENCE_DIR || '';
+async function capture(page, nome, directory = evidenceDir) {
+  if (!directory) return;
+  await mkdir(directory, { recursive: true });
+  await page.screenshot({ path: path.join(directory, `${nome}.png`), fullPage: true });
+}
+async function captureLeads(page, nome) {
+  await capture(page, nome, leadsEvidenceDir);
 }
 
 function api(pathname, { method = 'GET', body, cookie } = {}) {
@@ -429,8 +465,9 @@ test('browser: filtro sem resultado mostra estado vazio, diferente de falha', { 
 // O que estes testes provam: a fila mostra espera, fonte, responsável, estado
 // e próxima ação a partir de campos que a API JÁ devolvia; a ausência de dado
 // é dita como ausência; falha de leitura marca a lista como desatualizada em
-// vez de escondê-la; a ordenação por espera é derivada e explícita; e as
-// superfícies novas funcionam em 390px, no tema noturno e pelo teclado.
+// vez de escondê-la; a ordenação por espera é derivada e explícita; ações
+// concorrentes preservam a trava por pedido; e as superfícies novas funcionam
+// em 320/390/768px, no tema noturno e pelo teclado.
 //
 // O que NÃO provam: aceite humano, homologação de Marcelo/Andreia, execução em
 // Windows ou na máquina do operador.
@@ -551,7 +588,7 @@ test('browser: a fila mostra espera, fonte, responsável e próxima ação, e di
     assert.match(cartaoRecente, /PROTOCOLO\s+\w{8}/, 'o protocolo curto ajuda a localizar o pedido');
     assert.match(cartaoRecente, /recebido agora|há \d+ min/, 'pedido do momento não pode aparecer como antigo');
 
-    await capture(page, 'desktop-leads-fila');
+    await captureLeads(page, 'desktop-leads-fila');
     assert.deepEqual(erros, [], `a página não pode lançar erro de JavaScript: ${erros.join(' | ')}`);
     await context.close();
   } finally { /* o navegador é compartilhado e fechado no after() */ }
@@ -595,7 +632,7 @@ test('browser: falha de leitura marca a fila como desatualizada em vez de escond
     // Os pedidos da leitura anterior continuam na tela: falha não apaga dado.
     assert.equal(await page.isVisible(`[data-testid="${cardTestId(leadId)}"]`), true, 'o pedido já carregado não pode desaparecer por causa da falha');
     assert.equal(await page.isVisible('[data-testid="lead-queue-empty"]'), false, 'falha de leitura não pode virar estado vazio');
-    await capture(page, 'desktop-leads-desatualizado');
+    await captureLeads(page, 'desktop-leads-desatualizado');
 
     await page.evaluate(() => { window.__uxForcarFalhaFila = false; });
     await page.click('button[aria-label="Atualizar pedidos"]');
@@ -658,6 +695,66 @@ test('browser: a ordenação por espera é derivada e declarada, sem criar campo
   } finally { /* o navegador é compartilhado e fechado no after() */ }
 });
 
+test('browser: envios simultâneos mantêm cada pedido travado até a própria resposta', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'comercial' });
+  const cookie = await loginHttp(staff.email);
+  const primeiro = await seedLead({ label: 'Fila Trava Primeiro', phone: '(11) 98888-0019', cookie });
+  const segundo = await seedLead({ label: 'Fila Trava Segundo', phone: '(11) 98888-0020', cookie });
+
+  try {
+    const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+    // Segura apenas o PATCH do primeiro pedido dentro desta aba. Assim a segunda
+    // ação pode terminar e provar que ela não reabilita o primeiro cartão.
+    await context.addInitScript(leadId => {
+      const original = window.fetch.bind(window);
+      window.__uxLiberarAtualizacaoLead = null;
+      window.fetch = (input, init) => {
+        const url = typeof input === 'string' ? input : input?.url || '';
+        const method = String(init?.method || input?.method || 'GET').toUpperCase();
+        if (url.includes(`/api/admin/leads/${leadId}`) && method === 'PATCH') {
+          return new Promise((resolve, reject) => {
+            window.__uxLiberarAtualizacaoLead = () => original(input, init).then(resolve, reject);
+          });
+        }
+        return original(input, init);
+      };
+    }, primeiro);
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/leads', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+
+    const seletorPrimeiro = page.locator(`[data-testid="${cardTestId(primeiro)}"] select[aria-label^="Alterar status"]`);
+    const seletorSegundo = page.locator(`[data-testid="${cardTestId(segundo)}"] select[aria-label^="Alterar status"]`);
+    await seletorPrimeiro.waitFor({ state: 'visible', timeout: 90_000 });
+    await seletorSegundo.waitFor({ state: 'visible', timeout: 90_000 });
+
+    await seletorPrimeiro.selectOption('em_agendamento');
+    await page.waitForFunction(testId => {
+      const select = document.querySelector(`[data-testid="${testId}"] select`);
+      return Boolean(select?.disabled) && typeof window.__uxLiberarAtualizacaoLead === 'function';
+    }, cardTestId(primeiro), { timeout: 30_000 });
+
+    await seletorSegundo.selectOption('em_agendamento');
+    await page.waitForFunction(testId => {
+      const select = document.querySelector(`[data-testid="${testId}"] select`);
+      return select?.value === 'em_agendamento' && !select.disabled;
+    }, cardTestId(segundo), { timeout: 30_000 });
+
+    assert.equal(await seletorPrimeiro.isDisabled(), true, 'a conclusão do segundo envio não pode reabilitar o primeiro ainda pendente');
+    const liberou = await page.evaluate(() => {
+      if (typeof window.__uxLiberarAtualizacaoLead !== 'function') return false;
+      window.__uxLiberarAtualizacaoLead();
+      return true;
+    });
+    assert.equal(liberou, true, 'o teste precisa liberar o PATCH adiado para não deixar atividade pendente');
+    await page.waitForFunction(testId => {
+      const select = document.querySelector(`[data-testid="${testId}"] select`);
+      return select?.value === 'em_agendamento' && !select.disabled;
+    }, cardTestId(primeiro), { timeout: 30_000 });
+    await context.close();
+  } finally { /* o navegador é compartilhado e fechado no after() */ }
+});
+
 test('browser: no celular a fila não transborda e no tema noturno as superfícies novas seguem o tema', { skip: !RUN }, async () => {
   const staff = await provisionStaff(pool, { role: 'comercial' });
   const cookie = await loginHttp(staff.email);
@@ -688,7 +785,7 @@ test('browser: no celular a fila não transborda e no tema noturno as superfíci
     }
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(150);
-    await capture(page, 'mobile-leads-fila');
+    await captureLeads(page, 'mobile-leads-fila');
 
     // Tema noturno pelo controle real do envelope administrativo.
     await page.click('[data-admin-theme-toggle="true"]');
@@ -706,7 +803,7 @@ test('browser: no celular a fila não transborda e no tema noturno as superfíci
     const canais = (cor) => (cor.match(/\d+/g) || []).slice(0, 3).map(Number);
     assert.ok(canais(cores.painel.fundo).reduce((a, b) => a + b, 0) < 240, `o resumo precisa escurecer no tema noturno: ${cores.painel.fundo}`);
     assert.ok(canais(cores.numero.texto).reduce((a, b) => a + b, 0) > 480, `o número precisa clarear no tema noturno: ${cores.numero.texto}`);
-    await capture(page, 'mobile-leads-noturno');
+    await captureLeads(page, 'mobile-leads-noturno');
     await context.close();
   } finally { /* o navegador é compartilhado e fechado no after() */ }
 });

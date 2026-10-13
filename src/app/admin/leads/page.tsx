@@ -146,11 +146,21 @@ function LeadAdminContent() {
   // Verdadeiro quando uma nova leitura falhou mas ainda há dados da leitura
   // anterior. A lista continua visível, marcada como desatualizada.
   const [stale, setStale] = useState(false);
-  // Ação em andamento por pedido: trava o duplo envio do pedido afetado sem
-  // congelar a fila inteira.
-  const [pendingId, setPendingId] = useState<string | null>(null);
+  // Ações em andamento por pedido: cada id fica travado até a sua própria
+  // resposta terminar. O ref fecha a janela entre dois eventos antes do render;
+  // o estado mantém a interface sincronizada sem congelar a fila inteira.
+  const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());
   const [order, setOrder] = useState<"recentes" | "espera">("recentes");
   const hasLoadedRef = useRef(false);
+  const pendingIdsRef = useRef<Set<string>>(new Set());
+
+  function setLeadPending(leadId: string, pending: boolean) {
+    const next = new Set(pendingIdsRef.current);
+    if (pending) next.add(leadId);
+    else next.delete(leadId);
+    pendingIdsRef.current = next;
+    setPendingIds(next);
+  }
 
   const loadLeads = useCallback(async (selectedFilter: "all" | LeadStatus = filter) => {
     setLoading(true);
@@ -220,7 +230,8 @@ function LeadAdminContent() {
   }
 
   async function updateStatus(lead: Lead, status: LeadStatus) {
-    setPendingId(lead.id);
+    if (pendingIdsRef.current.has(lead.id)) return;
+    setLeadPending(lead.id, true);
     setError("");
     setNotice("");
     try {
@@ -236,12 +247,13 @@ function LeadAdminContent() {
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Não foi possível atualizar o pedido.");
     } finally {
-      setPendingId(null);
+      setLeadPending(lead.id, false);
     }
   }
 
   async function convertLead(lead: Lead) {
-    setPendingId(lead.id);
+    if (pendingIdsRef.current.has(lead.id)) return;
+    setLeadPending(lead.id, true);
     setError("");
     setNotice("");
     try {
@@ -260,7 +272,7 @@ function LeadAdminContent() {
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Não foi possível converter o lead.");
     } finally {
-      setPendingId(null);
+      setLeadPending(lead.id, false);
     }
   }
 
@@ -422,7 +434,7 @@ function LeadAdminContent() {
                   const origem = sourceLabel(lead);
                   const responsavel = typeof lead.responsible === "string" && lead.responsible.trim() ? lead.responsible.trim() : null;
                   const alteradoEm = formatUpdatedAt(lead.updated_at);
-                  const acaoPendente = pendingId === lead.id;
+                  const acaoPendente = pendingIds.has(lead.id);
                   return (
                     <article className={styles.card} key={lead.id} data-lead-id={lead.id} data-testid={`lead-card-${lead.id.slice(0, 8)}`}>
                       <div className={styles.cardTop}>
