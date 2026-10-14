@@ -82,6 +82,7 @@
     "test:ux-client-admin:pg": "node scripts/qa-ux-client-admin-postgres.mjs",
     "test:ux-ops:pg": "node scripts/qa-ux-ops-postgres.mjs",
     "test:ux-asset:pg": "node scripts/qa-ux-asset-postgres.mjs",
+    "test:ux-emergency:pg": "node scripts/qa-ux-emergency-postgres.mjs",
     "test:ux-finance:pg": "node scripts/qa-ux-finance-postgres.mjs",
     "test:ux-contract:pg": "node scripts/qa-ux-contract-postgres.mjs",
     "test:ux-intel:pg": "node scripts/qa-ux-intel-postgres.mjs",
