@@ -1,0 +1,44 @@
+name: UX asset delivery
+
+on:
+  pull_request:
+    paths:
+      - 'src/app/admin/patrimonio/**'
+      - 'src/lib/asset-request.ts'
+      - 'src/components/ui/**'
+      - 'server.mjs'
+      - 'src/server/ast-api.mjs'
+      - 'src/server/ast-advanced-api.mjs'
+      - 'tests/helpers/**'
+      - 'tests/ux-asset-workspace.integration.test.mjs'
+      - 'scripts/qa-ux-asset-postgres.mjs'
+      - 'scripts/ux-pro-00-inventory.mjs'
+      - 'db/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/ux-asset-delivery.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ux-asset-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ux-asset-postgres-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Patrimônio — HTTP real, PostgreSQL descartável e Chromium
+        run: npm run test:ux-asset:pg

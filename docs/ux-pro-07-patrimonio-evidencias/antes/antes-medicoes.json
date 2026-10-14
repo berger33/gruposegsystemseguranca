@@ -1,0 +1,46 @@
+{
+  "stage": "ux-pro-07-patrimonio-antes",
+  "base": "ad8c6b4127850a3ee30f657ce28ff504d1ccd52b",
+  "generatedBy": "UX_ASSET_UI_TIMEOUT=5000 npm run test:ux-asset:pg, com o gate focal novo e antes de editar /admin/patrimonio",
+  "exitCode": 1,
+  "tests": {
+    "total": 7,
+    "passed": 1,
+    "failed": 6,
+    "skipped": 0
+  },
+  "passed": [
+    "AST continua exigindo sessao e papel autorizado nas seis leituras da tela"
+  ],
+  "failed": [
+    {
+      "test": "browser: carregamento contextual e vazio concluido nunca se confundem",
+      "measurement": "timeout esperando patrimonio-produtos-carregando; a tela anterior nao tinha estado contextual identificavel"
+    },
+    {
+      "test": "browser: falha inicial declara causa e Tentar novamente faz nova leitura",
+      "measurement": "timeout esperando patrimonio-produtos-falha; a tela anterior mostrava apenas Erro: HTTP n e nao oferecia repeticao"
+    },
+    {
+      "test": "browser: falha de releitura preserva dado, informa hora e repeticao atualiza de verdade",
+      "measurement": "timeout esperando patrimonio-produtos-tabela; a tela anterior nao expunha a regiao e escondia o painel quando error era preenchido"
+    },
+    {
+      "test": "browser: negativa depois do sucesso falha fechada e nao preserva dado protegido",
+      "measurement": "timeout esperando patrimonio-produtos-tabela; nao havia estado semantico negado exercitavel"
+    },
+    {
+      "test": "browser: seis abas usam tablist, roving tabindex e setas Home End",
+      "measurement": "timeout esperando patrimonio-produtos-tabela; os seis controles anteriores eram botoes sem tablist/tab/tabpanel"
+    },
+    {
+      "test": "browser: 320 390 768 1440, tema noturno e percurso de teclado medidos sem problemas",
+      "measurement": "timeout esperando patrimonio-produtos-tabela; nao existia a superficie identificavel necessaria para medir a jornada"
+    }
+  ],
+  "limitations": [
+    "Timeout reduzido para 5 s somente nesta execucao de defeito conhecido; a execucao de entrega usa o timeout normal de 45 s.",
+    "Nao houve validacao manual, revisao humana nem aceite humano.",
+    "O gate L06 herdado foi medido separadamente e passou 9/9 na mesma base."
+  ]
+}

@@ -1,10 +1,19 @@
 "use client";
-import UiTaskWorkspace from "@/components/ui/UiTaskWorkspace";
+
+import UiBadge, { type UiBadgeTone } from "@/components/ui/UiBadge";
+import UiState from "@/components/ui/UiState";
 import UiTableScroll from "@/components/ui/UiTableScroll";
+import UiTaskWorkspace from "@/components/ui/UiTaskWorkspace";
+import styles from "@/components/ui/UiWorkspace.module.css";
+import {
+  assetErrorDetail,
+  assetRequest,
+  invalidAssetResponse,
+  type AssetErrorDescriptor,
+} from "@/lib/asset-request";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 
-import { useEffect, useState } from "react";
-
-type Tab = "produtos" | "reservas" | "ativos" | "requisicoes" | "os" | "inventarios";
+type Tab = "produtos" | "reservas" | "ativos" | "os" | "inventarios" | "requisicoes";
 
 interface Product {
   id: string;
@@ -68,352 +77,420 @@ interface Inventory {
   status: string;
 }
 
+type AssetItem = Product | Reservation | Asset | Requisition | ServiceOrder | Inventory;
+type ResourceState =
+  | { phase: "idle" }
+  | { phase: "loading" }
+  | { phase: "failed"; error: AssetErrorDescriptor }
+  | {
+      phase: "ready";
+      items: AssetItem[];
+      readAt: string;
+      refreshing: boolean;
+      staleError?: AssetErrorDescriptor;
+    };
+
+type TabConfig = {
+  id: Tab;
+  label: string;
+  title: string;
+  endpoint: string;
+  loading: string;
+  emptyTitle: string;
+  emptyDetail: string;
+  absence: string;
+};
+
+const TABS: readonly TabConfig[] = [
+  {
+    id: "produtos",
+    label: "Produtos & Estoque",
+    title: "Itens em Catálogo e Estoque",
+    endpoint: "/api/ast/products",
+    loading: "Lendo produtos e saldos de estoque…",
+    emptyTitle: "A consulta foi concluída e nenhum produto está cadastrado.",
+    emptyDetail: "O catálogo não é preenchido com exemplos. Atualize depois que um fluxo autorizado registrar o primeiro produto.",
+    absence: "Isso não significa que o catálogo esteja vazio.",
+  },
+  {
+    id: "reservas",
+    label: "Reservas Operacionais",
+    title: "Reservas de Estoque para Implantação ou Proposta",
+    endpoint: "/api/ast/reservations",
+    loading: "Lendo reservas de estoque…",
+    emptyTitle: "A consulta foi concluída e não há reserva neste recorte.",
+    emptyDetail: "Uma reserva só aparece depois de registrada por um fluxo autorizado. Atualize para consultar mudanças recentes.",
+    absence: "Isso não significa que não existam reservas.",
+  },
+  {
+    id: "ativos",
+    label: "Ativos Serializados",
+    title: "Ativos Serializados e Custódia Declarada",
+    endpoint: "/api/ast/serialized-assets",
+    loading: "Lendo ativos serializados…",
+    emptyTitle: "A consulta foi concluída e nenhum ativo serializado está cadastrado.",
+    emptyDetail: "Nenhum equipamento é criado automaticamente. Atualize depois de um cadastro autorizado.",
+    absence: "Isso não significa que não existam ativos serializados.",
+  },
+  {
+    id: "os",
+    label: "Ordens de Serviço (OS)",
+    title: "Ordens de Serviço de Manutenção",
+    endpoint: "/api/ast/service-orders",
+    loading: "Lendo ordens de serviço…",
+    emptyTitle: "A consulta foi concluída e não há ordem de serviço cadastrada.",
+    emptyDetail: "A ausência vale somente para o recorte respondido agora. Atualize depois da abertura de uma ordem.",
+    absence: "Isso não significa que não existam ordens de serviço.",
+  },
+  {
+    id: "inventarios",
+    label: "Inventários Físicos",
+    title: "Inventários Físicos e Ciclo de Contagem",
+    endpoint: "/api/ast/inventories",
+    loading: "Lendo inventários físicos…",
+    emptyTitle: "A consulta foi concluída e nenhum inventário está cadastrado.",
+    emptyDetail: "O sistema não cria contagens de exemplo. Atualize depois que um inventário for aberto.",
+    absence: "Isso não significa que não existam inventários físicos.",
+  },
+  {
+    id: "requisicoes",
+    label: "Requisições Internas",
+    title: "Requisições Internas de Material",
+    endpoint: "/api/ast/requisitions",
+    loading: "Lendo requisições internas…",
+    emptyTitle: "A consulta foi concluída e nenhuma requisição está registrada.",
+    emptyDetail: "A lista só contém solicitações persistidas. Atualize depois que um fluxo autorizado registrar uma requisição.",
+    absence: "Isso não significa que não existam requisições.",
+  },
+] as const;
+
+const INITIAL_RESOURCES = Object.fromEntries(TABS.map(tab => [tab.id, { phase: "idle" }])) as Record<Tab, ResourceState>;
+
+const STATUS_LABELS: Record<string, string> = {
+  rascunho: "Rascunho",
+  reservado: "Reservada",
+  liberado: "Liberada",
+  convertido: "Convertida em saída",
+  cancelado: "Cancelada",
+  cancelada: "Cancelada",
+  disponivel: "Disponível",
+  em_uso: "Em uso",
+  em_manutencao: "Em manutenção",
+  baixado: "Baixado",
+  perdida: "Perdida",
+  aberta: "Aberta",
+  em_execucao: "Em execução",
+  aguardando_peca: "Aguardando peça",
+  aguardando_aprovacao: "Aguardando aprovação",
+  concluida: "Concluída",
+  em_contagem: "Em contagem",
+  divergente: "Com divergência",
+  ajustado: "Ajustado",
+  aprovado: "Aprovada",
+  rejeitado: "Rejeitada",
+  em_cotacao: "Em cotação",
+  comprado: "Compra registrada",
+  recebido: "Recebida",
+  baixa: "Baixa",
+  media: "Média",
+  alta: "Alta",
+  critica: "Crítica",
+};
+
+function readable(value: string | undefined): string {
+  if (!value) return "Não informado";
+  return STATUS_LABELS[value] || value.replaceAll("_", " ").replace(/^./, letter => letter.toUpperCase());
+}
+
+function tone(value: string): UiBadgeTone {
+  if (["concluida", "aprovado", "ajustado", "recebido", "disponivel"].includes(value)) return "success";
+  if (["cancelado", "cancelada", "rejeitado", "perdida", "critica"].includes(value)) return "danger";
+  if (["em_manutencao", "aguardando_peca", "aguardando_aprovacao", "divergente", "alta"].includes(value)) return "warning";
+  if (["aberta", "em_execucao", "em_contagem", "em_cotacao", "em_uso", "convertido"].includes(value)) return "info";
+  return "neutral";
+}
+
+function readTime(value: string): string {
+  return new Date(value).toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+function Status({ value, prefix = "Situação" }: { value: string; prefix?: string }) {
+  return <UiBadge tone={tone(value)} srPrefix={prefix}>{readable(value)}</UiBadge>;
+}
+
 export default function PatrimonioWorkspace() {
   const [activeTab, setActiveTab] = useState<Tab>("produtos");
-  const [products, setProducts] = useState<Product[]>([]);
-  const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [requisitions, setRequisitions] = useState<Requisition[]>([]);
-  const [serviceOrders, setServiceOrders] = useState<ServiceOrder[]>([]);
-  const [inventories, setInventories] = useState<Inventory[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [resources, setResources] = useState<Record<Tab, ResourceState>>(INITIAL_RESOURCES);
+  const resourcesRef = useRef(resources);
+  const requestIds = useRef<Record<Tab, number>>({ produtos: 0, reservas: 0, ativos: 0, os: 0, inventarios: 0, requisicoes: 0 });
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  const commit = useCallback((updater: (current: Record<Tab, ResourceState>) => Record<Tab, ResourceState>) => {
+    const next = updater(resourcesRef.current);
+    resourcesRef.current = next;
+    setResources(next);
+  }, []);
+
+  const loadData = useCallback(async (tab: Tab) => {
+    const config = TABS.find(item => item.id === tab)!;
+    const previous = resourcesRef.current[tab];
+    const preserved = previous.phase === "ready" ? previous : null;
+    const requestId = ++requestIds.current[tab];
+
+    commit(current => ({
+      ...current,
+      [tab]: preserved
+        ? { ...preserved, refreshing: true, staleError: undefined }
+        : { phase: "loading" },
+    }));
+
+    const result = await assetRequest<{ items?: AssetItem[] }>(config.endpoint);
+    if (requestIds.current[tab] !== requestId) return;
+
+    if (!result.ok || !Array.isArray(result.data?.items)) {
+      const error = result.ok ? invalidAssetResponse(result.status) : result.error;
+      const failClosed = error.kind === "auth" || error.kind === "denied";
+      commit(current => ({
+        ...current,
+        [tab]: preserved && !failClosed
+          ? { ...preserved, refreshing: false, staleError: error }
+          : { phase: "failed", error },
+      }));
+      return;
+    }
+
+    commit(current => ({
+      ...current,
+      [tab]: {
+        phase: "ready",
+        items: result.data.items,
+        readAt: new Date().toISOString(),
+        refreshing: false,
+      },
+    }));
+  }, [commit]);
 
   useEffect(() => {
-    loadData(activeTab);
-  }, [activeTab]);
+    void loadData(activeTab);
+  }, [activeTab, loadData]);
 
-  async function loadData(tab: Tab) {
-    setLoading(true);
-    setError(null);
-    try {
-      if (tab === "produtos") {
-        const res = await fetch("/api/ast/products", { credentials: "same-origin" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        setProducts(data.items || []);
-      } else if (tab === "reservas") {
-        const res = await fetch("/api/ast/reservations", { credentials: "same-origin" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        setReservations(data.items || []);
-      } else if (tab === "ativos") {
-        const res = await fetch("/api/ast/serialized-assets", { credentials: "same-origin" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        setAssets(data.items || []);
-      } else if (tab === "requisicoes") {
-        const res = await fetch("/api/ast/requisitions", { credentials: "same-origin" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        setRequisitions(data.items || []);
-      } else if (tab === "os") {
-        const res = await fetch("/api/ast/service-orders", { credentials: "same-origin" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        setServiceOrders(data.items || []);
-      } else if (tab === "inventarios") {
-        const res = await fetch("/api/ast/inventories", { credentials: "same-origin" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        setInventories(data.items || []);
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Erro ao carregar dados de patrimônio");
-    } finally {
-      setLoading(false);
+  function selectTab(tab: Tab, focus = false) {
+    setActiveTab(tab);
+    if (focus) {
+      const index = TABS.findIndex(item => item.id === tab);
+      requestAnimationFrame(() => tabRefs.current[index]?.focus());
     }
   }
 
-  return (
-    <UiTaskWorkspace className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="border-b pb-4">
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Patrimônio, Almoxarifado e Ativos</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Gestão transacional de estoque, reservas operacionais, ativos serializados, ordens de serviço, manutenção e requisições internas sintéticas.
-        </p>
-      </div>
+  function handleTabKey(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    let next = index;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") next = (index + 1) % TABS.length;
+    else if (event.key === "ArrowLeft" || event.key === "ArrowUp") next = (index + TABS.length - 1) % TABS.length;
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = TABS.length - 1;
+    else return;
+    event.preventDefault();
+    selectTab(TABS[next].id, true);
+  }
 
-      <div className="flex space-x-2 border-b">
-        {(
-          [
-            ["produtos", "Produtos & Estoque"],
-            ["reservas", "Reservas Operacionais"],
-            ["ativos", "Ativos Serializados"],
-            ["os", "Ordens de Serviço (OS)"],
-            ["inventarios", "Inventários Físicos"],
-            ["requisicoes", "Requisições Internas"],
-          ] as const
-        ).map(([tabKey, label]) => (
+  const config = TABS.find(item => item.id === activeTab)!;
+  const state = resources[activeTab];
+
+  return (
+    <UiTaskWorkspace className={styles.workspace}>
+      <p className={styles.kicker}>UX-PRO-07A · PATRIMÔNIO E ALMOXARIFADO</p>
+      <h1>Patrimônio, Almoxarifado e Ativos</h1>
+      <p className={styles.lede}>
+        Consulte estoque, reservas, custódia, manutenção, inventários e requisições. Cada aba informa se ainda está lendo,
+        se a consulta falhou ou se o recorte terminou vazio; uma falha nunca é apresentada como ausência de registros.
+      </p>
+
+      <div className={styles.tabs} role="tablist" aria-label="Frentes de patrimônio e almoxarifado">
+        {TABS.map((tab, index) => (
           <button
-            key={tabKey}
-            onClick={() => setActiveTab(tabKey)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              activeTab === tabKey
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
+            key={tab.id}
+            ref={element => { tabRefs.current[index] = element; }}
+            id={`patrimonio-tab-${tab.id}`}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`patrimonio-panel-${tab.id}`}
+            tabIndex={activeTab === tab.id ? 0 : -1}
+            className={activeTab === tab.id ? styles.tabActive : styles.tab}
+            onClick={() => selectTab(tab.id)}
+            onKeyDown={event => handleTabKey(event, index)}
           >
-            {label}
+            {tab.label}
           </button>
         ))}
       </div>
 
-      {loading && <div className="p-4 text-sm text-gray-500">Carregando dados...</div>}
-      {error && <div className="p-4 text-sm text-red-600 bg-red-50 rounded">Erro: {error}</div>}
-
-      {!loading && !error && activeTab === "produtos" && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">Itens em Catálogo e Estoque</h2>
+      <section
+        className={`${styles.panel} ${styles.tabPanel}`}
+        id={`patrimonio-panel-${activeTab}`}
+        role="tabpanel"
+        aria-labelledby={`patrimonio-tab-${activeTab}`}
+        tabIndex={0}
+        data-testid={`patrimonio-${activeTab}-painel`}
+      >
+        <div className={styles.rowWrap}>
+          <div className={styles.grow}>
+            <h2 className={styles.panelTitle}>{config.title}</h2>
+            {state.phase === "ready" ? (
+              <p className={styles.hint}>Última leitura concluída às {readTime(state.readAt)}.</p>
+            ) : (
+              <p className={styles.hint}>Os dados só aparecem depois de uma resposta válida do servidor.</p>
+            )}
           </div>
-          {products.length === 0 ? (
-            <div className="p-8 text-center text-gray-500 border rounded">Nenhum produto cadastrado no almoxarifado.</div>
-          ) : (
-            <div className="overflow-x-auto border rounded-lg">
-              <UiTableScroll><table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">SKU</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Produto</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Categoria</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Unidade</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Estoque Atual</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Estoque Mínimo</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Localização</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {products.map((p) => (
-                    <tr key={p.id}>
-                      <td className="px-4 py-3 font-mono font-medium text-gray-900">{p.sku}</td>
-                      <td className="px-4 py-3 text-gray-800">{p.name}</td>
-                      <td className="px-4 py-3 text-gray-600">{p.category}</td>
-                      <td className="px-4 py-3 text-gray-600">{p.unit_measure}</td>
-                      <td className="px-4 py-3 font-semibold text-gray-900">{p.stock_current}</td>
-                      <td className="px-4 py-3 text-gray-500">{p.stock_min}</td>
-                      <td className="px-4 py-3 text-gray-500">{p.location || "Central"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table></UiTableScroll>
-            </div>
-          )}
-        </div>
-      )}
-
-      {!loading && !error && activeTab === "reservas" && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">Reservas de Estoque para Implantação / Proposta</h2>
+          <div className={styles.actions}>
+            <button
+              type="button"
+              aria-label={`Atualizar ${config.label.replace(" & ", " e ").toLocaleLowerCase("pt-BR")}`}
+              disabled={state.phase === "loading" || (state.phase === "ready" && state.refreshing)}
+              onClick={() => void loadData(activeTab)}
+            >
+              {state.phase === "ready" && state.refreshing ? "Atualizando…" : "Atualizar dados"}
+            </button>
           </div>
-          {reservations.length === 0 ? (
-            <div className="p-8 text-center text-gray-500 border rounded">Nenhuma reserva ativa no momento.</div>
-          ) : (
-            <div className="overflow-x-auto border rounded-lg">
-              <UiTableScroll><table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Produto</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Qtd Reservada</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Tipo Reserva</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Referência</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {reservations.map((r) => (
-                    <tr key={r.id}>
-                      <td className="px-4 py-3 font-medium text-gray-900">{r.product_name || r.product_id}</td>
-                      <td className="px-4 py-3 font-semibold text-gray-800">{r.quantity}</td>
-                      <td className="px-4 py-3 text-gray-600 capitalize">{r.reservation_type}</td>
-                      <td className="px-4 py-3 text-gray-500">{r.reference_type} #{r.reference_id}</td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                          {r.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table></UiTableScroll>
-            </div>
-          )}
         </div>
-      )}
 
-      {!loading && !error && activeTab === "ativos" && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">Equipamentos e Ativos Serializados</h2>
+        {(state.phase === "idle" || state.phase === "loading") ? (
+          <div data-testid={`patrimonio-${activeTab}-carregando`}>
+            <UiState
+              variant="loading"
+              title={config.loading}
+              detail="Aguarde a resposta desta aba; nenhum vazio ou total é presumido durante a leitura."
+            />
           </div>
-          {assets.length === 0 ? (
-            <div className="p-8 text-center text-gray-500 border rounded">Nenhum ativo serializado cadastrado.</div>
-          ) : (
-            <div className="overflow-x-auto border rounded-lg">
-              <UiTableScroll><table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Número de Série</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Item</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Custodiante / Titular</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Garantia</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {assets.map((a) => (
-                    <tr key={a.id}>
-                      <td className="px-4 py-3 font-mono font-medium text-gray-900">{a.serial_number}</td>
-                      <td className="px-4 py-3 text-gray-800">{a.product_name || "Equipamento"}</td>
-                      <td className="px-4 py-3 text-gray-600">{a.owner_name} ({a.owner_type})</td>
-                      <td className="px-4 py-3 text-gray-500">{a.warranty_until ? new Date(a.warranty_until).toLocaleDateString("pt-BR") : "Não informada"}</td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                          {a.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table></UiTableScroll>
-            </div>
-          )}
-        </div>
-      )}
+        ) : null}
 
-      {!loading && !error && activeTab === "os" && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">Ordens de Serviço (OS) & Manutenção</h2>
+        {state.phase === "failed" ? (
+          <div data-testid={`patrimonio-${activeTab}-${state.error.kind === "denied" || state.error.kind === "auth" ? "negado" : "falha"}`}>
+            <UiState
+              variant={state.error.kind === "denied" || state.error.kind === "auth" ? "denied" : "error"}
+              title={state.error.title}
+              detail={`${assetErrorDetail(state.error)} ${config.absence}`}
+              onRetry={state.error.canRetry ? () => void loadData(activeTab) : undefined}
+            />
           </div>
-          {serviceOrders.length === 0 ? (
-            <div className="p-8 text-center text-gray-500 border rounded">Nenhuma ordem de serviço cadastrada.</div>
-          ) : (
-            <div className="overflow-x-auto border rounded-lg">
-              <UiTableScroll><table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Protocolo</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Título</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Solicitante</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Técnico</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Prioridade</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {serviceOrders.map((so) => (
-                    <tr key={so.id}>
-                      <td className="px-4 py-3 font-mono font-medium text-gray-900">{so.protocol}</td>
-                      <td className="px-4 py-3 text-gray-800">{so.title}</td>
-                      <td className="px-4 py-3 text-gray-600">{so.requester_name}</td>
-                      <td className="px-4 py-3 text-gray-600">{so.technician_name || "A designar"}</td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-800 uppercase">
-                          {so.priority}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                          {so.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table></UiTableScroll>
-            </div>
-          )}
-        </div>
-      )}
+        ) : null}
 
-      {!loading && !error && activeTab === "inventarios" && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">Inventários Físicos e Ajustes</h2>
-          </div>
-          {inventories.length === 0 ? (
-            <div className="p-8 text-center text-gray-500 border rounded">Nenhum inventário cadastrado.</div>
-          ) : (
-            <div className="overflow-x-auto border rounded-lg">
-              <UiTableScroll><table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Protocolo</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Título</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Localização</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {inventories.map((inv) => (
-                    <tr key={inv.id}>
-                      <td className="px-4 py-3 font-mono font-medium text-gray-900">{inv.protocol}</td>
-                      <td className="px-4 py-3 text-gray-800">{inv.title}</td>
-                      <td className="px-4 py-3 text-gray-600">{inv.location}</td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                          {inv.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table></UiTableScroll>
-            </div>
-          )}
-        </div>
-      )}
-
-      {!loading && !error && activeTab === "requisicoes" && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">Requisições Internas de Materiais</h2>
-            <span className="text-xs bg-amber-50 text-amber-700 px-2 py-1 rounded border border-amber-200 font-medium">
-              Fluxo Sintético Interno (Sem compras ou pagamentos reais externos)
-            </span>
-          </div>
-          {requisitions.length === 0 ? (
-            <div className="p-8 text-center text-gray-500 border rounded">Nenhuma requisição registrada.</div>
-          ) : (
-            <div className="overflow-x-auto border rounded-lg">
-              <UiTableScroll><table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Protocolo</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Item</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Qtd</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Solicitante</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Urgência</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {requisitions.map((reqItem) => (
-                    <tr key={reqItem.id}>
-                      <td className="px-4 py-3 font-mono font-medium text-gray-900">{reqItem.protocol}</td>
-                      <td className="px-4 py-3 text-gray-800">{reqItem.product_name || "Material"}</td>
-                      <td className="px-4 py-3 font-semibold text-gray-900">{reqItem.quantity}</td>
-                      <td className="px-4 py-3 text-gray-600">{reqItem.requester_name}</td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800 uppercase">
-                          {reqItem.urgency}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                          {reqItem.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table></UiTableScroll>
-            </div>
-          )}
-        </div>
-      )}
+        {state.phase === "ready" ? (
+          <>
+            {state.refreshing ? (
+              <p className={`${styles.notice} ${styles.noticeInfo}`} role="status" data-testid={`patrimonio-${activeTab}-atualizando`}>
+                Atualizando esta aba. O conteúdo abaixo continua sendo o da última leitura concluída às {readTime(state.readAt)}.
+              </p>
+            ) : null}
+            {state.staleError ? (
+              <div className={`${styles.notice} ${styles.noticeWarning}`} role="alert" data-testid={`patrimonio-${activeTab}-desatualizado`}>
+                <strong>Não foi possível atualizar esta aba.</strong>
+                <p>
+                  {assetErrorDetail(state.staleError)} {config.absence} O conteúdo abaixo é da última leitura concluída às {readTime(state.readAt)} e pode estar desatualizado.
+                </p>
+                {state.staleError.canRetry ? (
+                  <div className={styles.actions}>
+                    <button type="button" onClick={() => void loadData(activeTab)}>Tentar novamente</button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            {state.items.length === 0 ? (
+              <div data-testid={`patrimonio-${activeTab}-vazio`}>
+                <UiState variant="empty" title={config.emptyTitle} detail={config.emptyDetail} />
+              </div>
+            ) : renderTable(activeTab, state.items)
+            }
+          </>
+        ) : null}
+      </section>
     </UiTaskWorkspace>
+  );
+}
+
+function renderTable(tab: Tab, items: AssetItem[]) {
+  if (tab === "produtos") {
+    const products = items as Product[];
+    return (
+      <div className={styles.tableWrap} data-testid="patrimonio-produtos-tabela">
+        <UiTableScroll>
+          <table className={styles.table}>
+            <caption>{products.length} produto(s) na última leitura concluída.</caption>
+            <thead><tr><th>SKU</th><th>Produto</th><th>Categoria</th><th>Unidade</th><th>Estoque atual</th><th>Estoque mínimo</th><th>Nível</th><th>Localização</th></tr></thead>
+            <tbody>{products.map(product => {
+              const belowMinimum = product.stock_current < product.stock_min;
+              return <tr key={product.id}>
+                <td><code>{product.sku}</code></td><td>{product.name}</td><td>{product.category}</td><td>{product.unit_measure}</td>
+                <td>{product.stock_current}</td><td>{product.stock_min}</td>
+                <td><UiBadge tone={belowMinimum ? "warning" : "success"} srPrefix="Nível de estoque">{belowMinimum ? "Abaixo do mínimo" : "Dentro do mínimo"}</UiBadge></td>
+                <td>{product.location || "Não informada"}</td>
+              </tr>;
+            })}</tbody>
+          </table>
+        </UiTableScroll>
+      </div>
+    );
+  }
+
+  if (tab === "reservas") {
+    const reservations = items as Reservation[];
+    return (
+      <div className={styles.tableWrap} data-testid="patrimonio-reservas-tabela"><UiTableScroll>
+        <table className={styles.table}><caption>{reservations.length} reserva(s) na última leitura concluída.</caption>
+          <thead><tr><th>Produto</th><th>Quantidade</th><th>Tipo</th><th>Referência</th><th>Situação</th></tr></thead>
+          <tbody>{reservations.map(item => <tr key={item.id}><td>{item.product_name || item.product_id}</td><td>{item.quantity}</td><td>{readable(item.reservation_type)}</td><td>{readable(item.reference_type)} · {item.reference_id}</td><td><Status value={item.status} prefix="Situação da reserva" /></td></tr>)}</tbody>
+        </table>
+      </UiTableScroll></div>
+    );
+  }
+
+  if (tab === "ativos") {
+    const assets = items as Asset[];
+    return (
+      <div className={styles.tableWrap} data-testid="patrimonio-ativos-tabela"><UiTableScroll>
+        <table className={styles.table}><caption>{assets.length} ativo(s) na última leitura concluída.</caption>
+          <thead><tr><th>Número de série</th><th>Item</th><th>Custodiante ou titular</th><th>Garantia declarada</th><th>Situação</th></tr></thead>
+          <tbody>{assets.map(item => <tr key={item.id}><td><code>{item.serial_number}</code></td><td>{item.product_name || "Equipamento sem nome retornado"}</td><td>{item.owner_name} · {readable(item.owner_type)}</td><td>{item.warranty_until ? new Date(`${item.warranty_until}T12:00:00`).toLocaleDateString("pt-BR") : "Não informada"}</td><td><Status value={item.status} prefix="Situação do ativo" /></td></tr>)}</tbody>
+        </table>
+      </UiTableScroll></div>
+    );
+  }
+
+  if (tab === "os") {
+    const orders = items as ServiceOrder[];
+    return (
+      <div className={styles.tableWrap} data-testid="patrimonio-os-tabela"><UiTableScroll>
+        <table className={styles.table}><caption>{orders.length} ordem(ns) de serviço na última leitura concluída.</caption>
+          <thead><tr><th>Protocolo</th><th>Ordem</th><th>Solicitante</th><th>Responsável técnico</th><th>Prioridade</th><th>Situação</th><th>Diagnóstico</th></tr></thead>
+          <tbody>{orders.map(item => <tr key={item.id}><td><code>{item.protocol}</code></td><td>{item.title}</td><td>{item.requester_name}</td><td>{item.technician_name || "Ainda não atribuído"}</td><td><Status value={item.priority} prefix="Prioridade" /></td><td><Status value={item.status} prefix="Situação da ordem" /></td><td>{item.diagnosis || "Ainda não informado"}</td></tr>)}</tbody>
+        </table>
+      </UiTableScroll></div>
+    );
+  }
+
+  if (tab === "inventarios") {
+    const inventories = items as Inventory[];
+    return (
+      <div className={styles.tableWrap} data-testid="patrimonio-inventarios-tabela"><UiTableScroll>
+        <table className={styles.table}><caption>{inventories.length} inventário(s) na última leitura concluída.</caption>
+          <thead><tr><th>Protocolo</th><th>Inventário</th><th>Local</th><th>Situação do ciclo</th></tr></thead>
+          <tbody>{inventories.map(item => <tr key={item.id}><td><code>{item.protocol}</code></td><td>{item.title}</td><td>{item.location}</td><td><Status value={item.status} prefix="Situação do inventário" /></td></tr>)}</tbody>
+        </table>
+      </UiTableScroll></div>
+    );
+  }
+
+  const requisitions = items as Requisition[];
+  return (
+    <div className={styles.tableWrap} data-testid="patrimonio-requisicoes-tabela"><UiTableScroll>
+      <table className={styles.table}><caption>{requisitions.length} requisição(ões) na última leitura concluída.</caption>
+        <thead><tr><th>Protocolo</th><th>Produto</th><th>Quantidade</th><th>Solicitante</th><th>Urgência</th><th>Situação</th><th>Motivo</th></tr></thead>
+        <tbody>{requisitions.map(item => <tr key={item.id}><td><code>{item.protocol}</code></td><td>{item.product_name || "Produto não retornado"}</td><td>{item.quantity}</td><td>{item.requester_name}</td><td><Status value={item.urgency} prefix="Urgência" /></td><td><Status value={item.status} prefix="Situação da requisição" /></td><td>{item.reason}</td></tr>)}</tbody>
+      </table>
+    </UiTableScroll></div>
   );
 }
