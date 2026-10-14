@@ -20,11 +20,21 @@
 // Os títulos "Contratos e implantação" e "Cadastro manual identificado" são
 // contrato do gate herdado `tests/l05-delivery.integration.test.mjs` e foram
 // preservados exatamente.
+//
+// UX-PRO-06 (fatia /admin/contratos, 14/10/2026) — estados de leitura da
+// família: uma releitura que falha NÃO apaga mais a lista já lida (as três
+// leituras preservam os itens e declaram a desatualização com `role="alert"`,
+// motivo real e hora da última leitura concluída); a releitura em curso mantém
+// o conteúdo visível com `role="status"`; dúvida de autorização (401/403)
+// continua falhando fechada, sem dado preservado e sem repetir a mesma
+// chamada. Nenhuma URL, método, corpo, papel ou regra mudou — igual ao já
+// entregue no funil (#212), na carteira (#213) e no comercial (#214).
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import UiBadge from "../../../components/ui/UiBadge";
 import UiState from "../../../components/ui/UiState";
 import styles from "../../../components/ui/UiWorkspace.module.css";
+import contratosStyles from "./Contratos.module.css";
 import { contractRequest, type ContractErrorDescriptor } from "../../../lib/contract-request";
 import {
   brl,
@@ -47,10 +57,74 @@ type Contract = {
   total_price: string;
 };
 
-type Leitura<T> = { itens: T[]; carregando: boolean; erro: ContractErrorDescriptor | null };
+type Leitura<T> = {
+  itens: T[];
+  carregando: boolean;
+  erro: ContractErrorDescriptor | null;
+  // UX-PRO-06 (contratos): quando a última leitura concluiu (relógio do
+  // navegador no instante do sucesso). `null` significa que nenhuma leitura
+  // concluiu ainda — é o que separa "dados possivelmente desatualizados" de
+  // "nunca houve leitura concluída".
+  lidoEm: number | null;
+};
 
-const leituraInicial = <T,>(): Leitura<T> => ({ itens: [], carregando: true, erro: null });
+const leituraInicial = <T,>(): Leitura<T> => ({ itens: [], carregando: true, erro: null, lidoEm: null });
 const today = () => new Date().toISOString().slice(0, 10);
+
+// UX-PRO-06 (contratos): hora da última leitura concluída, para a faixa de
+// dados desatualizados. Derivada do relógio do navegador no instante do
+// sucesso — nenhum valor é estimado nem gravado.
+function formatReadAt(value: number | null) {
+  if (value === null) return "—";
+  return new Date(value).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+}
+
+// Dúvida de autorização (401/403) é diferente de falha transitória: ali a
+// apresentação falha fechada, sem dado preservado e sem convite a repetir a
+// mesma chamada — padrão já entregue no funil, na carteira e no comercial.
+const erroNegado = (erro: ContractErrorDescriptor) => erro.kind === "denied" || erro.kind === "auth";
+
+// Uma leitura que falha NÃO apaga o que já foi lido: se já existiu leitura
+// concluída e a falha não é de autorização, a lista permanece e a falha é
+// declarada na faixa de desatualização. Sem leitura concluída (ou com
+// autorização duvidosa), o estado cheio assume a seção.
+function leituraFalhada<T>(atual: Leitura<T>, erro: ContractErrorDescriptor): Leitura<T> {
+  if (atual.lidoEm !== null && !erroNegado(erro)) {
+    return { ...atual, carregando: false, erro };
+  }
+  return { itens: [], carregando: false, erro, lidoEm: null };
+}
+
+// Faixa role="alert" de dados desatualizados: motivo real, hora da última
+// leitura concluída, o aviso de que dado antigo não significa lista vazia e a
+// repetição quando o erro permite. Igual à família (carteira/funil).
+function AvisoDesatualizado({
+  testId, erro, lidoEm, aoRepetir,
+}: {
+  testId: string;
+  erro: ContractErrorDescriptor;
+  lidoEm: number;
+  aoRepetir: () => void;
+}) {
+  return (
+    <p role="alert" className={contratosStyles.stale} data-testid={testId}>
+      A última atualização desta lista falhou ({erro.title}). Os itens abaixo são da última leitura
+      concluída, de {formatReadAt(lidoEm)}, e podem estar desatualizados — isto não significa que a
+      lista esteja vazia; a lista volta a acompanhar o servidor assim que uma leitura concluir.
+      {erro.kind === "retry" ? (
+        <>
+          {" "}
+          <button type="button" onClick={aoRepetir}>Tentar novamente</button>
+        </>
+      ) : null}
+    </p>
+  );
+}
+
+// Indicador role="status" de releitura em curso: a lista permanece na tela.
+function AvisoAtualizando({ testId, children }: { testId: string; children: string }) {
+  return <p role="status" className={contratosStyles.updating} data-testid={testId}>{children}</p>;
+}
 
 export default function ContractWorkspace() {
   const [empresas, setEmpresas] = useState<Leitura<Company>>(leituraInicial);
@@ -69,24 +143,24 @@ export default function ContractWorkspace() {
     setEmpresas(atual => ({ ...atual, carregando: true, erro: null }));
     const resultado = await contractRequest<{ companies?: Company[] }>("/api/crm/companies?type=client");
     setEmpresas(resultado.ok
-      ? { itens: resultado.data.companies || [], carregando: false, erro: null }
-      : { itens: [], carregando: false, erro: resultado.error });
+      ? { itens: resultado.data.companies || [], carregando: false, erro: null, lidoEm: Date.now() }
+      : atual => leituraFalhada(atual, resultado.error));
   }, []);
 
   const carregarPropostas = useCallback(async () => {
     setPropostas(atual => ({ ...atual, carregando: true, erro: null }));
     const resultado = await contractRequest<{ proposals?: Proposal[] }>("/api/crm/proposals?status=aceita&limit=100");
     setPropostas(resultado.ok
-      ? { itens: resultado.data.proposals || [], carregando: false, erro: null }
-      : { itens: [], carregando: false, erro: resultado.error });
+      ? { itens: resultado.data.proposals || [], carregando: false, erro: null, lidoEm: Date.now() }
+      : atual => leituraFalhada(atual, resultado.error));
   }, []);
 
   const carregarContratos = useCallback(async () => {
     setContratos(atual => ({ ...atual, carregando: true, erro: null }));
     const resultado = await contractRequest<{ contracts?: Contract[] }>("/api/crm/contracts");
     setContratos(resultado.ok
-      ? { itens: resultado.data.contracts || [], carregando: false, erro: null }
-      : { itens: [], carregando: false, erro: resultado.error });
+      ? { itens: resultado.data.contracts || [], carregando: false, erro: null, lidoEm: Date.now() }
+      : atual => leituraFalhada(atual, resultado.error));
   }, []);
 
   useEffect(() => {
@@ -158,18 +232,34 @@ export default function ContractWorkspace() {
           Escolha uma proposta aceita e sua versão preservada. A operação é
           idempotente: repetir não cria um segundo contrato.
         </p>
-        {propostas.carregando ? (
+        {/* UX-PRO-06 (contratos): com leitura concluída, a releitura mantém o
+            conteúdo na tela — indicador e faixa de desatuação por cima; os
+            estados cheios só existem quando não há leitura concluída (ou a
+            autorização falhou, que falha fechada). */}
+        {propostas.carregando && propostas.lidoEm !== null ? (
+          <AvisoAtualizando testId="propostas-atualizando">Atualizando as propostas aceitas…</AvisoAtualizando>
+        ) : null}
+        {propostas.erro && propostas.lidoEm !== null && !erroNegado(propostas.erro) ? (
+          <AvisoDesatualizado testId="propostas-desatualizado" erro={propostas.erro} lidoEm={propostas.lidoEm} aoRepetir={() => void carregarPropostas()} />
+        ) : null}
+        {propostas.carregando && propostas.lidoEm === null ? (
           <UiState variant="loading" title="Lendo propostas aceitas…" detail="Buscando as propostas aceitas da sua carteira." />
-        ) : propostas.erro ? (
+        ) : propostas.erro && (propostas.lidoEm === null || erroNegado(propostas.erro)) ? (
           <UiState
-            variant={propostas.erro.kind === "denied" || propostas.erro.kind === "auth" ? "denied" : "error"}
+            variant={erroNegado(propostas.erro) ? "denied" : "error"}
             title={propostas.erro.title}
             detail={`${propostas.erro.detail} ${contractErrorFootnote(propostas.erro)}`}
-            retryLabel={propostas.erro.canRetry ? "Tentar ler de novo" : undefined}
-            onRetry={propostas.erro.canRetry ? () => void carregarPropostas() : undefined}
+            retryLabel={propostas.erro.kind === "retry" ? "Tentar ler de novo" : undefined}
+            onRetry={propostas.erro.kind === "retry" ? () => void carregarPropostas() : undefined}
           />
         ) : propostas.itens.length === 0 ? (
-          <UiState variant="empty" title="Nenhuma proposta aceita disponível para sua carteira" detail="A leitura funcionou e não há proposta aceita aguardando virar contrato." />
+          <UiState
+            variant="empty"
+            title={propostas.erro ? "Nenhuma proposta na última leitura concluída" : "Nenhuma proposta aceita disponível para sua carteira"}
+            detail={propostas.erro
+              ? "A última leitura concluída não trouxe propostas aceitas e a tentativa de atualizar falhou."
+              : "A leitura funcionou e não há proposta aceita aguardando virar contrato."}
+          />
         ) : (
           <form onSubmit={criarDaProposta} className={styles.fieldset}>
             <div className={styles.field}>
@@ -198,13 +288,22 @@ export default function ContractWorkspace() {
         <p className={styles.hint}>
           Não cria proposta fictícia. Informe a origem real e o motivo do registro.
         </p>
-        {empresas.erro ? (
+        {/* UX-PRO-06 (contratos): mesma máquina de estados das demais leituras.
+            A falha sem leitura concluída (ou de autorização) assume a seção;
+            a falha sobre leitura concluída preserva as opções e avisa. */}
+        {empresas.carregando && empresas.lidoEm !== null ? (
+          <AvisoAtualizando testId="empresas-atualizando">Atualizando as empresas clientes…</AvisoAtualizando>
+        ) : null}
+        {empresas.erro && empresas.lidoEm !== null && !erroNegado(empresas.erro) ? (
+          <AvisoDesatualizado testId="empresas-desatualizado" erro={empresas.erro} lidoEm={empresas.lidoEm} aoRepetir={() => void carregarEmpresas()} />
+        ) : null}
+        {empresas.erro && (empresas.lidoEm === null || erroNegado(empresas.erro)) ? (
           <UiState
-            variant={empresas.erro.kind === "denied" || empresas.erro.kind === "auth" ? "denied" : "error"}
+            variant={erroNegado(empresas.erro) ? "denied" : "error"}
             title={empresas.erro.title}
             detail={`${empresas.erro.detail} ${contractErrorFootnote(empresas.erro)}`}
-            retryLabel={empresas.erro.canRetry ? "Tentar ler de novo" : undefined}
-            onRetry={empresas.erro.canRetry ? () => void carregarEmpresas() : undefined}
+            retryLabel={empresas.erro.kind === "retry" ? "Tentar ler de novo" : undefined}
+            onRetry={empresas.erro.kind === "retry" ? () => void carregarEmpresas() : undefined}
           />
         ) : null}
         <form onSubmit={criarManual} className={styles.fieldset}>
@@ -275,18 +374,35 @@ export default function ContractWorkspace() {
 
       <section aria-labelledby="contracts-title" className={styles.panel} data-testid="contracts-list">
         <h2 id="contracts-title" className={styles.panelTitle}>Contratos da carteira</h2>
-        {contratos.carregando ? (
+        {/* UX-PRO-06 (contratos): releitura em curso e falha sobre leitura
+            concluída mantêm a tabela na tela — indicador role="status" e faixa
+            role="alert" por cima dela; os estados cheios (carregando, erro,
+            negado) só assumem a seção quando não há leitura concluída ou a
+            autorização falhou (fail-closed, sem dado preservado). */}
+        {contratos.carregando && contratos.lidoEm !== null ? (
+          <AvisoAtualizando testId="contratos-atualizando">Atualizando a lista de contratos…</AvisoAtualizando>
+        ) : null}
+        {contratos.erro && contratos.lidoEm !== null && !erroNegado(contratos.erro) ? (
+          <AvisoDesatualizado testId="contratos-desatualizado" erro={contratos.erro} lidoEm={contratos.lidoEm} aoRepetir={() => void carregarContratos()} />
+        ) : null}
+        {contratos.carregando && contratos.lidoEm === null ? (
           <UiState variant="loading" title="Lendo contratos…" detail="Buscando os contratos acessíveis à sua carteira." />
-        ) : contratos.erro ? (
+        ) : contratos.erro && (contratos.lidoEm === null || erroNegado(contratos.erro)) ? (
           <UiState
-            variant={contratos.erro.kind === "denied" || contratos.erro.kind === "auth" ? "denied" : "error"}
+            variant={erroNegado(contratos.erro) ? "denied" : "error"}
             title={contratos.erro.title}
             detail={`${contratos.erro.detail} ${contractErrorFootnote(contratos.erro)}`}
-            retryLabel={contratos.erro.canRetry ? "Tentar ler de novo" : undefined}
-            onRetry={contratos.erro.canRetry ? () => void carregarContratos() : undefined}
+            retryLabel={contratos.erro.kind === "retry" ? "Tentar ler de novo" : undefined}
+            onRetry={contratos.erro.kind === "retry" ? () => void carregarContratos() : undefined}
           />
         ) : contratos.itens.length === 0 ? (
-          <UiState variant="empty" title="Nenhum contrato acessível" detail="A leitura funcionou e nenhum contrato está na sua carteira." />
+          <UiState
+            variant="empty"
+            title={contratos.erro ? "Nenhum contrato na última leitura concluída" : "Nenhum contrato acessível"}
+            detail={contratos.erro
+              ? "A última leitura concluída não trouxe contratos e a tentativa de atualizar falhou."
+              : "A leitura funcionou e nenhum contrato está na sua carteira."}
+          />
         ) : (
           <div className={styles.tableWrap}>
             <table className={styles.table} data-testid="contracts-table">

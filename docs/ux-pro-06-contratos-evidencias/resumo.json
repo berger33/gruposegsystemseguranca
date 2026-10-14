@@ -1,0 +1,118 @@
+{
+  "stage": "ux-pro-06-contratos",
+  "generatedBy": "gate npm run test:ux-crm:pg (UX_CONTRATOS_EVIDENCE_DIR=docs/ux-pro-06-contratos-evidencias)",
+  "notes": "Evidências da fatia UX-PRO-06 — estados de leitura da lista de contratos (/admin/contratos). Massa inteiramente sintética criada pelas próprias APIs, sessão de staff provisionada pelo gate; nenhuma captura usa dado pessoal ou credencial. As capturas de outras execuções da suíte ficam fora desta pasta.",
+  "fatia": "UX-PRO-06 — /admin/contratos",
+  "rota": "/admin/contratos",
+  "papel_usado": "marcelo (dados sintéticos; sem credencial registrada)",
+  "viewports": [
+    320,
+    390,
+    768,
+    1440
+  ],
+  "temas": [
+    "day",
+    "night"
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-06-contratos",
+      "route": "/admin/contratos",
+      "role": "marcelo",
+      "viewport": "320x844",
+      "theme": "day",
+      "file": "320-dia.png",
+      "sobraDocumentoPx": 0
+    },
+    {
+      "stage": "ux-pro-06-contratos",
+      "route": "/admin/contratos",
+      "role": "marcelo",
+      "viewport": "390x844",
+      "theme": "day",
+      "file": "390-dia.png",
+      "sobraDocumentoPx": 0
+    },
+    {
+      "stage": "ux-pro-06-contratos",
+      "route": "/admin/contratos",
+      "role": "marcelo",
+      "viewport": "768x1024",
+      "theme": "day",
+      "file": "768-dia.png",
+      "sobraDocumentoPx": 0
+    },
+    {
+      "stage": "ux-pro-06-contratos",
+      "route": "/admin/contratos",
+      "role": "marcelo",
+      "viewport": "1440x900",
+      "theme": "day",
+      "file": "1440-dia.png",
+      "sobraDocumentoPx": 0
+    },
+    {
+      "stage": "ux-pro-06-contratos",
+      "route": "/admin/contratos",
+      "role": "marcelo",
+      "viewport": "320x844",
+      "theme": "night",
+      "file": "320-noite.png",
+      "sobraDocumentoPx": 0
+    },
+    {
+      "stage": "ux-pro-06-contratos",
+      "route": "/admin/contratos",
+      "role": "marcelo",
+      "viewport": "390x844",
+      "theme": "night",
+      "file": "390-noite.png",
+      "sobraDocumentoPx": 0
+    },
+    {
+      "stage": "ux-pro-06-contratos",
+      "route": "/admin/contratos",
+      "role": "marcelo",
+      "viewport": "768x1024",
+      "theme": "night",
+      "file": "768-noite.png",
+      "sobraDocumentoPx": 0
+    },
+    {
+      "stage": "ux-pro-06-contratos",
+      "route": "/admin/contratos",
+      "role": "marcelo",
+      "viewport": "1440x900",
+      "theme": "night",
+      "file": "1440-noite.png",
+      "sobraDocumentoPx": 0
+    },
+    {
+      "stage": "ux-pro-06-contratos",
+      "route": "/admin/contratos",
+      "role": "marcelo",
+      "viewport": "390x844",
+      "theme": "day",
+      "state": "teclado",
+      "file": "390-dia-teclado.png",
+      "firstFocus": true,
+      "percursoTeclado": [
+        "Empresas e funil",
+        "contract-proposal",
+        "Criar contrato"
+      ],
+      "contornoFoco": {
+        "outlineStyle": "solid",
+        "outlineWidth": "3px",
+        "boxShadow": "none"
+      },
+      "sobraDocumentoPx": 0
+    }
+  ],
+  "transbordoDocumentoPorCaptura": "nenhum",
+  "limites": [
+    "Medição automatizada por Chromium; não é validação manual nem aceite de Marcelo, Andreia ou comercial.",
+    "A tela de detalhe /admin/contratos/[id] não é coberta por esta evidência (fatia própria)."
+  ]
+}
