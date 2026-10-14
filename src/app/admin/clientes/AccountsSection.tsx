@@ -2,16 +2,17 @@
 
 import { useState, type FormEvent } from "react";
 import { Plus, RefreshCw } from "lucide-react";
-import { callApi, jsonInit, explainApiError, accountStatusLabel, type AdminAccount } from "./admin-shared";
+import UiState from "../../../components/ui/UiState";
+import { callApi, jsonInit, explainApiError, accountStatusLabel, type AdminAccount, type Recurso } from "./admin-shared";
 import styles from "./AdminClientes.module.css";
 
 const ACCOUNT_STATUSES: AdminAccount["status"][] = ["active", "suspended", "closed"];
 
 export default function AccountsSection({
-  accounts,
+  leitura,
   reloadAccounts,
 }: {
-  accounts: AdminAccount[] | null;
+  leitura: Recurso<AdminAccount[]>;
   reloadAccounts: () => Promise<void>;
 }) {
   const [displayName, setDisplayName] = useState("");
@@ -20,6 +21,8 @@ export default function AccountsSection({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const accounts = leitura.dado;
+  const falha = leitura.falhaAtualizacao;
 
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -56,7 +59,7 @@ export default function AccountsSection({
   }
 
   return (
-    <section className={styles.card} aria-labelledby="accounts-section-title">
+    <section className={styles.card} aria-labelledby="accounts-section-title" data-testid="clientes-cadastros">
       <h2 id="accounts-section-title">1 · Cadastros centrais de clientes</h2>
       <p className={styles.hint}>
         Cada cadastro representa a empresa/condomínio cliente. O login (identidade) nunca entra como
@@ -112,41 +115,72 @@ export default function AccountsSection({
           Recarregar lista
         </button>
       </p>
-      {!accounts ? (
+      {leitura.concluiu ? (
+        <>
+          {leitura.carregando ? (
+            <p role="status" data-testid="clientes-cadastros-atualizando" className={styles.updating}>
+              Atualizando os cadastros centrais…
+            </p>
+          ) : null}
+          {falha ? (
+            <div role="alert" data-testid="clientes-cadastros-desatualizada" className={styles.stale}>
+              <strong>{falha.message}</strong>{" "}
+              Esta não é uma lista vazia: os dados abaixo são da última leitura concluída, às {leitura.ultimaLeitura}, e
+              podem estar desatualizados em relação ao servidor.
+              <div>
+                <button type="button" onClick={() => void reloadAccounts()}>Tentar novamente</button>
+              </div>
+            </div>
+          ) : null}
+          {accounts && accounts.length > 0 ? (
+            <ul className={styles.list}>
+              {accounts.map(account => (
+                <li key={account.id} className={styles.listItem}>
+                  <div className={styles.listItemMain}>
+                    <p className={styles.listItemTitle}>{account.display_name}</p>
+                    <p className={styles.listItemMeta}>
+                      {account.document_ref ? `Doc.: ${account.document_ref} · ` : ""}
+                      Criado em {new Date(account.created_at).toLocaleDateString("pt-BR")}
+                    </p>
+                  </div>
+                  <select
+                    className={styles.smallSelect}
+                    value={account.status}
+                    disabled={busy}
+                    onChange={event => void changeStatus(account, event.target.value as AdminAccount["status"])}
+                    aria-label={`Situação do cadastro ${account.display_name}`}
+                  >
+                    {ACCOUNT_STATUSES.map(status => (
+                      <option key={status} value={status}>
+                        {accountStatusLabel[status]}
+                      </option>
+                    ))}
+                  </select>
+                  {account.notes ? <p className={styles.listItemDetail}>Anotações: {account.notes}</p> : null}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className={styles.empty}>Nenhum cadastro criado ainda. Comece pelo formulário acima.</div>
+          )}
+        </>
+      ) : leitura.erro ? (
+        // Nunca houve leitura concluída: a falha é declarada com repetição — e
+        // não é apresentada como lista vazia nem como carregamento.
+        <div data-testid="clientes-cadastros-falha">
+          <UiState
+            variant="error"
+            title="Falha na consulta de cadastros centrais"
+            detail={`${leitura.erro.message} A ausência abaixo não é um zero: a lista simplesmente não foi lida.`}
+            retryLabel="Tentar novamente"
+            onRetry={() => void reloadAccounts()}
+          />
+        </div>
+      ) : (
         <div className={styles.loadingWrap} style={{ color: "#5a7189" }}>
           <span className={styles.spinner} style={{ borderColor: "#5a7189", borderTopColor: "transparent" }} aria-hidden="true" />
           Carregando cadastros…
         </div>
-      ) : accounts.length === 0 ? (
-        <div className={styles.empty}>Nenhum cadastro criado ainda. Comece pelo formulário acima.</div>
-      ) : (
-        <ul className={styles.list}>
-          {accounts.map(account => (
-            <li key={account.id} className={styles.listItem}>
-              <div className={styles.listItemMain}>
-                <p className={styles.listItemTitle}>{account.display_name}</p>
-                <p className={styles.listItemMeta}>
-                  {account.document_ref ? `Doc.: ${account.document_ref} · ` : ""}
-                  Criado em {new Date(account.created_at).toLocaleDateString("pt-BR")}
-                </p>
-              </div>
-              <select
-                className={styles.smallSelect}
-                value={account.status}
-                disabled={busy}
-                onChange={event => void changeStatus(account, event.target.value as AdminAccount["status"])}
-                aria-label={`Situação do cadastro ${account.display_name}`}
-              >
-                {ACCOUNT_STATUSES.map(status => (
-                  <option key={status} value={status}>
-                    {accountStatusLabel[status]}
-                  </option>
-                ))}
-              </select>
-              {account.notes ? <p className={styles.listItemDetail}>Anotações: {account.notes}</p> : null}
-            </li>
-          ))}
-        </ul>
       )}
     </section>
   );

@@ -7,6 +7,32 @@ export type AdminAccount = {
   created_at: string;
 };
 
+/**
+ * UX-PRO-06 (cadastros centrais): estado de UMA leitura independente.
+ *
+ * `concluiu` separa "nunca houve leitura concluída" de "já houve" — é o que
+ * permite distinguir dado possivelmente desatualizado de ausência de dado.
+ * `falhaAtualizacao` é a falha transitória DEPOIS de uma leitura concluída: os
+ * dados anteriores continuam valendo e a faixa diz isso. Negativa de
+ * autorização nunca entra em `falhaAtualizacao` — ela descarta o dado.
+ */
+export type Recurso<T> = {
+  dado: T | null;
+  carregando: boolean;
+  /** Falha que ocupa a tela por não existir leitura concluída. */
+  erro: AdminApiError | null;
+  concluiu: boolean;
+  /** Hora (relógio do navegador) da última leitura concluída; nada é gravado. */
+  ultimaLeitura: string | null;
+  falhaAtualizacao: AdminApiError | null;
+};
+
+export type ResultadoLeitura<T> = { ok: true; dado: T } | { ok: false; error: AdminApiError };
+
+export function recursoInicial<T>(): Recurso<T> {
+  return { dado: null, carregando: true, erro: null, concluiu: false, ultimaLeitura: null, falhaAtualizacao: null };
+}
+
 export const accountStatusLabel: Record<AdminAccount["status"], string> = {
   active: "Ativa",
   suspended: "Suspensa",
@@ -68,6 +94,7 @@ const apiErrors: Record<string, string> = {
   idempotency_key_required_or_invalid: "A chave segura desta tentativa não foi reconhecida. Reenvie o formulário.",
   idempotency_conflict: "Os dados mudaram durante uma repetição do envio. Revise e tente novamente.",
   individual_staff_required: "Esta operação exige uma sessão individual da equipe.",
+  forbidden: "Sua conta não tem acesso a esta área.",
   admin_session_required: "Sua sessão administrativa expirou. Entre novamente.",
   admin_session_expired: "Sua sessão administrativa expirou. Entre novamente.",
   invalid_json: "O envio não foi reconhecido pelo servidor. Tente novamente.",
@@ -152,10 +179,80 @@ export function explainApiError(code: unknown, fallback = "O servidor respondeu 
   return apiErrors[code] ?? fallback;
 }
 
+/**
+ * UX-PRO-06: classificação do erro de leitura. A mensagem continua sendo a
+ * frase em português que os formulários já exibem; o que passa a existir é o
+ * `status` e o código canônico devolvidos pelo servidor, que permitem separar
+ * três situações que antes eram a mesma coisa:
+ *  - `auth`/`denied` — a autorização caiu: descartar o dado (falha fechada);
+ *  - `transient` — o servidor falhou agora: preservar o que já foi lido.
+ */
+export type AdminErrorKind = "auth" | "denied" | "transient";
+
+const AUTH_CODES = new Set(["admin_session_required", "admin_session_expired"]);
+const DENIED_CODES = new Set(["forbidden", "individual_staff_required", "permission_scope_denied"]);
+
+export class AdminApiError extends Error {
+  readonly status: number;
+  readonly code: string;
+  readonly kind: AdminErrorKind;
+
+  constructor(message: string, { status = 0, code = "" }: { status?: number; code?: string } = {}) {
+    super(message);
+    this.name = "AdminApiError";
+    this.status = status;
+    this.code = code;
+    this.kind = status === 401 || AUTH_CODES.has(code) ? "auth"
+      : status === 403 || DENIED_CODES.has(code) ? "denied"
+      : "transient";
+  }
+
+  get negado() {
+    return this.kind === "auth" || this.kind === "denied";
+  }
+}
+
+export function comoAdminApiError(causa: unknown, fallback: string): AdminApiError {
+  if (causa instanceof AdminApiError) return causa;
+  // Sem resposta do servidor (rede, abort, JSON ilegível) não existe código
+  // canônico: a tela mostra a frase em português do próprio recorte, como
+  // classe transitória, em vez do texto cru do navegador.
+  return new AdminApiError(fallback, { code: "network_or_unknown" });
+}
+
+/**
+ * UX-PRO-06: o mesmo padrão já entregue no funil, na carteira, no comercial, na
+ * lista de contratos e no detalhe do contrato. Releitura em curso NÃO apaga o
+ * que já foi lido; falha transitória depois de uma leitura concluída vira faixa
+ * de "desatualizado" (dados preservados); negativa de autorização continua
+ * falha fechada — descarta o dado e ocupa a tela, sem repetir a mesma chamada.
+ */
+export function resolverLeitura<T>(atual: Recurso<T>, resultado: ResultadoLeitura<T>): Recurso<T> {
+  if (resultado.ok) {
+    return {
+      dado: resultado.dado, carregando: false, erro: null,
+      concluiu: true, ultimaLeitura: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+      falhaAtualizacao: null,
+    };
+  }
+  if (resultado.error.negado) {
+    return { dado: null, carregando: false, erro: resultado.error, concluiu: false, ultimaLeitura: null, falhaAtualizacao: null };
+  }
+  if (atual.concluiu) {
+    return { ...atual, carregando: false, erro: null, falhaAtualizacao: resultado.error };
+  }
+  return { dado: null, carregando: false, erro: resultado.error, concluiu: false, ultimaLeitura: null, falhaAtualizacao: null };
+}
+
 export async function callApi(path: string, init: RequestInit = {}) {
   const response = await fetch(path, { cache: "no-store", ...init });
   const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!response.ok) throw new Error(explainApiError(payload.error));
+  if (!response.ok) {
+    throw new AdminApiError(explainApiError(payload.error), {
+      status: response.status,
+      code: typeof payload.error === "string" ? payload.error : "",
+    });
+  }
   return payload;
 }
 
