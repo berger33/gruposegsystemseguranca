@@ -125,7 +125,7 @@ try {
     UX_EMERGENCY_UI_TIMEOUT: process.env.UX_EMERGENCY_UI_TIMEOUT || '',
   });
   result = executed.code;
-  const summary = auditTap(executed.output, { minimumCases: pattern ? 0 : 18 });
+  const summary = auditTap(executed.output, { minimumCases: pattern ? 0 : 21 });
   console.log(`UX_EMERGENCY_TAP_SUMMARY: pass=${summary.pass} fail=${summary.fail} skipped=${summary.skipped} todo=${summary.todo}`);
   if (summary.problems.length) {
     console.error(`UX_EMERGENCY_GATE_REJECTED: ${summary.problems.join('; ')}`);
