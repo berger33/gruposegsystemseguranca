@@ -32,6 +32,7 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
+import { recordKeyboardCapture } from '../scripts/ux-pro-00-keyboard-evidence.mjs';
 import pg from 'pg';
 import { chromium as playwrightChromium } from 'playwright';
 import packagedChromium from '@sparticuz/chromium';
@@ -375,8 +376,13 @@ test('UX-PRO-06 clientes: 320/390/768/1440 dia e noite sem transbordo, com percu
         const campo = page.locator('#new-account-name');
         await campo.waitFor();
         let focou = false;
+        const percursoTeclado = [];
         for (let i = 0; i < 60 && !focou; i++) {
           await page.keyboard.press('Tab');
+          percursoTeclado.push(await page.evaluate(() => {
+            const el = document.activeElement;
+            return el.id || el.getAttribute('aria-label') || el.textContent.trim().slice(0, 80) || el.tagName.toLowerCase();
+          }));
           focou = await campo.evaluate(el => el === document.activeElement);
         }
         assert.ok(focou, 'o campo do cadastro precisa ser alcançável por Tab');
@@ -387,6 +393,15 @@ test('UX-PRO-06 clientes: 320/390/768/1440 dia e noite sem transbordo, com percu
         assert.ok(contorno.estilo !== 'none' && contorno.espessura >= 1,
           `foco visível no campo (estilo=${contorno.estilo}, espessura=${contorno.espessura})`);
         await capture(page, 'clientes-390-teclado');
+        // Emissão após as asserções existentes de Tab + contorno; não inferir
+        // percurso/primeiro foco a partir do nome da captura ou de role=alert.
+        const viewport = page.viewportSize();
+        await recordKeyboardCapture(evidenceDir, {
+          stage: 'ux-pro-06-clientes', route: '/admin/clientes', role: 'ti',
+          viewport: `${viewport.width}x${viewport.height}`,
+          theme: await page.evaluate(() => document.documentElement.dataset.adminTheme || 'day'),
+          file: 'clientes-390-teclado.png', firstFocus: true, percursoTeclado,
+        });
       }
     }
     await context.close();

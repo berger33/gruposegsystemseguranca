@@ -38,7 +38,32 @@
       "theme": "day",
       "state": "percurso_teclado",
       "screenshot": "docs/ux-pro-06-contratos-evidencias/contratos-390-teclado.png",
-      "problems": []
+      "problems": [],
+      "firstFocus": true,
+      "percursoTeclado": [
+        "Sair",
+        "Início",
+        "Comercial",
+        "Empresas e funil",
+        "contract-company",
+        "contract-title",
+        "contract-scope",
+        "contract-starts",
+        "contract-starts",
+        "contract-starts",
+        "contract-starts",
+        "contract-ends",
+        "contract-ends",
+        "contract-ends",
+        "contract-ends",
+        "contract-price",
+        "contract-origin",
+        "Registrar contrato manual",
+        "Abrir composição e implantação",
+        "Abrir composição e implantação",
+        "Abrir composição e implantação",
+        "Abrir composição e implantação"
+      ]
     },
     {
       "stage": "ux-pro-06-contratos",

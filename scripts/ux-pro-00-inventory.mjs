@@ -22,6 +22,7 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { hasKeyboardTraversal } from './ux-pro-00-keyboard-evidence.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const appRoot = path.join(root, 'src', 'app');
@@ -219,10 +220,11 @@ async function visualCaptures() {
     }
     for (const entry of parsed.entries || []) {
       if (!entry.route) continue;
-      const record = byRoute.get(entry.route) || { stages: new Set(), viewports: new Set(), firstFocus: false, files: new Set() };
+      const record = byRoute.get(entry.route) || { stages: new Set(), viewports: new Set(), firstFocus: false, keyboardTraversal: false, files: new Set() };
       record.stages.add(parsed.stage || path.basename(path.dirname(file)));
       record.viewports.add(entry.viewport || 'sem_viewport');
       if (entry.firstFocus) record.firstFocus = true;
+      if (hasKeyboardTraversal(entry)) record.keyboardTraversal = true;
       record.files.add(rel(file));
       byRoute.set(entry.route, record);
     }
@@ -277,7 +279,10 @@ const DEMO_MARKERS = /demonstra[çc][ãa]o|demonstrativ|prot[óo]tipo|simula[çc
 // Padrões de estado dominantes no código atual (medidos em src/app em 10/10/2026).
 // São ocorrências estáticas: indicam que a rota declara o estado, não que ele foi exercitado.
 const LOADING_MARKERS = /variant=["']loading|phase[:=]\s*["']loading["']|\bCarregando\b|\bLendo\b/;
-const ERROR_MARKERS = /variant=["']error|ErrorVariant|phase[:=]\s*["']failed["']|\bFalhou\b|\bfalhou\b/;
+// Desatualização de leitura: inclui o testId passado por prop (a faixa usa
+// data-testid={testId}). Não usar role=alert: contracts-write-error é escrita.
+// Células novas auditadas: /admin/contratos e /admin/comercial; ver registro da fatia.
+const ERROR_MARKERS = /variant=["']error|ErrorVariant|phase[:=]\s*["']failed["']|\bFalhou\b|\bfalhou\b|\b(?:data-testid|testId)\s*=\s*["'][a-z0-9-]+-desatualizad[ao]["']/;
 const EMPTY_MARKERS = /variant=["']empty|phase[:=]\s*["']empty["']|\bvazio\b|\bVazio\b|[Nn]enhum/;
 const KEYBOARD_MARKERS = /onKeyDown|addEventListener\(\s*["']keydown|tabIndex|\.focus\(|focus-visible/;
 const LOCALE_DEFAULT = /\.toLocale(?:Date|Time)?String\s*\(\s*\)/g;
@@ -320,7 +325,8 @@ for (const pageFile of pageFiles) {
     estados_carregando: LOADING_MARKERS.test(source) ? 'sim' : 'nao',
     estados_erro: ERROR_MARKERS.test(source) ? 'sim' : 'nao',
     estados_vazio: EMPTY_MARKERS.test(source) ? 'sim' : 'nao',
-    marcadores_teclado: KEYBOARD_MARKERS.test(source) ? 'sim' : 'nao',
+    // Marcador léxico OU percurso explícito medido pelo gate, nunca só firstFocus.
+    marcadores_teclado: KEYBOARD_MARKERS.test(source) || capture?.keyboardTraversal ? 'sim' : 'nao',
     chamadas_locale_padrao: countOccurrences(source, LOCALE_DEFAULT),
     gate_baseline: baselineGates.map((gate) => gate.workflow).join('|'),
     gates_automatizados: routeGates.map((gate) => gate.workflow).join('|'),
@@ -347,9 +353,12 @@ function matrixRow(row) {
   const responsiveness = viewports.length
     ? `capturado em ${viewports.join(', ')}; faltam ${REQUIRED_VIEWPORTS.filter((width) => !covered.includes(width)).map((width) => `${width}px`).join(', ') || 'nenhum'}`
     : 'sem captura; 320/390/768/1440 px nao verificados';
-  const keyboard = row.capturas_primeiro_foco === 'sim'
-    ? 'primeiro foco registrado em captura; percurso completo nao verificado'
-    : (row.marcadores_teclado === 'sim' ? 'marcadores de teclado no codigo; nao verificado em navegador' : 'sem marcador e sem verificacao');
+  const recordedKeyboard = captures.get(row.rota)?.keyboardTraversal;
+  const keyboard = recordedKeyboard
+    ? `percurso de teclado registrado em navegador (recorte automatizado do gate)${row.capturas_primeiro_foco === 'sim' ? '; primeiro foco registrado em captura' : ''}`
+    : (row.capturas_primeiro_foco === 'sim'
+      ? 'primeiro foco registrado em captura; percurso completo nao verificado'
+      : (row.marcadores_teclado === 'sim' ? 'marcadores de teclado no codigo; nao verificado em navegador' : 'sem marcador e sem verificacao'));
   const states = [
     row.estados_carregando === 'sim' ? 'carregando' : null,
     row.estados_erro === 'sim' ? 'erro' : null,
@@ -372,7 +381,7 @@ function matrixRow(row) {
   else gaps.push(`captura ausente em ${REQUIRED_VIEWPORTS.filter((width) => !covered.includes(width)).map((width) => `${width}px`).join('/') || '—'}`);
   if (row.escopo_tema_administrativo === 'sim') gaps.push('tema noturno sem captura');
   else gaps.push('fora do escopo do tema administrativo; identidade da area nao verificada');
-  gaps.push('percurso de teclado nao verificado');
+  gaps.push(recordedKeyboard ? 'teclado limitado ao recorte registrado no gate' : 'percurso de teclado nao verificado');
   gaps.push('estados nao exercitados em navegador');
   gaps.push('validacao manual e aceite humano nao registrados');
   return {
