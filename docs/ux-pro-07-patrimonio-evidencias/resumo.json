@@ -1,0 +1,100 @@
+{
+  "stage": "ux-pro-07-patrimonio",
+  "generatedBy": "npm run test:ux-asset:pg (PostgreSQL descartavel + HTTP real + Chromium)",
+  "notes": "Massa inteiramente sintetica criada pela API AST. problems resulta das medicoes automatizadas; nao representa validacao manual nem aceite humano.",
+  "entries": [
+    {
+      "stage": "ux-pro-07-patrimonio",
+      "route": "/admin/patrimonio",
+      "role": "admin",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-patrimonio-evidencias/patrimonio-1440-falha-inicial.png",
+      "problems": [],
+      "state": "falha_inicial"
+    },
+    {
+      "stage": "ux-pro-07-patrimonio",
+      "route": "/admin/patrimonio",
+      "role": "admin",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-patrimonio-evidencias/patrimonio-1440-desatualizado.png",
+      "problems": [],
+      "state": "releitura_falhou_dado_preservado",
+      "contrasteFaixa": 14.33
+    },
+    {
+      "stage": "ux-pro-07-patrimonio",
+      "route": "/admin/patrimonio",
+      "role": "admin",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-patrimonio-evidencias/patrimonio-1440-dia.png",
+      "problems": [],
+      "overflowDocumentoPx": 0,
+      "menorAlvoAbaPx": 44
+    },
+    {
+      "stage": "ux-pro-07-patrimonio",
+      "route": "/admin/patrimonio",
+      "role": "admin",
+      "viewport": "768x1024",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-patrimonio-evidencias/patrimonio-768-dia.png",
+      "problems": [],
+      "overflowDocumentoPx": 0,
+      "menorAlvoAbaPx": 44
+    },
+    {
+      "stage": "ux-pro-07-patrimonio",
+      "route": "/admin/patrimonio",
+      "role": "admin",
+      "viewport": "768x1024",
+      "theme": "night",
+      "screenshot": "docs/ux-pro-07-patrimonio-evidencias/patrimonio-768-noite.png",
+      "problems": [],
+      "overflowDocumentoPx": 0,
+      "contrasteTitulo": 12.92,
+      "contrasteTabela": 12.92
+    },
+    {
+      "stage": "ux-pro-07-patrimonio",
+      "route": "/admin/patrimonio",
+      "role": "admin",
+      "viewport": "390x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-patrimonio-evidencias/patrimonio-390-dia.png",
+      "problems": [],
+      "overflowDocumentoPx": 0,
+      "menorAlvoAbaPx": 44
+    },
+    {
+      "stage": "ux-pro-07-patrimonio",
+      "route": "/admin/patrimonio",
+      "role": "admin",
+      "viewport": "390x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-patrimonio-evidencias/patrimonio-390-teclado.png",
+      "problems": [],
+      "state": "percurso_teclado",
+      "firstFocus": true,
+      "percursoTeclado": [
+        "Sair",
+        "Início",
+        "patrimonio-tab-produtos"
+      ]
+    },
+    {
+      "stage": "ux-pro-07-patrimonio",
+      "route": "/admin/patrimonio",
+      "role": "admin",
+      "viewport": "320x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-patrimonio-evidencias/patrimonio-320-dia.png",
+      "problems": [],
+      "overflowDocumentoPx": 0,
+      "menorAlvoAbaPx": 44
+    }
+  ]
+}
