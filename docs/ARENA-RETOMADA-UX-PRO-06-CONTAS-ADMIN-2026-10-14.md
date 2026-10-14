@@ -217,3 +217,78 @@ O proprietário decidiu, durante esta sessão, que a fatia seria implementada do
 3. contraste medido da faixa (6,54:1 em 320 px e 1440 px) e contagem de `problems: []` no `resumo.json`.
 
 Nenhuma das três foi implementada: são acréscimos de teste a um gate recém-entregue e dependem de autorização do proprietário.
+
+---
+
+## 9. POSTSCRIPTUM 2 (mesma sessão, encerramento): relido o inventário da `main` `27a26f8`, uma recomendação minha foi corrigida e a próxima fatia foi decidida
+
+### 9.1 A recomendação errada que precisei retirar
+
+Com a fatia de `/admin/clientes` já entregue pela PR #218 e esta sessão encerrada sem PR, reli o inventário versionado em `main` para indicar o próximo passo. A matriz `docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-13.csv` tem 100 linhas e **todas** carregam texto de lacuna; o inventário `docs/UX-PRO-00-INVENTARIO-ROTAS-2026-10-13.csv` tem 100 rotas, 44 delas `/admin`. Destas:
+
+| Rota | `estados_carregando` | `estados_erro` | `estados_vazio` | `marcadores_teclado` | gate focal | `capturas_primeiro_foco` |
+|---|---|---|---|---|---|---|
+| `/admin/clientes` | sim | sim | sim | **nao** | `ux-client-admin-delivery.yml` | **nao** |
+| `/admin/contratos` | sim | **nao** | sim | **nao** | `ux-contract-delivery.yml` | sim |
+| `/admin/contratos/[id]` | sim | sim | sim | sim | `ux-contract-delivery.yml` | sim |
+| `/admin/comercial` | **nao** | **nao** | sim | **nao** | `ux-crm-delivery.yml` | sim |
+| `/admin/fornecedores` | sim | **nao** | sim | sim | `ext04` + `ux-supplier` | sim |
+| `/admin/leads` | sim | sim | sim | **nao** | `ux-crm-delivery.yml` (herdado) | **nao** |
+| `/admin/portal/permissoes` | **nao** | sim | sim | **nao** | **nenhum** | **nao** |
+| `/admin/patrimonio` | sim | **nao** | sim | **nao** | **nenhum** | **nao** |
+
+Lendo `estados_erro = nao` em `/admin/contratos` como lacuna de comportamento, recomendei essa rota como próxima fatia. **Estava errado e a recomendação foi retirada.** A lista de contratos **já foi entregue**: `docs/UX-PRO-06-CONTRATOS-ESTADOS-2026-10-14.md` registra base `259ee43`, escopo commitado antes da implementação, "antes" com 2 dos 4 casos novos falhando na `main`, "depois" com `npm run test:ux-contract:pg` **12/12** (8 pré-existentes + 4 novos), faixa `role="alert"` com motivo real, hora da última leitura concluída, declaração de dados possivelmente desatualizados e "Tentar novamente", além de `role="status"` na releitura em curso. Não há ali lacuna funcional de estado de erro a corrigir.
+
+**Lição registrada para a próxima sessão:** célula do inventário **não** é comportamento de tela. Antes de propor fatia a partir de uma célula `nao`, ler o doc de estados da rota e a fonte local; a célula pode estar `nao` por vocabulário.
+
+### 9.2 Por que a célula diz `nao`: o detector é léxico (evidência com linha)
+
+`scripts/ux-pro-00-inventory.mjs` em `main`:
+
+- linha 280 — `const ERROR_MARKERS = /variant=["']error|ErrorVariant|phase[:=]\s*["']failed["']|\bFalhou\b|\bfalhou\b/;`
+- linha 282 — `const KEYBOARD_MARKERS = /onKeyDown|addEventListener\(\s*["']keydown|tabIndex|\.focus\(|focus-visible/;`
+- linha 225 — `if (entry.firstFocus) record.firstFocus = true;` (lido de `docs/<stage>-evidencias/resumo.json`)
+- linhas 321/323/330 — as três células são preenchidas por esses testes.
+
+Ocorrências na fonte local de cada rota (arquivos do próprio diretório da rota, que é o que o inventário concatena):
+
+| Rota | fonte local | `ERROR_MARKERS` | `KEYBOARD_MARKERS` |
+|---|---|---|---|
+| `/admin/contratos` | `ContractWorkspace.tsx` (441 l.) + `Contratos.module.css` (37 l.) | **0** | **0** |
+| `/admin/contratos/[id]` | `ContractWorkflowClient.tsx` (972 l.) + `DetalheContrato.module.css` (38 l.) | 1 (`falhou`) | 4 (`onKeyDown`, `tabIndex` ×2, `.focus(`) |
+
+Na lista, o estado de erro existe e está literalmente em `src/app/admin/contratos/ContractWorkspace.tsx`:
+
+- linha 119 — `<div role="alert" data-testid={testId} className={localStyles.stale}>`
+- linhas 250 / 302 / 389 — `testId="propostas-desatualizada"` / `testId="empresas-desatualizada"` / `testId="contratos-desatualizada"`
+- linha 227 — `<div data-testid="contracts-write-error" … role="alert">`
+- linhas 256 / 308 — `<p role="status" data-testid="…-atualizando">`
+
+Nenhuma dessas linhas contém `falhou`, `variant="error"`, `ErrorVariant` nem `phase: "failed"`. O `data-testid` da faixa é montado **por prop** (`data-testid={testId}`), então nem mesmo uma detecção por testid literal (`data-testid="…desatualizada"`) pegaria. A diferença entre lista e detalhe no inventário é de **vocabulário**, não de comportamento. O percurso de teclado da lista é por link nativo e **foi medido em navegador** (`docs/ux-pro-06-contratos-evidencias/contratos-390-teclado.png`), sem nenhum marcador léxico no código.
+
+Varredura das 44 rotas `/admin` de `main` reproduzindo os dois regexes sobre a fonte local:
+
+- **9 rotas** com `role="alert"` na fonte e `estados_erro = nao` no inventário: `/admin`, `/admin/comercial`, `/admin/contratos`, `/admin/emergencial`, `/admin/entrar`, `/admin/fornecedores`, `/admin/pendencias`, `/admin/publicacao`, `/admin/relatorios`. Em nenhuma delas há testid literal `…desatualizada`/`…falha` (todos montados por prop ou template).
+- **3 rotas** com captura visual registrada e `marcadores_teclado = nao`: `/admin/clientes`, `/admin/comercial`, `/admin/contratos`. Para elas a matriz escreve `percurso de teclado nao verificado` (linha 375) **mesmo quando o percurso foi medido em navegador** — o doc entregue de `/admin/clientes` registra foco visível medido e diferença confinada a 4.705 px de 390×7.066 (caixa `x 0–77 × y 790–877`).
+- **21 rotas** `/admin` têm captura; **1** tem `capturas_primeiro_foco = nao`: `/admin/clientes`. Motivo verificado: o `resumo.json` entregue pela PR #218 (`docs/ux-pro-06-clientes-evidencias/resumo.json`) tem 9 entradas com as chaves `stage, route, role, viewport, theme, screenshot, problems` e **nenhuma** `firstFocus`, enquanto **42 entradas** de estágios anteriores (`ux-03b`, `ux-04`, `ux-05`, …) têm o flag. O formato suporta; o gate novo não emite.
+- A implementação paralela desta sessão (não entregue) emite `firstFocus: true` na entrada 6 de `docs/ux-pro-06-contas-admin-evidencias/resumo.json`. É exatamente isso — e não tela — que ela tem de aproveitável sobre o que já foi entregue, somado às três asserções de teste do §8.
+
+### 9.3 Decisão do proprietário e impedimento físico deste branch
+
+**Decisão (pergunta feita e respondida nesta sessão):** a próxima fatia é **precisão do inventário** — fazer o inventário e a matriz reconhecerem o que já foi entregue, em vez de abrir outra fatia de tela. Nenhuma tela é alterada e nenhum código entregue é substituído.
+
+**Impedimento:** essa fatia **não pode ser feita neste branch**. `arena/14fe7e70-gruposegsystemseguranca` carrega a implementação paralela de `/admin/clientes` em `da82468`; qualquer PR a partir daqui conflita em 6 arquivos com a PR #218 (§8) e resolver significaria substituir funcionalidade entregue, o que `AGENTS.md` proíbe sem decisão explícita. A sessão também é fixa a este branch — não pode criar nem publicar outro. Portanto: **sessão nova, branch baseado em `main` `27a26f8`.**
+
+**Nota de ambiente (sem efeito no conteúdo):** entre turnos, o `.git` local voltou ao estado de clone fresco (`HEAD = 0e21c82`, reflog só com clone e checkout) com todo o trabalho solto como alteração não commitada, enquanto os quatro commits seguiam no remoto. Verificado que a árvore era **byte-idêntica** a `da82468` (`git add -A && git diff --cached da82468` vazio), refeito o `git fetch` e restaurado o ponteiro com `git reset --hard da82468`. Local e remoto coincidindo, árvore limpa, tracking configurado, hashes de `next-env.d.ts`/`tsconfig.json` íntegros (§5). Nada perdido, nada reescrito.
+
+### 9.4 Escopo sugerido e riscos da fatia decidida (nada disto foi executado)
+
+1. **`ERROR_MARKERS` reconhecer o padrão canônico entregue.** Risco real: `role="alert"` também é usado para aviso de escrita (ex.: `contracts-write-error`), então alargar a regex pode virar células de rotas onde o alerta **não** é estado de leitura falha. Cada rota virada deve ser justificada individualmente com file:line, nunca por regex ampla.
+2. **Creditar percurso de teclado medido em navegador** a partir do `resumo.json` (campo explícito emitido pelo gate), em vez de depender só de marcador léxico, e ajustar a frase da matriz (linhas 350–352 e 375) para não afirmar "nao verificado" quando há captura que o verificou.
+3. **Gate de `/admin/clientes` emitir `firstFocus`** na captura de teclado (1 célula do inventário).
+4. **Não enfraquecer** `tests/ux-pro-00-inventory.test.mjs` — é ele que exige CSV versionado fresco. Regenerar com `node scripts/ux-pro-00-inventory.mjs` e conferir que o diff se limita às células justificadas.
+5. Preservar os SHA-256 de `next-env.d.ts` e `tsconfig.json` fora do diff (§5), medindo antes/depois.
+
+### 9.5 Prompt de retomada da fatia decidida (pronto para colar, sessão nova)
+
+> Em `berger33/gruposegsystemseguranca`, abra branch novo baseado em `main` e confirme a ponta antes de qualquer avanço (`git fetch origin && git log --oneline -1 origin/main`; na última leitura era `27a26f8`, PR #218, sem PR aberta). Fatia: **precisão do inventário UX-PRO-00** — nenhuma tela é alterada e nenhum código entregue é substituído. Contexto medido: em `scripts/ux-pro-00-inventory.mjs`, `ERROR_MARKERS` (linha 280) e `KEYBOARD_MARKERS` (linha 282) são léxicos; `capturas_primeiro_foco` (linha 330) depende de `entry.firstFocus` (linha 225) vindo de `docs/<stage>-evidencias/resumo.json`. Consequências verificadas: 9 rotas `/admin` têm `role="alert"` na fonte e `estados_erro = nao` (`/admin`, `/admin/comercial`, `/admin/contratos`, `/admin/emergencial`, `/admin/entrar`, `/admin/fornecedores`, `/admin/pendencias`, `/admin/publicacao`, `/admin/relatorios`); 3 rotas têm captura e `marcadores_teclado = nao` (`/admin/clientes`, `/admin/comercial`, `/admin/contratos`) e a matriz ainda escreve "percurso de teclado nao verificado" (linha 375); `/admin/clientes` é a única rota `/admin` com captura e `capturas_primeiro_foco = nao`, porque o `resumo.json` da PR #218 tem 9 entradas e nenhuma `firstFocus`, enquanto 42 entradas de estágios anteriores têm. Faça: (a) `ERROR_MARKERS` reconhecer o padrão canônico entregue — a faixa `role="alert"` com testid de dados desatualizados, que em `src/app/admin/contratos/ContractWorkspace.tsx` linha 119 é `<div role="alert" data-testid={testId}>` com `testId="contratos-desatualizada"` na linha 389, ou seja, testid montado **por prop**, invisível a regex literal — justificando **rota a rota com file:line** e sem virar célula onde `role="alert"` é aviso de escrita (ex.: `contracts-write-error`, linha 227); (b) creditar percurso de teclado medido em navegador por campo explícito no `resumo.json` emitido pelo gate, e ajustar as frases da matriz (linhas 350–352, 375) para não declarar "nao verificado" quando há captura que verificou; (c) fazer o gate de `/admin/clientes` emitir `firstFocus` na captura de teclado. Meça **antes** (células atuais das rotas afetadas, com o diff dos dois CSVs) e **depois**, e confira que o diff dos CSVs se limita às células justificadas. Não enfraqueça, pule nem altere `tests/ux-pro-00-inventory.test.mjs` — é ele que exige CSV versionado fresco; se algum teste falhar, registre a causa. Rode: `npm test`, `npm run typecheck`, `npm run build`, `node scripts/qa-wave0-static.mjs`, `node scripts/ux-pro-00-inventory.mjs --check`, `npm run test:l08-delivery:pg` e os gates focais das rotas cujas células mudarem (`test:ux-contract:pg`, `test:ux-client-admin:pg`, `test:ux-crm:pg`). Preserve os SHA-256 de `next-env.d.ts` (`18b697c4794f97edd5aed1537bf1d1882597f545881dfcba7fc8c659075f11a2`) e `tsconfig.json` (`2128c956b8c75820bc217c00557346befa1e687565d2d8a0bb970faadb7a8d65`) fora do diff, restaurando com `git checkout --` após build e após cada gate Next. Registre antes/depois, limitações e evidências; **nunca** declare validação manual ou aceite humano. PR pequena baseada em `main` só com todos os checks obrigatórios verdes; merge só após revisão concluída e checks verdes. Em falha ou check pendente, preserve o trabalho, reporte a causa e gere novo prompt de retomada para a mesma fatia. Não rebase nem faça merge do branch `arena/14fe7e70-gruposegsystemseguranca` em `main`: ele contém uma implementação paralela de `/admin/clientes` que conflita em 6 arquivos com a PR #218 e substituiria código entregue.
