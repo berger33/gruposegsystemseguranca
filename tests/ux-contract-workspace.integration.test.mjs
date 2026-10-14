@@ -601,3 +601,287 @@ test('browser: em 390px as telas contratuais não produzem transbordo horizontal
     });
   }
 });
+
+// ---------------------------------------------------------------------------
+// UX-PRO-06 — detalhe do contrato (`/admin/contratos/[id]`)
+//
+// Mesmo padrao ja entregue na fila de pedidos (#210/#211), no funil (#212), na
+// carteira (#213), no comercial (#214) e na lista de contratos (#216): falha
+// transitoria DEPOIS de uma leitura concluida preserva o que ja foi lido e vira
+// faixa `role="alert"` com o motivo real, a hora da ultima leitura concluida e
+// a repeticao; a releitura em curso mostra `role="status"` sem esconder o
+// conteudo; a negativa (denied/auth) continua fail-closed, sem dado preservado
+// e sem convite a repetir a mesma chamada.
+//
+// O servidor NUNCA e enfraquecido: a falha e o atraso sao injetados em
+// `window.fetch` dentro da propria pagina, apenas nas requisicoes GET cujo
+// caminho termina exatamente no recurso escolhido.
+// ---------------------------------------------------------------------------
+
+const sufixoContrato = (caminho) => `/api/crm/contracts/${contractId}${caminho}`;
+
+async function abrirDetalheControlado(browser, { width = 1440, height = 900 } = {}) {
+  const context = await browser.newContext({ viewport: { width, height }, locale: 'pt-BR' });
+  const separador = adminCookie.indexOf('=');
+  await context.addCookies([{ name: adminCookie.slice(0, separador), value: adminCookie.slice(separador + 1), url: baseUrl }]);
+  const page = await context.newPage();
+  page.setDefaultTimeout(45_000);
+  page.setDefaultNavigationTimeout(90_000);
+  await page.addInitScript(() => {
+    window.__ux06d = { alvos: [], atraso: 0, falha: null };
+    const original = window.fetch.bind(window);
+    window.fetch = async (input, init) => {
+      const url = typeof input === 'string' ? input : (input?.url || '');
+      const metodo = (init?.method || (typeof input !== 'string' ? input?.method : '') || 'GET').toUpperCase();
+      const caminho = url.split('?')[0];
+      if (metodo === 'GET' && window.__ux06d.alvos.some(alvo => caminho.endsWith(alvo))) {
+        if (window.__ux06d.atraso) await new Promise(r => setTimeout(r, window.__ux06d.atraso));
+        if (window.__ux06d.falha) {
+          const { status, code } = window.__ux06d.falha;
+          return new Response(JSON.stringify({ error: code }), {
+            status, headers: { 'content-type': 'application/json' },
+          });
+        }
+      }
+      return original(input, init);
+    };
+  });
+  await page.goto(`${baseUrl}/admin/contratos/${contractId}`, { waitUntil: 'domcontentloaded' });
+  return { context, page };
+}
+
+/** Le um contador do painel de composicao (Itens/Unidades/Responsaveis). */
+function contadorComposicao(page, rotulo) {
+  return page.evaluate(rotulo => {
+    const itens = [...document.querySelectorAll('[data-testid="contract-composition"] dl > div')];
+    const alvo = itens.find(div => div.querySelector('dt')?.textContent?.trim() === rotulo);
+    const texto = alvo?.querySelector('dd')?.textContent?.trim();
+    return texto === undefined ? -1 : Number(texto);
+  }, rotulo);
+}
+
+/** Espera o contador chegar ao valor da leitura nova (sinal de releitura concluida). */
+function esperarContador(page, rotulo, valor) {
+  return page.waitForFunction(({ rotulo, valor }) => {
+    const itens = [...document.querySelectorAll('[data-testid="contract-composition"] dl > div')];
+    const alvo = itens.find(div => div.querySelector('dt')?.textContent?.trim() === rotulo);
+    return Number(alvo?.querySelector('dd')?.textContent?.trim() || '-1') === valor;
+  }, { rotulo, valor }, { timeout: 30_000 });
+}
+
+test('UX-PRO-06 detalhe: falha na releitura preserva o que ja foi lido, com hora e repeticao', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrirDetalheControlado(browser);
+    const titulo = page.getByRole('heading', { level: 1, name: /Contrato sintético UX-07 fatia C/ });
+    await titulo.waitFor();
+
+    // --- alertas: leitura concluida, com uma regra criada pela propria tela
+    await page.getByRole('tab', { name: 'Alertas e obrigações', exact: true }).click();
+    const regras = page.locator('[data-testid="contract-alert-rules"]');
+    await page.fill('#alert-title', 'Alerta sintetico da leitura UX-PRO-06');
+    await page.getByRole('button', { name: 'Configurar alerta' }).click();
+    await regras.waitFor();
+    assert.match(await regras.textContent(), /Alerta sintetico da leitura UX-PRO-06/,
+      'a regra criada aparece na leitura concluida');
+
+    // --- a releitura (disparada pelo proprio formulario) passa a falhar no GET
+    await page.evaluate(alvo => {
+      window.__ux06d.alvos = [alvo];
+      window.__ux06d.falha = { status: 503, code: 'contracts_unavailable' };
+    }, sufixoContrato('/alert-rules'));
+    await page.fill('#alert-title', 'Alerta sintetico que dispara a releitura falhada');
+    await page.getByRole('button', { name: 'Configurar alerta' }).click();
+
+    const faixaAlertas = page.locator('[data-testid="contract-alerts-desatualizada"]');
+    await faixaAlertas.waitFor({ timeout: 30_000 });
+    assert.equal(await faixaAlertas.getAttribute('role'), 'alert', 'a faixa de dados preservados e um alerta');
+    const textoAlertas = await faixaAlertas.textContent();
+    assert.match(textoAlertas, /desatualizados/i, 'a faixa diz que os dados podem estar desatualizados');
+    assert.match(textoAlertas, /última leitura concluída/i, 'a faixa diz de quando e o dado preservado');
+    assert.match(textoAlertas, /\d{1,2}:\d{2}/, 'a faixa cita a hora da ultima leitura concluida');
+    assert.ok(await regras.isVisible(), 'as regras ja lidas NAO podem sumir quando a releitura falha');
+    assert.match(await regras.textContent(), /Alerta sintetico da leitura UX-PRO-06/,
+      'a regra da leitura anterior continua na tela');
+    assert.equal(await page.locator('[data-testid="contract-alerts"] [data-ui-state="error"]').count(), 0,
+      'com dados preservados nao pode haver estado de erro em tela cheia');
+    assert.match(await page.locator('[data-testid="contract-notice"]').textContent(), /Registro gravado/,
+      'a escrita continua indo ao servidor: o que falhou foi a releitura');
+    await capture(page, 'contrato-detalhe-alertas-desatualizada');
+
+    // --- repetir dentro da faixa volta a falar com o servidor e limpa o aviso
+    await page.evaluate(() => { window.__ux06d.falha = null; });
+    await faixaAlertas.getByRole('button', { name: 'Tentar novamente' }).click();
+    await faixaAlertas.waitFor({ state: 'detached', timeout: 30_000 });
+    assert.ok(await regras.isVisible(), 'as regras continuam na tela apos a repeticao concluir');
+
+    // --- detalhe (cabecalho + composicao): mesmo padrao, com o contador como prova
+    await page.getByRole('tab', { name: 'Composição', exact: true }).click();
+    await page.fill('#resp-name', 'Responsavel sintetico UX-PRO-06 A');
+    await page.fill('#resp-role', 'gestor');
+    await page.getByRole('button', { name: 'Vincular responsável' }).click();
+    await page.waitForFunction(() => {
+      const itens = [...document.querySelectorAll('[data-testid="contract-composition"] dl > div')];
+      const alvo = itens.find(div => div.querySelector('dt')?.textContent?.trim() === 'Responsáveis');
+      return Number(alvo?.querySelector('dd')?.textContent?.trim() || '0') >= 1;
+    });
+    const preservados = await contadorComposicao(page, 'Responsáveis');
+    assert.ok(preservados >= 1, `a composicao ja lida mostra o responsavel vinculado (veio ${preservados})`);
+
+    await page.evaluate(alvo => {
+      window.__ux06d.alvos = [alvo];
+      window.__ux06d.falha = { status: 503, code: 'contracts_unavailable' };
+    }, sufixoContrato(''));
+    // Funcao distinta de proposito: a chave unica e (contract_id,
+    // responsible_id, role) e o formulario nao envia responsible_id (NULL).
+    // Funcao nova garante linha nova qualquer que seja o tratamento de NULL
+    // nessa chave, entao o contador prova a leitura nova sem depender disso.
+    await page.fill('#resp-name', 'Responsavel sintetico UX-PRO-06 B');
+    await page.fill('#resp-role', 'gestor senior UX-PRO-06');
+    await page.getByRole('button', { name: 'Vincular responsável' }).click();
+
+    const faixaDetalhe = page.locator('[data-testid="contract-detail-desatualizada"]');
+    await faixaDetalhe.waitFor({ timeout: 30_000 });
+    assert.equal(await faixaDetalhe.getAttribute('role'), 'alert', 'o cabecalho tambem anuncia a desatualizacao');
+    assert.ok(await titulo.isVisible(), 'o titulo do contrato ja lido NAO pode sumir quando a releitura falha');
+    assert.equal(await contadorComposicao(page, 'Responsáveis'), preservados,
+      'os numeros preservados sao os da ultima leitura concluida');
+    assert.equal(await page.locator('[data-testid="contract-composition-error"]').count(), 0,
+      'com dados preservados a composicao nao vira estado de erro em tela cheia');
+    await capture(page, 'contrato-detalhe-desatualizada');
+
+    await page.evaluate(() => { window.__ux06d.falha = null; });
+    await faixaDetalhe.getByRole('button', { name: 'Tentar novamente' }).click();
+    // A faixa sai quando a repeticao COMECA; esperar so o `detached` leria o
+    // contador antes de o servidor responder. O sinal honesto de conclusao e o
+    // proprio contador chegar ao valor da leitura nova.
+    await esperarContador(page, 'Responsáveis', preservados + 1);
+    assert.equal(await page.locator('[data-testid="contract-detail-desatualizada"]').count(), 0,
+      'a repeticao concluida com sucesso limpa a faixa de desatualizacao');
+    await context.close();
+  });
+});
+
+test('UX-PRO-06 detalhe: releitura em curso mantem o conteudo visivel com role=status', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrirDetalheControlado(browser);
+    const titulo = page.getByRole('heading', { level: 1, name: /Contrato sintético UX-07 fatia C/ });
+    await titulo.waitFor();
+    await page.getByRole('tab', { name: 'Composição', exact: true }).click();
+    await page.locator('[data-testid="contract-composition"] dl').waitFor();
+    // O contrato e compartilhado pela suite: a contagem e medida antes e
+    // conferida por DIFERENCA, nunca por um valor absoluto suposto.
+    const antes = await contadorComposicao(page, 'Responsáveis');
+
+    await page.evaluate(alvo => { window.__ux06d.alvos = [alvo]; window.__ux06d.atraso = 4000; }, sufixoContrato(''));
+    await page.fill('#resp-name', 'Responsavel sintetico da releitura lenta');
+    await page.fill('#resp-role', 'analista de contrato UX-PRO-06');
+    await page.getByRole('button', { name: 'Vincular responsável' }).click();
+
+    const indicador = page.locator('[data-testid="contract-detail-atualizando"]');
+    await indicador.waitFor({ timeout: 30_000 });
+    assert.equal(await indicador.getAttribute('role'), 'status', 'a releitura em curso e anunciada por role=status');
+    assert.ok(await titulo.isVisible(), 'o cabecalho NAO pode desaparecer durante a releitura');
+    assert.ok(await page.locator('[data-testid="contract-composition"] dl').isVisible(),
+      'a composicao NAO pode desaparecer durante a releitura');
+
+    await indicador.waitFor({ state: 'detached', timeout: 30_000 });
+    assert.equal(await page.locator('[data-testid="contract-detail-desatualizada"]').count(), 0,
+      'releitura concluida nao e desatualizacao');
+    assert.equal(await contadorComposicao(page, 'Responsáveis'), antes + 1,
+      `a releitura concluida aplica a leitura nova (antes=${antes})`);
+    await context.close();
+  });
+});
+
+test('UX-PRO-06 detalhe: negativa na releitura falha fechada, sem dado preservado nem repeticao', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrirDetalheControlado(browser);
+    const titulo = page.getByRole('heading', { level: 1, name: /Contrato sintético UX-07 fatia C/ });
+    await titulo.waitFor();
+    assert.ok(await titulo.isVisible(), 'houve leitura concluida antes da negativa');
+
+    await page.evaluate(alvo => {
+      window.__ux06d.alvos = [alvo];
+      window.__ux06d.falha = { status: 403, code: 'contract_management_forbidden' };
+    }, sufixoContrato(''));
+    await page.getByRole('tab', { name: 'Composição', exact: true }).click();
+    await page.fill('#resp-name', 'Responsavel sintetico da negativa');
+    await page.fill('#resp-role', 'gestor');
+    await page.getByRole('button', { name: 'Vincular responsável' }).click();
+
+    const negado = page.locator('[data-testid="contract-detail-error"] [data-ui-state="denied"]');
+    await negado.waitFor({ timeout: 30_000 });
+    assert.equal(await titulo.count(), 0, 'duvida de autorizacao NAO mantem o contrato ja lido na tela');
+    assert.equal(await page.locator('[data-testid="contract-detail-desatualizada"]').count(), 0,
+      'negativa nao vira faixa de dados desatualizados');
+    assert.equal(await negado.locator('button').count(), 0,
+      'negativa nao convida a repetir a mesma chamada');
+
+    // As outras leituras continuam independentes: a negativa de UMA nao derruba as sete.
+    await page.getByRole('tab', { name: 'Ciclo de vida', exact: true }).click();
+    await page.locator('[data-testid="contract-next-status"]').waitFor();
+    assert.equal(await page.locator('[data-testid="contract-status-error"]').count(), 0,
+      'a leitura da situacao nao foi descartada pela negativa do detalhe');
+    await capture(page, 'contrato-detalhe-negado');
+    await context.close();
+  });
+});
+
+test('UX-PRO-06 detalhe: 320/390/768/1440 dia e noite sem transbordo, com percurso de teclado', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+    // Uma unica pagina, redimensionada por etapa (convencao dos demais gates):
+    // menos lancamentos de navegador, mesma medicao de transbordo. A altura de
+    // cada etapa e a mesma declarada no resumo de evidencias.
+    const { context, page } = await abrirDetalheControlado(browser);
+    await page.getByRole('heading', { level: 1, name: /Contrato sintético UX-07 fatia C/ }).waitFor();
+    for (const [largura, altura] of [[1440, 900], [768, 1024], [390, 844], [320, 844]]) {
+      await page.setViewportSize({ width: largura, height: altura });
+      await page.waitForTimeout(700);
+      // Reconfirma apos o reflow do resize, como nos gates anteriores:
+      // transiente de layout nao reprova; transbordo persistente reprova.
+      const transbordo = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      assert.ok(transbordo <= 1, `transbordo de ${transbordo}px em ${largura}px (dia)`);
+      await capture(page, `contrato-detalhe-${largura}-dia`);
+      if (largura === 768) {
+        await page.click('[data-admin-theme-toggle="true"]');
+        await page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night', null, { timeout: 20_000 });
+        await page.waitForTimeout(400);
+        const transbordoNoite = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        assert.ok(transbordoNoite <= 1, `transbordo de ${transbordoNoite}px em 768px (noite)`);
+        const cores = await page.evaluate(() => {
+          const titulo = document.querySelector('[data-testid="contract-detail"] h1');
+          const painel = document.querySelector('[data-testid="contract-lifecycle"]');
+          const soma = (cor) => (cor.match(/[\d.]+/g) || []).slice(0, 3).reduce((a, b) => a + Number(b), 0);
+          return {
+            titulo: titulo ? soma(getComputedStyle(titulo).color) : 0,
+            painel: painel ? soma(getComputedStyle(painel).backgroundColor) : 999,
+          };
+        });
+        assert.ok(cores.painel < 240, `o painel precisa escurecer no tema noturno (soma=${cores.painel})`);
+        assert.ok(cores.titulo > 480, `o titulo precisa clarear no tema noturno (soma=${cores.titulo})`);
+        await capture(page, 'contrato-detalhe-768-noite');
+        await page.click('[data-admin-theme-toggle="true"]');
+        await page.waitForFunction(() => document.documentElement.dataset.adminTheme !== 'night', null, { timeout: 20_000 });
+      }
+      if (largura === 390) {
+        // Percurso de teclado ate a aba ativa, com foco visivel medido.
+        const aba = page.locator('[data-testid="contract-tab-ciclo"]');
+        await aba.waitFor();
+        let focou = false;
+        for (let i = 0; i < 60 && !focou; i++) {
+          await page.keyboard.press('Tab');
+          focou = await aba.evaluate(el => el === document.activeElement);
+        }
+        assert.ok(focou, 'a aba ativa do contrato precisa ser alcancavel por Tab');
+        const contorno = await aba.evaluate(el => ({
+          estilo: getComputedStyle(el).outlineStyle,
+          espessura: parseFloat(getComputedStyle(el).outlineWidth) || 0,
+        }));
+        assert.ok(contorno.estilo !== 'none' && contorno.espessura >= 1,
+          `foco visivel na aba do contrato (estilo=${contorno.estilo}, espessura=${contorno.espessura})`);
+        await capture(page, 'contrato-detalhe-390-teclado');
+      }
+    }
+    await context.close();
+  });
+});

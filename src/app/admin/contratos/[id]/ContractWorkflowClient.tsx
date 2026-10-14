@@ -18,11 +18,28 @@
 // Também: seis abas com `tablist`/`tab`/`tabpanel` reais (roving tabindex,
 // ←/→/Home/End), zero `style` inline e vocabulário em português em toda
 // situação exibida.
+//
+// UX-PRO-06 (14/10/2026) — estados de releitura. Antes, TODA releitura
+// começava com `dado: null`: começar a ler apagava o que já estava lido nas
+// oito leituras, e a falha deixava o painel sem nenhum dado, no mesmo lugar em
+// que ficaria a ausência total de registro. Agora `resolverRecurso` separa três
+// situações que estavam confundidas:
+//  1. nunca houve leitura concluída → carregando/erro em tela cheia (como era);
+//  2. releitura EM CURSO com leitura anterior → `role="status"` ao lado do
+//     conteúdo, que continua visível;
+//  3. falha TRANSITÓRIA depois de uma leitura → `role="alert"` com o motivo
+//     real, a hora da última leitura concluída (relógio do navegador; nada é
+//     estimado nem gravado) e repetição, preservando os dados anteriores.
+// Negativa de autorização (denied/auth) NÃO preserva nada: continua
+// fail-closed, substituindo o conteúdo pelo estado negado sem oferecer repetir
+// a mesma chamada. Nenhuma URL, método, corpo, papel ou transição mudou.
 
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 import UiBadge from "../../../../components/ui/UiBadge";
 import UiState from "../../../../components/ui/UiState";
 import styles from "../../../../components/ui/UiWorkspace.module.css";
+import localStyles from "./DetalheContrato.module.css";
 import { contractRequest, type ContractErrorDescriptor } from "../../../../lib/contract-request";
 import {
   alertStatusLabel,
@@ -52,8 +69,31 @@ import {
 
 type Props = { id: string };
 
-type Recurso<T> = { dado: T | null; carregando: boolean; erro: ContractErrorDescriptor | null };
-const recursoInicial = <T,>(): Recurso<T> => ({ dado: null, carregando: true, erro: null });
+/**
+ * UX-PRO-06: estado de UMA leitura independente.
+ *
+ * `concluiu` separa "nunca houve leitura concluída" de "já houve" — é o que
+ * permite distinguir dado possivelmente desatualizado de ausência de dado.
+ * `falhaAtualizacao` é a falha transitória DEPOIS de uma leitura concluída: os
+ * dados anteriores continuam valendo e a faixa diz isso. Negativa de
+ * autorização nunca entra aqui — ela descarta o dado.
+ */
+type Recurso<T> = {
+  dado: T | null;
+  carregando: boolean;
+  /** Falha que ocupa a tela inteira por não existir leitura concluída. */
+  erro: ContractErrorDescriptor | null;
+  concluiu: boolean;
+  /** Hora (relógio do navegador) da última leitura concluída; nada é gravado. */
+  ultimaLeitura: string | null;
+  falhaAtualizacao: ContractErrorDescriptor | null;
+};
+
+const recursoInicial = <T,>(): Recurso<T> => ({
+  dado: null, carregando: true, erro: null, concluiu: false, ultimaLeitura: null, falhaAtualizacao: null,
+});
+
+type ResultadoRecurso<T> = { ok: true; dado: T } | { ok: false; error: ContractErrorDescriptor };
 
 type Qualquer = Record<string, any>;
 
@@ -68,6 +108,37 @@ const ABAS = [
 type AbaId = (typeof ABAS)[number]["id"];
 
 const today = () => new Date().toISOString().slice(0, 10);
+const horaAgora = () => new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+/**
+ * UX-PRO-06: o mesmo padrão já entregue no funil, na carteira, no comercial e
+ * na lista de contratos. Falha transitória depois de uma leitura concluída
+ * PRESERVA o que foi lido e vira faixa de "desatualizado"; negativa de
+ * autorização (denied/auth) continua fail-closed — descarta o dado e
+ * substitui o conteúdo pelo estado negado, sem repetição da mesma chamada.
+ */
+function resolverRecurso<T>(atual: Recurso<T>, resultado: ResultadoRecurso<T>): Recurso<T> {
+  if (resultado.ok) {
+    return {
+      dado: resultado.dado, carregando: false, erro: null,
+      concluiu: true, ultimaLeitura: horaAgora(), falhaAtualizacao: null,
+    };
+  }
+  const negado = resultado.error.kind === "denied" || resultado.error.kind === "auth";
+  if (negado) {
+    return {
+      dado: null, carregando: false, erro: resultado.error,
+      concluiu: false, ultimaLeitura: null, falhaAtualizacao: null,
+    };
+  }
+  if (atual.concluiu) {
+    return { ...atual, carregando: false, erro: null, falhaAtualizacao: resultado.error };
+  }
+  return {
+    dado: null, carregando: false, erro: resultado.error,
+    concluiu: false, ultimaLeitura: null, falhaAtualizacao: null,
+  };
+}
 
 function Falha({ erro, aoRepetir, testId }: { erro: ContractErrorDescriptor; aoRepetir?: () => void; testId: string }) {
   const negado = erro.kind === "denied" || erro.kind === "auth";
@@ -82,6 +153,66 @@ function Falha({ erro, aoRepetir, testId }: { erro: ContractErrorDescriptor; aoR
       />
     </div>
   );
+}
+
+/** Releitura em curso de um recurso que já tem leitura concluída. */
+function Atualizando({ testId, children }: { testId: string; children: ReactNode }) {
+  return <p role="status" data-testid={testId} className={localStyles.updating}>{children}</p>;
+}
+
+/** Faixa de dado preservado: só existe quando há leitura concluída e falha transitória. */
+function FaixaDesatualizada({ testId, recurso, textoVazio, aoRepetir }: {
+  testId: string;
+  recurso: Recurso<unknown>;
+  textoVazio: string;
+  aoRepetir: () => void;
+}) {
+  const falha = recurso.falhaAtualizacao;
+  if (!falha) return null;
+  // Alguns detalhes do vocabulário já negam a leitura de "vazio"; nesses casos
+  // a faixa não repete a frase, só rotula a idade do dado.
+  const jaNegaVazio = /não significa/i.test(falha.detail);
+  return (
+    <div role="alert" data-testid={testId} className={localStyles.stale}>
+      <strong>{falha.title}.</strong> {falha.detail}{" "}
+      Os dados abaixo são da última leitura concluída, às {recurso.ultimaLeitura}, e podem estar
+      desatualizados{jaNegaVazio ? "." : <> — {textoVazio}</>}{" "}
+      <span>{contractErrorFootnote(falha)}</span>
+      {falha.canRetry ? (
+        <div>
+          <button type="button" onClick={aoRepetir}>Tentar novamente</button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Apresentação de uma leitura independente: carregando em tela cheia só
+ * enquanto não houver nenhuma leitura concluída; depois disso, o conteúdo
+ * permanece na tela e a releitura/desatualização é anunciada ao lado dele.
+ */
+function Painel({ recurso, testId, carregandoTitulo, carregandoDetalhe, atualizandoTexto, textoVazio, aoRepetir, children }: {
+  recurso: Recurso<Qualquer>;
+  testId: string;
+  carregandoTitulo: string;
+  carregandoDetalhe: string;
+  atualizandoTexto: string;
+  textoVazio: string;
+  aoRepetir: () => void;
+  children: ReactNode;
+}) {
+  if (recurso.concluiu) {
+    return (
+      <>
+        {recurso.carregando ? <Atualizando testId={`${testId}-atualizando`}>{atualizandoTexto}</Atualizando> : null}
+        <FaixaDesatualizada testId={`${testId}-desatualizada`} recurso={recurso} textoVazio={textoVazio} aoRepetir={aoRepetir} />
+        {children}
+      </>
+    );
+  }
+  if (recurso.erro) return <Falha erro={recurso.erro} aoRepetir={aoRepetir} testId={`${testId}-error`} />;
+  return <UiState variant="loading" title={carregandoTitulo} detail={carregandoDetalhe} />;
 }
 
 export default function ContractWorkflowClient({ id }: Props) {
@@ -102,12 +233,14 @@ export default function ContractWorkflowClient({ id }: Props) {
 
   /** Uma leitura independente: o que falha aqui não apaga as outras sete. */
   const ler = useCallback(
-    async (caminho: string, aplicar: (estado: Recurso<Qualquer>) => void) => {
-      aplicar({ dado: null, carregando: true, erro: null });
+    async (caminho: string, aplicar: Dispatch<SetStateAction<Recurso<Qualquer>>>) => {
+      // Começar a reler NÃO é perder o dado: o que já foi lido só sai da tela
+      // se a falha for de autorização (ver resolverRecurso).
+      aplicar(atual => ({ ...atual, carregando: true, erro: null, falhaAtualizacao: null }));
       const resultado = await contractRequest<Qualquer>(`/api/crm/contracts/${id}${caminho}`);
-      aplicar(resultado.ok
-        ? { dado: resultado.data, carregando: false, erro: null }
-        : { dado: null, carregando: false, erro: resultado.error });
+      aplicar(atual => resolverRecurso(atual, resultado.ok
+        ? { ok: true, dado: resultado.data }
+        : { ok: false, error: resultado.error }));
     },
     [id],
   );
@@ -167,7 +300,6 @@ export default function ContractWorkflowClient({ id }: Props) {
   }
 
   const contrato = detalhe.dado?.contract as Qualquer | undefined;
-  const lendoCabecalho = detalhe.carregando;
 
   return (
     <main className={styles.workspace} data-testid="contract-detail">
@@ -175,22 +307,24 @@ export default function ContractWorkflowClient({ id }: Props) {
         <a href="/admin/contratos">← Contratos</a>
       </nav>
 
-      {lendoCabecalho ? (
-        <UiState variant="loading" title="Lendo o contrato…" detail="Buscando dados do contrato e de cada frente de trabalho." />
-      ) : detalhe.erro ? (
-        <Falha erro={detalhe.erro} aoRepetir={() => void lerDetalhe()} testId="contract-detail-error" />
-      ) : (
-        <>
-          <h1>{contrato?.title || "Contrato"}</h1>
-          <p className={styles.lede}>
-            <UiBadge tone={contractStatusTone(contrato?.status)} srPrefix="Situação do contrato">
-              {contractStatusLabel(contrato?.status)}
-            </UiBadge>{" "}
-            · Origem: {contractOriginLabel(contrato?.origin)} · Vigência:{" "}
-            {shortDate(contrato?.starts_on)} — {shortDate(contrato?.ends_on, "em aberto")}
-          </p>
-        </>
-      )}
+      <Painel
+        recurso={detalhe}
+        testId="contract-detail"
+        carregandoTitulo="Lendo o contrato…"
+        carregandoDetalhe="Buscando dados do contrato e de cada frente de trabalho."
+        atualizandoTexto="Atualizando o contrato…"
+        textoVazio="isto não significa que o contrato deixou de existir."
+        aoRepetir={() => void lerDetalhe()}
+      >
+        <h1>{contrato?.title || "Contrato"}</h1>
+        <p className={styles.lede}>
+          <UiBadge tone={contractStatusTone(contrato?.status)} srPrefix="Situação do contrato">
+            {contractStatusLabel(contrato?.status)}
+          </UiBadge>{" "}
+          · Origem: {contractOriginLabel(contrato?.origin)} · Vigência:{" "}
+          {shortDate(contrato?.starts_on)} — {shortDate(contrato?.ends_on, "em aberto")}
+        </p>
+      </Painel>
 
       {aviso ? <p role="status" data-testid="contract-notice" className={`${styles.notice} ${styles.noticeInfo}`}>{aviso}</p> : null}
       {falhaEnvio ? (
@@ -239,12 +373,15 @@ export default function ContractWorkflowClient({ id }: Props) {
                 checklist concluído e bloqueios resolvidos — quem decide é o
                 servidor.
               </p>
-              {situacao.carregando ? (
-                <UiState variant="loading" title="Lendo situação e histórico…" detail="Buscando as transições permitidas e o histórico imutável." />
-              ) : situacao.erro ? (
-                <Falha erro={situacao.erro} aoRepetir={() => void lerSituacao()} testId="contract-status-error" />
-              ) : (
-                <>
+              <Painel
+                recurso={situacao}
+                testId="contract-status"
+                carregandoTitulo="Lendo situação e histórico…"
+                carregandoDetalhe="Buscando as transições permitidas e o histórico imutável."
+                atualizandoTexto="Atualizando a situação e o histórico…"
+                textoVazio="isto não significa que o contrato não tenha transição registrada."
+                aoRepetir={() => void lerSituacao()}
+              >
                   <form onSubmit={event => enviar(event, "/status", "POST", form => {
                     const dados = new FormData(form);
                     return {
@@ -305,16 +442,17 @@ export default function ContractWorkflowClient({ id }: Props) {
                       ))}
                     </ul>
                   )}
-                </>
-              )}
+                </Painel>
             </div>
           ) : null}
 
           {item.id === "composicao" ? (
             <div className={styles.panel} data-testid="contract-composition">
-              {detalhe.erro ? (
-                <Falha erro={detalhe.erro} aoRepetir={() => void lerDetalhe()} testId="contract-composition-error" />
-              ) : (
+              {/* Esta aba lê o MESMO recurso do cabeçalho, que já anuncia
+                  releitura e dados desatualizados logo acima das abas — a
+                  faixa não é duplicada aqui. Sem leitura concluída, o painel
+                  mostra o estado honesto em vez de contadores zerados. */}
+              {detalhe.concluiu ? (
                 <>
                   <dl className={styles.facts}>
                     <div><dt>Itens</dt><dd>{detalhe.dado?.items?.length ?? 0}</dd></div>
@@ -414,6 +552,10 @@ export default function ContractWorkflowClient({ id }: Props) {
                     </div>
                   </form>
                 </>
+              ) : detalhe.erro ? (
+                <Falha erro={detalhe.erro} aoRepetir={() => void lerDetalhe()} testId="contract-composition-error" />
+              ) : (
+                <UiState variant="loading" title="Lendo a composição do contrato…" detail="Buscando itens, unidades e responsáveis registrados." />
               )}
             </div>
           ) : null}
@@ -425,12 +567,15 @@ export default function ContractWorkflowClient({ id }: Props) {
                 representa e-mail ou mensagem efetivamente entregue.
               </p>
 
-              {alertas.carregando ? (
-                <UiState variant="loading" title="Lendo regras de alerta…" detail="Buscando as regras configuradas para este contrato." />
-              ) : alertas.erro ? (
-                <Falha erro={alertas.erro} aoRepetir={() => void lerAlertas()} testId="contract-alerts-error" />
-              ) : (
-                <>
+              <Painel
+                recurso={alertas}
+                testId="contract-alerts"
+                carregandoTitulo="Lendo regras de alerta…"
+                carregandoDetalhe="Buscando as regras configuradas para este contrato."
+                atualizandoTexto="Atualizando as regras de alerta…"
+                textoVazio="isto não significa que o contrato esteja sem regra de alerta."
+                aoRepetir={() => void lerAlertas()}
+              >
                   <form onSubmit={event => enviar(event, "/alert-rules", "POST", form => {
                     const dados = new FormData(form);
                     return {
@@ -485,16 +630,18 @@ export default function ContractWorkflowClient({ id }: Props) {
                       ))}
                     </ul>
                   )}
-                </>
-              )}
+                </Painel>
 
               <h3 className={styles.panelTitle}>Obrigações documentais (CON-06)</h3>
-              {obrigacoes.carregando ? (
-                <UiState variant="loading" title="Lendo obrigações documentais…" detail="Buscando certidões, licenças e comprovantes exigidos." />
-              ) : obrigacoes.erro ? (
-                <Falha erro={obrigacoes.erro} aoRepetir={() => void lerObrigacoes()} testId="contract-obligations-error" />
-              ) : (
-                <>
+              <Painel
+                recurso={obrigacoes}
+                testId="contract-obligations"
+                carregandoTitulo="Lendo obrigações documentais…"
+                carregandoDetalhe="Buscando certidões, licenças e comprovantes exigidos."
+                atualizandoTexto="Atualizando as obrigações documentais…"
+                textoVazio="isto não significa que o contrato esteja sem obrigação documental."
+                aoRepetir={() => void lerObrigacoes()}
+              >
                   <form onSubmit={event => enviar(event, "/document-obligations", "POST", form => {
                     const dados = new FormData(form);
                     return {
@@ -553,8 +700,7 @@ export default function ContractWorkflowClient({ id }: Props) {
                       ))}
                     </ul>
                   )}
-                </>
-              )}
+                </Painel>
             </div>
           ) : null}
 
@@ -564,12 +710,15 @@ export default function ContractWorkflowClient({ id }: Props) {
                 Dependências posteriores exigem base de verificação explícita.
                 Nenhuma etapa é marcada como concluída automaticamente.
               </p>
-              {implantacao.carregando ? (
-                <UiState variant="loading" title="Lendo o checklist de implantação…" detail="Buscando etapas e bloqueios registrados." />
-              ) : implantacao.erro ? (
-                <Falha erro={implantacao.erro} aoRepetir={() => void lerImplantacao()} testId="contract-implantation-error" />
-              ) : (
-                <>
+              <Painel
+                recurso={implantacao}
+                testId="contract-implantation"
+                carregandoTitulo="Lendo o checklist de implantação…"
+                carregandoDetalhe="Buscando etapas e bloqueios registrados."
+                atualizandoTexto="Atualizando o checklist de implantação…"
+                textoVazio="isto não significa que o contrato esteja sem etapa de implantação."
+                aoRepetir={() => void lerImplantacao()}
+              >
                   {((implantacao.dado?.steps || []) as Qualquer[]).length === 0 ? (
                     <UiState variant="empty" title="Checklist de implantação ainda não iniciado" detail="A leitura funcionou e nenhuma etapa foi criada para este contrato." />
                   ) : (
@@ -643,19 +792,21 @@ export default function ContractWorkflowClient({ id }: Props) {
                       <button type="submit" className={styles.primary} disabled={ocupado}>Registrar bloqueio</button>
                     </div>
                   </form>
-                </>
-              )}
+                </Painel>
             </div>
           ) : null}
 
           {item.id === "fiscalizacao" ? (
             <div className={styles.panel} data-testid="contract-fiscal">
-              {fiscal.carregando ? (
-                <UiState variant="loading" title="Lendo dossiês fiscais…" detail="Buscando dossiês, medições e evidências deste contrato." />
-              ) : fiscal.erro ? (
-                <Falha erro={fiscal.erro} aoRepetir={() => void lerFiscal()} testId="contract-fiscal-error" />
-              ) : (
-                <>
+              <Painel
+                recurso={fiscal}
+                testId="contract-fiscal"
+                carregandoTitulo="Lendo dossiês fiscais…"
+                carregandoDetalhe="Buscando dossiês, medições e evidências deste contrato."
+                atualizandoTexto="Atualizando os dossiês fiscais…"
+                textoVazio="isto não significa que o contrato esteja sem dossiê fiscal."
+                aoRepetir={() => void lerFiscal()}
+              >
                   <form onSubmit={event => enviar(event, "/fiscal/dossiers", "POST", form => {
                     const dados = new FormData(form);
                     return { title: dados.get("title"), description: dados.get("description") || null };
@@ -688,16 +839,18 @@ export default function ContractWorkflowClient({ id }: Props) {
                       ))}
                     </ul>
                   )}
-                </>
-              )}
+                </Painel>
 
               <h3 className={styles.panelTitle}>Diário de gestão (CON-11)</h3>
-              {diario.carregando ? (
-                <UiState variant="loading" title="Lendo o diário de gestão…" detail="Buscando as decisões registradas para este contrato." />
-              ) : diario.erro ? (
-                <Falha erro={diario.erro} aoRepetir={() => void lerDiario()} testId="contract-diary-error" />
-              ) : (
-                <>
+              <Painel
+                recurso={diario}
+                testId="contract-diary"
+                carregandoTitulo="Lendo o diário de gestão…"
+                carregandoDetalhe="Buscando as decisões registradas para este contrato."
+                atualizandoTexto="Atualizando o diário de gestão…"
+                textoVazio="isto não significa que o contrato esteja sem decisão registrada."
+                aoRepetir={() => void lerDiario()}
+              >
                   <form onSubmit={event => enviar(event, "/management-diary", "POST", form => {
                     const dados = new FormData(form);
                     return {
@@ -749,18 +902,22 @@ export default function ContractWorkflowClient({ id }: Props) {
                       ))}
                     </ul>
                   )}
-                </>
-              )}
+                </Painel>
             </div>
           ) : null}
 
           {item.id === "encerramento" ? (
             <div className={styles.panel} data-testid="contract-closure">
-              {encerramento.carregando ? (
-                <UiState variant="loading" title="Lendo o encerramento…" detail="Buscando o plano de encerramento e seu checklist." />
-              ) : encerramento.erro ? (
-                <Falha erro={encerramento.erro} aoRepetir={() => void lerEncerramento()} testId="contract-closure-error" />
-              ) : encerramento.dado?.closure ? (
+              <Painel
+                recurso={encerramento}
+                testId="contract-closure"
+                carregandoTitulo="Lendo o encerramento…"
+                carregandoDetalhe="Buscando o plano de encerramento e seu checklist."
+                atualizandoTexto="Atualizando o encerramento…"
+                textoVazio="isto não significa que o contrato esteja sem plano de encerramento."
+                aoRepetir={() => void lerEncerramento()}
+              >
+                {encerramento.dado?.closure ? (
                 <>
                   <p>
                     <UiBadge tone={closureStatusTone(encerramento.dado.closure.status)} srPrefix="Situação do encerramento">
@@ -804,7 +961,8 @@ export default function ContractWorkflowClient({ id }: Props) {
                     <button type="submit" className={styles.primary} disabled={ocupado}>Planejar encerramento</button>
                   </div>
                 </form>
-              )}
+                )}
+              </Painel>
             </div>
           ) : null}
         </section>

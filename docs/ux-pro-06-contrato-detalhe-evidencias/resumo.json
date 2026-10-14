@@ -1,0 +1,93 @@
+{
+  "stage": "ux-pro-06-contrato-detalhe",
+  "generatedBy": "gate npm run test:ux-contract:pg (UX_CONTRACT_EVIDENCE_DIR=docs/ux-pro-06-contrato-detalhe-evidencias)",
+  "notes": "Evidências da fatia UX-PRO-06 — estados de releitura do detalhe do contrato (/admin/contratos/[id]). Massa inteiramente sintética criada pelas próprias APIs, sessão de staff provisionada pelo gate; nenhuma captura usa dado pessoal ou credencial. As capturas da main SEM a correção (subpasta antes/) foram produzidas pela mesma suíte num worktree descartável de f066768 e ficam fora deste resumo de propósito: documentam o defeito corrigido, não a evidência vigente. As demais capturas que a suíte gerou para outras rotas foram removidas desta pasta para não misturar artefatos de outras fatias.",
+  "entries": [
+    {
+      "stage": "ux-pro-06-contrato-detalhe",
+      "route": "/admin/contratos/[id]",
+      "role": "admin",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-06-contrato-detalhe-evidencias/contrato-detalhe-1440-dia.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-contrato-detalhe",
+      "route": "/admin/contratos/[id]",
+      "role": "admin",
+      "viewport": "320x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-06-contrato-detalhe-evidencias/contrato-detalhe-320-dia.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-contrato-detalhe",
+      "route": "/admin/contratos/[id]",
+      "role": "admin",
+      "viewport": "390x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-06-contrato-detalhe-evidencias/contrato-detalhe-390-dia.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-contrato-detalhe",
+      "route": "/admin/contratos/[id]",
+      "role": "admin",
+      "viewport": "390x844",
+      "theme": "day",
+      "state": "percurso_teclado",
+      "firstFocus": true,
+      "screenshot": "docs/ux-pro-06-contrato-detalhe-evidencias/contrato-detalhe-390-teclado.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-contrato-detalhe",
+      "route": "/admin/contratos/[id]",
+      "role": "admin",
+      "viewport": "768x1024",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-06-contrato-detalhe-evidencias/contrato-detalhe-768-dia.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-contrato-detalhe",
+      "route": "/admin/contratos/[id]",
+      "role": "admin",
+      "viewport": "768x1024",
+      "theme": "night",
+      "screenshot": "docs/ux-pro-06-contrato-detalhe-evidencias/contrato-detalhe-768-noite.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-contrato-detalhe",
+      "route": "/admin/contratos/[id]",
+      "role": "admin",
+      "viewport": "1440x900",
+      "theme": "day",
+      "state": "releitura_falhou_dados_preservados_cabecalho",
+      "screenshot": "docs/ux-pro-06-contrato-detalhe-evidencias/contrato-detalhe-desatualizada.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-contrato-detalhe",
+      "route": "/admin/contratos/[id]",
+      "role": "admin",
+      "viewport": "1440x900",
+      "theme": "day",
+      "state": "releitura_falhou_dados_preservados_alertas",
+      "screenshot": "docs/ux-pro-06-contrato-detalhe-evidencias/contrato-detalhe-alertas-desatualizada.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-contrato-detalhe",
+      "route": "/admin/contratos/[id]",
+      "role": "admin",
+      "viewport": "1440x900",
+      "theme": "day",
+      "state": "negativa_fail_closed_sem_dado",
+      "screenshot": "docs/ux-pro-06-contrato-detalhe-evidencias/contrato-detalhe-negado.png",
+      "problems": []
+    }
+  ]
+}
