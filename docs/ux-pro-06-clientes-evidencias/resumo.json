@@ -1,0 +1,16 @@
+{
+  "stage": "ux-pro-06-clientes",
+  "generatedBy": "gate npm run test:ux-client-admin:pg (UX_CLIENT_ADMIN_EVIDENCE_DIR=docs/ux-pro-06-clientes-evidencias)",
+  "notes": "Evidências da fatia UX-PRO-06 — estados da leitura dos cadastros centrais de clientes (/admin/clientes). Massa inteiramente sintética criada pelas próprias APIs, sessão de staff provisionada pelo gate; nenhuma captura usa dado pessoal ou credencial. As capturas da main SEM a correção (subpasta antes/) foram produzidas pela mesma suíte num worktree descartável de 0e21c82 e ficam fora deste resumo de propósito: documentam o defeito corrigido, não a evidência vigente. As demais capturas que a suíte gera para outras rotas não existem aqui: o gate captura apenas esta tela.",
+  "entries": [
+    { "stage": "ux-pro-06-clientes", "route": "/admin/clientes", "role": "ti", "viewport": "1440x900", "theme": "day", "screenshot": "docs/ux-pro-06-clientes-evidencias/clientes-1440-dia.png", "problems": [] },
+    { "stage": "ux-pro-06-clientes", "route": "/admin/clientes", "role": "ti", "viewport": "320x844", "theme": "day", "screenshot": "docs/ux-pro-06-clientes-evidencias/clientes-320-dia.png", "problems": [] },
+    { "stage": "ux-pro-06-clientes", "route": "/admin/clientes", "role": "ti", "viewport": "390x844", "theme": "day", "screenshot": "docs/ux-pro-06-clientes-evidencias/clientes-390-dia.png", "problems": [] },
+    { "stage": "ux-pro-06-clientes", "route": "/admin/clientes", "role": "ti", "viewport": "390x844", "theme": "day", "screenshot": "docs/ux-pro-06-clientes-evidencias/clientes-390-teclado.png", "problems": [] },
+    { "stage": "ux-pro-06-clientes", "route": "/admin/clientes", "role": "ti", "viewport": "768x1024", "theme": "day", "screenshot": "docs/ux-pro-06-clientes-evidencias/clientes-768-dia.png", "problems": [] },
+    { "stage": "ux-pro-06-clientes", "route": "/admin/clientes", "role": "ti", "viewport": "768x1024", "theme": "night", "screenshot": "docs/ux-pro-06-clientes-evidencias/clientes-768-noite.png", "problems": [] },
+    { "stage": "ux-pro-06-clientes", "route": "/admin/clientes", "role": "ti", "viewport": "1440x900", "theme": "day", "screenshot": "docs/ux-pro-06-clientes-evidencias/clientes-desktop-desatualizada.png", "problems": [] },
+    { "stage": "ux-pro-06-clientes", "route": "/admin/clientes", "role": "ti", "viewport": "1440x900", "theme": "day", "screenshot": "docs/ux-pro-06-clientes-evidencias/clientes-desktop-falha-inicial.png", "problems": [] },
+    { "stage": "ux-pro-06-clientes", "route": "/admin/clientes", "role": "ti", "viewport": "1440x900", "theme": "day", "screenshot": "docs/ux-pro-06-clientes-evidencias/clientes-desktop-negado.png", "problems": [] }
+  ]
+}

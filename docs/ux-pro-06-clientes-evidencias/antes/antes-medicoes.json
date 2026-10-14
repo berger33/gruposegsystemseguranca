@@ -1,0 +1,48 @@
+{
+  "stage": "ux-pro-06-clientes",
+  "fase": "antes",
+  "base": "0e21c82df87860df786cadb995f687a4c9d8d213 (main, merge da PR #217) em worktree descartável limpo, apenas com o teste focal novo e o script do gate copiados — nenhuma linha da tela alterada",
+  "comando": "worktree descartavel: UX_CLIENT_ADMIN_EVIDENCE_DIR=<diretorio temporario> node scripts/qa-ux-client-admin-postgres.mjs (gate focal completo; as capturas foram copiadas para esta pasta)",
+  "resultado_agregado": "tests 6 / pass 2 / fail 4 / skipped 0 / todo 0 (UX_CLIENT_ADMIN_TEST_EXIT: 1)",
+  "resultados": [
+    {
+      "caso": "falha da leitura inicial nao vira carregando eterno",
+      "resultado": "falhou",
+      "evidencia": "timeout de 45s esperando [data-testid=clientes-cadastros-falha]: na main o erro da leitura e engolido e a secao 1 gira 'Carregando cadastros...' para sempre (defeito D1 do escopo); o aviso [data-testid=clientes-cadastros-indisponivel] tambem nao existe"
+    },
+    {
+      "caso": "falha na releitura preserva o que ja foi lido, com hora e repeticao",
+      "resultado": "falhou",
+      "evidencia": "timeout de 45s esperando [data-testid=clientes-cadastros-desatualizada]: a falha de releitura e invisivel e a lista antiga segue na tela sem hora, sem motivo e sem repeticao (defeito D2)"
+    },
+    {
+      "caso": "releitura em curso mantem o conteudo e anuncia com role=status",
+      "resultado": "falhou",
+      "evidencia": "timeout de 20s esperando [data-testid=clientes-cadastros-atualizando]: 'Recarregar lista' nao anuncia progresso nenhum (defeito D4)"
+    },
+    {
+      "caso": "negativa na releitura descarta o dado e nao oferece repetir",
+      "resultado": "falhou",
+      "evidencia": "timeout de 45s esperando [data-testid=clientes-cadastros-negado]: um 403 na releitura nao descarta nada — o cadastro (nome do cliente) continuava visivel, falhando ABERTO na tela (defeito D3)"
+    },
+    {
+      "caso": "401 sem sessao e 403 para papel sem acesso, decididos no servidor",
+      "resultado": "passou",
+      "evidencia": "preservacao: o servidor ja decidia (401 admin_session_required sem cookie; 403 forbidden para rh) e continua decidindo — a tela nao inventa permissao"
+    },
+    {
+      "caso": "320/390/768/1440 dia e noite sem transbordo, com percurso de teclado",
+      "resultado": "passou",
+      "evidencia": "preservacao: sem transbordo de documento em nenhuma das quatro larguras nem no tema noturno, e o campo do cadastro e alcancavel por Tab com foco visivel medido"
+    }
+  ],
+  "capturas": [
+    "clientes-1440-dia.png",
+    "clientes-768-dia.png",
+    "clientes-768-noite.png",
+    "clientes-390-dia.png",
+    "clientes-390-teclado.png",
+    "clientes-320-dia.png"
+  ],
+  "resumo": "4 defeitos confirmados por medicao (D1 carregando eterno, D2 releitura silenciosa, D4 releitura sem role=status e D3 negativa falhando aberto) e 2 preservacoes confirmadas (decisao de autorizacao no servidor e a cobertura de responsividade/tema/teclado). As capturas desta pasta sao da main SEM a correcao e ficam fora do resumo.json vigente de proposito: documentam o defeito corrigido, nao a evidencia vigente."
+}
