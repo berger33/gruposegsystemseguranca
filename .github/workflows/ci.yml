@@ -34,6 +34,8 @@ jobs:
         run: npm run typecheck
       - name: Unit tests (no silent integration skip)
         run: npm test
+      - name: UX-PRO-00 inventory precision (isolated fixtures, no bypass)
+        run: node --test tests/ux-pro-00-precision.test.mjs
       - name: Administrative navigation catalogue and role-filtered search
         run: node --test tests/admin-navigation.test.mjs
       - name: Build (beta noindex)
