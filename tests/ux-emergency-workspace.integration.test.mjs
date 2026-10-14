@@ -1,14 +1,12 @@
-// UX-PRO-07B — gate aditivo da leitura de /admin/emergencial.
+// UX-PRO-07B-2 — gate aditivo de /admin/emergencial.
 //
-// Prova com HTTP, PostgreSQL descartável e Chromium reais: autorização das duas
-// leituras, leitura inicial, vazio honesto, falha inicial com repetição real,
-// preservação marcada em falha transitória de releitura, negativa pós-sucesso
-// fail-closed, resposta 2xx malformada que não vira vazio, habilitação honesta
-// das ações de ativação, transição canônica intacta, teclado, responsividade e
-// tema. As falhas de leitura são injetadas apenas em window.fetch da página —
-// nenhuma API é afrouxada e nenhuma mutação é simulada.
+// Prova com HTTP, PostgreSQL descartável e Chromium reais: autorização e estados
+// das leituras, estados de escrita, replay com a mesma chave idempotente, resumo
+// legível da trilha, ajuda e obrigatoriedade dos campos, teclado, responsividade
+// e tema. A perda de resposta é injetada depois do commit real no servidor; as
+// demais falhas de UI são isoladas em window.fetch, sem afrouxar as APIs.
 //
-// Não substitui nem altera as asserções herdadas de tests/ext15-emergency*.test.mjs.
+// Não substitui nem enfraquece os contratos herdados de tests/ext15-emergency*.test.mjs.
 import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
@@ -137,10 +135,11 @@ async function withBrowser(body) {
 }
 
 /**
- * Abre a tela com controles de falha por leitura. `list` afeta
- * `GET /api/ext/emergency/channels`; `detail` afeta o GET do canal; as mutações
- * (POST) nunca são interceptadas — elas saem para o servidor de verdade e ficam
- * registradas em `window.__uxEmergencyControl.mutations` para inspeção.
+ * Abre a tela com controles de falha por leitura e escrita. `list` afeta
+ * `GET /api/ext/emergency/channels`; `detail` afeta o GET do canal. As mutações
+ * ficam registradas em `window.__uxEmergencyControl.mutations`; quando não há
+ * regra de falha elas chegam ao servidor real, e `dropResponseCount` só descarta
+ * a resposta depois de o servidor concluir o commit.
  */
 async function openEmergency(browser, {
   width = 1440,
@@ -164,7 +163,7 @@ async function openEmergency(browser, {
     window.__uxEmergencyControl = {
       list: { ...control.list },
       detail: { ...control.detail },
-      mutation: { ...control.mutation },
+      mutation: { failCount: 0, malformedCount: 0, dropResponseCount: 0, ...control.mutation },
       calls: { list: 0, detail: 0 },
       mutations: [],
     };
@@ -178,7 +177,9 @@ async function openEmergency(browser, {
           headers: { 'content-type': 'application/json' },
         });
       }
-      if (rule.malformed) {
+      const shouldMalformed = rule.malformed || rule.malformedCount > 0;
+      if (rule.malformedCount > 0) rule.malformedCount -= 1;
+      if (shouldMalformed) {
         return new Response(JSON.stringify({ note: 'resposta sem items' }), {
           status: 200,
           headers: { 'content-type': 'application/json' },
@@ -191,27 +192,37 @@ async function openEmergency(browser, {
       const pathname = new URL(raw, window.location.origin).pathname;
       const method = String(init?.method || (typeof input !== 'string' ? input?.method : '') || 'GET').toUpperCase();
       if (method === 'POST') {
+        const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined));
         window.__uxEmergencyControl.mutations.push({
           url: pathname,
           method,
           body: typeof init?.body === 'string' ? init.body : null,
-          idempotencyKey: init?.headers ? (init.headers['Idempotency-Key'] || init.headers['idempotency-key'] || null) : null,
+          idempotencyKey: headers.get('Idempotency-Key'),
         });
         const rule = window.__uxEmergencyControl.mutation;
         if (rule.delay > 0) await new Promise(resolve => setTimeout(resolve, rule.delay));
-        if (rule.fail) {
+        const shouldFail = rule.fail || rule.failCount > 0;
+        if (rule.failCount > 0) rule.failCount -= 1;
+        if (shouldFail) {
           return new Response(JSON.stringify({ error: rule.code || 'emergency_write_unavailable' }), {
             status: rule.status || 503,
             headers: { 'content-type': 'application/json' },
           });
         }
-        if (rule.malformed) {
+        const shouldMalformed = rule.malformed || rule.malformedCount > 0;
+        if (rule.malformedCount > 0) rule.malformedCount -= 1;
+        if (shouldMalformed) {
           return new Response(JSON.stringify({ note: 'resposta incompleta' }), {
             status: 200,
             headers: { 'content-type': 'application/json' },
           });
         }
-        return original(input, init);
+        const response = await original(input, init);
+        if (response.ok && rule.dropResponseCount > 0) {
+          rule.dropResponseCount -= 1;
+          throw new TypeError('mutation_response_lost_after_commit');
+        }
+        return response;
       }
       if (method === 'GET' && pathname === '/api/ext/emergency/channels') {
         window.__uxEmergencyControl.calls.list += 1;
@@ -644,10 +655,11 @@ test('browser: transição canônica rascunho → em_teste continua idêntica qu
 
     await page.getByRole('button', { name: 'Iniciar ciclo de testes', exact: true }).click();
     await page.locator('[data-testid="emergencial-escrita-mensagem"]').waitFor();
-    await page.waitForFunction(channelId => {
-      const text = document.querySelector('[data-testid="emergencial-detalhe-trilha"]')?.textContent || '';
-      return text.includes(channelId) && text.includes('"status": "em_teste"');
-    }, firstChannel.id);
+    await page.waitForFunction(() => {
+      const trail = document.querySelector('[data-testid="emergencial-detalhe-trilha"]');
+      const text = trail?.textContent || '';
+      return text.includes('Em teste') && text.includes('Ciclo de testes iniciado');
+    });
 
     const sent = await page.evaluate(() => window.__uxEmergencyControl.mutations.map(item => ({ ...item })));
     assert.equal(sent.length, 1, 'a ação liberada precisa enviar exatamente uma mutação');
@@ -711,7 +723,7 @@ test('browser: teclado alcança seleção e ações com foco visível, e trocar 
     await page.waitForFunction(previous => window.__uxEmergencyControl.calls.detail > previous, before);
     const selectedValue = await select.inputValue();
     assert.notEqual(selectedValue, selectedBeforeArrow, 'a seta precisa trocar o canal selecionado');
-    await page.waitForFunction(channelId => (document.querySelector('[data-testid="emergencial-detalhe-trilha"]')?.textContent || '').includes(channelId), selectedValue);
+    await page.waitForFunction(channelId => document.querySelector('[data-testid="emergencial-detalhe-trilha"]')?.getAttribute('data-channel-id') === channelId, selectedValue);
     assert.ok(await page.evaluate(() => window.__uxEmergencyControl.calls.detail >= 2), 'trocar de canal precisa reler a trilha de verdade');
 
     for (const label of ACTION_LABELS) {
@@ -828,7 +840,7 @@ test('browser: envio pendente bloqueia as cinco escritas e duplo clique não env
     await page.locator('[data-testid="emergencial-detalhe-trilha"]').waitFor();
 
     const nome = `Canal de envio ${randomUUID().slice(0, 8)}`;
-    await page.getByLabel('Nome', { exact: true }).fill(nome);
+    await page.locator('[data-testid="emergencial-field-name"]').fill(nome);
     const submit = page.getByRole('button', { name: 'Registrar rascunho' });
     await submit.click({ clickCount: 2, delay: 50 });
 
@@ -836,7 +848,7 @@ test('browser: envio pendente bloqueia as cinco escritas e duplo clique não env
     await sending.waitFor();
     const sendingText = await sending.innerText();
     assert.match(sendingText, /configuração do canal/i);
-    assert.match(sendingText, /não foi reconciliado/i);
+    assert.match(sendingText, /não foi reconciliado|resultado ainda não foi confirmado/i);
     const during = await actionStates(page);
     for (const label of ACTION_LABELS) {
       assert.equal(during[label].enabled, false, `${label} precisa ficar bloqueada durante o envio`);
@@ -864,7 +876,7 @@ test('browser: envio pendente bloqueia as cinco escritas e duplo clique não env
     await cards.getByRole('heading', { name: nome, exact: true }).waitFor();
     const newId = await page.locator('[data-testid="emergencial-canal-select"] option', { hasText: nome }).getAttribute('value');
     assert.equal(await page.locator('[data-testid="emergencial-canal-select"]').inputValue(), newId, 'a seleção precisa seguir o canal criado');
-    await page.waitForFunction(channelId => ((document.querySelector('[data-testid="emergencial-detalhe-trilha"]')?.textContent || '')).includes(channelId), newId);
+    await page.waitForFunction(channelId => document.querySelector('[data-testid="emergencial-detalhe-trilha"]')?.getAttribute('data-channel-id') === channelId, newId);
     await context.close();
   });
 });
@@ -896,10 +908,10 @@ test('browser: transição com envio pendente mantém payload canônico e bloque
     assert.equal(transitions.length, 1, 'duplo clique não pode enviar segunda transição');
     assert.deepEqual(JSON.parse(transitions[0].body), { status: 'em_teste' }, 'o corpo da transição não pode mudar');
     assert.match(String(transitions[0].idempotencyKey), /^ext15-ui-testing-\d+-[0-9a-f]+$/, 'a Idempotency-Key continua vindo do mesmo gerador');
-    await page.waitForFunction(channelId => {
+    await page.waitForFunction(() => {
       const text = document.querySelector('[data-testid="emergencial-detalhe-trilha"]')?.textContent || '';
-      return text.includes(channelId) && text.includes('"status": "em_teste"');
-    }, selectedId);
+      return text.includes('Em teste') && text.includes('Ciclo de testes iniciado');
+    });
     await context.close();
   });
 });
@@ -913,15 +925,15 @@ test('browser: falha transitória de escrita declara causa real, preserva a leit
     await page.locator('[data-testid="emergencial-canal-select"]').selectOption(writeDraft.id);
     await page.getByRole('button', { name: 'Iniciar ciclo de testes', exact: true }).click();
 
-    const error = page.locator('[data-testid="emergencial-escrita-erro"]');
-    await error.waitFor();
-    const text = await error.innerText();
+    const uncertain = page.locator('[data-testid="emergencial-escrita-incerta"]');
+    await uncertain.waitFor();
+    const text = await uncertain.innerText();
     assert.match(text, /emergency_write_unavailable/, 'a causa real precisa aparecer com o código do servidor');
     assert.match(text, /não é possível afirmar/i, 'a falha transitória precisa declarar que o resultado da escrita é incerto');
-    assert.match(text, /releia|atualizar/i, 'a falha precisa apontar para a releitura segura');
+    assert.match(text, /mesma URL|mesma chave idempotente/i, 'a tela deve oferecer reconciliação segura da solicitação original');
     assert.match(await page.locator('[data-testid="emergencial-lista"]').innerText(), /última leitura concluída/i, 'a hora da última leitura precisa continuar declarada');
     assert.ok(await page.locator('[data-testid="emergencial-lista-canais"]').count(), 'a lista lida continua visível e não é invalidada por falha de escrita');
-    assert.equal(await error.getByRole('button').count(), 0, 'falha de escrita não oferece repetição automática do POST');
+    assert.equal(await page.getByRole('button', { name: 'Reconciliar solicitação', exact: true }).count(), 1, 'a repetição só ocorre por ação explícita do usuário');
 
     const posts1 = await page.evaluate(() => window.__uxEmergencyControl.mutations.filter(item => item.url.includes('/transition')).length);
     await page.waitForTimeout(1500);
@@ -930,8 +942,9 @@ test('browser: falha transitória de escrita declara causa real, preserva a leit
 
     const after = await actionStates(page);
     for (const label of ACTION_LABELS) {
-      assert.equal(after[label].enabled, true, `${label} volta a ser liberada quando a leitura continua válida`);
+      assert.equal(after[label].enabled, false, `${label} fica bloqueada até a escrita incerta ser reconciliada`);
     }
+    assert.match(await blockedReason(page), /reconcilie/i);
     await capture(page, 'emergencial-1440-escrita-falha-transitoria', {
       estado: 'escrita_falha_transitoria',
       ...await measureSurface(page, '1440px na falha transitória de escrita'),
@@ -980,30 +993,38 @@ test('browser: 403 na escrita com perda de leitura falha fechada e remove o dado
   });
 });
 
-test('browser: 2xx malformada na escrita não é sucesso nem vazio e não derruba a tela', { skip: !RUN }, async () => {
+test('browser: 2xx malformada na escrita é incerta, não vira sucesso e não derruba a tela', { skip: !RUN }, async () => {
   await withBrowser(async browser => {
-    const { context, page } = await openEmergency(browser, { mutation: { malformed: true } });
+    const { context, page } = await openEmergency(browser, { mutation: { malformedCount: 1 } });
     await page.locator('[data-testid="emergencial-lista-canais"]').waitFor();
     await page.locator('[data-testid="emergencial-detalhe-trilha"]').waitFor();
     const callsBefore = await page.evaluate(() => window.__uxEmergencyControl.calls.list);
     await page.locator('[data-testid="emergencial-canal-select"]').selectOption(writeDraft.id);
     await page.getByRole('button', { name: 'Iniciar ciclo de testes', exact: true }).click();
 
-    const error = page.locator('[data-testid="emergencial-escrita-erro"]');
-    await error.waitFor();
-    assert.match(await error.innerText(), /invalid_emergency_write_response/);
+    const uncertain = page.locator('[data-testid="emergencial-escrita-incerta"]');
+    await uncertain.waitFor();
+    assert.match(await uncertain.innerText(), /invalid_emergency_write_response/);
     assert.equal(await page.locator('[data-testid="emergencial-escrita-mensagem"]').count(), 0, '2xx malformada não pode ser apresentada como sucesso');
     assert.ok(await page.locator('[data-testid="emergencial-lista-canais"]').count(), 'a lista lida continua visível');
+    assert.equal(await page.getByRole('button', { name: 'Reconciliar solicitação', exact: true }).count(), 1, 'a mesma chave fica disponível para reconciliação manual');
     const callsAfter = await page.evaluate(() => window.__uxEmergencyControl.calls.list);
-    assert.equal(callsAfter, callsBefore, 'escrita não confirmada não dispara releitura de reconciliação');
+    assert.equal(callsAfter, callsBefore, 'escrita não confirmada não dispara releitura automática');
+    assert.equal(await page.getByRole('button', { name: 'Registrar rascunho' }).isEnabled(), false, 'a criação concorrente fica bloqueada enquanto a resposta for incerta');
+    await context.close();
+  });
 
-    // A criação com resposta malformada (sem channel.id) também não pode vira sucesso nem crash.
-    await page.getByLabel('Nome', { exact: true }).fill(`Canal inválido ${randomUUID().slice(0, 8)}`);
+  // A criação com resposta malformada (sem channel.id) também não vira sucesso nem derruba a tela.
+  await withBrowser(async browser => {
+    const { context, page } = await openEmergency(browser, { mutation: { malformedCount: 1 } });
+    await page.locator('[data-testid="emergencial-lista-canais"]').waitFor();
+    await page.locator('[data-testid="emergencial-detalhe-trilha"]').waitFor();
     await page.getByRole('button', { name: 'Registrar rascunho' }).click();
-    await page.waitForTimeout(1200);
+    const uncertain = page.locator('[data-testid="emergencial-escrita-incerta"]');
+    await uncertain.waitFor();
     assert.equal(await page.getByRole('heading', { level: 1, name: /Apoio emergencial/i }).count(), 1, 'resposta malformada da criação não pode derrubar a tela');
     assert.equal(await page.locator('[data-testid="emergencial-escrita-mensagem"]').count(), 0, 'criação sem channel.id não pode ser apresentada como sucesso');
-    assert.match(await page.locator('[data-testid="emergencial-escrita-erro"]').innerText(), /invalid_emergency_write_response/);
+    assert.match(await uncertain.innerText(), /invalid_emergency_write_response/);
     const creates = await page.evaluate(() => window.__uxEmergencyControl.mutations.filter(item => item.url === '/api/ext/emergency/channels'));
     assert.equal(creates.length, 1);
     await capture(page, 'emergencial-1440-escrita-resposta-invalida', {
@@ -1057,12 +1078,223 @@ test('browser: envio pendente em 390 dia e 768 noite, falha de escrita em 320, a
       window.__uxEmergencyControl.mutation.code = 'emergency_write_unavailable';
     });
     await page.getByRole('button', { name: 'Iniciar ciclo de testes', exact: true }).click();
-    await page.locator('[data-testid="emergencial-escrita-erro"]').waitFor();
+    await page.locator('[data-testid="emergencial-escrita-incerta"]').waitFor();
     const s320 = await measureSurface(page, '320px na falha de escrita');
     await capture(page, 'emergencial-320-escrita-falha', {
       estado: 'escrita_falha_transitoria',
       overflowDocumentoPx: s320.overflowDocumentoPx,
       menorAlvoPx: s320.menorAlvoPx,
+    });
+    await context.close();
+  });
+});
+
+test('browser: a trilha mostra resumo legível e mantém o JSON técnico disponível', { skip: !RUN }, async () => {
+  const channel = await createChannel(`Trilha legível UX-PRO-07B-2 ${randomUUID().slice(0, 8)}`);
+  const transition = await api(`/api/ext/emergency/channels/${channel.id}/transition`, {
+    method: 'POST', cookie: adminCookie, body: { status: 'em_teste' },
+  });
+  assert.equal(transition.status, 200);
+  const testResult = await api(`/api/ext/emergency/channels/${channel.id}/tests`, {
+    method: 'POST',
+    cookie: adminCookie,
+    body: {
+      test_kind: 'recebimento',
+      result: 'Recebimento declarado como conferido no ensaio automatizado.',
+      evidence_note: 'Registro sintético do gate; nenhum contato externo foi realizado.',
+      tested_by_name: 'Operador QA interno',
+      is_success: true,
+    },
+  });
+  assert.equal(testResult.status, 201);
+
+  await withBrowser(async browser => {
+    const { context, page } = await openEmergency(browser);
+    await page.locator('[data-testid="emergencial-lista-canais"]').waitFor();
+    await page.locator('[data-testid="emergencial-canal-select"]').selectOption(channel.id);
+    const trail = page.locator('[data-testid="emergencial-detalhe-trilha"]');
+    await trail.waitFor();
+    await trail.getByRole('heading', { name: channel.name, exact: true }).waitFor();
+    const text = await trail.innerText();
+    assert.match(text, /Em teste/);
+    assert.match(text, /Resumo da prontidão interna/);
+    assert.match(text, /Pendente/);
+    assert.match(text, /Teste de recebimento/);
+    assert.match(text, /Sucesso declarado/);
+    assert.match(text, /Ciclo de testes iniciado/);
+    assert.match(text, /Teste interno registrado/);
+    assert.match(text, /nenhum contato externo/i);
+
+    const technical = page.locator('[data-testid="emergencial-detalhe-tecnico"]');
+    assert.equal(await technical.getAttribute('open'), null, 'JSON técnico começa recolhido, mas continua disponível');
+    await technical.locator('summary').click();
+    const raw = page.locator('[data-testid="emergencial-detalhe-json"]');
+    const rawText = await raw.innerText();
+    assert.match(rawText, /"events"/);
+    assert.match(rawText, /"tests"/);
+    assert.match(rawText, new RegExp(channel.id));
+    assert.match(rawText, /emergency_test_registered/);
+
+    const successContrastDay = await contrast(page, '[data-testid="emergencial-teste-sucesso"]');
+    assert.ok(successContrastDay >= 4.5, `contraste claro do resultado declarado precisa ser >= 4.5:1, medido ${successContrastDay}:1`);
+    await capture(page, 'emergencial-1440-trilha-legivel', {
+      estado: 'trilha_resumida_json_disponivel',
+      contrasteSucessoDia: successContrastDay,
+      ...await measureSurface(page, '1440px com trilha legível'),
+    });
+    await page.click('[data-admin-theme-toggle="true"]');
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night');
+    await page.waitForTimeout(400);
+    const successContrastNight = await contrast(page, '[data-testid="emergencial-teste-sucesso"]');
+    assert.ok(successContrastNight >= 4.5, `contraste noturno do resultado declarado precisa ser >= 4.5:1, medido ${successContrastNight}:1`);
+    await capture(page, 'emergencial-1440-trilha-legivel-noite', {
+      estado: 'trilha_resumida_json_disponivel',
+      contrasteSucessoDia: successContrastDay,
+      contrasteSucessoNoite: successContrastNight,
+      ...await measureSurface(page, '1440px com trilha legível no tema noite'),
+    });
+    await context.close();
+  });
+});
+
+test('browser: formulário explica e marca campos obrigatórios sem alterar o contrato de criação', { skip: !RUN }, async () => {
+  await withBrowser(async browser => {
+    const { context, page } = await openEmergency(browser);
+    const form = page.locator('form[aria-labelledby="emergencial-form-titulo"]');
+    await form.waitFor();
+    const fieldData = await form.locator('[data-testid^="emergencial-field-"]').evaluateAll(elements => elements.map(element => {
+      const id = element.id;
+      const label = [...document.querySelectorAll('label')].find(candidate => candidate.htmlFor === id);
+      const helpId = element.getAttribute('aria-describedby');
+      return {
+        id,
+        required: element.required,
+        label: label?.innerText || '',
+        help: helpId ? document.getElementById(helpId)?.textContent || '' : '',
+        marker: label?.querySelector('[data-testid="emergencial-obrigatorio"]')?.textContent || '',
+      };
+    }));
+    assert.equal(fieldData.length, 8, 'todos os oito campos existentes devem continuar presentes');
+    for (const field of fieldData) {
+      assert.ok(field.id, 'cada campo precisa de id estável');
+      assert.ok(field.required, `${field.id} precisa continuar obrigatório`);
+      assert.match(field.label, /Obrigatório/);
+      assert.match(field.marker, /Obrigatório/);
+      assert.ok(field.help.trim().length >= 12, `${field.id} precisa ter ajuda associada`);
+    }
+    assert.match(await form.innerText(), /não envia|não aciona/i);
+    await capture(page, 'emergencial-1440-formulario-orientado', {
+      estado: 'formulario_rotulado_com_ajuda',
+      ...await measureSurface(page, '1440px com formulário orientado'),
+    });
+
+    await form.getByRole('button', { name: 'Registrar rascunho' }).click();
+    await page.locator('[data-testid="emergencial-escrita-mensagem"]').waitFor();
+    const sent = await page.evaluate(() => window.__uxEmergencyControl.mutations.map(item => ({ ...item })));
+    assert.equal(sent.length, 1, `criação deve emitir exatamente um POST: ${JSON.stringify(sent)}`);
+    assert.equal(sent[0].method, 'POST');
+    assert.equal(sent[0].url, '/api/ext/emergency/channels');
+    assert.match(String(sent[0].idempotencyKey), /^ext15-ui-create-\d+-[0-9a-f]+$/);
+    assert.deepEqual(JSON.parse(sent[0].body), {
+      name: 'Plantão interno de apoio',
+      channel_type: 'telefone',
+      recipient_name: 'Supervisor de plantão',
+      recipient_contact: 'contato-interno-declarado',
+      availability: 'Disponibilidade declarada 24 horas por dia, sujeita a conferência humana.',
+      purpose: 'Apoio interno em ocorrências operacionais que exijam escalonamento humano.',
+      escalation_responsible: 'Gestor de plantão',
+      escalation_contact: 'contato-interno-escalacao',
+      escalation_steps: [{ responsible: 'Gestor de plantão', contact: 'contato-interno-escalacao', wait_minutes: 5 }],
+    }, 'a ajuda visual não pode mudar os campos ou o corpo canônico da criação');
+    await context.close();
+  });
+});
+
+test('browser: resposta perdida é reconciliada com a mesma chave sem duplicar eventos', { skip: !RUN }, async () => {
+  const channel = await createChannel(`Reconciliação segura UX-PRO-07B-2 ${randomUUID().slice(0, 8)}`);
+  const enterTest = await api(`/api/ext/emergency/channels/${channel.id}/transition`, {
+    method: 'POST', cookie: adminCookie, body: { status: 'em_teste' },
+  });
+  assert.equal(enterTest.status, 200);
+  await withBrowser(async browser => {
+    const { context, page } = await openEmergency(browser, {
+      mutation: { delay: 900, dropResponseCount: 1 },
+    });
+    await page.locator('[data-testid="emergencial-lista-canais"]').waitFor();
+    await page.locator('[data-testid="emergencial-canal-select"]').selectOption(channel.id);
+    await page.locator('[data-testid="emergencial-detalhe-trilha"]').waitFor();
+
+    await page.getByRole('button', { name: 'Marcar ativo (decisão humana)', exact: true }).click();
+    const knownFailure = page.locator('[data-testid="emergencial-escrita-erro"]');
+    await knownFailure.waitFor();
+    assert.match(await knownFailure.innerText(), /successful_tests_required/);
+    assert.equal(await page.locator('[data-testid="emergencial-escrita-incerta"]').count(), 0,
+      'uma recusa HTTP explícita não deve ser apresentada como resultado incerto');
+    assert.equal(await page.getByRole('button', { name: 'Reconciliar solicitação', exact: true }).count(), 0);
+
+    const receiptTest = page.locator('[data-testid="emergencial-acao-recebimento"]');
+    await page.evaluate(() => {
+      const button = document.querySelector('[data-testid="emergencial-acao-recebimento"]');
+      if (!(button instanceof HTMLButtonElement) || button.disabled) throw new Error('action_not_ready');
+      button.click();
+      button.click();
+    });
+    const pending = page.locator('[data-testid="emergencial-escrita-enviando"]');
+    await pending.waitFor();
+    assert.match(await pending.innerText(), /enviando|reenviando/i);
+    assert.equal(await receiptTest.isDisabled(), true, 'a ação em curso fica desabilitada');
+    assert.equal(await page.getByRole('button', { name: 'Registrar rascunho' }).isDisabled(), true,
+      'outras mutações também ficam bloqueadas durante o envio');
+    for (const label of ACTION_LABELS) {
+      assert.equal((await actionStates(page))[label].enabled, false, `${label} não pode concorrer com uma escrita pendente`);
+    }
+    const duringSend = await page.evaluate(() => window.__uxEmergencyControl.mutations.map(item => ({ ...item })));
+    assert.equal(duringSend.length, 2, 'só a recusa conhecida e uma única ação nova devem ter sido enviadas');
+    await capture(page, 'emergencial-1440-mutacao-pendente', {
+      estado: 'mutacao_pendente',
+      ...await measureSurface(page, '1440px durante envio pendente'),
+    });
+
+    const uncertain = page.locator('[data-testid="emergencial-escrita-incerta"]');
+    await uncertain.waitFor();
+    const uncertainText = await uncertain.innerText();
+    assert.match(uncertainText, /resultado .*confirmado|não foi possível confirmar|não é possível afirmar/i);
+    assert.match(uncertainText, /mesma chave/i);
+    assert.equal(await page.locator('[data-testid="emergencial-escrita-mensagem"]').count(), 0,
+      'resposta perdida não pode ser anunciada como sucesso');
+    assert.equal(await page.getByRole('button', { name: 'Reconciliar solicitação', exact: true }).count(), 1);
+    const beforeReplay = await api(`/api/ext/emergency/channels/${channel.id}`, { cookie: adminCookie });
+    assert.equal(beforeReplay.body.channel.status, 'em_teste', 'a primeira POST real chegou ao servidor antes de a resposta ser descartada');
+    assert.equal(beforeReplay.body.events.filter(event => event.event_type === 'emergency_test_registered').length, 1);
+    await capture(page, 'emergencial-1440-mutacao-resultado-incerto', {
+      estado: 'mutacao_com_resultado_nao_confirmado',
+      ...await measureSurface(page, '1440px com resultado de escrita não confirmado'),
+    });
+
+    await page.getByRole('button', { name: 'Reconciliar solicitação', exact: true }).click();
+    const success = page.locator('[data-testid="emergencial-escrita-mensagem"]');
+    await success.waitFor();
+    assert.match(await success.innerText(), /mesma chave/i);
+    assert.equal(await uncertain.count(), 0);
+    await page.waitForFunction(() => {
+      const text = document.querySelector('[data-testid="emergencial-detalhe-trilha"]')?.textContent || '';
+      return text.includes('Em teste') && text.includes('Teste de recebimento');
+    });
+
+    const sent = await page.evaluate(() => window.__uxEmergencyControl.mutations.map(item => ({ ...item })));
+    assert.equal(sent.length, 3);
+    const replayPair = sent.slice(1);
+    assert.deepEqual(replayPair[1], replayPair[0], 'reconciliação reenvia URL, método, corpo e Idempotency-Key idênticos');
+    assert.equal(replayPair[0].url, `/api/ext/emergency/channels/${channel.id}/tests`);
+    assert.equal(JSON.parse(replayPair[0].body).test_kind, 'recebimento');
+    assert.match(replayPair[0].idempotencyKey, /^ext15-ui-receipt-\d+-[0-9a-f]+$/);
+    const afterReplay = await api(`/api/ext/emergency/channels/${channel.id}`, { cookie: adminCookie });
+    assert.equal(afterReplay.body.channel.status, 'em_teste');
+    assert.equal(afterReplay.body.events.filter(event => event.event_type === 'emergency_test_registered').length, 1,
+      'replay idempotente confirma a primeira escrita sem criar evento duplicado');
+    await capture(page, 'emergencial-1440-mutacao-reconciliada', {
+      estado: 'mutacao_reconciliada_mesma_chave',
+      ...await measureSurface(page, '1440px depois da reconciliação'),
     });
     await context.close();
   });

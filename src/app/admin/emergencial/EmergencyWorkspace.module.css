@@ -1,9 +1,200 @@
-/* UX-PRO-07B — layout próprio das ações de /admin/emergencial.
-   Cores, alvos e foco continuam vindo de UiWorkspace.module.css e dos tokens
-   UX-01; aqui só se garante que rótulos longos possam quebrar linha em telas
-   estreitas sem estourar a largura da superfície. Nada de dado, permissão ou
-   contrato muda por causa deste arquivo. */
+/* UX-PRO-07B-2 — organização legível da trilha e orientação dos campos.
+   Tokens de cor, foco, alvos e superfície continuam centralizados em UX-01. */
 .acaoRotuloLongo {
   white-space: normal;
   max-width: 100%;
+}
+
+.fieldLabel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 8px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.required {
+  color: var(--ux-color-muted);
+  font-size: .75rem;
+  font-weight: 700;
+}
+
+.requiredNote {
+  margin: 0;
+  color: var(--ux-color-muted);
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .035em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.fieldHelp {
+  color: var(--ux-color-muted);
+  font-size: .8125rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.trail {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.trailOverview {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--ux-color-border);
+  border-radius: var(--ux-radius-md);
+  background: var(--ux-color-surface);
+}
+
+.trailHeading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.trailHeading > div {
+  min-width: 0;
+}
+
+.trailHeading time {
+  color: var(--ux-color-muted);
+  font-size: .8125rem;
+  overflow-wrap: anywhere;
+}
+
+.readiness {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.readiness > div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--ux-color-border);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-canvas);
+}
+
+.readiness dt,
+.trailMeta dt {
+  color: var(--ux-color-muted);
+  font-size: .75rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.readiness dd,
+.trailMeta dd {
+  margin: 4px 0 0;
+  font-size: .875rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.trailOverview > p {
+  margin-bottom: 0;
+}
+
+.trailSection {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--ux-color-border);
+}
+
+.trailList {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trailItem {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--ux-color-border);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-surface);
+}
+
+.trailItem > p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.trailMeta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.resultSuccess {
+  color: var(--ux-color-success);
+  font-size: .8125rem;
+  font-weight: 800;
+}
+
+.resultFailure {
+  color: var(--ux-color-danger-strong);
+  font-size: .8125rem;
+  font-weight: 800;
+}
+
+.boundary {
+  color: var(--ux-color-muted);
+  font-size: .8125rem;
+  line-height: 1.5;
+}
+
+.technical {
+  min-width: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--ux-color-border);
+}
+
+.technical > summary {
+  display: list-item;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--ux-color-border);
+  border-radius: var(--ux-radius-sm);
+  color: var(--ux-color-brand);
+  font-weight: 700;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.technical > summary:focus-visible {
+  outline: 3px solid var(--ux-color-focus);
+  outline-offset: 3px;
+}
+
+.technical > p {
+  margin: 10px 0;
+}
+
+@media (max-width: 480px) {
+  .trailOverview,
+  .trailItem {
+    padding: 10px;
+  }
 }

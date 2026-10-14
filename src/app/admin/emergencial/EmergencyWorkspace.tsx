@@ -5,9 +5,9 @@
 // A leitura trata os dois GET já existentes (`/api/ext/emergency/channels` e
 // `.../channels/:id`) com estado honesto por recurso, seleção válida e
 // habilitação das ações de ativação. A escrita (UX-PRO-07B-2) acrescenta
-// estado de envio pendente, prevenção de duplo clique e reconciliação de
-// resultado das cinco mutações canônicas; verbo, URL, corpo,
-// `Idempotency-Key` e auditoria do servidor permanecem idênticos.
+// estado pendente, prevenção de duplo clique e replay manual da solicitação
+// ambígua com URL, corpo e `Idempotency-Key` idênticos. A trilha continua sendo
+// lida do servidor; sua apresentação legível não altera contrato nem auditoria.
 
 import UiBadge, { type UiBadgeTone } from "@/components/ui/UiBadge";
 import UiState from "@/components/ui/UiState";
@@ -35,10 +35,29 @@ type Channel = {
   activated_at?: string | null;
 };
 
+type EmergencyTest = {
+  id: string;
+  test_kind: string;
+  result: string;
+  evidence_note: string;
+  tested_by_name: string;
+  is_success: boolean;
+  test_date?: string | null;
+  created_at: string;
+};
+
+type EmergencyEvent = {
+  id: string;
+  event_type: string;
+  summary: string;
+  payload?: Record<string, unknown> | null;
+  created_at: string;
+};
+
 type EmergencyDetail = {
   channel: Channel;
-  tests: Array<{ id: string; test_kind: string; is_success: boolean; tested_by_name: string }>;
-  events: Array<{ id: string; event_type: string; summary: string; created_at: string }>;
+  tests: EmergencyTest[];
+  events: EmergencyEvent[];
   readiness: { receiving_ok: boolean; attendance_ok: boolean; ready: boolean };
 };
 
@@ -57,9 +76,18 @@ type ReadState<T> =
 
 type WriteAction = 'create' | 'testing' | 'receipt' | 'attendance' | 'activate';
 
+type WriteRequest = {
+  action: WriteAction;
+  url: string;
+  body: Record<string, unknown>;
+  idempotencyKey: string;
+  channelId?: string;
+};
+
 type WriteState =
   | { phase: 'idle' }
-  | { phase: 'sending'; action: WriteAction }
+  | { phase: 'sending'; action: WriteAction; request: WriteRequest; replaying: boolean }
+  | { phase: 'uncertain'; action: WriteAction; request: WriteRequest; error: EmergencyErrorDescriptor }
   | { phase: 'failed'; action: WriteAction; error: EmergencyErrorDescriptor }
   | { phase: 'done'; action: WriteAction; note: string };
 
@@ -85,6 +113,20 @@ const STATUS_LABELS: Record<string, string> = {
   desativado: "Desativado",
 };
 
+const TEST_LABELS: Record<string, string> = {
+  recebimento: "Teste de recebimento",
+  atendimento: "Teste de atendimento",
+};
+
+const EVENT_LABELS: Record<string, string> = {
+  emergency_channel_created: "Canal interno registrado",
+  emergency_em_teste: "Ciclo de testes iniciado",
+  emergency_test_registered: "Teste interno registrado",
+  emergency_ativo: "Ativação humana registrada",
+  emergency_desativado: "Canal desativado internamente",
+  emergency_rascunho: "Canal retornou a rascunho",
+};
+
 function readableStatus(value: string): string {
   return STATUS_LABELS[value] || value.replaceAll("_", " ");
 }
@@ -105,8 +147,32 @@ function readTime(value: string): string {
   });
 }
 
+function readableDateTime(value?: string | null): string {
+  if (!value) return "Data não informada";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Data não informada";
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function readableTestKind(value: string): string {
+  return TEST_LABELS[value] || `Tipo de teste: ${value.replaceAll("_", " ")}`;
+}
+
+function readableEvent(value: string): string {
+  return EVENT_LABELS[value] || `Tipo de evento: ${value.replaceAll("_", " ")}`;
+}
+
 function isAuthFailure(error: EmergencyErrorDescriptor): boolean {
   return error.kind === "auth" || error.kind === "denied";
+}
+
+function isUncertainWrite(error: EmergencyErrorDescriptor): boolean {
+  return error.kind === "network"
+    || error.kind === "server"
+    || error.code === "invalid_emergency_write_response";
 }
 
 /** Motivo explícito de bloqueio das ações que mudam estado canônico. */
@@ -202,7 +268,20 @@ export default function EmergencyWorkspace() {
     const result = await emergencyRead<EmergencyDetail>(CHANNEL_URL(id));
     if (requestIds.current.detail !== requestId) return;
 
-    const invalid = result.ok && (!result.data || typeof result.data !== "object" || !result.data.channel);
+    const invalid = result.ok && (
+      !result.data
+      || typeof result.data !== "object"
+      || !result.data.channel
+      || typeof result.data.channel.id !== "string"
+      || result.data.channel.id !== id
+      || !Array.isArray(result.data.tests)
+      || !Array.isArray(result.data.events)
+      || !result.data.readiness
+      || typeof result.data.readiness !== "object"
+      || typeof result.data.readiness.receiving_ok !== "boolean"
+      || typeof result.data.readiness.attendance_ok !== "boolean"
+      || typeof result.data.readiness.ready !== "boolean"
+    );
     if (!result.ok || invalid) {
       const failure = result.ok ? invalidEmergencyResponse(result.status) : result.error;
       if (preserved && !isAuthFailure(failure)) {
@@ -230,6 +309,15 @@ export default function EmergencyWorkspace() {
   const selectionValid = hasOptions && channels.phase === "ready"
     && channels.data.some(item => item.id === selected);
   const actionsEnabled = channels.phase === "ready" && !channels.staleError && selectionValid;
+  const writePending = write.phase === "sending";
+  const writeUncertain = write.phase === "uncertain";
+  const writesBlocked = writePending || writeUncertain;
+  const actionsAllowed = actionsEnabled && !writesBlocked;
+  const blocked = writePending
+    ? "uma solicitação está sendo enviada; aguarde a resposta antes de iniciar outra escrita."
+    : writeUncertain
+      ? "há uma solicitação sem resultado confirmado; reconcilie a mesma solicitação antes de iniciar outra escrita."
+      : blockedReason(channels, selectionValid);
   const detailForId = detail.phase === "ready" || detail.phase === "failed" ? detail.forId ?? null : null;
 
   useEffect(() => {
@@ -238,23 +326,89 @@ export default function EmergencyWorkspace() {
     void loadDetail(selected);
   }, [selectionValid, selected, detailForId, loadDetail]);
 
-  // UX-PRO-07B-2 — uma escrita por vez nesta tela: as cinco entradas tocam a
-  // mesma máquina de estado canônica do canal. A guarda síncrona (ref) bloqueia
-  // o segundo clique antes do primeiro envio começar; o `disabled` mantém o
-  // bloqueio até a resposta chegar. Nenhum POST extra é disparado.
-  async function runWrite(action: WriteAction, send: () => Promise<void>) {
+  // A mesma solicitação é retida quando a resposta é ambígua. Uma ação explícita
+  // do operador a reenvia com URL, corpo e chave idempotente originais; o servidor
+  // reconcilia o resultado sem duplicar eventos ou testes.
+  async function runWrite(request: WriteRequest, replaying = false) {
     if (sendingRef.current) return;
-    sendingRef.current = action;
-    setWrite({ phase: "sending", action });
+    sendingRef.current = request.action;
+    setWrite({ phase: "sending", action: request.action, request, replaying });
     try {
-      await send();
+      const result = await emergencyWrite<{
+        channel?: { id?: unknown } | null;
+        readiness?: unknown;
+        status?: unknown;
+        note?: unknown;
+        test?: { id?: unknown } | null;
+        detail?: {
+          channel?: { id?: unknown } | null;
+          tests?: unknown;
+          readiness?: unknown;
+        } | null;
+        replayed?: unknown;
+      }>(request.url, { body: request.body, idempotencyKey: request.idempotencyKey });
+
+      if (!result.ok) {
+        failWrite(request, result.error);
+        return;
+      }
+
+      const data = result.data;
+      const channel = data?.channel && typeof data.channel === "object" ? data.channel : null;
+      const replayDetail = data?.detail && typeof data.detail === "object" ? data.detail : null;
+      const replayChannel = replayDetail?.channel && typeof replayDetail.channel === "object" ? replayDetail.channel : null;
+      const channelReceipt = (value: { id?: unknown } | null) => Boolean(
+        value
+          && typeof value.id === "string"
+          && value.id
+          && (!request.channelId || value.id === request.channelId),
+      );
+      const normalTestReceipt = Boolean(
+        data?.test
+          && typeof data.test.id === "string"
+          && data.test.id
+          && data.readiness !== null
+          && typeof data.readiness === "object"
+          && typeof data.status === "string",
+      );
+      const replayedTestReceipt = Boolean(
+        data?.replayed === true
+          && request.channelId
+          && replayChannel?.id === request.channelId
+          && Array.isArray(replayDetail?.tests)
+          && replayDetail?.readiness !== null
+          && typeof replayDetail?.readiness === "object",
+      );
+      const valid = request.action === "create"
+        ? channelReceipt(channel)
+        : request.action === "receipt" || request.action === "attendance"
+          ? normalTestReceipt || replayedTestReceipt
+          : channelReceipt(channel);
+
+      if (!valid) {
+        failWrite(request, invalidEmergencyWriteResponse(result.status));
+        return;
+      }
+
+      const channelId = request.action === "create" ? String(channel?.id || "") : request.channelId || "";
+      const note = data?.replayed === true
+        ? `A solicitação foi confirmada com a mesma chave idempotente. ${typeof data.note === "string" ? data.note : "A lista e a trilha foram relidas."}`
+        : data?.note;
+      doneWrite(request.action, note);
+      if (request.action === "create") setSelected(channelId);
+      await loadChannels();
+      if (request.action !== "create" && channelId) await loadDetail(channelId);
     } finally {
       sendingRef.current = null;
     }
   }
 
-  function failWrite(action: WriteAction, error: EmergencyErrorDescriptor) {
-    setWrite({ phase: "failed", action, error });
+  function failWrite(request: WriteRequest, error: EmergencyErrorDescriptor) {
+    if (isUncertainWrite(error)) {
+      setWrite({ phase: "uncertain", action: request.action, request, error });
+    } else {
+      setWrite({ phase: "failed", action: request.action, error });
+    }
     if (isAuthFailure(error)) {
       // Falha fechada: a releitura da lista (caminho existente) limpa o dado
       // protegido e apresenta a negativa sem repetição quando a sessão perdeu.
@@ -270,61 +424,66 @@ export default function EmergencyWorkspace() {
     });
   }
 
+  async function reconcileWrite() {
+    if (write.phase !== "uncertain") return;
+    await runWrite(write.request, true);
+  }
+
   async function create(e: FormEvent) {
     e.preventDefault();
-    await runWrite("create", async () => {
-      const result = await emergencyWrite<{ channel?: { id?: unknown }; note?: unknown }>(LIST_URL, {
-        body: { ...form, escalation_steps: [{ responsible: form.escalation_responsible, contact: form.escalation_contact, wait_minutes: 5 }] },
-        idempotencyKey: idem("create"),
-      });
-      if (!result.ok) {
-        failWrite("create", result.error);
-        return;
-      }
-      const channel = result.data?.channel;
-      if (!channel || typeof channel !== "object" || typeof channel.id !== "string" || !channel.id) {
-        failWrite("create", invalidEmergencyWriteResponse(result.status));
-        return;
-      }
-      doneWrite("create", result.data.note);
-      setSelected(channel.id);
-      await loadChannels();
+    await runWrite({
+      action: "create",
+      url: LIST_URL,
+      body: { ...form, escalation_steps: [{ responsible: form.escalation_responsible, contact: form.escalation_contact, wait_minutes: 5 }] },
+      idempotencyKey: idem("create"),
     });
   }
 
   async function act(action: WriteAction, path: string, body: Record<string, unknown>) {
     const id = selectionValid ? selected : "";
     if (!id) return;
-    await runWrite(action, async () => {
-      const result = await emergencyWrite<{ channel?: { id?: unknown }; readiness?: unknown; status?: unknown; note?: unknown }>(`${LIST_URL}/${id}${path}`, {
-        body,
-        idempotencyKey: idem(action),
-      });
-      if (!result.ok) {
-        failWrite(action, result.error);
-        return;
-      }
-      const data = result.data;
-      const valid = (action === "receipt" || action === "attendance")
-        ? Boolean(data && data.readiness !== null && typeof data.readiness === "object" && typeof data.status === "string")
-        : Boolean(data && data.channel !== null && typeof data.channel === "object" && typeof data.channel?.id === "string" && data.channel.id);
-      if (!valid) {
-        failWrite(action, invalidEmergencyWriteResponse(result.status));
-        return;
-      }
-      doneWrite(action, data.note);
-      await loadChannels();
-      await loadDetail(id);
+    await runWrite({
+      action,
+      url: `${LIST_URL}/${id}${path}`,
+      body,
+      idempotencyKey: idem(action),
+      channelId: id,
     });
   }
 
-  const field = (name: keyof typeof form, label: string) => (
-    <label className={styles.field} key={name}>{label}
-      <input required value={form[name]} onChange={e => setForm({ ...form, [name]: e.target.value })} />
-    </label>
-  );
+  const fieldHelp: Record<keyof typeof form, string> = {
+    name: "Nome interno para localizar o canal; não é publicado fora desta tela.",
+    channel_type: "Tipo declarado para o registro interno; não confirma conexão com fornecedor.",
+    recipient_name: "Informe a pessoa ou função responsável pelo canal no fluxo interno.",
+    recipient_contact: "Contato declarado para referência; o sistema não liga nem envia mensagem.",
+    availability: "Descreva o período informado; esta tela não mede disponibilidade nem confirma cobertura.",
+    purpose: "Registre a finalidade operacional interna, sem acionar um serviço externo.",
+    escalation_responsible: "Pessoa ou função que deve ser procurada em um escalonamento.",
+    escalation_contact: "Contato declarado do responsável; nenhuma chamada ou mensagem será enviada.",
+  };
 
-  const blocked = blockedReason(channels, selectionValid);
+  const field = (name: keyof typeof form, label: string) => {
+    const id = `emergencial-field-${name}`;
+    const helpId = `${id}-help`;
+    return (
+      <div className={styles.field} key={name}>
+        <label className={local.fieldLabel} htmlFor={id}>
+          <span>{label}</span><span className={local.required} aria-hidden="true" data-testid="emergencial-obrigatorio">Obrigatório</span>
+        </label>
+        <input
+          id={id}
+          data-testid={id}
+          required
+          aria-describedby={helpId}
+          disabled={writesBlocked}
+          value={form[name]}
+          onChange={e => setForm({ ...form, [name]: e.target.value })}
+        />
+        <span className={local.fieldHelp} id={helpId}>{fieldHelp[name]}</span>
+      </div>
+    );
+  };
+
 
   return <UiTaskWorkspace className={styles.workspace}>
     <p className={styles.kicker} data-testid="emergencial-kicker">EXT-15 · F11</p>
@@ -336,12 +495,36 @@ export default function EmergencyWorkspace() {
     <div className={styles.layout}>
       <form className={styles.panel} onSubmit={create} aria-labelledby="emergencial-form-titulo">
         <h2 id="emergencial-form-titulo" className={styles.panelTitle}>Configurar canal interno</h2>
+        <p className={local.requiredNote} data-testid="emergencial-obrigatorio-nota">Todos os campos são obrigatórios. Os dados são declarados para registro interno; esta tela não aciona contatos externos.</p>
         <div className={styles.stack}>
           {field("name", "Nome")}
-          <label className={styles.field}>Tipo<select value={form.channel_type} onChange={e => setForm({ ...form, channel_type: e.target.value })}>{["telefone", "whatsapp", "app", "botao", "outro"].map(x => <option key={x}>{x}</option>)}</select></label>
-          {field("recipient_name", "Destinatário responsável")}{field("recipient_contact", "Contato declarado")}{field("availability", "Disponibilidade declarada")}{field("purpose", "Finalidade")}{field("escalation_responsible", "Responsável pelo escalonamento")}{field("escalation_contact", "Contato de escalonamento")}
+          <div className={styles.field}>
+            <label className={local.fieldLabel} htmlFor="emergencial-field-channel_type">
+              <span>Tipo</span><span className={local.required} aria-hidden="true" data-testid="emergencial-obrigatorio">Obrigatório</span>
+            </label>
+            <select
+              id="emergencial-field-channel_type"
+              data-testid="emergencial-field-channel_type"
+              required
+              aria-describedby="emergencial-field-channel_type-help"
+              value={form.channel_type}
+              disabled={writesBlocked}
+              onChange={e => setForm({ ...form, channel_type: e.target.value })}
+            >
+              {["telefone", "whatsapp", "app", "botao", "outro"].map(x => <option key={x}>{x}</option>)}
+            </select>
+            <span className={local.fieldHelp} id="emergencial-field-channel_type-help">{fieldHelp.channel_type}</span>
+          </div>
+          {field("recipient_name", "Destinatário responsável")}
+          {field("recipient_contact", "Contato declarado")}
+          {field("availability", "Disponibilidade declarada")}
+          {field("purpose", "Finalidade")}
+          {field("escalation_responsible", "Responsável pelo escalonamento")}
+          {field("escalation_contact", "Contato de escalonamento")}
         </div>
-        <div className={styles.actions}><button className={local.acaoRotuloLongo} data-testid="emergencial-acao-criar" disabled={write.phase === "sending"} aria-busy={write.phase === "sending" && write.action === "create"}>Registrar rascunho</button></div>
+        <div className={styles.actions}>
+          <button className={local.acaoRotuloLongo} data-testid="emergencial-acao-criar" disabled={writesBlocked} aria-busy={writePending && write.action === "create"}>Registrar rascunho</button>
+        </div>
       </form>
 
       <section className={styles.panel} aria-labelledby="emergencial-acoes-titulo">
@@ -352,26 +535,35 @@ export default function EmergencyWorkspace() {
               id="emergencial-canal"
               data-testid="emergencial-canal-select"
               value={selected}
-              disabled={!hasOptions}
+              disabled={!hasOptions || writesBlocked}
               onChange={e => setSelected(e.target.value)}
             >
               <option value="">{hasOptions ? "Selecione" : "Nenhum canal lido"}</option>
               {hasOptions ? (channels as { phase: "ready"; data: Channel[] }).data.map(x => <option key={x.id} value={x.id}>{x.name} · {x.status}</option>) : null}
             </select>
           </label>
-          {actionsEnabled ? (
+          {actionsAllowed ? (
             <p className={styles.hint} role="status" id="emergencial-acoes-motivo" data-testid="emergencial-acoes-liberadas">Ações liberadas: a lista foi lida às {channels.phase === "ready" ? readTime(channels.readAt) : ""} e o canal selecionado é válido.</p>
           ) : (
             <p className={styles.hint} role="status" id="emergencial-acoes-motivo" data-testid="emergencial-acoes-bloqueio">Bloqueio: {blocked}</p>
           )}
           <div className={styles.actions}>
-            <button type="button" className={local.acaoRotuloLongo} data-testid="emergencial-acao-testes" disabled={!actionsEnabled || write.phase === "sending"} aria-busy={write.phase === "sending" && write.action === "testing"} aria-describedby="emergencial-acoes-motivo" onClick={() => void act("testing", "/transition", { status: "em_teste" })}>Iniciar ciclo de testes</button>
-            <button type="button" className={local.acaoRotuloLongo} data-testid="emergencial-acao-recebimento" disabled={!actionsEnabled || write.phase === "sending"} aria-busy={write.phase === "sending" && write.action === "receipt"} aria-describedby="emergencial-acoes-motivo" onClick={() => void act("receipt", "/tests", { test_kind: "recebimento", result: "Recebimento declarado como conferido pelo operador interno.", evidence_note: "Conferência manual declarada na interface EXT-15, sem envio automatizado.", tested_by_name: "Operador interno", is_success: true })}>Registrar teste de recebimento bem-sucedido</button>
-            <button type="button" className={local.acaoRotuloLongo} data-testid="emergencial-acao-atendimento" disabled={!actionsEnabled || write.phase === "sending"} aria-busy={write.phase === "sending" && write.action === "attendance"} aria-describedby="emergencial-acoes-motivo" onClick={() => void act("attendance", "/tests", { test_kind: "atendimento", result: "Atendimento declarado como conferido pelo operador interno.", evidence_note: "Conferência manual declarada na interface EXT-15, sem central externa.", tested_by_name: "Operador interno", is_success: true })}>Registrar teste de atendimento bem-sucedido</button>
-            <button type="button" className={local.acaoRotuloLongo} data-testid="emergencial-acao-ativar" disabled={!actionsEnabled || write.phase === "sending"} aria-busy={write.phase === "sending" && write.action === "activate"} aria-describedby="emergencial-acoes-motivo" onClick={() => void act("activate", "/transition", { status: "ativo", note: "Ativação humana após conferência dos dois registros internos de teste." })}>Marcar ativo (decisão humana)</button>
+            <button type="button" className={local.acaoRotuloLongo} data-testid="emergencial-acao-testes" disabled={!actionsAllowed} aria-busy={write.phase === "sending" && write.action === "testing"} aria-describedby="emergencial-acoes-motivo" onClick={() => void act("testing", "/transition", { status: "em_teste" })}>Iniciar ciclo de testes</button>
+            <button type="button" className={local.acaoRotuloLongo} data-testid="emergencial-acao-recebimento" disabled={!actionsAllowed} aria-busy={write.phase === "sending" && write.action === "receipt"} aria-describedby="emergencial-acoes-motivo" onClick={() => void act("receipt", "/tests", { test_kind: "recebimento", result: "Recebimento declarado como conferido pelo operador interno.", evidence_note: "Conferência manual declarada na interface EXT-15, sem envio automatizado.", tested_by_name: "Operador interno", is_success: true })}>Registrar teste de recebimento bem-sucedido</button>
+            <button type="button" className={local.acaoRotuloLongo} data-testid="emergencial-acao-atendimento" disabled={!actionsAllowed} aria-busy={write.phase === "sending" && write.action === "attendance"} aria-describedby="emergencial-acoes-motivo" onClick={() => void act("attendance", "/tests", { test_kind: "atendimento", result: "Atendimento declarado como conferido pelo operador interno.", evidence_note: "Conferência manual declarada na interface EXT-15, sem central externa.", tested_by_name: "Operador interno", is_success: true })}>Registrar teste de atendimento bem-sucedido</button>
+            <button type="button" className={local.acaoRotuloLongo} data-testid="emergencial-acao-ativar" disabled={!actionsAllowed} aria-busy={write.phase === "sending" && write.action === "activate"} aria-describedby="emergencial-acoes-motivo" onClick={() => void act("activate", "/transition", { status: "ativo", note: "Ativação humana após conferência dos dois registros internos de teste." })}>Marcar ativo (decisão humana)</button>
           </div>
           {write.phase === "sending" ? (
-            <p className={`${styles.notice} ${styles.noticeInfo}`} role="status" data-testid="emergencial-escrita-enviando">Enviando {WRITE_ACTION_NAMES[write.action]}… O resultado ainda não foi reconciliado; a lista e a trilha continuam sendo das últimas leituras concluídas.</p>
+            <p className={`${styles.notice} ${styles.noticeInfo}`} role="status" data-testid="emergencial-escrita-enviando">{write.replaying ? "Reenviando" : "Enviando"} {WRITE_ACTION_NAMES[write.action]}… O resultado ainda não foi confirmado; a lista e a trilha continuam sendo das últimas leituras concluídas.</p>
+          ) : null}
+          {write.phase === "uncertain" ? (
+            <div className={`${styles.notice} ${styles.noticeWarning}`} role="alert" data-testid="emergencial-escrita-incerta">
+              <strong>{write.error.title}</strong>
+              <p>{emergencyWriteErrorDetail(write.error)} A tela não repete a escrita automaticamente. “Reconciliar solicitação” reenvia exatamente a solicitação armazenada com a mesma URL, o mesmo corpo e a mesma chave idempotente para confirmar o resultado sem criar um registro duplicado. Não inicie outra escrita até a confirmação.</p>
+              <div className={styles.actions}>
+                <button type="button" data-testid="emergencial-escrita-reconciliar" disabled={writePending} onClick={() => void reconcileWrite()}>Reconciliar solicitação</button>
+              </div>
+            </div>
           ) : null}
           {write.phase === "failed" ? (
             <div className={`${styles.notice} ${styles.noticeError}`} role="alert" data-testid="emergencial-escrita-erro">
@@ -509,7 +701,78 @@ export default function EmergencyWorkspace() {
               ) : null}
             </div>
           ) : null}
-          <pre className={styles.codeBlock} data-testid="emergencial-detalhe-trilha">{JSON.stringify(detail.data, null, 2)}</pre>
+          <div className={local.trail} data-testid="emergencial-detalhe-trilha" data-channel-id={detail.data.channel.id}>
+            <div className={local.trailOverview}>
+              <div className={local.trailHeading}>
+                <div>
+                  <h3 className={styles.cardTitle}>{detail.data.channel.name}</h3>
+                  <p className={styles.hint}>Situação atual: <strong>{readableStatus(detail.data.channel.status)}</strong>.</p>
+                </div>
+                <time dateTime={detail.readAt}>Última leitura concluída às {readTime(detail.readAt)}.</time>
+              </div>
+              <h3 className={styles.panelTitle} id="emergencial-prontidao-titulo">Resumo da prontidão interna</h3>
+              <dl className={local.readiness} aria-labelledby="emergencial-prontidao-titulo">
+                <div><dt>Teste de recebimento</dt><dd>{detail.data.readiness.receiving_ok ? "Sucesso interno declarado" : "Pendente — nenhum sucesso interno foi lido"}</dd></div>
+                <div><dt>Teste de atendimento</dt><dd>{detail.data.readiness.attendance_ok ? "Sucesso interno declarado" : "Pendente — nenhum sucesso interno foi lido"}</dd></div>
+                <div><dt>Prontidão interna</dt><dd>{detail.data.readiness.ready ? "Os dois sucessos internos foram registrados" : "Ainda falta um ou mais registros internos bem-sucedidos"}</dd></div>
+              </dl>
+              <p className={local.boundary} data-testid="emergencial-trilha-limite">Este resumo reflete somente registros internos declarados. Não comprova entrega por fornecedor, disponibilidade externa nem acionamento de contato.</p>
+            </div>
+
+            <section className={local.trailSection} aria-labelledby="emergencial-testes-titulo">
+              <h3 className={styles.panelTitle} id="emergencial-testes-titulo">Testes declarados ({detail.data.tests.length})</h3>
+              {detail.data.tests.length ? (
+                <ol className={local.trailList}>
+                  {detail.data.tests.slice().reverse().map(item => (
+                    <li className={local.trailItem} key={item.id}>
+                      <div className={local.trailHeading}>
+                        <strong>{readableTestKind(item.test_kind)}</strong>
+                        <span className={item.is_success ? local.resultSuccess : local.resultFailure} data-testid="emergencial-teste-sucesso">{item.is_success ? "Sucesso declarado" : "Falha declarada"}</span>
+                      </div>
+                      <p>{item.result}</p>
+                      <dl className={local.trailMeta}>
+                        <div><dt>Responsável pelo registro</dt><dd>{item.tested_by_name}</dd></div>
+                        <div><dt>Data do teste declarada</dt><dd>{readableDateTime(item.test_date || item.created_at)}</dd></div>
+                        <div><dt>Observação declarada</dt><dd>{item.evidence_note}</dd></div>
+                        <div><dt>Registro interno</dt><dd><time dateTime={item.created_at}>{readableDateTime(item.created_at)}</time></dd></div>
+                      </dl>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className={styles.hint} data-testid="emergencial-testes-vazios">Nenhum teste interno foi lido para este canal.</p>
+              )}
+            </section>
+
+            <section className={local.trailSection} aria-labelledby="emergencial-eventos-titulo">
+              <h3 className={styles.panelTitle} id="emergencial-eventos-titulo">Eventos internos ({detail.data.events.length})</h3>
+              {detail.data.events.length ? (
+                <ol className={local.trailList}>
+                  {detail.data.events.slice().reverse().map(item => {
+                    const boundary = typeof item.payload?.boundary === "string" ? item.payload.boundary : "";
+                    return (
+                      <li className={local.trailItem} key={item.id}>
+                        <div className={local.trailHeading}>
+                          <strong>{readableEvent(item.event_type)}</strong>
+                          <time dateTime={item.created_at}>{readableDateTime(item.created_at)}</time>
+                        </div>
+                        <p>{item.summary}</p>
+                        {boundary ? <p className={local.boundary}>{boundary}</p> : null}
+                      </li>
+                    );
+                  })}
+                </ol>
+              ) : (
+                <p className={styles.hint} data-testid="emergencial-eventos-vazios">Nenhum evento interno foi lido para este canal.</p>
+              )}
+            </section>
+
+            <details className={local.technical} data-testid="emergencial-detalhe-tecnico">
+              <summary>Ver dados técnicos do servidor (JSON)</summary>
+              <p className={styles.hint}>Resposta original preservada para inspeção técnica; permanece recolhida para não substituir o resumo operacional.</p>
+              <pre className={styles.codeBlock} data-testid="emergencial-detalhe-json">{JSON.stringify(detail.data, null, 2)}</pre>
+            </details>
+          </div>
         </>
       ) : null}
     </section>
