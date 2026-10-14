@@ -192,3 +192,28 @@ Comportamento confirmado e já conhecido das fatias anteriores: `next build` e o
 > **6. Hashes.** Confira por SHA-256 `next-env.d.ts` (`18b697c4794f97edd5aed1537bf1d1882597f545881dfcba7fc8c659075f11a2`) e `tsconfig.json` (`2128c956b8c75820bc217c00557346befa1e687565d2d8a0bb970faadb7a8d65`) antes e depois de cada execução. `next build` reescreve `next-env.d.ts`; o gate L08 reescreve os dois. Restaure do Git e mantenha-os fora do diff.
 >
 > **7. Evidências e entrega.** Registre antes/depois por SHA-256, capturas em pasta própria `docs/ux-pro-06-<recorte>-evidencias/` com `resumo.json`, e a conferência **por linha** dos CSVs de inventário (só a linha de `/admin/clientes` pode mudar). **Não declare validação manual nem aceite humano.** Abra uma PR pequena baseada na `main` somente com todos os checks obrigatórios verdes e faça merge apenas após revisão concluída e todos os checks verdes. Se algum check falhar ou ficar pendente, preserve o trabalho, não faça merge e relate a causa com um novo prompt de retomada desta mesma fatia.
+
+---
+
+## 8. POSTSCRIPTUM (mesma sessão, ~1h depois): a fatia foi entregue pela PR #218 enquanto esta sessão trabalhava
+
+O proprietário decidiu, durante esta sessão, que a fatia seria implementada do zero (§1 acima). Ela foi implementada, medida e commitada neste branch. **Ao sincronizar a `main` antes de abrir a PR**, a conferência mostrou que o mesmo recorte já havia sido entregue por outra sessão:
+
+| Item | Evidência |
+|---|---|
+| Ponta da `main` ao final desta sessão | `27a26f8b2acd523d4b86134fa0141e8e5623b375` — **não** é mais `0e21c82`; `git merge-base --is-ancestor origin/main HEAD` falha (divergiu) |
+| O que entrou | `git log 0e21c82..origin/main`: **PR #218** "UX-PRO-06: estados da leitura dos cadastros centrais em /admin/clientes", head `arena/40f48ef1-gruposegsystemseguranca`, **MERGED** em 14/10/2026 03:43:54Z, com 6 commits (`a0833da` escopo → `b440121` gate escrito antes da correção → `1345aee` implementação → `c654e2a` estados/evidências/inventário → `465f962` correção de frase → `27a26f8` merge) |
+| Mesmos arquivos, mesma finalidade | A PR #218 alterou `src/app/admin/clientes/{page.tsx,AccountsSection.tsx,admin-shared.ts,AdminClientes.module.css}`, `README.md`, `package.json`, os dois CSVs de inventário e acrescentou gate próprio (`tests/ux-client-admin-workspace.integration.test.mjs`, `scripts/qa-ux-client-admin-postgres.mjs`, script `test:ux-client-admin:pg`, workflow `.github/workflows/ux-client-admin-delivery.yml`), docs `UX-PRO-06-CLIENTES-ESCOPO/ESTADOS-2026-10-14.md` e evidências em `docs/ux-pro-06-clientes-evidencias/` (com subpasta `antes/`) |
+| Mesmos cinco estados | `git show origin/main:src/app/admin/clientes/page.tsx` documenta e implementa: releitura em curso com `role="status"`, falha transitória com faixa `role="alert"` + hora + repetição, falha inicial sem "carregando" eterno, negativa descartando o dado sem oferecer repetição; marcadores `clientes-cadastros-{negado,indisponivel,falha,desatualizada,atualizando}` |
+| Checks da PR #218 | todos `pass` (`static-and-smoke`, `backup-restore-postgres`, `admin-entry-postgres-browser`, `client-portal-postgres-browser`, `contracts-postgres-browser`, `crm-postgres-browser`, `finance-postgres-browser`, `operations-postgres-browser`, `compliance-postgres`, `biddings-postgres`, `dispatch-guard`, 5 jobs `focal`) |
+| Reconciliação é impossível sem substituir trabalho entregue | `git merge-tree --write-tree origin/main HEAD` → **exit 1** com CONFLICT (content) em `README.md`, `docs/UX-PRO-00-INVENTARIO-ROTAS-2026-10-13.csv`, `docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-13.csv`, `src/app/admin/clientes/AccountsSection.tsx`, `src/app/admin/clientes/AdminClientes.module.css`, `src/app/admin/clientes/page.tsx` |
+
+**Decisão tomada e por quê:** nenhuma PR foi aberta e nenhum merge foi feito. Resolver esses conflitos significaria escolher entre duas implementações do mesmo recorte — isto é, **substituir funcionalidade já entregue na `main`**, o que `AGENTS.md` proíbe sem decisão explícita do proprietário. O trabalho desta sessão permanece preservado no branch `arena/14fe7e70-gruposegsystemseguranca` (commits `0b732bd` registro, `e191ab2` escopo, `66fa00b` implementação + gate + evidências), baseado em `0e21c82`, e não foi reescrito.
+
+**Diferenças residuais entre o gate desta sessão e o gate entregue (candidatas a uma fatia seguinte aditiva, sem tocar na implementação da #218):**
+
+1. preservação **entre seções**: o gate desta sessão afirma que, depois da falha na releitura, as opções de cadastro permanecem nos seletores `#grant-account` (seção 2) e `#contracts-account` (seção 3); o gate entregue afirma a faixa, a hora e que o cadastro continua visível na seção 1;
+2. prova de que a repetição **relê de verdade**: o gate desta sessão cria um cadastro por HTTP durante a falha, afirma que ele **não** aparece no dado preservado e que só aparece depois de a repetição concluir; o gate entregue afirma que o cadastro já lido continua visível após a repetição;
+3. contraste medido da faixa (6,54:1 em 320 px e 1440 px) e contagem de `problems: []` no `resumo.json`.
+
+Nenhuma das três foi implementada: são acréscimos de teste a um gate recém-entregue e dependem de autorização do proprietário.

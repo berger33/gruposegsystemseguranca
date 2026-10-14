@@ -4,6 +4,18 @@
 **Escopo declarado antes da implementação:** [`docs/UX-PRO-06-CONTAS-ADMIN-ESCOPO-2026-10-14.md`](UX-PRO-06-CONTAS-ADMIN-ESCOPO-2026-10-14.md) (commit `e191ab2`, anterior a qualquer edição de tela, teste, gate ou inventário).
 **Registro da base e da retomada:** [`docs/ARENA-RETOMADA-UX-PRO-06-CONTAS-ADMIN-2026-10-14.md`](ARENA-RETOMADA-UX-PRO-06-CONTAS-ADMIN-2026-10-14.md).
 
+> **AVISO DE STATUS (acrescentado ao final desta sessão): esta implementação NÃO foi entregue.**
+> Antes de abrir a PR, a sincronização da `main` mostrou que o mesmo recorte já havia sido
+> mesclado pela **PR #218** (`27a26f8`, 14/10/2026 03:43:54Z), com implementação, gate focal
+> (`npm run test:ux-client-admin:pg`), workflow, docs e evidências próprios. A reconciliação
+> produz conflito de conteúdo em seis arquivos; resolvê-lo significaria substituir trabalho já
+> entregue, o que `AGENTS.md` proíbe sem decisão explícita do proprietário. Este documento
+> permanece como registro medido de uma implementação paralela **não mesclada**, preservada no
+> commit `66fa00b` do branch da sessão. O registro vigente da fatia é
+> [`docs/UX-PRO-06-CLIENTES-ESTADOS-2026-10-14.md`](UX-PRO-06-CLIENTES-ESTADOS-2026-10-14.md),
+> e a colisão está documentada em
+> [`docs/ARENA-RETOMADA-UX-PRO-06-CONTAS-ADMIN-2026-10-14.md`](ARENA-RETOMADA-UX-PRO-06-CONTAS-ADMIN-2026-10-14.md) §8.
+
 Este documento descreve os estados que a tela passou a declarar, o que foi medido antes e depois, e o que **não** foi provado. Não declara validação manual nem aceite humano.
 
 ---
