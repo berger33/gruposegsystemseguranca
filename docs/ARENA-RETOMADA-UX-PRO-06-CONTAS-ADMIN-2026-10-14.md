@@ -1,0 +1,194 @@
+# Retomada UX-PRO-06 — "contas administrativas do cliente": base confirmada, fatia ausente e limitação Windows/EPERM verificada
+
+**Data:** 14/10/2026
+**Status deste documento:** registro de verificação e de bloqueio. Nesta sessão **nenhuma tela, teste, API, migração, inventário ou contrato foi alterado**. O único arquivo acrescentado é este registro.
+**O que este documento não é:** não declara validação manual, não declara aceite humano (de Marcelo, Andreia, TI ou comercial) e não declara que a fatia UX-PRO-06 de contas administrativas do cliente foi implementada. Ela **não** foi.
+
+---
+
+## 0. Base (`main`) sincronizada e confirmada antes de qualquer avanço
+
+| Item | Comando | Resultado |
+|---|---|---|
+| Ponta da `main` remota | `git fetch origin main` + `git rev-parse origin/main` | `0e21c82df87860df786cadb995f687a4c9d8d213` (merge da PR #217) |
+| HEAD local | `git rev-parse HEAD` | `0e21c82df87860df786cadb995f687a4c9d8d213` — **igual à `main`**, sem divergência |
+| `main` local | `git rev-parse main` | `0e21c82df87860df786cadb995f687a4c9d8d213` |
+| Árvore de trabalho | `git status --porcelain` | vazia no início (clone novo, sem edição pendente) |
+| Trabalho guardado | `git stash list` | vazio |
+| Histórico da sessão | `git reflog` | 2 entradas: `clone` e `checkout` para o branch da sessão — **nenhum commit local pré-existente** |
+| Checks na ponta da `main` | `gh api .../commits/0e21c82.../check-runs` | `static-and-smoke` **success**; `backup-restore-postgres` **success**; 2 check-runs, nenhum pendente, falho ou cancelado |
+| PRs abertas | `gh pr list --state open` | `[]` — nenhuma PR aberta no repositório |
+| Proteção de branch | `gh api .../branches/main/protection` | **HTTP 403 `Resource not accessible by integration`** — não foi possível enumerar os checks obrigatórios por proteção de branch. A referência usada é a lista de checks da PR #217 (9 checks, todos `pass`): `static-and-smoke`, `backup-restore-postgres`, `admin-entry-postgres-browser`, `client-portal-postgres-browser`, `contracts-postgres-browser`, `crm-postgres-browser`, `finance-postgres-browser`, `operations-postgres-browser`, `ux-contract-postgres-browser` |
+
+**Ambiente desta verificação:** Linux (kernel `6.1.158+`, uid `1001`), Node `v22.22.3`, npm `10.9.8`, dependências instaladas por `npm ci` (lockfile íntegro, `found 0 vulnerabilities`). Todos os workflows de `.github/workflows/` são `runs-on: ubuntu-latest`, portanto este ambiente é da mesma família de plataforma do CI — **não** é o host Windows do operador.
+
+---
+
+## 1. Bloqueio: o branch pedido e o trabalho local não existem aqui
+
+O pedido era retomar `arena/ux-pro-06-client-admin-accounts`, preservando "o commit de escopo e o trabalho local existente". Verificado antes de qualquer edição:
+
+| Verificação | Comando | Resultado |
+|---|---|---|
+| Branch remoto pedido | `git ls-remote --heads origin \| grep -i ux-pro-06` | **nenhuma correspondência** (exit 1) |
+| Total de heads remotos | `git ls-remote --heads origin \| wc -l` | 204 heads; os únicos com `ux-pro` no nome: `arena/ux-pro-05-jornada-funcionario`, `ux-pro-01-shared-tokens-chrome`, `ux-pro-02-theme-coverage`, `ux-pro-03-auditoria-observabilidade`, `ux-pro-03-rag-fontes`, `ux-pro-03-rbac-governanca`, `ux-pro-03-ti-integracoes` |
+| PR com esse head (qualquer estado) | `gh pr list --state all --search "ux-pro-06"` | 8 PRs: #210/#211 (fila de pedidos), #212 (funil), #213 (carteira), #214 (comercial), #215 (fechada, obsoleta), #216 (contratos lista), #217 (contratos detalhe). **Nenhuma** de contas administrativas do cliente |
+| Branch local pedido | `git branch -a` | só `arena/<sessão>` e `main` |
+| Eventos recentes do repositório | `gh api .../events` | refs citadas: apenas branches `arena/<hash>-gruposegsystemseguranca`; nenhum `ux-pro-06-client-admin-accounts` |
+
+**Consequência registrada, sem contorno:** não existe commit de escopo a preservar, não existe implementação parcial a retomar e não existe diff de fatia a levar para uma PR. Nada foi inventado para preencher a lacuna (nem tela, nem teste, nem doc de escopo, nem captura). Se o trabalho existe, ele está **fora deste clone** — no host do operador (worktree/branch não publicado) ou em outra sessão cujo branch não foi enviado ao remoto. Publicar esse branch (`git push origin <branch>`) o torna retomável aqui.
+
+Sobre o nome do branch: esta sessão está fixada pela plataforma ao branch `arena/14fe7e70-gruposegsystemseguranca`. Todo o trabalho desta sessão ficou nele; nenhum outro branch foi criado, alterado ou enviado.
+
+---
+
+## 2. A fatia também não está na `main` (evidência de código)
+
+Para não confundir "branch ausente" com "fatia já entregue por outra PR", o estado vigente de `/admin/clientes` foi lido na `main` (`0e21c82`):
+
+- `src/app/admin/clientes/page.tsx` — a leitura dos cadastros ainda engole a falha em silêncio:
+  ```ts
+  const loadAccounts = useCallback(async () => {
+    try {
+      const data = await callApi("/api/admin/client-accounts");
+      setAccounts((data.accounts as AdminAccount[]) ?? []);
+    } catch {
+      /* As seções exibem erro próprio quando necessário. */
+    }
+  }, []);
+  ```
+  Não há faixa de desatualização, não há hora da última leitura concluída, não há "Tentar novamente", não há `role="status"` de releitura em curso — exatamente a classe de defeito corrigida em #212, #213, #214, #216 e #217 nas outras telas.
+- `src/app/admin/clientes/AccountsSection.tsx` (153 linhas) — sem nenhum `data-testid`; apenas `role="alert"`/`role="status"` locais de erro/aviso de **escrita** (linhas 106–107), não de leitura.
+- As nove seções (`Accounts`, `Grants`, `Contracts`, `Documents`, `Tickets`, `Visits`, `Reports`, `Invites`, `Recoveries`) somam 1.768 linhas e compartilham `accounts` vindo dessa única leitura.
+- `docs/UX-PRO-06-CONTRATO-DETALHE-ESCOPO-2026-10-14.md` declara `/admin/clientes` (gestão interna de contas, vínculos, grants, convites) **fora do recorte** da última fatia, "família distinta, com risco próprio de escopo".
+- Não existe nenhum documento `docs/UX-PRO-06-*CONTAS*`, `*CLIENTES*` ou `*ACCOUNTS*`; os docs UX-PRO-06 presentes na `main` são: `CARTEIRA-ESTADOS`, `COMERCIAL-ESCOPO`, `COMERCIAL-ESTADOS`, `CONTRATO-DETALHE-ESCOPO`, `CONTRATO-DETALHE-ESTADOS`, `CONTRATOS-ESCOPO`, `CONTRATOS-ESTADOS`, `FILA-PEDIDOS`, `FUNIL-ESTADOS`.
+
+Rota e papéis vigentes (inventário de 13/10, linha 7): `/admin/clientes`, área `administrativo staff`, papéis `marcelo|ti` no `AdminGate` (UI; a autorização real fica na API `/api/admin/client-*`).
+
+---
+
+## 3. Os três testes de backup/CLI que falham com `EPERM` no Windows
+
+### 3.1 Quais são e o que cada um afirma
+
+| Arquivo | Teste | Symlink criado | Recusa afirmada |
+|---|---|---|---|
+| `tests/qa-backup-coverage-inventory.test.mjs` (linha 70) | `PLT-BAK-001: não aceitar diretório fora da raiz QA antes de ler banco ou bytes` | `await symlink(tmpdir(), path.join(f.qaRoot, 'outside-link'))` | `qa_inventory_external_dir_refused` |
+| `tests/qa-cli-v2-local-provider.test.mjs` (linha 67) | `PLT-BAK-001 / CLI-04: diretório operador e symlink fora do QA são recusados` | `await symlink(tmpdir(), path.join(root, 'objects'))` | `qa_object_external_dir_refused` |
+| `tests/qa-cli-v2-transfer.test.mjs` (linha 103) | `PLT-BAK-001: falha após 1/3 importa, remove só arquivo criado; desconhecido permanece e permite retry` | `await symlink(path.join(destinationRoot,'objects',canary), unsafe)` | `qa_cli_inventory_file_unsafe` |
+
+Os três são **guardas negativos de segurança**: o symlink é criado de propósito pelo teste para provar que o provedor QA, o inventário de cobertura e a transferência CLI v2 **recusam** um caminho que sai da raiz QA. O `EPERM` acontece no `fs.symlink` do **setup do teste** (não no código de produto): no Windows a chamada vai a `CreateSymbolicLinkW`, que exige o privilégio `SeCreateSymbolicLinkPrivilege`; sem ele, libuv devolve `EPERM` e o teste falha antes de afirmar qualquer coisa.
+
+### 3.2 Por que `TEMP`/`TMP=F:\SegSystem-QA-Temp` não resolve
+
+A restrição é do **token do processo**, não do diretório. Os testes usam `os.tmpdir()` (que respeita `TEMP`/`TMP`) tanto para o alvo quanto para o link, então mover o temporário para `F:` apenas muda o lugar onde a criação é negada. Duas condições adicionais que também produzem `EPERM`/`EINVAL` nesse cenário, a conferir no host: se `F:` for volume de rede, removível ou formatado em exFAT/FAT32, a criação de symlinks não é suportada pelo sistema de arquivos; e o "Controlled folder access" do Defender pode negar a escrita na pasta.
+
+### 3.3 Formas suportadas de executar esses testes (sem tocar nos testes)
+
+Qualquer uma destas torna a suíte completa executável no Windows; nenhuma exige alterar código ou teste:
+
+1. **Modo Desenvolvedor** (Windows 10 1703+/11): Configurações → Sistema → Para desenvolvedores → **Modo de desenvolvedor: ativado**. Concede a criação de symlinks ao usuário interativo sem elevação. É o caminho recomendado para QA local.
+2. **Shell elevado**: executar o terminal de QA como Administrador (o token do processo passa a ter `SeCreateSymbolicLinkPrivilege`).
+3. **Concessão explícita do privilégio**: `secpol.msc` → Políticas Locais → Atribuição de Direitos de Usuário → **Criar links simbólicos** → adicionar o usuário; depois sair e entrar de novo na sessão.
+4. **Plataforma equivalente à do CI**: WSL2 ou contêiner Linux com Node 22 (`npm ci` + `npm test`), que é exatamente o que o check obrigatório executa.
+
+Sondagem de 5 segundos para confirmar antes de rerodar a bateria (deve imprimir `SYMLINK_OK`):
+
+```bat
+node -e "const fs=require('fs'),os=require('os'),p=require('path');const d=fs.mkdtempSync(p.join(os.tmpdir(),'probe-'));fs.symlinkSync(os.tmpdir(),p.join(d,'l'));console.log('SYMLINK_OK')"
+```
+
+Complemento opcional de diagnóstico (como Administrador): `fsutil behavior query SymlinkEvaluation`.
+
+### 3.4 Por que os testes não foram enfraquecidos
+
+Substituir `symlink` por junction (`fs.symlink(..., 'junction')`, que não exige privilégio), pular os três casos em `win32`, ou relaxar as asserções retiraria a única prova automatizada de que um diretório/link **fora da raiz QA** é recusado antes de ler banco ou escrever bytes — cobertura P0 registrada em `docs/RELATORIO-CONSOLIDADO-TESTES.md` (`PLT-BAK-001.AI`, `PLT-BAK-001.AS`). Nenhuma dessas alterações foi feita, e este documento não autoriza fazê-las: a correção pertence à configuração do host, não ao repositório.
+
+### 3.5 Verificação executada neste ambiente (Linux, mesma família do CI)
+
+| Execução | Comando | Resultado |
+|---|---|---|
+| Sonda de capacidade de symlink | `node -e "...symlinkSync..."` | `symlink OK -> true`, `tmpdir=/tmp`, `platform=linux` |
+| Os três arquivos isolados | `node --test tests/qa-backup-coverage-inventory.test.mjs tests/qa-cli-v2-local-provider.test.mjs tests/qa-cli-v2-transfer.test.mjs` | **11 testes / 11 aprovados / 0 falhas / 0 pulados**, exit 0 — incluindo os três casos de symlink listados em §3.1 |
+| Bateria completa | `npm test` | **933 testes / 933 aprovados / 0 falhas / 0 pulados / 0 cancelados**, exit 0, 15,7 s |
+
+Ou seja: os mesmos 933 testes que no Windows do operador pararam em 930/933 passam integralmente aqui. A diferença é de plataforma/privilégio do host, não de código — o que confirma o diagnóstico de `EPERM` por privilégio de symlink e confirma que o check obrigatório (`QA baseline` / `static-and-smoke`, que roda `npm test` em `ubuntu-latest`) **não é afetado** por essa limitação local. A execução local no Windows **não substitui** esse check.
+
+**Precedente já documentado no repositório** (mesma tríade, mesmos códigos): `docs/ATIVACAO-LOCAL-PONTO-2026-10-07.md` (865 testes, 3 bloqueados por `EPERM`), `docs/AUDITORIA-INTERFACE-ROTAS-2026-10-08.md`, `docs/PLANO-CONCLUSAO-ARENA.md` (item F02, "requer Windows do operador"), e os registros UX-PRO-03/UX-PRO-04 de 13/10 (`895/898`, `908+3`, `912+3`, `917+3`, `921+3`, `925+3`, `929+3`, `930+3`). A contagem `930/933` relatada nesta retomada é a mesma da `main` vigente.
+
+---
+
+## 4. Verificações executadas nesta base
+
+Todas contra `main` (`0e21c82`), neste ambiente Linux, sem nenhuma edição de produto. **Elas validam a base, não a fatia** — a fatia não existe (§1 e §2).
+
+| Verificação | Comando | Resultado |
+|---|---|---|
+| Teste focal UX-PRO-06 | — | **não executável: não existe.** Nenhum `tests/ux-pro-06-*.test.mjs` e nenhum script `test:ux-pro-06*` em `package.json`; os arquivos `ux-pro-*` existentes são `ux-pro-00-inventory` e onze `ux-pro-03-*-ui`. O gate focal seria criado pela própria fatia |
+| Bateria de unidade | `npm test` | **933/933**, 0 pulados, exit 0 |
+| Typecheck | `npm run typecheck` (`tsc --noEmit`) | exit 0, sem diagnósticos |
+| Build | `NEXT_TELEMETRY_DISABLED=1 DATABASE_URL= MAIL_HOST= OLLAMA_ENABLED=false NEXT_PUBLIC_ALLOW_INDEX=false NEXT_PUBLIC_ENV=beta npm run build` | exit 0; lista de rotas emitida (inclui `/admin/clientes` e todo o portal `/cliente/*`) |
+| Onda 0 estática | `node scripts/qa-wave0-static.mjs` | **5/5** OK (imports relativos, dependências no manifest/lockfile, migrações 001–180 contínuas e únicas, migrações registradas no migrador PG, CI sem bypass), exit 0 |
+| Inventário | `node scripts/ux-pro-00-inventory.mjs --check` | `OK: docs/UX-PRO-00-INVENTARIO-ROTAS-2026-10-13.csv e docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-13.csv conferem com o código atual.`, exit 0 |
+| Gate L08 | `npm run test:l08-delivery:pg` | **51 testes / 51 aprovados / 0 falhas / 0 pulados**; `L08_DELIVERY_TEST_EXIT: 0`; `QA_L08_PG_TEMP_CLEANED: true`; PostgreSQL 17 embutido descartável + HTTP real + smoke de entrada em Chromium real |
+| Gate do painel ADM (vizinho de família) | `npm run test:ux-adm:pg` | **12/12**, 0 pulados; `UX_ADM_TEST_EXIT: 0` |
+| Gate que alcança `/admin/clientes` em navegador | `npm run test:f03-client-ticket-acceptance:pg` | **1/1**, 0 pulados; `F03_CLIENT_TICKET_ACCEPTANCE_TEST_EXIT: 0`; ledger de migrações **001–180** verificado em PostgreSQL; `tests/f03-client-ticket-acceptance.integration.test.mjs:383` faz `staffPage.goto(.../admin/clientes)` em Chromium real |
+
+Levantamento útil para a retomada: **não existe gate focal dedicado à tela `/admin/clientes`**. O que a alcança hoje é o gate F03 (jornada de chamado com aceite), mais as asserções estáticas de `tests/admin-page-gates.test.mjs:51` (papéis `marcelo|ti`) e `tests/client-offline-recovery.test.mjs` (texto de `RecoveriesSection`). `tests/ux-adm-panel.integration.test.mjs:377` cita `/admin/clientes` apenas como caminho canônico do registro `cli_ticket`, não como tela exercitada.
+
+---
+
+## 5. Hashes de `next-env.d.ts` e `tsconfig.json` (antes/depois, preservados)
+
+Baseline lido do Git antes de qualquer execução:
+
+```
+18b697c4794f97edd5aed1537bf1d1882597f545881dfcba7fc8c659075f11a2  next-env.d.ts
+2128c956b8c75820bc217c00557346befa1e687565d2d8a0bb970faadb7a8d65  tsconfig.json
+```
+
+| Momento | `next-env.d.ts` | `tsconfig.json` | Ação |
+|---|---|---|---|
+| Baseline (Git) | `18b697c4…11a2` | `2128c956…8d65` | — |
+| Após `typecheck`, `qa-wave0-static`, `inventory --check` | `18b697c4…11a2` (igual) | `2128c956…8d65` (igual) | nenhuma |
+| Após `npm run build` | **`1862ac4b…db2b`** (reescrito pelo Next) | `2128c956…8d65` (igual) | `git checkout -- next-env.d.ts` → baseline restaurado |
+| Após `npm run test:l08-delivery:pg` | **`e05da517…9c95`** (aponta para `.next/l08-browser-smoke/…`) | **`c9948e5c…caa`** (acrescenta `.next/l08-browser-smoke/types/**` e `dev/types/**` em `include`) | `git checkout -- next-env.d.ts tsconfig.json` → baseline restaurado |
+| Após `npm run test:ux-adm:pg` | **`ed7c6ab7…87e7`** | `2128c956…8d65` (igual) | restaurado ao final |
+| **Final (após todos os gates)** | **`18b697c4…11a2`** | **`2128c956…8d65`** | **idênticos ao baseline**, conferidos por `diff` dos digests; `git status --porcelain` vazio |
+
+Comportamento confirmado e já conhecido das fatias anteriores: `next build` e os gates que sobem um workspace Next próprio reescrevem `next-env.d.ts` (e o gate L08 também `tsconfig.json`). Os dois foram restaurados do Git após cada execução e **não entram em diff algum**.
+
+---
+
+## 6. Limitações (declaradas, não escondidas)
+
+1. **Não há validação manual nem aceite humano** registrados aqui. Nada nesta sessão foi revisado, aprovado ou aceito por Marcelo, Andreia, TI ou comercial.
+2. Chromium automatizado com PostgreSQL descartável e massa sintética **não é** validação manual nem aceite; é verificação automatizada de contrato e de apresentação.
+3. **O `EPERM` não foi reproduzido** nesta sessão: não há host Windows aqui. O diagnóstico vem do código dos três testes (§3.1), da semântica documentada de `fs.symlink` no Windows e do precedente registrado no próprio repositório (§3.5). As quatro formas suportadas de §3.3 **não foram executadas** em Windows — são instruções para o operador, não resultados medidos.
+4. **Checks obrigatórios não puderam ser enumerados** pela API de proteção de branch (403). A lista de referência é a dos checks da PR #217.
+5. As verificações do §4 atestam a **base** (`main` `0e21c82`), não a fatia pedida. Sem diff de fatia, não existe "antes/depois" de comportamento para medir — o "antes" registrado é o estado de defeito lido no código (§2).
+6. **Nenhuma PR foi aberta.** Uma PR exigiria um diff de escopo que não existe neste ambiente; abrir uma PR vazia ou com conteúdo fabricado violaria a regra de não inventar trabalho nem aceite. Nenhum merge foi feito.
+7. Nenhum outro branch foi criado, alterado ou enviado; o trabalho desta sessão ficou no branch da sessão.
+8. A PR #215 (fechada, obsoleta desde a #216) não foi reaberta, mesclada ou alterada — a decisão sobre ela continua sendo do proprietário.
+
+---
+
+## 7. Prompt de retomada desta mesma fatia (pronto para colar)
+
+> Retome a fatia **UX-PRO-06 — contas administrativas do cliente (`/admin/clientes`)** em `berger33/gruposegsystemseguranca`.
+>
+> **0. Base primeiro.** Rode `git fetch origin --prune` e confirme a ponta da `main` com `git rev-parse origin/main`, os check-runs desse commit e `gh pr list --state open`. Registre o SHA conferido. Na última conferência (14/10/2026) a ponta era `0e21c82df87860df786cadb995f687a4c9d8d213`, com `static-and-smoke` e `backup-restore-postgres` verdes e nenhuma PR aberta; a proteção de branch responde 403, então use os 9 checks da PR #217 como referência de obrigatórios.
+>
+> **1. Trabalho pré-existente.** O branch `arena/ux-pro-06-client-admin-accounts` **não existe no remoto** e não havia commit de escopo nem trabalho local no clone desta sessão (evidências em `docs/ARENA-RETOMADA-UX-PRO-06-CONTAS-ADMIN-2026-10-14.md` §1). Se o commit de escopo existe no seu host, publique-o (`git push origin <branch>`) e retome a partir dele, preservando-o. Se não existe, **comece pelo registro de escopo** commitado isoladamente antes de tocar em tela, teste ou inventário, no padrão de `docs/UX-PRO-06-CONTRATO-DETALHE-ESCOPO-2026-10-14.md`, e declare que é anterior à implementação.
+>
+> **2. Recorte.** Uma tela: `/admin/clientes` (`src/app/admin/clientes/page.tsx` + `AccountsSection.tsx` e as outras oito seções que consomem o mesmo `accounts`). Papéis `marcelo|ti` no `AdminGate`, inalterados; autorização real continua na API `/api/admin/client-*`. Defeito medido na `main`: `loadAccounts` engole a falha (`catch {}`), sem faixa de desatualização, sem hora da última leitura concluída, sem repetição e sem `role="status"` de releitura em curso; `AccountsSection` não tem `data-testid`. Fora do recorte: portal `/cliente/app/*`, `/admin/portal/*`, APIs, papéis, migrações, `UiWorkspace.module.css` compartilhado sem medição, e as fatias já entregues (#210–#214, #216, #217), que não são reabertas.
+>
+> **3. Regras.** Leia `AGENTS.md` e `docs/ARENA-PRESERVAR-FUNCIONALIDADES.md`. Mudança aditiva e pequena; nenhuma funcionalidade removida, desativada, oculta ou renomeada; negativa continua falhando fechada. Meça o "antes" na `main` limpa com o teste novo, antes de editar a tela.
+>
+> **4. Checks.** Execute e registre resultados reais (não estimados): teste focal novo da fatia; `npm test` (a `main` está em **933** testes); `npm run typecheck`; `npm run build`; `node scripts/qa-wave0-static.mjs` (5/5); `node scripts/ux-pro-00-inventory.mjs --check`; `npm run test:l08-delivery:pg`; e o gate que já alcança a tela, `npm run test:f03-client-ticket-acceptance:pg`. Registre também que **não existe gate focal dedicado a `/admin/clientes`** — o da fatia é novo.
+>
+> **5. `EPERM`/symlink no Windows.** Se a bateria local parar em 930/933 com `EPERM` em `qa-backup-coverage-inventory`, `qa-cli-v2-local-provider` e `qa-cli-v2-transfer`, **não altere, não pule e não enfraqueça esses três testes**: são guardas P0 que provam a recusa de caminho/symlink fora da raiz QA. A causa é privilégio de criação de symlink do processo Windows, não o diretório temporário (por isso `TEMP`/`TMP` em `F:` não resolve). Use uma forma suportada: Modo Desenvolvedor ativado, shell elevado, privilégio "Criar links simbólicos" concedido em `secpol.msc`, ou WSL2/contêiner Linux. Confirme com a sonda que imprime `SYMLINK_OK`. Em Linux/Node 22 os três arquivos passam 11/11 e a bateria passa 933/933. O check obrigatório roda em `ubuntu-latest` e precisa estar verde na PR; a execução local não o substitui.
+>
+> **6. Hashes.** Confira por SHA-256 `next-env.d.ts` (`18b697c4794f97edd5aed1537bf1d1882597f545881dfcba7fc8c659075f11a2`) e `tsconfig.json` (`2128c956b8c75820bc217c00557346befa1e687565d2d8a0bb970faadb7a8d65`) antes e depois de cada execução. `next build` reescreve `next-env.d.ts`; o gate L08 reescreve os dois. Restaure do Git e mantenha-os fora do diff.
+>
+> **7. Evidências e entrega.** Registre antes/depois por SHA-256, capturas em pasta própria `docs/ux-pro-06-<recorte>-evidencias/` com `resumo.json`, e a conferência **por linha** dos CSVs de inventário (só a linha de `/admin/clientes` pode mudar). **Não declare validação manual nem aceite humano.** Abra uma PR pequena baseada na `main` somente com todos os checks obrigatórios verdes e faça merge apenas após revisão concluída e todos os checks verdes. Se algum check falhar ou ficar pendente, preserve o trabalho, não faça merge e relate a causa com um novo prompt de retomada desta mesma fatia.
