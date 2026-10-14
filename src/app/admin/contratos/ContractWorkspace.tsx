@@ -20,11 +20,19 @@
 // Os títulos "Contratos e implantação" e "Cadastro manual identificado" são
 // contrato do gate herdado `tests/l05-delivery.integration.test.mjs` e foram
 // preservados exatamente.
+//
+// UX-PRO-06 (contratos, lista): a releitura segue o padrão do funil e da
+// carteira — falha transitória depois de uma leitura concluída preserva os
+// itens com faixa `role="alert"` (motivo, hora da última leitura, repetição),
+// releitura em curso mostra `role="status"` sem esconder o conteúdo, e a
+// negativa de autorização continua fail-closed, sem dado preservado. Nada de
+// URL, método, corpo, papel ou regra mudou.
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import UiBadge from "../../../components/ui/UiBadge";
 import UiState from "../../../components/ui/UiState";
 import styles from "../../../components/ui/UiWorkspace.module.css";
+import localStyles from "./Contratos.module.css";
 import { contractRequest, type ContractErrorDescriptor } from "../../../lib/contract-request";
 import {
   brl,
@@ -47,10 +55,80 @@ type Contract = {
   total_price: string;
 };
 
-type Leitura<T> = { itens: T[]; carregando: boolean; erro: ContractErrorDescriptor | null };
+type Leitura<T> = {
+  itens: T[];
+  carregando: boolean;
+  erro: ContractErrorDescriptor | null;
+  /** Já houve uma leitura concluída nesta tela (habilita preservar na falha). */
+  concluiu: boolean;
+  /** Hora (relógio do navegador) da última leitura concluída; nada é gravado. */
+  ultimaLeitura: string | null;
+  /** Falha transitória DEPOIS de uma leitura concluída: os itens acima continuam valendo. */
+  falhaAtualizacao: ContractErrorDescriptor | null;
+};
 
-const leituraInicial = <T,>(): Leitura<T> => ({ itens: [], carregando: true, erro: null });
+const leituraInicial = <T,>(): Leitura<T> => ({
+  itens: [], carregando: true, erro: null, concluiu: false, ultimaLeitura: null, falhaAtualizacao: null,
+});
 const today = () => new Date().toISOString().slice(0, 10);
+const horaAgora = () => new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+type ResultadoLeitura<T> = { ok: true; itens: T[] } | { ok: false; error: ContractErrorDescriptor };
+
+/**
+ * UX-PRO-06: o mesmo padrão já entregue no funil e na carteira. Falha
+ * transitória depois de uma leitura concluída PRESERVA os itens e vira faixa
+ * de "desatualizado"; negativa de autorização (denied/auth) continua
+ * fail-closed — substitui tudo pelo estado negado, sem dado preservado.
+ */
+function resolverLeitura<T>(atual: Leitura<T>, resultado: ResultadoLeitura<T>): Leitura<T> {
+  if (resultado.ok) {
+    return {
+      itens: resultado.itens, carregando: false, erro: null,
+      concluiu: true, ultimaLeitura: horaAgora(), falhaAtualizacao: null,
+    };
+  }
+  const negado = resultado.error.kind === "denied" || resultado.error.kind === "auth";
+  if (negado) {
+    return {
+      itens: [], carregando: false, erro: resultado.error,
+      concluiu: false, ultimaLeitura: null, falhaAtualizacao: null,
+    };
+  }
+  if (atual.concluiu) {
+    return { ...atual, carregando: false, erro: null, falhaAtualizacao: resultado.error };
+  }
+  return {
+    itens: [], carregando: false, erro: resultado.error,
+    concluiu: false, ultimaLeitura: null, falhaAtualizacao: null,
+  };
+}
+
+function FaixaDesatualizada({ testId, leitura, textoVazio, aoRepetir }: {
+  testId: string;
+  leitura: Leitura<unknown>;
+  textoVazio: string;
+  aoRepetir: () => void;
+}) {
+  const falha = leitura.falhaAtualizacao;
+  if (!falha) return null;
+  // Alguns detalhes do vocabulário já negam a leitura de "vazio"; nesses
+  // casos a faixa não repete a frase, só rotula a idade do dado.
+  const jaNegaVazio = /não significa/i.test(falha.detail);
+  return (
+    <div role="alert" data-testid={testId} className={localStyles.stale}>
+      <strong>{falha.title}.</strong> {falha.detail}{" "}
+      Os dados abaixo são da última leitura concluída, às {leitura.ultimaLeitura}, e podem estar
+      desatualizados{jaNegaVazio ? "." : <> — {textoVazio}</>}{" "}
+      <span>{contractErrorFootnote(falha)}</span>
+      {falha.canRetry ? (
+        <div>
+          <button type="button" onClick={aoRepetir}>Tentar novamente</button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export default function ContractWorkspace() {
   const [empresas, setEmpresas] = useState<Leitura<Company>>(leituraInicial);
@@ -66,27 +144,27 @@ export default function ContractWorkspace() {
   const [proposalId, setProposalId] = useState("");
 
   const carregarEmpresas = useCallback(async () => {
-    setEmpresas(atual => ({ ...atual, carregando: true, erro: null }));
+    setEmpresas(atual => ({ ...atual, carregando: true, erro: null, falhaAtualizacao: null }));
     const resultado = await contractRequest<{ companies?: Company[] }>("/api/crm/companies?type=client");
-    setEmpresas(resultado.ok
-      ? { itens: resultado.data.companies || [], carregando: false, erro: null }
-      : { itens: [], carregando: false, erro: resultado.error });
+    setEmpresas(atual => resolverLeitura(atual, resultado.ok
+      ? { ok: true, itens: resultado.data.companies || [] }
+      : { ok: false, error: resultado.error }));
   }, []);
 
   const carregarPropostas = useCallback(async () => {
-    setPropostas(atual => ({ ...atual, carregando: true, erro: null }));
+    setPropostas(atual => ({ ...atual, carregando: true, erro: null, falhaAtualizacao: null }));
     const resultado = await contractRequest<{ proposals?: Proposal[] }>("/api/crm/proposals?status=aceita&limit=100");
-    setPropostas(resultado.ok
-      ? { itens: resultado.data.proposals || [], carregando: false, erro: null }
-      : { itens: [], carregando: false, erro: resultado.error });
+    setPropostas(atual => resolverLeitura(atual, resultado.ok
+      ? { ok: true, itens: resultado.data.proposals || [] }
+      : { ok: false, error: resultado.error }));
   }, []);
 
   const carregarContratos = useCallback(async () => {
-    setContratos(atual => ({ ...atual, carregando: true, erro: null }));
+    setContratos(atual => ({ ...atual, carregando: true, erro: null, falhaAtualizacao: null }));
     const resultado = await contractRequest<{ contracts?: Contract[] }>("/api/crm/contracts");
-    setContratos(resultado.ok
-      ? { itens: resultado.data.contracts || [], carregando: false, erro: null }
-      : { itens: [], carregando: false, erro: resultado.error });
+    setContratos(atual => resolverLeitura(atual, resultado.ok
+      ? { ok: true, itens: resultado.data.contracts || [] }
+      : { ok: false, error: resultado.error }));
   }, []);
 
   useEffect(() => {
@@ -158,9 +236,7 @@ export default function ContractWorkspace() {
           Escolha uma proposta aceita e sua versão preservada. A operação é
           idempotente: repetir não cria um segundo contrato.
         </p>
-        {propostas.carregando ? (
-          <UiState variant="loading" title="Lendo propostas aceitas…" detail="Buscando as propostas aceitas da sua carteira." />
-        ) : propostas.erro ? (
+        {propostas.erro ? (
           <UiState
             variant={propostas.erro.kind === "denied" || propostas.erro.kind === "auth" ? "denied" : "error"}
             title={propostas.erro.title}
@@ -168,7 +244,20 @@ export default function ContractWorkspace() {
             retryLabel={propostas.erro.canRetry ? "Tentar ler de novo" : undefined}
             onRetry={propostas.erro.canRetry ? () => void carregarPropostas() : undefined}
           />
-        ) : propostas.itens.length === 0 ? (
+        ) : (
+          <>
+            <FaixaDesatualizada
+              testId="propostas-desatualizada"
+              leitura={propostas}
+              textoVazio="isto não significa que não existam propostas aceitas."
+              aoRepetir={() => void carregarPropostas()}
+            />
+            {propostas.carregando && propostas.concluiu ? (
+              <p role="status" data-testid="propostas-atualizando" className={localStyles.updating}>Atualizando propostas aceitas…</p>
+            ) : null}
+            {propostas.carregando && !propostas.concluiu ? (
+              <UiState variant="loading" title="Lendo propostas aceitas…" detail="Buscando as propostas aceitas da sua carteira." />
+            ) : propostas.itens.length === 0 ? (
           <UiState variant="empty" title="Nenhuma proposta aceita disponível para sua carteira" detail="A leitura funcionou e não há proposta aceita aguardando virar contrato." />
         ) : (
           <form onSubmit={criarDaProposta} className={styles.fieldset}>
@@ -190,6 +279,8 @@ export default function ContractWorkspace() {
               <button type="submit" className={styles.primary} disabled={enviando}>Criar contrato</button>
             </div>
           </form>
+            )}
+          </>
         )}
       </section>
 
@@ -206,6 +297,15 @@ export default function ContractWorkspace() {
             retryLabel={empresas.erro.canRetry ? "Tentar ler de novo" : undefined}
             onRetry={empresas.erro.canRetry ? () => void carregarEmpresas() : undefined}
           />
+        ) : null}
+        <FaixaDesatualizada
+          testId="empresas-desatualizada"
+          leitura={empresas}
+          textoVazio="isto não significa que não existam empresas."
+          aoRepetir={() => void carregarEmpresas()}
+        />
+        {empresas.carregando && empresas.concluiu ? (
+          <p role="status" data-testid="empresas-atualizando" className={localStyles.updating}>Atualizando empresas…</p>
         ) : null}
         <form onSubmit={criarManual} className={styles.fieldset}>
           <div className={styles.field}>
@@ -275,9 +375,7 @@ export default function ContractWorkspace() {
 
       <section aria-labelledby="contracts-title" className={styles.panel} data-testid="contracts-list">
         <h2 id="contracts-title" className={styles.panelTitle}>Contratos da carteira</h2>
-        {contratos.carregando ? (
-          <UiState variant="loading" title="Lendo contratos…" detail="Buscando os contratos acessíveis à sua carteira." />
-        ) : contratos.erro ? (
+        {contratos.erro ? (
           <UiState
             variant={contratos.erro.kind === "denied" || contratos.erro.kind === "auth" ? "denied" : "error"}
             title={contratos.erro.title}
@@ -285,7 +383,20 @@ export default function ContractWorkspace() {
             retryLabel={contratos.erro.canRetry ? "Tentar ler de novo" : undefined}
             onRetry={contratos.erro.canRetry ? () => void carregarContratos() : undefined}
           />
-        ) : contratos.itens.length === 0 ? (
+        ) : (
+          <>
+            <FaixaDesatualizada
+              testId="contratos-desatualizada"
+              leitura={contratos}
+              textoVazio="isto não significa que a carteira esteja vazia."
+              aoRepetir={() => void carregarContratos()}
+            />
+            {contratos.carregando && contratos.concluiu ? (
+              <p role="status" data-testid="contratos-atualizando" className={localStyles.updating}>Atualizando contratos…</p>
+            ) : null}
+            {contratos.carregando && !contratos.concluiu ? (
+              <UiState variant="loading" title="Lendo contratos…" detail="Buscando os contratos acessíveis à sua carteira." />
+            ) : contratos.itens.length === 0 ? (
           <UiState variant="empty" title="Nenhum contrato acessível" detail="A leitura funcionou e nenhum contrato está na sua carteira." />
         ) : (
           <div className={styles.tableWrap}>
@@ -321,6 +432,8 @@ export default function ContractWorkspace() {
               </tbody>
             </table>
           </div>
+            )}
+          </>
         )}
       </section>
     </main>

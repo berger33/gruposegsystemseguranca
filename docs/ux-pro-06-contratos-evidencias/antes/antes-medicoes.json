@@ -1,0 +1,29 @@
+{
+  "stage": "ux-pro-06-contratos",
+  "fase": "antes",
+  "base": "259ee43c38deeb35fb29a2c622f2ed3e6f6a6712 (main, merge da PR #214) em worktree descartável limpo, apenas com os testes novos copiados",
+  "comando": "UX_CONTRACT_TEST_PATTERN='UX-PRO-06' npm run test:ux-contract:pg (e, para viewports, UX_CONTRACT_TEST_PATTERN='320/390')",
+  "resultados": [
+    {
+      "caso": "falha na releitura preserva os contratos ja lidos, com hora e repeticao",
+      "resultado": "falhou",
+      "evidencia": "timeout de 30s esperando [data-testid=contratos-desatualizada]: a faixa nao existe na main e os itens lidos sao apagados (setState com itens: [])"
+    },
+    {
+      "caso": "releitura em curso mantem a lista visivel com role=status",
+      "resultado": "falhou",
+      "evidencia": "timeout de 30s esperando [data-testid=contratos-atualizando]: durante a releitura a lista e substituida pelo bloco de carregamento"
+    },
+    {
+      "caso": "negativa na releitura falha fechada, sem dado preservado nem repeticao",
+      "resultado": "passou",
+      "evidencia": "preservacao: a negativa ja falhava fechada na main e precisa continuar assim depois da correcao"
+    },
+    {
+      "caso": "320/390/768/1440 dia e noite sem transbordo, com percurso de teclado",
+      "resultado": "passou",
+      "evidencia": "preservacao: sem transbordo de documento, tema noturno alcanca painel e titulo, link do contrato alcancavel por Tab com foco visivel"
+    }
+  ],
+  "resumo": "2 defeitos confirmados (D1/D3 e D2 do documento de escopo), 2 preservacoes confirmadas (D4 e cobertura visual/teclado). Na branch corrigida a suite completa passa 12/12."
+}

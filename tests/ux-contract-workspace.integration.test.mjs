@@ -397,6 +397,197 @@ test('browser: carteira legitimamente vazia não é apresentada como falha', { s
   });
 });
 
+// ---------------------------------------------------------------------------
+// UX-PRO-06 (contratos, lista) — estados de releitura de /admin/contratos.
+// A falha é controlada por bandeiras em `window` (mesma convenção do gate da
+// carteira): a leitura inicial conclui de verdade e só a RELEITURA falha,
+// atrasada ou negada. O servidor nunca é enfraquecido.
+// ---------------------------------------------------------------------------
+
+/**
+ * Abre a lista de contratos com `window.fetch` controlável:
+ * - `window.__ux06Falha` = { status, code } derruba os GETs indicados por
+ *   `window.__ux06Alvos` (trechos de URL); `null` desliga;
+ * - `window.__ux06Atraso` = ms atrasa os GETs de `/api/crm/contracts`.
+ */
+async function abrirListaControlada(browser, cookie, { width = 1440, height = 900 } = {}) {
+  const context = await browser.newContext({ viewport: { width, height }, locale: 'pt-BR' });
+  const separador = cookie.indexOf('=');
+  await context.addCookies([{ name: cookie.slice(0, separador), value: cookie.slice(separador + 1), url: baseUrl }]);
+  const page = await context.newPage();
+  page.setDefaultTimeout(45_000);
+  page.setDefaultNavigationTimeout(90_000);
+  await page.addInitScript(() => {
+    window.__ux06Falha = null;
+    window.__ux06Alvos = ['/api/crm/contracts'];
+    window.__ux06Atraso = 0;
+    const original = window.fetch.bind(window);
+    window.fetch = async (input, init) => {
+      const url = typeof input === 'string' ? input : (input?.url || '');
+      const metodo = (init?.method || (typeof input !== 'string' ? input?.method : '') || 'GET').toUpperCase();
+      if (metodo === 'GET' && window.__ux06Atraso && url.includes('/api/crm/contracts') && !url.includes('/api/crm/contracts/')) {
+        await new Promise(r => setTimeout(r, window.__ux06Atraso));
+      }
+      if (metodo === 'GET' && window.__ux06Falha && window.__ux06Alvos.some(alvo => url.includes(alvo))) {
+        const { status, code } = window.__ux06Falha;
+        return new Response(JSON.stringify({ error: code }), {
+          status, headers: { 'content-type': 'application/json' },
+        });
+      }
+      return original(input, init);
+    };
+  });
+  await page.goto(`${baseUrl}/admin/contratos`, { waitUntil: 'domcontentloaded' });
+  return { context, page };
+}
+
+/** Dispara uma releitura real da lista pelo caminho da pessoa: criar um contrato manual recarrega os contratos. */
+async function criarManualEDispararReleitura(page, titulo) {
+  await page.selectOption('#contract-company', companyId);
+  await page.fill('#contract-title', titulo);
+  await page.fill('#contract-scope', 'Escopo sintético da releitura UX-PRO-06, sem dado real algum.');
+  await page.fill('#contract-origin', 'Massa fictícia do gate UX-PRO-06 para disparar a releitura da lista.');
+  await page.click('[data-testid="contracts-manual"] button[type="submit"]');
+}
+
+test('UX-PRO-06 contratos: falha na releitura preserva os contratos ja lidos, com hora e repeticao', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrirListaControlada(browser, adminCookie);
+    const lista = page.locator('[data-testid="contracts-list"]');
+    await lista.locator('[data-testid="contracts-table"]').waitFor();
+    assert.ok(await page.locator(`[data-testid="contract-row-${contractId}"]`).isVisible(), 'o contrato semeado esta na lista inicial');
+
+    // A releitura (disparada pela criação manual) passa a falhar com 503.
+    await page.evaluate(() => { window.__ux06Falha = { status: 503, code: 'contracts_unavailable' }; });
+    await criarManualEDispararReleitura(page, 'Contrato sintético releitura UX-PRO-06');
+
+    const faixa = lista.locator('[data-testid="contratos-desatualizada"]');
+    await faixa.waitFor({ timeout: 30_000 });
+    assert.equal(await faixa.getAttribute('role'), 'alert', 'a faixa de dados preservados e um alerta');
+    const texto = await faixa.textContent();
+    assert.match(texto, /desatualizados/i, 'a faixa diz que os dados podem estar desatualizados');
+    assert.match(texto, /não significa que a carteira esteja vazia/i, 'a faixa nega a leitura de carteira vazia');
+    assert.match(texto, /última leitura concluída/i, 'a faixa diz de quando e o dado preservado');
+    assert.match(texto, /\d{1,2}:\d{2}/, 'a faixa cita a hora da ultima leitura concluida');
+    assert.ok(await page.locator(`[data-testid="contract-row-${contractId}"]`).isVisible(),
+      'o contrato ja lido NAO pode sumir quando a releitura falha');
+    assert.equal(await lista.locator('[data-ui-state="error"]').count(), 0,
+      'com dados preservados nao deve haver estado de erro em tela cheia');
+    await capture(page, 'desktop-contratos-desatualizada');
+
+    // Repetir dentro da faixa volta a falar com o servidor e limpa o aviso.
+    await page.evaluate(() => { window.__ux06Falha = null; });
+    await faixa.locator('button', { hasText: 'Tentar novamente' }).click();
+    await faixa.waitFor({ state: 'detached', timeout: 30_000 });
+    assert.ok(await page.locator(`[data-testid="contract-row-${contractId}"]`).isVisible(),
+      'o contrato continua na tela apos a repeticao concluir');
+    await context.close();
+  });
+});
+
+test('UX-PRO-06 contratos: releitura em curso mantem a lista visivel com role=status', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrirListaControlada(browser, adminCookie);
+    const lista = page.locator('[data-testid="contracts-list"]');
+    await lista.locator('[data-testid="contracts-table"]').waitFor();
+
+    await page.evaluate(() => { window.__ux06Atraso = 4000; });
+    await criarManualEDispararReleitura(page, 'Contrato sintético atualização UX-PRO-06');
+
+    const indicador = lista.locator('[data-testid="contratos-atualizando"]');
+    await indicador.waitFor({ timeout: 30_000 });
+    assert.equal(await indicador.getAttribute('role'), 'status', 'a releitura em curso e anunciada por role=status');
+    assert.ok(await lista.locator('[data-testid="contracts-table"]').isVisible(),
+      'a lista NAO pode desaparecer durante a atualizacao');
+
+    await indicador.waitFor({ state: 'detached', timeout: 30_000 });
+    assert.equal(await lista.locator('[data-testid="contratos-desatualizada"]').count(), 0,
+      'releitura concluida nao e desatualizacao');
+    await context.close();
+  });
+});
+
+test('UX-PRO-06 contratos: negativa na releitura falha fechada, sem dado preservado nem repeticao', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrirListaControlada(browser, adminCookie);
+    const lista = page.locator('[data-testid="contracts-list"]');
+    await lista.locator('[data-testid="contracts-table"]').waitFor();
+    assert.ok(await page.locator(`[data-testid="contract-row-${contractId}"]`).isVisible());
+
+    await page.evaluate(() => { window.__ux06Falha = { status: 403, code: 'contract_management_forbidden' }; });
+    await criarManualEDispararReleitura(page, 'Contrato sintético negativa UX-PRO-06');
+
+    const negado = lista.locator('[data-ui-state="denied"]');
+    await negado.waitFor({ timeout: 30_000 });
+    assert.equal(await page.locator(`[data-testid="contract-row-${contractId}"]`).isVisible(), false,
+      'duvida de autorizacao NAO mantem dado na tela');
+    assert.equal(await lista.locator('[data-testid="contratos-desatualizada"]').count(), 0,
+      'negativa nao vira faixa de dados desatualizados');
+    assert.equal(await negado.locator('button').count(), 0,
+      'negativa nao convida a repetir a mesma chamada');
+    await context.close();
+  });
+});
+
+test('UX-PRO-06 contratos: 320/390/768/1440 dia e noite sem transbordo, com percurso de teclado', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+    // Uma unica pagina, redimensionada por etapa (convencao dos demais gates):
+    // menos lancamentos de navegador, mesma medicao de transbordo.
+    const { context, page } = await abrirListaControlada(browser, adminCookie);
+    const lista = page.locator('[data-testid="contracts-list"]');
+    await lista.locator('[data-testid="contracts-table"]').waitFor();
+    for (const largura of [1440, 768, 390, 320]) {
+      await page.setViewportSize({ width: largura, height: largura >= 1024 ? 900 : 844 });
+      await page.waitForTimeout(700);
+      // Reconfirma apos o reflow do resize, como no gate do funil: transiente
+      // de layout nao reprova; transbordo persistente reprova.
+      const transbordo = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      assert.ok(transbordo <= 1, `transbordo de ${transbordo}px em ${largura}px (dia)`);
+      await capture(page, `contratos-${largura}-dia`);
+      if (largura === 768) {
+        await page.click('[data-admin-theme-toggle="true"]');
+        await page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night', null, { timeout: 20_000 });
+        await page.waitForTimeout(400);
+        const transbordoNoite = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        assert.ok(transbordoNoite <= 1, `transbordo de ${transbordoNoite}px em 768px (noite)`);
+        const cores = await page.evaluate(() => {
+          const titulo = document.querySelector('[data-testid="contracts-list"] h2');
+          const painel = document.querySelector('[data-testid="contracts-list"]');
+          const soma = (cor) => (cor.match(/[\d.]+/g) || []).slice(0, 3).reduce((a, b) => a + Number(b), 0);
+          return {
+            titulo: titulo ? soma(getComputedStyle(titulo).color) : 0,
+            painel: painel ? soma(getComputedStyle(painel).backgroundColor) : 999,
+          };
+        });
+        assert.ok(cores.painel < 240, `o painel precisa escurecer no tema noturno (soma=${cores.painel})`);
+        assert.ok(cores.titulo > 480, `o titulo precisa clarear no tema noturno (soma=${cores.titulo})`);
+        await capture(page, 'contratos-768-noite');
+        await page.click('[data-admin-theme-toggle="true"]');
+        await page.waitForFunction(() => document.documentElement.dataset.adminTheme !== 'night', null, { timeout: 20_000 });
+      }
+      if (largura === 390) {
+        // Percurso de teclado ate a acao de abrir o contrato, com foco visivel.
+        const link = page.locator(`[data-testid="contract-row-${contractId}"] a`);
+        await link.waitFor();
+        let focou = false;
+        for (let i = 0; i < 60 && !focou; i++) {
+          await page.keyboard.press('Tab');
+          focou = await link.evaluate(el => el === document.activeElement);
+        }
+        assert.ok(focou, 'o link do contrato precisa ser alcancavel por Tab');
+        const contorno = await link.evaluate(el => ({
+          estilo: getComputedStyle(el).outlineStyle,
+          espessura: parseFloat(getComputedStyle(el).outlineWidth) || 0,
+        }));
+        assert.ok(contorno.estilo !== 'none' && contorno.espessura >= 1,
+          `foco visivel no link do contrato (estilo=${contorno.estilo}, espessura=${contorno.espessura})`);
+        await capture(page, 'contratos-390-teclado');
+      }
+    }
+    await context.close();
+  });
+});
+
 test('browser: em 390px as telas contratuais não produzem transbordo horizontal', { skip: !RUN }, async () => {
   for (const rota of ['/admin/contratos', `/admin/contratos/${contractId}`]) {
     await comNavegador(async browser => {
