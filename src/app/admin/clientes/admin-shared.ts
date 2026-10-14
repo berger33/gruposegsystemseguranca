@@ -214,7 +214,10 @@ export class AdminApiError extends Error {
 
 export function comoAdminApiError(causa: unknown, fallback: string): AdminApiError {
   if (causa instanceof AdminApiError) return causa;
-  return new AdminApiError(causa instanceof Error ? causa.message : fallback);
+  // Sem resposta do servidor (rede, abort, JSON ilegível) não existe código
+  // canônico: a tela mostra a frase em português do próprio recorte, como
+  // classe transitória, em vez do texto cru do navegador.
+  return new AdminApiError(fallback, { code: "network_or_unknown" });
 }
 
 /**
