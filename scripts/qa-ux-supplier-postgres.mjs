@@ -43,12 +43,36 @@ async function freeLoopbackPort() {
   });
 }
 
-function run(cmd, args, env) {
+function run(cmd, args, env, capture = false) {
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { cwd: root, env: { ...process.env, ...env }, stdio: 'inherit' });
+    const child = spawn(cmd, args, { cwd: root, env: { ...process.env, ...env }, stdio: capture ? ['ignore', 'pipe', 'pipe'] : 'inherit' });
+    let output = '';
+    if (capture) {
+      child.stdout.on('data', chunk => { output += chunk; process.stdout.write(chunk); });
+      child.stderr.on('data', chunk => { output += chunk; process.stderr.write(chunk); });
+    }
     child.once('error', reject);
-    child.once('exit', code => resolve(code ?? 1));
+    child.once('exit', code => resolve(capture ? { code: code ?? 1, output } : code ?? 1));
   });
+}
+
+// O mínimo protege o gate contra regressão silenciosa: os dois casos herdados
+// (contrato estático) mais os oito casos de leitura com navegador real da
+// UX-PRO-07C-1. Skip, todo ou ausência de resumo TAP reprovam o gate.
+const MINIMUM_CASES = 10;
+function auditTap(output) {
+  const number = label => {
+    const match = output.match(new RegExp(`^# ${label} (\\d+)$`, 'm'));
+    return match ? Number(match[1]) : null;
+  };
+  const pass = number('pass'), fail = number('fail'), skipped = number('skipped'), todo = number('todo');
+  const problems = [];
+  if (pass === null || fail === null) problems.push('resumo TAP ausente: a suíte não chegou a rodar');
+  if (fail) problems.push(`${fail} caso(s) reprovado(s)`);
+  if (skipped) problems.push(`${skipped} caso(s) pulado(s) — skip não é prova`);
+  if (todo) problems.push(`${todo} caso(s) marcado(s) como todo`);
+  if (pass !== null && pass < MINIMUM_CASES) problems.push(`apenas ${pass} caso(s) aprovado(s); a jornada exige ao menos ${MINIMUM_CASES}`);
+  return { pass, fail, skipped, todo, problems };
 }
 
 const database = 'seg_qa_ux_supplier';
@@ -84,7 +108,7 @@ try {
   etapa('migrações reais aplicadas (001–174, nenhuma nova)');
   etapa('servidor real e Chromium Playwright entregues ao teste de integração');
 
-  result = await run(process.execPath, ['--test', '--test-concurrency=1',
+  const executed = await run(process.execPath, ['--test', '--test-concurrency=1',
     ...(process.env.UX_SUPPLIER_TEST_PATTERN ? ['--test-name-pattern', process.env.UX_SUPPLIER_TEST_PATTERN] : []),
     'tests/ux-supplier-workspace.integration.test.mjs'], {
     RUN_DATABASE_INTEGRATION: '1',
@@ -102,7 +126,14 @@ try {
     // @sparticuz/chromium inclui as bibliotecas AL2023 (libnspr4 etc.) quando
     // esta flag está presente; mesma convenção dos demais gates, sem usar AWS.
     AWS_EXECUTION_ENV: 'AWS_Lambda_nodejs22.x',
-  });
+  }, true);
+  result = executed.code;
+  const summary = auditTap(executed.output);
+  console.log(`UX_SUPPLIER_TAP_SUMMARY: pass=${summary.pass} fail=${summary.fail} skipped=${summary.skipped} todo=${summary.todo} minimo_exigido=${MINIMUM_CASES}`);
+  if (summary.problems.length) {
+    console.error(`UX_SUPPLIER_GATE_REJECTED: ${summary.problems.join('; ')}`);
+    result = result || 1;
+  }
   console.log(`UX_SUPPLIER_TEST_EXIT: ${result}`);
 } catch (error) {
   console.error('QA_PG_FAILED', String(error?.message || error).replaceAll(password, '[redacted]').slice(0, 500));
