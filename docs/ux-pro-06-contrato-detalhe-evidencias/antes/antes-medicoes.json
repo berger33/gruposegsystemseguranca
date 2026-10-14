@@ -1,0 +1,39 @@
+{
+  "stage": "ux-pro-06-contrato-detalhe",
+  "fase": "antes",
+  "base": "f066768dec841bf6f1e2cb6ce54c96cab1044b4f (main, merge da PR #216) em worktree descartável limpo, apenas com o arquivo de teste novo copiado — nenhuma linha da tela alterada",
+  "comando": "UX_CONTRACT_TEST_PATTERN='UX-PRO-06 detalhe' UX_CONTRACT_EVIDENCE_DIR=docs/ux-pro-06-contrato-detalhe-evidencias/antes npm run test:ux-contract:pg",
+  "resultado_agregado": "tests 4 / pass 2 / fail 2 / skipped 0 / todo 0 (UX_CONTRACT_TEST_EXIT: 1)",
+  "resultados": [
+    {
+      "caso": "falha na releitura preserva o que ja foi lido, com hora e repeticao",
+      "resultado": "falhou",
+      "evidencia": "timeout de 30s esperando [data-testid=contract-alerts-desatualizada]: a faixa nao existe na main e o caminho de falha de ler() aplica dado: null, apagando as regras ja lidas (defeitos D1 e D3 do documento de escopo)"
+    },
+    {
+      "caso": "releitura em curso mantem o conteudo visivel com role=status",
+      "resultado": "falhou",
+      "evidencia": "timeout de 30s esperando [data-testid=contract-detail-atualizando]: carregando substitui o conteudo pelo bloco de leitura em tela cheia, e o cabecalho some porque lendoCabecalho = detalhe.carregando (defeito D2)"
+    },
+    {
+      "caso": "negativa na releitura falha fechada, sem dado preservado nem repeticao",
+      "resultado": "passou",
+      "evidencia": "preservacao: a negativa ja falhava fechada na main (estado negado, sem dado e sem botao de repetir) e precisa continuar assim depois da correcao (risco R2)"
+    },
+    {
+      "caso": "320/390/768/1440 dia e noite sem transbordo, com percurso de teclado",
+      "resultado": "passou",
+      "evidencia": "preservacao: sem transbordo de documento em nenhuma das quatro larguras nem no tema noturno, o tema alcanca painel e titulo, e a aba ativa do contrato e alcancavel por Tab com foco visivel medido"
+    }
+  ],
+  "capturas": [
+    "contrato-detalhe-1440-dia.png",
+    "contrato-detalhe-768-dia.png",
+    "contrato-detalhe-768-noite.png",
+    "contrato-detalhe-390-dia.png",
+    "contrato-detalhe-390-teclado.png",
+    "contrato-detalhe-320-dia.png",
+    "contrato-detalhe-negado.png"
+  ],
+  "resumo": "2 defeitos confirmados por medicao (D1/D3 na faixa de dados preservados e D2 na releitura em curso), 2 preservacoes confirmadas (D4 fail-closed e a cobertura de responsividade/tema/teclado). As capturas desta pasta sao da main SEM a correcao e ficam fora do resumo.json vigente de proposito: documentam o defeito corrigido, nao a evidencia vigente."
+}

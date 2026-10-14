@@ -14,7 +14,9 @@
 
 > **UX-PRO-06 — /admin/comercial:** estados honestos do histórico de versões e contraste noturno da etapa ativa; registro em [escopo](docs/UX-PRO-06-COMERCIAL-ESCOPO-2026-10-13.md) e [estados](docs/UX-PRO-06-COMERCIAL-ESTADOS-2026-10-13.md).
 
-> **UX-PRO-06 — /admin/contratos (lista):** falha na releitura preserva contratos, propostas e empresas já lidos, com faixa de desatualização, hora e repetição; registro em [escopo](docs/UX-PRO-06-CONTRATOS-ESCOPO-2026-10-14.md) e [estados](docs/UX-PRO-06-CONTRATOS-ESTADOS-2026-10-14.md). O detalhe `/admin/contratos/[id]` é a fatia seguinte.
+> **UX-PRO-06 — /admin/contratos (lista):** falha na releitura preserva contratos, propostas e empresas já lidos, com faixa de desatualização, hora e repetição; registro em [escopo](docs/UX-PRO-06-CONTRATOS-ESCOPO-2026-10-14.md) e [estados](docs/UX-PRO-06-CONTRATOS-ESTADOS-2026-10-14.md).
+
+> **UX-PRO-06 — /admin/contratos/[id] (detalhe):** a releitura das oito leituras preserva o que já foi lido, com faixa `role="alert"`, hora da última leitura concluída e repetição; a releitura em curso mantém o conteúdo visível com `role="status"`, e o cabeçalho do contrato deixa de sumir; a negativa continua falhando fechada. Registro em [escopo](docs/UX-PRO-06-CONTRATO-DETALHE-ESCOPO-2026-10-14.md) e [estados](docs/UX-PRO-06-CONTRATO-DETALHE-ESTADOS-2026-10-14.md). Ainda não é a conclusão de UX-PRO-06.
 
 > **UX-PRO-03 — console de TI:** confira os relatórios atuais de [Incidentes](docs/UX-PRO-03-INCIDENTES-TI-2026-10-13.md) e [Registros de integração](docs/UX-PRO-03-REGISTROS-INTEGRACAO-TI-2026-10-13.md). A tela de integração registra demonstrações internas; não prova envio a provedores externos. Continue pela próxima superfície realmente montada, sem ativar componentes órfãos.
 
