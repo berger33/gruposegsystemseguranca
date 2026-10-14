@@ -91,7 +91,9 @@ before(async () => {
   await waitForServer(baseUrl);
   pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 3 });
   browser = await launchBrowser();
-  for (const route of ['/admin/entrar', '/admin/crm', '/admin/leads']) {
+  // UX-PRO-06 (contratos): a tela da fatia entra no pré-aquecimento de
+  // compilação junto com as demais da família.
+  for (const route of ['/admin/entrar', '/admin/crm', '/admin/leads', '/admin/contratos']) {
     const deadline = Date.now() + 180_000;
     for (;;) {
       try {
@@ -1392,6 +1394,18 @@ async function writeComercialEvidence(nome, dados) {
   await writeFile(path.join(comercialEvidenceDir, nome), JSON.stringify(dados, null, 2) + '\n');
 }
 
+// UX-PRO-06 (contratos): evidências da lista /admin/contratos, separadas das
+// demais fatias para não misturar artefatos.
+const contratosEvidenceDir = process.env.UX_CONTRATOS_EVIDENCE_DIR || '';
+async function captureContratos(page, nome) {
+  await capture(page, nome, contratosEvidenceDir);
+}
+async function writeContratosEvidence(nome, dados) {
+  if (!contratosEvidenceDir) return;
+  await mkdir(contratosEvidenceDir, { recursive: true });
+  await writeFile(path.join(contratosEvidenceDir, nome), JSON.stringify(dados, null, 2) + '\n');
+}
+
 const COMERCIAL_ETAPAS = [
   'Vistoria',
   'Orçamentos (MO/técnico/custos)',
@@ -1972,4 +1986,532 @@ test('browser: evidência própria de /admin/comercial em 320/390/768/1440 px, d
   };
   await writeComercialEvidence('resumo.json', resumo);
   assert.equal(falhas.length, 0, `transbordo de documento: ${JSON.stringify(falhas)}`);
+});
+
+// ---------------------------------------------------------------------------
+// UX-PRO-06 — contratos (/admin/contratos): estados de leitura da lista
+//
+// O que estes testes provam: uma releitura que falha NÃO apaga a lista de
+// contratos já lida — a tela mantém as linhas, diz que podem estar
+// desatualizados, cita o motivo real e a hora da última leitura concluída, e
+// oferece repetição dentro da faixa; durante uma releitura em curso a tabela
+// permanece visível com indicador em role="status"; dúvida de autorização
+// continua falhando fechada (o estado negado substitui tudo, sem convite a
+// repetir); a primeira leitura que falha não é apresentada como ausência de
+// propostas; a tela não transborda em 320/390/768 px, escurece no tema
+// noturno pelo controle real do envelope e é operável pelo teclado.
+//
+// O que NÃO provam: aceite humano, homologação de Marcelo/Andreia, execução
+// em Windows ou na máquina do operador, e a tela de detalhe
+// /admin/contratos/[id] (fatia própria).
+// ---------------------------------------------------------------------------
+
+/**
+ * Força, SÓ dentro da aba do navegador, uma resposta de erro para as LEITURAS
+ * (GET) da lista de contratos. As escritas (POST /api/crm/contracts) passam
+ * de verdade: o caminho da pessoa é criar/atualizar e a releitura falhar
+ * depois. Mesma técnica dos irmãos: a interceptação do Playwright não
+ * funciona com este Chromium empacotado, então a falha é induzida no próprio
+ * `window.fetch` da página — o servidor nunca é enfraquecido.
+ */
+async function forceContractsStatus(context, status, code, { inicial = true } = {}) {
+  await context.addInitScript(({ status, code, inicial }) => {
+    // `inicial: false` arma a interceptação DESLIGADA: a leitura inicial
+    // conclui com normalidade e o teste liga a falha só na releitura.
+    window.__uxForcarFalhaContratos = inicial ? true : false;
+    const original = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      const metodo = String(init?.method || input?.method || 'GET').toUpperCase();
+      if (window.__uxForcarFalhaContratos && metodo === 'GET' && url.includes('/api/crm/contracts')) {
+        return Promise.resolve(new Response(JSON.stringify({ error: code }), {
+          status, headers: { 'content-type': 'application/json' },
+        }));
+      }
+      return original(input, init);
+    };
+  }, { status, code, inicial });
+}
+
+/** Atrasa a LEITURA (GET) da lista de contratos para observar a atualização em curso. */
+async function delayContractsFetch(context, ms = 4000) {
+  await context.addInitScript(({ ms }) => {
+    window.__uxAtrasarContratos = false;
+    const original = window.fetch.bind(window);
+    window.fetch = async (input, init) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      const metodo = String(init?.method || input?.method || 'GET').toUpperCase();
+      if (window.__uxAtrasarContratos && metodo === 'GET' && url.includes('/api/crm/contracts')) {
+        await new Promise(resolve => setTimeout(resolve, ms));
+      }
+      return original(input, init);
+    };
+  }, { ms });
+}
+
+/** Massa fictícia da fatia, criada pelas mesmas APIs que a pessoa usa. */
+async function seedContrato(cookie, label) {
+  const company = await api('/api/crm/companies', {
+    method: 'POST', cookie,
+    body: { displayName: `Condomínio Fictício ${label}`, city: 'Barueri', type: 'client', segment: 'Condomínio' },
+  });
+  assert.equal(company.status, 201, `criação de empresa cliente: ${JSON.stringify(company.body)}`);
+  const companyId = company.body?.company?.id;
+  assert.ok(companyId, 'a API precisa devolver o id da empresa cliente');
+
+  const criado = await api('/api/crm/contracts', {
+    method: 'POST', cookie,
+    body: {
+      source: 'manual', request_key: randomUUID(), company_id: companyId,
+      title: `Contrato 24h ${label}`,
+      service_summary: 'Cobertura sintética de segurança para validar a tela de contratos',
+      starts_on: '2036-03-01', total_cost: 1000, total_price: 2500,
+      origin_details: `Massa fictícia do gate UX-PRO-06 (${label}); nenhum dado real e nenhuma proposta inventada.`,
+    },
+  });
+  assert.equal(criado.status, 201, `criação do contrato manual: ${JSON.stringify(criado.body)}`);
+  const contractId = criado.body?.contract?.id;
+  assert.ok(contractId, 'a API precisa devolver o id do contrato');
+  return { companyId, contractId, contractTitle: `Contrato 24h ${label}` };
+}
+
+/** Proposta aceita, para o painel "Criar a partir de proposta aceita". */
+async function seedPropostaAceita(cookie, label, companyId) {
+  const opportunity = await api('/api/crm/opportunities', {
+    method: 'POST', cookie,
+    body: {
+      company_id: companyId, title: `Portaria 24h ${label}`,
+      service_name: 'Segurança desarmada', need_description: 'Cobertura noturna de portaria',
+      priority: 'alta', next_action: 'Agendar vistoria',
+    },
+  });
+  assert.equal(opportunity.status, 201, `criação da oportunidade: ${JSON.stringify(opportunity.body)}`);
+  const opportunityId = opportunity.body?.opportunity?.id;
+  const proposal = await api('/api/crm/proposals', {
+    method: 'POST', cookie,
+    body: { company_id: companyId, opportunity_id: opportunityId, title: `Proposta QA ${label}` },
+  });
+  assert.equal(proposal.status, 201, `criação da proposta: ${JSON.stringify(proposal.body)}`);
+  const proposalId = proposal.body?.proposal?.id;
+  const aceita = await api(`/api/crm/proposals/${proposalId}`, { method: 'PATCH', cookie, body: { status: 'aceita' } });
+  assert.equal(aceita.status, 200, `aceite da proposta: ${JSON.stringify(aceita.body)}`);
+  return { proposalId, proposalTitle: `Proposta QA ${label}` };
+}
+
+/**
+ * Preenche e envia o cadastro manual identificado — o caminho real da pessoa
+ * que dispara a releitura da lista depois de um sucesso de escrita.
+ */
+async function criarContratoManual(page, { label, companyId }) {
+  await page.waitForFunction(() => {
+    const select = document.querySelector('#contract-company');
+    return !!select && select.options.length > 1 && !select.options[0].textContent.includes('Lendo');
+  }, null, { timeout: 30_000 });
+  await page.selectOption('#contract-company', companyId);
+  await page.fill('#contract-title', `Registro Manual ${label}`);
+  await page.fill('#contract-scope', 'Cobertura sintética criada pelo gate durante a releitura da lista.');
+  await page.fill('#contract-origin', `Massa fictícia do gate UX-PRO-06 (${label}); origem declarada no cadastro manual.`);
+  await page.click('button:has-text("Registrar contrato manual")');
+}
+
+test('a lista de contratos continua exigindo sessão e o recorte por papel continua valendo', { skip: !RUN }, async () => {
+  const anonimo = await api('/api/crm/contracts');
+  assert.equal(anonimo.status, 401, 'anônimo deve continuar recebendo 401');
+  assert.equal(anonimo.body?.error, 'admin_session_required');
+  for (const leitura of ['/api/crm/companies?type=client', '/api/crm/proposals?status=aceita&limit=100']) {
+    const negada = await api(leitura);
+    assert.equal(negada.status, 401, `${leitura} anônima deve continuar 401`);
+  }
+
+  const rh = await provisionStaff(pool, { role: 'rh' });
+  const cookieRh = await loginHttp(rh.email);
+  const negado = await api('/api/crm/contracts', { cookie: cookieRh });
+  assert.equal(negado.status, 403, 'papel fora da família contratual deve continuar recebendo 403');
+  assert.equal(negado.body?.error, 'contract_access_forbidden');
+  assert.ok(!('contracts' in (negado.body || {})), 'a negativa não pode vazar lista');
+
+  // A lista continua pessoal para `comercial` e ampla para `marcelo` —
+  // a apresentação desta fatia não muda escopo, filtro nem permissão.
+  const gestor = await provisionStaff(pool, { role: 'marcelo' });
+  const cookieGestor = await loginHttp(gestor.email);
+  const { contractTitle } = await seedContrato(cookieGestor, 'Papel Contratos');
+  const listaGestor = await api('/api/crm/contracts', { cookie: cookieGestor });
+  assert.equal(listaGestor.status, 200);
+  assert.ok(listaGestor.body.contracts.some(item => item.title === contractTitle), 'o gestor vê o contrato da massa');
+
+  const vendedora = await provisionStaff(pool, { role: 'comercial' });
+  const cookieVendedora = await loginHttp(vendedora.email);
+  const listaVendedora = await api('/api/crm/contracts', { cookie: cookieVendedora });
+  assert.equal(listaVendedora.status, 200);
+  assert.equal(listaVendedora.body.contracts.some(item => item.title === contractTitle), false, 'a lista continua pessoal para comercial');
+});
+
+test('browser: falha na releitura mantém a lista de contratos já lida e marca os dados como desatualizados', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'marcelo' });
+  const cookie = await loginHttp(staff.email);
+  const { companyId, contractTitle } = await seedContrato(cookie, 'Contratos Desatualizada');
+
+  try {
+    const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+    // Interceptação armada DESLIGADA: a leitura inicial conclui de verdade.
+    await forceContractsStatus(context, 503, 'contracts_unavailable', { inicial: false });
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/contratos', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector(`text=${contractTitle}`, { timeout: 90_000 });
+
+    // A partir daqui a releitura falha. O caminho da pessoa é o mesmo de
+    // sempre: registrar um contrato manual; a escrita conclui e a releitura
+    // da lista falha — e NÃO pode apagar o que já estava na tela.
+    await page.evaluate(() => { window.__uxForcarFalhaContratos = true; });
+    await criarContratoManual(page, { label: 'Desatualizada', companyId });
+    await page.waitForSelector('[data-testid="contracts-notice"]', { timeout: 30_000 });
+
+    await page.waitForSelector('[data-testid="contratos-desatualizado"]', { timeout: 30_000 });
+    const aviso = await page.textContent('[data-testid="contratos-desatualizado"]') || '';
+    assert.match(aviso, /desatualizados/i, 'a faixa precisa dizer que os dados podem estar desatualizados');
+    assert.match(aviso, /não significa que a lista esteja vazia/i, 'falha não pode ser lida como lista vazia');
+    assert.match(aviso, /Não foi possível listar os contratos agora/, 'a faixa cita o motivo real da falha');
+    assert.match(aviso, /última leitura concluída/i, 'a faixa diz de quando é o dado preservado');
+    assert.ok(await page.isVisible(`text=${contractTitle}`), 'a lista lida não pode sumir com a falha da releitura');
+    assert.equal(await page.locator('[data-testid="contracts-list"] [data-ui-state="error"]').count(), 0, 'com dados preservados não deve haver estado de erro cheio na lista');
+    await captureContratos(page, 'desktop-contratos-desatualizada');
+
+    // A repetição dentro da faixa volta a falar com o servidor de verdade.
+    await page.evaluate(() => { window.__uxForcarFalhaContratos = false; });
+    await page.click('[data-testid="contratos-desatualizado"] button:has-text("Tentar novamente")');
+    await page.waitForSelector('[data-testid="contratos-desatualizado"]', { state: 'detached', timeout: 30_000 });
+    await page.waitForSelector('text=Registro Manual Desatualizada', { timeout: 30_000 });
+    assert.ok(await page.isVisible(`text=${contractTitle}`), 'a lista continua na tela após a repetição');
+
+    await context.close();
+  } finally { /* o navegador é compartilhado e fechado no after() */ }
+});
+
+test('browser: releitura em curso mantém a tabela visível com indicador role="status"', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'marcelo' });
+  const cookie = await loginHttp(staff.email);
+  const { companyId, contractTitle } = await seedContrato(cookie, 'Contratos Atualizando');
+
+  try {
+    const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+    await delayContractsFetch(context, 4000);
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/contratos', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector(`text=${contractTitle}`, { timeout: 90_000 });
+
+    await page.evaluate(() => { window.__uxAtrasarContratos = true; });
+    await criarContratoManual(page, { label: 'Atualizando', companyId });
+    await page.waitForSelector('[data-testid="contratos-atualizando"]', { timeout: 30_000 });
+    // Com a releitura ainda em voo, a tabela segue na tela — não é substituída
+    // por um bloco de carregamento que apaga o que a pessoa já estava lendo.
+    const indicador = page.locator('[data-testid="contratos-atualizando"]');
+    assert.equal(await indicador.getAttribute('role'), 'status', 'o indicador de atualização precisa ser role="status"');
+    assert.ok(await page.isVisible(`text=${contractTitle}`), 'a lista não pode desaparecer durante a atualização');
+
+    await page.waitForSelector('[data-testid="contratos-atualizando"]', { state: 'detached', timeout: 30_000 });
+    assert.equal(await page.isVisible('[data-testid="contratos-desatualizado"]'), false, 'releitura concluída não é desatualização');
+    assert.ok(await page.isVisible('text=Registro Manual Atualizando'), 'o contrato recém-criado aparece após a releitura concluir');
+
+    await context.close();
+  } finally { /* o navegador é compartilhado e fechado no after() */ }
+});
+
+test('browser: falha de autorização na releitura dos contratos falha fechada, sem dados preservados', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'marcelo' });
+  const cookie = await loginHttp(staff.email);
+  const { companyId, contractTitle } = await seedContrato(cookie, 'Contratos Negada');
+
+  try {
+    const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+    await forceContractsStatus(context, 403, 'contract_access_forbidden', { inicial: false });
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/contratos', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector(`text=${contractTitle}`, { timeout: 90_000 });
+
+    await page.evaluate(() => { window.__uxForcarFalhaContratos = true; });
+    await criarContratoManual(page, { label: 'Negada', companyId });
+    await page.waitForSelector('[data-testid="contracts-list"] [data-ui-state="denied"]', { timeout: 30_000 });
+
+    assert.equal(await page.isVisible(`text=${contractTitle}`), false, 'dúvida de autorização não mantém dado na tela');
+    assert.equal(await page.isVisible('[data-testid="contratos-desatualizado"]'), false, 'negativa não vira "dados desatualizados"');
+    assert.equal(await page.locator('[data-testid="contracts-list"] [data-ui-state="denied"] button').count(), 0, 'negativa não convida a repetir a mesma chamada');
+    const texto = await page.textContent('[data-testid="contracts-list"] [data-ui-state="denied"]') || '';
+    assert.match(texto, /Acesso negado/);
+
+    await context.close();
+  } finally { /* o navegador é compartilhado e fechado no after() */ }
+});
+
+test('browser: a primeira leitura de propostas que falha não é apresentada como ausência, e a leitura concluída depois aparece', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'marcelo' });
+  const cookie = await loginHttp(staff.email);
+  const { companyId, proposalTitle } = await seedContrato(cookie, 'Proposta Falha Inicial')
+    .then(async seed => ({ ...seed, ...(await seedPropostaAceita(cookie, 'Proposta Falha Inicial', seed.companyId)) }));
+
+  try {
+    const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+    // A falha desta prova é só da leitura de propostas; a lista de contratos
+    // lida normalmente (as leituras são independentes). Arma com chave para
+    // poder desligar antes da repetição oferecida.
+    await context.addInitScript(() => {
+      window.__uxFalhaPropostas = true;
+      const original = window.fetch.bind(window);
+      window.fetch = (input, init) => {
+        const url = typeof input === 'string' ? input : input?.url || '';
+        const metodo = String(init?.method || input?.method || 'GET').toUpperCase();
+        if (window.__uxFalhaPropostas && metodo === 'GET' && url.includes('/api/crm/proposals?')) {
+          return Promise.resolve(new Response(JSON.stringify({ error: 'crm_unavailable' }), {
+            status: 503, headers: { 'content-type': 'application/json' },
+          }));
+        }
+        return original(input, init);
+      };
+    });
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/contratos', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+
+    const painel = page.locator('[data-testid="contracts-from-proposal"]');
+    const estado = painel.locator('[data-ui-state="error"]');
+    await estado.waitFor({ timeout: 90_000 });
+    const texto = await estado.textContent() || '';
+    assert.match(texto, /não significa resultado vazio nem zero/i, 'a falha nega explicitamente a ausência de propostas');
+    assert.equal(await painel.locator('[data-ui-state="empty"]').count(), 0, 'falha não pode ser mostrada como ausência de propostas');
+    assert.equal(await painel.locator('form').count(), 0, 'sem leitura concluída o painel não finge que há escolha');
+    await captureContratos(page, 'desktop-propostas-falha-inicial');
+
+    // As leituras independentes seguem de pé: a lista lida mostra o contrato.
+    assert.ok(await page.isVisible('text=Contrato 24h Proposta Falha Inicial'), 'a leitura que funcionou continua valendo');
+
+    // A repetição oferecida volta a falar com o servidor: a proposta aceita
+    // aparece para escolha.
+    await page.evaluate(() => { window.__uxFalhaPropostas = false; });
+    await page.click('[data-testid="contracts-from-proposal"] [data-ui-state="error"] button:has-text("Tentar")');
+    await page.waitForSelector('#contract-proposal', { timeout: 30_000 });
+    const opcoes = await page.locator('#contract-proposal option').allTextContents();
+    assert.ok(opcoes.some(opcao => opcao.includes(proposalTitle)), 'a proposta aceita lida aparece para escolha');
+
+    await context.close();
+  } finally { /* o navegador é compartilhado e fechado no after() */ }
+});
+
+test('browser: a lista de contratos não transborda em 320/390/768 px e o tema noturno alcança as superfícies', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'marcelo' });
+  const cookie = await loginHttp(staff.email);
+  await seedContrato(cookie, 'Contratos Larguras');
+
+  try {
+    const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/contratos', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector('text=Contrato 24h Contratos Larguras', { timeout: 90_000 });
+    await captureContratos(page, 'desktop-contratos');
+
+    // Medição compartilhada com as telas irmãs: reflow pós-resize não é
+    // overflow real; nós dentro de contêiner com rolagem própria não contam.
+    const medir = () => page.evaluate(() => {
+      const raiz = document.documentElement;
+      const sobra = raiz.scrollWidth - raiz.clientWidth;
+      if (sobra <= 1) return { sobra, culpados: [] };
+      const dentroDeRolagem = node => {
+        for (let atual = node.parentElement; atual && atual !== document.body; atual = atual.parentElement) {
+          const overflowX = getComputedStyle(atual).overflowX;
+          if (overflowX === 'auto' || overflowX === 'scroll' || overflowX === 'hidden' || overflowX === 'clip') return true;
+        }
+        return false;
+      };
+      const culpados = [...document.querySelectorAll('body *')]
+        .filter(node => !dentroDeRolagem(node))
+        .map(node => ({ node, excesso: Math.round(node.getBoundingClientRect().right - raiz.clientWidth) }))
+        .filter(item => item.excesso > 1)
+        .sort((a, b) => b.excesso - a.excesso)
+        .slice(0, 8)
+        .map(({ node, excesso }) =>
+          `${node.tagName}#${node.id}.${String(node.className).slice(0, 60)}+${excesso}px{${(node.textContent || '').trim().slice(0, 30)}}`);
+      return { sobra, culpados };
+    });
+
+    for (const [largura, altura, nome] of [[320, 844, 'contratos-320'], [390, 844, 'contratos-390'], [768, 1024, 'contratos-768']]) {
+      await page.setViewportSize({ width: largura, height: altura });
+      await page.waitForTimeout(300);
+      let overflow = await medir();
+      if (overflow.sobra > 1) {
+        await page.waitForTimeout(400);
+        overflow = await medir();
+      }
+      assert.ok(overflow.sobra <= 1, `a lista de contratos não pode transbordar em ${largura}px (sobra ${overflow.sobra}px): ${overflow.culpados.join(' | ')}`);
+      await captureContratos(page, nome);
+    }
+
+    // Tema noturno pelo controle real do envelope administrativo.
+    await page.click('[data-admin-theme-toggle="true"]');
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night', null, { timeout: 20_000 });
+    const cores = await page.evaluate(() => {
+      const painel = document.querySelector('[data-testid="contracts-list"]');
+      const titulo = document.querySelector('[data-testid="contracts-list"] h2');
+      const ler = (elemento) => {
+        if (!elemento) return null;
+        const estilo = getComputedStyle(elemento);
+        return { fundo: estilo.backgroundColor, texto: estilo.color };
+      };
+      return { painel: ler(painel), titulo: ler(titulo) };
+    });
+    const canais = (cor) => (cor.match(/\d+/g) || []).slice(0, 3).map(Number);
+    assert.ok(cores.painel && canais(cores.painel.fundo).reduce((a, b) => a + b, 0) < 240, `o painel da lista precisa escurecer no tema noturno: ${cores.painel?.fundo}`);
+    assert.ok(cores.titulo && canais(cores.titulo.texto).reduce((a, b) => a + b, 0) > 480, `o título da lista precisa clarear no tema noturno: ${cores.titulo?.texto}`);
+    await captureContratos(page, 'contratos-768-noturno');
+
+    await context.close();
+  } finally { /* o navegador é compartilhado e fechado no after() */ }
+});
+
+test('browser: o teclado percorre navegação, formulário manual e submete com foco visível', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'marcelo' });
+  const cookie = await loginHttp(staff.email);
+  const { companyId } = await seedContrato(cookie, 'Contratos Teclado');
+
+  try {
+    const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 390, height: 844 } });
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/contratos', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForFunction(() => {
+      const select = document.querySelector('#contract-company');
+      return !!select && select.options.length > 1 && !select.options[0].textContent.includes('Lendo');
+    }, null, { timeout: 90_000 });
+
+    // Percurso de Tab a partir do primeiro link da navegação comercial. Os
+    // inputs de data consomem vários Tab por segmento (dia/mês/ano), então o
+    // percurso precisa ser longo o bastante para alcançar todo o formulário.
+    await page.locator('nav[aria-label="Navegação comercial"] a').first().focus();
+    const percurso = [];
+    for (let passo = 0; passo < 26; passo += 1) {
+      await page.keyboard.press('Tab');
+      percurso.push(await page.evaluate(() => ({
+        alvo: document.activeElement?.id || (document.activeElement?.textContent || '').trim().slice(0, 30),
+        tag: document.activeElement?.tagName,
+      })));
+    }
+    const ids = percurso.map(item => item.alvo);
+    assert.ok(ids.includes('contract-company'), `o select de empresa precisa ser alcançável por Tab: ${JSON.stringify(ids)}`);
+    assert.ok(ids.includes('contract-origin'), `o campo de origem precisa ser alcançável por Tab: ${JSON.stringify(ids)}`);
+    assert.ok(ids.some(alvo => alvo.includes('Registrar contrato manual')), `o botão de registrar precisa ser alcançável por Tab: ${JSON.stringify(ids)}`);
+
+    // Foco visível no controle crítico (select de empresa), medido por CSS.
+    await page.focus('#contract-company');
+    const contorno = await page.evaluate(() => {
+      const e = getComputedStyle(document.activeElement);
+      return { outlineStyle: e.outlineStyle, outlineWidth: e.outlineWidth, boxShadow: e.boxShadow };
+    });
+    const focoVisivel = contorno.outlineStyle !== 'none' || (contorno.boxShadow && contorno.boxShadow !== 'none');
+    assert.ok(focoVisivel, `o foco precisa ser visível no select de empresa: ${JSON.stringify(contorno)}`);
+
+    // Operação completa por teclado: preencher e submeter com Enter.
+    await page.selectOption('#contract-company', companyId);
+    await page.fill('#contract-title', 'Registro Manual Teclado');
+    await page.fill('#contract-scope', 'Cobertura sintética criada pelo gate no percurso de teclado.');
+    await page.fill('#contract-origin', 'Massa fictícia do gate UX-PRO-06 (teclado); origem declarada.');
+    await page.focus('button:has-text("Registrar contrato manual")');
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('[data-testid="contracts-notice"]', { timeout: 30_000 });
+    await page.waitForSelector('text=Registro Manual Teclado', { timeout: 30_000 });
+    await captureContratos(page, '390-contratos-teclado');
+
+    await context.close();
+  } finally { /* o navegador é compartilhado e fechado no after() */ }
+});
+
+test('browser: evidência própria de /admin/contratos em 320/390/768/1440 px, dia e noite, com teclado', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'marcelo' });
+  const cookie = await loginHttp(staff.email);
+  const { companyId } = await seedContrato(cookie, 'Contratos Evidência');
+  await seedPropostaAceita(cookie, 'Contratos Evidência', companyId);
+
+  const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+  const capturas = [];
+  try {
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/contratos', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector('text=Contrato 24h Contratos Evidência', { timeout: 90_000 });
+
+    const medir = () => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+
+    for (const tema of ['day', 'night']) {
+      await ajustarTemaAdmin(page, tema);
+      for (const [largura, altura] of [[320, 844], [390, 844], [768, 1024], [1440, 900]]) {
+        await page.setViewportSize({ width: largura, height: altura });
+        await page.waitForTimeout(250);
+        let sobra = await medir();
+        if (sobra > 1) { await page.waitForTimeout(400); sobra = await medir(); }
+        const slug = `${largura}-${tema === 'night' ? 'noite' : 'dia'}`;
+        await captureContratos(page, slug);
+        capturas.push({ arquivo: `${slug}.png`, largura, altura, tema, sobraPx: sobra });
+      }
+    }
+
+    // Teclado no celular (390 px, dia): foco visível e percurso de Tab.
+    await ajustarTemaAdmin(page, 'day');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.locator('nav[aria-label="Navegação comercial"] a').first().focus();
+    const percurso = [];
+    for (let passo = 0; passo < 3; passo += 1) {
+      await page.keyboard.press('Tab');
+      percurso.push(await page.evaluate(() => (document.activeElement?.id || document.activeElement?.textContent || '').trim().slice(0, 30)));
+    }
+    const contorno = await page.evaluate(() => {
+      const e = getComputedStyle(document.activeElement);
+      return { outlineStyle: e.outlineStyle, outlineWidth: e.outlineWidth, boxShadow: e.boxShadow };
+    });
+    await captureContratos(page, '390-dia-teclado');
+    const sobraTeclado = await medir();
+
+    const falhas = capturas.filter(c => c.sobraPx > 1);
+    const entries = capturas.map(c => ({
+      stage: 'ux-pro-06-contratos',
+      route: '/admin/contratos',
+      role: 'marcelo',
+      viewport: `${c.largura}x${c.altura}`,
+      theme: c.tema,
+      file: c.arquivo,
+      sobraDocumentoPx: c.sobraPx,
+    }));
+    entries.push({
+      stage: 'ux-pro-06-contratos',
+      route: '/admin/contratos',
+      role: 'marcelo',
+      viewport: '390x844',
+      theme: 'day',
+      state: 'teclado',
+      file: '390-dia-teclado.png',
+      firstFocus: true,
+      percursoTeclado: percurso,
+      contornoFoco: contorno,
+      sobraDocumentoPx: sobraTeclado,
+    });
+    const resumo = {
+      stage: 'ux-pro-06-contratos',
+      generatedBy: 'gate npm run test:ux-crm:pg (UX_CONTRATOS_EVIDENCE_DIR=docs/ux-pro-06-contratos-evidencias)',
+      notes: 'Evidências da fatia UX-PRO-06 — estados de leitura da lista de contratos (/admin/contratos). Massa inteiramente sintética criada pelas próprias APIs, sessão de staff provisionada pelo gate; nenhuma captura usa dado pessoal ou credencial. As capturas de outras execuções da suíte ficam fora desta pasta.',
+      fatia: 'UX-PRO-06 — /admin/contratos',
+      rota: '/admin/contratos',
+      papel_usado: 'marcelo (dados sintéticos; sem credencial registrada)',
+      viewports: [320, 390, 768, 1440],
+      temas: ['day', 'night'],
+      entries,
+      transbordoDocumentoPorCaptura: falhas.length === 0 ? 'nenhum' : falhas,
+      limites: [
+        'Medição automatizada por Chromium; não é validação manual nem aceite de Marcelo, Andreia ou comercial.',
+        'A tela de detalhe /admin/contratos/[id] não é coberta por esta evidência (fatia própria).',
+      ],
+    };
+    await writeContratosEvidence('resumo.json', resumo);
+    assert.equal(falhas.length, 0, `transbordo de documento: ${JSON.stringify(falhas)}`);
+  } finally {
+    await context.close();
+  }
 });
