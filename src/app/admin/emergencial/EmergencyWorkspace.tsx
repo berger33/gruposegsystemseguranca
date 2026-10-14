@@ -1,13 +1,13 @@
 "use client";
 
-// UX-PRO-07B-1 — leitura canônica e seleção do canal de apoio emergencial.
+// UX-PRO-07B — leitura canônica e estados de escrita do apoio emergencial.
 //
-// Esta subfatia trata somente LEITURA: os dois GET já existentes
-// (`/api/ext/emergency/channels` e `.../channels/:id`), o estado honesto de cada
-// um, a seleção válida e a habilitação das ações de ativação. As mutações
-// (criação, testes e transições) continuam com o mesmo método, o mesmo corpo, o
-// mesmo `Idempotency-Key` e a mesma auditoria do servidor; nenhuma delas foi
-// reescrita aqui.
+// A leitura trata os dois GET já existentes (`/api/ext/emergency/channels` e
+// `.../channels/:id`) com estado honesto por recurso, seleção válida e
+// habilitação das ações de ativação. A escrita (UX-PRO-07B-2) acrescenta
+// estado de envio pendente, prevenção de duplo clique e reconciliação de
+// resultado das cinco mutações canônicas; verbo, URL, corpo,
+// `Idempotency-Key` e auditoria do servidor permanecem idênticos.
 
 import UiBadge, { type UiBadgeTone } from "@/components/ui/UiBadge";
 import UiState from "@/components/ui/UiState";
@@ -16,7 +16,10 @@ import styles from "@/components/ui/UiWorkspace.module.css";
 import {
   emergencyErrorDetail,
   emergencyRead,
+  emergencyWrite,
+  emergencyWriteErrorDetail,
   invalidEmergencyResponse,
+  invalidEmergencyWriteResponse,
   type EmergencyErrorDescriptor,
 } from "@/lib/emergency-request";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
@@ -51,6 +54,22 @@ type ReadState<T> =
       staleError?: EmergencyErrorDescriptor;
       forId?: string;
     };
+
+type WriteAction = 'create' | 'testing' | 'receipt' | 'attendance' | 'activate';
+
+type WriteState =
+  | { phase: 'idle' }
+  | { phase: 'sending'; action: WriteAction }
+  | { phase: 'failed'; action: WriteAction; error: EmergencyErrorDescriptor }
+  | { phase: 'done'; action: WriteAction; note: string };
+
+const WRITE_ACTION_NAMES: Record<WriteAction, string> = {
+  create: 'a configuração do canal',
+  testing: 'a transição para o ciclo de testes',
+  receipt: 'o teste de recebimento',
+  attendance: 'o teste de atendimento',
+  activate: 'a ativação',
+};
 
 const LIST_URL = "/api/ext/emergency/channels";
 const CHANNEL_URL = (id: string) => `${LIST_URL}/${id}`;
@@ -115,13 +134,13 @@ export default function EmergencyWorkspace() {
   const [channels, setChannels] = useState<ReadState<Channel[]>>({ phase: "idle" });
   const [selected, setSelected] = useState("");
   const [detail, setDetail] = useState<ReadState<EmergencyDetail>>({ phase: "idle" });
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const [write, setWrite] = useState<WriteState>({ phase: "idle" });
   const [form, setForm] = useState({ name: "Plantão interno de apoio", channel_type: "telefone", recipient_name: "Supervisor de plantão", recipient_contact: "contato-interno-declarado", availability: "Disponibilidade declarada 24 horas por dia, sujeita a conferência humana.", purpose: "Apoio interno em ocorrências operacionais que exijam escalonamento humano.", escalation_responsible: "Gestor de plantão", escalation_contact: "contato-interno-escalacao" });
 
   const channelsRef = useRef(channels);
   const detailRef = useRef(detail);
   const requestIds = useRef({ list: 0, detail: 0 });
+  const sendingRef = useRef<WriteAction | null>(null);
 
   const commitChannels = useCallback((updater: (current: ReadState<Channel[]>) => ReadState<Channel[]>) => {
     const next = updater(channelsRef.current);
@@ -219,35 +238,84 @@ export default function EmergencyWorkspace() {
     void loadDetail(selected);
   }, [selectionValid, selected, detailForId, loadDetail]);
 
-  async function create(e: FormEvent) {
-    e.preventDefault();
-    setError("");
-    const r = await fetch(LIST_URL, {
-      method: "POST",
-      headers: { "content-type": "application/json", "Idempotency-Key": idem("create") },
-      body: JSON.stringify({ ...form, escalation_steps: [{ responsible: form.escalation_responsible, contact: form.escalation_contact, wait_minutes: 5 }] }),
-    });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok) return setError(d.error || "Falha ao configurar canal");
-    setMessage(d.note);
-    setSelected(d.channel.id);
-    await loadChannels();
+  // UX-PRO-07B-2 — uma escrita por vez nesta tela: as cinco entradas tocam a
+  // mesma máquina de estado canônica do canal. A guarda síncrona (ref) bloqueia
+  // o segundo clique antes do primeiro envio começar; o `disabled` mantém o
+  // bloqueio até a resposta chegar. Nenhum POST extra é disparado.
+  async function runWrite(action: WriteAction, send: () => Promise<void>) {
+    if (sendingRef.current) return;
+    sendingRef.current = action;
+    setWrite({ phase: "sending", action });
+    try {
+      await send();
+    } finally {
+      sendingRef.current = null;
+    }
   }
 
-  async function act(path: string, body: Record<string, unknown>, label: string) {
-    const id = selectionValid ? selected : "";
-    if (!id) return setError("Selecione um canal.");
-    setError("");
-    const r = await fetch(`${LIST_URL}/${id}${path}`, {
-      method: "POST",
-      headers: { "content-type": "application/json", "Idempotency-Key": idem(label) },
-      body: JSON.stringify(body),
+  function failWrite(action: WriteAction, error: EmergencyErrorDescriptor) {
+    setWrite({ phase: "failed", action, error });
+    if (isAuthFailure(error)) {
+      // Falha fechada: a releitura da lista (caminho existente) limpa o dado
+      // protegido e apresenta a negativa sem repetição quando a sessão perdeu.
+      void loadChannels();
+    }
+  }
+
+  function doneWrite(action: WriteAction, note: unknown) {
+    setWrite({
+      phase: "done",
+      action,
+      note: typeof note === "string" && note ? note : "Escrita registrada internamente; a lista e a trilha foram relidas.",
     });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok) return setError(d.error || `Falha em ${label}`);
-    setMessage(d.note);
-    await loadChannels();
-    await loadDetail(id);
+  }
+
+  async function create(e: FormEvent) {
+    e.preventDefault();
+    await runWrite("create", async () => {
+      const result = await emergencyWrite<{ channel?: { id?: unknown }; note?: unknown }>(LIST_URL, {
+        body: { ...form, escalation_steps: [{ responsible: form.escalation_responsible, contact: form.escalation_contact, wait_minutes: 5 }] },
+        idempotencyKey: idem("create"),
+      });
+      if (!result.ok) {
+        failWrite("create", result.error);
+        return;
+      }
+      const channel = result.data?.channel;
+      if (!channel || typeof channel !== "object" || typeof channel.id !== "string" || !channel.id) {
+        failWrite("create", invalidEmergencyWriteResponse(result.status));
+        return;
+      }
+      doneWrite("create", result.data.note);
+      setSelected(channel.id);
+      await loadChannels();
+    });
+  }
+
+  async function act(action: WriteAction, path: string, body: Record<string, unknown>) {
+    const id = selectionValid ? selected : "";
+    if (!id) return;
+    await runWrite(action, async () => {
+      const result = await emergencyWrite<{ channel?: { id?: unknown }; readiness?: unknown; status?: unknown; note?: unknown }>(`${LIST_URL}/${id}${path}`, {
+        body,
+        idempotencyKey: idem(action),
+      });
+      if (!result.ok) {
+        failWrite(action, result.error);
+        return;
+      }
+      const data = result.data;
+      const valid = (action === "receipt" || action === "attendance")
+        ? Boolean(data && data.readiness !== null && typeof data.readiness === "object" && typeof data.status === "string")
+        : Boolean(data && data.channel !== null && typeof data.channel === "object" && typeof data.channel?.id === "string" && data.channel.id);
+      if (!valid) {
+        failWrite(action, invalidEmergencyWriteResponse(result.status));
+        return;
+      }
+      doneWrite(action, data.note);
+      await loadChannels();
+      await loadDetail(id);
+    });
   }
 
   const field = (name: keyof typeof form, label: string) => (
@@ -273,7 +341,7 @@ export default function EmergencyWorkspace() {
           <label className={styles.field}>Tipo<select value={form.channel_type} onChange={e => setForm({ ...form, channel_type: e.target.value })}>{["telefone", "whatsapp", "app", "botao", "outro"].map(x => <option key={x}>{x}</option>)}</select></label>
           {field("recipient_name", "Destinatário responsável")}{field("recipient_contact", "Contato declarado")}{field("availability", "Disponibilidade declarada")}{field("purpose", "Finalidade")}{field("escalation_responsible", "Responsável pelo escalonamento")}{field("escalation_contact", "Contato de escalonamento")}
         </div>
-        <div className={styles.actions}><button className={local.acaoRotuloLongo}>Registrar rascunho</button></div>
+        <div className={styles.actions}><button className={local.acaoRotuloLongo} data-testid="emergencial-acao-criar" disabled={write.phase === "sending"} aria-busy={write.phase === "sending" && write.action === "create"}>Registrar rascunho</button></div>
       </form>
 
       <section className={styles.panel} aria-labelledby="emergencial-acoes-titulo">
@@ -297,13 +365,23 @@ export default function EmergencyWorkspace() {
             <p className={styles.hint} role="status" id="emergencial-acoes-motivo" data-testid="emergencial-acoes-bloqueio">Bloqueio: {blocked}</p>
           )}
           <div className={styles.actions}>
-            <button type="button" className={local.acaoRotuloLongo} data-testid="emergencial-acao-testes" disabled={!actionsEnabled} aria-describedby="emergencial-acoes-motivo" onClick={() => void act("/transition", { status: "em_teste" }, "testing")}>Iniciar ciclo de testes</button>
-            <button type="button" className={local.acaoRotuloLongo} data-testid="emergencial-acao-recebimento" disabled={!actionsEnabled} aria-describedby="emergencial-acoes-motivo" onClick={() => void act("/tests", { test_kind: "recebimento", result: "Recebimento declarado como conferido pelo operador interno.", evidence_note: "Conferência manual declarada na interface EXT-15, sem envio automatizado.", tested_by_name: "Operador interno", is_success: true }, "receipt")}>Registrar teste de recebimento bem-sucedido</button>
-            <button type="button" className={local.acaoRotuloLongo} data-testid="emergencial-acao-atendimento" disabled={!actionsEnabled} aria-describedby="emergencial-acoes-motivo" onClick={() => void act("/tests", { test_kind: "atendimento", result: "Atendimento declarado como conferido pelo operador interno.", evidence_note: "Conferência manual declarada na interface EXT-15, sem central externa.", tested_by_name: "Operador interno", is_success: true }, "attendance")}>Registrar teste de atendimento bem-sucedido</button>
-            <button type="button" className={local.acaoRotuloLongo} data-testid="emergencial-acao-ativar" disabled={!actionsEnabled} aria-describedby="emergencial-acoes-motivo" onClick={() => void act("/transition", { status: "ativo", note: "Ativação humana após conferência dos dois registros internos de teste." }, "activate")}>Marcar ativo (decisão humana)</button>
+            <button type="button" className={local.acaoRotuloLongo} data-testid="emergencial-acao-testes" disabled={!actionsEnabled || write.phase === "sending"} aria-busy={write.phase === "sending" && write.action === "testing"} aria-describedby="emergencial-acoes-motivo" onClick={() => void act("testing", "/transition", { status: "em_teste" })}>Iniciar ciclo de testes</button>
+            <button type="button" className={local.acaoRotuloLongo} data-testid="emergencial-acao-recebimento" disabled={!actionsEnabled || write.phase === "sending"} aria-busy={write.phase === "sending" && write.action === "receipt"} aria-describedby="emergencial-acoes-motivo" onClick={() => void act("receipt", "/tests", { test_kind: "recebimento", result: "Recebimento declarado como conferido pelo operador interno.", evidence_note: "Conferência manual declarada na interface EXT-15, sem envio automatizado.", tested_by_name: "Operador interno", is_success: true })}>Registrar teste de recebimento bem-sucedido</button>
+            <button type="button" className={local.acaoRotuloLongo} data-testid="emergencial-acao-atendimento" disabled={!actionsEnabled || write.phase === "sending"} aria-busy={write.phase === "sending" && write.action === "attendance"} aria-describedby="emergencial-acoes-motivo" onClick={() => void act("attendance", "/tests", { test_kind: "atendimento", result: "Atendimento declarado como conferido pelo operador interno.", evidence_note: "Conferência manual declarada na interface EXT-15, sem central externa.", tested_by_name: "Operador interno", is_success: true })}>Registrar teste de atendimento bem-sucedido</button>
+            <button type="button" className={local.acaoRotuloLongo} data-testid="emergencial-acao-ativar" disabled={!actionsEnabled || write.phase === "sending"} aria-busy={write.phase === "sending" && write.action === "activate"} aria-describedby="emergencial-acoes-motivo" onClick={() => void act("activate", "/transition", { status: "ativo", note: "Ativação humana após conferência dos dois registros internos de teste." })}>Marcar ativo (decisão humana)</button>
           </div>
-          {error && <p className={`${styles.notice} ${styles.noticeError}`} role="alert" data-testid="emergencial-escrita-erro">{error}</p>}
-          {message && <p className={`${styles.notice} ${styles.noticeInfo}`} role="status" data-testid="emergencial-escrita-mensagem">{message}</p>}
+          {write.phase === "sending" ? (
+            <p className={`${styles.notice} ${styles.noticeInfo}`} role="status" data-testid="emergencial-escrita-enviando">Enviando {WRITE_ACTION_NAMES[write.action]}… O resultado ainda não foi reconciliado; a lista e a trilha continuam sendo das últimas leituras concluídas.</p>
+          ) : null}
+          {write.phase === "failed" ? (
+            <div className={`${styles.notice} ${styles.noticeError}`} role="alert" data-testid="emergencial-escrita-erro">
+              <strong>{write.error.title}</strong>
+              <p>{emergencyWriteErrorDetail(write.error)}</p>
+            </div>
+          ) : null}
+          {write.phase === "done" ? (
+            <p className={`${styles.notice} ${styles.noticeInfo}`} role="status" data-testid="emergencial-escrita-mensagem">{write.note}</p>
+          ) : null}
         </div>
       </section>
     </div>

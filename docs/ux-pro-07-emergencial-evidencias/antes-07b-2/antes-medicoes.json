@@ -1,0 +1,85 @@
+{
+  "base": "a16ab71d4f7b91f151d4eb117f3d5420b94113c5",
+  "gate": "tests/ux-emergency-workspace.integration.test.mjs (18 casos, incluindo os 6 novos da UX-PRO-07B-2)",
+  "execucao": "npm run test:ux-emergency:pg contra a implementação anterior (UX_EMERGENCY_UI_TIMEOUT=10000)",
+  "exit": 1,
+  "pass": 12,
+  "fail": 6,
+  "skipped": 0,
+  "todo": 0,
+  "interpretacao": "Falha de gate NOVO contra o código antigo — não é regressão de gate herdado. Os 6 casos de escrita (13-18) não existem na implementação anterior.",
+  "casos": [
+    {
+      "resultado": "passou",
+      "caso": "1. EXT-15 continua recusando anônimo e papel sem permissão nas duas leituras"
+    },
+    {
+      "resultado": "passou",
+      "caso": "2. browser: leitura ainda não concluída não é vazio, e o vazio só aparece depois da resposta"
+    },
+    {
+      "resultado": "passou",
+      "caso": "3. EXT-15 cria o canal sintético pela API real e ele nasce em rascunho"
+    },
+    {
+      "resultado": "passou",
+      "caso": "4. browser: falha inicial declara causa real e Tentar novamente faz nova leitura"
+    },
+    {
+      "resultado": "passou",
+      "caso": "5. browser: falha de releitura preserva a lista, informa a hora e a repetição atualiza de verdade"
+    },
+    {
+      "resultado": "passou",
+      "caso": "6. browser: negativa depois do sucesso falha fechada e não mantém canal nem trilha protegidos"
+    },
+    {
+      "resultado": "passou",
+      "caso": "7. browser: resposta 2xx malformada não vira vazio"
+    },
+    {
+      "resultado": "passou",
+      "caso": "8. browser: ações bloqueadas com motivo durante a leitura e liberadas só depois de ler e selecionar"
+    },
+    {
+      "resultado": "passou",
+      "caso": "9. browser: transição canônica rascunho → em_teste continua idêntica quando a ação é liberada"
+    },
+    {
+      "resultado": "passou",
+      "caso": "10. browser: teclado alcança seleção e ações com foco visível, e trocar de canal relê a trilha"
+    },
+    {
+      "resultado": "passou",
+      "caso": "11. browser: 320 390 768 1440, tema noturno, alvos e contrastes medidos sem problemas"
+    },
+    {
+      "resultado": "passou",
+      "caso": "12. browser: contraste no tema claro e noturno da falha inicial, com rótulo real e sem vazio falso"
+    },
+    {
+      "resultado": "falhou",
+      "caso": "13. browser: envio pendente bloqueia as cinco escritas e duplo clique não envia segunda criação"
+    },
+    {
+      "resultado": "falhou",
+      "caso": "14. browser: transição com envio pendente mantém payload canônico e bloqueia as demais escritas"
+    },
+    {
+      "resultado": "falhou",
+      "caso": "15. browser: falha transitória de escrita declara causa real, preserva a leitura e não repete o POST"
+    },
+    {
+      "resultado": "falhou",
+      "caso": "16. browser: 403 na escrita com perda de leitura falha fechada e remove o dado protegido"
+    },
+    {
+      "resultado": "falhou",
+      "caso": "17. browser: 2xx malformada na escrita não é sucesso nem vazio e não derruba a tela"
+    },
+    {
+      "resultado": "falhou",
+      "caso": "18. browser: envio pendente em 390 dia e 768 noite, falha de escrita em 320, alvos e contrastes medidos"
+    }
+  ]
+}

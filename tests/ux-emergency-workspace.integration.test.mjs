@@ -36,6 +36,7 @@ let adminCookie;
 let rhCookie;
 let firstChannel;
 let secondChannel;
+let writeDraft;
 const evidenceEntries = [];
 
 async function waitForServer(url, timeoutMs = 120_000) {
@@ -146,6 +147,7 @@ async function openEmergency(browser, {
   height = 900,
   list = {},
   detail = {},
+  mutation = {},
 } = {}) {
   const context = await browser.newContext({ viewport: { width, height }, locale: 'pt-BR' });
   const separator = adminCookie.indexOf('=');
@@ -162,6 +164,7 @@ async function openEmergency(browser, {
     window.__uxEmergencyControl = {
       list: { ...control.list },
       detail: { ...control.detail },
+      mutation: { ...control.mutation },
       calls: { list: 0, detail: 0 },
       mutations: [],
     };
@@ -194,6 +197,20 @@ async function openEmergency(browser, {
           body: typeof init?.body === 'string' ? init.body : null,
           idempotencyKey: init?.headers ? (init.headers['Idempotency-Key'] || init.headers['idempotency-key'] || null) : null,
         });
+        const rule = window.__uxEmergencyControl.mutation;
+        if (rule.delay > 0) await new Promise(resolve => setTimeout(resolve, rule.delay));
+        if (rule.fail) {
+          return new Response(JSON.stringify({ error: rule.code || 'emergency_write_unavailable' }), {
+            status: rule.status || 503,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+        if (rule.malformed) {
+          return new Response(JSON.stringify({ note: 'resposta incompleta' }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
         return original(input, init);
       }
       if (method === 'GET' && pathname === '/api/ext/emergency/channels') {
@@ -206,7 +223,7 @@ async function openEmergency(browser, {
       }
       return original(input, init);
     };
-  }, { list, detail });
+  }, { list, detail, mutation });
   await page.goto(`${baseUrl}/admin/emergencial`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('heading', { level: 1, name: /Apoio emergencial/i }).waitFor();
   return { context, page };
@@ -799,6 +816,253 @@ test('browser: contraste no tema claro e noturno da falha inicial, com rótulo r
       contrasteFalhaDia: dayContrast,
       contrasteFalhaNoite: nightContrast,
       ...await measureSurface(page, '1440px na falha inicial no tema noite'),
+    });
+    await context.close();
+  });
+});
+test('browser: envio pendente bloqueia as cinco escritas e duplo clique não envia segunda criação', { skip: !RUN }, async () => {
+  await withBrowser(async browser => {
+    const { context, page } = await openEmergency(browser, { mutation: { delay: 2200 } });
+    const cards = page.locator('[data-testid="emergencial-lista-canais"]');
+    await cards.waitFor();
+    await page.locator('[data-testid="emergencial-detalhe-trilha"]').waitFor();
+
+    const nome = `Canal de envio ${randomUUID().slice(0, 8)}`;
+    await page.getByLabel('Nome', { exact: true }).fill(nome);
+    const submit = page.getByRole('button', { name: 'Registrar rascunho' });
+    await submit.click({ clickCount: 2, delay: 50 });
+
+    const sending = page.locator('[data-testid="emergencial-escrita-enviando"]');
+    await sending.waitFor();
+    const sendingText = await sending.innerText();
+    assert.match(sendingText, /configuração do canal/i);
+    assert.match(sendingText, /não foi reconciliado/i);
+    const during = await actionStates(page);
+    for (const label of ACTION_LABELS) {
+      assert.equal(during[label].enabled, false, `${label} precisa ficar bloqueada durante o envio`);
+    }
+    assert.equal(await submit.isEnabled(), false, 'o formulário precisa ficar bloqueado durante o envio');
+    assert.equal(await submit.getAttribute('aria-busy'), 'true', 'o botão em curso precisa declarar aria-busy');
+    await capture(page, 'emergencial-1440-enviando', {
+      estado: 'escrita_em_envio',
+      acaoEmEnvio: 'create',
+      ...await measureSurface(page, '1440px no envio pendente'),
+    });
+
+    await page.locator('[data-testid="emergencial-escrita-mensagem"]').waitFor();
+    assert.match(await page.locator('[data-testid="emergencial-escrita-mensagem"]').innerText(), /configurado internamente/i);
+    const sent = await page.evaluate(() => window.__uxEmergencyControl.mutations);
+    const creates = sent.filter(item => item.url === '/api/ext/emergency/channels' && item.method === 'POST');
+    assert.equal(creates.length, 1, 'duplo clique não pode enviar segunda criação');
+    const createBody = JSON.parse(creates[0].body);
+    assert.equal(createBody.name, nome, 'o corpo da criação não pode mudar');
+    assert.equal(createBody.channel_type, 'telefone');
+    assert.deepEqual(createBody.escalation_steps, [{ responsible: 'Gestor de plantão', contact: 'contato-interno-escalacao', wait_minutes: 5 }]);
+    assert.match(String(creates[0].idempotencyKey), /^ext15-ui-create-\d+-[0-9a-f]+$/);
+
+    // Reconciliação real: a releitura mostra o canal novo, a seleção muda e a trilha é lida.
+    await cards.getByRole('heading', { name: nome, exact: true }).waitFor();
+    const newId = await page.locator('[data-testid="emergencial-canal-select"] option', { hasText: nome }).getAttribute('value');
+    assert.equal(await page.locator('[data-testid="emergencial-canal-select"]').inputValue(), newId, 'a seleção precisa seguir o canal criado');
+    await page.waitForFunction(channelId => ((document.querySelector('[data-testid="emergencial-detalhe-trilha"]')?.textContent || '')).includes(channelId), newId);
+    await context.close();
+  });
+});
+
+test('browser: transição com envio pendente mantém payload canônico e bloqueia as demais escritas', { skip: !RUN }, async () => {
+  await withBrowser(async browser => {
+    const { context, page } = await openEmergency(browser, { mutation: { delay: 1800 } });
+    await page.locator('[data-testid="emergencial-lista-canais"]').waitFor();
+    await page.locator('[data-testid="emergencial-detalhe-trilha"]').waitFor();
+    const select = page.locator('[data-testid="emergencial-canal-select"]');
+    const selectedId = await select.inputValue();
+    assert.ok(selectedId, 'a seleção automática precisa seguir o primeiro canal lido');
+
+    const btn = page.getByRole('button', { name: 'Iniciar ciclo de testes', exact: true });
+    await btn.click({ clickCount: 2, delay: 50 });
+    const sending = page.locator('[data-testid="emergencial-escrita-enviando"]');
+    await sending.waitFor();
+    assert.match(await sending.innerText(), /transição para o ciclo de testes/i);
+    const during = await actionStates(page);
+    for (const label of ACTION_LABELS) {
+      assert.equal(during[label].enabled, false, `${label} precisa ficar bloqueada durante a transição`);
+    }
+    assert.equal(await page.getByRole('button', { name: 'Registrar rascunho' }).isEnabled(), false, 'o formulário precisa ficar bloqueado durante a transição');
+    assert.equal(await btn.getAttribute('aria-busy'), 'true');
+
+    await page.locator('[data-testid="emergencial-escrita-mensagem"]').waitFor();
+    const sent = await page.evaluate(() => window.__uxEmergencyControl.mutations);
+    const transitions = sent.filter(item => item.url === `/api/ext/emergency/channels/${selectedId}/transition`);
+    assert.equal(transitions.length, 1, 'duplo clique não pode enviar segunda transição');
+    assert.deepEqual(JSON.parse(transitions[0].body), { status: 'em_teste' }, 'o corpo da transição não pode mudar');
+    assert.match(String(transitions[0].idempotencyKey), /^ext15-ui-testing-\d+-[0-9a-f]+$/, 'a Idempotency-Key continua vindo do mesmo gerador');
+    await page.waitForFunction(channelId => {
+      const text = document.querySelector('[data-testid="emergencial-detalhe-trilha"]')?.textContent || '';
+      return text.includes(channelId) && text.includes('"status": "em_teste"');
+    }, selectedId);
+    await context.close();
+  });
+});
+
+test('browser: falha transitória de escrita declara causa real, preserva a leitura e não repete o POST', { skip: !RUN }, async () => {
+  writeDraft = await createChannel(`Canal de falha de escrita ${randomUUID().slice(0, 8)}`);
+  await withBrowser(async browser => {
+    const { context, page } = await openEmergency(browser, { mutation: { fail: true, status: 503, code: 'emergency_write_unavailable' } });
+    await page.locator('[data-testid="emergencial-lista-canais"]').waitFor();
+    await page.locator('[data-testid="emergencial-detalhe-trilha"]').waitFor();
+    await page.locator('[data-testid="emergencial-canal-select"]').selectOption(writeDraft.id);
+    await page.getByRole('button', { name: 'Iniciar ciclo de testes', exact: true }).click();
+
+    const error = page.locator('[data-testid="emergencial-escrita-erro"]');
+    await error.waitFor();
+    const text = await error.innerText();
+    assert.match(text, /emergency_write_unavailable/, 'a causa real precisa aparecer com o código do servidor');
+    assert.match(text, /não é possível afirmar/i, 'a falha transitória precisa declarar que o resultado da escrita é incerto');
+    assert.match(text, /releia|atualizar/i, 'a falha precisa apontar para a releitura segura');
+    assert.match(await page.locator('[data-testid="emergencial-lista"]').innerText(), /última leitura concluída/i, 'a hora da última leitura precisa continuar declarada');
+    assert.ok(await page.locator('[data-testid="emergencial-lista-canais"]').count(), 'a lista lida continua visível e não é invalidada por falha de escrita');
+    assert.equal(await error.getByRole('button').count(), 0, 'falha de escrita não oferece repetição automática do POST');
+
+    const posts1 = await page.evaluate(() => window.__uxEmergencyControl.mutations.filter(item => item.url.includes('/transition')).length);
+    await page.waitForTimeout(1500);
+    const posts2 = await page.evaluate(() => window.__uxEmergencyControl.mutations.filter(item => item.url.includes('/transition')).length);
+    assert.equal(posts2, posts1, 'nenhum POST de escrita é reenviado sozinho após a falha');
+
+    const after = await actionStates(page);
+    for (const label of ACTION_LABELS) {
+      assert.equal(after[label].enabled, true, `${label} volta a ser liberada quando a leitura continua válida`);
+    }
+    await capture(page, 'emergencial-1440-escrita-falha-transitoria', {
+      estado: 'escrita_falha_transitoria',
+      ...await measureSurface(page, '1440px na falha transitória de escrita'),
+    });
+    await context.close();
+  });
+  const detail = await api(`/api/ext/emergency/channels/${writeDraft.id}`, { cookie: adminCookie });
+  assert.equal(detail.body.channel.status, 'rascunho', 'a escrita com falha não pode ter sido aplicada no servidor');
+});
+
+test('browser: 403 na escrita com perda de leitura falha fechada e remove o dado protegido', { skip: !RUN }, async () => {
+  await withBrowser(async browser => {
+    const { context, page } = await openEmergency(browser);
+    await page.locator('[data-testid="emergencial-lista-canais"]').waitFor();
+    await page.locator('[data-testid="emergencial-detalhe-trilha"]').waitFor();
+    await page.locator('[data-testid="emergencial-canal-select"]').selectOption(writeDraft.id);
+
+    await page.evaluate(() => {
+      window.__uxEmergencyControl.mutation.fail = true;
+      window.__uxEmergencyControl.mutation.status = 403;
+      window.__uxEmergencyControl.mutation.code = 'forbidden';
+      window.__uxEmergencyControl.list.fail = true;
+      window.__uxEmergencyControl.list.status = 403;
+      window.__uxEmergencyControl.list.code = 'forbidden';
+    });
+    await page.getByRole('button', { name: 'Iniciar ciclo de testes', exact: true }).click();
+
+    const error = page.locator('[data-testid="emergencial-escrita-erro"]');
+    await error.waitFor();
+    assert.match(await error.innerText(), /não tem acesso/i);
+    const denied = page.locator('[data-testid="emergencial-lista-negado"]');
+    await denied.waitFor();
+    assert.equal(await denied.locator('[data-ui-state="denied"]').count(), 1);
+    assert.equal(await page.locator('[data-testid="emergencial-lista-canais"]').count(), 0, 'perda de autorização não mantém a lista protegida visível');
+    assert.equal(await page.locator('[data-testid="emergencial-detalhe-trilha"]').count(), 0, 'perda de autorização não mantém a trilha protegida visível');
+    assert.equal(await denied.getByRole('button').count(), 0, 'negativa não oferece repetição da mesma chamada');
+    const states = await actionStates(page);
+    for (const label of ACTION_LABELS) {
+      assert.equal(states[label].enabled, false, `${label} precisa ficar bloqueada quando a sessão perde autorização`);
+    }
+    await capture(page, 'emergencial-1440-escrita-negada', {
+      estado: 'escrita_negada_fail_closed',
+      ...await measureSurface(page, '1440px na negativa de escrita'),
+    });
+    await context.close();
+  });
+});
+
+test('browser: 2xx malformada na escrita não é sucesso nem vazio e não derruba a tela', { skip: !RUN }, async () => {
+  await withBrowser(async browser => {
+    const { context, page } = await openEmergency(browser, { mutation: { malformed: true } });
+    await page.locator('[data-testid="emergencial-lista-canais"]').waitFor();
+    await page.locator('[data-testid="emergencial-detalhe-trilha"]').waitFor();
+    const callsBefore = await page.evaluate(() => window.__uxEmergencyControl.calls.list);
+    await page.locator('[data-testid="emergencial-canal-select"]').selectOption(writeDraft.id);
+    await page.getByRole('button', { name: 'Iniciar ciclo de testes', exact: true }).click();
+
+    const error = page.locator('[data-testid="emergencial-escrita-erro"]');
+    await error.waitFor();
+    assert.match(await error.innerText(), /invalid_emergency_write_response/);
+    assert.equal(await page.locator('[data-testid="emergencial-escrita-mensagem"]').count(), 0, '2xx malformada não pode ser apresentada como sucesso');
+    assert.ok(await page.locator('[data-testid="emergencial-lista-canais"]').count(), 'a lista lida continua visível');
+    const callsAfter = await page.evaluate(() => window.__uxEmergencyControl.calls.list);
+    assert.equal(callsAfter, callsBefore, 'escrita não confirmada não dispara releitura de reconciliação');
+
+    // A criação com resposta malformada (sem channel.id) também não pode vira sucesso nem crash.
+    await page.getByLabel('Nome', { exact: true }).fill(`Canal inválido ${randomUUID().slice(0, 8)}`);
+    await page.getByRole('button', { name: 'Registrar rascunho' }).click();
+    await page.waitForTimeout(1200);
+    assert.equal(await page.getByRole('heading', { level: 1, name: /Apoio emergencial/i }).count(), 1, 'resposta malformada da criação não pode derrubar a tela');
+    assert.equal(await page.locator('[data-testid="emergencial-escrita-mensagem"]').count(), 0, 'criação sem channel.id não pode ser apresentada como sucesso');
+    assert.match(await page.locator('[data-testid="emergencial-escrita-erro"]').innerText(), /invalid_emergency_write_response/);
+    const creates = await page.evaluate(() => window.__uxEmergencyControl.mutations.filter(item => item.url === '/api/ext/emergency/channels'));
+    assert.equal(creates.length, 1);
+    await capture(page, 'emergencial-1440-escrita-resposta-invalida', {
+      estado: 'escrita_resposta_invalida',
+      ...await measureSurface(page, '1440px na resposta inválida de escrita'),
+    });
+    await context.close();
+  });
+});
+
+test('browser: envio pendente em 390 dia e 768 noite, falha de escrita em 320, alvos e contrastes medidos', { skip: !RUN }, async () => {
+  await withBrowser(async browser => {
+    const { context, page } = await openEmergency(browser, { width: 390, height: 844, mutation: { delay: 2500 } });
+    await page.locator('[data-testid="emergencial-lista-canais"]').waitFor();
+    await page.locator('[data-testid="emergencial-detalhe-trilha"]').waitFor();
+
+    await page.getByRole('button', { name: 'Iniciar ciclo de testes', exact: true }).click();
+    const sending = page.locator('[data-testid="emergencial-escrita-enviando"]');
+    await sending.waitFor();
+    const s390 = await measureSurface(page, '390px no envio pendente');
+    await capture(page, 'emergencial-390-enviando', {
+      estado: 'escrita_em_envio',
+      overflowDocumentoPx: s390.overflowDocumentoPx,
+      menorAlvoPx: s390.menorAlvoPx,
+    });
+    await page.locator('[data-testid="emergencial-escrita-mensagem"]').waitFor();
+
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.waitForTimeout(400);
+    await page.click('[data-admin-theme-toggle="true"]');
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night');
+    await page.waitForTimeout(300);
+    await page.getByRole('button', { name: 'Registrar teste de recebimento bem-sucedido', exact: true }).click();
+    await sending.waitFor();
+    const nightContrast = await contrast(page, '[data-testid="emergencial-escrita-enviando"]');
+    assert.ok(nightContrast >= 4.5, `contraste noturno da faixa de envio precisa ser >= 4.5:1, medido ${nightContrast}:1`);
+    const s768 = await measureSurface(page, '768px no envio pendente no tema noite');
+    await capture(page, 'emergencial-768-noite-enviando', {
+      estado: 'escrita_em_envio',
+      contrasteFaixaEnvio: nightContrast,
+      overflowDocumentoPx: s768.overflowDocumentoPx,
+      menorAlvoPx: s768.menorAlvoPx,
+    });
+    await page.locator('[data-testid="emergencial-escrita-mensagem"]').waitFor();
+
+    await page.setViewportSize({ width: 320, height: 844 });
+    await page.waitForTimeout(400);
+    await page.evaluate(() => {
+      window.__uxEmergencyControl.mutation.fail = true;
+      window.__uxEmergencyControl.mutation.status = 503;
+      window.__uxEmergencyControl.mutation.code = 'emergency_write_unavailable';
+    });
+    await page.getByRole('button', { name: 'Iniciar ciclo de testes', exact: true }).click();
+    await page.locator('[data-testid="emergencial-escrita-erro"]').waitFor();
+    const s320 = await measureSurface(page, '320px na falha de escrita');
+    await capture(page, 'emergencial-320-escrita-falha', {
+      estado: 'escrita_falha_transitoria',
+      overflowDocumentoPx: s320.overflowDocumentoPx,
+      menorAlvoPx: s320.menorAlvoPx,
     });
     await context.close();
   });
