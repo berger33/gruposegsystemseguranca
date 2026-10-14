@@ -30,7 +30,7 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { recordKeyboardCapture } from '../scripts/ux-pro-00-keyboard-evidence.mjs';
 import pg from 'pg';
@@ -128,6 +128,89 @@ async function capture(page, nome) {
   if (!evidenceDir) return;
   await mkdir(evidenceDir, { recursive: true });
   await page.screenshot({ path: path.join(evidenceDir, `${nome}.png`), fullPage: true });
+}
+
+// Critério WCAG 2.1 AA para texto normal: a faixa usa .8125rem.
+const CONTRASTE_MINIMO_FAIXA = 4.5;
+
+// Mede o contraste do texto da faixa contra o fundo efetivo, no navegador.
+// Mesmo algoritmo WCAG do gate CRM (tests/ux-crm-workspace.integration.test.mjs,
+// medição de contraste noturno de /admin/comercial).
+async function medirContrasteFaixa(page, seletor) {
+  return page.evaluate((sel) => {
+    const alvo = document.querySelector(sel);
+    if (!alvo) return null;
+    const fundoEfetivo = elemento => {
+      for (let atual = elemento; atual; atual = atual.parentElement) {
+        const cor = getComputedStyle(atual).backgroundColor;
+        const canais = (cor.match(/[\d.]+/g) || []).map(Number);
+        if (canais.length >= 3 && (canais.length < 4 || canais[3] > 0.5)) return canais.slice(0, 3);
+      }
+      return [255, 255, 255];
+    };
+    const luminancia = ([r, g, b]) => {
+      const lin = c => { const s = c / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; };
+      return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+    };
+    const contraste = (a, b) => {
+      const [l1, l2] = [luminancia(a), luminancia(b)].sort((x, y) => y - x);
+      return (l1 + 0.05) / (l2 + 0.05);
+    };
+    const cor = (getComputedStyle(alvo).color.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+    return Math.round(contraste(cor, fundoEfetivo(alvo)) * 100) / 100;
+  }, seletor);
+}
+
+/**
+ * Registra a medição de contraste da faixa na entrada da captura correspondente
+ * do resumo.json e devolve a lista de problemas da medição. `problems: []` no
+ * resumo é RESULTADO medido — abaixo do critério, o problema entra na lista e o
+ * teste reprova; nunca é preenchido como decoração. Preserva as demais
+ * entradas/metadados do resumo (mesmo contrato de
+ * scripts/ux-pro-00-keyboard-evidence.mjs). Sem diretório de evidência, apenas
+ * calcula os problemas, sem escrever arquivo.
+ */
+async function recordFaixaContraste(directory, measurement) {
+  const problems = measurement.contrasteFaixa >= CONTRASTE_MINIMO_FAIXA
+    ? []
+    : [`contraste da faixa ${measurement.contrasteFaixa}:1 abaixo de ${CONTRASTE_MINIMO_FAIXA}:1 em ${measurement.viewport}`];
+  if (!directory) return problems;
+  const file = path.join(directory, 'resumo.json');
+  let summary;
+  try {
+    summary = JSON.parse(await readFile(file, 'utf8'));
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    summary = {
+      stage: measurement.stage,
+      generatedBy: 'gate npm run test:ux-client-admin:pg (UX_CLIENT_ADMIN_EVIDENCE_DIR=docs/ux-pro-06-clientes-evidencias)',
+      notes: '',
+      entries: [],
+    };
+  }
+  if (!Array.isArray(summary.entries)) throw new Error('faixa_evidence_entries_invalid');
+  const nomeBase = path.basename(measurement.screenshot);
+  let entry = summary.entries.find(item => path.basename(item.screenshot || item.file || '') === nomeBase);
+  if (entry) {
+    if (entry.viewport !== measurement.viewport) throw new Error('faixa_evidence_viewport_mismatch');
+    entry.contrasteFaixa = measurement.contrasteFaixa;
+    entry.problems = [...(entry.problems || []), ...problems];
+  } else {
+    entry = {
+      stage: measurement.stage,
+      route: measurement.route,
+      role: measurement.role,
+      viewport: measurement.viewport,
+      theme: measurement.theme,
+      screenshot: measurement.screenshot,
+      problems: [...problems],
+      contrasteFaixa: measurement.contrasteFaixa,
+    };
+    summary.entries.push(entry);
+  }
+  await mkdir(directory, { recursive: true });
+  await writeFile(file, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
+  return entry.problems;
 }
 
 /**
@@ -403,6 +486,120 @@ test('UX-PRO-06 clientes: 320/390/768/1440 dia e noite sem transbordo, com percu
           file: 'clientes-390-teclado.png', firstFocus: true, percursoTeclado,
         });
       }
+    }
+    await context.close();
+  });
+});
+
+// ——— Resíduo aditivo sobre o gate entregue: só acréscimos de asserção e de
+// evidência. Nenhuma asserção existente foi alterada e nenhuma tela mudou. ———
+
+test('UX-PRO-06 clientes: faixa de desatualização mantém contraste medido em 320 e 1440 px, com problems: []', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrir(browser);
+    await aguardarCadastroNaTela(page);
+    const medicoes = {};
+    for (const [largura, altura] of [[1440, 900], [320, 844]]) {
+      await page.setViewportSize({ width: largura, height: altura });
+      await page.waitForTimeout(700);
+      await page.evaluate(() => { window.__qaCadastros.falhar = true; });
+      await page.getByRole('button', { name: /Recarregar lista/ }).click();
+      const faixa = page.locator('[data-testid="clientes-cadastros-desatualizada"]');
+      await faixa.waitFor({ timeout: 45_000 });
+      const razao = await medirContrasteFaixa(page, '[data-testid="clientes-cadastros-desatualizada"]');
+      assert.ok(razao !== null, `a faixa precisa existir para ser medida em ${largura}px`);
+      assert.ok(razao >= CONTRASTE_MINIMO_FAIXA,
+        `contraste da faixa em ${largura}px precisa ser ≥ ${CONTRASTE_MINIMO_FAIXA}:1 (medido ${razao}:1)`);
+      medicoes[`${largura}x${altura}`] = razao;
+      // A captura em 1440 px (clientes-desktop-desatualizada) já é emitida pelo
+      // teste da faixa; aqui só a captura nova em 320 px, no mesmo estado.
+      if (largura === 320) await capture(page, 'clientes-320-desatualizada');
+      await page.evaluate(() => { window.__qaCadastros.falhar = false; });
+      await faixa.getByRole('button', { name: /Tentar novamente/ }).click();
+      await page.locator('[data-testid="clientes-cadastros-desatualizada"]').waitFor({ state: 'detached', timeout: 45_000 });
+    }
+    // Evidência explícita no resumo: a razão medida por largura e `problems: []`
+    // como resultado dessa medição (não como rótulo fixo).
+    for (const [viewport, contrasteFaixa] of Object.entries(medicoes)) {
+      const screenshot = viewport === '1440x900'
+        ? 'docs/ux-pro-06-clientes-evidencias/clientes-desktop-desatualizada.png'
+        : 'docs/ux-pro-06-clientes-evidencias/clientes-320-desatualizada.png';
+      const problems = await recordFaixaContraste(evidenceDir, {
+        stage: 'ux-pro-06-clientes', route: '/admin/clientes', role: 'ti',
+        viewport, theme: 'day', screenshot, contrasteFaixa,
+      });
+      assert.deepEqual(problems, [], `a medição em ${viewport} não pode registrar problemas`);
+    }
+    if (evidenceDir) {
+      const resumo = JSON.parse(await readFile(path.join(evidenceDir, 'resumo.json'), 'utf8'));
+      for (const viewport of Object.keys(medicoes)) {
+        const nomeBase = viewport === '1440x900'
+          ? 'clientes-desktop-desatualizada.png'
+          : 'clientes-320-desatualizada.png';
+        const entry = resumo.entries.find(item => path.basename(item.screenshot || item.file || '') === nomeBase);
+        assert.ok(entry, `a entrada de ${nomeBase} precisa existir no resumo.json`);
+        assert.deepEqual(entry.problems, [], `o resumo.json precisa registrar problems: [] para ${nomeBase}`);
+        assert.equal(entry.contrasteFaixa, medicoes[viewport],
+          `o resumo.json precisa registrar o contraste medido de ${nomeBase}`);
+      }
+    }
+    await context.close();
+  });
+});
+
+test('UX-PRO-06 clientes: falha na releitura preserva as seções 2–3 e a repetição relê de verdade', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrir(browser);
+    await aguardarCadastroNaTela(page);
+    // Estado preservado de partida: os seletores das seções 2 (grants) e
+    // 3 (contratos) já foram construídos a partir da leitura concluída.
+    for (const seletor of ['#grant-account', '#contracts-account']) {
+      await page.locator(seletor).waitFor();
+      const opcoes = await page.locator(`${seletor} option`).allTextContents();
+      assert.ok(opcoes.some(opcao => opcao.includes(accountName)),
+        `o seletor ${seletor} precisa listar o cadastro lido`);
+    }
+    // Falha transitória DEPOIS de uma leitura concluída.
+    await page.evaluate(() => { window.__qaCadastros.falhar = true; });
+    await page.getByRole('button', { name: /Recarregar lista/ }).click();
+    const faixa = page.locator('[data-testid="clientes-cadastros-desatualizada"]');
+    await faixa.waitFor({ timeout: 45_000 });
+    // (1) Preservação ENTRE seções: a falha na releitura não apaga as opções
+    //     já construídas nos seletores das seções 2 e 3.
+    for (const seletor of ['#grant-account', '#contracts-account']) {
+      const opcoes = await page.locator(`${seletor} option`).allTextContents();
+      assert.ok(opcoes.some(opcao => opcao.includes(accountName)),
+        `a falha na releitura não pode apagar as opções preservadas de ${seletor}`);
+    }
+    // (2) A repetição relê de verdade: um cadastro criado por HTTP DURANTE a
+    //     falha não entra no dado preservado e só aparece quando a releitura
+    //     conclui — "Tentar novamente" consulta o servidor; não reexibe o
+    //     estado antigo.
+    const nomeDuranteFalha = 'QA UX-PRO-06 Criado Durante A Falha';
+    const criado = await api('/api/admin/client-accounts', {
+      method: 'POST', cookie: tiCookie,
+      body: { displayName: nomeDuranteFalha, documentRef: '00.000.000/0001-99', notes: 'Massa sintética criada durante a falha de releitura.' },
+    });
+    assert.equal(criado.status, 201, `criação durante a falha deveria retornar 201, veio ${criado.status}`);
+    for (const seletor of ['#grant-account', '#contracts-account']) {
+      const opcoes = await page.locator(`${seletor} option`).allTextContents();
+      assert.ok(!opcoes.some(opcao => opcao.includes(nomeDuranteFalha)),
+        `o cadastro criado durante a falha não pode aparecer no dado preservado de ${seletor}`);
+    }
+    assert.equal(await page.getByText(nomeDuranteFalha).count(), 0,
+      'o dado preservado é o da última leitura concluída, não o estado atual do servidor');
+    // Repetição com o servidor de volta: a lista é relida e o cadastro criado
+    // durante a falha passa a aparecer — inclusive nos seletores das seções 2–3.
+    await page.evaluate(() => { window.__qaCadastros.falhar = false; });
+    await faixa.getByRole('button', { name: /Tentar novamente/ }).click();
+    await page.locator('[data-testid="clientes-cadastros-desatualizada"]').waitFor({ state: 'detached', timeout: 45_000 });
+    await page.getByText(nomeDuranteFalha).first().waitFor({ timeout: 45_000 });
+    for (const seletor of ['#grant-account', '#contracts-account']) {
+      await page.waitForFunction(
+        ({ sel, nome }) => [...document.querySelectorAll(`${sel} option`)].some(opcao => opcao.textContent.includes(nome)),
+        { sel: seletor, nome: nomeDuranteFalha },
+        { timeout: 45_000 },
+      );
     }
     await context.close();
   });

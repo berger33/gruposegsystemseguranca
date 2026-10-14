@@ -83,7 +83,8 @@
       "viewport": "1440x900",
       "theme": "day",
       "screenshot": "docs/ux-pro-06-clientes-evidencias/clientes-desktop-desatualizada.png",
-      "problems": []
+      "problems": [],
+      "contrasteFaixa": 6.54
     },
     {
       "stage": "ux-pro-06-clientes",
@@ -102,6 +103,16 @@
       "theme": "day",
       "screenshot": "docs/ux-pro-06-clientes-evidencias/clientes-desktop-negado.png",
       "problems": []
+    },
+    {
+      "stage": "ux-pro-06-clientes",
+      "route": "/admin/clientes",
+      "role": "ti",
+      "viewport": "320x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-06-clientes-evidencias/clientes-320-desatualizada.png",
+      "problems": [],
+      "contrasteFaixa": 6.54
     }
   ]
 }
