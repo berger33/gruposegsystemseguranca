@@ -14,8 +14,8 @@ portal `/cliente/app/*` (área separada); `UiWorkspace.module.css` (32 consumido
 `contract-request.ts` e `contract-vocabulary.mjs` (intactos); APIs, papéis, permissões e dados
 canônicos — nenhum tocado.
 
-## Antes (medido em `259ee43`, worktree descartável limpo, log em
-[`antes/antes-gate-259ee43.log`](ux-pro-06-contratos-evidencias/antes/antes-gate-259ee43.log))
+## Antes (medido em `259ee43`, worktree descartável limpo, resumo legível por máquina em
+[`antes/antes-gate-259ee43.json`](ux-pro-06-contratos-evidencias/antes/antes-gate-259ee43.json))
 
 Suíte nova do gate `test:ux-crm:pg` (7 casos da fatia) rodada contra a `main`, sem nenhuma edição
 de tela: **5 passaram e 2 falharam**. Os cinco que passaram são preservações medidas (contrato
@@ -31,6 +31,9 @@ noturno, teclado, evidência própria sem transbordo).
 | 5 | Sem transbordo em 320/390/768 px + tema noturno | passa (preservação) |
 | 6 | Teclado percorre navegação e formulário, foco visível | passa (preservação) |
 | 7 | Evidência própria 320/390/768/1440, dia/noite, teclado | passa (preservação) |
+
+(O log bruto não é versionado porque `*.log` é ignorado pelo repositório; o `resumo.json` da
+subpasta `antes/` carrega os sete resultados, os erros e o método.)
 
 **Causa verificada no código:** nas três leituras (`carregarEmpresas`, `carregarPropostas`,
 `carregarContratos`) o caminho de falha fazia `itens: []` — **uma releitura que falha apaga a

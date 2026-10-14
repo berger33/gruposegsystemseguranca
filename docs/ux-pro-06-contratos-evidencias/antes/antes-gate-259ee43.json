@@ -1,0 +1,52 @@
+{
+  "papel": "medida ANTES da correção; não é evidência vigente (igual às fatias anteriores)",
+  "base": "main 259ee43c38deeb35fb29a2c622f2ed3e6f6a6712 (merge da PR #214)",
+  "metodo": "worktree descartável em checkout limpo de 259ee43, com apenas tests/ux-crm-workspace.integration.test.mjs da fatia aplicado; gate npm run test:ux-crm:pg com UX_CRM_TEST_PATTERN restrito aos casos da fatia; log bruto não versionado (*.log é ignorado pelo repositório)",
+  "gate": "npm run test:ux-crm:pg (UX_CRM_TEST_PATTERN='de contratos|evidência própria de /admin/contratos|releitura em curso mantém a tabela|primeira leitura de propostas|teclado percorre navegação')",
+  "resumo": {
+    "tests": 7,
+    "pass": 5,
+    "fail": 2
+  },
+  "defeito_medido": "falha na releitura apaga a lista já lida (contratos-desatualizado nunca aparece) e não existe indicador de atualização (contratos-atualizando nunca aparece)",
+  "casos": [
+    {
+      "n": 1,
+      "nome": "a lista de contratos continua exigindo sessão e o recorte por papel continua valendo",
+      "resultado": "passa"
+    },
+    {
+      "n": 2,
+      "nome": "browser: falha na releitura mantém a lista de contratos já lida e marca os dados como desatualizados",
+      "resultado": "falha",
+      "erro": "page.waitForSelector: Timeout 30000ms exceeded. Call log: - waiting for locator('[data-testid=\"contratos-desatualizado\"]') to be visible"
+    },
+    {
+      "n": 3,
+      "nome": "browser: releitura em curso mantém a tabela visível com indicador role=\"status\"",
+      "resultado": "falha",
+      "erro": "page.waitForSelector: Timeout 30000ms exceeded. Call log: - waiting for locator('[data-testid=\"contratos-atualizando\"]') to be visible"
+    },
+    {
+      "n": 4,
+      "nome": "browser: a primeira leitura de propostas que falha não é apresentada como ausência, e a leitura concluída depois aparece",
+      "resultado": "passa"
+    },
+    {
+      "n": 5,
+      "nome": "browser: a lista de contratos não transborda em 320/390/768 px e o tema noturno alcança as superfícies",
+      "resultado": "passa"
+    },
+    {
+      "n": 6,
+      "nome": "browser: o teclado percorre navegação, formulário manual e submete com foco visível",
+      "resultado": "passa"
+    },
+    {
+      "n": 7,
+      "nome": "browser: evidência própria de /admin/contratos em 320/390/768/1440 px, dia e noite, com teclado",
+      "resultado": "passa"
+    }
+  ],
+  "data": "2026-10-14"
+}
