@@ -10,9 +10,14 @@ const ACCOUNT_STATUSES: AdminAccount["status"][] = ["active", "suspended", "clos
 export default function AccountsSection({
   accounts,
   reloadAccounts,
+  carregando,
 }: {
   accounts: AdminAccount[] | null;
   reloadAccounts: () => Promise<void>;
+  /** UX-PRO-06: distingue "leitura em curso" de "leitura falhou/negada" — sem
+   *  isso a falha na primeira leitura ficava como spinner eterno. O estado é
+   *  declarado uma vez pela tela, acima das seções. */
+  carregando: boolean;
 }) {
   const [displayName, setDisplayName] = useState("");
   const [documentRef, setDocumentRef] = useState("");
@@ -107,22 +112,33 @@ export default function AccountsSection({
       {notice ? <p className={`${styles.message} ${styles.messageOk}`} role="status">{notice}</p> : null}
 
       <p className={styles.hint}>
-        <button type="button" className={styles.ghostButton} onClick={() => void reloadAccounts()} style={{ color: "#1a5db2", borderColor: "#1a5db2" }}>
+        <button
+          type="button"
+          className={styles.ghostButton}
+          data-testid="clientes-contas-recarregar"
+          onClick={() => void reloadAccounts()}
+          style={{ color: "#1a5db2", borderColor: "#1a5db2" }}
+        >
           <RefreshCw size={12} aria-hidden="true" />
           Recarregar lista
         </button>
       </p>
       {!accounts ? (
-        <div className={styles.loadingWrap} style={{ color: "#5a7189" }}>
-          <span className={styles.spinner} style={{ borderColor: "#5a7189", borderTopColor: "transparent" }} aria-hidden="true" />
-          Carregando cadastros…
-        </div>
+        // UX-PRO-06: sem leitura concluída, "carregando" só vale enquanto a
+        // leitura está realmente em curso. A falha e a negativa são declaradas
+        // pela tela (acima das seções), não por um spinner eterno aqui.
+        carregando ? (
+          <div className={styles.loadingWrap} style={{ color: "#5a7189" }} role="status" data-testid="clientes-contas-carregando">
+            <span className={styles.spinner} style={{ borderColor: "#5a7189", borderTopColor: "transparent" }} aria-hidden="true" />
+            Carregando cadastros…
+          </div>
+        ) : null
       ) : accounts.length === 0 ? (
-        <div className={styles.empty}>Nenhum cadastro criado ainda. Comece pelo formulário acima.</div>
+        <div className={styles.empty} data-testid="clientes-contas-vazio">Nenhum cadastro criado ainda. Comece pelo formulário acima.</div>
       ) : (
-        <ul className={styles.list}>
+        <ul className={styles.list} data-testid="clientes-contas-lista">
           {accounts.map(account => (
-            <li key={account.id} className={styles.listItem}>
+            <li key={account.id} className={styles.listItem} data-testid={`clientes-contas-cadastro-${account.id}`}>
               <div className={styles.listItemMain}>
                 <p className={styles.listItemTitle}>{account.display_name}</p>
                 <p className={styles.listItemMeta}>

@@ -1,0 +1,52 @@
+name: UX-PRO-06 client admin accounts delivery
+# UX-PRO-06 — gate focal da leitura dos cadastros centrais de clientes
+# (/admin/clientes). Paths restritos à rota e aos arquivos compartilhados
+# REALMENTE tocados nesta fatia. `server.mjs`, `src/server/client-space-api.mjs`
+# e `db/migrations/**` ficam de fora de propósito: nenhum deles foi alterado
+# aqui e nenhuma migração nova foi criada (as 001–180 permanecem intactas).
+# O gate herdado que já alcança a tela (jornada F03 de chamado com aceite) é
+# executado no mesmo job para provar que a mudança não a quebrou.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/admin/clientes/**'
+      - 'tests/ux-pro-06-clientes-contas.integration.test.mjs'
+      - 'tests/helpers/**'
+      - 'scripts/qa-ux-pro-06-clientes-postgres.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ux-pro-06-clientes-delivery.yml'
+concurrency:
+  group: ux-pro-06-clientes-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  ux-pro-06-clientes-postgres-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      # O gate recusa rodar com banco do operador ou remoto; aqui os valores
+      # ficam explicitamente vazios.
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Verificação de tipos
+        run: npm run typecheck
+      - name: Guardas estáticos herdados da rota (papéis do AdminGate e recuperação offline)
+        run: node --test tests/admin-page-gates.test.mjs tests/client-offline-recovery.test.mjs
+      - name: Gate focal novo — /admin/clientes em PostgreSQL, HTTP e Chromium reais
+        run: npm run test:ux-pro-06-clientes:pg
+      - name: Gate herdado que já alcança a tela (jornada F03 de chamado com aceite)
+        run: npm run test:f03-client-ticket-acceptance:pg

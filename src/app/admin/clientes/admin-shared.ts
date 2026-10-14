@@ -166,3 +166,94 @@ export function jsonInit(method: string, body: unknown): RequestInit {
     body: JSON.stringify(body),
   };
 }
+
+// ---------------------------------------------------------------------------
+// UX-PRO-06 (/admin/clientes): leitura dos cadastros centrais com estado honesto.
+//
+// Acréscimo aditivo: `callApi`, `jsonInit`, `explainApiError` e o mapa de
+// mensagens acima continuam exatamente como estão para as dez seções da rota —
+// nenhuma escrita muda de URL, método, corpo, cabeçalho ou mensagem. A
+// diferença é que a LEITURA volta descrita (motivo real, gravidade e se faz
+// sentido oferecer repetição) em vez de ser engolida por um `catch {}`, que
+// deixava a tela parecendo "carregando" para sempre ou "nenhum cadastro".
+// A requisição é a mesma de `callApi` (mesmo `cache: "no-store"`, sem cabeçalho
+// novo): só a resposta é classificada.
+// ---------------------------------------------------------------------------
+
+export type AdminReadErrorKind = "retry" | "denied" | "auth" | "error";
+
+export type AdminReadError = {
+  kind: AdminReadErrorKind;
+  code: string;
+  title: string;
+  detail: string;
+  canRetry: boolean;
+};
+
+export type AdminReadResult<T> =
+  | { ok: true; status: number; data: T }
+  | { ok: false; status: number; error: AdminReadError };
+
+/** Classifica a falha de leitura com o vocabulário já existente desta tela. */
+export function describeAdminReadError(code: unknown, status: number): AdminReadError {
+  const known = typeof code === "string" && code ? code : null;
+  const detail = explainApiError(known);
+  if (status === 401) {
+    return {
+      kind: "auth",
+      code: known || "admin_session_required",
+      title: "Sessão administrativa expirada",
+      detail,
+      canRetry: false,
+    };
+  }
+  if (status === 403) {
+    return {
+      kind: "denied",
+      code: known || "forbidden",
+      title: "Acesso recusado pelo servidor",
+      detail: known ? detail : "Seu papel não tem acesso aos cadastros de clientes. Nada foi carregado nem alterado.",
+      canRetry: false,
+    };
+  }
+  if (status === 0) {
+    return {
+      kind: "retry",
+      code: known || "network",
+      title: "Não foi possível ler os cadastros",
+      detail: "A leitura não chegou ao servidor (rede indisponível ou servidor local fora do ar). Nada foi alterado nesta tela.",
+      canRetry: true,
+    };
+  }
+  if (status >= 500) {
+    return {
+      kind: "retry",
+      code: known || "server_error",
+      title: "Não foi possível ler os cadastros",
+      detail: `${detail} Nada foi alterado nesta tela.`,
+      canRetry: true,
+    };
+  }
+  return {
+    kind: "error",
+    code: known || "unknown",
+    title: "A leitura dos cadastros foi recusada",
+    detail,
+    canRetry: false,
+  };
+}
+
+/** Lê sem lançar: devolve o dado ou a falha descrita. */
+export async function readApi<T = Record<string, unknown>>(path: string): Promise<AdminReadResult<T>> {
+  let response: Response;
+  try {
+    response = await fetch(path, { cache: "no-store" });
+  } catch {
+    return { ok: false, status: 0, error: describeAdminReadError(null, 0) };
+  }
+  const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!response.ok) {
+    return { ok: false, status: response.status, error: describeAdminReadError(payload.error, response.status) };
+  }
+  return { ok: true, status: response.status, data: payload as T };
+}

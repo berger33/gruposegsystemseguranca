@@ -1,0 +1,105 @@
+{
+  "stage": "ux-pro-06-contas-admin",
+  "generatedBy": "gate npm run test:ux-pro-06-clientes:pg (UX_PRO_06_CLIENTES_EVIDENCE_DIR=docs/ux-pro-06-contas-admin-evidencias)",
+  "notes": "Evidências da fatia UX-PRO-06 — estados de leitura dos cadastros centrais de clientes em /admin/clientes. Massa inteiramente sintética criada pela própria API canônica; sessão de staff individual provisionada pelo gate. Nenhuma captura contém dado pessoal, credencial ou segredo. Chromium automatizado com PostgreSQL descartável NÃO é validação manual nem aceite humano.",
+  "entries": [
+    {
+      "stage": "ux-pro-06-contas-admin",
+      "route": "/admin/clientes",
+      "role": "ti",
+      "viewport": "320x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-06-contas-admin-evidencias/contas-admin-320-dia.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-contas-admin",
+      "route": "/admin/clientes",
+      "role": "ti",
+      "viewport": "390x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-06-contas-admin-evidencias/contas-admin-390-dia.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-contas-admin",
+      "route": "/admin/clientes",
+      "role": "ti",
+      "viewport": "768x1024",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-06-contas-admin-evidencias/contas-admin-768-dia.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-contas-admin",
+      "route": "/admin/clientes",
+      "role": "ti",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-06-contas-admin-evidencias/contas-admin-1440-dia.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-contas-admin",
+      "route": "/admin/clientes",
+      "role": "ti",
+      "viewport": "768x1024",
+      "theme": "night",
+      "screenshot": "docs/ux-pro-06-contas-admin-evidencias/contas-admin-768-noite.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-contas-admin",
+      "route": "/admin/clientes",
+      "role": "ti",
+      "viewport": "390x844",
+      "theme": "day",
+      "state": "percurso_teclado",
+      "firstFocus": true,
+      "keyboardPath": [
+        "Sair",
+        "Fechar",
+        "Início",
+        "input",
+        "Início",
+        "Convite de acesso do cliente",
+        "Recuperação local de acesso — sem SMTP",
+        "1 · Cadastros centrais de clientes",
+        "2 · Vínculos de acesso verificados",
+        "3 · Contratos",
+        "4 · Documentos compartilhados",
+        "5 · Chamados dos clientes"
+      ],
+      "screenshot": "docs/ux-pro-06-contas-admin-evidencias/contas-admin-390-teclado.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-contas-admin",
+      "route": "/admin/clientes",
+      "role": "ti",
+      "viewport": "320x844",
+      "theme": "day",
+      "state": "dados_preservados",
+      "contrastRatio": 6.54,
+      "screenshot": "docs/ux-pro-06-contas-admin-evidencias/contas-admin-320-desatualizada.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-contas-admin",
+      "route": "/admin/clientes",
+      "role": "ti",
+      "viewport": "1440x900",
+      "theme": "day",
+      "state": "dados_preservados",
+      "contrastRatio": 6.54,
+      "screenshot": "docs/ux-pro-06-contas-admin-evidencias/contas-admin-1440-desatualizada.png",
+      "problems": []
+    }
+  ],
+  "problems": [],
+  "limites": [
+    "Medição automatizada por Chromium com massa sintética; não é validação manual nem aceite de Marcelo, Andreia ou TI.",
+    "As capturas da main SEM a correção ficam em antes/ e documentam o defeito corrigido, fora deste resumo de propósito.",
+    "O inventário continua registrando validacao manual: nao_registrado e aceite humano: nao_registrado."
+  ]
+}
