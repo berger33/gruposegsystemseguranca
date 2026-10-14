@@ -1,0 +1,45 @@
+name: UX emergency delivery
+
+on:
+  pull_request:
+    paths:
+      - 'src/app/admin/emergencial/**'
+      - 'src/lib/emergency-request.ts'
+      - 'src/components/ui/**'
+      - 'server.mjs'
+      - 'src/server/ext-emergency-api.mjs'
+      - 'tests/helpers/**'
+      - 'tests/ux-emergency-workspace.integration.test.mjs'
+      - 'tests/ext15-emergency.integration.test.mjs'
+      - 'tests/ext15-emergency.test.mjs'
+      - 'scripts/qa-ux-emergency-postgres.mjs'
+      - 'scripts/ux-pro-00-inventory.mjs'
+      - 'db/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/ux-emergency-delivery.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ux-emergency-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ux-emergency-postgres-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Apoio emergencial — HTTP real, PostgreSQL descartável e Chromium
+        run: npm run test:ux-emergency:pg

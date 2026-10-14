@@ -1,0 +1,9 @@
+/* UX-PRO-07B — layout próprio das ações de /admin/emergencial.
+   Cores, alvos e foco continuam vindo de UiWorkspace.module.css e dos tokens
+   UX-01; aqui só se garante que rótulos longos possam quebrar linha em telas
+   estreitas sem estourar a largura da superfície. Nada de dado, permissão ou
+   contrato muda por causa deste arquivo. */
+.acaoRotuloLongo {
+  white-space: normal;
+  max-width: 100%;
+}

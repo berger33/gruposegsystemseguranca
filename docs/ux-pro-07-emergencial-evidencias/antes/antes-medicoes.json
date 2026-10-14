@@ -1,0 +1,64 @@
+{
+  "stage": "ux-pro-07-emergencial-antes",
+  "base": "d2b79e43e63d76336be7f1cf717d8164c07c5ec6",
+  "generatedBy": "UX_EMERGENCY_UI_TIMEOUT=5000 npm run test:ux-emergency:pg, com o gate focal novo e antes de editar /admin/emergencial",
+  "exitCode": 1,
+  "tests": {
+    "total": 12,
+    "passed": 2,
+    "failed": 10,
+    "skipped": 0
+  },
+  "passed": [
+    "EXT-15 continua recusando anônimo e papel sem permissão nas duas leituras",
+    "EXT-15 cria o canal sintético pela API real e ele nasce em rascunho"
+  ],
+  "failed": [
+    {
+      "test": "browser: leitura ainda não concluída não é vazio, e o vazio só aparece depois da resposta",
+      "measurement": "timeout esperando emergencial-lista-carregando; a tela anterior não tinha estado de leitura contextual e mostrava 'Nenhum canal canônico configurado.' antes da resposta"
+    },
+    {
+      "test": "browser: falha inicial declara causa real e Tentar novamente faz nova leitura",
+      "measurement": "timeout esperando emergencial-lista-falha; a tela anterior mostrava o código cru em um <p role=alert> sem causa orientada à tarefa e sem 'Tentar novamente'"
+    },
+    {
+      "test": "browser: falha de releitura preserva a lista, informa a hora e a repetição atualiza de verdade",
+      "measurement": "timeout esperando emergencial-lista-canais com região identificável; não havia faixa de dado desatualizado, hora da última leitura nem controle de releitura"
+    },
+    {
+      "test": "browser: negativa depois do sucesso falha fechada e não mantém canal nem trilha protegidos",
+      "measurement": "timeout esperando emergencial-lista-canais; não existia estado semântico negado exercitável nem trilha fail-closed"
+    },
+    {
+      "test": "browser: resposta 2xx malformada não vira vazio",
+      "measurement": "timeout esperando emergencial-lista-falha; a tela anterior transformava {note} sem items em lista vazia (setItems(d.items || []))"
+    },
+    {
+      "test": "browser: ações bloqueadas com motivo durante a leitura e liberadas só depois de ler e selecionar",
+      "measurement": "timeout esperando emergencial-lista-carregando; os quatro botões de ativação não tinham disabled nem motivo declarado"
+    },
+    {
+      "test": "browser: transição canônica rascunho → em_teste continua idêntica quando a ação é liberada",
+      "measurement": "timeout esperando emergencial-lista-canais/select identificável; a superfície não permitia exercitar a ação liberada"
+    },
+    {
+      "test": "browser: teclado alcança seleção e ações com foco visível, e trocar de canal relê a trilha",
+      "measurement": "timeout esperando emergencial-lista-canais; a trilha não era lida ao selecionar automaticamente nem havia marcação de teclado própria da tela"
+    },
+    {
+      "test": "browser: 320 390 768 1440, tema noturno, alvos e contrastes medidos sem problemas",
+      "measurement": "timeout esperando emergencial-lista-canais; não existia a superfície identificável necessária para medir a jornada em quatro larguras"
+    },
+    {
+      "test": "browser: contraste no tema claro e noturno da falha inicial, com rótulo real e sem vazio falso",
+      "measurement": "timeout esperando emergencial-lista-falha; a região de falha semântica ainda não existia"
+    }
+  ],
+  "limitations": [
+    "Timeout reduzido para 5 s somente nesta execução de defeito conhecido; a execução de entrega usa o timeout normal de 45 s.",
+    "O gate herdado EXT-15 (npm run test:ext15-emergency:pg) foi medido separadamente e passou 18/18 na mesma base; nenhuma asserção dele é tocada por este gate.",
+    "Não houve validação manual, revisão humana nem aceite humano.",
+    "O arquivo antes-gate-completo.txt preserva a saída TAP integral desta execução."
+  ]
+}
