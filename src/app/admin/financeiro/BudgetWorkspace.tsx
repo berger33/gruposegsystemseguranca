@@ -16,6 +16,7 @@
 import styles from "../../../components/ui/UiWorkspace.module.css";
 import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
 import { financeInvalidListMessage } from "../../../lib/finance-request";
+import { financeDate, financeDateTime } from "../../../lib/finance-dates.mjs";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 type Budget = {
@@ -353,7 +354,7 @@ export default function BudgetWorkspace() {
       {selected && (
         <div data-testid="fin13-budget-detail" className={styles.stackTight}>
           <p data-testid="fin13-detail-protocol">{selected.protocol} · {selected.title}</p>
-          <p>Situação: <strong data-testid="fin13-detail-status">{selected.status}</strong> · versão <span data-testid="fin13-detail-version">{String(selected.version)}</span> · período {String(selected.period_start).slice(0, 10)} a {String(selected.period_end).slice(0, 10)}</p>
+          <p>Situação: <strong data-testid="fin13-detail-status">{selected.status}</strong> · versão <span data-testid="fin13-detail-version">{String(selected.version)}</span> · período {financeDate(selected.period_start)} a {financeDate(selected.period_end)}</p>
           <p data-testid="fin13-detail-revenue">Receita estimada: {brl(selected.total_revenue_cents)}</p>
           <p data-testid="fin13-detail-cost">Custo estimado: {brl(selected.total_cost_cents)}</p>
           <p data-testid="fin13-detail-margin">
@@ -409,7 +410,7 @@ export default function BudgetWorkspace() {
         {!historyError && history.length === 0 && <li data-testid="fin13-history-empty">Nenhum evento carregado. Selecione um orçamento e use “Ver histórico”.</li>}
         {history.map(entry => (
           <li data-testid={`fin13-history-row-${entry.id}`} key={entry.id}>
-            {entry.event_type || "evento legado sem classificação"} · {entry.previous_status || "início"} → {entry.next_status} · versão {entry.version_before === null || entry.version_before === undefined ? "inicial" : String(entry.version_before)} → {entry.version_after === null || entry.version_after === undefined ? "não registrada" : String(entry.version_after)} · autor {entry.changed_by_identity || "não informado pela origem"} · {new Date(entry.changed_at).toLocaleString("pt-BR")} · motivo: {entry.reason}
+            {entry.event_type || "evento legado sem classificação"} · {entry.previous_status || "início"} → {entry.next_status} · versão {entry.version_before === null || entry.version_before === undefined ? "inicial" : String(entry.version_before)} → {entry.version_after === null || entry.version_after === undefined ? "não registrada" : String(entry.version_after)} · autor {entry.changed_by_identity || "não informado pela origem"} · {financeDateTime(entry.changed_at)} · motivo: {entry.reason}
           </li>
         ))}
       </ul>

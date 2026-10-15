@@ -3,6 +3,7 @@
 import styles from "../../../components/ui/UiWorkspace.module.css";
 import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
 import { financeInvalidListMessage } from "../../../lib/finance-request";
+import { financeDate } from "../../../lib/finance-dates.mjs";
 import { FormEvent, useEffect, useState } from "react";
 
 type Snapshot = {
@@ -193,7 +194,7 @@ export default function CashflowWorkspace() {
       <div>
         <h3>Snapshots registrados</h3>
         <table data-testid="fin07-snapshots"><thead><tr><th>Competência</th><th>Tipo</th><th>Saldo</th><th>Vencidos</th><th>Próximos pagamentos</th></tr></thead><tbody>
-          {snapshots.length === 0 ? <tr><td colSpan={5} data-testid={readConfirmed ? "fin07-snapshots-empty" : "fin07-snapshots-unavailable"}>{readConfirmed ? "Nenhum snapshot registrado." : "Lista indisponível — a leitura não foi confirmada; não confundir com ausência de snapshots."}</td></tr> : snapshots.map(snapshot => <tr key={snapshot.id}><td>{String(snapshot.competence_date).slice(0, 10)}</td><td>{snapshot.cashflow_type}</td><td>{money(snapshot.balance_cents)}</td><td>{money(snapshot.vencidos_cents)}</td><td>{money(snapshot.proximos_pagamentos_cents)}</td></tr>)}
+          {snapshots.length === 0 ? <tr><td colSpan={5} data-testid={readConfirmed ? "fin07-snapshots-empty" : "fin07-snapshots-unavailable"}>{readConfirmed ? "Nenhum snapshot registrado." : "Lista indisponível — a leitura não foi confirmada; não confundir com ausência de snapshots."}</td></tr> : snapshots.map(snapshot => <tr key={snapshot.id}><td>{financeDate(snapshot.competence_date)}</td><td>{snapshot.cashflow_type}</td><td>{money(snapshot.balance_cents)}</td><td>{money(snapshot.vencidos_cents)}</td><td>{money(snapshot.proximos_pagamentos_cents)}</td></tr>)}
         </tbody></table>
       </div>
 
@@ -212,7 +213,7 @@ export default function CashflowWorkspace() {
       <div>
         <h3>Aging registrado</h3>
         <table data-testid="fin07-aging"><thead><tr><th>Recebível</th><th>Competência</th><th>Bucket</th><th>Dias vencidos</th><th>Restante</th></tr></thead><tbody>
-          {aging.length === 0 ? <tr><td colSpan={5} data-testid={readConfirmed ? "fin07-aging-empty" : "fin07-aging-unavailable"}>{readConfirmed ? "Nenhum aging registrado." : "Lista indisponível — a leitura não foi confirmada; não confundir com ausência de aging."}</td></tr> : aging.map(item => <tr key={item.id}><td>{item.protocol || item.receivable_id}</td><td>{String(item.competence_date).slice(0, 10)}</td><td>{item.bucket}</td><td>{item.days_overdue}</td><td>{money(item.amount_remaining_cents)}</td></tr>)}
+          {aging.length === 0 ? <tr><td colSpan={5} data-testid={readConfirmed ? "fin07-aging-empty" : "fin07-aging-unavailable"}>{readConfirmed ? "Nenhum aging registrado." : "Lista indisponível — a leitura não foi confirmada; não confundir com ausência de aging."}</td></tr> : aging.map(item => <tr key={item.id}><td>{item.protocol || item.receivable_id}</td><td>{financeDate(item.competence_date)}</td><td>{item.bucket}</td><td>{item.days_overdue}</td><td>{money(item.amount_remaining_cents)}</td></tr>)}
         </tbody></table>
       </div>
     </section>
