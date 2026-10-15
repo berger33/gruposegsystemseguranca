@@ -13,7 +13,7 @@
 
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -21,6 +21,7 @@ import pg from 'pg';
 import { chromium as playwrightChromium } from 'playwright';
 import packagedChromium from '@sparticuz/chromium';
 import { provisionStaff, STAFF_TEST_PASSWORD } from '../tests/helpers/staff-login.mjs';
+import { measurementPlan, measureKeyboard, measureTheme } from './ux-pro-08d-measurements.mjs';
 import { hashPassword } from '../src/lib/client-auth-core.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
@@ -34,6 +35,7 @@ const stage = (process.argv.find(arg => arg.startsWith('--stage='))?.split('=')[
 
 /** Cada etapa declara as rotas, o papel usado e o que será observado. */
 const STAGES = {
+  'ux-pro-08d': measurementPlan,
   'ux-03b': {
     outputDir: 'docs/ux-03b-evidencias',
     targets: [
@@ -395,9 +397,9 @@ async function jsonRequest(pathname, { method = 'GET', cookie, body, headers = {
 // A captura do portal não usa uma resposta forjada. Apenas a identidade, o
 // vínculo de acesso e a massa sintética são preparados no banco; o plano nasce
 // e é publicado pelas rotas HTTP canônicas com os grants de equipe reais.
-async function prepareClientContinuityTarget() {
+async function prepareClientContinuityTarget({ continuity = true } = {}) {
   const staff = await provisionStaff(pool, { role: 'admin' });
-  for (const permission of ['continuity.read', 'continuity.write', 'continuity.activate']) {
+  for (const permission of (continuity ? ['continuity.read', 'continuity.write', 'continuity.activate'] : [])) {
     await pool.query(
       `INSERT INTO auth_permissions(id,identity_id,permission,scope_type,granted_by,granted_by_role,reason)
        VALUES($1,$2,$3,'global',$2,'admin','Evidência UX: preparação de plano fictício publicado')`,
@@ -431,6 +433,8 @@ async function prepareClientContinuityTarget() {
   if (login.status !== 200) throw new Error(`client_login_failed_${login.status}`);
   const clientCookie = login.cookies.map(value => value.split(';')[0]).join('; ');
   if (!clientCookie.includes('seg_client_session=')) throw new Error('client_session_cookie_missing');
+
+  if (!continuity) return clientCookie;
 
   const key = label => `cont-evidence-${label}-${randomUUID()}`;
   const created = await jsonRequest('/api/ext/continuity/plans', {
@@ -480,8 +484,8 @@ try {
   const cookieByRole = new Map();
   const cookieByTarget = new Map();
   for (const target of plan.targets) {
-    if (target.clientContinuity) {
-      cookieByTarget.set(target.slug, await prepareClientContinuityTarget());
+    if (target.clientContinuity || target.clientSession) {
+      cookieByTarget.set(target.slug, await prepareClientContinuityTarget({ continuity: !target.clientSession }));
       continue;
     }
     if (cookieByRole.has(target.role)) continue;
@@ -516,8 +520,17 @@ try {
         const context = await browser.newContext({
           viewport: { width: viewport.width, height: viewport.height },
           locale: 'pt-BR',
+          ...(viewport.theme ? { colorScheme: viewport.theme === 'escuro' ? 'dark' : 'light' } : {}),
           ...(target.timezoneId ? { timezoneId: target.timezoneId } : {}),
         });
+        if (viewport.theme) await context.addInitScript(theme => {
+          localStorage.setItem('seg-color-mode', theme);
+          localStorage.setItem('segsystem.admin.appearance.v1', theme === 'escuro' ? 'night' : 'day');
+          document.addEventListener('DOMContentLoaded', () => {
+            document.documentElement.dataset.colorMode = theme;
+            if (theme === 'escuro') document.documentElement.dataset.adminTheme = 'night';
+          }, { once: true });
+        }, viewport.theme);
         const cookie = cookieByTarget.get(target.slug) || cookieByRole.get(target.role);
         if (!cookie) throw new Error(`capture_cookie_missing_${target.slug}`);
         const pair = cookie.split('; ')[0];
@@ -592,6 +605,9 @@ try {
           problems.push(`rolagem horizontal do documento: ${overflow.scrollWidth} > ${overflow.clientWidth} (${detail})`);
         }
 
+        if (plan.measurements && target.keyboard === 'knowledge') {
+          await page.getByText('Nenhum procedimento encontrado', { exact: true }).waitFor();
+        }
         // Teclado: Tab precisa mover o foco para um elemento real e visível.
         await page.keyboard.press('Tab');
         const focus = await page.evaluate(() => {
@@ -606,7 +622,13 @@ try {
         });
         if (!focus) problems.push('Tab não moveu o foco para nenhum elemento');
 
-        const file = path.join(outputDir, `${viewport.name}-${target.slug}.png`);
+        const measurements = plan.measurements ? {
+          ...await measureKeyboard(page, target),
+          theme: await measureTheme(page, target, viewport.theme),
+        } : {};
+        const captureDir = target.outputDir ? path.join(root, target.outputDir) : outputDir;
+        await mkdir(captureDir, { recursive: true });
+        const file = path.join(captureDir, `${viewport.name}-${target.slug}.png`);
         await page.screenshot({ path: file, fullPage: false });
 
         report.push({
@@ -617,6 +639,7 @@ try {
           screenshot: path.relative(root, file),
           gateEvidence: target.gateEvidence || null,
           firstFocus: focus,
+          ...measurements,
           problems,
           externalBlocked,
         });
@@ -629,13 +652,26 @@ try {
     }
   }
 
-  const summaryPath = path.join(outputDir, 'resumo.json');
-  await writeFile(summaryPath, `${JSON.stringify({ stage, generatedBy: 'scripts/ux-evidence-capture.mjs', entries: report }, null, 2)}\n`, 'utf8');
+  // A 08D complementa, nunca sobrescreve evidências/metadados das 08A/B/C.
+  const directories = plan.measurements
+    ? [...new Set(plan.targets.map(target => target.outputDir))]
+    : [plan.outputDir];
+  for (const directory of directories) {
+    const summaryPath = path.join(root, directory, 'resumo.json');
+    const previous = plan.measurements ? JSON.parse(await readFile(summaryPath, 'utf8')) : {};
+    const entries = report.filter(entry => path.dirname(entry.screenshot) === directory);
+    const summary = plan.measurements ? {
+      ...previous,
+      measurements08d: { stage, generatedBy: 'scripts/ux-evidence-capture.mjs', baseMain: '8dfbd7e451787dcf6f56e93b81d8e4edb26ceda5', date: '2026-10-15' },
+      entries: [...(previous.entries || []).filter(entry => entry.stage !== stage), ...entries],
+    } : { stage, generatedBy: 'scripts/ux-evidence-capture.mjs', entries };
+    await writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
+    console.log(`UX_EVIDENCE_SUMMARY: ${path.relative(root, summaryPath)}`);
+  }
   for (const entry of report) {
     const external = entry.externalBlocked.length ? ` [externos ignorados: ${entry.externalBlocked.length}]` : '';
     console.log(`UX_EVIDENCE ${entry.route} ${entry.viewport} ${entry.problems.length ? `PROBLEMAS: ${entry.problems.join(' | ')}` : 'OK'}${external}`);
   }
-  console.log(`UX_EVIDENCE_SUMMARY: ${path.relative(root, summaryPath)}`);
 } catch (error) {
   console.error('UX_EVIDENCE_FAILED', String(error?.message || error).slice(0, 400));
   exitCode = 1;

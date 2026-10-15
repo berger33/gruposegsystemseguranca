@@ -12,6 +12,8 @@
 
 > **Inventário vigente de rotas e cobertura (atualizado em 13/10/2026):** consulte [`docs/UX-PRO-00-ATUALIZACAO-2026-10-13.md`](docs/UX-PRO-00-ATUALIZACAO-2026-10-13.md), com [inventário de 100 rotas](docs/UX-PRO-00-INVENTARIO-ROTAS-2026-10-13.csv), [matriz de evidências](docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-13.csv) e gerador reproduzível (`node scripts/ux-pro-00-inventory.mjs --check`). Os documentos e CSVs datados de 10/10 permanecem como registros daquele snapshot.
 
+> **UX-PRO-08 — fechamento de medição (15/10/2026):** 08A/08B/08C preservadas; 08D acrescenta 64 capturas das três superfícies, quatro larguras e duas preferências de tema, com traços de teclado e resíduos explícitos (não é aceite nem UX sem defeitos). Consulte o [fechamento](docs/UX-PRO-08-FECHAMENTO-2026-10-15.md) e o [prompt UX-PRO-09A — entradas](docs/UX-PRO-09A-PROMPT-PROXIMA-SUBFATIA-2026-10-15.md). Homologação/produção continuam **NO-GO**.
+
 > **UX-PRO-06 — /admin/comercial:** estados honestos do histórico de versões e contraste noturno da etapa ativa; registro em [escopo](docs/UX-PRO-06-COMERCIAL-ESCOPO-2026-10-13.md) e [estados](docs/UX-PRO-06-COMERCIAL-ESTADOS-2026-10-13.md).
 
 > **UX-PRO-06 — /admin/contratos (lista):** falha na releitura preserva contratos, propostas e empresas já lidos, com faixa de desatualização, hora e repetição; registro em [escopo](docs/UX-PRO-06-CONTRATOS-ESCOPO-2026-10-14.md) e [estados](docs/UX-PRO-06-CONTRATOS-ESTADOS-2026-10-14.md).

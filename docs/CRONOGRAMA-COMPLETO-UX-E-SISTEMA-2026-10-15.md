@@ -37,38 +37,18 @@
 
 ---
 
-## 2. UX-PRO-08 — Conhecimento, assistentes e aparência (NÃO INICIADA)
+## 2. UX-PRO-08 — Conhecimento, assistentes e aparência (RECONCILIADA EM 15/10)
 
-| # | Subfatia proposta | Escopo (plano mestre) | Sessões |
-|---|---|---|---|
-| 08A | Entrada/curadoria do RAG por área | Mostrar corpus/escopo/estado da fonte sem revelar caminhos físicos, conteúdo fora da alçada ou segredos (`/admin/conhecimento`, fontes por diretório) | 1–2 |
-| 08B | Assistentes (Marcelo, RH, cliente, público) | Distinguir sem documentos × sem resultado relevante × modelo ocupado × indisponível × erro de rede; fontes/citações compreensíveis (sobre o contrato FECH-01, PR #182) | 1–2 |
-| 08C | Aparência do site | Painel TI + 10 prévias (`/admin/aparencia`, `/layout-preview`, `layout-01..10`): ativo × comparação, prévia × publicação; **não** mudar o site público além do logo nem publicar sem ação autorizada | 1–2 |
-| 08D | Resíduos/medições | Capturas 320/390/768/1440, dia/noite, teclado das três superfícies; gates `ux-knowledge`/`ext08` preservados | incl. acima |
+Esta atualização é limitada à família 08; os demais status/estimativas deste documento são históricos e exigem reconciliação na main antes de agir.
 
-**Subtotal: ~4–6 sessões/PRs.**
+| Subfatia | Estado conferido / escopo |
+|---|---|
+| 08A | MERGED #244 (`ab39b6dc`): leitura honesta de `/admin/conhecimento`; não refazer. |
+| 08B | MERGED #245 (`5a02f0e`): assistentes Marcelo/RH/cliente e fontes do RagWidget; contagem histórica corrigida de 13 para 12 PNGs, com lista no resumo. |
+| 08C | MERGED #246 (`8dfbd7e451787dcf6f56e93b81d8e4edb26ceda5`): aparência/prévias, faixa/noindex/selo; não refazer nem publicar. |
+| 08D | Medição/documentação entregue nesta branch, sujeita aos checks/merge da PR: 64 PNGs novos, 320/390/768/1440, claro/escuro, 64 traços de teclado (54 creditados pelo detector conservador). Gates preservados; sem alteração de produto. Ver fechamento para o estado e os limites. |
 
-## 3. UX-PRO-09 — Site público, entradas e identidade (NÃO INICIADA)
-
-| # | Subfatia proposta | Escopo | Sessões |
-|---|---|---|---|
-| 09A | Entradas | `/admin/entrar`, `/cliente/entrar` (+recuperar/redefinir/confirmar/alterar e-mail, convites), `/funcionario`: acessibilidade, tipografia, erros, confirmação, responsividade | 1–2 |
-| 09B | Público (só diagnóstico) | Home, serviços/segmentos, contato, orçamento, simulador, proposta, FAQ, conteúdos, pacotes, privacidade: **nenhuma alteração além do logo** — melhorias viram sugestão documentada, não código | 1 |
-| 09C | Evidências | Capturas/teclado das entradas; nenhuma credencial fictícia em captura/log | 1 |
-
-**Subtotal: ~3–4 sessões/PRs.**
-
-## 4. UX-PRO-10 — Auditoria visual final e fechamento (NÃO INICIADA)
-
-| # | Subfatia proposta | Escopo | Sessões |
-|---|---|---|---|
-| 10A | Passagem integral | Percorrer as 100 entradas de rota vigentes (44 staff, 15 portal cliente, 14 site público, 14 entrada/recuperação cliente, 11 prévias, 1 funcionário, 1 homologação) por área/papel: estados, temas, teclado, zoom 200%, 320/390/768/1440. Hoje: só 25/100 rotas têm captura reconhecida e 58/100 têm gate associado | 1–2 |
-| 10B | Correções | Cada lacuna encontrada vira PR própria (quantidade desconhecida até a 10A) ou pendência registrada — nunca "corrigir tudo" numa PR gigante | ? (depende da 10A) |
-| 10C | Fechamento documental | Regenerar inventário/matriz (`scripts/ux-pro-00-inventory.mjs`), atualizar README/docs de entrada, relatório final com cobertura por rota, checks, falhas, limitações e aceites ainda necessários | 1 |
-
-**Subtotal: ~3+ sessões/PRs + correções da 10B.**
-
-**Total do programa UX restante (07→10): ~22–32 sessões/PRs**, sem contar correções descobertas na UX-PRO-10.
+**Fechamento de medição, não aceite de UX sem defeitos:** [relatório da família](UX-PRO-08-FECHAMENTO-2026-10-15.md), com resíduos D1–D12. D7 (legibilidade noturna RAG) exige PR própria; D8 permanece vinculado ao E8 e depende de autorização. D9/D10 são limites de medição, não defeitos de produto demonstrados. E2–E9/C11, homologação e produção permanecem fora do escopo/NO-GO. Próxima subfatia da fila: [UX-PRO-09A — entradas](UX-PRO-09A-PROMPT-PROXIMA-SUBFATIA-2026-10-15.md), após conferir a PR 08D na main.
 
 ---
 

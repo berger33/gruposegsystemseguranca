@@ -26,7 +26,7 @@
 - `node --test tests/rag-widget-contract.test.mjs`: 9/9 aprovados.
 - `node --test tests/admin-page-gates.test.mjs`: 1/1 aprovado.
 - `npm run test:ai-rag-widget:pg`: 25/25 aprovados (0 falhas, 0 pulados, mínimo 20).
-- Evidências: `docs/ux-pro-08-assistentes-evidencias/` (13 PNGs + `resumo.json`).
+- Evidências: `docs/ux-pro-08-assistentes-evidencias/` (12 PNGs históricos + `resumo.json`). Contagem corrigida na 08D: o registro original dizia 13, mas existem 12 arquivos; lista conferida em `reconciliacao08d` no resumo, sem inventar captura faltante.
 
 ## 4. O que segue pendente
 
