@@ -1,0 +1,13 @@
+{
+  "fatia": "UX-PRO-07H",
+  "rota": "/admin/licitacoes",
+  "gate": "npm run test:ux-bidding:pg",
+  "resultado": "28/28 testes, 0 falhas, 0 pulados (caso Chromium novo cobre os 3 cenários UX-PRO-07H)",
+  "casosNovos": [
+    "2xx sem notices vira falha 'A resposta de licitações não pôde ser lida', nunca lista vazia — licitacoes-1440-resposta-invalida.png",
+    "falha 503 de releitura preserva a lista com faixa de desatualização e hora — licitacoes-1440-dado-preservado.png",
+    "negativa 403 após sucesso falha fechado, sem faixa de preservação — licitacoes-1440-negativa-pos-sucesso.png"
+  ],
+  "problems": [],
+  "limites": "Sem captura 320/768/noite nova; esta tela usa cores locais fixas (achado transversal registrado, fora da fatia). Nenhuma validação manual ou aceite humano; nada declara conformidade WCAG."
+}
