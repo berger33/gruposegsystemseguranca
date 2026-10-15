@@ -69,3 +69,35 @@ export async function thirdPartyRequest<T = unknown>(
 }
 
 export type { ThirdPartyErrorDescriptor };
+
+// ---------------------------------------------------------------------------
+// UX-PRO-07G — leitura honesta: resposta 2xx sem a forma canônica nunca é
+// ausência de registro. `thirdPartyRequest` acima permanece INTACTO; o código
+// abaixo é diagnóstico DESTA tela (o servidor nunca o devolve), por isso NÃO
+// entra em `third-party-vocabulary.mjs`. Mesma decisão da UX-PRO-07F/07E-1.
+// ---------------------------------------------------------------------------
+
+export const INVALID_THIRD_PARTY_RESPONSE = 'invalid_third_party_response';
+
+export function invalidThirdPartyResponse(status: number): ThirdPartyErrorDescriptor {
+  return {
+    kind: 'retry',
+    title: 'A resposta de terceiros não pôde ser lida',
+    detail: 'O servidor respondeu sem os dados esperados. Isto não significa que não existam terceiros, janelas ou avaliações registradas.',
+    code: INVALID_THIRD_PARTY_RESPONSE,
+    status,
+    canRetry: true,
+  };
+}
+
+export async function thirdPartyRead<T>(
+  url: string,
+  isValid: (data: unknown) => boolean,
+): Promise<ThirdPartyResult<T>> {
+  const result = await thirdPartyRequest<T>(url);
+  if (!result.ok) return result;
+  if (!isValid(result.data)) {
+    return { ok: false, status: result.status, error: invalidThirdPartyResponse(result.status), payload: result.data };
+  }
+  return result;
+}
