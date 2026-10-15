@@ -2,6 +2,7 @@
 
 import styles from "../../../components/ui/UiWorkspace.module.css";
 import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
+import { financeInvalidListMessage } from "../../../lib/finance-request";
 import { FormEvent, useEffect, useState } from "react";
 
 type ActivityRule = { id:string; activity_code:string; activity_label:string; obligation_type:string; jurisdiction:string; rule_reference:string; rule_description:string; is_active:boolean };
@@ -15,6 +16,29 @@ async function api(path:string, init?:RequestInit) {
   const data = await response.json().catch(()=>({}));
   if (!response.ok) throw new Error(financeErrorMessage(typeof data.error === "string" ? data.error : null, response.status));
   return data;
+}
+
+/**
+ * UX-PRO-07E-2 — leitura de lista com a chave canônica exigida.
+ *
+ * Reproduz EXATAMENTE o método, a URL e os cabeçalhos de `api` acima, que
+ * permanece intacto e continua servindo todas as escritas. A única diferença:
+ * um 2xx sem a lista esperada (chave ausente, valor não-array ou corpo
+ * ilegível) lança falha declarada em vez de virar `[]`.
+ *
+ * O servidor garante a chave no 200 e devolve `[]` quando realmente não há
+ * registro (`src/server/fin-management-api.mjs:381,392,479,587`), então o vazio
+ * legítimo continua sendo vazio concluído — só o vazio FALSO deixa de existir.
+ */
+async function apiList<T>(path: string, key: string): Promise<T[]> {
+  const response = await fetch(path, {
+    headers: { "Content-Type": "application/json" },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(financeErrorMessage(typeof data.error === "string" ? data.error : null, response.status));
+  const list = data && typeof data === "object" ? (data as Record<string, unknown>)[key] : undefined;
+  if (!Array.isArray(list)) throw new Error(financeInvalidListMessage(response.status));
+  return list as T[];
 }
 
 const emptyProvider = { name:"", provider_code:"", supported_obligations:[] as string[], idempotency_key:"" };
@@ -31,18 +55,22 @@ export default function FiscalWorkspace() {
   const [fiscalDocument,setFiscalDocument] = useState(emptyDocument);
   const [reason,setReason] = useState("");
   const [busy,setBusy] = useState(false); const [loading,setLoading] = useState(false); const [error,setError] = useState(""); const [notice,setNotice] = useState("");
+  // UX-PRO-07E-2: enquanto nenhuma leitura terminou com as quatro listas
+  // canônicas confirmadas, os vazios abaixo não podem afirmar ausência.
+  const [readConfirmed,setReadConfirmed] = useState(false);
 
   const load = async () => {
     setLoading(true); setError("");
     try {
-      const [r,p,o,d] = await Promise.all([
-        api("/api/fin/fiscal-activity-rules"),
-        api("/api/fin/fiscal-providers"),
-        api("/api/fin/fiscal-obligations"),
-        api("/api/fin/fiscal-documents"),
+      const [nextRules,nextProviders,nextObligations,nextDocuments] = await Promise.all([
+        apiList<ActivityRule>("/api/fin/fiscal-activity-rules","rules"),
+        apiList<Provider>("/api/fin/fiscal-providers","providers"),
+        apiList<Obligation>("/api/fin/fiscal-obligations","obligations"),
+        apiList<FiscalDocument>("/api/fin/fiscal-documents","documents"),
       ]);
-      setRules(r.rules||[]); setProviders(p.providers||[]); setObligations(o.obligations||[]); setDocuments(d.documents||[]);
-    } catch (e) { setError(e instanceof Error?e.message:"Falha ao carregar dados fiscais"); }
+      setRules(nextRules); setProviders(nextProviders); setObligations(nextObligations); setDocuments(nextDocuments);
+      setReadConfirmed(true);
+    } catch (e) { setReadConfirmed(false); setError(e instanceof Error?e.message:"Falha ao carregar dados fiscais"); }
     finally { setLoading(false); }
   };
   useEffect(()=>{ void load(); },[]);
@@ -93,7 +121,9 @@ export default function FiscalWorkspace() {
 
     <h3>Regras canônicas de atividade</h3>
     <table data-testid="fin11-rules-table"><thead><tr><th>Atividade</th><th>Obrigação</th><th>Competência</th><th>Regra</th></tr></thead><tbody>
-      {rules.length===0?<tr><td colSpan={4}>Nenhuma regra cadastrada.</td></tr>:rules.map(rule=>
+      {rules.length===0?(readConfirmed
+        ? <tr><td colSpan={4}>Nenhuma regra cadastrada.</td></tr>
+        : <tr><td colSpan={4} data-testid="fin11-rules-unavailable">Lista indisponível — a leitura não foi confirmada; não confundir com ausência de regras de atividade.</td></tr>):rules.map(rule=>
         <tr key={rule.id} data-testid={`fin11-rule-${rule.activity_code}`}><td>{rule.activity_label}</td><td data-testid={`fin11-rule-type-${rule.activity_code}`}>{rule.obligation_type}</td><td>{rule.jurisdiction}</td><td>{rule.rule_reference}</td></tr>)}
     </tbody></table>
 
@@ -110,7 +140,9 @@ export default function FiscalWorkspace() {
     </form>
     <label>Motivo da transição <input minLength={10} maxLength={1000} data-testid="fin11-reason" value={reason} onChange={e=>setReason(e.target.value)} placeholder="Motivo (10 a 1000 caracteres)"/></label>
     <table data-testid="fin11-providers-table"><thead><tr><th>Provedor</th><th>Código</th><th>Ambiente</th><th>Suporta</th><th>Status</th><th>Transição</th></tr></thead><tbody>
-      {providers.length===0?<tr><td colSpan={6}>Nenhum provedor.</td></tr>:providers.map(item=>
+      {providers.length===0?(readConfirmed
+        ? <tr><td colSpan={6}>Nenhum provedor.</td></tr>
+        : <tr><td colSpan={6} data-testid="fin11-providers-unavailable">Lista indisponível — a leitura não foi confirmada; não confundir com ausência de provedores fiscais.</td></tr>):providers.map(item=>
         <tr key={item.id} data-testid={`fin11-provider-${item.id}`}><td>{item.name}</td><td>{item.provider_code||"sem código"}</td><td>{item.environment}</td><td>{(Array.isArray(item.supported_obligations)?item.supported_obligations:[]).join(", ")||"nenhuma"}</td><td data-testid={`fin11-provider-status-${item.id}`}>{item.status}</td>
           <td>{item.status!=="configurado"&&<button disabled={busy||reason.length<10} data-testid={`fin11-provider-configure-${item.id}`} onClick={()=>transitionProvider(item,"configurado")}>Configurar</button>}
               {item.status!=="falha"&&<button disabled={busy||reason.length<10} onClick={()=>transitionProvider(item,"falha")}>Marcar falha</button>}</td></tr>)}
@@ -130,7 +162,9 @@ export default function FiscalWorkspace() {
       <button data-testid="fin11-obligation-create" disabled={busy}>Criar obrigação</button>
     </form>
     <table data-testid="fin11-obligations-table"><thead><tr><th>Atividade</th><th>Obrigação</th><th>Status</th><th>Regra aplicada</th><th>Transição</th></tr></thead><tbody>
-      {obligations.length===0?<tr><td colSpan={5}>Nenhuma obrigação.</td></tr>:obligations.map(item=>
+      {obligations.length===0?(readConfirmed
+        ? <tr><td colSpan={5}>Nenhuma obrigação.</td></tr>
+        : <tr><td colSpan={5} data-testid="fin11-obligations-unavailable">Lista indisponível — a leitura não foi confirmada; não confundir com ausência de obrigações fiscais.</td></tr>):obligations.map(item=>
         <tr key={item.id} data-testid={`fin11-obligation-${item.id}`}><td>{item.activity_type}</td><td data-testid={`fin11-obligation-type-${item.id}`}>{item.obligation_type}</td><td data-testid={`fin11-obligation-status-${item.id}`}>{item.status}</td><td>{item.determination_rule_reference||item.rule}</td>
           <td>{item.status==="pendente"&&<button disabled={busy||reason.length<10} data-testid={`fin11-obligation-determine-${item.id}`} onClick={()=>transitionObligation(item,"determinada")}>Determinar</button>}
               {item.status!=="cancelada"&&<button disabled={busy||reason.length<10} onClick={()=>transitionObligation(item,"cancelada")}>Cancelar</button>}</td></tr>)}
@@ -157,7 +191,9 @@ export default function FiscalWorkspace() {
       <button data-testid="fin11-document-create" disabled={busy}>Preparar documento</button>
     </form>
     <table data-testid="fin11-documents-table"><thead><tr><th>Protocolo</th><th>Tipo</th><th>Valor</th><th>Simulado</th><th>Status</th><th>Transição</th></tr></thead><tbody>
-      {documents.length===0?<tr><td colSpan={6}>Nenhum documento.</td></tr>:documents.map(item=>
+      {documents.length===0?(readConfirmed
+        ? <tr><td colSpan={6}>Nenhum documento.</td></tr>
+        : <tr><td colSpan={6} data-testid="fin11-documents-unavailable">Lista indisponível — a leitura não foi confirmada; não confundir com ausência de documentos fiscais.</td></tr>):documents.map(item=>
         <tr key={item.id} data-testid={`fin11-document-${item.id}`}><td>{item.protocol}</td><td data-testid={`fin11-document-type-${item.id}`}>{item.document_type}</td><td>{money(item.amount_cents)}</td><td>{item.simulated?"sintético":"NÃO SIMULADO"}</td><td data-testid={`fin11-document-status-${item.id}`}>{item.status}</td>
           <td>{item.status==="rascunho"&&<button disabled={busy||reason.length<10} data-testid={`fin11-document-register-${item.id}`} onClick={()=>transitionDocument(item,"emitido")}>Registrar sintético</button>}
               {item.status!=="cancelado"&&<button disabled={busy||reason.length<10} onClick={()=>transitionDocument(item,"cancelado")}>Cancelar</button>}</td></tr>)}

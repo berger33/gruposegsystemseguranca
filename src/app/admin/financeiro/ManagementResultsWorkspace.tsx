@@ -2,6 +2,7 @@
 
 import styles from "../../../components/ui/UiWorkspace.module.css";
 import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
+import { financeInvalidListMessage } from "../../../lib/finance-request";
 import { FormEvent, useEffect, useState } from "react";
 
 type Result = {
@@ -24,13 +25,26 @@ const api = async (path:string, options:RequestInit={}) => {
   if(!r.ok) throw new Error(financeErrorMessage(typeof b.error === "string" ? b.error : null, r.status));
   return b;
 };
+// UX-PRO-07E-2 — leitura de lista com a chave canônica exigida. Reproduz
+// EXATAMENTE método, URL e cabeçalhos de `api` (intacto, servindo as escritas);
+// a única diferença: um 2xx sem a lista esperada lança falha declarada em vez
+// de virar `[]`. O servidor garante a chave no 200 e devolve `[]` quando o vazio
+// é legítimo (`src/server/fin-management-api.mjs:57`).
+const apiList = async <T,>(path:string,key:string):Promise<T[]> => {
+  const r=await fetch(path,{headers:{"content-type":"application/json"}});
+  const b=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(financeErrorMessage(typeof b.error === "string" ? b.error : null, r.status));
+  const list=b&&typeof b==="object"?(b as Record<string,unknown>)[key]:undefined;
+  if(!Array.isArray(list)) throw new Error(financeInvalidListMessage(r.status));
+  return list as T[];
+};
 
 export default function ManagementResultsWorkspace(){
  const [rows,setRows]=useState<Result[]>([]); const [busy,setBusy]=useState(false); const [loading,setLoading]=useState(false); const [error,setError]=useState(""); const [notice,setNotice]=useState("");
  const [form,setForm]=useState({contract_id:"",client_account_id:"",competence_date:"",received:"",costs:"",reason:""});
  const load=async()=>{
    setLoading(true); setError("");
-   try { const b=await api("/api/fin/management-results"); setRows(b.results||[]); }
+   try { setRows(await apiList<Result>("/api/fin/management-results","results")); }
    catch(e) { setError(e instanceof Error?e.message:"Falha ao carregar resultados"); }
    finally { setLoading(false); }
  };
