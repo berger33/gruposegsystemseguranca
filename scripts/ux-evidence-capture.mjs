@@ -283,6 +283,24 @@ const STAGES = {
       waitFor: 'Plano fictício publicado na evidência de continuidade',
     }],
   },
+  // UX-PRO-08C — aparência do site e prévias: painel TI, prévia comparada,
+  // prévia individual e parâmetro inválido. A faixa "Prévia interna"
+  // (SitePreviewNotice) é o marco visual esperado nas três últimas.
+  'ux-pro-08c': {
+    outputDir: 'docs/ux-pro-08-aparencia-evidencias',
+    viewports: [
+      { name: 'w320', width: 320, height: 780 },
+      { name: 'w390', width: 390, height: 844 },
+      { name: 'w768', width: 768, height: 1024 },
+      { name: 'desktop', width: 1440, height: 900 },
+    ],
+    targets: [
+      { route: '/admin/aparencia', role: 'ti', slug: 'aparencia', waitFor: 'Escolha a apresentação do site' },
+      { route: '/layout-preview?visual=03', role: 'ti', slug: 'layout-preview-03', waitFor: 'Prévia interna' },
+      { route: '/layout-03', role: 'ti', slug: 'layout-03', waitFor: 'Prévia interna' },
+      { route: '/layout-preview?visual=99', role: 'ti', slug: 'layout-preview-invalido', waitFor: 'não foi reconhecido' },
+    ],
+  },
 };
 
 const plan = STAGES[stage];
@@ -291,7 +309,7 @@ if (!plan) {
   process.exit(2);
 }
 
-const VIEWPORTS = [
+const VIEWPORTS = plan.viewports || [
   { name: 'desktop', width: 1440, height: 900 },
   { name: 'mobile', width: 390, height: 844 },
 ];
