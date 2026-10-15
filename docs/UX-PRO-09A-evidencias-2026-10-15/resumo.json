@@ -1,0 +1,237 @@
+{
+  "schemaVersion": 1,
+  "task": "UX-PRO-09A — pedido manual de recuperação de senha",
+  "stage": "UX-PRO-09A",
+  "date": "2026-10-15",
+  "entries": [
+    {
+      "route": "/cliente/redefinir-senha",
+      "viewport": "320x844",
+      "screenshot": "ux-pro-09a-recuperacao-falha-503-320-claro.png",
+      "firstFocus": false,
+      "percursoTeclado": [
+        "GRUPO SEG System",
+        "Sobre o portal",
+        "E-MAIL",
+        "Solicitar validação manual",
+        "Mensagem de erro",
+        "Solicitar validação manual",
+        "Voltar para a entrada"
+      ]
+    },
+    {
+      "route": "/cliente/redefinir-senha",
+      "viewport": "390x844",
+      "screenshot": "ux-pro-09a-recuperacao-falha-503-390-claro.png",
+      "firstFocus": false,
+      "percursoTeclado": [
+        "GRUPO SEG System",
+        "Sobre o portal",
+        "E-MAIL",
+        "Solicitar validação manual",
+        "Mensagem de erro",
+        "Solicitar validação manual",
+        "Voltar para a entrada"
+      ]
+    },
+    {
+      "route": "/cliente/redefinir-senha",
+      "viewport": "768x900",
+      "screenshot": "ux-pro-09a-recuperacao-falha-503-768-claro.png",
+      "firstFocus": false,
+      "percursoTeclado": [
+        "GRUPO SEG System",
+        "Sobre o portal",
+        "E-MAIL",
+        "Solicitar validação manual",
+        "Mensagem de erro",
+        "Solicitar validação manual",
+        "Voltar para a entrada"
+      ]
+    },
+    {
+      "route": "/cliente/redefinir-senha",
+      "viewport": "1440x900",
+      "screenshot": "ux-pro-09a-recuperacao-falha-503-1440-claro.png",
+      "firstFocus": false,
+      "percursoTeclado": [
+        "GRUPO SEG System",
+        "Sobre o portal",
+        "E-MAIL",
+        "Solicitar validação manual",
+        "Mensagem de erro",
+        "Solicitar validação manual",
+        "Voltar para a entrada"
+      ]
+    }
+  ],
+  "baseSha": "0e3cfc78c8725b95cebfd57042d532bb95d456f5",
+  "branch": "arena/85e48996-gruposegsystemseguranca",
+  "route": "/cliente/redefinir-senha",
+  "role": "visitante anônimo; sem cookie ou sessão",
+  "routeHttpStatus": 200,
+  "apiHttp": [
+    {
+      "path": "/api/auth/recovery/manual",
+      "status": 503,
+      "source": "browser"
+    },
+    {
+      "path": "/api/auth/recovery/manual",
+      "status": 202,
+      "source": "browser"
+    },
+    {
+      "path": "/api/auth/recovery/manual",
+      "status": 202,
+      "source": "HTTP test client"
+    },
+    {
+      "path": "/api/auth/recovery/manual",
+      "status": 202,
+      "source": "HTTP test client"
+    }
+  ],
+  "states": [
+    {
+      "name": "initial",
+      "screenshot": "ux-pro-09a-recuperacao-inicial-390-claro.png"
+    },
+    {
+      "name": "loading",
+      "screenshot": "ux-pro-09a-recuperacao-carregando-390-claro.png",
+      "buttonDisabled": true
+    },
+    {
+      "name": "service_failure",
+      "httpStatus": 503,
+      "screenshot": [
+        "ux-pro-09a-recuperacao-falha-503-320-claro.png",
+        "ux-pro-09a-recuperacao-falha-503-390-claro.png",
+        "ux-pro-09a-recuperacao-falha-503-768-claro.png",
+        "ux-pro-09a-recuperacao-falha-503-1440-claro.png"
+      ],
+      "formRetainedForRetry": true,
+      "falseSuccessStatusShown": false,
+      "userMessage": "Não foi possível confirmar o recebimento da solicitação. Tente novamente em instantes; por segurança, não informamos se o endereço tem conta."
+    },
+    {
+      "name": "network_failure",
+      "screenshot": "ux-pro-09a-recuperacao-falha-rede-390-claro.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "horizontalOverflowPx": 0,
+      "simulatedFetchRejection": true,
+      "httpStatus": null,
+      "formRetainedForRetry": true,
+      "falseSuccessStatusShown": false,
+      "errorReceivesFocus": true,
+      "retryButtonEnabled": true,
+      "httpRequestIssued": false
+    },
+    {
+      "name": "success",
+      "httpStatus": 202,
+      "screenshot": "ux-pro-09a-recuperacao-sucesso-202-claro.png",
+      "genericMessageUnchangedForEligibleAndUnknownAddress": true,
+      "responseBodiesEqual": true
+    },
+    {
+      "name": "native_validation",
+      "malformedEmail": {
+        "typeMismatch": true,
+        "valueMissing": false
+      },
+      "emptyEmail": {
+        "typeMismatch": false,
+        "valueMissing": true
+      },
+      "httpRequestsBeforeValidSubmit": 0
+    }
+  ],
+  "keyboard": {
+    "focusOrder": [
+      "GRUPO SEG System",
+      "Sobre o portal",
+      "E-MAIL",
+      "Solicitar validação manual",
+      "Mensagem de erro",
+      "Solicitar validação manual",
+      "Voltar para a entrada"
+    ],
+    "errorReceivesFocus": true,
+    "errorFocusVisible": {
+      "outlineStyle": "solid",
+      "outlineWidth": "3px"
+    }
+  },
+  "theme": {
+    "mode": "light-default-only",
+    "themeTogglePresent": false,
+    "themeAttribute": null
+  },
+  "viewports": [
+    {
+      "viewport": {
+        "width": 320,
+        "height": 844
+      },
+      "horizontalOverflowPx": 0,
+      "focusedTarget": "Mensagem de erro",
+      "themeAttribute": null
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "horizontalOverflowPx": 0,
+      "focusedTarget": "Mensagem de erro",
+      "themeAttribute": null
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "horizontalOverflowPx": 0,
+      "focusedTarget": "Mensagem de erro",
+      "themeAttribute": null
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "horizontalOverflowPx": 0,
+      "focusedTarget": "Mensagem de erro",
+      "themeAttribute": null
+    }
+  ],
+  "console": {
+    "errorCount": 2,
+    "expectedHttp503DiagnosticCount": 1,
+    "blockedExternalFontDiagnosticCount": 1,
+    "unexpectedErrorCount": 0,
+    "errors": [
+      {
+        "message": "Failed to load resource: net::ERR_CONNECTION_CLOSED",
+        "source": "https://fonts.googleapis.com/css2"
+      },
+      {
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+        "source": "http://127.0.0.1:4649/api/auth/recovery/manual"
+      }
+    ],
+    "pageErrorCount": 0
+  },
+  "limitations": [
+    "503 reproduzido por trigger no PostgreSQL temporário e descartável; HTTP, servidor, rota e Chromium reais; sem mock da resposta HTTP. Separadamente, uma rejeição de fetch foi simulada no navegador para cobrir falha de rede; não equivale a interromper o transporte real.",
+    "202 genérico exercitado no navegador e por HTTP para identidade sintética elegível e endereço desconhecido; os corpos são comparados em memória, não salvos.",
+    "Somente tema claro, o único oferecido por esta superfície. Sem SMTP/provedor real, sessão/cookie, dados reais, UAT, aceite humano ou alegação WCAG/produção.",
+    "A busca externa de Google Fonts foi bloqueada pelo sandbox (ERR_CONNECTION_CLOSED); navegador usou fallback, sem erro de execução da página. O diagnóstico é separado do 503 reproduzido.",
+    "Overflow medido por viewport; esta subfatia altera somente o estado de falha da solicitação manual."
+  ]
+}
