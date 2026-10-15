@@ -204,6 +204,11 @@
   border: 1px solid #f5c4c0;
 }
 
+.message[tabindex="-1"]:focus {
+  outline: 3px solid var(--blue-bright);
+  outline-offset: 3px;
+}
+
 .messageInfo {
   background: var(--wash);
   color: var(--navy);

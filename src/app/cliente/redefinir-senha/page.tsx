@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CircleAlert, KeyRound } from "lucide-react";
@@ -20,18 +20,31 @@ function RequestForm() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const errorRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError("");
     setBusy(true);
     try {
-      await fetch("/api/auth/recovery/manual", {
+      const response = await fetch("/api/auth/recovery/manual", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-    } finally {
+      if (!response.ok) {
+        setError("Não foi possível confirmar o recebimento da solicitação. Tente novamente em instantes; por segurança, não informamos se o endereço tem conta.");
+        return;
+      }
       setSent(true);
+    } catch {
+      setError("Não foi possível confirmar o recebimento da solicitação. Tente novamente em instantes; por segurança, não informamos se o endereço tem conta.");
+    } finally {
       setBusy(false);
     }
   }
@@ -73,6 +86,17 @@ function RequestForm() {
                 onChange={event => setEmail(event.target.value)}
               />
             </div>
+            {error ? (
+              <p
+                ref={errorRef}
+                className={`${styles.message} ${styles.messageError}`}
+                role="alert"
+                tabIndex={-1}
+              >
+                <CircleAlert size={16} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
+                <span>{error}</span>
+              </p>
+            ) : null}
             <button className={styles.submit} type="submit" disabled={busy}>
               {busy ? "Registrando…" : "Solicitar validação manual"}
             </button>

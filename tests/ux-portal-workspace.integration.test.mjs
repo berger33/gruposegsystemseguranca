@@ -20,7 +20,7 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import pg from 'pg';
 import { chromium as playwrightChromium } from 'playwright';
@@ -100,7 +100,7 @@ async function capture(page, nome) {
  * Chromium empacotado, então a substituição é feita em `window.fetch`, como
  * nos demais gates do repositório. O servidor NÃO é enfraquecido.
  */
-async function openPage(browser, route, cookie, { width = 1440, height = 900, failRoutes = [], status = 503, code = 'employee_home_unavailable' } = {}) {
+async function openPage(browser, route, cookie, { width = 1440, height = 900, failRoutes = [], status = 503, code = 'employee_home_unavailable', onPage } = {}) {
   const context = await browser.newContext({ viewport: { width, height }, locale: 'pt-BR' });
   if (cookie) {
     await context.addCookies(cookie.split('; ').filter(Boolean).map(item => {
@@ -109,6 +109,7 @@ async function openPage(browser, route, cookie, { width = 1440, height = 900, fa
     }));
   }
   const page = await context.newPage();
+  if (typeof onPage === 'function') onPage(page);
   page.setDefaultTimeout(45_000);
   page.setDefaultNavigationTimeout(90_000);
   if (failRoutes.length) {
@@ -125,8 +126,8 @@ async function openPage(browser, route, cookie, { width = 1440, height = 900, fa
       };
     }, { routes: failRoutes, failStatus: status, failCode: code });
   }
-  await page.goto(`${baseUrl}${route}`, { waitUntil: 'domcontentloaded' });
-  return { context, page };
+  const navigationResponse = await page.goto(`${baseUrl}${route}`, { waitUntil: 'domcontentloaded' });
+  return { context, page, navigationResponse };
 }
 
 /** Entra no portal do funcionário pela tela, como a pessoa faria. */
@@ -222,7 +223,7 @@ before(async () => {
   clientCookie = clientLogin.setCookie.map(item => item.split(';')[0]).join('; ');
   assert.ok(clientCookie, 'o login do cliente precisa emitir cookie de sessão');
 
-  for (const route of ['/funcionario', '/cliente/app']) {
+  for (const route of ['/funcionario', '/cliente/app', '/cliente/redefinir-senha']) {
     const deadline = Date.now() + 240_000;
     for (;;) {
       try {
@@ -563,6 +564,365 @@ test('browser: a área do cliente diz "sem vínculo" só depois de uma leitura b
     await capture(page, 'ux-06-cliente-sem-vinculo');
     await context.close();
   } finally { await browser.close(); }
+});
+
+test('browser: pedido manual de recuperação distingue falha real, mantém 202 genérico e é operável por teclado', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  const eligibleEmail = 'qa09a@example.invalid';
+  const unknownEmail = 'missing09a@example.invalid';
+  const identityId = randomUUID();
+  const browserStatuses = [];
+  const consoleErrors = [];
+  const pageErrors = [];
+  const evidenceDir = process.env.UX_PORTAL_EVIDENCE_DIR || '';
+  const triggerName = 'qa_ux_pro09a_recovery_failure';
+  const functionName = 'qa_ux_pro09a_recovery_failure_fn';
+  let context, page;
+  let keyboardPath = [];
+  let focusedErrorStyle = null;
+  let networkFailure = null;
+  const viewportEvidence = [];
+  const errorScreenshots = [];
+  const safeDiagnostic = value => String(value)
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[address]')
+    .replace(/([?&](?:token|email)=)[^&\s]+/gi, '$1[redacted]')
+    .replace(/(authorization|cookie)[:=]\s*[^\s;]+/gi, '$1=[redacted]')
+    .slice(0, 240);
+  const focusName = () => page.evaluate(() => {
+    const element = document.activeElement;
+    if (!(element instanceof HTMLElement)) return 'none';
+    if (element instanceof HTMLInputElement) {
+      return element.labels?.[0]?.innerText.trim().replace(/\s+/g, ' ') || element.id || 'input';
+    }
+    if (element.getAttribute('role') === 'alert') return 'Mensagem de erro';
+    return (element.getAttribute('aria-label') || element.innerText || element.id || element.tagName)
+      .trim().replace(/\s+/g, ' ').slice(0, 80);
+  });
+  const cleanup = async () => {
+    await context?.close().catch(() => {});
+    await browser.close().catch(() => {});
+    await pool.query(`DROP TRIGGER IF EXISTS ${triggerName} ON client_access_recovery_requests`).catch(() => {});
+    await pool.query(`DROP FUNCTION IF EXISTS ${functionName}()`).catch(() => {});
+    await pool.query('DELETE FROM auth_identities WHERE id=$1', [identityId]).catch(() => {});
+  };
+
+  try {
+    // Trigger somente no PostgreSQL descartável: resposta HTTP e aplicação reais.
+    await pool.query(
+      `INSERT INTO auth_identities (id, kind, email, display_name, status, verification_method, verified_at)
+       VALUES ($1,'client',$2,'QA Sintético UX-PRO-09A','active','email_link',NOW())`,
+      [identityId, eligibleEmail],
+    );
+    await pool.query(`
+      CREATE FUNCTION ${functionName}() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN RAISE EXCEPTION 'qa_synthetic_recovery_failure'; END;
+      $$;
+    `);
+    await pool.query(`
+      CREATE TRIGGER ${triggerName} BEFORE INSERT ON client_access_recovery_requests
+      FOR EACH ROW EXECUTE FUNCTION ${functionName}();
+    `);
+
+    const opened = await openPage(browser, '/cliente/redefinir-senha', null, {
+      width: 390,
+      height: 844,
+      onPage: candidate => {
+        candidate.on('response', response => {
+          try {
+            if (new URL(response.url()).pathname === '/api/auth/recovery/manual') {
+              browserStatuses.push(response.status());
+            }
+          } catch { /* URL inválida não entra na evidência */ }
+        });
+        candidate.on('console', message => {
+          if (message.type() !== 'error') return;
+          let source = 'unknown';
+          try {
+            const url = new URL(message.location().url);
+            source = `${url.origin}${url.pathname}`;
+          } catch { /* mensagem sem URL */ }
+          consoleErrors.push({ message: safeDiagnostic(message.text()), source });
+        });
+        candidate.on('pageerror', error => pageErrors.push(safeDiagnostic(error.message)));
+      },
+    });
+    context = opened.context;
+    page = opened.page;
+    page.setDefaultTimeout(45_000);
+    await page.waitForLoadState('networkidle');
+    await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+    assert.equal(opened.navigationResponse?.status(), 200);
+    assert.equal(new URL(page.url()).pathname, '/cliente/redefinir-senha');
+    assert.deepEqual(await context.cookies(), [], 'a rota pública é testada sem cookie ou sessão');
+
+    const form = page.locator('section[aria-labelledby="recuperar-title"]');
+    const emailField = form.getByRole('textbox', { name: 'E-mail' });
+    assert.equal(await emailField.count(), 1);
+    assert.equal(await form.getByRole('button', { name: 'Solicitar validação manual' }).count(), 1);
+    assert.equal(await form.getByRole('alert').count(), 0);
+    assert.equal(await form.getByRole('status').count(), 0);
+    const theme = await page.evaluate(() => ({
+      mode: 'light-default-only',
+      themeTogglePresent: Boolean(document.querySelector('[data-admin-theme-toggle="true"]')),
+      themeAttribute: document.documentElement.getAttribute('data-admin-theme'),
+    }));
+    assert.equal(theme.themeTogglePresent, false);
+    assert.equal(theme.themeAttribute, null);
+    if (evidenceDir) await capture(page, 'ux-pro-09a-recuperacao-inicial-390-claro');
+
+    await page.locator('header a').first().focus();
+    keyboardPath.push(await focusName());
+    for (let step = 0; step < 2; step += 1) {
+      await page.keyboard.press('Tab');
+      keyboardPath.push(await focusName());
+    }
+    assert.deepEqual(keyboardPath, ['GRUPO SEG System', 'Sobre o portal', 'E-MAIL']);
+    await page.keyboard.press('Tab');
+    keyboardPath.push(await focusName());
+    assert.equal(keyboardPath.at(-1), 'Solicitar validação manual');
+
+    await emailField.fill('endereco-invalido');
+    const malformedEmail = await emailField.evaluate(element => ({
+      typeMismatch: element.validity.typeMismatch,
+      valueMissing: element.validity.valueMissing,
+    }));
+    await emailField.press('Enter');
+    assert.equal(malformedEmail.typeMismatch, true);
+    await emailField.fill('');
+    const emptyEmail = await emailField.evaluate(element => ({
+      typeMismatch: element.validity.typeMismatch,
+      valueMissing: element.validity.valueMissing,
+    }));
+    await emailField.press('Enter');
+    assert.equal(emptyEmail.valueMissing, true);
+    assert.deepEqual(browserStatuses, [], 'validação nativa não dispara HTTP');
+
+    // Segura apenas a resolução da resposta real para capturar o estado de envio.
+    await page.evaluate(() => {
+      const nativeFetch = window.fetch.bind(window);
+      let holdFirst = true;
+      window.__uxPro09aRelease = null;
+      window.fetch = async (input, init) => {
+        const response = await nativeFetch(input, init);
+        const url = typeof input === 'string' ? input : input.url;
+        if (holdFirst && new URL(url, window.location.href).pathname === '/api/auth/recovery/manual') {
+          holdFirst = false;
+          await new Promise(resolve => { window.__uxPro09aRelease = resolve; });
+        }
+        return response;
+      };
+    });
+    await emailField.fill(eligibleEmail);
+    await page.keyboard.press('Tab');
+    assert.equal(await focusName(), 'Solicitar validação manual');
+    const failureResponsePromise = page.waitForResponse(response => {
+      try { return new URL(response.url()).pathname === '/api/auth/recovery/manual'; }
+      catch { return false; }
+    });
+    await page.keyboard.press('Enter');
+    const failureResponse = await failureResponsePromise;
+    assert.equal(failureResponse.status(), 503);
+    await page.waitForFunction(() => typeof window.__uxPro09aRelease === 'function');
+    const busyButton = page.getByRole('button', { name: 'Registrando…' });
+    await busyButton.waitFor();
+    assert.equal(await busyButton.isDisabled(), true);
+    if (evidenceDir) await capture(page, 'ux-pro-09a-recuperacao-carregando-390-claro');
+    await page.evaluate(() => window.__uxPro09aRelease?.());
+
+    const error = form.getByRole('alert');
+    await error.waitFor();
+    await page.waitForFunction(() => document.activeElement?.matches('section[aria-labelledby="recuperar-title"] [role="alert"]'));
+    const errorText = await error.innerText();
+    assert.match(errorText, /Não foi possível confirmar o recebimento da solicitação/i);
+    assert.doesNotMatch(errorText, /recovery_unavailable|503|example\.invalid|@/i);
+    assert.equal(await form.getByRole('status').count(), 0, '503 nunca deve parecer sucesso');
+    assert.equal(await emailField.inputValue(), eligibleEmail, 'o valor permanece para nova tentativa');
+    assert.equal(await form.getByRole('button', { name: 'Solicitar validação manual' }).isEnabled(), true);
+    assert.equal(await focusName(), 'Mensagem de erro');
+    focusedErrorStyle = await page.evaluate(() => {
+      const style = getComputedStyle(document.activeElement);
+      return { outlineStyle: style.outlineStyle, outlineWidth: style.outlineWidth };
+    });
+    assert.deepEqual(focusedErrorStyle, { outlineStyle: 'solid', outlineWidth: '3px' });
+    keyboardPath.push('Mensagem de erro');
+    await page.keyboard.press('Tab');
+    keyboardPath.push(await focusName());
+    assert.equal(keyboardPath.at(-1), 'Solicitar validação manual');
+    await page.keyboard.press('Tab');
+    keyboardPath.push(await focusName());
+    assert.equal(keyboardPath.at(-1), 'Voltar para a entrada');
+    await error.focus();
+
+    for (const width of [320, 390, 768, 1440]) {
+      const height = width < 768 ? 844 : 900;
+      await page.setViewportSize({ width, height });
+      const metrics = await page.evaluate(() => {
+        const root = document.documentElement;
+        return {
+          viewport: { width: innerWidth, height: innerHeight },
+          horizontalOverflowPx: Math.max(root.scrollWidth, document.body.scrollWidth) - root.clientWidth,
+          focusedTarget: document.activeElement?.matches('section[aria-labelledby="recuperar-title"] [role="alert"]')
+            ? 'Mensagem de erro' : 'outro',
+          themeAttribute: root.getAttribute('data-admin-theme'),
+        };
+      });
+      assert.deepEqual(metrics.viewport, { width, height });
+      assert.equal(metrics.horizontalOverflowPx, 0);
+      assert.equal(metrics.focusedTarget, 'Mensagem de erro');
+      const screenshot = `ux-pro-09a-recuperacao-falha-503-${width}-claro.png`;
+      errorScreenshots.push(screenshot);
+      if (evidenceDir) await capture(page, screenshot.slice(0, -4));
+      viewportEvidence.push(metrics);
+    }
+
+    await page.evaluate(() => {
+      const originalFetch = window.fetch.bind(window);
+      window.__uxPro09aNetworkFailureTriggered = false;
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : (input?.url || '');
+        if (new URL(url, window.location.href).pathname === '/api/auth/recovery/manual') {
+          window.fetch = originalFetch;
+          window.__uxPro09aNetworkFailureTriggered = true;
+          throw new TypeError('Failed to fetch');
+        }
+        return originalFetch(input, init);
+      };
+    });
+    await page.keyboard.press('Tab');
+    assert.equal(await focusName(), 'Solicitar validação manual');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => window.__uxPro09aNetworkFailureTriggered === true);
+    await page.waitForFunction(() => document.activeElement?.matches('section[aria-labelledby="recuperar-title"] [role="alert"]'));
+    assert.match(await error.innerText(), /Não foi possível confirmar o recebimento da solicitação/i);
+    assert.equal(await emailField.inputValue(), eligibleEmail);
+    assert.equal(await form.getByRole('status').count(), 0, 'falha de rede não deve parecer sucesso');
+    assert.equal(await form.getByRole('button', { name: 'Solicitar validação manual' }).isEnabled(), true);
+    assert.equal(await focusName(), 'Mensagem de erro');
+    assert.deepEqual(browserStatuses, [503], 'a rejeição simulada ocorre antes de qualquer resposta HTTP');
+    await page.setViewportSize({ width: 390, height: 844 });
+    const networkViewport = await page.evaluate(() => ({
+      viewport: { width: innerWidth, height: innerHeight },
+      horizontalOverflowPx: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - document.documentElement.clientWidth,
+      focusedTarget: document.activeElement?.matches('section[aria-labelledby="recuperar-title"] [role="alert"]')
+        ? 'Mensagem de erro' : 'outro',
+    }));
+    assert.deepEqual(networkViewport.viewport, { width: 390, height: 844 });
+    assert.equal(networkViewport.horizontalOverflowPx, 0);
+    assert.equal(networkViewport.focusedTarget, 'Mensagem de erro');
+    const networkFailureScreenshot = 'ux-pro-09a-recuperacao-falha-rede-390-claro.png';
+    if (evidenceDir) await capture(page, networkFailureScreenshot.slice(0, -4));
+    await page.setViewportSize({ width: 1440, height: 900 });
+    networkFailure = {
+      screenshot: networkFailureScreenshot,
+      viewport: networkViewport.viewport,
+      horizontalOverflowPx: networkViewport.horizontalOverflowPx,
+      simulatedFetchRejection: true,
+      httpStatus: null,
+      formRetainedForRetry: true,
+      falseSuccessStatusShown: false,
+      errorReceivesFocus: true,
+      retryButtonEnabled: true,
+      httpRequestIssued: false,
+    };
+
+    await pool.query(`DROP TRIGGER IF EXISTS ${triggerName} ON client_access_recovery_requests`);
+    await pool.query(`DROP FUNCTION IF EXISTS ${functionName}()`);
+    await emailField.fill(eligibleEmail);
+    await page.keyboard.press('Tab');
+    const successResponsePromise = page.waitForResponse(response => {
+      try { return new URL(response.url()).pathname === '/api/auth/recovery/manual'; }
+      catch { return false; }
+    });
+    await page.keyboard.press('Enter');
+    const successResponse = await successResponsePromise;
+    assert.equal(successResponse.status(), 202);
+    const success = form.getByRole('status');
+    await success.waitFor();
+    const successText = await success.innerText();
+    assert.match(successText, /Se existir uma conta elegível/i);
+    assert.match(successText, /não confirmamos se o endereço tem conta/i);
+    assert.doesNotMatch(successText, /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+    if (evidenceDir) await capture(page, 'ux-pro-09a-recuperacao-sucesso-202-claro');
+
+    const [eligibleApi, unknownApi] = await Promise.all([
+      api('/api/auth/recovery/manual', { method: 'POST', body: { email: eligibleEmail } }),
+      api('/api/auth/recovery/manual', { method: 'POST', body: { email: unknownEmail } }),
+    ]);
+    assert.equal(eligibleApi.status, 202);
+    assert.equal(unknownApi.status, 202);
+    assert.deepEqual(eligibleApi.body, unknownApi.body, 'respostas públicas não enumeram e-mails');
+    assert.deepEqual(browserStatuses, [503, 202]);
+    assert.deepEqual(pageErrors, []);
+    const expected503Diagnostics = consoleErrors.filter(error =>
+      /503/.test(error.message) && error.source.endsWith('/api/auth/recovery/manual'));
+    const blockedFontDiagnostics = consoleErrors.filter(error =>
+      /ERR_CONNECTION_CLOSED/.test(error.message) && error.source === 'https://fonts.googleapis.com/css2');
+    const unexpectedConsoleErrors = consoleErrors.filter(error =>
+      !expected503Diagnostics.includes(error) && !blockedFontDiagnostics.includes(error));
+
+    if (evidenceDir) {
+      const summary = {
+        schemaVersion: 1,
+        task: 'UX-PRO-09A — pedido manual de recuperação de senha',
+        stage: 'UX-PRO-09A',
+        date: '2026-10-15',
+        entries: viewportEvidence.map((item, index) => ({
+          route: '/cliente/redefinir-senha',
+          viewport: `${item.viewport.width}x${item.viewport.height}`,
+          screenshot: errorScreenshots[index],
+          firstFocus: false,
+          percursoTeclado: keyboardPath,
+        })),
+        baseSha: '0e3cfc78c8725b95cebfd57042d532bb95d456f5',
+        branch: 'arena/85e48996-gruposegsystemseguranca',
+        route: '/cliente/redefinir-senha',
+        role: 'visitante anônimo; sem cookie ou sessão',
+        routeHttpStatus: opened.navigationResponse?.status() ?? null,
+        apiHttp: [
+          ...browserStatuses.map(status => ({ path: '/api/auth/recovery/manual', status, source: 'browser' })),
+          { path: '/api/auth/recovery/manual', status: eligibleApi.status, source: 'HTTP test client' },
+          { path: '/api/auth/recovery/manual', status: unknownApi.status, source: 'HTTP test client' },
+        ],
+        states: [
+          { name: 'initial', screenshot: 'ux-pro-09a-recuperacao-inicial-390-claro.png' },
+          { name: 'loading', screenshot: 'ux-pro-09a-recuperacao-carregando-390-claro.png', buttonDisabled: true },
+          {
+            name: 'service_failure', httpStatus: 503, screenshot: errorScreenshots,
+            formRetainedForRetry: true, falseSuccessStatusShown: false,
+            userMessage: 'Não foi possível confirmar o recebimento da solicitação. Tente novamente em instantes; por segurança, não informamos se o endereço tem conta.',
+          },
+          { name: 'network_failure', ...networkFailure },
+          {
+            name: 'success', httpStatus: 202, screenshot: 'ux-pro-09a-recuperacao-sucesso-202-claro.png',
+            genericMessageUnchangedForEligibleAndUnknownAddress: true, responseBodiesEqual: true,
+          },
+          { name: 'native_validation', malformedEmail, emptyEmail, httpRequestsBeforeValidSubmit: 0 },
+        ],
+        keyboard: { focusOrder: keyboardPath, errorReceivesFocus: true, errorFocusVisible: focusedErrorStyle },
+        theme,
+        viewports: viewportEvidence,
+        console: {
+          errorCount: consoleErrors.length,
+          expectedHttp503DiagnosticCount: expected503Diagnostics.length,
+          blockedExternalFontDiagnosticCount: blockedFontDiagnostics.length,
+          unexpectedErrorCount: unexpectedConsoleErrors.length,
+          errors: consoleErrors,
+          pageErrorCount: pageErrors.length,
+        },
+        limitations: [
+          '503 reproduzido por trigger no PostgreSQL temporário e descartável; HTTP, servidor, rota e Chromium reais; sem mock da resposta HTTP. Separadamente, uma rejeição de fetch foi simulada no navegador para cobrir falha de rede; não equivale a interromper o transporte real.',
+          '202 genérico exercitado no navegador e por HTTP para identidade sintética elegível e endereço desconhecido; os corpos são comparados em memória, não salvos.',
+          'Somente tema claro, o único oferecido por esta superfície. Sem SMTP/provedor real, sessão/cookie, dados reais, UAT, aceite humano ou alegação WCAG/produção.',
+          'A busca externa de Google Fonts foi bloqueada pelo sandbox (ERR_CONNECTION_CLOSED); navegador usou fallback, sem erro de execução da página. O diagnóstico é separado do 503 reproduzido.',
+          'Overflow medido por viewport; esta subfatia altera somente o estado de falha da solicitação manual.',
+        ],
+      };
+      await mkdir(evidenceDir, { recursive: true });
+      await writeFile(path.join(evidenceDir, 'resumo.json'), `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
+    }
+  } finally {
+    await cleanup();
+  }
 });
 
 test('browser: em 390px os dois portais não produzem transbordo horizontal', { skip: !RUN }, async () => {
