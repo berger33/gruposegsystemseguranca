@@ -61,7 +61,7 @@ import {
   ABSENT,
   type QualityErrorDescriptor,
 } from "../../../lib/quality-vocabulary.mjs";
-import { qualityRequest } from "../../../lib/quality-request";
+import { qualityRequest, qualityRead, type QualityResult } from "../../../lib/quality-request";
 
 type NC = {
   id: string;
@@ -133,11 +133,21 @@ type Detail = {
   events: EventRow[];
 };
 
-/** Estado honesto de uma leitura independente: nunca confunde os quatro casos. */
+/**
+ * Estado honesto de uma leitura independente (UX-PRO-07I): `ready` guarda a
+ * hora da última leitura concluída (`readAt`); releitura mantém o conteúdo
+ * com `refreshing`/`staleError`; negativa (401/403) falha fechado em `failed`.
+ */
 type Load<T> =
   | { phase: "loading" }
-  | { phase: "ready"; data: T }
+  | { phase: "ready"; data: T; readAt: string; refreshing?: boolean; staleError?: QualityErrorDescriptor }
   | { phase: "failed"; error: QualityErrorDescriptor };
+
+const isDenied = (error: QualityErrorDescriptor) =>
+  error.status === 401 || error.status === 403 || error.kind === "denied";
+
+const readTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
 const TABS = [
   { id: "lista", label: "Não conformidades" },
@@ -199,37 +209,80 @@ export default function QualidadeWorkspace() {
   // após falha, para a repetição ser segura, e só é descartada após sucesso.
   const keys = useRef<Record<string, string>>({});
 
-  const loadList = useCallback(async () => {
-    setList({ phase: "loading" });
-    const result = await qualityRequest<{ nonconformities: NC[] }>("/api/ext/quality/nonconformities");
+  // UX-PRO-07I: forma canônica exigida no 2xx, preservação em falha
+  // transitória de releitura e negativa fail-closed — padrão 07F.
+  const applyRead = <T,>(
+    setter: (updater: (previous: Load<T> | null) => Load<T> | null) => void,
+    result: QualityResult<T>,
+    map: (data: T) => T = data => data,
+  ) => {
     if (!result.ok) {
-      // Falha de leitura é estado próprio. A lista anterior NÃO é mantida nem
-      // substituída por uma lista vazia.
-      setList({ phase: "failed", error: result.error });
+      setter(previous => {
+        if (previous?.phase === "ready" && !isDenied(result.error)) {
+          return { ...previous, refreshing: false, staleError: result.error };
+        }
+        return { phase: "failed", error: result.error };
+      });
       return;
     }
-    setList({ phase: "ready", data: Array.isArray(result.data?.nonconformities) ? result.data.nonconformities : [] });
+    setter(() => ({ phase: "ready", data: map(result.data), readAt: new Date().toISOString() }));
+  };
+
+  const beginRead = <T,>(
+    setter: (updater: (previous: Load<T> | null) => Load<T> | null) => void,
+  ) => {
+    setter(previous =>
+      previous?.phase === "ready"
+        ? { ...previous, refreshing: true, staleError: undefined }
+        : { phase: "loading" },
+    );
+  };
+
+  const loadList = useCallback(async () => {
+    beginRead<NC[]>(updater => setList(previous => updater(previous) ?? { phase: "loading" }));
+    const result = await qualityRead<{ nonconformities: NC[] }>(
+      "/api/ext/quality/nonconformities",
+      data => !!data && typeof data === "object" && Array.isArray((data as { nonconformities?: unknown }).nonconformities),
+    );
+    // A lista continua sendo o array canônico; só a validação mudou.
+    applyRead<NC[]>(
+      updater => setList(previous => updater(previous) ?? { phase: "loading" }),
+      result.ok ? { ...result, data: result.data.nonconformities } : result,
+    );
   }, []);
 
   const loadRefs = useCallback(async () => {
-    setRefs({ phase: "loading" });
-    const result = await qualityRequest<{ staff: StaffRef[] }>("/api/ext/quality/references");
-    if (!result.ok) {
-      setRefs({ phase: "failed", error: result.error });
-      return;
-    }
-    setRefs({ phase: "ready", data: Array.isArray(result.data?.staff) ? result.data.staff : [] });
+    beginRead<StaffRef[]>(updater => setRefs(previous => updater(previous) ?? { phase: "loading" }));
+    const result = await qualityRead<{ staff: StaffRef[] }>(
+      "/api/ext/quality/references",
+      data => !!data && typeof data === "object" && Array.isArray((data as { staff?: unknown }).staff),
+    );
+    applyRead<StaffRef[]>(
+      updater => setRefs(previous => updater(previous) ?? { phase: "loading" }),
+      result.ok ? { ...result, data: result.data.staff } : result,
+    );
   }, []);
+
+  // Preservação é POR NÃO CONFORMIDADE: trocar de registro descarta o detalhe
+  // anterior (nunca exibe dado de outra NC como se fosse da selecionada).
+  const detailFor = useRef("");
 
   const loadDetail = useCallback(async (id: string) => {
     setSelectedId(id);
-    setDetail({ phase: "loading" });
-    const result = await qualityRequest<Detail>(`/api/ext/quality/nonconformities/${id}`);
-    if (!result.ok) {
-      setDetail({ phase: "failed", error: result.error });
-      return;
+    if (detailFor.current === id) {
+      beginRead<Detail>(updater => setDetail(updater));
+    } else {
+      detailFor.current = id;
+      setDetail({ phase: "loading" });
     }
-    setDetail({ phase: "ready", data: result.data });
+    const result = await qualityRead<Detail>(
+      `/api/ext/quality/nonconformities/${id}`,
+      data =>
+        !!data && typeof data === "object" &&
+        !!(data as Detail).nonconformity && typeof (data as Detail).nonconformity === "object" &&
+        typeof (data as Detail).nonconformity.id === "string",
+    );
+    applyRead<Detail>(updater => setDetail(updater), result);
   }, []);
 
   useEffect(() => {
@@ -416,6 +469,30 @@ export default function QualidadeWorkspace() {
     </div>
   );
 
+  // UX-PRO-07I: faixa de releitura — dado preservado, hora e repetição real.
+  const renderStale = <T,>(state: Load<T> | null, retry: () => void, testId: string) => {
+    if (!state || state.phase !== "ready") return null;
+    return (
+      <>
+        <p className={styles.hint} data-testid={`${testId}-leitura`}>
+          Última leitura concluída às {readTime(state.readAt)}.
+          {state.refreshing ? " Atualizando agora — o conteúdo exibido é o dessa leitura." : ""}
+        </p>
+        {state.staleError ? (
+          <div role="alert" data-testid={`${testId}-desatualizado`}>
+            <UiState
+              variant={qualityErrorVariant(state.staleError)}
+              title="A releitura falhou; o conteúdo abaixo é da última leitura concluída e pode estar desatualizado."
+              detail={`${state.staleError.detail} Última leitura concluída às ${readTime(state.readAt)}. ${qualityErrorFootnote(state.staleError)}`}
+              onRetry={state.staleError.canRetry ? retry : undefined}
+              retryLabel="Tentar a leitura de novo"
+            />
+          </div>
+        ) : null}
+      </>
+    );
+  };
+
   const items = list.phase === "ready" ? list.data : [];
   const staff = refs.phase === "ready" ? refs.data : [];
   const selected = detail?.phase === "ready" ? detail.data : null;
@@ -499,6 +576,7 @@ export default function QualidadeWorkspace() {
             data-testid="quality-list"
           >
             <h2 className={styles.panelTitle}>Não conformidades</h2>
+            {renderStale(list, () => void loadList(), "quality-list")}
             {list.phase === "loading" ? (
               <UiState variant="loading" title="Lendo as não conformidades…" detail="Nada é exibido antes de a leitura terminar." />
             ) : null}
@@ -512,6 +590,11 @@ export default function QualidadeWorkspace() {
                   "quality-list-error",
                 )
               : null}
+            {list.phase === "ready" ? (
+              <div className={styles.actions}>
+                <button type="button" onClick={() => void loadList()}>Reler as não conformidades</button>
+              </div>
+            ) : null}
             {list.phase === "ready" && items.length === 0 ? (
               <UiState
                 variant="empty"

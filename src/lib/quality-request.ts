@@ -63,3 +63,30 @@ export async function qualityRequest<T = unknown>(
 }
 
 export type { QualityErrorDescriptor };
+
+// UX-PRO-07I — leitura honesta (aditivo): 2xx sem a forma canônica nunca é
+// ausência de não conformidade. `qualityRequest` acima permanece INTACTO. O
+// código abaixo é diagnóstico desta tela (o servidor nunca o devolve), fora
+// do vocabulário anti-deriva. Mesma decisão da UX-PRO-07F/07G/07H.
+export const INVALID_QUALITY_RESPONSE = 'invalid_quality_response';
+export function invalidQualityResponse(status: number): QualityErrorDescriptor {
+  return {
+    kind: 'retry',
+    title: 'A resposta de qualidade não pôde ser lida',
+    detail: 'O servidor respondeu sem os dados esperados. Isto não significa que não existam não conformidades, causas ou ações registradas.',
+    code: INVALID_QUALITY_RESPONSE,
+    status,
+    canRetry: true,
+  };
+}
+export async function qualityRead<T>(
+  url: string,
+  isValid: (data: unknown) => boolean,
+): Promise<QualityResult<T>> {
+  const result = await qualityRequest<T>(url);
+  if (!result.ok) return result;
+  if (!isValid(result.data)) {
+    return { ok: false, status: result.status, error: invalidQualityResponse(result.status), payload: result.data };
+  }
+  return result;
+}
