@@ -26,7 +26,7 @@
 - `node --test tests/rag-widget-contract.test.mjs`: 9/9 aprovados.
 - `node --test tests/admin-page-gates.test.mjs`: 1/1 aprovado.
 - `npm run test:ai-rag-widget:pg`: 25/25 aprovados (0 falhas, 0 pulados, mínimo 20).
-- Evidências: `docs/ux-pro-08-assistentes-evidencias/` (13 PNGs + `resumo.json`).
+- Evidências: `docs/ux-pro-08-assistentes-evidencias/` (12 PNGs + `resumo.json` = 13 arquivos na entrega 08B; reconciliado e expandido na UX-PRO-08D para 29 PNGs + `resumo.json`).
 
 ## 4. O que segue pendente
 

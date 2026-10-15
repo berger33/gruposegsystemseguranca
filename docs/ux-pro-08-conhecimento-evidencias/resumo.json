@@ -1,19 +1,147 @@
 {
-  "fatia": "UX-PRO-08A",
+  "stage": "ux-pro-08-conhecimento",
+  "fatia": "UX-PRO-08A + UX-PRO-08D",
   "rota": "/admin/conhecimento",
-  "base": "9c65704 (merge PR #243)",
+  "base": "8dfbd7e (merge PR #246)",
   "gate": "npm run test:ux-knowledge:pg",
-  "resultado": "9/9 testes, 0 falhas, 0 pulados (gate PostgreSQL efêmero e Chromium real)",
+  "generatedBy": "npm run test:ux-knowledge:pg (PostgreSQL efêmero + HTTP real + Chromium)",
+  "resultado": "10/10 testes, 0 falhas, 0 pulados (gate PostgreSQL efêmero e Chromium real)",
   "casosNovos": [
     "2xx sem items vira falha invalid_knowledge_response, nunca lista vazia — conhecimento-1440-resposta-invalida.png",
     "falha transitória 503 de releitura preserva a lista lida com hora da última leitura concluída em pt-BR e faixa de alerta — conhecimento-1440-dado-preservado.png",
-    "negativa 403 após sucesso falha fechado, sem manter lista ou dados protegidos — conhecimento-1440-negativa-pos-sucesso.png"
+    "negativa 403 após sucesso falha fechado, sem manter lista ou dados protegidos — conhecimento-1440-negativa-pos-sucesso.png",
+    "medições 320/390/768/1440px (dia), 768px (noite) e percurso de teclado em 390px — conhecimento-320/390/768/1440-dia.png, conhecimento-768-noite.png, conhecimento-390-teclado.png"
   ],
   "capturas": [
     "conhecimento-1440-resposta-invalida.png",
     "conhecimento-1440-dado-preservado.png",
-    "conhecimento-1440-negativa-pos-sucesso.png"
+    "conhecimento-1440-negativa-pos-sucesso.png",
+    "conhecimento-1440-dia.png",
+    "conhecimento-768-dia.png",
+    "conhecimento-768-noite.png",
+    "conhecimento-390-dia.png",
+    "conhecimento-390-teclado.png",
+    "conhecimento-320-dia.png"
   ],
   "problems": [],
-  "limites": "Capturas 1440px dos cenários novos com Chromium e PostgreSQL real; asserções de 390px e teclado herdadas validadas no mesmo gate focal. Nenhuma validação manual ou aceite humano; nada declara conformidade WCAG."
+  "limites": "Capturas 320/390/768/1440px (dia), 768px (noite), percurso de teclado e estados 08A com Chromium e PostgreSQL real. Resíduo transversal E8 (.tabActive noturno 1.95:1 em UiWorkspace.module.css) medido e registrado na entrada 768-noite. Nenhuma validação manual ou aceite humano; nada declara conformidade WCAG.",
+  "entries": [
+    {
+      "stage": "ux-pro-08-conhecimento",
+      "route": "/admin/conhecimento",
+      "role": "admin",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-08-conhecimento-evidencias/conhecimento-1440-resposta-invalida.png",
+      "problems": [],
+      "state": "resposta_2xx_invalida"
+    },
+    {
+      "stage": "ux-pro-08-conhecimento",
+      "route": "/admin/conhecimento",
+      "role": "admin",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-08-conhecimento-evidencias/conhecimento-1440-dado-preservado.png",
+      "problems": [],
+      "state": "releitura_falhou_dado_preservado"
+    },
+    {
+      "stage": "ux-pro-08-conhecimento",
+      "route": "/admin/conhecimento",
+      "role": "admin",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-08-conhecimento-evidencias/conhecimento-1440-negativa-pos-sucesso.png",
+      "problems": [],
+      "state": "negativa_pos_sucesso_fail_closed"
+    },
+    {
+      "stage": "ux-pro-08-conhecimento",
+      "route": "/admin/conhecimento",
+      "role": "admin",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-08-conhecimento-evidencias/conhecimento-1440-dia.png",
+      "problems": [],
+      "overflowDocumentoPx": 0,
+      "menorAlvoPx": 44,
+      "contrasteTitulo": 15.54,
+      "contrasteCartao": 15.54,
+      "contrasteAbaAtiva": 9.58,
+      "contrasteAbaInativa": 9.58
+    },
+    {
+      "stage": "ux-pro-08-conhecimento",
+      "route": "/admin/conhecimento",
+      "role": "admin",
+      "viewport": "768x1024",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-08-conhecimento-evidencias/conhecimento-768-dia.png",
+      "problems": [],
+      "overflowDocumentoPx": 0,
+      "menorAlvoPx": 44
+    },
+    {
+      "stage": "ux-pro-08-conhecimento",
+      "route": "/admin/conhecimento",
+      "role": "admin",
+      "viewport": "768x1024",
+      "theme": "night",
+      "screenshot": "docs/ux-pro-08-conhecimento-evidencias/conhecimento-768-noite.png",
+      "problems": [
+        "contraste da aba ativa no tema noite 1.95:1 (abaixo de 4.5:1): estilo compartilhado .tabActive em src/components/ui/UiWorkspace.module.css (texto #fff sobre --ux-color-brand noturno #92bdf2); resíduo transversal E8/D8 fora de escopo"
+      ],
+      "overflowDocumentoPx": 0,
+      "menorAlvoPx": 44,
+      "contrasteTitulo": 12.92,
+      "contrasteCartao": 12.92,
+      "contrasteAbaInativa": 7.83,
+      "contrasteAbaAtiva": 1.95
+    },
+    {
+      "stage": "ux-pro-08-conhecimento",
+      "route": "/admin/conhecimento",
+      "role": "admin",
+      "viewport": "390x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-08-conhecimento-evidencias/conhecimento-390-dia.png",
+      "problems": [],
+      "overflowDocumentoPx": 0,
+      "menorAlvoPx": 44
+    },
+    {
+      "stage": "ux-pro-08-conhecimento",
+      "route": "/admin/conhecimento",
+      "role": "admin",
+      "viewport": "390x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-08-conhecimento-evidencias/conhecimento-390-teclado.png",
+      "problems": [],
+      "state": "percurso_teclado",
+      "firstFocus": true,
+      "percursoTeclado": [
+        "GrupoSEG System",
+        "Menu",
+        "Ativar modo noite",
+        "Sair",
+        "Início",
+        "Início",
+        "knowledge-tab-procedimentos"
+      ],
+      "overflowDocumentoPx": 0,
+      "menorAlvoPx": 44
+    },
+    {
+      "stage": "ux-pro-08-conhecimento",
+      "route": "/admin/conhecimento",
+      "role": "admin",
+      "viewport": "320x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-08-conhecimento-evidencias/conhecimento-320-dia.png",
+      "problems": [],
+      "overflowDocumentoPx": 0,
+      "menorAlvoPx": 44
+    }
+  ]
 }
