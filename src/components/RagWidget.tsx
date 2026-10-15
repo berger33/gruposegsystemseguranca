@@ -177,7 +177,7 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
       style={{ border: `2px solid ${colors.border}`, borderRadius: 12, padding: 20, background: colors.bg, marginTop: 20, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
     >
       <style>{`
-        .rag-widget :focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; }
+        .rag-widget :focus-visible { outline: 3px solid var(--ux-color-focus, #1d4ed8); outline-offset: 2px; }
         .rag-widget .rag-spin { display:inline-block; width:16px; height:16px; border:2px solid #fff; border-top-color:transparent; border-radius:50%; animation: rag-spin 0.8s linear infinite; }
         .rag-widget .rag-suggestion { font-size:11px; padding:5px 10px; border-radius:20px; background:#fff; cursor:pointer; }
         @keyframes rag-spin { to { transform: rotate(360deg); } }
@@ -290,8 +290,10 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
               <ul style={{ marginTop: 8, paddingLeft: 18 }}>
                 {answer.sources.map((s: any, i: number) => (
                   <li key={i} style={{ marginBottom: 6 }}>
-                    <strong>{s.title || s.source}</strong>
-                    {s.source && <span style={{ fontSize: 10, opacity: 0.7, marginLeft: 6 }}>({s.source})</span>}
+                    <strong>{s.title || "Fonte publicada"}</strong>
+                    {typeof s.version === "number" && (
+                      <span style={{ fontSize: 10, opacity: 0.7, marginLeft: 6 }}>(versão {s.version})</span>
+                    )}
                   </li>
                 ))}
               </ul>

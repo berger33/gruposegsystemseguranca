@@ -1,0 +1,32 @@
+{
+  "fatia": "UX-PRO-08B",
+  "titulo": "Assistentes privados por área e portal",
+  "base_main_sha": "ab39b6dc8d6e7a4fb85b4d9d18c7330eae23ec5a",
+  "data": "2026-10-15",
+  "arquivos_alterados": [
+    "src/app/admin/marcelo/assistente/page.tsx",
+    "src/app/admin/rh/assistente/page.tsx",
+    "src/app/cliente/app/assistente/page.tsx",
+    "src/components/RagWidget.tsx",
+    "docs/UX-PRO-08B-ESCOPO-ANTES-2026-10-15.md"
+  ],
+  "preservado": [
+    "AdminGate e papéis (marcelo/admin, rh/admin)",
+    "RagWidget testids e contrato FECH-01",
+    "Endpoints /api/ai/answer e /api/admin/ai-rag-* inalterados",
+    "Migrações 001-180 inalteradas",
+    "Gate test:ai-rag-widget:pg (25/25, minimo 20)"
+  ],
+  "checks": {
+    "typecheck": "pass",
+    "rag-widget-contract": "9/9 pass",
+    "admin-page-gates": "1/1 pass",
+    "ai-rag-widget-pg": "25/25 pass, 0 fail, 0 skipped, 0 todo"
+  },
+  "evidencias": "13 PNGs em docs/ux-pro-08-assistentes-evidencias/",
+  "limitacoes": [
+    "Sem aceite humano; sem declaração WCAG integral",
+    "Transversais E2-E9 e C11 fora de escopo",
+    "Homologação/produção NO-GO"
+  ]
+}
