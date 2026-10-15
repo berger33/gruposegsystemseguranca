@@ -33,7 +33,7 @@ import UiBadge from "../../../components/ui/UiBadge";
 import UiState from "../../../components/ui/UiState";
 import styles from "../../../components/ui/UiWorkspace.module.css";
 import localStyles from "./Contratos.module.css";
-import { contractRequest, type ContractErrorDescriptor } from "../../../lib/contract-request";
+import { contractRequest, contractRead, type ContractErrorDescriptor } from "../../../lib/contract-request";
 import {
   brl,
   contractErrorFootnote,
@@ -145,25 +145,35 @@ export default function ContractWorkspace() {
 
   const carregarEmpresas = useCallback(async () => {
     setEmpresas(atual => ({ ...atual, carregando: true, erro: null, falhaAtualizacao: null }));
-    const resultado = await contractRequest<{ companies?: Company[] }>("/api/crm/companies?type=client");
+    // UX-PRO-07M: 2xx sem a chave canônica é falha declarada, nunca lista vazia.
+    const resultado = await contractRead<{ companies?: Company[] }>(
+      "/api/crm/companies?type=client",
+      data => !!data && typeof data === "object" && Array.isArray((data as { companies?: unknown }).companies),
+    );
     setEmpresas(atual => resolverLeitura(atual, resultado.ok
-      ? { ok: true, itens: resultado.data.companies || [] }
+      ? { ok: true, itens: resultado.data.companies as Company[] }
       : { ok: false, error: resultado.error }));
   }, []);
 
   const carregarPropostas = useCallback(async () => {
     setPropostas(atual => ({ ...atual, carregando: true, erro: null, falhaAtualizacao: null }));
-    const resultado = await contractRequest<{ proposals?: Proposal[] }>("/api/crm/proposals?status=aceita&limit=100");
+    const resultado = await contractRead<{ proposals?: Proposal[] }>(
+      "/api/crm/proposals?status=aceita&limit=100",
+      data => !!data && typeof data === "object" && Array.isArray((data as { proposals?: unknown }).proposals),
+    );
     setPropostas(atual => resolverLeitura(atual, resultado.ok
-      ? { ok: true, itens: resultado.data.proposals || [] }
+      ? { ok: true, itens: resultado.data.proposals as Proposal[] }
       : { ok: false, error: resultado.error }));
   }, []);
 
   const carregarContratos = useCallback(async () => {
     setContratos(atual => ({ ...atual, carregando: true, erro: null, falhaAtualizacao: null }));
-    const resultado = await contractRequest<{ contracts?: Contract[] }>("/api/crm/contracts");
+    const resultado = await contractRead<{ contracts?: Contract[] }>(
+      "/api/crm/contracts",
+      data => !!data && typeof data === "object" && Array.isArray((data as { contracts?: unknown }).contracts),
+    );
     setContratos(atual => resolverLeitura(atual, resultado.ok
-      ? { ok: true, itens: resultado.data.contracts || [] }
+      ? { ok: true, itens: resultado.data.contracts as Contract[] }
       : { ok: false, error: resultado.error }));
   }, []);
 

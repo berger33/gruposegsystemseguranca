@@ -40,7 +40,7 @@ import UiBadge from "../../../../components/ui/UiBadge";
 import UiState from "../../../../components/ui/UiState";
 import styles from "../../../../components/ui/UiWorkspace.module.css";
 import localStyles from "./DetalheContrato.module.css";
-import { contractRequest, type ContractErrorDescriptor } from "../../../../lib/contract-request";
+import { contractRequest, contractRead, type ContractErrorDescriptor } from "../../../../lib/contract-request";
 import {
   alertStatusLabel,
   alertStatusTone,
@@ -233,11 +233,21 @@ export default function ContractWorkflowClient({ id }: Props) {
 
   /** Uma leitura independente: o que falha aqui não apaga as outras sete. */
   const ler = useCallback(
-    async (caminho: string, aplicar: Dispatch<SetStateAction<Recurso<Qualquer>>>) => {
+    async (
+      caminho: string,
+      aplicar: Dispatch<SetStateAction<Recurso<Qualquer>>>,
+      // UX-PRO-07M: cada seção exige a sua chave canônica no 2xx; sem ela, a
+      // resposta é falha declarada (invalid_contract_response), nunca a seção
+      // "vazia" — o `dado?.chave || []` da renderização só vê dado validado.
+      valida: (dado: Qualquer) => boolean,
+    ) => {
       // Começar a reler NÃO é perder o dado: o que já foi lido só sai da tela
       // se a falha for de autorização (ver resolverRecurso).
       aplicar(atual => ({ ...atual, carregando: true, erro: null, falhaAtualizacao: null }));
-      const resultado = await contractRequest<Qualquer>(`/api/crm/contracts/${id}${caminho}`);
+      const resultado = await contractRead<Qualquer>(
+        `/api/crm/contracts/${id}${caminho}`,
+        data => !!data && typeof data === "object" && valida(data as Qualquer),
+      );
       aplicar(atual => resolverRecurso(atual, resultado.ok
         ? { ok: true, dado: resultado.data }
         : { ok: false, error: resultado.error }));
@@ -245,14 +255,18 @@ export default function ContractWorkflowClient({ id }: Props) {
     [id],
   );
 
-  const lerDetalhe = useCallback(() => ler("", setDetalhe), [ler]);
-  const lerSituacao = useCallback(() => ler("/status", setSituacao), [ler]);
-  const lerImplantacao = useCallback(() => ler("/implantation", setImplantacao), [ler]);
-  const lerAlertas = useCallback(() => ler("/alert-rules", setAlertas), [ler]);
-  const lerObrigacoes = useCallback(() => ler("/document-obligations", setObrigacoes), [ler]);
-  const lerEncerramento = useCallback(() => ler("/closure", setEncerramento), [ler]);
-  const lerFiscal = useCallback(() => ler("/fiscal", setFiscal), [ler]);
-  const lerDiario = useCallback(() => ler("/management-diary", setDiario), [ler]);
+  const temObjeto = (chave: string) => (dado: Qualquer) =>
+    !!dado[chave] && typeof dado[chave] === "object";
+  const temLista = (chave: string) => (dado: Qualquer) => Array.isArray(dado[chave]);
+
+  const lerDetalhe = useCallback(() => ler("", setDetalhe, temObjeto("contract")), [ler]);
+  const lerSituacao = useCallback(() => ler("/status", setSituacao, temLista("history")), [ler]);
+  const lerImplantacao = useCallback(() => ler("/implantation", setImplantacao, temLista("steps")), [ler]);
+  const lerAlertas = useCallback(() => ler("/alert-rules", setAlertas, temLista("rules")), [ler]);
+  const lerObrigacoes = useCallback(() => ler("/document-obligations", setObrigacoes, temLista("obligations")), [ler]);
+  const lerEncerramento = useCallback(() => ler("/closure", setEncerramento, temLista("steps")), [ler]);
+  const lerFiscal = useCallback(() => ler("/fiscal", setFiscal, temLista("dossiers")), [ler]);
+  const lerDiario = useCallback(() => ler("/management-diary", setDiario, temLista("entries")), [ler]);
 
   const lerTudo = useCallback(async () => {
     await Promise.allSettled([
