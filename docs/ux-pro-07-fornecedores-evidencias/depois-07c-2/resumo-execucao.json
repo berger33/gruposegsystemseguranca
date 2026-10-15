@@ -1,0 +1,183 @@
+{
+  "stage": "ux-pro-07-fornecedores-07c-2",
+  "generatedBy": "npm run test:ux-supplier:pg (PostgreSQL descartável + HTTP real + Chromium)",
+  "measuredAt": "2026-10-15",
+  "route": "/admin/fornecedores",
+  "baseCommit": "ff0e6d620104364a35438785d8767400704d90cf",
+  "branch": "arena/c0af9881-gruposegsystemseguranca",
+  "focalGate": {
+    "command": "npm run test:ux-supplier:pg",
+    "minimumPass": 15,
+    "independentRuns": [
+      {
+        "log": "execucao-1-tap.txt",
+        "tests": 15,
+        "pass": 15,
+        "fail": 0,
+        "skipped": 0,
+        "todo": 0,
+        "gateExit": true,
+        "temporaryPostgresCleaned": true,
+        "capturesRecorded": true
+      },
+      {
+        "log": "execucao-2-tap.txt",
+        "tests": 15,
+        "pass": 15,
+        "fail": 0,
+        "skipped": 0,
+        "todo": 0,
+        "gateExit": true,
+        "temporaryPostgresCleaned": true,
+        "capturesRecorded": false
+      }
+    ],
+    "environment": {
+      "postgresql": "cluster descartável isolado",
+      "http": "servidor HTTP real",
+      "browser": "Chromium Playwright",
+      "failureInjection": "window.fetch na página",
+      "writePostNeverAutomaticallyRetried": true
+    },
+    "fieldControlsLockedDuringPendingAndUncertainty": true
+  },
+  "visualEvidence": {
+    "summary": "resumo.json",
+    "entries": 16,
+    "screenshots": [
+      "fornecedores-1440-falha-inicial.png",
+      "fornecedores-1440-desatualizado.png",
+      "fornecedores-1440-resposta-invalida.png",
+      "fornecedores-1440-dia.png",
+      "fornecedores-768-dia.png",
+      "fornecedores-768-noite.png",
+      "fornecedores-390-dia.png",
+      "fornecedores-390-teclado.png",
+      "fornecedores-320-dia.png",
+      "fornecedores-1440-escrita-enviando.png",
+      "fornecedores-1440-escrita-resposta-invalida.png",
+      "fornecedores-1440-escrita-duplo-submit.png",
+      "fornecedores-390-escrita-falha-transitoria.png",
+      "fornecedores-390-escrita-rede-incerta.png",
+      "fornecedores-1440-escrita-conflito.png",
+      "fornecedores-768-noite-escrita-negada.png"
+    ],
+    "viewports": [
+      "1440x900",
+      "320x844",
+      "390x844",
+      "768x1024"
+    ],
+    "themes": [
+      "day",
+      "night"
+    ],
+    "keyboardPath": true,
+    "maximumDocumentOverflowPx": 0,
+    "minimumInteractiveTargetPx": 44,
+    "failClosedEntries": [
+      {
+        "state": "negada_403_fail_closed",
+        "interactiveActions": 0,
+        "minimumTarget": null
+      }
+    ],
+    "minimumInstrumentedContrastRatio": 6.18,
+    "maximumInstrumentedContrastRatio": 15.54,
+    "problemsCount": 0,
+    "problems": []
+  },
+  "localValidation": [
+    {
+      "command": "npm ci",
+      "exitCode": 0,
+      "result": "81 packages added; 0 vulnerabilities"
+    },
+    {
+      "command": "npm test",
+      "exitCode": 0,
+      "result": {
+        "tests": 933,
+        "pass": 933,
+        "fail": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "command": "npm run typecheck",
+      "exitCode": 0
+    },
+    {
+      "command": "npm run build",
+      "exitCode": 0
+    },
+    {
+      "command": "node --check tests/ux-supplier-workspace.integration.test.mjs && node --check scripts/qa-ux-supplier-postgres.mjs",
+      "exitCode": 0,
+      "result": "ambos os arquivos JS passaram"
+    },
+    {
+      "command": "node scripts/qa-wave0-static.mjs",
+      "exitCode": 0,
+      "result": "5/5"
+    },
+    {
+      "command": "node scripts/ux-pro-00-inventory.mjs --check",
+      "exitCode": 0
+    },
+    {
+      "command": "npm run test:l06-delivery:pg",
+      "exitCode": 0,
+      "result": {
+        "tests": 9,
+        "pass": 9,
+        "fail": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "command": "npm run test:l08-delivery:pg",
+      "exitCode": 0,
+      "result": {
+        "tests": 51,
+        "pass": 51,
+        "fail": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "command": "npm run test:ext04-suppliers:pg",
+      "exitCode": 0,
+      "result": {
+        "tests": 28,
+        "pass": 28,
+        "fail": 0,
+        "skipped": 0,
+        "todo": 0
+      }
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    }
+  ],
+  "inventoryRegeneration": {
+    "command": "node scripts/ux-pro-00-inventory.mjs",
+    "diffPaths": [
+      "docs/UX-PRO-00-INVENTARIO-ROTAS-2026-10-13.csv",
+      "docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-13.csv"
+    ],
+    "changedDataRowsPerCsv": 1,
+    "onlyRoute": "/admin/fornecedores",
+    "finalCheckPassed": true
+  },
+  "protectedFileSha256": {
+    "next-env.d.ts": "18b697c4794f97edd5aed1537bf1d1882597f545881dfcba7fc8c659075f11a2",
+    "tsconfig.json": "2128c956b8c75820bc217c00557346befa1e687565d2d8a0bb970faadb7a8d65"
+  },
+  "humanValidation": "not performed",
+  "wcagAudit": "not performed; automated measurements are not a complete WCAG audit"
+}

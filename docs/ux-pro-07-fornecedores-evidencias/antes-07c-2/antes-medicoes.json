@@ -1,0 +1,64 @@
+{
+  "stage": "UX-PRO-07C-2",
+  "measuredAgainst": "Implementação anterior ao 07C-2; branch arena/c0af9881-gruposegsystemseguranca em ff0e6d620104364a35438785d8767400704d90cf (= origin/main / merge do PR #226)",
+  "command": "UX_SUPPLIER_UI_TIMEOUT=5000 UX_SUPPLIER_EVIDENCE_DIR=docs/ux-pro-07-fornecedores-evidencias/antes-07c-2 npm run test:ux-supplier:pg",
+  "exitCode": 1,
+  "runnerMinimum": 15,
+  "tap": {
+    "tests": 15,
+    "pass": 10,
+    "fail": 5,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "inheritedGate": {
+    "expected": 10,
+    "passed": 10,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "newWriteGate": {
+    "expected": 5,
+    "passed": 0,
+    "failed": 5,
+    "skipped": 0,
+    "todo": 0
+  },
+  "interpretation": "A execução contra o código anterior preservou todos os 10 casos herdados; os 5 casos aditivos 07C-2 falharam nas evidências de pendência/aria-busy, classificação de erro e fail-closed que ainda não existiam. Isto é a medição antes, não regressão herdada.",
+  "failures": [
+    {
+      "case": 11,
+      "name": "browser: nove escritas anunciam pendência e rejeitam 2xx sem recurso canônico",
+      "error": ""
+    },
+    {
+      "case": 12,
+      "name": "browser: guarda síncrona bloqueia dois submits no mesmo tick",
+      "error": ""
+    },
+    {
+      "case": 13,
+      "name": "browser: 5xx e rede são incertos, sem repetição automática, com replay manual de mesma chave",
+      "error": ""
+    },
+    {
+      "case": 14,
+      "name": "browser: HTTP 400 validação e HTTP 409 conflito são classificados separadamente",
+      "error": ""
+    },
+    {
+      "case": 15,
+      "name": "browser: 401 e 403 em escrita falham fechados e removem todos os dados protegidos",
+      "error": ""
+    }
+  ],
+  "protectedFileSha256AfterGate": {
+    "next-env.d.ts": "18b697c4794f97edd5aed1537bf1d1882597f545881dfcba7fc8c659075f11a2",
+    "tsconfig.json": "2128c956b8c75820bc217c00557346befa1e687565d2d8a0bb970faadb7a8d65"
+  },
+  "rawOutput": "antes-gate-completo.txt",
+  "capturedStates": "resumo.json",
+  "data": "2026-10-15"
+}

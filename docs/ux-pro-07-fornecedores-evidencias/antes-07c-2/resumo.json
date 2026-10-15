@@ -1,0 +1,167 @@
+{
+  "stage": "ux-pro-07-fornecedores-07c-2",
+  "generatedBy": "npm run test:ux-supplier:pg (PostgreSQL descartável + HTTP real + Chromium)",
+  "notes": "Capturas anteriores à implementação das escritas 07C-2, registradas em diretório separado; problems é derivado de overflow, menor alvo e contrastes instrumentados. Não representa validação manual nem auditoria WCAG completa.",
+  "entries": [
+    {
+      "stage": "ux-pro-07-fornecedores-07c-2",
+      "route": "/admin/fornecedores",
+      "role": "admin",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-fornecedores-evidencias/antes-07c-2/fornecedores-1440-falha-inicial.png",
+      "state": "falha_inicial",
+      "overflowDocumentoPx": 0,
+      "menorAlvoPx": 44,
+      "contrastesInstrumentados": {
+        "titulo": 15.54
+      },
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-07-fornecedores-07c-2",
+      "route": "/admin/fornecedores",
+      "role": "admin",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-fornecedores-evidencias/antes-07c-2/fornecedores-1440-desatualizado.png",
+      "state": "releitura_falhou_dado_preservado",
+      "contrasteFaixa": 14.33,
+      "overflowDocumentoPx": 0,
+      "menorAlvoPx": 44,
+      "contrastesInstrumentados": {
+        "titulo": 15.54,
+        "listaCotacoes": 15.54,
+        "faixaDesatualizada": 14.33
+      },
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-07-fornecedores-07c-2",
+      "route": "/admin/fornecedores",
+      "role": "admin",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-fornecedores-evidencias/antes-07c-2/fornecedores-1440-resposta-invalida.png",
+      "state": "resposta_2xx_invalida",
+      "overflowDocumentoPx": 0,
+      "menorAlvoPx": 44,
+      "contrastesInstrumentados": {
+        "titulo": 15.54
+      },
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-07-fornecedores-07c-2",
+      "route": "/admin/fornecedores",
+      "role": "admin",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-fornecedores-evidencias/antes-07c-2/fornecedores-1440-dia.png",
+      "overflowDocumentoPx": 0,
+      "menorAlvoPx": 44,
+      "contrastesInstrumentados": {
+        "titulo": 15.54,
+        "listaCotacoes": 15.54
+      },
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-07-fornecedores-07c-2",
+      "route": "/admin/fornecedores",
+      "role": "admin",
+      "viewport": "768x1024",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-fornecedores-evidencias/antes-07c-2/fornecedores-768-dia.png",
+      "overflowDocumentoPx": 0,
+      "menorAlvoPx": 44,
+      "contrastesInstrumentados": {
+        "titulo": 15.54,
+        "listaCotacoes": 15.54
+      },
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-07-fornecedores-07c-2",
+      "route": "/admin/fornecedores",
+      "role": "admin",
+      "viewport": "768x1024",
+      "theme": "night",
+      "screenshot": "docs/ux-pro-07-fornecedores-evidencias/antes-07c-2/fornecedores-768-noite.png",
+      "overflowDocumentoPx": 0,
+      "contrasteTitulo": 12.92,
+      "contrasteLista": 12.92,
+      "menorAlvoPx": 44,
+      "contrastesInstrumentados": {
+        "titulo": 12.92,
+        "listaCotacoes": 12.92
+      },
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-07-fornecedores-07c-2",
+      "route": "/admin/fornecedores",
+      "role": "admin",
+      "viewport": "390x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-fornecedores-evidencias/antes-07c-2/fornecedores-390-dia.png",
+      "overflowDocumentoPx": 0,
+      "menorAlvoPx": 44,
+      "contrastesInstrumentados": {
+        "titulo": 15.54,
+        "listaCotacoes": 15.54
+      },
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-07-fornecedores-07c-2",
+      "route": "/admin/fornecedores",
+      "role": "admin",
+      "viewport": "390x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-fornecedores-evidencias/antes-07c-2/fornecedores-390-teclado.png",
+      "state": "percurso_teclado",
+      "firstFocus": true,
+      "percursoTeclado": [
+        "Sair",
+        "Início",
+        "Leitura da jornada",
+        "Nova cotação interna",
+        "Cotações",
+        "Detalhe canônico",
+        "Pedidos internos",
+        "Atualizar listas",
+        "Cotações",
+        "fornecedores-supplier",
+        "fornecedores-product",
+        "fornecedores-quantity",
+        "fornecedores-price",
+        "fornecedores-notes",
+        "Confirmar no servidor",
+        "FORN-EXT-20261015-B2CEFornecedor sintético durante-falha-e08afcc8 · Produto sint"
+      ],
+      "overflowDocumentoPx": 0,
+      "menorAlvoPx": 44,
+      "contrastesInstrumentados": {
+        "titulo": 15.54,
+        "listaCotacoes": 15.54
+      },
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-07-fornecedores-07c-2",
+      "route": "/admin/fornecedores",
+      "role": "admin",
+      "viewport": "320x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-fornecedores-evidencias/antes-07c-2/fornecedores-320-dia.png",
+      "overflowDocumentoPx": 0,
+      "menorAlvoPx": 44,
+      "contrastesInstrumentados": {
+        "titulo": 15.54,
+        "listaCotacoes": 15.54
+      },
+      "problems": []
+    }
+  ]
+}

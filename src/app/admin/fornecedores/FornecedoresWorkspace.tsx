@@ -15,10 +15,15 @@ import {
 } from "@/lib/supplier-read";
 import { supplierRequest } from "@/lib/supplier-request";
 import {
+  classifySupplierWriteFailure,
+  invalidSupplierWriteResponse,
+  supplierWriteFailureDetail,
+  type SupplierWriteFailure,
+} from "@/lib/supplier-write";
+import {
   EXTERNAL_BOUNDARY,
   VOLUME_BOUNDARY,
   supplierDate,
-  supplierErrorFootnote,
   supplierLabel,
   supplierMoney,
 } from "@/lib/supplier-vocabulary.mjs";
@@ -40,6 +45,51 @@ type ReadState =
   | { phase: "loading" }
   | { phase: "failed"; error: SupplierReadError }
   | { phase: "ready"; readAt: string; refreshing: boolean; staleError?: SupplierReadError };
+
+type SupplierWritePlan = {
+  keyOperation: string;
+  actionId: string;
+  actionLabel: string;
+  url: string;
+  body: unknown;
+  validate: (data: unknown) => boolean;
+  onSuccess: (data: unknown) => Promise<void>;
+};
+
+type PendingSupplierWrite = Omit<SupplierWritePlan, "body"> & {
+  idempotencyKey: string;
+  bodyJson: string;
+};
+
+type BusySupplierWrite = { actionId: string; actionLabel: string };
+
+type SupplierWriteOutcome = { ok: true; data: unknown } | { ok: false };
+
+function resourceRecord(data: unknown, key: string): Record<string, unknown> | null {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+  const resource = (data as Record<string, unknown>)[key];
+  return resource && typeof resource === "object" && !Array.isArray(resource)
+    ? resource as Record<string, unknown>
+    : null;
+}
+
+function hasStringFields(data: unknown, key: string, fields: string[]): boolean {
+  const resource = resourceRecord(data, key);
+  return Boolean(resource && fields.every(field => typeof resource[field] === "string" && (resource[field] as string).trim().length > 0));
+}
+
+function hasIntegerField(data: unknown, key: string, field: string): boolean {
+  const resource = resourceRecord(data, key);
+  return Boolean(resource && typeof resource[field] === "number" && Number.isInteger(resource[field]));
+}
+
+const validQuotationResponse = (data: unknown) => hasStringFields(data, "quotation", ["id", "protocol", "status"]);
+const validDecisionResponse = (data: unknown) => hasStringFields(data, "quotation", ["id", "protocol", "status", "decision"]);
+const validValidityResponse = (data: unknown) => hasStringFields(data, "validity", ["id", "valid_until"]);
+const validAlertRuleResponse = (data: unknown) => hasStringFields(data, "alert_rule", ["id"]) && hasIntegerField(data, "alert_rule", "days_before");
+const validDocumentResponse = (data: unknown) => hasStringFields(data, "document", ["id", "document_type"]) && hasIntegerField(data, "document", "version");
+const validOrderResponse = (data: unknown) => hasStringFields(data, "order", ["id", "protocol", "status"]);
+const validDeadlineResponse = (data: unknown) => hasStringFields(data, "deadline", ["id", "due_date"]);
 
 const INITIAL_STATES: Record<ResourceKey, ReadState> = {
   references: { phase: "idle" },
@@ -101,10 +151,13 @@ export default function FornecedoresWorkspace() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [detail, setDetail] = useState<Detail | null>(null);
-  const [busy, setBusy] = useState("");
+  const [busy, setBusy] = useState<BusySupplierWrite | null>(null);
   const [notice, setNotice] = useState("");
-  const [writeError, setWriteError] = useState("");
+  const [writeError, setWriteError] = useState<SupplierWriteFailure | null>(null);
+  const [pendingWrite, setPendingWrite] = useState<PendingSupplierWrite | null>(null);
   const [denied, setDenied] = useState<SupplierReadError | null>(null);
+  const writeInFlight = useRef(false);
+  const pendingWriteRef = useRef<PendingSupplierWrite | null>(null);
   const keys = useRef<Record<string, string>>({});
 
   const [states, setStates] = useState<Record<ResourceKey, ReadState>>(INITIAL_STATES);
@@ -131,8 +184,18 @@ export default function FornecedoresWorkspace() {
   // protegido continua visível e nenhuma repetição da mesma chamada é oferecida.
   const failClosed = useCallback((error: SupplierReadError) => {
     setDenied(error);
+    setNotice("");
+    setWriteError(null);
+    pendingWriteRef.current = null;
+    setPendingWrite(null);
     setSuppliers([]); setProducts([]); setQuotations([]); setOrders([]); setDetail(null); setSelectedId("");
     setQuoteForm({ supplier_id: "", product_id: "", quantity: "1", unit_price: "", notes: "" });
+    setValidityForm({ valid_until: "", source: "registro_interno", source_reference: "", justification: "" });
+    setAlertForm({ days_before: "", justification: "" });
+    setDocumentForm({ document_type: "", file_name: "", file_url: "", storage_key: "" });
+    setDecisionReason("");
+    setOrderNotes("");
+    setDeadlineForm({ order_id: "", due_date: "", source: "registro_interno", source_reference: "", justification: "" });
     commit(() => ({
       references: { phase: "failed", error },
       quotations: { phase: "failed", error },
@@ -225,21 +288,86 @@ export default function FornecedoresWorkspace() {
   // de lista não são relançadas por uma mudança de seleção.
   useEffect(() => { void loadDetail(selectedId); }, [selectedId, loadDetail]);
 
-  async function mutate(operation: string, url: string, body: unknown): Promise<any> {
-    const key = keys.current[operation] || newKey(operation);
-    keys.current[operation] = key; // preservada enquanto houver falha
-    setBusy(operation); setWriteError(""); setNotice("");
+  async function executeWrite(request: PendingSupplierWrite, explicitRetry = false): Promise<SupplierWriteOutcome> {
+    if (writeInFlight.current) return { ok: false };
+    if (explicitRetry ? pendingWriteRef.current !== request : pendingWriteRef.current !== null) return { ok: false };
+
+    // A trava muda sincronicamente antes de qualquer await: dois eventos no
+    // mesmo tick não conseguem enviar dois POSTs, mesmo antes do novo render.
+    writeInFlight.current = true;
+    setBusy({ actionId: request.actionId, actionLabel: request.actionLabel });
+    setWriteError(null);
+    setNotice("");
     try {
-      const result = await supplierRequest<unknown>(url, {
-        method: "POST", headers: { "content-type": "application/json", "idempotency-key": key }, body: JSON.stringify(body),
+      const result = await supplierRequest<unknown>(request.url, {
+        method: "POST",
+        headers: { "content-type": "application/json", "idempotency-key": request.idempotencyKey },
+        body: request.bodyJson,
       });
-      if (!result.ok) { const failure = new Error(`${result.error.title}: ${result.error.detail} ${supplierErrorFootnote(result.error)}`); throw failure; }
-      delete keys.current[operation]; // só uma resposta real bem-sucedida encerra a tentativa
-      return result.data;
-    } catch (caught) {
-      setWriteError(`${caught instanceof Error ? caught.message : "Falha na operação."} Chave preservada para repetição segura: ${key}`);
-      throw caught;
-    } finally { setBusy(""); }
+      if (!result.ok) {
+        const failure = classifySupplierWriteFailure(result.status, result.error.code);
+        if (failure.kind === "auth" || failure.kind === "denied") {
+          const deniedError: SupplierReadError = {
+            kind: failure.kind,
+            title: failure.title,
+            detail: failure.detail,
+            code: failure.code,
+            status: failure.status,
+            canRetry: false,
+          };
+          failClosed(deniedError);
+        } else {
+          pendingWriteRef.current = failure.retrySameRequest ? request : null;
+          setPendingWrite(failure.retrySameRequest ? request : null);
+          setWriteError(failure);
+        }
+        return { ok: false };
+      }
+
+      if (!request.validate(result.data)) {
+        const failure = invalidSupplierWriteResponse(result.status);
+        pendingWriteRef.current = request;
+        setPendingWrite(request);
+        setWriteError(failure);
+        return { ok: false };
+      }
+
+      if (keys.current[request.keyOperation] === request.idempotencyKey) delete keys.current[request.keyOperation];
+      pendingWriteRef.current = null;
+      setPendingWrite(null);
+      setWriteError(null);
+      return { ok: true, data: result.data };
+    } catch {
+      const failure = classifySupplierWriteFailure(0, null);
+      pendingWriteRef.current = request;
+      setPendingWrite(request);
+      setWriteError(failure);
+      return { ok: false };
+    } finally {
+      writeInFlight.current = false;
+      setBusy(null);
+    }
+  }
+
+  async function submitWrite(plan: SupplierWritePlan) {
+    if (writeInFlight.current || pendingWriteRef.current) return;
+    const idempotencyKey = keys.current[plan.keyOperation] || newKey(plan.keyOperation);
+    keys.current[plan.keyOperation] = idempotencyKey;
+    const { body, ...requestPlan } = plan;
+    const request: PendingSupplierWrite = {
+      ...requestPlan,
+      idempotencyKey,
+      bodyJson: JSON.stringify(body),
+    };
+    const outcome = await executeWrite(request);
+    if (outcome.ok) await request.onSuccess(outcome.data);
+  }
+
+  async function retryPendingWrite() {
+    const request = pendingWriteRef.current;
+    if (!request || writeInFlight.current) return;
+    const outcome = await executeWrite(request, true);
+    if (outcome.ok) await request.onSuccess(outcome.data);
   }
 
   async function refresh(message: string, id = selectedId) {
@@ -248,51 +376,154 @@ export default function FornecedoresWorkspace() {
     setNotice(message);
   }
 
-  async function createQuotation(event: FormEvent) {
+  function createQuotation(event: FormEvent) {
     event.preventDefault();
     const cents = Math.round(Number(quoteForm.unit_price.replace(",", ".")) * 100);
-    try {
-      const data = await mutate("create-quotation", `/api/ext/supplier/suppliers/${quoteForm.supplier_id}/products/${quoteForm.product_id}/quotations`, {
-        quantity: Number(quoteForm.quantity), unit_price_cents: cents, notes: quoteForm.notes,
-      });
-      const id = data.quotation.id; setSelectedId(id); setQuoteForm({ supplier_id: "", product_id: "", quantity: "1", unit_price: "", notes: "" });
-      await refresh("Cotação confirmada pelo servidor; autoria veio da sessão staff.", id);
-    } catch { }
+    void submitWrite({
+      keyOperation: "create-quotation",
+      actionId: "create-quotation",
+      actionLabel: "Criar cotação",
+      url: `/api/ext/supplier/suppliers/${quoteForm.supplier_id}/products/${quoteForm.product_id}/quotations`,
+      body: { quantity: Number(quoteForm.quantity), unit_price_cents: cents, notes: quoteForm.notes },
+      validate: validQuotationResponse,
+      onSuccess: async data => {
+        const id = (data as { quotation: Quotation }).quotation.id;
+        setSelectedId(id);
+        setQuoteForm({ supplier_id: "", product_id: "", quantity: "1", unit_price: "", notes: "" });
+        await refresh("Cotação confirmada pelo servidor; autoria veio da sessão staff.", id);
+      },
+    });
   }
 
-  async function transitionQuotation(status: string) {
+  function transitionQuotation(status: string) {
     if (!selectedId) return;
-    try { await mutate(`quote-${selectedId}-${status}`, `/api/ext/supplier/quotations/${selectedId}/status`, { status, reason: `Transição ${status} confirmada pela equipe interna.` }); await refresh(`Estado ${status} confirmado pelo servidor.`); } catch { }
+    const operation = `quote-${selectedId}-${status}`;
+    void submitWrite({
+      keyOperation: operation,
+      actionId: operation,
+      actionLabel: `Mover cotação para ${supplierLabel(status)}`,
+      url: `/api/ext/supplier/quotations/${selectedId}/status`,
+      body: { status, reason: `Transição ${status} confirmada pela equipe interna.` },
+      validate: validQuotationResponse,
+      onSuccess: async () => { await refresh(`Estado ${status} confirmado pelo servidor.`); },
+    });
   }
-  async function decide(decision: "aprovada" | "rejeitada") {
+
+  function decide(decision: "aprovada" | "rejeitada") {
     if (!selectedId) return;
-    try { await mutate(`decision-${selectedId}`, `/api/ext/supplier/quotations/${selectedId}/decision`, { decision, justification: decisionReason }); setDecisionReason(""); await refresh(`Decisão ${decision} gravada com autor e data; não será sobrescrita.`); } catch { }
+    void submitWrite({
+      keyOperation: `decision-${selectedId}`,
+      actionId: `decision-${selectedId}-${decision}`,
+      actionLabel: `${decision === "aprovada" ? "Aprovar" : "Rejeitar"} cotação`,
+      url: `/api/ext/supplier/quotations/${selectedId}/decision`,
+      body: { decision, justification: decisionReason },
+      validate: validDecisionResponse,
+      onSuccess: async () => {
+        setDecisionReason("");
+        await refresh(`Decisão ${decision} gravada com autor e data; não será sobrescrita.`);
+      },
+    });
   }
-  async function addValidity(event: FormEvent) {
-    event.preventDefault(); if (!selectedId) return;
-    try { await mutate(`validity-${selectedId}`, `/api/ext/supplier/quotations/${selectedId}/validities`, validityForm); setValidityForm({ valid_until: "", source: "registro_interno", source_reference: "", justification: "" }); await refresh("Validade registrada com fonte; situação recalculada pela data-base do servidor."); } catch { }
-  }
-  async function addAlert(event: FormEvent) {
-    event.preventDefault(); if (!selectedId) return;
-    try { await mutate(`alert-${selectedId}`, `/api/ext/supplier/quotations/${selectedId}/alert-rules`, { days_before: Number(alertForm.days_before), justification: alertForm.justification }); setAlertForm({ days_before: "", justification: "" }); await refresh("Regra explícita registrada; somente agora existe limiar de alerta."); } catch { }
-  }
-  async function addDocument(event: FormEvent) {
-    event.preventDefault(); if (!selectedId) return;
-    try { await mutate(`document-${selectedId}`, `/api/ext/supplier/quotations/${selectedId}/documents`, documentForm); setDocumentForm({ document_type: "", file_name: "", file_url: "", storage_key: "" }); await refresh("Referência documental versionada confirmada; isto não comprova upload."); } catch { }
-  }
-  async function createOrder() {
-    if (!selectedId) return;
-    try { const data = await mutate(`order-${selectedId}`, `/api/ext/supplier/quotations/${selectedId}/orders`, { notes: orderNotes }); setOrderNotes(""); await refresh(`Pedido ${data.order.protocol} derivado da cotação aprovada.`); } catch { }
-  }
-  async function transitionOrder(orderId: string, status: string) {
-    try { await mutate(`order-${orderId}-${status}`, `/api/ext/supplier/orders/${orderId}/status`, { status, reason: `Transição ${status} confirmada pela equipe interna.` }); await refresh(`Pedido confirmado em ${status}.`); } catch { }
-  }
-  async function addDeadline(event: FormEvent) {
+
+  function addValidity(event: FormEvent) {
     event.preventDefault();
-    try { await mutate(`deadline-${deadlineForm.order_id}`, `/api/ext/supplier/orders/${deadlineForm.order_id}/deadlines`, deadlineForm); setDeadlineForm({ order_id: "", due_date: "", source: "registro_interno", source_reference: "", justification: "" }); await refresh("Prazo do pedido registrado com fonte; nenhum prazo foi estimado."); } catch { }
+    if (!selectedId) return;
+    void submitWrite({
+      keyOperation: `validity-${selectedId}`,
+      actionId: `validity-${selectedId}`,
+      actionLabel: "Registrar validade",
+      url: `/api/ext/supplier/quotations/${selectedId}/validities`,
+      body: validityForm,
+      validate: validValidityResponse,
+      onSuccess: async () => {
+        setValidityForm({ valid_until: "", source: "registro_interno", source_reference: "", justification: "" });
+        await refresh("Validade registrada com fonte; situação recalculada pela data-base do servidor.");
+      },
+    });
+  }
+
+  function addAlert(event: FormEvent) {
+    event.preventDefault();
+    if (!selectedId) return;
+    void submitWrite({
+      keyOperation: `alert-${selectedId}`,
+      actionId: `alert-${selectedId}`,
+      actionLabel: "Registrar regra de alerta",
+      url: `/api/ext/supplier/quotations/${selectedId}/alert-rules`,
+      body: { days_before: Number(alertForm.days_before), justification: alertForm.justification },
+      validate: validAlertRuleResponse,
+      onSuccess: async () => {
+        setAlertForm({ days_before: "", justification: "" });
+        await refresh("Regra explícita registrada; somente agora existe limiar de alerta.");
+      },
+    });
+  }
+
+  function addDocument(event: FormEvent) {
+    event.preventDefault();
+    if (!selectedId) return;
+    void submitWrite({
+      keyOperation: `document-${selectedId}`,
+      actionId: `document-${selectedId}`,
+      actionLabel: "Registrar referência documental",
+      url: `/api/ext/supplier/quotations/${selectedId}/documents`,
+      body: documentForm,
+      validate: validDocumentResponse,
+      onSuccess: async () => {
+        setDocumentForm({ document_type: "", file_name: "", file_url: "", storage_key: "" });
+        await refresh("Referência documental versionada confirmada; isto não comprova upload.");
+      },
+    });
+  }
+
+  function createOrder() {
+    if (!selectedId) return;
+    void submitWrite({
+      keyOperation: `order-${selectedId}`,
+      actionId: `order-${selectedId}`,
+      actionLabel: "Criar pedido derivado",
+      url: `/api/ext/supplier/quotations/${selectedId}/orders`,
+      body: { notes: orderNotes },
+      validate: validOrderResponse,
+      onSuccess: async data => {
+        setOrderNotes("");
+        const order = (data as { order: Order }).order;
+        await refresh(`Pedido ${order.protocol} derivado da cotação aprovada.`);
+      },
+    });
+  }
+
+  function transitionOrder(orderId: string, status: string) {
+    const operation = `order-${orderId}-${status}`;
+    void submitWrite({
+      keyOperation: operation,
+      actionId: operation,
+      actionLabel: `Mover pedido para ${supplierLabel(status)}`,
+      url: `/api/ext/supplier/orders/${orderId}/status`,
+      body: { status, reason: `Transição ${status} confirmada pela equipe interna.` },
+      validate: validOrderResponse,
+      onSuccess: async () => { await refresh(`Pedido confirmado em ${status}.`); },
+    });
+  }
+
+  function addDeadline(event: FormEvent) {
+    event.preventDefault();
+    void submitWrite({
+      keyOperation: `deadline-${deadlineForm.order_id}`,
+      actionId: `deadline-${deadlineForm.order_id}`,
+      actionLabel: "Registrar prazo do pedido",
+      url: `/api/ext/supplier/orders/${deadlineForm.order_id}/deadlines`,
+      body: deadlineForm,
+      validate: validDeadlineResponse,
+      onSuccess: async () => {
+        setDeadlineForm({ order_id: "", due_date: "", source: "registro_interno", source_reference: "", justification: "" });
+        await refresh("Prazo do pedido registrado com fonte; nenhum prazo foi estimado.");
+      },
+    });
   }
 
   const quote = detail?.quotation;
+  const writeLocked = Boolean(busy) || Boolean(pendingWrite);
   const quoteTransitions: Record<string, string[]> = { rascunho: ["enviado", "cancelado"], enviado: ["em_analise", "cancelado"], em_analise: ["cancelado"] };
   const orderTransitions: Record<string, string[]> = { rascunho: ["emitido", "cancelado"], emitido: ["em_entrega", "cancelado"], em_entrega: ["recebido", "cancelado"], recebido: ["fechado"] };
 
@@ -364,7 +595,7 @@ export default function FornecedoresWorkspace() {
 
   return (
     <UiTaskWorkspace className={styles.workspace}>
-      <p className={styles.kicker}>UX-PRO-07C-1 · FORNECEDORES EXT-04</p>
+      <p className={styles.kicker}>UX-PRO-07C-2 · FORNECEDORES EXT-04</p>
       <h1>EXT-04 — Fornecedores</h1>
       <p className={styles.lede}>
         Jornada administrativa interna de cotações, referências documentais e pedidos. Cada leitura informa se ainda está
@@ -382,19 +613,46 @@ export default function FornecedoresWorkspace() {
       </section>
 
       {denied ? (
-        <div data-testid="fornecedores-negado" data-ui-state="denied">
+        <div data-testid="fornecedores-negado" data-ui-state="denied" data-write-http-status={denied.status}>
           <UiState
             variant="denied"
             title={denied.title}
-            detail={`${supplierReadErrorDetail(denied)} A recusa veio do servidor; nenhum dado da jornada permanece na tela.`}
+            detail={`${supplierReadErrorDetail(denied)} HTTP ${denied.status}. A recusa veio do servidor; nenhum dado da jornada permanece na tela.`}
           />
         </div>
       ) : (
         <>
           {notice ? <p className={styles.notice} role="status">{notice}</p> : null}
+          {busy ? (
+            <p role="status" aria-live="polite" aria-atomic="true" data-testid="fornecedores-escrita-enviando">
+              Enviando {busy.actionLabel}. Aguardando resposta; o resultado ainda não foi reconciliado.
+            </p>
+          ) : null}
           {writeError ? (
-            <div role="alert" data-testid="fornecedores-escrita-falha">
-              <UiState variant="error" title="Falha na operação de escrita" detail={writeError} />
+            <div
+              data-testid="fornecedores-escrita-falha"
+              data-write-error-kind={writeError.kind}
+              data-write-http-status={writeError.status}
+              data-write-code={writeError.code || ""}
+              data-write-uncertain={String(writeError.uncertain)}
+            >
+              <UiState variant="error" title={writeError.title} detail={supplierWriteFailureDetail(writeError)}>
+                {pendingWrite ? (
+                  <>
+                    <p className={styles.hint}>A repetição usa o corpo capturado e a mesma chave da tentativa anterior; ela só acontece quando você aciona o botão.</p>
+                    <div className={styles.actions}>
+                      <button
+                        type="button"
+                        data-testid="fornecedores-escrita-repetir"
+                        disabled={Boolean(busy)}
+                        onClick={() => void retryPendingWrite()}
+                      >
+                        Repetir operação com a mesma chave
+                      </button>
+                    </div>
+                  </>
+                ) : null}
+              </UiState>
             </div>
           ) : null}
 
@@ -443,32 +701,40 @@ export default function FornecedoresWorkspace() {
             <form onSubmit={createQuotation} className={styles.fieldRow}>
               <div className={styles.field}>
                 <label htmlFor="fornecedores-supplier">Fornecedor</label>
-                <select id="fornecedores-supplier" required value={quoteForm.supplier_id} onChange={e => setQuoteForm({ ...quoteForm, supplier_id: e.target.value, product_id: "" })}>
+                <select id="fornecedores-supplier" disabled={writeLocked} required value={quoteForm.supplier_id} onChange={e => setQuoteForm({ ...quoteForm, supplier_id: e.target.value, product_id: "" })}>
                   <option value="">Selecione</option>
                   {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
               <div className={styles.field}>
                 <label htmlFor="fornecedores-product">Produto do fornecedor</label>
-                <select id="fornecedores-product" required value={quoteForm.product_id} onChange={e => setQuoteForm({ ...quoteForm, product_id: e.target.value })}>
+                <select id="fornecedores-product" disabled={writeLocked} required value={quoteForm.product_id} onChange={e => setQuoteForm({ ...quoteForm, product_id: e.target.value })}>
                   <option value="">Selecione</option>
                   {productsForSupplier.map(p => <option key={p.id} value={p.id}>{p.sku} — {p.name}</option>)}
                 </select>
               </div>
               <div className={styles.field}>
                 <label htmlFor="fornecedores-quantity">Quantidade</label>
-                <input id="fornecedores-quantity" required min={1} type="number" value={quoteForm.quantity} onChange={e => setQuoteForm({ ...quoteForm, quantity: e.target.value })} />
+                <input id="fornecedores-quantity" disabled={writeLocked} required min={1} type="number" value={quoteForm.quantity} onChange={e => setQuoteForm({ ...quoteForm, quantity: e.target.value })} />
               </div>
               <div className={styles.field}>
                 <label htmlFor="fornecedores-price">Preço unitário (R$)</label>
-                <input id="fornecedores-price" required inputMode="decimal" value={quoteForm.unit_price} onChange={e => setQuoteForm({ ...quoteForm, unit_price: e.target.value })} />
+                <input id="fornecedores-price" disabled={writeLocked} required inputMode="decimal" value={quoteForm.unit_price} onChange={e => setQuoteForm({ ...quoteForm, unit_price: e.target.value })} />
               </div>
               <div className={styles.field}>
                 <label htmlFor="fornecedores-notes">Notas (opcional, ≥10)</label>
-                <input id="fornecedores-notes" value={quoteForm.notes} onChange={e => setQuoteForm({ ...quoteForm, notes: e.target.value })} />
+                <input id="fornecedores-notes" disabled={writeLocked} value={quoteForm.notes} onChange={e => setQuoteForm({ ...quoteForm, notes: e.target.value })} />
               </div>
               <div className={styles.actions}>
-                <button type="submit" className={styles.primary} disabled={Boolean(busy)}>Confirmar no servidor</button>
+                <button
+                  type="submit"
+                  className={styles.primary}
+                  data-write-operation="create-quotation"
+                  aria-busy={busy?.actionId === "create-quotation" ? "true" : undefined}
+                  disabled={writeLocked}
+                >
+                  Confirmar no servidor
+                </button>
               </div>
             </form>
           </section>
@@ -493,6 +759,7 @@ export default function FornecedoresWorkspace() {
                             type="button"
                             className={local.quoteButton}
                             data-selected={selectedId === q.id ? "true" : "false"}
+                            disabled={writeLocked}
                             onClick={() => setSelectedId(q.id)}
                           >
                             <span className={local.quoteProtocol}>{q.protocol}</span>
@@ -549,18 +816,44 @@ export default function FornecedoresWorkspace() {
                     <p className={styles.hint}>Leitura concluída às {readTime(detailState.readAt)}.</p>
                     <div className={styles.actions}>
                       {(quoteTransitions[quote.status] || []).map(status => (
-                        <button key={status} type="button" disabled={Boolean(busy)} onClick={() => void transitionQuotation(status)}>Mover para {supplierLabel(status)}</button>
+                        <button
+                          key={status}
+                          type="button"
+                          data-write-operation={`quote-${selectedId}-${status}`}
+                          aria-busy={busy?.actionId === `quote-${selectedId}-${status}` ? "true" : undefined}
+                          disabled={writeLocked}
+                          onClick={() => transitionQuotation(status)}
+                        >
+                          Mover para {supplierLabel(status)}
+                        </button>
                       ))}
                     </div>
                     {quote.status === "em_analise" && !quote.decision ? (
                       <div className={styles.fieldRow}>
                         <div className={styles.field}>
                           <label htmlFor="fornecedores-decisao">Justificativa da decisão (≥10)</label>
-                          <input id="fornecedores-decisao" value={decisionReason} onChange={e => setDecisionReason(e.target.value)} />
+                          <input id="fornecedores-decisao" disabled={writeLocked} value={decisionReason} onChange={e => setDecisionReason(e.target.value)} />
                         </div>
                         <div className={styles.actions}>
-                          <button type="button" className={styles.primary} disabled={Boolean(busy)} onClick={() => void decide("aprovada")}>Aprovar definitivamente</button>
-                          <button type="button" disabled={Boolean(busy)} onClick={() => void decide("rejeitada")}>Rejeitar definitivamente</button>
+                          <button
+                            type="button"
+                            className={styles.primary}
+                            data-write-operation={`decision-${selectedId}-aprovada`}
+                            aria-busy={busy?.actionId === `decision-${selectedId}-aprovada` ? "true" : undefined}
+                            disabled={writeLocked}
+                            onClick={() => decide("aprovada")}
+                          >
+                            Aprovar definitivamente
+                          </button>
+                          <button
+                            type="button"
+                            data-write-operation={`decision-${selectedId}-rejeitada`}
+                            aria-busy={busy?.actionId === `decision-${selectedId}-rejeitada` ? "true" : undefined}
+                            disabled={writeLocked}
+                            onClick={() => decide("rejeitada")}
+                          >
+                            Rejeitar definitivamente
+                          </button>
                         </div>
                       </div>
                     ) : null}
@@ -571,10 +864,19 @@ export default function FornecedoresWorkspace() {
                       <div className={styles.fieldRow}>
                         <div className={styles.field}>
                           <label htmlFor="fornecedores-notas-pedido">Notas do pedido (opcional)</label>
-                          <input id="fornecedores-notas-pedido" value={orderNotes} onChange={e => setOrderNotes(e.target.value)} />
+                          <input id="fornecedores-notas-pedido" disabled={writeLocked} value={orderNotes} onChange={e => setOrderNotes(e.target.value)} />
                         </div>
                         <div className={styles.actions}>
-                          <button type="button" className={styles.primary} disabled={Boolean(busy)} onClick={() => void createOrder()}>Criar pedido derivado</button>
+                          <button
+                            type="button"
+                            className={styles.primary}
+                            data-write-operation={`order-${selectedId}`}
+                            aria-busy={busy?.actionId === `order-${selectedId}` ? "true" : undefined}
+                            disabled={writeLocked}
+                            onClick={createOrder}
+                          >
+                            Criar pedido derivado
+                          </button>
                         </div>
                       </div>
                     ) : null}
@@ -595,11 +897,11 @@ export default function FornecedoresWorkspace() {
                   <form onSubmit={addValidity} className={styles.fieldRow}>
                     <div className={styles.field}>
                       <label htmlFor="fornecedores-valida-ate">Válida até</label>
-                      <input id="fornecedores-valida-ate" required type="date" value={validityForm.valid_until} onChange={e => setValidityForm({ ...validityForm, valid_until: e.target.value })} />
+                      <input id="fornecedores-valida-ate" disabled={writeLocked} required type="date" value={validityForm.valid_until} onChange={e => setValidityForm({ ...validityForm, valid_until: e.target.value })} />
                     </div>
                     <div className={styles.field}>
                       <label htmlFor="fornecedores-fonte">Fonte</label>
-                      <select id="fornecedores-fonte" value={validityForm.source} onChange={e => setValidityForm({ ...validityForm, source: e.target.value })}>
+                      <select id="fornecedores-fonte" disabled={writeLocked} value={validityForm.source} onChange={e => setValidityForm({ ...validityForm, source: e.target.value })}>
                         <option value="registro_interno">registro interno</option>
                         <option value="documento_declarado">documento declarado</option>
                         <option value="email_declarado">e-mail declarado</option>
@@ -607,28 +909,43 @@ export default function FornecedoresWorkspace() {
                     </div>
                     <div className={styles.field}>
                       <label htmlFor="fornecedores-referencia">Referência da fonte</label>
-                      <input id="fornecedores-referencia" value={validityForm.source_reference} onChange={e => setValidityForm({ ...validityForm, source_reference: e.target.value })} />
+                      <input id="fornecedores-referencia" disabled={writeLocked} value={validityForm.source_reference} onChange={e => setValidityForm({ ...validityForm, source_reference: e.target.value })} />
                     </div>
                     <div className={styles.field}>
                       <label htmlFor="fornecedores-justificativa">Justificativa (≥5)</label>
-                      <input id="fornecedores-justificativa" required value={validityForm.justification} onChange={e => setValidityForm({ ...validityForm, justification: e.target.value })} />
+                      <input id="fornecedores-justificativa" disabled={writeLocked} required value={validityForm.justification} onChange={e => setValidityForm({ ...validityForm, justification: e.target.value })} />
                     </div>
                     <div className={styles.actions}>
-                      <button type="submit" className={styles.primary} disabled={Boolean(busy)}>Registrar validade</button>
+                      <button
+                        type="submit"
+                        className={styles.primary}
+                        data-write-operation={`validity-${selectedId}`}
+                        aria-busy={busy?.actionId === `validity-${selectedId}` ? "true" : undefined}
+                        disabled={writeLocked}
+                      >
+                        Registrar validade
+                      </button>
                     </div>
                   </form>
                   {!detail?.alert_rule ? (
                     <form onSubmit={addAlert} className={styles.fieldRow}>
                       <div className={styles.field}>
                         <label htmlFor="fornecedores-dias">Dias de antecedência</label>
-                        <input id="fornecedores-dias" required min={1} max={365} type="number" value={alertForm.days_before} onChange={e => setAlertForm({ ...alertForm, days_before: e.target.value })} />
+                        <input id="fornecedores-dias" disabled={writeLocked} required min={1} max={365} type="number" value={alertForm.days_before} onChange={e => setAlertForm({ ...alertForm, days_before: e.target.value })} />
                       </div>
                       <div className={styles.field}>
                         <label htmlFor="fornecedores-regra">Justificativa da regra</label>
-                        <input id="fornecedores-regra" required value={alertForm.justification} onChange={e => setAlertForm({ ...alertForm, justification: e.target.value })} />
+                        <input id="fornecedores-regra" disabled={writeLocked} required value={alertForm.justification} onChange={e => setAlertForm({ ...alertForm, justification: e.target.value })} />
                       </div>
                       <div className={styles.actions}>
-                        <button type="submit" disabled={Boolean(busy)}>Registrar regra explícita</button>
+                        <button
+                          type="submit"
+                          data-write-operation={`alert-${selectedId}`}
+                          aria-busy={busy?.actionId === `alert-${selectedId}` ? "true" : undefined}
+                          disabled={writeLocked}
+                        >
+                          Registrar regra explícita
+                        </button>
                       </div>
                     </form>
                   ) : null}
@@ -655,22 +972,30 @@ export default function FornecedoresWorkspace() {
                   <form onSubmit={addDocument} className={styles.fieldRow}>
                     <div className={styles.field}>
                       <label htmlFor="fornecedores-tipo">Tipo</label>
-                      <input id="fornecedores-tipo" required value={documentForm.document_type} onChange={e => setDocumentForm({ ...documentForm, document_type: e.target.value })} />
+                      <input id="fornecedores-tipo" disabled={writeLocked} required value={documentForm.document_type} onChange={e => setDocumentForm({ ...documentForm, document_type: e.target.value })} />
                     </div>
                     <div className={styles.field}>
                       <label htmlFor="fornecedores-nome">Nome declarado</label>
-                      <input id="fornecedores-nome" required value={documentForm.file_name} onChange={e => setDocumentForm({ ...documentForm, file_name: e.target.value })} />
+                      <input id="fornecedores-nome" disabled={writeLocked} required value={documentForm.file_name} onChange={e => setDocumentForm({ ...documentForm, file_name: e.target.value })} />
                     </div>
                     <div className={styles.field}>
                       <label htmlFor="fornecedores-url">file_url (referência)</label>
-                      <input id="fornecedores-url" required value={documentForm.file_url} onChange={e => setDocumentForm({ ...documentForm, file_url: e.target.value })} />
+                      <input id="fornecedores-url" disabled={writeLocked} required value={documentForm.file_url} onChange={e => setDocumentForm({ ...documentForm, file_url: e.target.value })} />
                     </div>
                     <div className={styles.field}>
                       <label htmlFor="fornecedores-chave">storage_key (referência)</label>
-                      <input id="fornecedores-chave" required value={documentForm.storage_key} onChange={e => setDocumentForm({ ...documentForm, storage_key: e.target.value })} />
+                      <input id="fornecedores-chave" disabled={writeLocked} required value={documentForm.storage_key} onChange={e => setDocumentForm({ ...documentForm, storage_key: e.target.value })} />
                     </div>
                     <div className={styles.actions}>
-                      <button type="submit" className={styles.primary} disabled={Boolean(busy)}>Registrar referência</button>
+                      <button
+                        type="submit"
+                        className={styles.primary}
+                        data-write-operation={`document-${selectedId}`}
+                        aria-busy={busy?.actionId === `document-${selectedId}` ? "true" : undefined}
+                        disabled={writeLocked}
+                      >
+                        Registrar referência
+                      </button>
                     </div>
                   </form>
                 </section>
@@ -702,7 +1027,16 @@ export default function FornecedoresWorkspace() {
                         </div>
                         <div className={styles.actions}>
                           {(orderTransitions[orderItem.status] || []).map(status => (
-                            <button key={status} type="button" disabled={Boolean(busy)} onClick={() => void transitionOrder(orderItem.id, status)}>Mover para {supplierLabel(status)}</button>
+                            <button
+                              key={status}
+                              type="button"
+                              data-write-operation={`order-${orderItem.id}-${status}`}
+                              aria-busy={busy?.actionId === `order-${orderItem.id}-${status}` ? "true" : undefined}
+                              disabled={writeLocked}
+                              onClick={() => transitionOrder(orderItem.id, status)}
+                            >
+                              Mover para {supplierLabel(status)}
+                            </button>
                           ))}
                         </div>
                       </article>
@@ -715,18 +1049,18 @@ export default function FornecedoresWorkspace() {
               <form onSubmit={addDeadline} className={styles.fieldRow}>
                 <div className={styles.field}>
                   <label htmlFor="fornecedores-pedido-prazo">Pedido para prazo</label>
-                  <select id="fornecedores-pedido-prazo" required value={deadlineForm.order_id} onChange={e => setDeadlineForm({ ...deadlineForm, order_id: e.target.value })}>
+                  <select id="fornecedores-pedido-prazo" disabled={writeLocked} required value={deadlineForm.order_id} onChange={e => setDeadlineForm({ ...deadlineForm, order_id: e.target.value })}>
                     <option value="">Selecione</option>
                     {orders.filter(o => !["fechado", "cancelado"].includes(o.status)).map(o => <option key={o.id} value={o.id}>{o.protocol}</option>)}
                   </select>
                 </div>
                 <div className={styles.field}>
                   <label htmlFor="fornecedores-prazo-data">Data do prazo</label>
-                  <input id="fornecedores-prazo-data" required type="date" value={deadlineForm.due_date} onChange={e => setDeadlineForm({ ...deadlineForm, due_date: e.target.value })} />
+                  <input id="fornecedores-prazo-data" disabled={writeLocked} required type="date" value={deadlineForm.due_date} onChange={e => setDeadlineForm({ ...deadlineForm, due_date: e.target.value })} />
                 </div>
                 <div className={styles.field}>
                   <label htmlFor="fornecedores-prazo-fonte">Fonte</label>
-                  <select id="fornecedores-prazo-fonte" value={deadlineForm.source} onChange={e => setDeadlineForm({ ...deadlineForm, source: e.target.value })}>
+                  <select id="fornecedores-prazo-fonte" disabled={writeLocked} value={deadlineForm.source} onChange={e => setDeadlineForm({ ...deadlineForm, source: e.target.value })}>
                     <option value="registro_interno">registro interno</option>
                     <option value="cotacao_aprovada">cotação aprovada</option>
                     <option value="pedido_emitido">pedido emitido</option>
@@ -734,14 +1068,22 @@ export default function FornecedoresWorkspace() {
                 </div>
                 <div className={styles.field}>
                   <label htmlFor="fornecedores-prazo-referencia">Referência</label>
-                  <input id="fornecedores-prazo-referencia" value={deadlineForm.source_reference} onChange={e => setDeadlineForm({ ...deadlineForm, source_reference: e.target.value })} />
+                  <input id="fornecedores-prazo-referencia" disabled={writeLocked} value={deadlineForm.source_reference} onChange={e => setDeadlineForm({ ...deadlineForm, source_reference: e.target.value })} />
                 </div>
                 <div className={styles.field}>
                   <label htmlFor="fornecedores-prazo-justificativa">Justificativa (≥5)</label>
-                  <input id="fornecedores-prazo-justificativa" required value={deadlineForm.justification} onChange={e => setDeadlineForm({ ...deadlineForm, justification: e.target.value })} />
+                  <input id="fornecedores-prazo-justificativa" disabled={writeLocked} required value={deadlineForm.justification} onChange={e => setDeadlineForm({ ...deadlineForm, justification: e.target.value })} />
                 </div>
                 <div className={styles.actions}>
-                  <button type="submit" className={styles.primary} disabled={Boolean(busy)}>Registrar prazo</button>
+                  <button
+                    type="submit"
+                    className={styles.primary}
+                    data-write-operation={`deadline-${deadlineForm.order_id}`}
+                    aria-busy={busy?.actionId === `deadline-${deadlineForm.order_id}` ? "true" : undefined}
+                    disabled={writeLocked}
+                  >
+                    Registrar prazo
+                  </button>
                 </div>
               </form>
             ) : null}
