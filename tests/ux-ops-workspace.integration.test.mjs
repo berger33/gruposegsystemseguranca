@@ -397,3 +397,668 @@ test('browser: em 390px a tela de operação não produz transbordo horizontal',
     await context.close();
   } finally { await browser.close(); }
 });
+
+// ============================================================================
+// UX-PRO-07D-1 — leitura honesta da superfície canônica de /admin/operacao.
+//
+// Casos estritamente ADITIVOS: nenhum caso herdado acima é editado, removido
+// ou relaxado, e o auxiliar herdado `openOps` continua intacto. Os casos
+// abaixo reaproveitam o servidor, o pool e as sessões do `before` herdado —
+// mesmo PostgreSQL descartável, mesmo servidor HTTP real, mesmo Chromium.
+//
+// Atrasos, falhas e corpos 2xx sem a lista canônica são injetados SOMENTE em
+// `window.fetch` da própria página e SOMENTE em GET de `/api/ops/*`. Nenhuma
+// escrita passa pelo injetor; nenhuma API, permissão ou auditoria é alterada.
+//
+// O que estes casos provam (subfatia 07D-1):
+//  - as 17 leituras canônicas da tela continuam exigindo sessão e respondendo
+//    com a lista canônica (contrato preservado);
+//  - o carregamento inicial não presume abas, vazio nem falha;
+//  - corpo 2xx sem a lista canônica vira falha declarada
+//    (`invalid_ops_response`) no painel inicial, na estrutura, no
+//    dimensionamento, nas versões de escala e no detalhe da versão — nunca
+//    lista vazia;
+//  - a coluna "Necessidades" dos postos não afirma zero enquanto a leitura de
+//    estrutura não foi confirmada;
+//  - a falha do detalhe da versão é declarada também nas seções dependentes
+//    (ciência e histórico), sem oferecer ação de ciência;
+//  - a resposta atrasada de uma versão escolhida antes é descartada;
+//  - 1440/768/390/320 px, tema noturno e percurso de teclado medidos; o que
+//    a medição encontrar fora do recorte desta rota (estilo compartilhado) é
+//    registrado em `problems` da evidência, nunca escondido.
+//
+// O que NÃO provam: a escrita de ciência de escala (subfatia própria), as
+// abas legadas (OpsAdvanced2Client/OpsAdvanced3Client), apresentação de
+// datas/horas, aceite humano ou auditoria WCAG completa.
+// ============================================================================
+
+import { readFile as readFile07d, writeFile as writeFile07d } from 'node:fs/promises';
+import { recordKeyboardCapture } from '../scripts/ux-pro-00-keyboard-evidence.mjs';
+
+const STAGE_07D = 'ux-pro-07-operacao';
+const ROTA_07D = '/admin/operacao';
+const evidenceDir07d = process.env.UX_OPS_07D_EVIDENCE_DIR || '';
+const evidencias07d = [];
+let massa07d = null;
+
+// [nome no injetor, caminho exato usado pela tela, chave canônica da lista]
+const LEITURAS_07D = [
+  ['posts', '/api/ops/posts?limit=100', 'posts'],
+  ['allocations', '/api/ops/allocations', 'allocations'],
+  ['coverage-requests', '/api/ops/coverage-requests', 'requests'],
+  ['handovers', '/api/ops/handovers', 'handovers'],
+  ['occurrence-book', '/api/ops/occurrence-book', 'occurrences'],
+  ['checklist-instances', '/api/ops/checklist-instances', 'instances'],
+  ['work-rules', '/api/ops/work-rules', 'rules'],
+  ['qualifications', '/api/ops/qualifications', 'qualifications'],
+  ['validations', '/api/ops/validations?is_valid=false', 'validations'],
+  ['job-roles', '/api/ops/job-roles', 'roles'],
+  ['post-shift-needs', '/api/ops/post-shift-needs', 'needs'],
+  ['dimensioning', '/api/ops/dimensioning', 'dimensionings'],
+  ['coverage-gaps', '/api/ops/coverage-gaps', 'gaps'],
+  ['schedule-versions', '/api/ops/schedule-versions', 'versions'],
+  ['schedule-entries', '/api/ops/schedule-entries?version_id=:version', 'entries'],
+  ['schedule-acks', '/api/ops/schedule-acks?version_id=:version', 'acknowledgments'],
+  ['schedule-history', '/api/ops/schedule-history?version_id=:version', 'history'],
+];
+
+const escape07d = value => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const CRASH_07D = /Target (page|closed)|has been closed|Target crashed|browser has disconnected|crashed|SIGSEGV|Protocol error/i;
+/** Repete somente quando o Chromium empacotado cai; asserção nunca é repetida. */
+async function withBrowser07d(body) {
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    let browser;
+    try {
+      browser = await launchBrowser();
+      return await body(browser);
+    } catch (error) {
+      if (error?.code === 'ERR_ASSERTION' || !CRASH_07D.test(String(error?.message || ''))) throw error;
+      lastError = error;
+      console.log(`UX_OPS_07D_BROWSER_RETRY tentativa=${attempt}: ${String(error.message).split('\n')[0]}`);
+    } finally {
+      await browser?.close().catch(() => {});
+    }
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  throw lastError;
+}
+
+/**
+ * Abre /admin/operacao com regras por leitura. Cada regra aceita `delay`,
+ * `fail`, `failCount`, `malformed`, `status`, `code` e `versionId` (este último
+ * restringe a regra ao `version_id` de uma versão de escala). Só GET de
+ * `/api/ops/*` passa pelo injetor; o resto segue para o servidor real.
+ */
+async function openOps07d(browser, { cookie = tiCookie, width = 1440, height = 900, rules = {} } = {}) {
+  const context = await browser.newContext({ viewport: { width, height }, locale: 'pt-BR' });
+  const separator = cookie.indexOf('=');
+  await context.addCookies([{ name: cookie.slice(0, separator), value: cookie.slice(separator + 1), url: baseUrl }]);
+  const page = await context.newPage();
+  page.setDefaultTimeout(Number(process.env.UX_OPS_07D_UI_TIMEOUT || 45_000));
+  page.setDefaultNavigationTimeout(90_000);
+  const normalized = {};
+  for (const [name, rule] of Object.entries(rules)) {
+    normalized[name] = { delay: 0, fail: false, failCount: 0, malformed: false, status: 503, code: 'read_unavailable', versionId: null, ...rule };
+  }
+  await page.addInitScript(control => {
+    const original = window.fetch.bind(window);
+    const state = { rules: control.rules, calls: {}, delivered: {} };
+    window.__uxOps07d = state;
+    window.fetch = async (input, init) => {
+      const raw = typeof input === 'string' ? input : (input?.url || '');
+      const method = String(init?.method || (typeof input !== 'string' ? input?.method : '') || 'GET').toUpperCase();
+      let url;
+      try { url = new URL(raw, window.location.origin); } catch { return original(input, init); }
+      if (method !== 'GET' || !url.pathname.startsWith('/api/ops/')) return original(input, init);
+      const name = url.pathname.slice('/api/ops/'.length);
+      const versionId = url.searchParams.get('version_id');
+      const tag = versionId ? `${name}@${versionId}` : name;
+      state.calls[name] = (state.calls[name] || 0) + 1;
+      state.calls[tag] = tag === name ? state.calls[name] : (state.calls[tag] || 0) + 1;
+      const rule = state.rules[name];
+      const applies = Boolean(rule) && (!rule.versionId || rule.versionId === versionId);
+      try {
+        if (applies) {
+          if (rule.delay > 0) await new Promise(resolve => setTimeout(resolve, rule.delay));
+          if (rule.malformed) {
+            return new Response(JSON.stringify({ note: 'corpo 2xx sem a lista canônica' }), {
+              status: 200, headers: { 'content-type': 'application/json' },
+            });
+          }
+          const shouldFail = rule.fail || rule.failCount > 0;
+          if (rule.failCount > 0) rule.failCount -= 1;
+          if (shouldFail) {
+            return new Response(JSON.stringify({ error: rule.code }), {
+              status: rule.status, headers: { 'content-type': 'application/json' },
+            });
+          }
+        }
+        return await original(input, init);
+      } finally {
+        state.delivered[tag] = (state.delivered[tag] || 0) + 1;
+      }
+    };
+  }, { rules: normalized });
+  await page.goto(`${baseUrl}${ROTA_07D}`, { waitUntil: 'domcontentloaded' });
+  await page.getByRole('heading', { level: 1, name: /Operação — controle e gestão operacional/ }).waitFor();
+  return { context, page };
+}
+
+async function writeEvidence07d() {
+  if (!evidenceDir07d) return;
+  await mkdir(evidenceDir07d, { recursive: true });
+  const entries = [...new Map(evidencias07d.map(entry => [path.basename(entry.screenshot), entry])).values()];
+  await writeFile07d(path.join(evidenceDir07d, 'resumo.json'), `${JSON.stringify({
+    stage: STAGE_07D,
+    generatedBy: 'npm run test:ux-ops:pg (PostgreSQL descartável + HTTP real + Chromium)',
+    notes: 'Massa inteiramente sintética criada pelas APIs de operação. problems resulta das medições automatizadas; não representa validação manual, homologação nem aceite humano, e não equivale a auditoria WCAG completa. A rolagem horizontal interna das tabelas é medida e registrada (tabelasComRolagemInterna), não corrigida nesta subfatia.',
+    entries,
+  }, null, 2)}\n`, 'utf8');
+}
+
+async function capture07d(page, name, extra = {}) {
+  if (!evidenceDir07d) return;
+  await mkdir(evidenceDir07d, { recursive: true });
+  const file = path.join(evidenceDir07d, `${name}.png`);
+  await page.screenshot({ path: file, fullPage: true });
+  const viewport = page.viewportSize();
+  evidencias07d.push({
+    stage: STAGE_07D,
+    route: ROTA_07D,
+    role: 'ti',
+    viewport: `${viewport.width}x${viewport.height}`,
+    theme: await page.evaluate(() => document.documentElement.dataset.adminTheme || 'day'),
+    screenshot: path.relative(root, file).replaceAll('\\', '/'),
+    problems: [],
+    ...extra,
+  });
+  await writeEvidence07d();
+}
+
+async function contraste07d(page, selector) {
+  return page.locator(selector).first().evaluate(element => {
+    const parse = value => (value.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+    const luminance = rgb => {
+      const values = rgb.map(value => {
+        const channel = value / 255;
+        return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * values[0] + 0.7152 * values[1] + 0.0722 * values[2];
+    };
+    const background = node => {
+      let current = node;
+      while (current) {
+        const value = getComputedStyle(current).backgroundColor;
+        if (value && !/rgba\([^)]*,\s*0\s*\)$/.test(value) && value !== 'transparent') return parse(value);
+        current = current.parentElement;
+      }
+      return [255, 255, 255];
+    };
+    const foreground = parse(getComputedStyle(element).color);
+    const back = background(element);
+    const [lighter, darker] = [luminance(foreground), luminance(back)].sort((a, b) => b - a);
+    return Math.round(((lighter + 0.05) / (darker + 0.05)) * 100) / 100;
+  });
+}
+
+/** Transbordo do documento, menor controle e rolagem interna das tabelas. */
+async function medirSuperficie07d(page, rotulo) {
+  const overflowDocumentoPx = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  assert.ok(overflowDocumentoPx <= 1, `transbordo de ${overflowDocumentoPx}px em ${rotulo}`);
+  const alvos = await page.locator('main main :is(button, [role="tab"], select, input)').evaluateAll(elements => elements
+    .map(element => element.getBoundingClientRect())
+    .filter(rect => rect.width > 0 && rect.height > 0)
+    .map(rect => Math.round(rect.height)));
+  assert.ok(alvos.length > 0, `nenhum controle medido em ${rotulo}`);
+  const menorAlvoPx = Math.min(...alvos);
+  assert.ok(menorAlvoPx >= 44, `controles precisam ter pelo menos 44px; medido ${menorAlvoPx}px em ${rotulo}`);
+  // Links de texto em linha (trilha "Contratos · Empresas e funil") são
+  // medidos à parte e só registrados: não são controles de formulário.
+  const links = await page.locator('main main a[href]').evaluateAll(elements => elements
+    .map(element => element.getBoundingClientRect())
+    .filter(rect => rect.width > 0 && rect.height > 0)
+    .map(rect => Math.round(rect.height)));
+  // Registrado, não corrigido nesta subfatia: tabelas mais largas que a tela
+  // rolam dentro do próprio contêiner; o contêiner não declara região focável.
+  const tabelas = await page.locator('main main table').evaluateAll(tables => tables.map(table => {
+    const wrapper = table.parentElement;
+    const rolagemInterna = Boolean(wrapper) && wrapper.scrollWidth - wrapper.clientWidth > 1;
+    return { rolagemInterna, regiaoFocavel: Boolean(wrapper) && wrapper.hasAttribute('tabindex') };
+  }));
+  return {
+    overflowDocumentoPx,
+    menorAlvoPx,
+    menorLinkEmLinhaPx: links.length ? Math.min(...links) : null,
+    tabelasVisiveis: tabelas.length,
+    tabelasComRolagemInterna: tabelas.filter(item => item.rolagemInterna).length,
+    tabelasComRolagemSemRegiaoFocavel: tabelas.filter(item => item.rolagemInterna && !item.regiaoFocavel).length,
+  };
+}
+
+after(async () => {
+  await writeEvidence07d().catch(() => {});
+});
+
+test('07D-1 massa sintética pelas APIs reais: duas versões de escala distintas e necessidade por turno', { skip: !RUN }, async () => {
+  const sufixo = randomUUID().slice(0, 8);
+  const agora = Date.now();
+  const dia = offset => new Date(agora + offset * 86_400_000).toISOString().slice(0, 10);
+
+  const criarProfissional = async letra => {
+    const nome = `Vigilante 07D ${letra} ${sufixo}`;
+    const resposta = await api('/api/hr/employees', {
+      method: 'POST', cookie: rhCookie,
+      body: { matricula: `QA-07D-${letra}-${sufixo}`, display_name: nome, cargo: 'vigilante', status: 'ativo', employment_type: 'clt' },
+    });
+    assert.equal(resposta.status, 201, `profissional ${letra}: ${resposta.status} ${JSON.stringify(resposta.body)}`);
+    return { id: resposta.body.employee.id, name: nome };
+  };
+  const criarPosto = async letra => {
+    const nome = `Posto 07D ${letra} ${sufixo}`;
+    const resposta = await api('/api/ops/posts', { method: 'POST', cookie: tiCookie, body: { name: nome } });
+    assert.equal(resposta.status, 201, `posto ${letra}: ${resposta.status} ${JSON.stringify(resposta.body)}`);
+    return { id: resposta.body.post.id, name: nome };
+  };
+  const criarVersao = async (inicio, fim) => {
+    const resposta = await api('/api/ops/schedule-versions', {
+      method: 'POST', cookie: tiCookie, body: { valid_from: inicio, valid_to: fim },
+    });
+    assert.equal(resposta.status, 201, `versão ${inicio}: ${resposta.status} ${JSON.stringify(resposta.body)}`);
+    const version = resposta.body.version;
+    return {
+      id: version.id,
+      version: version.version,
+      validity: `${String(version.valid_from).slice(0, 10)} a ${String(version.valid_to).slice(0, 10)}`,
+    };
+  };
+
+  const employeeA = await criarProfissional('A');
+  const employeeB = await criarProfissional('B');
+  const postA = await criarPosto('A');
+  const postB = await criarPosto('B');
+
+  const turno = await api('/api/ops/shift-templates', {
+    method: 'POST', cookie: tiCookie,
+    body: { name: `Turno 07D ${sufixo}`, shift_type: 'diurno', start_time: '07:00', end_time: '19:00', duration_hours: 12 },
+  });
+  assert.equal(turno.status, 201, `turno: ${turno.status} ${JSON.stringify(turno.body)}`);
+  const templateId = turno.body.template.id;
+
+  // Uma necessidade por turno ativa no posto A: a coluna "Necessidades" do
+  // posto A vale 1 quando a estrutura é lida; antes disso não vale zero.
+  const necessidade = await api('/api/ops/post-shift-needs', {
+    method: 'POST', cookie: tiCookie, body: { post_id: postA.id, shift_template_id: templateId, required_headcount: 2 },
+  });
+  assert.equal(necessidade.status, 201, `necessidade: ${necessidade.status} ${JSON.stringify(necessidade.body)}`);
+
+  const versionA = await criarVersao(dia(30), dia(36));
+  const versionB = await criarVersao(dia(60), dia(66));
+  for (const [versao, posto, profissional, data] of [
+    [versionA, postA, employeeA, dia(30)],
+    [versionB, postB, employeeB, dia(60)],
+  ]) {
+    const entrada = await api('/api/ops/schedule-entries', {
+      method: 'POST', cookie: tiCookie,
+      body: { version_id: versao.id, post_id: posto.id, employee_id: profissional.id, shift_template_id: templateId, entry_date: data },
+    });
+    assert.equal(entrada.status, 201, `entrada ${versao.validity}: ${entrada.status} ${JSON.stringify(entrada.body)}`);
+  }
+  massa07d = { sufixo, postA, postB, employeeA, employeeB, versionA, versionB };
+});
+
+test('07D-1 contrato preservado: as 17 leituras canônicas exigem sessão e respondem com a lista canônica', { skip: !RUN }, async () => {
+  assert.ok(massa07d, 'a massa sintética da 07D-1 precisa existir');
+  for (const [nome, caminho, chave] of LEITURAS_07D) {
+    const url = caminho.replace(':version', massa07d.versionB.id);
+    const anonimo = await api(url);
+    assert.equal(anonimo.status, 401, `${nome}: anônimo recusado`);
+    assert.equal(anonimo.body?.error, 'unauthorized', `${nome}: código canônico da negativa preservado`);
+    assert.ok(!(chave in (anonimo.body || {})), `${nome}: a negativa não vaza ${chave}`);
+    const autorizado = await api(url, { cookie: tiCookie });
+    assert.equal(autorizado.status, 200, `${nome}: sessão de staff continua lendo`);
+    assert.ok(Array.isArray(autorizado.body?.[chave]), `${nome}: a resposta continua trazendo a lista canônica "${chave}"`);
+  }
+});
+
+test('browser 07D-1: carregamento inicial não presume abas, vazio nem falha', { skip: !RUN }, async () => {
+  assert.ok(massa07d, 'a massa sintética da 07D-1 precisa existir');
+  await withBrowser07d(async browser => {
+    const { context, page } = await openOps07d(browser, { rules: { posts: { delay: 5000 } } });
+    const carregando = page.locator('main main [data-ui-state="loading"]').first();
+    await carregando.waitFor();
+    assert.match(await carregando.innerText(), /Consultando a operação/);
+    assert.equal(await page.locator('[role="tablist"]').count(), 0, 'sem leitura concluída, as abas não aparecem');
+    assert.equal(await page.locator('main main [data-ui-state="empty"]').count(), 0, 'nenhum vazio é presumido durante a leitura');
+    assert.equal(await page.locator('main main [data-ui-state="error"]').count(), 0, 'carregando não é falha');
+    await capture07d(page, 'operacao-1440-carregando', { state: 'carregando_painel_inicial' });
+    await page.locator('[role="tablist"]').waitFor();
+    await page.locator('section[aria-labelledby="posts-title"] table', { hasText: massa07d.postA.name }).waitFor();
+    await context.close();
+  });
+});
+
+test('browser 07D-1: 2xx sem a lista canônica no painel inicial é falha declarada, não vazio', { skip: !RUN }, async () => {
+  assert.ok(massa07d, 'a massa sintética da 07D-1 precisa existir');
+  await withBrowser07d(async browser => {
+    const { context, page } = await openOps07d(browser, { rules: { posts: { malformed: true } } });
+    await page.locator('main main [data-ui-state="error"], [role="tablist"]').first().waitFor();
+    await capture07d(page, 'operacao-1440-resposta-invalida', { state: 'resposta_2xx_sem_lista_painel_inicial' });
+    const falha = page.locator('main main [data-ui-state="error"]');
+    assert.equal(await falha.count(), 1, 'corpo 2xx sem "posts" precisa virar falha declarada');
+    const texto = await falha.innerText();
+    assert.match(texto, /invalid_ops_response/, 'o código de diagnóstico fica disponível');
+    assert.match(texto, /HTTP 200/, 'a resposta real do servidor é declarada');
+    assert.match(texto, /não significa que não existam registros/i);
+    assert.equal(await page.getByText('Nenhum posto cadastrado ainda').count(), 0, 'a resposta ilegível não vira "nenhum posto"');
+    assert.equal(await page.locator('main main [data-ui-state="empty"]').count(), 0, 'nenhum vazio é presumido');
+    assert.equal(await page.locator('[role="tablist"]').count(), 0, 'sem leitura completa, as abas não aparecem (mesma regra herdada da falha)');
+
+    const leiturasAntes = await page.evaluate(() => window.__uxOps07d.calls.posts || 0);
+    await page.evaluate(() => { window.__uxOps07d.rules.posts.malformed = false; });
+    await falha.getByRole('button', { name: 'Tentar carregar novamente' }).click();
+    await page.locator('[role="tablist"]').waitFor();
+    await page.locator('section[aria-labelledby="posts-title"] table', { hasText: massa07d.postA.name }).waitFor();
+    const leiturasDepois = await page.evaluate(() => window.__uxOps07d.calls.posts || 0);
+    assert.ok(leiturasDepois > leiturasAntes, `a repetição relê de verdade (${leiturasAntes} → ${leiturasDepois})`);
+    await context.close();
+  });
+});
+
+test('browser 07D-1: 2xx sem a lista canônica em estrutura, dimensionamento e versões de escala é falha declarada em cada grupo', { skip: !RUN }, async () => {
+  assert.ok(massa07d, 'a massa sintética da 07D-1 precisa existir');
+  await withBrowser07d(async browser => {
+    const { context, page } = await openOps07d(browser, {
+      rules: { 'job-roles': { malformed: true }, 'coverage-gaps': { malformed: true }, 'schedule-versions': { malformed: true } },
+    });
+    await page.locator('[role="tablist"]').waitFor();
+
+    const postos = page.locator('#ops-painel-postos');
+    await postos.locator('[data-ui-state="error"], #job-roles-title').first().waitFor();
+    await capture07d(page, 'operacao-1440-estrutura-resposta-invalida', { state: 'resposta_2xx_sem_lista_estrutura' });
+    const falhaEstrutura = postos.locator('[data-ui-state="error"]');
+    assert.equal(await falhaEstrutura.count(), 1, 'estrutura com 2xx sem "roles" precisa virar falha declarada');
+    assert.match(await falhaEstrutura.innerText(), /invalid_ops_response/);
+    assert.equal(await postos.getByText('Nenhum cargo ou função cadastrado').count(), 0, 'resposta ilegível não vira "nenhum cargo"');
+    assert.equal(await postos.getByText('Nenhuma necessidade por turno cadastrada').count(), 0, 'resposta ilegível não vira "nenhuma necessidade"');
+
+    await page.getByRole('tab', { name: 'Dimensionamento', exact: true }).click();
+    const dimensionamento = page.locator('#ops-painel-dimensionamento');
+    await dimensionamento.locator('[data-ui-state="error"], #coverage-gaps-title').first().waitFor();
+    const falhaDim = dimensionamento.locator('[data-ui-state="error"]');
+    assert.equal(await falhaDim.count(), 1, 'dimensionamento com 2xx sem "gaps" precisa virar falha declarada');
+    assert.match(await falhaDim.innerText(), /invalid_ops_response/);
+    assert.equal(await dimensionamento.getByText('Nenhuma lacuna de cobertura registrada').count(), 0, 'resposta ilegível não vira "nenhuma lacuna"');
+
+    await page.getByRole('tab', { name: 'Escalas', exact: true }).click();
+    const escalas = page.locator('#ops-painel-escalas');
+    await escalas.locator('[data-ui-state="error"], #schedule-versions-title').first().waitFor();
+    const falhaEscalas = escalas.locator('[data-ui-state="error"]');
+    assert.equal(await falhaEscalas.count(), 1, 'versões com 2xx sem "versions" precisa virar falha declarada');
+    assert.match(await falhaEscalas.innerText(), /invalid_ops_response/);
+    assert.equal(await escalas.getByText('Nenhuma versão de escala registrada').count(), 0, 'resposta ilegível não vira "nenhuma versão"');
+    await context.close();
+  });
+});
+
+test('browser 07D-1: a coluna Necessidades não afirma zero enquanto a estrutura não foi confirmada', { skip: !RUN }, async () => {
+  assert.ok(massa07d, 'a massa sintética da 07D-1 precisa existir');
+  await withBrowser07d(async browser => {
+    const { context, page } = await openOps07d(browser, {
+      // Regra persistente: em modo de desenvolvimento o React executa o efeito
+      // de carga duas vezes; uma falha "de uma vez só" ficaria só com uma delas.
+      rules: { 'post-shift-needs': { delay: 8000, fail: true, status: 503, code: 'read_unavailable' } },
+    });
+    await page.locator('[role="tablist"]').waitFor();
+    const linha = page.locator('section[aria-labelledby="posts-title"] tr', { hasText: massa07d.postA.name });
+    await linha.waitFor();
+    // Colunas: Posto, Tipo, Cliente, Unidade atendida, Contrato, Necessidades, Situação.
+    const celula = linha.locator('td').nth(5);
+    // As duas leituras da célula são capturadas antes das asserções, para que a
+    // execução contra a implementação anterior registre o estado de antes.
+    const durante = (await celula.innerText()).trim();
+    await capture07d(page, 'operacao-1440-necessidades-aguardando', { state: 'estrutura_lendo_coluna_aguardando', celulaNecessidades: durante });
+    const falhaEstrutura = page.locator('#ops-painel-postos [data-ui-state="error"]');
+    await falhaEstrutura.waitFor();
+    const depoisDaFalha = (await celula.innerText()).trim();
+    await capture07d(page, 'operacao-1440-necessidades-nao-confirmadas', { state: 'estrutura_falhou_coluna_nao_confirmada', celulaNecessidades: depoisDaFalha });
+
+    assert.notEqual(durante, '0', 'enquanto a estrutura é lida, a coluna não pode afirmar zero necessidades');
+    assert.match(durante, /aguardando/i, 'a célula declara que aguarda a leitura da estrutura');
+    assert.notEqual(depoisDaFalha, '0', 'falha da estrutura não pode virar zero necessidades');
+    assert.match(depoisDaFalha, /não confirmad/i, 'a célula declara que a quantidade não foi confirmada');
+
+    await page.evaluate(() => { Object.assign(window.__uxOps07d.rules['post-shift-needs'], { delay: 0, fail: false }); });
+    await falhaEstrutura.getByRole('button', { name: 'Tentar carregar novamente' }).click();
+    await page.locator('#shift-needs-title').waitFor();
+    assert.equal((await celula.innerText()).trim(), '1', 'com a estrutura confirmada, a contagem real aparece');
+    await context.close();
+  });
+});
+
+test('browser 07D-1: falha do detalhe da versão é declarada também em ciência e histórico, sem ação de ciência', { skip: !RUN }, async () => {
+  assert.ok(massa07d, 'a massa sintética da 07D-1 precisa existir');
+  await withBrowser07d(async browser => {
+    const { context, page } = await openOps07d(browser, {
+      rules: { 'schedule-acks': { fail: true, status: 503, code: 'read_unavailable', versionId: massa07d.versionB.id } },
+    });
+    await page.locator('[role="tablist"]').waitFor();
+    await page.getByRole('tab', { name: 'Escalas', exact: true }).click();
+    await page.locator('#ops-painel-escalas tr', { hasText: massa07d.versionB.validity })
+      .getByRole('button', { name: 'Ver calendário' }).click();
+
+    const calendario = page.locator('section[aria-labelledby="schedule-calendar-title"]');
+    const falha = calendario.locator('[data-ui-state="error"]');
+    await falha.waitFor();
+    await capture07d(page, 'operacao-1440-detalhe-falha', { state: 'detalhe_da_versao_falhou' });
+    assert.match(await falha.innerText(), /HTTP 503/, 'a resposta real do servidor é declarada');
+    const ciencias = page.locator('section[aria-labelledby="schedule-acks-title"]');
+    const historico = page.locator('section[aria-labelledby="schedule-history-title"]');
+    assert.equal(await ciencias.locator('[data-testid="operacao-ciencias-indisponiveis"]').count(), 1,
+      'a seção de ciência declara que depende da leitura que falhou');
+    assert.equal(await historico.locator('[data-testid="operacao-historico-indisponivel"]').count(), 1,
+      'a seção de histórico declara que depende da leitura que falhou');
+    assert.equal(await ciencias.getByRole('button', { name: 'Registrar ciência' }).count(), 0,
+      'sem leitura da versão, nenhuma ação de ciência é oferecida');
+
+    await page.evaluate(() => { window.__uxOps07d.rules['schedule-acks'].fail = false; });
+    await falha.getByRole('button', { name: 'Tentar carregar novamente' }).click();
+    await calendario.locator('table', { hasText: massa07d.postB.name }).waitFor();
+    await ciencias.locator('tr', { hasText: massa07d.employeeB.name }).waitFor();
+    assert.equal(await ciencias.locator('[data-testid="operacao-ciencias-indisponiveis"]').count(), 0);
+    assert.equal(await historico.locator('[data-testid="operacao-historico-indisponivel"]').count(), 0);
+    await context.close();
+  });
+});
+
+test('browser 07D-1: 2xx sem a lista canônica no detalhe da versão é falha declarada, não calendário vazio', { skip: !RUN }, async () => {
+  assert.ok(massa07d, 'a massa sintética da 07D-1 precisa existir');
+  await withBrowser07d(async browser => {
+    const { context, page } = await openOps07d(browser, {
+      rules: { 'schedule-entries': { malformed: true, versionId: massa07d.versionB.id } },
+    });
+    await page.locator('[role="tablist"]').waitFor();
+    await page.getByRole('tab', { name: 'Escalas', exact: true }).click();
+    await page.locator('#ops-painel-escalas tr', { hasText: massa07d.versionB.validity })
+      .getByRole('button', { name: 'Ver calendário' }).click();
+
+    const calendario = page.locator('section[aria-labelledby="schedule-calendar-title"]');
+    await calendario.locator('[data-ui-state="error"], [data-ui-state="empty"], table').first().waitFor();
+    await capture07d(page, 'operacao-1440-detalhe-resposta-invalida', { state: 'resposta_2xx_sem_lista_detalhe' });
+    const falha = calendario.locator('[data-ui-state="error"]');
+    assert.equal(await falha.count(), 1, 'detalhe com 2xx sem "entries" precisa virar falha declarada');
+    assert.match(await falha.innerText(), /invalid_ops_response/);
+    assert.equal(await calendario.getByText('Nenhuma entrada nesta versão').count(), 0, 'resposta ilegível não vira "nenhuma entrada"');
+    assert.equal(await page.locator('section[aria-labelledby="schedule-acks-title"]').getByText('Nenhum profissional com entrada nesta versão').count(), 0,
+      'resposta ilegível não vira "nenhum profissional"');
+    await context.close();
+  });
+});
+
+test('browser 07D-1: resposta atrasada de uma versão escolhida antes é descartada', { skip: !RUN }, async () => {
+  assert.ok(massa07d, 'a massa sintética da 07D-1 precisa existir');
+  const { versionA, versionB, postA, postB, employeeA, employeeB } = massa07d;
+  await withBrowser07d(async browser => {
+    const { context, page } = await openOps07d(browser, {
+      rules: {
+        'schedule-entries': { delay: 3500, versionId: versionA.id },
+        'schedule-acks': { delay: 3500, versionId: versionA.id },
+        'schedule-history': { delay: 3500, versionId: versionA.id },
+      },
+    });
+    await page.locator('[role="tablist"]').waitFor();
+    await page.getByRole('tab', { name: 'Escalas', exact: true }).click();
+    const versoes = page.locator('#ops-painel-escalas');
+    await versoes.locator('tr', { hasText: versionB.validity }).waitFor();
+    await versoes.locator('tr', { hasText: versionA.validity }).getByRole('button', { name: 'Ver calendário' }).click();
+    await versoes.locator('tr', { hasText: versionB.validity }).getByRole('button', { name: 'Ver calendário' }).click();
+
+    const calendario = page.locator('section[aria-labelledby="schedule-calendar-title"]');
+    await calendario.locator('table', { hasText: postB.name }).waitFor();
+    await page.waitForFunction(id => ['schedule-entries', 'schedule-acks', 'schedule-history']
+      .every(name => (window.__uxOps07d.delivered[`${name}@${id}`] || 0) >= 1), versionA.id, { timeout: 30_000 });
+    await page.waitForTimeout(800);
+    await capture07d(page, 'operacao-1440-versao-superada', { state: 'resposta_atrasada_de_versao_anterior_descartada' });
+
+    assert.match(await page.locator('#schedule-calendar-title').innerText(), new RegExp(`v${versionB.version}\\b`),
+      'o título continua sendo o da versão escolhida por último');
+    const textoCalendario = await calendario.innerText();
+    assert.match(textoCalendario, new RegExp(escape07d(postB.name)), 'o calendário mostra a versão escolhida por último');
+    assert.doesNotMatch(textoCalendario, new RegExp(escape07d(postA.name)),
+      'a resposta atrasada da versão anterior não pode substituir o calendário da versão escolhida');
+    const textoCiencias = await page.locator('section[aria-labelledby="schedule-acks-title"]').innerText();
+    assert.match(textoCiencias, new RegExp(escape07d(employeeB.name)));
+    assert.doesNotMatch(textoCiencias, new RegExp(escape07d(employeeA.name)),
+      'a lista de ciência não pode receber profissionais de outra versão');
+    await context.close();
+  });
+});
+
+test('browser 07D-1: 1440, 768, 390 e 320 px, tema noturno e percurso de teclado medidos', { skip: !RUN }, async () => {
+  assert.ok(massa07d, 'a massa sintética da 07D-1 precisa existir');
+  await withBrowser07d(async browser => {
+    const { context, page } = await openOps07d(browser);
+    await page.locator('[role="tablist"]').waitFor();
+    await page.locator('section[aria-labelledby="posts-title"] table', { hasText: massa07d.postA.name }).waitFor();
+    await page.locator('#shift-needs-title').waitFor();
+
+    for (const [width, height] of [[1440, 900], [768, 1024], [390, 844], [320, 844]]) {
+      await page.setViewportSize({ width, height });
+      await page.waitForTimeout(500);
+      const medidas = await medirSuperficie07d(page, `${width}px no tema dia`);
+      const extra = { ...medidas };
+      if (width === 1440) {
+        for (const [nome, seletor] of [
+          ['contrasteTitulo', 'h1'],
+          ['contrasteTabela', 'section[aria-labelledby="posts-title"] td'],
+          ['contrasteAbaAtiva', '[role="tab"][aria-selected="true"]'],
+          ['contrasteAbaInativa', '[role="tab"][aria-selected="false"]'],
+        ]) {
+          extra[nome] = await contraste07d(page, seletor);
+          assert.ok(extra[nome] >= 4.5, `${nome} no tema dia: ${extra[nome]}:1`);
+        }
+      }
+      await capture07d(page, `operacao-${width}-dia`, extra);
+
+      if (width === 768) {
+        await page.click('[data-admin-theme-toggle="true"]');
+        await page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night');
+        await page.waitForTimeout(400);
+        const noite = await medirSuperficie07d(page, '768px no tema noite');
+        for (const [nome, seletor] of [
+          ['contrasteTitulo', 'h1'],
+          ['contrasteTabela', 'section[aria-labelledby="posts-title"] td'],
+          ['contrasteAbaInativa', '[role="tab"][aria-selected="false"]'],
+        ]) {
+          noite[nome] = await contraste07d(page, seletor);
+          assert.ok(noite[nome] >= 4.5, `${nome} no tema noite: ${noite[nome]}:1`);
+        }
+        // A aba ativa usa `.tabActive` do estilo COMPARTILHADO
+        // (src/components/ui/UiWorkspace.module.css: texto #fff sobre
+        // --ux-color-brand, que no tema noite vale #92bdf2). Corrigir ali muda
+        // cerca de vinte rotas; fica fora do recorte desta rota. A medição é
+        // registrada como problema na evidência — nunca escondida.
+        noite.contrasteAbaAtiva = await contraste07d(page, '[role="tab"][aria-selected="true"]');
+        const problemasNoite = noite.contrasteAbaAtiva < 4.5
+          ? [`contraste da aba ativa no tema noite ${noite.contrasteAbaAtiva}:1 (abaixo de 4.5:1): estilo compartilhado .tabActive em src/components/ui/UiWorkspace.module.css (texto #fff sobre --ux-color-brand noturno #92bdf2); fora do recorte da rota, registrado para decisão transversal`]
+          : [];
+        await capture07d(page, 'operacao-768-noite', { ...noite, problems: problemasNoite });
+        if (evidenceDir07d && problemasNoite.length) {
+          const summary = JSON.parse(await readFile07d(path.join(evidenceDir07d, 'resumo.json'), 'utf8'));
+          const entry = summary.entries.find(item => path.basename(item.screenshot || '') === 'operacao-768-noite.png');
+          assert.deepEqual(entry?.problems, problemasNoite, 'o problema medido fica registrado na evidência');
+        }
+        await page.click('[data-admin-theme-toggle="true"]');
+        await page.waitForFunction(() => document.documentElement.dataset.adminTheme !== 'night');
+        await page.waitForTimeout(300);
+      }
+
+      if (width === 390) {
+        // Recarrega para que o percurso comece do início do documento, e não
+        // do último controle clicado (o seletor de tema, logo acima).
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.locator('[role="tablist"]').waitFor();
+        await page.locator('#shift-needs-title').waitFor();
+        await page.evaluate(() => {
+          window.scrollTo(0, 0);
+          if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+        });
+        const abaAtiva = page.locator('[role="tab"][aria-selected="true"]');
+        let alcancou = false;
+        let primeiroFoco = false;
+        const percurso = [];
+        for (let passo = 0; passo < 150 && !alcancou; passo++) {
+          await page.keyboard.press('Tab');
+          percurso.push(await page.evaluate(() => {
+            const element = document.activeElement;
+            return element?.id || element?.getAttribute?.('aria-label') || element?.textContent?.trim().slice(0, 80) || element?.tagName?.toLowerCase() || 'desconhecido';
+          }));
+          if (passo === 0) {
+            primeiroFoco = await page.evaluate(() => {
+              const element = document.activeElement;
+              if (!(element instanceof HTMLElement)) return false;
+              const style = getComputedStyle(element);
+              return style.outlineStyle !== 'none' && (parseFloat(style.outlineWidth) || 0) >= 1;
+            });
+          }
+          alcancou = await abaAtiva.evaluate(element => element === document.activeElement);
+        }
+        assert.ok(primeiroFoco, 'o primeiro foco por Tab precisa ser visível');
+        assert.ok(alcancou, 'a aba ativa precisa ser alcançável por Tab');
+        const contorno = await abaAtiva.evaluate(element => ({
+          style: getComputedStyle(element).outlineStyle,
+          width: parseFloat(getComputedStyle(element).outlineWidth) || 0,
+        }));
+        assert.ok(contorno.style !== 'none' && contorno.width >= 1, `foco da aba ativa precisa ser visível: ${contorno.style}/${contorno.width}px`);
+        await capture07d(page, 'operacao-390-teclado', { state: 'percurso_teclado', firstFocus: true, percursoTeclado: percurso, ...medidas });
+        await recordKeyboardCapture(evidenceDir07d, {
+          stage: STAGE_07D,
+          route: ROTA_07D,
+          role: 'ti',
+          viewport: '390x844',
+          theme: 'day',
+          file: 'operacao-390-teclado.png',
+          firstFocus: true,
+          percursoTeclado: percurso,
+        });
+        // As setas continuam movendo foco e seleção juntos (contrato herdado).
+        await page.keyboard.press('ArrowRight');
+        const segunda = page.getByRole('tab', { name: 'Jornada e habilitação', exact: true });
+        assert.equal(await segunda.getAttribute('aria-selected'), 'true');
+        assert.ok(await segunda.evaluate(element => element === document.activeElement), 'a seta move o foco junto com a seleção');
+        await page.keyboard.press('ArrowLeft');
+        assert.equal(await abaAtiva.first().evaluate(element => element.textContent?.trim()), 'Postos e alocações');
+        await page.locator('#shift-needs-title').waitFor();
+        if (evidenceDir07d) {
+          const summary = JSON.parse(await readFile07d(path.join(evidenceDir07d, 'resumo.json'), 'utf8'));
+          const entry = summary.entries.find(item => path.basename(item.screenshot || item.file || '') === 'operacao-390-teclado.png');
+          assert.ok(entry?.firstFocus);
+          assert.ok(entry?.percursoTeclado?.length > 0);
+          assert.deepEqual(entry.problems, []);
+        }
+      }
+    }
+    await context.close();
+  });
+});
