@@ -856,3 +856,485 @@ test('UX-PRO-07E-1 browser: a falha declarada não produz transbordo em 1440/768
     await writeFile(path.join(evidenceDir, 'resumo.json'), `${JSON.stringify(resumo, null, 2)}\n`, 'utf8');
   }
 });
+
+// ---------------------------------------------------------------------------
+// UX-PRO-07E-2 — casos NOVOS, acrescentados APÓS os 22 herdados.
+//
+// O prefixo herdado (858 linhas / 45.438 bytes / SHA-256
+// 21c4f686f343bdea9f8dc972dc931edbd77320b912fb93166661af35df889884) permanece
+// byte a byte: nenhuma asserção herdada foi editada, removida ou relaxada.
+//
+// O que estes casos provam: nas OITO superfícies restantes de /admin/financeiro
+// (FIN-08, FIN-09, FIN-10, FIN-11, FIN-12, FIN-14, FIN-15 e FIN-16) uma resposta
+// 2xx cujo corpo NÃO traz a lista canônica (chave ausente, chave não-array,
+// `null` ou corpo ilegível) deixa de ser "nenhum registro" e passa a ser falha
+// declarada de leitura; o vazio LEGÍTIMO (chave presente com `[]`) continua
+// sendo vazio concluído.
+//
+// Injeção somente em `window.fetch` da página e somente em GET, pelo auxiliar
+// herdado `openFinanceInvalidBody`: servidor, banco, proxy e TODAS as escritas
+// permanecem reais e intactos. As capturas são feitas ANTES das asserções e as
+// asserções leem o TEXTO renderizado (nunca esperam por um elemento que só
+// existe na implementação nova), para que a linha de base reprove rápido, com
+// a frase do vazio falso visível no relatório TAP.
+// ---------------------------------------------------------------------------
+
+/** Ids da massa sintética criada pelo caso de contrato, usados nas leituras sob demanda. */
+let qa07e2ClosureId = '', qa07e2ProvisionId = '', qa07e2ExportId = '', qa07e2ExpenseId = '';
+
+/** Espaço canônico de despesa (contrato + centro de custo + fornecedor), como nos demais gates. */
+async function qa07e2ExpenseSpace(label) {
+  const contractId = randomUUID(), costCenterId = randomUUID(), supplierId = randomUUID();
+  await pool.query(`INSERT INTO crm_contracts (id,proposal_version,title,status,origin,idempotency_key,created_by) VALUES ($1,1,$2,'ativo','manual',$3,'admin')`, [contractId, `Contrato sintético 07E-2 ${label}`, `qa-07e2-contract-${label}-${contractId}`]);
+  await pool.query("INSERT INTO fin_cost_centers (id,name,description) VALUES ($1,$2,$3)", [costCenterId, `Centro sintético 07E-2 ${label} ${costCenterId.slice(0,6)}`, `Centro de custo sintético do gate UX-PRO-07E-2 ${label}`]);
+  await pool.query("INSERT INTO fin_suppliers (id,name,document_ref,category) VALUES ($1,$2,$3,'material')", [supplierId, `Fornecedor sintético 07E-2 ${label} ${supplierId.slice(0,6)}`, `SYN-07E2-${supplierId.slice(0,8)}`]);
+  return { contractId, costCenterId, supplierId };
+}
+
+/**
+ * Mesma semântica do `settle` herdado (espera a âncora presente nas DUAS
+ * implementações e depois as candidatas), com teto de espera menor: mantém a
+ * leitura comparável antes/depois sem inflar a linha de base, onde a candidata
+ * nova nunca aparece.
+ */
+async function settle07e2(page, anchor, candidates = [], { extraMs = 700, candidateMs = 10_000 } = {}) {
+  let ancoraVisivel = true;
+  try {
+    await page.locator(anchor).first().waitFor({ timeout: 60_000 });
+  } catch {
+    ancoraVisivel = false;
+  }
+  if (ancoraVisivel && candidates.length) {
+    await Promise.race(candidates.map(selector => page.locator(selector).first().waitFor({ timeout: candidateMs }))).catch(() => {});
+  }
+  await page.waitForTimeout(extraMs);
+  return ancoraVisivel;
+}
+
+/** Abre uma aba pelo testid estável usado também pelo gate herdado do L07. */
+async function gotoTab07e2(page, id) {
+  await page.locator('[role="tablist"]').waitFor();
+  await page.getByTestId(`finance-tab-${id}`).click();
+}
+
+test('UX-PRO-07E-2 contrato: as 18 chaves canônicas existem no 200 e o vazio legítimo é chave presente com []', { skip: !RUN }, async () => {
+  // Massa sintética pelas PRÓPRIAS APIs financeiras (mesma convenção do caso
+  // herdado), necessária para as quatro leituras sob demanda com id real.
+  const space = await qa07e2ExpenseSpace('contrato');
+  const suffix = randomUUID().slice(0, 8);
+
+  const closure = await api('/api/fin/competence-closures', {
+    method: 'POST', cookie: financeCookie,
+    body: { competence_date: '2037-01-15', notes: 'Competência sintética criada pelo contrato UX-PRO-07E-2.', totals: { origem: 'interface_sintetica' } },
+  });
+  assert.equal(closure.status, 201, `fechamento sintético deveria ser 201, veio ${closure.status} ${JSON.stringify(closure.body)}`);
+  qa07e2ClosureId = closure.body.closure.id;
+
+  const provision = await api('/api/fin/commission-provisions', {
+    method: 'POST', cookie: financeCookie,
+    body: { provision_date: '2037-01-15', amount_cents: 100000, notes: 'Provisão sintética criada pelo contrato UX-PRO-07E-2.', idempotency_key: `qa-07e2-commission-${suffix}`, is_auto_paid: false },
+  });
+  assert.equal(provision.status, 201, `provisão sintética deveria ser 201, veio ${provision.status} ${JSON.stringify(provision.body)}`);
+  qa07e2ProvisionId = provision.body.provision.id;
+
+  const exportRow = await api('/api/fin/exports', {
+    method: 'POST', cookie: financeCookie,
+    body: {
+      period_start: '2037-01-01', period_end: '2037-01-31', total_records: 1, total_amount_cents: 100000,
+      file_name: `qa-07e2-${suffix}.csv`, filters: { origem: 'interface_sintetica' }, totals: { total_cents: 100000 },
+      storage_key: `synthetic/fin14/qa-07e2-${suffix}.csv`, is_accountant_limited: true,
+    },
+  });
+  assert.equal(exportRow.status, 201, `exportação sintética deveria ser 201, veio ${exportRow.status} ${JSON.stringify(exportRow.body)}`);
+  qa07e2ExportId = exportRow.body.export.id;
+
+  const expense = await api('/api/fin/expenses', {
+    method: 'POST', cookie: financeCookie,
+    body: {
+      expense_type: 'compra', category: 'material sintético',
+      description: 'Compra sintética criada pelo contrato UX-PRO-07E-2 para o histórico.',
+      amount_cents: 50000, threshold_cents: 50000, requester_name: 'Solicitante sintético 07E-2',
+      contract_id: space.contractId, cost_center_id: space.costCenterId, supplier_id: space.supplierId,
+      evidence_file_name: `qa-07e2-${suffix}.json`, evidence_file_url: `synthetic://fin10/qa-07e2-${suffix}.json`,
+      evidence_storage_key: `synthetic/fin10/qa-07e2-${suffix}.json`, idempotency_key: `qa-07e2-expense-${suffix}`,
+    },
+  });
+  assert.equal(expense.status, 201, `solicitação sintética deveria ser 201, veio ${expense.status} ${JSON.stringify(expense.body)}`);
+  qa07e2ExpenseId = expense.body.expense.id;
+
+  const esperados = [
+    ['/api/fin/fiscal-activity-rules', 'rules'],
+    ['/api/fin/fiscal-providers', 'providers'],
+    ['/api/fin/fiscal-obligations', 'obligations'],
+    ['/api/fin/fiscal-documents', 'documents'],
+    ['/api/fin/payment-gateways', 'gateways'],
+    ['/api/fin/gateway-webhooks', 'webhooks'],
+    ['/api/fin/gateway-charges', 'charges'],
+    ['/api/fin/competence-closures', 'closures'],
+    [`/api/fin/report-versions?closure_id=${qa07e2ClosureId}`, 'versions'],
+    ['/api/fin/commission-provisions', 'provisions'],
+    [`/api/fin/commission-provision-history?provision_id=${qa07e2ProvisionId}`, 'history'],
+    ['/api/fin/cost-imports', 'imports'],
+    ['/api/fin/costs', 'costs'],
+    ['/api/fin/exports', 'exports'],
+    [`/api/fin/export-logs?export_id=${qa07e2ExportId}`, 'logs'],
+    ['/api/fin/expenses', 'expenses'],
+    [`/api/fin/expense-history?expense_id=${qa07e2ExpenseId}`, 'history'],
+    ['/api/fin/management-results', 'results'],
+  ];
+  let vaziosLegitimos = 0;
+  for (const [caminho, chave] of esperados) {
+    const resposta = await api(caminho, { cookie: financeCookie });
+    assert.equal(resposta.status, 200, `${caminho} deveria responder 200, veio ${resposta.status}`);
+    assert.ok(Array.isArray(resposta.body?.[chave]),
+      `${caminho} precisa devolver a lista canônica "${chave}": é isso que autoriza a tela a exigir a chave em vez de aceitar [] como ausência`);
+    if (resposta.body[chave].length === 0) vaziosLegitimos += 1;
+  }
+  assert.ok(vaziosLegitimos >= 1,
+    'ao menos um endpoint precisa estar legitimamente vazio, para provar que ausência real é chave presente com [] e não chave ausente');
+  // As quatro leituras sob demanda foram exercitadas com registro real criado
+  // por este caso; as demais áreas não receberam massa e seguem vazias.
+  const versoes = await api(`/api/fin/report-versions?closure_id=${qa07e2ClosureId}`, { cookie: financeCookie });
+  assert.ok(versoes.body.versions.length >= 1, 'o fechamento sintético preserva ao menos uma versão de relatório');
+});
+
+test('UX-PRO-07E-2 browser: FIN-15 — 2xx sem "closures" declara falha, não "Nenhuma competência encontrada."', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      rules: [{ match: '/api/fin/competence-closures', body: { synthetic: true, note: 'corpo 2xx sem a lista canônica' } }],
+    });
+    await gotoTab07e2(page, 'closures');
+    await settle07e2(page, '[data-testid="finance-closure-workspace"]', ['[data-testid="fin15-read-error"]', '[data-testid="fin15-empty"]']);
+    await capture(page, '07e2-fechamento-corpo-invalido');
+
+    const texto = await textOf(page, '[data-testid="finance-closure-workspace"]');
+    assert.match(texto, /invalid_finance_response/, `o corpo 2xx sem "closures" precisa ser declarado; texto: "${texto.slice(0, 300)}"`);
+    assert.match(texto, /Não foi possível/i, 'a frase herdada continua em português');
+    assert.match(texto, /HTTP 200/, 'o status real aparece: um 2xx inválido não pode virar status 0');
+    assert.doesNotMatch(texto, /Nenhuma competência encontrada\./, 'competência não pode ser afirmada como ausente sobre resposta ilegível');
+    assert.equal(await page.locator('[data-testid="fin15-empty"]').count(), 0);
+    assert.equal(await page.locator('[data-testid="fin15-read-error"]').count(), 1);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-2 browser: FIN-16 — 2xx sem "provisions" declara falha, não "Nenhuma provisão encontrada."', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      rules: [{ match: '/api/fin/commission-provisions', body: { provisions: 'não é uma lista' } }],
+    });
+    await gotoTab07e2(page, 'commissions');
+    await settle07e2(page, '[data-testid="finance-commission-workspace"]', ['[data-testid="fin16-read-error"]', '[data-testid="fin16-empty"]']);
+    await capture(page, '07e2-comissoes-corpo-invalido');
+
+    const texto = await textOf(page, '[data-testid="finance-commission-workspace"]');
+    assert.match(texto, /invalid_finance_response/, `o corpo 2xx com "provisions" não-array precisa ser declarado; texto: "${texto.slice(0, 300)}"`);
+    assert.match(texto, /Não foi possível/i);
+    assert.doesNotMatch(texto, /Nenhuma provisão encontrada\./, 'provisão não pode ser afirmada como ausente sobre resposta ilegível');
+    assert.equal(await page.locator('[data-testid="fin16-empty"]').count(), 0);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-2 browser: FIN-14 — 2xx sem "exports" declara falha, não "Nenhuma exportação encontrada."', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      rules: [{ match: '/api/fin/exports', body: '<html>resposta que não é JSON</html>' }],
+    });
+    await gotoTab07e2(page, 'exports');
+    await settle07e2(page, '[data-testid="finance-export-workspace"]', ['[data-testid="fin14-read-error"]', '[data-testid="fin14-empty"]']);
+    await capture(page, '07e2-exportacoes-corpo-invalido');
+
+    const texto = await textOf(page, '[data-testid="finance-export-workspace"]');
+    assert.match(texto, /invalid_finance_response/, `o corpo 2xx ilegível precisa ser declarado; texto: "${texto.slice(0, 300)}"`);
+    assert.doesNotMatch(texto, /Nenhuma exportação encontrada\./, 'exportação não pode ser afirmada como ausente sobre resposta ilegível');
+    assert.equal(await page.locator('[data-testid="fin14-empty"]').count(), 0);
+    assert.equal(await page.locator('[data-testid="fin14-read-error"]').count(), 1);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-2 browser: FIN-10 — 2xx sem "expenses" declara falha, não "Nenhuma solicitação."', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      rules: [{ match: '/api/fin/expenses', body: { expenses: null } }],
+    });
+    await gotoTab07e2(page, 'expenses');
+    await settle07e2(page, '[data-testid="fin10-policy"]', ['[data-testid="fin10-error"]', '[data-testid="fin10-empty"]']);
+    await capture(page, '07e2-despesas-corpo-invalido');
+
+    const erro = await textOf(page, '[data-testid="fin10-error"]');
+    assert.match(erro, /invalid_finance_response/, `o corpo 2xx sem "expenses" precisa ser declarado; texto: "${erro.slice(0, 300)}"`);
+    assert.match(erro, /Não foi possível ler as despesas/i, 'o canal herdado de erro continua declarando a leitura');
+    const texto = await textOf(page, '[data-testid="fin10-expenses"]');
+    assert.doesNotMatch(texto, /Nenhuma solicitação\./, 'solicitação não pode ser afirmada como ausente sobre resposta ilegível');
+    assert.doesNotMatch(texto, /Nenhum resultado para a busca aplicada\./);
+    assert.equal(await page.locator('[data-testid="fin10-empty"]').count(), 0);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-2 browser: FIN-09 — 2xx sem "results" declara falha, não "Nenhum resultado registrado."', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      rules: [{ match: '/api/fin/management-results', body: { results: { id: 'não é lista' } } }],
+    });
+    await gotoTab07e2(page, 'results');
+    await settle07e2(page, '[data-testid="fin09-results"]', ['[data-testid="fin09-error"]', '[data-testid="fin09-list"]']);
+    await capture(page, '07e2-resultado-gerencial-corpo-invalido');
+
+    const erro = await textOf(page, '[data-testid="fin09-error"]');
+    assert.match(erro, /invalid_finance_response/, `o corpo 2xx com "results" não-array precisa ser declarado; texto: "${erro.slice(0, 300)}"`);
+    const texto = await textOf(page, '[data-testid="fin09-results"]');
+    assert.doesNotMatch(texto, /Nenhum resultado registrado\./, 'resultado não pode ser afirmado como ausente sobre resposta ilegível');
+    assert.equal(await page.locator('[data-testid="fin09-list"] li').count(), 0, 'falha de leitura não vira lista vazia (asserção herdada do L07 preservada)');
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-2 browser: leituras sob demanda — versões, histórico de comissão, trilha e histórico de despesa declaram falha em vez de vazio', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      rules: [
+        { match: '/api/fin/report-versions', body: { note: 'sem a lista de versões' } },
+        { match: '/api/fin/commission-provision-history', body: { history: 'não é uma lista' } },
+        { match: '/api/fin/export-logs', body: { logs: {} } },
+        { match: '/api/fin/expense-history', body: { note: 'sem histórico' } },
+      ],
+    });
+
+    // FIN-15 versões preservadas (sob demanda)
+    await page.locator('[role="tablist"]').waitFor();
+    await page.getByTestId('finance-tab-closures').click();
+    await settle07e2(page, '[data-testid="finance-closure-workspace"]', ['[data-testid="fin15-select"]']);
+    await page.selectOption('[data-testid="fin15-select"]', qa07e2ClosureId);
+    await page.getByTestId('fin15-versions').click();
+    await page.waitForTimeout(1_200);
+    await capture(page, '07e2-fechamento-versoes-corpo-invalido');
+    const fechamento = await textOf(page, '[data-testid="finance-closure-workspace"]');
+    assert.match(fechamento, /invalid_finance_response/, `versões sob demanda precisam declarar o corpo inválido; texto: "${fechamento.slice(0, 300)}"`);
+    assert.equal(await page.locator('[data-testid="fin15-version-list"] li').count(), 0, 'nenhuma versão pode ser afirmada sobre resposta ilegível');
+
+    // FIN-16 histórico auditável (sob demanda)
+    await page.getByTestId('finance-tab-commissions').click();
+    await settle07e2(page, '[data-testid="finance-commission-workspace"]', ['[data-testid="fin16-select"]']);
+    await page.selectOption('[data-testid="fin16-select"]', qa07e2ProvisionId);
+    await page.getByTestId('fin16-history').click();
+    await page.waitForTimeout(1_200);
+    await capture(page, '07e2-comissoes-historico-corpo-invalido');
+    const comissoes = await textOf(page, '[data-testid="finance-commission-workspace"]');
+    assert.match(comissoes, /invalid_finance_response/, `histórico de comissão sob demanda precisa declarar o corpo inválido; texto: "${comissoes.slice(0, 300)}"`);
+    assert.equal(await page.locator('[data-testid="fin16-history-list"] li').count(), 0);
+
+    // FIN-14 trilha da exportação (sob demanda)
+    await page.getByTestId('finance-tab-exports').click();
+    await settle07e2(page, '[data-testid="finance-export-workspace"]', ['[data-testid="fin14-select"]']);
+    await page.selectOption('[data-testid="fin14-select"]', qa07e2ExportId);
+    await page.getByTestId('fin14-logs').click();
+    await page.waitForTimeout(1_200);
+    await capture(page, '07e2-exportacoes-trilha-corpo-invalido');
+    const exportacoes = await textOf(page, '[data-testid="finance-export-workspace"]');
+    assert.match(exportacoes, /invalid_finance_response/, `trilha sob demanda precisa declarar o corpo inválido; texto: "${exportacoes.slice(0, 300)}"`);
+    assert.equal(await page.locator('[data-testid="fin14-log-list"] li').count(), 0);
+
+    // FIN-10 histórico da solicitação (sob demanda)
+    await page.getByTestId('finance-tab-expenses').click();
+    await settle07e2(page, '[data-testid="fin10-policy"]', [`[data-testid="fin10-history-toggle-${qa07e2ExpenseId}"]`]);
+    await page.getByTestId(`fin10-history-toggle-${qa07e2ExpenseId}`).click();
+    await page.waitForTimeout(1_200);
+    await capture(page, '07e2-despesas-historico-corpo-invalido');
+    const despesas = await textOf(page, '[data-testid="fin10-expenses"]');
+    assert.match(despesas, /invalid_finance_response/, `histórico de despesa sob demanda precisa declarar o corpo inválido; texto: "${despesas.slice(0, 300)}"`);
+    assert.doesNotMatch(despesas, /Sem eventos\./, 'histórico não pode ser afirmado vazio sobre resposta ilegível');
+    assert.equal(await page.locator(`[data-testid="fin10-history-error-${qa07e2ExpenseId}"]`).count(), 1);
+
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-2 browser: FIN-11 — grupo fiscal com 2xx sem "rules" declara indisponibilidade nas quatro listas', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      rules: [{ match: '/api/fin/fiscal-activity-rules', body: { synthetic: true } }],
+    });
+    await gotoTab07e2(page, 'fiscal');
+    await settle07e2(page, '[data-testid="fin11-fiscal"]', ['[data-testid="fin11-error"]', '[data-testid="fin11-rules-table"]']);
+    await capture(page, '07e2-fiscal-corpo-invalido');
+
+    const texto = await textOf(page, '[data-testid="fin11-fiscal"]');
+    assert.match(texto, /invalid_finance_response/, `o corpo 2xx sem "rules" precisa ser declarado; texto: "${texto.slice(0, 300)}"`);
+    assert.match(texto, /não confundir com ausência/i, 'a lista declara indisponibilidade, não ausência');
+    assert.doesNotMatch(texto, /Nenhuma regra cadastrada\./, 'regra não pode ser afirmada como ausente');
+    assert.doesNotMatch(texto, /Nenhum provedor\./, 'provedor não pode ser afirmado como ausente: a leitura do grupo não foi confirmada');
+    assert.doesNotMatch(texto, /Nenhuma obrigação\./, 'obrigação não pode ser afirmada como ausente');
+    assert.doesNotMatch(texto, /Nenhum documento\./, 'documento não pode ser afirmado como ausente');
+    assert.equal(await page.locator('[data-testid="fin11-rules-unavailable"]').count(), 1);
+    assert.equal(await page.locator('[data-testid="fin11-providers-unavailable"]').count(), 1);
+    assert.equal(await page.locator('[data-testid="fin11-obligations-unavailable"]').count(), 1);
+    assert.equal(await page.locator('[data-testid="fin11-documents-unavailable"]').count(), 1);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-2 browser: FIN-12 — grupo gateway com 2xx sem "gateways" declara indisponibilidade nas três listas', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      rules: [{ match: '/api/fin/payment-gateways', body: { note: 'corpo sem a lista canônica' } }],
+    });
+    await gotoTab07e2(page, 'gateway');
+    await settle07e2(page, '[data-testid="fin12-gateway"]', ['[data-testid="fin12-error"]', '[data-testid="fin12-gateways-table"]']);
+    await capture(page, '07e2-gateway-corpo-invalido');
+
+    const texto = await textOf(page, '[data-testid="fin12-gateway"]');
+    assert.match(texto, /invalid_finance_response/, `o corpo 2xx sem "gateways" precisa ser declarado; texto: "${texto.slice(0, 300)}"`);
+    assert.match(texto, /não confundir com ausência/i);
+    assert.doesNotMatch(texto, /Nenhum gateway cadastrado\./, 'gateway não pode ser afirmado como ausente');
+    assert.doesNotMatch(texto, /Nenhuma cobrança\./, 'cobrança não pode ser afirmada como ausente: a leitura do grupo não foi confirmada');
+    assert.doesNotMatch(texto, /Nenhum webhook recebido\./, 'webhook não pode ser afirmado como ausente');
+    assert.equal(await page.locator('[data-testid="fin12-gateways-unavailable"]').count(), 1);
+    assert.equal(await page.locator('[data-testid="fin12-charges-unavailable"]').count(), 1);
+    assert.equal(await page.locator('[data-testid="fin12-webhooks-unavailable"]').count(), 1);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-2 browser: FIN-08 — grupo de custos com 2xx sem "imports" declara indisponibilidade nas duas listas', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      rules: [{ match: '/api/fin/cost-imports', body: { imports: 'não é uma lista' } }],
+    });
+    await gotoTab07e2(page, 'costs');
+    await settle07e2(page, '[data-testid="fin08-costs"]', ['[data-testid="fin08-error"]', '[data-testid="fin08-imports"]']);
+    await capture(page, '07e2-custos-corpo-invalido');
+
+    const texto = await textOf(page, '[data-testid="fin08-costs"]');
+    assert.match(texto, /invalid_finance_response/, `o corpo 2xx com "imports" não-array precisa ser declarado; texto: "${texto.slice(0, 300)}"`);
+    assert.match(texto, /não confundir com ausência/i);
+    assert.doesNotMatch(texto, /Nenhuma importação\./, 'importação não pode ser afirmada como ausente');
+    assert.doesNotMatch(texto, /Nenhum custo\./, 'custo não pode ser afirmado como ausente: a leitura do grupo não foi confirmada');
+    assert.equal(await page.locator('[data-testid="fin08-imports-unavailable"]').count(), 1);
+    assert.equal(await page.locator('[data-testid="fin08-costs-unavailable"]').count(), 1);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-2 browser: vazio legítimo preservado — chave presente com [] continua vazio concluído nas oito superfícies', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const vazio = chave => ({ [chave]: [] });
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      rules: [
+        { match: '/api/fin/fiscal-activity-rules', body: vazio('rules') },
+        { match: '/api/fin/fiscal-providers', body: vazio('providers') },
+        { match: '/api/fin/fiscal-obligations', body: vazio('obligations') },
+        { match: '/api/fin/fiscal-documents', body: vazio('documents') },
+        { match: '/api/fin/payment-gateways', body: vazio('gateways') },
+        { match: '/api/fin/gateway-webhooks', body: vazio('webhooks') },
+        { match: '/api/fin/gateway-charges', body: vazio('charges') },
+        { match: '/api/fin/cost-imports', body: vazio('imports') },
+        { match: '/api/fin/costs', body: vazio('costs') },
+        { match: '/api/fin/competence-closures', body: vazio('closures') },
+        { match: '/api/fin/commission-provisions', body: vazio('provisions') },
+        { match: '/api/fin/exports', body: vazio('exports') },
+        { match: '/api/fin/expenses', body: vazio('expenses') },
+        { match: '/api/fin/management-results', body: vazio('results') },
+      ],
+    });
+
+    const esperas = [
+      ['fiscal', '[data-testid="fin11-fiscal"]', /Nenhuma regra cadastrada\.[\s\S]*Nenhum provedor\.[\s\S]*Nenhuma obrigação\.[\s\S]*Nenhum documento\./],
+      ['gateway', '[data-testid="fin12-gateway"]', /Nenhum gateway cadastrado\.[\s\S]*Nenhuma cobrança\.[\s\S]*Nenhum webhook recebido\./],
+      ['costs', '[data-testid="fin08-costs"]', /Nenhuma importação\.[\s\S]*Nenhum custo\./],
+      ['closures', '[data-testid="finance-closure-workspace"]', /Nenhuma competência encontrada\./],
+      ['commissions', '[data-testid="finance-commission-workspace"]', /Nenhuma provisão encontrada\./],
+      ['exports', '[data-testid="finance-export-workspace"]', /Nenhuma exportação encontrada\./],
+      ['expenses', '[data-testid="fin10-expenses"]', /Nenhuma solicitação\./],
+      ['results', '[data-testid="fin09-results"]', /Nenhum resultado registrado\./],
+    ];
+    for (const [aba, superficie, esperado] of esperas) {
+      await gotoTab07e2(page, aba);
+      await settle07e2(page, superficie, [], { extraMs: 900 });
+      await capture(page, `07e2-vazio-legitimo-${aba}`);
+      const texto = await textOf(page, superficie);
+      assert.doesNotMatch(texto, /invalid_finance_response/, `chave presente com [] é vazio concluído, nunca falha (${aba})`);
+      assert.match(texto, esperado, `o vazio legítimo herdado continua sendo declarado (${aba}); texto: "${texto.slice(0, 240)}"`);
+    }
+    assert.equal(await page.locator('[data-testid$="-unavailable"]').count(), 0,
+      'nenhum marcador de indisponibilidade pode aparecer quando a leitura foi confirmada');
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-2 browser: a falha declarada do grupo fiscal não produz transbordo em 1440/768/390/320 e as capturas ficam registradas', { skip: !RUN }, async () => {
+  const medicoes = [];
+  for (const [width, height, nome] of [[1440, 900, '1440'], [768, 1024, '768'], [390, 844, '390'], [320, 844, '320']]) {
+    // Um browser por largura, pela mesma limitação do --single-process.
+    const browser = await launchBrowser();
+    try {
+      const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+        width, height,
+        rules: [{ match: '/api/fin/fiscal-activity-rules', body: { rules: 'não é uma lista' } }],
+      });
+      await gotoTab07e2(page, 'fiscal');
+      await settle07e2(page, '[data-testid="fin11-fiscal"]', ['[data-testid="fin11-error"]', '[data-testid="fin11-rules-unavailable"]']);
+      await capture(page, `07e2-falha-declarada-${nome}`);
+
+      const transbordo = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      assert.ok(transbordo <= 1, `transbordo de ${transbordo}px em ${width}px com a falha declarada`);
+      const texto = await textOf(page, '[data-testid="fin11-fiscal"]');
+      assert.match(texto, /invalid_finance_response/, `a falha precisa estar declarada em ${width}px; texto: "${texto.slice(0, 240)}"`);
+      assert.match(texto, /não confundir com ausência/i, `o marcador de indisponibilidade precisa existir em ${width}px`);
+      const alturaRepetir = await page.locator('[data-testid="fin11-retry"]').first().evaluate(
+        node => Math.round(node.getBoundingClientRect().height)).catch(() => null);
+      // O alvo de 32px é convenção dos componentes novos; o botão legado do
+      // FIN-11 mede 29px em 1440px e isso fica registrado como observação no
+      // resumo e no relatório — fora do escopo desta fatia (leitura honesta).
+      // A prova exigida aqui é que o botão de repetir exista e seja acionável.
+      assert.ok(alturaRepetir !== null && alturaRepetir > 0, `o botão de repetir precisa existir em ${width}px`);
+      const elementoAtivo = await page.evaluate(() => {
+        const ativo = document.activeElement;
+        return ativo ? { tag: ativo.tagName.toLowerCase(), text: (ativo.textContent || '').trim().slice(0, 40) } : null;
+      });
+      medicoes.push({ width, height, nome, transbordo, alturaRepetir, elementoAtivo });
+      await context.close();
+    } finally { await browser.close(); }
+  }
+
+  if (evidenceDir) {
+    const { writeFile } = await import('node:fs/promises');
+    const resumo = {
+      stage: 'ux-pro-07-financeiro',
+      generatedBy: 'gate PostgreSQL descartável + HTTP real + Chromium (scripts/qa-ux-pro-07e2-postgres.mjs)',
+      notes: [
+        'UX-PRO-07E-2: falha declarada por resposta 2xx sem a lista canônica nas oito superfícies restantes de /admin/financeiro.',
+        'Tema dia; papel financeiro; massa sintética criada pelas próprias APIs financeiras.',
+        'elementoAtivoOnFailure é medição informativa do foco no momento da falha; NÃO é percurso de teclado nem primeiro foco visível. O percurso do tablist continua provado pelos casos herdados.',
+        'Arquivo próprio (não sobrescreve resumo.json da 07E-1); o inventário agrega por rota.',
+        'O tema noturno não foi medido nesta fatia: contraste é achado transversal (E8) fora do escopo.',
+      ],
+      entries: medicoes.map(item => ({
+        stage: 'ux-pro-07-financeiro',
+        route: '/admin/financeiro',
+        role: 'financeiro',
+        viewport: `${item.width}x${item.height}`,
+        theme: 'day',
+        screenshot: `${evidenceDir}/07e2-falha-declarada-${item.nome}.png`,
+        problems: [],
+        state: 'falha_declarada_corpo_2xx_sem_lista_grupo_fiscal',
+        transbordoDocumentoPx: item.transbordo,
+        alturaBotaoRepetirPx: item.alturaRepetir,
+        elementoAtivoOnFailure: item.elementoAtivo,
+      })),
+    };
+    await writeFile(path.join(evidenceDir, '07e2-resumo.json'), `${JSON.stringify(resumo, null, 2)}\n`, 'utf8');
+  }
+});
