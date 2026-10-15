@@ -27,7 +27,7 @@ Mantido com justificativa (C7): único estilo inline das superfícies, `Layout09
 - `npm test`: **942/942** aprovados (0 falhas/pulados), incluindo `site-appearance.focal`, `ext12-visual` e o novo `tests/ux-pro-08c-appearance.test.mjs` (3/3, registrado em `test:unit`).
 - `npm run typecheck`: aprovado.
 - `npm run test:ext12-visual:pg`: **14/14** (PostgreSQL real + HTTP + Chromium, mínimo 14).
-- `node scripts/ux-pro-00-inventory.mjs --check`: OK.
+- `node scripts/ux-pro-00-inventory.mjs --check`: OK após regenerar os CSVs (o gerador credita `/admin/aparencia` e `/layout-03` a partir do `resumo.json` desta fatia). Reproduzido em árvore limpa com as envs do CI: 942/942.
 - Evidências `docs/ux-pro-08-aparencia-evidencias/`: 16 capturas Chromium real (4 rotas × 320/390/768/1440) + `resumo.json` (etapa `ux-pro-08c` adicionada a `scripts/ux-evidence-capture.mjs`, com larguras por etapa sem alterar as demais). Primeiro Tab recai na faixa ("Abrir Aparência do site", contorno sólido) nas rotas de prévia. 15/16 sem problemas; em `/admin/aparencia` 320px o resumo registra 1 requisição de iframe abortada (`net::ERR_ABORTED` da prévia `?visual=06` ao encerrar o contexto) — captura válida, sem 5xx nem rolagem horizontal.
 
 ## 4. O que segue pendente
