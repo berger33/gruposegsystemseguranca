@@ -1,0 +1,302 @@
+{
+  "stage": "ux-pro-08c",
+  "generatedBy": "scripts/ux-evidence-capture.mjs",
+  "entries": [
+    {
+      "stage": "ux-pro-08c",
+      "route": "/admin/aparencia",
+      "role": "ti",
+      "viewport": "320x780",
+      "screenshot": "docs/ux-pro-08-aparencia-evidencias/w320-aparencia.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "GrupoSEG System",
+        "outline": "auto"
+      },
+      "problems": [
+        "requisição falhou: /layout-preview?visual=06 (net::ERR_ABORTED)"
+      ],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08c",
+      "route": "/admin/aparencia",
+      "role": "ti",
+      "viewport": "390x844",
+      "screenshot": "docs/ux-pro-08-aparencia-evidencias/w390-aparencia.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "GrupoSEG System",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08c",
+      "route": "/admin/aparencia",
+      "role": "ti",
+      "viewport": "768x1024",
+      "screenshot": "docs/ux-pro-08-aparencia-evidencias/w768-aparencia.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "GrupoSEG System",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08c",
+      "route": "/admin/aparencia",
+      "role": "ti",
+      "viewport": "1440x900",
+      "screenshot": "docs/ux-pro-08-aparencia-evidencias/desktop-aparencia.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "GrupoSEG System",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08c",
+      "route": "/layout-preview?visual=03",
+      "role": "ti",
+      "viewport": "320x780",
+      "screenshot": "docs/ux-pro-08-aparencia-evidencias/w320-layout-preview-03.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "Abrir Aparência do site",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08c",
+      "route": "/layout-preview?visual=03",
+      "role": "ti",
+      "viewport": "390x844",
+      "screenshot": "docs/ux-pro-08-aparencia-evidencias/w390-layout-preview-03.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "Abrir Aparência do site",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08c",
+      "route": "/layout-preview?visual=03",
+      "role": "ti",
+      "viewport": "768x1024",
+      "screenshot": "docs/ux-pro-08-aparencia-evidencias/w768-layout-preview-03.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "Abrir Aparência do site",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08c",
+      "route": "/layout-preview?visual=03",
+      "role": "ti",
+      "viewport": "1440x900",
+      "screenshot": "docs/ux-pro-08-aparencia-evidencias/desktop-layout-preview-03.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "Abrir Aparência do site",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08c",
+      "route": "/layout-03",
+      "role": "ti",
+      "viewport": "320x780",
+      "screenshot": "docs/ux-pro-08-aparencia-evidencias/w320-layout-03.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "Abrir Aparência do site",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08c",
+      "route": "/layout-03",
+      "role": "ti",
+      "viewport": "390x844",
+      "screenshot": "docs/ux-pro-08-aparencia-evidencias/w390-layout-03.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "Abrir Aparência do site",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08c",
+      "route": "/layout-03",
+      "role": "ti",
+      "viewport": "768x1024",
+      "screenshot": "docs/ux-pro-08-aparencia-evidencias/w768-layout-03.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "Abrir Aparência do site",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08c",
+      "route": "/layout-03",
+      "role": "ti",
+      "viewport": "1440x900",
+      "screenshot": "docs/ux-pro-08-aparencia-evidencias/desktop-layout-03.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "Abrir Aparência do site",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08c",
+      "route": "/layout-preview?visual=99",
+      "role": "ti",
+      "viewport": "320x780",
+      "screenshot": "docs/ux-pro-08-aparencia-evidencias/w320-layout-preview-invalido.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "Abrir Aparência do site",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08c",
+      "route": "/layout-preview?visual=99",
+      "role": "ti",
+      "viewport": "390x844",
+      "screenshot": "docs/ux-pro-08-aparencia-evidencias/w390-layout-preview-invalido.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "Abrir Aparência do site",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08c",
+      "route": "/layout-preview?visual=99",
+      "role": "ti",
+      "viewport": "768x1024",
+      "screenshot": "docs/ux-pro-08-aparencia-evidencias/w768-layout-preview-invalido.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "Abrir Aparência do site",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08c",
+      "route": "/layout-preview?visual=99",
+      "role": "ti",
+      "viewport": "1440x900",
+      "screenshot": "docs/ux-pro-08-aparencia-evidencias/desktop-layout-preview-invalido.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "Abrir Aparência do site",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    }
+  ]
+}
