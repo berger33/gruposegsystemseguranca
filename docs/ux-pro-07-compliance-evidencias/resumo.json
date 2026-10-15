@@ -1,0 +1,13 @@
+{
+  "fatia": "UX-PRO-07K",
+  "rota": "/admin/compliance",
+  "gate": "npm run test:ux-compliance:pg",
+  "resultado": "11/11 testes, 0 falhas, 0 pulados",
+  "casosNovos": [
+    "2xx sem items vira falha invalid_compliance_response, nunca lista vazia — compliance-1440-resposta-invalida.png",
+    "falha transitória 503 de releitura preserva a tabela lida com hora da última leitura concluída — compliance-1440-dado-preservado.png",
+    "negativa 403 (código canônico 'forbidden' desta família) após sucesso falha fechado — compliance-1440-negativa-pos-sucesso.png"
+  ],
+  "problems": [],
+  "limites": "Sem captura nova 320/768/noite. Nenhuma validação manual ou aceite humano; nada declara conformidade WCAG."
+}

@@ -63,3 +63,30 @@ export async function complianceRequest<T = unknown>(
 }
 
 export type { ComplianceErrorDescriptor };
+
+// UX-PRO-07K — leitura honesta (aditivo): 2xx sem a forma canônica nunca é
+// ausência de obrigação/documento. `complianceRequest` acima permanece
+// INTACTO. O código abaixo é diagnóstico desta tela (o servidor nunca o
+// devolve), fora do vocabulário anti-deriva. Mesma decisão das fatias 07F-07J.
+export const INVALID_COMPLIANCE_RESPONSE = 'invalid_compliance_response';
+export function invalidComplianceResponse(status: number): ComplianceErrorDescriptor {
+  return {
+    kind: 'retry',
+    title: 'A resposta de compliance não pôde ser lida',
+    detail: 'O servidor respondeu sem os dados esperados. Isto não significa que não existam obrigações, documentos, tarefas ou planos registrados.',
+    code: INVALID_COMPLIANCE_RESPONSE,
+    status,
+    canRetry: true,
+  };
+}
+export async function complianceRead<T>(
+  url: string,
+  isValid: (data: unknown) => boolean,
+): Promise<ComplianceResult<T>> {
+  const result = await complianceRequest<T>(url);
+  if (!result.ok) return result;
+  if (!isValid(result.data)) {
+    return { ok: false, status: result.status, error: invalidComplianceResponse(result.status), payload: result.data };
+  }
+  return result;
+}

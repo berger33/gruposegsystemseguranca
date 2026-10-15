@@ -167,26 +167,42 @@ async function capture(page, nome) {
  * Chromium empacotado, então a substituição é feita em `window.fetch`, como
  * nos demais gates. O servidor NUNCA é enfraquecido.
  */
-async function abrir(browser, cookie, { width = 1440, height = 900, failRoutes = [], status = 503, code = 'compliance_journey_unavailable' } = {}) {
+async function abrir(browser, cookie, { width = 1440, height = 900, failRoutes = [], status = 503, code = 'compliance_journey_unavailable', malformedRoutes = [], failAfterFirstRoutes = [] } = {}) {
   const context = await browser.newContext({ viewport: { width, height }, locale: 'pt-BR' });
   const separador = cookie.indexOf('=');
   await context.addCookies([{ name: cookie.slice(0, separador), value: cookie.slice(separador + 1), url: baseUrl }]);
   const page = await context.newPage();
   page.setDefaultTimeout(45_000);
   page.setDefaultNavigationTimeout(90_000);
-  if (failRoutes.length) {
-    await page.addInitScript(({ routes, failStatus, failCode }) => {
+  if (failRoutes.length || malformedRoutes.length || failAfterFirstRoutes.length) {
+    await page.addInitScript(({ routes, failStatus, failCode, malformed, failAfter }) => {
       const original = window.fetch.bind(window);
+      const chamadas = new Map();
       window.fetch = async (input, init) => {
         const url = typeof input === 'string' ? input : (input?.url || '');
+        if (malformed.some(route => url.includes(route))) {
+          return new Response(JSON.stringify({ unexpected: true }), {
+            status: 200, headers: { 'content-type': 'application/json' },
+          });
+        }
         if (routes.some(route => url.includes(route))) {
           return new Response(JSON.stringify({ error: failCode }), {
             status: failStatus, headers: { 'content-type': 'application/json' },
           });
         }
+        const alvoRecarga = failAfter.find(route => url.includes(route));
+        if (alvoRecarga) {
+          const n = (chamadas.get(alvoRecarga) || 0) + 1;
+          chamadas.set(alvoRecarga, n);
+          if (n > 1) {
+            return new Response(JSON.stringify({ error: failCode }), {
+              status: failStatus, headers: { 'content-type': 'application/json' },
+            });
+          }
+        }
         return original(input, init);
       };
-    }, { routes: failRoutes, failStatus: status, failCode: code });
+    }, { routes: failRoutes, failStatus: status, failCode: code, malformed: malformedRoutes, failAfter: failAfterFirstRoutes });
   }
   await page.goto(`${baseUrl}/admin/compliance`, { waitUntil: 'domcontentloaded' });
   // O h1 real é a marca de que a página de produto montou. Esperar só o
@@ -447,6 +463,52 @@ test('menu não é autorização: marcelo abre a tela e quem recusa é o servido
   assert.equal(escritaNegada.status, 403);
   assert.equal(escritaNegada.body.error, 'forbidden');
   assert.ok(!('obligation' in (escritaNegada.body || {})), 'a negativa não pode vazar o registro');
+});
+
+test('browser UX-PRO-07K: resposta 2xx sem items não vira lista vazia', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrir(browser, adminCookie, {
+      malformedRoutes: ['/api/ext/compliance/obligations'],
+    });
+    const erro = page.locator('[data-testid="compliance-obligations-error"]');
+    await erro.waitFor();
+    assert.match(await erro.textContent(), /não pôde ser lida/);
+    assert.equal(await page.locator('[data-testid="compliance-obligations-table"]').count(), 0, '2xx inválido não pode render tabela vazia');
+    assert.equal(await page.locator('[data-testid="compliance-obligations"] [data-ui-state="empty"]').count(), 0, '2xx inválido não é vazio concluído');
+    await capture(page, 'compliance-1440-resposta-invalida');
+    await context.close();
+  });
+});
+
+test('browser UX-PRO-07K: falha transitória de releitura preserva as obrigações lidas com hora', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrir(browser, adminCookie, {
+      failAfterFirstRoutes: ['/api/ext/compliance/obligations'], status: 503, code: 'compliance_journey_unavailable',
+    });
+    await page.locator('[data-testid="compliance-obligations-table"]').waitFor();
+    await page.getByRole('button', { name: 'Reler as obrigações' }).click();
+    const faixa = page.locator('[data-testid="compliance-obligations-desatualizado"]');
+    await faixa.waitFor();
+    assert.match(await faixa.textContent(), /última leitura concluída/i);
+    assert.equal(await page.locator('[data-testid="compliance-obligations-table"]').count(), 1, 'o dado lido permanece visível na falha de releitura');
+    await capture(page, 'compliance-1440-dado-preservado');
+    await context.close();
+  });
+});
+
+test('browser UX-PRO-07K: negativa após sucesso falha fechado, sem manter obrigação protegida', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrir(browser, adminCookie, {
+      failAfterFirstRoutes: ['/api/ext/compliance/obligations'], status: 403, code: 'forbidden',
+    });
+    await page.locator('[data-testid="compliance-obligations-table"]').waitFor();
+    await page.getByRole('button', { name: 'Reler as obrigações' }).click();
+    await page.locator('[data-testid="compliance-obligations-error"] [data-ui-state="denied"]').waitFor();
+    assert.equal(await page.locator('[data-testid="compliance-obligations-table"]').count(), 0, 'negativa não pode manter a tabela protegida');
+    assert.equal(await page.locator('[data-testid="compliance-obligations-desatualizado"]').count(), 0, 'negativa não é dado preservado');
+    await capture(page, 'compliance-1440-negativa-pos-sucesso');
+    await context.close();
+  });
 });
 
 test('browser: recusa do servidor vira estado NEGADO, nunca lista vazia', { skip: !RUN }, async () => {
