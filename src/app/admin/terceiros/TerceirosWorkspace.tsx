@@ -93,7 +93,7 @@ import {
   EXTERNAL_BOUNDARY,
   type ThirdPartyErrorDescriptor,
 } from "../../../lib/third-party-vocabulary.mjs";
-import { thirdPartyRequest } from "../../../lib/third-party-request";
+import { thirdPartyRequest, thirdPartyRead, type ThirdPartyResult } from "../../../lib/third-party-request";
 
 type AccessWindow = {
   status?: string;
@@ -217,11 +217,21 @@ type AuthorizationDecision = {
   external_actor_boundary?: ExternalBoundary | null;
 };
 
-/** Estado honesto de uma leitura independente: nunca confunde os quatro casos. */
+/**
+ * Estado honesto de uma leitura independente (UX-PRO-07G): `ready` guarda a
+ * hora da última leitura concluída (`readAt`); releitura mantém o conteúdo
+ * com `refreshing`/`staleError`; negativa (401/403) falha fechado em `failed`.
+ */
 type Load<T> =
   | { phase: "loading" }
-  | { phase: "ready"; data: T }
+  | { phase: "ready"; data: T; readAt: string; refreshing?: boolean; staleError?: ThirdPartyErrorDescriptor }
   | { phase: "failed"; error: ThirdPartyErrorDescriptor };
+
+const isDenied = (error: ThirdPartyErrorDescriptor) =>
+  error.status === 401 || error.status === 403 || error.kind === "denied";
+
+const readTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
 const TABS = [
   { id: "terceiros", label: "Terceiros registrados" },
@@ -286,26 +296,62 @@ export default function TerceirosWorkspace() {
   // após falha, para a repetição ser segura, e só é descartada após sucesso.
   const keys = useRef<Record<string, string>>({});
 
-  const loadList = useCallback(async () => {
-    setList({ phase: "loading" });
-    const result = await thirdPartyRequest<PartiesResponse>("/api/ext/third-party/parties");
+  // UX-PRO-07G: leituras com forma canônica exigida no 2xx, preservação em
+  // falha transitória de releitura e negativa fail-closed — padrão 07F.
+  const applyRead = <T,>(
+    setter: (updater: (previous: Load<T> | null) => Load<T> | null) => void,
+    result: ThirdPartyResult<T>,
+  ) => {
     if (!result.ok) {
-      // Falha de leitura é estado próprio. A lista anterior NÃO é mantida nem
-      // substituída por uma lista vazia, e nenhum indicador é renderizado.
-      setList({ phase: "failed", error: result.error });
+      setter(previous => {
+        if (previous?.phase === "ready" && !isDenied(result.error)) {
+          return { ...previous, refreshing: false, staleError: result.error };
+        }
+        return { phase: "failed", error: result.error };
+      });
       return;
     }
-    setList({ phase: "ready", data: result.data || {} });
+    setter(() => ({ phase: "ready", data: result.data, readAt: new Date().toISOString() }));
+  };
+
+  const beginRead = <T,>(
+    setter: (updater: (previous: Load<T> | null) => Load<T> | null) => void,
+  ) => {
+    setter(previous =>
+      previous?.phase === "ready"
+        ? { ...previous, refreshing: true, staleError: undefined }
+        : { phase: "loading" },
+    );
+  };
+
+  const loadList = useCallback(async () => {
+    beginRead<PartiesResponse>(updater => setList(previous => updater(previous) ?? { phase: "loading" }));
+    const result = await thirdPartyRead<PartiesResponse>(
+      "/api/ext/third-party/parties",
+      data => !!data && typeof data === "object" && Array.isArray((data as PartiesResponse).third_parties),
+    );
+    applyRead<PartiesResponse>(updater => setList(previous => updater(previous) ?? { phase: "loading" }), result);
   }, []);
 
+  // Preservação é POR TERCEIRO: trocar de terceiro descarta dossiê/decisão do
+  // anterior (inspect já anulava a decisão; o dossiê segue a mesma regra).
+  const dossierFor = useRef("");
+
   const loadDossier = useCallback(async (id: string) => {
-    setDossier({ phase: "loading" });
-    const result = await thirdPartyRequest<Dossier>(`/api/ext/third-party/parties/${id}`);
-    if (!result.ok) {
-      setDossier({ phase: "failed", error: result.error });
-      return;
+    if (dossierFor.current === id) {
+      beginRead<Dossier>(updater => setDossier(updater));
+    } else {
+      dossierFor.current = id;
+      setDossier({ phase: "loading" });
     }
-    setDossier({ phase: "ready", data: result.data });
+    const result = await thirdPartyRead<Dossier>(
+      `/api/ext/third-party/parties/${id}`,
+      data =>
+        !!data && typeof data === "object" &&
+        !!(data as Dossier).third_party && typeof (data as Dossier).third_party === "object" &&
+        typeof (data as Dossier).third_party.id === "string",
+    );
+    applyRead<Dossier>(updater => setDossier(updater), result);
   }, []);
 
   const inspect = useCallback(async (id: string) => {
@@ -497,18 +543,15 @@ export default function TerceirosWorkspace() {
 
   const runAuthorizationCheck = useCallback(async (id: string, scopeKind: string, scopeId: string) => {
     if (!id) return;
-    setDecision({ phase: "loading" });
+    beginRead<AuthorizationDecision>(updater => setDecision(updater));
     const query = new URLSearchParams({ scope_kind: scopeKind, scope_id: scopeId });
-    const result = await thirdPartyRequest<AuthorizationDecision>(
+    const result = await thirdPartyRead<AuthorizationDecision>(
       `/api/ext/third-party/parties/${id}/authorization?${query.toString()}`,
+      data => !!data && typeof data === "object" && typeof (data as AuthorizationDecision).authorized === "boolean",
     );
-    if (!result.ok) {
-      // A falha da consulta de autorização NÃO contamina o dossiê e nunca é
-      // lida como "não autorizado": são estados diferentes.
-      setDecision({ phase: "failed", error: result.error });
-      return;
-    }
-    setDecision({ phase: "ready", data: result.data });
+    // A falha da consulta de autorização NÃO contamina o dossiê e nunca é
+    // lida como "não autorizado": são estados diferentes.
+    applyRead<AuthorizationDecision>(updater => setDecision(updater), result);
   }, []);
 
   const checkAuthorization = (event: FormEvent) => {
@@ -546,6 +589,30 @@ export default function TerceirosWorkspace() {
       />
     </div>
   );
+
+  // UX-PRO-07G: faixa de releitura — dado preservado, hora e repetição real.
+  const renderStale = <T,>(state: Load<T> | null, retry: () => void, testId: string) => {
+    if (!state || state.phase !== "ready") return null;
+    return (
+      <>
+        <p className={styles.hint} data-testid={`${testId}-leitura`}>
+          Última leitura concluída às {readTime(state.readAt)}.
+          {state.refreshing ? " Atualizando agora — o conteúdo exibido é o dessa leitura." : ""}
+        </p>
+        {state.staleError ? (
+          <div role="alert" data-testid={`${testId}-desatualizado`}>
+            <UiState
+              variant={thirdPartyErrorVariant(state.staleError)}
+              title="A releitura falhou; o conteúdo abaixo é da última leitura concluída e pode estar desatualizado."
+              detail={`${state.staleError.detail} Última leitura concluída às ${readTime(state.readAt)}. ${thirdPartyErrorFootnote(state.staleError)}`}
+              onRetry={state.staleError.canRetry ? retry : undefined}
+              retryLabel="Tentar a leitura de novo"
+            />
+          </div>
+        ) : null}
+      </>
+    );
+  };
 
   const semTerceiro = (
     <UiState
@@ -661,6 +728,7 @@ export default function TerceirosWorkspace() {
         {active === "terceiros" ? (
           <section {...painel("terceiros")} data-testid="terceiros-lista">
             <h2 className={styles.panelTitle}>Terceiros registrados no backend canônico</h2>
+            {renderStale(list, () => void loadList(), "terceiros-lista")}
             {list.phase === "loading" ? (
               <UiState variant="loading" title="Lendo os terceiros canônicos…" detail="Nada é exibido antes de a leitura terminar." />
             ) : null}
@@ -797,6 +865,7 @@ export default function TerceirosWorkspace() {
         {active === "dossie" ? (
           <section {...painel("dossie")} data-testid="terceiros-dossie">
             <h2 className={styles.panelTitle}>Dossiê canônico e vínculo de contrato</h2>
+            {renderStale(dossier, () => { if (selectedId) void loadDossier(selectedId); }, "terceiros-dossie")}
             {renderDossierState("terceiros-dossie-erro", "Isto não significa que o terceiro não tenha contrato, documento ou janela registrada.")}
             {dossierData ? (
               <>

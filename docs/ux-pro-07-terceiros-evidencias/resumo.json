@@ -1,0 +1,15 @@
+{
+  "fatia": "UX-PRO-07G",
+  "rota": "/admin/terceiros",
+  "base": "00142f1 (merge PR #236)",
+  "gate": "npm run test:ux-third-party:pg",
+  "resultado": "13/13 testes, 0 falhas, 0 pulados (execução única verde, já com evidências)",
+  "casosNovos": [
+    "2xx sem third_parties vira falha invalid_third_party_response, nunca lista vazia — terceiros-1440-resposta-invalida.png",
+    "falha transitória 503 de releitura preserva a tabela lida com hora da última leitura concluída — terceiros-1440-dado-preservado.png",
+    "negativa 403 após sucesso falha fechado, sem tabela protegida nem faixa de preservação — terceiros-1440-negativa-pos-sucesso.png"
+  ],
+  "captura": ["terceiros-1440-resposta-invalida.png", "terceiros-1440-dado-preservado.png", "terceiros-1440-negativa-pos-sucesso.png", "desktop-terceiros-falha.png", "desktop-terceiros-negado.png", "desktop-terceiros-jornada.png", "desktop-terceiros-decisao.png", "desktop-terceiros-escrita.png", "mobile-terceiros-390px.png"],
+  "problems": [],
+  "limites": "Sem captura nova 320/768/noite. Nenhuma validação manual, homologação ou aceite humano; nada declara conformidade WCAG."
+}
