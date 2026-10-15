@@ -1,0 +1,28 @@
+name: UX-PRO-07F-1 datas e fuso financeiro
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/admin/financeiro/**'
+      - 'src/lib/finance-dates.mjs'
+      - 'src/lib/finance-dates.d.mts'
+      - 'tests/ux-finance-workspace.integration.test.mjs'
+      - 'tests/ux-finance-dates.test.mjs'
+      - 'scripts/qa-ux-pro-07f1-postgres.mjs'
+      - 'package.json'
+      - '.github/workflows/ux-pro-07f1-delivery.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+      - name: PostgreSQL descartavel, HTTP real, Chromium e auditoria TAP (minimo 44)
+        run: node scripts/qa-ux-pro-07f1-postgres.mjs
