@@ -43,6 +43,7 @@ import CommissionWorkspace from "./CommissionWorkspace";
 import UiState from "../../../components/ui/UiState";
 import UiBadge from "../../../components/ui/UiBadge";
 import { financeReadList, financeRequest, type FinanceErrorDescriptor } from "../../../lib/finance-request";
+import { financeDate } from "../../../lib/finance-dates.mjs";
 import {
   accountStatusLabel,
   accountStatusTone,
@@ -497,7 +498,7 @@ export default function FinanceiroWorkspace() {
                           <dl className={styles.facts}>
                             <div><dt>Valor</dt><dd>{money(rule.amount_cents)}</dd></div>
                             <div><dt>Identificador</dt><dd>{rule.recurrence_id}</dd></div>
-                            <div><dt>Início</dt><dd>{String(rule.start_date).slice(0, 10)}</dd></div>
+                            <div><dt>Início</dt><dd>{financeDate(rule.start_date)}</dd></div>
                           </dl>
                           <div className={styles.badgeRow}>
                             <UiBadge tone={approvalStatusTone(rule.is_approved ? "aprovado" : "pendente")} srPrefix="Aprovação">
@@ -628,7 +629,7 @@ export default function FinanceiroWorkspace() {
                         <li key={String(item.id)} className={styles.card}>
                           <p className={styles.cardTitle}>{String(item.protocol)}</p>
                           <dl className={styles.facts}>
-                            <div><dt>Período</dt><dd>{String(item.period_start)} a {String(item.period_end)}</dd></div>
+                            <div><dt>Período</dt><dd>{financeDate(item.period_start)} a {financeDate(item.period_end)}</dd></div>
                             <div><dt>Total</dt><dd>{money(item.amount_cents as string | number)}</dd></div>
                             <div><dt>Baixado</dt><dd>{money(item.settled_cents as string | number)}</dd></div>
                             <div><dt>Saldo</dt><dd>{money(item.remaining_cents as string | number)}</dd></div>

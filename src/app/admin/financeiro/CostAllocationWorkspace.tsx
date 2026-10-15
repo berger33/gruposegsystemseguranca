@@ -3,6 +3,7 @@
 import styles from "../../../components/ui/UiWorkspace.module.css";
 import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
 import { financeInvalidListMessage } from "../../../lib/finance-request";
+import { financeDate } from "../../../lib/finance-dates.mjs";
 import { FormEvent, useEffect, useState } from "react";
 
 type CostImport = {
@@ -95,7 +96,7 @@ export default function CostAllocationWorkspace() {
     </form>
     <table data-testid="fin08-imports"><thead><tr><th>Protocolo</th><th>Origem</th><th>Competência</th><th>Alocado</th><th>Registros</th></tr></thead><tbody>{imports.length===0?(readConfirmed
       ? <tr><td colSpan={5}>Nenhuma importação.</td></tr>
-      : <tr><td colSpan={5} data-testid="fin08-imports-unavailable">Lista indisponível — a leitura não foi confirmada; não confundir com ausência de importações.</td></tr>):imports.map(item=><tr key={item.id}><td>{item.protocol}</td><td>{item.source}</td><td>{String(item.competence_date).slice(0,10)}</td><td>{money(item.allocated_costs_cents)} / {money(item.total_costs_cents)}</td><td>{item.allocated_records} / {item.total_records}</td></tr>)}</tbody></table>
+      : <tr><td colSpan={5} data-testid="fin08-imports-unavailable">Lista indisponível — a leitura não foi confirmada; não confundir com ausência de importações.</td></tr>):imports.map(item=><tr key={item.id}><td>{item.protocol}</td><td>{item.source}</td><td>{financeDate(item.competence_date)}</td><td>{money(item.allocated_costs_cents)} / {money(item.total_costs_cents)}</td><td>{item.allocated_records} / {item.total_records}</td></tr>)}</tbody></table>
 
     <form data-testid="fin08-cost-form" onSubmit={createCost} className={styles.stack}><h3>Alocar custo</h3>
       <label>Importação <select data-testid="fin08-cost-import" value={costForm.import_id} onChange={e=>selectImport(e.target.value)}><option value="">Custo manual sintético</option>{imports.map(item=><option key={item.id} value={item.id}>{item.protocol} · {item.source}</option>)}</select></label>
@@ -114,6 +115,6 @@ export default function CostAllocationWorkspace() {
     </form>
     <table data-testid="fin08-cost-list"><thead><tr><th>Origem</th><th>Cliente / contrato / posto</th><th>Competência</th><th>Origem</th><th>Rateado</th><th>Regra</th></tr></thead><tbody>{costs.length===0?(readConfirmed
       ? <tr><td colSpan={6}>Nenhum custo.</td></tr>
-      : <tr><td colSpan={6} data-testid="fin08-costs-unavailable">Lista indisponível — a leitura não foi confirmada; não confundir com ausência de custos.</td></tr>):costs.map(cost=><tr key={cost.id}><td>{cost.cost_source}</td><td>{cost.client_name||"Cliente"} / {cost.contract_title||"Sem contrato"} / {cost.post_name||"Sem posto"}</td><td>{String(cost.competence_date).slice(0,10)}</td><td>{money(cost.source_amount_cents)}</td><td>{money(cost.amount_cents)} ({cost.rateio_percent}%)</td><td>{cost.rateio_rule}</td></tr>)}</tbody></table>
+      : <tr><td colSpan={6} data-testid="fin08-costs-unavailable">Lista indisponível — a leitura não foi confirmada; não confundir com ausência de custos.</td></tr>):costs.map(cost=><tr key={cost.id}><td>{cost.cost_source}</td><td>{cost.client_name||"Cliente"} / {cost.contract_title||"Sem contrato"} / {cost.post_name||"Sem posto"}</td><td>{financeDate(cost.competence_date)}</td><td>{money(cost.source_amount_cents)}</td><td>{money(cost.amount_cents)} ({cost.rateio_percent}%)</td><td>{cost.rateio_rule}</td></tr>)}</tbody></table>
   </section>;
 }

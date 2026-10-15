@@ -1338,3 +1338,541 @@ test('UX-PRO-07E-2 browser: a falha declarada do grupo fiscal não produz transb
     await writeFile(path.join(evidenceDir, '07e2-resumo.json'), `${JSON.stringify(resumo, null, 2)}\n`, 'utf8');
   }
 });
+
+// ---------------------------------------------------------------------------
+// UX-PRO-07F-1 — casos NOVOS, acrescentados APÓS os 34 herdados.
+//
+// O prefixo herdado (1.340 linhas / 76.468 bytes / SHA-256
+// e9fc84369f227c5308e240ca92dc21262c14c59c5648689457157d820e98c487) permanece
+// byte a byte: nenhuma asserção herdada foi editada, removida ou relaxada.
+//
+// O que estes casos provam: as 20 exibições de data/hora de /admin/financeiro
+// deixam de sair em ISO cru — `DD/MM/AAAA` nas datas de calendário, `MM/AAAA`
+// na competência do fechamento e `DD/MM/AAAA HH:mm UTC` (fuso DECLARADO) nos
+// três carimbos timestamptz — sem que nenhum payload, URL, método, permissão,
+// idempotência ou auditoria mude. O primeiro caso existe justamente para provar
+// que o CONTRATO cru continua ISO: é ele que autoriza a tela a formatar só a
+// exibição.
+//
+// Injeção de falha somente em `window.fetch` da página e somente em GET, pelo
+// auxiliar herdado `openFinanceInvalidBody`: servidor, banco, proxy e TODAS as
+// escritas permanecem reais e intactos. As capturas são feitas ANTES das
+// asserções e as asserções leem o TEXTO renderizado, para que a linha de base
+// reprove rápido, com o ISO cru visível no relatório TAP.
+// ---------------------------------------------------------------------------
+
+/** Ids da massa sintética criada pelo caso de contrato, usados pelos demais. */
+const qa07f1 = { ruleId: '', budgetId: '', closureId: '', provisionId: '', exportId: '', receivableId: '' };
+
+/** Cria um registro sintético pelas PRÓPRIAS APIs da rota, com erro visível. */
+async function qa07f1Create(rotulo, caminho, opcoes, esperado = 201) {
+  const resposta = await api(caminho, opcoes);
+  assert.equal(resposta.status, esperado,
+    `${rotulo} deveria responder ${esperado}, veio ${resposta.status} ${JSON.stringify(resposta.body)}`);
+  return resposta.body;
+}
+
+/**
+ * Texto das opções de um <select> NATIVO. O Playwright considera `<option>`
+ * oculto, então a espera é por EXISTÊNCIA (`waitForFunction`), nunca por
+ * visibilidade; se a opção esperada não chegar, o texto atual volta mesmo assim
+ * para que a reprovação mostre o que a tela exibiu.
+ */
+async function qa07f1OptionsText(page, testId, esperado) {
+  await page.waitForFunction(({ id, regex }) => {
+    const select = document.querySelector(`[data-testid="${id}"]`);
+    if (!select) return false;
+    return Array.from(select.options).some(option => new RegExp(regex).test(option.textContent || ''));
+  }, { id: testId, regex: esperado }, { timeout: 45_000 }).catch(() => {});
+  return page.evaluate(id => {
+    const select = document.querySelector(`[data-testid="${id}"]`);
+    return select
+      ? Array.from(select.options).map(option => (option.textContent || '').trim()).join(' | ')
+      : `[superficie ausente: ${id} nao renderizado no momento da leitura]`;
+  }, testId);
+}
+
+/** Espera o `<select>` nativo ter a opção com o valor indicado (id da massa). */
+async function qa07f1WaitOptionValue(page, testId, valor) {
+  await page.waitForFunction(({ id, value }) => {
+    const select = document.querySelector(`[data-testid="${id}"]`);
+    return Boolean(select) && Array.from(select.options).some(option => option.value === value);
+  }, { id: testId, value: valor }, { timeout: 45_000 });
+}
+
+/**
+ * Abre /admin/financeiro em contexto com FUSO DECLARADO, para provar que o
+ * carimbo exibido não depende da máquina de quem opera. Não substitui nem edita
+ * o auxiliar herdado `openFinanceInvalidBody`: repete a mesma configuração de
+ * cookie/página e acrescenta `timezoneId`.
+ */
+async function qa07f1OpenTimezone(browser, cookie, timezoneId) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'pt-BR', timezoneId });
+  const separator = cookie.indexOf('=');
+  await context.addCookies([{ name: cookie.slice(0, separator), value: cookie.slice(separator + 1), url: baseUrl }]);
+  const page = await context.newPage();
+  page.setDefaultTimeout(45_000);
+  page.setDefaultNavigationTimeout(90_000);
+  await page.goto(`${baseUrl}/admin/financeiro`, { waitUntil: 'domcontentloaded' });
+  return { context, page };
+}
+
+test('UX-PRO-07F-1 contrato: os 10 endpoints com data continuam devolvendo ISO cru no JSON e o payload não muda', { skip: !RUN, timeout: 180_000 }, async () => {
+  // Massa sintética pelas PRÓPRIAS APIs financeiras, com data/chave próprias
+  // para não colidir com as unicidades já usadas pelos casos herdados
+  // (competence-closures por competência, cashflow por competência+tipo,
+  // fin_exports por storage_key).
+  const suffix = randomUUID().slice(0, 8);
+  const ano = '2037';
+
+  const regra = await qa07f1Create('regra de recorrência sintética', '/api/fin/recurrence-rules', {
+    method: 'POST', cookie: financeCookie,
+    body: { contract_id: contractId, recurrence_type: 'mensal', start_date: `${ano}-02-03`, amount_cents: 150000, recurrence_id: `qa-07f1-rec-${suffix}` },
+  });
+  qa07f1.ruleId = regra.rule.id;
+
+  const orcamento = await qa07f1Create('orçamento sintético', '/api/fin/budgets', {
+    method: 'POST', cookie: financeCookie,
+    body: {
+      idempotency_key: `qa-07f1-budget-${suffix}`,
+      title: `Orçamento sintético 07F-1 ${suffix}`,
+      description: 'Orçamento gerencial sintético do gate UX-PRO-07F-1 para provar data de período.',
+      premises: 'Premissas sintéticas documentadas; estimativa sem promessa de resultado financeiro.',
+      period_start: `${ano}-02-01`, period_end: `${ano}-02-28`,
+      total_revenue_cents: 500000, total_cost_cents: 300000,
+    },
+  });
+  qa07f1.budgetId = orcamento.budget.id;
+
+  const provisao = await qa07f1Create('provisão sintética', '/api/fin/commission-provisions', {
+    method: 'POST', cookie: financeCookie,
+    body: { provision_date: `${ano}-02-15`, amount_cents: 250000, notes: 'Provisão sintética criada pelo contrato UX-PRO-07F-1.', idempotency_key: `qa-07f1-commission-${suffix}`, is_auto_paid: false },
+  });
+  qa07f1.provisionId = provisao.provision.id;
+  // Revisão humana: só ela preenche `reviewed_at`, o carimbo timestamptz do FIN-16.
+  await qa07f1Create('início de revisão da provisão', '/api/fin/commission-provisions', {
+    method: 'PATCH', cookie: financeCookie,
+    body: {
+      id: qa07f1.provisionId, status: 'em_revisao',
+      reason: 'Início da revisão humana pela massa sintética do gate UX-PRO-07F-1.',
+      revision_reason: 'Conferência sintética da base de cálculo da comissão.',
+    },
+  }, 200);
+
+  const exportacao = await qa07f1Create('exportação sintética', '/api/fin/exports', {
+    method: 'POST', cookie: financeCookie,
+    body: {
+      period_start: `${ano}-02-01`, period_end: `${ano}-02-28`, total_records: 3, total_amount_cents: 250000,
+      file_name: `qa-07f1-${suffix}.csv`, filters: { origem: 'interface_sintetica' }, totals: { total_cents: 250000 },
+      storage_key: `synthetic/fin14/qa-07f1-${suffix}.csv`, is_accountant_limited: true,
+    },
+  });
+  qa07f1.exportId = exportacao.export.id;
+  // Transição real: é ela que grava a trilha (fin_export_logs) com o carimbo.
+  await qa07f1Create('início da geração da exportação', '/api/fin/exports', {
+    method: 'PATCH', cookie: financeCookie, body: { id: qa07f1.exportId, status: 'gerando' },
+  }, 200);
+
+  const recebivel = await qa07f1Create('recebível sintético do aging', '/api/fin/receivables', {
+    method: 'POST', cookie: financeCookie,
+    body: { client_account_id: accountId, contract_id: contractId, competence_date: `${ano}-02-01`, due_date: `${ano}-02-10`, amount_cents: 42000, description: 'Recebível sintético do aging do gate UX-PRO-07F-1.' },
+  });
+  qa07f1.receivableId = recebivel.receivable.id;
+  await qa07f1Create('snapshot de fluxo de caixa', '/api/fin/cashflow-snapshots', {
+    method: 'POST', cookie: financeCookie,
+    body: { competence_date: `${ano}-02-01`, cashflow_type: 'realizado', total_receivable_cents: 120000, total_payable_cents: 40000, vencidos_cents: 15000, proximos_pagamentos_cents: 55000, notes: 'Snapshot realizado sintético do gate UX-PRO-07F-1.' },
+  });
+  await qa07f1Create('aging sintético', '/api/fin/aging-receivables', {
+    method: 'POST', cookie: financeCookie,
+    body: { receivable_id: qa07f1.receivableId, competence_date: `${ano}-02-01`, due_date: `${ano}-02-10`, amount_cents: 42000 },
+  });
+
+  const importacao = await qa07f1Create('importação sintética de custos', '/api/fin/cost-imports', {
+    method: 'POST', cookie: financeCookie,
+    body: { source: 'pessoal', file_name: `qa-07f1-${suffix}.csv`, file_url: `local://synthetic/fin08/qa-07f1-${suffix}.csv`, storage_key: `qa-07f1-${suffix}`, competence_date: `${ano}-02-01`, total_costs_cents: 120000, total_records: 1 },
+  });
+  assert.ok(importacao.import?.id, 'a importação sintética precisa devolver o registro criado');
+  await qa07f1Create('custo rateado sintético', '/api/fin/costs', {
+    method: 'POST', cookie: financeCookie,
+    body: {
+      client_account_id: accountId, contract_id: contractId, cost_source: 'pessoal', competence_date: `${ano}-02-01`,
+      source_amount_cents: 120000, description: 'Custo sintético do gate UX-PRO-07F-1 para a tabela de rateio.',
+      rateio_rule: 'Rateio sintético integral documentado pelo gate UX-PRO-07F-1.', rateio_percent: 100,
+      source_material: `QA-07F1-${suffix}`,
+    },
+  });
+
+  // `contract_id` é OMITIDO de propósito: o FIN-09 valida contra `crm_contracts`,
+  // e o fixture contratual deste gate vive em `client_contracts` (campo opcional).
+  await qa07f1Create('resultado gerencial sintético', '/api/fin/management-results', {
+    method: 'POST', cookie: financeCookie,
+    body: {
+      client_account_id: accountId, competence_date: `${ano}-02-01`,
+      revenue_received_cents: 90000, costs_cents: 45000, is_complete: false,
+      incomplete_reason: 'Faturamento sintético ainda aguarda conferência do período.',
+    },
+  });
+
+  const extrato = await qa07f1Create('extrato bancário sintético', '/api/fin/bank-statements', {
+    method: 'POST', cookie: financeCookie,
+    body: { source: 'importacao', file_name: `qa-07f1-${suffix}.csv`, file_url: `/synthetic/fin05/qa-07f1-${suffix}.csv`, storage_key: `fin05-07f1-${suffix}`, import_date: `${ano}-02-05` },
+  });
+  await qa07f1Create('transação bancária sintética', '/api/fin/bank-transactions', {
+    method: 'POST', cookie: financeCookie,
+    body: { statement_id: extrato.statement.id, transaction_date: `${ano}-02-05`, amount_cents: 32000, description: 'Transação sintética do gate UX-PRO-07F-1.', bank_ref: `FIN05-07F1-${suffix}` },
+  });
+
+  // Chave de idempotência EXISTENTE do contrato do f03 (nenhuma inventada).
+  await qa07f1Create('relatório f03 sintético', '/api/admin/finance/f03/reports', {
+    method: 'POST', cookie: financeCookie,
+    body: { account_id: accountId, period_start: `${ano}-02-01`, period_end: `${ano}-02-28` },
+    headers: { 'Idempotency-Key': `qa-07f1-report-${suffix}` },
+  });
+
+  // O fechamento vem por ÚLTIMO e em OUTRA competência: a migração 137 bloqueia
+  // lançamentos no mês fechado (`fin_competence_closed`), então fechar 02/2037
+  // antes da massa impediria o próprio recebível desta fatia.
+  const fechamento = await qa07f1Create('fechamento sintético', '/api/fin/competence-closures', {
+    method: 'POST', cookie: financeCookie,
+    body: { competence_date: `${ano}-04-15`, notes: 'Competência sintética criada pelo contrato UX-PRO-07F-1.', totals: { origem: 'interface_sintetica' } },
+  });
+  qa07f1.closureId = fechamento.closure.id;
+
+  // Contrato CRU: os 10 endpoints com data seguem devolvendo ISO no JSON. É a
+  // prova de que a formatação é só de exibição e nada mudou no payload.
+  const brutos = [
+    ['/api/fin/recurrence-rules', 'rules', 'start_date'],
+    ['/api/fin/budgets', 'budgets', 'period_start'],
+    ['/api/fin/competence-closures', 'closures', 'competence_date'],
+    ['/api/fin/commission-provisions', 'provisions', 'provision_date'],
+    ['/api/fin/exports', 'exports', 'period_start'],
+    ['/api/fin/cashflow-snapshots', 'snapshots', 'competence_date'],
+    ['/api/fin/cost-imports', 'imports', 'competence_date'],
+    ['/api/fin/management-results', 'results', 'competence_date'],
+    ['/api/fin/bank-transactions', 'transactions', 'transaction_date'],
+    ['/api/admin/finance/f03/reports', 'reports', 'period_start'],
+  ];
+  for (const [caminho, chave, campo] of brutos) {
+    const resposta = await api(caminho, { cookie: financeCookie });
+    assert.equal(resposta.status, 200, `${caminho} deveria responder 200, veio ${resposta.status}`);
+    const lista = resposta.body?.[chave];
+    assert.ok(Array.isArray(lista), `${caminho} precisa devolver a lista canônica "${chave}"`);
+    assert.ok(lista.length > 0, `${caminho} precisa ter ao menos a massa sintética desta fatia`);
+    const alvo = lista.find(item => item && item[campo]) || lista[0];
+    assert.match(String(alvo[campo]), /^\d{4}-\d{2}-\d{2}/,
+      `${caminho}.${campo} precisa continuar ISO cru no JSON; veio "${String(alvo[campo])}"`);
+  }
+});
+
+test('UX-PRO-07F-1 browser: FIN-15 mostra a competência em MM/AAAA na opção, no detalhe e no aviso do POST', { skip: !RUN, timeout: 120_000 }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, { rules: [] });
+    await gotoTab07e2(page, 'closures');
+    await settle07e2(page, '[data-testid="finance-closure-workspace"]', ['[data-testid="fin15-select"]']);
+
+    const opcoes = await qa07f1OptionsText(page, 'fin15-select', '04/2037');
+    await capture(page, '07f1-fin15-competencia-opcao');
+    assert.match(opcoes, /04\/2037/, `a opção do FIN-15 precisa trazer MM/AAAA; opções: "${opcoes}"`);
+    assert.doesNotMatch(opcoes, /2037-04/, `o ISO cru não pode mais aparecer no FIN-15; opções: "${opcoes}"`);
+
+    await qa07f1WaitOptionValue(page, 'fin15-select', qa07f1.closureId);
+    await page.selectOption('[data-testid="fin15-select"]', qa07f1.closureId);
+    await page.waitForFunction(() => Boolean(document.querySelector('[data-testid="fin15-detail"]')));
+    const detalhe = await textOf(page, '[data-testid="fin15-detail"]');
+    await capture(page, '07f1-fin15-competencia-detalhe');
+    assert.match(detalhe, /04\/2037/, `o detalhe do FIN-15 precisa trazer MM/AAAA; texto: "${detalhe.slice(0, 200)}"`);
+    assert.doesNotMatch(detalhe, /2037-04/, `o detalhe do FIN-15 não pode trazer ISO cru; texto: "${detalhe.slice(0, 200)}"`);
+
+    // Aviso do POST (terceira exibição do FIN-15): competência própria, sem
+    // colidir com a unicidade de `competence_date` já usada pelos casos herdados.
+    await page.getByTestId('fin15-date').fill('2037-03-15');
+    await page.getByTestId('fin15-notes').fill('Fechamento sintético do gate UX-PRO-07F-1 para o aviso de competência.');
+    await page.getByTestId('fin15-create').click();
+    await page.waitForFunction(() => (document.querySelector('[data-testid="fin15-notice"]')?.textContent || '').length > 0);
+    const aviso = await textOf(page, '[data-testid="fin15-notice"]');
+    await capture(page, '07f1-fin15-competencia-aviso');
+    assert.match(aviso, /03\/2037/, `o aviso do POST do FIN-15 precisa trazer MM/AAAA; texto: "${aviso.slice(0, 200)}"`);
+    assert.doesNotMatch(aviso, /2037-03/, `o aviso do FIN-15 não pode trazer ISO cru; texto: "${aviso.slice(0, 200)}"`);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07F-1 browser: FIN-16 traz a provisão em pt-BR e o carimbo da revisão com fuso declarado (UTC)', { skip: !RUN, timeout: 120_000 }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, { rules: [] });
+    await gotoTab07e2(page, 'commissions');
+    await settle07e2(page, '[data-testid="finance-commission-workspace"]', ['[data-testid="fin16-select"]']);
+
+    const opcoes = await qa07f1OptionsText(page, 'fin16-select', '15/02/2037');
+    await capture(page, '07f1-fin16-provisao-opcao');
+    assert.match(opcoes, /15\/02\/2037/, `a opção do FIN-16 precisa trazer DD/MM/AAAA; opções: "${opcoes}"`);
+    assert.doesNotMatch(opcoes, /2037-02/, `o ISO cru não pode mais aparecer no FIN-16; opções: "${opcoes}"`);
+
+    await qa07f1WaitOptionValue(page, 'fin16-select', qa07f1.provisionId);
+    await page.selectOption('[data-testid="fin16-select"]', qa07f1.provisionId);
+    await page.waitForFunction(() => Boolean(document.querySelector('[data-testid="fin16-review-audit"]')));
+    const auditoria = await textOf(page, '[data-testid="fin16-review-audit"]');
+    await capture(page, '07f1-fin16-carimbo-utc');
+    assert.match(auditoria, /\d{1,2}\/\d{1,2}\/\d{4} \d{2}:\d{2} UTC/,
+      `o carimbo da revisão precisa sair em pt-BR com fuso declarado; texto: "${auditoria.slice(0, 200)}"`);
+    assert.doesNotMatch(auditoria, /Invalid Date|NaN/,
+      `carimbo inválido nunca pode ser exibido; texto: "${auditoria.slice(0, 200)}"`);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07F-1 browser: FIN-14 traz o período em pt-BR e a trilha com fuso declarado (UTC)', { skip: !RUN, timeout: 120_000 }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, { rules: [] });
+    await gotoTab07e2(page, 'exports');
+    await settle07e2(page, '[data-testid="finance-export-workspace"]', ['[data-testid="fin14-select"]']);
+
+    await qa07f1WaitOptionValue(page, 'fin14-select', qa07f1.exportId);
+    await page.selectOption('[data-testid="fin14-select"]', qa07f1.exportId);
+    await page.waitForFunction(() => Boolean(document.querySelector('[data-testid="fin14-detail"]')));
+    const detalhe = await textOf(page, '[data-testid="fin14-detail"]');
+    await capture(page, '07f1-fin14-periodo-detalhe');
+    assert.match(detalhe, /01\/02\/2037 a 28\/02\/2037/,
+      `o período do FIN-14 precisa sair em pt-BR; texto: "${detalhe.slice(0, 200)}"`);
+    assert.doesNotMatch(detalhe, /2037-02/, `o período do FIN-14 não pode trazer ISO cru; texto: "${detalhe.slice(0, 200)}"`);
+
+    await page.getByTestId('fin14-logs').click();
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid="fin14-log-list"] li').length > 0
+      || Boolean(document.querySelector('[data-testid="fin14-logs-error"]')));
+    const trilha = await textOf(page, '[data-testid="fin14-log-list"]');
+    await capture(page, '07f1-fin14-trilha-utc');
+    assert.match(trilha, /\d{1,2}\/\d{1,2}\/\d{4} \d{2}:\d{2} UTC/,
+      `a trilha do FIN-14 precisa declarar o fuso; texto: "${trilha.slice(0, 240)}"`);
+    assert.doesNotMatch(trilha, /Invalid Date|NaN/, `a trilha do FIN-14 não pode exibir carimbo inválido; texto: "${trilha.slice(0, 240)}"`);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07F-1 browser: FIN-13 traz o período em pt-BR e o histórico da trilha com fuso declarado (UTC)', { skip: !RUN, timeout: 120_000 }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, { rules: [] });
+    await gotoTab07e2(page, 'budgets');
+    await settle07e2(page, '[data-testid="finance-budget-workspace"]', ['[data-testid="fin13-budget-select"]']);
+
+    await qa07f1WaitOptionValue(page, 'fin13-budget-select', qa07f1.budgetId);
+    await page.selectOption('[data-testid="fin13-budget-select"]', qa07f1.budgetId);
+    await page.waitForFunction(() => Boolean(document.querySelector('[data-testid="fin13-budget-detail"]')));
+    const detalhe = await textOf(page, '[data-testid="fin13-budget-detail"]');
+    await capture(page, '07f1-fin13-periodo-detalhe');
+    assert.match(detalhe, /01\/02\/2037 a 28\/02\/2037/,
+      `o período do FIN-13 precisa sair em pt-BR; texto: "${detalhe.slice(0, 240)}"`);
+    assert.doesNotMatch(detalhe, /2037-02/, `o período do FIN-13 não pode trazer ISO cru; texto: "${detalhe.slice(0, 240)}"`);
+
+    await page.getByTestId('fin13-load-history').click();
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid^="fin13-history-row-"]').length > 0
+      || Boolean(document.querySelector('[data-testid="fin13-history-error"]')));
+    const historico = await textOf(page, '[data-testid="fin13-history-list"]');
+    await capture(page, '07f1-fin13-historico-utc');
+    assert.match(historico, /\d{1,2}\/\d{1,2}\/\d{4} \d{2}:\d{2} UTC/,
+      `o histórico do FIN-13 precisa declarar o fuso; texto: "${historico.slice(0, 240)}"`);
+    assert.doesNotMatch(historico, /Invalid Date|NaN/, `o histórico do FIN-13 não pode exibir carimbo inválido; texto: "${historico.slice(0, 240)}"`);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07F-1 browser: FIN-05, FIN-07, FIN-08 e FIN-09 trazem as datas das listas em pt-BR', { skip: !RUN, timeout: 180_000 }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, { rules: [] });
+
+    const esperas = [
+      ['reconciliation', '[data-testid="fin05-transactions"]', /05\/02\/2037/, /2037-02-05/, '07f1-fin05-transacao'],
+      ['cashflow', '[data-testid="fin07-snapshots"]', /01\/02\/2037/, /2037-02-01/, '07f1-fin07-snapshot'],
+      ['costs', '[data-testid="fin08-imports"]', /01\/02\/2037/, /2037-02-01/, '07f1-fin08-importacao'],
+      ['results', '[data-testid="fin09-list"]', /01\/02\/2037/, /2037-02-01/, '07f1-fin09-resultado'],
+    ];
+    for (const [aba, superficie, esperado, cru, capture_nome] of esperas) {
+      await gotoTab07e2(page, aba);
+      await settle07e2(page, superficie, [], { extraMs: 900 });
+      const Aba = aba.charAt(0).toUpperCase() + aba.slice(1);
+      const texto = await textOf(page, superficie);
+      await capture(page, capture_nome);
+      assert.match(texto, esperado, `a ${Aba} precisa exibir a data em pt-BR; texto: "${texto.slice(0, 240)}"`);
+      assert.doesNotMatch(texto, cru, `a ${Aba} não pode mais exibir ISO cru; texto: "${texto.slice(0, 240)}"`);
+    }
+
+    // Aging e custos rateados: as outras duas tabelas com data das mesmas abas.
+    await gotoTab07e2(page, 'cashflow');
+    await settle07e2(page, '[data-testid="fin07-aging"]', [], { extraMs: 900 });
+    const aging = await textOf(page, '[data-testid="fin07-aging"]');
+    await capture(page, '07f1-fin07-aging');
+    assert.match(aging, /01\/02\/2037/, `a tabela de aging precisa exibir a data em pt-BR; texto: "${aging.slice(0, 240)}"`);
+
+    await gotoTab07e2(page, 'costs');
+    await settle07e2(page, '[data-testid="fin08-cost-list"]', [], { extraMs: 900 });
+    const custos = await textOf(page, '[data-testid="fin08-cost-list"]');
+    await capture(page, '07f1-fin08-custo');
+    assert.match(custos, /01\/02\/2037/, `a tabela de custos rateados precisa exibir a data em pt-BR; texto: "${custos.slice(0, 240)}"`);
+    assert.doesNotMatch(custos, /2037-02/, `a tabela de custos rateados não pode mais exibir ISO cru; texto: "${custos.slice(0, 240)}"`);
+
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07F-1 browser: o painel traz o início da regra e o período do relatório f03 em pt-BR', { skip: !RUN, timeout: 120_000 }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, { rules: [] });
+    await settle(page, '[data-testid="financeiro-workspace"]', ['[role="tablist"]']);
+    // A lista "Regras cadastradas" (com o campo Início) vive na aba Recorrência.
+    await gotoTab07e2(page, 'recurrence');
+    await settle07e2(page, '[data-testid="finance-recurrence"]', [`[data-testid="finance-rule-${qa07f1.ruleId}"]`]);
+
+    const regra = await textOf(page, `[data-testid="finance-rule-${qa07f1.ruleId}"]`);
+    await capture(page, '07f1-painel-regra-inicio');
+    assert.match(regra, /03\/02\/2037/, `o início da regra precisa sair em pt-BR; texto: "${regra.slice(0, 240)}"`);
+    assert.doesNotMatch(regra, /2037-02-03/, `o início da regra não pode trazer ISO cru; texto: "${regra.slice(0, 240)}"`);
+
+    await gotoTab07e2(page, 'f03reports');
+    await page.locator('[data-testid="finance-f03-reports"]').waitFor();
+    await page.getByRole('button', { name: 'Atualizar lista' }).click();
+    await page.waitForFunction(() => /01\/02\/2037/.test(document.querySelector('[data-testid="finance-f03-reports"]')?.textContent || '')
+      || Boolean(document.querySelector('[data-testid="finance-error"]')));
+    const relatorios = await textOf(page, '[data-testid="finance-f03-reports"]');
+    await capture(page, '07f1-painel-relatorio-periodo');
+    assert.match(relatorios, /01\/02\/2037 a 28\/02\/2037/,
+      `o período do relatório f03 precisa sair em pt-BR; texto: "${relatorios.slice(0, 300)}"`);
+    assert.doesNotMatch(relatorios, /2037-02-01/, `o período do relatório f03 não pode trazer ISO cru; texto: "${relatorios.slice(0, 300)}"`);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07F-1 browser: data ausente é declarada e formato inesperado é preservado cru (sem data inventada)', { skip: !RUN, timeout: 180_000 }, async () => {
+  // Rodada A — ausente (`null` em um registro e campo omitido em outro):
+  // o auxiliar herdado injeta o corpo 2xx só em GET, e o FIN-09 é superfície
+  // de lista simples (não depende de <option> oculto).
+  const browserA = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browserA, financeCookie, {
+      rules: [{
+        match: '/api/fin/management-results',
+        body: {
+          results: [
+            { id: 'qa-07f1-ausente-nulo', protocol: 'RES-FIN-07F1-A', competence_date: null, status: 'incompleto', is_complete: false, margin_cents: null, computed_margin_percent: null, margin_basis: 'dados_incompletos', incomplete_reason: 'Competência ausente injetada pelo gate UX-PRO-07F-1.' },
+            { id: 'qa-07f1-ausente-omitido', protocol: 'RES-FIN-07F1-B', status: 'incompleto', is_complete: false, margin_cents: null, computed_margin_percent: null, margin_basis: 'dados_incompletos', incomplete_reason: 'Competência omitida injetada pelo gate UX-PRO-07F-1.' },
+          ],
+        },
+      }],
+    });
+    await gotoTab07e2(page, 'results');
+    await settle07e2(page, '[data-testid="fin09-results"]', ['[data-testid="fin09-list"]']);
+    const texto = await textOf(page, '[data-testid="fin09-list"]');
+    await capture(page, '07f1-fin09-data-ausente');
+    const declaracoes = (texto.match(/Não informada/g) || []).length;
+    assert.ok(declaracoes >= 2,
+      `data ausente precisa ser declarada nas duas linhas (nulo e campo omitido); texto: "${texto.slice(0, 300)}"`);
+    assert.doesNotMatch(texto, /Invalid Date|NaN|undefined/,
+      `data ausente nunca pode virar data inventada; texto: "${texto.slice(0, 300)}"`);
+    await context.close();
+  } finally { await browserA.close(); }
+
+  // Rodada B — formato inesperado: nada é convertido por adivinhação; o texto
+  // volta como veio e o auxiliar jamais inventa uma data.
+  const browserB = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browserB, financeCookie, {
+      rules: [{
+        match: '/api/fin/management-results',
+        body: {
+          results: [
+            { id: 'qa-07f1-formato-inesperado', protocol: 'RES-FIN-07F1-C', competence_date: 'formato-inesperado', status: 'incompleto', is_complete: false, margin_cents: null, computed_margin_percent: null, margin_basis: 'dados_incompletos', incomplete_reason: 'Formato inesperado injetado pelo gate UX-PRO-07F-1.' },
+          ],
+        },
+      }],
+    });
+    await gotoTab07e2(page, 'results');
+    await settle07e2(page, '[data-testid="fin09-results"]', ['[data-testid="fin09-list"]']);
+    const texto = await textOf(page, '[data-testid="fin09-list"]');
+    await capture(page, '07f1-fin09-formato-inesperado');
+    assert.match(texto, /formato-inesperado/,
+      `formato inesperado precisa ser preservado como veio; texto: "${texto.slice(0, 300)}"`);
+    assert.doesNotMatch(texto, /\d{2}\/\d{2}\/\d{4}/,
+      `formato inesperado não pode virar data adivinhada; texto: "${texto.slice(0, 300)}"`);
+    await context.close();
+  } finally { await browserB.close(); }
+});
+
+test('UX-PRO-07F-1 browser: o MESMO carimbo é idêntico com timezoneId America/Sao_Paulo e Asia/Tokyo', { skip: !RUN, timeout: 120_000 }, async () => {
+  const leituras = [];
+  for (const timezoneId of ['America/Sao_Paulo', 'Asia/Tokyo']) {
+    // O Chromium empacotado roda com --single-process: um browser por contexto.
+    const browser = await launchBrowser();
+    try {
+      const { context, page } = await qa07f1OpenTimezone(browser, financeCookie, timezoneId);
+      const fusoEfetivo = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+      assert.equal(fusoEfetivo, timezoneId,
+        `o contexto precisa realmente emular o fuso "${timezoneId}"; o navegador respondeu "${fusoEfetivo}"`);
+      await gotoTab07e2(page, 'commissions');
+      await settle07e2(page, '[data-testid="finance-commission-workspace"]', ['[data-testid="fin16-select"]']);
+      await qa07f1WaitOptionValue(page, 'fin16-select', qa07f1.provisionId);
+      await page.selectOption('[data-testid="fin16-select"]', qa07f1.provisionId);
+      await page.waitForFunction(() => Boolean(document.querySelector('[data-testid="fin16-review-audit"]')));
+      const carimbo = await textOf(page, '[data-testid="fin16-review-audit"]');
+      await capture(page, `07f1-fuso-${timezoneId.replace(/[^A-Za-z]/g, '-')}`);
+      assert.match(carimbo, /\d{1,2}\/\d{1,2}\/\d{4} \d{2}:\d{2} UTC/,
+        `o carimbo precisa declarar o fuso em "${timezoneId}"; texto: "${carimbo.slice(0, 200)}"`);
+      leituras.push({ timezoneId, carimbo });
+      await context.close();
+    } finally { await browser.close(); }
+  }
+  assert.equal(leituras[0].carimbo, leituras[1].carimbo,
+    `o mesmo instante não pode mudar de texto com o fuso da máquina (${leituras[0].timezoneId}: "${leituras[0].carimbo}" × ${leituras[1].timezoneId}: "${leituras[1].carimbo}")`);
+});
+
+test('UX-PRO-07F-1 browser: as datas em pt-BR não produzem transbordo em 1440/768/390/320 e as capturas ficam registradas', { skip: !RUN, timeout: 180_000 }, async () => {
+  const medicoes = [];
+  for (const [width, height, nome] of [[1440, 900, '1440'], [768, 1024, '768'], [390, 844, '390'], [320, 844, '320']]) {
+    // Um browser por largura, pela mesma limitação do --single-process.
+    const browser = await launchBrowser();
+    try {
+      const { context, page } = await openFinanceInvalidBody(browser, financeCookie, { width, height, rules: [] });
+      await gotoTab07e2(page, 'closures');
+      await settle07e2(page, '[data-testid="finance-closure-workspace"]', ['[data-testid="fin15-select"]']);
+      const opcoes = await qa07f1OptionsText(page, 'fin15-select', '04/2037');
+      await capture(page, `07f1-datas-ptbr-${nome}`);
+
+      const transbordo = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      assert.match(opcoes, /04\/2037/, `a competência em pt-BR precisa existir em ${width}px; opções: "${opcoes}"`);
+      assert.ok(transbordo <= 0, `transbordo de ${transbordo}px em ${width}px com as datas em pt-BR`);
+      medicoes.push({ width, height, nome, transbordo, opcoes: opcoes.slice(0, 120) });
+      await context.close();
+    } finally { await browser.close(); }
+  }
+
+  if (evidenceDir) {
+    const { writeFile } = await import('node:fs/promises');
+    const resumo = {
+      stage: 'ux-pro-07-financeiro',
+      generatedBy: 'gate PostgreSQL descartável + HTTP real + Chromium (scripts/qa-ux-pro-07f1-postgres.mjs)',
+      notes: [
+        'UX-PRO-07F-1: as 20 exibições de data/hora de /admin/financeiro saem em DD/MM/AAAA, MM/AAAA e DD/MM/AAAA HH:mm UTC (fuso declarado) em vez de ISO cru.',
+        'Tema dia; papel financeiro; massa sintética criada pelas próprias APIs financeiras.',
+        'Este resumo NÃO mede percurso de teclado nem primeiro foco (ausentes de propósito): são cobertos pelos stages herdados ux-07-financeiro e ux-pro-07-financeiro, e o inventário agrega por rota.',
+        'Arquivo próprio (não sobrescreve resumo.json da 07E-1 nem 07e2-resumo.json da 07E-2).',
+        'O tema noturno não foi medido nesta fatia: contraste é achado transversal (E8) fora do escopo.',
+      ],
+      entries: medicoes.map(item => ({
+        stage: 'ux-pro-07-financeiro',
+        route: '/admin/financeiro',
+        role: 'financeiro',
+        viewport: `${item.width}x${item.height}`,
+        theme: 'day',
+        screenshot: `${evidenceDir}/07f1-datas-ptbr-${item.nome}.png`,
+        problems: [],
+        state: 'datas_em_ptbr_e_fuso_declarado_fin15',
+        transbordoDocumentoPx: item.transbordo,
+        formatoDataObservado: `MM/AAAA na competência do FIN-15; opções: ${item.opcoes}`,
+      })),
+    };
+    await writeFile(path.join(evidenceDir, '07f1-resumo.json'), `${JSON.stringify(resumo, null, 2)}\n`, 'utf8');
+  }
+});

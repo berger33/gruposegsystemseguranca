@@ -1,0 +1,77 @@
+{
+  "stage": "ux-pro-07-financeiro",
+  "generatedBy": "gate PostgreSQL descartável + HTTP real + Chromium (scripts/qa-ux-pro-07e2-postgres.mjs)",
+  "notes": [
+    "UX-PRO-07E-2: falha declarada por resposta 2xx sem a lista canônica nas oito superfícies restantes de /admin/financeiro.",
+    "Tema dia; papel financeiro; massa sintética criada pelas próprias APIs financeiras.",
+    "elementoAtivoOnFailure é medição informativa do foco no momento da falha; NÃO é percurso de teclado nem primeiro foco visível. O percurso do tablist continua provado pelos casos herdados.",
+    "Arquivo próprio (não sobrescreve resumo.json da 07E-1); o inventário agrega por rota.",
+    "O tema noturno não foi medido nesta fatia: contraste é achado transversal (E8) fora do escopo."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-07-financeiro",
+      "route": "/admin/financeiro",
+      "role": "financeiro",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-financeiro-evidencias/antes-07f-1/07e2-falha-declarada-1440.png",
+      "problems": [],
+      "state": "falha_declarada_corpo_2xx_sem_lista_grupo_fiscal",
+      "transbordoDocumentoPx": 0,
+      "alturaBotaoRepetirPx": 29,
+      "elementoAtivoOnFailure": {
+        "tag": "button",
+        "text": "Fiscal e obrigações"
+      }
+    },
+    {
+      "stage": "ux-pro-07-financeiro",
+      "route": "/admin/financeiro",
+      "role": "financeiro",
+      "viewport": "768x1024",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-financeiro-evidencias/antes-07f-1/07e2-falha-declarada-768.png",
+      "problems": [],
+      "state": "falha_declarada_corpo_2xx_sem_lista_grupo_fiscal",
+      "transbordoDocumentoPx": 0,
+      "alturaBotaoRepetirPx": 29,
+      "elementoAtivoOnFailure": {
+        "tag": "button",
+        "text": "Fiscal e obrigações"
+      }
+    },
+    {
+      "stage": "ux-pro-07-financeiro",
+      "route": "/admin/financeiro",
+      "role": "financeiro",
+      "viewport": "390x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-financeiro-evidencias/antes-07f-1/07e2-falha-declarada-390.png",
+      "problems": [],
+      "state": "falha_declarada_corpo_2xx_sem_lista_grupo_fiscal",
+      "transbordoDocumentoPx": 0,
+      "alturaBotaoRepetirPx": 29,
+      "elementoAtivoOnFailure": {
+        "tag": "button",
+        "text": "Fiscal e obrigações"
+      }
+    },
+    {
+      "stage": "ux-pro-07-financeiro",
+      "route": "/admin/financeiro",
+      "role": "financeiro",
+      "viewport": "320x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-financeiro-evidencias/antes-07f-1/07e2-falha-declarada-320.png",
+      "problems": [],
+      "state": "falha_declarada_corpo_2xx_sem_lista_grupo_fiscal",
+      "transbordoDocumentoPx": 0,
+      "alturaBotaoRepetirPx": 29,
+      "elementoAtivoOnFailure": {
+        "tag": "button",
+        "text": "Fiscal e obrigações"
+      }
+    }
+  ]
+}

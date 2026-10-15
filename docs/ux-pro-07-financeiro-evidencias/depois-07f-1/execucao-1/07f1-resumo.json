@@ -1,0 +1,61 @@
+{
+  "stage": "ux-pro-07-financeiro",
+  "generatedBy": "gate PostgreSQL descartável + HTTP real + Chromium (scripts/qa-ux-pro-07f1-postgres.mjs)",
+  "notes": [
+    "UX-PRO-07F-1: as 20 exibições de data/hora de /admin/financeiro saem em DD/MM/AAAA, MM/AAAA e DD/MM/AAAA HH:mm UTC (fuso declarado) em vez de ISO cru.",
+    "Tema dia; papel financeiro; massa sintética criada pelas próprias APIs financeiras.",
+    "Este resumo NÃO mede percurso de teclado nem primeiro foco (ausentes de propósito): são cobertos pelos stages herdados ux-07-financeiro e ux-pro-07-financeiro, e o inventário agrega por rota.",
+    "Arquivo próprio (não sobrescreve resumo.json da 07E-1 nem 07e2-resumo.json da 07E-2).",
+    "O tema noturno não foi medido nesta fatia: contraste é achado transversal (E8) fora do escopo."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-07-financeiro",
+      "route": "/admin/financeiro",
+      "role": "financeiro",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-financeiro-evidencias/depois-07f-1/execucao-1/07f1-datas-ptbr-1440.png",
+      "problems": [],
+      "state": "datas_em_ptbr_e_fuso_declarado_fin15",
+      "transbordoDocumentoPx": 0,
+      "formatoDataObservado": "MM/AAAA na competência do FIN-15; opções: Selecione | 04/2037 · fechada | 03/2037 · fechada | 01/2037 · fechada"
+    },
+    {
+      "stage": "ux-pro-07-financeiro",
+      "route": "/admin/financeiro",
+      "role": "financeiro",
+      "viewport": "768x1024",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-financeiro-evidencias/depois-07f-1/execucao-1/07f1-datas-ptbr-768.png",
+      "problems": [],
+      "state": "datas_em_ptbr_e_fuso_declarado_fin15",
+      "transbordoDocumentoPx": 0,
+      "formatoDataObservado": "MM/AAAA na competência do FIN-15; opções: Selecione | 04/2037 · fechada | 03/2037 · fechada | 01/2037 · fechada"
+    },
+    {
+      "stage": "ux-pro-07-financeiro",
+      "route": "/admin/financeiro",
+      "role": "financeiro",
+      "viewport": "390x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-financeiro-evidencias/depois-07f-1/execucao-1/07f1-datas-ptbr-390.png",
+      "problems": [],
+      "state": "datas_em_ptbr_e_fuso_declarado_fin15",
+      "transbordoDocumentoPx": 0,
+      "formatoDataObservado": "MM/AAAA na competência do FIN-15; opções: Selecione | 04/2037 · fechada | 03/2037 · fechada | 01/2037 · fechada"
+    },
+    {
+      "stage": "ux-pro-07-financeiro",
+      "route": "/admin/financeiro",
+      "role": "financeiro",
+      "viewport": "320x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-financeiro-evidencias/depois-07f-1/execucao-1/07f1-datas-ptbr-320.png",
+      "problems": [],
+      "state": "datas_em_ptbr_e_fuso_declarado_fin15",
+      "transbordoDocumentoPx": 0,
+      "formatoDataObservado": "MM/AAAA na competência do FIN-15; opções: Selecione | 04/2037 · fechada | 03/2037 · fechada | 01/2037 · fechada"
+    }
+  ]
+}
