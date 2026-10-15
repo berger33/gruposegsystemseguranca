@@ -71,6 +71,12 @@ Comparação estrutural com os resumos da main: todas as **9/29/20 entradas e de
 
 Reprodução: `npm ci`, depois `npm run ux:evidence -- --stage=ux-pro-08d`, sem variáveis de banco externo. Neste Linux, sonames do PostgreSQL embutido disponibilizados como nos gates e `LD_LIBRARY_PATH` em `node_modules/@embedded-postgres/linux-x64/native/lib`. Segredos/cookies/senhas ficam só na memória; não versionar logs de ambiente. O êxito do coletor significa medição concluída, não aprovação de todas as observações de acessibilidade.
 
+### CI remoto — registro da primeira rodada da PR #248
+
+A [PR complementar #248](https://github.com/berger33/gruposegsystemseguranca/pull/248) foi aberta apenas após incorporar #247. No head `ece685e`, **41/42 checks SUCCESS** e `ux-ops-postgres-browser` FAILURE ([run 38801890800](https://github.com/berger33/gruposegsystemseguranca/actions/runs/38801890800)). Nenhum merge foi feito com essa falha. O log detalhado não ficou acessível pela rede deste ambiente; as anotações da API só informam exit 1, portanto **a causa não foi estabelecida** e não é correto declarar flake comprovado.
+
+Diagnóstico adicional local no mesmo head: `npm run test:ux-ops:pg` **27/27**, zero falhas/pulados/todo, sem mudar nenhum arquivo de Operação ou seu gate. A reexecução remota por API foi recusada com 403 (`Actions: write` não concedido). Esta atualização documental registra o ocorrido e aciona uma nova rodada normal da CI; nenhum teste/workflow é retirado ou enfraquecido. O estado atual deve ser lido nos checks da #248 e no registro de merge do GitHub. **Só mergear após todos os checks reportados verdes**, sem bypass; se a falha persistir, manter a PR aberta.
+
 ## 6. Preservações e próxima subfatia
 
 Nenhuma alteração em código de produto, APIs, migrações, autorização/papéis/grants, vínculos, sessão, idempotência, auditoria ou dados. Conhecimento, RagWidget, assistentes, SitePreviewNotice/noindex/selo e publicação de aparência permanecem intactos. Nenhum layout publicado, nenhum site público alterado.
