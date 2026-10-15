@@ -58,8 +58,9 @@ function run(cmd, args, env, capture = false) {
 
 // O mínimo protege o gate contra regressão silenciosa: os dois casos herdados
 // (contrato estático) mais os oito casos de leitura com navegador real da
-// UX-PRO-07C-1. Skip, todo ou ausência de resumo TAP reprovam o gate.
-const MINIMUM_CASES = 10;
+// UX-PRO-07C-1 e os oito casos de escrita da UX-PRO-07C-2. Skip, todo ou
+// ausência de resumo TAP reprovam o gate.
+const MINIMUM_CASES = 18;
 function auditTap(output) {
   const number = label => {
     const match = output.match(new RegExp(`^# ${label} (\\d+)$`, 'm'));

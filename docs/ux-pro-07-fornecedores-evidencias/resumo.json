@@ -105,7 +105,7 @@
         "fornecedores-price",
         "fornecedores-notes",
         "Confirmar no servidor",
-        "FORN-EXT-20261015-35C0Fornecedor sintético durante-falha-5d43a3eb · Produto sint"
+        "FORN-EXT-20261015-D9B5Fornecedor sintético durante-falha-6cd70d88 · Produto sint"
       ]
     },
     {
@@ -116,6 +116,103 @@
       "theme": "day",
       "screenshot": "docs/ux-pro-07-fornecedores-evidencias/fornecedores-320-dia.png",
       "problems": [],
+      "overflowDocumentoPx": 0,
+      "menorAlvoPx": 44
+    },
+    {
+      "stage": "ux-pro-07-fornecedores",
+      "route": "/admin/fornecedores",
+      "role": "admin",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-fornecedores-evidencias/fornecedores-1440-enviando.png",
+      "problems": [],
+      "estado": "escrita_em_envio",
+      "acaoEmEnvio": "create-quotation",
+      "overflowDocumentoPx": 0,
+      "menorAlvoPx": 44
+    },
+    {
+      "stage": "ux-pro-07-fornecedores",
+      "route": "/admin/fornecedores",
+      "role": "admin",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-fornecedores-evidencias/fornecedores-1440-escrita-falha-transitoria.png",
+      "problems": [],
+      "estado": "escrita_falha_transitoria_incerta",
+      "overflowDocumentoPx": 0,
+      "menorAlvoPx": 44
+    },
+    {
+      "stage": "ux-pro-07-fornecedores",
+      "route": "/admin/fornecedores",
+      "role": "admin",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-fornecedores-evidencias/fornecedores-1440-escrita-conflito.png",
+      "problems": [],
+      "estado": "escrita_recusada_conflito",
+      "overflowDocumentoPx": 0,
+      "menorAlvoPx": 44
+    },
+    {
+      "stage": "ux-pro-07-fornecedores",
+      "route": "/admin/fornecedores",
+      "role": "admin",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-fornecedores-evidencias/fornecedores-1440-escrita-negada.png",
+      "problems": [],
+      "estado": "escrita_negada_fail_closed",
+      "overflowDocumentoPx": 0,
+      "alvosAcionaveis": 0
+    },
+    {
+      "stage": "ux-pro-07-fornecedores",
+      "route": "/admin/fornecedores",
+      "role": "admin",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-fornecedores-evidencias/fornecedores-1440-escrita-resposta-invalida.png",
+      "problems": [],
+      "estado": "escrita_resposta_2xx_invalida",
+      "overflowDocumentoPx": 0,
+      "menorAlvoPx": 44
+    },
+    {
+      "stage": "ux-pro-07-fornecedores",
+      "route": "/admin/fornecedores",
+      "role": "admin",
+      "viewport": "390x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-fornecedores-evidencias/fornecedores-390-enviando.png",
+      "problems": [],
+      "estado": "escrita_em_envio",
+      "overflowDocumentoPx": 0,
+      "menorAlvoPx": 44
+    },
+    {
+      "stage": "ux-pro-07-fornecedores",
+      "route": "/admin/fornecedores",
+      "role": "admin",
+      "viewport": "768x1024",
+      "theme": "night",
+      "screenshot": "docs/ux-pro-07-fornecedores-evidencias/fornecedores-768-noite-enviando.png",
+      "problems": [],
+      "estado": "escrita_em_envio_noite",
+      "overflowDocumentoPx": 0,
+      "contrasteFaixa": 6.06
+    },
+    {
+      "stage": "ux-pro-07-fornecedores",
+      "route": "/admin/fornecedores",
+      "role": "admin",
+      "viewport": "320x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-fornecedores-evidencias/fornecedores-320-escrita-falha.png",
+      "problems": [],
+      "estado": "escrita_falha_transitoria",
       "overflowDocumentoPx": 0,
       "menorAlvoPx": 44
     }
