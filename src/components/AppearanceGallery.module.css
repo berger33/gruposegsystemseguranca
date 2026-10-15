@@ -8,3 +8,52 @@
 @media(prefers-reduced-motion:reduce){.gallery *{scroll-behavior:auto;}}
 
 .previewState{display:inline-flex;margin-top:10px;padding:4px 8px;border-radius:6px;background:#edf1fc;color:#233f91;font-size:12px;font-weight:650;}
+
+/* UX-PRO-08E: the gallery itself is a staff surface, so fixed light cards and
+   secondary controls must not pair night-mode text with white/pale fills.
+   The miniature art and the iframe remain intentionally light: they depict
+   the public layout being compared, not the surrounding admin chrome. */
+:global(html[data-admin-theme="night"]) .gallery .option {
+  background: var(--ux-color-surface);
+  color: var(--ux-color-text);
+}
+
+:global(html[data-admin-theme="night"]) .gallery .selected {
+  background: var(--ux-color-brand-soft);
+  color: var(--ux-color-text);
+}
+
+:global(html[data-admin-theme="night"]) .gallery .device button,
+:global(html[data-admin-theme="night"]) .gallery .device a,
+:global(html[data-admin-theme="night"]) .gallery .secondary {
+  background: var(--ux-color-surface);
+  color: var(--ux-color-brand-strong);
+  border-color: var(--ux-color-border);
+}
+
+:global(html[data-admin-theme="night"]) .gallery .device button[aria-pressed='true'] {
+  background: var(--ux-color-brand-strong);
+  color: #111b2b;
+  border-color: var(--ux-color-brand-strong);
+}
+
+:global(html[data-admin-theme="night"]) .gallery .primary {
+  background: var(--ux-color-brand-strong);
+  color: #111b2b;
+  border-color: var(--ux-color-brand-strong);
+}
+
+:global(html[data-admin-theme="night"]) .gallery .badge,
+:global(html[data-admin-theme="night"]) .gallery .previewState {
+  background: var(--ux-color-brand-soft);
+  color: var(--ux-color-brand-strong);
+}
+
+:global(html[data-admin-theme="night"]) .gallery .dialog {
+  background: var(--ux-color-surface);
+}
+
+:global(html[data-admin-theme="night"]) .gallery .dialog textarea {
+  background: #111e30;
+  color: var(--ux-color-text);
+}
