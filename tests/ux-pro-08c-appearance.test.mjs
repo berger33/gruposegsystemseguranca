@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => readFile(new URL(`../${p}`, import.meta.url), 'utf8');
 const IDS = ['01','02','03','04','05','06','07','08','09','10'];
 
@@ -41,3 +44,61 @@ test('UX-PRO-08C galeria distingue ativo × comparação junto à prévia e pres
   assert.match(gallery, /site\.visual\.write/);
   assert.match(gallery, /method:'PUT'/);
 });
+
+test('UX-PRO-08D evidências e resumo.json das três superfícies cobrem 320/390/768/1440px, tema dia/noite, teclado e reconciliação de contagens', async () => {
+  const specs = [
+    {
+      dir: 'docs/ux-pro-08-conhecimento-evidencias',
+      stage: 'ux-pro-08-conhecimento',
+      expectedPngCount: 9,
+      routes: ['/admin/conhecimento'],
+      nightRoutes: ['/admin/conhecimento'],
+    },
+    {
+      dir: 'docs/ux-pro-08-assistentes-evidencias',
+      stage: 'ux-pro-08-assistentes',
+      expectedPngCount: 29,
+      routes: ['/admin/marcelo/assistente', '/admin/rh/assistente', '/cliente/app/assistente'],
+      nightRoutes: ['/admin/marcelo/assistente', '/admin/rh/assistente'],
+    },
+    {
+      dir: 'docs/ux-pro-08-aparencia-evidencias',
+      stage: 'ux-pro-08-aparencia',
+      expectedPngCount: 20,
+      routes: ['/admin/aparencia', '/layout-preview', '/layout-03'],
+      nightRoutes: ['/admin/aparencia'],
+    },
+  ];
+
+  for (const spec of specs) {
+    const absDir = path.join(root, spec.dir);
+    const files = await readdir(absDir);
+    const pngs = files.filter(f => f.endsWith('.png'));
+    const summary = JSON.parse(await read(`${spec.dir}/resumo.json`));
+    assert.equal(summary.stage, spec.stage, `${spec.dir}: stage canônico`);
+    assert.ok(Array.isArray(summary.entries), `${spec.dir}: entries[] presente`);
+    assert.equal(pngs.length, spec.expectedPngCount, `${spec.dir}: contagem exata de PNGs em disco`);
+    assert.equal(summary.entries.length, pngs.length, `${spec.dir}: entries.length reconciliado com PNGs em disco`);
+
+    for (const route of spec.routes) {
+      const routeEntries = summary.entries.filter(e => e.route === route);
+      for (const prefix of ['320x', '390x', '768x', '1440x']) {
+        assert.ok(
+          routeEntries.some(e => String(e.viewport || '').startsWith(prefix)),
+          `${spec.dir} (${route}): captura ${prefix} presente`,
+        );
+      }
+      assert.ok(
+        routeEntries.some(e => e.firstFocus === true && Array.isArray(e.percursoTeclado) && e.percursoTeclado.length > 0),
+        `${spec.dir} (${route}): percursoTeclado e firstFocus registrados`,
+      );
+    }
+
+    for (const nightRoute of spec.nightRoutes) {
+      const nightEntry = summary.entries.find(e => e.route === nightRoute && e.theme === 'night' && String(e.viewport || '').startsWith('768x'));
+      assert.ok(nightEntry, `${spec.dir} (${nightRoute}): entrada 768x1024 night presente`);
+      assert.ok(Array.isArray(nightEntry.problems) && nightEntry.problems.length > 0, `${spec.dir} (${nightRoute}): resíduo noturno registrado em problems[]`);
+    }
+  }
+});
+
