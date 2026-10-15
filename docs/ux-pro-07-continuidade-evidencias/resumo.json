@@ -1,0 +1,14 @@
+{
+  "fatia": "UX-PRO-07L",
+  "rota": "/admin/continuidade",
+  "gate": "npm run test:ux-continuity:pg + npm run test:ux-continuity-client:pg",
+  "resultado": "20/20 (staff) e 10/10 (portal do cliente), 0 falhas, 0 pulados",
+  "casosNovos": [
+    "2xx sem items vira falha invalid_continuity_response, nunca lista vazia — continuidade-1440-resposta-invalida.png",
+    "falha transitória 503 de releitura preserva os planos lidos com hora da última leitura concluída — continuidade-1440-dado-preservado.png",
+    "negativa 403 após sucesso falha fechado, sem plano protegido — continuidade-1440-negativa-pos-sucesso.png"
+  ],
+  "asercaoAdaptada": "O caso herdado 'queda do servidor' exigia 0 cartões após a falha; o padrão UX-PRO-07 aprovado (preservar declarando desatualização) o substitui: cartões preservados == antes da queda + faixa de desatualização presente. Nenhuma outra asserção foi alterada.",
+  "problems": [],
+  "limites": "Sem captura nova 320/768/noite. Nenhuma validação manual ou aceite humano; nada declara conformidade WCAG."
+}
