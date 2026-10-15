@@ -1,0 +1,10 @@
+{
+  "base": "85e1e075ef047018c9e882d87cb642bf27eb1aef",
+  "comando": "UX_OPS_EVIDENCE_DIR=docs/ux-pro-07-operacao-evidencias/antes-07d-1 npm run test:ux-ops:pg",
+  "exit": 1,
+  "tap": { "pass": 9, "fail": 10, "skipped": 0, "todo": 0, "minimo_exigido": 19 },
+  "resumo": "UX_OPS_TAP_SUMMARY: pass=9 fail=10 skipped=0 todo=0 minimo_exigido=19; UX_OPS_GATE_REJECTED; QA_PG_TEMP_CLEANED: true",
+  "interpretacao": "Os 8 casos herdados de servidor/massa/navegador que chegaram a executar e o caso novo de autorizacao no servidor passaram. Os 9 casos novos de navegador falharam porque a implementacao anterior nao tem estados por grupo, controles de releitura, hora de leitura, preservacao em falha de releitura, fail-closed por grupo nem validacao de corpo 2xx (testids e faixas inexistentes). Isso e falha dos casos novos contra a implementacao antiga, nao regressao de gate herdado.",
+  "caso_herdado_9": "O caso herdado 'browser: em 390px a tela de operacao nao produz transbordo horizontal' falhou nesta execucao por SIGSEGV do Chromium empacotado no lancamento do navegador (browserType.launch: Target page, context or browser has been closed; process did exit: signal=SIGSEGV), antes de qualquer assercao. Na execucao baseline imediatamente anterior, na mesma base intacta e sem o gate novo, o gate herdado passou 9/9 (UX_OPS_TEST_EXIT: 0). Instabilidade conhecida do Chromium --single-process, registrada tambem no relatorio UX-PRO-07C-2.",
+  "saida_integral": "antes-gate-completo.txt"
+}

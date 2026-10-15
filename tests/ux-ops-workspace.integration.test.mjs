@@ -31,11 +31,12 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import pg from 'pg';
 import { chromium as playwrightChromium } from 'playwright';
 import packagedChromium from '@sparticuz/chromium';
+import { recordKeyboardCapture } from '../scripts/ux-pro-00-keyboard-evidence.mjs';
 import { provisionStaff, STAFF_TEST_PASSWORD } from './helpers/staff-login.mjs';
 
 const RUN = process.env.RUN_DATABASE_INTEGRATION === '1' && process.env.DATABASE_URL;
@@ -396,4 +397,449 @@ test('browser: em 390px a tela de operação não produz transbordo horizontal',
     await capture(page, 'mobile-operacao-390px');
     await context.close();
   } finally { await browser.close(); }
+});
+
+// ============================================================================
+// UX-PRO-07D-1 — casos aditivos de leitura. Nenhum caso herdado acima é
+// editado; as falhas são injetadas somente em window.fetch da página.
+// ============================================================================
+
+const stagePro = 'ux-pro-07-operacao';
+const evidenceEntriesPro = [];
+
+async function writeEvidenceSummaryPro() {
+  if (!evidenceDir) return;
+  await mkdir(evidenceDir, { recursive: true });
+  const entries = [...new Map(evidenceEntriesPro.map(entry => [path.basename(entry.screenshot), entry])).values()];
+  await writeFile(path.join(evidenceDir, 'resumo.json'), `${JSON.stringify({
+    stage: stagePro,
+    generatedBy: 'npm run test:ux-ops:pg (PostgreSQL descartável + HTTP real + Chromium)',
+    notes: 'Massa inteiramente sintética criada pelas APIs de operação. problems resulta das medições automatizadas; não representa validação manual nem aceite humano.',
+    entries,
+  }, null, 2)}\n`, 'utf8');
+}
+
+async function capturePro(page, name, extra = {}) {
+  if (!evidenceDir) return;
+  await mkdir(evidenceDir, { recursive: true });
+  const file = path.join(evidenceDir, `${name}.png`);
+  await page.screenshot({ path: file, fullPage: true });
+  const viewport = page.viewportSize();
+  evidenceEntriesPro.push({
+    stage: stagePro,
+    route: '/admin/operacao',
+    role: 'ti',
+    viewport: `${viewport.width}x${viewport.height}`,
+    theme: await page.evaluate(() => document.documentElement.dataset.adminTheme || 'day'),
+    screenshot: path.relative(root, file).replaceAll('\\', '/'),
+    problems: [],
+    ...extra,
+  });
+  await writeEvidenceSummaryPro();
+}
+
+async function contrastPro(page, selector) {
+  return page.locator(selector).first().evaluate(element => {
+    const parse = value => (value.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+    const luminance = rgb => {
+      const values = rgb.map(value => {
+        const channel = value / 255;
+        return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * values[0] + 0.7152 * values[1] + 0.0722 * values[2];
+    };
+    const background = node => {
+      let current = node;
+      while (current) {
+        const value = getComputedStyle(current).backgroundColor;
+        if (value && value !== 'rgba(0, 0, 0, 0)' && value !== 'transparent') return parse(value);
+        current = current.parentElement;
+      }
+      return [255, 255, 255];
+    };
+    const foreground = parse(getComputedStyle(element).color);
+    const back = background(element);
+    const l1 = luminance(foreground);
+    const l2 = luminance(back);
+    return Math.round(((Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)) * 100) / 100;
+  });
+}
+
+const CRASH_PRO = /Target (page|closed)|has been closed|Target crashed|browser has disconnected|crashed|SIGSEGV|Protocol error/i;
+async function withBrowserPro(body) {
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const browser = await launchBrowser();
+    try {
+      return await body(browser);
+    } catch (error) {
+      if (error?.code === 'ERR_ASSERTION' || !CRASH_PRO.test(String(error?.message || ''))) throw error;
+      lastError = error;
+      console.log(`UX_OPS_BROWSER_RETRY tentativa=${attempt}: ${String(error.message).split('\n')[0]}`);
+    } finally {
+      await browser.close().catch(() => {});
+    }
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  throw lastError;
+}
+
+const READ_RESOURCES_PRO = {
+  posts: '/api/ops/posts',
+  allocations: '/api/ops/allocations',
+  coverageRequests: '/api/ops/coverage-requests',
+  handovers: '/api/ops/handovers',
+  occurrences: '/api/ops/occurrence-book',
+  checklists: '/api/ops/checklist-instances',
+  workRules: '/api/ops/work-rules',
+  qualifications: '/api/ops/qualifications',
+  validations: '/api/ops/validations',
+  jobRoles: '/api/ops/job-roles',
+  shiftNeeds: '/api/ops/post-shift-needs',
+  dimensionings: '/api/ops/dimensioning',
+  coverageGaps: '/api/ops/coverage-gaps',
+  scheduleVersions: '/api/ops/schedule-versions',
+  scheduleEntries: '/api/ops/schedule-entries',
+  scheduleAcks: '/api/ops/schedule-acks',
+  scheduleHistory: '/api/ops/schedule-history',
+};
+
+function defaultReadRulesPro(overrides = {}) {
+  const base = {};
+  for (const key of Object.keys(READ_RESOURCES_PRO)) {
+    base[key] = { delay: 0, fail: false, malformed: false, status: 503, code: 'read_unavailable', ...(overrides[key] || {}) };
+  }
+  return base;
+}
+
+async function openOpsPro(browser, cookie, { width = 1440, height = 900, rules = {} } = {}) {
+  const context = await browser.newContext({ viewport: { width, height }, locale: 'pt-BR' });
+  const separator = cookie.indexOf('=');
+  await context.addCookies([{ name: cookie.slice(0, separator), value: cookie.slice(separator + 1), url: baseUrl }]);
+  const page = await context.newPage();
+  page.setDefaultTimeout(45_000);
+  page.setDefaultNavigationTimeout(90_000);
+  await page.addInitScript(control => {
+    const original = window.fetch.bind(window);
+    const paths = control.paths;
+    window.__uxOpsControl = { rules: control.rules, calls: {} };
+    for (const key of Object.keys(paths)) window.__uxOpsControl.calls[key] = 0;
+    window.fetch = async (input, init) => {
+      const raw = typeof input === 'string' ? input : (input?.url || '');
+      const pathname = new URL(raw, window.location.origin).pathname;
+      const method = String(init?.method || (typeof input !== 'string' ? input?.method : '') || 'GET').toUpperCase();
+      if (method === 'GET') {
+        const key = Object.keys(paths).find(name => paths[name] === pathname);
+        const rule = key ? window.__uxOpsControl.rules[key] : null;
+        if (key && rule) {
+          window.__uxOpsControl.calls[key] += 1;
+          if (rule.delay > 0) await new Promise(resolve => setTimeout(resolve, rule.delay));
+          if (rule.malformed) {
+            return new Response(JSON.stringify({ note: 'corpo 2xx sem a chave canônica' }), {
+              status: 200, headers: { 'content-type': 'application/json' },
+            });
+          }
+          if (rule.fail) {
+            return new Response(JSON.stringify({ error: rule.code }), {
+              status: rule.status, headers: { 'content-type': 'application/json' },
+            });
+          }
+        }
+      }
+      return original(input, init);
+    };
+  }, { rules: defaultReadRulesPro(rules), paths: READ_RESOURCES_PRO });
+  await page.goto(`${baseUrl}/admin/operacao`, { waitUntil: 'domcontentloaded' });
+  return { context, page };
+}
+
+async function setRulePro(page, resource, patch) {
+  await page.evaluate(({ resource: name, patch: value }) => {
+    Object.assign(window.__uxOpsControl.rules[name], value);
+  }, { resource, patch });
+}
+
+async function callsPro(page) {
+  return page.evaluate(() => ({ ...window.__uxOpsControl.calls }));
+}
+
+test('07D-1: as dezessete leituras continuam exigindo sessão, sem vazar a chave canônica', { skip: !RUN }, async () => {
+  const endpoints = [
+    ['/api/ops/posts?limit=100', 'posts'], ['/api/ops/allocations', 'allocations'],
+    ['/api/ops/coverage-requests', 'requests'], ['/api/ops/handovers', 'handovers'],
+    ['/api/ops/occurrence-book', 'occurrences'], ['/api/ops/checklist-instances', 'instances'],
+    ['/api/ops/work-rules', 'rules'], ['/api/ops/qualifications', 'qualifications'],
+    ['/api/ops/validations?is_valid=false', 'validations'], ['/api/ops/job-roles', 'roles'],
+    ['/api/ops/post-shift-needs', 'needs'], ['/api/ops/dimensioning', 'dimensionings'],
+    ['/api/ops/coverage-gaps', 'gaps'], ['/api/ops/schedule-versions', 'versions'],
+    [`/api/ops/schedule-entries?version_id=${versionId}`, 'entries'],
+    [`/api/ops/schedule-acks?version_id=${versionId}`, 'acknowledgments'],
+    [`/api/ops/schedule-history?version_id=${versionId}`, 'history'],
+  ];
+  for (const [pathname, key] of endpoints) {
+    const anonymous = await api(pathname);
+    assert.equal(anonymous.status, 401, `${pathname} deveria exigir sessão`);
+    assert.equal(anonymous.body.error, 'unauthorized');
+    assert.ok(!(key in (anonymous.body || {})), `a negativa de ${pathname} não pode vazar ${key}`);
+  }
+  const authorized = await api('/api/ops/schedule-versions', { cookie: tiCookie });
+  assert.equal(authorized.status, 200);
+  assert.ok(Array.isArray(authorized.body.versions), 'ti continua lendo versões — permissão alguma mudou');
+});
+
+test('07D-1: leitura não concluída não é vazio; o vazio só aparece depois da resposta válida', { skip: !RUN }, async () => {
+  await withBrowserPro(async browser => {
+    const { context, page } = await openOpsPro(browser, tiCookie, { rules: { posts: { delay: 1500 } } });
+    const loading = page.locator('[data-ui-state="loading"]').first();
+    await loading.waitFor();
+    assert.equal(await page.locator('[role="tablist"]').count(), 0, 'durante a leitura as abas não aparecem');
+    assert.equal(await page.getByText('Nenhum posto cadastrado ainda').count(), 0,
+      'leitura em curso nunca é apresentada como vazio');
+    await page.locator('[role="tablist"]').waitFor();
+    const leitura = page.locator('[data-testid="operacao-principal-leitura"]');
+    await leitura.waitFor();
+    assert.match(await leitura.innerText(), /Leitura concluída às/);
+    await page.getByRole('tab', { name: 'Cobertura', exact: true }).click();
+    await page.getByText('Nenhuma pendência de cobertura registrada').waitFor();
+    await context.close();
+  });
+});
+
+test('07D-1: falha inicial transitória declara o código real e a repetição emite nova leitura', { skip: !RUN }, async () => {
+  await withBrowserPro(async browser => {
+    const { context, page } = await openOpsPro(browser, tiCookie, {
+      rules: { occurrences: { fail: true, status: 503, code: 'read_unavailable' } },
+    });
+    const failure = page.locator('[data-testid="operacao-principal-falha"]');
+    await failure.waitFor();
+    assert.match(await failure.innerText(), /read_unavailable|HTTP 503/);
+    assert.equal(await page.locator('[role="tablist"]').count(), 0);
+    await capturePro(page, 'operacao-1440-falha-inicial', { state: 'falha_inicial' });
+    const before = await callsPro(page);
+    await setRulePro(page, 'occurrences', { fail: false });
+    await failure.getByRole('button', { name: 'Tentar carregar novamente' }).click();
+    await page.locator('[role="tablist"]').waitFor();
+    await page.locator('table', { hasText: 'Portaria QA' }).first().waitFor();
+    const after = await callsPro(page);
+    assert.ok(after.occurrences > before.occurrences, 'a repetição precisa emitir nova leitura de verdade');
+    await context.close();
+  });
+});
+
+test('07D-1: falha de releitura do grupo principal preserva o conteúdo com hora e não mostra dado novo', { skip: !RUN }, async () => {
+  await withBrowserPro(async browser => {
+    const { context, page } = await openOpsPro(browser, tiCookie);
+    await page.locator('[role="tablist"]').waitFor();
+    await page.locator('table', { hasText: 'Portaria QA' }).first().waitFor();
+    const suffix = randomUUID().slice(0, 8);
+    const novoNome = `Portaria QA desatualizada ${suffix}`;
+    const created = await api('/api/ops/posts', { method: 'POST', cookie: tiCookie, body: { name: novoNome } });
+    assert.equal(created.status, 201);
+    await setRulePro(page, 'occurrences', { fail: true, status: 503, code: 'read_unavailable' });
+    await page.locator('[data-testid="operacao-principal-atualizar"]').click();
+    const stale = page.locator('[data-testid="operacao-principal-desatualizado"]');
+    await stale.waitFor();
+    assert.match(await stale.innerText(), /read_unavailable/);
+    assert.match(await stale.innerText(), /última leitura concluída às/);
+    assert.equal(await page.locator('[role="tablist"]').count(), 1, 'o conteúdo lido continua na tela');
+    await page.locator('table', { hasText: 'Portaria QA' }).first().waitFor();
+    assert.equal(await page.getByText(novoNome, { exact: true }).count(), 0,
+      'dado criado durante a falha não entra no recorte preservado');
+    const ratio = await contrastPro(page, '[data-testid="operacao-principal-desatualizado"]');
+    assert.ok(ratio >= 4.5, `contraste da faixa de desatualizado precisa ser >= 4.5:1, medido ${ratio}:1`);
+    await capturePro(page, 'operacao-1440-desatualizado', { state: 'releitura_falhou_dado_preservado', contrasteFaixa: ratio });
+    await setRulePro(page, 'occurrences', { fail: false });
+    await stale.getByRole('button', { name: 'Tentar novamente' }).click();
+    await stale.waitFor({ state: 'detached' });
+    await page.getByText(novoNome, { exact: true }).waitFor();
+    await context.close();
+  });
+});
+
+test('07D-1: negativa 403 depois do sucesso falha fechado no grupo principal', { skip: !RUN }, async () => {
+  await withBrowserPro(async browser => {
+    const { context, page } = await openOpsPro(browser, tiCookie);
+    await page.locator('[role="tablist"]').waitFor();
+    await page.locator('table', { hasText: 'Portaria QA' }).first().waitFor();
+    await setRulePro(page, 'allocations', { fail: true, status: 403, code: 'forbidden' });
+    await page.locator('[data-testid="operacao-principal-atualizar"]').click();
+    const denied = page.locator('[data-ui-state="denied"]').first();
+    await denied.waitFor();
+    assert.equal(await page.locator('[role="tablist"]').count(), 0, 'a negativa remove as abas e o conteúdo lido');
+    assert.equal(await page.locator('[data-testid="operacao-principal-desatualizado"]').count(), 0,
+      'negativa não é apresentada como dado desatualizado');
+    assert.equal(await denied.getByRole('button').count(), 0, 'negativa não oferece repetição da mesma chamada');
+    assert.equal(await page.locator('table', { hasText: 'Portaria QA' }).count(), 0,
+      'nenhuma tabela protegida permanece na tela');
+    await capturePro(page, 'operacao-1440-negada', { state: 'negativa_falha_fechado' });
+    await context.close();
+  });
+});
+
+test('07D-1: resposta 2xx sem a chave canônica de versões vira falha, nunca vazio', { skip: !RUN }, async () => {
+  await withBrowserPro(async browser => {
+    const { context, page } = await openOpsPro(browser, tiCookie, { rules: { scheduleVersions: { malformed: true } } });
+    await page.locator('[role="tablist"]').waitFor();
+    await page.getByRole('tab', { name: 'Escalas', exact: true }).click();
+    const failure = page.locator('[data-testid="operacao-escalas-falha"]');
+    await failure.waitFor();
+    assert.match(await failure.innerText(), /invalid_ops_response/);
+    assert.equal(await page.getByText('Nenhuma versão de escala registrada').count(), 0,
+      'corpo 2xx sem versions não pode virar vazio');
+    await capturePro(page, 'operacao-1440-resposta-invalida', { state: 'resposta_2xx_invalida' });
+    await setRulePro(page, 'scheduleVersions', { malformed: false });
+    await failure.getByRole('button', { name: 'Tentar carregar novamente' }).click();
+    await page.getByRole('button', { name: 'Ver calendário' }).first().waitFor();
+    await context.close();
+  });
+});
+
+test('07D-1: atualizar o detalhe relê somente o detalhe e preserva o calendário na falha', { skip: !RUN }, async () => {
+  await withBrowserPro(async browser => {
+    const { context, page } = await openOpsPro(browser, tiCookie);
+    await page.locator('[role="tablist"]').waitFor();
+    await page.getByRole('tab', { name: 'Escalas', exact: true }).click();
+    await page.getByRole('button', { name: 'Ver calendário' }).first().click();
+    await page.locator('[data-testid="operacao-detalhe-leitura"]').waitFor();
+    await page.locator('table').filter({ hasText: 'Portaria QA' }).first().waitFor();
+    const before = await callsPro(page);
+    await setRulePro(page, 'scheduleEntries', { fail: true, status: 503, code: 'read_unavailable' });
+    await page.locator('[data-testid="operacao-detalhe-atualizar"]').click();
+    const stale = page.locator('[data-testid="operacao-detalhe-desatualizado"]');
+    await stale.waitFor();
+    await page.locator('table').filter({ hasText: 'Portaria QA' }).first().waitFor();
+    const during = await callsPro(page);
+    assert.equal(during.scheduleVersions, before.scheduleVersions, 'o detalhe não relança a lista de versões');
+    assert.equal(during.posts, before.posts, 'o detalhe não relança o grupo principal');
+    assert.equal(during.dimensionings, before.dimensionings, 'o detalhe não relança o dimensionamento');
+    assert.ok(during.scheduleEntries > before.scheduleEntries, 'o detalhe relê as entradas da versão');
+    await setRulePro(page, 'scheduleEntries', { fail: false });
+    await stale.getByRole('button', { name: 'Tentar novamente' }).click();
+    await stale.waitFor({ state: 'detached' });
+    await context.close();
+  });
+});
+
+test('07D-1: falha de releitura do dimensionamento preserva contratado × realizado já lido', { skip: !RUN }, async () => {
+  await withBrowserPro(async browser => {
+    const { context, page } = await openOpsPro(browser, tiCookie);
+    await page.locator('[role="tablist"]').waitFor();
+    await page.getByRole('tab', { name: 'Dimensionamento', exact: true }).click();
+    await page.locator('[data-ui-badge]', { hasText: '70%' }).first().waitFor();
+    await setRulePro(page, 'coverageGaps', { fail: true, status: 503, code: 'read_unavailable' });
+    await page.locator('[data-testid="operacao-dimensionamento-atualizar"]').click();
+    const stale = page.locator('[data-testid="operacao-dimensionamento-desatualizado"]');
+    await stale.waitFor();
+    assert.match(await stale.innerText(), /última leitura concluída às/);
+    await page.locator('[data-ui-badge]', { hasText: '70%' }).first().waitFor();
+    await setRulePro(page, 'coverageGaps', { fail: false });
+    await stale.getByRole('button', { name: 'Tentar novamente' }).click();
+    await stale.waitFor({ state: 'detached' });
+    await context.close();
+  });
+});
+
+test('07D-1: falha de releitura da estrutura preserva cargos e necessidades já lidos', { skip: !RUN }, async () => {
+  await withBrowserPro(async browser => {
+    const { context, page } = await openOpsPro(browser, tiCookie);
+    await page.locator('[role="tablist"]').waitFor();
+    await page.getByRole('heading', { name: 'Cargos e funções' }).waitFor();
+    await setRulePro(page, 'jobRoles', { fail: true, status: 503, code: 'read_unavailable' });
+    await page.locator('[data-testid="operacao-estrutura-atualizar"]').click();
+    const stale = page.locator('[data-testid="operacao-estrutura-desatualizado"]');
+    await stale.waitFor();
+    await page.getByRole('heading', { name: 'Cargos e funções' }).waitFor();
+    await page.getByRole('heading', { name: 'Necessidade por turno' }).waitFor();
+    await setRulePro(page, 'jobRoles', { fail: false });
+    await stale.getByRole('button', { name: 'Tentar novamente' }).click();
+    await stale.waitFor({ state: 'detached' });
+    await context.close();
+  });
+});
+
+test('07D-1: 320 390 768 1440, tema noturno e percurso de teclado medidos sem problemas', { skip: !RUN }, async () => {
+  await withBrowserPro(async browser => {
+    const { context, page } = await openOpsPro(browser, tiCookie);
+    await page.locator('[role="tablist"]').waitFor();
+    await page.locator('table', { hasText: 'Portaria QA' }).first().waitFor();
+    for (const [width, height] of [[1440, 900], [768, 1024], [390, 844], [320, 844]]) {
+      await page.setViewportSize({ width, height });
+      await page.waitForTimeout(500);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      assert.ok(overflow <= 1, `transbordo de ${overflow}px em ${width}px no tema dia`);
+      const minTarget = await page.locator('[data-operacao-workspace] button')
+        .evaluateAll(elements => Math.min(...elements.filter(element => element.getClientRects().length > 0).map(element => element.getBoundingClientRect().height)));
+      assert.ok(minTarget >= 44, `alvos precisam ter pelo menos 44px; medido ${minTarget}px em ${width}px`);
+      await capturePro(page, `operacao-${width}-dia`, { overflowDocumentoPx: overflow, menorAlvoPx: Math.round(minTarget) });
+
+      if (width === 768) {
+        await page.click('[data-admin-theme-toggle="true"]');
+        await page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night');
+        await page.waitForTimeout(400);
+        const nightOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        assert.ok(nightOverflow <= 1, `transbordo de ${nightOverflow}px no tema noite`);
+        const headingContrast = await contrastPro(page, 'h1');
+        assert.ok(headingContrast >= 4.5, `contraste do título no tema noite: ${headingContrast}:1`);
+        await capturePro(page, 'operacao-768-noite', {
+          overflowDocumentoPx: nightOverflow, contrasteTitulo: headingContrast,
+        });
+        await page.click('[data-admin-theme-toggle="true"]');
+        await page.waitForFunction(() => document.documentElement.dataset.adminTheme !== 'night');
+      }
+
+      if (width === 390) {
+        await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
+        const target = page.locator('[data-testid="operacao-principal-atualizar"]');
+        let reached = false;
+        let firstFocus = false;
+        const traversal = [];
+        for (let step = 0; step < 120 && !reached; step++) {
+          await page.keyboard.press('Tab');
+          const label = await page.evaluate(() => {
+            const element = document.activeElement;
+            return element?.id || element?.getAttribute?.('aria-label') || element?.textContent?.trim().slice(0, 80) || element?.tagName?.toLowerCase() || 'desconhecido';
+          });
+          traversal.push(label);
+          if (step === 0) {
+            firstFocus = await page.evaluate(() => {
+              const element = document.activeElement;
+              if (!(element instanceof HTMLElement)) return false;
+              const style = getComputedStyle(element);
+              return style.outlineStyle !== 'none' && (parseFloat(style.outlineWidth) || 0) >= 1;
+            });
+          }
+          reached = await target.evaluate(element => element === document.activeElement);
+        }
+        assert.ok(firstFocus, 'o primeiro foco por Tab precisa ser visível');
+        assert.ok(reached, 'o controle de atualizar o grupo principal precisa ser alcançável por Tab');
+        const outline = await target.evaluate(element => ({
+          style: getComputedStyle(element).outlineStyle,
+          width: parseFloat(getComputedStyle(element).outlineWidth) || 0,
+        }));
+        assert.ok(outline.style !== 'none' && outline.width >= 1,
+          `foco do controle precisa ser visível: ${outline.style}/${outline.width}px`);
+        await capturePro(page, 'operacao-390-teclado', {
+          state: 'percurso_teclado', firstFocus: true, percursoTeclado: traversal,
+        });
+        await recordKeyboardCapture(evidenceDir, {
+          stage: stagePro,
+          route: '/admin/operacao',
+          role: 'ti',
+          viewport: '390x844',
+          theme: 'day',
+          file: 'operacao-390-teclado.png',
+          firstFocus: true,
+          percursoTeclado: traversal,
+        });
+        if (evidenceDir) {
+          const summary = JSON.parse(await readFile(path.join(evidenceDir, 'resumo.json'), 'utf8'));
+          const entry = summary.entries.find(item => path.basename(item.screenshot || item.file || '') === 'operacao-390-teclado.png');
+          assert.ok(entry?.firstFocus);
+          assert.ok(entry?.percursoTeclado?.length > 0);
+          assert.deepEqual(entry.problems, []);
+        }
+      }
+    }
+    await context.close();
+  });
 });

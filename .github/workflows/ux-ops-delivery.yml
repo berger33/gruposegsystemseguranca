@@ -9,6 +9,7 @@ on:
       - 'src/components/ui/**'
       - 'src/lib/ops-vocabulary.*'
       - 'src/lib/ops-request.ts'
+      - 'src/lib/ops-read.ts'
       - 'src/styles/ux-tokens.css'
       - 'src/server/ops-api.mjs'
       - 'src/server/ops-advanced-api.mjs'

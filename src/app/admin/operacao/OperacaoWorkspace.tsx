@@ -34,6 +34,12 @@ import UiState from "../../../components/ui/UiState";
 import UiBadge from "../../../components/ui/UiBadge";
 import { opsRequest, type OpsErrorDescriptor } from "../../../lib/ops-request";
 import {
+  invalidOpsResponse,
+  opsReadErrorDetail,
+  opsReadFailsClosed,
+  type OpsReadError,
+} from "../../../lib/ops-read";
+import {
   activeLabel,
   activeTone,
   allocationStatusLabel,
@@ -304,6 +310,79 @@ function ReadError({ error, onRetry }: { error: OpsErrorDescriptor; onRetry: () 
   );
 }
 
+// UX-PRO-07D-1: cada grupo de leitura tem estado próprio. O vazio só existe
+// depois de resposta 2xx válida; a falha transitória de releitura preserva o
+// conteúdo lido com a hora da última leitura concluída; 401/403 fecham o
+// grupo e limpam o conteúdo protegido dele.
+type ReadGroupKey = "principal" | "estrutura" | "dimensionamento" | "escalas" | "detalhe";
+
+type ReadState =
+  | { phase: "idle" }
+  | { phase: "loading" }
+  | { phase: "failed"; error: OpsReadError }
+  | { phase: "ready"; readAt: string; refreshing: boolean; staleError?: OpsReadError };
+
+function readTime(value: string): string {
+  return new Date(value).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+/** Falha inicial (ou negativa) de um grupo: nunca é vazio nem dado preservado. */
+function GroupFailed({ group, state, onRetry }: {
+  group: ReadGroupKey; state: ReadState; onRetry: () => void;
+}) {
+  if (state.phase !== "failed") return null;
+  if (opsReadFailsClosed(state.error)) {
+    return (
+      <div data-testid={`operacao-${group}-falha`}>
+        <UiState variant="denied" title={state.error.title} detail={opsReadErrorDetail(state.error)} />
+      </div>
+    );
+  }
+  return (
+    <div data-testid={`operacao-${group}-falha`}>
+      <ReadError error={state.error} onRetry={onRetry} />
+    </div>
+  );
+}
+
+/** Controles de releitura de um grupo pronto, com hora e faixa de desatualizado. */
+function GroupReadControls({ group, state, refreshLabel, absence, onRefresh }: {
+  group: ReadGroupKey; state: ReadState; refreshLabel: string; absence: string; onRefresh: () => void;
+}) {
+  if (state.phase !== "ready") return null;
+  return (
+    <>
+      <div className={styles.actions}>
+        <button
+          type="button"
+          data-testid={`operacao-${group}-atualizar`}
+          onClick={onRefresh}
+          disabled={state.refreshing}
+          aria-busy={state.refreshing}
+        >
+          {state.refreshing ? "Atualizando…" : refreshLabel}
+        </button>
+        <span className={styles.hint} data-testid={`operacao-${group}-leitura`}>
+          Leitura concluída às {readTime(state.readAt)}.
+        </span>
+      </div>
+      {state.staleError ? (
+        <div className={`${styles.notice} ${styles.noticeWarning}`} role="alert" data-testid={`operacao-${group}-desatualizado`}>
+          <strong>{state.staleError.title}</strong>
+          <p className={styles.hint}>
+            {opsReadErrorDetail(state.staleError)} {absence} O conteúdo abaixo é da última leitura concluída às {readTime(state.readAt)} e pode estar desatualizado.
+          </p>
+          {state.staleError.canRetry ? (
+            <div className={styles.actions}>
+              <button type="button" onClick={onRefresh}>Tentar novamente</button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 export default function OperacaoWorkspace() {
   const [activeTab, setActiveTab] = useState<TabId>("postos");
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -329,132 +408,212 @@ export default function OperacaoWorkspace() {
   const [workRules, setWorkRules] = useState<WorkRule[]>([]);
   const [qualifications, setQualifications] = useState<Qualification[]>([]);
   const [validations, setValidations] = useState<ScheduleValidation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<OpsErrorDescriptor | null>(null);
-  // OPS-01: o grupo de estrutura (cargo/função + necessidade por turno) carrega
-  // em estado PRÓPRIO, desacoplado do Promise.all acima. Assim uma falha em um
-  // grupo não derruba os painéis do outro — o acoplamento dos 9 fetches já é
-  // um problema conhecido desta tela e não deve ser agravado.
-  const [structureLoading, setStructureLoading] = useState(true);
-  const [structureError, setStructureError] = useState<OpsErrorDescriptor | null>(null);
-  // OPS-02: o painel de dimensionamento também carrega em grupo próprio,
-  // desacoplado dos demais — mesma razão do grupo de estrutura.
-  const [dimLoading, setDimLoading] = useState(true);
-  const [dimError, setDimError] = useState<OpsErrorDescriptor | null>(null);
-  // OPS-03: versões de escala em grupo próprio; o detalhe da versão selecionada
-  // (entradas, ciências e histórico) carrega sob demanda, também desacoplado.
-  const [schedLoading, setSchedLoading] = useState(true);
-  const [schedError, setSchedError] = useState<OpsErrorDescriptor | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState<OpsErrorDescriptor | null>(null);
+  // UX-PRO-07D-1: estado de leitura por grupo (principal, estrutura,
+  // dimensionamento, versões e detalhe). Os comentários OPS-01/02/03 originais
+  // continuam valendo: cada grupo carrega desacoplado dos demais, para uma
+  // falha em um grupo não derrubar os painéis do outro. O que muda é que cada
+  // grupo agora declara pronto somente depois de 2xx válido, preserva o
+  // conteúdo na falha transitória de releitura e fecha na negativa.
+  const [states, setStates] = useState<Record<ReadGroupKey, ReadState>>({
+    principal: { phase: "loading" },
+    estrutura: { phase: "loading" },
+    dimensionamento: { phase: "loading" },
+    escalas: { phase: "loading" },
+    detalhe: { phase: "idle" },
+  });
+  const statesRef = useRef(states);
+  const requestIds = useRef<Record<ReadGroupKey, number>>({
+    principal: 0, estrutura: 0, dimensionamento: 0, escalas: 0, detalhe: 0,
+  });
+  const detailVersionIdRef = useRef<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    const [postData, allocData, covData, handData, occData, checkData, ruleData, qualData, validationData] = await Promise.all([
-      opsRequest<{ posts?: Post[] }>("/api/ops/posts?limit=100"),
-      opsRequest<{ allocations?: Allocation[] }>("/api/ops/allocations"),
-      opsRequest<{ requests?: CoverageRequest[] }>("/api/ops/coverage-requests"),
-      opsRequest<{ handovers?: Handover[] }>("/api/ops/handovers"),
-      opsRequest<{ occurrences?: Occurrence[] }>("/api/ops/occurrence-book"),
-      opsRequest<{ instances?: ChecklistInstance[] }>("/api/ops/checklist-instances"),
-      opsRequest<{ rules?: WorkRule[] }>("/api/ops/work-rules"),
-      opsRequest<{ qualifications?: Qualification[] }>("/api/ops/qualifications"),
-      opsRequest<{ validations?: ScheduleValidation[] }>("/api/ops/validations?is_valid=false"),
-    ]);
-    // O painel inicial depende de todos os nove: sem qualquer um deles não há
-    // número honesto a mostrar, e a tela diz exatamente qual falhou.
-    const failed = [postData, allocData, covData, handData, occData, checkData, ruleData, qualData, validationData].find(r => !r.ok);
-    if (failed && !failed.ok) {
-      setError(failed.error);
-      setLoading(false);
+  const commit = useCallback((updater: (current: Record<ReadGroupKey, ReadState>) => Record<ReadGroupKey, ReadState>) => {
+    const next = updater(statesRef.current);
+    statesRef.current = next;
+    setStates(next);
+  }, []);
+
+  // Negativa ou ausência de sessão em um grupo: o conteúdo protegido daquele
+  // grupo sai da tela. Nenhum dado continua visível nem é tratado como
+  // desatualizado.
+  const clearGroup = useCallback((key: ReadGroupKey) => {
+    if (key === "principal") {
+      setPosts([]); setAllocations([]); setCoverages([]); setHandovers([]); setOccurrences([]);
+      setChecklists([]); setWorkRules([]); setQualifications([]); setValidations([]);
+    } else if (key === "estrutura") {
+      setJobRoles([]); setShiftNeeds([]);
+    } else if (key === "dimensionamento") {
+      setDimensionings([]); setGaps([]);
+    } else if (key === "escalas") {
+      setScheduleVersions([]); setSelectedVersion(null);
+      detailVersionIdRef.current = null;
+      setScheduleEntries([]); setScheduleAcks([]); setScheduleHistory([]);
+      commit(current => ({ ...current, detalhe: { phase: "idle" } }));
+    } else {
+      setScheduleEntries([]); setScheduleAcks([]); setScheduleHistory([]);
+    }
+  }, [commit]);
+
+  type GroupOutcome = { ok: true } | { ok: false; error: OpsReadError };
+
+  const runReadGroup = useCallback(async (
+    key: ReadGroupKey,
+    execute: () => Promise<GroupOutcome>,
+  ) => {
+    const previous = statesRef.current[key];
+    const preserved = previous.phase === "ready" ? previous : null;
+    const requestId = ++requestIds.current[key];
+    commit(current => ({
+      ...current,
+      [key]: preserved ? { ...preserved, refreshing: true, staleError: undefined } : { phase: "loading" },
+    }));
+    const outcome = await execute();
+    // Resposta superada (releitura ou seleção mais nova) nunca é aplicada.
+    if (requestIds.current[key] !== requestId) return;
+    if (!outcome.ok) {
+      if (opsReadFailsClosed(outcome.error)) {
+        clearGroup(key);
+        commit(current => ({ ...current, [key]: { phase: "failed", error: outcome.error } }));
+        return;
+      }
+      commit(current => ({
+        ...current,
+        [key]: preserved
+          ? { ...preserved, refreshing: false, staleError: outcome.error }
+          : { phase: "failed", error: outcome.error },
+      }));
       return;
     }
-    if (postData.ok) setPosts(postData.data.posts || []);
-    if (allocData.ok) setAllocations(allocData.data.allocations || []);
-    if (covData.ok) setCoverages(covData.data.requests || []);
-    if (handData.ok) setHandovers(handData.data.handovers || []);
-    if (occData.ok) setOccurrences(occData.data.occurrences || []);
-    if (checkData.ok) setChecklists(checkData.data.instances || []);
-    if (ruleData.ok) setWorkRules(ruleData.data.rules || []);
-    if (qualData.ok) setQualifications(qualData.data.qualifications || []);
-    if (validationData.ok) setValidations(validationData.data.validations || []);
-    setLoading(false);
-  }, []);
+    commit(current => ({
+      ...current,
+      [key]: { phase: "ready", readAt: new Date().toISOString(), refreshing: false },
+    }));
+  }, [clearGroup, commit]);
+
+  const load = useCallback(async () => {
+    await runReadGroup("principal", async () => {
+      const [postData, allocData, covData, handData, occData, checkData, ruleData, qualData, validationData] = await Promise.all([
+        opsRequest<{ posts?: Post[] }>("/api/ops/posts?limit=100"),
+        opsRequest<{ allocations?: Allocation[] }>("/api/ops/allocations"),
+        opsRequest<{ requests?: CoverageRequest[] }>("/api/ops/coverage-requests"),
+        opsRequest<{ handovers?: Handover[] }>("/api/ops/handovers"),
+        opsRequest<{ occurrences?: Occurrence[] }>("/api/ops/occurrence-book"),
+        opsRequest<{ instances?: ChecklistInstance[] }>("/api/ops/checklist-instances"),
+        opsRequest<{ rules?: WorkRule[] }>("/api/ops/work-rules"),
+        opsRequest<{ qualifications?: Qualification[] }>("/api/ops/qualifications"),
+        opsRequest<{ validations?: ScheduleValidation[] }>("/api/ops/validations?is_valid=false"),
+      ]);
+      // O painel inicial depende de todos os nove: sem qualquer um deles não há
+      // número honesto a mostrar, e a tela diz exatamente qual falhou.
+      const results = [postData, allocData, covData, handData, occData, checkData, ruleData, qualData, validationData];
+      const failed = results.find(r => !r.ok);
+      if (failed && !failed.ok) return { ok: false, error: failed.error };
+      const keys = ["posts", "allocations", "requests", "handovers", "occurrences", "instances", "rules", "qualifications", "validations"] as const;
+      for (const [index, canonicalKey] of keys.entries()) {
+        const result = results[index];
+        if (result.ok && !Array.isArray((result.data as Record<string, unknown>)[canonicalKey])) {
+          return { ok: false, error: invalidOpsResponse(result.status) };
+        }
+      }
+      if (postData.ok) setPosts(postData.data.posts as Post[]);
+      if (allocData.ok) setAllocations(allocData.data.allocations as Allocation[]);
+      if (covData.ok) setCoverages(covData.data.requests as CoverageRequest[]);
+      if (handData.ok) setHandovers(handData.data.handovers as Handover[]);
+      if (occData.ok) setOccurrences(occData.data.occurrences as Occurrence[]);
+      if (checkData.ok) setChecklists(checkData.data.instances as ChecklistInstance[]);
+      if (ruleData.ok) setWorkRules(ruleData.data.rules as WorkRule[]);
+      if (qualData.ok) setQualifications(qualData.data.qualifications as Qualification[]);
+      if (validationData.ok) setValidations(validationData.data.validations as ScheduleValidation[]);
+      return { ok: true };
+    });
+  }, [runReadGroup]);
 
   useEffect(() => { void load(); }, [load]);
 
   const loadStructure = useCallback(async () => {
-    setStructureLoading(true);
-    setStructureError(null);
-    const [roleData, needData] = await Promise.all([
-      opsRequest<{ roles?: JobRole[] }>("/api/ops/job-roles"),
-      opsRequest<{ needs?: PostShiftNeed[] }>("/api/ops/post-shift-needs"),
-    ]);
-    if (!roleData.ok) { setStructureError(roleData.error); setStructureLoading(false); return; }
-    if (!needData.ok) { setStructureError(needData.error); setStructureLoading(false); return; }
-    setJobRoles(roleData.data.roles || []);
-    setShiftNeeds(needData.data.needs || []);
-    setStructureLoading(false);
-  }, []);
+    await runReadGroup("estrutura", async () => {
+      const [roleData, needData] = await Promise.all([
+        opsRequest<{ roles?: JobRole[] }>("/api/ops/job-roles"),
+        opsRequest<{ needs?: PostShiftNeed[] }>("/api/ops/post-shift-needs"),
+      ]);
+      if (!roleData.ok) return { ok: false, error: roleData.error };
+      if (!needData.ok) return { ok: false, error: needData.error };
+      if (!Array.isArray(roleData.data.roles)) return { ok: false, error: invalidOpsResponse(roleData.status) };
+      if (!Array.isArray(needData.data.needs)) return { ok: false, error: invalidOpsResponse(needData.status) };
+      setJobRoles(roleData.data.roles);
+      setShiftNeeds(needData.data.needs);
+      return { ok: true };
+    });
+  }, [runReadGroup]);
 
   useEffect(() => { void loadStructure(); }, [loadStructure]);
 
   const loadDimensioning = useCallback(async () => {
-    setDimLoading(true);
-    setDimError(null);
-    const [dimData, gapData] = await Promise.all([
-      opsRequest<{ dimensionings?: Dimensioning[] }>("/api/ops/dimensioning"),
-      opsRequest<{ gaps?: CoverageGap[] }>("/api/ops/coverage-gaps"),
-    ]);
-    if (!dimData.ok) { setDimError(dimData.error); setDimLoading(false); return; }
-    if (!gapData.ok) { setDimError(gapData.error); setDimLoading(false); return; }
-    setDimensionings(dimData.data.dimensionings || []);
-    setGaps(gapData.data.gaps || []);
-    setDimLoading(false);
-  }, []);
+    await runReadGroup("dimensionamento", async () => {
+      const [dimData, gapData] = await Promise.all([
+        opsRequest<{ dimensionings?: Dimensioning[] }>("/api/ops/dimensioning"),
+        opsRequest<{ gaps?: CoverageGap[] }>("/api/ops/coverage-gaps"),
+      ]);
+      if (!dimData.ok) return { ok: false, error: dimData.error };
+      if (!gapData.ok) return { ok: false, error: gapData.error };
+      if (!Array.isArray(dimData.data.dimensionings)) return { ok: false, error: invalidOpsResponse(dimData.status) };
+      if (!Array.isArray(gapData.data.gaps)) return { ok: false, error: invalidOpsResponse(gapData.status) };
+      setDimensionings(dimData.data.dimensionings);
+      setGaps(gapData.data.gaps);
+      return { ok: true };
+    });
+  }, [runReadGroup]);
 
   useEffect(() => { void loadDimensioning(); }, [loadDimensioning]);
 
   const loadSchedules = useCallback(async () => {
-    setSchedLoading(true);
-    setSchedError(null);
-    const data = await opsRequest<{ versions?: ScheduleVersion[] }>("/api/ops/schedule-versions");
-    if (!data.ok) { setSchedError(data.error); setSchedLoading(false); return; }
-    setScheduleVersions(data.data.versions || []);
-    setSchedLoading(false);
-  }, []);
+    await runReadGroup("escalas", async () => {
+      const data = await opsRequest<{ versions?: ScheduleVersion[] }>("/api/ops/schedule-versions");
+      if (!data.ok) return { ok: false, error: data.error };
+      if (!Array.isArray(data.data.versions)) return { ok: false, error: invalidOpsResponse(data.status) };
+      setScheduleVersions(data.data.versions);
+      return { ok: true };
+    });
+  }, [runReadGroup]);
 
   useEffect(() => { void loadSchedules(); }, [loadSchedules]);
 
-  async function selectVersion(version: ScheduleVersion) {
+  const selectVersion = useCallback(async (version: ScheduleVersion) => {
     setSelectedVersion(version);
-    setDetailLoading(true);
-    setDetailError(null);
     setAckMessage("");
     setAckError(null);
     setCalendarView("posto");
-    const [entryData, ackData, historyData] = await Promise.all([
-      opsRequest<{ entries?: ScheduleEntry[] }>(`/api/ops/schedule-entries?version_id=${version.id}`),
-      opsRequest<{ acknowledgments?: ScheduleAck[] }>(`/api/ops/schedule-acks?version_id=${version.id}`),
-      opsRequest<{ history?: ScheduleHistoryItem[] }>(`/api/ops/schedule-history?version_id=${version.id}`),
-    ]);
-    // O painel de detalhe não pode fingir calendário: sem leitura completa,
-    // limpa as entradas e mostra o erro real.
-    const failed = [entryData, ackData, historyData].find(r => !r.ok);
-    if (failed && !failed.ok) {
+    // Trocar de versão não preserva o detalhe da versão anterior: ele só é
+    // preservado na releitura da mesma versão.
+    if (detailVersionIdRef.current !== version.id) {
+      detailVersionIdRef.current = version.id;
       setScheduleEntries([]);
       setScheduleAcks([]);
       setScheduleHistory([]);
-      setDetailError(failed.error);
-      setDetailLoading(false);
-      return;
+      commit(current => ({ ...current, detalhe: { phase: "loading" } }));
     }
-    if (entryData.ok) setScheduleEntries(entryData.data.entries || []);
-    if (ackData.ok) setScheduleAcks(ackData.data.acknowledgments || []);
-    if (historyData.ok) setScheduleHistory(historyData.data.history || []);
-    setDetailLoading(false);
-  }
+    await runReadGroup("detalhe", async () => {
+      const [entryData, ackData, historyData] = await Promise.all([
+        opsRequest<{ entries?: ScheduleEntry[] }>(`/api/ops/schedule-entries?version_id=${version.id}`),
+        opsRequest<{ acknowledgments?: ScheduleAck[] }>(`/api/ops/schedule-acks?version_id=${version.id}`),
+        opsRequest<{ history?: ScheduleHistoryItem[] }>(`/api/ops/schedule-history?version_id=${version.id}`),
+      ]);
+      // O painel de detalhe não pode fingir calendário: sem leitura completa,
+      // mostra o erro real (e, na releitura da mesma versão, preserva o que já
+      // foi lido em vez de fingir que sumiu).
+      const failed = [entryData, ackData, historyData].find(r => !r.ok);
+      if (failed && !failed.ok) return { ok: false, error: failed.error };
+      if (entryData.ok && !Array.isArray(entryData.data.entries)) return { ok: false, error: invalidOpsResponse(entryData.status) };
+      if (ackData.ok && !Array.isArray(ackData.data.acknowledgments)) return { ok: false, error: invalidOpsResponse(ackData.status) };
+      if (historyData.ok && !Array.isArray(historyData.data.history)) return { ok: false, error: invalidOpsResponse(historyData.status) };
+      if (entryData.ok) setScheduleEntries(entryData.data.entries as ScheduleEntry[]);
+      if (ackData.ok) setScheduleAcks(ackData.data.acknowledgments as ScheduleAck[]);
+      if (historyData.ok) setScheduleHistory(historyData.data.history as ScheduleHistoryItem[]);
+      return { ok: true };
+    });
+  }, [commit, runReadGroup]);
+
+  const principalState = states.principal;
 
   async function acknowledgeSchedule(employeeId: string, employeeName: string) {
     if (!selectedVersion) return;
@@ -492,7 +651,7 @@ export default function OperacaoWorkspace() {
   const activeTabInfo = TABS.find(item => item.id === activeTab)!;
 
   return (
-    <main className={styles.workspace}>
+    <main className={styles.workspace} data-operacao-workspace>
       <nav aria-label="Navegação operacional" className={styles.breadcrumbNav}>
         <a href="/admin/contratos">Contratos</a> · <a href="/admin/crm">Empresas e funil</a>
       </nav>
@@ -503,14 +662,21 @@ export default function OperacaoWorkspace() {
         cancelado ou suspenso não recebe nova alocação ou rotina; o histórico é preservado.
       </p>
 
-      {loading ? (
+      {principalState.phase === "loading" ? (
         <UiState variant="loading" title="Consultando a operação…" detail="Postos, alocações, cobertura, passagens, ocorrências, checklists, jornada e qualificações ainda não foram confirmados." />
       ) : null}
 
-      {!loading && error ? <ReadError error={error} onRetry={() => { void load(); }} /> : null}
+      <GroupFailed group="principal" state={principalState} onRetry={() => { void load(); }} />
 
-      {!loading && !error ? (
+      {principalState.phase === "ready" ? (
         <>
+          <GroupReadControls
+            group="principal"
+            state={principalState}
+            refreshLabel="Atualizar operação"
+            absence="Isso não significa que a operação esteja vazia."
+            onRefresh={() => { void load(); }}
+          />
           <div className={styles.tabs} role="tablist" aria-label="Frentes de trabalho da operação">
             {TABS.map(item => (
               <button
@@ -546,8 +712,7 @@ export default function OperacaoWorkspace() {
               shiftNeeds={shiftNeeds}
               jobRoles={jobRoles}
               allocations={allocations}
-              structureLoading={structureLoading}
-              structureError={structureError}
+              structureState={states.estrutura}
               onRetryStructure={() => { void loadStructure(); }}
             />
           ) : null}
@@ -560,8 +725,7 @@ export default function OperacaoWorkspace() {
             <DimensioningPanel
               dimensionings={dimensionings}
               gaps={gaps}
-              loading={dimLoading}
-              error={dimError}
+              state={states.dimensionamento}
               onRetry={() => { void loadDimensioning(); }}
             />
           ) : null}
@@ -575,11 +739,9 @@ export default function OperacaoWorkspace() {
               scheduleHistory={scheduleHistory}
               calendarView={calendarView}
               setCalendarView={setCalendarView}
-              loading={schedLoading}
-              error={schedError}
+              state={states.escalas}
               onRetry={() => { void loadSchedules(); }}
-              detailLoading={detailLoading}
-              detailError={detailError}
+              detailState={states.detalhe}
               onSelectVersion={version => { void selectVersion(version); }}
               onAcknowledge={(employeeId, employeeName) => { void acknowledgeSchedule(employeeId, employeeName); }}
               ackMessage={ackMessage}
@@ -632,10 +794,10 @@ function StatusBadge({ label, tone, srPrefix }: { label: string; tone: ReturnTyp
 }
 
 function PostsPanel({
-  posts, shiftNeeds, jobRoles, allocations, structureLoading, structureError, onRetryStructure,
+  posts, shiftNeeds, jobRoles, allocations, structureState, onRetryStructure,
 }: {
   posts: Post[]; shiftNeeds: PostShiftNeed[]; jobRoles: JobRole[]; allocations: Allocation[];
-  structureLoading: boolean; structureError: OpsErrorDescriptor | null; onRetryStructure: () => void;
+  structureState: ReadState; onRetryStructure: () => void;
 }) {
   return (
     <>
@@ -681,13 +843,20 @@ function PostsPanel({
         )}
       </section>
 
-      {structureLoading ? (
+      {structureState.phase === "loading" ? (
         <UiState variant="loading" title="Carregando estrutura operacional…" detail="Cargos, funções e necessidades por turno ainda não foram confirmados." />
       ) : null}
-      {!structureLoading && structureError ? <ReadError error={structureError} onRetry={onRetryStructure} /> : null}
+      <GroupFailed group="estrutura" state={structureState} onRetry={onRetryStructure} />
 
-      {!structureLoading && !structureError ? (
+      {structureState.phase === "ready" ? (
         <>
+          <GroupReadControls
+            group="estrutura"
+            state={structureState}
+            refreshLabel="Atualizar estrutura"
+            absence="Isso não significa que a estrutura esteja vazia."
+            onRefresh={onRetryStructure}
+          />
           <section className={styles.panel} aria-labelledby="job-roles-title">
             <h2 id="job-roles-title" className={styles.panelTitle}>Cargos e funções</h2>
             {jobRoles.length === 0 ? (
@@ -917,8 +1086,8 @@ function JourneyPanel({ workRules, qualifications, validations }: { workRules: W
 }
 
 function DimensioningPanel({
-  dimensionings, gaps, loading, error, onRetry,
-}: { dimensionings: Dimensioning[]; gaps: CoverageGap[]; loading: boolean; error: OpsErrorDescriptor | null; onRetry: () => void }) {
+  dimensionings, gaps, state, onRetry,
+}: { dimensionings: Dimensioning[]; gaps: CoverageGap[]; state: ReadState; onRetry: () => void }) {
   return (
     <>
       <p className={`${styles.notice} ${styles.noticeInfo}`}>
@@ -927,11 +1096,18 @@ function DimensioningPanel({
         jornada — qualificação vencida ou revogada depois da alocação aparece aqui como lacuna, não como número fictício.
       </p>
 
-      {loading ? <UiState variant="loading" title="Carregando dimensionamento…" /> : null}
-      {!loading && error ? <ReadError error={error} onRetry={onRetry} /> : null}
+      {state.phase === "loading" ? <UiState variant="loading" title="Carregando dimensionamento…" /> : null}
+      <GroupFailed group="dimensionamento" state={state} onRetry={onRetry} />
 
-      {!loading && !error ? (
+      {state.phase === "ready" ? (
         <>
+          <GroupReadControls
+            group="dimensionamento"
+            state={state}
+            refreshLabel="Atualizar dimensionamento"
+            absence="Isso não significa que não haja dimensionamento registrado."
+            onRefresh={onRetry}
+          />
           <section className={styles.panel} aria-labelledby="dimensioning-title">
             <h2 id="dimensioning-title" className={styles.panelTitle}>Contratado × planejado × realizado por faixa de tempo</h2>
             {dimensionings.length === 0 ? (
@@ -1047,15 +1223,17 @@ function DimensioningPanel({
 
 function SchedulesPanel({
   scheduleVersions, selectedVersion, scheduleEntries, scheduleAcks, scheduleHistory, calendarView, setCalendarView,
-  loading, error, onRetry, detailLoading, detailError, onSelectVersion, onAcknowledge, ackMessage, ackError,
+  state, onRetry, detailState, onSelectVersion, onAcknowledge, ackMessage, ackError,
 }: {
   scheduleVersions: ScheduleVersion[]; selectedVersion: ScheduleVersion | null; scheduleEntries: ScheduleEntry[];
   scheduleAcks: ScheduleAck[]; scheduleHistory: ScheduleHistoryItem[]; calendarView: "posto" | "equipe" | "pessoa";
-  setCalendarView: (view: "posto" | "equipe" | "pessoa") => void; loading: boolean; error: OpsErrorDescriptor | null;
-  onRetry: () => void; detailLoading: boolean; detailError: OpsErrorDescriptor | null;
+  setCalendarView: (view: "posto" | "equipe" | "pessoa") => void; state: ReadState;
+  onRetry: () => void; detailState: ReadState;
   onSelectVersion: (version: ScheduleVersion) => void; onAcknowledge: (employeeId: string, employeeName: string) => void;
   ackMessage: string; ackError: OpsErrorDescriptor | null;
 }) {
+  const detailLoading = detailState.phase === "loading";
+  const detailReady = detailState.phase === "ready";
   return (
     <>
       <p className={`${styles.notice} ${styles.noticeInfo}`}>
@@ -1064,13 +1242,20 @@ function SchedulesPanel({
         duplica efeito. Entradas só entram em versão editável e dentro da validade.
       </p>
 
-      {loading ? <UiState variant="loading" title="Carregando versões de escala…" /> : null}
-      {!loading && error ? <ReadError error={error} onRetry={onRetry} /> : null}
+      {state.phase === "loading" ? <UiState variant="loading" title="Carregando versões de escala…" /> : null}
+      <GroupFailed group="escalas" state={state} onRetry={onRetry} />
 
-      {!loading && !error ? (
+      {state.phase === "ready" ? (
         <>
           <section className={styles.panel} aria-labelledby="schedule-versions-title">
             <h2 id="schedule-versions-title" className={styles.panelTitle}>Versões de escala</h2>
+            <GroupReadControls
+              group="escalas"
+              state={state}
+              refreshLabel="Atualizar versões"
+              absence="Isso não significa que não haja versão registrada."
+              onRefresh={onRetry}
+            />
             {scheduleVersions.length === 0 ? (
               <UiState variant="empty" title="Nenhuma versão de escala registrada" detail="Sem versão, não há calendário — nada é presumido." />
             ) : (
@@ -1135,8 +1320,15 @@ function SchedulesPanel({
                   ))}
                 </div>
                 {detailLoading ? <UiState variant="loading" title="Carregando entradas da versão…" /> : null}
-                {!detailLoading && detailError ? <ReadError error={detailError} onRetry={() => onSelectVersion(selectedVersion)} /> : null}
-                {!detailLoading && !detailError && (() => {
+                <GroupFailed group="detalhe" state={detailState} onRetry={() => onSelectVersion(selectedVersion)} />
+                <GroupReadControls
+                  group="detalhe"
+                  state={detailState}
+                  refreshLabel="Atualizar detalhe"
+                  absence="Isso não significa que o detalhe esteja vazio."
+                  onRefresh={() => onSelectVersion(selectedVersion)}
+                />
+                {detailReady && (() => {
                   const { dates, truncated } = versionDateWindow(selectedVersion);
                   if (dates.length === 0) {
                     return <UiState variant="error" title="Validade da versão ilegível" detail="O calendário não pode ser montado com estas datas." />;
@@ -1215,7 +1407,7 @@ function SchedulesPanel({
               <section className={styles.panel} aria-labelledby="schedule-acks-title">
                 <h2 id="schedule-acks-title" className={styles.panelTitle}>Ciência da escala</h2>
                 {detailLoading ? <UiState variant="loading" title="Carregando ciências…" /> : null}
-                {!detailLoading && !detailError && (() => {
+                {detailReady && (() => {
                   const employees = [...new Map(scheduleEntries.map(entry => [entry.employee_id, entry])).values()];
                   return (
                     <>
@@ -1276,10 +1468,10 @@ function SchedulesPanel({
               <section className={styles.panel} aria-labelledby="schedule-history-title">
                 <h2 id="schedule-history-title" className={styles.panelTitle}>Histórico da versão</h2>
                 {detailLoading ? <UiState variant="loading" title="Carregando histórico…" /> : null}
-                {!detailLoading && !detailError && scheduleHistory.length === 0 ? (
+                {detailReady && scheduleHistory.length === 0 ? (
                   <UiState variant="empty" title="Nenhuma transição registrada para esta versão" />
                 ) : null}
-                {!detailLoading && !detailError && scheduleHistory.length > 0 ? (
+                {detailReady && scheduleHistory.length > 0 ? (
                   <div className={styles.tableWrap}>
                     <table className={styles.table}>
                       <thead>
