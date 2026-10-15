@@ -15,7 +15,7 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import UiState from "../../../components/ui/UiState";
 import styles from "../../../components/ui/UiWorkspace.module.css";
-import { biddingRequest } from "../../../lib/bidding-request";
+import { biddingRequest, biddingRead } from "../../../lib/bidding-request";
 import { biddingErrorFootnote, biddingErrorVariant, biddingStatusLabel, deadlineKindLabel, deadlineSourceLabel, deadlineSituationLabel, proposalDecisionLabel, honestMoney, honestDate, honestDateTime, type BiddingErrorDescriptor } from "../../../lib/bidding-vocabulary.mjs";
 
 interface MarketRelevance {
@@ -277,6 +277,16 @@ export default function LicitacoesWorkspace() {
   const [dossier, setDossier] = useState<Dossier | null>(null);
   const [dossierLoading, setDossierLoading] = useState(false);
   const [dossierError, setDossierError] = useState<BiddingErrorDescriptor | null>(null);
+  // UX-PRO-07H: hora da última leitura concluída e falha de releitura por
+  // recurso; preservação é por recurso e por edital (trocar de edital
+  // descarta o dossiê anterior).
+  const [listReadAt, setListReadAt] = useState<string | null>(null);
+  const [listStaleError, setListStaleError] = useState<BiddingErrorDescriptor | null>(null);
+  const [dossierReadAt, setDossierReadAt] = useState<string | null>(null);
+  const [dossierStaleError, setDossierStaleError] = useState<BiddingErrorDescriptor | null>(null);
+  const listingRef = useRef<NoticesResponse | null>(null);
+  const dossierRef = useRef<Dossier | null>(null);
+  const dossierFor = useRef<string | null>(null);
 
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<BiddingErrorDescriptor | null>(null);
@@ -306,26 +316,69 @@ export default function LicitacoesWorkspace() {
   const [resultForm, setResultForm] = useState({ result: "", justification: "" });
   const [resultKey, setResultKey] = useState(() => newIdempotencyKey("ext03-res"));
 
+  const isDenied = (error: BiddingErrorDescriptor) =>
+    error.status === 401 || error.status === 403 || error.kind === "denied";
+  const readTime = (iso: string) =>
+    new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
   const loadNotices = useCallback(async () => {
-    setListLoading(true);
+    // Releitura com dado já lido preserva o conteúdo; só a primeira leitura
+    // (ou após negativa) mostra "carregando".
+    if (!listingRef.current) setListLoading(true);
     setListError(null);
-    const result = await biddingRequest<NoticesResponse>("/api/ext/bidding/notices");
-    if (result.ok) setListing(result.data);
-    else { setListing(null); setListError(result.error); }
-    try { /* estado final compartilhado */ } finally {
-      setListLoading(false);
+    const result = await biddingRead<NoticesResponse>(
+      "/api/ext/bidding/notices",
+      data => !!data && typeof data === "object" && Array.isArray((data as NoticesResponse).notices),
+    );
+    if (result.ok) {
+      listingRef.current = result.data;
+      setListing(result.data);
+      setListReadAt(new Date().toISOString());
+      setListStaleError(null);
+    } else if (listingRef.current && !isDenied(result.error)) {
+      // Falha transitória: dado preservado, possivelmente desatualizado.
+      setListStaleError(result.error);
+    } else {
+      // Primeira leitura ou negativa: falha fechado, sem dado protegido.
+      listingRef.current = null;
+      setListing(null);
+      setListError(result.error);
+      setListStaleError(null);
     }
+    setListLoading(false);
   }, []);
 
   const loadDossier = useCallback(async (id: string) => {
-    setDossierLoading(true);
-    setDossierError(null);
-    const result = await biddingRequest<Dossier>(`/api/ext/bidding/notices/${id}`);
-    if (result.ok) setDossier(result.data);
-    else { setDossier(null); setDossierError(result.error); }
-    try { /* estado final compartilhado */ } finally {
-      setDossierLoading(false);
+    const mesmoEdital = dossierFor.current === id && dossierRef.current;
+    if (!mesmoEdital) {
+      dossierFor.current = id;
+      dossierRef.current = null;
+      setDossier(null);
+      setDossierStaleError(null);
+      setDossierLoading(true);
     }
+    setDossierError(null);
+    const result = await biddingRead<Dossier>(
+      `/api/ext/bidding/notices/${id}`,
+      data =>
+        !!data && typeof data === "object" &&
+        !!(data as Dossier).notice && typeof (data as Dossier).notice === "object" &&
+        typeof (data as Dossier).notice.id === "string",
+    );
+    if (result.ok) {
+      dossierRef.current = result.data;
+      setDossier(result.data);
+      setDossierReadAt(new Date().toISOString());
+      setDossierStaleError(null);
+    } else if (dossierRef.current && !isDenied(result.error)) {
+      setDossierStaleError(result.error);
+    } else {
+      dossierRef.current = null;
+      setDossier(null);
+      setDossierError(result.error);
+      setDossierStaleError(null);
+    }
+    setDossierLoading(false);
   }, []);
 
   useEffect(() => { loadNotices(); }, [loadNotices]);
@@ -411,6 +464,18 @@ export default function LicitacoesWorkspace() {
         </div>
 
         {listLoading && <div className="p-4 text-sm text-gray-500">Carregando licitações…</div>}
+
+        {listing && listReadAt && (
+          <p className="text-xs text-gray-500">Última leitura concluída às {readTime(listReadAt)}.</p>
+        )}
+        {listing && listStaleError && (
+          <div className="p-4 text-sm bg-amber-50 border border-amber-200 rounded" role="alert" data-testid="licitacoes-lista-desatualizado">
+            <p className="text-amber-800">A releitura falhou ({listStaleError.title}); a lista abaixo é da última leitura concluída às {listReadAt ? readTime(listReadAt) : "—"} e pode estar desatualizada. {listStaleError.detail}</p>
+            <button onClick={loadNotices} className="mt-2 px-3 py-1.5 text-sm border border-amber-300 rounded hover:bg-amber-100">
+              Tentar a leitura de novo
+            </button>
+          </div>
+        )}
 
         {!listLoading && listError && (
           <div className="p-4 text-sm bg-red-50 border border-red-200 rounded" role="alert">
@@ -522,6 +587,15 @@ export default function LicitacoesWorkspace() {
           <p className="text-red-700">{dossierError.title}: {dossierError.detail}</p>
           <button onClick={() => loadDossier(selectedId)} className="mt-2 px-3 py-1.5 text-sm border border-red-300 rounded hover:bg-red-100">
             Tentar novamente
+          </button>
+        </div>
+      )}
+
+      {selectedId && dossier && dossierStaleError && (
+        <div className="p-4 text-sm bg-amber-50 border border-amber-200 rounded" role="alert" data-testid="licitacoes-dossie-desatualizado">
+          <p className="text-amber-800">A releitura falhou ({dossierStaleError.title}); o dossiê abaixo é da última leitura concluída{dossierReadAt ? ` às ${readTime(dossierReadAt)}` : ""} e pode estar desatualizado. {dossierStaleError.detail}</p>
+          <button onClick={() => loadDossier(selectedId)} className="mt-2 px-3 py-1.5 text-sm border border-amber-300 rounded hover:bg-amber-100">
+            Tentar a leitura de novo
           </button>
         </div>
       )}

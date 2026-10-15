@@ -891,3 +891,34 @@ test('UX-08 Chromium: apresentação, negativa, falha honesta e mobile sem trans
     await context.close();
   } finally { await browser.close(); }
 });
+
+test('UX-PRO-07H Chromium: 2xx sem notices não vira lista vazia; releitura preserva; negativa falha fechado', { skip: !RUN }, async () => {
+  const browser=await playwrightChromium.launch({executablePath:await packagedChromium.executablePath(),args:packagedChromium.args.filter(a=>a!=='--disable-web-security'),headless:true});
+  try {
+    // Um único contexto: em --single-process, fechar contexto encerra o Chromium.
+    const ctx=await browser.newContext({viewport:{width:1440,height:900}});
+    const [name,value]=cookieTi.split('='); await ctx.addCookies([{name,value,url:baseUrl}]);
+
+    // Preservação na releitura + negativa pós-sucesso (mesma página).
+    const p2=await ctx.newPage();
+    await p2.goto(`${baseUrl}/admin/licitacoes`,{waitUntil:'domcontentloaded'});
+    await p2.waitForFunction(()=>document.body.textContent?.includes('Última leitura concluída às'), undefined, { timeout: 60000 });
+    await p2.evaluate(()=>{const real=window.fetch;window.fetch=(input,init)=>{const url=input instanceof Request?input.url:String(input);if(url.includes('/api/ext/bidding/notices')&&(!init?.method||init.method==='GET'))return Promise.resolve(new Response(JSON.stringify({error:'bidding_unavailable'}),{status:503,headers:{'content-type':'application/json'}}));return real(input,init);};});
+    await p2.getByRole('button',{name:'Recarregar'}).click();
+    await p2.waitForFunction(()=>document.querySelector('[data-testid="licitacoes-lista-desatualizado"]'), undefined, { timeout: 60000 });
+    assert.match(await p2.locator('[data-testid="licitacoes-lista-desatualizado"]').textContent(),/pode estar desatualizada/);
+    await p2.screenshot({path:'docs/ux-pro-07-licitacoes-evidencias/licitacoes-1440-dado-preservado.png',fullPage:true}).catch(()=>{});
+    await p2.evaluate(()=>{const real=window.fetch;window.fetch=(input,init)=>{const url=input instanceof Request?input.url:String(input);if(url.includes('/api/ext/bidding/notices')&&(!init?.method||init.method==='GET'))return Promise.resolve(new Response(JSON.stringify({error:'forbidden_role'}),{status:403,headers:{'content-type':'application/json'}}));return real(input,init);};});
+    await p2.getByRole('button',{name:'Recarregar'}).click();
+    await p2.waitForFunction(()=>!document.querySelector('[data-testid="licitacoes-lista-desatualizado"]')&&document.body.textContent?.includes('Papel sem acesso'), undefined, { timeout: 60000 });
+    await p2.screenshot({path:'docs/ux-pro-07-licitacoes-evidencias/licitacoes-1440-negativa-pos-sucesso.png',fullPage:true}).catch(()=>{});
+
+    // 2xx malformado (página nova, mesmo contexto).
+    const p1=await ctx.newPage();
+    await p1.addInitScript(()=>{const real=window.fetch;window.fetch=(input,init)=>{const url=input instanceof Request?input.url:String(input);if(url.includes('/api/ext/bidding/notices')&&(!init?.method||init.method==='GET'))return Promise.resolve(new Response(JSON.stringify({unexpected:true}),{status:200,headers:{'content-type':'application/json'}}));return real(input,init);};});
+    await p1.goto(`${baseUrl}/admin/licitacoes`,{waitUntil:'domcontentloaded'});
+    await p1.waitForFunction(()=>document.body.textContent?.includes('não pôde ser lida'), undefined, { timeout: 60000 });
+    assert.doesNotMatch(await p1.locator('body').textContent(),/nenhum edital canônico está registrado/i);
+    await p1.screenshot({path:'docs/ux-pro-07-licitacoes-evidencias/licitacoes-1440-resposta-invalida.png',fullPage:true}).catch(()=>{});
+  } finally { await browser.close(); }
+});

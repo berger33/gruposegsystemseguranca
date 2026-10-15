@@ -18,3 +18,20 @@ export async function biddingRequest<T=unknown>(url:string, init:RequestInit={})
   return {ok:true,status:response.status,data:payload as T};
 }
 export type { BiddingErrorDescriptor };
+
+// UX-PRO-07H — leitura honesta (aditivo): 2xx sem a forma canônica nunca é
+// ausência de edital. `biddingRequest` acima permanece INTACTO. O código
+// abaixo é diagnóstico desta tela (o servidor nunca o devolve), fora do
+// vocabulário anti-deriva. Mesma decisão da UX-PRO-07F/07G.
+export const INVALID_BIDDING_RESPONSE='invalid_bidding_response';
+export function invalidBiddingResponse(status:number):BiddingErrorDescriptor {
+  return { kind:'unavailable', title:'A resposta de licitações não pôde ser lida',
+    detail:'O servidor respondeu sem os dados esperados. Isto não significa que não existam editais ou dossiês registrados.',
+    code:INVALID_BIDDING_RESPONSE, status, canRetry:true };
+}
+export async function biddingRead<T>(url:string, isValid:(data:unknown)=>boolean):Promise<BiddingResult<T>> {
+  const result=await biddingRequest<T>(url);
+  if (!result.ok) return result;
+  if (!isValid(result.data)) return { ok:false, status:result.status, error:invalidBiddingResponse(result.status), payload:result.data };
+  return result;
+}
