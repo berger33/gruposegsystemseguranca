@@ -1,0 +1,126 @@
+{
+  "geradoPor": "npm run test:ux-ops:pg executado contra a implementação anterior (SHA-base 85e1e07; gate do commit 7adc958)",
+  "observacao": "Falha de casos novos contra a tela antiga; não é regressão de gate herdado. Casos 1-9 são os herdados da UX-07 (fatia A) e passam sem edição; casos 10-12 e 19 provam contrato, carregamento e medições já presentes antes; casos 13-18 reprovam exatamente os defeitos D1 (13, 14, 17), D4 (15), D3 (16) e D2 (18).",
+  "tapResumo": "pass=13 fail=6 skipped=0 todo=0 minimo_exigido=19",
+  "resumo": {
+    "total": 19,
+    "passaram": 13,
+    "falharam": 6
+  },
+  "casos": [
+    {
+      "caso": 1,
+      "status": "ok",
+      "nome": "as rotas de operação continuam exigindo sessão, sem mudança de contrato",
+      "erro": ""
+    },
+    {
+      "caso": 2,
+      "status": "ok",
+      "nome": "menu não é autorização: supervisor abre /admin/operacao mas é recusado numa escrita restrita",
+      "erro": ""
+    },
+    {
+      "caso": 3,
+      "status": "ok",
+      "nome": "massa fictícia pelas próprias APIs de operação: posto, turno, funcionário, versão de escala e ciência idempotente",
+      "erro": ""
+    },
+    {
+      "caso": 4,
+      "status": "ok",
+      "nome": "browser: falha de leitura NÃO vira lista vazia no painel inicial de operação",
+      "erro": ""
+    },
+    {
+      "caso": 5,
+      "status": "ok",
+      "nome": "browser: as 14 abas de operação são um tablist de verdade, com teclado",
+      "erro": ""
+    },
+    {
+      "caso": 6,
+      "status": "ok",
+      "nome": "browser: posto, alocação de escala e dimensionamento aparecem com vocabulário em português",
+      "erro": ""
+    },
+    {
+      "caso": 7,
+      "status": "ok",
+      "nome": "browser: a ciência da escala é idempotente também na tela — a segunda ciência não é um erro",
+      "erro": ""
+    },
+    {
+      "caso": 8,
+      "status": "ok",
+      "nome": "browser: a correção pontual em OpsAdvanced2Client mostra a falha real, não mais lista vazia",
+      "erro": ""
+    },
+    {
+      "caso": 9,
+      "status": "ok",
+      "nome": "browser: em 390px a tela de operação não produz transbordo horizontal",
+      "erro": ""
+    },
+    {
+      "caso": 10,
+      "status": "ok",
+      "nome": "07D-1 massa sintética pelas APIs reais: duas versões de escala distintas e necessidade por turno",
+      "erro": ""
+    },
+    {
+      "caso": 11,
+      "status": "ok",
+      "nome": "07D-1 contrato preservado: as 17 leituras canônicas exigem sessão e respondem com a lista canônica",
+      "erro": ""
+    },
+    {
+      "caso": 12,
+      "status": "ok",
+      "nome": "browser 07D-1: carregamento inicial não presume abas, vazio nem falha",
+      "erro": ""
+    },
+    {
+      "caso": 13,
+      "status": "not ok",
+      "nome": "browser 07D-1: 2xx sem a lista canônica no painel inicial é falha declarada, não vazio",
+      "erro": "corpo 2xx sem \"posts\" precisa virar falha declarada | expected: 1 | actual: 0"
+    },
+    {
+      "caso": 14,
+      "status": "not ok",
+      "nome": "browser 07D-1: 2xx sem a lista canônica em estrutura, dimensionamento e versões de escala é falha declarada em cada grupo",
+      "erro": "estrutura com 2xx sem \"roles\" precisa virar falha declarada | expected: 1 | actual: 0"
+    },
+    {
+      "caso": 15,
+      "status": "not ok",
+      "nome": "browser 07D-1: a coluna Necessidades não afirma zero enquanto a estrutura não foi confirmada",
+      "erro": "'enquanto a estrutura é lida, a coluna não pode afirmar zero necessidades' | expected: '0' | actual: '0'"
+    },
+    {
+      "caso": 16,
+      "status": "not ok",
+      "nome": "browser 07D-1: falha do detalhe da versão é declarada também em ciência e histórico, sem ação de ciência",
+      "erro": "a seção de ciência declara que depende da leitura que falhou | expected: 1 | actual: 0"
+    },
+    {
+      "caso": 17,
+      "status": "not ok",
+      "nome": "browser 07D-1: 2xx sem a lista canônica no detalhe da versão é falha declarada, não calendário vazio",
+      "erro": "detalhe com 2xx sem \"entries\" precisa virar falha declarada | expected: 1 | actual: 0"
+    },
+    {
+      "caso": 18,
+      "status": "not ok",
+      "nome": "browser 07D-1: resposta atrasada de uma versão escolhida antes é descartada",
+      "erro": "o calendário mostra a versão escolhida por último | actual (trecho do calendário): Calendário da versão v3 — 2026-12-14 a 2026-12-20 / Posto 07D A 001b823b — — — — — — —"
+    },
+    {
+      "caso": 19,
+      "status": "ok",
+      "nome": "browser 07D-1: 1440, 768, 390 e 320 px, tema noturno e percurso de teclado medidos",
+      "erro": ""
+    }
+  ]
+}
