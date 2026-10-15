@@ -74,7 +74,7 @@ import {
   ABSENT,
   type ComplianceErrorDescriptor,
 } from "../../../lib/compliance-vocabulary.mjs";
-import { complianceRequest } from "../../../lib/compliance-request";
+import { complianceRequest, complianceRead, type ComplianceResult } from "../../../lib/compliance-request";
 
 type Obligation = {
   id: string;
@@ -212,10 +212,21 @@ type Evaluation = {
 };
 
 /** Estado honesto de uma leitura independente: nunca confunde os quatro casos. */
+/**
+ * Estado honesto de leitura (UX-PRO-07K): `ready` guarda a hora da última
+ * leitura concluída (`readAt`); releitura mantém o conteúdo com
+ * `refreshing`/`staleError`; negativa (401/403) falha fechado em `failed`.
+ */
 type Load<T> =
   | { phase: "loading" }
-  | { phase: "ready"; data: T }
+  | { phase: "ready"; data: T; readAt: string; refreshing?: boolean; staleError?: ComplianceErrorDescriptor }
   | { phase: "failed"; error: ComplianceErrorDescriptor };
+
+const isDenied = (error: ComplianceErrorDescriptor) =>
+  error.status === 401 || error.status === 403 || error.kind === "denied";
+
+const readTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
 const TABS = [
   { id: "obrigacoes", label: "Obrigações e referências" },
@@ -306,77 +317,155 @@ export default function ComplianceWorkspace() {
   // após falha, para a repetição ser segura, e só é descartada após sucesso.
   const keys = useRef<Record<string, string>>({});
 
+  // UX-PRO-07K: forma canônica exigida no 2xx, preservação em falha
+  // transitória de releitura e negativa fail-closed — padrão 07F.
+  const applyRead = <T,>(
+    setter: (updater: (previous: Load<T> | null) => Load<T> | null) => void,
+    result: ComplianceResult<T>,
+    map: (data: T) => T = data => data,
+  ) => {
+    if (!result.ok) {
+      setter(previous => {
+        if (previous?.phase === "ready" && !isDenied(result.error)) {
+          return { ...previous, refreshing: false, staleError: result.error };
+        }
+        return { phase: "failed", error: result.error };
+      });
+      return;
+    }
+    setter(() => ({ phase: "ready", data: map(result.data), readAt: new Date().toISOString() }));
+  };
+
+  const beginRead = <T,>(
+    setter: (updater: (previous: Load<T> | null) => Load<T> | null) => void,
+  ) => {
+    setter(previous =>
+      previous?.phase === "ready"
+        ? { ...previous, refreshing: true, staleError: undefined }
+        : { phase: "loading" },
+    );
+  };
+
   const loadObligations = useCallback(async () => {
-    setObligations({ phase: "loading" });
-    const result = await complianceRequest<{ items: Obligation[] }>("/api/ext/compliance/obligations");
+    beginRead<Obligation[]>(updater => setObligations(previous => updater(previous) ?? { phase: "loading" }));
+    const result = await complianceRead<{ items: Obligation[] }>(
+      "/api/ext/compliance/obligations",
+      data => !!data && typeof data === "object" && Array.isArray((data as { items?: unknown }).items),
+    );
     if (!result.ok) {
       // Falha de leitura é estado próprio. A lista anterior NÃO é mantida nem
       // substituída por uma lista vazia.
-      setObligations({ phase: "failed", error: result.error });
+      // Falha: applyRead decide preservação x fail-closed.
+      applyRead<Obligation[]>(updater => setObligations(previous => updater(previous) ?? { phase: "loading" }), result);
       return;
     }
-    setObligations({ phase: "ready", data: Array.isArray(result.data?.items) ? result.data.items : [] });
+    applyRead<Obligation[]>(
+      updater => setObligations(previous => updater(previous) ?? { phase: "loading" }),
+      { ...result, data: result.data.items },
+    );
   }, []);
 
   const loadDocuments = useCallback(async () => {
-    setDocuments({ phase: "loading" });
-    const result = await complianceRequest<{ items: DocumentRow[] }>("/api/ext/compliance/documents");
+    beginRead<DocumentRow[]>(updater => setDocuments(previous => updater(previous) ?? { phase: "loading" }));
+    const result = await complianceRead<{ items: DocumentRow[] }>(
+      "/api/ext/compliance/documents",
+      data => !!data && typeof data === "object" && Array.isArray((data as { items?: unknown }).items),
+    );
     if (!result.ok) {
-      setDocuments({ phase: "failed", error: result.error });
+      // Falha: applyRead decide preservação x fail-closed.
+      applyRead<DocumentRow[]>(updater => setDocuments(previous => updater(previous) ?? { phase: "loading" }), result);
       return;
     }
-    setDocuments({ phase: "ready", data: Array.isArray(result.data?.items) ? result.data.items : [] });
+    applyRead<DocumentRow[]>(
+      updater => setDocuments(previous => updater(previous) ?? { phase: "loading" }),
+      { ...result, data: result.data.items },
+    );
   }, []);
 
   const loadTasks = useCallback(async () => {
-    setTasks({ phase: "loading" });
-    const result = await complianceRequest<{ items: TaskRow[] }>("/api/ext/compliance/tasks");
+    beginRead<TaskRow[]>(updater => setTasks(previous => updater(previous) ?? { phase: "loading" }));
+    const result = await complianceRead<{ items: TaskRow[] }>(
+      "/api/ext/compliance/tasks",
+      data => !!data && typeof data === "object" && Array.isArray((data as { items?: unknown }).items),
+    );
     if (!result.ok) {
-      setTasks({ phase: "failed", error: result.error });
+      // Falha: applyRead decide preservação x fail-closed.
+      applyRead<TaskRow[]>(updater => setTasks(previous => updater(previous) ?? { phase: "loading" }), result);
       return;
     }
-    setTasks({ phase: "ready", data: Array.isArray(result.data?.items) ? result.data.items : [] });
+    applyRead<TaskRow[]>(
+      updater => setTasks(previous => updater(previous) ?? { phase: "loading" }),
+      { ...result, data: result.data.items },
+    );
   }, []);
 
   const loadPlans = useCallback(async () => {
-    setPlans({ phase: "loading" });
-    const result = await complianceRequest<{ items: PlanRow[] }>("/api/ext/compliance/action-plans");
+    beginRead<PlanRow[]>(updater => setPlans(previous => updater(previous) ?? { phase: "loading" }));
+    const result = await complianceRead<{ items: PlanRow[] }>(
+      "/api/ext/compliance/action-plans",
+      data => !!data && typeof data === "object" && Array.isArray((data as { items?: unknown }).items),
+    );
     if (!result.ok) {
-      setPlans({ phase: "failed", error: result.error });
+      // Falha: applyRead decide preservação x fail-closed.
+      applyRead<PlanRow[]>(updater => setPlans(previous => updater(previous) ?? { phase: "loading" }), result);
       return;
     }
-    setPlans({ phase: "ready", data: Array.isArray(result.data?.items) ? result.data.items : [] });
+    applyRead<PlanRow[]>(
+      updater => setPlans(previous => updater(previous) ?? { phase: "loading" }),
+      { ...result, data: result.data.items },
+    );
   }, []);
 
   const loadSchedule = useCallback(async () => {
-    setSchedule({ phase: "loading" });
-    const result = await complianceRequest<Schedule>("/api/ext/compliance/schedule");
-    if (!result.ok) {
-      setSchedule({ phase: "failed", error: result.error });
-      return;
-    }
-    setSchedule({ phase: "ready", data: result.data });
+    beginRead<Schedule>(updater => setSchedule(updater));
+    const result = await complianceRead<Schedule>(
+      "/api/ext/compliance/schedule",
+      data => !!data && typeof data === "object" && typeof (data as Schedule).enabled === "boolean",
+    );
+    applyRead<Schedule>(updater => setSchedule(updater), result);
   }, []);
+
+  // Preservação é POR REGISTRO: trocar de documento/plano descarta o detalhe
+  // anterior (nunca exibe dado de outro registro como se fosse do selecionado).
+  const documentFor = useRef("");
+  const planFor = useRef("");
 
   const loadDocumentDetail = useCallback(async (id: string) => {
     setSelectedDocumentId(id);
-    setDocumentDetail({ phase: "loading" });
-    const result = await complianceRequest<{ document: DocumentRow }>(`/api/ext/compliance/documents/${id}`);
-    if (!result.ok) {
-      setDocumentDetail({ phase: "failed", error: result.error });
-      return;
+    if (documentFor.current === id) {
+      beginRead<DocumentRow>(updater => setDocumentDetail(updater));
+    } else {
+      documentFor.current = id;
+      setDocumentDetail({ phase: "loading" });
     }
-    setDocumentDetail({ phase: "ready", data: result.data.document });
+    const result = await complianceRead<{ document: DocumentRow }>(
+      `/api/ext/compliance/documents/${id}`,
+      data =>
+        !!data && typeof data === "object" &&
+        !!(data as { document?: unknown }).document &&
+        typeof (data as { document: DocumentRow }).document.id === "string",
+    );
+    applyRead<DocumentRow>(
+      updater => setDocumentDetail(updater),
+      result.ok ? { ...result, data: result.data.document } : result,
+    );
   }, []);
 
   const loadPlanDetail = useCallback(async (id: string) => {
-    setPlanDetail({ phase: "loading" });
-    const result = await complianceRequest<PlanDetail>(`/api/ext/compliance/action-plans/${id}`);
-    if (!result.ok) {
-      setPlanDetail({ phase: "failed", error: result.error });
-      return;
+    if (planFor.current === id) {
+      beginRead<PlanDetail>(updater => setPlanDetail(updater));
+    } else {
+      planFor.current = id;
+      setPlanDetail({ phase: "loading" });
     }
-    setPlanDetail({ phase: "ready", data: result.data });
+    const result = await complianceRead<PlanDetail>(
+      `/api/ext/compliance/action-plans/${id}`,
+      data =>
+        !!data && typeof data === "object" &&
+        !!(data as PlanDetail).action_plan && typeof (data as PlanDetail).action_plan === "object" &&
+        typeof (data as PlanDetail).action_plan.id === "string",
+    );
+    applyRead<PlanDetail>(updater => setPlanDetail(updater), result);
   }, []);
 
   useEffect(() => {
@@ -546,6 +635,30 @@ export default function ComplianceWorkspace() {
     </div>
   );
 
+  // UX-PRO-07K: faixa de releitura — dado preservado, hora e repetição real.
+  const renderStale = <T,>(state: Load<T> | null, retry: () => void, testId: string) => {
+    if (!state || state.phase !== "ready") return null;
+    return (
+      <>
+        <p className={styles.hint} data-testid={`${testId}-leitura`}>
+          Última leitura concluída às {readTime(state.readAt)}.
+          {state.refreshing ? " Atualizando agora — o conteúdo exibido é o dessa leitura." : ""}
+        </p>
+        {state.staleError ? (
+          <div role="alert" data-testid={`${testId}-desatualizado`}>
+            <UiState
+              variant={complianceErrorVariant(state.staleError)}
+              title="A releitura falhou; o conteúdo abaixo é da última leitura concluída e pode estar desatualizado."
+              detail={`${state.staleError.detail} Última leitura concluída às ${readTime(state.readAt)}. ${complianceErrorFootnote(state.staleError)}`}
+              onRetry={state.staleError.canRetry ? retry : undefined}
+              retryLabel="Tentar a leitura de novo"
+            />
+          </div>
+        ) : null}
+      </>
+    );
+  };
+
   const obligationItems = obligations.phase === "ready" ? obligations.data : [];
   const documentItems = documents.phase === "ready" ? documents.data : [];
   const taskItems = tasks.phase === "ready" ? tasks.data : [];
@@ -618,6 +731,12 @@ export default function ComplianceWorkspace() {
             data-testid="compliance-obligations"
           >
             <h2 className={styles.panelTitle}>Obrigações declaradas</h2>
+            {renderStale(obligations, () => void loadObligations(), "compliance-obligations")}
+            {obligations.phase === "ready" ? (
+              <div className={styles.actions}>
+                <button type="button" onClick={() => void loadObligations()}>Reler as obrigações</button>
+              </div>
+            ) : null}
             {obligations.phase === "loading" ? (
               <UiState variant="loading" title="Lendo as obrigações declaradas…" detail="Nada é exibido antes de a leitura terminar." />
             ) : null}
