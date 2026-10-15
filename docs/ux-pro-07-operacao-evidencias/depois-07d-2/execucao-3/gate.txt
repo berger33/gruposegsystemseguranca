@@ -1,0 +1,364 @@
+UX_OPS_07D2_SETUP: DATABASE_URL vazio confirmado; cluster temporário exclusivo solicitado
+QA_PG_READY: 127.0.0.1:36519/seg_qa_ux_ops_07d2; cluster temporário exclusivo; segredo omitido.
+UX_OPS_07D2_SETUP: cluster PostgreSQL descartável no ar
+Applied: 001-site-visual.sql
+Applied: 002-public-leads.sql
+Applied: 003-client-access.sql
+Applied: 004-client-space.sql
+Applied: 005-client-security.sql
+Applied: 006-admin-identities.sql
+Applied: 007-opcao-b-funcionarios.sql
+Applied: 008-document-contract-link.sql
+Applied: 009-mfa-challenge.sql
+Applied: 010-rbac-permissions.sql
+Applied: 011-audit-and-notifications.sql
+Applied: 012-integrations-and-catalog.sql
+Applied: 013-pub03-pub04-lead-enhancements.sql
+Applied: 014-crm-core.sql
+Applied: 015-crm-import.sql
+Applied: 016-crm11-catalog-enrichment.sql
+Applied: 017-crm12-equipment.sql
+Applied: 018-crm13-inspection.sql
+Applied: 019-crm14-labor-budget.sql
+Applied: 020-crm15-technical-budget.sql
+Applied: 021-crm16-cost-parameters.sql
+Applied: 022-crm17-price-scenarios.sql
+Applied: 023-crm18-discount-tiers.sql
+Applied: 024-crm19-proposals.sql
+Applied: 025-crm21-proposal-delivery.sql
+Applied: 026-crm22-acceptance-link.sql
+Applied: 027-crm23-contract-idempotent.sql
+Applied: 028-crm24-reports.sql
+Applied: 029-crm25-goals-commissions.sql
+Applied: 030-crm26-commercial-library.sql
+Applied: 031-crm27-partnerships-renewals.sql
+Applied: 032-con01-contract-units-docs.sql
+Applied: 033-con02-contract-posts-sla.sql
+Applied: 034-con03-contract-status-transitions.sql
+Applied: 035-con04-contract-amendments.sql
+Applied: 036-con05-contract-alerts.sql
+Applied: 037-con06-document-obligations.sql
+Applied: 038-con07-implantation-checklist.sql
+Applied: 039-con08-implantation-blocks.sql
+Applied: 040-con09-contract-closure.sql
+Applied: 041-con10-fiscal-dossier.sql
+Applied: 042-con11-management-diary.sql
+Applied: 043-plt05-notifications.sql
+Applied: 044-plt06-observability.sql
+Applied: 045-plt07-healthcheck.sql
+Applied: 046-plt08-backup.sql
+Applied: 047-plt09-privacy.sql
+Applied: 048-plt10-lgpd-requests.sql
+Applied: 049-plt11-retention.sql
+Applied: 050-plt12-incident-response.sql
+Applied: 051-plt13-config-flags.sql
+Applied: 052-plt14-dependencies.sql
+Applied: 053-plt15-integration-logs.sql
+Applied: 054-plt16-operational-budget.sql
+Applied: 055-plt17-env-isolation.sql
+Applied: 056-plt18-maintenance-docs.sql
+Applied: 057-hr01-cadastro-profissional.sql
+Applied: 058-emp01-perfil-proprio.sql
+Applied: 059-hr03-04-06-recrutamento-talentos-dossie.sql
+Applied: 060-hr07-08-09-desligamento-status-ferias.sql
+Applied: 061-hr10-11-12-afastamentos-ponto-banco-horas.sql
+Applied: 062-hr13-14-15-16-beneficios-adiantamentos-saude-integracao.sql
+Applied: 063-hr17-18-19-20-treinamento-competencias-uniformes-fechamento-dp.sql
+Applied: 064-hr21-22-23-24-holerites-avaliacoes-atendimento-indicadores.sql
+Applied: 065-emp02-03-04-05-plantao-escala-jornada-ausencia.sql
+Applied: 066-emp06-07-08-09-troca-passagem-ocorrencia-procedimentos.sql
+Applied: 067-emp10-11-12-13-documentos-holerites-solicitacoes-uniformes.sql
+Applied: 068-emp14-15-16-17-cursos-comunicados-atendimento-confidencial.sql
+Applied: 069-emp18-19-pwa-faq-acessibilidade.sql
+Applied: 070-ops01-02-03-04-estrutura-dimensionamento-escala-validacao.sql
+Applied: 071-ops05-06-07-08-cobertura-passagem-ocorrencia-checklist.sql
+Applied: 072-ops09-10-11-12-supervisao-ronda-chaves-relatorio.sql
+Applied: 073-ops13-14-15-16-metricas-escalas-limpeza-monitoramento.sql
+Applied: 074-cli01-02-03-04-portal-identidade-contatos-contratos-documentos.sql
+Applied: 075-cli05-06-07-08-chamados-visitas-relatorios.sql
+Applied: 076-cli09-10-11-12-13-14-cobrancas-oportunidade-satisfacao-renovacao-modos-seguranca.sql
+Applied: 077-fin01-02-03-04-contas-receber-pagar-recorrencia-pagamento.sql
+Applied: 078-fin05-06-07-08-conciliacao-cobranca-fluxo-custo.sql
+Applied: 079-fin09-10-11-12-resultado-despesa-fiscal-gateway.sql
+Applied: 080-fin13-14-15-16-orcamento-export-fechamento-comissao.sql
+Applied: 081-adm01-02-03-04-05-06-painel-aprovacao.sql
+Applied: 082-adm07-08-09-10-11-12-busca-relatorios-config-metas-diario-expansao.sql
+Applied: 083-ast01-02-03-04-05-06-estoque-reserva-ativo-entrega-requisicao.sql
+Applied: 084-ast07-08-09-10-11-12-inventario-os-manutencao-cftv-limpeza.sql
+Applied: 085-ext01-02-03-04-05-06-frota-terceiros-licitacoes-fornecedores-qualidade-satisfacao.sql
+Applied: 086-ext07-08-09-10-11-12-compliance-conhecimento-expansao-continuidade-analytics-editor.sql
+Applied: 087-ext13-14-15-16-17-relatorio-inteligencia-emergencial-central-biometria-ai10-automacoes.sql
+Applied: 088-pub06-cms-paginas-faq-cases-blog-vagas.sql
+Applied: 089-pub07-temas-preview-publicacao-rollback-preferencia.sql
+Applied: 090-pub08-seo-sitemap-redirects-dominio-noindex.sql
+Applied: 091-pub09-montador-pacote-comparador-servicos-planos.sql
+Applied: 092-pub10-origem-conversao-ab-test-minimizacao.sql
+Applied: 093-cli15-reclamacao-colaborador-canal-restrito-rh-minimo.sql
+Applied: 094-pub02-pub05-paginas-segmento-faq-assistida-handoff.sql
+Applied: 095-ai-rag-cliente-rh-marcelo-ollama-qwen3-bot-modes.sql
+Applied: 096-ai-rag-feedback-custo-token-rollback.sql
+Applied: 097-client-mfa-session.sql
+Applied: 098-client-manual-verification.sql
+Applied: 099-sec-staff-session-hardening.sql
+Applied: 100-l02-local-outbox.sql
+Applied: 101-l02-document-integrity.sql
+Applied: 102-l03-employee-self-service-security.sql
+Applied: 103-l04-comercial-role-widening.sql
+Applied: 104-crm-task-audit.sql
+Applied: 105-crm-interaction-audit.sql
+Applied: 106-crm-interaction-follow-up.sql
+Applied: 107-crm-visit-agenda.sql
+Applied: 108-crm-manual-cadences.sql
+Applied: 109-crm-task-delegation.sql
+Applied: 110-crm-visit-conflict-lead-link.sql
+Applied: 111-crm-opportunity-notes-reopen.sql
+Applied: 112-pub08-seo-redirect-audit-action.sql
+Applied: 113-crm-01-04-audit-actions.sql
+Applied: 114-crm-02-contact-update-audit.sql
+Applied: 115-crm-01-unit-audit.sql
+Applied: 116-crm-03-dedup-review.sql
+Applied: 117-l04-publication-portfolio.sql
+Applied: 118-l05-contract-canonicalization.sql
+Applied: 119-l06-operacao-hardening.sql
+Applied: 120-l06-fatia-b-operacao.sql
+Applied: 121-l06-fatia-c-patrimonio.sql
+Applied: 122-l06-fatia-d-manutencao.sql
+Applied: 123-l06-fatia-e-operacao-avancada.sql
+Applied: 124-fin05-conciliation-hardening.sql
+Applied: 125-fin06-collection-hardening.sql
+Applied: 126-fin07-cashflow-aging-hardening.sql
+Applied: 127-fin08-cost-allocation-hardening.sql
+Applied: 128-fin09-management-result-hardening.sql
+Applied: 129-fin10-expense-hardening.sql
+Applied: 130-fin11-fiscal-hardening.sql
+Applied: 131-fin12-gateway-hardening.sql
+Applied: 132-fin13-budget-hardening.sql
+Applied: 133-fin14-15-16-export-closure-commission-hardening.sql
+Applied: 134-fin13-budget-revision-margin-idempotency.sql
+Applied: 135-fin09-fin12-revalidation-hardening.sql
+Applied: 136-fin10-fin05-policy-history-locks.sql
+Applied: 137-fin14-15-16-ui-idempotency-closure-lock.sql
+Applied: 138-adm01-12-painel-marcelo-decisoes-escopo.sql
+Applied: 139-l08-client-space-atomic-idempotency.sql
+Applied: 140-l08-cli06-08-lifecycle-visits-reports.sql
+Applied: 141-l08-cli10-service-request-portal.sql
+Applied: 142-l08-cli11-satisfaction-portal.sql
+Applied: 143-l08-cli12-renewal-communications-portal.sql
+Applied: 144-l08-cli13-portal-access-modes.sql
+Applied: 145-cli14-account-security.sql
+Applied: 146-l08-cli15-employee-complaint-portal.sql
+Applied: 147-ext01-fleet-canonical-journey.sql
+Applied: 148-ext02-third-parties-canonical-journey.sql
+Applied: 149-ext03-biddings-canonical-journey.sql
+Applied: 150-ext04-supplier-journey.sql
+Applied: 151-ext05-quality-journey.sql
+Applied: 152-ext06-satisfaction-journey.sql
+Applied: 153-ext07-compliance-journey.sql
+Applied: 154-ext07-compliance-hardening.sql
+Applied: 155-ext07-compliance-hardening.sql
+Applied: 156-ext07-scheduled-evaluation.sql
+Applied: 157-f03-employee-request-rh-return.sql
+Applied: 158-f03-client-ticket-acceptance.sql
+Applied: 159-f03-receivable-settlement-report.sql
+Applied: 160-ext08-knowledge-canonical-journey.sql
+Applied: 161-ext09-expansion-canonical-journey.sql
+Applied: 162-ext10-continuity-canonical-journey.sql
+Applied: 163-ext11-analytics-canonical-journey.sql
+Applied: 164-ext12-visual-editor-canonical-journey.sql
+Applied: 165-ext13-reports-canonical-journey.sql
+Applied: 166-ext14-intel-canonical-journey.sql
+Applied: 167-ext15-emergency-canonical-journey.sql
+Applied: 168-ext07-compliance-action-plans.sql
+Applied: 169-ext10-continuity-client-portal.sql
+Applied: 170-ops-internal-pendency-notifications.sql
+Applied: 171-client-offline-access-recovery.sql
+Applied: 172-ext05-quality-client-account-scope.sql
+Applied: 173-ai-rag-client-account-scope.sql
+Applied: 174-auth-permissions-id-default.sql
+Applied: 175-ai-rag-directory-sources.sql
+Applied: 176-employee-geolocation-time-clock.sql
+Applied: 177-site-appearance-administration.sql
+Applied: 178-employee-time-clock-here-address.sql
+Applied: 179-employee-here-end-user-consent.sql
+Applied: 180-marcelo-rh-access.sql
+Migration ledger verified: 001–180 (PostgreSQL only)
+UX_OPS_07D2_SETUP: migrações reais aplicadas (nenhuma nova nesta fatia)
+UX_OPS_07D2_SETUP: servidor real e Chromium Playwright entregues ao teste de integração
+TAP version 13
+# Subtest: as rotas de operação continuam exigindo sessão, sem mudança de contrato
+ok 1 - as rotas de operação continuam exigindo sessão, sem mudança de contrato
+  ---
+  duration_ms: 6522.881652
+  type: 'test'
+  ...
+# Subtest: menu não é autorização: supervisor abre /admin/operacao mas é recusado numa escrita restrita
+ok 2 - menu não é autorização: supervisor abre /admin/operacao mas é recusado numa escrita restrita
+  ---
+  duration_ms: 58.442493
+  type: 'test'
+  ...
+# Subtest: massa fictícia pelas próprias APIs de operação: posto, turno, funcionário, versão de escala e ciência idempotente
+ok 3 - massa fictícia pelas próprias APIs de operação: posto, turno, funcionário, versão de escala e ciência idempotente
+  ---
+  duration_ms: 293.202125
+  type: 'test'
+  ...
+# Subtest: browser: falha de leitura NÃO vira lista vazia no painel inicial de operação
+ok 4 - browser: falha de leitura NÃO vira lista vazia no painel inicial de operação
+  ---
+  duration_ms: 4457.066497
+  type: 'test'
+  ...
+# Subtest: browser: as 14 abas de operação são um tablist de verdade, com teclado
+ok 5 - browser: as 14 abas de operação são um tablist de verdade, com teclado
+  ---
+  duration_ms: 4468.961802
+  type: 'test'
+  ...
+# Subtest: browser: posto, alocação de escala e dimensionamento aparecem com vocabulário em português
+ok 6 - browser: posto, alocação de escala e dimensionamento aparecem com vocabulário em português
+  ---
+  duration_ms: 3924.587411
+  type: 'test'
+  ...
+# Subtest: browser: a ciência da escala é idempotente também na tela — a segunda ciência não é um erro
+ok 7 - browser: a ciência da escala é idempotente também na tela — a segunda ciência não é um erro
+  ---
+  duration_ms: 5082.473216
+  type: 'test'
+  ...
+# Subtest: browser: a correção pontual em OpsAdvanced2Client mostra a falha real, não mais lista vazia
+ok 8 - browser: a correção pontual em OpsAdvanced2Client mostra a falha real, não mais lista vazia
+  ---
+  duration_ms: 4143.459121
+  type: 'test'
+  ...
+# Subtest: browser: em 390px a tela de operação não produz transbordo horizontal
+ok 9 - browser: em 390px a tela de operação não produz transbordo horizontal
+  ---
+  duration_ms: 3884.00351
+  type: 'test'
+  ...
+# Subtest: 07D-1 massa sintética pelas APIs reais: duas versões de escala distintas e necessidade por turno
+ok 10 - 07D-1 massa sintética pelas APIs reais: duas versões de escala distintas e necessidade por turno
+  ---
+  duration_ms: 507.271267
+  type: 'test'
+  ...
+# Subtest: 07D-1 contrato preservado: as 17 leituras canônicas exigem sessão e respondem com a lista canônica
+ok 11 - 07D-1 contrato preservado: as 17 leituras canônicas exigem sessão e respondem com a lista canônica
+  ---
+  duration_ms: 448.835612
+  type: 'test'
+  ...
+# Subtest: browser 07D-1: carregamento inicial não presume abas, vazio nem falha
+ok 12 - browser 07D-1: carregamento inicial não presume abas, vazio nem falha
+  ---
+  duration_ms: 6987.459439
+  type: 'test'
+  ...
+# Subtest: browser 07D-1: 2xx sem a lista canônica no painel inicial é falha declarada, não vazio
+ok 13 - browser 07D-1: 2xx sem a lista canônica no painel inicial é falha declarada, não vazio
+  ---
+  duration_ms: 3604.504968
+  type: 'test'
+  ...
+# Subtest: browser 07D-1: 2xx sem a lista canônica em estrutura, dimensionamento e versões de escala é falha declarada em cada grupo
+ok 14 - browser 07D-1: 2xx sem a lista canônica em estrutura, dimensionamento e versões de escala é falha declarada em cada grupo
+  ---
+  duration_ms: 3239.438577
+  type: 'test'
+  ...
+# Subtest: browser 07D-1: a coluna Necessidades não afirma zero enquanto a estrutura não foi confirmada
+ok 15 - browser 07D-1: a coluna Necessidades não afirma zero enquanto a estrutura não foi confirmada
+  ---
+  duration_ms: 10093.640589
+  type: 'test'
+  ...
+# Subtest: browser 07D-1: falha do detalhe da versão é declarada também em ciência e histórico, sem ação de ciência
+ok 16 - browser 07D-1: falha do detalhe da versão é declarada também em ciência e histórico, sem ação de ciência
+  ---
+  duration_ms: 3974.909722
+  type: 'test'
+  ...
+# Subtest: browser 07D-1: 2xx sem a lista canônica no detalhe da versão é falha declarada, não calendário vazio
+ok 17 - browser 07D-1: 2xx sem a lista canônica no detalhe da versão é falha declarada, não calendário vazio
+  ---
+  duration_ms: 3534.567122
+  type: 'test'
+  ...
+# Subtest: browser 07D-1: resposta atrasada de uma versão escolhida antes é descartada
+ok 18 - browser 07D-1: resposta atrasada de uma versão escolhida antes é descartada
+  ---
+  duration_ms: 7110.403729
+  type: 'test'
+  ...
+# Subtest: browser 07D-1: 1440, 768, 390 e 320 px, tema noturno e percurso de teclado medidos
+ok 19 - browser 07D-1: 1440, 768, 390 e 320 px, tema noturno e percurso de teclado medidos
+  ---
+  duration_ms: 8003.111241
+  type: 'test'
+  ...
+# Subtest: 07D-2 envio pendente bloqueia duplo clique sem mudar o contrato POST
+ok 20 - 07D-2 envio pendente bloqueia duplo clique sem mudar o contrato POST
+  ---
+  duration_ms: 5479.02708
+  type: 'test'
+  ...
+# Subtest: 07D-2 POST confirmado + GET 503 permite repetir somente a consulta; duplicate_ack continua sucesso idempotente
+ok 21 - 07D-2 POST confirmado + GET 503 permite repetir somente a consulta; duplicate_ack continua sucesso idempotente
+  ---
+  duration_ms: 6060.303189
+  type: 'test'
+  ...
+# Subtest: 07D-2 GET 2xx sem lista não apaga ciência conhecida nem simula pendência
+ok 22 - 07D-2 GET 2xx sem lista não apaga ciência conhecida nem simula pendência
+  ---
+  duration_ms: 5159.805781
+  type: 'test'
+  ...
+# Subtest: 07D-2 resultado atrasado de Post não contamina outra seleção
+ok 23 - 07D-2 resultado atrasado de Post não contamina outra seleção
+  ---
+  duration_ms: 5975.439077
+  type: 'test'
+  ...
+# Subtest: 07D-2 resultado atrasado de Get não contamina outra seleção
+ok 24 - 07D-2 resultado atrasado de Get não contamina outra seleção
+  ---
+  duration_ms: 5680.942014
+  type: 'test'
+  ...
+# Subtest: 07D-2 resposta POST perdida não é sucesso presumido e não causa reenvio automático
+ok 25 - 07D-2 resposta POST perdida não é sucesso presumido e não causa reenvio automático
+  ---
+  duration_ms: 5229.141666
+  type: 'test'
+  ...
+# Subtest: 07D-2 negativa 403 na reconciliação fecha ações sem simular ausência de ciência
+ok 26 - 07D-2 negativa 403 na reconciliação fecha ações sem simular ausência de ciência
+  ---
+  duration_ms: 5090.030654
+  type: 'test'
+  ...
+# Subtest: 07D-2 envio com teclado em 320/390/768/1440 e tema noite sem transbordo
+ok 27 - 07D-2 envio com teclado em 320/390/768/1440 e tema noite sem transbordo
+  ---
+  duration_ms: 39555.782993
+  type: 'test'
+  ...
+1..27
+# tests 27
+# suites 0
+# pass 27
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 159683.937771
+UX_OPS_07D2_TAP_SUMMARY: pass=27 fail=0 skipped=0 todo=0 minimo_exigido=27
+UX_OPS_07D2_TEST_EXIT: 0
+QA_PG_TEMP_CLEANED: true
+UX_OPS_07D2_SETUP: temporário limpo
+next-env.d.ts: OK
+tsconfig.json: OK

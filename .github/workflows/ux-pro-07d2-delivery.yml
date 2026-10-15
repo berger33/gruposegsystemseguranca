@@ -1,0 +1,24 @@
+name: UX-PRO-07D-2 ciencia de escala
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/admin/operacao/**'
+      - 'tests/ux-ops-workspace.integration.test.mjs'
+      - 'scripts/qa-ux-pro-07d2-postgres.mjs'
+      - '.github/workflows/ux-pro-07d2-delivery.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+      - name: PostgreSQL descartavel, HTTP real, Chromium e auditoria TAP (minimo 27)
+        run: node scripts/qa-ux-pro-07d2-postgres.mjs

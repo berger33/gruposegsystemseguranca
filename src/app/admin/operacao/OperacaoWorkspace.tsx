@@ -360,6 +360,10 @@ export default function OperacaoWorkspace() {
   const [calendarView, setCalendarView] = useState<"posto" | "equipe" | "pessoa">("posto");
   const [ackMessage, setAckMessage] = useState("");
   const [ackError, setAckError] = useState<OpsErrorDescriptor | null>(null);
+  // UX-PRO-07D-2: o envio é serializado; sua confirmação não implica leitura atual.
+  const ackLock = useRef(false);
+  const [ackPending, setAckPending] = useState<{ versionId: string; phase: "sending" | "reading" } | null>(null);
+  const [ackReadError, setAckReadError] = useState<OpsErrorDescriptor | null>(null);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [coverages, setCoverages] = useState<CoverageRequest[]>([]);
   const [handovers, setHandovers] = useState<Handover[]>([]);
@@ -477,6 +481,7 @@ export default function OperacaoWorkspace() {
     setDetailError(null);
     setAckMessage("");
     setAckError(null);
+    setAckReadError(null);
     setCalendarView("posto");
     const [entryData, ackData, historyData] = await Promise.all([
       opsReadList<ScheduleEntry>(`/api/ops/schedule-entries?version_id=${version.id}`, "entries"),
@@ -503,23 +508,62 @@ export default function OperacaoWorkspace() {
     setDetailLoading(false);
   }
 
+  async function readAcknowledgments(versionId: string, requestId: number) {
+    const data = await opsReadList<ScheduleAck>(`/api/ops/schedule-acks?version_id=${versionId}`, "acknowledgments");
+    // A mesma guarda do detalhe protege mensagens e reconciliação da escrita.
+    if (detailRequest.current !== requestId) return;
+    if (data.ok) {
+      setScheduleAcks(data.data);
+      setAckReadError(null);
+    } else if (data.error.status === 401 || data.error.status === 403) {
+      setScheduleEntries([]);
+      setScheduleAcks([]);
+      setScheduleHistory([]);
+      setDetailError(data.error);
+    } else {
+      // Preserva a última lista conhecida, mas não a apresenta como atual.
+      setAckReadError(data.error);
+    }
+  }
+
+  async function retryAcknowledgments() {
+    if (!selectedVersion || ackLock.current) return;
+    ackLock.current = true;
+    const versionId = selectedVersion.id;
+    const requestId = detailRequest.current;
+    setAckPending({ versionId, phase: "reading" });
+    try { await readAcknowledgments(versionId, requestId); }
+    finally { ackLock.current = false; setAckPending(null); }
+  }
+
   async function acknowledgeSchedule(employeeId: string, employeeName: string) {
-    if (!selectedVersion) return;
+    if (!selectedVersion || ackLock.current || ackReadError) return;
+    // Ref antes do primeiro await: também cobre cliques antes de novo render.
+    ackLock.current = true;
+    const versionId = selectedVersion.id;
+    const requestId = detailRequest.current;
+    setAckPending({ versionId, phase: "sending" });
     setAckMessage("");
     setAckError(null);
-    const result = await opsRequest<{ acknowledgment?: ScheduleAck }>("/api/ops/schedule-acks", {
-      method: "POST",
-      body: JSON.stringify({ version_id: selectedVersion.id, employee_id: employeeId }),
-    });
-    if (result.ok) {
-      setAckMessage(`Ciência registrada para ${employeeName}.`);
-    } else if (result.error.code === "duplicate_ack") {
-      setAckMessage(`Ciência já registrada para ${employeeName} — segunda ciência não duplica efeito.`);
-    } else {
-      setAckError(result.error);
+    try {
+      const result = await opsRequest<{ acknowledgment?: ScheduleAck }>("/api/ops/schedule-acks", {
+        method: "POST",
+        body: JSON.stringify({ version_id: versionId, employee_id: employeeId }),
+      });
+      if (detailRequest.current !== requestId) return;
+      if (result.ok) {
+        setAckMessage(`Ciência registrada para ${employeeName}.`);
+      } else if (result.error.code === "duplicate_ack") {
+        setAckMessage(`Ciência já registrada para ${employeeName} — segunda ciência não duplica efeito.`);
+      } else {
+        setAckError(result.error);
+      }
+      setAckPending({ versionId, phase: "reading" });
+      await readAcknowledgments(versionId, requestId);
+    } finally {
+      ackLock.current = false;
+      setAckPending(null);
     }
-    const ackData = await opsRequest<{ acknowledgments?: ScheduleAck[] }>(`/api/ops/schedule-acks?version_id=${selectedVersion.id}`);
-    if (ackData.ok) setScheduleAcks(ackData.data.acknowledgments || []);
   }
 
   function onTabKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
@@ -631,6 +675,9 @@ export default function OperacaoWorkspace() {
               onAcknowledge={(employeeId, employeeName) => { void acknowledgeSchedule(employeeId, employeeName); }}
               ackMessage={ackMessage}
               ackError={ackError}
+              ackPending={ackPending}
+              ackReadError={ackReadError}
+              onRetryAcknowledgments={() => { void retryAcknowledgments(); }}
             />
           ) : null}
 
@@ -1109,7 +1156,7 @@ function DimensioningPanel({
 
 function SchedulesPanel({
   scheduleVersions, selectedVersion, scheduleEntries, scheduleAcks, scheduleHistory, calendarView, setCalendarView,
-  loading, error, onRetry, detailLoading, detailError, onSelectVersion, onAcknowledge, ackMessage, ackError,
+  loading, error, onRetry, detailLoading, detailError, onSelectVersion, onAcknowledge, ackMessage, ackError, ackPending, ackReadError, onRetryAcknowledgments,
 }: {
   scheduleVersions: ScheduleVersion[]; selectedVersion: ScheduleVersion | null; scheduleEntries: ScheduleEntry[];
   scheduleAcks: ScheduleAck[]; scheduleHistory: ScheduleHistoryItem[]; calendarView: "posto" | "equipe" | "pessoa";
@@ -1117,6 +1164,8 @@ function SchedulesPanel({
   onRetry: () => void; detailLoading: boolean; detailError: OpsErrorDescriptor | null;
   onSelectVersion: (version: ScheduleVersion) => void; onAcknowledge: (employeeId: string, employeeName: string) => void;
   ackMessage: string; ackError: OpsErrorDescriptor | null;
+  ackPending: { versionId: string; phase: "sending" | "reading" } | null;
+  ackReadError: OpsErrorDescriptor | null; onRetryAcknowledgments: () => void;
 }) {
   return (
     <>
@@ -1291,6 +1340,17 @@ function SchedulesPanel({
                         Ciência registrada pela interface para a versão selecionada. A segunda ciência do mesmo
                         profissional na mesma versão é rejeitada sem duplicar efeito — o banco garante e a tela mostra.
                       </p>
+                      {ackPending ? (
+                        <UiState variant="loading"
+                          title={ackPending.versionId !== selectedVersion.id ? "Há uma ciência em andamento em outra seleção" : ackPending.phase === "sending" ? "Registrando ciência…" : "Conferindo ciências…"}
+                          detail="Aguarde a conclusão. Nenhum envio é repetido automaticamente; consultar a lista não envia outra ciência." />
+                      ) : null}
+                      {ackReadError ? (
+                        <UiState variant={opsErrorVariant(ackReadError)} title="A lista de ciências não foi atualizada"
+                          detail={`A última lista conhecida pode estar desatualizada. ${ackReadError.detail} ${opsErrorFootnote(ackReadError)}`}
+                          retryLabel={ackReadError.canRetry && !ackPending ? "Consultar ciências novamente" : undefined}
+                          onRetry={ackReadError.canRetry && !ackPending ? onRetryAcknowledgments : undefined} />
+                      ) : null}
                       {employees.length === 0 ? (
                         <UiState variant="empty" title="Nenhum profissional com entrada nesta versão" detail="Ciência pressupõe escala publicada com entradas." />
                       ) : (
@@ -1317,7 +1377,7 @@ function SchedulesPanel({
                                     </td>
                                     <td>
                                       <div className={styles.actions}>
-                                        <button type="button" onClick={() => onAcknowledge(employee.employee_id, employee.employee_name || "profissional")}>
+                                        <button type="button" disabled={Boolean(ackPending || ackReadError)} onClick={() => onAcknowledge(employee.employee_id, employee.employee_name || "profissional")}>
                                           Registrar ciência
                                         </button>
                                       </div>
@@ -1332,6 +1392,8 @@ function SchedulesPanel({
                       {ackMessage ? <p className={styles.notice} role="status">{ackMessage}</p> : null}
                       {ackError ? (
                         <div className={`${styles.notice} ${styles.noticeError}`} role="alert">
+                          <strong>Não foi possível confirmar o registro</strong>
+                          <p className={styles.hint}>Confira a lista de ciências antes de decidir por um novo envio. Não repetimos o envio automaticamente.</p>
                           <strong>{ackError.title}</strong>
                           <p className={styles.hint}>{ackError.detail} {opsErrorFootnote(ackError)}</p>
                         </div>
