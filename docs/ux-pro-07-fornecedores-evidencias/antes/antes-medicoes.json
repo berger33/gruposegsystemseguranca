@@ -1,6 +1,6 @@
 {
-  "geradoPor": "npm run test:ux-supplier:pg contra a implementacao anterior (ba2a06f)",
-  "observacao": "Falha de casos novos contra a tela antiga; nao e regressao de gate herdado.",
+  "geradoPor": "npm run test:ux-supplier:pg executado contra a implementacao anterior (SHA-base ba2a06f)",
+  "observacao": "Falha de casos novos contra a tela antiga; nao e regressao de gate herdado. Casos 1 e 2 sao estaticos herdados; caso 3 prova autorizacao no servidor, preservada antes e depois.",
   "resumo": {
     "total": 10,
     "passaram": 3,
