@@ -236,13 +236,38 @@ async function capture(page, nome) {
 /**
  * Abre /admin/continuidade já autenticada, sem interceptar transporte algum.
  */
-async function abrir(browser, cookie, { width = 1440, height = 900 } = {}) {
+async function abrir(browser, cookie, { width = 1440, height = 900, malformedRoutes = [], failAfterFirstRoutes = [], failStatus = 503, failCode = 'continuity_unavailable' } = {}) {
   const context = await browser.newContext({ viewport: { width, height }, locale: 'pt-BR', timezoneId: 'America/Sao_Paulo' });
   const separador = cookie.indexOf('=');
   await context.addCookies([{ name: cookie.slice(0, separador), value: cookie.slice(separador + 1), url: baseUrl }]);
   const page = await context.newPage();
   page.setDefaultTimeout(45_000);
   page.setDefaultNavigationTimeout(120_000);
+  if (malformedRoutes.length || failAfterFirstRoutes.length) {
+    await page.addInitScript(({ malformed, failAfter, status, code }) => {
+      const original = window.fetch.bind(window);
+      const chamadas = new Map();
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : (input?.url || '');
+        if (malformed.some(route => url.includes(route))) {
+          return new Response(JSON.stringify({ unexpected: true }), {
+            status: 200, headers: { 'content-type': 'application/json' },
+          });
+        }
+        const alvoRecarga = failAfter.find(route => url.includes(route));
+        if (alvoRecarga) {
+          const n = (chamadas.get(alvoRecarga) || 0) + 1;
+          chamadas.set(alvoRecarga, n);
+          if (n > 1) {
+            return new Response(JSON.stringify({ error: code }), {
+              status, headers: { 'content-type': 'application/json' },
+            });
+          }
+        }
+        return original(input, init);
+      };
+    }, { malformed: malformedRoutes, failAfter: failAfterFirstRoutes, status: failStatus, code: failCode });
+  }
   await page.goto(`${baseUrl}/admin/continuidade`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('heading', { level: 1, name: 'Continuidade de negócios e contingência' }).waitFor();
   return { context, page };
@@ -532,6 +557,55 @@ test('idempotência real: replay com a mesma chave, 409 divergente, e falha não
 });
 
 // ------------------------------------------------------------- navegador (7)
+
+test('browser UX-PRO-07L: resposta 2xx sem items não vira lista vazia', opt, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrir(browser, adminCookie, {
+      malformedRoutes: ['/api/ext/continuity/plans'],
+    });
+    await abaPlanos(page).click();
+    const erro = page.locator('[data-testid="continuity-list"] [data-ui-state="error"]');
+    await erro.waitFor();
+    assert.match(await erro.textContent(), /não pôde ser lida/);
+    assert.equal(await page.locator('[data-testid="continuity-plan-card"]').count(), 0, '2xx inválido não pode render plano');
+    assert.equal(await page.locator('[data-testid="continuity-list"] [data-ui-state="empty"]').count(), 0, '2xx inválido não é vazio concluído');
+    await capture(page, 'continuidade-1440-resposta-invalida');
+    await context.close();
+  });
+});
+
+test('browser UX-PRO-07L: falha transitória de releitura preserva os planos lidos com hora', opt, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrir(browser, adminCookie, {
+      failAfterFirstRoutes: ['/api/ext/continuity/plans'], failStatus: 503, failCode: 'continuity_unavailable',
+    });
+    await abaPlanos(page).click();
+    await page.locator('[data-testid="continuity-plan-card"]').first().waitFor();
+    await page.getByRole('button', { name: 'Atualizar lista' }).click();
+    const faixa = page.locator('[data-testid="continuity-list-desatualizado"]');
+    await faixa.waitFor();
+    assert.match(await faixa.textContent(), /última leitura concluída/i);
+    assert.ok(await page.locator('[data-testid="continuity-plan-card"]').count() >= 1, 'o dado lido permanece visível na falha de releitura');
+    await capture(page, 'continuidade-1440-dado-preservado');
+    await context.close();
+  });
+});
+
+test('browser UX-PRO-07L: negativa após sucesso falha fechado, sem manter plano protegido', opt, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrir(browser, adminCookie, {
+      failAfterFirstRoutes: ['/api/ext/continuity/plans'], failStatus: 403, failCode: 'forbidden',
+    });
+    await abaPlanos(page).click();
+    await page.locator('[data-testid="continuity-plan-card"]').first().waitFor();
+    await page.getByRole('button', { name: 'Atualizar lista' }).click();
+    await page.locator('[data-testid="continuity-list"] [data-ui-state="denied"]').waitFor();
+    assert.equal(await page.locator('[data-testid="continuity-plan-card"]').count(), 0, 'negativa não pode manter plano protegido');
+    assert.equal(await page.locator('[data-testid="continuity-list-desatualizado"]').count(), 0, 'negativa não é dado preservado');
+    await capture(page, 'continuidade-1440-negativa-pos-sucesso');
+    await context.close();
+  });
+});
 
 test('browser: recusa 403 do servidor é estado NEGADO, nunca lista vazia nem falha', opt, async () => {
   await comNavegador(async browser => {
@@ -932,7 +1006,13 @@ test('browser: queda do servidor é dita como rede indisponível, nunca como lis
       assert.match(texto, /Rede indisponível/, 'a falha de transporte é nomeada');
       assert.match(texto, /Isto não é uma lista vazia/, 'a tela nega explicitamente a leitura vazia');
       assert.equal(await lista.locator('[data-ui-state="empty"]').count(), 0, 'falha de leitura nunca vira vazio');
-      assert.equal(await page.locator('[data-testid="continuity-plan-card"]').count(), 0, 'nenhum plano é inventado durante a falha');
+      // UX-PRO-07L (padrão das fatias 07A-07K, aprovado pelo proprietário):
+      // a falha transitória de releitura PRESERVA os planos já lidos, com a
+      // faixa de desatualização acima — não apaga nem inventa. A asserção
+      // anterior (0 cartões) media o comportamento pré-07L e foi substituída
+      // por esta, mais forte: exatamente os mesmos cartões de antes da queda.
+      assert.equal(await page.locator('[data-testid="continuity-plan-card"]').count(), antes, 'os planos lidos são preservados (nem apagados nem inventados) durante a falha');
+      assert.equal(await page.locator('[data-testid="continuity-list-desatualizado"]').count(), 1, 'a preservação é declarada na faixa de desatualização');
       assert.ok(await falha.locator('button').count() >= 1, 'falha transitória precisa oferecer nova tentativa');
 
       await capture(page, 'gate-falha-de-rede');
