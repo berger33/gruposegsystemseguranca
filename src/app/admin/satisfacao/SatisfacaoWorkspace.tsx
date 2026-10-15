@@ -70,7 +70,7 @@ import {
   PERIOD_NOT_MEASURED,
   type SatisfactionErrorDescriptor,
 } from "../../../lib/satisfaction-vocabulary.mjs";
-import { satisfactionRequest } from "../../../lib/satisfaction-request";
+import { satisfactionRequest, satisfactionRead, type SatisfactionResult } from "../../../lib/satisfaction-request";
 
 type Survey = {
   id: string;
@@ -165,11 +165,21 @@ type Detail = {
   events: EventRow[];
 };
 
-/** Estado honesto de uma leitura independente: nunca confunde os quatro casos. */
+/**
+ * Estado honesto de uma leitura independente (UX-PRO-07J): `ready` guarda a
+ * hora da última leitura concluída (`readAt`); releitura mantém o conteúdo
+ * com `refreshing`/`staleError`; negativa (401/403) falha fechado em `failed`.
+ */
 type Load<T> =
   | { phase: "loading" }
-  | { phase: "ready"; data: T }
+  | { phase: "ready"; data: T; readAt: string; refreshing?: boolean; staleError?: SatisfactionErrorDescriptor }
   | { phase: "failed"; error: SatisfactionErrorDescriptor };
+
+const isDenied = (error: SatisfactionErrorDescriptor) =>
+  error.status === 401 || error.status === 403 || error.kind === "denied";
+
+const readTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
 const TABS = [
   { id: "pesquisas", label: "Pesquisas e indicador" },
@@ -214,37 +224,75 @@ export default function SatisfacaoWorkspace() {
   // após falha, para a repetição ser segura, e só é descartada após sucesso.
   const keys = useRef<Record<string, string>>({});
 
-  const loadList = useCallback(async () => {
-    setList({ phase: "loading" });
-    const result = await satisfactionRequest<SurveyList>("/api/ext/satisfaction/surveys");
+  // UX-PRO-07J: forma canônica exigida no 2xx, preservação em falha
+  // transitória de releitura e negativa fail-closed — padrão 07F.
+  const applyRead = <T,>(
+    setter: (updater: (previous: Load<T> | null) => Load<T> | null) => void,
+    result: SatisfactionResult<T>,
+  ) => {
     if (!result.ok) {
-      // Falha de leitura é estado próprio. A lista anterior NÃO é mantida nem
-      // substituída por uma lista vazia, e nenhum indicador é renderizado.
-      setList({ phase: "failed", error: result.error });
+      setter(previous => {
+        if (previous?.phase === "ready" && !isDenied(result.error)) {
+          return { ...previous, refreshing: false, staleError: result.error };
+        }
+        return { phase: "failed", error: result.error };
+      });
       return;
     }
-    setList({ phase: "ready", data: result.data || {} });
+    setter(() => ({ phase: "ready", data: result.data, readAt: new Date().toISOString() }));
+  };
+
+  const beginRead = <T,>(
+    setter: (updater: (previous: Load<T> | null) => Load<T> | null) => void,
+  ) => {
+    setter(previous =>
+      previous?.phase === "ready"
+        ? { ...previous, refreshing: true, staleError: undefined }
+        : { phase: "loading" },
+    );
+  };
+
+  const loadList = useCallback(async () => {
+    beginRead<SurveyList>(updater => setList(previous => updater(previous) ?? { phase: "loading" }));
+    const result = await satisfactionRead<SurveyList>(
+      "/api/ext/satisfaction/surveys",
+      data => !!data && typeof data === "object" && Array.isArray((data as SurveyList).surveys),
+    );
+    applyRead<SurveyList>(updater => setList(previous => updater(previous) ?? { phase: "loading" }), result);
   }, []);
 
   const loadReferences = useCallback(async () => {
-    setReferences({ phase: "loading" });
-    const result = await satisfactionRequest<References>("/api/ext/satisfaction/references");
-    if (!result.ok) {
-      setReferences({ phase: "failed", error: result.error });
-      return;
-    }
-    setReferences({ phase: "ready", data: result.data || {} });
+    beginRead<References>(updater => setReferences(previous => updater(previous) ?? { phase: "loading" }));
+    const result = await satisfactionRead<References>(
+      "/api/ext/satisfaction/references",
+      data =>
+        !!data && typeof data === "object" &&
+        Array.isArray((data as References).accounts) &&
+        Array.isArray((data as References).targets) &&
+        Array.isArray((data as References).staff),
+    );
+    applyRead<References>(updater => setReferences(previous => updater(previous) ?? { phase: "loading" }), result);
   }, []);
+
+  // Preservação é POR PESQUISA: trocar de pesquisa descarta o detalhe anterior.
+  const detailFor = useRef("");
 
   const inspect = useCallback(async (id: string) => {
     setSelectedId(id);
-    setDetail({ phase: "loading" });
-    const result = await satisfactionRequest<Detail>(`/api/ext/satisfaction/surveys/${id}`);
-    if (!result.ok) {
-      setDetail({ phase: "failed", error: result.error });
-      return;
+    if (detailFor.current === id) {
+      beginRead<Detail>(updater => setDetail(updater));
+    } else {
+      detailFor.current = id;
+      setDetail({ phase: "loading" });
     }
-    setDetail({ phase: "ready", data: result.data });
+    const result = await satisfactionRead<Detail>(
+      `/api/ext/satisfaction/surveys/${id}`,
+      data =>
+        !!data && typeof data === "object" &&
+        !!(data as Detail).survey && typeof (data as Detail).survey === "object" &&
+        typeof (data as Detail).survey.id === "string",
+    );
+    applyRead<Detail>(updater => setDetail(updater), result);
   }, []);
 
   useEffect(() => {
@@ -361,6 +409,30 @@ export default function SatisfacaoWorkspace() {
     </div>
   );
 
+  // UX-PRO-07J: faixa de releitura — dado preservado, hora e repetição real.
+  const renderStale = <T,>(state: Load<T> | null, retry: () => void, testId: string) => {
+    if (!state || state.phase !== "ready") return null;
+    return (
+      <>
+        <p className={styles.hint} data-testid={`${testId}-leitura`}>
+          Última leitura concluída às {readTime(state.readAt)}.
+          {state.refreshing ? " Atualizando agora — o conteúdo exibido é o dessa leitura." : ""}
+        </p>
+        {state.staleError ? (
+          <div role="alert" data-testid={`${testId}-desatualizado`}>
+            <UiState
+              variant={satisfactionErrorVariant(state.staleError)}
+              title="A releitura falhou; o conteúdo abaixo é da última leitura concluída e pode estar desatualizado."
+              detail={`${state.staleError.detail} Última leitura concluída às ${readTime(state.readAt)}. ${satisfactionErrorFootnote(state.staleError)}`}
+              onRetry={state.staleError.canRetry ? retry : undefined}
+              retryLabel="Tentar a leitura de novo"
+            />
+          </div>
+        ) : null}
+      </>
+    );
+  };
+
   const surveys = list.phase === "ready" && Array.isArray(list.data.surveys) ? list.data.surveys : [];
   const aggregate = list.phase === "ready" ? list.data.aggregate || null : null;
   const accounts = references.phase === "ready" && Array.isArray(references.data.accounts) ? references.data.accounts : [];
@@ -439,6 +511,12 @@ export default function SatisfacaoWorkspace() {
             data-testid="satisfacao-surveys"
           >
             <h2 className={styles.panelTitle}>Pesquisas canônicas registradas</h2>
+            {renderStale(list, () => void loadList(), "satisfacao-surveys")}
+            {list.phase === "ready" ? (
+              <div className={styles.actions}>
+                <button type="button" onClick={() => void loadList()}>Reler as pesquisas</button>
+              </div>
+            ) : null}
             {list.phase === "loading" ? (
               <UiState variant="loading" title="Lendo as pesquisas canônicas…" detail="Nada é exibido antes de a leitura terminar." />
             ) : null}

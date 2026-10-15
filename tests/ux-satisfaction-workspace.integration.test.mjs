@@ -199,6 +199,7 @@ async function capture(page, nome) {
 async function abrir(browser, cookie, {
   width = 1440, height = 900, failRoutes = [], status = 503,
   code = 'satisfaction_journey_unavailable', presentAdminSession = false,
+  malformedRoutes = [], failAfterFirstRoutes = [],
 } = {}) {
   const context = await browser.newContext({ viewport: { width, height }, locale: 'pt-BR' });
   const separador = cookie.indexOf('=');
@@ -206,9 +207,10 @@ async function abrir(browser, cookie, {
   const page = await context.newPage();
   page.setDefaultTimeout(45_000);
   page.setDefaultNavigationTimeout(90_000);
-  if (failRoutes.length || presentAdminSession) {
-    await page.addInitScript(({ routes, failStatus, failCode, showAdminMenu }) => {
+  if (failRoutes.length || presentAdminSession || malformedRoutes.length || failAfterFirstRoutes.length) {
+    await page.addInitScript(({ routes, failStatus, failCode, showAdminMenu, malformed, failAfter }) => {
       const original = window.fetch.bind(window);
+      const chamadas = new Map();
       window.fetch = async (input, init) => {
         const url = typeof input === 'string' ? input : (input?.url || '');
         if (showAdminMenu && url.includes('/api/admin/session') && (!init?.method || init.method === 'GET')) {
@@ -217,14 +219,29 @@ async function abrir(browser, cookie, {
             { status: 200, headers: { 'content-type': 'application/json' } },
           );
         }
+        if (malformed.some(route => url.includes(route))) {
+          return new Response(JSON.stringify({ unexpected: true }), {
+            status: 200, headers: { 'content-type': 'application/json' },
+          });
+        }
         if (routes.some(route => url.includes(route))) {
           return new Response(JSON.stringify({ error: failCode }), {
             status: failStatus, headers: { 'content-type': 'application/json' },
           });
         }
+        const alvoRecarga = failAfter.find(route => url.includes(route));
+        if (alvoRecarga) {
+          const n = (chamadas.get(alvoRecarga) || 0) + 1;
+          chamadas.set(alvoRecarga, n);
+          if (n > 1) {
+            return new Response(JSON.stringify({ error: failCode }), {
+              status: failStatus, headers: { 'content-type': 'application/json' },
+            });
+          }
+        }
         return original(input, init);
       };
-    }, { routes: failRoutes, failStatus: status, failCode: code, showAdminMenu: presentAdminSession });
+    }, { routes: failRoutes, failStatus: status, failCode: code, showAdminMenu: presentAdminSession, malformed: malformedRoutes, failAfter: failAfterFirstRoutes });
   }
   await page.goto(`${baseUrl}/admin/satisfacao`, { waitUntil: 'domcontentloaded' });
   // O h1 real é a marca de que a página de produto montou. Esperar o contêiner
@@ -501,6 +518,52 @@ test('o corpo de cada transição é o que o servidor realmente lê', { skip: !R
     'aberta',
     'recusa de validação não pode mudar o estado do acompanhamento',
   );
+});
+
+test('browser UX-PRO-07J: resposta 2xx sem surveys não vira lista vazia', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrir(browser, tiCookie, {
+      malformedRoutes: ['/api/ext/satisfaction/surveys'],
+    });
+    const erro = page.locator('[data-testid="satisfacao-surveys-error"]');
+    await erro.waitFor();
+    assert.match(await erro.textContent(), /não pôde ser lida/);
+    assert.equal(await page.locator('[data-testid="satisfacao-surveys-table"]').count(), 0, '2xx inválido não pode render tabela vazia');
+    assert.equal(await page.locator('[data-testid="satisfacao-surveys"] [data-ui-state="empty"]').count(), 0, '2xx inválido não é vazio concluído');
+    await capture(page, 'satisfacao-1440-resposta-invalida');
+    await context.close();
+  });
+});
+
+test('browser UX-PRO-07J: falha transitória de releitura preserva as pesquisas lidas com hora', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrir(browser, tiCookie, {
+      failAfterFirstRoutes: ['/api/ext/satisfaction/surveys'], status: 503, code: 'satisfaction_journey_unavailable',
+    });
+    await page.locator('[data-testid="satisfacao-surveys-table"]').waitFor();
+    await page.getByRole('button', { name: 'Reler as pesquisas' }).click();
+    const faixa = page.locator('[data-testid="satisfacao-surveys-desatualizado"]');
+    await faixa.waitFor();
+    assert.match(await faixa.textContent(), /última leitura concluída/i);
+    assert.equal(await page.locator('[data-testid="satisfacao-surveys-table"]').count(), 1, 'o dado lido permanece visível na falha de releitura');
+    await capture(page, 'satisfacao-1440-dado-preservado');
+    await context.close();
+  });
+});
+
+test('browser UX-PRO-07J: negativa após sucesso falha fechado, sem manter pesquisa protegida', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrir(browser, tiCookie, {
+      failAfterFirstRoutes: ['/api/ext/satisfaction/surveys'], status: 403, code: 'forbidden_role',
+    });
+    await page.locator('[data-testid="satisfacao-surveys-table"]').waitFor();
+    await page.getByRole('button', { name: 'Reler as pesquisas' }).click();
+    await page.locator('[data-testid="satisfacao-surveys-error"] [data-ui-state="denied"]').waitFor();
+    assert.equal(await page.locator('[data-testid="satisfacao-surveys-table"]').count(), 0, 'negativa não pode manter a tabela protegida');
+    assert.equal(await page.locator('[data-testid="satisfacao-surveys-desatualizado"]').count(), 0, 'negativa não é dado preservado');
+    await capture(page, 'satisfacao-1440-negativa-pos-sucesso');
+    await context.close();
+  });
 });
 
 test('browser: recusa de papel vira estado NEGADO, nunca lista vazia', { skip: !RUN }, async () => {

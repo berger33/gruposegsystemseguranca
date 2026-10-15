@@ -1,0 +1,13 @@
+{
+  "fatia": "UX-PRO-07J",
+  "rota": "/admin/satisfacao",
+  "gate": "npm run test:ux-satisfaction:pg",
+  "resultado": "12/12 testes, 0 falhas, 0 pulados",
+  "casosNovos": [
+    "2xx sem surveys vira falha invalid_satisfaction_response, nunca lista vazia — satisfacao-1440-resposta-invalida.png",
+    "falha transitória 503 de releitura preserva a tabela lida com hora da última leitura concluída — satisfacao-1440-dado-preservado.png",
+    "negativa 403 após sucesso falha fechado, sem tabela protegida — satisfacao-1440-negativa-pos-sucesso.png"
+  ],
+  "problems": [],
+  "limites": "Sem captura nova 320/768/noite. Nenhuma validação manual ou aceite humano; nada declara conformidade WCAG."
+}
