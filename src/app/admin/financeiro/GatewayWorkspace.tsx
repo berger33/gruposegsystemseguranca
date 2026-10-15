@@ -1,6 +1,7 @@
 "use client";
 
 import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
+import { financeInvalidListMessage } from "../../../lib/finance-request";
 import { FormEvent, useEffect, useState } from "react";
 
 type Gateway = { id:string; name:string; gateway_code:string|null; gateway_type:string; status:string; environment:string; is_selected:boolean; is_sandbox:boolean; is_active:boolean; charge_enabled?:boolean; has_sandbox_secret?:boolean };
@@ -28,6 +29,30 @@ async function api(path:string, init?:RequestInit) {
   return data;
 }
 
+/**
+ * UX-PRO-07E-2 — leitura de lista com a chave canônica exigida.
+ *
+ * Reproduz EXATAMENTE o método, a URL e os cabeçalhos de `api` acima, que
+ * permanece intacto e continua servindo todas as escritas (incluindo a decisão
+ * de recusa por código em `simulateWebhook`). A única diferença: um 2xx sem a
+ * lista esperada (chave ausente, valor não-array ou corpo ilegível) lança
+ * falha declarada em vez de virar `[]`.
+ *
+ * O servidor garante a chave no 200 e devolve `[]` quando realmente não há
+ * registro (`src/server/fin-management-api.mjs:800,919,1080`), então o vazio
+ * legítimo continua sendo vazio concluído — só o vazio FALSO deixa de existir.
+ */
+async function apiList<T>(path: string, key: string): Promise<T[]> {
+  const response = await fetch(path, {
+    headers: { "Content-Type": "application/json" },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new FinanceApiError(typeof data.error === "string" ? data.error : null, response.status);
+  const list = data && typeof data === "object" ? (data as Record<string, unknown>)[key] : undefined;
+  if (!Array.isArray(list)) throw new Error(financeInvalidListMessage(response.status));
+  return list as T[];
+}
+
 export default function GatewayWorkspace() {
   const [gateways,setGateways] = useState<Gateway[]>([]);
   const [webhooks,setWebhooks] = useState<Webhook[]>([]);
@@ -39,15 +64,23 @@ export default function GatewayWorkspace() {
   const [reason,setReason] = useState("");
   const [gateway,setGateway] = useState({ name:"", gateway_code:"", gateway_type:"pix", idempotency_key:"" });
   const [charge,setCharge] = useState({ gateway_id:"", receivable_id:"", amount_cents:"", idempotency_key:"" });
+  // UX-PRO-07E-2: enquanto nenhuma leitura terminou com as três listas
+  // canônicas confirmadas, os vazios abaixo não podem afirmar ausência.
+  const [readConfirmed,setReadConfirmed] = useState(false);
 
   const run = async (fn:()=>Promise<void>) => { setBusy(true); setError(""); setNotice(""); try { await fn(); } catch(e) { setError(e instanceof Error?e.message:"Falha inesperada"); } finally { setBusy(false); } };
   // load() não usa run(): recarregar a lista não pode apagar o aviso da ação.
   const load = async () => {
     setLoading(true); setError("");
     try {
-      const [g,w,c] = await Promise.all([api("/api/fin/payment-gateways"), api("/api/fin/gateway-webhooks"), api("/api/fin/gateway-charges")]);
-      setGateways(g.gateways||[]); setWebhooks(w.webhooks||[]); setCharges(c.charges||[]);
-    } catch (e) { setError(e instanceof Error?e.message:"Falha ao carregar gateway"); }
+      const [nextGateways,nextWebhooks,nextCharges] = await Promise.all([
+        apiList<Gateway>("/api/fin/payment-gateways","gateways"),
+        apiList<Webhook>("/api/fin/gateway-webhooks","webhooks"),
+        apiList<Charge>("/api/fin/gateway-charges","charges"),
+      ]);
+      setGateways(nextGateways); setWebhooks(nextWebhooks); setCharges(nextCharges);
+      setReadConfirmed(true);
+    } catch (e) { setReadConfirmed(false); setError(e instanceof Error?e.message:"Falha ao carregar gateway"); }
     finally { setLoading(false); }
   };
   useEffect(()=>{ void load(); }, []);
@@ -117,7 +150,9 @@ export default function GatewayWorkspace() {
     </form>
     <label>Motivo da transição <input minLength={10} maxLength={1000} data-testid="fin12-reason" value={reason} onChange={e=>setReason(e.target.value)} placeholder="Motivo (10 a 1000 caracteres)"/></label>
     <table data-testid="fin12-gateways-table"><thead><tr><th>Gateway</th><th>Código</th><th>Tipo</th><th>Ambiente</th><th>Status</th><th>Cobrança liberada</th><th>Transição</th></tr></thead><tbody>
-      {gateways.length===0?<tr><td colSpan={7}>Nenhum gateway cadastrado.</td></tr>:gateways.map(item=>
+      {gateways.length===0?(readConfirmed
+        ? <tr><td colSpan={7}>Nenhum gateway cadastrado.</td></tr>
+        : <tr><td colSpan={7} data-testid="fin12-gateways-unavailable">Lista indisponível — a leitura não foi confirmada; não confundir com ausência de gateways.</td></tr>):gateways.map(item=>
         <tr key={item.id} data-testid={`fin12-gateway-${item.id}`}>
           <td>{item.name}</td><td>{item.gateway_code||"sem código"}</td><td>{item.gateway_type}</td><td>{item.environment}</td>
           <td data-testid={`fin12-gateway-status-${item.id}`}>{item.status}</td>
@@ -142,7 +177,9 @@ export default function GatewayWorkspace() {
       <button data-testid="fin12-charge-create" disabled={busy}>Criar cobrança</button>
     </form>
     <table data-testid="fin12-charges-table"><thead><tr><th>Protocolo</th><th>Valor</th><th>Simulada</th><th>Status</th><th>Conciliada</th><th>Simulador</th></tr></thead><tbody>
-      {charges.length===0?<tr><td colSpan={6}>Nenhuma cobrança.</td></tr>:charges.map(item=>
+      {charges.length===0?(readConfirmed
+        ? <tr><td colSpan={6}>Nenhuma cobrança.</td></tr>
+        : <tr><td colSpan={6} data-testid="fin12-charges-unavailable">Lista indisponível — a leitura não foi confirmada; não confundir com ausência de cobranças.</td></tr>):charges.map(item=>
         <tr key={item.id} data-testid={`fin12-charge-${item.id}`}>
           <td>{item.protocol}</td><td>{money(item.amount_cents)}</td><td>{item.simulated?"sintética":"NÃO SIMULADA"}</td>
           <td data-testid={`fin12-charge-status-${item.id}`}>{item.status}</td>
@@ -158,7 +195,9 @@ export default function GatewayWorkspace() {
 
     <h3>Webhooks recebidos</h3>
     <table data-testid="fin12-webhooks-table"><thead><tr><th>Evento</th><th>Assinatura</th><th>Status</th><th>Replays</th><th>Cobrança</th></tr></thead><tbody>
-      {webhooks.length===0?<tr><td colSpan={5}>Nenhum webhook recebido.</td></tr>:webhooks.map(item=>
+      {webhooks.length===0?(readConfirmed
+        ? <tr><td colSpan={5}>Nenhum webhook recebido.</td></tr>
+        : <tr><td colSpan={5} data-testid="fin12-webhooks-unavailable">Lista indisponível — a leitura não foi confirmada; não confundir com ausência de webhooks.</td></tr>):webhooks.map(item=>
         <tr key={item.id} data-testid={`fin12-webhook-${item.id}`}>
           <td>{item.event_type}</td>
           <td data-testid={`fin12-webhook-signature-${item.id}`}>{item.is_valid_signature?"válida":"inválida"}</td>

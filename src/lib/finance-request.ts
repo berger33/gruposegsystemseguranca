@@ -66,14 +66,18 @@ export type { FinanceErrorDescriptor };
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// UX-PRO-07E-2 (PENDENTE, fora desta fatia): a mesma classe de defeito — resposta
-// 2xx sem a lista canônica virando vazio falso — permanece em 8 arquivos da rota
-// (/admin/financeiro): FiscalWorkspace, GatewayWorkspace, ClosureWorkspace,
-// CommissionWorkspace, CostAllocationWorkspace, ExportWorkspace, ExpenseWorkspace
-// e ManagementResultsWorkspace (18 ocorrências). A classe D1 NÃO está fechada na
-// rota: somente os 5 arquivos do escopo 07E-1 aprovado pelo owner leem por
-// `financeReadList`/`requestList` validando a lista. Registro mantido também em
-// docs/UX-PRO-07E-1-RELATORIO-2026-10-15.md.
+// UX-PRO-07E-2 (implementada em 15/10/2026, a partir do registro desta linha):
+// a classe D1 — resposta 2xx sem a lista canônica virando vazio falso — passou a
+// ser fechada também nos 8 arquivos restantes de /admin/financeiro:
+// FiscalWorkspace, GatewayWorkspace, ClosureWorkspace, CommissionWorkspace,
+// CostAllocationWorkspace, ExportWorkspace, ExpenseWorkspace e
+// ManagementResultsWorkspace (18 ocorrências). Cada um ganhou um leitor local
+// que espelha o fetch já existente do arquivo (usado intacto pelas escritas) e
+// exige `Array.isArray(chave)` no 2xx, falhando com `invalid_finance_response`
+// quando a lista não vem. Com os 5 arquivos da UX-PRO-07E-1, a classe D1 está
+// fechada nos 13 arquivos de /admin/financeiro. Isto NÃO cobre os achados
+// E2-E9 nem os transversais do PR #229 — ver
+// docs/UX-PRO-07E-2-RELATORIO-2026-10-15.md para evidências e limites.
 // ---------------------------------------------------------------------------
 
 export const INVALID_FINANCE_RESPONSE = 'invalid_finance_response';

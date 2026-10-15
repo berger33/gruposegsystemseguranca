@@ -2,6 +2,7 @@
 import styles from "../../../components/ui/UiWorkspace.module.css";
 import { useCallback, useEffect, useState } from "react";
 import { financeErrorMessage, expenseStatusLabel } from "../../../lib/finance-vocabulary.mjs";
+import { financeInvalidListMessage } from "../../../lib/finance-request";
 
 type Expense = { id:string; protocol:string; expense_type:string; category:string; description:string; amount_cents:number; threshold_cents:number; status:"pendente"|"aprovado"|"rejeitado"|"cancelado"; requester_name:string; requester_identity:string; approver_name:string|null; evidence_file_name:string };
 type HistoryEntry={ id:string; previous_status:string|null; next_status:string; changed_by_identity:string; reason:string; authority_limit_cents:string|number|null; approver_identity:string|null; requester_identity:string|null };
@@ -15,6 +16,9 @@ const parseBrl = (text:string) => {
 export default function ExpenseWorkspace() {
   const [expenses,setExpenses]=useState<Expense[]>([]);
   const [history,setHistory]=useState<Record<string,HistoryEntry[]|undefined>>({});
+  // UX-PRO-07E-2: falha declarada da leitura sob demanda do histórico — nunca
+  // "Sem eventos." sobre uma resposta que não trouxe a lista canônica.
+  const [historyError,setHistoryError]=useState<Record<string,string>>({});
   const [historyOpen,setHistoryOpen]=useState<Record<string,boolean>>({});
   const [authority,setAuthority]=useState<{max_amount_cents:number;is_active:boolean;allow_self_approval:boolean}|null|undefined>(undefined);
   const [notice,setNotice]=useState("");
@@ -49,8 +53,20 @@ export default function ExpenseWorkspace() {
       if (!response.ok) throw new Error(financeErrorMessage(typeof body?.error === "string" ? body.error : null, response.status));
       return body;
     };
+    // UX-PRO-07E-2: mesma URL/cache/cabeçalhos do `readJson` acima (que continua
+    // servindo `expense-authorities`, objeto/null e fora da classe D1); a
+    // diferença é exigir a lista canônica em vez de trocá-la por `[]`. O servidor
+    // garante a chave no 200 (`src/server/fin-management-api.mjs:164`).
+    const readList = async <T,>(url:string,key:string):Promise<T[]> => {
+      const response = await fetch(url,{cache:"no-store"});
+      const body = await response.json().catch(()=>({}));
+      if (!response.ok) throw new Error(financeErrorMessage(typeof body?.error === "string" ? body.error : null, response.status));
+      const list = body && typeof body === "object" ? (body as Record<string,unknown>)[key] : undefined;
+      if (!Array.isArray(list)) throw new Error(financeInvalidListMessage(response.status));
+      return list as T[];
+    };
     const [lists,policy] = await Promise.allSettled([
-      readJson(`/api/fin/expenses${q?`?q=${encodeURIComponent(q)}`:""}`),
+      readList<Expense>(`/api/fin/expenses${q?`?q=${encodeURIComponent(q)}`:""}`,"expenses"),
       readJson(`/api/fin/expense-authorities`),
     ]);
     if (lists.status!=="fulfilled") {
@@ -58,7 +74,7 @@ export default function ExpenseWorkspace() {
       setLoading(false);
       return;
     }
-    setExpenses(lists.value.expenses ?? []);
+    setExpenses(lists.value);
     setSearchApplied(q);
     setError("");
     if (policy.status==="fulfilled") setAuthority(policy.value.authority ?? null);
@@ -68,8 +84,15 @@ export default function ExpenseWorkspace() {
   const loadHistory = useCallback(async (expenseId:string) => {
     const response=await fetch(`/api/fin/expense-history?expense_id=${expenseId}`,{cache:"no-store"});
     if (response.ok) {
-      const json=await response.json();
-      setHistory(h=>({...h,[expenseId]:json.history ?? []}));
+      const json=await response.json().catch(()=>({}));
+      // UX-PRO-07E-2: 2xx sem `history` array é falha declarada; o histórico
+      // permanece indefinido (nunca vira lista vazia) e a falha fica visível.
+      if (!Array.isArray(json?.history)) {
+        setHistoryError(h=>({...h,[expenseId]:financeInvalidListMessage(response.status)}));
+        return;
+      }
+      setHistory(h=>({...h,[expenseId]:json.history}));
+      setHistoryError(h=>{ if(!(expenseId in h)) return h; const next={...h}; delete next[expenseId]; return next; });
     }
   }, []);
 
@@ -149,10 +172,11 @@ export default function ExpenseWorkspace() {
               </button>
               {historyOpen[e.id] ? (
                 <div data-testid={`fin10-history-${e.id}`} className={styles.metaBlock}>
+                  {historyError[e.id]?<div role="alert" data-testid={`fin10-history-error-${e.id}`}>{historyError[e.id]}</div>:null}
                   {(history[e.id]||[]).map(h=>(
                     <div key={h.id}>{h.previous_status??"início"} → {h.next_status} por {h.changed_by_identity}: {h.reason}{h.authority_limit_cents!=null?` — limite aplicado ${brl(Number(h.authority_limit_cents))}`:""}</div>
                   ))}
-                  {(history[e.id]===undefined)?<div>Carregando histórico…</div>:history[e.id]!.length===0?<div>Sem eventos.</div>:null}
+                  {historyError[e.id]?null:(history[e.id]===undefined)?<div>Carregando histórico…</div>:history[e.id]!.length===0?<div>Sem eventos.</div>:null}
                 </div>
               ) : null}
             </li>

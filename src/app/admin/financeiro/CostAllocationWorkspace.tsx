@@ -2,6 +2,7 @@
 
 import styles from "../../../components/ui/UiWorkspace.module.css";
 import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
+import { financeInvalidListMessage } from "../../../lib/finance-request";
 import { FormEvent, useEffect, useState } from "react";
 
 type CostImport = {
@@ -29,12 +30,43 @@ async function request(path:string, init?:RequestInit) {
   return data;
 }
 
+/**
+ * UX-PRO-07E-2 — leitura de lista com a chave canônica exigida.
+ *
+ * Reproduz EXATAMENTE o método, a URL e os cabeçalhos de `request` acima, que
+ * permanece intacto e continua servindo todas as escritas. A única diferença:
+ * um 2xx sem a lista esperada (chave ausente, valor não-array ou corpo
+ * ilegível) lança falha declarada em vez de virar `[]`.
+ *
+ * O servidor garante a chave no 200 e devolve `[]` quando realmente não há
+ * registro (`src/server/fin-advanced-api.mjs:823,908`), então o vazio legítimo
+ * continua sendo vazio concluído — só o vazio FALSO deixa de existir.
+ */
+async function requestList<T>(path: string, key: string): Promise<T[]> {
+  const response = await fetch(path, {
+    headers: { "Content-Type": "application/json" },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(financeErrorMessage(typeof data.error === "string" ? data.error : null, response.status));
+  const list = data && typeof data === "object" ? (data as Record<string, unknown>)[key] : undefined;
+  if (!Array.isArray(list)) throw new Error(financeInvalidListMessage(response.status));
+  return list as T[];
+}
+
 export default function CostAllocationWorkspace() {
   const [imports,setImports] = useState<CostImport[]>([]); const [costs,setCosts] = useState<Cost[]>([]);
   const [importForm,setImportForm] = useState(initialImport); const [costForm,setCostForm] = useState(initialCost);
   const [busy,setBusy] = useState(false); const [error,setError] = useState(""); const [notice,setNotice] = useState("");
+  // UX-PRO-07E-2: enquanto nenhuma leitura terminou com as duas listas
+  // canônicas confirmadas, os vazios abaixo não podem afirmar ausência.
+  const [readConfirmed,setReadConfirmed] = useState(false);
   const run = async (operation:()=>Promise<void>) => { setBusy(true); setError(""); setNotice(""); try { await operation(); } catch(cause) { setError(cause instanceof Error?cause.message:"Falha inesperada"); } finally { setBusy(false); } };
-  const load = async () => { const [importData,costData] = await Promise.all([request("/api/fin/cost-imports"),request("/api/fin/costs")]); setImports(importData.imports||[]); setCosts(costData.costs||[]); };
+  const load = async () => {
+    try {
+      const [nextImports,nextCosts] = await Promise.all([requestList<CostImport>("/api/fin/cost-imports","imports"),requestList<Cost>("/api/fin/costs","costs")]);
+      setImports(nextImports); setCosts(nextCosts); setReadConfirmed(true);
+    } catch (cause) { setReadConfirmed(false); throw cause; }
+  };
   useEffect(()=>{ void run(load); },[]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const createImport = async (event:FormEvent) => { event.preventDefault(); await run(async()=>{
@@ -61,7 +93,9 @@ export default function CostAllocationWorkspace() {
       <label>Total de registros <input required type="number" min={0} data-testid="fin08-import-records" value={importForm.total_records} onChange={e=>setImportForm({...importForm,total_records:e.target.value})}/></label>
       <button data-testid="fin08-create-import" disabled={busy}>Registrar importação sintética</button>
     </form>
-    <table data-testid="fin08-imports"><thead><tr><th>Protocolo</th><th>Origem</th><th>Competência</th><th>Alocado</th><th>Registros</th></tr></thead><tbody>{imports.length===0?<tr><td colSpan={5}>Nenhuma importação.</td></tr>:imports.map(item=><tr key={item.id}><td>{item.protocol}</td><td>{item.source}</td><td>{String(item.competence_date).slice(0,10)}</td><td>{money(item.allocated_costs_cents)} / {money(item.total_costs_cents)}</td><td>{item.allocated_records} / {item.total_records}</td></tr>)}</tbody></table>
+    <table data-testid="fin08-imports"><thead><tr><th>Protocolo</th><th>Origem</th><th>Competência</th><th>Alocado</th><th>Registros</th></tr></thead><tbody>{imports.length===0?(readConfirmed
+      ? <tr><td colSpan={5}>Nenhuma importação.</td></tr>
+      : <tr><td colSpan={5} data-testid="fin08-imports-unavailable">Lista indisponível — a leitura não foi confirmada; não confundir com ausência de importações.</td></tr>):imports.map(item=><tr key={item.id}><td>{item.protocol}</td><td>{item.source}</td><td>{String(item.competence_date).slice(0,10)}</td><td>{money(item.allocated_costs_cents)} / {money(item.total_costs_cents)}</td><td>{item.allocated_records} / {item.total_records}</td></tr>)}</tbody></table>
 
     <form data-testid="fin08-cost-form" onSubmit={createCost} className={styles.stack}><h3>Alocar custo</h3>
       <label>Importação <select data-testid="fin08-cost-import" value={costForm.import_id} onChange={e=>selectImport(e.target.value)}><option value="">Custo manual sintético</option>{imports.map(item=><option key={item.id} value={item.id}>{item.protocol} · {item.source}</option>)}</select></label>
@@ -78,6 +112,8 @@ export default function CostAllocationWorkspace() {
       <label>Material/referência sintética <input maxLength={500} data-testid="fin08-cost-material" value={costForm.source_material} onChange={e=>setCostForm({...costForm,source_material:e.target.value})}/></label>
       <button data-testid="fin08-create-cost" disabled={busy}>Criar custo rateado</button>
     </form>
-    <table data-testid="fin08-cost-list"><thead><tr><th>Origem</th><th>Cliente / contrato / posto</th><th>Competência</th><th>Origem</th><th>Rateado</th><th>Regra</th></tr></thead><tbody>{costs.length===0?<tr><td colSpan={6}>Nenhum custo.</td></tr>:costs.map(cost=><tr key={cost.id}><td>{cost.cost_source}</td><td>{cost.client_name||"Cliente"} / {cost.contract_title||"Sem contrato"} / {cost.post_name||"Sem posto"}</td><td>{String(cost.competence_date).slice(0,10)}</td><td>{money(cost.source_amount_cents)}</td><td>{money(cost.amount_cents)} ({cost.rateio_percent}%)</td><td>{cost.rateio_rule}</td></tr>)}</tbody></table>
+    <table data-testid="fin08-cost-list"><thead><tr><th>Origem</th><th>Cliente / contrato / posto</th><th>Competência</th><th>Origem</th><th>Rateado</th><th>Regra</th></tr></thead><tbody>{costs.length===0?(readConfirmed
+      ? <tr><td colSpan={6}>Nenhum custo.</td></tr>
+      : <tr><td colSpan={6} data-testid="fin08-costs-unavailable">Lista indisponível — a leitura não foi confirmada; não confundir com ausência de custos.</td></tr>):costs.map(cost=><tr key={cost.id}><td>{cost.cost_source}</td><td>{cost.client_name||"Cliente"} / {cost.contract_title||"Sem contrato"} / {cost.post_name||"Sem posto"}</td><td>{String(cost.competence_date).slice(0,10)}</td><td>{money(cost.source_amount_cents)}</td><td>{money(cost.amount_cents)} ({cost.rateio_percent}%)</td><td>{cost.rateio_rule}</td></tr>)}</tbody></table>
   </section>;
 }
