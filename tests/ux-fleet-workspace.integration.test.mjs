@@ -196,6 +196,7 @@ async function capture(page, nome) {
 async function abrir(browser, cookie, {
   width = 1440, height = 900, failRoutes = [], status = 503,
   code = 'fleet_unavailable', presentAdminSession = false,
+  malformedRoutes = [], failAfterFirstRoutes = [],
 } = {}) {
   const context = await browser.newContext({ viewport: { width, height }, locale: 'pt-BR' });
   const separador = cookie.indexOf('=');
@@ -203,9 +204,10 @@ async function abrir(browser, cookie, {
   const page = await context.newPage();
   page.setDefaultTimeout(45_000);
   page.setDefaultNavigationTimeout(90_000);
-  if (failRoutes.length || presentAdminSession) {
-    await page.addInitScript(({ routes, failStatus, failCode, showAdminMenu }) => {
+  if (failRoutes.length || presentAdminSession || malformedRoutes.length || failAfterFirstRoutes.length) {
+    await page.addInitScript(({ routes, failStatus, failCode, showAdminMenu, malformed, failAfter }) => {
       const original = window.fetch.bind(window);
+      const chamadas = new Map();
       window.fetch = async (input, init) => {
         const url = typeof input === 'string' ? input : (input?.url || '');
         if (showAdminMenu && url.includes('/api/admin/session') && (!init?.method || init.method === 'GET')) {
@@ -214,14 +216,30 @@ async function abrir(browser, cookie, {
             { status: 200, headers: { 'content-type': 'application/json' } },
           );
         }
+        if (malformed.some(route => url.includes(route))) {
+          // UX-PRO-07F: 2xx bem-formado em JSON, mas sem a forma canônica.
+          return new Response(JSON.stringify({ unexpected: true }), {
+            status: 200, headers: { 'content-type': 'application/json' },
+          });
+        }
         if (routes.some(route => url.includes(route))) {
           return new Response(JSON.stringify({ error: failCode }), {
             status: failStatus, headers: { 'content-type': 'application/json' },
           });
         }
+        const alvoRecarga = failAfter.find(route => url.includes(route));
+        if (alvoRecarga) {
+          const n = (chamadas.get(alvoRecarga) || 0) + 1;
+          chamadas.set(alvoRecarga, n);
+          if (n > 1) {
+            return new Response(JSON.stringify({ error: failCode }), {
+              status: failStatus, headers: { 'content-type': 'application/json' },
+            });
+          }
+        }
         return original(input, init);
       };
-    }, { routes: failRoutes, failStatus: status, failCode: code, showAdminMenu: presentAdminSession });
+    }, { routes: failRoutes, failStatus: status, failCode: code, showAdminMenu: presentAdminSession, malformed: malformedRoutes, failAfter: failAfterFirstRoutes });
   }
   await page.goto(`${baseUrl}/admin/frota`, { waitUntil: 'domcontentloaded' });
   // O h1 real é a marca de que a página de produto montou. Esperar o contêiner
@@ -514,6 +532,56 @@ test('browser: falha de leitura não vira frota vazia nem custo zero', { skip: !
     assert.doesNotMatch(texto, /R\$\s?0,00/, 'falha nunca vira custo zero');
     assert.doesNotMatch(texto, /\b0 km\b/, 'falha nunca vira odômetro zero');
     await capture(page, 'desktop-frota-falha');
+    await context.close();
+  });
+});
+
+test('browser UX-PRO-07F: resposta 2xx sem a forma canônica não vira frota vazia', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrir(browser, tiCookie, {
+      malformedRoutes: ['/api/ext/fleet/vehicles'],
+    });
+    const erro = page.locator('[data-testid="frota-lista-erro"]');
+    await erro.waitFor();
+    const texto = await erro.textContent();
+    assert.match(texto, /não pôde ser lida/);
+    assert.match(texto, /\(invalid_fleet_response\)/);
+    assert.equal(await page.locator('[data-testid="frota-tabela"]').count(), 0, '2xx inválido não pode render tabela vazia');
+    assert.equal(await page.locator('[data-testid="frota-lista"] [data-ui-state="empty"]').count(), 0, '2xx inválido não é vazio concluído');
+    await capture(page, 'frota-1440-resposta-invalida');
+    await context.close();
+  });
+});
+
+test('browser UX-PRO-07F: falha transitória de releitura preserva a frota lida com hora e repetição', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrir(browser, tiCookie, {
+      failAfterFirstRoutes: ['/api/ext/fleet/vehicles'], status: 503, code: 'fleet_unavailable',
+    });
+    await page.locator('[data-testid="frota-tabela"]').waitFor();
+    await page.getByRole('button', { name: 'Reler a frota canônica' }).click();
+    const faixa = page.locator('[data-testid="frota-lista-desatualizado"]');
+    await faixa.waitFor();
+    const texto = await faixa.textContent();
+    assert.match(texto, /última leitura concluída/i);
+    assert.match(texto, /pode estar desatualizado/);
+    assert.equal(await page.locator('[data-testid="frota-tabela"]').count(), 1, 'o dado lido permanece visível na falha de releitura');
+    await capture(page, 'frota-1440-dado-preservado');
+    await context.close();
+  });
+});
+
+test('browser UX-PRO-07F: negativa após sucesso falha fechado, sem manter veículo protegido', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrir(browser, tiCookie, {
+      failAfterFirstRoutes: ['/api/ext/fleet/vehicles'], status: 403, code: 'forbidden_role',
+    });
+    await page.locator('[data-testid="frota-tabela"]').waitFor();
+    await page.getByRole('button', { name: 'Reler a frota canônica' }).click();
+    await page.locator('[data-testid="frota-lista-erro"] [data-ui-state="denied"]').waitFor();
+    assert.equal(await page.locator('[data-testid="frota-tabela"]').count(), 0, 'negativa não pode manter a tabela protegida');
+    assert.equal(await page.locator('[data-testid="frota-lista-desatualizado"]').count(), 0, 'negativa não é dado preservado');
+    await capture(page, 'frota-1440-negativa-pos-sucesso');
     await context.close();
   });
 });

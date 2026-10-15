@@ -64,3 +64,51 @@ export async function fleetRequest<T = unknown>(
 }
 
 export type { FleetErrorDescriptor };
+
+// ---------------------------------------------------------------------------
+// UX-PRO-07F — leitura honesta: resposta 2xx sem a forma canônica nunca é
+// ausência de registro, frota vazia ou dossiê vazio.
+//
+// `fleetRequest` acima permanece INTACTO (mesma URL, método, corpo, cabeçalhos,
+// `credentials: 'same-origin'` e `cache: 'no-store'`); o que segue é
+// acrescentado ao lado, sem alterar o comportamento de nenhuma escrita.
+//
+// O código abaixo é de diagnóstico DESTA tela — o servidor nunca o devolve —,
+// por isso NÃO entra em `fleet-vocabulary.mjs`, que só traduz códigos que o
+// servidor de frota realmente devolve. Mesma decisão da UX-PRO-07D-1 e da
+// UX-PRO-07E-1.
+// ---------------------------------------------------------------------------
+
+export const INVALID_FLEET_RESPONSE = 'invalid_fleet_response';
+
+/** Descritor de uma resposta 2xx que não trouxe a forma canônica esperada. */
+export function invalidFleetResponse(status: number): FleetErrorDescriptor {
+  return {
+    kind: 'retry',
+    title: 'A resposta da frota não pôde ser lida',
+    detail: 'O servidor respondeu sem os dados esperados. Isto não significa que não existam veículos, histórico ou regras registradas.',
+    code: INVALID_FLEET_RESPONSE,
+    status,
+    canRetry: true,
+  };
+}
+
+/**
+ * Leitura validada: mesma chamada de `fleetRequest` (que continua fazendo o
+ * fetch); a única diferença é exigir a forma canônica `isValid` na resposta
+ * 2xx, em vez de trocá-la por `{}`/`[]`. O servidor garante a forma no 200
+ * (ex.: `vehicles`/`fleet_registered` em `src/server/ext-fleet-api.mjs:290` e
+ * `rules` em `:814`), então o vazio legítimo continua sendo vazio concluído —
+ * apenas o vazio FALSO deixa de existir.
+ */
+export async function fleetRead<T>(
+  url: string,
+  isValid: (data: unknown) => boolean,
+): Promise<FleetResult<T>> {
+  const result = await fleetRequest<T>(url);
+  if (!result.ok) return result;
+  if (!isValid(result.data)) {
+    return { ok: false, status: result.status, error: invalidFleetResponse(result.status), payload: result.data };
+  }
+  return result;
+}

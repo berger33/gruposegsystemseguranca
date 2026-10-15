@@ -84,7 +84,7 @@ import {
   ABSENT,
   type FleetErrorDescriptor,
 } from "../../../lib/fleet-vocabulary.mjs";
-import { fleetRequest } from "../../../lib/fleet-request";
+import { fleetRequest, fleetRead, type FleetResult } from "../../../lib/fleet-request";
 
 type Vehicle = {
   id: string;
@@ -175,11 +175,25 @@ type Dossier = {
 
 type RulesResponse = { rules?: MaintenanceRule[]; source?: string | null; base_date?: string | null };
 
-/** Estado honesto de uma leitura independente: nunca confunde os quatro casos. */
+/**
+ * Estado honesto de uma leitura independente (UX-PRO-07F): nunca confunde os
+ * casos. `ready` guarda a hora da última leitura concluída (`readAt`); uma
+ * releitura mantém o conteúdo com `refreshing` e, se falhar de forma
+ * transitória, com `staleError` — sem esconder o que já foi lido. Negativa
+ * (401/403) nunca carrega dado anterior: falha fechado em `failed`.
+ */
 type Load<T> =
   | { phase: "loading" }
-  | { phase: "ready"; data: T }
+  | { phase: "ready"; data: T; readAt: string; refreshing?: boolean; staleError?: FleetErrorDescriptor }
   | { phase: "failed"; error: FleetErrorDescriptor };
+
+/** Negativa de autenticação/autorização: o dado protegido não pode ficar. */
+const isDenied = (error: FleetErrorDescriptor) =>
+  error.status === 401 || error.status === 403 || error.kind === "denied";
+
+/** Hora local pt-BR da última leitura concluída, para exibição honesta. */
+const readTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
 const TABS = [
   { id: "frota", label: "Frota registrada" },
@@ -235,36 +249,78 @@ export default function FrotaWorkspace() {
   // após falha, para a repetição ser segura, e só é descartada após sucesso.
   const keys = useRef<Record<string, string>>({});
 
-  const loadList = useCallback(async () => {
-    setList({ phase: "loading" });
-    const result = await fleetRequest<VehiclesResponse>("/api/ext/fleet/vehicles");
+  // UX-PRO-07F: as três leituras exigem a forma canônica no 2xx, preservam o
+  // dado lido em falha transitória de releitura (com `staleError` e `readAt`)
+  // e falham fechado em negativa — sem nunca virar vazio falso.
+  const applyRead = <T,>(
+    setter: (updater: (previous: Load<T> | null) => Load<T> | null) => void,
+    result: FleetResult<T>,
+  ) => {
     if (!result.ok) {
-      // Falha de leitura é estado próprio. A lista anterior NÃO é mantida nem
-      // substituída por uma lista vazia, e nenhum indicador é renderizado.
-      setList({ phase: "failed", error: result.error });
+      setter(previous => {
+        if (previous?.phase === "ready" && !isDenied(result.error)) {
+          return { ...previous, refreshing: false, staleError: result.error };
+        }
+        return { phase: "failed", error: result.error };
+      });
       return;
     }
-    setList({ phase: "ready", data: result.data || {} });
+    setter(() => ({ phase: "ready", data: result.data, readAt: new Date().toISOString() }));
+  };
+
+  const beginRead = <T,>(
+    setter: (updater: (previous: Load<T> | null) => Load<T> | null) => void,
+  ) => {
+    setter(previous =>
+      previous?.phase === "ready"
+        ? { ...previous, refreshing: true, staleError: undefined }
+        : { phase: "loading" },
+    );
+  };
+
+  const loadList = useCallback(async () => {
+    beginRead<VehiclesResponse>(updater => setList(previous => updater(previous) ?? { phase: "loading" }));
+    const result = await fleetRead<VehiclesResponse>(
+      "/api/ext/fleet/vehicles",
+      data => !!data && typeof data === "object" && Array.isArray((data as VehiclesResponse).vehicles),
+    );
+    applyRead<VehiclesResponse>(updater => setList(previous => updater(previous) ?? { phase: "loading" }), result);
   }, []);
 
+  // Preservação é POR VEÍCULO: trocar de veículo descarta o dossiê/regras do
+  // anterior (nunca exibe dado de outro veículo como se fosse do selecionado).
+  const dossierFor = useRef("");
+  const rulesFor = useRef("");
+
   const loadDossier = useCallback(async (id: string) => {
-    setDossier({ phase: "loading" });
-    const result = await fleetRequest<Dossier>(`/api/ext/fleet/vehicles/${id}`);
-    if (!result.ok) {
-      setDossier({ phase: "failed", error: result.error });
-      return;
+    if (dossierFor.current === id) {
+      beginRead<Dossier>(updater => setDossier(updater));
+    } else {
+      dossierFor.current = id;
+      setDossier({ phase: "loading" });
     }
-    setDossier({ phase: "ready", data: result.data });
+    const result = await fleetRead<Dossier>(
+      `/api/ext/fleet/vehicles/${id}`,
+      data =>
+        !!data && typeof data === "object" &&
+        !!(data as Dossier).vehicle && typeof (data as Dossier).vehicle === "object" &&
+        typeof (data as Dossier).vehicle.id === "string",
+    );
+    applyRead<Dossier>(updater => setDossier(updater), result);
   }, []);
 
   const loadRules = useCallback(async (id: string) => {
-    setRules({ phase: "loading" });
-    const result = await fleetRequest<RulesResponse>(`/api/ext/fleet/vehicles/${id}/maintenance-rules`);
-    if (!result.ok) {
-      setRules({ phase: "failed", error: result.error });
-      return;
+    if (rulesFor.current === id) {
+      beginRead<RulesResponse>(updater => setRules(updater));
+    } else {
+      rulesFor.current = id;
+      setRules({ phase: "loading" });
     }
-    setRules({ phase: "ready", data: result.data || {} });
+    const result = await fleetRead<RulesResponse>(
+      `/api/ext/fleet/vehicles/${id}/maintenance-rules`,
+      data => !!data && typeof data === "object" && Array.isArray((data as RulesResponse).rules),
+    );
+    applyRead<RulesResponse>(updater => setRules(updater), result);
   }, []);
 
   const inspect = useCallback(async (id: string) => {
@@ -471,6 +527,31 @@ export default function FrotaWorkspace() {
     </div>
   );
 
+  // UX-PRO-07F: faixa de releitura — dado preservado, possivelmente
+  // desatualizado, com a hora da última leitura concluída e repetição real.
+  const renderStale = <T,>(state: Load<T> | null, retry: () => void, testId: string) => {
+    if (!state || state.phase !== "ready") return null;
+    return (
+      <>
+        <p className={styles.hint} data-testid={`${testId}-leitura`}>
+          Última leitura concluída às {readTime(state.readAt)}.
+          {state.refreshing ? " Atualizando agora — o conteúdo exibido é o dessa leitura." : ""}
+        </p>
+        {state.staleError ? (
+          <div role="alert" data-testid={`${testId}-desatualizado`}>
+            <UiState
+              variant={fleetErrorVariant(state.staleError)}
+              title="A releitura falhou; o conteúdo abaixo é da última leitura concluída e pode estar desatualizado."
+              detail={`${state.staleError.detail} Última leitura concluída às ${readTime(state.readAt)}. ${fleetErrorFootnote(state.staleError)}`}
+              onRetry={state.staleError.canRetry ? retry : undefined}
+              retryLabel="Tentar a leitura de novo"
+            />
+          </div>
+        ) : null}
+      </>
+    );
+  };
+
   const semVeiculo = (
     <UiState
       variant="empty"
@@ -573,6 +654,7 @@ export default function FrotaWorkspace() {
             data-testid="frota-lista"
           >
             <h2 className={styles.panelTitle}>Veículos registrados no backend canônico</h2>
+            {renderStale(list, () => void loadList(), "frota-lista")}
             {list.phase === "loading" ? (
               <UiState variant="loading" title="Lendo a frota canônica…" detail="Nada é exibido antes de a leitura terminar." />
             ) : null}
@@ -1193,6 +1275,7 @@ export default function FrotaWorkspace() {
             {/* LEITURA INDEPENDENTE: o histórico de regras vem do GET da rota
                 de regras, não do dossiê. Falhar aqui não apaga o dossiê. */}
             {!selectedId ? semVeiculo : null}
+            {renderStale(rules, () => { if (selectedId) void loadRules(selectedId); }, "frota-regras")}
             {selectedId && (!rules || rules.phase === "loading") ? (
               <UiState variant="loading" title="Lendo as regras registradas deste veículo…" detail="Nada é exibido antes de a leitura terminar." />
             ) : null}
