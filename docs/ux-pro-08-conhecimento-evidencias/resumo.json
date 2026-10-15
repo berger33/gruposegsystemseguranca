@@ -142,6 +142,704 @@
       "problems": [],
       "overflowDocumentoPx": 0,
       "menorAlvoPx": 44
+    },
+    {
+      "stage": "ux-pro-08d",
+      "route": "/admin/conhecimento",
+      "role": "admin",
+      "viewport": "320x780",
+      "screenshot": "docs/ux-pro-08-conhecimento-evidencias/08d-w320-escuro-conhecimento.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "GrupoSEG System",
+        "outline": "auto"
+      },
+      "keyboardSteps": [
+        {
+          "key": "Tab (primeiro)",
+          "tag": "a",
+          "target": "GrupoSEG System",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 144,
+          "height": 48
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Menu",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 84,
+          "height": 38
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Ativar modo dia",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(169, 198, 230, 0.38)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 110,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Sair",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 65,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 32,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 35,
+          "height": 19
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Procedimentos",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 268,
+          "height": 44
+        },
+        {
+          "key": "ArrowRight",
+          "tag": "button",
+          "target": "Detalhe e versões",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 268,
+          "height": 44
+        },
+        {
+          "key": "End",
+          "tag": "button",
+          "target": "Novo POP",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 268,
+          "height": 44
+        },
+        {
+          "key": "Home",
+          "tag": "button",
+          "target": "Procedimentos",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 268,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "section",
+          "target": "knowledge-articles",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(53, 73, 96)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 268,
+          "height": 577
+        }
+      ],
+      "keyboardActions": [
+        "tablist: ArrowRight, End e Home alteram seleção e foco"
+      ],
+      "percursoTeclado": [
+        "Tab (primeiro): GrupoSEG System",
+        "Tab: Menu",
+        "Tab: Ativar modo dia",
+        "Tab: Sair",
+        "Tab: Início",
+        "Tab: Início",
+        "Tab: Procedimentos",
+        "ArrowRight: Detalhe e versões",
+        "End: Novo POP",
+        "Home: Procedimentos",
+        "Tab: knowledge-articles"
+      ],
+      "keyboardProblems": [],
+      "theme": {
+        "requested": "escuro",
+        "actual": "escuro",
+        "adminTheme": "night",
+        "body": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)"
+        },
+        "surface": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(229, 237, 247)"
+        },
+        "scope": "staff"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08d",
+      "route": "/admin/conhecimento",
+      "role": "admin",
+      "viewport": "390x844",
+      "screenshot": "docs/ux-pro-08-conhecimento-evidencias/08d-w390-escuro-conhecimento.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "GrupoSEG System",
+        "outline": "auto"
+      },
+      "keyboardSteps": [
+        {
+          "key": "Tab (primeiro)",
+          "tag": "a",
+          "target": "GrupoSEG System",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 144,
+          "height": 48
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Menu",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 84,
+          "height": 38
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Ativar modo dia",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(169, 198, 230, 0.38)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 110,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Sair",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 65,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 32,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 35,
+          "height": 19
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Procedimentos",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 335,
+          "height": 44
+        },
+        {
+          "key": "ArrowRight",
+          "tag": "button",
+          "target": "Detalhe e versões",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 335,
+          "height": 44
+        },
+        {
+          "key": "End",
+          "tag": "button",
+          "target": "Novo POP",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 335,
+          "height": 44
+        },
+        {
+          "key": "Home",
+          "tag": "button",
+          "target": "Procedimentos",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 335,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "section",
+          "target": "knowledge-articles",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": false,
+          "border": "rgb(53, 73, 96)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 335,
+          "height": 577
+        }
+      ],
+      "keyboardActions": [
+        "tablist: ArrowRight, End e Home alteram seleção e foco"
+      ],
+      "keyboardProblems": [
+        "teclado: knowledge-articles: integralmente visível=false, foco=true"
+      ],
+      "theme": {
+        "requested": "escuro",
+        "actual": "escuro",
+        "adminTheme": "night",
+        "body": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)"
+        },
+        "surface": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(229, 237, 247)"
+        },
+        "scope": "staff"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08d",
+      "route": "/admin/conhecimento",
+      "role": "admin",
+      "viewport": "1440x900",
+      "screenshot": "docs/ux-pro-08-conhecimento-evidencias/08d-w1440-escuro-conhecimento.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "GrupoSEG System",
+        "outline": "auto"
+      },
+      "keyboardSteps": [
+        {
+          "key": "Tab (primeiro)",
+          "tag": "a",
+          "target": "GrupoSEG System",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 144,
+          "height": 48
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Ativar modo dia",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(169, 198, 230, 0.38)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 110,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Sair",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 65,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 45
+        },
+        {
+          "key": "Tab",
+          "tag": "input",
+          "target": "input",
+          "visible": true,
+          "focusVisible": false,
+          "fullyVisible": true,
+          "border": "rgb(53, 73, 96)",
+          "shadow": "none",
+          "outline": "0px none rgb(149, 202, 255)",
+          "width": 177,
+          "height": 24
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Visão e pendências3",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Clientes e comercial6",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Entrega de serviços8",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Pessoas1",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Financeiro e conformidade4",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 60
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Portais1",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Sistema2",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Conhecimento1",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Base de conhecimento",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(182, 210, 250)",
+          "shadow": "rgb(146, 189, 242) 3px 0px 0px 0px inset",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 205,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 32,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 35,
+          "height": 19
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Procedimentos",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 143,
+          "height": 44
+        },
+        {
+          "key": "ArrowRight",
+          "tag": "button",
+          "target": "Detalhe e versões",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 163,
+          "height": 44
+        },
+        {
+          "key": "End",
+          "tag": "button",
+          "target": "Novo POP",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 104,
+          "height": 44
+        },
+        {
+          "key": "Home",
+          "tag": "button",
+          "target": "Procedimentos",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 143,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "section",
+          "target": "knowledge-articles",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(53, 73, 96)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 1028,
+          "height": 349
+        }
+      ],
+      "keyboardActions": [
+        "tablist: ArrowRight, End e Home alteram seleção e foco"
+      ],
+      "keyboardProblems": [
+        "teclado: input: integralmente visível=true, foco=false"
+      ],
+      "theme": {
+        "requested": "escuro",
+        "actual": "escuro",
+        "adminTheme": "night",
+        "body": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)"
+        },
+        "surface": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(229, 237, 247)"
+        },
+        "scope": "staff"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
     }
-  ]
+  ],
+  "measurements08d": {
+    "stage": "ux-pro-08d",
+    "generatedBy": "scripts/ux-evidence-capture.mjs",
+    "baseMain": "8dfbd7e451787dcf6f56e93b81d8e4edb26ceda5",
+    "reconciledMain": "3d807a420db6c63c3f754ae02144053e29da1469",
+    "date": "2026-10-15",
+    "note": "Complemento: noite 320/390/1440. Capturado antes do merge concorrente #247; código de produto idêntico, metadados e capturas da main preservados."
+  }
 }

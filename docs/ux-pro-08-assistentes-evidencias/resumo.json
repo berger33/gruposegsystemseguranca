@@ -26,7 +26,7 @@
     "ai-rag-widget-pg": "26/26 pass, 0 fail, 0 skipped, 0 todo"
   },
   "reconciliacaoContagem08b": "A UX-PRO-08B havia gravado 12 arquivos .png e 1 resumo.json (= 13 arquivos na pasta, registrados anteriormente como \"13 PNGs\"). Na UX-PRO-08D foram acrescentadas 17 capturas de larguras (320/390/768/1440), tema noite (768px nas duas rotas staff) e percurso de teclado (390px nas três rotas privadas), totalizando 29 PNGs + resumo.json.",
-  "evidencias": "29 PNGs em docs/ux-pro-08-assistentes-evidencias/",
+  "evidencias": "35 PNGs em docs/ux-pro-08-assistentes-evidencias/ (29 preservados da #247 + 6 noturnos do complemento).",
   "limitacoes": [
     "Sem aceite humano; sem declaração WCAG integral",
     "Resíduo D5 medido e registrado nas entradas 768-noite: RagWidget.tsx usa paleta clara inline (RAG_COLORS) e sugestões compactas (~27px); no tema noite elementos sem cor inline herdam --ux-color-text claro sobre fundo claro do cartão (mantido sem reimplementar RagWidget.tsx)",
@@ -429,6 +429,1502 @@
       "overflowDocumentoPx": 0,
       "alturaEnvioPx": 64,
       "alturaSugestaoPx": 44
+    },
+    {
+      "stage": "ux-pro-08d",
+      "route": "/admin/marcelo/assistente",
+      "role": "marcelo",
+      "viewport": "320x780",
+      "screenshot": "docs/ux-pro-08-assistentes-evidencias/08d-w320-escuro-marcelo.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "GrupoSEG System",
+        "outline": "auto"
+      },
+      "keyboardSteps": [
+        {
+          "key": "Tab (primeiro)",
+          "tag": "a",
+          "target": "GrupoSEG System",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 144,
+          "height": 48
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Menu",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 84,
+          "height": 38
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Ativar modo dia",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(169, 198, 230, 0.38)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 110,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Sair",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 65,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 32,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Escopo declarado deste assistente",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 222,
+          "height": 19
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-0",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(124, 58, 237)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 180,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-1",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(124, 58, 237)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 158,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-2",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(124, 58, 237)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 181,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-3",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(124, 58, 237)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 181,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "textarea",
+          "target": "rag-question",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(203, 213, 225)",
+          "shadow": "rgba(0, 0, 0, 0.05) 0px 1px 2px 0px inset",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 222,
+          "height": 87
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-submit",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(53, 73, 96)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 222,
+          "height": 67
+        },
+        {
+          "key": "Shift+Tab",
+          "tag": "button",
+          "target": "rag-submit",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(53, 73, 96)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 222,
+          "height": 67
+        }
+      ],
+      "keyboardActions": [
+        "pergunta digitada e enviada por Tab/Enter; HTTP 200, zero fontes, modelo não chamado"
+      ],
+      "percursoTeclado": [
+        "Tab (primeiro): GrupoSEG System",
+        "Tab: Menu",
+        "Tab: Ativar modo dia",
+        "Tab: Sair",
+        "Tab: Início",
+        "Tab: Escopo declarado deste assistente",
+        "Tab: rag-suggestion-0",
+        "Tab: rag-suggestion-1",
+        "Tab: rag-suggestion-2",
+        "Tab: rag-suggestion-3",
+        "Tab: rag-question",
+        "Tab: rag-submit",
+        "Shift+Tab: rag-submit"
+      ],
+      "keyboardProblems": [],
+      "theme": {
+        "requested": "escuro",
+        "actual": "escuro",
+        "adminTheme": "night",
+        "body": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)"
+        },
+        "surface": {
+          "background": "rgb(245, 243, 255)",
+          "color": "rgb(229, 237, 247)"
+        },
+        "scope": "staff"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08d",
+      "route": "/admin/marcelo/assistente",
+      "role": "marcelo",
+      "viewport": "390x844",
+      "screenshot": "docs/ux-pro-08-assistentes-evidencias/08d-w390-escuro-marcelo.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "GrupoSEG System",
+        "outline": "auto"
+      },
+      "keyboardSteps": [
+        {
+          "key": "Tab (primeiro)",
+          "tag": "a",
+          "target": "GrupoSEG System",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 144,
+          "height": 48
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Menu",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 84,
+          "height": 38
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Ativar modo dia",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(169, 198, 230, 0.38)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 110,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Sair",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 65,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 32,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Escopo declarado deste assistente",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 289,
+          "height": 19
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-0",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(124, 58, 237)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 180,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-1",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(124, 58, 237)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 158,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-2",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(124, 58, 237)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 181,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-3",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(124, 58, 237)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 181,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "textarea",
+          "target": "rag-question",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(203, 213, 225)",
+          "shadow": "rgba(0, 0, 0, 0.05) 0px 1px 2px 0px inset",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 289,
+          "height": 87
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-submit",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(53, 73, 96)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 240,
+          "height": 44
+        },
+        {
+          "key": "Shift+Tab",
+          "tag": "button",
+          "target": "rag-submit",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(53, 73, 96)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 240,
+          "height": 44
+        }
+      ],
+      "keyboardActions": [
+        "pergunta digitada e enviada por Tab/Enter; HTTP 200, zero fontes, modelo não chamado"
+      ],
+      "percursoTeclado": [
+        "Tab (primeiro): GrupoSEG System",
+        "Tab: Menu",
+        "Tab: Ativar modo dia",
+        "Tab: Sair",
+        "Tab: Início",
+        "Tab: Escopo declarado deste assistente",
+        "Tab: rag-suggestion-0",
+        "Tab: rag-suggestion-1",
+        "Tab: rag-suggestion-2",
+        "Tab: rag-suggestion-3",
+        "Tab: rag-question",
+        "Tab: rag-submit",
+        "Shift+Tab: rag-submit"
+      ],
+      "keyboardProblems": [],
+      "theme": {
+        "requested": "escuro",
+        "actual": "escuro",
+        "adminTheme": "night",
+        "body": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)"
+        },
+        "surface": {
+          "background": "rgb(245, 243, 255)",
+          "color": "rgb(229, 237, 247)"
+        },
+        "scope": "staff"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08d",
+      "route": "/admin/marcelo/assistente",
+      "role": "marcelo",
+      "viewport": "1440x900",
+      "screenshot": "docs/ux-pro-08-assistentes-evidencias/08d-w1440-escuro-marcelo.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "GrupoSEG System",
+        "outline": "auto"
+      },
+      "keyboardSteps": [
+        {
+          "key": "Tab (primeiro)",
+          "tag": "a",
+          "target": "GrupoSEG System",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 144,
+          "height": 48
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Ativar modo dia",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(169, 198, 230, 0.38)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 110,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Sair",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 65,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 45
+        },
+        {
+          "key": "Tab",
+          "tag": "input",
+          "target": "input",
+          "visible": true,
+          "focusVisible": false,
+          "fullyVisible": true,
+          "border": "rgb(53, 73, 96)",
+          "shadow": "none",
+          "outline": "0px none rgb(149, 202, 255)",
+          "width": 177,
+          "height": 24
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Visão e pendências2",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Painel do Marcelo",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(182, 210, 250)",
+          "shadow": "rgb(146, 189, 242) 3px 0px 0px 0px inset",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 205,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Analytics",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 205,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Clientes e comercial5",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Entrega de serviços7",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Pessoas1",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Financeiro e conformidade4",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 60
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Portais1",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Sistema1",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Conhecimento1",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 32,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Escopo declarado deste assistente",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 982,
+          "height": 19
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-0",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(124, 58, 237)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 180,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-1",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(124, 58, 237)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 158,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-2",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(124, 58, 237)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 181,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-3",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(124, 58, 237)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 181,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "textarea",
+          "target": "rag-question",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(203, 213, 225)",
+          "shadow": "rgba(0, 0, 0, 0.05) 0px 1px 2px 0px inset",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 982,
+          "height": 87
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-submit",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(53, 73, 96)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 240,
+          "height": 44
+        },
+        {
+          "key": "Shift+Tab",
+          "tag": "button",
+          "target": "rag-submit",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(53, 73, 96)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 240,
+          "height": 44
+        }
+      ],
+      "keyboardActions": [
+        "pergunta digitada e enviada por Tab/Enter; HTTP 200, zero fontes, modelo não chamado"
+      ],
+      "keyboardProblems": [
+        "teclado: input: integralmente visível=true, foco=false"
+      ],
+      "theme": {
+        "requested": "escuro",
+        "actual": "escuro",
+        "adminTheme": "night",
+        "body": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)"
+        },
+        "surface": {
+          "background": "rgb(245, 243, 255)",
+          "color": "rgb(229, 237, 247)"
+        },
+        "scope": "staff"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08d",
+      "route": "/admin/rh/assistente",
+      "role": "rh",
+      "viewport": "320x780",
+      "screenshot": "docs/ux-pro-08-assistentes-evidencias/08d-w320-escuro-rh.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "GrupoSEG System",
+        "outline": "auto"
+      },
+      "keyboardSteps": [
+        {
+          "key": "Tab (primeiro)",
+          "tag": "a",
+          "target": "GrupoSEG System",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 144,
+          "height": 48
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Menu",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 84,
+          "height": 38
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Ativar modo dia",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(169, 198, 230, 0.38)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 110,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Sair",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 65,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 32,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Escopo declarado deste assistente",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 222,
+          "height": 19
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-0",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(5, 150, 105)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 165,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-1",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(5, 150, 105)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 155,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-2",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(5, 150, 105)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 159,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-3",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(5, 150, 105)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 182,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "textarea",
+          "target": "rag-question",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(203, 213, 225)",
+          "shadow": "rgba(0, 0, 0, 0.05) 0px 1px 2px 0px inset",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 222,
+          "height": 87
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-submit",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(255, 255, 255)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 189,
+          "height": 44
+        },
+        {
+          "key": "Shift+Tab",
+          "tag": "button",
+          "target": "rag-submit",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(255, 255, 255)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 189,
+          "height": 44
+        }
+      ],
+      "keyboardActions": [
+        "pergunta digitada e enviada por Tab/Enter; HTTP 200, zero fontes, modelo não chamado"
+      ],
+      "percursoTeclado": [
+        "Tab (primeiro): GrupoSEG System",
+        "Tab: Menu",
+        "Tab: Ativar modo dia",
+        "Tab: Sair",
+        "Tab: Início",
+        "Tab: Escopo declarado deste assistente",
+        "Tab: rag-suggestion-0",
+        "Tab: rag-suggestion-1",
+        "Tab: rag-suggestion-2",
+        "Tab: rag-suggestion-3",
+        "Tab: rag-question",
+        "Tab: rag-submit",
+        "Shift+Tab: rag-submit"
+      ],
+      "keyboardProblems": [],
+      "theme": {
+        "requested": "escuro",
+        "actual": "escuro",
+        "adminTheme": "night",
+        "body": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)"
+        },
+        "surface": {
+          "background": "rgb(236, 253, 245)",
+          "color": "rgb(229, 237, 247)"
+        },
+        "scope": "staff"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08d",
+      "route": "/admin/rh/assistente",
+      "role": "rh",
+      "viewport": "390x844",
+      "screenshot": "docs/ux-pro-08-assistentes-evidencias/08d-w390-escuro-rh.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "GrupoSEG System",
+        "outline": "auto"
+      },
+      "keyboardSteps": [
+        {
+          "key": "Tab (primeiro)",
+          "tag": "a",
+          "target": "GrupoSEG System",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 144,
+          "height": 48
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Menu",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 84,
+          "height": 38
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Ativar modo dia",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(169, 198, 230, 0.38)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 110,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Sair",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 65,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 32,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Escopo declarado deste assistente",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 289,
+          "height": 19
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-0",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(5, 150, 105)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 165,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-1",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(5, 150, 105)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 155,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-2",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(5, 150, 105)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 159,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-3",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(5, 150, 105)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 182,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "textarea",
+          "target": "rag-question",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(203, 213, 225)",
+          "shadow": "rgba(0, 0, 0, 0.05) 0px 1px 2px 0px inset",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 289,
+          "height": 87
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-submit",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(255, 255, 255)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 189,
+          "height": 44
+        },
+        {
+          "key": "Shift+Tab",
+          "tag": "button",
+          "target": "rag-submit",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(255, 255, 255)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 189,
+          "height": 44
+        }
+      ],
+      "keyboardActions": [
+        "pergunta digitada e enviada por Tab/Enter; HTTP 200, zero fontes, modelo não chamado"
+      ],
+      "percursoTeclado": [
+        "Tab (primeiro): GrupoSEG System",
+        "Tab: Menu",
+        "Tab: Ativar modo dia",
+        "Tab: Sair",
+        "Tab: Início",
+        "Tab: Escopo declarado deste assistente",
+        "Tab: rag-suggestion-0",
+        "Tab: rag-suggestion-1",
+        "Tab: rag-suggestion-2",
+        "Tab: rag-suggestion-3",
+        "Tab: rag-question",
+        "Tab: rag-submit",
+        "Shift+Tab: rag-submit"
+      ],
+      "keyboardProblems": [],
+      "theme": {
+        "requested": "escuro",
+        "actual": "escuro",
+        "adminTheme": "night",
+        "body": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)"
+        },
+        "surface": {
+          "background": "rgb(236, 253, 245)",
+          "color": "rgb(229, 237, 247)"
+        },
+        "scope": "staff"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-08d",
+      "route": "/admin/rh/assistente",
+      "role": "rh",
+      "viewport": "1440x900",
+      "screenshot": "docs/ux-pro-08-assistentes-evidencias/08d-w1440-escuro-rh.png",
+      "gateEvidence": null,
+      "firstFocus": {
+        "tag": "a",
+        "text": "GrupoSEG System",
+        "outline": "auto"
+      },
+      "keyboardSteps": [
+        {
+          "key": "Tab (primeiro)",
+          "tag": "a",
+          "target": "GrupoSEG System",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 144,
+          "height": 48
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Ativar modo dia",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(169, 198, 230, 0.38)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 110,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Sair",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 65,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 45
+        },
+        {
+          "key": "Tab",
+          "tag": "input",
+          "target": "input",
+          "visible": true,
+          "focusVisible": false,
+          "fullyVisible": true,
+          "border": "rgb(53, 73, 96)",
+          "shadow": "none",
+          "outline": "0px none rgb(149, 202, 255)",
+          "width": 177,
+          "height": 24
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Pessoas1",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Funcionários e RH",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 205,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 32,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Escopo declarado deste assistente",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 982,
+          "height": 19
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-0",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(5, 150, 105)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 165,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-1",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(5, 150, 105)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 155,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-2",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(5, 150, 105)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 159,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-suggestion-3",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(5, 150, 105)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 182,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "textarea",
+          "target": "rag-question",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(203, 213, 225)",
+          "shadow": "rgba(0, 0, 0, 0.05) 0px 1px 2px 0px inset",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 982,
+          "height": 87
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "rag-submit",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(255, 255, 255)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 189,
+          "height": 44
+        },
+        {
+          "key": "Shift+Tab",
+          "tag": "button",
+          "target": "rag-submit",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(255, 255, 255)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 189,
+          "height": 44
+        }
+      ],
+      "keyboardActions": [
+        "pergunta digitada e enviada por Tab/Enter; HTTP 200, zero fontes, modelo não chamado"
+      ],
+      "keyboardProblems": [
+        "teclado: input: integralmente visível=true, foco=false"
+      ],
+      "theme": {
+        "requested": "escuro",
+        "actual": "escuro",
+        "adminTheme": "night",
+        "body": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)"
+        },
+        "surface": {
+          "background": "rgb(236, 253, 245)",
+          "color": "rgb(229, 237, 247)"
+        },
+        "scope": "staff"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
     }
-  ]
+  ],
+  "measurements08d": {
+    "stage": "ux-pro-08d",
+    "generatedBy": "scripts/ux-evidence-capture.mjs",
+    "baseMain": "8dfbd7e451787dcf6f56e93b81d8e4edb26ceda5",
+    "reconciledMain": "3d807a420db6c63c3f754ae02144053e29da1469",
+    "date": "2026-10-15",
+    "note": "Complemento: noite 320/390/1440. Capturado antes do merge concorrente #247; código de produto idêntico, metadados e capturas da main preservados."
+  }
 }
