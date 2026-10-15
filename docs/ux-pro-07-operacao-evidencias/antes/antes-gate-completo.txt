@@ -266,9 +266,9 @@ not ok 13 - browser 07D-1: 2xx sem a lista canônica no painel inicial é falha 
   failureType: 'testCodeFailure'
   error: |-
     corpo 2xx sem "posts" precisa virar falha declarada
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -290,9 +290,9 @@ not ok 14 - browser 07D-1: 2xx sem a lista canônica em estrutura, dimensionamen
   failureType: 'testCodeFailure'
   error: |-
     estrutura com 2xx sem "roles" precisa virar falha declarada
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -334,9 +334,9 @@ not ok 16 - browser 07D-1: falha do detalhe da versão é declarada também em c
   failureType: 'testCodeFailure'
   error: |-
     a seção de ciência declara que depende da leitura que falhou
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
@@ -358,9 +358,9 @@ not ok 17 - browser 07D-1: 2xx sem a lista canônica no detalhe da versão é fa
   failureType: 'testCodeFailure'
   error: |-
     detalhe com 2xx sem "entries" precisa virar falha declarada
-    
+
     0 !== 1
-    
+
   code: 'ERR_ASSERTION'
   name: 'AssertionError'
   expected: 1
