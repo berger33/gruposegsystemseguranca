@@ -1,7 +1,7 @@
 name: UX-09 fornecedores delivery
 on:
   pull_request:
-    paths: ['src/app/admin/fornecedores/**','src/lib/supplier-*','tests/ux-supplier-*','scripts/qa-ux-supplier-postgres.mjs','scripts/ux-evidence-capture.mjs','package.json']
+    paths: ['src/app/admin/fornecedores/**','src/lib/supplier-*','src/components/ui/**','tests/ux-supplier-*','tests/helpers/**','scripts/qa-ux-supplier-postgres.mjs','scripts/ux-evidence-capture.mjs','package.json']
   workflow_dispatch:
 jobs:
   focal:
