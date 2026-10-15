@@ -65,6 +65,17 @@ export type { FinanceErrorDescriptor };
 // `src/app/admin/operacao/OperacaoWorkspace.tsx`.
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// UX-PRO-07E-2 (PENDENTE, fora desta fatia): a mesma classe de defeito — resposta
+// 2xx sem a lista canônica virando vazio falso — permanece em 8 arquivos da rota
+// (/admin/financeiro): FiscalWorkspace, GatewayWorkspace, ClosureWorkspace,
+// CommissionWorkspace, CostAllocationWorkspace, ExportWorkspace, ExpenseWorkspace
+// e ManagementResultsWorkspace (18 ocorrências). A classe D1 NÃO está fechada na
+// rota: somente os 5 arquivos do escopo 07E-1 aprovado pelo owner leem por
+// `financeReadList`/`requestList` validando a lista. Registro mantido também em
+// docs/UX-PRO-07E-1-RELATORIO-2026-10-15.md.
+// ---------------------------------------------------------------------------
+
 export const INVALID_FINANCE_RESPONSE = 'invalid_finance_response';
 
 /** Descritor de uma resposta 2xx que não trouxe a lista canônica esperada. */
