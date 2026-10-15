@@ -26,13 +26,23 @@
 // `OpsAdvanced3Client` (abas Supervisão, Rondas, Relatórios, Métricas,
 // Limpeza e Monitoramento) continuam sendo telas legadas à parte — ver
 // `docs/UX-07-OPERACAO-2026-10-05.md`, seção "O que não foi feito".
+//
+// UX-PRO-07D-1 (leitura honesta da superfície canônica): um corpo 2xx sem a
+// lista canônica vira falha declarada (`invalid_ops_response`), nunca lista
+// vazia; a resposta atrasada de uma versão de escala escolhida antes é
+// descartada; a falha do detalhe da versão é declarada também nas seções de
+// ciência e histórico; e a coluna "Necessidades" dos postos não afirma zero
+// enquanto a leitura de estrutura não foi confirmada. Nenhuma URL, método,
+// corpo, cabeçalho, permissão ou escrita mudou: `acknowledgeSchedule` e as
+// abas legadas ficam para subfatias próprias — ver
+// `docs/UX-PRO-07D-1-ESCOPO-ANTES-2026-10-15.md`.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import OpsAdvanced2Client from "../ti/OpsAdvanced2Client";
 import OpsAdvanced3Client from "../ti/OpsAdvanced3Client";
 import UiState from "../../../components/ui/UiState";
 import UiBadge from "../../../components/ui/UiBadge";
-import { opsRequest, type OpsErrorDescriptor } from "../../../lib/ops-request";
+import { opsRequest, type OpsErrorDescriptor, type OpsResult } from "../../../lib/ops-request";
 import {
   activeLabel,
   activeTone,
@@ -304,6 +314,35 @@ function ReadError({ error, onRetry }: { error: OpsErrorDescriptor; onRetry: () 
   );
 }
 
+// UX-PRO-07D-1: resposta 2xx sem a lista canônica nunca é ausência de
+// registro. O código é de diagnóstico desta tela — não vem do servidor —, por
+// isso não entra no vocabulário de `ops-vocabulary.mjs`, que só traduz
+// códigos que os servidores de operação realmente devolvem.
+const INVALID_OPS_RESPONSE = "invalid_ops_response";
+function invalidOpsResponse(status: number): OpsErrorDescriptor {
+  return {
+    kind: "retry",
+    title: "A resposta da operação não pôde ser lida",
+    detail: "O servidor respondeu sem a lista esperada. Isto não significa que não existam registros.",
+    code: INVALID_OPS_RESPONSE,
+    status,
+    canRetry: true,
+  };
+}
+
+/**
+ * Mesma URL, método, credenciais e cabeçalhos de `opsRequest` (que continua
+ * fazendo a chamada); a única diferença é exigir a lista canônica `key` na
+ * resposta 2xx, em vez de trocá-la por `[]`.
+ */
+async function opsReadList<T>(url: string, key: string): Promise<OpsResult<T[]>> {
+  const result = await opsRequest<Record<string, unknown> | null>(url);
+  if (!result.ok) return result;
+  const list = result.data && typeof result.data === "object" ? result.data[key] : undefined;
+  if (!Array.isArray(list)) return { ok: false, status: result.status, error: invalidOpsResponse(result.status) };
+  return { ok: true, status: result.status, data: list as T[] };
+}
+
 export default function OperacaoWorkspace() {
   const [activeTab, setActiveTab] = useState<TabId>("postos");
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -347,20 +386,24 @@ export default function OperacaoWorkspace() {
   const [schedError, setSchedError] = useState<OpsErrorDescriptor | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<OpsErrorDescriptor | null>(null);
+  // UX-PRO-07D-1: cada "Ver calendário" recebe um número; só a resposta da
+  // última versão escolhida é aplicada. A resposta atrasada de uma versão
+  // escolhida antes é descartada em vez de sobrescrever o calendário atual.
+  const detailRequest = useRef(0);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     const [postData, allocData, covData, handData, occData, checkData, ruleData, qualData, validationData] = await Promise.all([
-      opsRequest<{ posts?: Post[] }>("/api/ops/posts?limit=100"),
-      opsRequest<{ allocations?: Allocation[] }>("/api/ops/allocations"),
-      opsRequest<{ requests?: CoverageRequest[] }>("/api/ops/coverage-requests"),
-      opsRequest<{ handovers?: Handover[] }>("/api/ops/handovers"),
-      opsRequest<{ occurrences?: Occurrence[] }>("/api/ops/occurrence-book"),
-      opsRequest<{ instances?: ChecklistInstance[] }>("/api/ops/checklist-instances"),
-      opsRequest<{ rules?: WorkRule[] }>("/api/ops/work-rules"),
-      opsRequest<{ qualifications?: Qualification[] }>("/api/ops/qualifications"),
-      opsRequest<{ validations?: ScheduleValidation[] }>("/api/ops/validations?is_valid=false"),
+      opsReadList<Post>("/api/ops/posts?limit=100", "posts"),
+      opsReadList<Allocation>("/api/ops/allocations", "allocations"),
+      opsReadList<CoverageRequest>("/api/ops/coverage-requests", "requests"),
+      opsReadList<Handover>("/api/ops/handovers", "handovers"),
+      opsReadList<Occurrence>("/api/ops/occurrence-book", "occurrences"),
+      opsReadList<ChecklistInstance>("/api/ops/checklist-instances", "instances"),
+      opsReadList<WorkRule>("/api/ops/work-rules", "rules"),
+      opsReadList<Qualification>("/api/ops/qualifications", "qualifications"),
+      opsReadList<ScheduleValidation>("/api/ops/validations?is_valid=false", "validations"),
     ]);
     // O painel inicial depende de todos os nove: sem qualquer um deles não há
     // número honesto a mostrar, e a tela diz exatamente qual falhou.
@@ -370,15 +413,15 @@ export default function OperacaoWorkspace() {
       setLoading(false);
       return;
     }
-    if (postData.ok) setPosts(postData.data.posts || []);
-    if (allocData.ok) setAllocations(allocData.data.allocations || []);
-    if (covData.ok) setCoverages(covData.data.requests || []);
-    if (handData.ok) setHandovers(handData.data.handovers || []);
-    if (occData.ok) setOccurrences(occData.data.occurrences || []);
-    if (checkData.ok) setChecklists(checkData.data.instances || []);
-    if (ruleData.ok) setWorkRules(ruleData.data.rules || []);
-    if (qualData.ok) setQualifications(qualData.data.qualifications || []);
-    if (validationData.ok) setValidations(validationData.data.validations || []);
+    if (postData.ok) setPosts(postData.data);
+    if (allocData.ok) setAllocations(allocData.data);
+    if (covData.ok) setCoverages(covData.data);
+    if (handData.ok) setHandovers(handData.data);
+    if (occData.ok) setOccurrences(occData.data);
+    if (checkData.ok) setChecklists(checkData.data);
+    if (ruleData.ok) setWorkRules(ruleData.data);
+    if (qualData.ok) setQualifications(qualData.data);
+    if (validationData.ok) setValidations(validationData.data);
     setLoading(false);
   }, []);
 
@@ -388,13 +431,13 @@ export default function OperacaoWorkspace() {
     setStructureLoading(true);
     setStructureError(null);
     const [roleData, needData] = await Promise.all([
-      opsRequest<{ roles?: JobRole[] }>("/api/ops/job-roles"),
-      opsRequest<{ needs?: PostShiftNeed[] }>("/api/ops/post-shift-needs"),
+      opsReadList<JobRole>("/api/ops/job-roles", "roles"),
+      opsReadList<PostShiftNeed>("/api/ops/post-shift-needs", "needs"),
     ]);
     if (!roleData.ok) { setStructureError(roleData.error); setStructureLoading(false); return; }
     if (!needData.ok) { setStructureError(needData.error); setStructureLoading(false); return; }
-    setJobRoles(roleData.data.roles || []);
-    setShiftNeeds(needData.data.needs || []);
+    setJobRoles(roleData.data);
+    setShiftNeeds(needData.data);
     setStructureLoading(false);
   }, []);
 
@@ -404,13 +447,13 @@ export default function OperacaoWorkspace() {
     setDimLoading(true);
     setDimError(null);
     const [dimData, gapData] = await Promise.all([
-      opsRequest<{ dimensionings?: Dimensioning[] }>("/api/ops/dimensioning"),
-      opsRequest<{ gaps?: CoverageGap[] }>("/api/ops/coverage-gaps"),
+      opsReadList<Dimensioning>("/api/ops/dimensioning", "dimensionings"),
+      opsReadList<CoverageGap>("/api/ops/coverage-gaps", "gaps"),
     ]);
     if (!dimData.ok) { setDimError(dimData.error); setDimLoading(false); return; }
     if (!gapData.ok) { setDimError(gapData.error); setDimLoading(false); return; }
-    setDimensionings(dimData.data.dimensionings || []);
-    setGaps(gapData.data.gaps || []);
+    setDimensionings(dimData.data);
+    setGaps(gapData.data);
     setDimLoading(false);
   }, []);
 
@@ -419,15 +462,16 @@ export default function OperacaoWorkspace() {
   const loadSchedules = useCallback(async () => {
     setSchedLoading(true);
     setSchedError(null);
-    const data = await opsRequest<{ versions?: ScheduleVersion[] }>("/api/ops/schedule-versions");
+    const data = await opsReadList<ScheduleVersion>("/api/ops/schedule-versions", "versions");
     if (!data.ok) { setSchedError(data.error); setSchedLoading(false); return; }
-    setScheduleVersions(data.data.versions || []);
+    setScheduleVersions(data.data);
     setSchedLoading(false);
   }, []);
 
   useEffect(() => { void loadSchedules(); }, [loadSchedules]);
 
   async function selectVersion(version: ScheduleVersion) {
+    const requestId = ++detailRequest.current;
     setSelectedVersion(version);
     setDetailLoading(true);
     setDetailError(null);
@@ -435,10 +479,13 @@ export default function OperacaoWorkspace() {
     setAckError(null);
     setCalendarView("posto");
     const [entryData, ackData, historyData] = await Promise.all([
-      opsRequest<{ entries?: ScheduleEntry[] }>(`/api/ops/schedule-entries?version_id=${version.id}`),
-      opsRequest<{ acknowledgments?: ScheduleAck[] }>(`/api/ops/schedule-acks?version_id=${version.id}`),
-      opsRequest<{ history?: ScheduleHistoryItem[] }>(`/api/ops/schedule-history?version_id=${version.id}`),
+      opsReadList<ScheduleEntry>(`/api/ops/schedule-entries?version_id=${version.id}`, "entries"),
+      opsReadList<ScheduleAck>(`/api/ops/schedule-acks?version_id=${version.id}`, "acknowledgments"),
+      opsReadList<ScheduleHistoryItem>(`/api/ops/schedule-history?version_id=${version.id}`, "history"),
     ]);
+    // Outra versão foi escolhida enquanto esta era lida: a resposta é de uma
+    // seleção superada e não pode substituir o calendário atual.
+    if (detailRequest.current !== requestId) return;
     // O painel de detalhe não pode fingir calendário: sem leitura completa,
     // limpa as entradas e mostra o erro real.
     const failed = [entryData, ackData, historyData].find(r => !r.ok);
@@ -450,9 +497,9 @@ export default function OperacaoWorkspace() {
       setDetailLoading(false);
       return;
     }
-    if (entryData.ok) setScheduleEntries(entryData.data.entries || []);
-    if (ackData.ok) setScheduleAcks(ackData.data.acknowledgments || []);
-    if (historyData.ok) setScheduleHistory(historyData.data.history || []);
+    if (entryData.ok) setScheduleEntries(entryData.data);
+    if (ackData.ok) setScheduleAcks(ackData.data);
+    if (historyData.ok) setScheduleHistory(historyData.data);
     setDetailLoading(false);
   }
 
@@ -671,7 +718,15 @@ function PostsPanel({
                     <td>{post.company_name || (post.company_id ? "—" : "sem cliente")}</td>
                     <td>{post.unit_name || (post.unit_id ? "—" : "sem unidade")}</td>
                     <td>{post.contract_title || (post.contract_id ? "—" : "sem contrato")}</td>
-                    <td>{shiftNeeds.filter(need => need.post_id === post.id && need.is_active).length}</td>
+                    <td>
+                      {structureLoading ? (
+                        <span className={styles.hint} data-testid="operacao-necessidades-aguardando">Aguardando leitura</span>
+                      ) : structureError ? (
+                        <span className={styles.hint} data-testid="operacao-necessidades-nao-confirmadas">Não confirmado</span>
+                      ) : (
+                        shiftNeeds.filter(need => need.post_id === post.id && need.is_active).length
+                      )}
+                    </td>
                     <td><StatusBadge label={activeLabel(post.is_active)} tone={activeTone(post.is_active)} /></td>
                   </tr>
                 ))}
@@ -679,6 +734,13 @@ function PostsPanel({
             </table>
           </div>
         )}
+        {posts.length > 0 && (structureLoading || structureError) ? (
+          <p className={styles.footnote} data-testid="operacao-necessidades-aviso">
+            A coluna “Necessidades” depende da leitura da estrutura operacional (cargos e necessidades por turno, logo
+            abaixo). Enquanto essa leitura não for confirmada, nenhuma quantidade é exibida — “Não confirmado” não
+            significa zero.
+          </p>
+        ) : null}
       </section>
 
       {structureLoading ? (
@@ -1215,6 +1277,12 @@ function SchedulesPanel({
               <section className={styles.panel} aria-labelledby="schedule-acks-title">
                 <h2 id="schedule-acks-title" className={styles.panelTitle}>Ciência da escala</h2>
                 {detailLoading ? <UiState variant="loading" title="Carregando ciências…" /> : null}
+                {!detailLoading && detailError ? (
+                  <p className={styles.hint} data-testid="operacao-ciencias-indisponiveis">
+                    As ciências desta versão não são exibidas porque a leitura da versão falhou — o motivo está no
+                    calendário acima. Nenhum profissional é apresentado como pendente ou ciente sem essa leitura.
+                  </p>
+                ) : null}
                 {!detailLoading && !detailError && (() => {
                   const employees = [...new Map(scheduleEntries.map(entry => [entry.employee_id, entry])).values()];
                   return (
@@ -1276,6 +1344,12 @@ function SchedulesPanel({
               <section className={styles.panel} aria-labelledby="schedule-history-title">
                 <h2 id="schedule-history-title" className={styles.panelTitle}>Histórico da versão</h2>
                 {detailLoading ? <UiState variant="loading" title="Carregando histórico…" /> : null}
+                {!detailLoading && detailError ? (
+                  <p className={styles.hint} data-testid="operacao-historico-indisponivel">
+                    O histórico desta versão não é exibido porque a leitura da versão falhou — o motivo está no
+                    calendário acima.
+                  </p>
+                ) : null}
                 {!detailLoading && !detailError && scheduleHistory.length === 0 ? (
                   <UiState variant="empty" title="Nenhuma transição registrada para esta versão" />
                 ) : null}
