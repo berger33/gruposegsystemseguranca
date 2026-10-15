@@ -2,6 +2,7 @@
 
 import styles from "../../../components/ui/UiWorkspace.module.css";
 import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
+import { financeInvalidListMessage } from "../../../lib/finance-request";
 import { FormEvent, useEffect, useState } from "react";
 
 type Snapshot = {
@@ -61,6 +62,22 @@ async function request(path: string, init?: RequestInit) {
   return data;
 }
 
+/**
+ * UX-PRO-07E-1 — leitura de lista com a chave canônica exigida: mesmo método,
+ * URL e cabeçalhos de `request` (intacto para as escritas); um 2xx sem a lista
+ * lança falha declarada em vez de virar `[]`. O servidor garante a chave no 200
+ * (`src/server/fin-advanced-api.mjs:622`, `:708`), então o vazio legítimo
+ * continua sendo vazio concluído.
+ */
+async function requestList<T>(path: string, key: string): Promise<T[]> {
+  const response = await fetch(path, { headers: { "Content-Type": "application/json" } });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(financeErrorMessage(typeof data.error === "string" ? data.error : null, response.status));
+  const list = data && typeof data === "object" ? (data as Record<string, unknown>)[key] : undefined;
+  if (!Array.isArray(list)) throw new Error(financeInvalidListMessage(response.status));
+  return list as T[];
+}
+
 export default function CashflowWorkspace() {
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [aging, setAging] = useState<Aging[]>([]);
@@ -70,6 +87,9 @@ export default function CashflowWorkspace() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  // UX-PRO-07E-1: enquanto as três listas canônicas não chegam confirmadas, os
+  // vazios abaixo não podem afirmar ausência de registro.
+  const [readConfirmed, setReadConfirmed] = useState(false);
 
   const run = async (operation: () => Promise<void>) => {
     setBusy(true);
@@ -79,14 +99,22 @@ export default function CashflowWorkspace() {
     finally { setBusy(false); }
   };
   const load = async () => {
-    const [cashflow, agingData, receivableData] = await Promise.all([
-      request("/api/fin/cashflow-snapshots"),
-      request("/api/fin/aging-receivables"),
-      request("/api/fin/receivables"),
-    ]);
-    setSnapshots(cashflow.snapshots || []);
-    setAging(agingData.aging || []);
-    setReceivables(receivableData.receivables || []);
+    // UX-PRO-07E-1: mesma estrutura tudo-ou-nada de antes; um 2xx sem a chave
+    // canônica agora também é falha, e a leitura só é confirmada com as três.
+    try {
+      const [nextSnapshots, nextAging, nextReceivables] = await Promise.all([
+        requestList<Snapshot>("/api/fin/cashflow-snapshots", "snapshots"),
+        requestList<Aging>("/api/fin/aging-receivables", "aging"),
+        requestList<Receivable>("/api/fin/receivables", "receivables"),
+      ]);
+      setSnapshots(nextSnapshots);
+      setAging(nextAging);
+      setReceivables(nextReceivables);
+      setReadConfirmed(true);
+    } catch (cause) {
+      setReadConfirmed(false);
+      throw cause;
+    }
   };
   useEffect(() => { void run(load); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -165,7 +193,7 @@ export default function CashflowWorkspace() {
       <div>
         <h3>Snapshots registrados</h3>
         <table data-testid="fin07-snapshots"><thead><tr><th>Competência</th><th>Tipo</th><th>Saldo</th><th>Vencidos</th><th>Próximos pagamentos</th></tr></thead><tbody>
-          {snapshots.length === 0 ? <tr><td colSpan={5}>Nenhum snapshot registrado.</td></tr> : snapshots.map(snapshot => <tr key={snapshot.id}><td>{String(snapshot.competence_date).slice(0, 10)}</td><td>{snapshot.cashflow_type}</td><td>{money(snapshot.balance_cents)}</td><td>{money(snapshot.vencidos_cents)}</td><td>{money(snapshot.proximos_pagamentos_cents)}</td></tr>)}
+          {snapshots.length === 0 ? <tr><td colSpan={5} data-testid={readConfirmed ? "fin07-snapshots-empty" : "fin07-snapshots-unavailable"}>{readConfirmed ? "Nenhum snapshot registrado." : "Lista indisponível — a leitura não foi confirmada; não confundir com ausência de snapshots."}</td></tr> : snapshots.map(snapshot => <tr key={snapshot.id}><td>{String(snapshot.competence_date).slice(0, 10)}</td><td>{snapshot.cashflow_type}</td><td>{money(snapshot.balance_cents)}</td><td>{money(snapshot.vencidos_cents)}</td><td>{money(snapshot.proximos_pagamentos_cents)}</td></tr>)}
         </tbody></table>
       </div>
 
@@ -184,7 +212,7 @@ export default function CashflowWorkspace() {
       <div>
         <h3>Aging registrado</h3>
         <table data-testid="fin07-aging"><thead><tr><th>Recebível</th><th>Competência</th><th>Bucket</th><th>Dias vencidos</th><th>Restante</th></tr></thead><tbody>
-          {aging.length === 0 ? <tr><td colSpan={5}>Nenhum aging registrado.</td></tr> : aging.map(item => <tr key={item.id}><td>{item.protocol || item.receivable_id}</td><td>{String(item.competence_date).slice(0, 10)}</td><td>{item.bucket}</td><td>{item.days_overdue}</td><td>{money(item.amount_remaining_cents)}</td></tr>)}
+          {aging.length === 0 ? <tr><td colSpan={5} data-testid={readConfirmed ? "fin07-aging-empty" : "fin07-aging-unavailable"}>{readConfirmed ? "Nenhum aging registrado." : "Lista indisponível — a leitura não foi confirmada; não confundir com ausência de aging."}</td></tr> : aging.map(item => <tr key={item.id}><td>{item.protocol || item.receivable_id}</td><td>{String(item.competence_date).slice(0, 10)}</td><td>{item.bucket}</td><td>{item.days_overdue}</td><td>{money(item.amount_remaining_cents)}</td></tr>)}
         </tbody></table>
       </div>
     </section>

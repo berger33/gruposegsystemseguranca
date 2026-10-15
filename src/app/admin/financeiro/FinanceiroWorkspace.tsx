@@ -42,7 +42,7 @@ import ClosureWorkspace from "./ClosureWorkspace";
 import CommissionWorkspace from "./CommissionWorkspace";
 import UiState from "../../../components/ui/UiState";
 import UiBadge from "../../../components/ui/UiBadge";
-import { financeRequest, type FinanceErrorDescriptor } from "../../../lib/finance-request";
+import { financeReadList, financeRequest, type FinanceErrorDescriptor } from "../../../lib/finance-request";
 import {
   accountStatusLabel,
   accountStatusTone,
@@ -134,14 +134,21 @@ export default function FinanceiroWorkspace() {
    * Leitura do painel próprio (recebíveis, regras e pagamentos). Falha de
    * leitura NUNCA vira lista vazia: as três listas são descartadas e o erro
    * real aparece com o código canônico e opção de repetir.
+   *
+   * UX-PRO-07E-1: uma resposta **2xx sem a lista canônica** também é falha.
+   * Antes, `(a.ok && a.data.receivables) || []` trocava um corpo ilegível por
+   * "nenhum recebível encontrado", sem declarar nada. `financeReadList` mantém
+   * a mesma URL, método, cabeçalhos e credenciais de `financeRequest` e só
+   * exige a chave canônica; o vazio legítimo (chave presente com `[]`) continua
+   * sendo vazio concluído.
    */
   const load = useCallback(async () => {
     setLoading(true);
     setReadError(null);
     const [a, r, p] = await Promise.all([
-      financeRequest<{ receivables?: Account[] }>("/api/admin/finance/f03/receivables"),
-      financeRequest<{ rules?: Rule[] }>("/api/fin/recurrence-rules"),
-      financeRequest<{ payments?: Payment[] }>("/api/fin/payments"),
+      financeReadList<Account>("/api/admin/finance/f03/receivables", "receivables"),
+      financeReadList<Rule>("/api/fin/recurrence-rules", "rules"),
+      financeReadList<Payment>("/api/fin/payments", "payments"),
     ]);
     const failed = [a, r, p].find(result => !result.ok);
     if (failed && !failed.ok) {
@@ -152,15 +159,15 @@ export default function FinanceiroWorkspace() {
       setLoading(false);
       return;
     }
-    const received: Account[] = (a.ok && a.data.receivables) || [];
+    const received: Account[] = a.ok ? a.data : [];
     const nextAccounts = contractFilter ? received.filter(item => item.contract_id === contractFilter) : received;
     setAccounts(nextAccounts);
-    setRules((r.ok && r.data.rules) || []);
-    setPayments((p.ok && p.data.payments) || []);
+    setRules(r.ok ? r.data : []);
+    setPayments(p.ok ? p.data : []);
     if (selected) {
       setSelected(nextAccounts.find(item => item.id === selected.id) || selected);
-      const h = await financeRequest<{ history?: Record<string, unknown>[] }>(`/api/fin/payment-history?receivable_id=${selected.id}`);
-      if (h.ok) setHistory(h.data.history || []);
+      const h = await financeReadList<Record<string, unknown>>(`/api/fin/payment-history?receivable_id=${selected.id}`, "history");
+      if (h.ok) setHistory(h.data);
       else setActionError(h.error);
     }
     setLoading(false);
@@ -282,16 +289,18 @@ export default function FinanceiroWorkspace() {
 
   const openAccount = (account: Account) => run(async () => {
     setSelected(account);
-    const result = await financeRequest<{ history?: Record<string, unknown>[] }>(`/api/fin/payment-history?receivable_id=${account.id}`);
+    // UX-PRO-07E-1: 2xx sem `history` é falha declarada, não histórico vazio.
+    const result = await financeReadList<Record<string, unknown>>(`/api/fin/payment-history?receivable_id=${account.id}`, "history");
     if (!result.ok) { setHistory([]); return result.error; }
-    setHistory(result.data.history || []);
+    setHistory(result.data);
     return null;
   });
 
   const loadReports = () => run(async () => {
-    const result = await financeRequest<{ reports?: Record<string, unknown>[] }>("/api/admin/finance/f03/reports");
+    // UX-PRO-07E-1: 2xx sem `reports` é falha declarada, não "nenhum relatório".
+    const result = await financeReadList<Record<string, unknown>>("/api/admin/finance/f03/reports", "reports");
     if (!result.ok) return result.error;
-    setReports(result.data.reports || []);
+    setReports(result.data);
     return null;
   });
 
@@ -305,9 +314,11 @@ export default function FinanceiroWorkspace() {
       });
       if (!result.ok) return result.error;
       setNotice(result.data?.note || "Relatório interno gerado.");
-      const listed = await financeRequest<{ reports?: Record<string, unknown>[] }>("/api/admin/finance/f03/reports");
+      // UX-PRO-07E-1: a releitura pós-escrita usa o mesmo leitor canônico; um
+      // 2xx sem `reports` não apaga a lista conhecida nem finge ausência.
+      const listed = await financeReadList<Record<string, unknown>>("/api/admin/finance/f03/reports", "reports");
       if (!listed.ok) return listed.error;
-      setReports(listed.data.reports || []);
+      setReports(listed.data);
       return null;
     });
   };
