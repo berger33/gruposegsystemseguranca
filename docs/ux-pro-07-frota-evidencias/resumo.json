@@ -1,0 +1,16 @@
+{
+  "fatia": "UX-PRO-07F",
+  "rota": "/admin/frota",
+  "base": "12fe34e (merge PR #233)",
+  "gate": "npm run test:ux-fleet:pg",
+  "resultado": "13/13 testes, 0 falhas, 0 pulados (2 execuções verdes consecutivas, a segunda com evidências)",
+  "casosNovos": [
+    "2xx sem a forma canônica (vehicles ausente) vira falha declarada invalid_fleet_response, nunca frota vazia — frota-1440-resposta-invalida.png",
+    "falha transitória 503 de releitura preserva a tabela lida, com hora da última leitura concluída e repetição real — frota-1440-dado-preservado.png",
+    "negativa 403 após sucesso falha fechado: tabela protegida sai do DOM, sem faixa de dado preservado — frota-1440-negativa-pos-sucesso.png"
+  ],
+  "preservacaoComprovadaPeloGate": "trocar de veículo descarta dossiê/regras do anterior (o caso herdado da jornada completa voltou a passar após a preservação passar a ser por veículo)",
+  "capturas": ["frota-1440-resposta-invalida.png", "frota-1440-dado-preservado.png", "frota-1440-negativa-pos-sucesso.png", "desktop-frota-falha.png", "desktop-frota-negado.png", "desktop-frota-jornada.png", "desktop-frota-escrita.png", "mobile-frota-390px.png"],
+  "problems": [],
+  "limites": "Capturas 1440/390 herdadas + 1440 dos cenários novos; sem captura 320/768/noite nova nesta fatia (a rota já tinha evidência de teclado e 390px do gate herdado). Nenhuma validação manual, homologação ou aceite humano; nada declara conformidade WCAG."
+}
