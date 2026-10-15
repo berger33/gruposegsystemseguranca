@@ -1,10 +1,11 @@
-// UX-07 / EXT-08 — navegador real + servidor real + PostgreSQL temporário.
+// UX-07 / UX-PRO-08A / EXT-08 — navegador real + servidor real + PostgreSQL temporário.
 // O gate não altera API, rotas, migrações ou autorização para testar a tela.
 // A massa fictícia nasce nas APIs canônicas, nunca por SQL de negócio.
 import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { mkdir } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import path from 'node:path';
 import pg from 'pg';
@@ -14,10 +15,17 @@ import { provisionStaff, STAFF_TEST_PASSWORD } from './helpers/staff-login.mjs';
 
 const RUN = process.env.RUN_DATABASE_INTEGRATION === '1' && process.env.DATABASE_URL;
 const root = path.resolve(import.meta.dirname, '..');
+const evidenceDir = process.env.UX_KNOWLEDGE_EVIDENCE_DIR || '';
 let server, pool, baseUrl, adminCookie, financeCookie;
 let publishedArticle, draftArticle;
 
 const key = label => `ext08-ux-${label}-${randomUUID()}`;
+
+async function capture(page, nome) {
+  if (!evidenceDir) return;
+  await mkdir(evidenceDir, { recursive: true });
+  await page.screenshot({ path: path.join(evidenceDir, `${nome}.png`), fullPage: true });
+}
 
 async function freePort() {
   return new Promise((resolve, reject) => {
@@ -85,30 +93,55 @@ async function launchBrowser() {
   throw last;
 }
 
-async function openPage(browser, cookie, { width = 1440, height = 900, failRoutes = [], failStatus = 503, failCode = 'database_error', presentAdminSession = false } = {}) {
+async function openPage(browser, cookie, {
+  width = 1440,
+  height = 900,
+  failRoutes = [],
+  failStatus = 503,
+  failCode = 'database_error',
+  malformedRoutes = [],
+  failAfterFirstRoutes = [],
+  presentAdminSession = false,
+} = {}) {
   const context = await browser.newContext({ viewport: { width, height }, locale: 'pt-BR' });
   const separator = cookie.indexOf('=');
   await context.addCookies([{ name: cookie.slice(0, separator), value: cookie.slice(separator + 1), url: baseUrl }]);
   const page = await context.newPage();
   page.setDefaultTimeout(45_000);
   page.setDefaultNavigationTimeout(90_000);
-  if (failRoutes.length || presentAdminSession) {
-    await page.addInitScript(({ routes, status, code, showAdminMenu }) => {
+  if (failRoutes.length || malformedRoutes.length || failAfterFirstRoutes.length || presentAdminSession) {
+    await page.addInitScript(({ routes, status, code, malformed, failAfter, showAdminMenu }) => {
       const originalFetch = window.fetch.bind(window);
+      const callCounts = new Map();
       window.fetch = async (input, init) => {
         const url = typeof input === 'string' ? input : (input?.url || '');
-        // A simulação é APENAS da apresentação do menu. A chamada EXT-08
-        // continua com o cookie financeiro real e o 403 abaixo vem do servidor
-        // canônico, provando que o menu não substitui autorização.
         if (showAdminMenu && url.includes('/api/admin/session') && (!init?.method || init.method === 'GET')) {
           return new Response(JSON.stringify({ role: 'admin', identityId: null, mfaVerified: true, expiresAt: '2099-01-01T00:00:00.000Z' }), { status: 200, headers: { 'content-type': 'application/json' } });
+        }
+        if (malformed.some(route => url.includes(route))) {
+          return new Response(JSON.stringify({ unexpected: true }), { status: 200, headers: { 'content-type': 'application/json' } });
         }
         if (routes.some(route => url.includes(route))) {
           return new Response(JSON.stringify({ error: code }), { status, headers: { 'content-type': 'application/json' } });
         }
+        const reloadTarget = failAfter.find(route => url.includes(route));
+        if (reloadTarget) {
+          const count = (callCounts.get(reloadTarget) || 0) + 1;
+          callCounts.set(reloadTarget, count);
+          if (count > 1) {
+            return new Response(JSON.stringify({ error: code }), { status, headers: { 'content-type': 'application/json' } });
+          }
+        }
         return originalFetch(input, init);
       };
-    }, { routes: failRoutes, status: failStatus, code: failCode, showAdminMenu: presentAdminSession });
+    }, {
+      routes: failRoutes,
+      status: failStatus,
+      code: failCode,
+      malformed: malformedRoutes,
+      failAfter: failAfterFirstRoutes,
+      showAdminMenu: presentAdminSession,
+    });
   }
   await page.goto(`${baseUrl}/admin/conhecimento`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('heading', { level: 1, name: 'Base de Conhecimento e Procedimentos Operacionais' }).waitFor();
@@ -239,8 +272,6 @@ test('EXT-08 UX: falha de rede em ciência não apaga detalhe nem histórico', {
     assert.match(await error.textContent(), /falha não significa que não existam as ciências registradas/i);
     assert.equal(await science.locator('[data-ui-state="empty"]').count(), 0, 'falha de ciência não vira vazio');
     assert.ok(await page.locator('[data-testid="knowledge-history"] ul li').count(), 'histórico independente continua na tela');
-    // Apenas um painel de aba fica montado por acessibilidade. Ao voltar, o
-    // detalhe independente já carregado precisa continuar disponível.
     await page.getByRole('tab', { name: 'Detalhe e versões', exact: true }).click();
     await page.locator('[data-testid="knowledge-version-detail"]').waitFor();
     await context.close();
@@ -305,6 +336,67 @@ test('EXT-08 UX: viewport 390px não cria rolagem horizontal do documento', { sk
     await page.waitForTimeout(500);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     assert.ok(overflow <= 1, `houve ${overflow}px de transbordo horizontal em 390px`);
+    await context.close();
+  } finally {
+    await browser.close().catch(() => {});
+  }
+});
+
+test('UX-PRO-08A: 2xx sem items na lista vira erro de resposta inválida, nunca lista vazia', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openPage(browser, adminCookie, {
+      malformedRoutes: ['/api/ext/knowledge/articles'],
+    });
+    const panel = page.locator('[data-testid="knowledge-articles"]');
+    const erro = panel.locator('[data-ui-state="error"]');
+    await erro.waitFor();
+    assert.match(await erro.textContent(), /A resposta da base de conhecimento não pôde ser lida/i);
+    assert.equal(await panel.locator('[data-testid="knowledge-articles-list"]').count(), 0, '2xx inválido não pode render lista');
+    assert.equal(await panel.locator('[data-ui-state="empty"]').count(), 0, '2xx inválido não é lista vazia');
+    await capture(page, 'conhecimento-1440-resposta-invalida');
+    await context.close();
+  } finally {
+    await browser.close().catch(() => {});
+  }
+});
+
+test('UX-PRO-08A: falha transitória de releitura preserva a lista lida com hora em pt-BR', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openPage(browser, adminCookie, {
+      failAfterFirstRoutes: ['/api/ext/knowledge/articles'],
+      failStatus: 503,
+      failCode: 'database_error',
+    });
+    await page.locator('[data-testid="knowledge-articles-list"]').waitFor();
+    await page.getByRole('button', { name: 'Aplicar filtros' }).click();
+    const faixa = page.locator('[data-testid="knowledge-articles-list-desatualizado"]');
+    await faixa.waitFor();
+    assert.match(await faixa.textContent(), /última leitura concluída/i);
+    assert.equal(await page.locator('[data-testid="knowledge-articles-list"]').count(), 1, 'o dado lido permanece visível na falha de releitura');
+    await capture(page, 'conhecimento-1440-dado-preservado');
+    await context.close();
+  } finally {
+    await browser.close().catch(() => {});
+  }
+});
+
+test('UX-PRO-08A: negativa após sucesso falha fechado, sem manter lista protegida', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openPage(browser, adminCookie, {
+      failAfterFirstRoutes: ['/api/ext/knowledge/articles'],
+      failStatus: 403,
+      failCode: 'forbidden_role',
+    });
+    await page.locator('[data-testid="knowledge-articles-list"]').waitFor();
+    await page.getByRole('button', { name: 'Aplicar filtros' }).click();
+    const denied = page.locator('[data-testid="knowledge-articles"] [data-ui-state="denied"]');
+    await denied.waitFor();
+    assert.equal(await page.locator('[data-testid="knowledge-articles-list"]').count(), 0, 'negativa não pode manter os cartões protegidos');
+    assert.equal(await page.locator('[data-testid="knowledge-articles-list-desatualizado"]').count(), 0, 'negativa não é dado preservado');
+    await capture(page, 'conhecimento-1440-negativa-pos-sucesso');
     await context.close();
   } finally {
     await browser.close().catch(() => {});

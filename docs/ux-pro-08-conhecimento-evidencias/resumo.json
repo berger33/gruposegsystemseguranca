@@ -1,0 +1,19 @@
+{
+  "fatia": "UX-PRO-08A",
+  "rota": "/admin/conhecimento",
+  "base": "9c65704 (merge PR #243)",
+  "gate": "npm run test:ux-knowledge:pg",
+  "resultado": "9/9 testes, 0 falhas, 0 pulados (gate PostgreSQL efêmero e Chromium real)",
+  "casosNovos": [
+    "2xx sem items vira falha invalid_knowledge_response, nunca lista vazia — conhecimento-1440-resposta-invalida.png",
+    "falha transitória 503 de releitura preserva a lista lida com hora da última leitura concluída em pt-BR e faixa de alerta — conhecimento-1440-dado-preservado.png",
+    "negativa 403 após sucesso falha fechado, sem manter lista ou dados protegidos — conhecimento-1440-negativa-pos-sucesso.png"
+  ],
+  "capturas": [
+    "conhecimento-1440-resposta-invalida.png",
+    "conhecimento-1440-dado-preservado.png",
+    "conhecimento-1440-negativa-pos-sucesso.png"
+  ],
+  "problems": [],
+  "limites": "Capturas 1440px dos cenários novos com Chromium e PostgreSQL real; asserções de 390px e teclado herdadas validadas no mesmo gate focal. Nenhuma validação manual ou aceite humano; nada declara conformidade WCAG."
+}
