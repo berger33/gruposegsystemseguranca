@@ -15,10 +15,18 @@ import {
 } from "@/lib/supplier-read";
 import { supplierRequest } from "@/lib/supplier-request";
 import {
+  describeSupplierWriteError,
+  invalidSupplierWriteResponse,
+  supplierWriteErrorDetail,
+  supplierWriteFailsClosed,
+  supplierWriteReceipts,
+  supplierWriteUncertain,
+  type SupplierWriteError,
+} from "@/lib/supplier-write";
+import {
   EXTERNAL_BOUNDARY,
   VOLUME_BOUNDARY,
   supplierDate,
-  supplierErrorFootnote,
   supplierLabel,
   supplierMoney,
 } from "@/lib/supplier-vocabulary.mjs";
@@ -47,6 +55,54 @@ const INITIAL_STATES: Record<ResourceKey, ReadState> = {
   orders: { phase: "idle" },
   detail: { phase: "idle" },
 };
+
+// UX-PRO-07C-2 — as nove mutações canônicas, cada uma com a sua chave canônica
+// de corpo 2xx. Os rótulos de operação (usados pelo gerador de Idempotency-Key)
+// permanecem exatamente os que a tela já usava.
+type SupplierWriteAction =
+  | "create-quotation"
+  | "quotation-status"
+  | "quotation-decision"
+  | "register-validity"
+  | "register-alert"
+  | "register-document"
+  | "create-order"
+  | "order-status"
+  | "register-deadline";
+
+const WRITE_ACTION_NAMES: Record<SupplierWriteAction, string> = {
+  "create-quotation": "a criação da cotação",
+  "quotation-status": "a transição de estado da cotação",
+  "quotation-decision": "a decisão da cotação",
+  "register-validity": "o registro de validade",
+  "register-alert": "o registro da regra de alerta",
+  "register-document": "o registro da referência documental",
+  "create-order": "a criação do pedido derivado",
+  "order-status": "a transição de estado do pedido",
+  "register-deadline": "o registro do prazo do pedido",
+};
+
+type WriteRequest = {
+  action: SupplierWriteAction;
+  /** Rótulo canônico da operação: alimenta o gerador de chave e a preservação em falha. */
+  operation: string;
+  url: string;
+  body: unknown;
+  /** Valida a chave canônica do corpo 2xx antes de declarar sucesso. */
+  validate: (data: unknown) => boolean;
+  /**
+   * Reconciliação de sucesso: limpa formulários, move seleção e relê exatamente
+   * o que a tela relia antes. Fica no pedido porque a repetição explícita de
+   * uma solicitação incerta precisa reconciliar da mesma forma.
+   */
+  onSuccess: (data: unknown) => Promise<void>;
+};
+
+type WriteState =
+  | { phase: "idle" }
+  | { phase: "sending"; request: WriteRequest; idempotencyKey: string; replaying: boolean }
+  | { phase: "uncertain"; request: WriteRequest; idempotencyKey: string; error: SupplierWriteError }
+  | { phase: "failed"; action: SupplierWriteAction; error: SupplierWriteError };
 
 const READS = {
   references: {
@@ -101,11 +157,11 @@ export default function FornecedoresWorkspace() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [detail, setDetail] = useState<Detail | null>(null);
-  const [busy, setBusy] = useState("");
   const [notice, setNotice] = useState("");
-  const [writeError, setWriteError] = useState("");
+  const [write, setWrite] = useState<WriteState>({ phase: "idle" });
   const [denied, setDenied] = useState<SupplierReadError | null>(null);
   const keys = useRef<Record<string, string>>({});
+  const sendingRef = useRef<string | null>(null);
 
   const [states, setStates] = useState<Record<ResourceKey, ReadState>>(INITIAL_STATES);
   const statesRef = useRef(states);
@@ -225,21 +281,66 @@ export default function FornecedoresWorkspace() {
   // de lista não são relançadas por uma mudança de seleção.
   useEffect(() => { void loadDetail(selectedId); }, [selectedId, loadDetail]);
 
-  async function mutate(operation: string, url: string, body: unknown): Promise<any> {
-    const key = keys.current[operation] || newKey(operation);
-    keys.current[operation] = key; // preservada enquanto houver falha
-    setBusy(operation); setWriteError(""); setNotice("");
+  // UX-PRO-07C-2 — a escrita como operação com estado próprio. A guarda síncrona
+  // (ref) é verificada antes do primeiro await: um segundo clique no mesmo tick
+  // não dispara segundo POST. O transporte continua sendo `supplierRequest`,
+  // com o mesmo verbo, URL, corpo e Idempotency-Key; a chave é preservada
+  // enquanto houver falha e só uma resposta real bem-sucedida a encerra. O
+  // sucesso reconcilia via `request.onSuccess` — inclusive na repetição
+  // explícita da solicitação incerta, que é o caso em que o chamador original
+  // já retornou.
+  async function runWrite(request: WriteRequest, replaying = false): Promise<unknown | null> {
+    if (sendingRef.current) return null;
+    sendingRef.current = request.operation;
+    const key = keys.current[request.operation] || newKey(request.operation);
+    keys.current[request.operation] = key; // preservada enquanto houver falha
+    setWrite({ phase: "sending", request, idempotencyKey: key, replaying });
+    setNotice("");
+    let confirmed: unknown = null;
     try {
-      const result = await supplierRequest<unknown>(url, {
-        method: "POST", headers: { "content-type": "application/json", "idempotency-key": key }, body: JSON.stringify(body),
+      const result = await supplierRequest<unknown>(request.url, {
+        method: "POST", headers: { "content-type": "application/json", "idempotency-key": key }, body: JSON.stringify(request.body),
       });
-      if (!result.ok) { const failure = new Error(`${result.error.title}: ${result.error.detail} ${supplierErrorFootnote(result.error)}`); throw failure; }
-      delete keys.current[operation]; // só uma resposta real bem-sucedida encerra a tentativa
-      return result.data;
-    } catch (caught) {
-      setWriteError(`${caught instanceof Error ? caught.message : "Falha na operação."} Chave preservada para repetição segura: ${key}`);
-      throw caught;
-    } finally { setBusy(""); }
+      if (!result.ok) {
+        failWrite(request, key, describeSupplierWriteError(result.error));
+        return null;
+      }
+      if (!request.validate(result.data)) {
+        // 2xx sem a chave canônica: nunca sucesso, nunca ausência.
+        failWrite(request, key, invalidSupplierWriteResponse(result.status));
+        return null;
+      }
+      delete keys.current[request.operation]; // só uma resposta real bem-sucedida encerra a tentativa
+      setWrite({ phase: "idle" });
+      confirmed = result.data;
+    } finally {
+      sendingRef.current = null;
+    }
+    await request.onSuccess(confirmed);
+    return confirmed;
+  }
+
+  function failWrite(request: WriteRequest, key: string, error: SupplierWriteError) {
+    if (supplierWriteFailsClosed(error)) {
+      // Negativa ou perda de sessão: a releitura pelo caminho existente da
+      // leitura falha fechado e remove listas, detalhe e formulários protegidos.
+      setWrite({ phase: "failed", action: request.action, error });
+      void refreshLists();
+      return;
+    }
+    if (supplierWriteUncertain(error)) {
+      // Resultado incerto: a solicitação original é retida para repetição
+      // explícita com a mesma URL, o mesmo corpo e a mesma chave.
+      setWrite({ phase: "uncertain", request, idempotencyKey: key, error });
+      return;
+    }
+    setWrite({ phase: "failed", action: request.action, error });
+  }
+
+  /** Repetição explícita da solicitação incerta: mesma URL, mesmo corpo, mesma chave. */
+  async function repeatWrite() {
+    if (write.phase !== "uncertain") return;
+    await runWrite(write.request, true);
   }
 
   async function refresh(message: string, id = selectedId) {
@@ -251,45 +352,129 @@ export default function FornecedoresWorkspace() {
   async function createQuotation(event: FormEvent) {
     event.preventDefault();
     const cents = Math.round(Number(quoteForm.unit_price.replace(",", ".")) * 100);
-    try {
-      const data = await mutate("create-quotation", `/api/ext/supplier/suppliers/${quoteForm.supplier_id}/products/${quoteForm.product_id}/quotations`, {
-        quantity: Number(quoteForm.quantity), unit_price_cents: cents, notes: quoteForm.notes,
-      });
-      const id = data.quotation.id; setSelectedId(id); setQuoteForm({ supplier_id: "", product_id: "", quantity: "1", unit_price: "", notes: "" });
-      await refresh("Cotação confirmada pelo servidor; autoria veio da sessão staff.", id);
-    } catch { }
+    await runWrite({
+      action: "create-quotation",
+      operation: "create-quotation",
+      url: `/api/ext/supplier/suppliers/${quoteForm.supplier_id}/products/${quoteForm.product_id}/quotations`,
+      body: { quantity: Number(quoteForm.quantity), unit_price_cents: cents, notes: quoteForm.notes },
+      validate: supplierWriteReceipts.quotation,
+      onSuccess: data => {
+        const id = String((data as { quotation: { id: string } }).quotation.id);
+        setSelectedId(id); setQuoteForm({ supplier_id: "", product_id: "", quantity: "1", unit_price: "", notes: "" });
+        return refresh("Cotação confirmada pelo servidor; autoria veio da sessão staff.", id);
+      },
+    });
   }
 
   async function transitionQuotation(status: string) {
     if (!selectedId) return;
-    try { await mutate(`quote-${selectedId}-${status}`, `/api/ext/supplier/quotations/${selectedId}/status`, { status, reason: `Transição ${status} confirmada pela equipe interna.` }); await refresh(`Estado ${status} confirmado pelo servidor.`); } catch { }
+    const quotationId = selectedId;
+    await runWrite({
+      action: "quotation-status",
+      operation: `quote-${quotationId}-${status}`,
+      url: `/api/ext/supplier/quotations/${quotationId}/status`,
+      body: { status, reason: `Transição ${status} confirmada pela equipe interna.` },
+      validate: supplierWriteReceipts.quotation,
+      onSuccess: () => refresh(`Estado ${status} confirmado pelo servidor.`, quotationId),
+    });
   }
   async function decide(decision: "aprovada" | "rejeitada") {
     if (!selectedId) return;
-    try { await mutate(`decision-${selectedId}`, `/api/ext/supplier/quotations/${selectedId}/decision`, { decision, justification: decisionReason }); setDecisionReason(""); await refresh(`Decisão ${decision} gravada com autor e data; não será sobrescrita.`); } catch { }
+    const quotationId = selectedId;
+    await runWrite({
+      action: "quotation-decision",
+      operation: `decision-${quotationId}`,
+      url: `/api/ext/supplier/quotations/${quotationId}/decision`,
+      body: { decision, justification: decisionReason },
+      validate: supplierWriteReceipts.quotation,
+      onSuccess: () => { setDecisionReason(""); return refresh(`Decisão ${decision} gravada com autor e data; não será sobrescrita.`, quotationId); },
+    });
   }
   async function addValidity(event: FormEvent) {
     event.preventDefault(); if (!selectedId) return;
-    try { await mutate(`validity-${selectedId}`, `/api/ext/supplier/quotations/${selectedId}/validities`, validityForm); setValidityForm({ valid_until: "", source: "registro_interno", source_reference: "", justification: "" }); await refresh("Validade registrada com fonte; situação recalculada pela data-base do servidor."); } catch { }
+    const quotationId = selectedId;
+    await runWrite({
+      action: "register-validity",
+      operation: `validity-${quotationId}`,
+      url: `/api/ext/supplier/quotations/${quotationId}/validities`,
+      body: validityForm,
+      validate: supplierWriteReceipts.validity,
+      onSuccess: () => {
+        setValidityForm({ valid_until: "", source: "registro_interno", source_reference: "", justification: "" });
+        return refresh("Validade registrada com fonte; situação recalculada pela data-base do servidor.", quotationId);
+      },
+    });
   }
   async function addAlert(event: FormEvent) {
     event.preventDefault(); if (!selectedId) return;
-    try { await mutate(`alert-${selectedId}`, `/api/ext/supplier/quotations/${selectedId}/alert-rules`, { days_before: Number(alertForm.days_before), justification: alertForm.justification }); setAlertForm({ days_before: "", justification: "" }); await refresh("Regra explícita registrada; somente agora existe limiar de alerta."); } catch { }
+    const quotationId = selectedId;
+    await runWrite({
+      action: "register-alert",
+      operation: `alert-${quotationId}`,
+      url: `/api/ext/supplier/quotations/${quotationId}/alert-rules`,
+      body: { days_before: Number(alertForm.days_before), justification: alertForm.justification },
+      validate: supplierWriteReceipts.alertRule,
+      onSuccess: () => {
+        setAlertForm({ days_before: "", justification: "" });
+        return refresh("Regra explícita registrada; somente agora existe limiar de alerta.", quotationId);
+      },
+    });
   }
   async function addDocument(event: FormEvent) {
     event.preventDefault(); if (!selectedId) return;
-    try { await mutate(`document-${selectedId}`, `/api/ext/supplier/quotations/${selectedId}/documents`, documentForm); setDocumentForm({ document_type: "", file_name: "", file_url: "", storage_key: "" }); await refresh("Referência documental versionada confirmada; isto não comprova upload."); } catch { }
+    const quotationId = selectedId;
+    await runWrite({
+      action: "register-document",
+      operation: `document-${quotationId}`,
+      url: `/api/ext/supplier/quotations/${quotationId}/documents`,
+      body: documentForm,
+      validate: supplierWriteReceipts.document,
+      onSuccess: () => {
+        setDocumentForm({ document_type: "", file_name: "", file_url: "", storage_key: "" });
+        return refresh("Referência documental versionada confirmada; isto não comprova upload.", quotationId);
+      },
+    });
   }
   async function createOrder() {
     if (!selectedId) return;
-    try { const data = await mutate(`order-${selectedId}`, `/api/ext/supplier/quotations/${selectedId}/orders`, { notes: orderNotes }); setOrderNotes(""); await refresh(`Pedido ${data.order.protocol} derivado da cotação aprovada.`); } catch { }
+    const quotationId = selectedId;
+    await runWrite({
+      action: "create-order",
+      operation: `order-${quotationId}`,
+      url: `/api/ext/supplier/quotations/${quotationId}/orders`,
+      body: { notes: orderNotes },
+      validate: supplierWriteReceipts.order,
+      onSuccess: data => {
+        const protocol = String((data as { order: { protocol: string } }).order.protocol);
+        setOrderNotes("");
+        return refresh(`Pedido ${protocol} derivado da cotação aprovada.`, quotationId);
+      },
+    });
   }
   async function transitionOrder(orderId: string, status: string) {
-    try { await mutate(`order-${orderId}-${status}`, `/api/ext/supplier/orders/${orderId}/status`, { status, reason: `Transição ${status} confirmada pela equipe interna.` }); await refresh(`Pedido confirmado em ${status}.`); } catch { }
+    await runWrite({
+      action: "order-status",
+      operation: `order-${orderId}-${status}`,
+      url: `/api/ext/supplier/orders/${orderId}/status`,
+      body: { status, reason: `Transição ${status} confirmada pela equipe interna.` },
+      validate: supplierWriteReceipts.order,
+      onSuccess: () => refresh(`Pedido confirmado em ${status}.`, selectedId),
+    });
   }
   async function addDeadline(event: FormEvent) {
     event.preventDefault();
-    try { await mutate(`deadline-${deadlineForm.order_id}`, `/api/ext/supplier/orders/${deadlineForm.order_id}/deadlines`, deadlineForm); setDeadlineForm({ order_id: "", due_date: "", source: "registro_interno", source_reference: "", justification: "" }); await refresh("Prazo do pedido registrado com fonte; nenhum prazo foi estimado."); } catch { }
+    const orderId = deadlineForm.order_id;
+    await runWrite({
+      action: "register-deadline",
+      operation: `deadline-${orderId}`,
+      url: `/api/ext/supplier/orders/${orderId}/deadlines`,
+      body: deadlineForm,
+      validate: supplierWriteReceipts.deadline,
+      onSuccess: () => {
+        setDeadlineForm({ order_id: "", due_date: "", source: "registro_interno", source_reference: "", justification: "" });
+        return refresh("Prazo do pedido registrado com fonte; nenhum prazo foi estimado.", selectedId);
+      },
+    });
   }
 
   const quote = detail?.quotation;
@@ -303,6 +488,12 @@ export default function FornecedoresWorkspace() {
 
   const listsBusy = [references, quotationState, orderState].some(state =>
     state.phase === "loading" || (state.phase === "ready" && state.refreshing));
+
+  // UX-PRO-07C-2 — envio em curso ou resultado incerto bloqueiam as nove
+  // escritas (elas tocam a mesma máquina de estados canônica; o servidor
+  // continua sendo a autoridade). Os controles de leitura seguem disponíveis.
+  const writesBlocked = write.phase === "sending" || write.phase === "uncertain";
+  const sendingOperation = write.phase === "sending" ? write.request.operation : null;
 
   const lastListRead = [references, quotationState, orderState]
     .filter(state => state.phase === "ready")
@@ -364,12 +555,13 @@ export default function FornecedoresWorkspace() {
 
   return (
     <UiTaskWorkspace className={styles.workspace}>
-      <p className={styles.kicker}>UX-PRO-07C-1 · FORNECEDORES EXT-04</p>
+      <p className={styles.kicker}>UX-PRO-07C · FORNECEDORES EXT-04</p>
       <h1>EXT-04 — Fornecedores</h1>
       <p className={styles.lede}>
         Jornada administrativa interna de cotações, referências documentais e pedidos. Cada leitura informa se ainda está
         consultando o servidor, se a consulta falhou ou se o recorte terminou vazio; uma falha nunca é apresentada como
-        ausência de registros.
+        ausência de registros. Cada escrita declara o envio em curso, valida a resposta do servidor antes de confirmar
+        sucesso e, quando o resultado é incerto, repete somente por decisão explícita e com a mesma chave de idempotência.
       </p>
 
       <section aria-label="Condição de volume" className={local.boundary}>
@@ -392,9 +584,31 @@ export default function FornecedoresWorkspace() {
       ) : (
         <>
           {notice ? <p className={styles.notice} role="status">{notice}</p> : null}
-          {writeError ? (
+          {write.phase === "sending" ? (
+            <p className={`${styles.notice} ${styles.noticeInfo}`} role="status" data-testid="fornecedores-escrita-enviando">
+              {write.replaying ? "Reenviando" : "Enviando"} {WRITE_ACTION_NAMES[write.request.action]}… O resultado ainda
+              não foi confirmado; as listas e o detalhe continuam sendo das últimas leituras concluídas.
+            </p>
+          ) : null}
+          {write.phase === "uncertain" ? (
+            <div className={`${styles.notice} ${styles.noticeWarning}`} role="alert" data-testid="fornecedores-escrita-incerta">
+              <strong>{write.error.title}</strong>
+              <p>
+                {supplierWriteErrorDetail(write.error)} A tela não repete a escrita automaticamente. “Repetir com a mesma
+                chave” reenvia exatamente esta solicitação — mesma URL, mesmo corpo e a mesma chave de idempotência
+                (<code className={local.codeInline}>{write.idempotencyKey}</code>) — para confirmar o resultado sem criar
+                registro duplicado. Não inicie outra escrita até a confirmação; atualize as listas para conferir o estado atual.
+              </p>
+              <div className={styles.actions}>
+                <button type="button" data-testid="fornecedores-escrita-repetir" onClick={() => void repeatWrite()}>
+                  Repetir com a mesma chave
+                </button>
+              </div>
+            </div>
+          ) : null}
+          {write.phase === "failed" ? (
             <div role="alert" data-testid="fornecedores-escrita-falha">
-              <UiState variant="error" title="Falha na operação de escrita" detail={writeError} />
+              <UiState variant="error" title={write.error.title} detail={supplierWriteErrorDetail(write.error)} />
             </div>
           ) : null}
 
@@ -468,7 +682,7 @@ export default function FornecedoresWorkspace() {
                 <input id="fornecedores-notes" value={quoteForm.notes} onChange={e => setQuoteForm({ ...quoteForm, notes: e.target.value })} />
               </div>
               <div className={styles.actions}>
-                <button type="submit" className={styles.primary} disabled={Boolean(busy)}>Confirmar no servidor</button>
+                <button type="submit" className={styles.primary} disabled={writesBlocked} aria-busy={sendingOperation === "create-quotation"}>Confirmar no servidor</button>
               </div>
             </form>
           </section>
@@ -549,7 +763,7 @@ export default function FornecedoresWorkspace() {
                     <p className={styles.hint}>Leitura concluída às {readTime(detailState.readAt)}.</p>
                     <div className={styles.actions}>
                       {(quoteTransitions[quote.status] || []).map(status => (
-                        <button key={status} type="button" disabled={Boolean(busy)} onClick={() => void transitionQuotation(status)}>Mover para {supplierLabel(status)}</button>
+                        <button key={status} type="button" disabled={writesBlocked} aria-busy={sendingOperation === `quote-${selectedId}-${status}`} onClick={() => void transitionQuotation(status)}>Mover para {supplierLabel(status)}</button>
                       ))}
                     </div>
                     {quote.status === "em_analise" && !quote.decision ? (
@@ -559,8 +773,8 @@ export default function FornecedoresWorkspace() {
                           <input id="fornecedores-decisao" value={decisionReason} onChange={e => setDecisionReason(e.target.value)} />
                         </div>
                         <div className={styles.actions}>
-                          <button type="button" className={styles.primary} disabled={Boolean(busy)} onClick={() => void decide("aprovada")}>Aprovar definitivamente</button>
-                          <button type="button" disabled={Boolean(busy)} onClick={() => void decide("rejeitada")}>Rejeitar definitivamente</button>
+                          <button type="button" className={styles.primary} disabled={writesBlocked} aria-busy={sendingOperation === `decision-${selectedId}`} onClick={() => void decide("aprovada")}>Aprovar definitivamente</button>
+                          <button type="button" disabled={writesBlocked} aria-busy={sendingOperation === `decision-${selectedId}`} onClick={() => void decide("rejeitada")}>Rejeitar definitivamente</button>
                         </div>
                       </div>
                     ) : null}
@@ -574,7 +788,7 @@ export default function FornecedoresWorkspace() {
                           <input id="fornecedores-notas-pedido" value={orderNotes} onChange={e => setOrderNotes(e.target.value)} />
                         </div>
                         <div className={styles.actions}>
-                          <button type="button" className={styles.primary} disabled={Boolean(busy)} onClick={() => void createOrder()}>Criar pedido derivado</button>
+                          <button type="button" className={styles.primary} disabled={writesBlocked} aria-busy={sendingOperation === `order-${selectedId}`} onClick={() => void createOrder()}>Criar pedido derivado</button>
                         </div>
                       </div>
                     ) : null}
@@ -614,7 +828,7 @@ export default function FornecedoresWorkspace() {
                       <input id="fornecedores-justificativa" required value={validityForm.justification} onChange={e => setValidityForm({ ...validityForm, justification: e.target.value })} />
                     </div>
                     <div className={styles.actions}>
-                      <button type="submit" className={styles.primary} disabled={Boolean(busy)}>Registrar validade</button>
+                      <button type="submit" className={styles.primary} disabled={writesBlocked} aria-busy={sendingOperation === `validity-${selectedId}`}>Registrar validade</button>
                     </div>
                   </form>
                   {!detail?.alert_rule ? (
@@ -628,7 +842,7 @@ export default function FornecedoresWorkspace() {
                         <input id="fornecedores-regra" required value={alertForm.justification} onChange={e => setAlertForm({ ...alertForm, justification: e.target.value })} />
                       </div>
                       <div className={styles.actions}>
-                        <button type="submit" disabled={Boolean(busy)}>Registrar regra explícita</button>
+                        <button type="submit" disabled={writesBlocked} aria-busy={sendingOperation === `alert-${selectedId}`}>Registrar regra explícita</button>
                       </div>
                     </form>
                   ) : null}
@@ -670,7 +884,7 @@ export default function FornecedoresWorkspace() {
                       <input id="fornecedores-chave" required value={documentForm.storage_key} onChange={e => setDocumentForm({ ...documentForm, storage_key: e.target.value })} />
                     </div>
                     <div className={styles.actions}>
-                      <button type="submit" className={styles.primary} disabled={Boolean(busy)}>Registrar referência</button>
+                      <button type="submit" className={styles.primary} disabled={writesBlocked} aria-busy={sendingOperation === `document-${selectedId}`}>Registrar referência</button>
                     </div>
                   </form>
                 </section>
@@ -702,7 +916,7 @@ export default function FornecedoresWorkspace() {
                         </div>
                         <div className={styles.actions}>
                           {(orderTransitions[orderItem.status] || []).map(status => (
-                            <button key={status} type="button" disabled={Boolean(busy)} onClick={() => void transitionOrder(orderItem.id, status)}>Mover para {supplierLabel(status)}</button>
+                            <button key={status} type="button" disabled={writesBlocked} aria-busy={sendingOperation === `order-${orderItem.id}-${status}`} onClick={() => void transitionOrder(orderItem.id, status)}>Mover para {supplierLabel(status)}</button>
                           ))}
                         </div>
                       </article>
@@ -741,7 +955,7 @@ export default function FornecedoresWorkspace() {
                   <input id="fornecedores-prazo-justificativa" required value={deadlineForm.justification} onChange={e => setDeadlineForm({ ...deadlineForm, justification: e.target.value })} />
                 </div>
                 <div className={styles.actions}>
-                  <button type="submit" className={styles.primary} disabled={Boolean(busy)}>Registrar prazo</button>
+                  <button type="submit" className={styles.primary} disabled={writesBlocked} aria-busy={sendingOperation === `deadline-${deadlineForm.order_id}`}>Registrar prazo</button>
                 </div>
               </form>
             ) : null}

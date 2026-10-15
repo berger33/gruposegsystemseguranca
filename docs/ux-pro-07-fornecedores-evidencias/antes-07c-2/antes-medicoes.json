@@ -1,0 +1,41 @@
+{
+  "stage": "ux-pro-07-fornecedores",
+  "subfatia": "UX-PRO-07C-2 — estados de escrita",
+  "momento": "antes da implementacao da tela (base ff0e6d6, pos-07C-1)",
+  "gate": "npm run test:ux-supplier:pg (gate focal ampliado para 18 casos, tela ainda intacta)",
+  "resultado": {
+    "pass": 11,
+    "fail": 7,
+    "skipped": 0,
+    "todo": 0,
+    "exit": 1,
+    "minimo_exigido": 18,
+    "rejeitado_por": ["7 caso(s) reprovado(s)", "apenas 11 caso(s) aprovado(s); a jornada exige ao menos 18"]
+  },
+  "casos": [
+    { "numero": 1, "nome": "EXT-04 workspace declares the canonical surface and distinct states", "resultado": "passou (herdado)" },
+    { "numero": 2, "nome": "EXT-04 browser failure injection contract is explicit", "resultado": "passou (herdado)" },
+    { "numero": 3, "nome": "as quatro leituras continuam exigindo sessão e papel autorizado", "resultado": "passou (herdado)" },
+    { "numero": 4, "nome": "browser: carregamento contextual e vazio concluído nunca se confundem", "resultado": "passou (herdado)" },
+    { "numero": 5, "nome": "browser: falha inicial declara causa e Tentar novamente faz nova leitura", "resultado": "passou (herdado)" },
+    { "numero": 6, "nome": "browser: falha de releitura preserva dado, informa hora e repetição atualiza de verdade", "resultado": "passou (herdado)" },
+    { "numero": 7, "nome": "browser: negativa depois do sucesso falha fechada e não preserva dado protegido", "resultado": "passou (herdado)" },
+    { "numero": 8, "nome": "browser: resposta 2xx malformada nunca é apresentada como ausência", "resultado": "passou (herdado)" },
+    { "numero": 9, "nome": "browser: selecionar cotação relê o detalhe sem relançar as três listas", "resultado": "passou (herdado)" },
+    { "numero": 10, "nome": "browser: 320 390 768 1440, tema noturno e percurso de teclado medidos sem problemas", "resultado": "passou (herdado)" },
+    { "numero": 11, "nome": "as nove mutações continuam exigindo sessão e papel autorizado no servidor", "resultado": "passou (autorização de escrita já estava preservada no servidor)" },
+    { "numero": 12, "nome": "browser: escrita da cotação declara envio, bloqueia duplo clique e reconcilia de verdade", "resultado": "falhou — não existe fornecedores-escrita-enviando nem aria-busy; sem guarda de duplo clique comprovada" },
+    { "numero": 13, "nome": "browser: transição de cotação com envio pendente mantém payload canônico e chave idempotente", "resultado": "falhou — nenhum estado de envio declarado" },
+    { "numero": 14, "nome": "browser: falha transitória de escrita declara incerteza, não repete sozinha e a repetição usa a mesma chave", "resultado": "falhou — não existe fornecedores-escrita-incerta nem botão de repetição pela mesma chave" },
+    { "numero": 15, "nome": "browser: conflito real de escrita é distinto de transitório, com código canônico e sem repetição", "resultado": "falhou — a faixa única não distingue recusa definitiva de transitório (E4)" },
+    { "numero": 16, "nome": "browser: 403 na escrita com perda de leitura falha fechada e remove o dado protegido", "resultado": "falhou — 403 de escrita não dispara fail-closed; listas e detalhe permanecem visíveis (E5)" },
+    { "numero": 17, "nome": "browser: 2xx malformada na escrita não vira sucesso nem ausência e não derruba a tela", "resultado": "falhou — corpo 2xx sem a chave canônica não é validado antes do sucesso (E3)" },
+    { "numero": 18, "nome": "browser: envio pendente e falha de escrita medidos em 320 390 768 e tema noturno", "resultado": "falhou — nenhum estado de escrita mensurável" }
+  ],
+  "notas": [
+    "Saída integral do gate em antes-gate-completo.txt (UX_SUPPLIER_TAP_SUMMARY: pass=11 fail=7 skipped=0 todo=0 minimo_exigido=18; QA_PG_TEMP_CLEANED: true).",
+    "Este resultado é a falha de casos NOVOS contra a implementação anterior — não é regressão de gate herdado e não substitui a medição herdada da 07C-1.",
+    "PostgreSQL descartável, servidor HTTP real e Chromium; falhas injetadas somente em window.fetch da página.",
+    "Nenhuma validação manual, homologação, revisão humana ou aceite humano aconteceu."
+  ]
+}

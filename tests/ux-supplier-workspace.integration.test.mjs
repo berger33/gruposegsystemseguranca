@@ -350,6 +350,20 @@ async function contrast(page, selector) {
   });
 }
 
+/** UX-PRO-07C-2 — medição de superfície por captura: transbordo e menor alvo. */
+async function measureSurface(page, label = 'superfície') {
+  const overflowDocumentoPx = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  assert.ok(overflowDocumentoPx <= 1, `transbordo de ${overflowDocumentoPx}px em ${label}`);
+  const targets = await page.locator('[data-task-workspace] :is(button, select, input, a[href])')
+    .evaluateAll(elements => elements
+      .map(element => ({ height: Math.round(element.getBoundingClientRect().height), visible: element.getBoundingClientRect().height > 0 }))
+      .filter(item => item.visible)
+      .map(item => item.height));
+  const menorAlvoPx = Math.min(...targets);
+  assert.ok(menorAlvoPx >= 44, `alvos precisam ter pelo menos 44px; medido ${menorAlvoPx}px em ${label}`);
+  return { overflowDocumentoPx, menorAlvoPx };
+}
+
 before(async () => {
   if (!RUN) return;
   const port = 3000 + Math.floor(Math.random() * 2000);
@@ -732,7 +746,7 @@ test('browser: escrita da cotação declara envio, bloqueia duplo clique e recon
       'a leitura continua disponível durante o envio');
     assert.equal(await page.locator('[data-testid="fornecedores-atualizar-detalhe"]').isDisabled(), false,
       'a leitura do detalhe continua disponível durante o envio');
-    await capture(page, 'fornecedores-1440-enviando', { estado: 'escrita_em_envio', acaoEmEnvio: 'create-quotation' });
+    await capture(page, 'fornecedores-1440-enviando', { estado: 'escrita_em_envio', acaoEmEnvio: 'create-quotation', ...await measureSurface(page, '1440px no envio pendente') });
 
     // Sucesso reconciliado: a seleção segue a cotação nova e as listas são relidas.
     await page.locator('p[role="status"]').filter({ hasText: /Cotação confirmada pelo servidor/ }).waitFor();
@@ -819,7 +833,7 @@ test('browser: falha transitória de escrita declara incerteza, não repete sozi
     await page.waitForTimeout(1500);
     assert.equal(await page.evaluate(() => window.__uxSupplierControl.mutations.filter(m => m.writeKey === 'quotation-status').length), 1,
       'nenhum POST pode ser reenviado automaticamente');
-    await capture(page, 'fornecedores-1440-escrita-falha-transitoria', { estado: 'escrita_falha_transitoria_incerta' });
+    await capture(page, 'fornecedores-1440-escrita-falha-transitoria', { estado: 'escrita_falha_transitoria_incerta', ...await measureSurface(page, '1440px na falha transitória de escrita') });
 
     // Repetição explícita: mesma URL, mesmo corpo e a MESMA chave idempotente.
     await page.getByRole('button', { name: 'Repetir com a mesma chave' }).click();
@@ -872,7 +886,7 @@ test('browser: conflito real de escrita é distinto de transitório, com código
     assert.equal(await page.locator('[data-testid="fornecedores-negado"]').count(), 0);
     assert.equal(await page.getByRole('button', { name: 'Registrar validade' }).isDisabled(), false,
       'recusa definitiva libera as escritas de volta');
-    await capture(page, 'fornecedores-1440-escrita-conflito', { estado: 'escrita_recusada_conflito' });
+    await capture(page, 'fornecedores-1440-escrita-conflito', { estado: 'escrita_recusada_conflito', ...await measureSurface(page, '1440px na recusa definitiva de escrita') });
     await context.close();
   });
 });
@@ -915,7 +929,11 @@ test('browser: 403 na escrita com perda de leitura falha fechada e remove o dado
     assert.equal(await page.locator('[data-testid="fornecedores-quotations-desatualizado"]').count(), 0,
       'negativa não é apresentada como dado desatualizado');
     assert.equal(await denied.getByRole('button').count(), 0, 'negativa não oferece repetição da mesma chamada');
-    await capture(page, 'fornecedores-1440-escrita-negada', { estado: 'escrita_negada_fail_closed' });
+    const negadaOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    assert.ok(negadaOverflow <= 1, `transbordo de ${negadaOverflow}px na negativa de escrita`);
+    const negadaTargets = await page.locator('[data-task-workspace] :is(button, select, input, a[href])').count();
+    assert.equal(negadaTargets, 0, 'a negativa não deixa nenhum controle acionável na tela');
+    await capture(page, 'fornecedores-1440-escrita-negada', { estado: 'escrita_negada_fail_closed', overflowDocumentoPx: negadaOverflow, alvosAcionaveis: negadaTargets });
     await context.close();
   });
 });
@@ -939,28 +957,32 @@ test('browser: 2xx malformada na escrita não vira sucesso nem ausência e não 
       '2xx sem a chave canônica não pode virar sucesso');
     assert.match(await list.innerText(), new RegExp(created.quotation.protocol), 'a lista lida permanece');
     assert.equal(await page.locator('[data-testid="fornecedores-detalhe-painel"]').count(), 1, 'o detalhe permanece');
-    await capture(page, 'fornecedores-1440-escrita-resposta-invalida', { estado: 'escrita_resposta_2xx_invalida' });
+    await capture(page, 'fornecedores-1440-escrita-resposta-invalida', { estado: 'escrita_resposta_2xx_invalida', ...await measureSurface(page, '1440px na resposta 2xx inválida de escrita') });
     await context.close();
+  });
 
-    // A criação com corpo sem quotation.id também não vira sucesso e não derruba a tela.
+  // A criação com corpo sem quotation.id também não vira sucesso e não derruba a
+  // tela. Navegador próprio: o Chromium empacotado em --single-process não
+  // sobrevive à reabertura de contexto no mesmo processo.
+  await withBrowser(async browser => {
     const catalog = await seedCatalog('resposta-invalida-criacao');
-    const second = await openFornecedores(browser, { writeRules: { 'create-quotation': { malformed: true } } });
-    const page2 = second.page;
-    const list2 = page2.locator('[data-testid="fornecedores-quotations-lista"]');
-    await list2.waitFor();
-    await page2.selectOption('#fornecedores-supplier', catalog.supplierId);
-    await page2.selectOption('#fornecedores-product', catalog.productId);
-    await page2.fill('#fornecedores-notes', 'Criação com resposta declarada inválida pelo gate.');
-    await page2.getByRole('button', { name: 'Confirmar no servidor' }).click();
-    const uncertain2 = page2.locator('[data-testid="fornecedores-escrita-incerta"]');
-    await uncertain2.waitFor();
-    assert.match(await uncertain2.innerText(), /invalid_supplier_write_response/);
-    await page2.getByRole('heading', { level: 1, name: /EXT-04 — Fornecedores/ }).waitFor();
-    assert.equal(await page2.locator('p[role="status"]').filter({ hasText: /Cotação confirmada pelo servidor/ }).count(), 0,
+    const { context, page } = await openFornecedores(browser, { writeRules: { 'create-quotation': { malformed: true } } });
+    const list = page.locator('[data-testid="fornecedores-quotations-lista"]');
+    await list.waitFor();
+    await page.selectOption('#fornecedores-supplier', catalog.supplierId);
+    await page.selectOption('#fornecedores-product', catalog.productId);
+    await page.fill('#fornecedores-price', '10,00');
+    await page.fill('#fornecedores-notes', 'Criação com resposta declarada inválida pelo gate.');
+    await page.getByRole('button', { name: 'Confirmar no servidor' }).click();
+    const uncertain = page.locator('[data-testid="fornecedores-escrita-incerta"]');
+    await uncertain.waitFor();
+    assert.match(await uncertain.innerText(), /invalid_supplier_write_response/);
+    await page.getByRole('heading', { level: 1, name: /EXT-04 — Fornecedores/ }).waitFor();
+    assert.equal(await page.locator('p[role="status"]').filter({ hasText: /Cotação confirmada pelo servidor/ }).count(), 0,
       'criação com corpo inválido não pode declarar sucesso');
-    assert.equal(await page2.locator('#fornecedores-supplier').inputValue(), catalog.supplierId,
+    assert.equal(await page.locator('#fornecedores-supplier').inputValue(), catalog.supplierId,
       'o formulário não é limpo sem sucesso confirmado');
-    await second.context.close();
+    await context.close();
   });
 });
 
@@ -978,12 +1000,7 @@ test('browser: envio pendente e falha de escrita medidos em 320 390 768 e tema n
     await page.waitForTimeout(400);
     await page.getByRole('button', { name: 'Mover para Enviada' }).click();
     await page.locator('[data-testid="fornecedores-escrita-enviando"]').waitFor();
-    let overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    assert.ok(overflow <= 1, `transbordo de ${overflow}px no envio em 390px`);
-    let minTarget = await page.locator('[data-task-workspace] :is(button, select, input, a[href])')
-      .evaluateAll(elements => Math.min(...elements.map(element => element.getBoundingClientRect().height)));
-    assert.ok(minTarget >= 44, `alvos precisam ter pelo menos 44px; medido ${minTarget}px no envio em 390px`);
-    await capture(page, 'fornecedores-390-enviando', { estado: 'escrita_em_envio', overflowDocumentoPx: overflow, menorAlvoPx: minTarget });
+    await capture(page, 'fornecedores-390-enviando', { estado: 'escrita_em_envio', ...await measureSurface(page, '390px no envio pendente') });
     await page.locator('p[role="status"]').filter({ hasText: /Estado enviado confirmado pelo servidor/ }).waitFor();
 
     // 768 px, tema noturno pelo controle real do envelope: envio pendente com contraste medido.
@@ -1016,15 +1033,9 @@ test('browser: envio pendente e falha de escrita medidos em 320 390 768 e tema n
     await page.getByRole('button', { name: 'Mover para Cancelada' }).click();
     const uncertain = page.locator('[data-testid="fornecedores-escrita-incerta"]');
     await uncertain.waitFor();
-    const overflow320 = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    assert.ok(overflow320 <= 1, `transbordo de ${overflow320}px na falha de escrita em 320px`);
-    const minTarget320 = await page.locator('[data-task-workspace] :is(button, select, input, a[href])')
-      .evaluateAll(elements => Math.min(...elements.map(element => element.getBoundingClientRect().height)));
-    assert.ok(minTarget320 >= 44, `alvos precisam ter pelo menos 44px; medido ${minTarget320}px na falha em 320px`);
     await capture(page, 'fornecedores-320-escrita-falha', {
       estado: 'escrita_falha_transitoria',
-      overflowDocumentoPx: overflow320,
-      menorAlvoPx: minTarget320,
+      ...await measureSurface(page, '320px na falha transitória de escrita'),
     });
     await context.close();
   });
