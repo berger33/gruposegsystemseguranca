@@ -232,3 +232,41 @@ html[data-admin-theme="night"] [data-admin-theme-scope="true"] [role="alert"] {
   background: var(--ux-color-error-soft);
   color: var(--ux-color-error);
 }
+
+/* UX-PRO-08E: the RAG widget keeps its area accent in day mode, but its
+   semantic roles follow the administrative night palette. This avoids
+   inheriting light text over the fixed RAG_COLORS pastel cards while keeping
+   the public/customer widget and all request/response contracts unchanged. */
+html[data-admin-theme="night"] [data-admin-theme-scope="true"] .rag-widget {
+  --rag-border: var(--ux-color-border) !important;
+  --rag-bg: var(--ux-color-surface) !important;
+  --rag-accent: var(--ux-color-brand-strong) !important;
+  --rag-light: var(--ux-color-brand-soft) !important;
+  --rag-accent-contrast: #111b2b !important;
+  --rag-control-bg: var(--ux-color-surface) !important;
+  --rag-control-text: var(--ux-color-text) !important;
+  --rag-control-border: var(--ux-color-border) !important;
+  --rag-input-bg: #111e30 !important;
+  --rag-input-text: var(--ux-color-text) !important;
+  --rag-input-border: var(--ux-color-border) !important;
+  --rag-error-bg: var(--ux-color-error-soft) !important;
+  --rag-error-text: var(--ux-color-error) !important;
+  --rag-error-border: var(--ux-color-error) !important;
+  --rag-answer-bg: var(--ux-color-surface) !important;
+  --rag-answer-text: var(--ux-color-text) !important;
+  --rag-success-bg: var(--ux-color-success) !important;
+  --rag-success-text: #111b2b !important;
+  color: var(--ux-color-text);
+}
+
+html[data-admin-theme="night"] [data-admin-theme-scope="true"] .rag-widget .rag-suggestion {
+  background: var(--rag-control-bg) !important;
+  color: var(--rag-accent) !important;
+  border-color: var(--rag-border) !important;
+}
+
+html[data-admin-theme="night"] [data-admin-theme-scope="true"] .rag-widget [data-testid="rag-question"] {
+  background: var(--rag-input-bg) !important;
+  color: var(--rag-input-text) !important;
+  border-color: var(--rag-input-border) !important;
+}

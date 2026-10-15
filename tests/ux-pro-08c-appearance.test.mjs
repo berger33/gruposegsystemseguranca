@@ -45,6 +45,37 @@ test('UX-PRO-08C galeria distingue ativo × comparação junto à prévia e pres
   assert.match(gallery, /method:'PUT'/);
 });
 
+test('UX-PRO-08E corrige os resíduos de contraste noturno do RAG e da galeria sem alterar contratos', async () => {
+  const rag = await read('src/components/RagWidget.tsx');
+  const gallery = await read('src/components/AppearanceGallery.tsx');
+  const adminTheme = await read('src/app/admin/admin-theme.css');
+  const galleryCss = await read('src/components/AppearanceGallery.module.css');
+
+  // O widget mantém a paleta diurna por escopo, mas agora expõe papéis
+  // semânticos que o tema noturno pode trocar sem tocar em API ou conteúdo.
+  assert.match(rag, /--rag-bg/);
+  assert.match(rag, /--rag-accent-contrast/);
+  assert.match(rag, /var\(--rag-input-bg\)/);
+  assert.match(rag, /var\(--rag-answer-text\)/);
+  assert.match(adminTheme, /\.rag-widget\s*\{/);
+  assert.match(adminTheme, /--rag-accent: var\(--ux-color-brand-strong\) !important/);
+  assert.match(adminTheme, /--rag-accent-contrast: #111b2b !important/);
+  assert.match(adminTheme, /\.rag-widget \.rag-suggestion/);
+
+  // A galeria mantém a miniatura/iframe como prévia do site, mas corrige a
+  // moldura administrativa, controles, estado selecionado e diálogo no night.
+  assert.match(galleryCss, /html\[data-admin-theme="night"\]/);
+  assert.match(galleryCss, /\.gallery \.option\s*\{[\s\S]*background: var\(--ux-color-surface\)/);
+  assert.match(galleryCss, /\.gallery \.selected\s*\{[\s\S]*background: var\(--ux-color-brand-soft\)/);
+  assert.match(galleryCss, /device button\[aria-pressed='true'\]/);
+  assert.match(galleryCss, /\.gallery \.primary\s*\{[\s\S]*color: #111b2b/);
+
+  // Rotas, identidade, concessão, publicação e o contrato de resposta do
+  // widget continuam sendo exercitados pelos testes/gates existentes.
+  assert.match(rag, /\/api\/ai\/answer/);
+  assert.match(gallery, /method:'PUT'/);
+});
+
 test('UX-PRO-08D evidências e resumo.json das três superfícies cobrem 320/390/768/1440px, tema dia/noite, teclado e reconciliação de contagens', async () => {
   const specs = [
     {

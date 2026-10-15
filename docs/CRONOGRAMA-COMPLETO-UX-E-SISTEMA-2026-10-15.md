@@ -46,9 +46,10 @@ Esta atualização é limitada à família 08; os demais status/estimativas dest
 | 08A | MERGED #244 (`ab39b6dc`): leitura honesta de `/admin/conhecimento`; não refazer. |
 | 08B | MERGED #245 (`5a02f0e`): assistentes Marcelo/RH/cliente e fontes do RagWidget; contagem histórica corrigida de 13 para 12 PNGs, com lista no resumo. |
 | 08C | MERGED #246 (`8dfbd7e451787dcf6f56e93b81d8e4edb26ceda5`): aparência/prévias, faixa/noindex/selo; não refazer nem publicar. |
-| 08D | MERGED #247 (`3d807a420db6c63c3f754ae02144053e29da1469`). Complemento limitado nesta branch: 12 PNGs noturnos 320/390/1440 nas quatro rotas staff, ainda ausentes na #247; não reabrir nem duplicar sua entrega. Gates e código de produto preservados. |
+| 08D | MERGED #247 (`3d807a420db6c63c3f754ae02144053e29da1469`). Complemento mergeado na #248 (`be87ab1`): 12 PNGs noturnos 320/390/1440 nas quatro rotas staff, ainda ausentes na #247; não reabrir nem duplicar sua entrega. Gates e código de produto preservados. |
+| 08E | Continuação desta sessão: D5 (`RagWidget`) e D6 (`AppearanceGallery`) corrigidos com tokens/overrides do tema administrativo noturno; testes e gate focal atualizados para exigir contraste mínimo. D7, D8/E6/E8 e a passagem integral das prévias continuam separadas. |
 
-**Fechamento de medição, não aceite de UX sem defeitos:** [relatório da família](UX-PRO-08-FECHAMENTO-2026-10-15.md), com os resíduos D1–D8 da #247 preservados e complemento 08D-C1/C2/C3. D5 (RAG) e D6 (aparência) exigem PRs próprias; D8 permanece vinculado a E6/E8 e depende de autorização. C2 registra limites do detector, não defeitos de produto demonstrados. E2–E9/C11, homologação e produção permanecem fora do escopo/NO-GO. Próxima subfatia da fila: [UX-PRO-09A — entradas](UX-PRO-09A-PROMPT-PROXIMA-SUBFATIA-2026-10-15.md), após conferir a PR 08D na main.
+**Fechamento de medição, não aceite de UX sem defeitos:** [relatório da família](UX-PRO-08-FECHAMENTO-2026-10-15.md), com os resíduos D1–D8 da #247 preservados e complemento 08D-C1/C2/C3. D5 (RAG) e D6 (aparência), que eram pendências próprias no registro 08D, têm continuidade implementada nesta sessão em 08E; D7 e D8 permanecem separados, com D8 vinculado a E6/E8 e dependente de autorização. C2 registra limites do detector, não defeitos de produto demonstrados. E2–E9/C11, homologação e produção permanecem fora do escopo/NO-GO. Próxima subfatia da fila: [UX-PRO-09A — entradas](UX-PRO-09A-PROMPT-PROXIMA-SUBFATIA-2026-10-15.md), após conferir a PR 08D na main.
 
 ---
 

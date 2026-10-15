@@ -57,7 +57,16 @@ const SUGGESTIONS: Record<string, string[]> = {
   publico: ["Quais serviços vocês oferecem?", "Como solicitar orçamento?", "Contato claro?", "FAQ por categoria?"],
 };
 
-const STATE_STYLE: React.CSSProperties = { marginTop: 12, padding: 12, borderRadius: 8, fontSize: 13, lineHeight: 1.5 };
+const STATE_STYLE: React.CSSProperties = {
+  marginTop: 12,
+  padding: 12,
+  borderRadius: 8,
+  fontSize: 13,
+  lineHeight: 1.5,
+  color: "var(--rag-error-text)",
+  background: "var(--rag-error-bg)",
+  border: "1px solid var(--rag-error-border)",
+};
 
 function busyDetail(failure: Failure) {
   if (failure.state !== "busy" || !failure.retryAfterSeconds) return failure.detail;
@@ -80,6 +89,29 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
   const abortRef = useRef<AbortController | null>(null);
   const colors = RAG_COLORS[ragKey] || RAG_COLORS.publico;
   const scopeLabel = ragScopeLabel(ragKey);
+  // Keep the day palette unchanged while allowing the administrative night
+  // theme to replace the visual roles without changing the RAG scope colors
+  // or any of the FECH-01 request/response behavior.
+  const ragStyleVars = {
+    "--rag-border": colors.border,
+    "--rag-bg": colors.bg,
+    "--rag-accent": colors.accent,
+    "--rag-light": colors.light,
+    "--rag-accent-contrast": "#fff",
+    "--rag-control-bg": "#fff",
+    "--rag-control-text": "#374151",
+    "--rag-control-border": "#e5e7eb",
+    "--rag-input-bg": "#fff",
+    "--rag-input-text": "#1f2937",
+    "--rag-input-border": "#cbd5e1",
+    "--rag-error-bg": "#fef2f2",
+    "--rag-error-text": "#b91c1c",
+    "--rag-error-border": "#fecaca",
+    "--rag-answer-bg": "#fff",
+    "--rag-answer-text": "#1f2937",
+    "--rag-success-bg": "#10b981",
+    "--rag-success-text": "#fff",
+  } as React.CSSProperties;
 
   useEffect(() => () => { abortRef.current?.abort(); }, []);
 
@@ -174,24 +206,24 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
       data-rag-key={ragKey}
       data-ui-state={uiState}
       aria-busy={phase === "loading"}
-      style={{ border: `2px solid ${colors.border}`, borderRadius: 12, padding: 20, background: colors.bg, marginTop: 20, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
+      style={{ ...ragStyleVars, border: "2px solid var(--rag-border)", borderRadius: 12, padding: 20, background: "var(--rag-bg)", marginTop: 20, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
     >
       <style>{`
         .rag-widget :focus-visible { outline: 3px solid var(--ux-color-focus, #1d4ed8); outline-offset: 2px; }
-        .rag-widget .rag-spin { display:inline-block; width:16px; height:16px; border:2px solid #fff; border-top-color:transparent; border-radius:50%; animation: rag-spin 0.8s linear infinite; }
-        .rag-widget .rag-suggestion { font-size:11px; padding:5px 10px; border-radius:20px; background:#fff; cursor:pointer; }
+        .rag-widget .rag-spin { display:inline-block; width:16px; height:16px; border:2px solid var(--rag-accent-contrast); border-top-color:transparent; border-radius:50%; animation: rag-spin 0.8s linear infinite; }
+        .rag-widget .rag-suggestion { font-size:11px; padding:5px 10px; border-radius:20px; background:var(--rag-control-bg); cursor:pointer; }
         @keyframes rag-spin { to { transform: rotate(360deg); } }
         @media (prefers-reduced-motion: reduce) { .rag-widget .rag-spin { animation: none; } }
       `}</style>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
         <div>
-          <h2 id={headingId} style={{ margin: 0, fontSize: 20, fontWeight: 700, color: colors.accent }}>{title}</h2>
-          <span style={{ display: "inline-block", marginTop: 6, fontSize: 11, padding: "3px 8px", borderRadius: 20, background: colors.accent, color: "#fff", fontWeight: 600 }}>
+          <h2 id={headingId} style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "var(--rag-accent)" }}>{title}</h2>
+          <span style={{ display: "inline-block", marginTop: 6, fontSize: 11, padding: "3px 8px", borderRadius: 20, background: "var(--rag-accent)", color: "var(--rag-accent-contrast)", fontWeight: 600 }}>
             RAG {ragKey.toUpperCase()} • escopo conferido no servidor
           </span>
         </div>
-        <span data-testid="rag-scope" style={{ fontSize: 11, padding: "4px 8px", borderRadius: 6, background: colors.light, color: colors.accent, fontWeight: 600, maxWidth: 260 }}>
+        <span data-testid="rag-scope" style={{ fontSize: 11, padding: "4px 8px", borderRadius: 6, background: "var(--rag-light)", color: "var(--rag-accent)", fontWeight: 600, maxWidth: 260 }}>
           {scopeLabel}
         </span>
       </div>
@@ -210,7 +242,7 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
             data-testid={`rag-suggestion-${i}`}
             disabled={phase === "loading"}
             onClick={() => { setQuery(s); ask(s); }}
-            style={{ border: `1px solid ${colors.border}`, color: colors.accent, opacity: phase === "loading" ? 0.6 : 1 }}
+            style={{ border: "1px solid var(--rag-border)", color: "var(--rag-accent)", opacity: phase === "loading" ? 0.6 : 1 }}
           >
             {s}
           </button>
@@ -232,7 +264,7 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
           rows={3}
           aria-describedby={`${helpId} ${counterId}`}
           disabled={phase === "loading"}
-          style={{ padding: 12, borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14, resize: "vertical", boxShadow: "inset 0 1px 2px rgba(0,0,0,0.05)", width: "100%", boxSizing: "border-box" }}
+          style={{ padding: 12, borderRadius: 8, border: "1px solid var(--rag-input-border)", background: "var(--rag-input-bg)", color: "var(--rag-input-text)", fontSize: 14, resize: "vertical", boxShadow: "inset 0 1px 2px rgba(0,0,0,0.05)", width: "100%", boxSizing: "border-box" }}
         />
         <p id={helpId} style={{ margin: 0, fontSize: 11, opacity: 0.75 }}>
           Entre {RAG_QUESTION_MIN} e {RAG_QUESTION_MAX} caracteres — o mesmo limite aceito pelo servidor. Perguntas e respostas não são gravadas no painel de custo.
@@ -242,7 +274,7 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
             type="submit"
             data-testid="rag-submit"
             disabled={phase === "loading"}
-            style={{ padding: "10px 18px", background: colors.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: phase === "loading" ? "not-allowed" : "pointer", opacity: phase === "loading" ? 0.7 : 1, display: "flex", alignItems: "center", gap: 8 }}
+            style={{ padding: "10px 18px", background: "var(--rag-accent)", color: "var(--rag-accent-contrast)", border: "none", borderRadius: 8, fontWeight: 600, cursor: phase === "loading" ? "not-allowed" : "pointer", opacity: phase === "loading" ? 0.7 : 1, display: "flex", alignItems: "center", gap: 8 }}
           >
             {phase === "loading" ? (<><span className="rag-spin" aria-hidden="true" /> Consultando base e modelo local…</>) : `Perguntar à base ${ragKey.toUpperCase()}`}
           </button>
@@ -255,12 +287,12 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
       </p>
 
       {phase === "failed" && failure && (
-        <div data-testid="rag-failure" role="alert" style={{ ...STATE_STYLE, color: "#b91c1c", background: "#fef2f2", border: "1px solid #fecaca" }}>
+        <div data-testid="rag-failure" role="alert" style={STATE_STYLE}>
           <strong style={{ display: "block", marginBottom: 4 }}>{failure.title}</strong>
           {busyDetail(failure)}
           {failure.code && <span style={{ display: "block", marginTop: 6, fontSize: 11, opacity: 0.8 }}>Código técnico: {failure.code}</span>}
           {failure.canRetry && (
-            <button type="button" data-testid="rag-retry" onClick={() => ask()} style={{ marginTop: 8, padding: "6px 12px", borderRadius: 6, border: "1px solid #b91c1c", background: "#fff", color: "#b91c1c", fontWeight: 600, cursor: "pointer" }}>
+            <button type="button" data-testid="rag-retry" onClick={() => ask()} style={{ marginTop: 8, padding: "6px 12px", borderRadius: 6, border: "1px solid var(--rag-error-text)", background: "var(--rag-control-bg)", color: "var(--rag-error-text)", fontWeight: 600, cursor: "pointer" }}>
               Tentar novamente
             </button>
           )}
@@ -268,7 +300,7 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
       )}
 
       {phase === "answered" && answer && (
-        <div data-testid="rag-answer" data-answer-state={outcome?.state || "answered"} style={{ marginTop: 16, padding: 16, background: "#fff", borderRadius: 10, borderLeft: `5px solid ${colors.accent}`, boxShadow: "0 2px 6px rgba(0,0,0,0.05)" }}>
+        <div data-testid="rag-answer" data-answer-state={outcome?.state || "answered"} style={{ marginTop: 16, padding: 16, background: "var(--rag-answer-bg)", borderRadius: 10, borderLeft: "5px solid var(--rag-accent)", boxShadow: "0 2px 6px rgba(0,0,0,0.05)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
             <div style={{ fontSize: 11, opacity: 0.75, display: "flex", gap: 10, flexWrap: "wrap" }}>
               {answer.protocol && <span>Protocolo <strong data-testid="rag-protocol">{answer.protocol}</strong></span>}
@@ -276,17 +308,17 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
               <span data-testid="rag-answer-origin">{answer.ollamaUsed ? "Ollama local" : "Sem fonte aprovada suficiente — modelo não consultado"}</span>
             </div>
             {answer.protocol && (
-              <button type="button" data-testid="rag-copy-protocol" onClick={copyProtocol} style={{ fontSize: 11, padding: "4px 8px", borderRadius: 6, border: "1px solid #e5e7eb", background: copied ? "#10b981" : "#fff", color: copied ? "#fff" : "#374151", cursor: "pointer" }}>
+              <button type="button" data-testid="rag-copy-protocol" onClick={copyProtocol} style={{ fontSize: 11, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--rag-control-border)", background: copied ? "var(--rag-success-bg)" : "var(--rag-control-bg)", color: copied ? "var(--rag-success-text)" : "var(--rag-control-text)", cursor: "pointer" }}>
                 {copied ? "Copiado!" : "Copiar protocolo"}
               </button>
             )}
           </div>
 
-          <div data-testid="rag-answer-response" style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap", color: "#1f2937" }}>{answer.response}</div>
+          <div data-testid="rag-answer-response" style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap", color: "var(--rag-answer-text)" }}>{answer.response}</div>
 
           {answer.sources.length > 0 && (
-            <details data-testid="rag-sources" style={{ marginTop: 12, fontSize: 12, background: colors.bg, padding: 10, borderRadius: 8 }}>
-              <summary style={{ cursor: "pointer", fontWeight: 600, color: colors.accent }}>Fontes publicadas usadas ({answer.sources.length})</summary>
+            <details data-testid="rag-sources" style={{ marginTop: 12, fontSize: 12, background: "var(--rag-bg)", padding: 10, borderRadius: 8 }}>
+              <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--rag-accent)" }}>Fontes publicadas usadas ({answer.sources.length})</summary>
               <ul style={{ marginTop: 8, paddingLeft: 18 }}>
                 {answer.sources.map((s: any, i: number) => (
                   <li key={i} style={{ marginBottom: 6 }}>
@@ -300,7 +332,7 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
             </details>
           )}
 
-          <p style={{ fontSize: 11, color: colors.accent, marginBottom: 0 }}>
+          <p style={{ fontSize: 11, color: "var(--rag-accent)", marginBottom: 0 }}>
             Fontes filtradas por área e, no portal, pelas contas vinculadas à sua sessão. Confirme decisões e valores nas telas oficiais.
           </p>
         </div>

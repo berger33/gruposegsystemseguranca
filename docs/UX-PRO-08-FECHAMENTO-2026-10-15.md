@@ -84,3 +84,12 @@ Nenhuma alteração em código de produto, APIs, migrações, autorização/pap�
 **Fechamento de medição, com resíduos pendentes — não UX sem defeitos.** Sem validação manual de jornada, aceite humano ou declaração WCAG integral. Ollama real, Windows, leitores de tela, zoom 200%, contraste integral e todos os layouts não são comprovados por este complemento. Homologação/produção **NO-GO**.
 
 Próxima subfatia da fila: **UX-PRO-09A — entradas**, com [prompt pronto](UX-PRO-09A-PROMPT-PROXIMA-SUBFATIA-2026-10-15.md). Os resíduos permanecem separados, nunca embutidos numa PR de entradas. Conferir a PR complementar e o SHA final na main antes da próxima execução.
+
+## 7. Adendo posterior — UX-PRO-08E
+
+A continuidade da família nesta sessão reabriu **somente** os resíduos de produto D5 e D6, que eram explicitamente pendências de PR própria neste fechamento:
+
+- D5 foi corrigido em `RagWidget.tsx` com papéis de cor sobrescritos pelo tema administrativo noturno em `admin-theme.css`. O gate focal agora exige `>= 4,5:1` no rótulo e no envio e preserva os alvos de sugestão `>= 44px`.
+- D6 foi corrigido em `AppearanceGallery.module.css` para cartões, opção selecionada, controles, botões, selo, diálogo e textarea no tema noturno; a miniatura/iframe continua clara por representar o site público em comparação.
+
+O adendo não invalida as capturas históricas de 08D nem as reclassifica como posteriores à correção. O relatório da continuidade é [`UX-PRO-08E-CONTRASTE-NOTURNO-2026-10-15.md`](UX-PRO-08E-CONTRASTE-NOTURNO-2026-10-15.md). D7, D8/E6/E8, as demais prévias, aceite humano, homologação e produção continuam pendentes/NO-GO.

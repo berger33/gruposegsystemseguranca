@@ -343,7 +343,7 @@ async function writeEvidence08b() {
     evidencias: `${entries.length} PNGs em docs/ux-pro-08-assistentes-evidencias/`,
     limitacoes: [
       'Sem aceite humano; sem declaração WCAG integral',
-      'Resíduo D5 medido e registrado nas entradas 768-noite: RagWidget.tsx usa paleta clara inline (RAG_COLORS) e sugestões compactas (~27px); no tema noite elementos sem cor inline herdam --ux-color-text claro sobre fundo claro do cartão (mantido sem reimplementar RagWidget.tsx)',
+      'D5 resolvido na continuação UX-PRO-08E: papéis de cor do RagWidget seguem o tema administrativo noturno; o gate mede rótulo e envio >= 4.5:1 e mantém alvos de sugestão >= 44px.',
       'Transversais E2-E9 e C11 fora de escopo',
       'Homologação/produção NO-GO',
     ],
@@ -1075,19 +1075,13 @@ test('UX-PRO-08D: medições 320/390/768/1440px, tema dia/noite e percurso de te
           noite.contrasteRotuloPergunta = await contraste08b(page, '[data-testid="rag-widget"] label');
           noite.contrasteBotaoEnvio = await contraste08b(page, '[data-testid="rag-submit"]');
           assert.ok(noite.contrasteTitulo >= 4.5, `contrasteTitulo noite em ${target.route}: ${noite.contrasteTitulo}:1`);
-          // D5: RagWidget.tsx usa paleta clara inline (RAG_COLORS) e sugestões compactas (~27px);
-          // no tema noite elementos sem cor inline herdam --ux-color-text claro sobre fundo claro do cartão.
-          const problemasNoite = [];
-          if (noite.contrasteRotuloPergunta < 4.5) {
-            problemasNoite.push(`resíduo D5: contraste do rótulo da pergunta no tema noite ${noite.contrasteRotuloPergunta}:1 (abaixo de 4.5:1) em RagWidget.tsx (fundo inline claro RAG_COLORS com texto herdado --ux-color-text claro); registrado para PR própria sem reimplementar RagWidget.tsx`);
-          }
-          if (noite.contrasteBotaoEnvio < 4.5) {
-            problemasNoite.push(`resíduo D5: contraste do botão de envio ${noite.contrasteBotaoEnvio}:1 (abaixo de 4.5:1) em RagWidget.tsx (RAG_COLORS.${target.role}.accent); registrado para PR própria`);
-          }
-          if (noite.alturaSugestaoPx < 44) {
-            problemasNoite.push(`resíduo D5: pílula de sugestão .rag-suggestion com ${noite.alturaSugestaoPx}px (< 44px) em RagWidget.tsx; registrado para PR própria`);
-          }
-          await capture(page, `${target.slug}-768-noite`, { ...noite, problems: problemasNoite });
+          // UX-PRO-08E: D5 deixou de ser apenas um resíduo medido. O tema
+          // noturno precisa manter legíveis o rótulo herdado e o envio, em
+          // ambos os assistentes staff, sem trocar o escopo da pergunta.
+          assert.ok(noite.contrasteRotuloPergunta >= 4.5, `D5: contrasteRotuloPergunta noite em ${target.route}: ${noite.contrasteRotuloPergunta}:1`);
+          assert.ok(noite.contrasteBotaoEnvio >= 4.5, `D5: contrasteBotaoEnvio noite em ${target.route}: ${noite.contrasteBotaoEnvio}:1`);
+          assert.ok(noite.alturaSugestaoPx >= 44, `alvo da sugestão em ${target.route}: ${noite.alturaSugestaoPx}px`);
+          await capture(page, `${target.slug}-768-noite`, { ...noite, problems: [] });
           await page.click('[data-admin-theme-toggle="true"]');
           await page.waitForFunction(() => document.documentElement.dataset.adminTheme !== 'night');
           await page.waitForTimeout(250);
