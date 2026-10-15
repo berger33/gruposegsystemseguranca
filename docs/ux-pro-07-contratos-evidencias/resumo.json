@@ -1,0 +1,39 @@
+{
+  "stage": "ux-pro-06-contratos",
+  "generatedBy": "gate PostgreSQL/Chromium; medição explícita de teclado",
+  "entries": [
+    {
+      "stage": "ux-pro-06-contratos",
+      "route": "/admin/contratos",
+      "role": "admin",
+      "viewport": "390x844",
+      "theme": "day",
+      "file": "contratos-390-teclado.png",
+      "firstFocus": true,
+      "percursoTeclado": [
+        "Sair",
+        "Início",
+        "Comercial",
+        "Empresas e funil",
+        "contract-company",
+        "contract-title",
+        "contract-scope",
+        "contract-starts",
+        "contract-starts",
+        "contract-starts",
+        "contract-starts",
+        "contract-ends",
+        "contract-ends",
+        "contract-ends",
+        "contract-ends",
+        "contract-price",
+        "contract-origin",
+        "Registrar contrato manual",
+        "Abrir composição e implantação",
+        "Abrir composição e implantação",
+        "Abrir composição e implantação",
+        "Abrir composição e implantação"
+      ]
+    }
+  ]
+}

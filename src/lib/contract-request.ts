@@ -49,3 +49,30 @@ export async function contractRequest<T = unknown>(url: string, init: RequestIni
 }
 
 export type { ContractErrorDescriptor };
+
+// UX-PRO-07M — leitura honesta (aditivo): 2xx sem a chave canônica nunca é
+// ausência de contrato/proposta/empresa. `contractRequest` acima permanece
+// INTACTO. O código abaixo é diagnóstico destas telas (o servidor nunca o
+// devolve), fora do vocabulário anti-deriva. Mesma decisão das fatias 07F-07L.
+export const INVALID_CONTRACT_RESPONSE = 'invalid_contract_response';
+export function invalidContractResponse(status: number): ContractErrorDescriptor {
+  return {
+    kind: 'retry',
+    title: 'A resposta de contratos não pôde ser lida',
+    detail: 'O servidor respondeu sem os dados esperados. Isto não significa que não existam contratos, propostas ou registros.',
+    code: INVALID_CONTRACT_RESPONSE,
+    status,
+    canRetry: true,
+  };
+}
+export async function contractRead<T>(
+  url: string,
+  isValid: (data: unknown) => boolean,
+): Promise<ContractResult<T>> {
+  const result = await contractRequest<T>(url);
+  if (!result.ok) return result;
+  if (!isValid(result.data)) {
+    return { ok: false, status: result.status, error: invalidContractResponse(result.status) };
+  }
+  return result;
+}

@@ -134,18 +134,23 @@ async function capture(page, nome) {
  * Chromium empacotado, então a substituição é feita em `window.fetch`, como
  * nos demais gates. O servidor NUNCA é enfraquecido.
  */
-async function abrir(browser, rota, cookie, { width = 1440, height = 900, failRoutes = [], status = 503, code = 'contracts_unavailable' } = {}) {
+async function abrir(browser, rota, cookie, { width = 1440, height = 900, failRoutes = [], status = 503, code = 'contracts_unavailable', malformedRoutes = [] } = {}) {
   const context = await browser.newContext({ viewport: { width, height }, locale: 'pt-BR' });
   const separador = cookie.indexOf('=');
   await context.addCookies([{ name: cookie.slice(0, separador), value: cookie.slice(separador + 1), url: baseUrl }]);
   const page = await context.newPage();
   page.setDefaultTimeout(45_000);
   page.setDefaultNavigationTimeout(90_000);
-  if (failRoutes.length) {
-    await page.addInitScript(({ routes, failStatus, failCode }) => {
+  if (failRoutes.length || malformedRoutes.length) {
+    await page.addInitScript(({ routes, failStatus, failCode, malformed }) => {
       const original = window.fetch.bind(window);
       window.fetch = async (input, init) => {
         const url = typeof input === 'string' ? input : (input?.url || '');
+        if (malformed.some(route => url.includes(route))) {
+          return new Response(JSON.stringify({ unexpected: true }), {
+            status: 200, headers: { 'content-type': 'application/json' },
+          });
+        }
         if (routes.some(route => url.includes(route))) {
           return new Response(JSON.stringify({ error: failCode }), {
             status: failStatus, headers: { 'content-type': 'application/json' },
@@ -153,7 +158,7 @@ async function abrir(browser, rota, cookie, { width = 1440, height = 900, failRo
         }
         return original(input, init);
       };
-    }, { routes: failRoutes, failStatus: status, failCode: code });
+    }, { routes: failRoutes, failStatus: status, failCode: code, malformed: malformedRoutes });
   }
   await page.goto(`${baseUrl}${rota}`, { waitUntil: 'domcontentloaded' });
   return { context, page };
@@ -265,6 +270,37 @@ test('menu não é autorização: comercial abre a tela e quem recusa é o servi
   // admin segue com tudo: esta fatia não mexeu em permissão nenhuma.
   assert.equal((await api(`/api/crm/contracts/${contractId}`, { cookie: adminCookie })).status, 200);
   assert.equal((await api(`/api/crm/contracts/${contractId}/management-diary`, { cookie: adminCookie })).status, 200);
+});
+
+test('browser UX-PRO-07M: resposta 2xx sem contracts não vira carteira vazia', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+      const { context, page } = await abrir(browser, '/admin/contratos', adminCookie, {
+        malformedRoutes: ['/api/crm/contracts'],
+      });
+      const lista = page.locator('[data-testid="contracts-list"]');
+      await lista.waitFor();
+      const estado = lista.locator('[data-ui-state="error"]');
+      await estado.waitFor();
+      assert.match(await estado.textContent(), /não pôde ser lida/);
+      assert.equal(await page.locator('[data-testid="contracts-table"]').count(), 0, '2xx inválido não pode render tabela vazia');
+      assert.equal(await lista.locator('[data-ui-state="empty"]').count(), 0, '2xx inválido não é vazio concluído');
+      await capture(page, 'contratos-1440-resposta-invalida');
+      await context.close();
+  });
+});
+
+test('browser UX-PRO-07M: resposta 2xx sem history não vira ciclo de vida vazio', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+      const { context, page } = await abrir(browser, `/admin/contratos/${contractId}`, adminCookie, {
+        malformedRoutes: ['/status'],
+      });
+      await page.locator('[role="tablist"]').waitFor();
+      const falha = page.locator('[data-testid="contract-status-error"]');
+      await falha.waitFor();
+      assert.match(await falha.textContent(), /não pôde ser lida/);
+      await capture(page, 'contrato-detalhe-1440-resposta-invalida');
+      await context.close();
+  });
 });
 
 test('browser: a falha de UMA leitura não derruba mais a página inteira do contrato', { skip: !RUN }, async () => {
