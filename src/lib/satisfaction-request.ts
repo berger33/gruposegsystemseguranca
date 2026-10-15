@@ -62,3 +62,30 @@ export async function satisfactionRequest<T = unknown>(
 }
 
 export type { SatisfactionErrorDescriptor };
+
+// UX-PRO-07J — leitura honesta (aditivo): 2xx sem a forma canônica nunca é
+// ausência de pesquisa. `satisfactionRequest` acima permanece INTACTO. O
+// código abaixo é diagnóstico desta tela (o servidor nunca o devolve), fora
+// do vocabulário anti-deriva. Mesma decisão da UX-PRO-07F/07G/07H/07I.
+export const INVALID_SATISFACTION_RESPONSE = 'invalid_satisfaction_response';
+export function invalidSatisfactionResponse(status: number): SatisfactionErrorDescriptor {
+  return {
+    kind: 'retry',
+    title: 'A resposta de satisfação não pôde ser lida',
+    detail: 'O servidor respondeu sem os dados esperados. Isto não significa que não existam pesquisas, respostas ou acompanhamentos registrados.',
+    code: INVALID_SATISFACTION_RESPONSE,
+    status,
+    canRetry: true,
+  };
+}
+export async function satisfactionRead<T>(
+  url: string,
+  isValid: (data: unknown) => boolean,
+): Promise<SatisfactionResult<T>> {
+  const result = await satisfactionRequest<T>(url);
+  if (!result.ok) return result;
+  if (!isValid(result.data)) {
+    return { ok: false, status: result.status, error: invalidSatisfactionResponse(result.status), payload: result.data };
+  }
+  return result;
+}
