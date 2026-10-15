@@ -3,6 +3,7 @@
 import styles from "../../../components/ui/UiWorkspace.module.css";
 import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
 import { financeInvalidListMessage } from "../../../lib/finance-request";
+import { financeDate } from "../../../lib/finance-dates.mjs";
 import { FormEvent, useEffect, useState } from "react";
 
 type Result = {
@@ -81,7 +82,7 @@ export default function ManagementResultsWorkspace(){
      <button data-testid="fin09-create" disabled={busy}>Registrar resultado incompleto</button>
    </form>
    <ul data-testid="fin09-list">{rows.length===0&&!loading&&!error?<li>Nenhum resultado registrado.</li>:rows.map(r=><li key={r.id} data-testid={`fin09-result-${r.id}`}>
-     <strong>{r.protocol}</strong> · {r.competence_date} · {r.status}<br/>
+     <strong>{r.protocol}</strong> · {financeDate(r.competence_date)} · {r.status}<br/>
      {marginBasis(r)} Valor de margem conhecido: {money(r.margin_cents)}. {percentage(r.computed_margin_percent)}<br/>
      Base: <span data-testid={`fin09-margin-basis-${r.id}`}>{r.margin_basis}</span>{r.incomplete_reason?` · Motivo: ${r.incomplete_reason}`:""}
    </li>)}</ul>

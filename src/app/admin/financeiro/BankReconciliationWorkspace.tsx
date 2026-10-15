@@ -3,6 +3,7 @@
 import styles from "../../../components/ui/UiWorkspace.module.css";
 import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
 import { financeInvalidListMessage } from "../../../lib/finance-request";
+import { financeDate } from "../../../lib/finance-dates.mjs";
 import { FormEvent, useEffect, useState } from "react";
 
 type Statement = {
@@ -269,7 +270,7 @@ export default function BankReconciliationWorkspace() {
           {transactions.length === 0 ? (readConfirmed
             ? <li data-testid="fin05-transactions-empty">Nenhuma transação sintética.</li>
             : <li data-testid="fin05-transactions-unavailable">Lista indisponível — a leitura não foi confirmada; não confundir com ausência de transações.</li>) : transactions.map(transaction => (
-            <li key={transaction.id}>{transaction.bank_ref} · {transaction.transaction_date} · {transaction.description} · {money(transaction.amount_cents)} · {transaction.is_conciliated ? "conciliada" : "pendente"}</li>
+            <li key={transaction.id}>{transaction.bank_ref} · {financeDate(transaction.transaction_date)} · {transaction.description} · {money(transaction.amount_cents)} · {transaction.is_conciliated ? "conciliada" : "pendente"}</li>
           ))}
         </ul>
       </div>
