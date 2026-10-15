@@ -485,7 +485,9 @@ test('browser: selecionar cotação relê o detalhe sem relançar as três lista
     await list.waitFor();
     const before = await page.evaluate(() => ({ ...window.__uxSupplierControl.calls }));
     assert.ok(before.quotations >= 1 && before.references >= 1 && before.orders >= 1);
-    await list.getByRole('button').first().click();
+    // O clique incide sobre a cotação criada na preparação do gate: a lista é
+    // ordenada por criação decrescente e outros casos criam cotações depois.
+    await list.getByRole('button').filter({ hasText: quotationProtocol }).first().click();
     const detail = page.locator('[data-testid="fornecedores-detalhe-painel"]');
     await detail.waitFor();
     assert.match(await detail.innerText(), new RegExp(quotationProtocol));
