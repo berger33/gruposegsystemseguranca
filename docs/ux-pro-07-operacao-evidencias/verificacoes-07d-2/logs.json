@@ -1,0 +1,37 @@
+[
+  {
+    "raw": "docs/ux-pro-07-operacao-evidencias/antes-07d-2/execucao-2/gate.log",
+    "rawSha256": "bc13f966eb775a91d926df937908313832a1649f736ab4a0741dcc5a6baaa68e",
+    "normalized": "docs/ux-pro-07-operacao-evidencias/antes-07d-2/execucao-2/gate.txt",
+    "normalizedSha256": "c98603f3bf97ceb50c6cb4a72b896192400a47aa00a30f7cd052dc24a52067c2",
+    "normalization": "only trailing whitespace on each line; original gate.log preserved locally (ignored by repository)"
+  },
+  {
+    "raw": "docs/ux-pro-07-operacao-evidencias/antes-07d-2/gate.log",
+    "rawSha256": "8530e9a5e49ea6f3328b2f0e8ba0ed86a51d52bcaf004d17ca47a6dcf1eef1b2",
+    "normalized": "docs/ux-pro-07-operacao-evidencias/antes-07d-2/gate.txt",
+    "normalizedSha256": "da9c6b83e6ea4d835db601e1b3e286338f1cd2faab9c3f6dd97bdc85b90d46eb",
+    "normalization": "only trailing whitespace on each line; original gate.log preserved locally (ignored by repository)"
+  },
+  {
+    "raw": "docs/ux-pro-07-operacao-evidencias/depois-07d-2/execucao-1/gate.log",
+    "rawSha256": "f5dfeac4e7095a984e75689af335da4fbefc9152038b50af1e2c368f3ae941fa",
+    "normalized": "docs/ux-pro-07-operacao-evidencias/depois-07d-2/execucao-1/gate.txt",
+    "normalizedSha256": "f5dfeac4e7095a984e75689af335da4fbefc9152038b50af1e2c368f3ae941fa",
+    "normalization": "only trailing whitespace on each line; original gate.log preserved locally (ignored by repository)"
+  },
+  {
+    "raw": "docs/ux-pro-07-operacao-evidencias/depois-07d-2/execucao-2/gate.log",
+    "rawSha256": "0fecfc0353291c8de699080b97ab98ee32d4aeb32f29db726204734fc1113fdb",
+    "normalized": "docs/ux-pro-07-operacao-evidencias/depois-07d-2/execucao-2/gate.txt",
+    "normalizedSha256": "0fecfc0353291c8de699080b97ab98ee32d4aeb32f29db726204734fc1113fdb",
+    "normalization": "only trailing whitespace on each line; original gate.log preserved locally (ignored by repository)"
+  },
+  {
+    "raw": "docs/ux-pro-07-operacao-evidencias/depois-07d-2/execucao-3/gate.log",
+    "rawSha256": "e9cd136969e17d3f348f2d52ce39895163653a5746b1a51f61dd535e98032ba9",
+    "normalized": "docs/ux-pro-07-operacao-evidencias/depois-07d-2/execucao-3/gate.txt",
+    "normalizedSha256": "e9cd136969e17d3f348f2d52ce39895163653a5746b1a51f61dd535e98032ba9",
+    "normalization": "only trailing whitespace on each line; original gate.log preserved locally (ignored by repository)"
+  }
+]

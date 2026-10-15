@@ -1062,3 +1062,235 @@ test('browser 07D-1: 1440, 768, 390 e 320 px, tema noturno e percurso de teclado
     await context.close();
   });
 });
+
+// UX-PRO-07D-2 — adição pura aos 19 casos herdados (inclusive 07D-1).
+// Massa por API real. Injeção exclusivamente em window.fetch, nunca no servidor.
+const evidenceDir07d2 = process.env.UX_OPS_07D2_EVIDENCE_DIR || '';
+let fixtureSequence07d2 = 0;
+async function fixture07d2() {
+  const suffix = randomUUID().slice(0, 8);
+  const day = new Date(Date.now() + (200 + fixtureSequence07d2++) * 86_400_000).toISOString().slice(0, 10);
+  const employee = await api('/api/hr/employees', { method: 'POST', cookie: rhCookie,
+    body: { matricula: `07D2-${suffix}`, display_name: `Profissional 07D2 ${suffix}`, cargo: 'vigilante', status: 'ativo', employment_type: 'clt' } });
+  assert.equal(employee.status, 201);
+  const version = await api('/api/ops/schedule-versions', { method: 'POST', cookie: tiCookie,
+    body: { valid_from: day, valid_to: day, status: 'revisada' } });
+  assert.equal(version.status, 201);
+  const entry = await api('/api/ops/schedule-entries', { method: 'POST', cookie: tiCookie,
+    body: { version_id: version.body.version.id, post_id: postId, employee_id: employee.body.employee.id, shift_template_id: shiftTemplateId, entry_date: day } });
+  assert.equal(entry.status, 201);
+  return { version: version.body.version, employee: employee.body.employee };
+}
+async function capture07d2(page, name) {
+  if (!evidenceDir07d2) return;
+  await mkdir(evidenceDir07d2, { recursive: true });
+  await page.screenshot({ path: path.join(evidenceDir07d2, `${name}.png`), fullPage: true });
+}
+async function openAck07d2(browser, fixture, width = 1440) {
+  const opened = await openOps(browser, tiCookie, { width });
+  const { page } = opened;
+  await page.getByRole('tab', { name: 'Escalas', exact: true }).click();
+  await page.getByRole('row').filter({ has: page.getByRole('cell', { name: `v${fixture.version.version}`, exact: true }) })
+    .getByRole('button', { name: 'Ver calendário', exact: true }).click();
+  const section = page.locator('section[aria-labelledby="schedule-acks-title"]');
+  await section.getByRole('button', { name: 'Registrar ciência', exact: true }).waitFor();
+  await page.evaluate(firstVersionId => {
+    const original = window.fetch.bind(window);
+    const state = { posts: [], gets: 0, returned: 0, holdPost: false, holdGet: false, failGet: false, malformed: false, denied: false, loseResponse: false, releasePost: null, releaseGet: null };
+    const postBarrier = new Promise(resolve => { state.releasePost = resolve; });
+    const getBarrier = new Promise(resolve => { state.releaseGet = resolve; });
+    window.__ack07d2 = state;
+    window.fetch = async (input, init) => {
+      const url = new URL(typeof input === 'string' ? input : input.url, location.href);
+      const method = String(init?.method || 'GET').toUpperCase();
+      if (url.pathname !== '/api/ops/schedule-acks') return original(input, init);
+      if (method === 'POST') {
+        state.posts.push({ method, url: url.pathname, body: JSON.parse(init.body), headers: init.headers });
+        const response = await original(input, init); // escrita e auditoria REAIS
+        if (state.holdPost) await postBarrier;
+        state.returned++;
+        if (state.loseResponse) throw new TypeError('Resposta perdida depois do POST real');
+        return response;
+      }
+      state.gets++;
+      const response = await original(input, init);
+      if (state.holdGet && url.searchParams.get('version_id') === firstVersionId) await getBarrier;
+      if (state.failGet || state.denied) return new Response(JSON.stringify({ error: state.denied ? 'forbidden' : 'internal' }), {
+        status: state.denied ? 403 : 503, headers: { 'content-type': 'application/json' },
+      });
+      if (state.malformed) return new Response(JSON.stringify({ note: 'sem lista canônica' }), { status: 200, headers: { 'content-type': 'application/json' } });
+      return response;
+    };
+  }, fixture.version.id);
+  return { ...opened, section, button: section.getByRole('button', { name: 'Registrar ciência', exact: true }) };
+}
+async function waitAckRead07d2(page) {
+  await page.waitForFunction(() => window.__ack07d2.gets >= 1);
+  await page.waitForTimeout(250);
+}
+
+test('07D-2 envio pendente bloqueia duplo clique sem mudar o contrato POST', { skip: !RUN }, async () => {
+  const fixture = await fixture07d2();
+  const browser = await launchBrowser();
+  try {
+    const { context, page, section, button } = await openAck07d2(browser, fixture);
+    await page.evaluate(() => { window.__ack07d2.holdPost = true; });
+    await button.click();
+    await page.waitForFunction(() => window.__ack07d2.posts.length === 1);
+    // O mesmo elemento é acionado também antes de novo render: a guarda síncrona é necessária.
+    await section.locator('button').first().evaluate(el => { el.click(); el.click(); });
+    await capture07d2(page, 'envio-pendente');
+    const posts = await page.evaluate(() => window.__ack07d2.posts);
+    assert.equal(posts.length, 1, 'um único POST durante o envio');
+    assert.deepEqual(posts[0].body, { version_id: fixture.version.id, employee_id: fixture.employee.id });
+    assert.equal(posts[0].url, '/api/ops/schedule-acks');
+    assert.equal(posts[0].headers['Idempotency-Key'], undefined, 'não inventar chave que o contrato não possui');
+    assert.equal(await section.locator('button').first().isDisabled(), true);
+    assert.match(await section.innerText(), /Registrando ciência/);
+    await page.evaluate(() => window.__ack07d2.releasePost());
+    await waitAckRead07d2(page);
+    await section.getByText(/Ciência registrada para/).waitFor();
+    const read = await api(`/api/ops/schedule-acks?version_id=${fixture.version.id}`, { cookie: tiCookie });
+    assert.equal(read.body.acknowledgments.length, 1);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('07D-2 POST confirmado + GET 503 permite repetir somente a consulta; duplicate_ack continua sucesso idempotente', { skip: !RUN }, async () => {
+  const fixture = await fixture07d2();
+  const browser = await launchBrowser();
+  try {
+    const { context, page, section, button } = await openAck07d2(browser, fixture);
+    await page.evaluate(() => { window.__ack07d2.failGet = true; });
+    await button.click();
+    await waitAckRead07d2(page);
+    await capture07d2(page, 'post-confirmado-leitura-falhou');
+    assert.match(await section.innerText(), /Ciência registrada para/);
+    assert.equal(await section.getByRole('button', { name: 'Consultar ciências novamente', exact: true }).count(), 1);
+    assert.equal(await section.getByRole('button', { name: 'Registrar ciência', exact: true }).isDisabled(), true,
+      'sem reconciliar, não oferecer novo envio');
+    await page.evaluate(() => { window.__ack07d2.failGet = false; });
+    await section.getByRole('button', { name: 'Consultar ciências novamente', exact: true }).click();
+    await section.getByText(/Ciente desde/).waitFor();
+    assert.equal(await page.evaluate(() => window.__ack07d2.posts.length), 1, 'retry é só GET');
+    await section.getByRole('button', { name: 'Registrar ciência', exact: true }).click();
+    await section.getByText(/já registrada.*não duplica efeito/).waitFor();
+    assert.equal(await page.evaluate(() => window.__ack07d2.posts.length), 2, 'segunda ciência somente por decisão explícita');
+    const read = await api(`/api/ops/schedule-acks?version_id=${fixture.version.id}`, { cookie: tiCookie });
+    assert.equal(read.body.acknowledgments.length, 1);
+    await capture07d2(page, 'reconciliado-duplicate-ack');
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('07D-2 GET 2xx sem lista não apaga ciência conhecida nem simula pendência', { skip: !RUN }, async () => {
+  const fixture = await fixture07d2();
+  const seed = await api('/api/ops/schedule-acks', { method: 'POST', cookie: tiCookie,
+    body: { version_id: fixture.version.id, employee_id: fixture.employee.id } });
+  assert.equal(seed.status, 201);
+  const browser = await launchBrowser();
+  try {
+    const { context, page, section, button } = await openAck07d2(browser, fixture);
+    await page.evaluate(() => { window.__ack07d2.malformed = true; });
+    await button.click();
+    await waitAckRead07d2(page);
+    await capture07d2(page, 'releitura-corpo-invalido');
+    assert.match(await section.innerText(), /invalid_ops_response/);
+    assert.match(await section.innerText(), /Ciente desde/);
+    assert.doesNotMatch(await section.innerText(), /\bPendente\b/);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+for (const phase of ['Post', 'Get']) {
+  test(`07D-2 resultado atrasado de ${phase} não contamina outra seleção`, { skip: !RUN }, async () => {
+    const fixture = await fixture07d2();
+    const fixtureB = await fixture07d2();
+    const b = fixtureB.version;
+    const ackB = await api('/api/ops/schedule-acks', { method: 'POST', cookie: tiCookie,
+      body: { version_id: b.id, employee_id: fixtureB.employee.id } });
+    assert.equal(ackB.status, 201);
+    const browser = await launchBrowser();
+    try {
+      const { context, page, section, button } = await openAck07d2(browser, fixture);
+      await page.evaluate(phase => { window.__ack07d2[`hold${phase}`] = true; }, phase);
+      await button.click();
+      await page.waitForFunction(phase => phase === 'Post' ? window.__ack07d2.posts.length === 1 : window.__ack07d2.gets >= 1, phase);
+      await page.getByRole('row').filter({ has: page.getByRole('cell', { name: `v${b.version}`, exact: true }) })
+        .getByRole('button', { name: 'Ver calendário', exact: true }).click();
+      await section.getByText(fixtureB.employee.display_name, { exact: true }).waitFor();
+      await section.getByText(/Ciente desde/).waitFor();
+      await page.evaluate(phase => window.__ack07d2[`release${phase}`](), phase);
+      await page.waitForFunction(() => window.__ack07d2.returned >= 1);
+      await page.waitForTimeout(300);
+      await capture07d2(page, `resposta-${phase.toLowerCase()}-superada`);
+      assert.doesNotMatch(await section.innerText(), /Ciência registrada para|Ciência já registrada/);
+      assert.doesNotMatch(await section.innerText(), new RegExp(fixture.employee.display_name));
+      assert.equal(await section.getByText('Pendente', { exact: true }).count(), 0, 'a leitura atrasada de A não pode apagar a ciência já conhecida de B');
+      assert.match(await section.innerText(), /Ciente desde/);
+      await context.close();
+    } finally { await browser.close(); }
+  });
+}
+
+test('07D-2 resposta POST perdida não é sucesso presumido e não causa reenvio automático', { skip: !RUN }, async () => {
+  const fixture = await fixture07d2();
+  const browser = await launchBrowser();
+  try {
+    const { context, page, section, button } = await openAck07d2(browser, fixture);
+    await page.evaluate(() => { window.__ack07d2.loseResponse = true; });
+    await button.click();
+    await waitAckRead07d2(page);
+    await capture07d2(page, 'resposta-post-perdida');
+    assert.match(await section.innerText(), /Não foi possível confirmar o registro/);
+    assert.doesNotMatch(await section.innerText(), /Ciência registrada para/);
+    await section.getByText(/Ciente desde/).waitFor(); // GET confirma dado real, não o resultado do POST perdido.
+    assert.equal(await page.evaluate(() => window.__ack07d2.posts.length), 1);
+    const read = await api(`/api/ops/schedule-acks?version_id=${fixture.version.id}`, { cookie: tiCookie });
+    assert.equal(read.body.acknowledgments.length, 1);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('07D-2 negativa 403 na reconciliação fecha ações sem simular ausência de ciência', { skip: !RUN }, async () => {
+  const fixture = await fixture07d2();
+  const browser = await launchBrowser();
+  try {
+    const { context, page, section, button } = await openAck07d2(browser, fixture);
+    await page.evaluate(() => { window.__ack07d2.denied = true; });
+    await button.click();
+    await waitAckRead07d2(page);
+    await capture07d2(page, 'reconciliacao-negada');
+    assert.equal(await section.getByRole('button', { name: 'Registrar ciência', exact: true }).count(), 0);
+    assert.equal(await section.getByText('Pendente', { exact: true }).count(), 0);
+    assert.equal(await page.getByRole('button', { name: 'Consultar ciências novamente', exact: true }).count(), 0);
+    assert.match(await page.locator('#ops-painel-escalas').innerText(), /HTTP 403|forbidden/);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('07D-2 envio com teclado em 320/390/768/1440 e tema noite sem transbordo', { skip: !RUN }, async () => {
+  const fixture = await fixture07d2();
+  for (const width of [320, 390, 768, 1440]) {
+    const browser = await launchBrowser();
+    try {
+      const { context, page, section, button } = await openAck07d2(browser, fixture, width);
+      // Percurso medido entre os controles da lista de ciência, sem alterar layout.
+      await button.focus();
+      assert.equal(await button.evaluate(el => el === document.activeElement), true);
+      await page.evaluate(() => { window.__ack07d2.holdPost = true; });
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(() => window.__ack07d2.posts.length === 1);
+      await capture07d2(page, `envio-${width}-dia`);
+      assert.match(await section.innerText(), /Registrando ciência/);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth) <= 1);
+      await page.locator('[data-admin-theme-toggle="true"]').click();
+      await page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night');
+      await capture07d2(page, `envio-${width}-noite`);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth) <= 1);
+      await page.evaluate(() => window.__ack07d2.releasePost());
+      await waitAckRead07d2(page);
+      await context.close();
+    } finally { await browser.close(); }
+  }
+});

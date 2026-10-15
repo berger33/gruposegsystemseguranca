@@ -1,0 +1,63 @@
+[
+  {
+    "name": "valid",
+    "accepted": true,
+    "problems": []
+  },
+  {
+    "name": "missing",
+    "accepted": false,
+    "problems": [
+      "resumo TAP ausente: a suíte não chegou a rodar"
+    ]
+  },
+  {
+    "name": "incomplete",
+    "accepted": false,
+    "problems": [
+      "resumo TAP ausente: a suíte não chegou a rodar"
+    ]
+  },
+  {
+    "name": "fail",
+    "accepted": false,
+    "problems": [
+      "1 caso(s) reprovado(s)"
+    ]
+  },
+  {
+    "name": "skip",
+    "accepted": false,
+    "problems": [
+      "1 caso(s) pulado(s) — skip não é prova"
+    ]
+  },
+  {
+    "name": "todo",
+    "accepted": false,
+    "problems": [
+      "1 caso(s) marcado(s) como todo"
+    ]
+  },
+  {
+    "name": "below",
+    "accepted": false,
+    "problems": [
+      "apenas 26 caso(s) aprovado(s); a jornada exige ao menos 27"
+    ]
+  },
+  {
+    "name": "directive",
+    "accepted": false,
+    "problems": [
+      "diretiva skip/todo"
+    ]
+  },
+  {
+    "name": "notok",
+    "accepted": false,
+    "problems": [
+      "caso TAP reprovado"
+    ]
+  }
+]

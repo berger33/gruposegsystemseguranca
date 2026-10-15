@@ -1,0 +1,37 @@
+{
+  "base": "2eb5ca909b0491e9dd0d7f61722daa27c4a11e17",
+  "csvs": [
+    {
+      "file": "docs/UX-PRO-00-INVENTARIO-ROTAS-2026-10-13.csv",
+      "lines": 101,
+      "changes": [
+        {
+          "line": 28,
+          "route": "/admin/operacao"
+        }
+      ]
+    },
+    {
+      "file": "docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-13.csv",
+      "lines": 101,
+      "changes": [
+        {
+          "line": 28,
+          "route": "/admin/operacao"
+        }
+      ]
+    }
+  ],
+  "inheritedTests": {
+    "byteForBytePrefixPreserved": true,
+    "inheritedBytes": 58477,
+    "inheritedSha256": "d8659945adf2e1ad233ebc8fd21a5e1eaceefd72c69374ce7e2a49a4e98cac75",
+    "inheritedCases": 19,
+    "newCases": 8,
+    "minimum": 27
+  },
+  "protectedHashes": {
+    "next-env.d.ts": "18b697c4794f97edd5aed1537bf1d1882597f545881dfcba7fc8c659075f11a2",
+    "tsconfig.json": "2128c956b8c75820bc217c00557346befa1e687565d2d8a0bb970faadb7a8d65"
+  }
+}

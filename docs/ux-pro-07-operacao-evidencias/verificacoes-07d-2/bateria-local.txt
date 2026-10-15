@@ -1,0 +1,268 @@
+## inventory
+$ node scripts/ux-pro-00-inventory.mjs
+Exit: 0
+      "adicionadasDesde": [
+        "/admin/aparencia",
+        "/layout-preview"
+      ],
+      "removidasDesde": []
+    },
+    {
+      "inventario": "Auditoria 08/10/2026",
+      "arquivo": "docs/AUDITORIA-INTERFACE-ROTAS-2026-10-08.csv",
+      "linhasRegistradas": 100,
+      "rotasDistintasRegistradas": 100,
+      "linhasSemBarraInicial": 100,
+      "raizGravadaComoArquivo": 1,
+      "adicionadasDesde": [],
+      "removidasDesde": []
+    }
+  ],
+  "inventario": "docs/UX-PRO-00-INVENTARIO-ROTAS-2026-10-13.csv",
+  "matriz": "docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-13.csv"
+}
+next-env.d.ts: OK
+tsconfig.json: OK
+
+## npm-ci
+$ npm ci
+Exit: 0
+
+added 81 packages, and audited 82 packages in 10s
+
+10 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+next-env.d.ts: OK
+tsconfig.json: OK
+
+## unit
+$ npm test
+Exit: 0
+ok 914 - UX-07 terceiros: a fronteira externa é declarada e nunca simulada
+  ---
+  duration_ms: 0.665754
+  type: 'test'
+  ...
+# Subtest: UX-07 terceiros: a página não alargou o AdminGate nem trocou de servidor
+ok 915 - UX-07 terceiros: a página não alargou o AdminGate nem trocou de servidor
+  ---
+  duration_ms: 14.670351
+  type: 'test'
+  ...
+1..915
+# tests 933
+# suites 0
+# pass 933
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 20279.453335
+next-env.d.ts: OK
+tsconfig.json: OK
+
+## typecheck
+$ npm run typecheck
+Exit: 0
+
+> grupo-seg-system@0.1.0 typecheck
+> tsc --noEmit
+
+next-env.d.ts: OK
+tsconfig.json: OK
+
+## build
+$ npm run build
+Exit: 0
+├ ƒ /proposta/aceite/[token]
+├ ƒ /qa/modulos
+├ ○ /segmentos
+├   /segmentos/[key]
+│ ├ ● /segmentos/condominios_residenciais
+│ ├ ● /segmentos/empresas_escritorios
+│ └ ● /segmentos/industrias_galpoes
+├ ○ /servicos
+├   /servicos/[id]
+│ ├ ● /servicos/Segurança Desarmada
+│ ├ ● /servicos/Monitoramento 24 Horas
+│ ├ ● /servicos/Câmeras e CFTV
+│ └ ● [+3 more paths]
+└ ○ /simulador
+
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
+next-env.d.ts: OK
+tsconfig.json: OK
+
+## static
+$ node scripts/qa-wave0-static.mjs
+Exit: 0
+OK PLT-SMK-001: Imports relativos estáticos de server.mjs
+OK PLT-SMK-001: Dependências runtime declaradas em manifest e lockfile
+OK PLT-MIG-001: Migrações SQL 001–180 contínuas e únicas
+OK PLT-MIG-001: Migrações 001–180 registradas no migrador PG
+OK PLT-CI-001: CI com install/test/typecheck/build sem bypass
+RESUMO: 5/5 verificações estáticas OK; 0 imports ausentes; 0 migrações ausentes.
+next-env.d.ts: OK
+tsconfig.json: OK
+
+## inventory-check
+$ node scripts/ux-pro-00-inventory.mjs --check
+Exit: 0
+      "raizGravadaComoArquivo": 0,
+      "adicionadasDesde": [
+        "/admin/aparencia",
+        "/layout-preview"
+      ],
+      "removidasDesde": []
+    },
+    {
+      "inventario": "Auditoria 08/10/2026",
+      "arquivo": "docs/AUDITORIA-INTERFACE-ROTAS-2026-10-08.csv",
+      "linhasRegistradas": 100,
+      "rotasDistintasRegistradas": 100,
+      "linhasSemBarraInicial": 100,
+      "raizGravadaComoArquivo": 1,
+      "adicionadasDesde": [],
+      "removidasDesde": []
+    }
+  ]
+}
+OK: docs/UX-PRO-00-INVENTARIO-ROTAS-2026-10-13.csv e docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-13.csv conferem com o código atual.
+next-env.d.ts: OK
+tsconfig.json: OK
+
+## vocabulary
+$ node --test tests/ux-ops-vocabulary.test.mjs
+Exit: 0
+ok 7 - UX-07 rodapé: o código canônico só aparece entre parênteses, nunca como frase principal
+  ---
+  duration_ms: 0.28803
+  type: 'test'
+  ...
+# Subtest: UX-07 vocabulário de situação: valor desconhecido passa cru, nunca é inventado
+ok 8 - UX-07 vocabulário de situação: valor desconhecido passa cru, nunca é inventado
+  ---
+  duration_ms: 0.275785
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 71.733897
+next-env.d.ts: OK
+tsconfig.json: OK
+
+## l06
+$ npm run test:l06-delivery:pg
+Exit: 0
+# ops_key_create relation "audit_log" does not exist
+#  GET /admin/operacao 200 in 77ms (next.js: 17ms, application-code: 60ms)
+#  GET / 200 in 91ms (next.js: 1.8ms, application-code: 89ms)
+# Subtest: L06 Fatia E: OPS-09..16 — operação avançada, conflitos, idempotência, sintético e auditoria fail-closed
+ok 9 - L06 Fatia E: OPS-09..16 — operação avançada, conflitos, idempotência, sintético e auditoria fail-closed
+  ---
+  duration_ms: 6034.956729
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 45749.874673
+L06_DELIVERY_TEST_EXIT: 0
+QA_L06_PG_TEMP_CLEANED: true
+next-env.d.ts: OK
+tsconfig.json: OK
+
+## l08
+$ npm run test:l08-delivery:pg
+Exit: 0
+  duration_ms: 6.258465
+  type: 'test'
+  ...
+# Subtest: L08 Chromium entry smoke serves the real client entry point
+ok 4 - L08 Chromium entry smoke serves the real client entry point
+  ---
+  duration_ms: 9310.674388
+  type: 'test'
+  ...
+1..4
+# tests 51
+# suites 0
+# pass 51
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 33755.000182
+L08_DELIVERY_TEST_EXIT: 0
+QA_L08_PG_TEMP_CLEANED: true
+next-env.d.ts: OK
+tsconfig.json: OK
+
+## ext04
+$ npm run test:ext04-suppliers:pg
+Exit: 0
+  type: 'test'
+  ...
+# Subtest: EXT-04 HTTP+DB: falha de auditoria devolve 503 e reverte negócio+evento
+ok 28 - EXT-04 HTTP+DB: falha de auditoria devolve 503 e reverte negócio+evento
+  ---
+  duration_ms: 40.907092
+  type: 'test'
+  ...
+1..28
+# tests 28
+# suites 0
+# pass 28
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 12768.279273
+EXT04_TAP_SUMMARY: pass=28 fail=0 skipped=0 todo=0 minimo_exigido=28
+EXT04_SUPPLIERS_TEST_EXIT: 0
+QA_EXT04_PG_TEMP_CLEANED: true
+next-env.d.ts: OK
+tsconfig.json: OK
+
+## ux-ops
+$ npm run test:ux-ops:pg
+Exit: 0
+  type: 'test'
+  ...
+# Subtest: 07D-2 envio com teclado em 320/390/768/1440 e tema noite sem transbordo
+ok 27 - 07D-2 envio com teclado em 320/390/768/1440 e tema noite sem transbordo
+  ---
+  duration_ms: 32699.852697
+  type: 'test'
+  ...
+1..27
+# tests 27
+# suites 0
+# pass 27
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 166356.556378
+UX_OPS_TAP_SUMMARY: pass=27 fail=0 skipped=0 todo=0 minimo_exigido=19
+UX_OPS_TEST_EXIT: 0
+QA_PG_TEMP_CLEANED: true
+next-env.d.ts: OK
+tsconfig.json: OK
