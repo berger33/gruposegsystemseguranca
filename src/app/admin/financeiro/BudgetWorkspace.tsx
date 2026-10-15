@@ -15,6 +15,7 @@
 
 import styles from "../../../components/ui/UiWorkspace.module.css";
 import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
+import { financeInvalidListMessage } from "../../../lib/finance-request";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 type Budget = {
@@ -94,6 +95,29 @@ async function api(path: string, init?: RequestInit) {
   return data;
 }
 
+/**
+ * UX-PRO-07E-1 — leitura de lista com a chave canônica exigida: mesmo método,
+ * URL e cabeçalhos de `api` (intacto para as escritas); um 2xx sem a lista lança
+ * falha declarada em vez de virar `[]`. O servidor garante a chave no 200
+ * (`src/server/fin-budget-api.mjs:182`, `:382`, `:399`), então o vazio legítimo
+ * continua sendo vazio concluído.
+ *
+ * Esta área JÁ apresenta `fin13-budget-unavailable` / `fin13-scenario-unavailable`
+ * quando há erro de leitura (asserção herdada em
+ * `tests/l07-delivery.integration.test.mjs:2438`); por isso nenhuma apresentação
+ * muda aqui — apenas passa a existir erro também para o corpo 2xx inválido.
+ */
+async function apiList<T>(path: string, key: string): Promise<T[]> {
+  const response = await fetch(path, {
+    headers: { "Content-Type": "application/json" },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(financeErrorMessage(typeof data.error === "string" ? data.error : null, response.status));
+  const list = data && typeof data === "object" ? (data as Record<string, unknown>)[key] : undefined;
+  if (!Array.isArray(list)) throw new Error(financeInvalidListMessage(response.status));
+  return list as T[];
+}
+
 export default function BudgetWorkspace() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
@@ -128,8 +152,8 @@ export default function BudgetWorkspace() {
   // não zera a coleção já carregada nem vira lista vazia.
   const loadBudgets = useCallback(async () => {
     try {
-      const data = await api("/api/fin/budgets");
-      setBudgets(data.budgets || []);
+      const rows = await apiList<Budget>("/api/fin/budgets", "budgets");
+      setBudgets(rows);
       setBudgetsError("");
       return true;
     } catch (error) {
@@ -140,8 +164,8 @@ export default function BudgetWorkspace() {
 
   const loadScenarios = useCallback(async () => {
     try {
-      const data = await api("/api/fin/budget-scenarios");
-      setScenarios(data.scenarios || []);
+      const rows = await apiList<Scenario>("/api/fin/budget-scenarios", "scenarios");
+      setScenarios(rows);
       setScenariosError("");
     } catch (error) {
       setScenariosError(`Não foi possível ler os cenários (${error instanceof Error ? error.message : "falha desconhecida"}).`);
@@ -151,8 +175,8 @@ export default function BudgetWorkspace() {
   const loadHistory = useCallback(async (budgetId: string) => {
     if (!budgetId) return;
     try {
-      const data = await api(`/api/fin/budget-history?budget_id=${encodeURIComponent(budgetId)}`);
-      setHistory(data.history || []);
+      const rows = await apiList<HistoryEntry>(`/api/fin/budget-history?budget_id=${encodeURIComponent(budgetId)}`, "history");
+      setHistory(rows);
       setHistoryError("");
     } catch (error) {
       setHistoryError(`Não foi possível ler o histórico (${error instanceof Error ? error.message : "falha desconhecida"}).`);

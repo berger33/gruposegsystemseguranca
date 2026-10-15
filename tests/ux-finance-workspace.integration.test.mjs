@@ -345,3 +345,514 @@ test('browser: em 390px a tela financeira não produz transbordo horizontal', { 
     await context.close();
   } finally { await browser.close(); }
 });
+
+// ---------------------------------------------------------------------------
+// UX-PRO-07E-1 — casos NOVOS, acrescentados APÓS os 8 herdados.
+//
+// O prefixo herdado (347 linhas / 17.004 bytes / SHA-256
+// 42dc4da39b583445e338c9fb7d8586d43c6b1a9bc8745768b4290280f7e8ec74) permanece
+// byte a byte: nenhuma asserção herdada foi editada, removida ou relaxada.
+//
+// O que estes casos provam: uma resposta 2xx cujo corpo NÃO traz a lista
+// canônica deixa de ser apresentada como "nenhum registro" no painel próprio e
+// em quatro sub-workspaces de /admin/financeiro (conciliação, orçamento, fluxo
+// de caixa e cobrança). O vazio LEGÍTIMO — chave presente com `[]`, que é como
+// o servidor expressa ausência real — continua sendo vazio concluído.
+//
+// Injeção somente em `window.fetch` da página e somente em GET: servidor,
+// banco, proxy e todas as escritas permanecem reais e intactos.
+//
+// Duas escolhas de método, ambas para tornar a linha de base comparável:
+//  1. as capturas são feitas ANTES de afirmar, para que a implementação
+//     anterior também produza a imagem do vazio falso;
+//  2. as asserções leem o TEXTO renderizado em vez de esperar um elemento que
+//     só existe na implementação nova — assim a linha de base reprova rápido e
+//     com a frase do vazio falso na mensagem, em vez de estourar timeout e
+//     degradar o servidor ao fim da suíte.
+//
+// As oito áreas restantes da rota (Closure, Commission, CostAllocation,
+// Expense, Export, Fiscal, Gateway, ManagementResults) continuam com o vazio
+// falso e estão registradas como pendência 07E-2 — estes casos NÃO as cobrem.
+// ---------------------------------------------------------------------------
+
+/**
+ * Abre /admin/financeiro com corpos 2xx INVÁLIDOS injetados em `window.fetch`.
+ * As regras são persistentes (em modo de desenvolvimento o React executa os
+ * efeitos de carga duas vezes) e podem ser desligadas por `releaseInvalidBody`,
+ * o que permite provar que a repetição recupera o dado real.
+ */
+async function openFinanceInvalidBody(browser, cookie, { width = 1440, height = 900, rules = [] } = {}) {
+  const context = await browser.newContext({ viewport: { width, height }, locale: 'pt-BR' });
+  const separator = cookie.indexOf('=');
+  await context.addCookies([{ name: cookie.slice(0, separator), value: cookie.slice(separator + 1), url: baseUrl }]);
+  const page = await context.newPage();
+  page.setDefaultTimeout(45_000);
+  page.setDefaultNavigationTimeout(90_000);
+  watchPageErrors(page);
+  const injected = rules.map(rule => ({
+    match: rule.match,
+    status: rule.status ?? 200,
+    body: typeof rule.body === 'string' ? rule.body : JSON.stringify(rule.body),
+  }));
+  await page.addInitScript(({ rules: injectedRules }) => {
+    const original = window.fetch.bind(window);
+    const state = { rules: injectedRules.map(rule => ({ ...rule, active: true })) };
+    window.__qaFinanceInvalidBody = state;
+    window.fetch = async (input, init) => {
+      const url = typeof input === 'string' ? input : (input?.url || '');
+      const method = String(init?.method || (typeof input === 'object' && input?.method) || 'GET').toUpperCase();
+      // Somente GET: nenhuma escrita passa pelo injetor.
+      if (method === 'GET') {
+        const hit = state.rules.find(rule => rule.active && url.includes(rule.match));
+        if (hit) return new Response(hit.body, { status: hit.status, headers: { 'content-type': 'application/json' } });
+      }
+      return original(input, init);
+    };
+  }, { rules: injected });
+  await page.goto(`${baseUrl}/admin/financeiro`, { waitUntil: 'domcontentloaded' });
+  return { context, page };
+}
+
+/** Desliga uma regra de injeção, para provar que a repetição recupera de verdade. */
+async function releaseInvalidBody(page, match) {
+  await page.evaluate(target => {
+    for (const rule of window.__qaFinanceInvalidBody.rules) if (rule.match === target) rule.active = false;
+  }, match);
+}
+
+async function gotoTab(page, name) {
+  await page.locator('[role="tablist"]').waitFor();
+  await page.getByRole('tab', { name, exact: true }).click();
+}
+
+/**
+ * Espera a superfície que existe nos DOIS cenários (implementação anterior e
+ * nova) e dá tempo de a leitura assentar, para que a captura e a leitura de
+ * texto sejam comparáveis antes/depois.
+ */
+/**
+ * Registra erros não capturados da página. Não alteram nenhuma asserção: servem
+ * para explicar, na mensagem de reprovação, por que uma superfície sumiu.
+ */
+function watchPageErrors(page) {
+  const erros = [];
+  page.on('pageerror', error => {
+    if (erros.length < 3) erros.push(String(error?.message || error).replace(/\s+/g, ' ').slice(0, 220));
+  });
+  page.__qaPageErrors = erros;
+  return erros;
+}
+
+async function settle(page, anchor, candidates, extraMs = 500) {
+  let ancoraVisivel = true;
+  try {
+    await page.locator(anchor).first().waitFor({ timeout: 60_000 });
+  } catch {
+    ancoraVisivel = false;
+  }
+  if (ancoraVisivel) {
+    await Promise.race(candidates.map(selector => page.locator(selector).first().waitFor({ timeout: 30_000 }))).catch(() => {});
+  }
+  await page.waitForTimeout(extraMs);
+  return ancoraVisivel;
+}
+
+/**
+ * Texto renderizado de uma superfície, para asserções que não dependem de
+ * elemento novo. Se a superfície não existe no momento da leitura, devolve um
+ * marcador explicativo em vez de estourar timeout: as asserções positivas
+ * continuam reprovando, agora com a causa visível no relatório TAP.
+ */
+async function textOf(page, selector) {
+  try {
+    return (await page.locator(selector).first().innerText({ timeout: 15_000 })).replace(/\s+/g, ' ');
+  } catch {
+    const erros = page.__qaPageErrors || [];
+    const causa = erros.length ? ` erro de página registrado: "${erros[0]}"` : '';
+    return `[superficie ausente: ${selector} nao estava renderizada no momento da leitura.${causa}]`;
+  }
+}
+
+test('UX-PRO-07E-1 contrato: todo GET canônico devolve a chave de lista no 200, e o vazio legítimo é chave presente com []', { skip: !RUN }, async () => {
+  const esperados = [
+    ['/api/admin/finance/f03/receivables', 'receivables'],
+    ['/api/fin/recurrence-rules', 'rules'],
+    ['/api/fin/payments', 'payments'],
+    ['/api/admin/finance/f03/reports', 'reports'],
+    ['/api/fin/bank-statements', 'statements'],
+    ['/api/fin/bank-transactions', 'transactions'],
+    ['/api/fin/receivables', 'receivables'],
+    ['/api/fin/payables', 'payables'],
+    ['/api/fin/conciliations', 'conciliations'],
+    ['/api/fin/budgets', 'budgets'],
+    ['/api/fin/budget-scenarios', 'scenarios'],
+    ['/api/fin/cashflow-snapshots', 'snapshots'],
+    ['/api/fin/aging-receivables', 'aging'],
+    ['/api/fin/collection-policies', 'policies'],
+    ['/api/fin/collection-reminders', 'reminders'],
+  ];
+  let vaziosLegitimos = 0;
+  for (const [caminho, chave] of esperados) {
+    const resposta = await api(caminho, { cookie: financeCookie });
+    assert.equal(resposta.status, 200, `${caminho} deveria responder 200, veio ${resposta.status}`);
+    assert.ok(Array.isArray(resposta.body?.[chave]),
+      `${caminho} precisa devolver a lista canônica "${chave}": é isso que autoriza a tela a exigir a chave em vez de aceitar []`);
+    if (resposta.body[chave].length === 0) vaziosLegitimos += 1;
+  }
+  assert.ok(vaziosLegitimos >= 1,
+    'ao menos um endpoint precisa estar legitimamente vazio, para provar que ausência real é chave presente com [] e não chave ausente');
+  // Nenhum extrato bancário é criado por esta suíte: vazio legítimo confirmado.
+  const extratos = await api('/api/fin/bank-statements', { cookie: financeCookie });
+  assert.deepEqual(extratos.body.statements, []);
+});
+
+test('UX-PRO-07E-1 browser: painel próprio — 2xx sem "receivables" declara falha, não "Nenhum recebível encontrado."', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      rules: [{ match: '/api/admin/finance/f03/receivables', body: { ok: true, note: 'corpo 2xx sem a lista canônica' } }],
+    });
+    await settle(page, '[data-testid="financeiro-workspace"]',
+      ['[data-testid="finance-read-error"]', '[data-testid="finance-receivables-table"]']);
+    await capture(page, '07e1-painel-recebiveis-corpo-invalido');
+
+    const texto = await textOf(page, '[data-testid="financeiro-workspace"]');
+    assert.match(texto, /invalid_finance_response/,
+      `o corpo 2xx sem a lista precisa ser declarado como falha; texto renderizado: "${texto.slice(0, 300)}"`);
+    assert.match(texto, /sem a lista esperada/i, 'a falha declara que a resposta veio sem a lista');
+    assert.match(texto, /não significa que não existam registros/i, 'a falha não pode soar como ausência de dado');
+    assert.match(texto, /HTTP 200/, 'o status real aparece: um 2xx inválido não pode virar status 0');
+    assert.doesNotMatch(texto, /Nenhum recebível encontrado\./,
+      'ausência de recebível não pode ser afirmada sobre uma resposta ilegível');
+    assert.equal(await page.locator('[data-testid="finance-receivables-empty"]').count(), 0);
+    assert.equal(await page.locator('[role="tablist"]').count(), 0,
+      'sem leitura confirmada as abas não aparecem — comportamento herdado preservado');
+    assert.ok(await page.locator('[data-testid="finance-read-error"] button').count() >= 1,
+      'falha transitória precisa oferecer nova tentativa');
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-1 browser: painel próprio — 2xx com "rules" não-array declara falha, não "Nenhuma regra encontrada."', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      rules: [{ match: '/api/fin/recurrence-rules', body: { rules: 'não é uma lista' } }],
+    });
+    await settle(page, '[data-testid="financeiro-workspace"]',
+      ['[data-testid="finance-read-error"]', '[role="tablist"]']);
+    await capture(page, '07e1-painel-regras-nao-array');
+
+    const texto = await textOf(page, '[data-testid="financeiro-workspace"]');
+    assert.match(texto, /invalid_finance_response/,
+      `lista não-array precisa ser declarada como falha; texto: "${texto.slice(0, 300)}"`);
+    assert.doesNotMatch(texto, /Nenhuma regra encontrada\./, 'regra de recorrência não pode ser afirmada como ausente');
+    assert.equal(await page.locator('[role="tablist"]').count(), 0);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-1 browser: painel próprio — corpo 2xx ilegível declara falha, não "Nenhum pagamento encontrado."', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      // JSON ilegível: o leitor de `financeRequest` já devolve `null`, que não
+      // pode virar lista vazia.
+      rules: [{ match: '/api/fin/payments', body: '<html>resposta que não é JSON</html>' }],
+    });
+    await settle(page, '[data-testid="financeiro-workspace"]',
+      ['[data-testid="finance-read-error"]', '[role="tablist"]']);
+    await capture(page, '07e1-painel-pagamentos-corpo-ilegivel');
+
+    const texto = await textOf(page, '[data-testid="financeiro-workspace"]');
+    assert.match(texto, /invalid_finance_response/,
+      `corpo ilegível precisa ser declarado como falha; texto: "${texto.slice(0, 300)}"`);
+    assert.doesNotMatch(texto, /Nenhum pagamento encontrado\./, 'pagamento não pode ser afirmado como ausente');
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-1 browser: vazio legítimo preservado — 2xx com listas vazias continua vazio concluído, não falha', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      rules: [
+        { match: '/api/admin/finance/f03/receivables', body: { receivables: [] } },
+        { match: '/api/fin/recurrence-rules', body: { rules: [] } },
+        { match: '/api/fin/payments', body: { payments: [] } },
+      ],
+    });
+    await settle(page, '[role="tablist"]', ['[data-testid="finance-receivables-table"]']);
+    await capture(page, '07e1-painel-vazio-legitimo');
+
+    const texto = await textOf(page, '[data-testid="financeiro-workspace"]');
+    assert.doesNotMatch(texto, /invalid_finance_response/,
+      'chave presente com [] é vazio concluído, nunca falha');
+    assert.equal(await page.locator('[data-testid="finance-read-error"]').count(), 0);
+    const vazio = page.locator('[data-testid="finance-receivables-empty"]');
+    assert.equal(await vazio.count(), 1, 'o vazio honesto herdado continua existindo');
+    assert.match(await vazio.innerText(), /Nenhum recebível encontrado\./);
+    await gotoTab(page, 'Recorrência');
+    await page.locator('[data-testid="finance-recurrence"]').waitFor();
+    assert.match(await page.locator('[data-testid="finance-recurrence"]').innerText(), /Nenhuma regra encontrada\./,
+      'o vazio herdado de recorrência é preservado');
+    await gotoTab(page, 'Pagamentos');
+    await page.locator('[data-testid="finance-payments"]').waitFor();
+    assert.match(await page.locator('[data-testid="finance-payments"]').innerText(), /Nenhum pagamento encontrado\./,
+      'o vazio herdado de pagamentos é preservado');
+    await capture(page, '07e1-painel-vazio-legitimo-pagamentos');
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-1 browser: a repetição depois do corpo 2xx inválido recupera o dado real', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      rules: [{ match: '/api/admin/finance/f03/receivables', body: { receivables: null } }],
+    });
+    await settle(page, '[data-testid="financeiro-workspace"]',
+      ['[data-testid="finance-read-error"]', '[data-testid="finance-receivables-table"]']);
+    await capture(page, '07e1-painel-antes-de-repetir');
+
+    const antes = await textOf(page, '[data-testid="financeiro-workspace"]');
+    assert.match(antes, /invalid_finance_response/,
+      `a falha precisa ser declarada antes de oferecer repetição; texto: "${antes.slice(0, 300)}"`);
+    assert.equal(await page.locator('[role="tablist"]').count(), 0);
+
+    await releaseInvalidBody(page, '/api/admin/finance/f03/receivables');
+    await page.locator('[data-testid="finance-read-error"] button').first().click();
+    await page.locator('[role="tablist"]').waitFor({ timeout: 90_000 });
+    const linha = page.locator('tr', { hasText: receivableProtocol }).first();
+    await linha.waitFor();
+    await capture(page, '07e1-painel-depois-de-repetir');
+
+    const depois = await textOf(page, '[data-testid="financeiro-workspace"]');
+    assert.doesNotMatch(depois, /invalid_finance_response/, 'a repetição real limpa a falha');
+    assert.match(await linha.innerText(), /Baixa parcial/, 'o dado real volta a ser exibido após repetir');
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-1 browser: conciliação bancária — 2xx sem "statements" declara indisponibilidade, não ausência de extrato', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      rules: [{ match: '/api/fin/bank-statements', body: { synthetic: true } }],
+    });
+    await gotoTab(page, 'Conciliação bancária');
+    await settle(page, '[data-testid="fin05-reconciliation"]',
+      ['[data-testid="fin05-error"]', '[data-testid="fin05-statements"]']);
+    await capture(page, '07e1-conciliacao-corpo-invalido');
+
+    const texto = await textOf(page, '[data-testid="fin05-reconciliation"]');
+    assert.match(texto, /invalid_finance_response/,
+      `o corpo 2xx sem "statements" precisa ser declarado; texto: "${texto.slice(0, 300)}"`);
+    assert.match(texto, /HTTP 200/, 'o status real aparece na faixa herdada');
+    assert.match(texto, /não confundir com ausência/i, 'a lista declara indisponibilidade, não ausência');
+    assert.doesNotMatch(texto, /Nenhum extrato sintético\./, 'extrato não pode ser afirmado como ausente');
+    assert.doesNotMatch(texto, /Nenhuma transação sintética\./, 'transação não pode ser afirmada como ausente');
+    assert.doesNotMatch(texto, /Nenhuma sugestão\./, 'sugestão não pode ser afirmada como ausente');
+    assert.equal(await page.locator('[data-testid="fin05-statements-unavailable"]').count(), 1);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-1 browser: orçamento — 2xx sem "budgets" declara indisponibilidade, não "Nenhum orçamento encontrado."', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      rules: [{ match: '/api/fin/budgets', body: { total: 0 } }],
+    });
+    await gotoTab(page, 'Orçamento e cenários');
+    await settle(page, '[data-testid="finance-budget-workspace"]',
+      ['[data-testid="fin13-budgets-error"]', '[data-testid="fin13-budget-list"]']);
+    await capture(page, '07e1-orcamento-corpo-invalido');
+
+    const texto = await textOf(page, '[data-testid="finance-budget-workspace"]');
+    assert.match(texto, /invalid_finance_response/,
+      `o corpo 2xx sem "budgets" precisa ser declarado; texto: "${texto.slice(0, 300)}"`);
+    assert.match(texto, /não foi possível ler/i, 'a frase herdada continua em português');
+    assert.doesNotMatch(texto, /Nenhum orçamento encontrado\./, 'orçamento não pode ser afirmado como ausente');
+    assert.equal(await page.locator('[data-testid="fin13-budget-empty"]').count(), 0,
+      'indisponibilidade não é apresentada como ausência de registros (asserção herdada do L07 preservada)');
+    assert.equal(await page.locator('[data-testid="fin13-budget-unavailable"]').count(), 1,
+      'o ramo indisponível já existente passa a cobrir também o corpo 2xx inválido');
+    assert.equal(await page.locator('[data-testid="fin13-budgets-retry"]').count(), 1, 'a repetição herdada continua disponível');
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-1 browser: cenários — 2xx sem "scenarios" declara indisponibilidade, não ausência de cenário', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      rules: [{ match: '/api/fin/budget-scenarios', body: { scenarios: {} } }],
+    });
+    await gotoTab(page, 'Orçamento e cenários');
+    await settle(page, '[data-testid="finance-budget-workspace"]',
+      ['[data-testid="fin13-scenarios-error"]', '[data-testid="fin13-scenario-list"]']);
+    await capture(page, '07e1-cenarios-corpo-invalido');
+
+    const texto = await textOf(page, '[data-testid="finance-budget-workspace"]');
+    assert.match(texto, /invalid_finance_response/,
+      `o corpo 2xx sem "scenarios" precisa ser declarado; texto: "${texto.slice(0, 300)}"`);
+    assert.doesNotMatch(texto, /Nenhum cenário para o orçamento selecionado\./,
+      'cenário não pode ser afirmado como ausente sobre resposta ilegível');
+    assert.equal(await page.locator('[data-testid="fin13-scenario-empty"]').count(), 0);
+    assert.equal(await page.locator('[data-testid="fin13-scenario-unavailable"]').count(), 1);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-1 browser: fluxo de caixa — 2xx sem "snapshots" declara indisponibilidade, não "Nenhum snapshot registrado."', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      rules: [{ match: '/api/fin/cashflow-snapshots', body: { note: 'corpo sem a lista canônica' } }],
+    });
+    await gotoTab(page, 'Fluxo de caixa e aging');
+    await settle(page, '[data-testid="fin07-cashflow"]',
+      ['[data-testid="fin07-error"]', '[data-testid="fin07-snapshots"]']);
+    await capture(page, '07e1-fluxo-caixa-corpo-invalido');
+
+    const texto = await textOf(page, '[data-testid="fin07-cashflow"]');
+    assert.match(texto, /invalid_finance_response/,
+      `o corpo 2xx sem "snapshots" precisa ser declarado; texto: "${texto.slice(0, 300)}"`);
+    assert.match(texto, /não confundir com ausência/i);
+    assert.doesNotMatch(texto, /Nenhum snapshot registrado\./, 'snapshot não pode ser afirmado como ausente');
+    assert.doesNotMatch(texto, /Nenhum aging registrado\./,
+      'aging também não pode ser afirmado como ausente: a leitura do grupo não foi confirmada');
+    assert.equal(await page.locator('[data-testid="fin07-snapshots-unavailable"]').count(), 1);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-1 browser: cobrança — 2xx sem "policies" declara indisponibilidade, não "Nenhuma política cadastrada."', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      rules: [{ match: '/api/fin/collection-policies', body: { policies: {} } }],
+    });
+    await gotoTab(page, 'Cobrança');
+    await settle(page, '[data-testid="fin06-collection"]',
+      ['[data-testid="fin06-error"]', '[data-testid="fin06-policies"]']);
+    await capture(page, '07e1-cobranca-corpo-invalido');
+
+    const texto = await textOf(page, '[data-testid="fin06-collection"]');
+    assert.match(texto, /invalid_finance_response/,
+      `o corpo 2xx sem "policies" precisa ser declarado; texto: "${texto.slice(0, 300)}"`);
+    assert.match(texto, /não confundir com ausência/i);
+    assert.doesNotMatch(texto, /Nenhuma política cadastrada\./, 'política não pode ser afirmada como ausente');
+    assert.doesNotMatch(texto, /Nenhum lembrete sintético\./, 'lembrete não pode ser afirmado como ausente');
+    assert.equal(await page.locator('[data-testid="fin06-policies-unavailable"]').count(), 1);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-1 browser: relatório de baixas — 2xx sem "reports" declara falha, não lista vazia', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      rules: [{ match: '/api/admin/finance/f03/reports', body: { note: 'sem a lista' } }],
+    });
+    await gotoTab(page, 'Relatório de baixas');
+    await page.locator('[data-testid="finance-f03-reports"]').waitFor();
+    await page.getByRole('button', { name: 'Atualizar lista' }).click();
+    await page.waitForTimeout(1_500);
+    await capture(page, '07e1-relatorios-corpo-invalido');
+
+    const texto = await textOf(page, '[data-testid="finance-f03-reports"]');
+    const painel = await textOf(page, '[data-testid="financeiro-workspace"]');
+    assert.ok(/invalid_finance_response/.test(painel),
+      `a atualização de relatórios precisa declarar o corpo inválido; texto do painel: "${painel.slice(0, 300)}"`);
+    assert.match(painel, /HTTP 200/);
+    assert.equal(await page.locator('[data-testid="finance-error"]').count(), 1,
+      'a falha aparece no canal herdado de erro de ação');
+    assert.ok(texto.length > 0);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-1 browser: histórico da conta — 2xx sem "history" declara falha, não ausência de evento', { skip: !RUN }, async () => {
+  // O Chromium empacotado roda com --single-process: reaproveitar o mesmo
+  // browser entre contextos derruba o alvo (limitação documentada no auxiliar
+  // herdado `launchBrowser`). Cada caso abre o seu próprio browser.
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+      rules: [{ match: '/api/fin/payment-history', body: { note: 'sem histórico' } }],
+    });
+    const linha = page.locator('tr', { hasText: receivableProtocol }).first();
+    await linha.waitFor();
+    await page.getByRole('button', { name: `Abrir conta ${receivableProtocol}` }).click();
+    await page.waitForTimeout(1_500);
+    await capture(page, '07e1-historico-corpo-invalido');
+
+    const painel = await textOf(page, '[data-testid="financeiro-workspace"]');
+    assert.match(painel, /invalid_finance_response/,
+      `o histórico da conta precisa declarar o corpo inválido; texto: "${painel.slice(0, 300)}"`);
+    assert.equal(await page.locator('[data-testid="finance-error"]').count(), 1);
+    await context.close();
+  } finally { await browser.close(); }
+});
+
+test('UX-PRO-07E-1 browser: a falha declarada não produz transbordo em 1440/768/390/320 e as capturas ficam registradas', { skip: !RUN }, async () => {
+  const medicoes = [];
+  for (const [width, height, nome] of [[1440, 900, '1440'], [768, 1024, '768'], [390, 844, '390'], [320, 844, '320']]) {
+    // Um browser por largura, pela mesma limitação do --single-process.
+    const browser = await launchBrowser();
+    try {
+      const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+        width, height,
+        rules: [{ match: '/api/admin/finance/f03/receivables', body: { receivables: 'não é uma lista' } }],
+      });
+      await settle(page, '[data-testid="financeiro-workspace"]',
+        ['[data-testid="finance-read-error"]', '[data-testid="finance-receivables-table"]']);
+      await capture(page, `07e1-falha-declarada-${nome}`);
+
+      const transbordo = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      assert.ok(transbordo <= 1, `transbordo de ${transbordo}px em ${width}px com a falha declarada`);
+      const elementoAtivo = await page.evaluate(() => {
+        const ativo = document.activeElement;
+        return ativo ? { tag: ativo.tagName.toLowerCase(), text: (ativo.textContent || '').trim().slice(0, 40) } : null;
+      });
+      const texto = await textOf(page, '[data-testid="financeiro-workspace"]');
+      assert.match(texto, /invalid_finance_response/,
+        `a falha precisa estar declarada em ${width}px; texto: "${texto.slice(0, 240)}"`);
+      const alturaRepetir = await page.locator('[data-testid="finance-read-error"] button').first().evaluate(
+        node => Math.round(node.getBoundingClientRect().height)).catch(() => null);
+      if (alturaRepetir !== null) assert.ok(alturaRepetir >= 32, `botão de repetir com apenas ${alturaRepetir}px em ${width}px`);
+      medicoes.push({ width, height, nome, transbordo, elementoAtivo, alturaRepetir });
+      await context.close();
+    } finally { await browser.close(); }
+  }
+
+  if (evidenceDir) {
+    const { writeFile } = await import('node:fs/promises');
+    const resumo = {
+      stage: 'ux-pro-07-financeiro',
+      generatedBy: 'gate PostgreSQL descartável + HTTP real + Chromium (scripts/qa-ux-pro-07e1-postgres.mjs)',
+      notes: [
+        'UX-PRO-07E-1: falha declarada por resposta 2xx sem a lista canônica em /admin/financeiro.',
+        'Tema dia; papel financeiro; massa sintética criada pelas próprias APIs financeiras.',
+        'elementoAtivoOnFailure é medição informativa do foco no momento da falha; NÃO é percurso de teclado nem primeiro foco visível. O percurso do tablist continua provado pelo caso herdado.',
+        'O tema noturno não foi medido nesta fatia: contraste é achado transversal (E8) fora do escopo.',
+      ],
+      entries: medicoes.map(item => ({
+        stage: 'ux-pro-07-financeiro',
+        route: '/admin/financeiro',
+        role: 'financeiro',
+        viewport: `${item.width}x${item.height}`,
+        theme: 'day',
+        screenshot: `${evidenceDir}/07e1-falha-declarada-${item.nome}.png`,
+        problems: [],
+        state: 'falha_declarada_corpo_2xx_sem_lista',
+        transbordoDocumentoPx: item.transbordo,
+        alturaBotaoRepetirPx: item.alturaRepetir,
+        elementoAtivoOnFailure: item.elementoAtivo,
+      })),
+    };
+    await writeFile(path.join(evidenceDir, 'resumo.json'), `${JSON.stringify(resumo, null, 2)}\n`, 'utf8');
+  }
+});

@@ -1,0 +1,332 @@
+UX_FIN_07E1_SETUP: DATABASE_URL vazio confirmado; cluster temporário exclusivo solicitado
+QA_PG_READY: 127.0.0.1:35489/seg_qa_ux_finance_07e1; cluster temporário exclusivo; segredo omitido.
+UX_FIN_07E1_SETUP: cluster PostgreSQL descartável no ar
+Applied: 001-site-visual.sql
+Applied: 002-public-leads.sql
+Applied: 003-client-access.sql
+Applied: 004-client-space.sql
+Applied: 005-client-security.sql
+Applied: 006-admin-identities.sql
+Applied: 007-opcao-b-funcionarios.sql
+Applied: 008-document-contract-link.sql
+Applied: 009-mfa-challenge.sql
+Applied: 010-rbac-permissions.sql
+Applied: 011-audit-and-notifications.sql
+Applied: 012-integrations-and-catalog.sql
+Applied: 013-pub03-pub04-lead-enhancements.sql
+Applied: 014-crm-core.sql
+Applied: 015-crm-import.sql
+Applied: 016-crm11-catalog-enrichment.sql
+Applied: 017-crm12-equipment.sql
+Applied: 018-crm13-inspection.sql
+Applied: 019-crm14-labor-budget.sql
+Applied: 020-crm15-technical-budget.sql
+Applied: 021-crm16-cost-parameters.sql
+Applied: 022-crm17-price-scenarios.sql
+Applied: 023-crm18-discount-tiers.sql
+Applied: 024-crm19-proposals.sql
+Applied: 025-crm21-proposal-delivery.sql
+Applied: 026-crm22-acceptance-link.sql
+Applied: 027-crm23-contract-idempotent.sql
+Applied: 028-crm24-reports.sql
+Applied: 029-crm25-goals-commissions.sql
+Applied: 030-crm26-commercial-library.sql
+Applied: 031-crm27-partnerships-renewals.sql
+Applied: 032-con01-contract-units-docs.sql
+Applied: 033-con02-contract-posts-sla.sql
+Applied: 034-con03-contract-status-transitions.sql
+Applied: 035-con04-contract-amendments.sql
+Applied: 036-con05-contract-alerts.sql
+Applied: 037-con06-document-obligations.sql
+Applied: 038-con07-implantation-checklist.sql
+Applied: 039-con08-implantation-blocks.sql
+Applied: 040-con09-contract-closure.sql
+Applied: 041-con10-fiscal-dossier.sql
+Applied: 042-con11-management-diary.sql
+Applied: 043-plt05-notifications.sql
+Applied: 044-plt06-observability.sql
+Applied: 045-plt07-healthcheck.sql
+Applied: 046-plt08-backup.sql
+Applied: 047-plt09-privacy.sql
+Applied: 048-plt10-lgpd-requests.sql
+Applied: 049-plt11-retention.sql
+Applied: 050-plt12-incident-response.sql
+Applied: 051-plt13-config-flags.sql
+Applied: 052-plt14-dependencies.sql
+Applied: 053-plt15-integration-logs.sql
+Applied: 054-plt16-operational-budget.sql
+Applied: 055-plt17-env-isolation.sql
+Applied: 056-plt18-maintenance-docs.sql
+Applied: 057-hr01-cadastro-profissional.sql
+Applied: 058-emp01-perfil-proprio.sql
+Applied: 059-hr03-04-06-recrutamento-talentos-dossie.sql
+Applied: 060-hr07-08-09-desligamento-status-ferias.sql
+Applied: 061-hr10-11-12-afastamentos-ponto-banco-horas.sql
+Applied: 062-hr13-14-15-16-beneficios-adiantamentos-saude-integracao.sql
+Applied: 063-hr17-18-19-20-treinamento-competencias-uniformes-fechamento-dp.sql
+Applied: 064-hr21-22-23-24-holerites-avaliacoes-atendimento-indicadores.sql
+Applied: 065-emp02-03-04-05-plantao-escala-jornada-ausencia.sql
+Applied: 066-emp06-07-08-09-troca-passagem-ocorrencia-procedimentos.sql
+Applied: 067-emp10-11-12-13-documentos-holerites-solicitacoes-uniformes.sql
+Applied: 068-emp14-15-16-17-cursos-comunicados-atendimento-confidencial.sql
+Applied: 069-emp18-19-pwa-faq-acessibilidade.sql
+Applied: 070-ops01-02-03-04-estrutura-dimensionamento-escala-validacao.sql
+Applied: 071-ops05-06-07-08-cobertura-passagem-ocorrencia-checklist.sql
+Applied: 072-ops09-10-11-12-supervisao-ronda-chaves-relatorio.sql
+Applied: 073-ops13-14-15-16-metricas-escalas-limpeza-monitoramento.sql
+Applied: 074-cli01-02-03-04-portal-identidade-contatos-contratos-documentos.sql
+Applied: 075-cli05-06-07-08-chamados-visitas-relatorios.sql
+Applied: 076-cli09-10-11-12-13-14-cobrancas-oportunidade-satisfacao-renovacao-modos-seguranca.sql
+Applied: 077-fin01-02-03-04-contas-receber-pagar-recorrencia-pagamento.sql
+Applied: 078-fin05-06-07-08-conciliacao-cobranca-fluxo-custo.sql
+Applied: 079-fin09-10-11-12-resultado-despesa-fiscal-gateway.sql
+Applied: 080-fin13-14-15-16-orcamento-export-fechamento-comissao.sql
+Applied: 081-adm01-02-03-04-05-06-painel-aprovacao.sql
+Applied: 082-adm07-08-09-10-11-12-busca-relatorios-config-metas-diario-expansao.sql
+Applied: 083-ast01-02-03-04-05-06-estoque-reserva-ativo-entrega-requisicao.sql
+Applied: 084-ast07-08-09-10-11-12-inventario-os-manutencao-cftv-limpeza.sql
+Applied: 085-ext01-02-03-04-05-06-frota-terceiros-licitacoes-fornecedores-qualidade-satisfacao.sql
+Applied: 086-ext07-08-09-10-11-12-compliance-conhecimento-expansao-continuidade-analytics-editor.sql
+Applied: 087-ext13-14-15-16-17-relatorio-inteligencia-emergencial-central-biometria-ai10-automacoes.sql
+Applied: 088-pub06-cms-paginas-faq-cases-blog-vagas.sql
+Applied: 089-pub07-temas-preview-publicacao-rollback-preferencia.sql
+Applied: 090-pub08-seo-sitemap-redirects-dominio-noindex.sql
+Applied: 091-pub09-montador-pacote-comparador-servicos-planos.sql
+Applied: 092-pub10-origem-conversao-ab-test-minimizacao.sql
+Applied: 093-cli15-reclamacao-colaborador-canal-restrito-rh-minimo.sql
+Applied: 094-pub02-pub05-paginas-segmento-faq-assistida-handoff.sql
+Applied: 095-ai-rag-cliente-rh-marcelo-ollama-qwen3-bot-modes.sql
+Applied: 096-ai-rag-feedback-custo-token-rollback.sql
+Applied: 097-client-mfa-session.sql
+Applied: 098-client-manual-verification.sql
+Applied: 099-sec-staff-session-hardening.sql
+Applied: 100-l02-local-outbox.sql
+Applied: 101-l02-document-integrity.sql
+Applied: 102-l03-employee-self-service-security.sql
+Applied: 103-l04-comercial-role-widening.sql
+Applied: 104-crm-task-audit.sql
+Applied: 105-crm-interaction-audit.sql
+Applied: 106-crm-interaction-follow-up.sql
+Applied: 107-crm-visit-agenda.sql
+Applied: 108-crm-manual-cadences.sql
+Applied: 109-crm-task-delegation.sql
+Applied: 110-crm-visit-conflict-lead-link.sql
+Applied: 111-crm-opportunity-notes-reopen.sql
+Applied: 112-pub08-seo-redirect-audit-action.sql
+Applied: 113-crm-01-04-audit-actions.sql
+Applied: 114-crm-02-contact-update-audit.sql
+Applied: 115-crm-01-unit-audit.sql
+Applied: 116-crm-03-dedup-review.sql
+Applied: 117-l04-publication-portfolio.sql
+Applied: 118-l05-contract-canonicalization.sql
+Applied: 119-l06-operacao-hardening.sql
+Applied: 120-l06-fatia-b-operacao.sql
+Applied: 121-l06-fatia-c-patrimonio.sql
+Applied: 122-l06-fatia-d-manutencao.sql
+Applied: 123-l06-fatia-e-operacao-avancada.sql
+Applied: 124-fin05-conciliation-hardening.sql
+Applied: 125-fin06-collection-hardening.sql
+Applied: 126-fin07-cashflow-aging-hardening.sql
+Applied: 127-fin08-cost-allocation-hardening.sql
+Applied: 128-fin09-management-result-hardening.sql
+Applied: 129-fin10-expense-hardening.sql
+Applied: 130-fin11-fiscal-hardening.sql
+Applied: 131-fin12-gateway-hardening.sql
+Applied: 132-fin13-budget-hardening.sql
+Applied: 133-fin14-15-16-export-closure-commission-hardening.sql
+Applied: 134-fin13-budget-revision-margin-idempotency.sql
+Applied: 135-fin09-fin12-revalidation-hardening.sql
+Applied: 136-fin10-fin05-policy-history-locks.sql
+Applied: 137-fin14-15-16-ui-idempotency-closure-lock.sql
+Applied: 138-adm01-12-painel-marcelo-decisoes-escopo.sql
+Applied: 139-l08-client-space-atomic-idempotency.sql
+Applied: 140-l08-cli06-08-lifecycle-visits-reports.sql
+Applied: 141-l08-cli10-service-request-portal.sql
+Applied: 142-l08-cli11-satisfaction-portal.sql
+Applied: 143-l08-cli12-renewal-communications-portal.sql
+Applied: 144-l08-cli13-portal-access-modes.sql
+Applied: 145-cli14-account-security.sql
+Applied: 146-l08-cli15-employee-complaint-portal.sql
+Applied: 147-ext01-fleet-canonical-journey.sql
+Applied: 148-ext02-third-parties-canonical-journey.sql
+Applied: 149-ext03-biddings-canonical-journey.sql
+Applied: 150-ext04-supplier-journey.sql
+Applied: 151-ext05-quality-journey.sql
+Applied: 152-ext06-satisfaction-journey.sql
+Applied: 153-ext07-compliance-journey.sql
+Applied: 154-ext07-compliance-hardening.sql
+Applied: 155-ext07-compliance-hardening.sql
+Applied: 156-ext07-scheduled-evaluation.sql
+Applied: 157-f03-employee-request-rh-return.sql
+Applied: 158-f03-client-ticket-acceptance.sql
+Applied: 159-f03-receivable-settlement-report.sql
+Applied: 160-ext08-knowledge-canonical-journey.sql
+Applied: 161-ext09-expansion-canonical-journey.sql
+Applied: 162-ext10-continuity-canonical-journey.sql
+Applied: 163-ext11-analytics-canonical-journey.sql
+Applied: 164-ext12-visual-editor-canonical-journey.sql
+Applied: 165-ext13-reports-canonical-journey.sql
+Applied: 166-ext14-intel-canonical-journey.sql
+Applied: 167-ext15-emergency-canonical-journey.sql
+Applied: 168-ext07-compliance-action-plans.sql
+Applied: 169-ext10-continuity-client-portal.sql
+Applied: 170-ops-internal-pendency-notifications.sql
+Applied: 171-client-offline-access-recovery.sql
+Applied: 172-ext05-quality-client-account-scope.sql
+Applied: 173-ai-rag-client-account-scope.sql
+Applied: 174-auth-permissions-id-default.sql
+Applied: 175-ai-rag-directory-sources.sql
+Applied: 176-employee-geolocation-time-clock.sql
+Applied: 177-site-appearance-administration.sql
+Applied: 178-employee-time-clock-here-address.sql
+Applied: 179-employee-here-end-user-consent.sql
+Applied: 180-marcelo-rh-access.sql
+Migration ledger verified: 001–180 (PostgreSQL only)
+UX_FIN_07E1_SETUP: migrações reais aplicadas (nenhuma nova nesta fatia)
+UX_FIN_07E1_SETUP: servidor real e Chromium Playwright entregues ao teste de integração
+TAP version 13
+# Subtest: as rotas financeiras continuam exigindo sessão, sem mudança de contrato
+ok 1 - as rotas financeiras continuam exigindo sessão, sem mudança de contrato
+  ---
+  duration_ms: 6251.094653
+  type: 'test'
+  ...
+# Subtest: menu não é autorização: ti abre /admin/financeiro mas é recusado na escrita
+ok 2 - menu não é autorização: ti abre /admin/financeiro mas é recusado na escrita
+  ---
+  duration_ms: 104.254703
+  type: 'test'
+  ...
+# Subtest: massa fictícia pelas próprias APIs financeiras: recebível e baixa parcial calculada no servidor
+ok 3 - massa fictícia pelas próprias APIs financeiras: recebível e baixa parcial calculada no servidor
+  ---
+  duration_ms: 77.96561
+  type: 'test'
+  ...
+# Subtest: browser: falha de leitura NÃO vira lista vazia no painel financeiro
+ok 4 - browser: falha de leitura NÃO vira lista vazia no painel financeiro
+  ---
+  duration_ms: 4298.127674
+  type: 'test'
+  ...
+# Subtest: browser: as 16 abas do financeiro são um tablist de verdade, com teclado
+ok 5 - browser: as 16 abas do financeiro são um tablist de verdade, com teclado
+  ---
+  duration_ms: 3614.771566
+  type: 'test'
+  ...
+# Subtest: browser: a situação da conta aparece com vocabulário em português e valor em reais
+ok 6 - browser: a situação da conta aparece com vocabulário em português e valor em reais
+  ---
+  duration_ms: 3251.430108
+  type: 'test'
+  ...
+# Subtest: browser: o vocabulário também chega às áreas FIN-05..FIN-16 — a falha deixa de ser código cru
+ok 7 - browser: o vocabulário também chega às áreas FIN-05..FIN-16 — a falha deixa de ser código cru
+  ---
+  duration_ms: 3027.867335
+  type: 'test'
+  ...
+# Subtest: browser: em 390px a tela financeira não produz transbordo horizontal
+ok 8 - browser: em 390px a tela financeira não produz transbordo horizontal
+  ---
+  duration_ms: 3236.959393
+  type: 'test'
+  ...
+# Subtest: UX-PRO-07E-1 contrato: todo GET canônico devolve a chave de lista no 200, e o vazio legítimo é chave presente com []
+ok 9 - UX-PRO-07E-1 contrato: todo GET canônico devolve a chave de lista no 200, e o vazio legítimo é chave presente com []
+  ---
+  duration_ms: 448.943746
+  type: 'test'
+  ...
+# Subtest: UX-PRO-07E-1 browser: painel próprio — 2xx sem "receivables" declara falha, não "Nenhum recebível encontrado."
+ok 10 - UX-PRO-07E-1 browser: painel próprio — 2xx sem "receivables" declara falha, não "Nenhum recebível encontrado."
+  ---
+  duration_ms: 3036.512752
+  type: 'test'
+  ...
+# Subtest: UX-PRO-07E-1 browser: painel próprio — 2xx com "rules" não-array declara falha, não "Nenhuma regra encontrada."
+ok 11 - UX-PRO-07E-1 browser: painel próprio — 2xx com "rules" não-array declara falha, não "Nenhuma regra encontrada."
+  ---
+  duration_ms: 3108.163249
+  type: 'test'
+  ...
+# Subtest: UX-PRO-07E-1 browser: painel próprio — corpo 2xx ilegível declara falha, não "Nenhum pagamento encontrado."
+ok 12 - UX-PRO-07E-1 browser: painel próprio — corpo 2xx ilegível declara falha, não "Nenhum pagamento encontrado."
+  ---
+  duration_ms: 3015.649843
+  type: 'test'
+  ...
+# Subtest: UX-PRO-07E-1 browser: vazio legítimo preservado — 2xx com listas vazias continua vazio concluído, não falha
+ok 13 - UX-PRO-07E-1 browser: vazio legítimo preservado — 2xx com listas vazias continua vazio concluído, não falha
+  ---
+  duration_ms: 3201.046178
+  type: 'test'
+  ...
+# Subtest: UX-PRO-07E-1 browser: a repetição depois do corpo 2xx inválido recupera o dado real
+ok 14 - UX-PRO-07E-1 browser: a repetição depois do corpo 2xx inválido recupera o dado real
+  ---
+  duration_ms: 3431.765271
+  type: 'test'
+  ...
+# Subtest: UX-PRO-07E-1 browser: conciliação bancária — 2xx sem "statements" declara indisponibilidade, não ausência de extrato
+ok 15 - UX-PRO-07E-1 browser: conciliação bancária — 2xx sem "statements" declara indisponibilidade, não ausência de extrato
+  ---
+  duration_ms: 3992.590332
+  type: 'test'
+  ...
+# Subtest: UX-PRO-07E-1 browser: orçamento — 2xx sem "budgets" declara indisponibilidade, não "Nenhum orçamento encontrado."
+ok 16 - UX-PRO-07E-1 browser: orçamento — 2xx sem "budgets" declara indisponibilidade, não "Nenhum orçamento encontrado."
+  ---
+  duration_ms: 3827.436029
+  type: 'test'
+  ...
+# Subtest: UX-PRO-07E-1 browser: cenários — 2xx sem "scenarios" declara indisponibilidade, não ausência de cenário
+ok 17 - UX-PRO-07E-1 browser: cenários — 2xx sem "scenarios" declara indisponibilidade, não ausência de cenário
+  ---
+  duration_ms: 3868.219286
+  type: 'test'
+  ...
+# Subtest: UX-PRO-07E-1 browser: fluxo de caixa — 2xx sem "snapshots" declara indisponibilidade, não "Nenhum snapshot registrado."
+ok 18 - UX-PRO-07E-1 browser: fluxo de caixa — 2xx sem "snapshots" declara indisponibilidade, não "Nenhum snapshot registrado."
+  ---
+  duration_ms: 3215.733548
+  type: 'test'
+  ...
+# Subtest: UX-PRO-07E-1 browser: cobrança — 2xx sem "policies" declara indisponibilidade, não "Nenhuma política cadastrada."
+ok 19 - UX-PRO-07E-1 browser: cobrança — 2xx sem "policies" declara indisponibilidade, não "Nenhuma política cadastrada."
+  ---
+  duration_ms: 3150.497978
+  type: 'test'
+  ...
+# Subtest: UX-PRO-07E-1 browser: relatório de baixas — 2xx sem "reports" declara falha, não lista vazia
+ok 20 - UX-PRO-07E-1 browser: relatório de baixas — 2xx sem "reports" declara falha, não lista vazia
+  ---
+  duration_ms: 4604.953154
+  type: 'test'
+  ...
+# Subtest: UX-PRO-07E-1 browser: histórico da conta — 2xx sem "history" declara falha, não ausência de evento
+ok 21 - UX-PRO-07E-1 browser: histórico da conta — 2xx sem "history" declara falha, não ausência de evento
+  ---
+  duration_ms: 3823.348083
+  type: 'test'
+  ...
+# Subtest: UX-PRO-07E-1 browser: a falha declarada não produz transbordo em 1440/768/390/320 e as capturas ficam registradas
+ok 22 - UX-PRO-07E-1 browser: a falha declarada não produz transbordo em 1440/768/390/320 e as capturas ficam registradas
+  ---
+  duration_ms: 12087.003836
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 79556.246349
+UX_FIN_07E1_TAP_SUMMARY: pass=22 fail=0 skipped=0 todo=0 minimo_exigido=22
+UX_FIN_07E1_TEST_EXIT: 0
+QA_PG_TEMP_CLEANED: true
+UX_FIN_07E1_SETUP: temporário limpo

@@ -2,6 +2,7 @@
 
 import styles from "../../../components/ui/UiWorkspace.module.css";
 import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
+import { financeInvalidListMessage } from "../../../lib/finance-request";
 import { FormEvent, useEffect, useState } from "react";
 
 type Policy = {
@@ -43,6 +44,22 @@ async function request(path: string, init?: RequestInit) {
   return data;
 }
 
+/**
+ * UX-PRO-07E-1 — leitura de lista com a chave canônica exigida: mesmo método,
+ * URL e cabeçalhos de `request` (intacto para as escritas); um 2xx sem a lista
+ * lança falha declarada em vez de virar `[]`. O servidor garante a chave no 200
+ * (`src/server/fin-advanced-api.mjs:355`, `:461`, `:600`), então o vazio
+ * legítimo continua sendo vazio concluído.
+ */
+async function requestList<T>(path: string, key: string): Promise<T[]> {
+  const response = await fetch(path, { headers: { "Content-Type": "application/json" } });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(financeErrorMessage(typeof data.error === "string" ? data.error : null, response.status));
+  const list = data && typeof data === "object" ? (data as Record<string, unknown>)[key] : undefined;
+  if (!Array.isArray(list)) throw new Error(financeInvalidListMessage(response.status));
+  return list as T[];
+}
+
 export default function CollectionWorkspace() {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [receivables, setReceivables] = useState<Account[]>([]);
@@ -50,6 +67,12 @@ export default function CollectionWorkspace() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  // UX-PRO-07E-1: enquanto as três listas canônicas não chegam confirmadas, os
+  // vazios abaixo não podem afirmar ausência de registro.
+  const [readConfirmed, setReadConfirmed] = useState(false);
+  // O histórico é lido sob demanda: "idle" preserva o texto honesto de quem
+  // ainda não consultou; só a falha real passa a declarar indisponibilidade.
+  const [historyState, setHistoryState] = useState<"idle" | "confirmed" | "failed">("idle");
 
   const [policyForm, setPolicyForm] = useState({ name: "", description: "", reminder_type: "notificacao_portal", days_before: "3", escalation_level: "0" });
   const [reminderForm, setReminderForm] = useState({ receivable_id: "", policy_id: "", responsible_name: "", due_date: "", reminder_type: "notificacao_portal", content: "" });
@@ -67,14 +90,22 @@ export default function CollectionWorkspace() {
   };
 
   async function load() {
-    const [policyData, receivableData, reminderData] = await Promise.all([
-      request("/api/fin/collection-policies"),
-      request("/api/fin/receivables"),
-      request("/api/fin/collection-reminders"),
-    ]);
-    setPolicies(policyData.policies || []);
-    setReceivables(receivableData.receivables || []);
-    setReminders(reminderData.reminders || []);
+    // UX-PRO-07E-1: mesma estrutura tudo-ou-nada de antes; um 2xx sem a chave
+    // canônica agora também é falha, e a leitura só é confirmada com as três.
+    try {
+      const [nextPolicies, nextReceivables, nextReminders] = await Promise.all([
+        requestList<Policy>("/api/fin/collection-policies", "policies"),
+        requestList<Account>("/api/fin/receivables", "receivables"),
+        requestList<Reminder>("/api/fin/collection-reminders", "reminders"),
+      ]);
+      setPolicies(nextPolicies);
+      setReceivables(nextReceivables);
+      setReminders(nextReminders);
+      setReadConfirmed(true);
+    } catch (cause) {
+      setReadConfirmed(false);
+      throw cause;
+    }
   }
 
   useEffect(() => {
@@ -135,8 +166,15 @@ export default function CollectionWorkspace() {
   const loadHistory = async (event: FormEvent) => {
     event.preventDefault();
     await run(async () => {
-      const data = await request(`/api/fin/collection-history?receivable_id=${encodeURIComponent(historyReceivableId)}`);
-      setHistory(data.history || []);
+      // UX-PRO-07E-1: 2xx sem `history` é falha declarada, não histórico vazio.
+      try {
+        const rows = await requestList<HistoryEntry>(`/api/fin/collection-history?receivable_id=${encodeURIComponent(historyReceivableId)}`, "history");
+        setHistory(rows);
+        setHistoryState("confirmed");
+      } catch (cause) {
+        setHistoryState("failed");
+        throw cause;
+      }
     });
   };
 
@@ -168,7 +206,9 @@ export default function CollectionWorkspace() {
       <div>
         <h3>Políticas de cobrança</h3>
         <ul data-testid="fin06-policies">
-          {policies.length === 0 ? <li>Nenhuma política cadastrada.</li> : policies.map(policy => (
+          {policies.length === 0 ? (readConfirmed
+            ? <li data-testid="fin06-policies-empty">Nenhuma política cadastrada.</li>
+            : <li data-testid="fin06-policies-unavailable">Lista indisponível — a leitura não foi confirmada; não confundir com ausência de políticas.</li>) : policies.map(policy => (
             <li data-testid={`fin06-policy-${policy.id}`} key={policy.id}>
               {policy.name} · {policy.reminder_type} · {policy.days_before} dias antes · escalonamento {policy.escalation_level} ·{" "}
               {policy.is_approved ? "aprovada" : "não aprovada"} · {policy.is_active ? "ativa" : "inativa"}{" "}
@@ -199,7 +239,9 @@ export default function CollectionWorkspace() {
       <div>
         <h3>Lembretes</h3>
         <ul data-testid="fin06-reminders">
-          {reminders.length === 0 ? <li>Nenhum lembrete sintético.</li> : reminders.map(reminder => (
+          {reminders.length === 0 ? (readConfirmed
+            ? <li data-testid="fin06-reminders-empty">Nenhum lembrete sintético.</li>
+            : <li data-testid="fin06-reminders-unavailable">Lista indisponível — a leitura não foi confirmada; não confundir com ausência de lembretes.</li>) : reminders.map(reminder => (
             <li data-testid={`fin06-reminder-${reminder.id}`} key={reminder.id}>
               {reminder.responsible_name} · {reminder.reminder_type} · {reminder.status} · {reminder.is_real_message ? "ATENÇÃO: mensagem real" : "simulado/local"}
               {reminder.status !== "lembrete_enviado" && (
@@ -226,7 +268,9 @@ export default function CollectionWorkspace() {
         <button type="submit" data-testid="fin06-load-history">Carregar histórico</button>
       </form>
       <ul data-testid="fin06-history">
-        {history.length === 0 ? <li>Nenhum histórico carregado.</li> : history.map(entry => (
+        {history.length === 0 ? (historyState === "failed"
+          ? <li data-testid="fin06-history-unavailable">Histórico indisponível por falha de leitura — não confundir com ausência de eventos.</li>
+          : <li data-testid="fin06-history-empty">Nenhum histórico carregado.</li>) : history.map(entry => (
           <li key={entry.id}>
             {entry.previous_status || "criação"} → {entry.next_status} · {entry.reason} ·{" "}
             {entry.is_blocking_action ? "ATENÇÃO: bloqueio" : "sem bloqueio automático"}

@@ -2,6 +2,7 @@
 
 import styles from "../../../components/ui/UiWorkspace.module.css";
 import { financeErrorMessage } from "../../../lib/finance-vocabulary.mjs";
+import { financeInvalidListMessage } from "../../../lib/finance-request";
 import { FormEvent, useEffect, useState } from "react";
 
 type Statement = {
@@ -48,6 +49,29 @@ async function request(path: string, init?: RequestInit) {
   return data;
 }
 
+/**
+ * UX-PRO-07E-1 — leitura de lista com a chave canônica exigida.
+ *
+ * Reproduz EXATAMENTE o método, a URL e os cabeçalhos de `request` acima, que
+ * permanece intacto e continua servindo todas as escritas. A única diferença:
+ * um 2xx sem a lista esperada (chave ausente, valor não-array ou corpo
+ * ilegível) lança falha declarada em vez de virar `[]`.
+ *
+ * O servidor garante a chave no 200 e devolve `[]` quando realmente não há
+ * registro (`src/server/fin-advanced-api.mjs:83`, `:144`, `:210`), então o vazio
+ * legítimo continua sendo vazio concluído — só o vazio FALSO deixa de existir.
+ */
+async function requestList<T>(path: string, key: string): Promise<T[]> {
+  const response = await fetch(path, {
+    headers: { "Content-Type": "application/json" },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(financeErrorMessage(typeof data.error === "string" ? data.error : null, response.status));
+  const list = data && typeof data === "object" ? (data as Record<string, unknown>)[key] : undefined;
+  if (!Array.isArray(list)) throw new Error(financeInvalidListMessage(response.status));
+  return list as T[];
+}
+
 export default function BankReconciliationWorkspace() {
   const [statements, setStatements] = useState<Statement[]>([]);
   const [transactions, setTransactions] = useState<BankTransaction[]>([]);
@@ -56,6 +80,9 @@ export default function BankReconciliationWorkspace() {
   const [conciliations, setConciliations] = useState<Conciliation[]>([]);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  // UX-PRO-07E-1: enquanto nenhuma leitura terminou com as cinco listas
+  // canônicas confirmadas, os vazios abaixo não podem afirmar ausência.
+  const [readConfirmed, setReadConfirmed] = useState(false);
 
   const [statementForm, setStatementForm] = useState({
     source: "extrato",
@@ -96,18 +123,28 @@ export default function BankReconciliationWorkspace() {
   };
 
   async function load() {
-    const [statementData, transactionData, receivableData, payableData, conciliationData] = await Promise.all([
-      request("/api/fin/bank-statements"),
-      request("/api/fin/bank-transactions"),
-      request("/api/fin/receivables"),
-      request("/api/fin/payables"),
-      request("/api/fin/conciliations"),
-    ]);
-    setStatements(statementData.statements || []);
-    setTransactions(transactionData.transactions || []);
-    setReceivables(receivableData.receivables || []);
-    setPayables(payableData.payables || []);
-    setConciliations(conciliationData.conciliations || []);
+    // UX-PRO-07E-1: mesma estrutura tudo-ou-nada de antes (nenhuma mudança no
+    // caminho de falha não-2xx, que `run` continua apresentando igual); a
+    // diferença é que um 2xx sem a chave canônica agora também é falha, e a
+    // leitura só é dada como confirmada quando as cinco listas chegaram.
+    try {
+      const [nextStatements, nextTransactions, nextReceivables, nextPayables, nextConciliations] = await Promise.all([
+        requestList<Statement>("/api/fin/bank-statements", "statements"),
+        requestList<BankTransaction>("/api/fin/bank-transactions", "transactions"),
+        requestList<Account>("/api/fin/receivables", "receivables"),
+        requestList<Account>("/api/fin/payables", "payables"),
+        requestList<Conciliation>("/api/fin/conciliations", "conciliations"),
+      ]);
+      setStatements(nextStatements);
+      setTransactions(nextTransactions);
+      setReceivables(nextReceivables);
+      setPayables(nextPayables);
+      setConciliations(nextConciliations);
+      setReadConfirmed(true);
+    } catch (cause) {
+      setReadConfirmed(false);
+      throw cause;
+    }
   }
 
   useEffect(() => {
@@ -206,7 +243,9 @@ export default function BankReconciliationWorkspace() {
       <div>
         <h3>Extratos importados</h3>
         <ul data-testid="fin05-statements">
-          {statements.length === 0 ? <li>Nenhum extrato sintético.</li> : statements.map(statement => (
+          {statements.length === 0 ? (readConfirmed
+            ? <li data-testid="fin05-statements-empty">Nenhum extrato sintético.</li>
+            : <li data-testid="fin05-statements-unavailable">Lista indisponível — a leitura não foi confirmada; não confundir com ausência de extratos.</li>) : statements.map(statement => (
             <li key={statement.id}>{statement.protocol} · {statement.source} · {statement.file_name} · {statement.total_transactions} transações · {money(statement.total_amount_cents)}</li>
           ))}
         </ul>
@@ -227,7 +266,9 @@ export default function BankReconciliationWorkspace() {
       <div>
         <h3>Transações do extrato</h3>
         <ul data-testid="fin05-transactions">
-          {transactions.length === 0 ? <li>Nenhuma transação sintética.</li> : transactions.map(transaction => (
+          {transactions.length === 0 ? (readConfirmed
+            ? <li data-testid="fin05-transactions-empty">Nenhuma transação sintética.</li>
+            : <li data-testid="fin05-transactions-unavailable">Lista indisponível — a leitura não foi confirmada; não confundir com ausência de transações.</li>) : transactions.map(transaction => (
             <li key={transaction.id}>{transaction.bank_ref} · {transaction.transaction_date} · {transaction.description} · {money(transaction.amount_cents)} · {transaction.is_conciliated ? "conciliada" : "pendente"}</li>
           ))}
         </ul>
@@ -255,7 +296,9 @@ export default function BankReconciliationWorkspace() {
       <div>
         <h3>Sugestões e confirmações</h3>
         <ul data-testid="fin05-conciliations">
-          {conciliations.length === 0 ? <li>Nenhuma sugestão.</li> : conciliations.map(conciliation => (
+          {conciliations.length === 0 ? (readConfirmed
+            ? <li data-testid="fin05-conciliations-empty">Nenhuma sugestão.</li>
+            : <li data-testid="fin05-conciliations-unavailable">Lista indisponível — a leitura não foi confirmada; não confundir com ausência de sugestões.</li>) : conciliations.map(conciliation => (
             <li data-testid={`fin05-conciliation-${conciliation.id}`} key={conciliation.id}>
               {conciliation.status} · conta {conciliation.receivable_id || conciliation.payable_id} · banco {conciliation.bank_transaction_id} · {money(conciliation.amount_matched_cents)} · {conciliation.suggestion_reason}
               {conciliation.status === "sugerida" && <button type="button" onClick={() => setConfirmationForm({ ...confirmationForm, id: conciliation.id, status: "conciliada" })}>Selecionar para confirmar</button>}

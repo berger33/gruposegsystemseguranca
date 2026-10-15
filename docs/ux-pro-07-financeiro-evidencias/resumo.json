@@ -1,0 +1,76 @@
+{
+  "stage": "ux-pro-07-financeiro",
+  "generatedBy": "gate PostgreSQL descartável + HTTP real + Chromium (scripts/qa-ux-pro-07e1-postgres.mjs)",
+  "notes": [
+    "UX-PRO-07E-1: falha declarada por resposta 2xx sem a lista canônica em /admin/financeiro.",
+    "Tema dia; papel financeiro; massa sintética criada pelas próprias APIs financeiras.",
+    "elementoAtivoOnFailure é medição informativa do foco no momento da falha; NÃO é percurso de teclado nem primeiro foco visível. O percurso do tablist continua provado pelo caso herdado.",
+    "O tema noturno não foi medido nesta fatia: contraste é achado transversal (E8) fora do escopo."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-07-financeiro",
+      "route": "/admin/financeiro",
+      "role": "financeiro",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-financeiro-evidencias/07e1-falha-declarada-1440.png",
+      "problems": [],
+      "state": "falha_declarada_corpo_2xx_sem_lista",
+      "transbordoDocumentoPx": 0,
+      "alturaBotaoRepetirPx": 44,
+      "elementoAtivoOnFailure": {
+        "tag": "body",
+        "text": "GrupoSEG System MenuFinanceiroModo noite"
+      }
+    },
+    {
+      "stage": "ux-pro-07-financeiro",
+      "route": "/admin/financeiro",
+      "role": "financeiro",
+      "viewport": "768x1024",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-financeiro-evidencias/07e1-falha-declarada-768.png",
+      "problems": [],
+      "state": "falha_declarada_corpo_2xx_sem_lista",
+      "transbordoDocumentoPx": 0,
+      "alturaBotaoRepetirPx": 44,
+      "elementoAtivoOnFailure": {
+        "tag": "body",
+        "text": "GrupoSEG System MenuFinanceiroModo noite"
+      }
+    },
+    {
+      "stage": "ux-pro-07-financeiro",
+      "route": "/admin/financeiro",
+      "role": "financeiro",
+      "viewport": "390x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-financeiro-evidencias/07e1-falha-declarada-390.png",
+      "problems": [],
+      "state": "falha_declarada_corpo_2xx_sem_lista",
+      "transbordoDocumentoPx": 0,
+      "alturaBotaoRepetirPx": 44,
+      "elementoAtivoOnFailure": {
+        "tag": "body",
+        "text": "GrupoSEG System MenuFinanceiroModo noite"
+      }
+    },
+    {
+      "stage": "ux-pro-07-financeiro",
+      "route": "/admin/financeiro",
+      "role": "financeiro",
+      "viewport": "320x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-07-financeiro-evidencias/07e1-falha-declarada-320.png",
+      "problems": [],
+      "state": "falha_declarada_corpo_2xx_sem_lista",
+      "transbordoDocumentoPx": 0,
+      "alturaBotaoRepetirPx": 44,
+      "elementoAtivoOnFailure": {
+        "tag": "body",
+        "text": "GrupoSEG System MenuFinanceiroModo noite"
+      }
+    }
+  ]
+}
