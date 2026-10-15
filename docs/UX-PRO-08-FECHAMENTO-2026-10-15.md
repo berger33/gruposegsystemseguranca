@@ -1,80 +1,80 @@
-# UX-PRO-08 — fechamento de medição da família (08D, 15/10/2026)
+# UX-PRO-08 — fechamento reconciliado e complemento da matriz (15/10/2026)
 
-## Situação e limites
+## 1. Governança: merge concorrente preservado, não reaberto
 
-**08D concluída como medição/documentação, com resíduos pendentes explícitos; não é certificação de UX sem defeitos.** Escopo escrito antes de código em [UX-PRO-08D-ESCOPO-ANTES-2026-10-15.md](UX-PRO-08D-ESCOPO-ANTES-2026-10-15.md). Nenhuma alteração em código de produto, API, migração, autorização ou publicação. Nenhum aceite humano, homologação, validação manual de jornada ou conformidade WCAG integral. Homologação e produção **NO-GO**.
+A sessão iniciou na main `8dfbd7e451787dcf6f56e93b81d8e4edb26ceda5`, árvore limpa, com #244/#245/#246 MERGED (11/12/41 checks SUCCESS). Durante a coleta independente, a **#247 (UX-PRO-08D)** foi mergeada por outra sessão. O fetch antes de abrir PR detectou a main **`3d807a420db6c63c3f754ae02144053e29da1469`**; #247 confirmada MERGED com 6 checks SUCCESS. Não reaberta nem duplicada.
 
-Base reconfirmada por fetch: `8dfbd7e451787dcf6f56e93b81d8e4edb26ceda5`. PRs #244 (08A, `ab39b6dc`), #245 (08B, `5a02f0e`) e #246 (08C, base acima) MERGED, respectivamente 11/12/41 checks SUCCESS. Os dois checks encontrados no próprio merge commit da main também estavam SUCCESS. Não reabertas. #230 CLOSED. #234 continua aberta/conflitante, fora do escopo. A consulta de proteção da branch retornou 403 por permissão da integração; isso não autoriza bypass: conferir todos os checks reportados na nova PR e não mergear com pendente/falha.
+O escopo foi reduzido **antes de adaptar o código**: [escopo do complemento](UX-PRO-08D-COMPLEMENTO-ESCOPO-ANTES-2026-10-15.md). O levantamento inicial desta sessão foi escrito antes de código e permanece no histórico `0beb1fc`. A branch incorpora a main concorrente e preserva integralmente seu [escopo canônico](UX-PRO-08D-ESCOPO-ANTES-2026-10-15.md), [relatório 08D](UX-PRO-08D-RELATORIO-2026-10-15.md), testes, metadados e capturas. Os IDs D1–D8 daquele relatório não são renumerados aqui.
 
-## Entrega pequena e aditiva
+#230 está CLOSED; #234 permanece aberta/conflitante (financeiro), fora desta fatia. A consulta de proteção da branch retornou 403 por permissão da integração; não é autorização de bypass: exigir todos os checks reportados verdes na PR complementar antes de tentar merge.
 
-- Etapa opt-in `ux-pro-08d` no capturador existente + módulo de medição; demais etapas mantêm seus planos e padrão de escrita.
-- Captura em Chromium com PostgreSQL 17 efêmero, migrações 001–180 e sessões emitidas por login real. Credenciais/cookies ficam apenas na memória. Sem mock de respostas de produto; assistentes fazem pergunta real sobre base vazia, HTTP 200, zero fontes e `ollama_used=false`.
-- Preferências reais `seg-color-mode` e `segsystem.admin.appearance.v1`, com `data-color-mode`/`data-admin-theme` e cores computadas registrados; não confundir a preferência pública com o tema administrativo.
-- Percurso começa no primeiro Tab, sem `.focus()` nem clique de mouse. Tab/Shift+Tab até controles da superfície; conhecimento exercita ArrowRight/End/Home, assistentes digitam/enviam por Tab/Enter, galeria compara layout 01 por Enter, prévias percorrem os dois links sem navegar. Nenhum PUT de publicação é feito.
-- Resumos antigos/metadados e PNGs A/B/C preservados; novas entradas têm `stage=ux-pro-08d`. A segunda execução substitui somente entradas e PNGs 08D, não soma capturas duplicadas.
-- Teste novo verifica matriz, unicidade, dimensões PNG, tema real, consistência de crédito de teclado e contagem histórica 08B; incluído em `npm test`.
+## 2. Entrega limitada ao que ainda faltava
 
-## Cobertura depois — evidências nas pastas próprias
+A #247 cobriu dia nas quatro larguras, noite em **768px nas quatro rotas staff**, e teclado em 390px. Este complemento acrescenta **somente 12 PNGs noturnos: 320/390/1440px × quatro rotas staff**. Nenhuma repetição das capturas dia, da noite768, do público ou do cliente.
 
-Todas as linhas abaixo possuem **320×780, 390×844, 768×1024 e 1440×900, cada uma em claro e escuro**. Os PNGs são recortes da viewport no ponto final do percurso (não imagens da página inteira); não comprovam todos os estados nem elementos abaixo da dobra.
-
-| Superfície/rota | PNGs novos | Percursos executados/registrados | Percursos creditados pelo critério conservador |
+| Superfície | PNGs preservados da main #247 | PNGs novos | Total na pasta |
 |---|---:|---:|---:|
-| `/admin/conhecimento` | 8 | 8 | 4 |
-| `/admin/marcelo/assistente` | 8 | 8 | 6 |
-| `/admin/rh/assistente` | 8 | 8 | 6 |
-| `/cliente/app/assistente` | 8 | 8 | 8 |
-| `/admin/aparencia` | 8 | 8 | 6 |
-| `/layout-preview?visual=03` | 8 | 8 | 8 |
-| `/layout-03` | 8 | 8 | 8 |
-| `/layout-preview?visual=99` | 8 | 8 | 8 |
-| **Total** | **64** | **64** | **54** |
+| Conhecimento | 9 | 3 | 12 |
+| Assistentes | 29 | 6 (Marcelo/RH) | 35 |
+| Aparência/prévias | 20 | 3 (painel) | 23 |
+| **Total** | **58** | **12** | **70** |
 
-Pastas: `docs/ux-pro-08-conhecimento-evidencias` (3 históricas + 8 novas), `docs/ux-pro-08-assistentes-evidencias` (12 históricas + 24 novas), `docs/ux-pro-08-aparencia-evidencias` (16 históricas + 32 novas). Total dessas pastas: **95 PNGs**, não 96. O histórico adicional `ux-07-conhecimento-evidencias` não é alterado.
+Agora as quatro rotas staff têm captura dia/noite em 320/390/768/1440; os demais estados e os percursos da #247 continuam preservados. Cliente e prévias não têm garantia de tema staff e não foram tematizados artificialmente.
 
-Cada `resumo.json` registra `theme`, `keyboardSteps` (alvo, indicador, geometria), `keyboardActions`, `keyboardProblems`, problemas de página e bloqueios externos. Só recebe `percursoTeclado` se TODOS os alvos forem integralmente visíveis e tiverem indicador computado no próprio elemento. Os dez percursos não creditados não foram apagados nem tratados como sucesso: veja D9/D10. Isso não significa dez defeitos de produto.
+**Proveniência honesta:** a coleta independente havia gerado 64 imagens sobre 8dfbd7e. Só as 12 ainda ausentes foram aproveitadas na PR. A #247 não mudou `src/`, `server.mjs` ou migrações, portanto o código de produto capturado é idêntico. Os resumos registram separadamente base de captura 8dfbd7e e main reconciliada 3d807a4; não fingem captura posterior ao merge. As outras 52 imagens não compõem o diff final da PR. Todos os 58 PNGs da main são preservados byte a byte.
 
-**Resultado técnico das 64 capturas:** nenhum overflow horizontal do documento, erro de console local, requisição local falha ou HTTP 5xx registrado. Os recursos externos de fonte foram bloqueados pelo ambiente; são registrados à parte, não omitidos. Na aparência, o iframe pode ter rolagem interna intencional. O ERR_ABORTED histórico da 08C não se repetiu; não houve correção de produto para isso.
+## 3. Instrumentação e limites do teclado
 
-## Lacunas numeradas: resolvidas e pendentes
+Etapa opt-in `npm run ux:evidence -- --stage=ux-pro-08d`, limitada às 12 combinações faltantes, usando servidor/HTTP reais, PostgreSQL 17 descartável, migrações 001–180, Chromium e sessões staff reais. O coletor preserva todas as entradas/metadados e só substitui suas próprias entradas (`stage=ux-pro-08d`) ao repetir. As outras etapas mantêm seus planos e comportamento.
 
-| ID | Medição/reprodução e evidência | Destino |
+Sem resposta forjada de produto: nos assistentes há pergunta digitada e enviada por Tab/Enter, HTTP 200, zero fontes e `ollama_used=false`. Preferências reais `seg-color-mode`/`segsystem.admin.appearance.v1`, atributo efetivo e cores computadas registrados; não confundir preferência pública com tema administrativo. Conhecimento espera vazio canônico concluído antes de medir. Galeria compara layout 01 por Enter; nenhum PUT/publicação.
+
+As 12 entradas novas registram `keyboardSteps`, `keyboardActions`, `keyboardProblems` e `theme`. Os PNGs são recortes da viewport no final do percurso, não páginas inteiras nem revisão de todos os estados. Teclado começa no primeiro Tab, sem `.focus()` nem clique de mouse; pausa após Tab evita medir a posição transitória da rolagem suave.
+
+**12 percursos executados e registrados, 7 creditados pelo detector conservador:** conhecimento 1/3, Marcelo 2/3, RH 2/3, aparência 2/3. Cinco não recebem `percursoTeclado`, por limites explícitos do detector (08D-C2 abaixo). Isso não apaga nem invalida os percursos 390 já registrados pela #247 sob seu próprio critério.
+
+Nenhum overflow horizontal do documento, erro local de console, requisição local falha ou HTTP 5xx foi registrado nas novas capturas. Recursos externos de Google Fonts ficaram bloqueados e estão em `externalBlocked`; portanto a tipografia final com rede não foi comprovada. O ERR_ABORTED histórico da 08C já fora tratado pela #247 e não se repetiu neste complemento.
+
+## 4. Lacunas numeradas e destino
+
+| ID | Constatação | Encaminhamento |
 |---|---|---|
-| **D1** | Conhecimento: matriz 8/8, vazio canônico concluído, tablist e teclado. Estados malformado/desatualizado/negado da 08A preservados. | Medição entregue; não alegar matriz de todos os estados. |
-| **D2** | Assistentes Marcelo/RH/cliente: 24/24; 320/768 agora presentes, além de 390/1440; pergunta sem fonte via API real. Estados com fonte/ocupado/falha/negado continuam nas evidências históricas e gate. | Medição entregue. Público não foi reimplementado nem recapturado nesta fatia privada. |
-| **D3** | 08B dizia 13 PNGs, mas lista conferida contém 12. `reconciliacao08d` conserva a declaração original e lista os 12 arquivos reais. | Corrigida apenas a contagem documental, inclusive relatório 08B. Nenhum 13º arquivo fabricado. |
-| **D4** | Aparência/prévias: 32/32 novas, dia/noite e percurso explícitos; comparação não publica. | Medição entregue no mesmo recorte de quatro rotas da 08C. Não representa avaliação visual integral dos dez layouts. |
-| **D5** | ERR_ABORTED do iframe em 320 na 08C: zero requisições locais falhas na nova matriz. | Não reproduzido; histórico preservado, nenhuma correção presumida. |
-| **D6** | Inventário regenerado pelo gerador intacto: 100 rotas, 58 com gate, **27 → 30 com captura reconhecida** (três assistentes). Conhecimento ganha 320/768; teclado é creditado só onde o contrato existente aceita. | Resolvida a atualização. O gerador não interpreta tema e não normaliza query strings: o CSV ainda diz “noite não comprovado”; o detalhe verificável está nos resumos 08D, sem alargar artificialmente o critério. |
-| **D7** | **Baixa legibilidade do widget RAG staff noturno**. Ex.: `08d-w320-escuro-marcelo.png` e `08d-w1440-escuro-rh.png`. Root night, texto herdado `rgb(229,237,247)` sobre fundo fixo Marcelo `rgb(245,243,255)` ou RH `rgb(236,253,245)`. Razão calculada dessas amostras opacas: **1,08:1 / 1,12:1**; não é auditoria de todos os textos/estados. | **Pendência de PR própria do RagWidget**, com medição de rótulo/escopo/status, tokens e estados nas duas áreas; preservar contrato FECH-01, papéis e gates. Nenhum ajuste nesta PR. |
-| **D8** | Conhecimento noturno: aba ativa com texto claro sobre azul claro, visível em `08d-w320-escuro-conhecimento.png`. Cor e classe vêm do compartilhado `UiWorkspace`. | Vinculada ao **E8** já registrado; exige autorização explícita do dono. Não corrigida, não reclassificada como autorização. |
-| **D9** | Conhecimento 390, nos dois temas: último Tab chega ao `knowledge-articles`, painel maior que a viewport; foco computado presente, mas `fullyVisible=false`. | **Limite conservador da medição**, não prova de controle inacessível: região não cabe inteira em uma captura. Preservar traço; eventual PR de instrumentação pode distinguir regiões de controles, sem alterar produto. |
-| **D10** | Nas quatro rotas staff em 1440, ambos os temas, busca lateral registra `focusVisible=false` no input (8 percursos). `AdminChrome.module.css:36` já aplica contorno ao ancestral `.moduleSearch:focus-within`; o capturador mede apenas o elemento. | **Limite do detector, não defeito demonstrado da busca**. Não corrigir CSS transversal. Futuro ajuste isolado pode medir ancestral/oclusão e recapturar antes de creditar esses percursos. |
-| **D11** | Cliente e prévias foram medidos nas duas preferências, mas as superfícies amostradas mantêm suas cores; não estão no escopo de tema staff. | Característica/limite registrado, não garantia de modo noturno integral do portal/site. Ampliar tema exige escopo próprio; não aplicar CSS público por consequência. |
-| **D12** | Google Fonts sem saída de rede: 16/48/116 eventos externos nas três pastas (podem incluir requisição + console para o mesmo recurso). | Limitação do sandbox/fonte substituta; não prova de tipografia final em ambiente com rede. Não vendorizar nem trocar fonte nesta PR. |
+| **08D-C1** | Noite 320/390/1440 ausente nas quatro rotas staff após #247. | **Medição entregue: 12 capturas** em pastas próprias, teste de unicidade/dimensões/tema/teclado; nenhum código de produto alterado. |
+| **08D-C2a** | Conhecimento 390 noite: Tab alcança `knowledge-articles`, painel maior que viewport. Foco medido presente, `fullyVisible=false`. | Limite conservador: região não cabe inteira na captura, não prova de controle inacessível. Traço preservado; sem crédito novo. Eventual instrumentação futura pode distinguir região de controle. |
+| **08D-C2b** | Quatro rotas staff 1440 noite: input da busca lateral sem indicador no próprio input. A main já tem `.moduleSearch:focus-within` no ancestral (`AdminChrome.module.css:36`), que o novo detector não mede. | Limite do detector, **não defeito demonstrado da busca**. Quatro traços preservados sem crédito. Não alterar CSS transversal; eventual PR de medição pode avaliar ancestral/oclusão. |
+| **08D-C3 / D5 da #247** | Legibilidade do widget RAG staff noturno: amostra de texto herdado `rgb(229,237,247)` sobre fundo fixo Marcelo `rgb(245,243,255)` ou RH `rgb(236,253,245)`, razões **1,08:1 / 1,12:1**. Também envio RH `3,77:1`, já medido na #247. Ex.: `08d-w320-escuro-marcelo.png`. | **Pendência de PR própria do RagWidget**; não reimplementar aqui. Preservar contrato FECH-01, papéis e gates. |
+| **08D-C3 / D6 da #247** | Cartões/controles da aparência noturna mantêm fundo claro com texto noturno claro (cartão `1,18:1`, medido pela #247). Novas capturas confirmam o resíduo em outras larguras. | **Pendência de PR própria de aparência**; nenhum ajuste de CSS/publicação nesta PR. |
+| **08D-C3 / D7 da #247** | Inline dinâmico Layout09 e foco do atalho público. | Mantidos com justificativa no relatório canônico; fora deste complemento. |
+| **08D-C3 / D8 da #247** | E8 aba ativa noturna conhecimento `1,95:1`, E6 main aninhado, demais prévias para UX-PRO-10A. | E2–E9/C11 continuam fora do escopo sem autorização explícita do dono. Não corrigidos por consequência desta medição. |
 
-## Validação local
+A contagem histórica **13 PNGs × 12 reais da 08B já foi reconciliada pela #247**: preservada, não “resolvida de novo”. Os resumos recebem 3/6/3 entradas aditivas; o total de assistentes é atualizado de 29 para 35 PNGs, preservando a explicação histórica.
+
+## 5. Inventário, testes e reprodução
+
+Gerador UX-PRO-00 intocado: 100 rotas, 58 com gate e **32 com captura reconhecida**, como na main #247. O complemento não deve reduzir 32 para a medição inicial de 30 desta sessão. O gerador não interpreta tema; o CSV continua conservador sobre noite, com detalhe nas entradas legíveis por máquina.
+
+Validações locais repetidas na main incorporada, com zero falhas/pulados/todo:
 
 | Verificação | Resultado |
 |---|---|
-| `npm test` | **947/947**, zero falhas/pulados/todo; inclui `site-appearance.focal` e 5 testes da nova matriz |
+| `npm test` | **948/948**, incluindo 5 testes do complemento e `site-appearance.focal` |
 | `npm run typecheck` | aprovado |
-| `npm run test:ux-knowledge:pg` | **9/9**, PostgreSQL + HTTP + Chromium |
-| `npm run test:ai-rag-widget:pg` | **25/25**, mínimo 20; provedor determinístico do gate, não Ollama real |
-| `npm run test:ext08-knowledge:pg` | **15/15**, mínimo 15 |
-| `npm run test:ext12-visual:pg` | **14/14**, mínimo 14 |
-| `node --test tests/site-appearance.focal.test.mjs tests/ux-pro-00-precision.test.mjs` | **9/9** |
-| `node scripts/qa-wave0-static.mjs` | **5/5**, ledger 001–180 intacto |
-| `node scripts/ux-pro-00-inventory.mjs --check` | aprovado após regeneração |
-| `git diff --check` | aprovado |
+| `test:ux-knowledge:pg` | **10/10** |
+| `test:ai-rag-widget:pg` | **26/26**, mínimo 20; provedor determinístico do gate, não Ollama real |
+| `test:ext08-knowledge:pg` | **15/15**, mínimo 15 |
+| `test:ext12-visual:pg` | **14/14**, mínimo 14 |
+| `site-appearance.focal` + `ux-pro-00-precision` | **9/9** |
+| `qa-wave0-static` | **5/5**, ledger 001–180 intacto |
+| Inventário `--check` e `git diff --check` | aprovados |
 
-Reprodução da coleta: `npm ci`, depois `npm run ux:evidence -- --stage=ux-pro-08d`, sem DATABASE_URL/DATABASE_MIGRATION_URL/RUN_DATABASE_INTEGRATION_REMOTE. Neste Linux foi necessário disponibilizar os sonames do PostgreSQL embutido como nos gates existentes e passar `LD_LIBRARY_PATH` apontando para `node_modules/@embedded-postgres/linux-x64/native/lib`; isso não é configuração de produto. Não registrar senhas/URLs de banco nos artefatos.
+Comparação estrutural com os resumos da main: todas as **9/29/20 entradas e demais metadados** preservados (exceto atualização declarada do total de assistentes). Nenhum PNG anterior alterado no diff da PR.  Os testes de evidência da #247 mantêm TODAS as asserções; só as contagens exatas passam de 9/29/20 para **12/35/23**. Teste adicional confere o recorte de 12, dimensões PNG, tema efetivo, ausência de crédito indevido e preservação dos 29 arquivos anteriores dos assistentes.
 
-O êxito do coletor significa que a medição terminou, não que todas as observações de acessibilidade passaram. `keyboardProblems` e a ausência de crédito conservador continuam visíveis e testados.
+Reprodução: `npm ci`, depois `npm run ux:evidence -- --stage=ux-pro-08d`, sem variáveis de banco externo. Neste Linux, sonames do PostgreSQL embutido disponibilizados como nos gates e `LD_LIBRARY_PATH` em `node_modules/@embedded-postgres/linux-x64/native/lib`. Segredos/cookies/senhas ficam só na memória; não versionar logs de ambiente. O êxito do coletor significa medição concluída, não aprovação de todas as observações de acessibilidade.
 
-## Preservação e continuidade
+## 6. Preservações e próxima subfatia
 
-Intactos rotas, dados, papéis/grants, vínculos de conta, sessão, APIs, idempotência, auditoria, migrações e funcionalidades das três áreas. Nenhuma reimplementação das 08A/B/C, nenhum layout publicado, nenhum site público alterado. E2–E9/C11 não tratados. RAG real/Ollama, Windows, leitores de tela, zoom 200%, contraste integral, todos os dez layouts e aceite dos usuários continuam não comprovados por esta fatia.
+Nenhuma alteração em código de produto, APIs, migrações, autorização/papéis/grants, vínculos, sessão, idempotência, auditoria ou dados. Conhecimento, RagWidget, assistentes, SitePreviewNotice/noindex/selo e publicação de aparência permanecem intactos. Nenhum layout publicado, nenhum site público alterado.
 
-Próxima subfatia da fila: **UX-PRO-09A — entradas**, com [prompt pronto](UX-PRO-09A-PROMPT-PROXIMA-SUBFATIA-2026-10-15.md). Os resíduos acima permanecem pendências separadas, não devem ser embutidos na PR de entradas. O estado final da PR 08D e o SHA de merge devem ser confirmados no GitHub/na main remota antes da próxima execução.
+**Fechamento de medição, com resíduos pendentes — não UX sem defeitos.** Sem validação manual de jornada, aceite humano ou declaração WCAG integral. Ollama real, Windows, leitores de tela, zoom 200%, contraste integral e todos os layouts não são comprovados por este complemento. Homologação/produção **NO-GO**.
+
+Próxima subfatia da fila: **UX-PRO-09A — entradas**, com [prompt pronto](UX-PRO-09A-PROMPT-PROXIMA-SUBFATIA-2026-10-15.md). Os resíduos permanecem separados, nunca embutidos numa PR de entradas. Conferir a PR complementar e o SHA final na main antes da próxima execução.

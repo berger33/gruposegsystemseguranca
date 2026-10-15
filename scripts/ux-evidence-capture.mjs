@@ -397,9 +397,9 @@ async function jsonRequest(pathname, { method = 'GET', cookie, body, headers = {
 // A captura do portal não usa uma resposta forjada. Apenas a identidade, o
 // vínculo de acesso e a massa sintética são preparados no banco; o plano nasce
 // e é publicado pelas rotas HTTP canônicas com os grants de equipe reais.
-async function prepareClientContinuityTarget({ continuity = true } = {}) {
+async function prepareClientContinuityTarget() {
   const staff = await provisionStaff(pool, { role: 'admin' });
-  for (const permission of (continuity ? ['continuity.read', 'continuity.write', 'continuity.activate'] : [])) {
+  for (const permission of ['continuity.read', 'continuity.write', 'continuity.activate']) {
     await pool.query(
       `INSERT INTO auth_permissions(id,identity_id,permission,scope_type,granted_by,granted_by_role,reason)
        VALUES($1,$2,$3,'global',$2,'admin','Evidência UX: preparação de plano fictício publicado')`,
@@ -433,8 +433,6 @@ async function prepareClientContinuityTarget({ continuity = true } = {}) {
   if (login.status !== 200) throw new Error(`client_login_failed_${login.status}`);
   const clientCookie = login.cookies.map(value => value.split(';')[0]).join('; ');
   if (!clientCookie.includes('seg_client_session=')) throw new Error('client_session_cookie_missing');
-
-  if (!continuity) return clientCookie;
 
   const key = label => `cont-evidence-${label}-${randomUUID()}`;
   const created = await jsonRequest('/api/ext/continuity/plans', {
@@ -484,8 +482,8 @@ try {
   const cookieByRole = new Map();
   const cookieByTarget = new Map();
   for (const target of plan.targets) {
-    if (target.clientContinuity || target.clientSession) {
-      cookieByTarget.set(target.slug, await prepareClientContinuityTarget({ continuity: !target.clientSession }));
+    if (target.clientContinuity) {
+      cookieByTarget.set(target.slug, await prepareClientContinuityTarget());
       continue;
     }
     if (cookieByRole.has(target.role)) continue;
@@ -662,7 +660,7 @@ try {
     const entries = report.filter(entry => path.dirname(entry.screenshot) === directory);
     const summary = plan.measurements ? {
       ...previous,
-      measurements08d: { stage, generatedBy: 'scripts/ux-evidence-capture.mjs', baseMain: '8dfbd7e451787dcf6f56e93b81d8e4edb26ceda5', date: '2026-10-15' },
+      measurements08d: { stage, generatedBy: 'scripts/ux-evidence-capture.mjs', baseMain: '3d807a420db6c63c3f754ae02144053e29da1469', date: new Date().toISOString().slice(0, 10) },
       entries: [...(previous.entries || []).filter(entry => entry.stage !== stage), ...entries],
     } : { stage, generatedBy: 'scripts/ux-evidence-capture.mjs', entries };
     await writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');

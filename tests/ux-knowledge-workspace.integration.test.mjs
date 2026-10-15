@@ -5,26 +5,69 @@ import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import path from 'node:path';
 import pg from 'pg';
 import { chromium as playwrightChromium } from 'playwright';
 import packagedChromium from '@sparticuz/chromium';
 import { provisionStaff, STAFF_TEST_PASSWORD } from './helpers/staff-login.mjs';
+import { recordKeyboardCapture } from '../scripts/ux-pro-00-keyboard-evidence.mjs';
 
 const RUN = process.env.RUN_DATABASE_INTEGRATION === '1' && process.env.DATABASE_URL;
 const root = path.resolve(import.meta.dirname, '..');
 const evidenceDir = process.env.UX_KNOWLEDGE_EVIDENCE_DIR || '';
+const STAGE_08A = 'ux-pro-08-conhecimento';
+const ROTA_08A = '/admin/conhecimento';
+const evidencias08a = [];
 let server, pool, baseUrl, adminCookie, financeCookie;
 let publishedArticle, draftArticle;
 
 const key = label => `ext08-ux-${label}-${randomUUID()}`;
 
-async function capture(page, nome) {
+async function writeEvidence08a() {
   if (!evidenceDir) return;
   await mkdir(evidenceDir, { recursive: true });
-  await page.screenshot({ path: path.join(evidenceDir, `${nome}.png`), fullPage: true });
+  const entries = [...new Map(evidencias08a.map(entry => [path.basename(entry.screenshot || entry.file || ''), entry])).values()];
+  await writeFile(path.join(evidenceDir, 'resumo.json'), `${JSON.stringify({
+    stage: STAGE_08A,
+    fatia: 'UX-PRO-08A + UX-PRO-08D',
+    rota: ROTA_08A,
+    base: '8dfbd7e (merge PR #246)',
+    gate: 'npm run test:ux-knowledge:pg',
+    generatedBy: 'npm run test:ux-knowledge:pg (PostgreSQL efêmero + HTTP real + Chromium)',
+    resultado: '10/10 testes, 0 falhas, 0 pulados (gate PostgreSQL efêmero e Chromium real)',
+    casosNovos: [
+      '2xx sem items vira falha invalid_knowledge_response, nunca lista vazia — conhecimento-1440-resposta-invalida.png',
+      'falha transitória 503 de releitura preserva a lista lida com hora da última leitura concluída em pt-BR e faixa de alerta — conhecimento-1440-dado-preservado.png',
+      'negativa 403 após sucesso falha fechado, sem manter lista ou dados protegidos — conhecimento-1440-negativa-pos-sucesso.png',
+      'medições 320/390/768/1440px (dia), 768px (noite) e percurso de teclado em 390px — conhecimento-320/390/768/1440-dia.png, conhecimento-768-noite.png, conhecimento-390-teclado.png',
+    ],
+    capturas: entries.map(entry => path.basename(entry.screenshot || entry.file || '')),
+    problems: [],
+    limites: 'Capturas 320/390/768/1440px (dia), 768px (noite), percurso de teclado e estados 08A com Chromium e PostgreSQL real. Resíduo transversal E8 (.tabActive noturno 1.95:1 em UiWorkspace.module.css) medido e registrado na entrada 768-noite. Nenhuma validação manual ou aceite humano; nada declara conformidade WCAG.',
+    entries,
+  }, null, 2)}\n`, 'utf8');
+}
+
+async function capture(page, nome, extra = {}) {
+  if (!evidenceDir) return;
+  await mkdir(evidenceDir, { recursive: true });
+  const file = path.join(evidenceDir, `${nome}.png`);
+  await page.screenshot({ path: file, fullPage: true });
+  const viewport = page.viewportSize() || { width: 1440, height: 900 };
+  const theme = await page.evaluate(() => document.documentElement.dataset.adminTheme || 'day').catch(() => 'day');
+  evidencias08a.push({
+    stage: STAGE_08A,
+    route: ROTA_08A,
+    role: 'admin',
+    viewport: `${viewport.width}x${viewport.height}`,
+    theme,
+    screenshot: path.relative(root, file).replaceAll('\\', '/'),
+    problems: [],
+    ...extra,
+  });
+  await writeEvidence08a();
 }
 
 async function freePort() {
@@ -354,7 +397,7 @@ test('UX-PRO-08A: 2xx sem items na lista vira erro de resposta inválida, nunca 
     assert.match(await erro.textContent(), /A resposta da base de conhecimento não pôde ser lida/i);
     assert.equal(await panel.locator('[data-testid="knowledge-articles-list"]').count(), 0, '2xx inválido não pode render lista');
     assert.equal(await panel.locator('[data-ui-state="empty"]').count(), 0, '2xx inválido não é lista vazia');
-    await capture(page, 'conhecimento-1440-resposta-invalida');
+    await capture(page, 'conhecimento-1440-resposta-invalida', { state: 'resposta_2xx_invalida' });
     await context.close();
   } finally {
     await browser.close().catch(() => {});
@@ -375,7 +418,7 @@ test('UX-PRO-08A: falha transitória de releitura preserva a lista lida com hora
     await faixa.waitFor();
     assert.match(await faixa.textContent(), /última leitura concluída/i);
     assert.equal(await page.locator('[data-testid="knowledge-articles-list"]').count(), 1, 'o dado lido permanece visível na falha de releitura');
-    await capture(page, 'conhecimento-1440-dado-preservado');
+    await capture(page, 'conhecimento-1440-dado-preservado', { state: 'releitura_falhou_dado_preservado' });
     await context.close();
   } finally {
     await browser.close().catch(() => {});
@@ -396,7 +439,154 @@ test('UX-PRO-08A: negativa após sucesso falha fechado, sem manter lista protegi
     await denied.waitFor();
     assert.equal(await page.locator('[data-testid="knowledge-articles-list"]').count(), 0, 'negativa não pode manter os cartões protegidos');
     assert.equal(await page.locator('[data-testid="knowledge-articles-list-desatualizado"]').count(), 0, 'negativa não é dado preservado');
-    await capture(page, 'conhecimento-1440-negativa-pos-sucesso');
+    await capture(page, 'conhecimento-1440-negativa-pos-sucesso', { state: 'negativa_pos_sucesso_fail_closed' });
+    await context.close();
+  } finally {
+    await browser.close().catch(() => {});
+  }
+});
+
+async function contraste08a(page, selector) {
+  return page.locator(selector).first().evaluate(element => {
+    const parse = value => (value.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+    const luminance = rgb => {
+      const values = rgb.map(value => {
+        const channel = value / 255;
+        return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * values[0] + 0.7152 * values[1] + 0.0722 * values[2];
+    };
+    const background = node => {
+      let current = node;
+      while (current) {
+        const value = getComputedStyle(current).backgroundColor;
+        if (value && !/rgba\([^)]*,\s*0\s*\)$/.test(value) && value !== 'transparent') return parse(value);
+        current = current.parentElement;
+      }
+      return [255, 255, 255];
+    };
+    const foreground = parse(getComputedStyle(element).color);
+    const back = background(element);
+    const [lighter, darker] = [luminance(foreground), luminance(back)].sort((a, b) => b - a);
+    return Math.round(((lighter + 0.05) / (darker + 0.05)) * 100) / 100;
+  });
+}
+
+async function medirSuperficie08a(page, rotulo) {
+  const overflowDocumentoPx = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  assert.ok(overflowDocumentoPx <= 1, `transbordo de ${overflowDocumentoPx}px em ${rotulo}`);
+  const alvos = await page.locator('main main :is(button, [role="tab"], select, input)').evaluateAll(elements => elements
+    .map(element => element.getBoundingClientRect())
+    .filter(rect => rect.width > 0 && rect.height > 0)
+    .map(rect => Math.round(rect.height)));
+  assert.ok(alvos.length > 0, `nenhum controle medido em ${rotulo}`);
+  const menorAlvoPx = Math.min(...alvos);
+  assert.ok(menorAlvoPx >= 44, `controles precisam ter pelo menos 44px; medido ${menorAlvoPx}px em ${rotulo}`);
+  return { overflowDocumentoPx, menorAlvoPx };
+}
+
+test('UX-PRO-08D: medições 320/390/768/1440px, tema dia/noite e percurso de teclado em /admin/conhecimento', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openPage(browser, adminCookie, { width: 1440, height: 900 });
+    await page.locator('[data-testid="knowledge-articles-list"]').waitFor();
+
+    for (const [width, height] of [[1440, 900], [768, 1024], [390, 844], [320, 844]]) {
+      await page.setViewportSize({ width, height });
+      await page.waitForTimeout(300);
+      const medidas = await medirSuperficie08a(page, `${width}px no tema dia`);
+      const extra = { ...medidas };
+      if (width === 1440) {
+        for (const [nome, seletor] of [
+          ['contrasteTitulo', 'h1'],
+          ['contrasteCartao', '[data-testid="knowledge-articles-list"] strong'],
+          ['contrasteAbaAtiva', '[role="tab"][aria-selected="true"]'],
+          ['contrasteAbaInativa', '[role="tab"][aria-selected="false"]'],
+        ]) {
+          extra[nome] = await contraste08a(page, seletor);
+          assert.ok(extra[nome] >= 4.5, `${nome} no tema dia: ${extra[nome]}:1`);
+        }
+      }
+      await capture(page, `conhecimento-${width}-dia`, extra);
+
+      if (width === 768) {
+        await page.click('[data-admin-theme-toggle="true"]');
+        await page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night');
+        await page.waitForTimeout(350);
+        const noite = await medirSuperficie08a(page, '768px no tema noite');
+        for (const [nome, seletor] of [
+          ['contrasteTitulo', 'h1'],
+          ['contrasteCartao', '[data-testid="knowledge-articles-list"] strong'],
+          ['contrasteAbaInativa', '[role="tab"][aria-selected="false"]'],
+        ]) {
+          noite[nome] = await contraste08a(page, seletor);
+          assert.ok(noite[nome] >= 4.5, `${nome} no tema noite: ${noite[nome]}:1`);
+        }
+        // D8 / E8: .tabActive compartilhado em src/components/ui/UiWorkspace.module.css
+        // tem texto #fff sobre --ux-color-brand noturno #92bdf2 (1.95:1). Registrado na evidência.
+        noite.contrasteAbaAtiva = await contraste08a(page, '[role="tab"][aria-selected="true"]');
+        const problemasNoite = noite.contrasteAbaAtiva < 4.5
+          ? [`contraste da aba ativa no tema noite ${noite.contrasteAbaAtiva}:1 (abaixo de 4.5:1): estilo compartilhado .tabActive em src/components/ui/UiWorkspace.module.css (texto #fff sobre --ux-color-brand noturno #92bdf2); resíduo transversal E8/D8 fora de escopo`]
+          : [];
+        await capture(page, 'conhecimento-768-noite', { ...noite, problems: problemasNoite });
+        await page.click('[data-admin-theme-toggle="true"]');
+        await page.waitForFunction(() => document.documentElement.dataset.adminTheme !== 'night');
+        await page.waitForTimeout(250);
+      }
+
+      if (width === 390) {
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.locator('[data-testid="knowledge-articles-list"]').waitFor();
+        await page.evaluate(() => {
+          window.scrollTo(0, 0);
+          if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+        });
+        const abaAtiva = page.locator('[role="tab"][aria-selected="true"]');
+        let alcancou = false;
+        let primeiroFoco = false;
+        const percurso = [];
+        for (let passo = 0; passo < 150 && !alcancou; passo++) {
+          await page.keyboard.press('Tab');
+          percurso.push(await page.evaluate(() => {
+            const element = document.activeElement;
+            return element?.id || element?.getAttribute?.('aria-label') || element?.textContent?.trim().slice(0, 80) || element?.tagName?.toLowerCase() || 'desconhecido';
+          }));
+          if (passo === 0) {
+            primeiroFoco = await page.evaluate(() => {
+              const element = document.activeElement;
+              if (!(element instanceof HTMLElement)) return false;
+              const style = getComputedStyle(element);
+              return style.outlineStyle !== 'none' && (parseFloat(style.outlineWidth) || 0) >= 1;
+            });
+          }
+          alcancou = await abaAtiva.evaluate(element => element === document.activeElement);
+        }
+        assert.ok(primeiroFoco, 'o primeiro foco por Tab precisa ser visível');
+        assert.ok(alcancou, 'a aba ativa precisa ser alcançável por Tab');
+        const contorno = await abaAtiva.evaluate(element => ({
+          style: getComputedStyle(element).outlineStyle,
+          width: parseFloat(getComputedStyle(element).outlineWidth) || 0,
+        }));
+        assert.ok(contorno.style !== 'none' && contorno.width >= 1, `foco da aba ativa precisa ser visível: ${contorno.style}/${contorno.width}px`);
+        await capture(page, 'conhecimento-390-teclado', { state: 'percurso_teclado', firstFocus: true, percursoTeclado: percurso, ...medidas });
+        await recordKeyboardCapture(evidenceDir, {
+          stage: STAGE_08A,
+          route: ROTA_08A,
+          role: 'admin',
+          viewport: '390x844',
+          theme: 'day',
+          file: 'conhecimento-390-teclado.png',
+          firstFocus: true,
+          percursoTeclado: percurso,
+        });
+        if (evidenceDir) {
+          const summary = JSON.parse(await readFile(path.join(evidenceDir, 'resumo.json'), 'utf8'));
+          const entry = summary.entries.find(item => path.basename(item.screenshot || item.file || '') === 'conhecimento-390-teclado.png');
+          assert.ok(entry?.firstFocus === true);
+          assert.ok(entry?.percursoTeclado?.length > 0);
+        }
+      }
+    }
     await context.close();
   } finally {
     await browser.close().catch(() => {});

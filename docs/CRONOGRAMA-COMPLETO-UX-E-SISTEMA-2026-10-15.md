@@ -46,9 +46,9 @@ Esta atualização é limitada à família 08; os demais status/estimativas dest
 | 08A | MERGED #244 (`ab39b6dc`): leitura honesta de `/admin/conhecimento`; não refazer. |
 | 08B | MERGED #245 (`5a02f0e`): assistentes Marcelo/RH/cliente e fontes do RagWidget; contagem histórica corrigida de 13 para 12 PNGs, com lista no resumo. |
 | 08C | MERGED #246 (`8dfbd7e451787dcf6f56e93b81d8e4edb26ceda5`): aparência/prévias, faixa/noindex/selo; não refazer nem publicar. |
-| 08D | Medição/documentação entregue nesta branch, sujeita aos checks/merge da PR: 64 PNGs novos, 320/390/768/1440, claro/escuro, 64 traços de teclado (54 creditados pelo detector conservador). Gates preservados; sem alteração de produto. Ver fechamento para o estado e os limites. |
+| 08D | MERGED #247 (`3d807a420db6c63c3f754ae02144053e29da1469`). Complemento limitado nesta branch: 12 PNGs noturnos 320/390/1440 nas quatro rotas staff, ainda ausentes na #247; não reabrir nem duplicar sua entrega. Gates e código de produto preservados. |
 
-**Fechamento de medição, não aceite de UX sem defeitos:** [relatório da família](UX-PRO-08-FECHAMENTO-2026-10-15.md), com resíduos D1–D12. D7 (legibilidade noturna RAG) exige PR própria; D8 permanece vinculado ao E8 e depende de autorização. D9/D10 são limites de medição, não defeitos de produto demonstrados. E2–E9/C11, homologação e produção permanecem fora do escopo/NO-GO. Próxima subfatia da fila: [UX-PRO-09A — entradas](UX-PRO-09A-PROMPT-PROXIMA-SUBFATIA-2026-10-15.md), após conferir a PR 08D na main.
+**Fechamento de medição, não aceite de UX sem defeitos:** [relatório da família](UX-PRO-08-FECHAMENTO-2026-10-15.md), com os resíduos D1–D8 da #247 preservados e complemento 08D-C1/C2/C3. D5 (RAG) e D6 (aparência) exigem PRs próprias; D8 permanece vinculado a E6/E8 e depende de autorização. C2 registra limites do detector, não defeitos de produto demonstrados. E2–E9/C11, homologação e produção permanecem fora do escopo/NO-GO. Próxima subfatia da fila: [UX-PRO-09A — entradas](UX-PRO-09A-PROMPT-PROXIMA-SUBFATIA-2026-10-15.md), após conferir a PR 08D na main.
 
 ---
 

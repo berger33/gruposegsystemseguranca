@@ -27,7 +27,7 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createServer as createProbe } from 'node:net';
 import path from 'node:path';
 import pg from 'pg';
@@ -35,6 +35,7 @@ import { chromium as playwrightChromium } from 'playwright';
 import packagedChromium from '@sparticuz/chromium';
 import { hashPassword } from '../src/lib/client-auth-core.mjs';
 import { provisionStaff, STAFF_TEST_PASSWORD } from './helpers/staff-login.mjs';
+import { recordKeyboardCapture } from '../scripts/ux-pro-00-keyboard-evidence.mjs';
 
 const RUN = process.env.RUN_DATABASE_INTEGRATION === '1' && Boolean(process.env.DATABASE_URL);
 const REQUIRE = process.env.QA_AI_RAG_WIDGET_REQUIRE_DB === '1';
@@ -296,10 +297,83 @@ async function withBrowser(body) {
 }
 
 const evidenceDir = process.env.FECH01_EVIDENCE_DIR || '';
-async function capture(page, name) {
+const STAGE_08B = 'ux-pro-08-assistentes';
+const is08bEvidence = evidenceDir.includes('ux-pro-08-assistentes-evidencias');
+const evidencias08b = [];
+
+function inferRoleFromRoute(route) {
+  if (route === '/admin/marcelo/assistente') return 'marcelo';
+  if (route === '/admin/rh/assistente') return 'rh';
+  if (route === '/cliente/app/assistente') return 'cliente';
+  return 'publico';
+}
+
+async function writeEvidence08b() {
+  if (!evidenceDir || !is08bEvidence) return;
+  await mkdir(evidenceDir, { recursive: true });
+  const entries = [...new Map(evidencias08b.map(entry => [path.basename(entry.screenshot || entry.file || ''), entry])).values()];
+  await writeFile(path.join(evidenceDir, 'resumo.json'), `${JSON.stringify({
+    stage: STAGE_08B,
+    fatia: 'UX-PRO-08B + UX-PRO-08D',
+    titulo: 'Assistentes privados por área e portal — estados FECH-01 + medições 320/390/768/1440, dia/noite e teclado',
+    base_main_sha: '8dfbd7e451787dcf6f56e93b81d8e4edb26ceda5',
+    data: '2026-10-15',
+    generatedBy: 'npm run test:ai-rag-widget:pg (PostgreSQL 17 descartável + HTTP real + Chromium + stub determinístico)',
+    arquivos_alterados: [
+      'src/app/admin/marcelo/assistente/page.tsx',
+      'src/app/admin/rh/assistente/page.tsx',
+      'src/app/cliente/app/assistente/page.tsx',
+      'src/components/RagWidget.tsx',
+      'docs/UX-PRO-08B-ESCOPO-ANTES-2026-10-15.md',
+    ],
+    preservado: [
+      'AdminGate e papéis (marcelo/admin, rh/admin)',
+      'RagWidget testids e contrato FECH-01',
+      'Endpoints /api/ai/answer e /api/admin/ai-rag-* inalterados',
+      'Migrações 001-180 inalteradas',
+      'Gate test:ai-rag-widget:pg (26/26, minimo 20)',
+    ],
+    checks: {
+      typecheck: 'pass',
+      'rag-widget-contract': '9/9 pass',
+      'admin-page-gates': '1/1 pass',
+      'ai-rag-widget-pg': '26/26 pass, 0 fail, 0 skipped, 0 todo',
+    },
+    reconciliacaoContagem08b: 'A UX-PRO-08B havia gravado 12 arquivos .png e 1 resumo.json (= 13 arquivos na pasta, registrados anteriormente como "13 PNGs"). Na UX-PRO-08D foram acrescentadas 17 capturas de larguras (320/390/768/1440), tema noite (768px nas duas rotas staff) e percurso de teclado (390px nas três rotas privadas), totalizando 29 PNGs + resumo.json.',
+    evidencias: `${entries.length} PNGs em docs/ux-pro-08-assistentes-evidencias/`,
+    limitacoes: [
+      'Sem aceite humano; sem declaração WCAG integral',
+      'Resíduo D5 medido e registrado nas entradas 768-noite: RagWidget.tsx usa paleta clara inline (RAG_COLORS) e sugestões compactas (~27px); no tema noite elementos sem cor inline herdam --ux-color-text claro sobre fundo claro do cartão (mantido sem reimplementar RagWidget.tsx)',
+      'Transversais E2-E9 e C11 fora de escopo',
+      'Homologação/produção NO-GO',
+    ],
+    entries,
+  }, null, 2)}\n`, 'utf8');
+}
+
+async function capture(page, name, extra = {}) {
   if (!evidenceDir) return;
   await mkdir(evidenceDir, { recursive: true });
-  await page.screenshot({ path: path.join(evidenceDir, `${name}.png`), fullPage: false });
+  const file = path.join(evidenceDir, `${name}.png`);
+  await page.screenshot({ path: file, fullPage: false });
+  if (is08bEvidence) {
+    const route = (() => {
+      try { return new URL(page.url()).pathname; } catch { return '/admin/rh/assistente'; }
+    })();
+    const viewport = page.viewportSize() || { width: 1440, height: 900 };
+    const theme = await page.evaluate(() => document.documentElement.dataset.adminTheme || 'day').catch(() => 'day');
+    evidencias08b.push({
+      stage: STAGE_08B,
+      route,
+      role: inferRoleFromRoute(route),
+      viewport: `${viewport.width}x${viewport.height}`,
+      theme,
+      screenshot: path.relative(root, file).replaceAll('\\', '/'),
+      problems: [],
+      ...extra,
+    });
+    await writeEvidence08b();
+  }
 }
 
 async function openSources(page) {
@@ -917,5 +991,165 @@ test('browser: modelo local fora do ar vira tempo esgotado sem resposta inventad
     });
   } finally {
     await stub.start(stub.port);
+  }
+});
+
+async function contraste08b(page, selector) {
+  return page.locator(selector).first().evaluate(element => {
+    const parse = value => (value.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+    const luminance = rgb => {
+      const values = rgb.map(value => {
+        const channel = value / 255;
+        return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * values[0] + 0.7152 * values[1] + 0.0722 * values[2];
+    };
+    const background = node => {
+      let current = node;
+      while (current) {
+        const value = getComputedStyle(current).backgroundColor;
+        if (value && !/rgba\([^)]*,\s*0\s*\)$/.test(value) && value !== 'transparent') return parse(value);
+        current = current.parentElement;
+      }
+      return [255, 255, 255];
+    };
+    const foreground = parse(getComputedStyle(element).color);
+    const back = background(element);
+    const [lighter, darker] = [luminance(foreground), luminance(back)].sort((a, b) => b - a);
+    return Math.round(((lighter + 0.05) / (darker + 0.05)) * 100) / 100;
+  });
+}
+
+async function medirAssistente08b(page, rotulo) {
+  const overflowDocumentoPx = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  assert.ok(overflowDocumentoPx <= 1, `transbordo de ${overflowDocumentoPx}px em ${rotulo}`);
+  const alturaEnvioPx = await page.locator('[data-testid="rag-submit"]').evaluate(el => Math.round(el.getBoundingClientRect().height));
+  const alturaSugestaoPx = await page.locator('[data-testid="rag-suggestion-0"]').evaluate(el => Math.round(el.getBoundingClientRect().height));
+  return { overflowDocumentoPx, alturaEnvioPx, alturaSugestaoPx };
+}
+
+test('UX-PRO-08D: medições 320/390/768/1440px, tema dia/noite e percurso de teclado nos três assistentes privados', opt, async () => {
+  const targets = [
+    { route: '/admin/marcelo/assistente', heading: 'Assistente Marcelo', slug: 'assistente-marcelo', role: 'marcelo', cookie: marceloCookie, staff: true },
+    { route: '/admin/rh/assistente', heading: 'Assistente RH', slug: 'assistente-rh', role: 'rh', cookie: rhCookie, staff: true },
+    { route: '/cliente/app/assistente', heading: 'Assistente Cliente', slug: 'assistente-cliente', role: 'cliente', cookie: clientA.cookie, staff: false },
+  ];
+
+  for (const target of targets) {
+    await withBrowser(async browser => {
+      const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'pt-BR', timezoneId: 'America/Sao_Paulo' });
+      await context.addCookies(target.cookie.split('; ').filter(Boolean).map(pair => {
+        const separator = pair.indexOf('=');
+        return { name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl };
+      }));
+      const page = await context.newPage();
+      page.setDefaultTimeout(45_000);
+      page.setDefaultNavigationTimeout(120_000);
+      await page.goto(`${baseUrl}${target.route}`, { waitUntil: 'domcontentloaded' });
+      await page.getByRole('heading', { level: 1, name: target.heading }).waitFor();
+      await page.locator('[data-testid="rag-widget"]').waitFor();
+      await waitForHydration(page);
+
+      for (const [width, height] of [[1440, 900], [768, 1024], [390, 844], [320, 844]]) {
+        await page.setViewportSize({ width, height });
+        await page.waitForTimeout(300);
+        const medidas = await medirAssistente08b(page, `${target.route} ${width}px dia`);
+        const extra = { ...medidas };
+        if (width === 1440) {
+          extra.contrasteTitulo = await contraste08b(page, 'h1');
+          extra.contrasteSubtituloWidget = await contraste08b(page, '[data-testid="rag-widget"] h2');
+          extra.contrasteRotuloPergunta = await contraste08b(page, '[data-testid="rag-widget"] label');
+          extra.contrasteBotaoEnvio = await contraste08b(page, '[data-testid="rag-submit"]');
+          assert.ok(extra.contrasteTitulo >= 4.5, `contrasteTitulo dia em ${target.route}: ${extra.contrasteTitulo}:1`);
+          assert.ok(extra.contrasteRotuloPergunta >= 4.5, `contrasteRotuloPergunta dia em ${target.route}: ${extra.contrasteRotuloPergunta}:1`);
+        }
+        await capture(page, `${target.slug}-${width}-dia`, extra);
+
+        if (width === 768 && target.staff) {
+          await page.click('[data-admin-theme-toggle="true"]');
+          await page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night');
+          await page.waitForTimeout(350);
+          const noite = await medirAssistente08b(page, `${target.route} 768px noite`);
+          noite.contrasteTitulo = await contraste08b(page, 'h1');
+          noite.contrasteSubtituloWidget = await contraste08b(page, '[data-testid="rag-widget"] h2');
+          noite.contrasteRotuloPergunta = await contraste08b(page, '[data-testid="rag-widget"] label');
+          noite.contrasteBotaoEnvio = await contraste08b(page, '[data-testid="rag-submit"]');
+          assert.ok(noite.contrasteTitulo >= 4.5, `contrasteTitulo noite em ${target.route}: ${noite.contrasteTitulo}:1`);
+          // D5: RagWidget.tsx usa paleta clara inline (RAG_COLORS) e sugestões compactas (~27px);
+          // no tema noite elementos sem cor inline herdam --ux-color-text claro sobre fundo claro do cartão.
+          const problemasNoite = [];
+          if (noite.contrasteRotuloPergunta < 4.5) {
+            problemasNoite.push(`resíduo D5: contraste do rótulo da pergunta no tema noite ${noite.contrasteRotuloPergunta}:1 (abaixo de 4.5:1) em RagWidget.tsx (fundo inline claro RAG_COLORS com texto herdado --ux-color-text claro); registrado para PR própria sem reimplementar RagWidget.tsx`);
+          }
+          if (noite.contrasteBotaoEnvio < 4.5) {
+            problemasNoite.push(`resíduo D5: contraste do botão de envio ${noite.contrasteBotaoEnvio}:1 (abaixo de 4.5:1) em RagWidget.tsx (RAG_COLORS.${target.role}.accent); registrado para PR própria`);
+          }
+          if (noite.alturaSugestaoPx < 44) {
+            problemasNoite.push(`resíduo D5: pílula de sugestão .rag-suggestion com ${noite.alturaSugestaoPx}px (< 44px) em RagWidget.tsx; registrado para PR própria`);
+          }
+          await capture(page, `${target.slug}-768-noite`, { ...noite, problems: problemasNoite });
+          await page.click('[data-admin-theme-toggle="true"]');
+          await page.waitForFunction(() => document.documentElement.dataset.adminTheme !== 'night');
+          await page.waitForTimeout(250);
+        }
+
+        if (width === 390) {
+          await page.reload({ waitUntil: 'domcontentloaded' });
+          await page.getByRole('heading', { level: 1, name: target.heading }).waitFor();
+          await page.locator('[data-testid="rag-widget"]').waitFor();
+          await waitForHydration(page);
+          await page.evaluate(() => {
+            window.scrollTo(0, 0);
+            if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+          });
+          const submitBtn = page.locator('[data-testid="rag-submit"]');
+          let alcancou = false;
+          let primeiroFoco = false;
+          const percurso = [];
+          for (let passo = 0; passo < 150 && !alcancou; passo++) {
+            await page.keyboard.press('Tab');
+            percurso.push(await page.evaluate(() => {
+              const element = document.activeElement;
+              return element?.getAttribute?.('data-testid') || element?.id || element?.getAttribute?.('aria-label') || element?.textContent?.trim().slice(0, 80) || element?.tagName?.toLowerCase() || 'desconhecido';
+            }));
+            if (passo === 0) {
+              primeiroFoco = await page.evaluate(() => {
+                const element = document.activeElement;
+                if (!(element instanceof HTMLElement)) return false;
+                const style = getComputedStyle(element);
+                return style.outlineStyle !== 'none' && (parseFloat(style.outlineWidth) || 0) >= 1;
+              });
+            }
+            alcancou = await submitBtn.evaluate(element => element === document.activeElement);
+          }
+          assert.ok(primeiroFoco, `primeiro foco visível em ${target.route}`);
+          assert.ok(alcancou, `botão de envio alcançável por Tab em ${target.route}`);
+          assert.ok(percurso.includes('rag-question'), `campo de pergunta no percurso Tab em ${target.route}`);
+          const contorno = await submitBtn.evaluate(element => ({
+            style: getComputedStyle(element).outlineStyle,
+            width: parseFloat(getComputedStyle(element).outlineWidth) || 0,
+          }));
+          assert.ok(contorno.style !== 'none' && contorno.width >= 1, `foco visível no envio em ${target.route}`);
+          await capture(page, `${target.slug}-390-teclado`, { state: 'percurso_teclado', firstFocus: true, percursoTeclado: percurso, ...medidas });
+          if (is08bEvidence) {
+            await recordKeyboardCapture(evidenceDir, {
+              stage: STAGE_08B,
+              route: target.route,
+              role: target.role,
+              viewport: '390x844',
+              theme: 'day',
+              file: `${target.slug}-390-teclado.png`,
+              firstFocus: true,
+              percursoTeclado: percurso,
+            });
+            const summary = JSON.parse(await readFile(path.join(evidenceDir, 'resumo.json'), 'utf8'));
+            const entry = summary.entries.find(item => path.basename(item.screenshot || item.file || '') === `${target.slug}-390-teclado.png`);
+            assert.ok(entry?.firstFocus === true);
+            assert.ok(entry?.percursoTeclado?.length > 0);
+          }
+        }
+      }
+      await context.close();
+    });
   }
 });

@@ -6,19 +6,15 @@ export const measurementPlan = {
   outputDir: directory('conhecimento'),
   measurements: true,
   viewports: [
-    [320, 780], [390, 844], [768, 1024], [1440, 900],
-  ].flatMap(([width, height]) => ['claro', 'escuro'].map(theme => ({
+    [320, 780], [390, 844], [1440, 900],
+  ].flatMap(([width, height]) => ['escuro'].map(theme => ({
     name: `08d-w${width}-${theme}`, width, height, theme,
   }))),
   targets: [
     { route: '/admin/conhecimento', role: 'admin', slug: 'conhecimento', area: 'conhecimento', keyboard: 'knowledge', waitFor: 'Base de Conhecimento e Procedimentos Operacionais', waitForRole: 'heading' },
     { route: '/admin/marcelo/assistente', role: 'marcelo', slug: 'marcelo', area: 'assistentes', keyboard: 'rag', waitFor: 'Assistente Marcelo', waitForRole: 'heading' },
     { route: '/admin/rh/assistente', role: 'rh', slug: 'rh', area: 'assistentes', keyboard: 'rag', waitFor: 'Assistente RH', waitForRole: 'heading' },
-    { route: '/cliente/app/assistente', role: 'client', clientSession: true, slug: 'cliente', area: 'assistentes', keyboard: 'rag', waitFor: 'Assistente Cliente', waitForRole: 'heading' },
     { route: '/admin/aparencia', role: 'ti', slug: 'aparencia', area: 'aparencia', keyboard: 'gallery', waitFor: 'Escolha a apresentação do site' },
-    { route: '/layout-preview?visual=03', role: 'ti', slug: 'layout-preview-03', area: 'aparencia', keyboard: 'preview', waitFor: 'Prévia interna' },
-    { route: '/layout-03', role: 'ti', slug: 'layout-03', area: 'aparencia', keyboard: 'preview', waitFor: 'Prévia interna' },
-    { route: '/layout-preview?visual=99', role: 'ti', slug: 'layout-preview-invalido', area: 'aparencia', keyboard: 'preview', waitFor: 'não foi reconhecido' },
   ].map(target => ({ ...target, outputDir: directory(target.area) })),
 };
 

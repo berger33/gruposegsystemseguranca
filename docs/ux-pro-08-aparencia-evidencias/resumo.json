@@ -1,9 +1,10 @@
 {
-  "stage": "ux-pro-08c",
-  "generatedBy": "scripts/ux-evidence-capture.mjs",
+  "stage": "ux-pro-08-aparencia",
+  "fatia": "UX-PRO-08C + UX-PRO-08D",
+  "generatedBy": "scripts/ux-evidence-capture.mjs + complemento UX-PRO-08D (768-noite e percursoTeclado 390px)",
   "entries": [
     {
-      "stage": "ux-pro-08c",
+      "stage": "ux-pro-08-aparencia",
       "route": "/admin/aparencia",
       "role": "ti",
       "viewport": "320x780",
@@ -14,16 +15,17 @@
         "text": "GrupoSEG System",
         "outline": "auto"
       },
-      "problems": [
-        "requisição falhou: /layout-preview?visual=06 (net::ERR_ABORTED)"
-      ],
+      "overflowPx": 0,
+      "problems": [],
       "externalBlocked": [
         "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
         "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
+      ],
+      "requestedRoute": "/admin/aparencia",
+      "theme": "day"
     },
     {
-      "stage": "ux-pro-08c",
+      "stage": "ux-pro-08-aparencia",
       "route": "/admin/aparencia",
       "role": "ti",
       "viewport": "390x844",
@@ -40,10 +42,12 @@
         "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
         "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
         "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
+      ],
+      "requestedRoute": "/admin/aparencia",
+      "theme": "day"
     },
     {
-      "stage": "ux-pro-08c",
+      "stage": "ux-pro-08-aparencia",
       "route": "/admin/aparencia",
       "role": "ti",
       "viewport": "768x1024",
@@ -60,10 +64,12 @@
         "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
         "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
         "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
+      ],
+      "requestedRoute": "/admin/aparencia",
+      "theme": "day"
     },
     {
-      "stage": "ux-pro-08c",
+      "stage": "ux-pro-08-aparencia",
       "route": "/admin/aparencia",
       "role": "ti",
       "viewport": "1440x900",
@@ -80,11 +86,13 @@
         "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
         "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
         "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
+      ],
+      "requestedRoute": "/admin/aparencia",
+      "theme": "day"
     },
     {
-      "stage": "ux-pro-08c",
-      "route": "/layout-preview?visual=03",
+      "stage": "ux-pro-08-aparencia",
+      "route": "/layout-preview",
       "role": "ti",
       "viewport": "320x780",
       "screenshot": "docs/ux-pro-08-aparencia-evidencias/w320-layout-preview-03.png",
@@ -98,11 +106,13 @@
       "externalBlocked": [
         "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
         "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
+      ],
+      "requestedRoute": "/layout-preview?visual=03",
+      "theme": "day"
     },
     {
-      "stage": "ux-pro-08c",
-      "route": "/layout-preview?visual=03",
+      "stage": "ux-pro-08-aparencia",
+      "route": "/layout-preview",
       "role": "ti",
       "viewport": "390x844",
       "screenshot": "docs/ux-pro-08-aparencia-evidencias/w390-layout-preview-03.png",
@@ -116,11 +126,13 @@
       "externalBlocked": [
         "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
         "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
+      ],
+      "requestedRoute": "/layout-preview?visual=03",
+      "theme": "day"
     },
     {
-      "stage": "ux-pro-08c",
-      "route": "/layout-preview?visual=03",
+      "stage": "ux-pro-08-aparencia",
+      "route": "/layout-preview",
       "role": "ti",
       "viewport": "768x1024",
       "screenshot": "docs/ux-pro-08-aparencia-evidencias/w768-layout-preview-03.png",
@@ -134,11 +146,13 @@
       "externalBlocked": [
         "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
         "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
+      ],
+      "requestedRoute": "/layout-preview?visual=03",
+      "theme": "day"
     },
     {
-      "stage": "ux-pro-08c",
-      "route": "/layout-preview?visual=03",
+      "stage": "ux-pro-08-aparencia",
+      "route": "/layout-preview",
       "role": "ti",
       "viewport": "1440x900",
       "screenshot": "docs/ux-pro-08-aparencia-evidencias/desktop-layout-preview-03.png",
@@ -152,10 +166,12 @@
       "externalBlocked": [
         "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
         "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
+      ],
+      "requestedRoute": "/layout-preview?visual=03",
+      "theme": "day"
     },
     {
-      "stage": "ux-pro-08c",
+      "stage": "ux-pro-08-aparencia",
       "route": "/layout-03",
       "role": "ti",
       "viewport": "320x780",
@@ -170,10 +186,12 @@
       "externalBlocked": [
         "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
         "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
+      ],
+      "requestedRoute": "/layout-03",
+      "theme": "day"
     },
     {
-      "stage": "ux-pro-08c",
+      "stage": "ux-pro-08-aparencia",
       "route": "/layout-03",
       "role": "ti",
       "viewport": "390x844",
@@ -188,10 +206,12 @@
       "externalBlocked": [
         "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
         "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
+      ],
+      "requestedRoute": "/layout-03",
+      "theme": "day"
     },
     {
-      "stage": "ux-pro-08c",
+      "stage": "ux-pro-08-aparencia",
       "route": "/layout-03",
       "role": "ti",
       "viewport": "768x1024",
@@ -206,10 +226,12 @@
       "externalBlocked": [
         "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
         "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
+      ],
+      "requestedRoute": "/layout-03",
+      "theme": "day"
     },
     {
-      "stage": "ux-pro-08c",
+      "stage": "ux-pro-08-aparencia",
       "route": "/layout-03",
       "role": "ti",
       "viewport": "1440x900",
@@ -224,11 +246,13 @@
       "externalBlocked": [
         "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
         "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
+      ],
+      "requestedRoute": "/layout-03",
+      "theme": "day"
     },
     {
-      "stage": "ux-pro-08c",
-      "route": "/layout-preview?visual=99",
+      "stage": "ux-pro-08-aparencia",
+      "route": "/layout-preview",
       "role": "ti",
       "viewport": "320x780",
       "screenshot": "docs/ux-pro-08-aparencia-evidencias/w320-layout-preview-invalido.png",
@@ -242,11 +266,13 @@
       "externalBlocked": [
         "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
         "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
+      ],
+      "requestedRoute": "/layout-preview?visual=99",
+      "theme": "day"
     },
     {
-      "stage": "ux-pro-08c",
-      "route": "/layout-preview?visual=99",
+      "stage": "ux-pro-08-aparencia",
+      "route": "/layout-preview",
       "role": "ti",
       "viewport": "390x844",
       "screenshot": "docs/ux-pro-08-aparencia-evidencias/w390-layout-preview-invalido.png",
@@ -260,11 +286,13 @@
       "externalBlocked": [
         "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
         "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
+      ],
+      "requestedRoute": "/layout-preview?visual=99",
+      "theme": "day"
     },
     {
-      "stage": "ux-pro-08c",
-      "route": "/layout-preview?visual=99",
+      "stage": "ux-pro-08-aparencia",
+      "route": "/layout-preview",
       "role": "ti",
       "viewport": "768x1024",
       "screenshot": "docs/ux-pro-08-aparencia-evidencias/w768-layout-preview-invalido.png",
@@ -278,11 +306,13 @@
       "externalBlocked": [
         "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
         "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
+      ],
+      "requestedRoute": "/layout-preview?visual=99",
+      "theme": "day"
     },
     {
-      "stage": "ux-pro-08c",
-      "route": "/layout-preview?visual=99",
+      "stage": "ux-pro-08-aparencia",
+      "route": "/layout-preview",
       "role": "ti",
       "viewport": "1440x900",
       "screenshot": "docs/ux-pro-08-aparencia-evidencias/desktop-layout-preview-invalido.png",
@@ -296,183 +326,94 @@
       "externalBlocked": [
         "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
         "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ],
+      "requestedRoute": "/layout-preview?visual=99",
+      "theme": "day"
+    },
+    {
+      "stage": "ux-pro-08-aparencia",
+      "route": "/admin/aparencia",
+      "role": "ti",
+      "viewport": "768x1024",
+      "theme": "night",
+      "file": "w768-noite-aparencia.png",
+      "screenshot": "docs/ux-pro-08-aparencia-evidencias/w768-noite-aparencia.png",
+      "status": 200,
+      "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+      "h1": "Escolha a apresentação do site",
+      "overflowPx": 0,
+      "contrasteTitulo": 12.92,
+      "contrasteSubtituloPrevia": 12.92,
+      "contrasteCartaoOpcao": 1.18,
+      "problems": [
+        "resíduo D6: cartão .option/.selected em AppearanceGallery.module.css usa background: white/#f8faff fixo com color: var(--ux-color-text) claro no modo noite (contraste medido 1.18:1 < 4.5:1); registrado como lacuna D6 para PR própria"
       ]
     },
     {
-      "stage": "ux-pro-08d",
+      "stage": "ux-pro-08-aparencia",
       "route": "/admin/aparencia",
       "role": "ti",
-      "viewport": "320x780",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w320-claro-aparencia.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "GrupoSEG System",
-        "outline": "auto"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "GrupoSEG System",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(217, 231, 247)",
-          "shadow": "none",
-          "outline": "1px auto rgb(16, 16, 16)",
-          "width": 144,
-          "height": 48
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Menu",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgba(148, 183, 224, 0.35)",
-          "shadow": "none",
-          "outline": "3px solid rgb(145, 201, 255)",
-          "width": 84,
-          "height": 38
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Ativar modo noite",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgba(169, 198, 230, 0.38)",
-          "shadow": "none",
-          "outline": "3px solid rgb(145, 201, 255)",
-          "width": 124,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Sair",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgba(148, 183, 224, 0.35)",
-          "shadow": "none",
-          "outline": "1px auto rgb(16, 16, 16)",
-          "width": 65,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Início",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(35, 63, 145)",
-          "shadow": "none",
-          "outline": "3px solid rgb(145, 201, 255)",
-          "width": 32,
-          "height": 20
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Abrir site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(35, 63, 145)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 222,
-          "height": 20
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 122,
-          "height": 290
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 122,
-          "height": 290
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "button",
-          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(35, 63, 145)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 122,
-          "height": 290
-        }
-      ],
-      "keyboardActions": [
-        "Enter compara layout 01; nenhum PUT/publicação"
-      ],
+      "viewport": "390x844",
+      "theme": "day",
+      "state": "percurso_teclado",
+      "file": "w390-teclado-aparencia.png",
+      "screenshot": "docs/ux-pro-08-aparencia-evidencias/w390-teclado-aparencia.png",
+      "firstFocus": true,
       "percursoTeclado": [
-        "Tab (primeiro): GrupoSEG System",
-        "Tab: Menu",
-        "Tab: Ativar modo noite",
-        "Tab: Sair",
-        "Tab: Início",
-        "Tab: Abrir site atual",
-        "Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
-        "Tab: Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
-        "Shift+Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã"
+        "GrupoSEG System",
+        "Menu",
+        "Ativar modo noite",
+        "Sair",
+        "Início",
+        "Abrir site atual",
+        "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Co"
       ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "claro",
-        "actual": "claro",
-        "adminTheme": "day",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(243, 245, 251)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "staff"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
+      "overflowPx": 0,
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-08-aparencia",
+      "route": "/layout-preview",
+      "requestedRoute": "/layout-preview?visual=03",
+      "role": "publico",
+      "viewport": "390x844",
+      "theme": "day",
+      "state": "percurso_teclado",
+      "file": "w390-teclado-layout-preview-03.png",
+      "screenshot": "docs/ux-pro-08-aparencia-evidencias/w390-teclado-layout-preview-03.png",
+      "firstFocus": true,
+      "percursoTeclado": [
+        "Abrir Aparência do site",
+        "Ver site atual",
+        "Grupo SEG System — início",
+        "Abrir navegação",
+        "Vamos conversar",
+        "Conte o que você precisa"
+      ],
+      "overflowPx": 0,
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-08-aparencia",
+      "route": "/layout-03",
+      "requestedRoute": "/layout-03",
+      "role": "publico",
+      "viewport": "390x844",
+      "theme": "day",
+      "state": "percurso_teclado",
+      "file": "w390-teclado-layout-03.png",
+      "screenshot": "docs/ux-pro-08-aparencia-evidencias/w390-teclado-layout-03.png",
+      "firstFocus": true,
+      "percursoTeclado": [
+        "Abrir Aparência do site",
+        "Ver site atual",
+        "Grupo SEG System — início",
+        "Abrir navegação",
+        "Vamos conversar",
+        "Conte o que você precisa"
+      ],
+      "overflowPx": 0,
+      "problems": []
     },
     {
       "stage": "ux-pro-08d",
@@ -651,178 +592,6 @@
       "route": "/admin/aparencia",
       "role": "ti",
       "viewport": "390x844",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w390-claro-aparencia.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "GrupoSEG System",
-        "outline": "auto"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "GrupoSEG System",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(217, 231, 247)",
-          "shadow": "none",
-          "outline": "1px auto rgb(16, 16, 16)",
-          "width": 144,
-          "height": 48
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Menu",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgba(148, 183, 224, 0.35)",
-          "shadow": "none",
-          "outline": "3px solid rgb(145, 201, 255)",
-          "width": 84,
-          "height": 38
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Ativar modo noite",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgba(169, 198, 230, 0.38)",
-          "shadow": "none",
-          "outline": "3px solid rgb(145, 201, 255)",
-          "width": 124,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Sair",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgba(148, 183, 224, 0.35)",
-          "shadow": "none",
-          "outline": "1px auto rgb(16, 16, 16)",
-          "width": 65,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Início",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(35, 63, 145)",
-          "shadow": "none",
-          "outline": "3px solid rgb(145, 201, 255)",
-          "width": 32,
-          "height": 20
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Abrir site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(35, 63, 145)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 289,
-          "height": 20
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 155,
-          "height": 272
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 155,
-          "height": 272
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "button",
-          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(35, 63, 145)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 155,
-          "height": 272
-        }
-      ],
-      "keyboardActions": [
-        "Enter compara layout 01; nenhum PUT/publicação"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): GrupoSEG System",
-        "Tab: Menu",
-        "Tab: Ativar modo noite",
-        "Tab: Sair",
-        "Tab: Início",
-        "Tab: Abrir site atual",
-        "Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
-        "Tab: Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
-        "Shift+Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "claro",
-        "actual": "claro",
-        "adminTheme": "day",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(243, 245, 251)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "staff"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/admin/aparencia",
-      "role": "ti",
-      "viewport": "390x844",
       "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w390-escuro-aparencia.png",
       "gateEvidence": null,
       "firstFocus": {
@@ -975,656 +744,6 @@
         "surface": {
           "background": "rgba(0, 0, 0, 0)",
           "color": "rgb(229, 237, 247)"
-        },
-        "scope": "staff"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/admin/aparencia",
-      "role": "ti",
-      "viewport": "768x1024",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w768-claro-aparencia.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "GrupoSEG System",
-        "outline": "auto"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "GrupoSEG System",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(217, 231, 247)",
-          "shadow": "none",
-          "outline": "1px auto rgb(16, 16, 16)",
-          "width": 144,
-          "height": 48
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Menu",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgba(148, 183, 224, 0.35)",
-          "shadow": "none",
-          "outline": "3px solid rgb(145, 201, 255)",
-          "width": 84,
-          "height": 38
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Ativar modo noite",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgba(169, 198, 230, 0.38)",
-          "shadow": "none",
-          "outline": "3px solid rgb(145, 201, 255)",
-          "width": 124,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Sair",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgba(148, 183, 224, 0.35)",
-          "shadow": "none",
-          "outline": "1px auto rgb(16, 16, 16)",
-          "width": 65,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Início",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(35, 63, 145)",
-          "shadow": "none",
-          "outline": "3px solid rgb(145, 201, 255)",
-          "width": 32,
-          "height": 20
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Abrir site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(35, 63, 145)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 194,
-          "height": 20
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 322,
-          "height": 257
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 322,
-          "height": 257
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "button",
-          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(35, 63, 145)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 322,
-          "height": 257
-        }
-      ],
-      "keyboardActions": [
-        "Enter compara layout 01; nenhum PUT/publicação"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): GrupoSEG System",
-        "Tab: Menu",
-        "Tab: Ativar modo noite",
-        "Tab: Sair",
-        "Tab: Início",
-        "Tab: Abrir site atual",
-        "Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
-        "Tab: Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
-        "Shift+Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "claro",
-        "actual": "claro",
-        "adminTheme": "day",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(243, 245, 251)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "staff"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/admin/aparencia",
-      "role": "ti",
-      "viewport": "768x1024",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w768-escuro-aparencia.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "GrupoSEG System",
-        "outline": "auto"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "GrupoSEG System",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(229, 237, 247)",
-          "shadow": "none",
-          "outline": "1px auto rgb(149, 202, 255)",
-          "width": 144,
-          "height": 48
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Menu",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgba(148, 183, 224, 0.35)",
-          "shadow": "none",
-          "outline": "3px solid rgb(149, 202, 255)",
-          "width": 84,
-          "height": 38
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Ativar modo dia",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgba(169, 198, 230, 0.38)",
-          "shadow": "none",
-          "outline": "3px solid rgb(149, 202, 255)",
-          "width": 110,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Sair",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgba(148, 183, 224, 0.35)",
-          "shadow": "none",
-          "outline": "1px auto rgb(149, 202, 255)",
-          "width": 65,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Início",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(146, 189, 242)",
-          "shadow": "none",
-          "outline": "3px solid rgb(149, 202, 255)",
-          "width": 32,
-          "height": 20
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Abrir site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(146, 189, 242)",
-          "shadow": "none",
-          "outline": "3px solid rgb(149, 202, 255)",
-          "width": 194,
-          "height": 20
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(53, 73, 96)",
-          "shadow": "none",
-          "outline": "3px solid rgb(149, 202, 255)",
-          "width": 322,
-          "height": 257
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(53, 73, 96)",
-          "shadow": "none",
-          "outline": "3px solid rgb(149, 202, 255)",
-          "width": 322,
-          "height": 257
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "button",
-          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(146, 189, 242)",
-          "shadow": "none",
-          "outline": "3px solid rgb(149, 202, 255)",
-          "width": 322,
-          "height": 257
-        }
-      ],
-      "keyboardActions": [
-        "Enter compara layout 01; nenhum PUT/publicação"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): GrupoSEG System",
-        "Tab: Menu",
-        "Tab: Ativar modo dia",
-        "Tab: Sair",
-        "Tab: Início",
-        "Tab: Abrir site atual",
-        "Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
-        "Tab: Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
-        "Shift+Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "escuro",
-        "actual": "escuro",
-        "adminTheme": "night",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(229, 237, 247)"
-        },
-        "scope": "staff"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED",
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/admin/aparencia",
-      "role": "ti",
-      "viewport": "1440x900",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w1440-claro-aparencia.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "GrupoSEG System",
-        "outline": "auto"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "GrupoSEG System",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(217, 231, 247)",
-          "shadow": "none",
-          "outline": "1px auto rgb(16, 16, 16)",
-          "width": 144,
-          "height": 48
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Ativar modo noite",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgba(169, 198, 230, 0.38)",
-          "shadow": "none",
-          "outline": "3px solid rgb(145, 201, 255)",
-          "width": 124,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Sair",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgba(148, 183, 224, 0.35)",
-          "shadow": "none",
-          "outline": "1px auto rgb(16, 16, 16)",
-          "width": 65,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Início",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(35, 63, 145)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 220,
-          "height": 45
-        },
-        {
-          "key": "Tab",
-          "tag": "input",
-          "target": "input",
-          "visible": true,
-          "focusVisible": false,
-          "fullyVisible": true,
-          "border": "rgb(18, 38, 63)",
-          "shadow": "none",
-          "outline": "0px none rgb(18, 38, 63)",
-          "width": 177,
-          "height": 24
-        },
-        {
-          "key": "Tab",
-          "tag": "summary",
-          "target": "Visão e pendências3",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(36, 70, 107)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 220,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "summary",
-          "target": "Clientes e comercial6",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(36, 70, 107)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 220,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "summary",
-          "target": "Entrega de serviços7",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(36, 70, 107)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 220,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "summary",
-          "target": "Pessoas1",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(36, 70, 107)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 220,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "summary",
-          "target": "Financeiro e conformidade4",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(36, 70, 107)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 220,
-          "height": 60
-        },
-        {
-          "key": "Tab",
-          "tag": "summary",
-          "target": "Portais2",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(36, 70, 107)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 220,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "summary",
-          "target": "Sistema2",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(36, 70, 107)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 220,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "TI",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(41, 71, 101)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 205,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(35, 63, 145)",
-          "shadow": "rgb(35, 63, 145) 3px 0px 0px 0px inset",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 205,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "summary",
-          "target": "Conhecimento1",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(36, 70, 107)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 220,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Início",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(35, 63, 145)",
-          "shadow": "none",
-          "outline": "3px solid rgb(145, 201, 255)",
-          "width": 32,
-          "height": 20
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Abrir site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(35, 63, 145)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 194,
-          "height": 20
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 243,
-          "height": 257
-        },
-        {
-          "key": "Tab",
-          "tag": "button",
-          "target": "Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 243,
-          "height": 257
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "button",
-          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(35, 63, 145)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 243,
-          "height": 257
-        }
-      ],
-      "keyboardActions": [
-        "Enter compara layout 01; nenhum PUT/publicação"
-      ],
-      "keyboardProblems": [
-        "teclado: input: integralmente visível=true, foco=false"
-      ],
-      "theme": {
-        "requested": "claro",
-        "actual": "claro",
-        "adminTheme": "day",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(243, 245, 251)",
-          "color": "rgb(21, 36, 61)"
         },
         "scope": "staff"
       },
@@ -1945,1980 +1064,14 @@
         "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
         "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
       ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-preview?visual=03",
-      "role": "ti",
-      "viewport": "320x780",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w320-claro-layout-preview-03.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "claro",
-        "actual": "claro",
-        "adminTheme": "day",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-preview?visual=03",
-      "role": "ti",
-      "viewport": "320x780",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w320-escuro-layout-preview-03.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "escuro",
-        "actual": "escuro",
-        "adminTheme": "night",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-preview?visual=03",
-      "role": "ti",
-      "viewport": "390x844",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w390-claro-layout-preview-03.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "claro",
-        "actual": "claro",
-        "adminTheme": "day",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-preview?visual=03",
-      "role": "ti",
-      "viewport": "390x844",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w390-escuro-layout-preview-03.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "escuro",
-        "actual": "escuro",
-        "adminTheme": "night",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-preview?visual=03",
-      "role": "ti",
-      "viewport": "768x1024",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w768-claro-layout-preview-03.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "claro",
-        "actual": "claro",
-        "adminTheme": "day",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-preview?visual=03",
-      "role": "ti",
-      "viewport": "768x1024",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w768-escuro-layout-preview-03.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "escuro",
-        "actual": "escuro",
-        "adminTheme": "night",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-preview?visual=03",
-      "role": "ti",
-      "viewport": "1440x900",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w1440-claro-layout-preview-03.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "claro",
-        "actual": "claro",
-        "adminTheme": "day",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-preview?visual=03",
-      "role": "ti",
-      "viewport": "1440x900",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w1440-escuro-layout-preview-03.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "escuro",
-        "actual": "escuro",
-        "adminTheme": "night",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-03",
-      "role": "ti",
-      "viewport": "320x780",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w320-claro-layout-03.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "claro",
-        "actual": "claro",
-        "adminTheme": "day",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-03",
-      "role": "ti",
-      "viewport": "320x780",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w320-escuro-layout-03.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "escuro",
-        "actual": "escuro",
-        "adminTheme": "night",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-03",
-      "role": "ti",
-      "viewport": "390x844",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w390-claro-layout-03.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "claro",
-        "actual": "claro",
-        "adminTheme": "day",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-03",
-      "role": "ti",
-      "viewport": "390x844",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w390-escuro-layout-03.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "escuro",
-        "actual": "escuro",
-        "adminTheme": "night",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-03",
-      "role": "ti",
-      "viewport": "768x1024",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w768-claro-layout-03.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "claro",
-        "actual": "claro",
-        "adminTheme": "day",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-03",
-      "role": "ti",
-      "viewport": "768x1024",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w768-escuro-layout-03.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "escuro",
-        "actual": "escuro",
-        "adminTheme": "night",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-03",
-      "role": "ti",
-      "viewport": "1440x900",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w1440-claro-layout-03.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "claro",
-        "actual": "claro",
-        "adminTheme": "day",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-03",
-      "role": "ti",
-      "viewport": "1440x900",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w1440-escuro-layout-03.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "escuro",
-        "actual": "escuro",
-        "adminTheme": "night",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-preview?visual=99",
-      "role": "ti",
-      "viewport": "320x780",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w320-claro-layout-preview-invalido.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "claro",
-        "actual": "claro",
-        "adminTheme": "day",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-preview?visual=99",
-      "role": "ti",
-      "viewport": "320x780",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w320-escuro-layout-preview-invalido.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "escuro",
-        "actual": "escuro",
-        "adminTheme": "night",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-preview?visual=99",
-      "role": "ti",
-      "viewport": "390x844",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w390-claro-layout-preview-invalido.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "claro",
-        "actual": "claro",
-        "adminTheme": "day",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-preview?visual=99",
-      "role": "ti",
-      "viewport": "390x844",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w390-escuro-layout-preview-invalido.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "escuro",
-        "actual": "escuro",
-        "adminTheme": "night",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-preview?visual=99",
-      "role": "ti",
-      "viewport": "768x1024",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w768-claro-layout-preview-invalido.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "claro",
-        "actual": "claro",
-        "adminTheme": "day",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-preview?visual=99",
-      "role": "ti",
-      "viewport": "768x1024",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w768-escuro-layout-preview-invalido.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "escuro",
-        "actual": "escuro",
-        "adminTheme": "night",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-preview?visual=99",
-      "role": "ti",
-      "viewport": "1440x900",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w1440-claro-layout-preview-invalido.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "claro",
-        "actual": "claro",
-        "adminTheme": "day",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
-    },
-    {
-      "stage": "ux-pro-08d",
-      "route": "/layout-preview?visual=99",
-      "role": "ti",
-      "viewport": "1440x900",
-      "screenshot": "docs/ux-pro-08-aparencia-evidencias/08d-w1440-escuro-layout-preview-invalido.png",
-      "gateEvidence": null,
-      "firstFocus": {
-        "tag": "a",
-        "text": "Abrir Aparência do site",
-        "outline": "solid"
-      },
-      "keyboardSteps": [
-        {
-          "key": "Tab (primeiro)",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        },
-        {
-          "key": "Tab",
-          "tag": "a",
-          "target": "Ver site atual",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 112,
-          "height": 44
-        },
-        {
-          "key": "Shift+Tab",
-          "tag": "a",
-          "target": "Abrir Aparência do site",
-          "visible": true,
-          "focusVisible": true,
-          "fullyVisible": true,
-          "border": "rgb(209, 217, 232)",
-          "shadow": "none",
-          "outline": "3px solid rgb(49, 90, 202)",
-          "width": 175,
-          "height": 44
-        }
-      ],
-      "keyboardActions": [
-        "Tab alcança os dois links da faixa, sem navegar/publicar"
-      ],
-      "percursoTeclado": [
-        "Tab (primeiro): Abrir Aparência do site",
-        "Tab: Ver site atual",
-        "Shift+Tab: Abrir Aparência do site"
-      ],
-      "keyboardProblems": [],
-      "theme": {
-        "requested": "escuro",
-        "actual": "escuro",
-        "adminTheme": "night",
-        "body": {
-          "background": "rgba(0, 0, 0, 0)",
-          "color": "rgb(0, 0, 0)"
-        },
-        "surface": {
-          "background": "rgb(237, 241, 252)",
-          "color": "rgb(21, 36, 61)"
-        },
-        "scope": "sem garantia de tema sistêmico; medido, não aplicado ao site público"
-      },
-      "problems": [],
-      "externalBlocked": [
-        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
-        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
-      ]
     }
   ],
   "measurements08d": {
     "stage": "ux-pro-08d",
     "generatedBy": "scripts/ux-evidence-capture.mjs",
     "baseMain": "8dfbd7e451787dcf6f56e93b81d8e4edb26ceda5",
-    "date": "2026-10-15"
+    "reconciledMain": "3d807a420db6c63c3f754ae02144053e29da1469",
+    "date": "2026-10-15",
+    "note": "Complemento: noite 320/390/1440. Capturado antes do merge concorrente #247; código de produto idêntico, metadados e capturas da main preservados."
   }
 }
