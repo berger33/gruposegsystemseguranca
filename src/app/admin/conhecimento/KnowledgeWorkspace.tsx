@@ -1,9 +1,11 @@
 "use client";
 
-// UX-07 / EXT-08 — Base de Conhecimento e Procedimentos Operacionais.
+// UX-07 / UX-PRO-08A / EXT-08 — Base de Conhecimento e Procedimentos Operacionais.
 // A tela consome exclusivamente as rotas canônicas de ext-knowledge-api.mjs.
-// Cada leitura tem estado próprio: lista, detalhe/versões, histórico e ciência
+// Cada leitura tem estado próprio e honesto: lista, detalhe/versões, histórico e ciência
 // nunca reutilizam um array vazio para esconder uma falha ou uma recusa.
+// Em falhas transitórias de releitura na mesma entidade, preserva o dado anterior com
+// faixa "desatualizado", carimbo de data/hora pt-BR e repetição. Em 401/403, fail-closed.
 
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import UiBadge, { type UiBadgeTone } from "../../../components/ui/UiBadge";
@@ -13,7 +15,6 @@ import {
   KNOWLEDGE_ACCESS_ROLES,
   KNOWLEDGE_CATEGORY_SUGGESTIONS,
   KNOWLEDGE_TRANSITIONS,
-  describeKnowledgeError,
   honestCount,
   honestDate,
   honestDateTime,
@@ -22,6 +23,7 @@ import {
   knowledgeAcknowledgmentSourceLabel,
   knowledgeCategoryLabel,
   knowledgeErrorFootnote,
+  knowledgeErrorVariant,
   knowledgeHistorySummary,
   knowledgeRoleLabel,
   knowledgeStatusLabel,
@@ -29,6 +31,11 @@ import {
   knowledgeTagsLabel,
   type KnowledgeErrorDescriptor,
 } from "../../../lib/knowledge-vocabulary.mjs";
+import {
+  knowledgeRequest,
+  knowledgeRead,
+  type KnowledgeResult,
+} from "../../../lib/knowledge-request";
 
 type KnowledgeArticle = {
   id: string;
@@ -71,16 +78,24 @@ type AcknowledgmentEntry = {
 };
 
 type VersionDetail = { article: KnowledgeArticle; versions: KnowledgeArticle[] };
-type ReadState<T> =
-  | { phase: "loading" }
-  | { phase: "error"; error: KnowledgeErrorDescriptor }
-  | { phase: "denied"; error: KnowledgeErrorDescriptor }
-  | { phase: "empty" }
-  | { phase: "ready"; data: T };
 
-type KnowledgeResult<T> =
-  | { ok: true; status: number; data: T }
-  | { ok: false; status: number; error: KnowledgeErrorDescriptor };
+/**
+ * Estado honesto de leitura (UX-PRO-08A, padrão 07F–07L):
+ * `ready` guarda a hora da última leitura concluída (`readAt`);
+ * uma releitura mantém o conteúdo com `refreshing` e, se falhar de forma transitória, com `staleError`;
+ * negativa (401/403) descarta o dado protegido imediatamente (fail-closed).
+ */
+type Load<T> =
+  | { phase: "loading" }
+  | { phase: "ready"; data: T; readAt: string; refreshing?: boolean; staleError?: KnowledgeErrorDescriptor }
+  | { phase: "empty" }
+  | { phase: "failed"; error: KnowledgeErrorDescriptor };
+
+const isDenied = (error: KnowledgeErrorDescriptor) =>
+  error.status === 401 || error.status === 403 || error.kind === "denied";
+
+const readTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
 const TABS = [
   { id: "procedimentos", label: "Procedimentos" },
@@ -91,43 +106,6 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
-async function knowledgeRequest<T>(url: string, init: RequestInit = {}): Promise<KnowledgeResult<T>> {
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      cache: "no-store",
-      credentials: "same-origin",
-      ...init,
-      headers: {
-        accept: "application/json",
-        ...(init.body ? { "content-type": "application/json" } : {}),
-        ...(init.headers || {}),
-      },
-    });
-  } catch {
-    return { ok: false, status: 0, error: describeKnowledgeError(null, 0) };
-  }
-
-  let payload: unknown = null;
-  try {
-    payload = await response.json();
-  } catch {
-    payload = null;
-  }
-
-  if (!response.ok) {
-    const code = payload && typeof payload === "object" && typeof (payload as { error?: unknown }).error === "string"
-      ? (payload as { error: string }).error
-      : null;
-    return { ok: false, status: response.status, error: describeKnowledgeError(code, response.status) };
-  }
-  return { ok: true, status: response.status, data: payload as T };
-}
-
-function rejectedState<T>(error: KnowledgeErrorDescriptor): ReadState<T> {
-  return error.kind === "denied" ? { phase: "denied", error } : { phase: "error", error };
-}
-
 /** Apresenta o ciclo de cada leitura sem jamais converter falha em coleção vazia. */
 function ReadBoundary<T>({
   state,
@@ -137,7 +115,7 @@ function ReadBoundary<T>({
   onRetry,
   children,
 }: {
-  state: ReadState<T>;
+  state: Load<T>;
   subject: string;
   emptyTitle: string;
   emptyDetail: string;
@@ -147,11 +125,26 @@ function ReadBoundary<T>({
   if (state.phase === "loading") {
     return <UiState variant="loading" title={`Carregando ${subject}…`} detail="A consulta ainda não terminou." />;
   }
-  if (state.phase === "denied") {
-    return <UiState variant="denied" title={state.error.title} detail={`${state.error.detail} Menu não é autorização: a navegação não substitui a decisão do servidor. ${knowledgeErrorFootnote(state.error)}`} onRetry={state.error.canRetry ? onRetry : undefined} />;
-  }
-  if (state.phase === "error") {
-    return <UiState variant="error" title={state.error.title} detail={`${state.error.detail} A falha não significa que não existam ${subject}. ${knowledgeErrorFootnote(state.error)}`} onRetry={state.error.canRetry ? onRetry : undefined} />;
+  if (state.phase === "failed") {
+    const error = state.error;
+    if (isDenied(error)) {
+      return (
+        <UiState
+          variant="denied"
+          title={error.title}
+          detail={`${error.detail} Menu não é autorização: a navegação não substitui a decisão do servidor. ${knowledgeErrorFootnote(error)}`}
+          onRetry={error.canRetry ? onRetry : undefined}
+        />
+      );
+    }
+    return (
+      <UiState
+        variant="error"
+        title={error.title}
+        detail={`${error.detail} A falha não significa que não existam ${subject}. ${knowledgeErrorFootnote(error)}`}
+        onRetry={error.canRetry ? onRetry : undefined}
+      />
+    );
   }
   if (state.phase === "empty") {
     return <UiState variant="empty" title={emptyTitle} detail={emptyDetail} />;
@@ -163,10 +156,10 @@ const newOperationKey = (label: string) => `ext08-ui-${label}-${crypto.randomUUI
 
 export default function KnowledgeWorkspace() {
   const [activeTab, setActiveTab] = useState<TabId>("procedimentos");
-  const [articles, setArticles] = useState<ReadState<KnowledgeArticle[]>>({ phase: "loading" });
-  const [versionDetail, setVersionDetail] = useState<ReadState<VersionDetail>>({ phase: "empty" });
-  const [history, setHistory] = useState<ReadState<HistoryEntry[]>>({ phase: "empty" });
-  const [acknowledgments, setAcknowledgments] = useState<ReadState<AcknowledgmentEntry[]>>({ phase: "empty" });
+  const [articles, setArticles] = useState<Load<KnowledgeArticle[]>>({ phase: "loading" });
+  const [versionDetail, setVersionDetail] = useState<Load<VersionDetail>>({ phase: "empty" });
+  const [history, setHistory] = useState<Load<HistoryEntry[]>>({ phase: "empty" });
+  const [acknowledgments, setAcknowledgments] = useState<Load<AcknowledgmentEntry[]>>({ phase: "empty" });
   const [selectedId, setSelectedId] = useState("");
   const selectedIdRef = useRef("");
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -191,47 +184,109 @@ export default function KnowledgeWorkspace() {
   const [transitionReason, setTransitionReason] = useState("");
   const [ackNotes, setAckNotes] = useState("");
 
+  const applyRead = <T,>(
+    setter: (updater: (previous: Load<T>) => Load<T>) => void,
+    result: KnowledgeResult<T>,
+    isEmpty: (data: T) => boolean,
+  ) => {
+    if (!result.ok) {
+      setter(previous => {
+        if (previous.phase === "ready" && !isDenied(result.error)) {
+          return { ...previous, refreshing: false, staleError: result.error };
+        }
+        return { phase: "failed", error: result.error };
+      });
+      return;
+    }
+    if (isEmpty(result.data)) {
+      setter(() => ({ phase: "empty" }));
+      return;
+    }
+    setter(() => ({ phase: "ready", data: result.data, readAt: new Date().toISOString() }));
+  };
+
+  const beginRead = <T,>(setter: (updater: (previous: Load<T>) => Load<T>) => void) => {
+    setter(previous =>
+      previous.phase === "ready"
+        ? { ...previous, refreshing: true, staleError: undefined }
+        : { phase: "loading" },
+    );
+  };
+
   const loadArticles = useCallback(async () => {
-    setArticles({ phase: "loading" });
+    beginRead<KnowledgeArticle[]>(setArticles);
     const params = new URLSearchParams();
     if (filterCategory) params.set("category", filterCategory);
     if (filterQuery) params.set("q", filterQuery);
     if (filterStatus) params.set("status", filterStatus);
     const suffix = params.toString();
-    const result = await knowledgeRequest<{ items?: KnowledgeArticle[] }>(`/api/ext/knowledge/articles${suffix ? `?${suffix}` : ""}`);
-    if (!result.ok) return setArticles(rejectedState(result.error));
-    const items = Array.isArray(result.data.items) ? result.data.items : [];
-    setArticles(items.length ? { phase: "ready", data: items } : { phase: "empty" });
+    const result = await knowledgeRead<{ items?: KnowledgeArticle[] }>(
+      `/api/ext/knowledge/articles${suffix ? `?${suffix}` : ""}`,
+      data => !!data && typeof data === "object" && Array.isArray((data as { items?: unknown }).items),
+    );
+    applyRead<KnowledgeArticle[]>(
+      setArticles,
+      result.ok ? { ...result, data: result.data.items || [] } : result,
+      items => items.length === 0,
+    );
   }, [filterCategory, filterQuery, filterStatus]);
 
   const loadVersionDetail = useCallback(async (id: string) => {
-    setVersionDetail({ phase: "loading" });
-    const result = await knowledgeRequest<{ article?: KnowledgeArticle; versions?: KnowledgeArticle[] }>(`/api/ext/knowledge/articles/${id}`);
+    setVersionDetail(prev => (prev.phase === "ready" && selectedIdRef.current === id ? { ...prev, refreshing: true, staleError: undefined } : { phase: "loading" }));
+    const result = await knowledgeRead<{ article?: KnowledgeArticle; versions?: KnowledgeArticle[] }>(
+      `/api/ext/knowledge/articles/${id}`,
+      data => !!data && typeof data === "object" && !!(data as { article?: unknown }).article && typeof (data as { article?: unknown }).article === "object",
+    );
     if (selectedIdRef.current !== id) return;
-    if (!result.ok) return setVersionDetail(rejectedState(result.error));
-    if (!result.data.article) return setVersionDetail({ phase: "empty" });
-    setVersionDetail({ phase: "ready", data: { article: result.data.article, versions: Array.isArray(result.data.versions) ? result.data.versions : [] } });
+    if (!result.ok) {
+      setVersionDetail(previous => {
+        if (previous.phase === "ready" && !isDenied(result.error)) {
+          return { ...previous, refreshing: false, staleError: result.error };
+        }
+        return { phase: "failed", error: result.error };
+      });
+      return;
+    }
+    if (!result.data.article) {
+      setVersionDetail({ phase: "empty" });
+      return;
+    }
+    setVersionDetail({
+      phase: "ready",
+      data: {
+        article: result.data.article,
+        versions: Array.isArray(result.data.versions) ? result.data.versions : [],
+      },
+      readAt: new Date().toISOString(),
+    });
   }, []);
 
   const loadHistory = useCallback(async (id: string) => {
-    setHistory({ phase: "loading" });
-    // O contrato entrega detalhe e histórico no mesmo recurso. A solicitação é
-    // deliberadamente independente da leitura de versão para não mascarar uma
-    // falha de histórico como detalhe ausente.
-    const result = await knowledgeRequest<{ history?: HistoryEntry[] }>(`/api/ext/knowledge/articles/${id}`);
+    setHistory(prev => (prev.phase === "ready" && selectedIdRef.current === id ? { ...prev, refreshing: true, staleError: undefined } : { phase: "loading" }));
+    const result = await knowledgeRead<{ history?: HistoryEntry[] }>(
+      `/api/ext/knowledge/articles/${id}`,
+      data => !!data && typeof data === "object" && Array.isArray((data as { history?: unknown }).history),
+    );
     if (selectedIdRef.current !== id) return;
-    if (!result.ok) return setHistory(rejectedState(result.error));
-    const items = Array.isArray(result.data.history) ? result.data.history : [];
-    setHistory(items.length ? { phase: "ready", data: items } : { phase: "empty" });
+    applyRead<HistoryEntry[]>(
+      setHistory,
+      result.ok ? { ...result, data: result.data.history || [] } : result,
+      items => items.length === 0,
+    );
   }, []);
 
   const loadAcknowledgments = useCallback(async (id: string) => {
-    setAcknowledgments({ phase: "loading" });
-    const result = await knowledgeRequest<{ items?: AcknowledgmentEntry[] }>(`/api/ext/knowledge/articles/${id}/acknowledgments`);
+    setAcknowledgments(prev => (prev.phase === "ready" && selectedIdRef.current === id ? { ...prev, refreshing: true, staleError: undefined } : { phase: "loading" }));
+    const result = await knowledgeRead<{ items?: AcknowledgmentEntry[] }>(
+      `/api/ext/knowledge/articles/${id}/acknowledgments`,
+      data => !!data && typeof data === "object" && Array.isArray((data as { items?: unknown }).items),
+    );
     if (selectedIdRef.current !== id) return;
-    if (!result.ok) return setAcknowledgments(rejectedState(result.error));
-    const items = Array.isArray(result.data.items) ? result.data.items : [];
-    setAcknowledgments(items.length ? { phase: "ready", data: items } : { phase: "empty" });
+    applyRead<AcknowledgmentEntry[]>(
+      setAcknowledgments,
+      result.ok ? { ...result, data: result.data.items || [] } : result,
+      items => items.length === 0,
+    );
   }, []);
 
   useEffect(() => {
@@ -244,6 +299,7 @@ export default function KnowledgeWorkspace() {
     setTransitionStatus(KNOWLEDGE_TRANSITIONS[article.status || ""]?.[0] || "");
     setTransitionNotes("");
     setTransitionReason("");
+    // Preservação é POR PROCEDIMENTO: trocar de artigo descarta o detalhe/histórico anterior
     setVersionDetail({ phase: "loading" });
     setHistory({ phase: "loading" });
     setAcknowledgments({ phase: "loading" });
@@ -334,12 +390,35 @@ export default function KnowledgeWorkspace() {
     tabRefs.current[next]?.focus();
   }
 
+  const renderStale = <T,>(state: Load<T>, retry: () => void, testId: string) => {
+    if (state.phase !== "ready") return null;
+    return (
+      <>
+        <p className={styles.hint} data-testid={`${testId}-leitura`}>
+          Última leitura concluída às {readTime(state.readAt)}.
+          {state.refreshing ? " Atualizando agora — o conteúdo exibido é o dessa leitura." : ""}
+        </p>
+        {state.staleError ? (
+          <div role="alert" data-testid={`${testId}-desatualizado`}>
+            <UiState
+              variant={knowledgeErrorVariant(state.staleError)}
+              title="A releitura falhou; o conteúdo abaixo é da última leitura concluída e pode estar desatualizado."
+              detail={`${state.staleError.detail} Última leitura concluída às ${readTime(state.readAt)}. ${knowledgeErrorFootnote(state.staleError)}`}
+              onRetry={state.staleError.canRetry ? retry : undefined}
+              retryLabel="Tentar a leitura de novo"
+            />
+          </div>
+        ) : null}
+      </>
+    );
+  };
+
   return (
     <main className={styles.workspace}>
       <nav aria-label="Trilha" className={styles.breadcrumbNav}>
         <a href="/admin">Início</a> · <span aria-current="page">Base de conhecimento</span>
       </nav>
-      <p className={styles.kicker}>EXT-08 · UX-07</p>
+      <p className={styles.kicker}>EXT-08 · UX-07 · UX-PRO-08A</p>
       <h1>Base de Conhecimento e Procedimentos Operacionais</h1>
       <p className={styles.lede}>Procedimentos versionados, busca por escopo, ciclo de vida canônico, histórico imutável e ciência vinculada à versão. A tela não presume acesso: cada consulta é confirmada pelo servidor.</p>
 
@@ -395,6 +474,8 @@ export default function KnowledgeWorkspace() {
               <div className={styles.actions}><button className="primary" type="submit">Aplicar filtros</button></div>
             </form>
 
+            {renderStale(articles, () => void loadArticles(), "knowledge-articles-list")}
+
             <ReadBoundary state={articles} subject="os procedimentos" emptyTitle="Nenhum procedimento encontrado" emptyDetail="A leitura funcionou; não há procedimento no escopo ou nos filtros atuais." onRetry={() => void loadArticles()}>
               {items => <div className={styles.cards} data-testid="knowledge-articles-list">
                 {items.map(article => <article className={`${styles.card} ${selectedId === article.id ? styles.knowledgeCardSelected : ""}`} key={article.id}>
@@ -417,6 +498,7 @@ export default function KnowledgeWorkspace() {
         {activeTab === "detalhe" ? (
           <section id="knowledge-panel-detalhe" role="tabpanel" aria-labelledby="knowledge-tab-detalhe" tabIndex={0} className={styles.panel} data-testid="knowledge-detail">
             <h2 className={styles.panelTitle}>Detalhe da versão e ciclo de vida</h2>
+            {renderStale(versionDetail, () => selectedId && void loadVersionDetail(selectedId), "knowledge-version-detail")}
             <ReadBoundary state={versionDetail} subject="o detalhe da versão" emptyTitle="Nenhum procedimento selecionado" emptyDetail="Escolha um procedimento na lista para consultar a versão e seu ciclo de vida." onRetry={() => selectedId && void loadVersionDetail(selectedId)}>
               {detail => {
                 const article = detail.article;
@@ -491,6 +573,7 @@ export default function KnowledgeWorkspace() {
               <section className={styles.sectionCard} data-testid="knowledge-history">
                 <div className={styles.padded}>
                   <h3 className={styles.cardTitle}>Revisões da versão</h3>
+                  {renderStale(history, () => selectedId && void loadHistory(selectedId), "knowledge-history")}
                   <ReadBoundary state={history} subject="o histórico de revisões" emptyTitle="Nenhuma revisão registrada" emptyDetail="A leitura funcionou; não há alteração histórica para o procedimento selecionado." onRetry={() => selectedId && void loadHistory(selectedId)}>
                     {entries => <ul className={styles.knowledgeList}>{entries.map(entry => <li key={entry.id} className={styles.knowledgeListItem}><span>Versão {honestCount(entry.next_version)} · {knowledgeHistorySummary(entry.change_summary)}</span><span>{honestText(entry.changer_name, "Responsável não informado")} · {honestDateTime(entry.created_at)}</span></li>)}</ul>}
                   </ReadBoundary>
@@ -499,6 +582,7 @@ export default function KnowledgeWorkspace() {
               <section className={styles.sectionCard} data-testid="knowledge-acknowledgments">
                 <div className={styles.padded}>
                   <h3 className={styles.cardTitle}>Ciências e métricas</h3>
+                  {renderStale(acknowledgments, () => selectedId && void loadAcknowledgments(selectedId), "knowledge-acknowledgments")}
                   <ReadBoundary state={acknowledgments} subject="as ciências registradas" emptyTitle="Nenhuma ciência registrada" emptyDetail="A leitura funcionou; nenhum colaborador confirmou ciência nesta versão." onRetry={() => selectedId && void loadAcknowledgments(selectedId)}>
                     {entries => <ul className={styles.knowledgeList}>{entries.map(entry => <li key={entry.id} className={styles.knowledgeListItem}><span>{honestText(entry.user_name, "Colaborador não informado")} · {knowledgeRoleLabel(entry.user_role)}</span><span>{honestDateTime(entry.acknowledged_at)} · {knowledgeAcknowledgmentSourceLabel(entry.source)}</span>{entry.notes ? <span>{entry.notes}</span> : <span>Sem observação registrada.</span>}</li>)}</ul>}
                   </ReadBoundary>
@@ -518,7 +602,9 @@ export default function KnowledgeWorkspace() {
                 <div className={styles.field}><label htmlFor="knowledge-form-title">Título</label><input id="knowledge-form-title" required minLength={5} maxLength={200} value={formTitle} onChange={event => setFormTitle(event.target.value)} /></div>
                 <div className={styles.field}><label htmlFor="knowledge-form-category">Categoria</label><select id="knowledge-form-category" value={formCategory} onChange={event => setFormCategory(event.target.value)}>{KNOWLEDGE_CATEGORY_SUGGESTIONS.map(category => <option key={category} value={category}>{knowledgeCategoryLabel(category)}</option>)}</select></div>
               </div>
-              <div className={styles.field}><label htmlFor="knowledge-form-summary">Resumo executivo <span className={styles.required}>opcional</span></label><input id="knowledge-form-summary" minLength={10} maxLength={500} value={formSummary} onChange={event => setFormSummary(event.target.value)} /></div>
+              <div className={styles.fieldRow}>
+                <div className={styles.field}><label htmlFor="knowledge-form-summary">Resumo executivo <span className={styles.required}>opcional</span></label><input id="knowledge-form-summary" minLength={10} maxLength={500} value={formSummary} onChange={event => setFormSummary(event.target.value)} /></div>
+              </div>
               <div className={styles.field}><label htmlFor="knowledge-form-content">Conteúdo completo</label><textarea id="knowledge-form-content" required minLength={50} maxLength={20000} rows={7} value={formContent} onChange={event => setFormContent(event.target.value)} /></div>
               <div className={styles.fieldRow}>
                 <div className={styles.field}><label htmlFor="knowledge-form-tags">Etiquetas <span className={styles.required}>opcional</span></label><input id="knowledge-form-tags" value={formTags} onChange={event => setFormTags(event.target.value)} placeholder="portaria, acesso, visitantes" /><p className={styles.hint}>As etiquetas são texto livre aceito pelo contrato, separadas por vírgula.</p></div>
