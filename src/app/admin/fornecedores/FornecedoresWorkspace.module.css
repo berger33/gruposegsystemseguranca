@@ -1,0 +1,97 @@
+/* UX-PRO-07C-1 — apresentação local de /admin/fornecedores.
+   Só posiciona e dimensiona: nenhuma regra aqui altera dado, permissão,
+   contrato de API, transição canônica ou auditoria. Tokens semânticos do
+   envelope administrativo substituem as cores fixas que existiam inline. */
+
+.quoteList {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.quoteItem { min-width: 0; }
+
+.quoteButton {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--ux-color-border);
+  border-left-width: 4px;
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-surface);
+  color: var(--ux-color-text);
+  font: inherit;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.quoteButton:hover { background: var(--ux-color-brand-soft); }
+
+.quoteButton[data-selected='true'] {
+  border-left-color: var(--ux-color-brand);
+  background: var(--ux-color-brand-soft);
+}
+
+.quoteProtocol {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.quoteMeta { color: var(--ux-color-muted); font-size: 0.8125rem; }
+
+.orderList { display: grid; gap: 12px; margin: 12px 0 0; }
+
+.orderItem {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--ux-color-border);
+  overflow-wrap: anywhere;
+}
+
+.orderItem:first-child { padding-top: 0; border-top: 0; }
+
+.orderProtocol {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.facts { display: grid; gap: 4px; margin: 0; font-size: 0.875rem; }
+.facts > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.facts dt { font-weight: 700; color: var(--ux-color-muted); }
+.facts dt::after { content: ':'; }
+.facts dd { margin: 0; }
+
+.badgeRow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+.documentList { display: grid; gap: 6px; margin: 12px 0 0; padding: 0; list-style: none; }
+.documentList > li { font-size: 0.875rem; overflow-wrap: anywhere; }
+
+.boundary {
+  padding: 12px 14px;
+  border: 1px solid var(--ux-color-border);
+  border-left: 4px solid var(--ux-color-warning);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-warning-soft);
+  margin-bottom: 12px;
+}
+
+.boundary strong { display: block; margin-bottom: 4px; }
+.boundary p { margin: 0; font-size: 0.875rem; line-height: 1.55; }
+
+.codeInline {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
