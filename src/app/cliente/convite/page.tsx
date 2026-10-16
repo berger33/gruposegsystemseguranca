@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CircleAlert, MailCheck } from "lucide-react";
@@ -30,6 +30,14 @@ function InviteAcceptInner() {
   const [error, setError] = useState("");
   const [done, setDone] = useState<{ email: string; emailStatus: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  // UX-PRO-09A-5 (G5): padrão de G1/G2 aplicado somente ao erro pós-submissão.
+  // O aviso de montagem (convite usado/expirado/revogado/inexistente) continua
+  // exatamente como estava: não decorre de ação da pessoa nesta tela.
+  const errorRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
 
   useEffect(() => {
     let cancelled = false;
@@ -180,7 +188,7 @@ function InviteAcceptInner() {
               />
             </div>
             {error ? (
-              <p className={`${styles.message} ${styles.messageError}`} role="alert">
+              <p ref={errorRef} className={`${styles.message} ${styles.messageError}`} role="alert" tabIndex={-1}>
                 <CircleAlert size={16} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
                 <span>{error}</span>
               </p>

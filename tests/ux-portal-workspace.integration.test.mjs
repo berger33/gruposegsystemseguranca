@@ -1773,3 +1773,204 @@ test('browser: a troca de e-mail entrega o token manual na superfície que realm
     await pool.query('DELETE FROM auth_identities WHERE id=$1', [identityId]).catch(() => {});
   }
 });
+
+
+// G5 (UX-PRO-09A-5): nas entradas públicas do cliente, o erro pós-submissão recebia
+// role="alert" mas nenhum foco: ao desabilitar o botão em "busy", o foco caía em BODY.
+// Aplica-se aqui o padrão já mergeado de G1/G2 (ref + tabIndex={-1} + focus no efeito,
+// contorno existente em RealAccess.module.css), localmente em cada rota. O resumo é
+// gravado ANTES das asserções de correção: a execução RED registra o estado anterior.
+// Nenhuma senha, token de convite ou cookie entra em PNG, JSON versionado ou log.
+test('browser: erro pós-submissão recebe foco nas entradas públicas do cliente (G5)', { skip: !RUN }, async () => {
+  const g5EvidenceDir = process.env.UX_PORTAL_G5_EVIDENCE_DIR || '';
+  const entries = [];
+  const inviteEmail = `g5-convite-${randomUUID().slice(0, 8)}@exemplo.invalid`;
+  let inviteId = null;
+  const staffIds = [];
+  const recordFocusOf = page => async action => {
+    const target = await page.evaluate(() => {
+      const element = document.activeElement;
+      if (!element || element === document.body) return 'BODY (foco perdido ao desabilitar o botão)';
+      return element.id || element.textContent?.trim().slice(0, 60) || element.tagName;
+    });
+    return { action, target };
+  };
+  try {
+    // Convite pendente real, emitido pelo fluxo administrativo canônico (papel TI).
+    const ti = await provisionStaff(pool, { role: 'ti' });
+    staffIds.push(ti.id);
+    const tiCookie = await loginStaffHttp(ti.email);
+    const created = await api('/api/admin/invites', { method: 'POST', cookie: tiCookie, body: { email: inviteEmail } });
+    assert.equal(created.status, 201, `emissão de convite deveria ser 201, veio ${created.status} ${JSON.stringify(created.body)}`);
+    assert.equal(created.body.emailStatus, 'local_outbox', 'sem SMTP o convite vai para a caixa local');
+    inviteId = created.body.inviteId;
+    const box = await pool.query(
+      "SELECT body FROM local_outbox_messages WHERE recipient_address=$1 AND template='client_invite'",
+      [inviteEmail],
+    );
+    assert.equal(box.rowCount, 1, 'o convite pendente precisa estar na caixa local');
+    const inviteUrl = box.rows[0].body.match(/\/cliente\/convite\?token=\S+/)?.[0];
+    assert.ok(inviteUrl, 'o corpo do convite precisa trazer o link de aceite');
+
+    for (const [width, height] of [[320, 844], [390, 844], [768, 900], [1440, 900]]) {
+      // ---------------- /cliente/entrar: credencial recusada ----------------
+      {
+        const browser = await launchBrowser();
+        try {
+          const { context, page, navigationResponse } = await openPage(browser, '/cliente/entrar', null, { width, height });
+          assert.equal(navigationResponse.status(), 200, `a entrada do cliente deveria responder 200 em ${width}`);
+          await page.getByRole('heading', { name: 'Entrar na área do cliente' }).waitFor();
+          await page.waitForLoadState('networkidle');
+          await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+          const recordFocus = recordFocusOf(page);
+          const email = page.getByLabel('E-mail', { exact: true });
+          const senha = page.getByLabel('Senha', { exact: true });
+          const button = page.getByRole('button', { name: 'Entrar', exact: true });
+          const keyboard = [];
+          await email.focus();
+          keyboard.push(await recordFocus('focus e-mail'));
+          await email.fill(`g5-entrar-${randomUUID().slice(0, 8)}@exemplo.invalid`);
+          await page.keyboard.press('Tab');
+          keyboard.push(await recordFocus('Tab'));
+          assert.equal(await page.evaluate(() => document.activeElement.id), 'password');
+          await senha.fill('Frase sintetica G5 sem conta!');
+          await page.keyboard.press('Tab');
+          keyboard.push(await recordFocus('Tab'));
+          assert.ok(await button.evaluate(element => element === document.activeElement));
+          const pending = page.waitForResponse(response =>
+            new URL(response.url()).pathname === '/api/auth/login' && response.request().method() === 'POST');
+          await page.keyboard.press('Enter');
+          const loginResponse = await pending;
+          assert.equal(loginResponse.status(), 401, 'credencial desconhecida responde 401 genérico');
+          const alert = page.locator('section[aria-labelledby="entrar-title"] form [role="alert"]');
+          await alert.waitFor();
+          keyboard.push(await recordFocus('Enter / 401 genérico'));
+          keyboard.push(await recordFocus('passo seguinte após o erro (repetição por teclado)'));
+          await page.keyboard.press('Tab');
+          keyboard.push(await recordFocus('Tab após o erro'));
+          const repetition = keyboard[keyboard.length - 1].target;
+          // Senha nunca entra em captura: campos limpos antes do PNG.
+          await email.fill('');
+          await senha.fill('');
+          const overflow = await page.evaluate(() =>
+            document.documentElement.scrollWidth - document.documentElement.clientWidth);
+          assert.ok(overflow <= 1, `G5 entrar: overflow ${overflow} em ${width}`);
+          const screenshot = `ux-pro-09a5-entrar-erro-${width}-claro.png`;
+          if (g5EvidenceDir) {
+            await mkdir(g5EvidenceDir, { recursive: true });
+            await page.screenshot({ path: path.join(g5EvidenceDir, screenshot), fullPage: true });
+          }
+          entries.push({
+            route: '/cliente/entrar', state: 'erro pós-submissão (401 genérico real, conta desconhecida)',
+            viewport: `${width}x${height}`, theme: 'claro (único suportado)', screenshot,
+            percursoTeclado: keyboard, overflow, loginHttpStatus: 401,
+            focusAposFalha: keyboard.find(item => item.action === 'Enter / 401 genérico')?.target ?? null,
+            repeticaoAposErro: repetition,
+          });
+          await context.close();
+        } finally { await browser.close().catch(() => {}); }
+      }
+
+      // ---------------- /cliente/convite: senha comum recusada --------------
+      {
+        const browser = await launchBrowser();
+        try {
+          const { context, page, navigationResponse } = await openPage(browser, inviteUrl, null, { width, height });
+          assert.equal(navigationResponse.status(), 200, `o aceite de convite deveria responder 200 em ${width}`);
+          await page.getByRole('heading', { name: 'Aceitar convite' }).waitFor();
+          await page.getByLabel('Senha', { exact: true }).waitFor();
+          await page.waitForLoadState('networkidle');
+          await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+          const recordFocus = recordFocusOf(page);
+          const senha = page.getByLabel('Senha', { exact: true });
+          const repetir = page.getByLabel('Repita a senha', { exact: true });
+          const button = page.getByRole('button', { name: 'Criar meu acesso', exact: true });
+          const keyboard = [];
+          await senha.focus();
+          keyboard.push(await recordFocus('focus senha'));
+          await senha.fill('password1234');
+          await page.keyboard.press('Tab');
+          keyboard.push(await recordFocus('Tab'));
+          assert.equal(await page.evaluate(() => document.activeElement.id), 'passwordAgain');
+          await repetir.fill('password1234');
+          await page.keyboard.press('Tab');
+          keyboard.push(await recordFocus('Tab'));
+          assert.ok(await button.evaluate(element => element === document.activeElement));
+          const pending = page.waitForResponse(response =>
+            new URL(response.url()).pathname === '/api/auth/invite/accept' && response.request().method() === 'POST');
+          await page.keyboard.press('Enter');
+          const acceptResponse = await pending;
+          assert.equal(acceptResponse.status(), 400, 'senha comum é recusada no servidor');
+          assert.deepEqual(await acceptResponse.json(), { error: 'password_common' });
+          const alert = page.locator('section[aria-labelledby="convite-title"] form [role="alert"]');
+          await alert.waitFor();
+          keyboard.push(await recordFocus('Enter / 400 password_common'));
+          await page.keyboard.press('Tab');
+          keyboard.push(await recordFocus('Tab após o erro'));
+          const repetition = keyboard[keyboard.length - 1].target;
+          await senha.fill('');
+          await repetir.fill('');
+          const overflow = await page.evaluate(() =>
+            document.documentElement.scrollWidth - document.documentElement.clientWidth);
+          assert.ok(overflow <= 1, `G5 convite: overflow ${overflow} em ${width}`);
+          const screenshot = `ux-pro-09a5-convite-erro-${width}-claro.png`;
+          if (g5EvidenceDir) {
+            await mkdir(g5EvidenceDir, { recursive: true });
+            await page.screenshot({ path: path.join(g5EvidenceDir, screenshot), fullPage: true });
+          }
+          entries.push({
+            route: '/cliente/convite', state: 'erro pós-submissão (400 password_common real, convite continua pendente)',
+            viewport: `${width}x${height}`, theme: 'claro (único suportado)', screenshot,
+            percursoTeclado: keyboard, overflow, acceptHttpStatus: 400,
+            focusAposFalha: keyboard.find(item => item.action === 'Enter / 400 password_common')?.target ?? null,
+            repeticaoAposErro: repetition,
+          });
+          await context.close();
+        } finally { await browser.close().catch(() => {}); }
+      }
+    }
+
+    // O convite não pode ter sido consumido pelas recusas de senha.
+    const stillPending = await pool.query('SELECT used_at, revoked_at FROM auth_invites WHERE id=$1', [inviteId]);
+    assert.equal(stillPending.rows[0].used_at, null, 'a recusa de senha não consome o convite');
+    assert.equal(stillPending.rows[0].revoked_at, null);
+
+    // Resumo gravado ANTES das asserções de correção: a execução RED (código ainda
+    // sem foco no erro) deixa a medição do estado anterior registrada em disco.
+    if (g5EvidenceDir) {
+      await mkdir(g5EvidenceDir, { recursive: true });
+      await writeFile(path.join(g5EvidenceDir, 'resumo.json'), `${JSON.stringify({
+        schemaVersion: 1, stage: 'UX-PRO-09A-5', date: '2026-10-16', gap: 'G5',
+        routes: ['/cliente/entrar', '/cliente/convite'], entries,
+        simulatedFetchRejection: false, mockedHttp: false,
+        invite: { estadoAposRecusas: 'pendente (não consumido)', tokenEmEvidencia: 'não (somente em memória)' },
+        limitations: [
+          'Tema claro único nestas superfícies; sem alternador noturno',
+          'Percurso medido no Chromium empacotado em Linux; sem leitores de tela/zoom 200%/Windows',
+          'Dados sintéticos em PostgreSQL descartável; sem SMTP real',
+          'Sem aceite humano, UAT, certificação WCAG ou produção; NO-GO',
+        ],
+      }, null, 2)}\n`, 'utf8');
+    }
+
+    // Expectativas corrigidas (falham na execução RED, passam com o padrão G1/G2).
+    for (const entry of entries) {
+      assert.ok(entry.focusAposFalha && !entry.focusAposFalha.startsWith('BODY'),
+        `G5: após a falha o foco precisa ir para o erro, não para "${entry.focusAposFalha}" em ${entry.route} ${entry.viewport}`);
+      assert.match(entry.focusAposFalha, /não conferem|comum|segura/i,
+        `G5: o foco precisa estar na mensagem de erro visível em ${entry.route} ${entry.viewport}`);
+      assert.match(entry.repeticaoAposErro, /Entrar|Criar meu acesso/,
+        `G5: o passo seguinte ao erro precisa alcançar a repetição em ${entry.route} ${entry.viewport}`);
+    }
+  } finally {
+    await pool.query('DELETE FROM local_outbox_messages WHERE recipient_address=$1', [inviteEmail]).catch(() => {});
+    await pool.query('DELETE FROM auth_invites WHERE id=$1', [inviteId]).catch(() => {});
+    if (staffIds.length) {
+      await pool.query('DELETE FROM auth_access_audit WHERE actor_id=ANY($1::uuid[])', [staffIds]).catch(() => {});
+      await pool.query('DELETE FROM auth_sessions WHERE identity_id=ANY($1::uuid[])', [staffIds]).catch(() => {});
+      await pool.query('DELETE FROM auth_staff_profiles WHERE identity_id=ANY($1::uuid[])', [staffIds]).catch(() => {});
+      await pool.query('DELETE FROM auth_credentials WHERE identity_id=ANY($1::uuid[])', [staffIds]).catch(() => {});
+      await pool.query('DELETE FROM auth_identities WHERE id=ANY($1::uuid[])', [staffIds]).catch(() => {});
+    }
+  }
+});

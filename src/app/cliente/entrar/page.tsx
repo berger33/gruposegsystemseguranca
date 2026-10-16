@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { CircleAlert, KeyRound } from "lucide-react";
 import RealAccessShell from "../RealAccessShell";
@@ -17,6 +17,14 @@ export default function ClientSignInPage() {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // UX-PRO-09A-5 (G5): mesmo padrão de G1/G2 — o erro pós-submissão recebe foco
+  // programático e contorno visível, em vez de deixar o foco no BODY quando o
+  // botão é desabilitado. Não muda mensagem, contrato nem ordem de Tab.
+  const errorRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -88,7 +96,11 @@ export default function ClientSignInPage() {
             <input id="mfa-code" name="code" autoComplete="one-time-code" required value={code}
               onChange={event => setCode(event.target.value.trim())} maxLength={20} />
           </div>
-          {error ? <p className={`${styles.message} ${styles.messageError}`} role="alert">{error}</p> : null}
+          {error ? (
+            <p ref={errorRef} className={`${styles.message} ${styles.messageError}`} role="alert" tabIndex={-1}>
+              {error}
+            </p>
+          ) : null}
           <button className={styles.submit} type="submit" disabled={busy}>{busy ? 'Verificando…' : 'Verificar e entrar'}</button>
           <button className={styles.secondaryLink} type="button" onClick={() => { setChallenge(''); setCode(''); setError(''); }}>Recomeçar acesso</button>
         </form> : <form className={styles.form} onSubmit={submit}>
@@ -117,7 +129,7 @@ export default function ClientSignInPage() {
             />
           </div>
           {error ? (
-            <p className={`${styles.message} ${styles.messageError}`} role="alert">
+            <p ref={errorRef} className={`${styles.message} ${styles.messageError}`} role="alert" tabIndex={-1}>
               <CircleAlert size={16} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
               <span>{error}</span>
             </p>
