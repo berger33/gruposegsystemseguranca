@@ -51,6 +51,17 @@ async function launchBrowser() {
   });
 }
 
+// L06 infra (sem relação com asserção de produto): cada aba de `/admin/patrimonio` é
+// lida no cliente depois da navegação, então `networkidle` pode resolver antes da
+// resposta da aba e o corpo ainda mostra "Carregando… / Lendo…". Esta espera LIMITADA
+// usa o estado da própria aba e termina quando o aviso de carregamento sai da tela.
+// Nenhuma asserção muda: se a leitura falhar de fato, a espera estoura e a asserção
+// seguinte continua reprovando (nenhum vazio ou total é presumido no lugar dela).
+async function waitForTabRead(page, tab) {
+  await page.locator(`[data-testid="patrimonio-${tab}-painel"]`).waitFor({ timeout: 30_000 });
+  await page.locator(`[data-testid="patrimonio-${tab}-carregando"]`).waitFor({ state: "detached", timeout: 30_000 });
+}
+
 async function insertContract(companyId, status) {
   const id = uuid();
   await pool.query(
@@ -1568,25 +1579,26 @@ test("L06 Fatia C: estoque, reserva, ativo/serial, entrega/devolução, requisi�
     await page.goto(`${baseUrl}/admin/patrimonio`, { waitUntil: "networkidle" });
 
     // Título e tabela de produtos
+    await waitForTabRead(page, "produtos");
     let content = await page.textContent("body");
     assert.match(content || "", /Patrimônio, Almoxarifado e Ativos/, "patrimonio workspace rendered");
     assert.match(content || "", /RAD-VHF-001/, "product SKU rendered in table");
 
     // Aba Reservas
     await page.click("button:has-text('Reservas Operacionais')");
-    await page.waitForTimeout(500);
+    await waitForTabRead(page, "reservas");
     content = await page.textContent("body");
     assert.match(content || "", /Reservas de Estoque/, "reservations tab rendered");
 
     // Aba Ativos Serializados
     await page.click("button:has-text('Ativos Serializados')");
-    await page.waitForTimeout(500);
+    await waitForTabRead(page, "ativos");
     content = await page.textContent("body");
     assert.match(content || "", /SER-RAD-2026-0001/, "serialized asset rendered");
 
     // Aba Requisições
     await page.click("button:has-text('Requisições Internas')");
-    await page.waitForTimeout(500);
+    await waitForTabRead(page, "requisicoes");
     content = await page.textContent("body");
     assert.match(content || "", /REQ-AST-/, "requisition protocol rendered");
   } finally {
