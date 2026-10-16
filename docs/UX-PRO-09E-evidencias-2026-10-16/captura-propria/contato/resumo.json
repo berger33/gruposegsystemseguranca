@@ -1,0 +1,3644 @@
+{
+  "stage": "ux-pro-09e-antes",
+  "generatedBy": "scripts/ux-evidence-capture.mjs (isolated output copy)",
+  "baseMain": "4a4b614b08046f93c59e44f9502218b0d9e47244",
+  "date": "2026-10-16",
+  "route": "/contato",
+  "limitations": [
+    "Chromium headless Linux; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.",
+    "Contraste só é computado quando cor de fundo sólida é resolvida; gradientes/imagens/camadas complexas ficam indeterminados.",
+    "Rede externa bloqueada no sandbox; recursos externos podem divergir.",
+    "Sem leitor de tela, zoom 200%, teste humano/UAT ou declaração de conformidade WCAG. Nenhum formulário foi enviado.",
+    "Banco descartável e ambiente local sem sessão; rota de aceite usa token sintético inválido, não um token real."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "contato",
+      "viewportName": "w320-day",
+      "route": "/contato",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/contato/ux-pro-09e-contato-320-day.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Contato claro — PUB-02 / PUB-03"
+          },
+          {
+            "level": 2,
+            "text": "Assistente de dúvidas"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 2429,
+        "states": {
+          "loading": false,
+          "empty": true,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 26,
+          "resolvedCount": 10,
+          "indeterminateCount": 16,
+          "under45": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "20px",
+              "fontWeight": "700",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1607,
+                "width": 196,
+                "height": 54
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1809,
+                "width": 184,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1842,
+                "width": 159,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1875,
+                "width": 96,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1908,
+                "width": 119,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 2160,
+                "width": 196,
+                "height": 64
+              },
+              "classes": "",
+              "context": "form"
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "20px",
+              "fontWeight": "700",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1607,
+                "width": 196,
+                "height": 54
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1809,
+                "width": 184,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1842,
+                "width": 159,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1875,
+                "width": 96,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1908,
+                "width": 119,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 2160,
+                "width": 196,
+                "height": 64
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "button",
+              "text": "Enviar pedido (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 40,
+                "y": 1501,
+                "width": 240,
+                "height": 64
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "p",
+              "text": "Respostas baseadas apenas em conteúdo público aprovado.",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "12px",
+              "fontWeight": "400",
+              "lineHeight": "18px",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1805,
+                "width": 196,
+                "height": 36
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "label",
+              "text": "Pergunta para Assistente de dúvidas",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "13px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1951,
+                "width": 196,
+                "height": 36
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "p",
+              "text": "Entre 5 e 500 caracteres — o mesmo limite aceito pelo servidor. Pergun",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "0.75",
+              "rect": {
+                "x": 62,
+                "y": 2090,
+                "width": 196,
+                "height": 60
+              },
+              "classes": "",
+              "context": "form"
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "input",
+        "text": "",
+        "outline": "auto"
+      },
+      "problems": [
+        "rolagem horizontal do documento: 343 > 320 (br@343px)"
+      ],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "contato",
+      "viewportName": "w320-night",
+      "route": "/contato",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/contato/ux-pro-09e-contato-320-night.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Contato claro — PUB-02 / PUB-03"
+          },
+          {
+            "level": 2,
+            "text": "Assistente de dúvidas"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 2429,
+        "states": {
+          "loading": false,
+          "empty": true,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 26,
+          "resolvedCount": 10,
+          "indeterminateCount": 16,
+          "under45": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "20px",
+              "fontWeight": "700",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1607,
+                "width": 196,
+                "height": 54
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1809,
+                "width": 184,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1842,
+                "width": 159,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1875,
+                "width": 96,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1908,
+                "width": 119,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 2160,
+                "width": 196,
+                "height": 64
+              },
+              "classes": "",
+              "context": "form"
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "20px",
+              "fontWeight": "700",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1607,
+                "width": 196,
+                "height": 54
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1809,
+                "width": 184,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1842,
+                "width": 159,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1875,
+                "width": 96,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1908,
+                "width": 119,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 2160,
+                "width": 196,
+                "height": 64
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "button",
+              "text": "Enviar pedido (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 40,
+                "y": 1501,
+                "width": 240,
+                "height": 64
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "p",
+              "text": "Respostas baseadas apenas em conteúdo público aprovado.",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "12px",
+              "fontWeight": "400",
+              "lineHeight": "18px",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1805,
+                "width": 196,
+                "height": 36
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "label",
+              "text": "Pergunta para Assistente de dúvidas",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "13px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1951,
+                "width": 196,
+                "height": 36
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "p",
+              "text": "Entre 5 e 500 caracteres — o mesmo limite aceito pelo servidor. Pergun",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "0.75",
+              "rect": {
+                "x": 62,
+                "y": 2090,
+                "width": 196,
+                "height": 60
+              },
+              "classes": "",
+              "context": "form"
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "input",
+        "text": "",
+        "outline": "auto"
+      },
+      "problems": [
+        "rolagem horizontal do documento: 343 > 320 (br@343px)"
+      ],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "contato",
+      "viewportName": "w390-day",
+      "route": "/contato",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/contato/ux-pro-09e-contato-390-day.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Contato claro — PUB-02 / PUB-03"
+          },
+          {
+            "level": 2,
+            "text": "Assistente de dúvidas"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 2429,
+        "states": {
+          "loading": false,
+          "empty": true,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 26,
+          "resolvedCount": 10,
+          "indeterminateCount": 16,
+          "under45": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "20px",
+              "fontWeight": "700",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1467,
+                "width": 259,
+                "height": 27
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1610,
+                "width": 184,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1643,
+                "width": 159,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 227,
+                "y": 1643,
+                "width": 96,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1676,
+                "width": 119,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1895,
+                "width": 246,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "20px",
+              "fontWeight": "700",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1467,
+                "width": 259,
+                "height": 27
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1610,
+                "width": 184,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1643,
+                "width": 159,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 227,
+                "y": 1643,
+                "width": 96,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1676,
+                "width": 119,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1895,
+                "width": 246,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "button",
+              "text": "Enviar pedido (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 40,
+                "y": 1383,
+                "width": 310,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "p",
+              "text": "Respostas baseadas apenas em conteúdo público aprovado.",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "12px",
+              "fontWeight": "400",
+              "lineHeight": "18px",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1606,
+                "width": 266,
+                "height": 36
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "label",
+              "text": "Pergunta para Assistente de dúvidas",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "13px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1719,
+                "width": 266,
+                "height": 18
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "p",
+              "text": "Entre 5 e 500 caracteres — o mesmo limite aceito pelo servidor. Pergun",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "0.75",
+              "rect": {
+                "x": 62,
+                "y": 1840,
+                "width": 266,
+                "height": 45
+              },
+              "classes": "",
+              "context": "form"
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "input",
+        "text": "",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "contato",
+      "viewportName": "w390-night",
+      "route": "/contato",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/contato/ux-pro-09e-contato-390-night.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Contato claro — PUB-02 / PUB-03"
+          },
+          {
+            "level": 2,
+            "text": "Assistente de dúvidas"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 2429,
+        "states": {
+          "loading": false,
+          "empty": true,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 26,
+          "resolvedCount": 10,
+          "indeterminateCount": 16,
+          "under45": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "20px",
+              "fontWeight": "700",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1467,
+                "width": 259,
+                "height": 27
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1610,
+                "width": 184,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1643,
+                "width": 159,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 227,
+                "y": 1643,
+                "width": 96,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1676,
+                "width": 119,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1895,
+                "width": 246,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "20px",
+              "fontWeight": "700",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1467,
+                "width": 259,
+                "height": 27
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1610,
+                "width": 184,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1643,
+                "width": 159,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 227,
+                "y": 1643,
+                "width": 96,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1676,
+                "width": 119,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1895,
+                "width": 246,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "button",
+              "text": "Enviar pedido (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 40,
+                "y": 1383,
+                "width": 310,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "p",
+              "text": "Respostas baseadas apenas em conteúdo público aprovado.",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "12px",
+              "fontWeight": "400",
+              "lineHeight": "18px",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1606,
+                "width": 266,
+                "height": 36
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "label",
+              "text": "Pergunta para Assistente de dúvidas",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "13px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1719,
+                "width": 266,
+                "height": 18
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "p",
+              "text": "Entre 5 e 500 caracteres — o mesmo limite aceito pelo servidor. Pergun",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "0.75",
+              "rect": {
+                "x": 62,
+                "y": 1840,
+                "width": 266,
+                "height": 45
+              },
+              "classes": "",
+              "context": "form"
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "input",
+        "text": "",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "contato",
+      "viewportName": "w768-day",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/contato/ux-pro-09e-contato-768-day.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Contato claro — PUB-02 / PUB-03"
+          },
+          {
+            "level": 2,
+            "text": "Assistente de dúvidas"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 2429,
+        "states": {
+          "loading": false,
+          "empty": true,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 26,
+          "resolvedCount": 10,
+          "indeterminateCount": 16,
+          "under45": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "20px",
+              "fontWeight": "700",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1112,
+                "width": 259,
+                "height": 27
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1205,
+                "width": 184,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 252,
+                "y": 1205,
+                "width": 159,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 417,
+                "y": 1205,
+                "width": 96,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 518,
+                "y": 1205,
+                "width": 119,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1394,
+                "width": 246,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "20px",
+              "fontWeight": "700",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1112,
+                "width": 259,
+                "height": 27
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1205,
+                "width": 184,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 252,
+                "y": 1205,
+                "width": 159,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 417,
+                "y": 1205,
+                "width": 96,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 518,
+                "y": 1205,
+                "width": 119,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1394,
+                "width": 246,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "button",
+              "text": "Enviar pedido (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 40,
+                "y": 1028,
+                "width": 688,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "p",
+              "text": "Respostas baseadas apenas em conteúdo público aprovado.",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "12px",
+              "fontWeight": "400",
+              "lineHeight": "18px",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1201,
+                "width": 644,
+                "height": 18
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "label",
+              "text": "Pergunta para Assistente de dúvidas",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "13px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1248,
+                "width": 644,
+                "height": 18
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "p",
+              "text": "Entre 5 e 500 caracteres — o mesmo limite aceito pelo servidor. Pergun",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "0.75",
+              "rect": {
+                "x": 62,
+                "y": 1369,
+                "width": 644,
+                "height": 15
+              },
+              "classes": "",
+              "context": "form"
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "input",
+        "text": "",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "contato",
+      "viewportName": "w768-night",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/contato/ux-pro-09e-contato-768-night.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Contato claro — PUB-02 / PUB-03"
+          },
+          {
+            "level": 2,
+            "text": "Assistente de dúvidas"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 2429,
+        "states": {
+          "loading": false,
+          "empty": true,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 26,
+          "resolvedCount": 10,
+          "indeterminateCount": 16,
+          "under45": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "20px",
+              "fontWeight": "700",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1112,
+                "width": 259,
+                "height": 27
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1205,
+                "width": 184,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 252,
+                "y": 1205,
+                "width": 159,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 417,
+                "y": 1205,
+                "width": 96,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 518,
+                "y": 1205,
+                "width": 119,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1394,
+                "width": 246,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "20px",
+              "fontWeight": "700",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1112,
+                "width": 259,
+                "height": 27
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1205,
+                "width": 184,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 252,
+                "y": 1205,
+                "width": 159,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 417,
+                "y": 1205,
+                "width": 96,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 518,
+                "y": 1205,
+                "width": 119,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1394,
+                "width": 246,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "button",
+              "text": "Enviar pedido (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 40,
+                "y": 1028,
+                "width": 688,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "p",
+              "text": "Respostas baseadas apenas em conteúdo público aprovado.",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "12px",
+              "fontWeight": "400",
+              "lineHeight": "18px",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1201,
+                "width": 644,
+                "height": 18
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "label",
+              "text": "Pergunta para Assistente de dúvidas",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "13px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 62,
+                "y": 1248,
+                "width": 644,
+                "height": 18
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "p",
+              "text": "Entre 5 e 500 caracteres — o mesmo limite aceito pelo servidor. Pergun",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "0.75",
+              "rect": {
+                "x": 62,
+                "y": 1369,
+                "width": 644,
+                "height": 15
+              },
+              "classes": "",
+              "context": "form"
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "input",
+        "text": "",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "contato",
+      "viewportName": "w1440-day",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/contato/ux-pro-09e-contato-1440-day.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Contato claro — PUB-02 / PUB-03"
+          },
+          {
+            "level": 2,
+            "text": "Assistente de dúvidas"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 2429,
+        "states": {
+          "loading": false,
+          "empty": true,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 26,
+          "resolvedCount": 10,
+          "indeterminateCount": 16,
+          "under45": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "20px",
+              "fontWeight": "700",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 332,
+                "y": 1090,
+                "width": 259,
+                "height": 27
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 332,
+                "y": 1183,
+                "width": 184,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 522,
+                "y": 1183,
+                "width": 159,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 687,
+                "y": 1183,
+                "width": 96,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 788,
+                "y": 1183,
+                "width": 119,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 332,
+                "y": 1372,
+                "width": 246,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "20px",
+              "fontWeight": "700",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 332,
+                "y": 1090,
+                "width": 259,
+                "height": 27
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 332,
+                "y": 1183,
+                "width": 184,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 522,
+                "y": 1183,
+                "width": 159,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 687,
+                "y": 1183,
+                "width": 96,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 788,
+                "y": 1183,
+                "width": 119,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 332,
+                "y": 1372,
+                "width": 246,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "button",
+              "text": "Enviar pedido (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 310,
+                "y": 1006,
+                "width": 820,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "p",
+              "text": "Respostas baseadas apenas em conteúdo público aprovado.",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "12px",
+              "fontWeight": "400",
+              "lineHeight": "18px",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 332,
+                "y": 1179,
+                "width": 776,
+                "height": 18
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "label",
+              "text": "Pergunta para Assistente de dúvidas",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "13px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 332,
+                "y": 1226,
+                "width": 776,
+                "height": 18
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "p",
+              "text": "Entre 5 e 500 caracteres — o mesmo limite aceito pelo servidor. Pergun",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "0.75",
+              "rect": {
+                "x": 332,
+                "y": 1347,
+                "width": 776,
+                "height": 15
+              },
+              "classes": "",
+              "context": "form"
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "input",
+        "text": "",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "contato",
+      "viewportName": "w1440-night",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/contato/ux-pro-09e-contato-1440-night.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Contato claro — PUB-02 / PUB-03"
+          },
+          {
+            "level": 2,
+            "text": "Assistente de dúvidas"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 2429,
+        "states": {
+          "loading": false,
+          "empty": true,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 26,
+          "resolvedCount": 10,
+          "indeterminateCount": 16,
+          "under45": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "20px",
+              "fontWeight": "700",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 332,
+                "y": 1090,
+                "width": 259,
+                "height": 27
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 332,
+                "y": 1183,
+                "width": 184,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 522,
+                "y": 1183,
+                "width": 159,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 687,
+                "y": 1183,
+                "width": 96,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 788,
+                "y": 1183,
+                "width": 119,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 332,
+                "y": 1372,
+                "width": 246,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "20px",
+              "fontWeight": "700",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 332,
+                "y": 1090,
+                "width": 259,
+                "height": 27
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 332,
+                "y": 1183,
+                "width": 184,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 522,
+                "y": 1183,
+                "width": 159,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 687,
+                "y": 1183,
+                "width": 96,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 788,
+                "y": 1183,
+                "width": 119,
+                "height": 27
+              },
+              "classes": "rag-suggestion",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 332,
+                "y": 1372,
+                "width": 246,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "button",
+              "text": "Enviar pedido (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 310,
+                "y": 1006,
+                "width": 820,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "p",
+              "text": "Respostas baseadas apenas em conteúdo público aprovado.",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "12px",
+              "fontWeight": "400",
+              "lineHeight": "18px",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 332,
+                "y": 1179,
+                "width": 776,
+                "height": 18
+              },
+              "classes": "",
+              "context": "section.rag-widget"
+            },
+            {
+              "tag": "label",
+              "text": "Pergunta para Assistente de dúvidas",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "13px",
+              "fontWeight": "600",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 332,
+                "y": 1226,
+                "width": 776,
+                "height": 18
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "p",
+              "text": "Entre 5 e 500 caracteres — o mesmo limite aceito pelo servidor. Pergun",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true,
+              "fontSize": "11px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "0.75",
+              "rect": {
+                "x": 332,
+                "y": 1347,
+                "width": 776,
+                "height": 15
+              },
+              "classes": "",
+              "context": "form"
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "input",
+        "text": "",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    }
+  ]
+}

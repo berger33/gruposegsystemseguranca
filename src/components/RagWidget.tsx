@@ -47,14 +47,10 @@ const RAG_COLORS: Record<string, { border: string; bg: string; accent: string; l
   cliente: { border: "#0b5fff", bg: "#eff6ff", accent: "#0b5fff", light: "#dbeafe" },
   rh: { border: "#059669", bg: "#ecfdf5", accent: "#059669", light: "#d1fae5" },
   marcelo: { border: "#7c3aed", bg: "#f5f3ff", accent: "#7c3aed", light: "#ede9fe" },
-  // UX-PRO-09E: o escopo público é o único do site público e tinha as 6 amostras
-  // de contraste <4,5:1 medidas pelo 09B em /contato (título, quatro sugestões e
-  // o botão de envio sobre #ea580c, entre 3,11:1 e 3,56:1). O acento desce uma
-  // etapa da mesma família de laranja para #c2410c, que resolve >=4,5:1 nos quatro
-  // papéis do widget (texto sobre o fundo do cartão, sobre o branco das sugestões,
-  // sobre a pílula `light` e como fundo do texto branco do botão). Os demais
-  // escopos são áreas privadas medidas por outros gates e ficam intactos.
-  publico: { border: "#c2410c", bg: "#fff7ed", accent: "#c2410c", light: "#ffedd5" },
+  // UX-PRO-09E: manter o acento de identidade pública no título grande e nos
+  // demais papéis fora do escopo. Só as sugestões e o envio, alvos medidos,
+  // usam abaixo um acento interativo separado e mais escuro.
+  publico: { border: "#ea580c", bg: "#fff7ed", accent: "#ea580c", light: "#ffedd5" },
 };
 
 const SUGGESTIONS: Record<string, string[]> = {
@@ -95,6 +91,7 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
   const requestSeq = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   const colors = RAG_COLORS[ragKey] || RAG_COLORS.publico;
+  const interactiveAccent = ragKey === "publico" ? "#c2410c" : colors.accent;
   const scopeLabel = ragScopeLabel(ragKey);
   // Keep the day palette unchanged while allowing the administrative night
   // theme to replace the visual roles without changing the RAG scope colors
@@ -103,6 +100,7 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
     "--rag-border": colors.border,
     "--rag-bg": colors.bg,
     "--rag-accent": colors.accent,
+    "--rag-interactive-accent": interactiveAccent,
     "--rag-light": colors.light,
     "--rag-accent-contrast": "#fff",
     "--rag-control-bg": "#fff",
@@ -249,7 +247,7 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
             data-testid={`rag-suggestion-${i}`}
             disabled={phase === "loading"}
             onClick={() => { setQuery(s); ask(s); }}
-            style={{ border: "1px solid var(--rag-border)", color: "var(--rag-accent)", opacity: phase === "loading" ? 0.6 : 1 }}
+            style={{ border: "1px solid var(--rag-border)", color: "var(--rag-interactive-accent)", opacity: phase === "loading" ? 0.6 : 1 }}
           >
             {s}
           </button>
@@ -281,7 +279,7 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
             type="submit"
             data-testid="rag-submit"
             disabled={phase === "loading"}
-            style={{ padding: "10px 18px", background: "var(--rag-accent)", color: "var(--rag-accent-contrast)", border: "none", borderRadius: 8, fontWeight: 600, cursor: phase === "loading" ? "not-allowed" : "pointer", opacity: phase === "loading" ? 0.7 : 1, display: "flex", alignItems: "center", gap: 8 }}
+            style={{ padding: "10px 18px", background: "var(--rag-interactive-accent)", color: "var(--rag-accent-contrast)", border: "none", borderRadius: 8, fontWeight: 600, cursor: phase === "loading" ? "not-allowed" : "pointer", opacity: phase === "loading" ? 0.7 : 1, display: "flex", alignItems: "center", gap: 8 }}
           >
             {phase === "loading" ? (<><span className="rag-spin" aria-hidden="true" /> Consultando base e modelo local…</>) : `Perguntar à base ${ragKey.toUpperCase()}`}
           </button>

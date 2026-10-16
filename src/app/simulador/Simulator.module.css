@@ -165,11 +165,9 @@
   border-radius: 50%;
   background: #eef4fa;
   font: 800 11px/1 'Manrope', sans-serif;
-  /* UX-PRO-09E: o número da etapa pertence à amostra medida do <li> ("01Seu
-     espaço"); a #8397a8 ficava em 2,72:1 sobre a bolha #eef4fa. Sem escurecer o
-     número, a amostra passaria a medir bem enquanto o pixel continuaria ruim,
-     então o badge acompanha o rótulo. */
-  color: var(--muted);
+  /* Os números em span não fazem parte das 104 amostras autorizadas; preservar
+     a cor original, sem ampliar a correção de contraste a este elemento. */
+  color: #8397a8;
 }
 
 .steps li small {

@@ -296,6 +296,7 @@ const STAGES = {
     outputDir: process.env.UX_EVIDENCE_09E_DIR || 'docs/UX-PRO-09E-evidencias-2026-10-16',
     publicDiagnostic: true,
     attributeTextOverflow: true,
+    fullContrastSamples: true,
     viewports: [320, 390, 768, 1440].flatMap(width => ['day', 'night'].map(theme => ({
       name: `w${width}-${theme}`, width, height: width >= 768 ? (width === 768 ? 1024 : 900) : (width === 320 ? 780 : 844), theme,
     }))),
@@ -707,7 +708,7 @@ try {
         });
         if (!focus) problems.push('Tab não moveu o foco para nenhum elemento');
 
-        const publicAudit = plan.publicDiagnostic ? await page.evaluate(() => {
+        const publicAudit = plan.publicDiagnostic ? await page.evaluate(includeContrastSamples => {
           const visible = el => { const r = el.getBoundingClientRect(), s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none'; };
           const color = value => { const m = value.match(/[\d.]+/g); return m && m.length >= 3 ? {rgb:m.slice(0,3).map(Number), alpha:m.length > 3 ? Number(m[3]) : 1} : null; };
           const luminance = c => { const v = c.map(x => { x /= 255; return x <= .04045 ? x / 12.92 : ((x + .055) / 1.055) ** 2.4; }); return .2126*v[0]+.7152*v[1]+.0722*v[2]; };
@@ -733,8 +734,21 @@ try {
           const text = (document.body?.innerText || '').slice(0,12000);
           const headings = [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].filter(visible).map(e=>({level:Number(e.tagName.slice(1)),text:(e.innerText||'').trim().slice(0,120)}));
           const landmarks = [...document.querySelectorAll('main,nav,header,footer,[role=main],[role=navigation]')].filter(visible).map(e=>e.tagName.toLowerCase()+(e.getAttribute('aria-label') ? `[aria-label=${e.getAttribute('aria-label')}]` : ''));
-          return {title:document.title, headings, landmarks, visibleTextLength:text.trim().length, states:{loading:/carregando|loading/i.test(text),empty:/nenhum(a)? .*encontrad|sem .*publicad|nenhum conteúdo|nenhum resultado/i.test(text),failure:/erro ao|falha ao|indisponível|não foi possível/i.test(text)}, contrast:{sampleCount:ratios.length,resolvedCount:ratios.filter(x=>x.ratio!==null).length,indeterminateCount:ratios.filter(x=>x.ratio===null).length,under45:ratios.filter(x=>x.ratio!==null && x.ratio<4.5).slice(0,30),lowest:ratios.filter(x=>x.ratio!==null).sort((a,b)=>a.ratio-b.ratio).slice(0,10)}, focusables:document.querySelectorAll('a[href],button,input,select,textarea,[tabindex]:not([tabindex="-1"])').length};
-        }) : null;
+          const contrast = {
+            sampleCount: ratios.length,
+            resolvedCount: ratios.filter(x => x.ratio !== null).length,
+            indeterminateCount: ratios.filter(x => x.ratio === null).length,
+            under45: ratios.filter(x => x.ratio !== null && x.ratio < 4.5).slice(0, 30),
+            lowest: ratios.filter(x => x.ratio !== null).sort((a, b) => a.ratio - b.ratio).slice(0, 10),
+          };
+          if (includeContrastSamples) contrast.samples = ratios;
+          return {
+            title: document.title, headings, landmarks, visibleTextLength: text.trim().length,
+            states: { loading: /carregando|loading/i.test(text), empty: /nenhum(a)? .*encontrad|sem .*publicad|nenhum conteúdo|nenhum resultado/i.test(text), failure: /erro ao|falha ao|indisponível|não foi possível/i.test(text) },
+            contrast,
+            focusables: document.querySelectorAll('a[href],button,input,select,textarea,[tabindex]:not([tabindex="-1"])').length,
+          };
+        }, plan.fullContrastSamples === true) : null;
         const measurements = plan.measurements ? {
           ...await measureKeyboard(page, target),
           theme: await measureTheme(page, target, viewport.theme),

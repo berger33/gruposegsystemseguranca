@@ -1,0 +1,3310 @@
+{
+  "stage": "ux-pro-09e",
+  "generatedBy": "scripts/ux-evidence-capture.mjs",
+  "route": "/faq",
+  "limitations": [
+    "Chromium headless Linux; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.",
+    "Contraste só é computado quando cor de fundo sólida é resolvida; gradientes/imagens/camadas complexas ficam indeterminados.",
+    "Rede externa bloqueada no sandbox; recursos externos podem divergir.",
+    "Sem leitor de tela, zoom 200%, teste humano/UAT ou declaração de conformidade WCAG. Nenhum formulário foi enviado.",
+    "Banco descartável e ambiente local sem sessão; rota de aceite usa token sintético inválido, não um token real."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-09e",
+      "route": "/faq",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/faq/w320-day-faq.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "FAQ — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "FAQ revisada — PUB-02"
+          },
+          {
+            "level": 2,
+            "text": "Contato claro"
+          },
+          {
+            "level": 2,
+            "text": "Pergunte à nossa base de respostas"
+          },
+          {
+            "level": 2,
+            "text": "Acessibilidade, navegação e desempenho — PUB-02"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1770,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 10,
+          "indeterminateCount": 14,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "/contato",
+              "ratio": 4.75,
+              "foreground": "rgb(11, 95, 255)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Consultar FAQ",
+              "ratio": 18.26,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                239,
+                239
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Contato claro",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Endereço: Av. Armando Bei, 305 - Sala 01, Vila Nova Bonsucesso, Guarul",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Oferecemos seis serviços validados: Segurança Desarmada, Monitoramento",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Você pode solicitar orçamento pelo site em /orcamento ou /simulador, i",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "A visita tem estados: solicitada, em agendamento, confirmada, realizad",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não. O site não exibe preços fictícios. O orçamento é elaborado após q",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Tratamos dados com minimização: nome, telefone, cidade/bairro, tipo de",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Atendemos principalmente Guarulhos e região metropolitana de São Paulo",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "FAQ revisada — PUB-02",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Perguntas frequentes revisadas, com contato claro, sem invenção de pre",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Oferecemos seis serviços validados: Segurança Desarmada, Monitoramento",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Você pode solicitar orçamento pelo site em /orcamento ou /simulador, i",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "A visita tem estados: solicitada, em agendamento, confirmada, realizad",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não. O site não exibe preços fictícios. O orçamento é elaborado após q",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Tratamos dados com minimização: nome, telefone, cidade/bairro, tipo de",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Atendemos principalmente Guarulhos e região metropolitana de São Paulo",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Contato claro",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Endereço: Av. Armando Bei, 305 - Sala 01, Vila Nova Bonsucesso, Guarul",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "/contato",
+              "ratio": 4.75,
+              "foreground": "rgb(11, 95, 255)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Pergunte à nossa base de respostas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Respostas revisadas pela equipe. Valores, cobertura e prazos dependem ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Sua pergunta",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Consultar FAQ",
+              "ratio": 18.26,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                239,
+                239
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Acessibilidade, navegação e desempenho — PUB-02",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Navegação consistente, breadcrumbs, estados vazios explicam próxima aç",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Sem termos técnicos de implantação em jornadas de negócio",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Imagens e cases autorizados apenas quando houver autorização formal em",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "SEO técnico, títulos, sitemap, redirects e verificação de domínio na l",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Montador de pacote/comparador somente a partir de catálogo e regras ap",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Segmentos validados: /segmentos condominios, empresas, industrias com ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "/segmentos",
+              "ratio": null,
+              "foreground": "rgb(11, 95, 255)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "FAQ assistida PUB-05: bot não inventa preço/cobertura/licença/prazo, t",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 4
+      },
+      "firstFocus": {
+        "tag": "summary",
+        "text": "Quais serviços a SEG System oferece? [servicos]",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/faq",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/faq/w320-night-faq.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "FAQ — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "FAQ revisada — PUB-02"
+          },
+          {
+            "level": 2,
+            "text": "Contato claro"
+          },
+          {
+            "level": 2,
+            "text": "Pergunte à nossa base de respostas"
+          },
+          {
+            "level": 2,
+            "text": "Acessibilidade, navegação e desempenho — PUB-02"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1770,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 10,
+          "indeterminateCount": 14,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "/contato",
+              "ratio": 4.75,
+              "foreground": "rgb(11, 95, 255)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Consultar FAQ",
+              "ratio": 18.26,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                239,
+                239
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Contato claro",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Endereço: Av. Armando Bei, 305 - Sala 01, Vila Nova Bonsucesso, Guarul",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Oferecemos seis serviços validados: Segurança Desarmada, Monitoramento",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Você pode solicitar orçamento pelo site em /orcamento ou /simulador, i",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "A visita tem estados: solicitada, em agendamento, confirmada, realizad",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não. O site não exibe preços fictícios. O orçamento é elaborado após q",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Tratamos dados com minimização: nome, telefone, cidade/bairro, tipo de",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Atendemos principalmente Guarulhos e região metropolitana de São Paulo",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "FAQ revisada — PUB-02",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Perguntas frequentes revisadas, com contato claro, sem invenção de pre",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Oferecemos seis serviços validados: Segurança Desarmada, Monitoramento",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Você pode solicitar orçamento pelo site em /orcamento ou /simulador, i",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "A visita tem estados: solicitada, em agendamento, confirmada, realizad",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não. O site não exibe preços fictícios. O orçamento é elaborado após q",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Tratamos dados com minimização: nome, telefone, cidade/bairro, tipo de",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Atendemos principalmente Guarulhos e região metropolitana de São Paulo",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Contato claro",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Endereço: Av. Armando Bei, 305 - Sala 01, Vila Nova Bonsucesso, Guarul",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "/contato",
+              "ratio": 4.75,
+              "foreground": "rgb(11, 95, 255)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Pergunte à nossa base de respostas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Respostas revisadas pela equipe. Valores, cobertura e prazos dependem ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Sua pergunta",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Consultar FAQ",
+              "ratio": 18.26,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                239,
+                239
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Acessibilidade, navegação e desempenho — PUB-02",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Navegação consistente, breadcrumbs, estados vazios explicam próxima aç",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Sem termos técnicos de implantação em jornadas de negócio",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Imagens e cases autorizados apenas quando houver autorização formal em",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "SEO técnico, títulos, sitemap, redirects e verificação de domínio na l",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Montador de pacote/comparador somente a partir de catálogo e regras ap",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Segmentos validados: /segmentos condominios, empresas, industrias com ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "/segmentos",
+              "ratio": null,
+              "foreground": "rgb(11, 95, 255)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "FAQ assistida PUB-05: bot não inventa preço/cobertura/licença/prazo, t",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 4
+      },
+      "firstFocus": {
+        "tag": "summary",
+        "text": "Quais serviços a SEG System oferece? [servicos]",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/faq",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/faq/w390-day-faq.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "FAQ — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "FAQ revisada — PUB-02"
+          },
+          {
+            "level": 2,
+            "text": "Contato claro"
+          },
+          {
+            "level": 2,
+            "text": "Pergunte à nossa base de respostas"
+          },
+          {
+            "level": 2,
+            "text": "Acessibilidade, navegação e desempenho — PUB-02"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1770,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 10,
+          "indeterminateCount": 14,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "/contato",
+              "ratio": 4.75,
+              "foreground": "rgb(11, 95, 255)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Consultar FAQ",
+              "ratio": 18.26,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                239,
+                239
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Contato claro",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Endereço: Av. Armando Bei, 305 - Sala 01, Vila Nova Bonsucesso, Guarul",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Oferecemos seis serviços validados: Segurança Desarmada, Monitoramento",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Você pode solicitar orçamento pelo site em /orcamento ou /simulador, i",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "A visita tem estados: solicitada, em agendamento, confirmada, realizad",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não. O site não exibe preços fictícios. O orçamento é elaborado após q",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Tratamos dados com minimização: nome, telefone, cidade/bairro, tipo de",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Atendemos principalmente Guarulhos e região metropolitana de São Paulo",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "FAQ revisada — PUB-02",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Perguntas frequentes revisadas, com contato claro, sem invenção de pre",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Oferecemos seis serviços validados: Segurança Desarmada, Monitoramento",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Você pode solicitar orçamento pelo site em /orcamento ou /simulador, i",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "A visita tem estados: solicitada, em agendamento, confirmada, realizad",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não. O site não exibe preços fictícios. O orçamento é elaborado após q",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Tratamos dados com minimização: nome, telefone, cidade/bairro, tipo de",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Atendemos principalmente Guarulhos e região metropolitana de São Paulo",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Contato claro",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Endereço: Av. Armando Bei, 305 - Sala 01, Vila Nova Bonsucesso, Guarul",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "/contato",
+              "ratio": 4.75,
+              "foreground": "rgb(11, 95, 255)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Pergunte à nossa base de respostas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Respostas revisadas pela equipe. Valores, cobertura e prazos dependem ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Sua pergunta",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Consultar FAQ",
+              "ratio": 18.26,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                239,
+                239
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Acessibilidade, navegação e desempenho — PUB-02",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Navegação consistente, breadcrumbs, estados vazios explicam próxima aç",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Sem termos técnicos de implantação em jornadas de negócio",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Imagens e cases autorizados apenas quando houver autorização formal em",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "SEO técnico, títulos, sitemap, redirects e verificação de domínio na l",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Montador de pacote/comparador somente a partir de catálogo e regras ap",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Segmentos validados: /segmentos condominios, empresas, industrias com ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "/segmentos",
+              "ratio": null,
+              "foreground": "rgb(11, 95, 255)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "FAQ assistida PUB-05: bot não inventa preço/cobertura/licença/prazo, t",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 4
+      },
+      "firstFocus": {
+        "tag": "summary",
+        "text": "Quais serviços a SEG System oferece? [servicos]",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/faq",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/faq/w390-night-faq.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "FAQ — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "FAQ revisada — PUB-02"
+          },
+          {
+            "level": 2,
+            "text": "Contato claro"
+          },
+          {
+            "level": 2,
+            "text": "Pergunte à nossa base de respostas"
+          },
+          {
+            "level": 2,
+            "text": "Acessibilidade, navegação e desempenho — PUB-02"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1770,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 10,
+          "indeterminateCount": 14,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "/contato",
+              "ratio": 4.75,
+              "foreground": "rgb(11, 95, 255)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Consultar FAQ",
+              "ratio": 18.26,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                239,
+                239
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Contato claro",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Endereço: Av. Armando Bei, 305 - Sala 01, Vila Nova Bonsucesso, Guarul",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Oferecemos seis serviços validados: Segurança Desarmada, Monitoramento",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Você pode solicitar orçamento pelo site em /orcamento ou /simulador, i",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "A visita tem estados: solicitada, em agendamento, confirmada, realizad",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não. O site não exibe preços fictícios. O orçamento é elaborado após q",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Tratamos dados com minimização: nome, telefone, cidade/bairro, tipo de",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Atendemos principalmente Guarulhos e região metropolitana de São Paulo",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "FAQ revisada — PUB-02",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Perguntas frequentes revisadas, com contato claro, sem invenção de pre",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Oferecemos seis serviços validados: Segurança Desarmada, Monitoramento",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Você pode solicitar orçamento pelo site em /orcamento ou /simulador, i",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "A visita tem estados: solicitada, em agendamento, confirmada, realizad",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não. O site não exibe preços fictícios. O orçamento é elaborado após q",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Tratamos dados com minimização: nome, telefone, cidade/bairro, tipo de",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Atendemos principalmente Guarulhos e região metropolitana de São Paulo",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Contato claro",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Endereço: Av. Armando Bei, 305 - Sala 01, Vila Nova Bonsucesso, Guarul",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "/contato",
+              "ratio": 4.75,
+              "foreground": "rgb(11, 95, 255)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Pergunte à nossa base de respostas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Respostas revisadas pela equipe. Valores, cobertura e prazos dependem ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Sua pergunta",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Consultar FAQ",
+              "ratio": 18.26,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                239,
+                239
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Acessibilidade, navegação e desempenho — PUB-02",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Navegação consistente, breadcrumbs, estados vazios explicam próxima aç",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Sem termos técnicos de implantação em jornadas de negócio",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Imagens e cases autorizados apenas quando houver autorização formal em",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "SEO técnico, títulos, sitemap, redirects e verificação de domínio na l",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Montador de pacote/comparador somente a partir de catálogo e regras ap",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Segmentos validados: /segmentos condominios, empresas, industrias com ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "/segmentos",
+              "ratio": null,
+              "foreground": "rgb(11, 95, 255)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "FAQ assistida PUB-05: bot não inventa preço/cobertura/licença/prazo, t",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 4
+      },
+      "firstFocus": {
+        "tag": "summary",
+        "text": "Quais serviços a SEG System oferece? [servicos]",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/faq",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/faq/w768-day-faq.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "FAQ — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "FAQ revisada — PUB-02"
+          },
+          {
+            "level": 2,
+            "text": "Contato claro"
+          },
+          {
+            "level": 2,
+            "text": "Pergunte à nossa base de respostas"
+          },
+          {
+            "level": 2,
+            "text": "Acessibilidade, navegação e desempenho — PUB-02"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1770,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 10,
+          "indeterminateCount": 14,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "/contato",
+              "ratio": 4.75,
+              "foreground": "rgb(11, 95, 255)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Consultar FAQ",
+              "ratio": 18.26,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                239,
+                239
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Contato claro",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Endereço: Av. Armando Bei, 305 - Sala 01, Vila Nova Bonsucesso, Guarul",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Oferecemos seis serviços validados: Segurança Desarmada, Monitoramento",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Você pode solicitar orçamento pelo site em /orcamento ou /simulador, i",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "A visita tem estados: solicitada, em agendamento, confirmada, realizad",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não. O site não exibe preços fictícios. O orçamento é elaborado após q",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Tratamos dados com minimização: nome, telefone, cidade/bairro, tipo de",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Atendemos principalmente Guarulhos e região metropolitana de São Paulo",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "FAQ revisada — PUB-02",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Perguntas frequentes revisadas, com contato claro, sem invenção de pre",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Oferecemos seis serviços validados: Segurança Desarmada, Monitoramento",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Você pode solicitar orçamento pelo site em /orcamento ou /simulador, i",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "A visita tem estados: solicitada, em agendamento, confirmada, realizad",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não. O site não exibe preços fictícios. O orçamento é elaborado após q",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Tratamos dados com minimização: nome, telefone, cidade/bairro, tipo de",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Atendemos principalmente Guarulhos e região metropolitana de São Paulo",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Contato claro",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Endereço: Av. Armando Bei, 305 - Sala 01, Vila Nova Bonsucesso, Guarul",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "/contato",
+              "ratio": 4.75,
+              "foreground": "rgb(11, 95, 255)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Pergunte à nossa base de respostas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Respostas revisadas pela equipe. Valores, cobertura e prazos dependem ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Sua pergunta",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Consultar FAQ",
+              "ratio": 18.26,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                239,
+                239
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Acessibilidade, navegação e desempenho — PUB-02",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Navegação consistente, breadcrumbs, estados vazios explicam próxima aç",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Sem termos técnicos de implantação em jornadas de negócio",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Imagens e cases autorizados apenas quando houver autorização formal em",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "SEO técnico, títulos, sitemap, redirects e verificação de domínio na l",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Montador de pacote/comparador somente a partir de catálogo e regras ap",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Segmentos validados: /segmentos condominios, empresas, industrias com ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "/segmentos",
+              "ratio": null,
+              "foreground": "rgb(11, 95, 255)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "FAQ assistida PUB-05: bot não inventa preço/cobertura/licença/prazo, t",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 4
+      },
+      "firstFocus": {
+        "tag": "summary",
+        "text": "Quais serviços a SEG System oferece? [servicos]",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/faq",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/faq/w768-night-faq.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "FAQ — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "FAQ revisada — PUB-02"
+          },
+          {
+            "level": 2,
+            "text": "Contato claro"
+          },
+          {
+            "level": 2,
+            "text": "Pergunte à nossa base de respostas"
+          },
+          {
+            "level": 2,
+            "text": "Acessibilidade, navegação e desempenho — PUB-02"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1770,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 10,
+          "indeterminateCount": 14,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "/contato",
+              "ratio": 4.75,
+              "foreground": "rgb(11, 95, 255)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Consultar FAQ",
+              "ratio": 18.26,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                239,
+                239
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Contato claro",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Endereço: Av. Armando Bei, 305 - Sala 01, Vila Nova Bonsucesso, Guarul",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Oferecemos seis serviços validados: Segurança Desarmada, Monitoramento",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Você pode solicitar orçamento pelo site em /orcamento ou /simulador, i",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "A visita tem estados: solicitada, em agendamento, confirmada, realizad",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não. O site não exibe preços fictícios. O orçamento é elaborado após q",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Tratamos dados com minimização: nome, telefone, cidade/bairro, tipo de",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Atendemos principalmente Guarulhos e região metropolitana de São Paulo",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "FAQ revisada — PUB-02",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Perguntas frequentes revisadas, com contato claro, sem invenção de pre",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Oferecemos seis serviços validados: Segurança Desarmada, Monitoramento",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Você pode solicitar orçamento pelo site em /orcamento ou /simulador, i",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "A visita tem estados: solicitada, em agendamento, confirmada, realizad",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não. O site não exibe preços fictícios. O orçamento é elaborado após q",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Tratamos dados com minimização: nome, telefone, cidade/bairro, tipo de",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Atendemos principalmente Guarulhos e região metropolitana de São Paulo",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Contato claro",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Endereço: Av. Armando Bei, 305 - Sala 01, Vila Nova Bonsucesso, Guarul",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "/contato",
+              "ratio": 4.75,
+              "foreground": "rgb(11, 95, 255)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Pergunte à nossa base de respostas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Respostas revisadas pela equipe. Valores, cobertura e prazos dependem ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Sua pergunta",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Consultar FAQ",
+              "ratio": 18.26,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                239,
+                239
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Acessibilidade, navegação e desempenho — PUB-02",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Navegação consistente, breadcrumbs, estados vazios explicam próxima aç",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Sem termos técnicos de implantação em jornadas de negócio",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Imagens e cases autorizados apenas quando houver autorização formal em",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "SEO técnico, títulos, sitemap, redirects e verificação de domínio na l",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Montador de pacote/comparador somente a partir de catálogo e regras ap",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Segmentos validados: /segmentos condominios, empresas, industrias com ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "/segmentos",
+              "ratio": null,
+              "foreground": "rgb(11, 95, 255)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "FAQ assistida PUB-05: bot não inventa preço/cobertura/licença/prazo, t",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 4
+      },
+      "firstFocus": {
+        "tag": "summary",
+        "text": "Quais serviços a SEG System oferece? [servicos]",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/faq",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/faq/w1440-day-faq.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "FAQ — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "FAQ revisada — PUB-02"
+          },
+          {
+            "level": 2,
+            "text": "Contato claro"
+          },
+          {
+            "level": 2,
+            "text": "Pergunte à nossa base de respostas"
+          },
+          {
+            "level": 2,
+            "text": "Acessibilidade, navegação e desempenho — PUB-02"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1770,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 10,
+          "indeterminateCount": 14,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "/contato",
+              "ratio": 4.75,
+              "foreground": "rgb(11, 95, 255)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Consultar FAQ",
+              "ratio": 18.26,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                239,
+                239
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Contato claro",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Endereço: Av. Armando Bei, 305 - Sala 01, Vila Nova Bonsucesso, Guarul",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Oferecemos seis serviços validados: Segurança Desarmada, Monitoramento",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Você pode solicitar orçamento pelo site em /orcamento ou /simulador, i",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "A visita tem estados: solicitada, em agendamento, confirmada, realizad",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não. O site não exibe preços fictícios. O orçamento é elaborado após q",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Tratamos dados com minimização: nome, telefone, cidade/bairro, tipo de",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Atendemos principalmente Guarulhos e região metropolitana de São Paulo",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "FAQ revisada — PUB-02",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Perguntas frequentes revisadas, com contato claro, sem invenção de pre",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Oferecemos seis serviços validados: Segurança Desarmada, Monitoramento",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Você pode solicitar orçamento pelo site em /orcamento ou /simulador, i",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "A visita tem estados: solicitada, em agendamento, confirmada, realizad",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não. O site não exibe preços fictícios. O orçamento é elaborado após q",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Tratamos dados com minimização: nome, telefone, cidade/bairro, tipo de",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Atendemos principalmente Guarulhos e região metropolitana de São Paulo",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Contato claro",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Endereço: Av. Armando Bei, 305 - Sala 01, Vila Nova Bonsucesso, Guarul",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "/contato",
+              "ratio": 4.75,
+              "foreground": "rgb(11, 95, 255)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Pergunte à nossa base de respostas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Respostas revisadas pela equipe. Valores, cobertura e prazos dependem ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Sua pergunta",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Consultar FAQ",
+              "ratio": 18.26,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                239,
+                239
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Acessibilidade, navegação e desempenho — PUB-02",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Navegação consistente, breadcrumbs, estados vazios explicam próxima aç",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Sem termos técnicos de implantação em jornadas de negócio",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Imagens e cases autorizados apenas quando houver autorização formal em",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "SEO técnico, títulos, sitemap, redirects e verificação de domínio na l",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Montador de pacote/comparador somente a partir de catálogo e regras ap",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Segmentos validados: /segmentos condominios, empresas, industrias com ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "/segmentos",
+              "ratio": null,
+              "foreground": "rgb(11, 95, 255)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "FAQ assistida PUB-05: bot não inventa preço/cobertura/licença/prazo, t",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 4
+      },
+      "firstFocus": {
+        "tag": "summary",
+        "text": "Quais serviços a SEG System oferece? [servicos]",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/faq",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/faq/w1440-night-faq.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "FAQ — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "FAQ revisada — PUB-02"
+          },
+          {
+            "level": 2,
+            "text": "Contato claro"
+          },
+          {
+            "level": 2,
+            "text": "Pergunte à nossa base de respostas"
+          },
+          {
+            "level": 2,
+            "text": "Acessibilidade, navegação e desempenho — PUB-02"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1770,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 10,
+          "indeterminateCount": 14,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "/contato",
+              "ratio": 4.75,
+              "foreground": "rgb(11, 95, 255)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Consultar FAQ",
+              "ratio": 18.26,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                239,
+                239
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Contato claro",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Endereço: Av. Armando Bei, 305 - Sala 01, Vila Nova Bonsucesso, Guarul",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Oferecemos seis serviços validados: Segurança Desarmada, Monitoramento",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Você pode solicitar orçamento pelo site em /orcamento ou /simulador, i",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "A visita tem estados: solicitada, em agendamento, confirmada, realizad",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não. O site não exibe preços fictícios. O orçamento é elaborado após q",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Tratamos dados com minimização: nome, telefone, cidade/bairro, tipo de",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Atendemos principalmente Guarulhos e região metropolitana de São Paulo",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "FAQ revisada — PUB-02",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Perguntas frequentes revisadas, com contato claro, sem invenção de pre",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Oferecemos seis serviços validados: Segurança Desarmada, Monitoramento",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Você pode solicitar orçamento pelo site em /orcamento ou /simulador, i",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "A visita tem estados: solicitada, em agendamento, confirmada, realizad",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não. O site não exibe preços fictícios. O orçamento é elaborado após q",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Tratamos dados com minimização: nome, telefone, cidade/bairro, tipo de",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Atendemos principalmente Guarulhos e região metropolitana de São Paulo",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Contato claro",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Endereço: Av. Armando Bei, 305 - Sala 01, Vila Nova Bonsucesso, Guarul",
+              "ratio": 19.45,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "/contato",
+              "ratio": 4.75,
+              "foreground": "rgb(11, 95, 255)",
+              "background": [
+                240,
+                247,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Pergunte à nossa base de respostas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Respostas revisadas pela equipe. Valores, cobertura e prazos dependem ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Sua pergunta",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Consultar FAQ",
+              "ratio": 18.26,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                239,
+                239
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h2",
+              "text": "Acessibilidade, navegação e desempenho — PUB-02",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Navegação consistente, breadcrumbs, estados vazios explicam próxima aç",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Sem termos técnicos de implantação em jornadas de negócio",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Imagens e cases autorizados apenas quando houver autorização formal em",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "SEO técnico, títulos, sitemap, redirects e verificação de domínio na l",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Montador de pacote/comparador somente a partir de catálogo e regras ap",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "Segmentos validados: /segmentos condominios, empresas, industrias com ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "/segmentos",
+              "ratio": null,
+              "foreground": "rgb(11, 95, 255)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "li",
+              "text": "FAQ assistida PUB-05: bot não inventa preço/cobertura/licença/prazo, t",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 4
+      },
+      "firstFocus": {
+        "tag": "summary",
+        "text": "Quais serviços a SEG System oferece? [servicos]",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,2137 @@
+{
+  "stage": "ux-pro-09e-antes-visual",
+  "generatedBy": "scripts/ux-evidence-capture.mjs (isolated full-page context capture)",
+  "baseMain": "4a4b614b08046f93c59e44f9502218b0d9e47244",
+  "date": "2026-10-16",
+  "captureMode": "fullPage",
+  "route": "/simulador",
+  "limitations": [
+    "Chromium headless Linux; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.",
+    "Contraste só é computado quando cor de fundo sólida é resolvida; gradientes/imagens/camadas complexas ficam indeterminados.",
+    "Rede externa bloqueada no sandbox; recursos externos podem divergir.",
+    "Sem leitor de tela, zoom 200%, teste humano/UAT ou declaração de conformidade WCAG. Nenhum formulário foi enviado.",
+    "Banco descartável e ambiente local sem sessão; rota de aceite usa token sintético inválido, não um token real."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-09e-antes-visual",
+      "scenarioId": "simulador",
+      "viewportName": "w320-day",
+      "captureMode": "fullPage",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-320-day-full.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conte o que você precisa.\nA gente cuida do resto."
+          },
+          {
+            "level": 2,
+            "text": "Seu espaço"
+          },
+          {
+            "level": 2,
+            "text": "Sua solicitação"
+          }
+        ],
+        "landmarks": [
+          "header",
+          "nav[aria-label=Navegação do simulador]",
+          "main",
+          "footer"
+        ],
+        "visibleTextLength": 818,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 24,
+          "indeterminateCount": 0,
+          "under45": [
+            {
+              "tag": "li",
+              "text": "01Seu espaço",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "02O que você precisa",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "03Seus dados",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "04Revisão",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Resumo do que você está montando.",
+              "ratio": 3.17,
+              "foreground": "rgb(128, 147, 164)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Escolha o tipo de imóvel para começar.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Nenhum selecionado ainda.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "p",
+              "text": "Escolha o tipo de imóvel para começar.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Nenhum selecionado ainda.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "01Seu espaço",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "02O que você precisa",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "03Seus dados",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "04Revisão",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Resumo do que você está montando.",
+              "ratio": 3.17,
+              "foreground": "rgb(128, 147, 164)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Quatro passos curtos para a equipe entender seu espaço. Nenhum preço é",
+              "ratio": 4.72,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                242,
+                248,
+                253
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "(11) 3437-2217",
+              "ratio": 5.05,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Voltar",
+              "ratio": 5.05,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 12
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "SGRUPO SEG SYSTEMSEGURANÇA INTEGRADA",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes-visual",
+      "scenarioId": "simulador",
+      "viewportName": "w320-night",
+      "captureMode": "fullPage",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-320-night-full.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conte o que você precisa.\nA gente cuida do resto."
+          },
+          {
+            "level": 2,
+            "text": "Seu espaço"
+          },
+          {
+            "level": 2,
+            "text": "Sua solicitação"
+          }
+        ],
+        "landmarks": [
+          "header",
+          "nav[aria-label=Navegação do simulador]",
+          "main",
+          "footer"
+        ],
+        "visibleTextLength": 818,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 24,
+          "indeterminateCount": 0,
+          "under45": [
+            {
+              "tag": "li",
+              "text": "01Seu espaço",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "02O que você precisa",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "03Seus dados",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "04Revisão",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Resumo do que você está montando.",
+              "ratio": 3.17,
+              "foreground": "rgb(128, 147, 164)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Escolha o tipo de imóvel para começar.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Nenhum selecionado ainda.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "p",
+              "text": "Escolha o tipo de imóvel para começar.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Nenhum selecionado ainda.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "01Seu espaço",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "02O que você precisa",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "03Seus dados",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "04Revisão",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Resumo do que você está montando.",
+              "ratio": 3.17,
+              "foreground": "rgb(128, 147, 164)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Quatro passos curtos para a equipe entender seu espaço. Nenhum preço é",
+              "ratio": 4.72,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                242,
+                248,
+                253
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "(11) 3437-2217",
+              "ratio": 5.05,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Voltar",
+              "ratio": 5.05,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 12
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "SGRUPO SEG SYSTEMSEGURANÇA INTEGRADA",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes-visual",
+      "scenarioId": "simulador",
+      "viewportName": "w390-day",
+      "captureMode": "fullPage",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-390-day-full.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conte o que você precisa.\nA gente cuida do resto."
+          },
+          {
+            "level": 2,
+            "text": "Seu espaço"
+          },
+          {
+            "level": 2,
+            "text": "Sua solicitação"
+          }
+        ],
+        "landmarks": [
+          "header",
+          "nav[aria-label=Navegação do simulador]",
+          "main",
+          "footer"
+        ],
+        "visibleTextLength": 818,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 24,
+          "indeterminateCount": 0,
+          "under45": [
+            {
+              "tag": "li",
+              "text": "01Seu espaço",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "02O que você precisa",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "03Seus dados",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "04Revisão",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Resumo do que você está montando.",
+              "ratio": 3.17,
+              "foreground": "rgb(128, 147, 164)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Escolha o tipo de imóvel para começar.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Nenhum selecionado ainda.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "p",
+              "text": "Escolha o tipo de imóvel para começar.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Nenhum selecionado ainda.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "01Seu espaço",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "02O que você precisa",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "03Seus dados",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "04Revisão",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Resumo do que você está montando.",
+              "ratio": 3.17,
+              "foreground": "rgb(128, 147, 164)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Quatro passos curtos para a equipe entender seu espaço. Nenhum preço é",
+              "ratio": 4.72,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                242,
+                248,
+                253
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "(11) 3437-2217",
+              "ratio": 5.05,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Voltar",
+              "ratio": 5.05,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 12
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "SGRUPO SEG SYSTEMSEGURANÇA INTEGRADA",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes-visual",
+      "scenarioId": "simulador",
+      "viewportName": "w390-night",
+      "captureMode": "fullPage",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-390-night-full.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conte o que você precisa.\nA gente cuida do resto."
+          },
+          {
+            "level": 2,
+            "text": "Seu espaço"
+          },
+          {
+            "level": 2,
+            "text": "Sua solicitação"
+          }
+        ],
+        "landmarks": [
+          "header",
+          "nav[aria-label=Navegação do simulador]",
+          "main",
+          "footer"
+        ],
+        "visibleTextLength": 818,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 24,
+          "indeterminateCount": 0,
+          "under45": [
+            {
+              "tag": "li",
+              "text": "01Seu espaço",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "02O que você precisa",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "03Seus dados",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "04Revisão",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Resumo do que você está montando.",
+              "ratio": 3.17,
+              "foreground": "rgb(128, 147, 164)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Escolha o tipo de imóvel para começar.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Nenhum selecionado ainda.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "p",
+              "text": "Escolha o tipo de imóvel para começar.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Nenhum selecionado ainda.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "01Seu espaço",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "02O que você precisa",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "03Seus dados",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "04Revisão",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Resumo do que você está montando.",
+              "ratio": 3.17,
+              "foreground": "rgb(128, 147, 164)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Quatro passos curtos para a equipe entender seu espaço. Nenhum preço é",
+              "ratio": 4.72,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                242,
+                248,
+                253
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "(11) 3437-2217",
+              "ratio": 5.05,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Voltar",
+              "ratio": 5.05,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 12
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "SGRUPO SEG SYSTEMSEGURANÇA INTEGRADA",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes-visual",
+      "scenarioId": "simulador",
+      "viewportName": "w768-day",
+      "captureMode": "fullPage",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-768-day-full.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conte o que você precisa.\nA gente cuida do resto."
+          },
+          {
+            "level": 2,
+            "text": "Seu espaço"
+          },
+          {
+            "level": 2,
+            "text": "Sua solicitação"
+          }
+        ],
+        "landmarks": [
+          "header",
+          "nav[aria-label=Navegação do simulador]",
+          "main",
+          "footer"
+        ],
+        "visibleTextLength": 833,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 25,
+          "resolvedCount": 25,
+          "indeterminateCount": 0,
+          "under45": [
+            {
+              "tag": "li",
+              "text": "01Seu espaço",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "02O que você precisa",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "03Seus dados",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "04Revisão",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Resumo do que você está montando.",
+              "ratio": 3.17,
+              "foreground": "rgb(128, 147, 164)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Escolha o tipo de imóvel para começar.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Nenhum selecionado ainda.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "p",
+              "text": "Escolha o tipo de imóvel para começar.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Nenhum selecionado ainda.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "01Seu espaço",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "02O que você precisa",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "03Seus dados",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "04Revisão",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Resumo do que você está montando.",
+              "ratio": 3.17,
+              "foreground": "rgb(128, 147, 164)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Quatro passos curtos para a equipe entender seu espaço. Nenhum preço é",
+              "ratio": 4.72,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                242,
+                248,
+                253
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Voltar ao site",
+              "ratio": 5.05,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "(11) 3437-2217",
+              "ratio": 5.05,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 12
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "SGRUPO SEG SYSTEMSEGURANÇA INTEGRADA",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes-visual",
+      "scenarioId": "simulador",
+      "viewportName": "w768-night",
+      "captureMode": "fullPage",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-768-night-full.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conte o que você precisa.\nA gente cuida do resto."
+          },
+          {
+            "level": 2,
+            "text": "Seu espaço"
+          },
+          {
+            "level": 2,
+            "text": "Sua solicitação"
+          }
+        ],
+        "landmarks": [
+          "header",
+          "nav[aria-label=Navegação do simulador]",
+          "main",
+          "footer"
+        ],
+        "visibleTextLength": 833,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 25,
+          "resolvedCount": 25,
+          "indeterminateCount": 0,
+          "under45": [
+            {
+              "tag": "li",
+              "text": "01Seu espaço",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "02O que você precisa",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "03Seus dados",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "04Revisão",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Resumo do que você está montando.",
+              "ratio": 3.17,
+              "foreground": "rgb(128, 147, 164)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Escolha o tipo de imóvel para começar.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Nenhum selecionado ainda.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "p",
+              "text": "Escolha o tipo de imóvel para começar.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Nenhum selecionado ainda.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "01Seu espaço",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "02O que você precisa",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "03Seus dados",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "04Revisão",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Resumo do que você está montando.",
+              "ratio": 3.17,
+              "foreground": "rgb(128, 147, 164)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Quatro passos curtos para a equipe entender seu espaço. Nenhum preço é",
+              "ratio": 4.72,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                242,
+                248,
+                253
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Voltar ao site",
+              "ratio": 5.05,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "(11) 3437-2217",
+              "ratio": 5.05,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 12
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "SGRUPO SEG SYSTEMSEGURANÇA INTEGRADA",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes-visual",
+      "scenarioId": "simulador",
+      "viewportName": "w1440-day",
+      "captureMode": "fullPage",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-1440-day-full.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conte o que você precisa.\nA gente cuida do resto."
+          },
+          {
+            "level": 2,
+            "text": "Seu espaço"
+          },
+          {
+            "level": 2,
+            "text": "Sua solicitação"
+          }
+        ],
+        "landmarks": [
+          "header",
+          "nav[aria-label=Navegação do simulador]",
+          "main",
+          "footer"
+        ],
+        "visibleTextLength": 833,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 25,
+          "resolvedCount": 25,
+          "indeterminateCount": 0,
+          "under45": [
+            {
+              "tag": "li",
+              "text": "01Seu espaço",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "02O que você precisa",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "03Seus dados",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "04Revisão",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Resumo do que você está montando.",
+              "ratio": 3.17,
+              "foreground": "rgb(128, 147, 164)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Escolha o tipo de imóvel para começar.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Nenhum selecionado ainda.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "p",
+              "text": "Escolha o tipo de imóvel para começar.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Nenhum selecionado ainda.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "01Seu espaço",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "02O que você precisa",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "03Seus dados",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "04Revisão",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Resumo do que você está montando.",
+              "ratio": 3.17,
+              "foreground": "rgb(128, 147, 164)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Quatro passos curtos para a equipe entender seu espaço. Nenhum preço é",
+              "ratio": 4.72,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                242,
+                248,
+                253
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Voltar ao site",
+              "ratio": 5.05,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "(11) 3437-2217",
+              "ratio": 5.05,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 12
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "SGRUPO SEG SYSTEMSEGURANÇA INTEGRADA",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes-visual",
+      "scenarioId": "simulador",
+      "viewportName": "w1440-night",
+      "captureMode": "fullPage",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-1440-night-full.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conte o que você precisa.\nA gente cuida do resto."
+          },
+          {
+            "level": 2,
+            "text": "Seu espaço"
+          },
+          {
+            "level": 2,
+            "text": "Sua solicitação"
+          }
+        ],
+        "landmarks": [
+          "header",
+          "nav[aria-label=Navegação do simulador]",
+          "main",
+          "footer"
+        ],
+        "visibleTextLength": 833,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 25,
+          "resolvedCount": 25,
+          "indeterminateCount": 0,
+          "under45": [
+            {
+              "tag": "li",
+              "text": "01Seu espaço",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "02O que você precisa",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "03Seus dados",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "04Revisão",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Resumo do que você está montando.",
+              "ratio": 3.17,
+              "foreground": "rgb(128, 147, 164)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Escolha o tipo de imóvel para começar.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Nenhum selecionado ainda.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "p",
+              "text": "Escolha o tipo de imóvel para começar.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Nenhum selecionado ainda.",
+              "ratio": 2.36,
+              "foreground": "rgb(154, 171, 186)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "01Seu espaço",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "02O que você precisa",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "03Seus dados",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "li",
+              "text": "04Revisão",
+              "ratio": 2.56,
+              "foreground": "rgb(147, 164, 180)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Resumo do que você está montando.",
+              "ratio": 3.17,
+              "foreground": "rgb(128, 147, 164)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Quatro passos curtos para a equipe entender seu espaço. Nenhum preço é",
+              "ratio": 4.72,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                242,
+                248,
+                253
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Voltar ao site",
+              "ratio": 5.05,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "(11) 3437-2217",
+              "ratio": 5.05,
+              "foreground": "rgb(90, 113, 137)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 12
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "SGRUPO SEG SYSTEMSEGURANÇA INTEGRADA",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1600 @@
+{
+  "stage": "ux-pro-09e-antes",
+  "generatedBy": "scripts/ux-evidence-capture.mjs (isolated output copy)",
+  "baseMain": "4a4b614b08046f93c59e44f9502218b0d9e47244",
+  "date": "2026-10-16",
+  "route": "/orcamento",
+  "limitations": [
+    "Chromium headless Linux; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.",
+    "Contraste só é computado quando cor de fundo sólida é resolvida; gradientes/imagens/camadas complexas ficam indeterminados.",
+    "Rede externa bloqueada no sandbox; recursos externos podem divergir.",
+    "Sem leitor de tela, zoom 200%, teste humano/UAT ou declaração de conformidade WCAG. Nenhum formulário foi enviado.",
+    "Banco descartável e ambiente local sem sessão; rota de aceite usa token sintético inválido, não um token real."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "orcamento",
+      "viewportName": "w320-day",
+      "route": "/orcamento",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/orcamento/ux-pro-09e-orcamento-320-day.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 32,
+                "y": 1704,
+                "width": 256,
+                "height": 64
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 32,
+                "y": 331,
+                "width": 119,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 32,
+                "y": 377,
+                "width": 188,
+                "height": 36
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 32,
+                "y": 421,
+                "width": 93,
+                "height": 36
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 133,
+                "y": 421,
+                "width": 103,
+                "height": 36
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 32,
+                "y": 465,
+                "width": 70,
+                "height": 36
+              },
+              "classes": "",
+              "context": "section"
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "orcamento",
+      "viewportName": "w320-night",
+      "route": "/orcamento",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/orcamento/ux-pro-09e-orcamento-320-night.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 32,
+                "y": 1704,
+                "width": 256,
+                "height": 64
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 32,
+                "y": 331,
+                "width": 119,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 32,
+                "y": 377,
+                "width": 188,
+                "height": 36
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 32,
+                "y": 421,
+                "width": 93,
+                "height": 36
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 133,
+                "y": 421,
+                "width": 103,
+                "height": 36
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 32,
+                "y": 465,
+                "width": 70,
+                "height": 36
+              },
+              "classes": "",
+              "context": "section"
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "orcamento",
+      "viewportName": "w390-day",
+      "route": "/orcamento",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/orcamento/ux-pro-09e-orcamento-390-day.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 32,
+                "y": 1424,
+                "width": 326,
+                "height": 64
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 32,
+                "y": 282,
+                "width": 119,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 159,
+                "y": 282,
+                "width": 188,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 32,
+                "y": 328,
+                "width": 93,
+                "height": 36
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 133,
+                "y": 328,
+                "width": 103,
+                "height": 36
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 244,
+                "y": 328,
+                "width": 70,
+                "height": 36
+              },
+              "classes": "",
+              "context": "section"
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "orcamento",
+      "viewportName": "w390-night",
+      "route": "/orcamento",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/orcamento/ux-pro-09e-orcamento-390-night.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 32,
+                "y": 1424,
+                "width": 326,
+                "height": 64
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 32,
+                "y": 282,
+                "width": 119,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 159,
+                "y": 282,
+                "width": 188,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 32,
+                "y": 328,
+                "width": 93,
+                "height": 36
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 133,
+                "y": 328,
+                "width": 103,
+                "height": 36
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 244,
+                "y": 328,
+                "width": 70,
+                "height": 36
+              },
+              "classes": "",
+              "context": "section"
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "orcamento",
+      "viewportName": "w768-day",
+      "route": "/orcamento",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/orcamento/ux-pro-09e-orcamento-768-day.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 32,
+                "y": 1006,
+                "width": 704,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 32,
+                "y": 213,
+                "width": 119,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 159,
+                "y": 213,
+                "width": 188,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 356,
+                "y": 213,
+                "width": 93,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 456,
+                "y": 213,
+                "width": 103,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 568,
+                "y": 213,
+                "width": 70,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "orcamento",
+      "viewportName": "w768-night",
+      "route": "/orcamento",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/orcamento/ux-pro-09e-orcamento-768-night.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 32,
+                "y": 1006,
+                "width": 704,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 32,
+                "y": 213,
+                "width": 119,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 159,
+                "y": 213,
+                "width": 188,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 356,
+                "y": 213,
+                "width": 93,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 456,
+                "y": 213,
+                "width": 103,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 568,
+                "y": 213,
+                "width": 70,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "orcamento",
+      "viewportName": "w1440-day",
+      "route": "/orcamento",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/orcamento/ux-pro-09e-orcamento-1440-day.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 302,
+                "y": 936,
+                "width": 836,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 302,
+                "y": 194,
+                "width": 119,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 429,
+                "y": 194,
+                "width": 188,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 626,
+                "y": 194,
+                "width": 93,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 726,
+                "y": 194,
+                "width": 103,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 838,
+                "y": 194,
+                "width": 70,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "orcamento",
+      "viewportName": "w1440-night",
+      "route": "/orcamento",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/orcamento/ux-pro-09e-orcamento-1440-night.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 302,
+                "y": 936,
+                "width": 836,
+                "height": 42
+              },
+              "classes": "",
+              "context": "form"
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 302,
+                "y": 194,
+                "width": 119,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 429,
+                "y": 194,
+                "width": 188,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 626,
+                "y": 194,
+                "width": 93,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 726,
+                "y": 194,
+                "width": 103,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 838,
+                "y": 194,
+                "width": 70,
+                "height": 38
+              },
+              "classes": "",
+              "context": "section"
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    }
+  ]
+}

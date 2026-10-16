@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "stage": "UX-PRO-09E",
+  "phase": "correcao-depois",
+  "date": "2026-10-16",
+  "beforeBase": "4a4b614b08046f93c59e44f9502218b0d9e47244",
+  "correctiveBase": "6866b5019b0fcb12536ca51fcc7061e9b2e538d9",
+  "generatedBy": "scripts/ux-evidence-capture.mjs + PostgreSQL descartável; cada amostra DOM foi retida para o cruzamento de contraste",
+  "counts": {
+    "publicRoutes": 14,
+    "viewportCapturesBefore": 112,
+    "viewportCapturesCorrectiveAfter": 112,
+    "totalCorrectiveAfterPngs": 112,
+    "navigationStatus200": 112,
+    "reviewedBelow45Before": 104,
+    "correctedRealSignals": 96,
+    "realSignalsAtLeast4_5After": 96,
+    "largeTextNoDefectDemonstrated": 8,
+    "below45AfterIncludingUnchangedLargeText": 8
+  },
+  "dimensionsByCaptureMode": {
+    "viewport:320x780": 28,
+    "viewport:390x844": 28,
+    "viewport:768x1024": 28,
+    "viewport:1440x900": 28
+  },
+  "beforeMeasurements": {
+    "entries": 112,
+    "sampleCount": 2214,
+    "resolvedCount": 1246,
+    "indeterminateCount": 968,
+    "under45Count": 104,
+    "horizontalOverflowCount": 4,
+    "navigationStatus200": 112
+  },
+  "correctiveAfterMeasurements": {
+    "entries": 112,
+    "sampleCount": 2214,
+    "resolvedCount": 1246,
+    "indeterminateCount": 968,
+    "under45Count": 8,
+    "horizontalOverflowCount": 0,
+    "navigationStatus200": 112
+  },
+  "crosswalk": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/contraste-revisao.json",
+  "integrityManifest": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/integridade.json",
+  "limitations": [
+    "Chromium headless Linux; day/night representa prefers-color-scheme, não um controle de tema do produto.",
+    "Contraste automatizado é evidência de triagem; fundos complexos permanecem indeterminados.",
+    "Sem aceite humano, UAT, declaração WCAG integral ou validação de produção; homologação e produção NO-GO.",
+    "A rota de token sintético inválido mantém dois 404 de recursos em cada captura; não é parte das correções."
+  ]
+}
