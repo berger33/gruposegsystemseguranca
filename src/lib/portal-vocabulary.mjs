@@ -134,6 +134,62 @@ const ERROR_MESSAGES = Object.freeze({
     title: 'Esta identidade já existe',
     detail: 'Nada foi criado. Use o acesso existente ou peça a recuperação de senha.',
   },
+  // ----- Segurança da conta do cliente (client-security-api — UX-PRO-09C) ----
+  mfa_already_active: {
+    kind: 'conflict',
+    title: 'O MFA desta conta já está ativo',
+    detail: 'Nada foi reconfigurado. Para trocar o autenticador, desative primeiro e configure de novo.',
+  },
+  mfa_setup_required: {
+    kind: 'conflict',
+    title: 'Prepare o autenticador antes de informar o código',
+    detail: 'A configuração ainda não foi iniciada nesta sessão. Nenhum código foi aceito.',
+  },
+  mfa_verify_only_during_login: {
+    kind: 'auth',
+    title: 'A verificação por código acontece na entrada',
+    detail: 'Informe o código do autenticador na tela de acesso; aqui nada foi verificado.',
+  },
+  invalid_session: {
+    kind: 'invalid',
+    title: 'Sessão selecionada inválida',
+    detail: 'Nenhuma sessão foi revogada. Atualize a lista e tente de novo.',
+  },
+  new_email_different_required: {
+    kind: 'invalid',
+    title: 'Informe um e-mail diferente do atual',
+    detail: 'A troca pede um endereço novo. Nada foi solicitado.',
+  },
+  email_already_in_use: {
+    kind: 'conflict',
+    title: 'Este e-mail já pertence a outra conta',
+    detail: 'Nada foi solicitado. Use um endereço que não esteja em uso.',
+  },
+  email_change_pending: {
+    kind: 'conflict',
+    title: 'Já existe uma troca de e-mail em andamento',
+    detail: 'Aguarde a conclusão ou confirme o token atual antes de pedir outra troca.',
+  },
+  invalid_or_expired_token: {
+    kind: 'invalid',
+    title: 'Token inválido ou expirado',
+    detail: 'Nenhuma troca foi confirmada. Solicite a troca de novo para receber outro token.',
+  },
+  security_unavailable: {
+    kind: 'retry',
+    title: 'Serviço de segurança indisponível',
+    detail: 'O servidor não confirmou a operação e nada foi alterado. Tente novamente em instantes.',
+  },
+  audit_unavailable: {
+    kind: 'retry',
+    title: 'Registro de auditoria indisponível',
+    detail: 'Sem a trilha de auditoria a operação não é concluída e nada foi alterado. Tente novamente em instantes.',
+  },
+  client_confirmation_required: {
+    kind: 'auth',
+    title: 'Confirme o cadastro da sua conta',
+    detail: 'Sua identidade ainda aguarda a confirmação de e-mail. Confirme o acesso antes de continuar.',
+  },
   mfa_code_invalid: {
     kind: 'invalid',
     title: 'Código de verificação inválido',
