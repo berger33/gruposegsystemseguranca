@@ -1,0 +1,398 @@
+{
+  "stage": "ux-pro-09e",
+  "generatedBy": "scripts/ux-evidence-capture.mjs",
+  "route": "/proposta/aceite/diagnostico-token-invalido",
+  "limitations": [
+    "Chromium headless Linux; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.",
+    "Contraste só é computado quando cor de fundo sólida é resolvida; gradientes/imagens/camadas complexas ficam indeterminados.",
+    "Rede externa bloqueada no sandbox; recursos externos podem divergir.",
+    "Sem leitor de tela, zoom 200%, teste humano/UAT ou declaração de conformidade WCAG. Nenhum formulário foi enviado.",
+    "Banco descartável e ambiente local sem sessão; rota de aceite usa token sintético inválido, não um token real."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-09e",
+      "route": "/proposta/aceite/diagnostico-token-invalido",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/aceite-token-sintetico-invalido/w320-day-aceite-token-sintetico-invalido.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Aceite de proposta | Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Aceite de proposta comercial"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 281,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 0
+      },
+      "firstFocus": {
+        "tag": "nextjs-portal",
+        "text": "",
+        "outline": "none"
+      },
+      "problems": [
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/proposta/aceite/diagnostico-token-invalido",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/aceite-token-sintetico-invalido/w320-night-aceite-token-sintetico-invalido.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Aceite de proposta | Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Aceite de proposta comercial"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 281,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 0
+      },
+      "firstFocus": {
+        "tag": "nextjs-portal",
+        "text": "",
+        "outline": "none"
+      },
+      "problems": [
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/proposta/aceite/diagnostico-token-invalido",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/aceite-token-sintetico-invalido/w390-day-aceite-token-sintetico-invalido.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Aceite de proposta | Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Aceite de proposta comercial"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 281,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 0
+      },
+      "firstFocus": {
+        "tag": "nextjs-portal",
+        "text": "",
+        "outline": "none"
+      },
+      "problems": [
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/proposta/aceite/diagnostico-token-invalido",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/aceite-token-sintetico-invalido/w390-night-aceite-token-sintetico-invalido.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Aceite de proposta | Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Aceite de proposta comercial"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 281,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 0
+      },
+      "firstFocus": {
+        "tag": "nextjs-portal",
+        "text": "",
+        "outline": "none"
+      },
+      "problems": [
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/proposta/aceite/diagnostico-token-invalido",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/aceite-token-sintetico-invalido/w768-day-aceite-token-sintetico-invalido.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Aceite de proposta | Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Aceite de proposta comercial"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 281,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 0
+      },
+      "firstFocus": {
+        "tag": "nextjs-portal",
+        "text": "",
+        "outline": "none"
+      },
+      "problems": [
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/proposta/aceite/diagnostico-token-invalido",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/aceite-token-sintetico-invalido/w768-night-aceite-token-sintetico-invalido.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Aceite de proposta | Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Aceite de proposta comercial"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 281,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 0
+      },
+      "firstFocus": {
+        "tag": "nextjs-portal",
+        "text": "",
+        "outline": "none"
+      },
+      "problems": [
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/proposta/aceite/diagnostico-token-invalido",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/aceite-token-sintetico-invalido/w1440-day-aceite-token-sintetico-invalido.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Aceite de proposta | Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Aceite de proposta comercial"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 281,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 0
+      },
+      "firstFocus": {
+        "tag": "nextjs-portal",
+        "text": "",
+        "outline": "none"
+      },
+      "problems": [
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/proposta/aceite/diagnostico-token-invalido",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/aceite-token-sintetico-invalido/w1440-night-aceite-token-sintetico-invalido.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Aceite de proposta | Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Aceite de proposta comercial"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 281,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 0
+      },
+      "firstFocus": {
+        "tag": "nextjs-portal",
+        "text": "",
+        "outline": "none"
+      },
+      "problems": [
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    }
+  ]
+}

@@ -47,7 +47,14 @@ const RAG_COLORS: Record<string, { border: string; bg: string; accent: string; l
   cliente: { border: "#0b5fff", bg: "#eff6ff", accent: "#0b5fff", light: "#dbeafe" },
   rh: { border: "#059669", bg: "#ecfdf5", accent: "#059669", light: "#d1fae5" },
   marcelo: { border: "#7c3aed", bg: "#f5f3ff", accent: "#7c3aed", light: "#ede9fe" },
-  publico: { border: "#ea580c", bg: "#fff7ed", accent: "#ea580c", light: "#ffedd5" },
+  // UX-PRO-09E: o escopo público é o único do site público e tinha as 6 amostras
+  // de contraste <4,5:1 medidas pelo 09B em /contato (título, quatro sugestões e
+  // o botão de envio sobre #ea580c, entre 3,11:1 e 3,56:1). O acento desce uma
+  // etapa da mesma família de laranja para #c2410c, que resolve >=4,5:1 nos quatro
+  // papéis do widget (texto sobre o fundo do cartão, sobre o branco das sugestões,
+  // sobre a pílula `light` e como fundo do texto branco do botão). Os demais
+  // escopos são áreas privadas medidas por outros gates e ficam intactos.
+  publico: { border: "#c2410c", bg: "#fff7ed", accent: "#c2410c", light: "#ffedd5" },
 };
 
 const SUGGESTIONS: Record<string, string[]> = {

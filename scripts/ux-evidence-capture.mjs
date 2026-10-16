@@ -285,6 +285,34 @@ const STAGES = {
       waitFor: 'Plano fictício publicado na evidência de continuidade',
     }],
   },
+  // UX-PRO-09E — correções do site público autorizadas após o diagnóstico 09B,
+  // medidas amostra por amostra: overflow do documento a 320 px em `/contato` e
+  // `/faq` e as amostras de contraste <4,5:1 de `/contato` e `/simulador`. A matriz é a mesma
+  // do 09B (14 rotas `site publico` × 4 larguras × day/night) para que antes e
+  // depois sejam comparáveis ao diagnóstico; a pasta de saída é própria e vem de
+  // `UX_EVIDENCE_09E_DIR`, de modo que o par `antes/`+`depois` nunca sobrescreve
+  // as evidências do 09B nem as entre si.
+  'ux-pro-09e': {
+    outputDir: process.env.UX_EVIDENCE_09E_DIR || 'docs/UX-PRO-09E-evidencias-2026-10-16',
+    publicDiagnostic: true,
+    attributeTextOverflow: true,
+    viewports: [320, 390, 768, 1440].flatMap(width => ['day', 'night'].map(theme => ({
+      name: `w${width}-${theme}`, width, height: width >= 768 ? (width === 768 ? 1024 : 900) : (width === 320 ? 780 : 844), theme,
+    }))),
+    targets: [
+      { route: '/', slug: 'home' }, { route: '/contato', slug: 'contato' },
+      { route: '/conteudos', slug: 'conteudos' }, { route: '/conteudos/diagnostico-sem-conteudo', slug: 'conteudo-dinamico' },
+      { route: '/faq', slug: 'faq' }, { route: '/orcamento', slug: 'orcamento' },
+      { route: '/pacotes', slug: 'pacotes' }, { route: '/privacidade', slug: 'privacidade' },
+      { route: '/proposta/aceite/diagnostico-token-invalido', slug: 'aceite-token-sintetico-invalido' },
+      { route: '/segmentos', slug: 'segmentos' }, { route: '/segmentos/condominio', slug: 'segmento-condominio' },
+      { route: '/servicos', slug: 'servicos' }, { route: '/servicos/Segurança%20Desarmada', slug: 'servico-seguranca-desarmada' },
+      { route: '/simulador', slug: 'simulador' },
+    ].map(target => ({
+      ...target,
+      outputDir: `${process.env.UX_EVIDENCE_09E_DIR || 'docs/UX-PRO-09E-evidencias-2026-10-16'}/${target.slug}`,
+    })),
+  },
   // UX-PRO-09B — diagnóstico visual público, sem sessão e sem alteração de produto.
   'ux-pro-09b': {
     outputDir: 'docs/UX-PRO-09B-evidencias-2026-10-16',
@@ -560,6 +588,7 @@ try {
         console.log(`UX_EVIDENCE_CAPTURING ${target.route} ${viewport.name}`);
         page.setDefaultTimeout(45_000);
         page.setDefaultNavigationTimeout(90_000);
+        let textOverflowCulprits = null;
         const problems = [];
         // Recursos de terceiros (ex.: Google Fonts) não têm saída de rede neste
         // ambiente. Isso é limitação do sandbox, não defeito da página: fica
@@ -624,6 +653,41 @@ try {
           }, overflow.clientWidth);
           const detail = culprits.map(item => `${item.selector}@${item.right}px`).join(' , ') || 'elemento não identificado';
           problems.push(`rolagem horizontal do documento: ${overflow.scrollWidth} > ${overflow.clientWidth} (${detail})`);
+          // A 09E acrescenta a atribuição por execução de texto. O laço acima mede
+          // apenas retângulos de elementos, então uma palavra mais larga que a
+          // coluna (ex.: um e-mail sem espaço) estoura o documento sem que nenhum
+          // elemento tenha rect além do limite — foi assim que /faq ficou "sem
+          // culpado". Aqui cada nó de texto é medido pelo próprio Range de linha.
+          if (plan.attributeTextOverflow) {
+            const textCulprits = await page.evaluate(limit => {
+              const found = [];
+              const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+              let node;
+              while ((node = walker.nextNode())) {
+                const owner = node.parentElement;
+                if (!owner) continue;
+                const style = getComputedStyle(owner);
+                if (style.visibility === 'hidden' || style.display === 'none') continue;
+                const range = document.createRange();
+                range.selectNodeContents(node);
+                for (const rect of range.getClientRects()) {
+                  if (rect.width === 0 || rect.right <= limit + 1) continue;
+                  found.push({
+                    selector: `${owner.tagName.toLowerCase()}${owner.className && typeof owner.className === 'string' && owner.className.trim() ? `.${owner.className.trim().split(/\s+/).join('.')}` : ''}`,
+                    right: Math.round(rect.right),
+                    width: Math.round(rect.width),
+                    fragment: (node.textContent || '').trim().slice(0, 48),
+                  });
+                  break;
+                }
+              }
+              return found.sort((a, b) => b.right - a.right).slice(0, 4);
+            }, overflow.clientWidth);
+            if (textCulprits.length) {
+              problems.push(`overflow atribuído a execução de texto: ${textCulprits.map(item => `${item.selector} "${item.fragment}" rect=${item.width}px fim=${item.right}px`).join(' | ')}`);
+              textOverflowCulprits = textCulprits;
+            }
+          }
         }
 
         if (plan.measurements && target.keyboard === 'knowledge') {
@@ -689,6 +753,7 @@ try {
           gateEvidence: target.gateEvidence || null,
           ...(plan.publicDiagnostic ? { navigationStatus, theme: viewport.theme, audit: publicAudit } : {}),
           firstFocus: focus,
+          ...(textOverflowCulprits ? { textOverflowCulprits } : {}),
           ...measurements,
           problems,
           externalBlocked,

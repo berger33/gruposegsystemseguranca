@@ -151,7 +151,9 @@
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 8px;
-  color: #93a4b4;
+  /* UX-PRO-09E: #93a4b4 media 2,56:1 sobre o branco do cartão. O rótulo da
+     etapa passa ao token próprio da página (--muted = 5,05:1). */
+  color: var(--muted);
 }
 
 .steps li span {
@@ -163,7 +165,11 @@
   border-radius: 50%;
   background: #eef4fa;
   font: 800 11px/1 'Manrope', sans-serif;
-  color: #8397a8;
+  /* UX-PRO-09E: o número da etapa pertence à amostra medida do <li> ("01Seu
+     espaço"); a #8397a8 ficava em 2,72:1 sobre a bolha #eef4fa. Sem escurecer o
+     número, a amostra passaria a medir bem enquanto o pixel continuaria ruim,
+     então o badge acompanha o rótulo. */
+  color: var(--muted);
 }
 
 .steps li small {
@@ -583,7 +589,8 @@
 
 .asideIntro {
   margin: 0 0 18px;
-  color: #8093a4;
+  /* UX-PRO-09E: #8093a4 = 3,17:1 sobre o branco; mesmo token compartilhado. */
+  color: var(--muted);
   font-size: 12px;
 }
 
@@ -631,7 +638,8 @@
 
 .summaryEmpty {
   margin: 0;
-  color: #9aabba;
+  /* UX-PRO-09E: #9aabba = 2,36:1, a menor razão medida no simulador. */
+  color: var(--muted);
   font-size: 12px;
 }
 
