@@ -8,7 +8,7 @@
 // descartável do servidor; nenhum cookie é emitido antes da verificação).
 
 import BrandLogo from "@/components/BrandLogo";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import UiField from "../../../components/ui/UiField";
 import { useSearchParams } from "next/navigation";
@@ -48,6 +48,15 @@ export default function AdminLoginClient() {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // UX-PRO-09A-6 (G5): padrão de G1/G2 aplicado localmente à entrada da equipe.
+  // O erro pós-submissão recebe foco programático e contorno visível, em vez de
+  // deixar o foco no BODY quando o botão é desabilitado em "busy". Não muda
+  // mensagem, contrato, RBAC, MFA nem política de chave legada.
+  const errorRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
 
   const goToDestination = useCallback(
     (role: string) => {
@@ -309,7 +318,13 @@ export default function AdminLoginClient() {
           )}
 
           {error ? (
-            <p className={`${styles.message} ${styles.messageError}`} role="alert" data-login-error="true">
+            <p
+              ref={errorRef}
+              className={`${styles.message} ${styles.messageError}`}
+              role="alert"
+              tabIndex={-1}
+              data-login-error="true"
+            >
               {error}
             </p>
           ) : null}

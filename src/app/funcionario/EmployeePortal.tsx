@@ -237,6 +237,10 @@ export default function EmployeePortal(){
 function Login({onLogin}:{onLogin:()=>Promise<void>}){
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState<PortalErrorDescriptor|null>(null);
+  // UX-PRO-09A-6 (G5): o aviso de falha de submissão recebe foco programático num
+  // invólucro local focável; o UiState compartilhado permanece intacto.
+  const errorRef=useRef<HTMLDivElement>(null);
+  useEffect(()=>{ if(error) errorRef.current?.focus(); },[error]);
   async function submit(e:FormEvent<HTMLFormElement>){
     e.preventDefault();
     if(busy)return;
@@ -249,7 +253,7 @@ function Login({onLogin}:{onLogin:()=>Promise<void>}){
     finally{ setBusy(false); }
   }
   return <main className={styles.shell} data-admin-theme-scope="true"><div className={styles.loginThemeToggle}><AdminThemeToggle/></div><div className={styles.login}><section className={styles.loginCard}><BrandLogo size={64}/><h1>Portal do funcionário</h1><p>Use somente sua identidade individual. Este acesso não utiliza credenciais de RH.</p>
-    {error?<ErrorNotice descriptor={error}/>:null}
+    {error?<div ref={errorRef} tabIndex={-1} data-login-error-focus="true" className={styles.loginErrorFocus}><ErrorNotice descriptor={error}/></div>:null}
     <form className={styles.form} onSubmit={submit}>
       <div className={styles.field}><label htmlFor="portal-email">E-mail</label><input id="portal-email" className={styles.input} name="email" type="email" autoComplete="username" required/></div>
       <div className={styles.field}><label htmlFor="portal-senha">Senha</label><input id="portal-senha" className={styles.input} name="password" type="password" autoComplete="current-password" required/></div>

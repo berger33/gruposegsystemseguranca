@@ -79,7 +79,7 @@ async function loginStaffHttp(email) {
 
 // O Chromium empacotado roda com --single-process: reaproveitar o mesmo
 // browser entre contextos derruba o alvo. Cada teste abre o seu.
-async function launchBrowser() {
+async function launchChromiumOnce() {
   // @sparticuz/chromium contains a Linux binary. On Windows use the installed
   // Edge channel so the same browser checks can run on the operator machine.
   if (process.platform === 'win32') {
@@ -90,6 +90,21 @@ async function launchBrowser() {
     args: packagedChromium.args.filter(arg => arg !== '--disable-web-security'),
     headless: true,
   });
+}
+
+// O Chromium empacotado roda em --single-process e, em sandbox/CI, pode morrer
+// ao NASCER (SIGSEGV antes de navegar). Isso é infraestrutura, não asserção: o
+// lançamento recebe até duas novas tentativas; nenhuma verificação é afrouxada.
+async function launchBrowser() {
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await launchChromiumOnce();
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
 }
 
 const evidenceDir = process.env.UX_PORTAL_EVIDENCE_DIR || '';
@@ -1972,5 +1987,116 @@ test('browser: erro pós-submissão recebe foco nas entradas públicas do client
       await pool.query('DELETE FROM auth_credentials WHERE identity_id=ANY($1::uuid[])', [staffIds]).catch(() => {});
       await pool.query('DELETE FROM auth_identities WHERE id=ANY($1::uuid[])', [staffIds]).catch(() => {});
     }
+  }
+});
+
+
+// G5 (UX-PRO-09A-6): na entrada do funcionário, o aviso de falha de submissão
+// (ErrorNotice/UiState, role="alert") não recebia foco; ao desabilitar o botão em
+// "busy", o foco caía em BODY. Correção local: invólucro focável com ref + tabIndex
+// {-1} + focus no efeito, contorno novo e local em EmployeePortal.module.css. O
+// UiState compartilhado permanece intacto. Resumo gravado ANTES das asserções de
+// correção: a execução RED registra o estado anterior em antes/.
+test('browser: falha de submissão na entrada do funcionário recebe foco, em dia e noite (G5)', { skip: !RUN }, async () => {
+  const baseEvidenceDir = process.env.UX_PRO_09A6_EVIDENCE_DIR || '';
+  const evidenceDir = baseEvidenceDir ? path.join(baseEvidenceDir, 'funcionario') : '';
+  const entries = [];
+  for (const theme of ['day', 'night']) {
+    for (const [width, height] of [[320, 844], [390, 844], [768, 900], [1440, 900]]) {
+      const browser = await launchBrowser();
+      try {
+        const context = await browser.newContext({ viewport: { width, height }, locale: 'pt-BR' });
+        if (theme === 'night') {
+          await context.addInitScript(() => {
+            try { window.localStorage.setItem('segsystem.admin.appearance.v1', 'night'); } catch { /* sem storage */ }
+          });
+        }
+        const page = await context.newPage();
+        page.setDefaultTimeout(45_000);
+        page.setDefaultNavigationTimeout(90_000);
+        await page.goto(`${baseUrl}/funcionario`, { waitUntil: 'domcontentloaded' });
+        await page.getByRole('heading', { name: 'Portal do funcionário' }).waitFor();
+        await page.waitForLoadState('networkidle');
+        await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+        assert.equal(await page.evaluate(() => document.documentElement.dataset.adminTheme ?? 'day'), theme,
+          `o tema pedido precisa estar aplicado em ${width}/${theme}`);
+        const keyboard = [];
+        const recordFocus = async action => keyboard.push({ action, target: await page.evaluate(() => {
+          const element = document.activeElement;
+          if (!element || element === document.body) return 'BODY (foco perdido ao desabilitar o botão)';
+          if (element.getAttribute('data-login-error-focus') === 'true') return `[data-login-error-focus] ${element.textContent?.trim().slice(0, 50)}`;
+          return element.id || element.textContent?.trim().slice(0, 40) || element.tagName;
+        }) });
+        const email = page.locator('#portal-email');
+        const senha = page.locator('#portal-senha');
+        const button = page.getByRole('button', { name: 'Entrar com segurança', exact: true });
+        await email.focus();
+        await recordFocus('focus e-mail');
+        await email.fill(employeeEmail);
+        await page.keyboard.press('Tab');
+        await recordFocus('Tab');
+        assert.equal(await page.evaluate(() => document.activeElement.id), 'portal-senha');
+        await senha.fill(`Errada-${randomUUID()}!`);
+        await page.keyboard.press('Tab');
+        await recordFocus('Tab');
+        assert.ok(await button.evaluate(element => element === document.activeElement));
+        const pending = page.waitForResponse(response =>
+          new URL(response.url()).pathname === '/api/employee/session' && response.request().method() === 'POST');
+        await page.keyboard.press('Enter');
+        const loginResponse = await pending;
+        assert.ok([401, 429].includes(loginResponse.status()),
+          `senha errada deve responder 401 (ou 429 sob limite), veio ${loginResponse.status()}`);
+        // Espera o estado de erro que existe ANTES e DEPOIS da correção (UiState);
+        // o invólucro focável é verificado pelas medições de foco logo abaixo.
+        const notice = page.locator('[data-ui-state="error"]');
+        await notice.waitFor({ timeout: 30_000 });
+        await recordFocus('Enter / falha real');
+        // O aviso fica antes do formulário no DOM: mede-se um percurso limitado até
+        // o botão de repetir, em vez de supor que um único Tab chegaria nele.
+        let repetition = 'não alcançada em 6 passos de Tab';
+        for (let step = 1; step <= 6; step += 1) {
+          await page.keyboard.press('Tab');
+          await recordFocus(`Tab ${step} após o erro`);
+          const target = keyboard[keyboard.length - 1].target;
+          if (/Entrar com segurança/.test(target)) { repetition = target; break; }
+        }
+        await email.fill('');
+        await senha.fill('');
+        const overflow = await page.evaluate(() =>
+          document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        assert.ok(overflow <= 1, `G5 funcionário: overflow ${overflow} em ${width}/${theme}`);
+        const screenshot = `ux-pro-09a6-funcionario-${theme}-${width}.png`;
+        if (evidenceDir) {
+          await mkdir(evidenceDir, { recursive: true });
+          await page.screenshot({ path: path.join(evidenceDir, screenshot), fullPage: true });
+        }
+        entries.push({
+          route: '/funcionario', theme, viewport: `${width}x${height}`, screenshot,
+          percursoTeclado: keyboard, overflow, loginHttpStatus: loginResponse.status(),
+          focusAposFalha: keyboard.find(item => item.action === 'Enter / falha real')?.target ?? null,
+          repeticaoAposErro: repetition,
+        });
+        await context.close();
+      } finally { await browser.close().catch(() => {}); }
+    }
+  }
+  if (evidenceDir) {
+    await mkdir(evidenceDir, { recursive: true });
+    await writeFile(path.join(evidenceDir, 'resumo.json'), `${JSON.stringify({
+      schemaVersion: 1, stage: 'UX-PRO-09A-6', date: '2026-10-16', gap: 'G5',
+      route: '/funcionario', entries,
+      simulatedFetchRejection: false, mockedHttp: false,
+      limitations: [
+        'Percurso medido no Chromium empacotado em Linux; sem leitores de tela/zoom 200%/Windows',
+        'Funcionário e dados sintéticos em PostgreSQL descartável',
+        'Sem aceite humano, UAT, certificação WCAG ou produção; NO-GO',
+      ],
+    }, null, 2)}\n`, 'utf8');
+  }
+  for (const entry of entries) {
+    assert.ok(entry.focusAposFalha?.startsWith('[data-login-error-focus]'),
+      `G5: após a falha o foco precisa ir para o aviso, não para "${entry.focusAposFalha}" em ${entry.viewport}/${entry.theme}`);
+    assert.match(entry.repeticaoAposErro, /Entrar com segurança/,
+      `G5: o passo seguinte ao erro precisa alcançar a repetição em ${entry.viewport}/${entry.theme}`);
   }
 });

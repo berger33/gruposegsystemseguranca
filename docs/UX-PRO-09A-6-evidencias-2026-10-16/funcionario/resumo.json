@@ -1,0 +1,336 @@
+{
+  "schemaVersion": 1,
+  "stage": "UX-PRO-09A-6",
+  "date": "2026-10-16",
+  "gap": "G5",
+  "route": "/funcionario",
+  "entries": [
+    {
+      "route": "/funcionario",
+      "theme": "day",
+      "viewport": "320x844",
+      "screenshot": "ux-pro-09a6-funcionario-day-320.png",
+      "percursoTeclado": [
+        {
+          "action": "focus e-mail",
+          "target": "portal-email"
+        },
+        {
+          "action": "Tab",
+          "target": "portal-senha"
+        },
+        {
+          "action": "Tab",
+          "target": "Entrar com segurança"
+        },
+        {
+          "action": "Enter / falha real",
+          "target": "[data-login-error-focus] Falha na consultaE-mail ou senha não conferemConfi"
+        },
+        {
+          "action": "Tab 1 após o erro",
+          "target": "portal-email"
+        },
+        {
+          "action": "Tab 2 após o erro",
+          "target": "portal-senha"
+        },
+        {
+          "action": "Tab 3 após o erro",
+          "target": "Entrar com segurança"
+        }
+      ],
+      "overflow": 0,
+      "loginHttpStatus": 401,
+      "focusAposFalha": "[data-login-error-focus] Falha na consultaE-mail ou senha não conferemConfi",
+      "repeticaoAposErro": "Entrar com segurança"
+    },
+    {
+      "route": "/funcionario",
+      "theme": "day",
+      "viewport": "390x844",
+      "screenshot": "ux-pro-09a6-funcionario-day-390.png",
+      "percursoTeclado": [
+        {
+          "action": "focus e-mail",
+          "target": "portal-email"
+        },
+        {
+          "action": "Tab",
+          "target": "portal-senha"
+        },
+        {
+          "action": "Tab",
+          "target": "Entrar com segurança"
+        },
+        {
+          "action": "Enter / falha real",
+          "target": "[data-login-error-focus] Falha na consultaE-mail ou senha não conferemConfi"
+        },
+        {
+          "action": "Tab 1 após o erro",
+          "target": "portal-email"
+        },
+        {
+          "action": "Tab 2 após o erro",
+          "target": "portal-senha"
+        },
+        {
+          "action": "Tab 3 após o erro",
+          "target": "Entrar com segurança"
+        }
+      ],
+      "overflow": 0,
+      "loginHttpStatus": 401,
+      "focusAposFalha": "[data-login-error-focus] Falha na consultaE-mail ou senha não conferemConfi",
+      "repeticaoAposErro": "Entrar com segurança"
+    },
+    {
+      "route": "/funcionario",
+      "theme": "day",
+      "viewport": "768x900",
+      "screenshot": "ux-pro-09a6-funcionario-day-768.png",
+      "percursoTeclado": [
+        {
+          "action": "focus e-mail",
+          "target": "portal-email"
+        },
+        {
+          "action": "Tab",
+          "target": "portal-senha"
+        },
+        {
+          "action": "Tab",
+          "target": "Entrar com segurança"
+        },
+        {
+          "action": "Enter / falha real",
+          "target": "[data-login-error-focus] Falha na consultaE-mail ou senha não conferemConfi"
+        },
+        {
+          "action": "Tab 1 após o erro",
+          "target": "portal-email"
+        },
+        {
+          "action": "Tab 2 após o erro",
+          "target": "portal-senha"
+        },
+        {
+          "action": "Tab 3 após o erro",
+          "target": "Entrar com segurança"
+        }
+      ],
+      "overflow": 0,
+      "loginHttpStatus": 401,
+      "focusAposFalha": "[data-login-error-focus] Falha na consultaE-mail ou senha não conferemConfi",
+      "repeticaoAposErro": "Entrar com segurança"
+    },
+    {
+      "route": "/funcionario",
+      "theme": "day",
+      "viewport": "1440x900",
+      "screenshot": "ux-pro-09a6-funcionario-day-1440.png",
+      "percursoTeclado": [
+        {
+          "action": "focus e-mail",
+          "target": "portal-email"
+        },
+        {
+          "action": "Tab",
+          "target": "portal-senha"
+        },
+        {
+          "action": "Tab",
+          "target": "Entrar com segurança"
+        },
+        {
+          "action": "Enter / falha real",
+          "target": "[data-login-error-focus] Falha na consultaE-mail ou senha não conferemConfi"
+        },
+        {
+          "action": "Tab 1 após o erro",
+          "target": "portal-email"
+        },
+        {
+          "action": "Tab 2 após o erro",
+          "target": "portal-senha"
+        },
+        {
+          "action": "Tab 3 após o erro",
+          "target": "Entrar com segurança"
+        }
+      ],
+      "overflow": 0,
+      "loginHttpStatus": 401,
+      "focusAposFalha": "[data-login-error-focus] Falha na consultaE-mail ou senha não conferemConfi",
+      "repeticaoAposErro": "Entrar com segurança"
+    },
+    {
+      "route": "/funcionario",
+      "theme": "night",
+      "viewport": "320x844",
+      "screenshot": "ux-pro-09a6-funcionario-night-320.png",
+      "percursoTeclado": [
+        {
+          "action": "focus e-mail",
+          "target": "portal-email"
+        },
+        {
+          "action": "Tab",
+          "target": "portal-senha"
+        },
+        {
+          "action": "Tab",
+          "target": "Entrar com segurança"
+        },
+        {
+          "action": "Enter / falha real",
+          "target": "[data-login-error-focus] Falha na consultaE-mail ou senha não conferemConfi"
+        },
+        {
+          "action": "Tab 1 após o erro",
+          "target": "portal-email"
+        },
+        {
+          "action": "Tab 2 após o erro",
+          "target": "portal-senha"
+        },
+        {
+          "action": "Tab 3 após o erro",
+          "target": "Entrar com segurança"
+        }
+      ],
+      "overflow": 0,
+      "loginHttpStatus": 401,
+      "focusAposFalha": "[data-login-error-focus] Falha na consultaE-mail ou senha não conferemConfi",
+      "repeticaoAposErro": "Entrar com segurança"
+    },
+    {
+      "route": "/funcionario",
+      "theme": "night",
+      "viewport": "390x844",
+      "screenshot": "ux-pro-09a6-funcionario-night-390.png",
+      "percursoTeclado": [
+        {
+          "action": "focus e-mail",
+          "target": "portal-email"
+        },
+        {
+          "action": "Tab",
+          "target": "portal-senha"
+        },
+        {
+          "action": "Tab",
+          "target": "Entrar com segurança"
+        },
+        {
+          "action": "Enter / falha real",
+          "target": "[data-login-error-focus] Falha na consultaE-mail ou senha não conferemConfi"
+        },
+        {
+          "action": "Tab 1 após o erro",
+          "target": "portal-email"
+        },
+        {
+          "action": "Tab 2 após o erro",
+          "target": "portal-senha"
+        },
+        {
+          "action": "Tab 3 após o erro",
+          "target": "Entrar com segurança"
+        }
+      ],
+      "overflow": 0,
+      "loginHttpStatus": 401,
+      "focusAposFalha": "[data-login-error-focus] Falha na consultaE-mail ou senha não conferemConfi",
+      "repeticaoAposErro": "Entrar com segurança"
+    },
+    {
+      "route": "/funcionario",
+      "theme": "night",
+      "viewport": "768x900",
+      "screenshot": "ux-pro-09a6-funcionario-night-768.png",
+      "percursoTeclado": [
+        {
+          "action": "focus e-mail",
+          "target": "portal-email"
+        },
+        {
+          "action": "Tab",
+          "target": "portal-senha"
+        },
+        {
+          "action": "Tab",
+          "target": "Entrar com segurança"
+        },
+        {
+          "action": "Enter / falha real",
+          "target": "[data-login-error-focus] Falha na consultaE-mail ou senha não conferemConfi"
+        },
+        {
+          "action": "Tab 1 após o erro",
+          "target": "portal-email"
+        },
+        {
+          "action": "Tab 2 após o erro",
+          "target": "portal-senha"
+        },
+        {
+          "action": "Tab 3 após o erro",
+          "target": "Entrar com segurança"
+        }
+      ],
+      "overflow": 0,
+      "loginHttpStatus": 401,
+      "focusAposFalha": "[data-login-error-focus] Falha na consultaE-mail ou senha não conferemConfi",
+      "repeticaoAposErro": "Entrar com segurança"
+    },
+    {
+      "route": "/funcionario",
+      "theme": "night",
+      "viewport": "1440x900",
+      "screenshot": "ux-pro-09a6-funcionario-night-1440.png",
+      "percursoTeclado": [
+        {
+          "action": "focus e-mail",
+          "target": "portal-email"
+        },
+        {
+          "action": "Tab",
+          "target": "portal-senha"
+        },
+        {
+          "action": "Tab",
+          "target": "Entrar com segurança"
+        },
+        {
+          "action": "Enter / falha real",
+          "target": "[data-login-error-focus] Falha na consultaE-mail ou senha não conferemConfi"
+        },
+        {
+          "action": "Tab 1 após o erro",
+          "target": "portal-email"
+        },
+        {
+          "action": "Tab 2 após o erro",
+          "target": "portal-senha"
+        },
+        {
+          "action": "Tab 3 após o erro",
+          "target": "Entrar com segurança"
+        }
+      ],
+      "overflow": 0,
+      "loginHttpStatus": 401,
+      "focusAposFalha": "[data-login-error-focus] Falha na consultaE-mail ou senha não conferemConfi",
+      "repeticaoAposErro": "Entrar com segurança"
+    }
+  ],
+  "simulatedFetchRejection": false,
+  "mockedHttp": false,
+  "limitations": [
+    "Percurso medido no Chromium empacotado em Linux; sem leitores de tela/zoom 200%/Windows",
+    "Funcionário e dados sintéticos em PostgreSQL descartável",
+    "Sem aceite humano, UAT, certificação WCAG ou produção; NO-GO"
+  ]
+}

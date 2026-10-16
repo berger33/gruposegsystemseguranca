@@ -193,7 +193,7 @@ test('logout revoga a sessão no servidor: cookie reutilizado passa a 401', { sk
 // Jornada de navegador (Chromium real)
 // ---------------------------------------------------------------------------
 
-async function launchBrowser() {
+async function launchChromiumOnce() {
   return playwrightChromium.launch({
     executablePath: await packagedChromium.executablePath(),
     // O pacote serverless inclui --disable-web-security, que removeria Origin
@@ -201,6 +201,21 @@ async function launchBrowser() {
     args: packagedChromium.args.filter(arg => arg !== '--disable-web-security'),
     headless: true,
   });
+}
+
+// O Chromium empacotado (--single-process) pode falhar ao nascer em sandbox/CI
+// (SIGSEGV antes de navegar). Infraestrutura, não asserção: até duas tentativas
+// extras de lançamento; nenhuma verificação é afrouxada.
+async function launchBrowser() {
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await launchChromiumOnce();
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
 }
 
 async function newPage(browser) {
@@ -334,5 +349,116 @@ test('browser: logout devolve à entrada e a sessão sai revogada', { skip: !RUN
     await context.close();
   } finally {
     await browser.close();
+  }
+});
+
+// G5 (UX-PRO-09A-6): na entrada da equipe, o erro pós-submissão tinha role="alert"
+// mas nenhum foco; ao desabilitar o botão em "busy", o foco caía em BODY. Aplica-se o
+// padrão já mergeado de G1/G2 localmente (ref + tabIndex={-1} + focus no efeito), com
+// contorno novo e local em AdminChrome.module.css (dia e noite). O resumo é gravado
+// ANTES das asserções de correção: a execução RED registra o estado anterior em antes/.
+// Nenhuma credencial entra em PNG, JSON versionado ou log.
+test('browser: erro de credencial recebe foco na entrada da equipe, em dia e noite (G5)', { skip: !RUN }, async () => {
+  const baseEvidenceDir = process.env.UX_PRO_09A6_EVIDENCE_DIR || '';
+  const evidenceDir = baseEvidenceDir ? path.join(baseEvidenceDir, 'admin') : '';
+  const staff = await provisionStaff(pool, { role: 'ti' });
+  const entries = [];
+  for (const theme of ['day', 'night']) {
+    for (const [width, height] of [[320, 844], [390, 844], [768, 900], [1440, 900]]) {
+      const browser = await launchBrowser();
+      try {
+        const context = await browser.newContext({ baseURL: baseUrl, viewport: { width, height }, locale: 'pt-BR' });
+        if (theme === 'night') {
+          await context.addInitScript(() => {
+            try { window.localStorage.setItem('segsystem.admin.appearance.v1', 'night'); } catch { /* sem storage */ }
+          });
+        }
+        const page = await context.newPage();
+        page.setDefaultTimeout(45_000);
+        page.setDefaultNavigationTimeout(90_000);
+        await page.goto('/admin/entrar', { waitUntil: 'domcontentloaded' });
+        await page.waitForSelector('#login-email', { timeout: 90_000 });
+        await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+        assert.equal(await page.evaluate(() => document.documentElement.dataset.adminTheme ?? 'day'), theme,
+          `o tema pedido precisa estar aplicado em ${width}/${theme}`);
+        const recordFocus = async action => keyboard.push({ action, target: await page.evaluate(() => {
+          const element = document.activeElement;
+          if (!element || element === document.body) return 'BODY (foco perdido ao desabilitar o botão)';
+          if (element.getAttribute('data-login-error') === 'true') return `[data-login-error] ${element.textContent?.trim().slice(0, 50)}`;
+          return element.id || element.textContent?.trim().slice(0, 40) || element.tagName;
+        }) });
+        const keyboard = [];
+        const email = page.locator('#login-email');
+        const senha = page.locator('#login-password');
+        const button = page.locator('button[type="submit"]');
+        await email.focus();
+        await recordFocus('focus e-mail');
+        await email.fill(staff.email);
+        await page.keyboard.press('Tab');
+        await recordFocus('Tab');
+        assert.equal(await page.evaluate(() => document.activeElement.id), 'login-password');
+        await senha.fill('Senha-Errada-0!');
+        await page.keyboard.press('Tab');
+        await recordFocus('Tab');
+        assert.ok(await button.evaluate(element => element === document.activeElement));
+        const pending = page.waitForResponse(response =>
+          new URL(response.url()).pathname === '/api/admin/session' && response.request().method() === 'POST');
+        await page.keyboard.press('Enter');
+        const loginResponse = await pending;
+        assert.equal(loginResponse.status(), 401, 'credencial errada responde 401 sem papel de sessão');
+        const alert = page.locator('[data-login-error="true"]');
+        await alert.waitFor({ timeout: 30_000 });
+        await recordFocus('Enter / 401');
+        // A entrada limpa a senha após a falha (comportamento existente) e o botão só
+        // habilita com e-mail e senha preenchidos; por isso a repetição por teclado é:
+        // Shift+Tab até a senha, redigitar de novo e Tab até o botão habilitado.
+        await page.keyboard.press('Shift+Tab');
+        await recordFocus('Shift+Tab após o erro');
+        assert.equal(await page.evaluate(() => document.activeElement.id), 'login-password',
+          'o passo de volta do erro precisa cair no campo de senha');
+        await page.keyboard.type('Senha-Errada-1!');
+        await recordFocus('redigitar senha para repetir');
+        await page.keyboard.press('Tab');
+        await recordFocus('Tab após redigitar');
+        const repetition = keyboard[keyboard.length - 1].target;
+        await email.fill('');
+        await senha.fill('');
+        const overflow = await page.evaluate(() =>
+          document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        assert.ok(overflow <= 1, `G5 admin: overflow ${overflow} em ${width}/${theme}`);
+        const screenshot = `ux-pro-09a6-admin-entrar-${theme}-${width}.png`;
+        if (evidenceDir) {
+          await import('node:fs/promises').then(fs => fs.mkdir(evidenceDir, { recursive: true }));
+          await page.screenshot({ path: path.join(evidenceDir, screenshot), fullPage: true });
+        }
+        entries.push({
+          route: '/admin/entrar', theme, viewport: `${width}x${height}`, screenshot,
+          percursoTeclado: keyboard, overflow, loginHttpStatus: 401,
+          focusAposFalha: keyboard.find(item => item.action === 'Enter / 401')?.target ?? null,
+          repeticaoAposErro: repetition,
+        });
+        await context.close();
+      } finally { await browser.close().catch(() => {}); }
+    }
+  }
+  if (evidenceDir) {
+    const fs = await import('node:fs/promises');
+    await fs.mkdir(evidenceDir, { recursive: true });
+    await fs.writeFile(path.join(evidenceDir, 'resumo.json'), `${JSON.stringify({
+      schemaVersion: 1, stage: 'UX-PRO-09A-6', date: '2026-10-16', gap: 'G5',
+      route: '/admin/entrar', entries,
+      simulatedFetchRejection: false, mockedHttp: false,
+      limitations: [
+        'Percurso medido no Chromium empacotado em Linux; sem leitores de tela/zoom 200%/Windows',
+        'Dados sintéticos em PostgreSQL descartável',
+        'Sem aceite humano, UAT, certificação WCAG ou produção; NO-GO',
+      ],
+    }, null, 2)}\n`, 'utf8');
+  }
+  for (const entry of entries) {
+    assert.ok(entry.focusAposFalha?.startsWith('[data-login-error]'),
+      `G5: após a falha o foco precisa ir para o erro, não para "${entry.focusAposFalha}" em ${entry.viewport}/${entry.theme}`);
+    assert.match(entry.repeticaoAposErro, /Entrar/,
+      `G5: o passo seguinte ao erro precisa alcançar a repetição em ${entry.viewport}/${entry.theme}`);
   }
 });
