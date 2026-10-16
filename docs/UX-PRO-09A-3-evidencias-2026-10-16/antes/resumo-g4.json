@@ -1,0 +1,383 @@
+{
+  "schemaVersion": 1,
+  "stage": "UX-PRO-09A-3",
+  "date": "2026-10-16",
+  "baseSha": "091a878eb804720360c75f1b1d26bcf99ecb5233",
+  "entries": [
+    {
+      "route": "/cliente/redefinir-senha",
+      "origin": "recover",
+      "originalTtlSeconds": 3600,
+      "fixture": "token expirado inserido no PostgreSQL descartável; emissão não exercitada",
+      "viewport": "320x844",
+      "theme": "claro (único suportado)",
+      "screenshot": "g4-recover-320-claro.png",
+      "percursoTeclado": [
+        {
+          "action": "focus campo",
+          "target": "newPassword"
+        },
+        {
+          "action": "Tab",
+          "target": "newPasswordAgain"
+        },
+        {
+          "action": "Tab",
+          "target": "Redefinir senha"
+        },
+        {
+          "action": "Enter / 400",
+          "target": "GrupoSEG SystemSobre o portalNova senhaDefinir nova senhaNov"
+        },
+        {
+          "action": "Shift+Tab",
+          "target": "newPasswordAgain"
+        },
+        {
+          "action": "Tab / repetir",
+          "target": "Redefinir senha"
+        },
+        {
+          "action": "Enter / segundo 400",
+          "target": "GrupoSEG SystemSobre o portalNova senhaDefinir nova senhaNov"
+        }
+      ],
+      "overflow": 0,
+      "routeHttpStatus": 200,
+      "resetHttpStatuses": [
+        400,
+        400
+      ]
+    },
+    {
+      "route": "/cliente/redefinir-senha",
+      "origin": "recover",
+      "originalTtlSeconds": 3600,
+      "fixture": "token expirado inserido no PostgreSQL descartável; emissão não exercitada",
+      "viewport": "390x844",
+      "theme": "claro (único suportado)",
+      "screenshot": "g4-recover-390-claro.png",
+      "percursoTeclado": [
+        {
+          "action": "focus campo",
+          "target": "newPassword"
+        },
+        {
+          "action": "Tab",
+          "target": "newPasswordAgain"
+        },
+        {
+          "action": "Tab",
+          "target": "Redefinir senha"
+        },
+        {
+          "action": "Enter / 400",
+          "target": "GrupoSEG SystemSobre o portalNova senhaDefinir nova senhaNov"
+        },
+        {
+          "action": "Shift+Tab",
+          "target": "newPasswordAgain"
+        },
+        {
+          "action": "Tab / repetir",
+          "target": "Redefinir senha"
+        },
+        {
+          "action": "Enter / segundo 400",
+          "target": "GrupoSEG SystemSobre o portalNova senhaDefinir nova senhaNov"
+        }
+      ],
+      "overflow": 0,
+      "routeHttpStatus": 200,
+      "resetHttpStatuses": [
+        400,
+        400
+      ]
+    },
+    {
+      "route": "/cliente/redefinir-senha",
+      "origin": "recover",
+      "originalTtlSeconds": 3600,
+      "fixture": "token expirado inserido no PostgreSQL descartável; emissão não exercitada",
+      "viewport": "768x900",
+      "theme": "claro (único suportado)",
+      "screenshot": "g4-recover-768-claro.png",
+      "percursoTeclado": [
+        {
+          "action": "focus campo",
+          "target": "newPassword"
+        },
+        {
+          "action": "Tab",
+          "target": "newPasswordAgain"
+        },
+        {
+          "action": "Tab",
+          "target": "Redefinir senha"
+        },
+        {
+          "action": "Enter / 400",
+          "target": "GrupoSEG SystemSobre o portalNova senhaDefinir nova senhaNov"
+        },
+        {
+          "action": "Shift+Tab",
+          "target": "newPasswordAgain"
+        },
+        {
+          "action": "Tab / repetir",
+          "target": "Redefinir senha"
+        },
+        {
+          "action": "Enter / segundo 400",
+          "target": "GrupoSEG SystemSobre o portalNova senhaDefinir nova senhaNov"
+        }
+      ],
+      "overflow": 0,
+      "routeHttpStatus": 200,
+      "resetHttpStatuses": [
+        400,
+        400
+      ]
+    },
+    {
+      "route": "/cliente/redefinir-senha",
+      "origin": "recover",
+      "originalTtlSeconds": 3600,
+      "fixture": "token expirado inserido no PostgreSQL descartável; emissão não exercitada",
+      "viewport": "1440x900",
+      "theme": "claro (único suportado)",
+      "screenshot": "g4-recover-1440-claro.png",
+      "percursoTeclado": [
+        {
+          "action": "focus campo",
+          "target": "newPassword"
+        },
+        {
+          "action": "Tab",
+          "target": "newPasswordAgain"
+        },
+        {
+          "action": "Tab",
+          "target": "Redefinir senha"
+        },
+        {
+          "action": "Enter / 400",
+          "target": "GrupoSEG SystemSobre o portalNova senhaDefinir nova senhaNov"
+        },
+        {
+          "action": "Shift+Tab",
+          "target": "newPasswordAgain"
+        },
+        {
+          "action": "Tab / repetir",
+          "target": "Redefinir senha"
+        },
+        {
+          "action": "Enter / segundo 400",
+          "target": "GrupoSEG SystemSobre o portalNova senhaDefinir nova senhaNov"
+        }
+      ],
+      "overflow": 0,
+      "routeHttpStatus": 200,
+      "resetHttpStatuses": [
+        400,
+        400
+      ]
+    },
+    {
+      "route": "/cliente/redefinir-senha",
+      "origin": "manual_ti",
+      "originalTtlSeconds": 900,
+      "fixture": "token expirado inserido no PostgreSQL descartável; emissão não exercitada",
+      "viewport": "320x844",
+      "theme": "claro (único suportado)",
+      "screenshot": "g4-manual_ti-320-claro.png",
+      "percursoTeclado": [
+        {
+          "action": "focus campo",
+          "target": "newPassword"
+        },
+        {
+          "action": "Tab",
+          "target": "newPasswordAgain"
+        },
+        {
+          "action": "Tab",
+          "target": "Redefinir senha"
+        },
+        {
+          "action": "Enter / 400",
+          "target": "GrupoSEG SystemSobre o portalNova senhaDefinir nova senhaNov"
+        },
+        {
+          "action": "Shift+Tab",
+          "target": "newPasswordAgain"
+        },
+        {
+          "action": "Tab / repetir",
+          "target": "Redefinir senha"
+        },
+        {
+          "action": "Enter / segundo 400",
+          "target": "GrupoSEG SystemSobre o portalNova senhaDefinir nova senhaNov"
+        }
+      ],
+      "overflow": 0,
+      "routeHttpStatus": 200,
+      "resetHttpStatuses": [
+        400,
+        400
+      ]
+    },
+    {
+      "route": "/cliente/redefinir-senha",
+      "origin": "manual_ti",
+      "originalTtlSeconds": 900,
+      "fixture": "token expirado inserido no PostgreSQL descartável; emissão não exercitada",
+      "viewport": "390x844",
+      "theme": "claro (único suportado)",
+      "screenshot": "g4-manual_ti-390-claro.png",
+      "percursoTeclado": [
+        {
+          "action": "focus campo",
+          "target": "newPassword"
+        },
+        {
+          "action": "Tab",
+          "target": "newPasswordAgain"
+        },
+        {
+          "action": "Tab",
+          "target": "Redefinir senha"
+        },
+        {
+          "action": "Enter / 400",
+          "target": "GrupoSEG SystemSobre o portalNova senhaDefinir nova senhaNov"
+        },
+        {
+          "action": "Shift+Tab",
+          "target": "newPasswordAgain"
+        },
+        {
+          "action": "Tab / repetir",
+          "target": "Redefinir senha"
+        },
+        {
+          "action": "Enter / segundo 400",
+          "target": "GrupoSEG SystemSobre o portalNova senhaDefinir nova senhaNov"
+        }
+      ],
+      "overflow": 0,
+      "routeHttpStatus": 200,
+      "resetHttpStatuses": [
+        400,
+        400
+      ]
+    },
+    {
+      "route": "/cliente/redefinir-senha",
+      "origin": "manual_ti",
+      "originalTtlSeconds": 900,
+      "fixture": "token expirado inserido no PostgreSQL descartável; emissão não exercitada",
+      "viewport": "768x900",
+      "theme": "claro (único suportado)",
+      "screenshot": "g4-manual_ti-768-claro.png",
+      "percursoTeclado": [
+        {
+          "action": "focus campo",
+          "target": "newPassword"
+        },
+        {
+          "action": "Tab",
+          "target": "newPasswordAgain"
+        },
+        {
+          "action": "Tab",
+          "target": "Redefinir senha"
+        },
+        {
+          "action": "Enter / 400",
+          "target": "GrupoSEG SystemSobre o portalNova senhaDefinir nova senhaNov"
+        },
+        {
+          "action": "Shift+Tab",
+          "target": "newPasswordAgain"
+        },
+        {
+          "action": "Tab / repetir",
+          "target": "Redefinir senha"
+        },
+        {
+          "action": "Enter / segundo 400",
+          "target": "GrupoSEG SystemSobre o portalNova senhaDefinir nova senhaNov"
+        }
+      ],
+      "overflow": 0,
+      "routeHttpStatus": 200,
+      "resetHttpStatuses": [
+        400,
+        400
+      ]
+    },
+    {
+      "route": "/cliente/redefinir-senha",
+      "origin": "manual_ti",
+      "originalTtlSeconds": 900,
+      "fixture": "token expirado inserido no PostgreSQL descartável; emissão não exercitada",
+      "viewport": "1440x900",
+      "theme": "claro (único suportado)",
+      "screenshot": "g4-manual_ti-1440-claro.png",
+      "percursoTeclado": [
+        {
+          "action": "focus campo",
+          "target": "newPassword"
+        },
+        {
+          "action": "Tab",
+          "target": "newPasswordAgain"
+        },
+        {
+          "action": "Tab",
+          "target": "Redefinir senha"
+        },
+        {
+          "action": "Enter / 400",
+          "target": "GrupoSEG SystemSobre o portalNova senhaDefinir nova senhaNov"
+        },
+        {
+          "action": "Shift+Tab",
+          "target": "newPasswordAgain"
+        },
+        {
+          "action": "Tab / repetir",
+          "target": "Redefinir senha"
+        },
+        {
+          "action": "Enter / segundo 400",
+          "target": "GrupoSEG SystemSobre o portalNova senhaDefinir nova senhaNov"
+        }
+      ],
+      "overflow": 0,
+      "routeHttpStatus": 200,
+      "resetHttpStatuses": [
+        400,
+        400
+      ]
+    }
+  ],
+  "messagesObserved": [
+    "Este link de redefinição não é mais válido. Ele vale 1 hora, tem uso único e é substituído quando um novo é emitido. Peça outro link.",
+    "Este link de redefinição não é mais válido. Ele vale 1 hora, tem uso único e é substituído quando um novo é emitido. Peça outro link."
+  ],
+  "simulatedFetchRejection": false,
+  "mockedHttp": false,
+  "limitations": [
+    "Fixtures de expiração, não emissão por SMTP/TI",
+    "Tema claro único",
+    "Sem aceite humano, WCAG, UAT ou produção; NO-GO",
+    "Campos limpos antes de capturar; foco do ResetForm não alterado"
+  ],
+  "phase": "antes",
+  "result": "RED esperado: mensagem antiga afirma 1 hora para ambas as fixtures",
+  "keyboardViewport": "1440x900; o mesmo percurso foi associado às capturas redimensionadas; não é percurso independente nas quatro larguras"
+}
