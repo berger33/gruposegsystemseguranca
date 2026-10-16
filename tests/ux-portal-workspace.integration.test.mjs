@@ -1567,3 +1567,209 @@ test('browser: erro de link de redefinição não afirma prazo fixo para nenhuma
     await pool.query('DELETE FROM auth_identities WHERE id=ANY($1::uuid[])', [ids]);
   }
 });
+
+
+// G3 (UX-PRO-09A-4): a entrega manual da troca de e-mail apontava a rota pública
+// /cliente/confirmar-email, cujo handler só consome tokens kind='confirm_email' de
+// auth_email_tokens. O token de troca vive em auth_email_change e só é confirmado por
+// PUT autenticado em /cliente/app/seguranca. Identidade sintética dedicada: nada aqui
+// toca o cliente dos demais testes. Nenhum token vai para PNG, JSON versionado ou log.
+test('browser: a troca de e-mail entrega o token manual na superfície que realmente confirma', { skip: !RUN }, async () => {
+  const g3EvidenceDir = process.env.UX_PORTAL_G3_EVIDENCE_DIR || '';
+  const suffix = randomUUID().slice(0, 8);
+  const identityId = randomUUID();
+  const currentEmail = `g3-atual-${suffix}@exemplo.invalid`;
+  const newEmail = `g3-novo-${suffix}@exemplo.invalid`;
+  const password = `Sintetica-${randomUUID()}!`;
+  const entries = [];
+  try {
+    await pool.query(
+      `INSERT INTO auth_identities (id, kind, email, display_name, status, verification_method, verified_at)
+       VALUES ($1,'client',$2,$3,'active','email_link',NOW())`,
+      [identityId, currentEmail, `Cliente Sintetico G3 ${suffix}`],
+    );
+    await pool.query('INSERT INTO auth_credentials (identity_id, password_hash) VALUES ($1,$2)',
+      [identityId, await hashPassword(password)]);
+    const login = await api('/api/auth/login', { method: 'POST', body: { email: currentEmail, password } });
+    assert.equal(login.status, 200, `login G3 deveria ser 200, veio ${login.status} ${JSON.stringify(login.body)}`);
+    const cookie = login.setCookie.map(item => item.split(';')[0]).join('; ');
+    assert.ok(cookie, 'a sessão G3 precisa emitir cookie');
+
+    // --- 1) pedido real de troca, com sessão ativa e mesma origem --------------
+    const requested = await api('/api/client/security/email-change', { method: 'POST', cookie, body: { newEmail } });
+    assert.equal(requested.status, 202,
+      `pedido de troca deveria ser 202, veio ${requested.status} ${JSON.stringify(requested.body)}`);
+    assert.equal(requested.body.delivery, 'local_outbox', 'sem SMTP a entrega continua sendo caixa local');
+
+    const stored = await pool.query(
+      `SELECT token_hash, EXTRACT(EPOCH FROM (expires_at-created_at))::int AS window_seconds
+       FROM auth_email_change WHERE identity_id=$1`, [identityId]);
+    assert.equal(stored.rowCount, 1, 'um único pedido pendente para a identidade');
+    assert.equal(stored.rows[0].window_seconds, 24 * 3600, 'a validade de 24 h não muda nesta fatia');
+
+    // --- 2) o corpo entregue nomeia a superfície que confirma ------------------
+    const box = await pool.query(
+      `SELECT template, subject, body, delivery_mode, is_sensitive
+       FROM local_outbox_messages WHERE recipient_address=$1`, [newEmail]);
+    assert.equal(box.rowCount, 1, 'a entrega manual grava exatamente uma mensagem');
+    assert.equal(box.rows[0].template, 'client_email_change');
+    assert.equal(box.rows[0].delivery_mode, 'local_outbox', 'o estado nunca afirma envio');
+    assert.equal(box.rows[0].is_sensitive, true, 'o conteúdo continua marcado como sensível');
+    const manual = box.rows[0].body;
+    assert.match(manual, /\/cliente\/app\/seguranca/,
+      'a entrega manual precisa nomear a superfície que realmente confirma');
+    assert.doesNotMatch(manual, /\/cliente\/confirmar-email/,
+      'a rota pública só consome confirm_email e não pode ser indicada para esta troca');
+    const tokenMatch = manual.match(/Token:\s*(\S+)\s*$/);
+    assert.ok(tokenMatch, 'o token continua disponível uma única vez pelo canal manual');
+    const manualToken = tokenMatch[1];
+    assert.match(stored.rows[0].token_hash, /^[0-9a-f]{64}$/, 'o banco guarda hash, nunca o token');
+    assert.notEqual(stored.rows[0].token_hash, manualToken, 'o token entregue não é o valor persistido');
+
+    // --- 3) prova do defeito anterior: a rota pública recusa este token --------
+    const publicAttempt = await api('/api/auth/confirm-email', { method: 'POST', body: { token: manualToken } });
+    assert.equal(publicAttempt.status, 400,
+      `a rota pública precisa recusar token de troca de e-mail, veio ${publicAttempt.status}`);
+    assert.equal(publicAttempt.body.error, 'confirmation_link_invalid');
+    const untouched = await pool.query('SELECT used_at, cancelled_at FROM auth_email_change WHERE identity_id=$1', [identityId]);
+    assert.equal(untouched.rows[0].used_at, null, 'a recusa pública não pode consumir o token de troca');
+
+    // --- 4) superfície real, medida em quatro larguras, com campos vazios ------
+    for (;;) {
+      const probe = await fetch(`${baseUrl}/cliente/app/seguranca`, { redirect: 'manual' });
+      if (probe.status !== 404) break;
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    for (const [width, height] of [[320, 844], [390, 844], [768, 900], [1440, 900]]) {
+      const browser = await launchBrowser();
+      try {
+        const { context, page, navigationResponse } = await openPage(browser, '/cliente/app/seguranca', cookie, { width, height });
+        assert.equal(navigationResponse.status(), 200, `a área protegida deveria responder 200 em ${width}`);
+        await page.getByRole('heading', { name: 'Trocar e-mail' }).waitFor();
+        await page.waitForLoadState('networkidle');
+        await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+
+        const novoEmail = page.getByLabel('Novo e-mail', { exact: true });
+        const tokenField = page.getByLabel('Token da URL manual', { exact: true });
+        const confirmButton = page.getByRole('button', { name: 'Confirmar troca', exact: true });
+        // Percurso real de vários passos, sem Enter: nada é submetido pelo teclado.
+        const keyboard = [];
+        const recordFocus = async action => keyboard.push({
+          action,
+          target: await page.evaluate(() => {
+            const element = document.activeElement;
+            if (!element || element === document.body) return 'BODY (foco perdido)';
+            return element.id || element.textContent?.trim().slice(0, 40) || element.tagName;
+          }),
+        });
+        await novoEmail.focus();
+        await recordFocus('focus campo novo e-mail');
+        assert.equal(await page.evaluate(() => document.activeElement.id), 'new-email');
+        await page.keyboard.press('Tab');
+        await recordFocus('Tab');
+        assert.equal(await page.evaluate(() => document.activeElement.textContent.trim()), 'Solicitar troca');
+        await page.keyboard.press('Tab');
+        await recordFocus('Tab');
+        assert.equal(await page.evaluate(() => document.activeElement.id), 'email-token');
+        await page.keyboard.press('Tab');
+        await recordFocus('Tab');
+        assert.ok(await confirmButton.evaluate(element => element === document.activeElement));
+        await page.keyboard.press('Shift+Tab');
+        await recordFocus('Shift+Tab');
+        assert.equal(await page.evaluate(() => document.activeElement.id), 'email-token');
+
+        // Rótulos visíveis associados aos dois campos do recorte.
+        const labels = await page.evaluate(() => ['new-email', 'email-token'].map(id => {
+          const input = document.getElementById(id);
+          const label = document.querySelector(`label[for="${id}"]`);
+          return { id, labelText: label?.textContent?.trim() ?? null, inputType: input?.getAttribute('type') ?? null };
+        }));
+        assert.deepEqual(labels, [
+          { id: 'new-email', labelText: 'Novo e-mail', inputType: 'email' },
+          { id: 'email-token', labelText: 'Token da URL manual', inputType: null },
+        ]);
+
+        // Campos vazios: token nunca entra em captura nem em JSON versionado.
+        assert.equal(await novoEmail.inputValue(), '');
+        assert.equal(await tokenField.inputValue(), '');
+        const overflow = await page.evaluate(() =>
+          document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        assert.ok(overflow <= 1, `G3: overflow ${overflow} em ${width}`);
+        const screenshot = `ux-pro-09a4-troca-email-${width}-claro.png`;
+        if (g3EvidenceDir) {
+          await mkdir(g3EvidenceDir, { recursive: true });
+          await page.screenshot({ path: path.join(g3EvidenceDir, screenshot), fullPage: true });
+        }
+        entries.push({
+          route: '/cliente/app/seguranca', role: 'cliente autenticado (sessão sintética)',
+          viewport: `${width}x${height}`, theme: 'claro (único suportado)', screenshot,
+          percursoTeclado: keyboard, labels: labels.map(item => item.labelText), overflow,
+          routeHttpStatus: 200, camposNasCapturas: 'vazios (token não exibido)',
+        });
+        await context.close();
+      } finally { await browser.close().catch(() => {}); }
+    }
+
+    // --- 5) a instrução corrigida é verdadeira: o PUT autenticado confirma -----
+    const confirmed = await api('/api/client/security/email-change', { method: 'PUT', cookie, body: { token: manualToken } });
+    assert.equal(confirmed.status, 200,
+      `o token manual precisa confirmar na superfície indicada, veio ${confirmed.status} ${JSON.stringify(confirmed.body)}`);
+    assert.deepEqual(confirmed.body, { ok: true, sessionRevoked: true });
+    const after = await pool.query('SELECT email FROM auth_identities WHERE id=$1', [identityId]);
+    assert.equal(after.rows[0].email, newEmail, 'o e-mail da mesma identidade foi atualizado');
+    const used = await pool.query('SELECT used_at IS NOT NULL AS used FROM auth_email_change WHERE identity_id=$1', [identityId]);
+    assert.equal(used.rows[0].used, true, 'o token é de uso único');
+    const reused = await api('/api/client/security/email-change', { method: 'PUT', cookie, body: { token: manualToken } });
+    assert.equal(reused.status, 401, 'a confirmação revogou as sessões: a antiga não confirma de novo');
+    const session = await api('/api/auth/me', { cookie });
+    assert.equal(session.status, 401, 'a sessão anterior foi revogada pela troca confirmada');
+    const auditRows = await pool.query(
+      `SELECT action, result FROM auth_access_audit WHERE actor_id=$1 AND action IN ('email_change_request','email_change_confirm')
+       ORDER BY action`, [identityId]);
+    assert.deepEqual(auditRows.rows.map(row => `${row.action}/${row.result}`).sort(),
+      ['email_change_confirm/allowed', 'email_change_request/allowed']);
+
+    if (g3EvidenceDir) {
+      await mkdir(g3EvidenceDir, { recursive: true });
+      await writeFile(path.join(g3EvidenceDir, 'resumo.json'), `${JSON.stringify({
+        schemaVersion: 1, stage: 'UX-PRO-09A-4', date: '2026-10-16', gap: 'G3',
+        route: '/cliente/app/seguranca', entries,
+        delivery: {
+          channel: 'local_outbox (sem SMTP; nada foi enviado)',
+          template: 'client_email_change',
+          bodyMentionsRealSurface: /\/cliente\/app\/seguranca/.test(manual),
+          bodyMentionsPublicConfirmRoute: /\/cliente\/confirmar-email/.test(manual),
+          tokenInEvidence: 'redigido (nunca versionado, capturado ou registrado)',
+          windowSeconds: stored.rows[0].window_seconds,
+          storedValueIsHash: /^[0-9a-f]{64}$/.test(stored.rows[0].token_hash),
+        },
+        defectReproduced: {
+          publicRouteStatus: publicAttempt.status,
+          publicRouteError: publicAttempt.body.error,
+          tokenStillUnusedAfterPublicAttempt: untouched.rows[0].used_at === null,
+        },
+        confirmation: {
+          putStatus: confirmed.status, sessionRevoked: confirmed.body.sessionRevoked === true,
+          identityEmailUpdated: after.rows[0].email === newEmail,
+          tokenSingleUse: used.rows[0].used === true,
+          previousSessionRefused: session.status === 401,
+          audit: auditRows.rows.map(row => `${row.action}/${row.result}`),
+        },
+        simulatedFetchRejection: false, mockedHttp: false,
+        limitations: [
+          'Caixa local: sem SMTP/provedor real, nada é enviado de fato',
+          'Tema claro único nesta superfície; sem alternador noturno',
+          'Identidade e dados sintéticos em PostgreSQL descartável',
+          'Sem aceite humano, UAT, certificação WCAG ou produção; NO-GO',
+        ],
+      }, null, 2)}\n`, 'utf8');
+    }
+  } finally {
+    await pool.query('DELETE FROM local_outbox_messages WHERE recipient_address=$1', [newEmail]).catch(() => {});
+    await pool.query('DELETE FROM auth_email_change WHERE identity_id=$1', [identityId]).catch(() => {});
+    await pool.query('DELETE FROM auth_access_audit WHERE actor_id=$1', [identityId]).catch(() => {});
+    await pool.query('DELETE FROM auth_sessions WHERE identity_id=$1', [identityId]).catch(() => {});
+    await pool.query('DELETE FROM auth_credentials WHERE identity_id=$1', [identityId]).catch(() => {});
+    await pool.query('DELETE FROM auth_identities WHERE id=$1', [identityId]).catch(() => {});
+  }
+});
